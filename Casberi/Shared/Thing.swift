@@ -1247,6 +1247,10 @@ final class Thing {
     /// field, so it ships only once `CD_pinnedAt` is deployed to Production
     /// (see docs/cloudkit-deploy.md). Unpinning writes nil; nothing about a
     /// pin is permanent to the person, only the column is permanent to iCloud.
+    ///
+    /// **Unread since prd §1175 deleted Pin.** Nothing reads or writes it;
+    /// it stays because CloudKit cannot drop a deployed field, and removing
+    /// a stored property is a breaking schema change (`ThingSchemaVersioning`).
     var pinnedAt: Date? = nil
 
     // MARK: - Filed (2026-09-29)

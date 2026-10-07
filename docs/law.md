@@ -222,7 +222,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1305 of 1369 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1306 of 1370 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -916,7 +916,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §629 — The two ethrex seats are "Hegotá UTXO" and "Hegotá Privacy" (amended by §647; part superseded by §1038)
 - §630 — The inclusion pass: glass goes opaque under Reduce Transparency, money says its direction without colour, the dock ge… [+1 sub-entries]
 - §631 — The Mac stops rendering a phone's point sizes, and the walked row can finally be taken
-- §632 — Nothing under a thing is a guess: the related neighbours, the two chips and the "kept here" sentence are cut; Pin is… (amended by §645) [+2 sub-entries]
+- §632 — Nothing under a thing is a guess: the related neighbours, the two chips and the "kept here" sentence are cut; Pin is… (amended by §645; part superseded by §1175) [+2 sub-entries]
 - §633 — A trending token's sheet in the demo was a title over a logo
 - §634 — Three things that said "this is yours" instead of saying anything: the "From" tautologies, the dock's tap-learning, a…
 - §635 — The crown pour and its colour picker are gone
@@ -1307,7 +1307,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §966 — Becoming the pick is a crossfade, in the template
 - §967 — What this app reaches and what it reached are ONE pushed screen, filtered by the dock's categories
 - §968 — Robinhood is read on Alchemy beside Zerion, and a DEX-only token is priced off a pool deep enough to sell into
-- §969 — Notes is a room in You, Pinned folds into it, and the app gets its one capture path for writing (amended by §1127, §1136; part superseded by §972, §975, §981, §995, §1099)
+- §969 — Notes is a room in You, Pinned folds into it, and the app gets its one capture path for writing (amended by §1127, §1136; part superseded by §972, §975, §981, §995, §1099, §1175)
 - §970 — A note can be spoken: the sheet's wide key carries the one verb, and holding New lands speaking (part superseded by §971)
 - §971 — Dictation is Apple's, and the note sheet's mic KEEPS A VOICE NOTE (amended by §972, §987)
 - §972 — "Voice" is retired as a source and a room, and the voice note is kept whole (part superseded by §980)
@@ -1322,9 +1322,9 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §980 — Notes gets folders, and the Folders tile comes back with them (part superseded by §995)
 - §981 — A note of yours edits, and its sheet drops "That day"
 - §982 — The note takes Apple Notes' five missing pieces: a checklist you tick, a scan, a link to anything you keep, a Quick N… (amended by §1100; part superseded by §1023)
-- §983 — Notes, toward Apple: the room previews, the long press holds five, a note of yours is a page with three keys, and wri… (amended by §985; part superseded by §1099)
+- §983 — Notes, toward Apple: the room previews, the long press holds five, a note of yours is a page with three keys, and wri… (amended by §985; part superseded by §1099, §1175)
 - §984 — Notes, end to end: six defects the flow walked into
-- §985 — The rest of the Notes room stands under "Notes", and a deleted note waits thirty days in Recently deleted
+- §985 — The rest of the Notes room stands under "Notes", and a deleted note waits thirty days in Recently deleted (part superseded by §1175)
 - §986 — New folder starts where the folders do
 - §987 — The voice note plays like a player: a length on the row, a playhead you can tap, three speeds, and the words lit as t… (amended by §1099)
 - §988 — Logos: watch a public LEZ account, keyless, forward from the moment you watch (amended by §989, §1034, §1035, §1084)
@@ -1529,6 +1529,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1172 — Four small fixes: the box's figures share a column, a subscription in your head, Edit on a subscription, and Alerts'…
 - §1173 — The demo has three calendars
 - §1174 — A chart's windows are tiles, and the hour is one of them
+- §1175 — Pin is deleted
 
 ## Dead rulings → what replaced them (generated)
 

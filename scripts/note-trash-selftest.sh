@@ -74,7 +74,7 @@ print("The list")
 func entry(_ at: TimeInterval) -> NoteTrashEntry {
     NoteTrashEntry(id: UUID(), kind: "note", title: "t", content: "", source: "You",
                    createdAt: t0, capturedAt: t0, tags: [], sourceRef: nil, folder: nil,
-                   pinnedAt: nil, wikilinks: [], deletedAt: t0.addingTimeInterval(at),
+                   wikilinks: [], deletedAt: t0.addingTimeInterval(at),
                    hasPicture: false, hasAudio: false)
 }
 let older = entry(0), newer = entry(day)
@@ -83,7 +83,7 @@ check(NoteTrashRules.ordered([older, newer]) == [newer, older], "the newest dele
 print("An entry survives the disk")
 let e = NoteTrashEntry(id: UUID(), kind: "voice", title: "Locked note", content: "", source: "You",
                        createdAt: t0, capturedAt: t0, tags: ["Note"], sourceRef: "notelock:v1",
-                       folder: "Home", pinnedAt: t0, wikilinks: ["Book club"], deletedAt: t0,
+                       folder: "Home", wikilinks: ["Book club"], deletedAt: t0,
                        hasPicture: true, hasAudio: true)
 let round = try! JSONDecoder().decode(NoteTrashEntry.self, from: JSONEncoder().encode(e))
 check(round == e, "every field comes back, the lock's mark and the folder included")

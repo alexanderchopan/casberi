@@ -84,8 +84,7 @@ enum WidgetPublish {
     /// The Category widget's shelves (2026-10-04): Notes first, always, then
     /// every catalog category with something in it, in the tray's order.
     ///
-    /// Notes reads its own fetch — the room's `pinnedAt != nil || source ==
-    /// "You"` — because a note from March is still the newest note, and the
+    /// Notes reads its own fetch — the room's `source == "You"` — because a note from March is still the newest note, and the
     /// newest-600 slice of a busy corpus has long since dropped it. The
     /// categories read the slice, where their newest rows always are.
     ///
@@ -93,14 +92,14 @@ enum WidgetPublish {
     /// Screen whole: a row's title is where a transfer says how much.
     static func shelves(things: [Thing], context: ModelContext) -> [WidgetShelf] {
         var d = FetchDescriptor<Thing>(
-            predicate: #Predicate { $0.pinnedAt != nil || $0.source == "You" },
+            predicate: #Predicate { $0.source == "You" },
             sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
         d.fetchLimit = 400
         let notes = ((try? context.fetch(d)) ?? []).live
             .filter(Pinboard.inRoom)
-            .sorted { Pinboard.stamp($0) > Pinboard.stamp($1) }
+            .sorted { $0.capturedAt > $1.capturedAt }
         var out = [WidgetShelf(room: Pinboard.room, name: String(localized: "Notes"),
-                               glyph: "note.text", rows: rows(notes, stamp: Pinboard.stamp))]
+                               glyph: "note.text", rows: rows(notes, stamp: { $0.capturedAt }))]
 
         let money: Set<String> = ["Wallet", "Markets", "Testnets"]
         let hidden = BalancePrivacy.shared.hidden

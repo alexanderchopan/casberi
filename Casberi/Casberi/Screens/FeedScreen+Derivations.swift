@@ -120,8 +120,9 @@ extension FeedScreen {
         // Resolved once, not per row (prd §1079).
         let people = socialScopeMembers
         return base.filter { thing in
-            // The pinned room's membership is decided entirely by the `@Query`
-            // above (`pinnedAt != nil`), so there is no source to match against
+            // The Notes room's membership is decided entirely by the `@Query`
+            // above (`source == "You"`, not the room's name), so there is no
+            // source to match against
             // — and matching one is how this room shipped EMPTY (2026-08-10):
             // "Pinned" is not a source any thing carries, so `thing.source ==
             // source` was false for every row the query had just correctly

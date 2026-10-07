@@ -65084,3 +65084,14 @@ Settings counts the phone's calendars through EventKit (§1150), and the demo's 
 2. **1H leads: 1H · 1D · 1W · 1M.** A token's hour is GeckoTerminal's minute candles (`aggregate=1`), kept to the last 3,600 seconds because a candle exists only where a trade happened (sixty spanned five hours on DEGEN, measured), Alchemy's 5-minute prices behind it; fewer than two candles in the hour is no hour, and the chart steps back as it does for any window that fails. A stock's hour is Yahoo's day of minute candles, the last sixty kept (`StockRange.trailing`), Yahoo having no hour window. The scrub says minutes under an hour ("12m ago"). 24h stays the base.
 
 **Seen** on a private simulator over the demo: Degen's sheet with the four tiles, 1D picked, then 1H. **Not seen:** a live hour curve on screen (the demo draws one stored curve for every window); GeckoTerminal's and Yahoo's minute candles were read directly instead.
+
+## §1175 — Pin is deleted (user, 2026-10-07: "why don't we just get rid of pinning, seems superfluous", "and it just creates another list when person could go where the thing is", then "yes", "go ahead"; supersedes §632's Pin disc, §969's "Pin is how anything gets in", §983's and §985's Pinned group)
+
+**Why.** A pin made a second list for a thing that already has a place, and the tray's search and Find reach anything wherever it lives. It was also the fifth button that kept a sheet past four tiles.
+
+1. **No Pin anywhere**: not on a thing sheet (`VerbDial`'s `onPin` and `togglePin` are deleted), not in a row's long press (Notes' holds Move, Lock, Share, Delete), not in the tray's note hits.
+2. **Notes is the notes you wrote or recorded** (`Pinboard.inRoom` is `isNote`): its query, the widget's Notes shelf and the tray's note search read `source == "You"`, newest first by capture; the Pinned group is gone, and the empty room says "Write or record a note."
+3. **The model goes with the surface (§723)**: `Pinboard.toggle`, `isPinned`, `stamp`, `ShellChrome.pinPulse`, the trash entry's `pinnedAt`. The rail's Notes chip wears the Notes glyph, not a pin.
+4. **`Thing.pinnedAt` stays, unread.** CloudKit cannot drop a deployed field and removing a stored property is a breaking schema change; nothing reads or writes it. A thing pinned before this simply stays where it lives.
+
+**Seen** on a private simulator over the demo: Notes listing notes only, tiles All · Folders · Voice · New; Degen's sheet with Share alone, no Pin.

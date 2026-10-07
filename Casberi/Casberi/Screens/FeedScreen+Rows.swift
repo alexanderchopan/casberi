@@ -238,8 +238,8 @@ extension FeedScreen {
     func rowSkin(_ thing: Thing) -> DS.RowSkin? { nil }
 
     /// Rooms that hold more than one source. "All" is the one that always
-    /// does; Pinboard is selected by `pinnedAt` rather than by source, so it
-    /// mixes too. A folded category (Markets) resolves to a real seat before
+    /// does; the Notes room is selected by its own query rather than by its
+    /// name, so it stays here. A folded category (Markets) resolves to a real seat before
     /// it reaches here, so it is correctly NOT in this set.
     private var roomMixesSources: Bool {
         source == "All" || source == Pinboard.room
@@ -665,7 +665,7 @@ extension FeedScreen {
                             live: isLive(thing),
                             // The Notes room has no day dividers, so the
                             // row carries its own time (prd §969).
-                            stamp: Pinboard.isPinnedRoom(source) ? Pinboard.stamp(thing) : nil,
+                            stamp: Pinboard.isPinnedRoom(source) ? thing.capturedAt : nil,
                             // What a note of yours says (prd §983).
                             notePreview: Pinboard.isPinnedRoom(source) && Pinboard.isNote(thing),
                             imageOnly: imageOnly,
@@ -778,19 +778,6 @@ struct RowVerbMenu: View {
             } label: {
                 Label(translate.label, systemImage: translate.icon)
             }
-        }
-        Button {
-            let pinned = Pinboard.toggle(thing)
-            // Saved now, as filing is: a pin left to autosave was lost when
-            // the app closed within seconds of it.
-            modelContext.saveHonestly()
-            chrome.pinPulse += 1
-            DSHaptic.tap()
-            chrome.flash(pinned ? String(localized: "Pinned")
-                                : String(localized: "Unpinned"))
-        } label: {
-            Label(Pinboard.isPinned(thing) ? "Unpin" : "Pin",
-                  systemImage: Pinboard.isPinned(thing) ? "pin.slash" : "pin")
         }
         if !note {
             ThingShareLink(thing: thing) {

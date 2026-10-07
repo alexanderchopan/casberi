@@ -27,7 +27,7 @@ struct WalkScope: Hashable {
     /// **An absent door is honest; a door onto a row the list does not hold is
     /// not** (A.3 rule 4). False whenever the list's membership cannot be
     /// rebuilt from a source and a kind — a hero, a "that day" shelf, a search
-    /// result, the pinned room (membership is `pinnedAt != nil`, not a source),
+    /// result, the Notes room (membership is a note of yours, not its name),
     /// and any of the feed's own extra narrowings.
     let walks: Bool
 

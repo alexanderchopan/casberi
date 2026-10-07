@@ -615,8 +615,8 @@ extension FeedScreen {
     /// filter this list is actually showing.
     ///
     /// **`narrowed` is the whole safety of it.** `liveVisible` applies four
-    /// more filters that no `source ==` predicate can rebuild: the pinned
-    /// room's membership is `pinnedAt != nil` rather than a source, and the
+    /// more filters that no `source ==` predicate can rebuild: the Notes
+    /// room's membership is a note of yours rather than its name, and the
     /// wallet and person scopes narrow to a subset the room's own
     /// chip chose. In any of those the doors are ABSENT, which A.3 rule 4
     /// says plainly: an absent door is honest, a door onto a row the list does

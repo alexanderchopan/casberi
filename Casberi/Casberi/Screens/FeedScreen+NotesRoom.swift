@@ -14,7 +14,7 @@ extension FeedScreen {
     /// also doesn't separate by days").
     func notesOrder(_ rows: [Thing]) -> [Thing] {
         rows.filter { $0.isLive && Pinboard.inRoom($0) }
-            .sorted { Pinboard.stamp($0) > Pinboard.stamp($1) }
+            .sorted { $0.capturedAt > $1.capturedAt }
     }
 
     /// The Notes room's tile (prd §969), gated on the room like the two
@@ -112,20 +112,10 @@ extension FeedScreen {
                 openFolderRow(open)
             }
             if chrome.notesScope == .all {
-                // PINNED LEADS (prd §983), under its name — Apple Notes'
-                // order. Named groups, never days (§969's "no day dividers"
-                // holds). The rest stand under "Notes" whenever a Pinned
-                // group is drawn (prd §985): headerless, one pin made every
-                // row under it read as pinned. A pin lifted out as the cover
-                // draws no group, so then the list needs no name either.
-                let pinned = visible.filter { $0.isLive && Pinboard.isPinned($0) }
-                let rest = visible.filter { $0.isLive && !Pinboard.isPinned($0) }
-                let pinnedDrawn = pinned.contains { $0.id != coverID }
-                daySection(String(localized: "Pinned"), pinned, nextEventID: nextEventID,
-                           dated: false, cover: coverID)
-                daySection(pinnedDrawn ? String(localized: "Notes") : Pinboard.room, rest,
-                           nextEventID: nextEventID, dated: false,
-                           cover: coverID, headed: pinnedDrawn)
+                // One plain list, no day dividers (§969); the Pinned group
+                // that led it (§983, §985) went with Pin (§1175).
+                daySection(Pinboard.room, visible, nextEventID: nextEventID, dated: false,
+                           cover: coverID, headed: false)
             } else {
                 daySection(Pinboard.room, visible, nextEventID: nextEventID, dated: false,
                            cover: coverID, headed: false)

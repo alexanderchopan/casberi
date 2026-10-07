@@ -236,27 +236,16 @@ struct FeedScreen: View {
             d.fetchLimit = min(Self.allRoomFetchLimit, rowBudget ?? .max)
             _things = Query(d)
         } else if Pinboard.isPinnedRoom(source) {
-            // The Notes room is the one room that is not a source, so it is
-            // the one room whose rows are not selected by ONE `source`: what
-            // you pinned, from anywhere, and the notes you wrote (`source ==
-            // "You"`, narrowed to the note kind in `feedThings` — a kind
-            // cannot be predicated, and your other captures are a handful).
-            //
-            // The ORDER is the point, and it is `Pinboard.stamp`'s, applied in
-            // `feedThings`: every other room orders by when the thing
-            // HAPPENED, and this one orders by when YOU acted. A pin you made
-            // this morning on a two-year-old screenshot belongs at the top —
-            // that is what makes this a list you built rather than another
-            // slice of the same river. See `Thing.pinnedAt`. The query's own
-            // sort is only a stable pre-order for that pass.
+            // The Notes room is the one room that is not a source: the notes
+            // you wrote (`source == "You"`, narrowed to the note kind in
+            // `feedThings` — a kind cannot be predicated, and your other
+            // captures are a handful). What you pinned left it with Pin (prd
+            // §1175).
             //
             // Unbounded deliberately, unlike the All room above: this list is
             // as long as you made it by hand, so there is no corpus-scale
-            // growth to bound and a ceiling here could hide a row you pinned
-            // on purpose — the one place in the app where that would be
-            // unambiguously wrong. `rowBudget` is ignored here for the same
-            // reason: there is no corpus-scale materialisation to defer.
-            _things = Query(filter: #Predicate<Thing> { $0.pinnedAt != nil || $0.source == "You" },
+            // growth to bound. `rowBudget` is ignored for the same reason.
+            _things = Query(filter: #Predicate<Thing> { $0.source == "You" },
                             sort: \Thing.capturedAt, order: .reverse)
         } else if RoomAccounts.mergedRooms.contains(source) {
             // **A MERGED ROOM READS EVERY APP IT FOLDED IN (prd §1048, §1052).**
@@ -1717,7 +1706,7 @@ struct FeedScreen: View {
         // Same shape: one cheap SQL `COUNT` scoped to this source, per
         // foreground activation, and only on a genuine mismatch does it run
         // a real fetch and populate `sourceRoomFallbackSnapshot`. Excludes
-        // Pinboard (its `@Query` is predicated on `pinnedAt`, not `source`,
+        // the Notes room (its `@Query` is predicated on `source == "You"`, not its name,
         // so a source-scoped count would compare the wrong thing) and All
         // (already covered above).
         //

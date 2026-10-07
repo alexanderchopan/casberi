@@ -14,7 +14,8 @@ import SwiftData
 /// You's four doors (Home, Notes, Addresses, Settings) lead, then each
 /// category in the person's Dock order (§1050j) — its own disc, its two
 /// most-opened apps, "+N". No grabber and no detents. Since prd §1133 it
-/// holds EVERY way to move: Search leads it (the door to Find), You is a row
+/// holds EVERY way to move: Search (the door to Find; its own capsule beside
+/// the face on the phone since §1176), You is a row
 /// like the others, and every row shows all its apps and accounts, wrapping
 /// under its name (§1133b); the pill that picked them in the title row is
 /// deleted. Glass on the floating layer is the design
@@ -87,7 +88,7 @@ struct RoomsTray: View {
     @FocusState private var searching: Bool
     /// What the search reads beyond the tray's own names (prd §1171), read
     /// when the field is first focused, never in a body (§628): your notes
-    /// and pins, and the phone's calendars.
+    /// and the phone's calendars.
     @State private var noteCorpus: [Thing] = []
     @State private var phoneCalendars: [PhoneCalendar] = []
     @State private var dealt = false
@@ -124,6 +125,14 @@ struct RoomsTray: View {
                             ? .opacity
                             : .scale(scale: 0.06, anchor: railInset > 0 ? .topLeading : .bottomLeading)
                                 .combined(with: .opacity))
+                    // The search's own capsule beside the face (prd §1176):
+                    // out of the face's side as the card comes out of its top.
+                    if railInset == 0 {
+                        searchCapsule(screen: geo.size)
+                            .transition(reduceMotion
+                                ? .opacity
+                                : .scale(scale: 0.2, anchor: .leading).combined(with: .opacity))
+                    }
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: corner)
@@ -166,17 +175,20 @@ struct RoomsTray: View {
 
     private func panel(screen: CGSize, top safeTop: CGFloat = 0) -> some View {
         let width = min(screen.width * Self.widthShare, Self.maxWidth)
-        // Searching, the card stands at its full height, so its field stays
-        // above the keyboard however few results there are (prd §1133e).
-        // Beside the rail the card hangs from the top, under the status bar
-        // and the demo's pill (§1133f).
+        // Beside the rail the field leads the card, which then stands at its
+        // full height while searching so the field stays above the keyboard
+        // however few results there are (prd §1133e); it hangs from the top,
+        // under the status bar and the demo's pill (§1133f). On the phone the
+        // field is the capsule under the card (§1176), so the card hugs what
+        // it holds and grows up from the capsule as results arrive.
         let railTopInset = railInset > 0 ? safeTop + DSDemoMark.screenClearance + Self.railTop : 0
         let full = (screen.height - railTopInset) * Self.heightShare
-        let height = (searching || !query.isEmpty) ? full : min(contentHeight, full)
+        let standsFull = railInset > 0 && (searching || !query.isEmpty)
+        let height = standsFull ? full : min(contentHeight, full)
         let gap = Self.gap(inner: width - 2 * DS.Space.s4)
         return ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                searchField
+                if railInset > 0 { searchField }
                 if query.trimmingCharacters(in: .whitespaces).isEmpty {
                     youRow(gap: gap)
                     recentRow(gap: gap)
@@ -321,7 +333,7 @@ struct RoomsTray: View {
     /// Manage held.
     ///
     /// Notes is the second door, right after Home (prd §969): the room you
-    /// build — the notes you write and everything you pin — behind a door
+    /// build — the notes you write — behind a door
     /// that is ALWAYS drawn, because a door that appears only once something
     /// is in the room (§961's Pinned) is a door nobody can find the first
     /// time. An empty room draws its empty state (§769), not nothing.
@@ -532,14 +544,56 @@ struct RoomsTray: View {
 
     // MARK: - Search (prd §1133)
 
-    /// **ONE SEARCH, AT THE TOP OF THE TRAY (prd §1133, §1133e, user: "i
-    /// like the search tho"; "fix 1").** It filters the tray as you type, as
-    /// the App Library's does: every app, account, place and category whose
-    /// name holds the words, each saying where it lives, and last a row that
-    /// searches your THINGS for the same words in Find. It opened Find
-    /// directly until §1133e, which found everything but the apps the tray
-    /// had just grown to hold.
+    /// **ONE SEARCH (prd §1133, §1133e, user: "i like the search tho"; "fix
+    /// 1").** It filters the tray as you type, as the App Library's does:
+    /// every app, account, place and category whose name holds the words,
+    /// each saying where it lives, and last a row that searches your THINGS
+    /// for the same words in Find. It opened Find directly until §1133e,
+    /// which found everything but the apps the tray had just grown to hold.
+    ///
+    /// **Where it stands (prd §1176, user: "should the fab search be on the
+    /// bottom of the tray instead of the top so it is closer to someones
+    /// fingers?").** On the phone it is its own glass capsule beside the face,
+    /// at the face's height — iOS 26's search, a capsule at the bottom edge —
+    /// because the card's top, where it led until §1176, is the farthest
+    /// point from the corner the tray grows out of. Typing, the face is under
+    /// the keyboard (§865), so the capsule takes the card's whole width just
+    /// above it and the results read down from the card's top, as
+    /// Spotlight's do. Beside the rail the face is at the TOP, so there the
+    /// field still leads the card (`searchField`).
+    private func searchCapsule(screen: CGSize) -> some View {
+        let width = min(screen.width * Self.widthShare, Self.maxWidth)
+        let typing = chrome.keyboardUp
+        // The face's column: its centre is the rows' lead centre, and the
+        // capsule starts a step past its unfolded edge.
+        let beside = typing ? DSRoomChassis.inset
+            : DSRoomChassis.rowLeadCentre + DSDock.agentSize(minimized: false) / 2 + DS.Space.s3
+        // Typing, the unfolded seat's row, so the card above keeps its gap.
+        let height = typing ? DSDock.agentSize(minimized: false) : DSDock.agentSize(fold: chrome.fold)
+        let bottom = typing ? DSDock.agentBottomInset(minimized: false) : DSDock.agentBottomInset(fold: chrome.fold)
+        return searchControl
+            .padding(.horizontal, DS.Space.s4)
+            .frame(width: max(DSRoomChassis.inset + width - beside, 1), height: height)
+            .contentShape(Capsule())
+            .onTapGesture { searching = true }
+            .dsGlass(cornerRadius: height / 2)
+            .padding(.leading, beside)
+            .padding(.bottom, bottom)
+            .animation(liftMotion, value: typing)
+    }
+
+    /// The field beside the rail: the card's first row, on a faint plate.
     private var searchField: some View {
+        searchControl
+            .padding(.horizontal, DS.Space.s3)
+            .frame(height: Self.searchHeight)
+            .background(DS.fillFaint, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .padding(.bottom, DS.Space.s2)
+            .modifier(Dealt(on: dealt, index: 0, reduceMotion: reduceMotion))
+    }
+
+    /// The glyph, the words and Clear — one field in either place.
+    private var searchControl: some View {
         HStack(spacing: DS.Space.s2) {
             Image(systemName: "magnifyingglass")
                 .dsGlyph(.body)
@@ -565,11 +619,6 @@ struct RoomsTray: View {
                 .accessibilityLabel(Text("Clear"))
             }
         }
-        .padding(.horizontal, DS.Space.s3)
-        .frame(height: Self.searchHeight)
-        .background(DS.fillFaint, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .padding(.bottom, DS.Space.s2)
-        .modifier(Dealt(on: dealt, index: 0, reduceMotion: reduceMotion))
     }
 
     /// One thing the search can land on.
@@ -703,7 +752,7 @@ struct RoomsTray: View {
         return hits
     }
 
-    /// Your notes and pins whose name holds the words as you type them
+    /// Your notes whose name holds the words as you type them
     /// ("pack" finds Packing list), then the ones Find's engine finds by
     /// their words (`Retriever.find`, as Notes' search tray did, prd §1099).
     /// Values are read here, after the live check, so no row touches a
@@ -716,13 +765,9 @@ struct RoomsTray: View {
         return (named + found).prefix(Kind.cap).compactMap { thing in
             guard thing.isLive else { return nil }
             let id = thing.id
-            let line: String = if Pinboard.isNote(thing) {
-                NotePreview.line(title: thing.title, content: thing.content,
-                                 isVoice: thing.kind == .voice, isLocked: NoteLock.isLocked(thing))
-                    ?? thing.capturedAt.formatted(date: .abbreviated, time: .omitted)
-            } else {
-                String(localized: "Pinned · \(thing.source)")
-            }
+            let line = NotePreview.line(title: thing.title, content: thing.content,
+                                        isVoice: thing.kind == .voice, isLocked: NoteLock.isLocked(thing))
+                ?? thing.capturedAt.formatted(date: .abbreviated, time: .omitted)
             return Hit(id: "note:" + id.uuidString, kind: .notes, name: thing.title, line: line,
                        mark: .icon(thing.source, symbol: BridgeIcon.noteSymbol(for: thing))) {
                 close()
@@ -741,7 +786,7 @@ struct RoomsTray: View {
     /// phone's calendars, and the readings Settings keeps.
     private func readKinds() async {
         let you = NoteSheetSource.keptSource
-        var d = FetchDescriptor<Thing>(predicate: #Predicate<Thing> { $0.source == you || $0.pinnedAt != nil },
+        var d = FetchDescriptor<Thing>(predicate: #Predicate<Thing> { $0.source == you },
                                        sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
         d.fetchLimit = 2_000
         noteCorpus = ((try? context.fetch(d)) ?? []).filter { $0.isLive && Pinboard.inRoom($0) }

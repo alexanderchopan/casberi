@@ -107,11 +107,6 @@ struct VerbDial: View {
     var onVerb: (Verb) -> Void
     /// The Name disc — present only when there's an address to name.
     var onName: (() -> Void)?
-    /// Pin, as a disc (prd §632, user: "why not just add pin to the row of
-    /// discs that are verbs?") — the dial is the sheet's one verb surface, and
-    /// the chip row underneath made Pin look like a peer of two chips that
-    /// were not verbs at all.
-    var onPin: (() -> Void)?
 
     /// The copy disc's own beat. A copy is the one verb on this dial whose
     /// whole effect is INVISIBLE — nothing opens, nothing moves, and the
@@ -125,11 +120,10 @@ struct VerbDial: View {
     /// The share tray, raised by the Share disc.
     @State private var sharing = false
 
-    /// Six discs fit a phone at the resting size; a seventh (four verbs, Name,
-    /// Pin and Share — the wallet's fullest dial) takes the tighter cut rather
-    /// than overflowing the sheet.
+    /// Six discs fit a phone at the resting size; more takes the tighter cut
+    /// rather than overflowing the sheet. Pin is deleted (prd §1175).
     private var discCount: Int {
-        verbs.count + (onName == nil ? 0 : 1) + (onPin == nil ? 0 : 1) + 1
+        verbs.count + (onName == nil ? 0 : 1) + 1
     }
     private var tight: Bool { discCount > 6 }
 
@@ -155,13 +149,6 @@ struct VerbDial: View {
             if let onName {
                 Button(action: onName) {
                     disc(icon: "square.and.pencil", label: "Name")
-                }
-                .buttonStyle(PressSpring())
-            }
-            if let onPin {
-                let pinned = Pinboard.isPinned(thing)
-                Button(action: onPin) {
-                    disc(icon: pinned ? "pin.slash" : "pin", label: pinned ? "Unpin" : "Pin")
                 }
                 .buttonStyle(PressSpring())
             }

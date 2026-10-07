@@ -1,8 +1,10 @@
 import Foundation
 import SwiftData
 
-/// THE NOTES ROOM — the pinned list, and the notes you wrote (prd §969,
-/// 2026-09-28).
+/// THE NOTES ROOM — the notes you wrote (prd §969, 2026-09-28). It held
+/// what you pinned too until prd §1175 deleted Pin (user: "why don't we just
+/// get rid of pinning, seems superfluous … it just creates another list when
+/// a person could go where the thing is"); the name `Pinboard` is history.
 ///
 /// **Why this exists.** Every other room in the app is assembled FOR you: a
 /// source lands rows, the feed shapes them, and your only say is which room
@@ -23,14 +25,9 @@ import SwiftData
 /// different shape" — is paid by `Thing.folder`, which serves a pin and a
 /// note alike.
 ///
-/// **What it is not.** No ordering you maintain (reorder declined, §969:
-/// "this one on top" is Pin, and folders are the other hand-order), and no
-/// editor — a note is captured, never edited (§26: content is the record).
-///
-/// **Storage** is `Thing.pinnedAt` for a pin — see that property for why
-/// `Mark.saved`, which looks free, is a trap — and `source == "You"` with
-/// `kind == .note` for a note, which is exactly what a note shared in from
-/// Apple Notes already lands as (§230a), so the room reaches those too.
+/// **Storage** is `source == "You"` with `kind == .note` (or `.voice`),
+/// which is exactly what a note shared in from Apple Notes already lands as
+/// (§230a), so the room reaches those too. `Thing.pinnedAt` is unread.
 enum Pinboard {
 
     /// The door's label, and the sentinel `FeedFilter.source` takes when the
@@ -64,54 +61,23 @@ enum Pinboard {
 
     /// A note you wrote — or shared in, or dictated as text — or SPOKE (prd
     /// §971, a voice thing the note sheet recorded): your own source, the
-    /// note or voice kind. The room's second membership, beside the pin.
+    /// note or voice kind. The room's one membership since Pin went (§1175).
     static func isNote(_ thing: Thing) -> Bool {
         thing.source == "You" && (thing.kind == .note || thing.kind == .voice)
     }
 
-    /// Whether the room holds this thing: pinned, or a note of yours. The
-    /// `@Query` fetches `pinnedAt != nil || source == "You"` (a kind cannot be
-    /// predicated), and this is the half the predicate could not say.
-    static func inRoom(_ thing: Thing) -> Bool {
-        thing.pinnedAt != nil || isNote(thing)
-    }
-
-    /// The room's one order: newest first, by when YOU acted — the pin's
-    /// time for a pin, the note's capture for a note. A pin you made this
-    /// morning on a two-year-old screenshot belongs at the top; so does a
-    /// note you pinned, which is what "this one on top" means here.
-    static func stamp(_ thing: Thing) -> Date {
-        thing.pinnedAt ?? thing.capturedAt
-    }
-
-    // MARK: - The verb
-
-    static func isPinned(_ thing: Thing) -> Bool { thing.pinnedAt != nil }
+    /// Whether the room holds this thing: a note of yours. The `@Query`
+    /// fetches `source == "You"` (a kind cannot be predicated), and this is
+    /// the half the predicate could not say.
+    static func inRoom(_ thing: Thing) -> Bool { isNote(thing) }
 
     /// File a thing in a folder, or take it out with nil (prd §980). A model
-    /// write and nothing else, like `toggle`, so it is legal from the row's
-    /// menu. One folder at most: filing again MOVES it.
+    /// write and nothing else, so it is legal from the row's menu. One folder
+    /// at most: filing again MOVES it.
     @MainActor
     static func file(_ thing: Thing, in folder: String?) {
         guard thing.isLive else { return }
         thing.folder = folder
-    }
-
-    /// Pin or unpin, and report the new state so the caller can word its own
-    /// confirmation without re-reading the model.
-    ///
-    /// Writes the model and nothing else: no network, no consent, no external
-    /// side effect. That is what makes it legal from the row's context menu,
-    /// which is otherwise reads-only — the menu's rule exists to keep a
-    /// one-slip yes from reaching something irreversible, and this reaches
-    /// nothing and undoes itself with the same gesture.
-    @discardableResult
-    @MainActor
-    static func toggle(_ thing: Thing) -> Bool {
-        guard thing.isLive else { return false }
-        let nowPinned = thing.pinnedAt == nil
-        thing.pinnedAt = nowPinned ? .now : nil
-        return nowPinned
     }
 }
 
@@ -154,7 +120,7 @@ enum NotesScope: String, CaseIterable, Identifiable, Hashable, Sendable {
     /// Read by VoiceOver and the tooltip.
     var summary: String {
         switch self {
-        case .all:     return String(localized: "Your notes and everything you pinned")
+        case .all:     return String(localized: "Your notes")
         case .folders: return String(localized: "What you filed")
         case .voice:   return String(localized: "What you recorded")
         case .new:     return String(localized: "Write or record a note")

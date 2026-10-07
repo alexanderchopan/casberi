@@ -24,7 +24,6 @@ struct NoteTrashEntry: Codable, Identifiable, Equatable, Sendable {
     /// a locked note is archived SEALED, and recovers sealed.
     let sourceRef: String?
     let folder: String?
-    let pinnedAt: Date?
     let wikilinks: [String]
     let deletedAt: Date
     let hasPicture: Bool

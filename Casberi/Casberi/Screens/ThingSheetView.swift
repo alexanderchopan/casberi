@@ -503,8 +503,7 @@ struct ThingSheetView: View {
                              // wallet — it already has a name (via the Wallet
                              // screen's rename), so the Name disc would just
                              // offer to relabel it through the wrong flow.
-                             onName: MovedStage(thing) == nil ? (nameCounterpartyAction ?? nameIdentityAction) : nil,
-                             onPin: togglePin)
+                             onName: MovedStage(thing) == nil ? (nameCounterpartyAction ?? nameIdentityAction) : nil)
                         .padding(.top, DS.Space.s6)
                         .settleIn(delay: 0.12)
                     dialResult
@@ -560,7 +559,7 @@ struct ThingSheetView: View {
                             .settleIn(delay: 0.12)
                     }
                     VerbDial(thing: thing, verbs: sheetVerbs,
-                             onVerb: runVerb, onName: nil, onPin: togglePin)
+                             onVerb: runVerb, onName: nil)
                         .padding(.top, DS.Space.s6)
                         .settleIn(delay: 0.14)
                     dialResult
@@ -796,7 +795,7 @@ struct ThingSheetView: View {
                         .padding(.top, onBack == nil ? DS.Space.s4 : DS.Space.s3)
                         .settleIn(delay: 0.06)
                     VerbDial(thing: thing, verbs: sheetVerbs,
-                             onVerb: runVerb, onName: nil, onPin: togglePin)
+                             onVerb: runVerb, onName: nil)
                         .padding(.top, DS.Space.s6)
                         .settleIn(delay: 0.1)
                     dialResult
@@ -988,7 +987,7 @@ struct ThingSheetView: View {
                     // already plain grey, so the dial changes their shape,
                     // not their weight.
                     VerbDial(thing: thing, verbs: sheetVerbs,
-                             onVerb: runVerb, onName: nil, onPin: togglePin)
+                             onVerb: runVerb, onName: nil)
                         .padding(.top, DS.Space.s6)
                         .settleIn(delay: 0.2)
                     dialResult
@@ -2196,7 +2195,7 @@ struct ThingSheetView: View {
     /// The dial, under a note's head (prd §893).
     @ViewBuilder private var noteDial: some View {
         VerbDial(thing: thing, verbs: sheetVerbs,
-                 onVerb: runVerb, onName: nil, onPin: togglePin)
+                 onVerb: runVerb, onName: nil)
             .padding(.top, DS.Space.s6)
         dialResult
     }
@@ -3078,21 +3077,6 @@ struct ThingSheetView: View {
     }
 
     /// The one verb gate, both layouts: reads pass, writes confirm.
-    /// Pin is a DISC (prd §632, user: "why not just add pin to the row of
-    /// discs that are verbs?") — the dial is the sheet's one verb surface,
-    /// and a chip row under it made Pin look like a peer of two chips that
-    /// were not verbs at all.
-    private func togglePin() {
-        DSHaptic.tap()
-        let pinned = Pinboard.toggle(thing)
-        modelContext.saveHonestly()
-        chrome.pinPulse += 1
-        // The confirmation says WHERE it went (prd §969): Pin is how anything
-        // in the app gets into the Notes room.
-        verbResult = pinned ? String(localized: "Pinned to Notes") : String(localized: "Unpinned")
-        verbResultIsError = false
-    }
-
     private func runVerb(_ verb: Verb) {
         if verb.isWrite {
             confirmingVerb = verb

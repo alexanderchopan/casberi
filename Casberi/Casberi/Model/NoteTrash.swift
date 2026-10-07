@@ -45,7 +45,7 @@ final class NoteTrash {
             content: thing.content, source: thing.source,
             createdAt: thing.createdAt, capturedAt: thing.capturedAt,
             tags: thing.tags, sourceRef: thing.sourceRef, folder: thing.folder,
-            pinnedAt: thing.pinnedAt, wikilinks: thing.wikilinks,
+            wikilinks: thing.wikilinks,
             deletedAt: .now, hasPicture: picture != nil, hasAudio: audio != nil)
         do {
             try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
@@ -60,7 +60,7 @@ final class NoteTrash {
         return true
     }
 
-    /// Put a note back where it was: its words, picture, audio, folder, pin,
+    /// Put a note back where it was: its words, picture, audio, folder,
     /// tags and day, under its own id. A locked note comes back locked.
     @discardableResult
     func recover(_ entry: NoteTrashEntry, into context: ModelContext) -> Thing? {
@@ -76,7 +76,6 @@ final class NoteTrash {
                           sourceRef: entry.sourceRef)
         thing.tags = entry.tags
         thing.folder = entry.folder
-        thing.pinnedAt = entry.pinnedAt
         thing.wikilinks = entry.wikilinks
         thing.previewImageData = picture
         thing.audio = audio

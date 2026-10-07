@@ -20,7 +20,7 @@ enum FolderShareCard {
         @MainActor
         init(name: String, things: [Thing]) {
             self.name = name
-            let live = things.filter(\.isLive).sorted { Pinboard.stamp($0) > Pinboard.stamp($1) }
+            let live = things.filter(\.isLive).sorted { $0.capturedAt > $1.capturedAt }
             count = live.count
             rows = live.prefix(rowCap).map { thing in
                 ShareCard.Row(source: thing.source,

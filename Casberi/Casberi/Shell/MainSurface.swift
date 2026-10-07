@@ -2182,10 +2182,6 @@ struct MainSurface: View {
         // from connecting one and find no room to open, which is the whole
         // point of connecting it (prd §234).
         .onChange(of: liveRoomChipCount) { _, _ in refreshLiveChips() }
-        // A pin changes no corpus count, so it needs its own signal (see
-        // `ShellChrome.pinPulse`). `refreshLiveChips`, never `freezeChips`:
-        // the strip must not re-sort under the thumb that just pinned.
-        .onChange(of: chrome.pinPulse) { _, _ in refreshLiveChips() }
     }
 
     /// Which edge the incoming room slides from — set by `go(to:)` BEFORE the

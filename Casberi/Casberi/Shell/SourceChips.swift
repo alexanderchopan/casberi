@@ -960,8 +960,8 @@ struct SourceChips: View {
                     // face), and the pick is the one shape everywhere now.
                     categoryTile(label)
                 case Pinboard.room:
-                    // The pinned room (2026-08-10) — see `PinnedChipMark`.
-                    PinnedChipMark(size: iconSize)
+                    // The Notes room — see `NotesChipMark`.
+                    NotesChipMark(size: iconSize)
                 default:
                     // A category chip is a WORD, not a mark (prd §351,
                     // 2026-08-11, overturning the icon-only ruling of
@@ -1273,11 +1273,12 @@ private struct ChipScrollEase: ViewModifier {
 ///
 /// Drawn in the tint, unlike "All"'s ink: this is the one room whose contents
 /// you chose, and the tint is what the app uses everywhere else to mean yours.
-private struct PinnedChipMark: View {
+private struct NotesChipMark: View {
     let size: CGFloat
 
     var body: some View {
-        Image(systemName: "pin.fill")
+        // The Notes tile's own glyph; a pin until Pin went (prd §1175).
+        Image(systemName: ScopeTileGlyph.notes)
             // Fixed against the circle, not the text size: the neighbouring
             // chips are app icons that don't scale at all, so a glyph that grew
             // would break the strip's rhythm — the same reason "All" stops at
