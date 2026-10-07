@@ -608,13 +608,24 @@ struct ThingSheetView: View {
                         .padding(.top, onBack == nil ? DS.Space.s4 : DS.Space.s3)
                         .settleIn(delay: 0.04)
                     }
-                    PurchaseStageView(thing: thing, reading: purchaseReading,
-                                      recurrence: purchaseRecurrence,
-                                      headDrawn: purchaseReading.archetype != .watch)
-                        .padding(.horizontal, purchaseReading.archetype != .watch
-                                 ? DSRoomChassis.leadInset : DS.Space.s4)
-                        .padding(.top, purchaseReading.archetype != .watch ? DS.Space.s6 : DS.Space.s3)
-                        .settleIn(delay: 0.06)
+                    if purchaseReading.archetype != .watch {
+                        // The room's frame (prd §1179): the receipt in the box.
+                        PurchaseStageView(thing: thing, reading: purchaseReading,
+                                          recurrence: purchaseRecurrence, headDrawn: true)
+                            .dsRoomBox()
+                            .padding(.top, DS.Space.s4)
+                            .settleIn(delay: 0.06)
+                    VerbDial(thing: thing, verbs: sheetVerbs, onVerb: runVerb, onName: nil)
+                        .padding(.top, DSRoomChassis.leadGap)
+                        .settleIn(delay: 0.08)
+                    dialResult
+                    } else {
+                        PurchaseStageView(thing: thing, reading: purchaseReading,
+                                          recurrence: purchaseRecurrence, headDrawn: false)
+                            .padding(.horizontal, DS.Space.s4)
+                            .padding(.top, DS.Space.s3)
+                            .settleIn(delay: 0.06)
+                    }
                 } else if let workReading {
                     // The Work receipt (2026-08-12) — the §302 ledger's
                     // grammar one category over. It REPLACES the title block
@@ -630,13 +641,18 @@ struct ThingSheetView: View {
                     }
                     .padding(.top, onBack == nil ? DS.Space.s4 : DS.Space.s3)
                     .settleIn(delay: 0.04)
+                    // The room's frame (prd §1179): the status in the box.
                     WorkStageView(thing: thing, reading: workReading,
                                   detail: WorkStage.statusDetail(
                                     workRow, clause: workReading.statusWord),
                                   projectInHead: true)
-                        .padding(.horizontal, DSRoomChassis.leadInset)
-                        .padding(.top, DS.Space.s6)
+                        .dsRoomBox()
+                        .padding(.top, DS.Space.s4)
                         .settleIn(delay: 0.06)
+                    VerbDial(thing: thing, verbs: sheetVerbs, onVerb: runVerb, onName: nil)
+                        .padding(.top, DSRoomChassis.leadGap)
+                        .settleIn(delay: 0.08)
+                    dialResult
                 } else if let agentGrant {
                     // A PERMISSION, not a bookmark (prd §367). The title slot
                     // held "personal · openai/* · read, list" — three facts
@@ -753,17 +769,31 @@ struct ThingSheetView: View {
                     }
                     .padding(.top, onBack == nil ? DS.Space.s4 : DS.Space.s3)
                     .settleIn(delay: 0.04)
-                    titleBlock
-                        .padding(.horizontal, DSRoomChassis.leadInset)
-                        .padding(.top, DS.Space.s6)
-                        .settleIn(delay: 0.06)
+                    // THE ROOM'S FRAME (prd §1179): the title and the clock in
+                    // the room's box, the tiles under it, the facts after.
+                    VStack(alignment: .leading, spacing: DS.Space.s4) {
+                        titleBlock
+                        if let start = momentStart {
+                            MomentSheetBlock(start: start, end: thing.endAt,
+                                             overdue: thing.kind == .reminder && start < .now,
+                                             isReminder: thing.kind == .reminder,
+                                             facts: thing.factList, part: .box)
+                        }
+                    }
+                    .dsRoomBox()
+                    .padding(.top, DS.Space.s4)
+                    .settleIn(delay: 0.06)
+                    VerbDial(thing: thing, verbs: sheetVerbs, onVerb: runVerb, onName: nil)
+                        .padding(.top, DSRoomChassis.leadGap)
+                        .settleIn(delay: 0.08)
+                    dialResult
                     if let start = momentStart {
-                        MomentSheetBlock(start: start, end: thing.endAt,
-                                         overdue: thing.kind == .reminder && start < .now,
-                                         isReminder: thing.kind == .reminder,
-                                         facts: thing.factList)
-                            .padding(.top, DS.Space.s4)
-                            .settleIn(delay: 0.08)
+                        let rows = MomentSheetBlock(start: start, end: thing.endAt,
+                                                    isReminder: thing.kind == .reminder,
+                                                    facts: thing.factList, part: .rows)
+                        if rows.hasRows {
+                            rows.padding(.top, DSRoomChassis.leadGap)
+                        }
                     }
                 } else if postHead {
                     // Who, then what they were answering, then the words — the
@@ -971,7 +1001,9 @@ struct ThingSheetView: View {
                     .padding(.horizontal, DS.Space.s4)
                     .padding(.top, DS.Space.s3)
                 }
-                if moneyReceipt == nil && !framedShot && !articleHead && noteShape == nil && !talkHead {
+                if moneyReceipt == nil && !framedShot && !articleHead && noteShape == nil && !talkHead
+                    && !momentHead && workReading == nil
+                    && (purchaseReading == nil || purchaseReading?.archetype == .watch) {
                     // The disc dial, standardized across every sheet
                     // (2026-07-23) — it was B1-only (the wallet stage, the
                     // framed screenshot) and everything else kept the older

@@ -222,7 +222,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1310 of 1374 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1311 of 1375 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1533,6 +1533,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1176 — The tray's search is its own capsule beside the face (amended by §1177)
 - §1177 — A room's bar is as wide as its tiles, and the tray's search takes its slot
 - §1178 — A thing sheet's acts are the rooms' tiles
+- §1179 — A thing sheet stands in the room's frame: the box, the tiles, the rest
 - §1180 — Settings' box and Markets' box are one box: the words stand at one edge on one baseline
 
 ## Dead rulings → what replaced them (generated)

@@ -72,6 +72,13 @@ struct MomentSheetBlock: View {
     var overdue = false
     var isReminder = false
     var facts: [ThingFact] = []
+    /// Which half draws (prd §1179): the clock in a sheet's card, the fact
+    /// rows under its tiles, or both where no card stands.
+    enum Part { case whole, box, rows }
+    var part: Part = .whole
+
+    /// Inside the card the well gives the inset; outside, the lead's column.
+    private var inset: CGFloat { part == .box ? 0 : DSRoomChassis.leadInset }
 
     private var metrics: [ThingFact] { facts.filter { $0.action == .metric } }
     private var rows: [ThingFact] {
@@ -105,6 +112,20 @@ struct MomentSheetBlock: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
+            if part != .rows { clock }
+            if part != .box, !rows.isEmpty {
+                FactRows(facts: rows)
+                    .padding(.horizontal, DS.Space.s4)
+                    .padding(.top, part == .rows ? 0 : DS.Space.s4)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// Whether the rows half has anything to draw.
+    var hasRows: Bool { !rows.isEmpty }
+
+    @ViewBuilder private var clock: some View {
             if !metrics.isEmpty {
                 // A run is its distance first (prd §365), the clock beneath.
                 HStack(alignment: .top, spacing: DS.Space.s6) {
@@ -119,34 +140,27 @@ struct MomentSheetBlock: View {
                         }
                     }
                 }
-                .padding(.horizontal, DSRoomChassis.leadInset)
+                .padding(.horizontal, inset)
                 Text(clockLine)
                     .dsText(.body17).foregroundStyle(DS.textSecondary)
-                    .padding(.horizontal, DSRoomChassis.leadInset)
+                    .padding(.horizontal, inset)
                     .padding(.top, DS.Space.s3)
             } else if isReminder {
                 Text(dueLine)
                     .dsText(.heading24)
                     .foregroundStyle(overdue ? DS.destructiveInk : DS.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
-                    .padding(.horizontal, DSRoomChassis.leadInset)
+                    .padding(.horizontal, inset)
             } else {
                 Text(clockLine)
                     .dsText(.heading40).foregroundStyle(DS.textPrimary)
                     .monospacedDigit().lineLimit(1).minimumScaleFactor(0.6)
-                    .padding(.horizontal, DSRoomChassis.leadInset)
+                    .padding(.horizontal, inset)
                 Text(relativeLine)
                     .dsText(.body17).foregroundStyle(DS.textSecondary)
-                    .padding(.horizontal, DSRoomChassis.leadInset)
+                    .padding(.horizontal, inset)
                     .padding(.top, DS.Space.s1)
             }
-            if !rows.isEmpty {
-                FactRows(facts: rows)
-                    .padding(.horizontal, DS.Space.s4)
-                    .padding(.top, DS.Space.s4)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     /// "Overdue since yesterday, 12:00" / "Due tomorrow, 11:00".

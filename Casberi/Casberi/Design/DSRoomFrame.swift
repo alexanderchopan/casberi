@@ -39,6 +39,19 @@ extension View {
             .listRowSeparator(.hidden)
     }
 
+    /// THE ROOM'S BOX OUTSIDE A LIST (prd §1179): a thing sheet's card at a
+    /// room's one size — `leadBox` inside the head's well, in the rows'
+    /// column — so a sheet's card and a room's box are the same box, never a
+    /// second one drawn to match. What does not fit is clipped: the box never
+    /// grows (§760), the rest of the sheet carries the overflow.
+    func dsRoomBox() -> some View {
+        frame(maxWidth: .infinity, minHeight: DSRoomChassis.leadBox,
+              maxHeight: DSRoomChassis.leadBox, alignment: .topLeading)
+            .clipped()
+            .dsRoomHeadBlock()
+            .padding(.horizontal, DSRoomChassis.inset)
+    }
+
     /// The tiles' row, straight under the box.
     func dsRoomTilesListRow() -> some View {
         listRowInsets(.init(top: 0, leading: DSRoomChassis.inset,

@@ -1,0 +1,162 @@
+<!doctype html>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Thing sheet template</title>
+<style>
+:root{--ground:#0b0b0f;--ink:#eeecf3;--ink2:#a29ead;--page:#000;--box:#1c1c1e;--tile:#1c1c1e;--sel:#1e6fe6;--text:#fff;--text2:#ebebf599;--text3:#ebebf566;
+  --pink:#ff2d87;--confirm:#30d158;--attention:#ff9f0a;--danger:#ff453a;--rounded:ui-rounded,"SF Pro Rounded",-apple-system,sans-serif}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;-webkit-font-smoothing:antialiased;padding:32px 16px 64px}
+header,section,.verdict{max-width:1240px;margin:0 auto}
+h1{font:700 28px/34px var(--rounded)}
+h2{font:700 22px/28px var(--rounded);margin-top:48px}
+p.desc{font-size:15px;line-height:22px;color:var(--ink2);max-width:860px;margin-top:6px}
+.stage{display:flex;gap:28px;flex-wrap:wrap;margin-top:20px;align-items:flex-start}
+figure{width:393px;max-width:100%}
+figcaption{font-size:13px;line-height:19px;color:var(--ink2);margin:12px 6px 0}
+figcaption b{color:var(--ink)}
+.tag{display:inline-block;font:600 12px var(--rounded);color:var(--ink2);background:#ffffff14;border-radius:99px;padding:3px 9px;margin-bottom:8px}
+.tag.new{color:#fff;background:var(--pink)}
+
+/* a sheet over a dimmed room */
+.phone{background:#0e0e10;border-radius:48px;height:852px;overflow:hidden;position:relative;outline:1px solid #ffffff14;box-shadow:0 24px 70px #0008}
+.sheet{position:absolute;inset:44px 0 0;background:var(--page);color:var(--text);border-radius:38px 38px 0 0;padding:20px 16px 0;overflow:hidden}
+.grab{width:36px;height:5px;border-radius:3px;background:#ffffff40;margin:-12px auto 14px}
+.head{display:flex;align-items:center;gap:10px;height:44px;margin-bottom:12px}
+.mark{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;font:700 13px var(--rounded);color:#fff;flex:none}
+.mark.c{border-radius:50%}
+.head .n{font:700 20px/24px var(--rounded);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.head .t{font-size:13px;color:var(--pink)}
+
+/* the room's box and tiles, as in every room */
+.box{background:var(--box);border-radius:26px;height:236px;padding:16px;position:relative;overflow:hidden}
+.tiles{display:grid;gap:8px;margin-top:15px}
+.t4{grid-template-columns:repeat(4,1fr)} .t3{grid-template-columns:repeat(3,1fr)}
+.tile{height:52px;border-radius:16px;background:var(--tile);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:10px;font-weight:600;position:relative}
+.tile .g{font-size:19px;line-height:20px}
+.tile.verb{color:#4d9bff}
+.menu{position:absolute;right:0;bottom:58px;width:210px;background:#2c2c2ef2;border-radius:14px;padding:6px 0;box-shadow:0 12px 40px #000a;z-index:2;text-align:left}
+.menu div{display:flex;justify-content:space-between;padding:10px 14px;font-size:15px;font-weight:400;color:#fff}
+.menu div+div{border-top:.5px solid #ffffff1a}
+
+/* the body under the tiles */
+.facts{margin-top:18px}
+.fact{display:flex;justify-content:space-between;align-items:baseline;min-height:40px;font-size:16px}
+.fact span:last-child{color:var(--text2)}
+.prose{font-size:16px;line-height:23px;color:var(--text2);margin-top:14px}
+
+/* the box's contents */
+.amt{font:700 44px/50px var(--rounded);font-variant-numeric:tabular-nums}
+.amt.in{color:var(--confirm)}
+.parties{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--text2)}
+.face{width:26px;height:26px;border-radius:50%;flex:none}
+.teeth{position:absolute;left:0;right:0;bottom:0;height:10px;background:radial-gradient(circle at 6px -2px,transparent 6px,var(--box) 6.5px) repeat-x;background-size:12px 10px;transform:scaleY(-1)}
+.when .day{font:700 15px var(--rounded);color:var(--pink)}
+.when .big{font:700 40px/46px var(--rounded)}
+.when .range{font-size:17px;color:var(--text2);margin-top:2px}
+.strip{display:flex;gap:3px;margin-top:18px}
+.strip i{flex:1;height:30px;border-radius:5px;background:#ffffff10}
+.strip i.on{background:var(--sel)}
+.status{font:700 38px/44px var(--rounded);color:var(--danger)}
+.art{position:absolute;inset:0;background:linear-gradient(135deg,#ff6a3d,#c2185b 55%,#311b92)}
+.art .cap{position:absolute;left:16px;bottom:14px;right:16px;font:700 22px/26px var(--rounded);color:#fff;text-shadow:0 2px 12px #0008}
+.art .cap small{display:block;font:500 14px/18px -apple-system;opacity:.85}
+
+/* today's dial, for the before frames */
+.dial{display:flex;justify-content:center;gap:14px;margin-top:16px}
+.disc{display:flex;flex-direction:column;align-items:center;gap:5px;font-size:11px;color:var(--text2)}
+.disc i{width:46px;height:46px;border-radius:50%;background:#1c1c1e;display:grid;place-items:center;font-style:normal;font-size:18px;color:#fff}
+.oldhead{font:700 26px/31px var(--rounded);margin:6px 0 10px}
+
+.anno{position:absolute;right:-2px;font:600 11px var(--rounded);color:var(--pink);background:#ff2d8722;border-radius:6px;padding:2px 6px}
+
+.verdict{margin-top:40px;font-size:15px;line-height:23px;color:var(--ink2)}
+.verdict b{color:var(--ink)}
+.verdict li{margin:6px 0 0 20px}
+</style>
+
+<header>
+  <h1>Thing sheets as rooms: one card, four tiles</h1>
+  <p class="desc">Every sheet in the easy group gets the same frame a room has: a head row, the room's box at its fixed size (236pt), the tiles 15pt under it (52pt each, the same corner and fill as You's row), then the facts and body. The dial of round buttons becomes the tiles. Demo data; the glyphs stand in for the real SF Symbols the dial already uses.</p>
+</header>
+
+<section>
+<h2>1 · The template</h2>
+<div class="stage">
+  <figure><span class="tag new">Template</span><div class="phone"><div class="sheet" id="tpl"></div></div>
+    <figcaption><b>Head, box, tiles, then everything else.</b> The box never changes size, so the tiles stand at the same height on every sheet, as they do in every room. What doesn't fit the box (facts, the article, replies) goes below the tiles, and the sheet scrolls.</figcaption></figure>
+  <figure><span class="tag new">Five buttons</span><div class="phone"><div class="sheet" id="five"></div></div>
+    <figcaption><b>Four tiles at most.</b> A sheet's actions come first (at most three today), then Pin, then Share. When that adds up to five, Pin moves into Share's menu, so Share is always the last tile and nothing is lost. With three or fewer, the tiles split the row three ways.</figcaption></figure>
+</div>
+</section>
+
+<section>
+<h2>2 · The easy group, before and after</h2>
+<div class="stage">
+  <figure><span class="tag">Today</span><div class="phone"><div class="sheet" id="m0"></div></div>
+    <figcaption><b>Money receipt today.</b> The receipt card, then five round buttons.</figcaption></figure>
+  <figure><span class="tag new">Proposed</span><div class="phone"><div class="sheet" id="m1"></div></div>
+    <figcaption><b>The receipt is the box.</b> Basescan · Copy · Name · Share; Pin is in Share's menu. The facts follow.</figcaption></figure>
+</div>
+<div class="stage">
+  <figure><span class="tag new">Event</span><div class="phone"><div class="sheet" id="e1"></div></div>
+    <figcaption><b>The day and the time are the box</b>, with the day's strip showing where it falls. Join · Calendar · Pin · Share.</figcaption></figure>
+  <figure><span class="tag new">Work status</span><div class="phone"><div class="sheet" id="w1"></div></div>
+    <figcaption><b>The status word is the box</b> (Vercel, npm, Sentry, GitHub and the rest of Work's 13). Vercel · Copy link · Pin · Share.</figcaption></figure>
+  <figure><span class="tag new">Media</span><div class="phone"><div class="sheet" id="a1"></div></div>
+    <figcaption><b>The artwork fills the box</b>, cropped to it (Spotify, Apple Music, Podcasts, YouTube, Twitch). Three actions, so three tiles: Spotify · Pin · Share.</figcaption></figure>
+</div>
+</section>
+
+<div class="verdict">
+  <b>What this asks you to decide</b>
+  <ul>
+    <li><b>Tile ink.</b> Shown white, like You's places. Rooms draw a verb tile (Notes' New) in blue; on a sheet every tile is a verb, so a row of four blue tiles is the alternative.</li>
+    <li><b>Pin into Share's menu</b> when there are five. The other choice is dropping Name or Copy from money receipts, the only sheet that reaches five today besides World App transfers.</li>
+    <li><b>Three tiles split three ways</b>, not four with a gap. Rooms already do this when a place has fewer tiles.</li>
+    <li><b>The rest of the easy group</b> follows the same three shapes: purchase receipt, picture (cropped to the box, tap for whole), social person, Privy app, L2BEAT and Walletbeat reports, agent grant.</li>
+    <li><b>Not in this pass:</b> chart, article, post and mail (a statement card), and the prose sheets (notes, conversations).</li>
+  </ul>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const head=(mk,bg,name,time,circ)=>`<div class="grab"></div><div class="head"><div class="mark ${circ?'c':''}" style="background:${bg}">${mk}</div><div class="n">${name}</div><div class="t">${time}</div></div>`;
+const tiles=(list,menu)=>`<div class="tiles ${list.length===3?'t3':'t4'}">${list.map(([g,l],i)=>`<div class="tile">${menu&&i===list.length-1?menu:''}<span class="g">${g}</span>${l}</div>`).join('')}</div>`;
+const facts=rows=>`<div class="facts">${rows.map(([a,b])=>`<div class="fact"><span>${a}</span><span>${b}</span></div>`).join('')}</div>`;
+
+const receiptBox=`<div class="box"><div class="parties"><div class="face" style="background:#7b3fe4"></div>maya.eth <span style="opacity:.5">→</span> <div class="face" style="background:#0052ff"></div>Main</div>
+  <div style="margin-top:28px;font-size:14px;color:var(--text2)">Received</div><div class="amt in">+1,240 USDC</div>
+  <div style="font-size:14px;color:var(--text2);margin-top:4px">$1,240.00 · Base</div><div class="teeth"></div></div>`;
+const share=['⇪','Share'];
+
+$('tpl').innerHTML=head('▣','#2a2a2d','The thing\'s name','Today 9:41')+
+  `<div class="box" style="display:grid;place-items:center;color:var(--text3);font:600 15px var(--rounded)">The card · 236pt, every sheet<span class="anno" style="top:8px">box</span></div>`+
+  `<div style="position:relative">${tiles([['◇','Action'],['◇','Action'],['⌖','Pin'],share])}<span class="anno" style="top:-6px">tiles · 52pt</span></div>`+
+  facts([['Fact','Value'],['Fact','Value'],['Fact','Value']])+`<div class="prose">Then the body: words, a transcript, replies, a list. It scrolls under the tiles; the box and tiles never move.</div>`;
+
+const menu=`<div class="menu"><div>Share… <span>⇪</span></div><div>Pin <span>⌖</span></div></div>`;
+$('five').innerHTML=head('W','#0052ff','Received from maya.eth','2h',true)+receiptBox+
+  tiles([['↗','Basescan'],['⧉','Copy'],['✎','Name'],share],menu)+facts([['Network','Base'],['Fee','$0.01']]);
+
+$('m0').innerHTML=head('W','#0052ff','Received from maya.eth','2h',true)+receiptBox+
+  `<div class="dial">${[['↗','Basescan'],['⧉','Copy'],['✎','Name'],['⌖','Pin'],['⇪','Share']].map(([g,l])=>`<div class="disc"><i>${g}</i>${l}</div>`).join('')}</div>`+
+  facts([['Network','Base'],['Fee','$0.01'],['Block','21,904,112']]);
+$('m1').innerHTML=head('W','#0052ff','Received from maya.eth','2h',true)+receiptBox+
+  tiles([['↗','Basescan'],['⧉','Copy'],['✎','Name'],share])+facts([['Network','Base'],['Fee','$0.01'],['Block','21,904,112']]);
+
+$('e1').innerHTML=head('▦','#ff3b30','Design review','Today')+
+  `<div class="box when"><div class="day">Thursday, Oct 8</div><div class="big">2:00 – 3:00 PM</div><div class="range">Studio, 2nd floor · 1 hr</div>
+   <div class="strip">${Array.from({length:12},(_,i)=>`<i class="${i===5?'on':''}"></i>`).join('')}</div>
+   <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-top:4px"><span>9</span><span>12</span><span>3</span><span>6</span></div></div>`+
+  tiles([['▶︎','Join'],['▦','Calendar'],['⌖','Pin'],share])+facts([['Calendar','Work'],['With','Sam, Mira'],['Where','Studio, 2nd floor']]);
+
+$('w1').innerHTML=head('▲','#000','Production deploy','14m')+
+  `<div class="box"><div style="font-size:14px;color:var(--text2)">casberi-web · main</div><div class="status" style="margin-top:26px">Failed</div>
+   <div style="font-size:16px;color:var(--text2);margin-top:6px">Build exited with 1 · 2m 14s</div>
+   <div style="font-size:14px;color:var(--text3);position:absolute;left:16px;bottom:16px">Commit 4f1c9a2 · "tray search finds apps"</div></div>`+
+  tiles([['↗','Vercel'],['⧉','Copy link'],['⌖','Pin'],share])+facts([['Project','casberi-web'],['Branch','main'],['Started','2:01 PM']]);
+
+$('a1').innerHTML=head('♪','#1db954','Spotify','Yesterday',true)+
+  `<div class="box"><div class="art"><div class="cap">Night Drive<small>Kestrel · Low Tide</small></div></div></div>`+
+  tiles([['↗','Spotify'],['⌖','Pin'],share])+facts([['Played','Yesterday, 11:40 PM'],['Album','Low Tide'],['Length','3:52']]);
+</script>

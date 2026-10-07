@@ -65134,3 +65134,12 @@ Settings counts the phone's calendars through EventKit (§1150), and the demo's 
 3. **A count past 99 still widens Settings' column**, so with three-digit counts its words sit a figure's width right of Markets'. Kept, because a clipped count is a wrong count (§83).
 
 **Seen** on the simulator over the demo: the word columns' left edges at x 281/283 and 775/775 (3× pixels, the 2px is the letters' own shapes), the rows' tops at 725/726.
+
+## §1179 — A thing sheet stands in the room's frame: the box, the tiles, the rest (user, 2026-10-07: "why don't we make all thing sheets have this same template, the card and the four buttons below it", "basically make thing sheets look like our rooms do", "ok mock 1 and 2", "same card size too so we are never hand rolling", "go ahead"; mockup `design/mockups/thing-sheet-template.html`)
+
+1. **The card is the room's box** (`View.dsRoomBox()`, `Design/DSRoomFrame.swift`): `leadBox` inside the head's well, in the rows' column, clipped, never grown (§760) — one box with the rooms', never one drawn to match.
+2. **The order is a room's**: the sheet's head, the box, the tiles `leadGap` under it (§1178), then everything the box does not hold.
+3. **Three sheets stand in it now**: an event or reminder (the title and the clock in the box, `MomentSheetBlock(part: .box)`, its fact rows under the tiles, `part: .rows`), a work status (`WorkStageView`), and a purchase receipt (`PurchaseStageView`; a watched product keeps its own art and the dial at the foot).
+4. **Not yet, each a card of its own to design**: the money receipt (its own head, finality and history), media (316pt art), a picture (its aspect), a social person (the post list under the face), Privy, L2BEAT and Walletbeat (full reports), an agent grant; then the statement card for chart, article, post and mail.
+
+**Seen** on a private simulator over the demo: Design review (title and clock in the box, Calendar · Share, Where under them), QM-408 from Linear (status in the box, Mark done · Share), Bitrefill's €100 refill (the amount and Bitcoin in the box, Bitrefill · Share). **Not seen:** a reminder, a workout's metrics in the box, the Mac.
