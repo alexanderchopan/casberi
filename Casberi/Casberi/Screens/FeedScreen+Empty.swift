@@ -328,7 +328,7 @@ extension FeedScreen {
                     : String(localized: "\(DS.secondaryGesture) anything in All to move it here.")
             case .voice:
                 return String(localized: "Nothing recorded yet. Hold New to record.")
-            case .all, .new, .search:
+            case .all, .new:
                 // `DS.secondaryGesture`, not a literal (prd §607): pinning
                 // lives in a `contextMenu`, a right-click under a pointer.
                 return String(localized: "Write or record a note, or \(DS.secondaryGesture) anything to pin it here.")

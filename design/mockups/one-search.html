@@ -1,0 +1,135 @@
+<!doctype html>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>One search</title>
+<style>
+:root{--ground:#0b0b0f;--ink:#eeecf3;--ink2:#a29ead;--page:#000;--box:#1c1c1e;--raised:#2a2a2d;--sel:#1e6fe6;--text:#fff;--text2:#ebebf599;--text3:#ebebf566;
+  --pink:#ff2d87;--confirm:#30d158;--rounded:ui-rounded,"SF Pro Rounded",-apple-system,sans-serif}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;-webkit-font-smoothing:antialiased;padding:32px 16px 64px}
+header,section,.verdict{max-width:1240px;margin:0 auto}
+h1{font:700 28px/34px var(--rounded)}
+h2{font:700 22px/28px var(--rounded);margin-top:48px}
+p.desc{font-size:15px;line-height:22px;color:var(--ink2);max-width:860px;margin-top:6px}
+.stage{display:flex;gap:28px;flex-wrap:wrap;margin-top:20px;align-items:flex-start}
+figure{width:393px;max-width:100%}
+figcaption{font-size:13px;line-height:19px;color:var(--ink2);margin:12px 6px 0}
+figcaption b{color:var(--ink)}
+.tag{display:inline-block;font:600 12px var(--rounded);color:var(--ink2);background:#ffffff14;border-radius:99px;padding:3px 9px;margin-bottom:8px}
+.tag.new{color:#fff;background:var(--pink)}
+
+/* the phone, with the tray up over a dimmed room */
+.phone{background:var(--page);color:var(--text);border-radius:48px;height:852px;overflow:hidden;position:relative;outline:1px solid #ffffff14;box-shadow:0 24px 70px #0008}
+.room{padding:62px 16px 0;opacity:.35;filter:blur(2px)}
+.title{font:700 34px/41px var(--rounded);margin-bottom:12px;white-space:nowrap}
+.title .p{color:var(--pink)} .title .dot{color:var(--text3);font-weight:400}
+.box{background:var(--box);border-radius:26px;height:236px}
+.tray{position:absolute;left:10px;right:10px;top:56px;bottom:300px;border-radius:32px;background:#1f1f22f2;backdrop-filter:blur(24px);outline:1px solid #ffffff14;padding:14px 16px;overflow:hidden}
+.field{display:flex;align-items:center;gap:8px;height:40px;border-radius:12px;background:#ffffff1a;padding:0 12px;font-size:17px;margin-bottom:6px}
+.field .g{color:var(--text2)} .field .q{flex:1} .field .x{color:var(--text3)}
+.caret{display:inline-block;width:2px;height:20px;background:var(--sel);vertical-align:-4px;margin-left:1px}
+.sec{font-size:12px;line-height:16px;color:var(--text2);margin:12px 0 0}
+.row{display:flex;align-items:center;gap:12px;min-height:52px}
+.ic{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;font:700 15px var(--rounded);color:#fff;flex:none;background:var(--raised)}
+.ic.sq{border-radius:10px}
+.ic.g{color:var(--text)} .ic.pink{color:var(--pink)}
+.b{flex:1;min-width:0}
+.n{font-size:17px;line-height:22px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.n mark{background:none;color:inherit;font-weight:600}
+.s{font-size:13px;line-height:18px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fade{position:absolute;left:0;right:0;bottom:0;height:40px;background:linear-gradient(transparent,#1f1f22)}
+.kbd{position:absolute;left:0;right:0;bottom:0;height:292px;background:#2b2b2e;display:grid;place-items:center;color:var(--text3);font-size:13px}
+
+/* the bottom band, before and after */
+.bars{display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:20px 28px;margin-top:20px}
+.bar{background:var(--page);border-radius:28px;padding:18px 16px;outline:1px solid #ffffff14}
+.bar .who{font:700 17px var(--rounded);margin-bottom:12px}
+.bar .lbl{font-size:12px;color:var(--ink2);margin:10px 0 6px}
+.band{display:flex;align-items:center;gap:10px;height:58px}
+.face{width:56px;height:56px;border-radius:50%;background:var(--raised);display:grid;place-items:center;font-size:28px;flex:none}
+.cap{height:56px;border-radius:28px;background:#2c2c2ecc;display:flex;align-items:center;gap:2px;padding:0 6px;outline:1px solid #ffffff12;margin-left:auto}
+.cap i{font-style:normal;font-size:12px;font-weight:600;width:56px;height:46px;border-radius:23px;color:var(--text2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px}
+.cap i b{font-size:17px;line-height:19px;font-weight:500;color:var(--text)}
+.cap i.on{background:var(--sel);color:#fff}
+.cap i.gone{opacity:.35;text-decoration:line-through}
+.cap i.add{color:#fff}
+.none{font-size:13px;color:var(--text3);margin-left:auto}
+
+.verdict{margin-top:40px;font-size:15px;line-height:23px;color:var(--ink2)}
+.verdict b{color:var(--ink)}
+.verdict li{margin:6px 0 0 20px}
+</style>
+
+<header>
+  <h1>One search: the tray finds everything you have</h1>
+  <p class="desc">The face's tray is the only search. It finds everything you've kept by name: apps, accounts, people, feeds, calendars, mail lists, subscriptions, notes and watched companies. Results come in sections, starting with the place you opened it from, and the last row hands the words to Find. A place's capsule keeps only its filters and its Add. Demo data. The glyphs stand in for the real SF Symbols.</p>
+</header>
+
+<section>
+<h2>1 · The tray, searching</h2>
+<div class="stage">
+  <figure><span class="tag">Today</span><div class="phone" id="t0"></div>
+    <figcaption><b>Opened from Notes, "trip".</b> Today the tray finds names only: apps, places, categories and people. No note, feed or mail list matches, so the only useful row is the last one, into Find, where notes are mixed in with everything else.</figcaption></figure>
+  <figure><span class="tag new">Proposed</span><div class="phone" id="t1"></div>
+    <figcaption><b>Same search.</b> Notes comes first because you opened the tray from Notes, matched by title or words, with the next line under each. Then the other kinds, each only if it has a match (here Apps), in the tiles' A–Z order. Find stays last.</figcaption></figure>
+  <figure><span class="tag new">Proposed</span><div class="phone" id="t2"></div>
+    <figcaption><b>Opened from Settings, "nyt".</b> Settings' kinds come first, each under its own name, and a row opens the page that Settings would open. It's the same list Settings' Search draws today (<code>SettingsHome.searchEverything</code>), moved into the tray.</figcaption></figure>
+</div>
+</section>
+
+<section>
+<h2>2 · The capsules, without Search</h2>
+<div class="bars" id="bars"></div>
+</section>
+
+<div class="verdict">
+  <b>The rule, and what it changes</b>
+  <ul>
+    <li><b>The tray searches what you have, and a capsule only adds.</b> Finding something you haven't added yet (a company, an app from the catalogue) stays in that place's Add, because the tray can't hold the whole world.</li>
+    <li><b>Settings' bar is deleted.</b> It held Search alone (<code>SettingsScope.bar</code>), so with Search gone the face stands alone. The box's counts are still its filter (§1138).</li>
+    <li><b>Notes</b> becomes All · Folders · Voice · New. <code>NotesSearchSheet</code> is deleted, and the tray takes its matching on titles and words.</li>
+    <li><b>Markets</b>: Search becomes Add (<code>plus</code>, the New tile's glyph), opening the same company search. Not Watch, because <code>eye</code> already means the Watchlist tile.</li>
+    <li><b>The Apps catalogue keeps its field.</b> It's the add flow itself, a sheet you open to connect something new.</li>
+    <li><b>Amends</b> §1133e (the tray finds kinds, not just names), §1138 item 6 (Markets' bar) and the Notes tiles (§1099/§1127).</li>
+    <li><b>Cost:</b> the tray's search reads notes' words, so it moves off the main actor. That's the same fetch Find already runs.</li>
+  </ul>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const C=["#0052ff","#ff9500","#7b3fe4","#00d395","#f3ba2f","#e6007a","#30d158","#ff3b30","#5e6ad2","#5ac8fa"];
+const hi=(t,w)=>t.replace(new RegExp(w,'i'),m=>`<mark>${m}</mark>`);
+const room=(a,b)=>`<div class="room"><div class="title"><span class="p">${a}</span> <span class="dot">·</span> ${b}</div><div class="box"></div></div>`;
+const field=q=>`<div class="field"><span class="g">⌕</span><span class="q">${q}<span class="caret"></span></span><span class="x">⊗</span></div>`;
+const r=(ic,name,sub,w,cls='')=>`<div class="row"><div class="ic ${cls}">${ic}</div><div class="b"><div class="n">${hi(name,w)}</div>${sub?`<div class="s">${sub}</div>`:''}</div></div>`;
+const app=(name,k,place,w)=>`<div class="row"><div class="ic sq" style="background:${C[k]}">${name[0]}</div><div class="b"><div class="n">${hi(name,w)}</div></div><div class="s" style="color:var(--text2);font-size:17px">${place}</div></div>`;
+const sec=t=>`<div class="sec">${t}</div>`;
+const find=w=>r('⌕',`Search your things for “${w}”`,'','zzz','g');
+const shell=(roomA,roomB,q,body)=>`${room(roomA,roomB)}<div class="tray">${field(q)}${body}<div class="fade"></div></div><div class="kbd">keyboard</div>`;
+
+$('t0').innerHTML=shell('Alex','Notes','trip',
+  app('TripIt',4,'Life','trip')+find('trip'));
+
+$('t1').innerHTML=shell('Alex','Notes','trip',
+  sec('Notes')+
+  r('▤','Lisbon trip','Pack the adapter · Oct 12','trip','pink')+
+  r('▤','Road trip playlist','12 songs · Sep 30','trip','pink')+
+  r('〰︎','Trip budget','Voice note · 0:42','trip','pink')+
+  sec('Apps')+app('TripIt',4,'Life','trip')+
+  find('trip'));
+
+$('t2').innerHTML=shell('Alex','Settings','nyt',
+  sec('Feeds')+r('◉','NYT Wirecutter','14 this week','nyt','g')+
+  sec('Mail lists')+r('✉︎','The Morning','nytimes.com · 22 mails','nyt','g')+
+  sec('Subscriptions')+r('↻','NYT All Access','$25 a month · renews Oct 19','nyt','g')+
+  find('nyt'));
+
+// the capsules, before and after (glyph, word)
+const T={all:['▢','All'],folders:['▭','Folders'],voice:['〰︎','Voice'],new:['＋','New'],search:['⌕','Search'],add:['＋','Add']};
+const cap=(keys,on,gone=[],add=[])=>`<div class="cap">${keys.map(k=>`<i class="${k===on?'on':''} ${gone.includes(k)?'gone':''} ${add.includes(k)?'add':''}"><b>${T[k][0]}</b>${T[k][1]}</i>`).join('')}</div>`;
+const band=inner=>`<div class="band"><div class="face">🐙</div>${inner}</div>`;
+const card=(who,before,after)=>`<div class="bar"><div class="who">${who}</div><div class="lbl">Today</div>${band(before)}<div class="lbl" style="color:var(--pink)">Proposed</div>${band(after)}</div>`;
+$('bars').innerHTML=
+  card('Settings',cap(['search'],null),'<span class="none">No capsule. The face stands alone.</span>')+
+  card('Notes',cap(['all','folders','voice','new','search'],'all',['search']),cap(['all','folders','voice','new'],'all'))+
+  card('Markets',cap(['search'],null),cap(['add'],null,[],['add']));
+</script>

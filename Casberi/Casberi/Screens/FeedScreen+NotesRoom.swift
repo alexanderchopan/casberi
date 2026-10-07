@@ -33,17 +33,17 @@ extension FeedScreen {
             guard let filed = thing.folder else { return false }
             guard let open = chrome.notesFolder else { return true }
             return NoteFolderName.key(filed) == NoteFolderName.key(open)
-        case .all, .new, .search:  return true
+        case .all, .new:  return true
         }
     }
 
-    /// The Notes room's tiles (prd §969, §1099, §1127): All · Folders ·
-    /// Voice · New · Search, on the same template as every room's. New and
-    /// Search are VERBS in the row — they never light. New raises the note
+    /// The Notes room's tiles (prd §969, §1099, §1127, §1171): All · Folders ·
+    /// Voice · New, on the same template as every room's. New is a VERB in
+    /// the row — it never lights. New raises the note
     /// page; held, it raises the page with the mic live (prd §970), and
     /// under Voice a plain tap records too, because that is the only note
     /// that tile lists. Its plus arms into the voice kind's waveform as
-    /// the hold builds (prd §973). Search raises the find tray.
+    /// the hold builds (prd §973). Search is the tray's (prd §1171).
     /// Notes' held New: raises the page with the mic live (prd §970).
     var notesHold: DSScopeTiles<NotesScope>.Hold {
         DSScopeTiles<NotesScope>.Hold(
@@ -55,9 +55,7 @@ extension FeedScreen {
     /// A Notes tile's act, wherever the tile stands: the bottom bar on the
     /// phone (prd §1136 item 2), the strip under You's tiles beside the rail.
     func pickNotesScope(_ picked: NotesScope) {
-        if picked == .search {
-            feedSheet = .notesSearch
-        } else if picked == .new {
+        if picked == .new {
             if chrome.notesScope == .voice { chrome.newNoteByVoice() } else { chrome.newNote += 1 }
         } else {
             // Any pick closes an open folder — Folders tapped again is
@@ -78,7 +76,7 @@ extension FeedScreen {
         if !DSScopeDock<NotesScope>.atBottom(roomSizeClass) {
             Section {
                 DSScopeTiles(sections: NotesScope.allCases, active: chrome.notesScope,
-                             strip: true, verbs: [.new, .search], hold: notesHold) { pickNotesScope($0) }
+                             strip: true, verbs: [.new], hold: notesHold) { pickNotesScope($0) }
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
                     .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
@@ -136,8 +134,8 @@ extension FeedScreen {
     }
 
     #if DEBUG
-    /// `-notesScope folders|voice|search` lands on Folders or Voice, or
-    /// raises Search, at mount (prd §1099, §1127; NSLogs `notesProbe:`).
+    /// `-notesScope folders|voice` lands on Folders or Voice at mount (prd
+    /// §1099, §1127; NSLogs `notesProbe:`).
     /// Once per launch.
     func notesProbe() {
         guard !Self.notesProbed else { return }
@@ -145,7 +143,7 @@ extension FeedScreen {
         let defaults = UserDefaults.standard
         if let raw = defaults.string(forKey: "notesScope"), let scope = NotesScope(rawValue: raw) {
             NSLog("[Casberi] notesProbe: scope %@", raw)
-            if scope == .search { feedSheet = .notesSearch } else if !scope.isVerb { chrome.notesScope = scope }
+            if !scope.isVerb { chrome.notesScope = scope }
         }
     }
     #endif

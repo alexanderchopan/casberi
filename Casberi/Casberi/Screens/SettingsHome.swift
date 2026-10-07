@@ -19,17 +19,16 @@ struct SettingsHome: View {
     @Environment(ShellChrome.self) private var chrome
     @Environment(HomeRoute.self) private var route
     @Environment(\.modelContext) private var context
-    @Environment(\.horizontalSizeClass) private var sizeClass
 
     @State private var scope: SettingsScope = .apps
     /// Casberi's own options, opened in place from its pinned row — the way a
     /// Notes folder opens (prd §980): its name leads back.
     @State private var casberiOpen = false
+    /// A name the tray's search landed on (prd §1171): People narrowed to it,
+    /// shown in a field you clear. Settings has no search of its own; the
+    /// tray's is the one search.
     @State private var query = ""
     @FocusState private var searchFocused: Bool
-    /// The bar's Search (prd §1138): a field over the kind you're on. People
-    /// draws its own field always, as Addresses did.
-    @State private var searchOpen = false
     @State private var peopleScope = AddressScope(name: nil)
     @State private var people = 0
     @State private var calendarAdd = false
@@ -67,14 +66,8 @@ struct SettingsHome: View {
             }
             Section {
                 VStack(alignment: .leading, spacing: DS.Space.s6) {
-                    if !DSScopeDock<SettingsScope>.atBottom(sizeClass), !casberiOpen {
-                        DSScopeTiles(sections: SettingsScope.bar, active: scope,
-                                     strip: true, verbs: SettingsScope.verbs) { pick($0) }
-                    }
-                    // ONE SEARCH OVER EVERY KIND (prd §1153, user: "build 3 and
-                    // 4"): the bar's Search opens it on any kind, People's own
-                    // field included, and what it finds is grouped by kind.
-                    if !casberiOpen, searchOpen || !query.isEmpty {
+                    // The name a tray search landed on (prd §1171), clearable.
+                    if !casberiOpen, !query.isEmpty {
                         DSSlabField(placeholder: String(localized: "Search"),
                                     text: $query, actionLabel: "",
                                     focus: $searchFocused,
@@ -83,8 +76,6 @@ struct SettingsHome: View {
                     }
                     if casberiOpen {
                         casberiOptions
-                    } else if !query.isEmpty {
-                        searchEverything
                     } else {
                         switch scope {
                         case .apps:
@@ -123,7 +114,6 @@ struct SettingsHome: View {
                                 kindList(SubscriptionsReading.shared.items.filter { hit($0.name) },
                                          empty: "Track a subscription and it lands here.") { subscriptionRow($0) }
                             }
-                        case .search:        EmptyView()
                         }
                     }
                 }
@@ -151,11 +141,6 @@ struct SettingsHome: View {
             }
         }
         }
-        .dsScopeDock(sections: casberiOpen || searchFocused ? [] : SettingsScope.bar,
-                     active: scope, verbs: SettingsScope.verbs,
-                     // A place in You stands where a room does, down to the
-                     // safe area, so the bar centres on the seat as Markets' does.
-                     clearance: 0) { pick($0) }
         .dsAdaptiveContentWidth(.reading)
         .dsPageBackground()
         .dsSoftScrollEdges()
@@ -201,37 +186,37 @@ struct SettingsHome: View {
                 .environment(self.route)
                 .environment(\.modelContext, context)
         }
-        // A search closed with nothing in it folds its field away.
-        .onChange(of: searchFocused) { _, focused in
-            if !focused, query.isEmpty { searchOpen = false }
-        }
-        .onChange(of: chrome.settingsPeopleQuery, initial: true) { _, asked in
-            // The tray's search found a person (prd §1136 item 3): land on
-            // People with their name in the field.
-            guard let asked else { return }
-            scope = .people
+        .onChange(of: chrome.settingsLanding, initial: true) { _, landing in
+            // The tray's search found something Settings holds (prd §1171):
+            // a person lands on People with their name in the field, a kind
+            // on its list, a feed, list or plan on its own sheet.
+            guard let landing else { return }
             casberiOpen = false
-            query = asked
-            chrome.settingsPeopleQuery = nil
+            switch landing {
+            case .person(let name):
+                scope = .people
+                query = name
+            case .kind(let kind):
+                scope = kind
+                query = ""
+            case .sheet(let raised):
+                query = ""
+                sheet = raised
+            }
+            chrome.settingsLanding = nil
         }
     }
 
     // MARK: - Acts
 
     private func pick(_ picked: SettingsScope) {
-        if picked == .search {
-            withAnimation(DS.Motion.standard) { searchOpen = true }
-            searchFocused = true
-            return
-        }
         withAnimation(DS.Motion.standard) {
             scope = picked
             query = ""
-            searchOpen = false
         }
     }
 
-    /// The bar's search, over the kind you're on.
+    /// The landed name, over the kind you're on.
     private func hit(_ name: String) -> Bool {
         query.isEmpty || name.localizedCaseInsensitiveContains(query)
     }
@@ -241,7 +226,7 @@ struct SettingsHome: View {
     private func add(_ kind: SettingsScope) {
         DSHaptic.selection()
         switch kind {
-        case .apps, .search:
+        case .apps:
             route.present(.apps)
         case .calendars:
             calendarChoice = true
@@ -301,7 +286,6 @@ struct SettingsHome: View {
             case .people: people
             case .subscriptions: SubscriptionsReading.shared.items.count
             case .wallets: WalletStore.shared.addresses.count
-            case .search: 0
             }
             return (kind, n, kind.label)
         }
@@ -637,57 +621,6 @@ struct SettingsHome: View {
         scope == .people && query.isEmpty && !casberiOpen && peopleLetters.count > 3
     }
 
-    /// What one search finds, by kind, each kind only when it has a hit, in
-    /// the box's order (prd §1153).
-    @ViewBuilder
-    private var searchEverything: some View {
-        let apps = connectedApps.filter { hit($0.name) }
-        let phone = phoneCalendars.filter { hit($0.title) }
-        let subscribed = CalendarSubscriptionStore.shared.calendars.filter { hit($0.displayName) }
-        let feedHits = feeds.filter { hit($0.name) }
-        let lists = MailSubscriptionsReading.shared.items.filter { hit($0.name) }
-        let people = ContactIndexSources.contacts.contains { hit($0.name) }
-        let subs = SubscriptionsReading.shared.items.filter { hit($0.name) }
-        if apps.isEmpty && phone.isEmpty && subscribed.isEmpty && feedHits.isEmpty
-            && lists.isEmpty && !people && subs.isEmpty {
-            empty("Nothing matches.")
-        } else {
-            VStack(alignment: .leading, spacing: DS.Space.s6) {
-                if !apps.isEmpty { kindSection("Apps") { ForEach(apps) { appRow($0) } } }
-                if !phone.isEmpty || !subscribed.isEmpty {
-                    kindSection("Calendars") {
-                        ForEach(phone) { cal in
-                            DSPushRow(title: Text(verbatim: cal.title), subtitle: Text(verbatim: cal.account)) {
-                                route.openSetup(forOffer: "Calendar")
-                            } leading: {
-                                Circle().fill(cal.color).frame(width: 14, height: 14)
-                                    .frame(width: DS.Mark.notice, height: DS.Mark.notice)
-                            }
-                        }
-                        ForEach(subscribed) { calendarRow($0) }
-                    }
-                }
-                if !feedHits.isEmpty { kindSection("Feeds") { ForEach(feedHits) { feedRow($0) } } }
-                if !lists.isEmpty { kindSection("Mail lists") { ForEach(lists) { newsletterRow($0) } } }
-                if people {
-                    kindSection("People") {
-                        AddressesSection(query: query, scope: $peopleScope,
-                                         openPlan: { sheet = .subscription($0) })
-                    }
-                }
-                if !subs.isEmpty { kindSection("Subscriptions") { ForEach(subs) { subscriptionRow($0) } } }
-            }
-        }
-    }
-
-    private func kindSection<Rows: View>(_ title: LocalizedStringKey,
-                                         @ViewBuilder rows: () -> Rows) -> some View {
-        VStack(alignment: .leading, spacing: DS.Space.s2) {
-            Text(title).dsText(.heading17).foregroundStyle(DS.brandInk)
-            rows()
-        }
-    }
-
     // MARK: - Subscriptions, feeds, newsletters, calendars
 
     private func empty(_ words: LocalizedStringKey) -> some View {
@@ -782,23 +715,17 @@ struct SettingsHome: View {
 }
 
 /// Settings' eight kinds (prd §1166), picked by pressing their counts in the
-/// box, and the bar's one verb (prd §1138, amending §1136h's scrolling bar).
-/// No All: the box is the overview of all of it (user: "the sources screen
-/// IS that list"). Search searches the kind you're on.
+/// box. No All: the box is the overview of all of it (user: "the sources
+/// screen IS that list"). No bar since prd §1171: its one verb was Search,
+/// and the tray's search finds every kind.
 enum SettingsScope: String, CaseIterable, Identifiable, Hashable, Sendable {
-    case apps, calendars, cards, feeds, newsletters, people, subscriptions, wallets, search
+    case apps, calendars, cards, feeds, newsletters, people, subscriptions, wallets
 
     var id: String { rawValue }
 
     /// The box's eight kinds, A–Z by their words (prd §1166).
     static let kinds: [SettingsScope] = [.apps, .calendars, .cards, .feeds, .newsletters,
                                          .people, .subscriptions, .wallets]
-
-    static let verbs: Set<SettingsScope> = [.search]
-    /// What the floating bar holds: Search alone since prd §1166 (user: "agree
-    /// we don't need it now"): every kind's list leads with its own act, and
-    /// Apps lists every app, so Add was a second door to each.
-    static let bar: [SettingsScope] = [.search]
 
     var label: String {
         switch self {
@@ -812,7 +739,6 @@ enum SettingsScope: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .people:        return String(localized: "People")
         case .subscriptions: return String(localized: "Subscriptions")
         case .wallets:       return String(localized: "Wallets")
-        case .search:        return String(localized: "Search")
         }
     }
 
@@ -826,7 +752,6 @@ enum SettingsScope: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .newsletters:   return String(localized: "The lists that write to your mail")
         case .people:        return String(localized: "The people behind your accounts")
         case .subscriptions: return String(localized: "What you pay for")
-        case .search:        return String(localized: "Find one of the kind you're on")
         }
     }
 }
@@ -867,6 +792,14 @@ struct CalendarSubscribeSheet: View {
         Task { @MainActor in await CalendarSubscriptionIngest.refresh(context: context, only: entry.id) }
         dismiss()
     }
+}
+
+/// Where the tray's search lands in Settings (prd §1171): a person on People
+/// with their name in the field, a kind's list, or a row's own sheet.
+enum SettingsLanding: Hashable {
+    case person(String)
+    case kind(SettingsScope)
+    case sheet(SettingsSheet)
 }
 
 /// What Settings raises over itself (prd §1143).

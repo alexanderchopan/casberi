@@ -89,8 +89,6 @@ extension FeedScreen {
         /// A room's verb for what you follow: Reading's Follow tray, Media's
         /// track tray, Work's watch tray (prd §1118).
         case followingAdd(Following.Room)
-        /// The Notes room's Search (prd §1099).
-        case notesSearch
         /// Subscribe to a calendar, from an empty Coming up (prd §1137).
         case calendarSubscribe
         /// Social's Follow (prd §1086).
@@ -139,7 +137,6 @@ extension FeedScreen {
             case .readingFind(let scope): "readingFind:\(scope.rawValue)"
             case .following(let id, let room): "following:\(room.rawValue):\(id)"
             case .followingAdd(let room): "followingAdd:\(room.rawValue)"
-            case .notesSearch: "notesSearch"
             case .calendarSubscribe: "calendarSubscribe"
             case .socialFollow: "socialFollow"
             case .walletFollow: "walletFollow"
@@ -352,16 +349,6 @@ extension FeedScreen {
             }
         case .calendarSubscribe:
             CalendarSubscribeSheet()
-        case .notesSearch:
-            NotesSearchSheet { thing in
-                // One sheet at a time (§872): the tray closes, then the
-                // note's page rises.
-                feedSheet = nil
-                Task { @MainActor in
-                    try? await Task.sleep(for: .milliseconds(450))
-                    openThing(thing)
-                }
-            }
         case .company(let company):
             CompanySheet(company: company)
         case .githubWatch:

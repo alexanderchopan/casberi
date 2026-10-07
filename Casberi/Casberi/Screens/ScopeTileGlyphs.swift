@@ -50,8 +50,8 @@ enum ScopeTileGlyph {
     /// Markets' Alerts (prd §1081): the system's bell, the bell a note's
     /// reminder already wears for "tell me".
     static let alerts       = "bell"
-    /// Markets' Search verb (prd §1082): the system's magnifier, the app's
-    /// search glyph wherever a field searches.
+    /// Reading's Search and the Apps catalogue's (prd §1085, §1138): the
+    /// system's magnifier, the app's search glyph wherever a field searches.
     static let search       = "magnifyingglass"
     /// Logos' Node scope (prd §991) — the node you run.
     static let node         = "server.rack"
@@ -170,7 +170,6 @@ extension NotesScope: DSTileScope {
         case .folders: return ScopeTileGlyph.folders
         case .voice:   return ScopeTileGlyph.voice
         case .new:     return ScopeTileGlyph.new
-        case .search:  return ScopeTileGlyph.search
         }
     }
 }
@@ -249,7 +248,8 @@ extension YouTile: DSTileScope {
     }
 }
 
-/// Settings' own filters (prd §1136 item 5); the bar is Search alone (§1166).
+/// Settings' own filters (prd §1136 item 5), pressed in the box (§1138);
+/// no bar since §1171.
 extension SettingsScope: DSTileScope {
     var glyph: String {
         switch self {
@@ -261,7 +261,6 @@ extension SettingsScope: DSTileScope {
         case .people:        return ScopeTileGlyph.people
         case .subscriptions: return ScopeTileGlyph.subscriptions
         case .wallets:       return ScopeTileGlyph.wallets
-        case .search:        return ScopeTileGlyph.search
         }
     }
 }

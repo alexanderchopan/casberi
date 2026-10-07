@@ -111,8 +111,8 @@ extension FeedScreen {
     }
 
     #if DEBUG
-    /// `-marketsScope alerts|<Category>|search` — land on a tile, or raise Search,
-    /// at mount (prd §1081; NSLogs `marketsScope:`). Once per launch.
+    /// `-marketsScope alerts|<Category>|add` — land on a tile, or raise Add,
+    /// at mount (prd §1081, §1171; NSLogs `marketsScope:`). Once per launch.
     private func marketsProbe() {
         guard !Self.marketsProbed,
               let raw = UserDefaults.standard.string(forKey: "marketsScope") else { return }

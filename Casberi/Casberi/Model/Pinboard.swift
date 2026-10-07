@@ -136,8 +136,9 @@ enum Pinboard {
 /// whole; the glyphs are `ScopeTileGlyphs.swift`'s.
 enum NotesScope: String, CaseIterable, Identifiable, Hashable, Sendable {
     /// Voice (prd §1127) took the title row's Notes · Voice notes pill when
-    /// Home's You pill took the title row: the voice notes you spoke.
-    case all, folders, voice, new, search
+    /// Home's You pill took the title row: the voice notes you spoke. Search
+    /// is deleted (prd §1171): the tray's search finds your notes.
+    case all, folders, voice, new
 
     var id: String { rawValue }
 
@@ -147,7 +148,6 @@ enum NotesScope: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .folders: return String(localized: "Folders")
         case .voice:   return String(localized: "Voice")
         case .new:     return String(localized: "New")
-        case .search:  return String(localized: "Search")
         }
     }
 
@@ -158,11 +158,9 @@ enum NotesScope: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .folders: return String(localized: "What you filed")
         case .voice:   return String(localized: "What you recorded")
         case .new:     return String(localized: "Write or record a note")
-        case .search:  return String(localized: "Find a note")
         }
     }
 
-    /// The tiles that SCOPE the list; New and Search are verbs and never
-    /// stand.
-    var isVerb: Bool { self == .new || self == .search }
+    /// The tiles that SCOPE the list; New is a verb and never stands.
+    var isVerb: Bool { self == .new }
 }

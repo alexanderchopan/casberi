@@ -16,9 +16,11 @@ struct TokensScope: DSTileScope {
     static let watchlist = TokensScope(category: nil)
     /// Every alert you set, and the ones that fired (prd §1081).
     static let alerts = TokensScope(category: "\u{1}alerts")
-    /// The verb, last: search the index and the market, and watch (prd
-    /// §1081, renamed from Add by §1082 when it began searching the index).
-    static let search = TokensScope(category: "\u{1}search")
+    /// The verb, last: find a company or coin in the index and the market,
+    /// and watch it (prd §1081). Add again since prd §1171 (it was Search
+    /// from §1082): the tray's search finds what you have, so the bar's one
+    /// verb is the one that finds what you don't.
+    static let add = TokensScope(category: "\u{1}add")
 
     var id: String { category ?? "\u{1}watchlist" }
 
@@ -27,19 +29,19 @@ struct TokensScope: DSTileScope {
 
     var label: String {
         if self == .alerts { return String(localized: "Alerts") }
-        if self == .search { return String(localized: "Search") }
+        if self == .add { return String(localized: "Add") }
         return category ?? String(localized: "Watchlist")
     }
 
     var glyph: String {
         if self == .alerts { return ScopeTileGlyph.alerts }
-        if self == .search { return ScopeTileGlyph.search }
+        if self == .add { return ScopeTileGlyph.new }
         return category.map(CategoryFold.glyph(for:)) ?? ScopeTileGlyph.watch
     }
 
     var summary: String {
         if self == .alerts { return String(localized: "The price alerts you set") }
-        if self == .search { return String(localized: "Find something to follow") }
+        if self == .add { return String(localized: "Find something to watch") }
         guard let category else { return String(localized: "What you follow") }
         return String(localized: "The companies behind \(category)")
     }
@@ -78,8 +80,8 @@ struct TokensScope: DSTileScope {
             .sorted { $0.localizedStandardCompare($1) == .orderedAscending }
             .map { TokensScope(category: $0) }
 
-    /// The bar: Search alone, the verb.
-    static let bar: [TokensScope] = [.search]
+    /// The bar: Add alone, the verb (prd §1171).
+    static let bar: [TokensScope] = [.add]
 
     /// Every tile, for a hook that names one.
     static var all: [TokensScope] { box + bar }

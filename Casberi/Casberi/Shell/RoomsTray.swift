@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 
 /// The rooms tray (prd §930; the Apple pass §932) — the phone's whole
 /// navigation behind ONE button, the face.
@@ -38,6 +39,8 @@ struct RoomsTray: View {
     @Environment(FeedFilter.self) private var filter
     @Environment(BridgeStore.self) private var bridges
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.modelContext) private var context
+    @Environment(\.openURL) private var openURL
 
     /// A row's round icons: the category's own and its apps', one size —
     /// the touch floor since prd §1094 (users: "the menu buttons are super
@@ -82,6 +85,11 @@ struct RoomsTray: View {
     /// What the tray's search holds (prd §1133e); cleared when it closes.
     @State private var query = ""
     @FocusState private var searching: Bool
+    /// What the search reads beyond the tray's own names (prd §1171), read
+    /// when the field is first focused, never in a body (§628): your notes
+    /// and pins, and the phone's calendars.
+    @State private var noteCorpus: [Thing] = []
+    @State private var phoneCalendars: [PhoneCalendar] = []
     @State private var dealt = false
     @State private var bounceTick = 0
 
@@ -130,6 +138,16 @@ struct RoomsTray: View {
             try? await Task.sleep(for: .seconds(1))
             NSLog("[Casberi] openTray: raised")
             withAnimation(liftMotion) { chrome.roomsTray = true }
+            // `-traySearch "<words>"` types into the field (prd §1171): a
+            // simctl-booted simulator draws no keyboard to type with.
+            if let words = UserDefaults.standard.string(forKey: "traySearch") {
+                await readKinds()
+                query = words
+                NSLog("[Casberi] traySearch: %@ | %d notes read", words, noteCorpus.count)
+                for (kind, hits) in sections(words) {
+                    NSLog("[Casberi] traySearch| %@ | %@", "\(kind)", hits.map(\.name).joined(separator: ", "))
+                }
+            }
         }
         #endif
         .onChange(of: chrome.roomsTray) { _, up in
@@ -137,7 +155,10 @@ struct RoomsTray: View {
             // they are simply there.
             dealt = up
             if up && !reduceMotion { bounceTick += 1 }
-            if !up { query = ""; searching = false }
+            if !up { query = ""; searching = false; noteCorpus = [] }
+        }
+        .onChange(of: searching) { _, focused in
+            if focused { Task { await readKinds() } }
         }
     }
 
@@ -554,90 +575,220 @@ struct RoomsTray: View {
     /// One thing the search can land on.
     private struct Hit: Identifiable {
         let id: String
+        let kind: Kind
         let name: String
-        /// Where it lives ("Wallet", "You"), nil for a category itself.
-        let place: String?
-        let face: FolderItem.Face?
-        let glyph: String?
+        /// Where it lives ("Wallet", "You") for a name in the tray, else a
+        /// line under the name (a note's next line, a feed's app).
+        var place: String? = nil
+        var line: String? = nil
+        let mark: Mark
         let act: () -> Void
+    }
+
+    /// What a hit draws at its leading edge.
+    private enum Mark {
+        case face(FolderItem.Face)
+        case glyph(String)
+        case icon(String, symbol: String?)
+        case dot(Color)
+    }
+
+    /// THE ONE SEARCH'S KINDS (prd §1171, user: "should we make the tray
+    /// search be for everything and then we have no capsule for search").
+    /// The kinds of the place you opened the tray from lead (Notes' notes,
+    /// Settings' lists); then the tray's own names, headless, as the search
+    /// has always drawn them (§1133e); then each other kind under its word,
+    /// A–Z.
+    private enum Kind: Int, CaseIterable {
+        case names, calendars, feeds, mailLists, notes, people, subscriptions
+
+        var title: LocalizedStringKey? {
+            switch self {
+            case .names:         nil
+            case .calendars:     "Calendars"
+            case .feeds:         "Feeds"
+            case .mailLists:     "Mail lists"
+            case .notes:         "Notes"
+            case .people:        "People"
+            case .subscriptions: "Subscriptions"
+            }
+        }
+
+        /// How many rows a kind draws before Find takes over.
+        static let cap = 5
+    }
+
+    /// The kinds the standing place holds, which lead the results: Notes'
+    /// notes, Settings' lists.
+    private var leadingKinds: Set<Kind> {
+        guard route.path.isEmpty else { return [] }
+        if Pinboard.isPinnedRoom(filter.source) { return [.notes] }
+        if HomeScope.Place(source: filter.source) == .settings {
+            return [.calendars, .feeds, .mailLists, .people, .subscriptions]
+        }
+        return []
     }
 
     /// Everything the tray holds, as hits: You's places, each category and
     /// every app and account in it — the same items and the same acts the
     /// rows draw, so a hit lands where its icon would.
-    private var allHits: [Hit] {
+    private var nameHits: [Hit] {
         var hits = youDoors.map { door in
-            Hit(id: "you:" + door.key, name: door.word, place: String(localized: "You"),
-                face: .place(door.glyph), glyph: nil, act: door.act)
+            Hit(id: "you:" + door.key, kind: .names, name: door.word, place: String(localized: "You"),
+                mark: .face(.place(door.glyph)), act: door.act)
         }
         for category in categories {
-            hits.append(Hit(id: "cat:" + category, name: category, place: nil, face: nil,
-                            glyph: CategoryFold.glyph(for: category)) { pickCategory(category) })
+            hits.append(Hit(id: "cat:" + category, kind: .names, name: category,
+                            mark: .glyph(CategoryFold.glyph(for: category))) { pickCategory(category) })
             for item in folder(for: category).items {
-                hits.append(Hit(id: category + ":" + item.id, name: item.name, place: category,
-                                face: item.face, glyph: nil, act: item.act))
+                hits.append(Hit(id: category + ":" + item.id, kind: .names, name: item.name, place: category,
+                                mark: .face(item.face), act: item.act))
             }
         }
-        // People (prd §1136 item 3): they live in Sources now, so the
-        // search finds them by name and lands on them there. The index is
-        // the snapshot Settings and the book build; a person not yet indexed
-        // is found once either has been opened.
+        return hits
+    }
+
+    /// Settings' kinds, by name (prd §1171, was Settings' own search,
+    /// §1153): each lands where Settings would open it.
+    private var kindHits: [Hit] {
+        var hits: [Hit] = []
+        for cal in phoneCalendars {
+            hits.append(Hit(id: "cal:" + cal.id, kind: .calendars, name: cal.title, line: cal.account,
+                            mark: .dot(cal.color)) { landInSettings(.kind(.calendars)) })
+        }
+        for cal in CalendarSubscriptionStore.shared.calendars {
+            hits.append(Hit(id: "calsub:" + cal.id.uuidString, kind: .calendars, name: cal.displayName,
+                            mark: .glyph(ScopeTileGlyph.calendars)) { landInSettings(.kind(.calendars)) })
+        }
+        for room in Following.Room.allCases {
+            for item in FollowingReading.shared.items(for: room) {
+                hits.append(Hit(id: "feed:\(room.rawValue):" + item.id, kind: .feeds, name: item.name,
+                                line: item.seat, mark: .icon(item.seat, symbol: nil)) {
+                    landInSettings(.sheet(.following(item.id, room)))
+                })
+            }
+        }
+        for item in MailSubscriptionsReading.shared.items {
+            hits.append(Hit(id: "list:" + item.id, kind: .mailLists, name: item.name, line: item.address,
+                            mark: .icon(item.name, symbol: nil)) { landInSettings(.sheet(.mailList(item.id))) })
+        }
+        // People (prd §1136 item 3): they live in Settings, so the search
+        // finds them by name and lands on them there.
         for contact in ContactIndexSources.contacts
             where !contact.isUnnamed && !ContactIndexSources.isYours(contact) {
-            hits.append(Hit(id: "person:" + contact.id, name: contact.name,
-                            place: String(localized: "People"), face: .person(contact), glyph: nil) {
-                chrome.settingsPeopleQuery = contact.name
-                screen(.casberi)
-            })
+            hits.append(Hit(id: "person:" + contact.id, kind: .people, name: contact.name,
+                            mark: .face(.person(contact))) { landInSettings(.person(contact.name)) })
+        }
+        for item in SubscriptionsReading.shared.items {
+            hits.append(Hit(id: "plan:" + item.id, kind: .subscriptions, name: item.name,
+                            line: item.next.map { String(localized: "Renews \($0.formatted(.dateTime.month(.abbreviated).day()))") },
+                            mark: .icon(item.name, symbol: nil)) { landInSettings(.sheet(.subscription(item.id))) })
         }
         return hits
+    }
+
+    /// Your notes and pins whose name holds the words as you type them
+    /// ("pack" finds Packing list), then the ones Find's engine finds by
+    /// their words (`Retriever.find`, as Notes' search tray did, prd §1099).
+    /// Values are read here, after the live check, so no row touches a
+    /// deleted model.
+    private func noteHits(_ words: String) -> [Hit] {
+        let live = noteCorpus.live
+        let named = live.filter { $0.title.localizedStandardContains(words) }
+        let byName = Set(named.map(\.id))
+        let found = Retriever.find(words, in: live).hits.filter { !byName.contains($0.id) }
+        return (named + found).prefix(Kind.cap).compactMap { thing in
+            guard thing.isLive else { return nil }
+            let id = thing.id
+            let line: String = if Pinboard.isNote(thing) {
+                NotePreview.line(title: thing.title, content: thing.content,
+                                 isVoice: thing.kind == .voice, isLocked: NoteLock.isLocked(thing))
+                    ?? thing.capturedAt.formatted(date: .abbreviated, time: .omitted)
+            } else {
+                String(localized: "Pinned · \(thing.source)")
+            }
+            return Hit(id: "note:" + id.uuidString, kind: .notes, name: thing.title, line: line,
+                       mark: .icon(thing.source, symbol: BridgeIcon.noteSymbol(for: thing))) {
+                close()
+                if let url = URL(string: "casberi://thing/\(id.uuidString)") { openURL(url) }
+            }
+        }
+    }
+
+    /// The tray closes, then Settings rises on what was found.
+    private func landInSettings(_ landing: SettingsLanding) {
+        chrome.settingsLanding = landing
+        screen(.casberi)
+    }
+
+    /// Read what the kinds need once the field is focused: notes, the
+    /// phone's calendars, and the readings Settings keeps.
+    private func readKinds() async {
+        let you = NoteSheetSource.keptSource
+        var d = FetchDescriptor<Thing>(predicate: #Predicate<Thing> { $0.source == you || $0.pinnedAt != nil },
+                                       sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
+        d.fetchLimit = 2_000
+        noteCorpus = ((try? context.fetch(d)) ?? []).filter { $0.isLive && Pinboard.inRoom($0) }
+        phoneCalendars = PhoneCalendar.readable()
+        // People are found from the index's snapshot, which only Settings
+        // and the book built; build it here so a person is found first time.
+        _ = ContactIndexSources.rebuild(context: context)
+        MailSubscriptionsReading.shared.refresh(context)
+        for room in Following.Room.allCases { FollowingReading.shared.refresh(room, context: context) }
+        await SubscriptionsReading.shared.refresh(context)
+    }
+
+    /// The hits for the words, by kind: a name that STARTS with the words
+    /// first ("co": Coinbase before Acorns), then any word in it, then
+    /// anywhere; the tray's order within.
+    private func sections(_ words: String) -> [(Kind, [Hit])] {
+        let w = words.lowercased()
+        func ranked(_ hits: [Hit]) -> [Hit] {
+            hits.enumerated()
+                .compactMap { i, hit -> (Int, Int, Hit)? in
+                    guard hit.name.localizedStandardContains(words) else { return nil }
+                    let name = hit.name.lowercased()
+                    let rank = name.hasPrefix(w) ? 0 : name.contains(" " + w) ? 1 : 2
+                    return (rank, i, hit)
+                }
+                .sorted { $0.0 != $1.0 ? $0.0 < $1.0 : $0.1 < $1.1 }
+                .map(\.2)
+        }
+        let byKind = Dictionary(grouping: ranked(kindHits), by: \.kind)
+        let lead = leadingKinds
+        let order = Kind.allCases.filter { $0 != .names }
+            .sorted { (lead.contains($0) ? 0 : 1, $0.rawValue) < (lead.contains($1) ? 0 : 1, $1.rawValue) }
+        var out: [(Kind, [Hit])] = []
+        let names = ranked(nameHits)
+        for kind in order {
+            // The tray's names stand after the place's own kinds and before
+            // the rest: opened from Notes, your notes lead.
+            if !lead.contains(kind), !names.isEmpty, !out.contains(where: { $0.0 == .names }) {
+                out.append((.names, names))
+            }
+            let hits = kind == .notes ? noteHits(words) : Array((byKind[kind] ?? []).prefix(Kind.cap))
+            if !hits.isEmpty { out.append((kind, hits)) }
+        }
+        if !names.isEmpty, !out.contains(where: { $0.0 == .names }) { out.append((.names, names)) }
+        return out
     }
 
     @ViewBuilder
     private var searchResults: some View {
         let words = query.trimmingCharacters(in: .whitespaces)
-        // A name that STARTS with the words first ("co": Coinbase before
-        // Acorns), then any word in it, then anywhere; the tray's order within.
-        let hits = allHits.enumerated()
-            .compactMap { i, hit -> (Int, Int, Hit)? in
-                guard hit.name.localizedStandardContains(words) else { return nil }
-                let name = hit.name.lowercased(), w = words.lowercased()
-                let rank = name.hasPrefix(w) ? 0 : name.contains(" " + w) ? 1 : 2
-                return (rank, i, hit)
-            }
-            .sorted { $0.0 != $1.0 ? $0.0 < $1.0 : $0.1 < $1.1 }
-            .map(\.2)
         VStack(alignment: .leading, spacing: 0) {
-            ForEach(hits) { hit in
-                Button(action: hit.act) {
-                    HStack(spacing: DS.Space.s3) {
-                        Group {
-                            if let face = hit.face {
-                                itemFace(FolderItem(id: hit.id, name: hit.name, face: face,
-                                                    lit: false, act: hit.act))
-                            } else if let glyph = hit.glyph {
-                                roundIcon(glyph, ink: DS.textPrimary, fill: DS.surfaceRaised, bounces: false)
-                            }
-                        }
-                        .frame(width: Self.icon, height: Self.icon)
-                        Text(verbatim: hit.name)
-                            .dsText(.body17)
-                            .foregroundStyle(DS.textPrimary)
-                            .lineLimit(1)
-                        Spacer(minLength: DS.Space.s2)
-                        if let place = hit.place {
-                            Text(verbatim: place)
-                                .dsText(.body17)
-                                .foregroundStyle(DS.textSecondary)
-                                .lineLimit(1)
-                        }
-                    }
-                    .frame(minHeight: Self.resultHeight)
-                    .contentShape(Rectangle())
+            let found = sections(words)
+            ForEach(found, id: \.0) { kind, hits in
+                // The names go headless when they lead; under a kind they
+                // need a word, or they read as more of it.
+                if let title = kind.title ?? (found.first?.0 == kind ? nil : "Apps") {
+                    Text(title)
+                        .dsText(.label12)
+                        .foregroundStyle(DS.textSecondary)
+                        .padding(.top, DS.Space.s3)
+                        .accessibilityAddTraits(.isHeader)
                 }
-                .buttonStyle(RowPress())
-                .accessibilityLabel(hit.place.map { Text(verbatim: "\(hit.name), \($0)") }
-                                    ?? Text(verbatim: hit.name))
+                ForEach(hits) { hit in hitRow(hit) }
             }
             // Your things, through Find: the one search over everything kept.
             Button(action: searchThings) {
@@ -654,6 +805,50 @@ struct RoomsTray: View {
             }
             .buttonStyle(RowPress())
         }
+    }
+
+    private func hitRow(_ hit: Hit) -> some View {
+        Button(action: hit.act) {
+            HStack(spacing: DS.Space.s3) {
+                Group {
+                    switch hit.mark {
+                    case .face(let face):
+                        itemFace(FolderItem(id: hit.id, name: hit.name, face: face, lit: false, act: hit.act))
+                    case .glyph(let glyph):
+                        roundIcon(glyph, ink: DS.textPrimary, fill: DS.surfaceRaised, bounces: false)
+                    case .icon(let name, let symbol):
+                        BridgeIcon(name: name, size: Self.icon, circular: true, symbol: symbol)
+                    case .dot(let color):
+                        Circle().fill(color).frame(width: 14, height: 14)
+                    }
+                }
+                .frame(width: Self.icon, height: Self.icon)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(verbatim: hit.name)
+                        .dsText(.body17)
+                        .foregroundStyle(DS.textPrimary)
+                        .lineLimit(1)
+                    if let line = hit.line, !line.isEmpty {
+                        Text(verbatim: line)
+                            .dsText(.subhead12)
+                            .foregroundStyle(DS.textTertiary)
+                            .lineLimit(1)
+                    }
+                }
+                Spacer(minLength: DS.Space.s2)
+                if let place = hit.place {
+                    Text(verbatim: place)
+                        .dsText(.body17)
+                        .foregroundStyle(DS.textSecondary)
+                        .lineLimit(1)
+                }
+            }
+            .frame(minHeight: Self.resultHeight)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(RowPress())
+        .accessibilityLabel(hit.place.map { Text(verbatim: "\(hit.name), \($0)") }
+                            ?? Text(verbatim: hit.name))
     }
 
     static let resultHeight: CGFloat = 56

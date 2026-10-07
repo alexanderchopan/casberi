@@ -1018,9 +1018,9 @@ final class ShellChrome {
         let at: Date
     }
     var serviceDoor: ServiceDoor?
-    /// The tray's search found a person (prd §1136 item 3): Sources lands on
-    /// People with this name in its field, then clears it.
-    var settingsPeopleQuery: String?
+    /// The tray's search found something Settings holds (prd §1136 item 3,
+    /// §1171): Settings lands on it, then clears this.
+    var settingsLanding: SettingsLanding?
     static let serviceDoorLife: TimeInterval = 8
 
     /// Take a service door: the caller has already closed its own sheet, so

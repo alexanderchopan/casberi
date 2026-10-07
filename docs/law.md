@@ -222,7 +222,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1301 of 1365 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1302 of 1366 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1450,7 +1450,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1096 — Solana, past §86: a cursor, v1 transactions, SPL grants, a measured venue table, and `.sol` names back
 - §1097 — A Bitcoin wallet, not an address: watch an xpub, and the facts only a wallet can state — dust, reuse, a send that waits
 - §1098 — Lightning, over Nostr Wallet Connect: a seat any Lightning wallet fills, refused if it can pay
-- §1099 — Notes, made over: a note is one page, Voice notes stand in the title row's pill, All · Folders · New · Search, a list… (amended by §1100, §1127, §1136)
+- §1099 — Notes, made over: a note is one page, Voice notes stand in the title row's pill, All · Folders · New · Search, a list… (amended by §1100, §1127, §1136, §1171)
 - §1100 — Writing a note: one editor at the cursor, save as you type, headings and quotes, ticked items sink, lines move and in…
 - §1101 — The Aa key: formatting for someone who never types markdown
 - §1102 — One smaller box: every room's lead is 236pt, every room's tiles stand at one y, and a sheet shows its picture whole
@@ -1484,7 +1484,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1124 — Privy's apps are a group in Holdings
 - §1125 — The last room's swipe left opens the tray
 - §1126 — Reading's Subscriptions count no posts
-- §1127 — Home wears a You pill, and Notes and Markets are places in Home (amended by §1128, §1129, §1133, §1136)
+- §1127 — Home wears a You pill, and Notes and Markets are places in Home (amended by §1128, §1129, §1133, §1136, §1171)
 - §1128 — The pill is the room's title (amended by §1129)
 - §1129 — The category's name comes back, in pink, and You's doors are places (amended by §1156)
 - §1130 — Threads can have notifications the way Instagram does, through its own sign-in; Meta's Threads API cannot give them
@@ -1495,7 +1495,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1135 — An unwatched wallet's rows leave, under the name it was watched by too [+1 sub-entries]
 - §1136 — One place for lists: You is a room of four places, Settings holds everything you've connected, Home is Today then Com… (amended by §1138, §1139, §1164, §1166)
 - §1137 — Calendars you subscribe to [+11 sub-entries]
-- §1138 — The box's counts are the filter, on Sources and in the Apps catalogue (amended by §1140, §1142, §1145, §1166, §1167) [+1 sub-entries]
+- §1138 — The box's counts are the filter, on Sources and in the Apps catalogue (amended by §1140, §1142, §1145, §1166, §1167, §1171) [+1 sub-entries]
 - §1139 — Home is the whole of today: its feeds, then Later today (amended by §1154; part superseded by §1141)
 - §1142 — The catalogue is what you could add, rises as a sheet, and names its categories without figures
 - §1143 — What Settings opens rises over Settings
@@ -1507,7 +1507,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1150 — Calendars counts every calendar Casberi reads
 - §1151 — The default order is the day first: Day, Social, Work, Wallet, Reading, Life, Media, Agents, Testnets
 - §1152 — Home is by category, in your dock order (amended by §1156)
-- §1153 — People gets Contacts' A–Z strip, and Settings' Search looks through every kind
+- §1153 — People gets Contacts' A–Z strip, and Settings' Search looks through every kind (amended by §1171)
 - §1154 — Home ends with its categories: "Your day" and the Coming up door are deleted
 - §1155 — Logos gets Chat: your conversations from Basecamp, read through Observer and never kept; Rewards folds into Node (amended by §1155a)
 - §1155a — Several Observers, each tile through its own; the pairing tray rises from the shell
@@ -1525,6 +1525,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1168 — Today wears the inbox tray (amended by §1169)
 - §1169 — Empty Today is a preview of itself, and every room's All is a stack
 - §1170 — Settings' rows are Today's size
+- §1171 — One search: the tray finds everything you have, and a place's bar only adds
 
 ## Dead rulings → what replaced them (generated)
 
