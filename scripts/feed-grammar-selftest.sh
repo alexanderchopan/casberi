@@ -137,12 +137,13 @@ guards() {
   grep -q -- 'Text(p).fontWeight(.medium)' <<< "$R" \
     || echo "the line's project clause is no longer told apart by weight"
 
-  # The door counts, from the window's own walk.
-  # BOTH doors — the All feed's and every room's section path.
+  # The door counts, from the window's own walk: every room's section path.
+  # Home has no door since prd §1154 ("at the end of the day is the end of the
+  # day": its rows are not windowed and no "Show older" closes it), so one.
   local doors
   doors=$(grep -c -- 'if window.more { olderRow(hidden: window.hidden) }' <<< "$F" || true)
-  [[ "$doors" == 2 ]] \
-    || echo "a Show older door no longer carries the window's hidden count ($doors of 2)"
+  [[ "$doors" == 1 ]] \
+    || echo "a Show older door no longer carries the window's hidden count ($doors of 1)"
   grep -q -- 'DSPushRowLabel(title: Text("Show older")' <<< "$F" \
     || echo "Show older is no longer a row in the column"
 
