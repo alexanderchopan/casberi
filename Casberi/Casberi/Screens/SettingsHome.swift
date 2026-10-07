@@ -36,6 +36,8 @@ struct SettingsHome: View {
     /// The phone's own calendars Casberi reads through Calendar (prd §1150),
     /// read on the screen's task, never in a body (§628).
     @State private var phoneCalendars: [PhoneCalendar] = []
+    /// People's letters, for the A–Z strip on the trailing edge (prd §1152).
+    @State private var peopleLetters: [String] = []
     /// WHAT A ROW OR ADD OPENS, OVER SETTINGS (prd §1143, user: "there is no
     /// way to get back"): a subscription, a list, a follow or an add tray
     /// rises here, so a swipe down is Settings again. They used to land in
@@ -49,6 +51,7 @@ struct SettingsHome: View {
         // THE ROOM'S FRAME (prd §1136f): title, box and tiles as the same
         // three list rows every room draws, so they stand where Home's,
         // Notes' and Markets' do on every screen, by construction.
+        ScrollViewReader { proxy in
         List {
             YouHead(place: .settings)
                 .dsRoomTitleListRow()
@@ -66,8 +69,11 @@ struct SettingsHome: View {
                         DSScopeTiles(sections: SettingsScope.bar, active: scope,
                                      strip: true, verbs: SettingsScope.verbs) { pick($0) }
                     }
-                    if !casberiOpen, scope != .people, searchOpen || !query.isEmpty {
-                        DSSlabField(placeholder: String(localized: "Search \(scope.label)"),
+                    // ONE SEARCH OVER EVERY KIND (prd §1152, user: "build 3 and
+                    // 4"): the bar's Search opens it on any kind, People's own
+                    // field included, and what it finds is grouped by kind.
+                    if !casberiOpen, searchOpen || !query.isEmpty {
+                        DSSlabField(placeholder: String(localized: "Search"),
                                     text: $query, actionLabel: "",
                                     focus: $searchFocused,
                                     glyph: "magnifyingglass", clearable: true,
@@ -75,6 +81,8 @@ struct SettingsHome: View {
                     }
                     if casberiOpen {
                         casberiOptions
+                    } else if !query.isEmpty {
+                        searchEverything
                     } else {
                         switch scope {
                         case .apps:
@@ -106,6 +114,19 @@ struct SettingsHome: View {
                 .listRowSeparator(.hidden)
         }
         .dsRoomList()
+        // PEOPLE'S A–Z STRIP (prd §1152): Contacts' index on the trailing
+        // edge, a letter tapped or slid to jumps the list to its header.
+        // Above the floating bar, under the box: the list's own column.
+        .overlay(alignment: .bottomTrailing) {
+            if showsLetterIndex {
+                LetterIndex(letters: peopleLetters) { letter in
+                    proxy.scrollTo(AddressesSection.letterID(letter), anchor: .top)
+                }
+                .padding(.trailing, 2)
+                .padding(.bottom, ShellMetrics.bottomInset + DS.Space.s4)
+            }
+        }
+        }
         .dsScopeDock(sections: casberiOpen || searchFocused ? [] : SettingsScope.bar,
                      active: scope, verbs: SettingsScope.verbs,
                      // A place in You stands where a room does, down to the
@@ -364,13 +385,64 @@ struct SettingsHome: View {
 
     @ViewBuilder
     private var peopleList: some View {
-        DSSlabField(placeholder: String(localized: "Search people"),
-                    text: $query, actionLabel: "",
-                    focus: $searchFocused,
-                    glyph: "magnifyingglass", clearable: true,
-                    size: .slab, submitLabel: .search, action: {})
         AddressesSection(query: query, scope: $peopleScope,
-                         openPlan: { sheet = .subscription($0) })
+                         openPlan: { sheet = .subscription($0) },
+                         onLetters: { peopleLetters = $0 })
+    }
+
+    private var showsLetterIndex: Bool {
+        scope == .people && query.isEmpty && !casberiOpen && peopleLetters.count > 3
+    }
+
+    /// What one search finds, by kind, each kind only when it has a hit, in
+    /// the box's order (prd §1152).
+    @ViewBuilder
+    private var searchEverything: some View {
+        let apps = connectedApps.filter { hit($0.name) }
+        let phone = phoneCalendars.filter { hit($0.title) }
+        let subscribed = CalendarSubscriptionStore.shared.calendars.filter { hit($0.displayName) }
+        let feedHits = feeds.filter { hit($0.name) }
+        let lists = MailSubscriptionsReading.shared.items.filter { hit($0.name) }
+        let people = ContactIndexSources.contacts.contains { hit($0.name) }
+        let subs = SubscriptionsReading.shared.items.filter { hit($0.name) }
+        if apps.isEmpty && phone.isEmpty && subscribed.isEmpty && feedHits.isEmpty
+            && lists.isEmpty && !people && subs.isEmpty {
+            empty("Nothing matches.")
+        } else {
+            VStack(alignment: .leading, spacing: DS.Space.s6) {
+                if !apps.isEmpty { kindSection("Apps") { ForEach(apps) { appRow($0) } } }
+                if !phone.isEmpty || !subscribed.isEmpty {
+                    kindSection("Calendars") {
+                        ForEach(phone) { cal in
+                            DSPushRow(title: Text(verbatim: cal.title), subtitle: Text(verbatim: cal.account)) {
+                                route.openSetup(forOffer: "Calendar")
+                            } leading: {
+                                Circle().fill(cal.color).frame(width: 14, height: 14)
+                                    .frame(width: DS.Face.row, height: DS.Face.row)
+                            }
+                        }
+                        ForEach(subscribed) { calendarRow($0) }
+                    }
+                }
+                if !feedHits.isEmpty { kindSection("Feeds") { ForEach(feedHits) { feedRow($0) } } }
+                if !lists.isEmpty { kindSection("Mailing lists") { ForEach(lists) { newsletterRow($0) } } }
+                if people {
+                    kindSection("People") {
+                        AddressesSection(query: query, scope: $peopleScope,
+                                         openPlan: { sheet = .subscription($0) })
+                    }
+                }
+                if !subs.isEmpty { kindSection("Subscriptions") { ForEach(subs) { subscriptionRow($0) } } }
+            }
+        }
+    }
+
+    private func kindSection<Rows: View>(_ title: LocalizedStringKey,
+                                         @ViewBuilder rows: () -> Rows) -> some View {
+        VStack(alignment: .leading, spacing: DS.Space.s1) {
+            Text(title).dsText(.heading17).foregroundStyle(DS.brandInk)
+            rows()
+        }
     }
 
     // MARK: - Subscriptions, feeds, newsletters, calendars
@@ -589,5 +661,50 @@ struct PhoneCalendar: Identifiable {
                     ? $0.title.localizedStandardCompare($1.title) == .orderedAscending
                     : $0.account.localizedStandardCompare($1.account) == .orderedAscending
             }
+    }
+}
+
+/// Contacts' index (prd §1152): the letters a list files under, stacked on
+/// its trailing edge; a tap or a slide jumps to the letter under the finger,
+/// a tick each time it changes. "Not named yet" draws as a dot.
+struct LetterIndex: View {
+    let letters: [String]
+    let jump: (String) -> Void
+    @State private var current: String?
+
+    private static let pitch: CGFloat = 15
+
+    var body: some View {
+        VStack(spacing: 0) {
+            ForEach(letters, id: \.self) { letter in
+                Text(verbatim: letter == "…" ? "•" : letter)
+                    .dsText(.dockCaption10)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(DS.tint)
+                    .frame(width: 20, height: Self.pitch)
+            }
+        }
+        .padding(.vertical, DS.Space.s1)
+        .contentShape(Rectangle())
+        .gesture(
+            DragGesture(minimumDistance: 0)
+                .onChanged { value in
+                    let i = Int((value.location.y - DS.Space.s1) / Self.pitch)
+                    let letter = letters[max(0, min(letters.count - 1, i))]
+                    guard letter != current else { return }
+                    current = letter
+                    DSHaptic.selection()
+                    jump(letter)
+                }
+                .onEnded { _ in current = nil }
+        )
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text("Index"))
+        .accessibilityAdjustableAction { direction in
+            let i = letters.firstIndex(of: current ?? letters[0]) ?? 0
+            let next = direction == .increment ? min(letters.count - 1, i + 1) : max(0, i - 1)
+            current = letters[next]
+            jump(letters[next])
+        }
     }
 }

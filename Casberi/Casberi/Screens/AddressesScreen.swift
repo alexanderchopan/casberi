@@ -39,6 +39,9 @@ struct AddressesSection: View {
     /// (Settings, prd §1143), instead of leaving for the Wallet. Declared
     /// before `onScopes`, so a trailing closure still means `onScopes`.
     var openPlan: ((String) -> Void)? = nil
+    /// The letters the list files under, for the screen's A–Z strip (prd
+    /// §1152); each letter's header carries `AddressesSection.letterID`.
+    var onLetters: (([String]) -> Void)? = nil
     var onScopes: ([AddressScope]) -> Void = { _ in }
     @Environment(\.horizontalSizeClass) private var sizeClass
     @State private var opened: Contact?
@@ -122,6 +125,7 @@ struct AddressesSection: View {
         // the stores and the ledger only — no network.
         .task { await refresh() }
         .onChange(of: scopes, initial: true) { _, held in onScopes(held) }
+        .onChange(of: letters, initial: true) { _, now in onLetters?(now) }
         // The resolver, debounced behind the typing: one web3.bio ask per
         // settled query, only for a query SHAPED like an address, a name or
         // a handle, and only when nobody here already carries it.
@@ -518,6 +522,7 @@ struct AddressesSection: View {
                         ForEach(section.rows) { contact in row(contact) }
                     } header: {
                         LetterHead(text: Self.title(for: section.letter), tone: DS.textTertiary)
+                            .id(Self.letterID(section.letter))
                     }
                 }
             }
@@ -541,6 +546,20 @@ struct AddressesSection: View {
     /// wall of identicons under a symbol read as junk; under a word it reads
     /// as what it is, a to-do — and "yet" says the row's own `Name` verb is
     /// the way out).
+    /// The letters the A–Z strip offers: the groups the list draws, in its
+    /// order, none while a search narrows it.
+    private var letters: [String] {
+        guard query.isEmpty else { return [] }
+        let everyone = shown.sorted { l, r in
+            if l.isUnnamed != r.isUnnamed { return !l.isUnnamed }
+            return l.name.localizedStandardCompare(r.name) == .orderedAscending
+        }
+        return Self.lettered(everyone).map(\.letter)
+    }
+
+    /// The scroll id of a letter's header, for the strip's jump.
+    static func letterID(_ letter: String) -> String { "people-letter-\(letter)" }
+
     static func title(for letter: String) -> Text {
         switch letter {
         case "…": Text("Not named yet")

@@ -222,7 +222,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1284 of 1346 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1285 of 1347 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1508,6 +1508,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1150 — Calendars counts every calendar Casberi reads
 - §1151 — The default order is the day first: Day, Social, Work, Wallet, Reading, Life, Media, Agents, Testnets
 - §1152 — Home is by category, in your dock order
+- §1152 — People gets Contacts' A–Z strip, and Settings' Search looks through every kind
 
 ## Dead rulings → what replaced them (generated)
 
