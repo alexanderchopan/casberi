@@ -64836,3 +64836,12 @@ Home's sections are categories since §1152, and Day is one of them, its name a 
 **Demo.** While the demo is on, Chat shows three sample conversations from the demo person's week (`DemoChat`), dated from now; nothing is read or sent.
 
 **Checked.** `logos-observer-selftest.sh` (68 checks, 11 new for chat), `logos-selftest.sh`, `tile-glyph-audit.py`, `footnote-audit.py`, `sentence-case-audit.py` (Basecamp a proper name), `room-heads-selftest.sh`; on the simulator against a scratch copy of the Observer with stand-in chat routes: pairing with chat on, the tile and list, a conversation's messages with a duplicate dropped, Node with mining and rewards, and the demo's chats. **Not seen:** the Observer's real chat routes (not written yet), a real Basecamp, a device.
+
+
+## §1156 — Every title's first word is pink, and You's screens name the place alone (user, 2026-10-06: "the home feed categories should be in pink, and perhaps my name should be what is white"; "should we have the user name only be on home? or not even on home? that way the title first word is always pink?"; "Home should be in Pink"; "make them all pink"; amends §1129, §1133d and §1152) — BUILT
+
+**The title.** Home, Notes and Markets title themselves with the place alone (`FeedScreen.youPlaceName`), and Apps, Addresses and Settings do the same (`YouHead`): "Home", never "Alex · Home". So the title's first word is pink on every screen and always says where you are. Your name stays on the rooms tray's You row (`HomeScope.title`).
+
+**Home's sections.** Home's section headers (§1152) are pink, the "You" section included, matching the titles; `categoryHeaderRow` uses the divider's default ink.
+
+**Checked.** `day-divider-audit.py`; on the simulator, Home reads "Home" in pink over pink Day and Social headers.

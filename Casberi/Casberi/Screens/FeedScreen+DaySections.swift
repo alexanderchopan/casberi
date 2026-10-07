@@ -338,8 +338,8 @@ extension FeedScreen {
                 // a name belongs. The whisper keeps its capsule and the
                 // Since-you-left group keeps its name.
                 // A CATEGORY, NOT A DAY (prd §1152): Home's sections are named
-                // by what they hold, so the divider takes the primary ink
-                // (`dated: false`, §740), and each is a door to its
+                // by what they hold, in the pink every title wears (§1156),
+                // and each is a door to its
                 // category's combined page, as the tray's row is (user: "will
                 // the category be tappable?").
                 categoryHeaderRow(label)
@@ -649,7 +649,8 @@ extension FeedScreen {
     /// label only.
     @ViewBuilder
     private func categoryHeaderRow(_ category: String) -> some View {
-        let divider = FeedDayDivider(label: category, dated: false) { EmptyView() }
+        // Every section's name is pink, as every title is (prd §1156).
+        let divider = FeedDayDivider(label: category) { EmptyView() }
             .textCase(nil)
             .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(Rectangle())

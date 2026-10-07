@@ -222,7 +222,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1286 of 1349 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1287 of 1350 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1486,7 +1486,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1126 — Reading's Subscriptions count no posts
 - §1127 — Home wears a You pill, and Notes and Markets are places in Home (amended by §1128, §1129, §1133, §1136)
 - §1128 — The pill is the room's title (amended by §1129)
-- §1129 — The category's name comes back, in pink, and You's doors are places
+- §1129 — The category's name comes back, in pink, and You's doors are places (amended by §1156)
 - §1130 — Threads can have notifications the way Instagram does, through its own sign-in; Meta's Threads API cannot give them
 - §1131 — Threads is a seat: its own sign-in, its Activity in Social
 - §1132 — Nothing pushes on the phone: what you open rises as one sheet
@@ -1506,10 +1506,11 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1149 — A connected app's line reads grey everywhere; a selected count stays blue
 - §1150 — Calendars counts every calendar Casberi reads
 - §1151 — The default order is the day first: Day, Social, Work, Wallet, Reading, Life, Media, Agents, Testnets
-- §1152 — Home is by category, in your dock order
+- §1152 — Home is by category, in your dock order (amended by §1156)
 - §1153 — People gets Contacts' A–Z strip, and Settings' Search looks through every kind
 - §1154 — Home ends with its categories: "Your day" and the Coming up door are deleted
 - §1155 — Logos gets Chat: your conversations from Basecamp, read through Observer and never kept; Rewards folds into Node
+- §1156 — Every title's first word is pink, and You's screens name the place alone
 
 ## Dead rulings → what replaced them (generated)
 

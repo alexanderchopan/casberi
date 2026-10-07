@@ -480,7 +480,8 @@ struct RoomsTray: View {
     /// disc white behind the same glyph (§1053).
     private func youRow(gap: CGFloat) -> some View {
         // **A ROW LIKE EVERY OTHER (prd §1133, §1133c).** Your name, else You
-        // (`HomeScope.title`, the screen title's word; §1133d: the name line
+        // (`HomeScope.title`; since §1156 the screen titles name the place alone,
+        // so your name is here only; §1133d: the name line
         // runs the card's width now, so the truncation §1133a answered is
         // gone), then Home's disc where a category's own stands and the other
         // five places, one line of six.

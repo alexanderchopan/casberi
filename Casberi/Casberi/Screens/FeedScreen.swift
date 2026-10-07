@@ -1473,7 +1473,7 @@ struct FeedScreen: View {
     /// category's name is yours, else You (`HomeScope.title`), and the You
     /// pill beside it names the place.
     var roomName: String {
-        if HomeScope.contains(source) { return HomeScope.title }
+        if HomeScope.contains(source) { return youPlaceName }
         return BridgeCatalog.seatName(forSource: hostRoom ?? source)
     }
 

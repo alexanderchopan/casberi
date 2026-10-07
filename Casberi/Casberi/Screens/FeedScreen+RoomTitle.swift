@@ -10,13 +10,14 @@ import SwiftUI
 // the row is one height picked or not, and you change the pick from the tray.
 
 /// The title row of a You place that is a screen (Apps, Addresses,
-/// Settings): the category's name and the place, where the screen's own name
-/// stood (prd §1129).
+/// Settings): the place alone, in pink (prd §1156, amending §1129 — your
+/// name lives on the tray's You row, so the title's first word is always
+/// pink and always says where you are).
 struct YouHead: View {
     let place: HomeScope.Place
 
     var body: some View {
-        DSRoomTitleRow(title: HomeScope.title, pick: place.name)
+        DSRoomTitleRow(title: place.name)
     }
 }
 
@@ -32,16 +33,20 @@ extension HomeScope.Place {
 }
 
 extension FeedScreen {
+    /// You's place as the title's own word (prd §1156): Home, Notes or
+    /// Markets, never your name before it.
+    var youPlaceName: String {
+        if Pinboard.isPinnedRoom(source) { return String(localized: "Notes") }
+        if HomeScope.isMarkets(source) { return String(localized: "Markets") }
+        return String(localized: "Home")
+    }
+
     /// What the title names after the category's dot, or nil while the room
-    /// shows everything (prd §1133): You's place (Home is a place, so You
-    /// always names one), the app or account picked, or the network the
-    /// Testnets room is showing.
+    /// shows everything (prd §1133): the app or account picked, or the
+    /// network the Testnets room is showing. You's places name themselves
+    /// (`youPlaceName`, §1156), so they pick nothing.
     var roomPick: String? {
-        if HomeScope.contains(source) {
-            if Pinboard.isPinnedRoom(source) { return String(localized: "Notes") }
-            if HomeScope.isMarkets(source) { return String(localized: "Markets") }
-            return String(localized: "Home")
-        }
+        if HomeScope.contains(source) { return nil }
         if let rail = chrome.accountRail,
            rail.source == source || source == RoomAccounts.testnetsRoom,
            let slot = rail.slots.first(where: { !$0.id.isEmpty && $0.isShowing(rail.scope) }) {
