@@ -854,8 +854,16 @@ strip_comments "Casberi/Casberi/Screens/AppsScreen.swift" > "$TMP/apps.nc"
   || { echo "✗ a room draws a sliders disc again — settings open from Apps (prd §1050f)."; fail=1; }
 grep -q 'route.openAccount(destination)' "$TMP/apps.nc" \
   || { echo "✗ a connected row in Apps no longer opens its account page (prd §1050f)."; fail=1; }
-! grep -q '\.contextMenu' "$TMP/tray.nc" \
-  || { echo "✗ a tray mark has a hold again — §1033 deleted it."; fail=1; }
+# §1159 amended this: an app's icon in a tray row holds Open, then Settings,
+# its account page through the one call Settings' row makes. Any other hold in
+# the tray is still §1033's deleted one.
+if grep -q '\.contextMenu' "$TMP/tray.nc"; then
+  grep -q 'accountPage(BridgeRouter.destination(forID:' "$TMP/tray.nc" \
+    && grep -q 'route.openAccount(dest)' "$TMP/tray.nc" \
+    || { echo "✗ a tray mark holds something other than §1159's Open · Settings — §1033 deleted it."; fail=1; }
+  [ "$(grep -c '\.contextMenu' "$TMP/tray.nc")" -le 1 ] \
+    || { echo "✗ the tray holds more than one menu — only an app's icon takes §1159's."; fail=1; }
+fi
 
 if [ $fail -eq 0 ]; then
   echo "✓ dock self-test"
