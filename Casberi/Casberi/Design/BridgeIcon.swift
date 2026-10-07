@@ -28,6 +28,9 @@ private enum BridgeIconArt {
             .folding(options: .diacriticInsensitive, locale: Locale(identifier: "en_US_POSIX"))
             .replacingOccurrences(of: " ", with: "-")
             .replacingOccurrences(of: ".", with: "")
+            // "Disney+" is brand-disneyplus: a "+" in an asset name is not a
+            // name anyone types (prd §1164).
+            .replacingOccurrences(of: "+", with: "plus")
         names[name] = made
         return made
     }

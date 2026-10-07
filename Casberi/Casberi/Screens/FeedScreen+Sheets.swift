@@ -102,6 +102,9 @@ extension FeedScreen {
         case subscription(String)
         /// Track a subscription by hand (prd §1105, the verb since §1117).
         case subscriptionAdd
+        /// Track a subscription, opened on one app: raised once on the
+        /// arrival a first connect made (prd §1164).
+        case subscriptionTrack(String)
         /// One mailing list, by its key (prd §1111).
         case mailSubscription(String)
         /// Track a sender's mail as a subscription (prd §1117).
@@ -143,6 +146,7 @@ extension FeedScreen {
             case .walletTokens: "walletTokens"
             case .subscription(let id): "subscription:\(id)"
             case .subscriptionAdd: "subscriptionAdd"
+            case .subscriptionTrack(let app): "subscriptionTrack:\(app)"
             case .mailSubscription(let id): "mailSubscription:\(id)"
             case .mailSubscriptionAdd: "mailSubscriptionAdd"
             case .company(let c): "company:\(c.name)"
@@ -311,7 +315,15 @@ extension FeedScreen {
         case .subscription(let id):
             SubscriptionSheet(id: id)
         case .subscriptionAdd:
+            // A Catalyst sheet does not inherit the presenter's environment
+            // (prd §872); the tray reads the connected apps (§1164).
             SubscriptionAddTray()
+                .environment(chrome)
+                .environment(bridges)
+        case .subscriptionTrack(let app):
+            SubscriptionAddTray(prefill: .init(name: app, site: SubscriptionAddTray.siteByOffer[app]))
+                .environment(chrome)
+                .environment(bridges)
         case .mailSubscriptionAdd:
             MailSubscriptionAddTray()
         case .mailSubscription(let id):

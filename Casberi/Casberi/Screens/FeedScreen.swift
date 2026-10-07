@@ -508,6 +508,23 @@ struct FeedScreen: View {
         feedSheet = .githubWatch
     }
 
+    /// TRACK, ONCE, AFTER A FIRST CONNECT (prd §1164): an app you can hold a
+    /// plan with raises Track a subscription on its own price, once per app
+    /// ever (`SubscriptionPlans.shouldAsk`), and never over a plan already
+    /// tracked. Free plans count, so it asks for a price, never whether you
+    /// pay. GitHub's next step is its watch tray (§1030), so it is not asked
+    /// there. Keyed on `isActive` for `landGitHubWatch`'s reason.
+    func landSubscriptionAsk() async {
+        guard isActive, source != "GitHub", chrome.connectLanding == source else { return }
+        chrome.connectLanding = nil
+        let tracked = SubscriptionsReading.shared.items.map(\.name) + SubscriptionStore.shared.all.map(\.name)
+        guard SubscriptionPlans.shouldAsk(source, tracked: tracked) else { return }
+        SubscriptionPlans.markAsked(source)
+        try? await Task.sleep(for: .milliseconds(900))
+        guard !Task.isCancelled, isActive, feedSheet == nil else { return }
+        feedSheet = .subscriptionTrack(source)
+    }
+
     /// **A SERVICE DOOR LANDS HERE** (`ShellChrome.serviceDoor`): a plan's
     /// sheet in the Wallet, a list's in Day, asked for from the service's
     /// other page. Keyed on `isActive` for `landGitHubWatch`'s reason (the
@@ -1141,7 +1158,7 @@ struct FeedScreen: View {
         // told a first-time writer to open the catalog instead.
         if !roomHasContent && !LiveRoomSources.has(source) && !agentRoomShown
             && !Pinboard.isPinnedRoom(source) && !walletKeepsChrome {
-            // An empty Home still names what stopped (prd §1162): an app
+            // An empty Home still names what stopped (prd §1164): an app
             // that broke before anything landed is the likeliest reason the
             // feed is empty at all.
             if source == "All" { reconnectSection }
@@ -1999,6 +2016,7 @@ struct FeedScreen: View {
         // A method, not an inline closure: this chain sits at the type-checker's
         // limit, and the inline form tipped it over.
         .task(id: githubLandingKey) { await landGitHubWatch() }
+        .task(id: githubLandingKey) { await landSubscriptionAsk() }
         .task(id: serviceDoorKey) { await landServiceDoor() }
         .sheet(item: $roomShare) { input in
             ShareTray(room: input)

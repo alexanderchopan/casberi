@@ -222,7 +222,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1295 of 1358 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1296 of 1359 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1493,7 +1493,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1133 — Two controls: the face says where, the tiles say what (amended by §1136) [+5 sub-entries]
 - §1134 — Day's Track tray searches mail
 - §1135 — An unwatched wallet's rows leave, under the name it was watched by too [+1 sub-entries]
-- §1136 — One place for lists: You is a room of four places, Settings holds everything you've connected, Home is Today then Com… (amended by §1138, §1139)
+- §1136 — One place for lists: You is a room of four places, Settings holds everything you've connected, Home is Today then Com… (amended by §1138, §1139, §1164)
 - §1137 — Calendars you subscribe to [+11 sub-entries]
 - §1138 — The box's counts are the filter, on Sources and in the Apps catalogue (amended by §1140, §1142, §1145) [+1 sub-entries]
 - §1139 — Home is the whole of today: its feeds, then Later today (amended by §1154; part superseded by §1141)
@@ -1516,9 +1516,10 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1158 — Spotify reads where the web player reads: the albums and playlists you played, and what your friends are playing, off…
 - §1159 — An app's icon in the rooms tray long-presses to Settings, its account page
 - §1160 — Day's Subscriptions fills from the mail already here, and a list that went quiet stands under Stopped
-- §1161 — Track a subscription is one tap: the cards offer what they charged twice, a typed name finds the app, and the price i…
+- §1161 — Track a subscription is one tap: the cards offer what they charged twice, a typed name finds the app, and the price i… (amended by §1164)
 - §1162 — Connecting, made shorter: pasted keys reach your other devices, Paste is the commit, a wrong or refused key says why,… (amended by §1163)
 - §1163 — A seat has one name: every bridge `NetworkReach` names is its catalog name, so a refused key reaches the page, the ri…
+- §1164 — You can track a subscription without a card or an app: the tray opens on Popular and stays open, a free plan counts,…
 
 ## Dead rulings → what replaced them (generated)
 

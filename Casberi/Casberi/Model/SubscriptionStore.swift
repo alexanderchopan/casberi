@@ -38,7 +38,7 @@ final class SubscriptionStore {
     func add(name raw: String, amount: Double, currency: String = "USD", yearly: Bool,
              anchor: Date, paysWith: String?, site: String?) -> Subscriptions.Manual? {
         let name = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !name.isEmpty, amount > 0 else { return nil }
+        guard !name.isEmpty, amount >= 0 else { return nil }
         let key = Subscriptions.key(name)
         let entry = Subscriptions.Manual(
             id: key, name: name, amount: amount, currency: currency, yearly: yearly,

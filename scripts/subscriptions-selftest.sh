@@ -22,6 +22,7 @@ cd "$(dirname "$0")/.."
 SRC="Casberi/Casberi/Model/Subscriptions.swift"
 AWR="Casberi/Casberi/Model/AppleWalletRoom.swift"
 LEDE="Casberi/Casberi/Model/RoomLede.swift"   # AppleWalletRoom.lede returns one
+PLANS="Casberi/Casberi/Model/SubscriptionPlans.swift"   # prd §1164
 VERIFY="scripts/verify.sh"
 
 work=$(mktemp -d)
@@ -161,11 +162,29 @@ check(yr.first?.yearly == true, "two charges a year apart are offered as yearly"
 check(suggest(spends("Spotify", [(11.99, 42), (11.99, 12)]) + [Spend(merchant: "Spotify", amount: 11.99,
       currency: "USD", date: ago(5), isSettled: false)]).count == 1, "a pending charge does not count")
 
+// §1164 — a list you can fill without a card, free plans included.
+let free = Subscriptions.Manual(id: "notion", name: "Notion", amount: 0, currency: "USD", yearly: false,
+                                anchor: ago(3), paysWith: nil, site: "notion.so", at: now)
+let freeItems = compose([], manual: [free])
+check(freeItems.count == 1 && freeItems.first?.amount == 0, "a free plan is listed, at no price")
+check(Subscriptions.total(freeItems, usd: { a, _ in a }).counted == 1, "a free plan is counted as a subscription")
+let names = SubscriptionPlans.popular.map(\.name)
+check(names == names.sorted { $0.localizedStandardCompare($1) == .orderedAscending }, "Popular reads A–Z")
+check(Set(names).count == names.count, "Popular names one service once")
+check(SubscriptionPlans.popular(matching: "pri").map(\.name) == ["Amazon Prime"], "a word inside a name finds it")
+check(SubscriptionPlans.isTracked("spotify ", among: ["Spotify"]), "a tracked name is the same plan whatever its case")
+let asks = UserDefaults(suiteName: "subs-selftest-\(ProcessInfo.processInfo.processIdentifier)")!
+check(SubscriptionPlans.shouldAsk("Spotify", tracked: [], defaults: asks), "a first connect of a plan app asks")
+check(!SubscriptionPlans.shouldAsk("Photos", tracked: [], defaults: asks), "an app with no plan never asks")
+check(!SubscriptionPlans.shouldAsk("Notion", tracked: ["Notion"], defaults: asks), "a plan already tracked never asks")
+SubscriptionPlans.markAsked("Spotify", defaults: asks)
+check(!SubscriptionPlans.shouldAsk("Spotify", tracked: [], defaults: asks), "an app asks once, ever")
+
 if failures > 0 { print("\(failures) assertion(s) failed"); exit(1) }
-print("  ok   detection, merge, cadence, renewals, order, total")
+print("  ok   detection, merge, cadence, renewals, order, total, plans")
 SWIFT
 
-build() { swiftc -Onone -o "$work/run" "$AWR" "$LEDE" "$1" "$work/main.swift" 2>"$work/err" || return 1 }
+build() { swiftc -Onone -o "$work/run" "$AWR" "$LEDE" "${2:-$PLANS}" "$1" "$work/main.swift" 2>"$work/err" || return 1 }
 
 cp "$SRC" "$work/Subscriptions.swift"
 build "$work/Subscriptions.swift" || { cat "$work/err"; fail "the shipped source does not compile"; }
@@ -199,10 +218,43 @@ mutate "a currency with no rate counted at par" \
 mutate "a bill and a charge for one plan listed twice" \
   's/if var standing = byKey\[k\] \{\n                if !standing\.foundIn\.contains\(bill\.source\)/if false, var standing = byKey[k] {\n                if !standing.foundIn.contains(bill.source)/'
 
+# §1164: the plan lists, mutated in their own file.
+mutate_plans() {
+  local why="$1" expr="$2"
+  cp "$PLANS" "$work/p.swift"
+  perl -0pi -e "$expr" "$work/p.swift"
+  cmp -s "$PLANS" "$work/p.swift" && fail "mutation matched nothing: $why"
+  if build "$work/Subscriptions.swift" "$work/p.swift" && "$work/run" >/dev/null 2>&1; then
+    fail "mutation SURVIVED — $why"
+  fi
+  echo "  ok   catches  $why"
+}
+mutate_plans "a connect asks again on every reconnect (the asked set ignored)" \
+  's/return !\(defaults\.stringArray\(forKey: askedKey\) \?\? \[\]\)\.contains\(app\)/return true/'
+mutate_plans "a plan already tracked is asked about" \
+  's/guard sells\(app\), !isTracked\(app, among: tracked\) else/guard sells(app) else/'
+
+# §1164: every app named as selling a plan is a catalogue app, by its exact name.
+catalog_names=$(grep -o 'Offer(name: "[^"]*"' Casberi/Casberi/Model/BridgeCatalog.swift | sed 's/Offer(name: "//; s/"$//')
+for app in $(sed -n '/static let apps: Set<String> = \[/,/\]/p' "$PLANS" | grep -o '"[^"]*"' | tr -d '"' | tr ' ' '_'); do
+  print -r -- "$catalog_names" | tr ' ' '_' | grep -qx -- "$app" || fail "SubscriptionPlans.apps names \"${app//_/ }\", which is not a catalogue app"
+done
+# §1164 wiring: a free plan can be kept, and each door reaches the lists.
+grep -q 'guard !name.isEmpty, amount >= 0 else' Casberi/Casberi/Model/SubscriptionStore.swift \
+  || fail "drift: SubscriptionStore refuses a free plan again"
+grep -q 'guard let value = Double(cleaned), value >= 0 else' Casberi/Casberi/Screens/SubscriptionSheets.swift \
+  || fail "drift: the tray's price refuses Free again"
+grep -q 'SubscriptionPlans.popular(matching: query)' Casberi/Casberi/Screens/SubscriptionSheets.swift \
+  || fail "drift: the tray no longer offers Popular"
+grep -q 'SubscriptionPlans.sells(name)' Casberi/Casberi/Screens/AccountPage.swift \
+  || fail "drift: an app's page no longer offers Track"
+grep -q 'await landSubscriptionAsk()' Casberi/Casberi/Screens/FeedScreen.swift \
+  || fail "drift: a first connect no longer raises Track"
+
 # Wiring: the reading feeds this function, the tile reads the reading.
 grep -q "Subscriptions.compose(found: found, bills: bills" Casberi/Casberi/Model/SubscriptionsSource.swift \
   || fail "drift: SubscriptionsReading no longer composes through Subscriptions.compose"
 grep -q "subscriptions-selftest.sh" "$VERIFY" \
   || fail "not wired into verify.sh — the completeness guard requires it, with its reason"
 
-echo "✓ subscriptions: detection, merge, cadence, renewals, order, total, 8 mutations"
+echo "✓ subscriptions: detection, merge, cadence, renewals, order, total, plans, 10 mutations"

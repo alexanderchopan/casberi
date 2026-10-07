@@ -97,8 +97,16 @@ struct SettingsHome: View {
                                      empty: "Lists that write to your mail land here.") { newsletterRow($0) }
                         case .people:        peopleList
                         case .subscriptions:
-                            kindList(SubscriptionsReading.shared.items.filter { hit($0.name) },
-                                     empty: "Track a subscription and it lands here.") { subscriptionRow($0) }
+                            // The verb leads, as on the Wallet's list (prd
+                            // §1117), so an empty list is never a dead end
+                            // (§1164): the tray opens on Popular.
+                            VStack(alignment: .leading, spacing: DS.Space.s1) {
+                                if query.isEmpty {
+                                    DSDoorRow(icon: "plus", title: Text(SubscriptionWords.track)) { add(.subscriptions) }
+                                }
+                                kindList(SubscriptionsReading.shared.items.filter { hit($0.name) },
+                                         empty: "Track a subscription and it lands here.") { subscriptionRow($0) }
+                            }
                         case .new, .search:  EmptyView()
                         }
                     }

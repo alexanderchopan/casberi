@@ -165,6 +165,9 @@ enum BridgeGlyph {
         // logo, which no third party may draw, and never a Siri orb: this seat
         // is Apple's model, not Siri.
         case "apple intelligence": return "apple.intelligence"
+        // Two plans with no App Store app to take a mark from (prd §1164).
+        case "icloud+":   return "icloud"
+        case "apple one": return "square.stack"
         case "day one":   return "1.circle"
         case "bookmarks": return "bookmark.fill"
         case "safari":    return "globe"

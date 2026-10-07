@@ -141,6 +141,10 @@ enum SubscriptionWords {
     /// "Subscribe". It pairs with Stop tracking.
     static var track: String { String(localized: "Track a subscription") }
 
+    /// A plan held for nothing says so (prd §1164): "Free", never "$0.00",
+    /// and never masked, because no balance is behind it.
+    static var free: String { String(localized: "Free") }
+
     /// A host as a door names it: no scheme, no path, no leading `www.`.
     static func host(_ raw: String) -> String {
         var host = raw.trimmingCharacters(in: .whitespaces).lowercased()

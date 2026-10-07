@@ -66,6 +66,7 @@ struct SubscriptionSheet: View {
 
     private func statement(_ item: Subscriptions.Item, mask: String?) -> SubscriptionStatement? {
         guard let amount = item.amount else { return nil }
+        if amount == 0 { return SubscriptionStatement(figure: SubscriptionWords.free) }
         return SubscriptionStatement(figure: money(amount, item.currency, mask),
                                      word: cadenceWord(item),
                                      note: item.was.map { Text("Up from \(money($0, item.currency, mask))") })
@@ -78,7 +79,7 @@ struct SubscriptionSheet: View {
             out.append(.init(item.cadenceDays == nil ? String(localized: "Next charge") : String(localized: "Renews"),
                              next.formatted(.dateTime.month(.wide).day().year())))
         }
-        if showsMoney, let monthly = item.monthly, item.isYearly {
+        if showsMoney, let monthly = item.monthly, monthly > 0, item.isYearly {
             out.append(.init(String(localized: "A month"), money(monthly, item.currency, mask)))
         }
         if let since = item.since {
@@ -146,21 +147,42 @@ struct SubscriptionSheet: View {
 }
 
 /// TRACK A SUBSCRIPTION (prd §1105, the verb since §1117; made one tap,
-/// §1161). Day's tray in money: rows over a search field at the bottom.
+/// §1161; a list you can fill without a card, §1164). Day's tray in money:
+/// rows over a search field at the bottom.
 ///   1. FROM YOUR CARDS — charges that look like a plan and are not tracked
-///      yet (`SubscriptionsReading.suggestions`). A tap tracks one and closes.
-///   2. Typed, the catalogue's apps that match, then the words themselves.
-///   3. A pick asks only the price and Month or Year; the renewal, what pays
-///      it and the website sit under More, the website filled from the app.
-/// When the same name later shows up as a charge a card names, the two merge
-/// by name (`Subscriptions.compose`) and are counted once.
+///      yet (`SubscriptionsReading.suggestions`). A tap tracks one.
+///   2. YOUR APPS — connected apps you can hold a plan with
+///      (`SubscriptionPlans.apps`), then POPULAR, the services most people
+///      hold one with. Neither needs a card or a connected app.
+///   3. Typed, the catalogue's apps and the popular services that match,
+///      then the words themselves.
+///   4. A pick asks only the price, Free included, and Month or Year; the
+///      renewal, what pays it and the website sit under More.
+/// Opened from a list, tracking returns to it, the row ticked, so six plans
+/// are six taps and six prices; opened on one app (`prefill`, its account
+/// page or its first connect), tracking closes. When the same name later
+/// shows up as a charge a card names, the two merge by name
+/// (`Subscriptions.compose`) and are counted once.
 struct SubscriptionAddTray: View {
+    /// Opens on this pick's price instead of the list.
+    let prefill: Pick?
+
+    init(prefill: Pick? = nil) {
+        self.prefill = prefill
+        // On the price from the first frame, never the list for one.
+        _picked = State(initialValue: prefill)
+        _site = State(initialValue: prefill?.site ?? "")
+    }
+
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
     @Environment(ShellChrome.self) private var chrome
+    @Environment(BridgeStore.self) private var store
 
     @State private var query = ""
     @State private var picked: Pick?
+    /// Tracked on this visit, so a row ticks before the reading catches up.
+    @State private var trackedHere: [String] = []
     @State private var price = ""
     @State private var yearly = false
     @State private var renews = SubscriptionAddTray.firstRenewal(yearly: false)
@@ -183,7 +205,24 @@ struct SubscriptionAddTray: View {
         DSTray(title: SubscriptionWords.track, height: 640, detents: [.large]) {
             if let picked { form(picked) } else { list }
         }
-        .task { await SubscriptionsReading.shared.refresh(modelContext) }
+        .task {
+            if prefill != nil, picked != nil { focus = .price }
+            await SubscriptionsReading.shared.refresh(modelContext)
+        }
+    }
+
+    /// Every name tracked: what the Wallet reads, what was added by hand, and
+    /// what this visit tracked.
+    private var tracked: [String] {
+        SubscriptionsReading.shared.items.map(\.name) + SubscriptionStore.shared.all.map(\.name) + trackedHere
+    }
+
+    /// Connected apps you can hold a plan with, not tracked yet, A–Z.
+    private var yourApps: [String] {
+        let tracked = tracked
+        return Set(store.bridges.filter { $0.status != .paused }.map(\.name))
+            .filter { SubscriptionPlans.sells($0) && !SubscriptionPlans.isTracked($0, among: tracked) }
+            .sorted { $0.localizedStandardCompare($1) == .orderedAscending }
     }
 
     // MARK: - 1 · 2 The list
@@ -192,18 +231,33 @@ struct SubscriptionAddTray: View {
 
     private var list: some View {
         let typed = trimmedQuery
+        let tracked = tracked
         let suggestions = Self.matching(SubscriptionsReading.shared.suggestions, query: typed)
-        let apps = typed.isEmpty ? [] : Self.apps(matching: typed)
+            .filter { !SubscriptionPlans.isTracked($0.name, among: trackedHere) }
+        let mine = typed.isEmpty ? yourApps : []
+        // A name already offered above is not offered twice.
+        let above = suggestions.map(\.name) + mine
+        let apps = Self.apps(matching: typed).filter { !SubscriptionPlans.isTracked($0.name, among: above) }
         return ScrollView {
             LazyVStack(alignment: .leading, spacing: 0) {
                 if !suggestions.isEmpty {
                     DSTrayHead(String(localized: "From your cards"))
                     ForEach(suggestions) { suggestionRow($0) }
                 }
+                if !mine.isEmpty {
+                    DSTrayHead(String(localized: "Your apps"))
+                    ForEach(mine, id: \.self) { name in
+                        let site = Self.siteByOffer[name]
+                        pickRow(name, line: Text(verbatim: site ?? BridgeCatalog.category(forSource: name) ?? "")) {
+                            choose(Pick(name: name, site: site))
+                        }
+                    }
+                }
                 if !apps.isEmpty {
-                    DSTrayHead(String(localized: "Apps"))
+                    DSTrayHead(typed.isEmpty ? String(localized: "Popular") : String(localized: "Apps"))
                     ForEach(apps, id: \.name) { app in
-                        pickRow(app.name, line: Text(verbatim: app.line)) {
+                        pickRow(app.name, line: Text(verbatim: app.line),
+                                tracked: SubscriptionPlans.isTracked(app.name, among: tracked)) {
                             choose(Pick(name: app.name, site: app.site))
                         }
                     }
@@ -213,12 +267,6 @@ struct SubscriptionAddTray: View {
                             line: Text("Any other name")) {
                         choose(Pick(name: typed, site: nil))
                     }
-                }
-                if typed.isEmpty, suggestions.isEmpty {
-                    DSEmptyState(headline: DSProse.text("Nothing on your cards yet"),
-                                 words: Text("Type a name below"),
-                                 scale: .list(rows: 3))
-                        .padding(.horizontal, DS.Space.s4)
                 }
             }
             .padding(.bottom, 96)
@@ -258,19 +306,26 @@ struct SubscriptionAddTray: View {
         .accessibilityLabel(Text("Track \(s.name)"))
     }
 
-    private func pickRow(_ name: String, title: String? = nil, line: Text,
+    /// A tracked row stays where it was, ticked, and opens nothing: the
+    /// list is the record of what this visit did (prd §1164).
+    private func pickRow(_ name: String, title: String? = nil, line: Text, tracked: Bool = false,
                          action: @escaping () -> Void) -> some View {
         Button(action: action) {
             DSFeedRow(name: title ?? name, line: line) {
                 SubscriptionFace(name: name)
             } trailing: {
-                Image(systemName: "plus").dsGlyph(.body).foregroundStyle(DS.tint)
+                Image(systemName: tracked ? "checkmark" : "plus")
+                    .dsGlyph(.body)
+                    .foregroundStyle(tracked ? DS.textTertiary : DS.tint)
+                    .dsSymbolSwap(tracked)
             }
             .contentShape(Rectangle())
         }
         .buttonStyle(RowPress())
+        .disabled(tracked)
         .dsHover()
         .padding(.horizontal, DS.Space.s4)
+        .accessibilityLabel(tracked ? Text("Tracking \(name)") : Text(verbatim: title ?? name))
     }
 
     // MARK: - 3 The price
@@ -308,6 +363,16 @@ struct SubscriptionAddTray: View {
                     }
                     Text(yearly ? String(localized: "a year") : String(localized: "a month"))
                         .dsText(.body17).foregroundStyle(DS.textSecondary)
+                    Spacer(minLength: DS.Space.s2)
+                    // A plan you hold for nothing is still a plan (prd §1164).
+                    Button {
+                        DSHaptic.selection()
+                        price = "0"
+                        focus = nil
+                    } label: {
+                        Chip(text: String(localized: "Free"), selected: amount == 0)
+                    }
+                    .buttonStyle(PressSpring())
                 }
                 row(String(localized: "Every")) {
                     HStack(spacing: DS.Space.s2) {
@@ -388,7 +453,21 @@ struct SubscriptionAddTray: View {
                                            anchor: anchor, paysWith: paysWith, site: site) != nil else { return }
         DSHaptic.selection()
         chrome.flash(String(localized: "Tracking \(name)"))
-        dismiss()
+        // One app's tray is done; a list goes back to the list, ticked.
+        guard prefill == nil else { dismiss(); return }
+        withAnimation(DS.Motion.standard) {
+            trackedHere.append(name)
+            picked = nil
+        }
+        self.query = ""
+        self.price = ""
+        self.yearly = false
+        self.renews = Self.firstRenewal(yearly: false)
+        self.renewsTouched = false
+        self.paysWith = nil
+        self.site = ""
+        self.more = false
+        self.focus = nil
     }
 
     /// Month or Year, and the renewal follows it until the person sets one.
@@ -404,7 +483,8 @@ struct SubscriptionAddTray: View {
     private var amount: Double? {
         let cleaned = price.replacingOccurrences(of: ",", with: ".")
             .filter { $0.isNumber || $0 == "." }
-        guard let value = Double(cleaned), value > 0 else { return nil }
+        // Zero is a price (a free plan, prd §1164); an empty field is none.
+        guard let value = Double(cleaned), value >= 0 else { return nil }
         return value
     }
 
@@ -426,13 +506,17 @@ struct SubscriptionAddTray: View {
         return all.filter { $0.name.localizedCaseInsensitiveContains(query) }
     }
 
-    /// The catalogue's apps whose name, or a word in it, starts with what was
-    /// typed, A–Z, five at most; each with its own website when
-    /// `ServiceIdentity` knows one, else its category for the line.
+    /// With nothing typed, the popular services (prd §1164). Typed, the
+    /// catalogue's apps whose name, or a word in it, starts with it (five at
+    /// most) and the popular services that do, one row a name, A–Z; each
+    /// with its own website when one is known, else its category.
     static func apps(matching query: String) -> [(name: String, site: String?, line: String)] {
+        let popular = SubscriptionPlans.popular(matching: query)
+            .map { (name: $0.name, site: Optional($0.site), line: $0.site) }
+        guard !query.isEmpty else { return popular }
         let q = query.lowercased()
         var seen: Set<String> = []
-        return BridgeCatalog.allOffers
+        let catalogue = BridgeCatalog.allOffers
             .filter { offer in
                 let name = offer.name.lowercased()
                 return name.hasPrefix(q) || name.split(separator: " ").contains { $0.hasPrefix(q) }
@@ -444,6 +528,8 @@ struct SubscriptionAddTray: View {
                 let site = siteByOffer[offer.name]
                 return (name: offer.name, site: site, line: site ?? BridgeCatalog.category(of: offer))
             }
+        return (catalogue + popular.filter { seen.insert($0.name).inserted })
+            .sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
     }
 
     /// Each catalogue app's own domain, the shortest when it has several.

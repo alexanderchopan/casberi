@@ -334,7 +334,10 @@ struct WalletSubscriptionRow: View {
     var body: some View {
         let mask = BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil
         SubscriptionRow(name: item.name, line: Self.line(item, mask: mask, writes: writes)) {
-            if let monthly = item.monthly {
+            if item.amount == 0 {
+                Text(verbatim: SubscriptionWords.free)
+                    .dsText(.price17).foregroundStyle(DS.textSecondary)
+            } else if let monthly = item.monthly {
                 Text(verbatim: mask ?? CardSpendRoom.money(monthly, code: item.currency))
                     .dsText(.price17).monospacedDigit().foregroundStyle(DS.textPrimary)
             } else if let amount = item.amount {
@@ -352,7 +355,7 @@ struct WalletSubscriptionRow: View {
     /// monthly".
     static func line(_ item: Subscriptions.Item, mask: String?, writes: String? = nil) -> Text {
         var rest: [String] = []
-        if item.isYearly, let amount = item.amount {
+        if item.isYearly, let amount = item.amount, amount > 0 {
             rest.append(String(localized: "\(mask ?? CardSpendRoom.money(amount, code: item.currency)) yearly"))
         }
         if let next = item.next {

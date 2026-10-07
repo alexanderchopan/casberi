@@ -167,7 +167,7 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
     /// Whether the page is still on screen when the landing's beat ends —
     /// a person who left in that beat is not pulled back.
     @State private var onScreen = false
-    /// Whose account this is (prd §1162), read in `onAppear` and on change —
+    /// Whose account this is (prd §1164), read in `onAppear` and on change —
     /// never in the body.
     @State private var identity: String?
 
@@ -258,6 +258,10 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
                 cardSheet?(id)
             case .web(let url):
                 DSWebSheet(url: url) { sheet = nil }
+            case .track:
+                SubscriptionAddTray(prefill: .init(name: name, site: SubscriptionAddTray.siteByOffer[name]))
+                    .environment(chrome)
+                    .environment(store)
             }
         }
         .task(id: source) { await readCounts() }
@@ -340,7 +344,7 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
                 .minimumScaleFactor(0.7)
-            // WHOSE ACCOUNT (prd §1162): "acme" under GitHub, as Settings draws
+            // WHOSE ACCOUNT (prd §1164): "acme" under GitHub, as Settings draws
             // an Apple Account's email under its name. Only once connected —
             // a name left from a disconnected key would describe nothing here.
             if state.connected, let identity {
@@ -446,6 +450,17 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
                            fact: String(localized: "In Wallet"),
                            opens: true,
                            action: { openPlan(planID) })
+        } else if seat != nil || state.connected, SubscriptionPlans.sells(name),
+                  !SubscriptionPlans.isTracked(name, among: SubscriptionsReading.shared.items.map(\.name)
+                                                     + SubscriptionStore.shared.all.map(\.name)) {
+            // TRACK — an app you can hold a plan with and haven't tracked
+            // (prd §1164). Free plans count, so the row never asks whether
+            // you pay; it opens the tray on this app's price.
+            AccountFactRow(glyph: SubscriptionWords.planGlyph,
+                           title: SubscriptionWords.track,
+                           fact: String(localized: "Free or paid"),
+                           opens: true,
+                           action: { sheet = .track })
         }
         if keyed, state.connected {
             AccountFactRow(glyph: "key",
@@ -695,9 +710,12 @@ enum AccountPageSheet: Identifiable {
     case card(id: String)
     /// A provider's page, opened beside the rows (prd §653, `DSWebSheet`).
     case web(URL)
+    /// Track a subscription, opened on this app (prd §1164).
+    case track
     var id: String {
         switch self {
         case .key: "key"
+        case .track: "track"
         case .profile(let p): "profile:\(p.id)"
         case .thing(let id): "thing:\(id.uuidString)"
         case .card(let id): "card:\(id)"
