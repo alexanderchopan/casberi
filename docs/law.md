@@ -222,7 +222,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1280 of 1342 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1281 of 1343 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1139,7 +1139,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §809 — The digest fits the lock screen, learns the reading hour, and opens into its rows (part superseded by §883)
 - §809a — The notification extension needs no app group: its pictures ride the notification as attachments
 - §810 — Tempo is a wallet chain, ON by default, read through Zerion only
-- §811 — On Accounts, a connected row's line is green and a broken one's is attention
+- §811 — On Accounts, a connected row's line is green and a broken one's is attention (part superseded by §1149)
 - §812 — Manage and Connect split the catalogue: Connect lists only what you have not connected (part superseded by §1033)
 - §813 — The demo capsule says what the tap does
 - §814 — The World ID pitch: what we want World to ship, in order
@@ -1504,6 +1504,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1145 — Settings › Apps is only yours; Add is the one door to the rest
 - §1147 — A renamed app's records take its current name and merge into one
 - §1148 — A catalogue row says something only when its name can't
+- §1149 — A connected app's line reads grey everywhere; a selected count stays blue
 
 ## Dead rulings → what replaced them (generated)
 

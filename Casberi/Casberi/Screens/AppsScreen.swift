@@ -1109,7 +1109,9 @@ struct AppsScreen: View {
     private func sublineColor(_ entry: Ranked) -> Color {
         switch entry.tier {
         case 0:  DS.attentionInk
-        case 2:  entry.bridge?.status.color ?? DS.confirmInk
+        // Connected reads grey, as Settings' own rows do (prd §1149,
+        // reversing §811's green): only a word that needs you takes a hue.
+        case 2:  DS.textTertiary
         default: DS.textTertiary
         }
     }
