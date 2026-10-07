@@ -121,6 +121,33 @@ final class BridgeStore {
         BridgeHealth.rename(old.name, to: name)
     }
 
+    /// Renames every record whose name has a current one, then keeps ONE
+    /// record per name (prd §1147): the first that is not paused, else the
+    /// first. Writes `bridges` once, and only when something changed.
+    func convergeNames(_ current: (String) -> String) {
+        var out: [BridgeApp] = []
+        var changed = false
+        for old in bridges {
+            var app = old
+            let name = current(old.name)
+            if name != old.name {
+                app = BridgeApp(id: old.id, name: name, status: old.status,
+                                statusLine: old.statusLine, can: old.can)
+                app.askBeforeActing = old.askBeforeActing
+                BridgeHealth.rename(old.name, to: name)
+                changed = true
+            }
+            if let i = out.firstIndex(where: { $0.name == app.name }) {
+                // A paused twin yields to a live one.
+                if out[i].status == .paused && app.status != .paused { out[i] = app }
+                changed = true
+                continue
+            }
+            out.append(app)
+        }
+        if changed { bridges = out }
+    }
+
     func remove(_ id: String) {
         // `bridges` persists and notifies observers on every mutating access,
         // so removing what isn't there costs a full JSON encode and an

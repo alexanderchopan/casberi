@@ -64774,3 +64774,7 @@ Reading's Subscriptions box marked every post: a feed that posts many times a da
 ## §1145 — Settings › Apps is only yours; Add is the one door to the rest (user, 2026-10-06: "clicking the N More in each category brings up the add menu"; "it is a bit confusing"; "yes remove those links"; amends §1138 item 3)
 
 Settings › Apps lists the apps you have, under category headers A–Z, Other last; the "N more in <Category>" links §1138 put under each category are deleted, because they opened the same catalogue as Add (§1142) and made two doors to one place. A category you have nothing in draws no header. With nothing connected the list says "No apps yet" over Add's sentence.
+
+## §1147 — A renamed app's records take its current name and merge into one (user, 2026-10-06: "in Testnets, my app is showing two entries for Frames Devnet connected"; "in Settings under apps / Testnets"; "both are called Frames Devnet")
+
+Frames Devnet became Hegotá Frames (`Corpus.renamedSources`), but the launch sweep that renames app records (`SourceRename.sweepSeats`) only knew Markets, so the phone kept two records under the old name and Settings › Apps drew both. Every launch now renames each record whose source has a current name and keeps one record per name, a live one over a paused twin (`BridgeStore.convergeNames`, `CasberiTests/BridgeConvergeTests`). It writes the store only when something changed.

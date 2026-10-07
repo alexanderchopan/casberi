@@ -147,6 +147,12 @@ enum SourceRename {
     @MainActor
     static func sweepSeats(_ store: BridgeStore) {
         for (id, name) in seatNames { store.rename(id, to: name) }
+        // EVERY record under a renamed source takes its current name, and
+        // twins merge (prd §1147, user: "in Settings under apps / Testnets…
+        // both are called Frames Devnet"): Frames Devnet became Hegotá Frames
+        // with no `seatNames` entry, so its records kept the old name, and
+        // two of them drew as two rows in Settings › Apps.
+        store.convergeNames(Corpus.canonicalSource)
     }
 
     /// Seat id → the name that seat answers to now. Only seats that have been
