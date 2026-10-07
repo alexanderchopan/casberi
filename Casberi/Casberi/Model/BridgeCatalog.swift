@@ -206,7 +206,7 @@ enum BridgeCatalog {
         // 18.4, and this bridge's query never filtered them out, so the
         // sentence was false for eleven months about rows that were already
         // landing.
-        Offer(name: "Apple Wallet", tagline: "Apple Card, Cash and Savings, and UK banks",  group: "Wallet",    connectable: true,
+        Offer(name: "Apple Wallet", tagline: "What your cards and accounts spend",  group: "Wallet",    connectable: true,
               // Dead on Mac, and it always was (2026-08-12). FinanceKit is
               // compiled out of the Catalyst build outright
               // (`#if canImport(FinanceKit) && !targetEnvironment(macCatalyst)`,
