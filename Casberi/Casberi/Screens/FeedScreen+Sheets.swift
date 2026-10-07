@@ -57,6 +57,10 @@ extension FeedScreen {
         /// The Logos send form (prd §1084) — the same sheet, routed here for
         /// `framesSend`'s reason.
         case logosSend
+        /// One Logos conversation (prd §1155), read live from the Observer.
+        /// Carries the conversation's id and title, never a message: nothing
+        /// of the chat is kept.
+        case logosChat(id: String, title: String)
         /// ONE FRAMES TRANSACTION, and the three routes below it — all four
         /// here for two reasons at once: the seat lands no
         /// `Thing` so nothing can ride `.thing`, and every card that opens one
@@ -147,6 +151,7 @@ extension FeedScreen {
             case .person(let source, let handle): "person:\(source):\(handle)"
             case .framesSend: "framesSend"
             case .logosSend: "logosSend"
+            case .logosChat(let id, _): "logosChat:\(id)"
             case .framesMove(let m, _): "framesMove:\(m.id)"
             case .framesFrame(let m, let i): "framesFrame:\(m.id)#\(i)"
             case .framesPayer(let p, _): "framesPayer:\(p.id)"
@@ -435,6 +440,8 @@ extension FeedScreen {
         // knows: who the book knows, what the account holds, whether a Max is
         // honest, and the one closure that actually sends. Everything visual
         // lives in `DevnetSendSheet`.
+        case .logosChat(let id, let title):
+            LogosChatTray(convo: id, title: title)
         case .logosSend:
             // **A NATIVE TRANSFER, ONE SIGNER, NO MAX (prd §1084).** The
             // sender pays the fee and must hold its reserve besides, so the

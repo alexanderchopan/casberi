@@ -108,17 +108,17 @@ ROOM="Casberi/Casberi/Model/LogosRoom.swift"
 # the account menu picks the account. Holdings arrived with v0.3's token
 # shards. No verb is a tile (prd §1108): Create heads the Accounts menu and
 # Send leads Holdings, so the enum is the four scopes and nothing else.
-grep -q 'static let order: \[LogosSection\] = \[.home, .holdings, .node, .rewards\]' "$ROOM" \
-  || { echo "✗ LogosSection's scopes moved — Home, Holdings, Node, Rewards (prd §991, §1016, §1084)"; guard_fail=1; }
+grep -q 'static let order: \[LogosSection\] = \[.home, .chat, .holdings, .node\]' "$ROOM" \
+  || { echo "✗ LogosSection's scopes moved — Home, Chat, Holdings, Node (prd §991, §1084, §1155)"; guard_fail=1; }
 if grep -qE '^\s*case (create|explorer|send)\b' "$ROOM"; then
   echo "✗ a Logos verb is a tile again — Create is the menu's first row, Send leads Holdings (prd §1108)"; guard_fail=1
 fi
 grep -q 'accountAction: LogosSection.canCreate' Casberi/Casberi/Screens/FeedScreen+LogosRoom.swift \
   || { echo "✗ Logos' New account left the Accounts menu (prd §1108)"; guard_fail=1; }
-# What the node EARNED is Rewards', never Node's (prd §1016): every kind that
-# lands an earning must be in rewardKinds, or it shows under Node.
-grep -q 'static let rewardKinds: Set<String> = \["vouchers", "tickets", "mining", "idle"\]' "$ROOM" \
-  || { echo "✗ LogosRoom.rewardKinds moved — vouchers, tickets, mining, idle (prd §1016)"; guard_fail=1; }
+# What the node EARNED rides Node since §1155 (no Rewards tile): every node
+# row is Node's, so none can fall between two tiles.
+grep -q 'static func isNodeRef(_ ref: String?) -> Bool { nodeKind(ofRef: ref) != nil }' "$ROOM" \
+  || { echo "✗ LogosRoom.isNodeRef no longer takes every node row (prd §1155)"; guard_fail=1; }
 # The coin glyph is the app's own symbol: it must exist in the catalog and be
 # routed through Image(dsSymbol:), or the tile draws nothing, silently.
 [[ -f Casberi/Casberi/Assets.xcassets/coins.stack.symbolset/coins.stack.svg ]] \

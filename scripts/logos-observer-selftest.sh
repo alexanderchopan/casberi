@@ -166,6 +166,35 @@ check(down.node.value?.reachable == false, "node down is a reading, not an error
 check(W.snapshot(down) == .unreachable, "node down maps to unreachable")
 check(W.status(parse(#"{"v":1,"node":{"reachable":true}}"#)) == nil, "a v1 body is refused")
 
+print("Chat (chat.read, prd §1155)")
+check(W.scopeLabel("chat.read") == "Your chats" && W.isReadScope("chat.read"), "chat.read is a read scope with its own words")
+check(W.chatAvailability(parse(#"{"available":false,"reason":"chat_not_started"}"#)) == .notStarted,
+      "chat_not_started says open Chat, not unreachable")
+check(W.chatAvailability(parse(#"{"available":true,"conversations":[]}"#)) == .available, "available")
+check(W.conversations(parse(#"{"available":false,"reason":"chat_not_started"}"#)) == nil, "no list when chat isn't started")
+let convos = W.conversations(parse("""
+{"available":true,"conversations":[
+ {"id":"old","kind":"group","name":"LEZ testers","last_activity_ms":1000,"history_only":true},
+ {"id":"new","kind":"direct","nickname":"Terricola","preview":"hi","last_activity_ms":5000,"message_count":3},
+ {"kind":"direct"}]}
+"""))!
+check(convos.map(\.id) == ["new", "old"], "newest activity first; a conversation with no id is dropped")
+check(convos[0].title == "Terricola" && convos[1].title == "LEZ testers" && convos[0].direct && !convos[1].direct,
+      "title is nickname, then name; kind decides direct")
+check(convos[1].historyOnly, "history_only survives")
+let msgs = W.messages(parse("""
+{"available":true,"messages":[
+ {"from_self":false,"sender":"0xabc","content":"two","timestamp_ms":2000},
+ {"from_self":true,"content":"one","timestamp_ms":1000},
+ {"from_self":false,"sender":"0xabc","content":"two","timestamp_ms":2000},
+ {"from_self":false,"sender":"","content":"three","timestamp_ms":3000}]}
+"""))!
+check(msgs.map(\.content) == ["one", "two", "three"], "oldest first, de-duplicated on (time, sender, content)")
+check(msgs[0].fromSelf && msgs[0].sender == nil && msgs[2].sender == nil, "an empty sender is no sender")
+check(W.messagesTarget(convo: "a b/c?d") == "/v2/chat/messages?convo=a%20b%2Fc%3Fd",
+      "the conversation id is percent-encoded once, in the signed target")
+check(W.messagesTarget(convo: "c1", sinceMs: 42) == "/v2/chat/messages?convo=c1&since_ms=42", "since_ms rides the target")
+
 print(failures == 0 ? "✓ all Observer checks" : "✗ \(failures) failure(s)")
 exit(failures == 0 ? 0 : 1)
 

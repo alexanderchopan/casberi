@@ -15,7 +15,9 @@ struct LogosObserverPairTray: View {
     init(offer: LogosObserverWire.Offer, onPaired: @escaping () -> Void = {}) {
         self.offer = offer
         self.onPaired = onPaired
-        _chosen = State(initialValue: Set(offer.scopes))
+        // Chat is offered OFF (prd §1155): reading someone's conversations
+        // is a choice made by turning it on, never by not turning it off.
+        _chosen = State(initialValue: Set(offer.scopes.filter { $0 != "chat.read" }))
     }
 
     var body: some View {

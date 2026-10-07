@@ -242,6 +242,8 @@ KNOWN_PROPER: set[str] = {
     # The Logos team's own product (prd §1095): "Logos Observer" is the name of
     # the sidecar the person pairs with, as their repo and pairing QR spell it.
     "Observer",
+    # Logos Basecamp, the Logos desktop app chat is read from (prd §1155).
+    "Basecamp",
     # Protocols, chains and companies with no catalog seat of their own.
     "Morpho", "Uniswap", "Aave", "Spark", "Hyperliquid", "Aerodrome",
     "Bitcoin", "Ethereum", "Solana", "Base", "Optimism", "Polygon", "Arbitrum",

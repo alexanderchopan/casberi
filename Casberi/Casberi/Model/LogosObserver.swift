@@ -175,6 +175,62 @@ final class LogosObserver {
         return nil
     }
 
+    // MARK: - Chat (chat.read)
+
+    /// What the Chat tile can show. Held in memory only and dropped with the
+    /// pairing: decrypted messages never reach the library or iCloud.
+    enum ChatState: Equatable {
+        case notPaired
+        /// Paired without `chat.read`: pairing again is the only way to grant it.
+        case notGranted
+        /// Basecamp's Chat app has not started `chat_module` on that machine.
+        case notStarted
+        case unreachable
+        case loading
+        case ready([LogosObserverWire.Conversation])
+    }
+
+    private(set) var chat: ChatState = .notPaired
+
+    var grantsChat: Bool { paired?.granted.contains("chat.read") == true }
+
+    /// Reads the conversation list. Nothing is read without `chat.read`.
+    func readChat() async {
+        // The demo shows what a paired Chat looks like (prd §1155): sample
+        // conversations, nothing read and nothing sent.
+        if DemoMode.isActive { chat = .ready(DemoChat.conversations()); return }
+        guard let paired, let key = Self.readKey() else { chat = .notPaired; return }
+        guard grantsChat else { chat = .notGranted; return }
+        if case .ready = chat {} else { chat = .loading }
+        switch await signed("GET", "/v2/chat/conversations", paired: paired, key: key) {
+        case .answered(200, let json):
+            switch LogosObserverWire.chatAvailability(json) {
+            case .notStarted?: chat = .notStarted
+            case .available?:
+                chat = LogosObserverWire.conversations(json).map(ChatState.ready) ?? .unreachable
+            default: chat = .unreachable
+            }
+        case .answered(let code, let json):
+            if LogosObserverWire.refusal(status: code, json: json)?.dropsCredential == true {
+                forgetLocally()
+                LogosStore.shared.useNode(nil)
+            }
+            chat = code == 403 ? .notGranted : .unreachable
+        case .failed, .pinMismatch:
+            chat = .unreachable
+        }
+    }
+
+    /// One conversation's messages, oldest first; nil when they could not be read.
+    func messages(in convo: String) async -> [LogosObserverWire.ChatMessage]? {
+        if DemoMode.isActive { return DemoChat.messages(in: convo) }
+        guard let paired, grantsChat, let key = Self.readKey() else { return nil }
+        guard case .answered(200, let json) = await signed(
+            "GET", LogosObserverWire.messagesTarget(convo: convo), paired: paired, key: key)
+        else { return nil }
+        return LogosObserverWire.messages(json)
+    }
+
     // MARK: - Forgetting
 
     /// Revoke this device on the Observer, then forget it here whatever the
@@ -188,6 +244,7 @@ final class LogosObserver {
 
     func forgetLocally() {
         paired = nil
+        chat = .notPaired
         Self.deleteKey()
     }
 
@@ -294,5 +351,48 @@ final class PinnedSession: NSObject, URLSessionDelegate, @unchecked Sendable {
             return (.cancelAuthenticationChallenge, nil)
         }
         return (.useCredential, URLCredential(trust: trust))
+    }
+}
+
+/// The demo's Logos chats (prd §1155): the demo person's own week — the
+/// Quillmark launch, a node on the testnet — dated from now so they stay fresh.
+/// Only while the demo is on; never stored.
+enum DemoChat {
+    private static func ago(_ minutes: Double) -> Int64 {
+        Int64((Date().timeIntervalSince1970 - minutes * 60) * 1000)
+    }
+
+    static func conversations() -> [LogosObserverWire.Conversation] {
+        [.init(id: "demo-ana", direct: true, name: nil, nickname: "Ana Kovač",
+               preview: "Node's synced. Pairing the phone now",
+               lastActivity: Date(timeIntervalSince1970: TimeInterval(ago(4)) / 1000),
+               messageCount: 4, historyOnly: false),
+         .init(id: "demo-ops", direct: false, name: "Node operators", nickname: nil,
+               preview: "Reset lands with 0.4, back up your keys",
+               lastActivity: Date(timeIntervalSince1970: TimeInterval(ago(95)) / 1000),
+               messageCount: 3, historyOnly: false),
+         .init(id: "demo-quill", direct: false, name: "Quillmark beta", nickname: nil,
+               preview: "1.4 is in review",
+               lastActivity: Date(timeIntervalSince1970: TimeInterval(ago(60 * 26)) / 1000),
+               messageCount: 2, historyOnly: true)]
+    }
+
+    static func messages(in convo: String) -> [LogosObserverWire.ChatMessage] {
+        switch convo {
+        case "demo-ana":
+            return [.init(fromSelf: false, sender: "0x7c41e2b0d93a5f18", content: "Did your node finish syncing?", timestampMs: ago(31)),
+                    .init(fromSelf: true, sender: nil, content: "Just about. 461 peers, mining since this morning", timestampMs: ago(27)),
+                    .init(fromSelf: false, sender: "0x7c41e2b0d93a5f18", content: "Nice. Three tickets ready on mine", timestampMs: ago(12)),
+                    .init(fromSelf: true, sender: nil, content: "Node's synced. Pairing the phone now", timestampMs: ago(4))]
+        case "demo-ops":
+            return [.init(fromSelf: false, sender: "0x19ad04c7e6b2f350", content: "Heads up: testnet resets with 0.4", timestampMs: ago(140)),
+                    .init(fromSelf: false, sender: "0xe08b33f1a4c79d26", content: "Same genesis accounts?", timestampMs: ago(120)),
+                    .init(fromSelf: false, sender: "0x19ad04c7e6b2f350", content: "Reset lands with 0.4, back up your keys", timestampMs: ago(95))]
+        case "demo-quill":
+            return [.init(fromSelf: true, sender: nil, content: "Build's up for testers", timestampMs: ago(60 * 28)),
+                    .init(fromSelf: false, sender: "0x5f2e81c0b7a4d963", content: "1.4 is in review", timestampMs: ago(60 * 26))]
+        default:
+            return []
+        }
     }
 }

@@ -33,6 +33,7 @@ enum LogosObserverWire {
         case "mining.status.read": return String(localized: "Whether it's mining")
         case "rewards.status.read": return String(localized: "Rewards waiting")
         case "blend.status.read": return String(localized: "Blend network status")
+        case "chat.read": return String(localized: "Your chats")
         default: return scope
         }
     }
@@ -302,6 +303,98 @@ enum LogosObserverWire {
             snap.claimable = r.claimable
         }
         return snap
+    }
+
+    // MARK: - Chat (chat.read, proposed with the Observer's developer 2026-10-06)
+
+    /// Logos chat as the Observer serves it from Basecamp's `chat_module`
+    /// (through `json_rpc_bridge`, reads only). Never stored: decrypted
+    /// messages go to this phone's memory and nowhere else — not the
+    /// library, which syncs through iCloud.
+    struct Conversation: Equatable, Identifiable {
+        let id: String
+        let direct: Bool
+        let name: String?
+        let nickname: String?
+        let preview: String?
+        let lastActivity: Date?
+        let messageCount: Int?
+        /// From an earlier session of the person's Basecamp identity, which
+        /// is new at every Basecamp launch on chat_module 0.3.0.
+        let historyOnly: Bool
+
+        var title: String {
+            nickname ?? name ?? (direct ? String(localized: "Direct conversation")
+                                        : String(localized: "Group conversation"))
+        }
+    }
+
+    struct ChatMessage: Equatable, Identifiable {
+        let fromSelf: Bool
+        let sender: String?
+        let content: String
+        let timestampMs: Int64
+        /// chat_module gives a message no id, so this is the key the
+        /// Observer and the phone de-duplicate on.
+        var id: String { "\(timestampMs)|\(sender ?? "self")|\(content)" }
+        var date: Date { Date(timeIntervalSince1970: TimeInterval(timestampMs) / 1000) }
+    }
+
+    /// `{available, reason?, …}`: false when Basecamp's Chat app has not
+    /// started chat_module (`chat_not_started`), so the phone says "open Chat"
+    /// rather than "unreachable".
+    enum ChatAvailability: Equatable { case available, notStarted, other(String) }
+
+    static func chatAvailability(_ json: Any?) -> ChatAvailability? {
+        guard let obj = json as? [String: Any], let available = obj["available"] as? Bool else { return nil }
+        if available { return .available }
+        let reason = obj["reason"] as? String ?? ""
+        return reason == "chat_not_started" ? .notStarted : .other(reason)
+    }
+
+    /// `/v2/chat/conversations`, newest activity first.
+    static func conversations(_ json: Any?) -> [Conversation]? {
+        guard let obj = json as? [String: Any], obj["available"] as? Bool == true,
+              let list = obj["conversations"] as? [[String: Any]] else { return nil }
+        func text(_ d: [String: Any], _ k: String) -> String? {
+            (d[k] as? String).flatMap { $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : $0 }
+        }
+        return list.compactMap { d -> Conversation? in
+            guard let id = text(d, "id") else { return nil }
+            let ms = (d["last_activity_ms"] as? NSNumber)?.doubleValue
+            return Conversation(id: id, direct: (d["kind"] as? String) != "group",
+                                name: text(d, "name"), nickname: text(d, "nickname"),
+                                preview: text(d, "preview"),
+                                lastActivity: ms.map { Date(timeIntervalSince1970: $0 / 1000) },
+                                messageCount: (d["message_count"] as? NSNumber)?.intValue,
+                                historyOnly: d["history_only"] as? Bool ?? false)
+        }
+        .sorted { ($0.lastActivity ?? .distantPast) > ($1.lastActivity ?? .distantPast) }
+    }
+
+    /// `/v2/chat/messages`, oldest first, de-duplicated on `ChatMessage.id`.
+    static func messages(_ json: Any?) -> [ChatMessage]? {
+        guard let obj = json as? [String: Any], obj["available"] as? Bool == true,
+              let list = obj["messages"] as? [[String: Any]] else { return nil }
+        var seen = Set<String>()
+        return list.compactMap { d -> ChatMessage? in
+            guard let content = d["content"] as? String,
+                  let ts = (d["timestamp_ms"] as? NSNumber)?.int64Value else { return nil }
+            let m = ChatMessage(fromSelf: d["from_self"] as? Bool ?? false,
+                                sender: (d["sender"] as? String).flatMap { $0.isEmpty ? nil : $0 },
+                                content: content, timestampMs: ts)
+            return seen.insert(m.id).inserted ? m : nil
+        }
+        .sorted { $0.timestampMs < $1.timestampMs }
+    }
+
+    /// The messages request's target. The conversation id is percent-encoded
+    /// here, once, because the HMAC signs this exact string.
+    static func messagesTarget(convo: String, sinceMs: Int64? = nil) -> String {
+        var allowed = CharacterSet.alphanumerics
+        allowed.insert(charactersIn: "-._~")
+        let id = convo.addingPercentEncoding(withAllowedCharacters: allowed) ?? convo
+        return "/v2/chat/messages?convo=\(id)" + (sinceMs.map { "&since_ms=\($0)" } ?? "")
     }
 
     // MARK: - base64url (RFC 4648, no padding)

@@ -33660,6 +33660,34 @@
         }
       }
     },
+    "%lld tickets ready" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld tickets listos"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "チケット %lld 枚が準備完了"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "티켓 %lld개 준비됨"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld 张票已就绪"
+          }
+        }
+      }
+    },
     "%lld to watch" : {
       "localizations" : {
         "es" : {
@@ -39761,6 +39789,34 @@
         }
       }
     },
+    "1 ticket ready" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1 ticket listo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "チケット 1 枚が準備完了"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "티켓 1개 준비됨"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1 张票已就绪"
+          }
+        }
+      }
+    },
     "1 to sign" : {
       "localizations" : {
         "es" : {
@@ -45132,6 +45188,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "添加名字"
+          }
+        }
+      }
+    },
+    "Add your node on the Logos page." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Añade tu nodo en la página de Logos."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Logos ページでノードを追加してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Logos 페이지에서 노드를 추가하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 Logos 页面添加你的节点。"
           }
         }
       }
@@ -55890,6 +55974,34 @@
         }
       }
     },
+    "Chat isn't open" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Chat no está abierto"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Chat が開いていません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Chat이 열려 있지 않음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Chat 未打开"
+          }
+        }
+      }
+    },
     "Chat with " : {
       "localizations" : {
         "es" : {
@@ -63168,6 +63280,34 @@
         }
       }
     },
+    "Couldn't read this conversation from your Observer." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se pudo leer esta conversación desde tu Observer."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Observer からこの会話を読み取れませんでした。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Observer에서 이 대화를 읽을 수 없습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "无法从你的 Observer 读取此对话。"
+          }
+        }
+      }
+    },
     "Couldn't read this pack just now." : {
       "localizations" : {
         "es" : {
@@ -66383,6 +66523,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "未成功"
+          }
+        }
+      }
+    },
+    "Direct conversation" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Conversación directa"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ダイレクト会話"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1:1 대화"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "私聊"
           }
         }
       }
@@ -74565,6 +74733,34 @@
         }
       }
     },
+    "From an earlier session" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "De una sesión anterior"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "以前のセッションから"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이전 세션에서"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "来自之前的会话"
+          }
+        }
+      }
+    },
     "From the agent's own console. It stays in %@'s Keychain and goes only to that provider." : {
       "localizations" : {
         "es" : {
@@ -76424,6 +76620,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "在本次交易中授予并用尽 — 无需撤销。"
+          }
+        }
+      }
+    },
+    "Group conversation" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Conversación de grupo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "グループ会話"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "그룹 대화"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "群聊"
           }
         }
       }
@@ -95908,6 +96132,34 @@
         }
       }
     },
+    "No chats" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No hay chats"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "チャットはありません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "채팅 없음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "没有聊天"
+          }
+        }
+      }
+    },
     "No collectibles" : {
       "localizations" : {
         "es" : {
@@ -96044,6 +96296,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "暂无连接"
+          }
+        }
+      }
+    },
+    "No conversations" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No hay conversaciones"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "会話はありません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "대화 없음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "没有对话"
           }
         }
       }
@@ -96744,6 +97024,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "无匹配"
+          }
+        }
+      }
+    },
+    "No messages in this conversation yet." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Todavía no hay mensajes en esta conversación."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "この会話にはまだメッセージがありません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 대화에는 아직 메시지가 없습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "此对话中还没有消息。"
           }
         }
       }
@@ -105240,6 +105548,34 @@
         }
       }
     },
+    "Open Chat in Logos Basecamp on your computer." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Abre Chat en Logos Basecamp en tu ordenador."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "コンピュータの Logos Basecamp で Chat を開いてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "컴퓨터의 Logos Basecamp에서 Chat을 여세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在电脑上的 Logos Basecamp 中打开 Chat。"
+          }
+        }
+      }
+    },
     "Open Food Facts' grade, not ours." : {
       "localizations" : {
         "es" : {
@@ -108508,6 +108844,34 @@
         }
       }
     },
+    "Pair Logos Observer on the Logos page to read your chats." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Empareja Logos Observer en la página de Logos para leer tus chats."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "チャットを読むには、Logos ページで Logos Observer をペアリングしてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "채팅을 읽으려면 Logos 페이지에서 Logos Observer를 페어링하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 Logos 页面配对 Logos Observer 以读取你的聊天。"
+          }
+        }
+      }
+    },
     "Pair a Safe app" : {
       "localizations" : {
         "es" : {
@@ -108589,6 +108953,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "与 %@ 配对"
+          }
+        }
+      }
+    },
+    "Pair your Observer again with chats turned on." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Vuelve a emparejar tu Observer con los chats activados."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "チャットをオンにして Observer をもう一度ペアリングしてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "채팅을 켠 상태로 Observer를 다시 페어링하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "开启聊天后重新配对你的 Observer。"
           }
         }
       }
@@ -116259,6 +116651,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "正在读取你的余额…"
+          }
+        }
+      }
+    },
+    "Reading your chats…" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Leyendo tus chats…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "チャットを読み込み中…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "채팅을 읽는 중…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在读取你的聊天…"
           }
         }
       }
@@ -131465,6 +131885,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "从这里开始"
+          }
+        }
+      }
+    },
+    "Start one in Chat in Logos Basecamp." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Empieza una en Chat, en Logos Basecamp."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Logos Basecamp の Chat で始めてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Logos Basecamp의 Chat에서 시작하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 Logos Basecamp 的 Chat 中开始一个。"
           }
         }
       }
@@ -156811,6 +157259,34 @@
         }
       }
     },
+    "Your Logos chats, read from Basecamp through Observer" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tus chats de Logos, leídos desde Basecamp a través de Observer"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Basecampから Observer 経由で読み取る Logos のチャット"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Observer를 통해 Basecamp에서 읽어 온 Logos 채팅"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "通过 Observer 从 Basecamp 读取的 Logos 聊天"
+          }
+        }
+      }
+    },
     "Your Morpho position on %@ fell below the %@ you set — health factor %@" : {
       "localizations" : {
         "en" : {
@@ -156875,6 +157351,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你在%@上的Morpho头寸接近被清算 — 健康系数%@"
+          }
+        }
+      }
+    },
+    "Your Observer didn't answer. Check that this device is on the same network." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu Observer no respondió. Comprueba que este dispositivo esté en la misma red."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Observer が応答しませんでした。このデバイスが同じネットワークにあるか確認してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Observer가 응답하지 않았습니다. 이 기기가 같은 네트워크에 있는지 확인하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的 Observer 没有响应。请确认此设备在同一网络中。"
           }
         }
       }
@@ -157077,6 +157581,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你的Safe设置已更改：%@"
+          }
+        }
+      }
+    },
+    "Your chats" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tus chats"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "チャット"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "내 채팅"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的聊天"
           }
         }
       }
@@ -158806,6 +159338,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你的节点的同步、对等节点和奖励凭证"
+          }
+        }
+      }
+    },
+    "Your node's sync, peers, mining and rewards" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Sincronización, pares, minería y recompensas de tu nodo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ノードの同期、ピア、マイニング、報酬"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "노드의 동기화, 피어, 채굴 및 보상"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的节点的同步、对等节点、挖矿和奖励"
           }
         }
       }
@@ -163959,6 +164519,62 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "本周贡献"
+          }
+        }
+      }
+    },
+    "conversation" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "conversación"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "件の会話"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "개 대화"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "个对话"
+          }
+        }
+      }
+    },
+    "conversations" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "conversaciones"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "件の会話"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "개 대화"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "个对话"
           }
         }
       }

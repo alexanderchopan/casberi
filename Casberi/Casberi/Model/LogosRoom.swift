@@ -4,8 +4,9 @@ import Foundation
 /// network's vocabulary. `FramesSection` is the shape (`order`, `resolve`
 /// falling back to `.home`, `emptyHeadline`/`emptyBody` for a scope with
 /// nothing yet) and `DSRoomScopeChrome` is the shared control, which draws
-/// Home first and the rest in the alphabet (§936 amended): Home · Holdings ·
-/// Node · Rewards. The verbs are rows, not tiles (prd §1108): Create is "New
+/// Home first and the rest in the alphabet (§936 amended): Home · Chat ·
+/// Holdings · Node (prd §1155: Rewards folded into Node to make room for
+/// Chat, the four-tile row §1107 kept). The verbs are rows, not tiles (prd §1108): Create is "New
 /// account" at the head of the Accounts menu and Send leads Holdings, as in
 /// Frames; Explorer's door is the Logos page's, and every row opens its own
 /// transaction there.
@@ -23,21 +24,23 @@ import Foundation
 /// the holder's own account, read off `getAccount`, where v0.2 kept it in a
 /// separate account nothing public mapped to an owner — the reason it was
 /// absent until now. **Node is the one scope the family did not have**,
-/// because it is the one thing Logos lets you run. **Rewards** (prd §1016) is
-/// what that node earns, so Node answers "is it healthy" and Rewards "what
-/// has it earned".
+/// because it is the one thing Logos lets you run, and it carries what that
+/// node earns (§1016's Rewards, folded in by §1155): unclaimed rewards are
+/// the node's, and only a claim makes them a holding. **Chat** (§1155) reads
+/// your Logos conversations from Basecamp through a paired Observer, live,
+/// and keeps nothing.
 enum LogosSection: String, CaseIterable, Identifiable, Sendable {
     case home
+    case chat
     case holdings
     case node
-    case rewards
 
     var id: String { rawValue }
 
     /// **HOME'S LIST IS THE ACTIVITY (prd §1039).** The Activity and Accounts
     /// tiles are deleted, as in the Wallet and Frames: Home lists the chain's
     /// moves and the account menu under the tiles picks the account.
-    static let order: [LogosSection] = [.home, .holdings, .node, .rewards]
+    static let order: [LogosSection] = [.home, .chat, .holdings, .node]
 
     /// **WHICH ACTS A PAGE OFFERS (prd §1084's rule, drawn as rows since
     /// §1108).** One account per phone: "New account" heads the Accounts menu
@@ -55,18 +58,18 @@ enum LogosSection: String, CaseIterable, Identifiable, Sendable {
     var label: String {
         switch self {
         case .home:     return String(localized: "Home")
+        case .chat:     return String(localized: "Chat")
         case .holdings: return String(localized: "Holdings")
         case .node:     return String(localized: "Node")
-        case .rewards:  return String(localized: "Rewards")
         }
     }
 
     var summary: String {
         switch self {
         case .home:     return String(localized: "The balance, and what moved, dated from its block")
+        case .chat:     return String(localized: "Your Logos chats, read from Basecamp through Observer")
         case .holdings: return String(localized: "The tokens your accounts hold")
-        case .node:     return String(localized: "Your node's sync and peers")
-        case .rewards:  return String(localized: "What your node earns: mining tickets and reward vouchers")
+        case .node:     return String(localized: "Your node's sync, peers, mining and rewards")
         }
     }
 
@@ -77,17 +80,15 @@ enum LogosSection: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .holdings: return String(localized: "No tokens")
         case .node:     return String(localized: "No node")
-        case .rewards:  return String(localized: "No node")
-        case .home: return nil
+        case .home, .chat: return nil
         }
     }
 
     var emptyBody: String? {
         switch self {
         case .holdings: return String(localized: "A token held by an account you follow.")
-        case .node:     return String(localized: "Give the Logos page your node's address.")
-        case .rewards:  return String(localized: "Mine with your own Logos node, added on the Logos page.")
-        case .home: return nil
+        case .node:     return String(localized: "Add your node on the Logos page.")
+        case .home, .chat: return nil
         }
     }
 
@@ -177,25 +178,15 @@ enum LogosRoom {
         return parts.count >= 4 ? String(parts[2]) : nil
     }
 
-    /// A node row's ref is `logos:node:<kind>:<seconds>`; its kind says which
-    /// scope it belongs to.
+    /// A node row's ref is `logos:node:<kind>:<seconds>`.
     static func nodeKind(ofRef ref: String?) -> String? {
         guard let ref, ref.hasPrefix("logos:node:") else { return nil }
         let parts = ref.split(separator: ":")
         return parts.count >= 3 ? String(parts[2]) : nil
     }
 
-    /// What the node EARNED (prd §1016): vouchers, tickets, and mining
-    /// starting or stopping. Every other node row is its health.
-    static let rewardKinds: Set<String> = ["vouchers", "tickets", "mining", "idle"]
-
-    static func isNodeRef(_ ref: String?) -> Bool {
-        nodeKind(ofRef: ref).map { !rewardKinds.contains($0) } ?? false
-    }
-
-    static func isRewardsRef(_ ref: String?) -> Bool {
-        nodeKind(ofRef: ref).map(rewardKinds.contains) ?? false
-    }
+    /// Every node row is Node's: its health and what it earned (prd §1155).
+    static func isNodeRef(_ ref: String?) -> Bool { nodeKind(ofRef: ref) != nil }
 
     /// `scope` narrows to one account (the deck's pick); nil is All.
     @MainActor

@@ -9,8 +9,8 @@ extension FeedScreen {
 
     /// The Logos room's rows for one scope: Home's are the chain's moves
     /// (narrowed to the picked account) — the deleted Activity tile's list
-    /// (prd §1039) — Node is your node's health and Rewards what it earned
-    /// (prd §1016).
+    /// (prd §1039) — and Node your node's health and what it earned (§1016,
+    /// one tile since §1155). Chat lands no rows (`logosChatSection`).
     func logosRows(_ rows: [Thing], section: LogosSection) -> [Thing] {
         switch section {
         case .home:
@@ -20,10 +20,9 @@ extension FeedScreen {
             }
         case .node:
             return rows.filter { LogosRoom.isNodeRef($0.sourceRef) }
-        case .rewards:
-            return rows.filter { LogosRoom.isRewardsRef($0.sourceRef) }
-        // Holdings lists what is held, not what happened (`logosHoldingsSection`).
-        case .holdings:
+        // Holdings lists what is held, not what happened (`logosHoldingsSection`),
+        // and Chat what the Observer reads, never kept (`logosChatSection`).
+        case .holdings, .chat:
             return []
         }
     }
@@ -78,6 +77,49 @@ extension FeedScreen {
                                       bottom: DSRoomChassis.contentGap, trailing: 0))
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
+        }
+        if active == .chat { logosChatSection }
+    }
+
+    // MARK: - Chat (prd §1155)
+
+    /// One unit, abbreviated ("4m", "2h", "1d"): the row's preview takes
+    /// the width, and a phrase like "4 min. ago" truncated to "4…o".
+    static func chatAge(_ date: Date, now: Date = Date()) -> String {
+        let f = DateComponentsFormatter()
+        f.unitsStyle = .abbreviated
+        f.maximumUnitCount = 1
+        f.allowedUnits = [.minute, .hour, .day, .weekOfMonth]
+        return f.string(from: max(60, now.timeIntervalSince(date))) ?? ""
+    }
+
+    /// Your Logos conversations, newest first, read live from the paired
+    /// Observer each time the tile is shown and never stored: decrypted
+    /// messages stay in this phone's memory, out of the library and iCloud.
+    /// A row opens the conversation (`FeedSheetRoute.logosChat`).
+    @ViewBuilder
+    var logosChatSection: some View {
+        let observer = LogosObserver.shared
+        Section {
+            if case .ready(let convos) = observer.chat {
+                ForEach(convos) { convo in
+                    Button {
+                        feedSheet = .logosChat(id: convo.id, title: convo.title)
+                    } label: {
+                        DSPushRowLabel(
+                            title: Text(convo.title),
+                            subtitle: (convo.preview ?? (convo.historyOnly ? String(localized: "From an earlier session") : nil)).map { Text($0) },
+                            fact: convo.lastActivity.map { Text(Self.chatAge($0)) }) {
+                            DSGlyphLead(glyph: convo.direct ? "person" : "person.2", size: DS.Face.list)
+                        }
+                    }
+                    .buttonStyle(RowPress())
+                    .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DSRoomChassis.rowInset,
+                                              bottom: DS.Space.s2, trailing: DSRoomChassis.rowInset))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                }
+            }
         }
     }
 

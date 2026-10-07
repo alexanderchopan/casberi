@@ -222,7 +222,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1285 of 1348 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1286 of 1349 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1330,7 +1330,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §988 — Logos: watch a public LEZ account, keyless, forward from the moment you watch (amended by §989, §1034, §1035, §1084)
 - §989 — Logos: your own node, read at the address you give it (amended by §1016)
 - §990 — No suggested addresses on the devnets (amended by §1089)
-- §991 — The Logos room is a devnet-family room: Home, Accounts, Activity, Node (amended by §1016, §1084)
+- §991 — The Logos room is a devnet-family room: Home, Accounts, Activity, Node (amended by §1016, §1084, §1155)
 - §993 — The Reminders room holds its lead when empty, and scopes like Apple's lists (amended by §997)
 - §994 — The Calendar room is a month grid over Today · Week · Month · New (amended by §999)
 - §995 — The music rooms scope by Activity · Albums · Artists · Songs, and every room's tiles read A–Z (amended by §999, §1039, §1050d, §1136; part superseded by §1099)
@@ -1349,7 +1349,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1013 — The tray is one grid: headers above, every button the face's size, and a Recent line (amended by §1014, §1015, §1016a, §1050l, §1093; part superseded by §1050j)
 - §1014 — The tray is solid black, its doors the room head's charcoal, and its first column is the face's axis
 - §1015 — The tray searches in place, pins the You row, and a hold is Manage account (amended by §1133; part superseded by §1033)
-- §1016 — Logos: a Rewards tile, mining read off your node, and the app's first own symbol
+- §1016 — Logos: a Rewards tile, mining read off your node, and the app's first own symbol (amended by §1155)
 - §1017 — One circle size: every mark and face is the face button's 46pt, and the row breathes
 - §1018 — The share sheet's link is `public.url` bytes, never a proxied `URL`
 - §1019 — The mail rooms carry All · Attachments · New, Gmail and iCloud Mail alike
@@ -1509,6 +1509,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1152 — Home is by category, in your dock order
 - §1153 — People gets Contacts' A–Z strip, and Settings' Search looks through every kind
 - §1154 — Home ends with its categories: "Your day" and the Coming up door are deleted
+- §1155 — Logos gets Chat: your conversations from Basecamp, read through Observer and never kept; Rewards folds into Node
 
 ## Dead rulings → what replaced them (generated)
 
