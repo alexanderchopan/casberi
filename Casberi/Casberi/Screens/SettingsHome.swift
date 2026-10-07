@@ -596,7 +596,10 @@ struct SettingsHome: View {
                                   subtitle: addr.label.isEmpty ? nil : Text(verbatim: WalletStore.shortAddress(addr.address))) {
                             route.openSetup(forOffer: CategoryFold.walletRoom)
                         } leading: {
-                            WalletFace(address: addr.address, size: DS.Mark.notice, circular: true)
+                            // A face keeps its own ramp (face-ramp audit), centred in the
+                            // rows' 38pt icon column (prd §1170).
+                            WalletFace(address: addr.address, size: DS.Face.row, circular: true)
+                                .frame(width: DS.Mark.notice, height: DS.Mark.notice)
                         }
                     }
                 }
