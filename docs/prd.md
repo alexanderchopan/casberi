@@ -65095,3 +65095,14 @@ Settings counts the phone's calendars through EventKit (§1150), and the demo's 
 4. **`Thing.pinnedAt` stays, unread.** CloudKit cannot drop a deployed field and removing a stored property is a breaking schema change; nothing reads or writes it. A thing pinned before this simply stays where it lives.
 
 **Seen** on a private simulator over the demo: Notes listing notes only, tiles All · Folders · Voice · New; Degen's sheet with Share alone, no Pin.
+
+## §1176 — The tray's search is its own capsule beside the face (user, 2026-10-07: "should the fab search be on the bottom of the tray instead of the top so it is closer to someones fingers? can you mock that up in html", then of `design/mockups/tray-search-bottom.html`, "i like option 3", "do it"; amends §1133e's "Search leads it")
+
+**Why.** The tray grows out of the face in the bottom-left corner, so the card's top edge, where Search led since §1133, was the farthest reach on the screen: about 560pt above the thumb on a 17 Pro with every app connected. iOS 26 stands search as a capsule at the bottom edge; this is that.
+
+1. **On the phone, Search is a glass capsule level with the face** (`RoomsTray.searchCapsule`): the face's height and fold, a step past its unfolded edge, ending at the card's trailing edge. It grows out of the face's side as the card grows out of its top. The card holds only places.
+2. **Typing, the face is under the keyboard (§865)**, so the capsule takes the card's whole width just above the keyboard (`ShellChrome.keyboardUp`).
+3. **The card hugs what it holds**, results included, and grows up from the capsule; it no longer stands at full height while searching. Results read down from the card's top, as Spotlight's do. Return still goes to Find.
+4. **Beside the rail (iPad, Mac) the field still leads the card** (`searchField`): the face is at the top there, so the top is the near edge.
+
+**Seen** on the simulator over the demo: the tray at rest with the capsule beside the face, and `-traySearch "ca"` with results above it. **Not seen:** the typing layout, because a headless simulator draws no software keyboard. **Note:** the code landed inside b36774d3 (§1175), whose whole-file add swept this session's uncommitted hunks; this entry is its record.
