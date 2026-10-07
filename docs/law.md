@@ -222,7 +222,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1296 of 1359 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1297 of 1360 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -849,7 +849,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §560 — The nav-sheet family gets a chassis, and two sheets get a way out
 - §561 — Sentence case became a check, because the manual sweep had already missed it
 - §562 — The vibenet roster could be renamed and unwatched from and not added to — the watch sheet had no presenter (part superseded by §1038)
-- §563 — The empty room's one act takes the head rung, and the tint budget becomes a check
+- §563 — The empty room's one act takes the head rung, and the tint budget becomes a check (amended by §1165)
 - §564 — The two-tier rule gets an instrument, and five of six proposals died on the tree
 - §565 — The treemap's leader cell becomes the lockup, and the rule is that a leader must be a number
 - §566 — Six room figures take the language — and the one deletion that lost facts, caught and reversed (part superseded by §692)
@@ -1520,6 +1520,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1162 — Connecting, made shorter: pasted keys reach your other devices, Paste is the commit, a wrong or refused key says why,… (amended by §1163)
 - §1163 — A seat has one name: every bridge `NetworkReach` names is its catalog name, so a refused key reaches the page, the ri…
 - §1164 — You can track a subscription without a card or an app: the tray opens on Popular and stays open, a free plan counts,…
+- §1165 — The empty Home offers Track a subscription under Browse apps
 
 ## Dead rulings → what replaced them (generated)
 
