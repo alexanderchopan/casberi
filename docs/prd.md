@@ -65115,3 +65115,12 @@ Settings counts the phone's calendars through EventKit (§1150), and the demo's 
 2. **The tray's search takes the bar's slot**: the capsule starts at `DSDock.agentSeat`, the bar's own leading edge, at the bar's height, and the bar steps out while the tray is up (`DSScopeDock`, `!chrome.roomsTray`). Opening the tray reads as the room's bar turning into search; closing it brings the bar back.
 
 **Seen** on the simulator over the demo: Notes' bar as All · Folders · Voice · New with no gap, and the tray over Notes with the bar gone and Search in its place. **Not seen:** a strip long enough to scroll, and the bar coming back as the tray closes.
+
+## §1178 — A thing sheet's acts are the rooms' tiles (user, 2026-10-07: "for the buttons on the thing sheets i'd like them to be same size they are on the rooms is that what we are doing? same card size too so we are never hand rolling?", "same size", "we only want sheets to have four tiles and where they have more we will talk about those"; supersedes §632's disc dial; mockup `design/mockups/thing-sheet-template.html`)
+
+1. **`VerbDial` draws `DSScopeTiles`**, the template You's row and every room's tiles draw, at its 52pt, four columns, in the rows' column (`DSRoomChassis.inset`): every tile a verb in the template's verb ink, none ever lit (`SheetTile.none`). The thing's acts lead, then Name, then Share last; the order is the caller's (`DSTileScope.keepsOrder`, a sheet's `SheetTile`), never A–Z. A copy's glyph is a checkmark for 1.2s, as the disc's was. Every sheet that drew the dial draws the tiles.
+2. **A chart's windows are 52pt too** (`DSRangeChips(tiles:)`, §1174), so every tile in the app is one size.
+3. **Four at most, and more is a question for the user**: with Pin gone (§1175) a sheet is its acts, Name, Share. Two paths can still reach five — a wallet transfer with World App (explorer, World App, Copy, Name, Share) and a sheet whose derived verbs reach three plus an extra (Join, Episode, On X, Dropbox, Privy's), capped at four plus Share. The fifth wraps to a second row until ruled.
+4. **Not yet: the card.** The box on top of each sheet (the room's `leadBox`) is the next step, the easy group one sheet at a time.
+
+**Seen** on a private simulator over the demo: Design review's sheet with Calendar · Share as tiles in the text's column; Degen's with Share. **Not seen:** a five-tile sheet, the Mac.

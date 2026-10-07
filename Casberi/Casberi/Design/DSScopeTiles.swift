@@ -12,10 +12,15 @@ protocol DSTileScope: DSSectionScope {
     /// True when the scopes are SPANS OF TIME, which read in time, never A–Z
     /// (prd §999): Calendar's Today · Week · Month.
     static var readsInTime: Bool { get }
+    /// True when the caller's order IS the meaning and must stand as given:
+    /// a thing sheet's tiles, whose first is the thing's own act and whose
+    /// last is always Share (prd §1178), never A–Z.
+    static var keepsOrder: Bool { get }
 }
 
 extension DSTileScope {
     static var readsInTime: Bool { false }
+    static var keepsOrder: Bool { false }
 }
 
 /// THE SCOPES AS TILES — under the head on Home and under the figure in every
@@ -215,6 +220,7 @@ struct DSScopeTiles<Scope: DSTileScope>: View {
         let leads = sections.filter(isLead)
         let tail = sections.filter { !isLead($0) && verbs.contains($0) }
         let middle = sections.filter { !isLead($0) && !verbs.contains($0) }
+        guard !Scope.keepsOrder else { return sections }
         guard !Scope.readsInTime else { return leads + middle + tail }
         let byWord: (Scope, Scope) -> Bool = {
             $0.label.localizedStandardCompare($1.label) == .orderedAscending

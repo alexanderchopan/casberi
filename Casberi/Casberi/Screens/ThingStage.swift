@@ -97,10 +97,15 @@ struct SwapStage {
     }
 }
 
-/// The verb dial (B1, 2026-07-16) — the iOS contact-card pattern: discs with
-/// short labels, recognizable at a glance, still capped. Reads pass, writes
-/// confirm (the caller routes through the same confirm dialog), Share is the
-/// same ThingShareLink.
+/// The verb dial (B1, 2026-07-16): a thing sheet's acts. Reads pass, writes
+/// confirm (the caller routes through the same confirm dialog), Share raises
+/// the share tray.
+///
+/// **THE ROOMS' TILES SINCE prd §1178** (user: "for the buttons on the thing
+/// sheets i'd like them to be same size they are on the rooms … so we are
+/// never hand rolling"): the round discs became `DSScopeTiles`, the very
+/// template You's row and every room's tiles draw, every tile a verb — the
+/// thing's acts in order, Name, then Share last. Four columns, as a room's.
 struct VerbDial: View {
     let thing: Thing
     let verbs: [Verb]
@@ -120,12 +125,6 @@ struct VerbDial: View {
     /// The share tray, raised by the Share disc.
     @State private var sharing = false
 
-    /// Six discs fit a phone at the resting size; more takes the tighter cut
-    /// rather than overflowing the sheet. Pin is deleted (prd §1175).
-    private var discCount: Int {
-        verbs.count + (onName == nil ? 0 : 1) + 1
-    }
-    private var tight: Bool { discCount > 6 }
 
     /// Liveness guard (build 188 — see `ThingRowKeying.swift`). SwiftUI
     /// re-evaluates a LEAF view's body on the model's own observation,
@@ -138,44 +137,44 @@ struct VerbDial: View {
     }
 
     @ViewBuilder private var liveBody: some View {
-        HStack(alignment: .top, spacing: tight ? DS.Space.s2 : DS.Space.s4 + 2) {
-            ForEach(verbs) { verb in
-                Button { press(verb) } label: {
-                    disc(icon: copied == verb.id ? "checkmark" : verb.icon,
-                         label: Self.dialLabel(for: verb))
-                }
-                .buttonStyle(PressSpring())
+        let tiles = self.tiles
+        DSScopeTiles(sections: tiles, active: SheetTile.none, verbs: Set(tiles)) { pick($0) }
+            // In the rows' column, as a room's tiles stand: the discs were
+            // centred and needed no inset; a grid does.
+            .padding(.horizontal, DSRoomChassis.inset)
+            .frame(maxWidth: .infinity)
+            .sheet(isPresented: $sharing) { ShareTray(thing: thing) }
+            // Bound to `copied`, so SwiftUI cancels it when the sheet goes and
+            // restarts it when a second copy lands before the first has cleared.
+            .task(id: copied) {
+                guard copied != nil else { return }
+                try? await Task.sleep(for: .milliseconds(1200))
+                copied = nil
             }
-            if let onName {
-                Button(action: onName) {
-                    disc(icon: "square.and.pencil", label: "Name")
-                }
-                .buttonStyle(PressSpring())
-            }
-            // The Share disc raises the share tray — the card, then Messages,
-            // Mail and the system sheet as rows (docs/social-spec.md section 3,
-            // 2026-09-24). The feed row's context menu keeps the bare
-            // `ThingShareLink`; the dial is where the card is.
-            Button { sharing = true } label: {
-                disc(icon: "square.and.arrow.up", label: "Share")
-            }
-            .buttonStyle(PressSpring())
+    }
+
+    /// The thing's acts, then Name, then Share: the order is the meaning
+    /// (`SheetTile.keepsOrder`). A copy wears a checkmark for a beat.
+    private var tiles: [SheetTile] {
+        var out = verbs.map { verb in
+            SheetTile(id: "verb:" + verb.id, label: Self.dialLabel(for: verb),
+                      glyph: copied == verb.id ? "checkmark" : verb.icon)
         }
-        .sheet(isPresented: $sharing) { ShareTray(thing: thing) }
-        .frame(maxWidth: .infinity)
-        // Bound to `copied`, so SwiftUI cancels it when the sheet goes and
-        // restarts it when a second copy lands before the first has cleared.
-        .task(id: copied) {
-            guard copied != nil else { return }
-            try? await Task.sleep(for: .milliseconds(1200))
-            guard !Task.isCancelled else { return }
-            copied = nil
+        if onName != nil { out.append(SheetTile(id: "name", label: "Name", glyph: "square.and.pencil")) }
+        out.append(SheetTile(id: "share", label: "Share", glyph: "square.and.arrow.up"))
+        return out
+    }
+
+    private func pick(_ tile: SheetTile) {
+        switch tile.id {
+        case "name": onName?()
+        case "share": sharing = true
+        default:
+            guard let verb = verbs.first(where: { "verb:" + $0.id == tile.id }) else { return }
+            press(verb)
         }
     }
 
-    /// One verb press. Everything routes to the caller unchanged; a copy also
-    /// marks its own disc, which is local because the fact is local — the
-    /// parent's `verbResult` names what happened, this says WHERE.
     private func press(_ verb: Verb) {
         onVerb(verb)
         if case .copyText = verb.action { copied = verb.id }
@@ -200,32 +199,19 @@ struct VerbDial: View {
         if verb.label.hasPrefix("Copy") { return "Copy" }
         return verb.label.count <= 12 ? verb.label : verb.shortLabel
     }
+}
 
-    private func disc(icon: String, label: String) -> some View {
-        VStack(spacing: DS.Space.s2 - 2) {
-            Circle()
-                .fill(DS.fillLine)
-                .frame(width: tight ? 48 : 52, height: tight ? 48 : 52)
-                .overlay {
-                    Image(systemName: icon)
-                        .dsGlyph(.body, weight: .regular)
-                        .foregroundStyle(DS.textPrimary)
-                        // A disc whose glyph CHANGES morphs into the new one
-                        // instead of hard-cutting — Pin ⇄ Unpin, and Copy's
-                        // beat as a checkmark. A disc whose icon is constant
-                        // never animates, so the other four pay nothing for
-                        // it. Reduce Motion is handled inside the modifier.
-                        .dsSymbolSwap(icon)
-                }
-            Text(LocalizedStringKey(label))
-                .dsText(.label12)
-                .foregroundStyle(DS.textTertiary)
-                .lineLimit(1)
-        }
-        .contentShape(Rectangle())
-        // One hover for all three callers above — the verb discs, Name, and
-        // Share — since they share this anatomy. No tooltip: every disc wears
-        // its own word underneath, so a cursor already has the name.
-        .dsHover()
-    }
+/// One of a thing sheet's tiles (prd §1178): one of its acts, Name or Share,
+/// drawn by `DSScopeTiles` like a room's. Its glyph is the act's own symbol —
+/// a sheet's acts are not scopes, so they read no `ScopeTileGlyph` table —
+/// and its order is the caller's.
+struct SheetTile: DSTileScope {
+    let id: String
+    let label: String
+    let glyph: String
+    var summary: String { label }
+    static var keepsOrder: Bool { true }
+
+    /// The pick nothing is: every sheet tile is a verb, so none ever lights.
+    static let none = SheetTile(id: "", label: "", glyph: "")
 }

@@ -109,9 +109,9 @@ struct DSRangeChips<Option: Hashable>: View {
         self.onPick = onPick
     }
 
-    /// A tile's height: the touch floor, under You's 52 because a window is
-    /// a word, never a glyph over one.
-    private static var tileHeight: CGFloat { DS.Hit.min }
+    /// A tile's height: a room tile's 52 (`DSScopeTiles`), so every tile in
+    /// the app is one size (user: "same size", prd §1178).
+    private static var tileHeight: CGFloat { 52 }
 
     /// The crown budgets this strip at `DSRoomChassis.crownRangeChips` (42),
     /// so a 44pt floor would push its line out through the slot's clip. 32 is

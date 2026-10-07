@@ -222,7 +222,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1308 of 1372 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1309 of 1373 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -916,7 +916,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §629 — The two ethrex seats are "Hegotá UTXO" and "Hegotá Privacy" (amended by §647; part superseded by §1038)
 - §630 — The inclusion pass: glass goes opaque under Reduce Transparency, money says its direction without colour, the dock ge… [+1 sub-entries]
 - §631 — The Mac stops rendering a phone's point sizes, and the walked row can finally be taken
-- §632 — Nothing under a thing is a guess: the related neighbours, the two chips and the "kept here" sentence are cut; Pin is… (amended by §645; part superseded by §1175) [+2 sub-entries]
+- §632 — Nothing under a thing is a guess: the related neighbours, the two chips and the "kept here" sentence are cut; Pin is… (amended by §645; part superseded by §1175, §1178) [+2 sub-entries]
 - §633 — A trending token's sheet in the demo was a title over a logo
 - §634 — Three things that said "this is yours" instead of saying anything: the "From" tautologies, the dock's tap-learning, a…
 - §635 — The crown pour and its colour picker are gone
@@ -1532,6 +1532,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1175 — Pin is deleted
 - §1176 — The tray's search is its own capsule beside the face (amended by §1177)
 - §1177 — A room's bar is as wide as its tiles, and the tray's search takes its slot
+- §1178 — A thing sheet's acts are the rooms' tiles
 
 ## Dead rulings → what replaced them (generated)
 
