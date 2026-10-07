@@ -7511,6 +7511,34 @@
         }
       }
     },
+    "Search, or type any name" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Busca o escribe cualquier nombre"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "検索、または名前を入力"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "검색하거나 이름 입력"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "搜索或输入任意名称"
+          }
+        }
+      }
+    },
     "Security incidents arrive here. Following the wallet you use adds a review of it too." : {
       "localizations" : {
         "es" : {
@@ -8239,6 +8267,34 @@
         }
       }
     },
+    "Write or record a note." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Escribe o graba una nota."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ノートを書くか録音しましょう。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "노트를 쓰거나 녹음하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "写下或录制一条笔记。"
+          }
+        }
+      }
+    },
     "You follow this" : {
       "localizations" : {
         "es" : {
@@ -8431,6 +8487,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你的账户及关注的 1 个地址"
+          }
+        }
+      }
+    },
+    "Your notes" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tus notas"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "あなたのノート"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "내 노트"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的笔记"
           }
         }
       }
