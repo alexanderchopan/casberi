@@ -1,17 +1,17 @@
 import SwiftUI
 import SwiftData
 
-// THE MARKETS ROOM (prd §1081): the day as a heat map in the box, the
-// watchlist under one sort menu, the Alerts tile, and Add as the last tile.
+// THE MARKETS ROOM (prd §1081, §1171b): the categories in the box, the
+// watchlist under one sort menu, and Watchlist · Alerts · New on the bar.
 extension FeedScreen {
     /// The watched rows: Markets' rows that are not a fired alert.
     func marketsWatches(_ visible: [Thing]) -> [Thing] {
         visible.live.filter { !PriceAlertStore.isAlertRow($0) }
     }
 
-    /// THE BOX IS THE TILES (prd §1138): Watchlist and Alerts, then the
-    /// categories A–Z, a glyph and a name each, no figure and no colour
-    /// (user: "the categories w/ no numbers, just their glyph and name").
+    /// THE BOX IS THE CATEGORIES (prd §1138, §1171b): A–Z, a glyph and a
+    /// name each, no figure and no colour (user: "the categories w/ no
+    /// numbers, just their glyph and name"); Watchlist and Alerts ride the bar.
     /// Pressing one lists it below; the box never moves. It replaced the
     /// watchlist's heat map (§1081) and the category bar.
     var marketsTilesSection: some View {
@@ -111,8 +111,8 @@ extension FeedScreen {
     }
 
     #if DEBUG
-    /// `-marketsScope alerts|<Category>|add` — land on a tile, or raise Add,
-    /// at mount (prd §1081, §1171; NSLogs `marketsScope:`). Once per launch.
+    /// `-marketsScope alerts|<Category>|new` — land on a tile, or raise New,
+    /// at mount (prd §1081, §1171b; NSLogs `marketsScope:`). Once per launch.
     private func marketsProbe() {
         guard !Self.marketsProbed,
               let raw = UserDefaults.standard.string(forKey: "marketsScope") else { return }
@@ -120,7 +120,7 @@ extension FeedScreen {
         NSLog("[Casberi] marketsScope: %@", raw)
         switch raw {
         case "alerts":        chrome.tokensScope = .alerts
-        case "add", "search": feedSheet = .watchAdd
+        case "new", "add", "search": feedSheet = .watchAdd
         default:
             // A category's index by its name (`Work`).
             if let scope = TokensScope.all.first(where: { $0.category == raw }) {

@@ -14,7 +14,7 @@ extension FeedScreen {
         if !DSScopeDock<TokensScope>.atBottom(roomSizeClass) {
             Section {
                 DSScopeTiles(sections: TokensScope.bar, active: chrome.tokensScope,
-                             strip: true, verbs: [.add]) { pickTokensScope($0) }
+                             strip: true, verbs: [.new]) { pickTokensScope($0) }
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
                     .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
@@ -25,8 +25,8 @@ extension FeedScreen {
     }
 
     func pickTokensScope(_ picked: TokensScope) {
-        // Add is a verb (prd §1081, §1171): it opens the sheet, never lights.
-        if picked == .add {
+        // New is a verb (prd §1081, §1171b): it opens the sheet, never lights.
+        if picked == .new {
             feedSheet = .watchAdd
             return
         }

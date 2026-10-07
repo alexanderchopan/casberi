@@ -65056,3 +65056,11 @@ Every row in Settings leads with a `DS.Mark.notice` (38pt) icon, Today's (§1157
 2. **Reading is All · Highlights · Subscriptions.** `ReadingScope.search`, the `.readingFind` sheet and `ReadingFindSheet`'s search half (its corpus, `Retriever` hits, rows and the `Mode`) are deleted; the sheet is Follow alone. What you read is found through the tray's last row, Find.
 
 **Seen** on a fresh simulator with nothing connected: "insta" finds Instagram under Add, Social at its edge. **Not seen:** the tap into Instagram's page (the new simulator's tap access was not granted), Reading's tiles on screen.
+
+### §1171b — Markets' bar is Watchlist · Alerts · New, and its box is the eight categories (user, 2026-10-07: "should we get rid of the add button on markets … or do we want to call it 'new' like the other capsules have? we could even … put watchlist and alerts in it so markets and notes have their own lil menu capsule and that would free up two slots in the header card", then "why not call it 'new' it's same as add and then we would be consistent", "build it"; amends §1171a item 5's Add, §1138 item 6's box)
+
+1. **The bar holds Markets' views and its verb**, as Notes' does: Watchlist, Alerts, then New (`TokensScope.bar`). New opens the same company search (`watchAdd`); it stays on the bar because watching a stock searches the live market, which the tray's search does not.
+2. **New is every capsule's `plus` word** (`TokensScope.new`, was `.add`): one word for one verb on every bar. A row keeps its exact verb ("Watch a wallet", "Track a subscription"), because a row has room for the object.
+3. **The box is the eight categories, two across** (`TokensScope.box`), as Settings' eight counts stand. Pressing the picked one again is still the watchlist.
+
+**Seen** on a private simulator over the demo: the watchlist with Watchlist lit on the bar and the box's eight categories; Work picked, lit in the box, its companies listed. **Not seen:** the iPad and Mac strip, Alerts.

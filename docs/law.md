@@ -1525,7 +1525,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1168 — Today wears the inbox tray (amended by §1169)
 - §1169 — Empty Today is a preview of itself, and every room's All is a stack
 - §1170 — Settings' rows are Today's size
-- §1171 — One search: the tray finds everything you have, and a place's bar only adds [+1 sub-entries]
+- §1171 — One search: the tray finds everything you have, and a place's bar only adds [+2 sub-entries]
 
 ## Dead rulings → what replaced them (generated)
 

@@ -17,10 +17,9 @@ struct TokensScope: DSTileScope {
     /// Every alert you set, and the ones that fired (prd §1081).
     static let alerts = TokensScope(category: "\u{1}alerts")
     /// The verb, last: find a company or coin in the index and the market,
-    /// and watch it (prd §1081). Add again since prd §1171 (it was Search
-    /// from §1082): the tray's search finds what you have, so the bar's one
-    /// verb is the one that finds what you don't.
-    static let add = TokensScope(category: "\u{1}add")
+    /// and watch it (prd §1081). New since prd §1171b (Search from §1082,
+    /// Add in §1171): the one word every capsule's `plus` says, as Notes'.
+    static let new = TokensScope(category: "\u{1}new")
 
     var id: String { category ?? "\u{1}watchlist" }
 
@@ -29,19 +28,19 @@ struct TokensScope: DSTileScope {
 
     var label: String {
         if self == .alerts { return String(localized: "Alerts") }
-        if self == .add { return String(localized: "Add") }
+        if self == .new { return String(localized: "New") }
         return category ?? String(localized: "Watchlist")
     }
 
     var glyph: String {
         if self == .alerts { return ScopeTileGlyph.alerts }
-        if self == .add { return ScopeTileGlyph.new }
+        if self == .new { return ScopeTileGlyph.new }
         return category.map(CategoryFold.glyph(for:)) ?? ScopeTileGlyph.watch
     }
 
     var summary: String {
         if self == .alerts { return String(localized: "The price alerts you set") }
-        if self == .add { return String(localized: "Find something to watch") }
+        if self == .new { return String(localized: "Find something to watch") }
         guard let category else { return String(localized: "What you follow") }
         return String(localized: "The companies behind \(category)")
     }
@@ -69,19 +68,19 @@ struct TokensScope: DSTileScope {
     }()
 
     /// THE BOX (prd §1138, user: "the categories w/ no numbers, just their
-    /// glyph and name. watchlist being the first", then "get rid of testnets
-    /// b/c it won't have a market, and use the extra slot for alerts"):
-    /// Watchlist and Alerts lead, then every category whose pack holds a
-    /// company A–Z — a tile onto an empty list is a dead control (§83).
-    /// Testnets has no market and Markets is a place in You (§1123); the All
-    /// index is deleted, Search reaches every company.
-    static let box: [TokensScope] = [.watchlist, .alerts]
-        + packs.keys.filter { $0 != "Testnets" && $0 != HomeScope.markets }
+    /// glyph and name"): every category whose pack holds a company A–Z — a
+    /// tile onto an empty list is a dead control (§83). Testnets has no
+    /// market and Markets is a place in You (§1123). Watchlist and Alerts
+    /// moved to the bar (prd §1171b, user: "put watchlist and alerts in it so
+    /// markets and notes have their own lil menu capsule"), so the box is the
+    /// eight categories two across, as Settings' eight counts stand.
+    static let box: [TokensScope] = packs.keys.filter { $0 != "Testnets" && $0 != HomeScope.markets }
             .sorted { $0.localizedStandardCompare($1) == .orderedAscending }
             .map { TokensScope(category: $0) }
 
-    /// The bar: Add alone, the verb (prd §1171).
-    static let bar: [TokensScope] = [.add]
+    /// The bar: Watchlist, Alerts, then New, the verb (prd §1171b), as Notes'
+    /// bar holds its own views and its New.
+    static let bar: [TokensScope] = [.watchlist, .alerts, .new]
 
     /// Every tile, for a hook that names one.
     static var all: [TokensScope] { box + bar }
