@@ -58168,6 +58168,34 @@
         }
       }
     },
+    "Connect Calendar or subscribe to one, and its dates show in Coming up." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Conecta Calendario o suscríbete a uno y sus fechas aparecerán en Próximamente."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "カレンダーを接続するか購読すると、その日付が「今後の予定」に表示されます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "캘린더를 연결하거나 구독하면 날짜가 '다가오는 일정'에 표시됩니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "连接日历或订阅一个日历，其日期会显示在“即将到来”中。"
+          }
+        }
+      }
+    },
     "Connect Rocket Money" : {
       "localizations" : {
         "es" : {
@@ -69191,6 +69219,34 @@
         }
       }
     },
+    "Every calendar Casberi reads" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Todos los calendarios que lee Casberi"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberi が読み取るすべてのカレンダー"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberi가 읽는 모든 캘린더"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberi 读取的所有日历"
+          }
+        }
+      }
+    },
     "Every chain L2BEAT covers" : {
       "localizations" : {
         "es" : {
@@ -72597,6 +72653,34 @@
         }
       }
     },
+    "Find an app by name" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Busca una app por su nombre"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "名前でアプリを探す"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이름으로 앱 찾기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "按名称查找 App"
+          }
+        }
+      }
+    },
     "Find another account" : {
       "localizations" : {
         "es" : {
@@ -72649,6 +72733,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "在你的内容中查找"
+          }
+        }
+      }
+    },
+    "Find one of the kind you're on" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Busca uno del tipo en el que estás"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "表示中の種類から探す"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "보고 있는 종류에서 찾기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在当前类型中查找"
           }
         }
       }
@@ -96048,6 +96160,34 @@
         }
       }
     },
+    "No apps" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No hay apps"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アプリはありません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "앱 없음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "没有 App"
+          }
+        }
+      }
+    },
     "No apps match %@." : {
       "localizations" : {
         "es" : {
@@ -103204,6 +103344,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你关注的地址在这里还没有余额。"
+          }
+        }
+      }
+    },
+    "Nothing you've added matches." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Nada de lo que has añadido coincide."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "追加したものに一致する項目はありません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "추가한 항목 중 일치하는 것이 없습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你添加的内容中没有匹配项。"
           }
         }
       }
@@ -152033,6 +152201,34 @@
         }
       }
     },
+    "What your followed addresses are worth." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Lo que valen las direcciones que sigues."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "フォロー中のアドレスの評価額。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "팔로우하는 주소의 가치."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你关注的地址的价值。"
+          }
+        }
+      }
+    },
     "What your money is made of" : {
       "localizations" : {
         "es" : {
@@ -166515,6 +166711,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "huggingface.co/%@"
+          }
+        }
+      }
+    },
+    "iCloud, notifications, privacy" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "iCloud, notificaciones, privacidad"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "iCloud、通知、プライバシー"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "iCloud, 알림, 개인정보 보호"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "iCloud、通知、隐私"
           }
         }
       }
