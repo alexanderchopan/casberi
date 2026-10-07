@@ -616,16 +616,22 @@ enum NetworkReach {
                  hosts: ["mzstatic.com"]),
         // Spotify signs in through its own web player inside \(DS.device)
         // (accounts.spotify.com, opened by the connect screen — a setup door),
-        // and \(DS.device) then reads the web player's own endpoints as you:
-        // your recently played tracks from api.spotify.com, and a fresh
-        // web-player token from open.spotify.com when the old one lapses.
+        // and \(DS.device) then reads the web player's own endpoints as you
+        // (prd §1158): what you and your friends played from
+        // spclient.wg.spotify.com, your username once from Pathfinder
+        // (api-partner.spotify.com, with a client token from
+        // clienttoken.spotify.com), your display name from api.spotify.com,
+        // and a fresh web-player token from open.spotify.com when the old one
+        // lapses. Each album or playlist is named through open.spotify.com's
+        // oEmbed.
         // (open.spotify.com is also declared above as the link-preview host a
         // pasted Spotify link opens on tap.) No developer app, no key, no
         // server — the session lives only on this device.
         Endpoint(service: "Spotify",
                  reach: .whenConnected(bridge: "spotify"),
-                 purpose: "Reads what you recently played, using the same web-player session you signed in with. The requests carry only that session — no account of ours, no key, no server.",
-                 hosts: ["api.spotify.com", "open.spotify.com", "accounts.spotify.com"]),
+                 purpose: "Reads the albums and playlists you played and what your friends are playing, using the same web-player session you signed in with. The requests carry only that session — no account of ours, no key, no server.",
+                 hosts: ["spclient.wg.spotify.com", "api-partner.spotify.com", "clienttoken.spotify.com",
+                         "api.spotify.com", "open.spotify.com", "accounts.spotify.com"]),
         // Duolingo signs in through its own page inside \(DS.device) (the
         // connect screen's sheet), and \(DS.device) then reads the web app's
         // own endpoints as you: your profile, and the record of which days you

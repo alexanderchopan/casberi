@@ -768,6 +768,11 @@ enum Retriever {
             (["my own posts", "own posts", "my posts", "posts", "post"], "Post"),
             (["my replies", "replies", "reply", "replied"], "Reply"),
             (["what i liked", "i liked", "my likes", "likes", "liked"], "Liked"),
+            // Spotify's friend feed (`SpotifyIngest`, prd §1158): what the
+            // people you follow played. Ahead of "Played", whose bare word
+            // would otherwise take "what my friends played" as your own.
+            (["what my friends played", "friends played", "my friends listened",
+              "friends listening", "friends are playing"], "Friends"),
             // Spotify recently-played (`SpotifyIngest`). A facet like "Liked":
             // "what I played on Spotify" narrows to these rather than a
             // whole-corpus keyword scan, and it is a state label the Themes

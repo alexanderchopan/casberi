@@ -408,6 +408,7 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - `-splitsProbe` — Splits (2026-09-18, prd §820): a Read-scoped API key, refused on save unless `whoami` scopes are exactly `read` → docs/hooks/system.md · prd §820
 - **Apple Wallet is TWO regions, and `Card` is a fact it reads (prd §779).** FinanceKit is the US on 17.4+ (Apple Card/Cash/Savings) and the UK on 18.4+. → docs/hooks/wallet.md · prd §779
 - `-spotifySession "<sp_dc>"` `-spotifyProbe` — the Spotify seat's session, and its chain link by link (prd §703, 2026-09-12) → docs/hooks/bridges.md · prd §703
+- **Spotify reads `spclient`, never `api.spotify.com` (throttled for every web-player token, §711b): the albums and playlists you played, one row each per day, named by oEmbed, and your friends' plays (`buddylist`); the username comes once from Pathfinder (`spotify-plays-selftest.sh`). UNMEASURED: `-spotifyProbe` logs the shapes** → prd §1158
 - `-duolingoSession "<jwt_token>"` `-duolingoProbe` — Duolingo's live door, the fifth seat on the session-cookie pattern → docs/hooks/bridges.md · prd §776
 - **A 200 from `open.spotify.com/api/token` is not a signed-in session (`isAnonymous`); only `.refused` clears the credential, and a 429 is `.throttled`** → docs/hooks/bridges.md · prd §711 · §711b
 - **Acorns and Rocket Money are REAL SEATS (Wallet group, `.signIn`, prd §780b)** → docs/hooks/bridges.md · prd §780b

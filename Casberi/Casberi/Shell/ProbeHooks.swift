@@ -166,9 +166,32 @@ enum ProbeHooks {
               failure.map { "FAILED — \(String(describing: $0)) — \($0.line)" }
               ?? "ok as \(SpotifyAuth.load()?.username ?? "(no display name)")")
         guard failure == nil else { return }
+        // The `spclient` links (prd §1158), each on its own line: the friend
+        // feed, the username Pathfinder resolves, and the recently-played
+        // answer's KEYS, because its shape is the one thing no build host has
+        // measured.
+        let (friends, friendsFailure) = await SpotifyAuth.spclient("presence-view/v1/buddylist")
+        NSLog("[Casberi] spotify| buddylist: %@", friends.map { json in
+            "\(((json as? [String: Any])?["friends"] as? [Any])?.count ?? -1) friends"
+        } ?? "FAILED — \(String(describing: friendsFailure))")
+        let (id, idFailure) = await SpotifyAuth.userID()
+        NSLog("[Casberi] spotify| username: %@",
+              id.map { _ in "resolved" } ?? "FAILED — \(String(describing: idFailure))")
+        if let id {
+            let (played, playedFailure) = await SpotifyAuth.spclient(
+                "recently-played/v3/user/\(id)/recently-played"
+                + "?format=json&offset=0&limit=50&filter=default,collection-new-episodes&market=from_token")
+            let root = played as? [String: Any]
+            let first = (root?["playContexts"] as? [[String: Any]])?.first
+            NSLog("[Casberi] spotify| recently-played: %@ · keys %@ · first context keys %@ · parsed %d",
+                  played == nil ? "FAILED — \(String(describing: playedFailure))" : "200",
+                  root.map { $0.keys.sorted().joined(separator: ",") } ?? "-",
+                  first.map { $0.keys.sorted().joined(separator: ",") } ?? "-",
+                  SpotifyPlays.contexts(played)?.count ?? -1)
+        }
         let added = await SpotifyIngest.refresh(context: context)
-        NSLog("[Casberi] spotify| recently played: %@ new",
-              added.map(String.init) ?? "FAILED")
+        NSLog("[Casberi] spotify| landed: %@ new",
+              added.map(String.init) ?? "FAILED — \(String(describing: SpotifyIngest.lastFailure))")
     }
 
     /// `-appleReceiptProbe` — the measurement behind one question: can Apple's

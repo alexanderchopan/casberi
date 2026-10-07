@@ -13,9 +13,10 @@ import SwiftData
 /// the first seat is never touched. Same technique as, and ported from,
 /// github.com/stephancill/stupid-social, an App-Store-approved app.
 ///
-/// What lands: your RECENTLY PLAYED tracks (`/v1/me/player/recently-played`),
-/// as "Song — Artist" link things opening in Spotify, each wearing its album's
-/// cover — one thing per song (dedup by track id), `capturedAt` = its play time.
+/// What lands (prd §1158, read off `spclient`, never `api.spotify.com`): the
+/// albums, playlists, artists and shows you played, one row per one of them
+/// per day, and each friend's newest play. Rows landed before §1158 are one
+/// per SONG (`spotify:<track id>`) and stay as they are.
 ///
 /// The standing cost, stated plainly: `SpotifyWebPlayerToken` carries a
 /// hardcoded TOTP secret and version. When Spotify rotates either, token refresh
@@ -36,6 +37,14 @@ enum SpotifyAuth {
         /// Epoch seconds; nil means "unknown, refresh before use".
         var accessTokenExpiresAt: TimeInterval?
         var username: String?
+        /// The account's Spotify USERNAME (its id, never the display name
+        /// above), which `spclient`'s recently-played path is keyed on. It
+        /// never changes, so it is resolved once through Pathfinder and kept
+        /// (prd §1158). Optional: every credential stored before it decodes.
+        var userID: String?
+        /// The web player's client id, as `/api/token` hands it back. A
+        /// Pathfinder `client-token` is minted for it.
+        var clientID: String?
     }
 
     /// WHICH LINK BROKE. The seat's connect is a chain — harvest the cookie,
@@ -61,6 +70,10 @@ enum SpotifyAuth {
         case throttled
         /// Nothing is stored — no sign-in has happened on this device.
         case noSession
+        /// Spotify answered 200 in a shape this build cannot read (prd §1158):
+        /// the `spclient` reads are the web player's own, undocumented, so a
+        /// changed shape is a fact of its own, never "couldn't reach".
+        case unreadable
 
         /// The line the connect screen shows. Says which link broke, so the
         /// next report names it.
@@ -74,6 +87,8 @@ enum SpotifyAuth {
                 return String(localized: "Signed in — Spotify is busy right now, so your plays will arrive shortly.")
             case .refused(let status):
                 return String(localized: "Spotify didn't accept that sign-in (\(status)) — tap Connect to try again.")
+            case .unreadable:
+                return String(localized: "Signed in, but Spotify answered in a shape this version can't read.")
             }
         }
 
@@ -83,7 +98,7 @@ enum SpotifyAuth {
         var clearsCredential: Bool {
             switch self {
             case .refused, .noSession: return true
-            case .unreachable, .throttled: return false
+            case .unreachable, .throttled, .unreadable: return false
             }
         }
 
@@ -143,9 +158,9 @@ enum SpotifyAuth {
     /// refresh is still worth one try — it may not have actually expired — but
     /// the refresh's own verdict is what rides along, because a bearer that
     /// then gets refused is a refusal of the SESSION, not of that one call.
-    static func token() async -> (String?, Failure?) {
+    static func token(forceRefresh: Bool = false) async -> (String?, Failure?) {
         guard var creds = load(), !creds.spDC.isEmpty else { return (nil, .noSession) }
-        if let expiresAt = creds.accessTokenExpiresAt,
+        if !forceRefresh, let expiresAt = creds.accessTokenExpiresAt,
            expiresAt - Date.now.timeIntervalSince1970 > tokenRefreshLeeway,
            !creds.bearerToken.isEmpty {
             return (creds.bearerToken, nil)
@@ -163,11 +178,33 @@ enum SpotifyAuth {
     /// Saves and returns the refreshed credential, or the reason it couldn't.
     private static func refreshWebPlayerToken(_ creds: Credentials)
         async -> (creds: Credentials?, failure: Failure?) {
+        let (json, failure) = await mint(creds, reason: "transport")
+        guard let json, let access = json["accessToken"] as? String else {
+            return (nil, failure ?? .unreachable)
+        }
+        var refreshed = creds
+        refreshed.bearerToken = access
+        if let ms = json["accessTokenExpirationTimestampMs"] as? Double {
+            refreshed.accessTokenExpiresAt = ms / 1000
+        }
+        if let clientID = json["clientId"] as? String, !clientID.isEmpty {
+            refreshed.clientID = clientID
+        }
+        save(refreshed)
+        return (refreshed, nil)
+    }
+
+    /// One call to the web player's token endpoint, signed the way
+    /// `open.spotify.com` signs it. `reason` is `transport` for the bearer
+    /// every read carries, `init` for the one Pathfinder takes (stupid-social's
+    /// split, prd §1158). The JSON comes back only for a SIGNED-IN mint.
+    private static func mint(_ creds: Credentials, reason: String)
+        async -> (json: [String: Any]?, failure: Failure?) {
         let totp = SpotifyWebPlayerToken.current()
         let serverTotp = await SpotifyWebPlayerToken.serverSynchronized() ?? totp
         var comps = URLComponents(string: "https://open.spotify.com/api/token")!
         comps.queryItems = [
-            URLQueryItem(name: "reason", value: "transport"),
+            URLQueryItem(name: "reason", value: reason),
             URLQueryItem(name: "productType", value: "web-player"),
             URLQueryItem(name: "totp", value: totp),
             URLQueryItem(name: "totpServer", value: serverTotp),
@@ -205,7 +242,7 @@ enum SpotifyAuth {
         else { return (nil, .unreachable) }
         guard http.statusCode == 200,
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let access = json["accessToken"] as? String, !access.isEmpty
+              (json["accessToken"] as? String)?.isEmpty == false
         else {
             // 5xx and 429 are Spotify having a bad minute, not a session verdict.
             return (nil, .from(status: http.statusCode))
@@ -220,14 +257,7 @@ enum SpotifyAuth {
         // as the refusal it is: a lapsed session, which the connect screen and
         // the ingest both already render as "sign in again".
         if json["isAnonymous"] as? Bool == true { return (nil, .refused(200)) }
-
-        var refreshed = creds
-        refreshed.bearerToken = access
-        if let ms = json["accessTokenExpirationTimestampMs"] as? Double {
-            refreshed.accessTokenExpiresAt = ms / 1000
-        }
-        save(refreshed)
-        return (refreshed, nil)
+        return (json, nil)
     }
 
     /// What `open.spotify.com` is running when it mints a token: mobile Safari,
@@ -271,6 +301,112 @@ enum SpotifyAuth {
             save(current)
         }
         return nil
+    }
+}
+
+// MARK: - The web player's own reads (prd §1158)
+
+/// `spclient.wg.spotify.com` and Pathfinder, the hosts `open.spotify.com`
+/// itself reads. `api.spotify.com` throttles every web-player token on one
+/// shared client id (§711b, measured: 429 on the first request, and still
+/// 429 after three honoured `Retry-After`s), so nothing that lands rows reads
+/// it. Request shapes are ported from github.com/stephancill/stupid-social
+/// (2026-09-29), which reads the friend feed and the username this way in an
+/// App-Store app.
+extension SpotifyAuth {
+
+    /// The version the web player stamps on its own requests.
+    static let webPlayerVersion = "1.2.90.229.g33aad738"
+
+    /// GET one `spclient` path with the session's bearer. A 401 or 403 mints
+    /// a fresh bearer and asks once more: the stored one may have been caught
+    /// in flight with no expiry, or may have lapsed early.
+    static func spclient(_ path: String) async -> (json: Any?, failure: Failure?) {
+        let (bearer, tokenFailure) = await token()
+        guard var current = bearer else { return (nil, tokenFailure ?? .unreachable) }
+        for attempt in 0..<2 {
+            let (json, status) = await IngestSupport.getJSONStatus(
+                "https://spclient.wg.spotify.com/\(path)",
+                auth: "Bearer \(current)",
+                headers: ["spotify-app-version": webPlayerVersion,
+                          "app-platform": "WebPlayer",
+                          "accept": "application/json"],
+                service: "Spotify")
+            if status == 200 {
+                if let json { return (json, nil) }
+                return (nil, .unreadable)
+            }
+            guard attempt == 0, status == 401 || status == 403 else {
+                return (nil, .from(status: status))
+            }
+            let (fresh, failure) = await token(forceRefresh: true)
+            guard let fresh else { return (nil, failure ?? .from(status: status)) }
+            current = fresh
+        }
+        return (nil, .unreachable)
+    }
+
+    /// The account's username, resolved once and kept. Pathfinder's
+    /// `profileAttributes` answers it to an `init` bearer carrying a
+    /// `client-token` minted for the web player's client id, the chain
+    /// stupid-social runs (§1158). Nil with the broken link otherwise.
+    static func userID() async -> (String?, Failure?) {
+        guard var creds = load(), !creds.spDC.isEmpty else { return (nil, .noSession) }
+        if let id = creds.userID, !id.isEmpty { return (id, nil) }
+
+        let (initJSON, initFailure) = await mint(creds, reason: "init")
+        guard let initJSON, let initBearer = initJSON["accessToken"] as? String,
+              let clientID = (initJSON["clientId"] as? String) ?? creds.clientID,
+              !clientID.isEmpty
+        else { return (nil, initFailure ?? .unreadable) }
+
+        let (tokenJSON, tokenStatus) = await IngestSupport.postJSONStatus(
+            "https://clienttoken.spotify.com/v1/clienttoken",
+            body: ["client_data": [
+                "client_version": webPlayerVersion,
+                "client_id": clientID,
+                "js_sdk_data": ["device_brand": "", "device_id": "", "device_model": "",
+                                "device_type": "", "os": "", "os_version": ""],
+            ]],
+            headers: ["accept": "application/json",
+                      "origin": "https://open.spotify.com",
+                      "referer": "https://open.spotify.com/",
+                      "app-platform": "WebPlayer",
+                      "user-agent": webPlayerUserAgent],
+            service: "Spotify")
+        guard tokenStatus == 200 else { return (nil, .from(status: tokenStatus)) }
+        guard let clientToken = ((tokenJSON as? [String: Any])?["granted_token"]
+                as? [String: Any])?["token"] as? String, !clientToken.isEmpty
+        else { return (nil, .unreadable) }
+
+        let (profileJSON, profileStatus) = await IngestSupport.postJSONStatus(
+            "https://api-partner.spotify.com/pathfinder/v2/query",
+            auth: "Bearer \(initBearer)",
+            body: ["variables": [String: Any](),
+                   "operationName": "profileAttributes",
+                   "extensions": ["persistedQuery": [
+                       "version": 1,
+                       "sha256Hash": "53bcb064f6cd18c23f752bc324a791194d20df612d8e1239c735144ab0399ced",
+                   ]]],
+            headers: ["client-token": clientToken,
+                      "spotify-app-version": webPlayerVersion,
+                      "app-platform": "WebPlayer",
+                      "accept": "application/json",
+                      "origin": "https://open.spotify.com",
+                      "referer": "https://open.spotify.com/",
+                      "user-agent": webPlayerUserAgent],
+            service: "Spotify")
+        guard profileStatus == 200 else { return (nil, .from(status: profileStatus)) }
+        let profile = (((profileJSON as? [String: Any])?["data"] as? [String: Any])?["me"]
+                       as? [String: Any])?["profile"] as? [String: Any]
+        guard let id = profile?["username"] as? String, !id.isEmpty else {
+            return (nil, .unreadable)
+        }
+        creds = load() ?? creds
+        creds.userID = id
+        creds.clientID = clientID
+        save(creds)
+        return (id, nil)
     }
 }
 
@@ -341,11 +477,19 @@ enum SpotifyIngest {
     /// tell a throttle (signed in, plays delayed) from a dead session.
     @MainActor private(set) static var lastFailure: SpotifyAuth.Failure?
 
-    /// Recently played, newest 50 — "Song — Artist" things linking to Spotify,
-    /// each wearing its album's cover and the album it came off. One thing per
-    /// SONG (dedup by track id): in Casberi a "notification" is the arrival of a
-    /// new thing in the feed, so a song you replay is already landed and makes
-    /// no new noise; its row simply carries its most recent play time.
+    /// What you played and what your friends are playing, both read where
+    /// the web player reads them (prd §1158). `api.spotify.com`'s
+    /// recently-played tracks are throttled for every web-player token
+    /// (§711b), so this seat reads `spclient` instead:
+    ///
+    /// - **You:** the albums, playlists, artists and shows you played
+    ///   (`recently-played/v3`), one row per one of them per day, named and
+    ///   pictured through Spotify's public oEmbed. `spclient` keeps no
+    ///   per-song history, so a row is the album or playlist, not the song.
+    /// - **Friends:** each friend's newest play (`presence-view/v1/buddylist`,
+    ///   people you follow who share their listening), one row per play.
+    ///
+    /// Nil only when both reads failed; `lastFailure` names the first.
     @MainActor
     static func refresh(context: ModelContext) async -> Int? {
         guard SpotifyAuth.connected, !running else {
@@ -355,127 +499,115 @@ enum SpotifyIngest {
         defer { running = false }
         lastFailure = nil
 
-        let (bearer, tokenFailure) = await SpotifyAuth.token()
-        guard let token = bearer else { lastFailure = tokenFailure ?? .unreachable; return nil }
-        let (json, status) = await IngestSupport.getJSONStatus(
-            "https://api.spotify.com/v1/me/player/recently-played?limit=50",
-            auth: "Bearer \(token)", service: "Spotify")
-        // 401/403 here means the session lapsed after the token check — the
-        // refresh already ran inside `accessToken()`, so there's nothing more to
-        // try this pass; the seat will re-validate on the next foreground.
-        guard status == 200,
-              let root = json as? [String: Any],
-              let items = root["items"] as? [[String: Any]] else {
-            // A 429 is the norm here, not an outage: `api.spotify.com` throttles
-            // the web player's shared client id on a rolling window (three
-            // honoured `Retry-After`s in a row, still 429 — §711b).
-            lastFailure = status == 200 ? .unreachable : .from(status: status)
+        let existing = IngestSupport.existingSourceRefs(context, source: "Spotify")
+        let (friends, friendsFailure) = await friendPlays(existing: existing)
+        let (yours, yoursFailure) = await yourPlays(existing: existing)
+        if friends == nil && yours == nil {
+            lastFailure = yoursFailure ?? friendsFailure ?? .unreachable
             return nil
         }
+        let things = (yours ?? []) + (friends ?? [])
+        for thing in things { context.insert(thing) }
+        if !things.isEmpty {
+            SpotlightIndex.index(things)
+            context.saveHonestly()
+        }
+        return things.count
+    }
 
-        let existing = IngestSupport.existingSourceRefs(context, source: "Spotify")
+    // MARK: - Yours: what you played, by album, playlist, artist or show
+
+    /// How many new rows one pass names. Each costs one oEmbed request, and
+    /// a first pass over a long history is a backlog, not news.
+    static let namesPerPass = 20
+
+    @MainActor
+    private static func yourPlays(existing: Set<String>) async -> ([Thing]?, SpotifyAuth.Failure?) {
+        let (id, idFailure) = await SpotifyAuth.userID()
+        guard let id else { return (nil, idFailure) }
+        let user = id.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? id
+        let (json, failure) = await SpotifyAuth.spclient(
+            "recently-played/v3/user/\(user)/recently-played"
+            + "?format=json&offset=0&limit=50&filter=default,collection-new-episodes&market=from_token")
+        guard let json else { return (nil, failure) }
+        guard let plays = SpotifyPlays.contexts(json) else { return (nil, .unreadable) }
+
         var seen = Set<String>()
-        var added = 0
-
-        for item in items {
-            guard let track = item["track"] as? [String: Any],
-                  let id = track["id"] as? String,
-                  let name = track["name"] as? String else { continue }
-            let ref = "spotify:\(id)"
-            // One row per song even if it appears several times in the window
-            // (a replay), and never a duplicate of a row already landed.
+        var things: [Thing] = []
+        for play in plays where things.count < namesPerPass {
+            let ref = play.ref
             guard seen.insert(ref).inserted, !existing.contains(ref) else { continue }
-            let artists = ((track["artists"] as? [[String: Any]]) ?? [])
-                .compactMap { $0["name"] as? String }.joined(separator: ", ")
-            // The track's page, built from its id when `external_urls` is
-            // missing (prd §912) — a play with no door was a row that opened
-            // nothing. Same host, same shape Spotify serves in that field.
-            let link = ((track["external_urls"] as? [String: Any])?["spotify"] as? String)
-                .flatMap { $0.isEmpty ? nil : $0 } ?? "https://open.spotify.com/track/\(id)"
-            let when = IngestSupport.isoDate(item["played_at"])
-            let album = (track["album"] as? [String: Any]) ?? [:]
-
+            var named = play.fixedName
+            var art: String?
+            if named == nil, let page = URL(string: play.page) {
+                let answer = await OEmbed.resolve(page)
+                named = answer?.title?.trimmingCharacters(in: .whitespacesAndNewlines)
+                art = IngestSupport.imageURL(answer?.thumbnailURL)
+            }
+            // Unnamed is unlanded: the next pass asks again.
+            guard let name = named, !name.isEmpty else { continue }
             let thing = Thing(
                 kind: .link,
-                title: artists.isEmpty ? name : "\(name) — \(artists)",
-                content: link,
+                title: TitleSeam.join(name, play.kindWord),
+                content: play.page,
                 source: "Spotify",
-                capturedAt: when ?? .now,
-                // The facet the retriever narrows "what I played on Spotify" to,
-                // and simply true: this endpoint is recently-played and nothing
-                // else. No "Music" tag beside it — the source chip and type tag
-                // already say that (ShapedRows' reason for dropping bridge tags).
+                capturedAt: play.playedAt,
                 tags: ["Played"],
                 sourceRef: ref
             )
-            // The join key MediaMoments' artist crossing reads — a backend
-            // field, no row draws it for Spotify.
-            if !artists.isEmpty { thing.authorHandle = artists }
-            thing.previewImageURL = coverURL(album)
-            // The album the track came off — the one fact the payload carries
-            // that the title doesn't. `summary`, not `enrichedText`: Spotify
-            // authored it and handed it over, so it's shown copy, not scraped.
-            // …and where it was played FROM, when the play says (prd §912):
-            // `context.type` is the one fact about the listening the payload
-            // carries. Its `uri` names no title, so the word is all there is.
-            let albumWords = albumLine(album, track: name)
-            let fromWords = playedFrom(item["context"], albumNamed: albumWords != nil)
-            let words = [albumWords, fromWords].compactMap { $0 }
-            thing.summary = words.isEmpty ? nil : words.joined(separator: " · ")
-            context.insert(thing)
-            SpotlightIndex.index([thing])
-            added += 1
-        }
-        if added > 0 { context.saveHonestly() }
-        return added
-    }
-
-    // MARK: - Album facts (both read off `track.album`, already in hand)
-
-    /// The album cover as a plain https URL. Spotify serves three sizes per
-    /// album (640 / 300 / 64 square); 300 is what `AppleMusicIngest.artURL`
-    /// picks for the same job and reasons. Nearest-to-300 rather than a fixed
-    /// index: the sizes are a convention, not a contract.
-    private static func coverURL(_ album: [String: Any]) -> String? {
-        let sized = ((album["images"] as? [[String: Any]]) ?? [])
-            .compactMap { image -> (width: Int, url: String)? in
-                guard let url = IngestSupport.imageURL(image["url"] as? String)
-                else { return nil }
-                return ((image["width"] as? Int) ?? 0, url)
+            thing.previewImageURL = art
+            // The song last played inside it, where the answer names one: the
+            // one per-song fact `spclient` keeps (§1158).
+            if let last = play.lastTrackPage.flatMap(URL.init(string:)),
+               let song = await OEmbed.resolve(last)?.title?
+                .trimmingCharacters(in: .whitespacesAndNewlines), !song.isEmpty {
+                thing.summary = String(localized: "Last played: \(song)")
             }
-        return sized.min { abs($0.width - 300) < abs($1.width - 300) }?.url
+            things.append(thing)
+        }
+        return (things, nil)
     }
 
-    /// "from playlist" / "from album" — the play's `context`, when Spotify
-    /// sent one with a `uri` (a context without one is not a context). The
-    /// album word stands down when the album line already names it, so a
-    /// row never reads "From Blonde (2016) · from album". Other types (an
-    /// artist page, a show) are not worded: the ask was playlist or album.
-    private static func playedFrom(_ context: Any?, albumNamed: Bool) -> String? {
-        guard let context = context as? [String: Any],
-              let type = (context["type"] as? String)?.lowercased(),
-              let uri = context["uri"] as? String, !uri.isEmpty else { return nil }
-        switch type {
-        case "playlist": return String(localized: "from playlist")
-        case "album": return albumNamed ? nil : String(localized: "from album")
-        default: return nil
-        }
-    }
+    // MARK: - Friends: what the people you follow are playing
 
-    /// "From Blonde (2016)" — display copy under the track in the thing sheet.
-    /// Nil for a single, where Spotify wraps the one track in an album of the
-    /// same name and the line would only repeat the title back.
-    private static func albumLine(_ album: [String: Any], track: String) -> String? {
-        guard let name = (album["name"] as? String)?
-                .trimmingCharacters(in: .whitespacesAndNewlines),
-              !name.isEmpty,
-              name.caseInsensitiveCompare(track) != .orderedSame else { return nil }
-        let year = (album["release_date"] as? String).flatMap { raw -> String? in
-            let digits = raw.prefix(4)
-            return digits.count == 4 && digits.allSatisfy(\.isNumber)
-                ? String(digits) : nil
+    @MainActor
+    private static func friendPlays(existing: Set<String>) async -> ([Thing]?, SpotifyAuth.Failure?) {
+        let (json, failure) = await SpotifyAuth.spclient("presence-view/v1/buddylist")
+        guard let json else { return (nil, failure) }
+        guard let friends = (json as? [String: Any])?["friends"] as? [[String: Any]] else {
+            return (nil, .unreadable)
         }
-        guard let year else { return String(localized: "From \(name)") }
-        return String(localized: "From \(name) (\(year))")
+        var things: [Thing] = []
+        for friend in friends {
+            guard let user = friend["user"] as? [String: Any],
+                  let userURI = user["uri"] as? String,
+                  let who = (user["name"] as? String)?
+                    .trimmingCharacters(in: .whitespacesAndNewlines), !who.isEmpty,
+                  let track = friend["track"] as? [String: Any],
+                  let trackURI = track["uri"] as? String,
+                  let song = track["name"] as? String, !song.isEmpty,
+                  let ms = SpotifyPlays.millis(friend["timestamp"])
+            else { continue }
+            let ref = "spotify:friend:\(userURI):\(Int64(ms))"
+            guard !existing.contains(ref) else { continue }
+            let artist = (track["artist"] as? [String: Any])?["name"] as? String
+            let thing = Thing(
+                kind: .link,
+                title: TitleSeam.join(String(localized: "\(who) played \(song)"), artist),
+                content: SpotifyPlays.page(trackURI) ?? "https://open.spotify.com",
+                source: "Spotify",
+                capturedAt: Date(timeIntervalSince1970: ms / 1000),
+                tags: ["Friends"],
+                sourceRef: ref
+            )
+            thing.previewImageURL = IngestSupport.imageURL(track["imageUrl"] as? String)
+            thing.authorAvatarURL = IngestSupport.imageURL(user["imageUrl"] as? String)
+            if let from = ((track["context"] as? [String: Any])?["name"] as? String)?
+                .trimmingCharacters(in: .whitespacesAndNewlines), !from.isEmpty {
+                thing.summary = String(localized: "From \(from)")
+            }
+            things.append(thing)
+        }
+        return (things, nil)
     }
 }

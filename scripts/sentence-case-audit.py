@@ -220,6 +220,10 @@ KNOWN_PHRASES: tuple[str, ...] = (
 )
 
 KNOWN_PROPER: set[str] = {
+    # Spotify's own names for its library collections (prd §1158): "Liked
+    # Songs" and "Your Episodes" are what Spotify calls them, and a row of
+    # what you played from them wears the name Spotify gave.
+    "Songs", "Episodes",
     # Apple's biometric names: "Open with Optic ID" names the system's own
     # prompt (prd §982), as "Face ID" and "Touch ID" do.
     "Optic",

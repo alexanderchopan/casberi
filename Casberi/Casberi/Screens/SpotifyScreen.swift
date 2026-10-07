@@ -6,8 +6,9 @@ import SwiftData
 /// development-mode clampdown made it 403 for everyone. This one opens Spotify's
 /// own web-player login inside a `WKWebView` we control (`SpotifyLoginWebView`),
 /// harvests that session, and reads the web player's endpoints as the person.
-/// No developer standing, no per-user allowlist. What lands: your recently
-/// played tracks. Read-only — it can never play, queue, or change anything.
+/// No developer standing, no per-user allowlist. What lands: the albums,
+/// playlists and shows you played, and your friends' plays (prd §1158).
+/// Read-only — it can never play, queue, or change anything.
 struct SpotifyScreen: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(BridgeStore.self) private var store
@@ -98,7 +99,7 @@ struct SpotifyScreen: View {
                              syncingLine: String(localized: "Reading your Spotify…"),
                              proof: result,
                              retry: { Task { await sync() } })
-        DSSlabNote(text: "Your recently played tracks land in your feed.", plain: true)
+        DSSlabNote(text: "The albums and playlists you play, and what your friends play, land in Media.", plain: true)
     }
 
     /// The web view handed back a session. Store it, confirm it works, sync.
@@ -150,7 +151,8 @@ struct SpotifyScreen: View {
 
     /// What this seat can do, said once — the catalogue reads it on connect and
     /// on every later sync.
-    private static let canLines = ["Reads what you recently played.",
+    private static let canLines = ["Reads the albums, playlists and shows you played.",
+                                   "Reads what the friends you follow are playing, when they share it.",
                                    "Read-only — never plays, queues, or changes anything."]
 
     private func register(proof: String) {
@@ -167,6 +169,8 @@ struct SpotifyScreen: View {
             switch SpotifyIngest.lastFailure {
             case .throttled?:
                 result = .says(SpotifyAuth.Failure.throttled.line)
+            case .unreadable?:
+                result = .failed(SpotifyAuth.Failure.unreadable.line)
             case let failure? where failure.clearsCredential:
                 result = .failed(failure.line)
             default:

@@ -222,7 +222,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1289 of 1352 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1290 of 1353 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1003,7 +1003,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §700 — Only the avatar is fixed: the catalogue is the strip's LAST item (part superseded by §793, §798)
 - §701 — X grows a SECOND door: live notifications, read with the person's own session cookies, not the paid API §280 declined
 - §702 — "What it reaches" leaves the account pages; the app's hosts are stated once, in settings
-- §703 — The Spotify sign-in hung on a token it might never be handed, and the seat was only registered by a sync that lands rows
+- §703 — The Spotify sign-in hung on a token it might never be handed, and the seat was only registered by a sync that lands rows (amended by §1158)
 - §704 — An X notification is a NOTICE: the news is the sentence, the post is the preview under it
 - §705 — The avatar is a TOGGLE: press it again and Settings closes (amended by §796)
 - §706 — The daily whisper is CUT: two notification classes, no third
@@ -1011,8 +1011,8 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §708 — The gray boxes come off the account page: a row states a fact, a footer explains it (amended by §729)
 - §709 — An article's sheet drew its own headline twice and put the exit before the reading: the card becomes a picture, the l…
 - §710 — The RSS page freezes, refuses another feed and kills the app: an unbounded roster inside a draggable sheet, and three…
-- §711 — Spotify "connects" and then says the sign-in didn't take: a five-link chain reported as one word, and an anonymous to…
-- §711b — The 429 is Spotify throttling the web player's SHARED client id, not the person: the session is proven by the token e…
+- §711 — Spotify "connects" and then says the sign-in didn't take: a five-link chain reported as one word, and an anonymous to… (amended by §1158)
+- §711b — The 429 is Spotify throttling the web player's SHARED client id, not the person: the session is proven by the token e… (amended by §1158)
 - §712 — The glass tray is deleted: a `DSTray` parameter nothing passed, the sheet it drew, its DEBUG flag and three tokens
 - §713 — A notification says WHERE and, when it arrived late, WHEN; an arrival stops lighting the screen (amended by §770)
 - §714 — Every source that holds a picture shows it: the ladder's first rung reaches every URL a row carries, and the second n…
@@ -1513,6 +1513,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1155a — Several Observers, each tile through its own; the pairing tray rises from the shell
 - §1156 — Every title's first word is pink, and You's screens name the place alone
 - §1157 — Home's rows lead with the app's icon, as notifications do, and Settings' app rows are one line
+- §1158 — Spotify reads where the web player reads: the albums and playlists you played, and what your friends are playing, off…
 
 ## Dead rulings → what replaced them (generated)
 

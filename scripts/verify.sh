@@ -1650,6 +1650,11 @@ harness "X live self-test" "X live self-test" "scripts/x-live-selftest.sh" "the 
 # 200 that is not a summaries array read as an empty history says "up to date"
 # over a body nobody understood, and today's row never grows.
 harness "Duolingo self-test" "Duolingo self-test" "scripts/duolingo-selftest.sh" "the Duolingo self-test failed — run scripts/duolingo-selftest.sh"
+# Spotify's `spclient` reads (prd §1158) — a 200 of another shape read as an
+# empty history, a timeless play dated by the sweep, a ref that lands an album
+# once ever or every pass, and the ingest drifting back onto `api.spotify.com`,
+# where every web-player token is throttled (§711b).
+harness "Spotify plays self-test" "Spotify plays self-test" "scripts/spotify-plays-selftest.sh" "the Spotify plays self-test failed — run scripts/spotify-plays-selftest.sh"
 # Privy Home (prd §803c) — an email account read as a wallet, a "deprecated"
 # refresh token stored, a millisecond date in the year 57000, and every empty
 # wallet re-read each pass on the shared Zerion allowance.
