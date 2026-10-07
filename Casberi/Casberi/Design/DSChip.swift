@@ -93,15 +93,25 @@ struct DSRangeChips<Option: Hashable>: View {
     /// wants its bars to reach the floor and a row of pills would take the
     /// box's bottom fifth.
     var slim = false
+    /// **THE WINDOW AS TILES (prd §1174, user: "i'd like to make all thing
+    /// sheets use this button format").** You's tiles' anatomy — the sheet
+    /// corner, a raised fill, the pick in tint with white ink — one even row
+    /// spanning the figure, words in place of glyphs. A thing sheet's chart.
+    var tiles = false
 
     init(ranges: [Option], range: Option, label: @escaping (Option) -> String,
-         slim: Bool = false, onPick: @escaping (Option) -> Void) {
+         slim: Bool = false, tiles: Bool = false, onPick: @escaping (Option) -> Void) {
         self.ranges = ranges
         self.range = range
         self.label = label
         self.slim = slim
+        self.tiles = tiles
         self.onPick = onPick
     }
+
+    /// A tile's height: the touch floor, under You's 52 because a window is
+    /// a word, never a glyph over one.
+    private static var tileHeight: CGFloat { DS.Hit.min }
 
     /// The crown budgets this strip at `DSRoomChassis.crownRangeChips` (42),
     /// so a 44pt floor would push its line out through the slot's clip. 32 is
@@ -110,7 +120,34 @@ struct DSRangeChips<Option: Hashable>: View {
     private static var hit: CGFloat { 32 }
 
     var body: some View {
-        if ranges.count > 1, slim {
+        if ranges.count > 1, tiles {
+            HStack(spacing: DS.Space.s2) {
+                ForEach(ranges, id: \.self) { r in
+                    let on = r == range
+                    Button {
+                        guard !on else { return }
+                        DSHaptic.tap()
+                        onPick(r)
+                    } label: {
+                        Text(label(r))
+                            .dsText(.body17)
+                            .fontWeight(.semibold)
+                            .lineLimit(1)
+                            .foregroundStyle(on ? Color.white : DS.textPrimary)
+                            .frame(maxWidth: .infinity, minHeight: Self.tileHeight)
+                            .background {
+                                RoundedRectangle(cornerRadius: DS.Radius.sheet, style: .continuous)
+                                    .fill(on ? DS.tint : DS.surfaceRaised)
+                            }
+                            .animation(DS.Motion.standard, value: on)
+                            .contentShape(RoundedRectangle(cornerRadius: DS.Radius.sheet, style: .continuous))
+                    }
+                    .buttonStyle(PressSpring())
+                    .accessibilityAddTraits(on ? .isSelected : [])
+                }
+            }
+            .frame(maxWidth: .infinity)
+        } else if ranges.count > 1, slim {
             HStack(spacing: DS.Space.s4) {
                 ForEach(ranges, id: \.self) { r in
                     Button {

@@ -918,11 +918,20 @@ struct TokenChartView<R: PriceRange, Fallback: View>: View {
 
     /// Hero's under-plot seat for what the classic header carried on its
     /// right: the range chips, or the coarse fallback's honest label.
-    private func heroFooter(_ chart: TokenChart) -> some View {
-        HStack {
-            Spacer(minLength: 0)
-            chipsOrCoarseLabel(chart)
-            Spacer(minLength: 0)
+    /// The windows stand as tiles here, the sheet's own row (prd §1174).
+    @ViewBuilder private func heroFooter(_ chart: TokenChart) -> some View {
+        if chart.coarse {
+            HStack {
+                Spacer(minLength: 0)
+                chipsOrCoarseLabel(chart)
+                Spacer(minLength: 0)
+            }
+        } else {
+            DSRangeChips(ranges: Array(R.allCases), range: range, label: { $0.label }, tiles: true) { r in
+                scrubIndex = nil
+                range = r
+                TokenChartStyle.remember(r, key: memoryKey)
+            }
         }
     }
 

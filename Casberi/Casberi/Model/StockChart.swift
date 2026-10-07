@@ -5,7 +5,7 @@ import Foundation
 /// "7D" label: the chip says what the data is. Same for "1M" (a month of
 /// daily candles, ~22 trading days).
 enum StockRange: String, CaseIterable, PriceRange {
-    case day = "1D", week = "5D", month = "1M"
+    case hour = "1H", day = "1D", week = "5D", month = "1M"
 
     /// One grammar with `TokenRange` (2026-08-16). A market week is five
     /// SESSIONS, which is why the raw value says 5D — but "5D" beside a token's
@@ -13,15 +13,19 @@ enum StockRange: String, CaseIterable, PriceRange {
     /// the span is what somebody is choosing. The raw value keeps the sessions.
     var label: String {
         switch self {
+        case .hour:  "1H"
         case .day:   "1D"
         case .week:  "1W"
         case .month: "1M"
         }
     }
 
-    /// Yahoo v8 chart params: window + candle size.
+    /// Yahoo v8 chart params: window + candle size. Yahoo has no hour
+    /// window, so the hour is the day's minute candles, the last sixty kept
+    /// (`trailing`, prd §1174).
     var yahoo: (range: String, interval: String) {
         switch self {
+        case .hour:  ("1d", "1m")
         case .day:   ("1d", "5m")
         case .week:  ("5d", "30m")
         case .month: ("1mo", "1d")
@@ -31,11 +35,15 @@ enum StockRange: String, CaseIterable, PriceRange {
     /// Seconds per candle — the scrub's "9h ago" math.
     var step: TimeInterval {
         switch self {
+        case .hour:  60
         case .day:   300
         case .week:  1_800
         case .month: 86_400
         }
     }
+
+    /// How many of the newest candles the window keeps, nil for all.
+    var trailing: Int? { self == .hour ? 60 : nil }
 
     static var base: StockRange { .day }
 
@@ -114,7 +122,8 @@ struct StockChart {
 
         // Missing candles arrive as nulls (halts, thin pre-market) — they
         // drop out rather than plotting as zeros.
-        let closes = ((quote["close"] as? [Any]) ?? []).compactMap { $0 as? Double }
+        let all = ((quote["close"] as? [Any]) ?? []).compactMap { $0 as? Double }
+        let closes = range.trailing.map { Array(all.suffix($0)) } ?? all
         guard closes.count >= 2, let first = closes.first, let last = closes.last,
               first > 0 else { return nil }
 

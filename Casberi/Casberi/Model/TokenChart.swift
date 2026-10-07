@@ -45,6 +45,7 @@ extension PriceRange {
     func agoLabel(indexFromEnd: Int) -> String? {
         let ago = Double(indexFromEnd) * step
         if ago < 1 { return "now" }
+        if ago < 3600 { return "\(Int(ago / 60))m ago" }
         if ago < 86_400 { return "\(Int(ago / 3600))h ago" }
         return "\(Int(ago / 86_400))d ago"
     }
@@ -52,9 +53,10 @@ extension PriceRange {
 
 /// A chart's time window (prd 51) — 24h stays the default everywhere the
 /// range picker doesn't show (feed pulse, Home row). GeckoTerminal serves
-/// all three for free: hourly candles carry 24h and 7d, daily carry 30d.
+/// all four for free: minute candles carry the hour (prd §1174), hourly
+/// candles 24h and 7d, daily 30d.
 enum TokenRange: String, CaseIterable, PriceRange {
-    case day = "1D", week = "7D", month = "30D"
+    case hour = "1H", day = "1D", week = "7D", month = "30D"
 
     /// The chips read in DURATIONS rather than candle counts — a week is a
     /// week whether it holds 7 daily closes or 168 hourly ones, and "30D"
@@ -62,6 +64,7 @@ enum TokenRange: String, CaseIterable, PriceRange {
     /// month. The raw values above stay put; see `PriceRange.label`.
     var label: String {
         switch self {
+        case .hour:  "1H"
         case .day:   "1D"
         case .week:  "1W"
         case .month: "1M"
@@ -71,6 +74,7 @@ enum TokenRange: String, CaseIterable, PriceRange {
     /// GeckoTerminal OHLCV path piece + candle count.
     var ohlcv: (timeframe: String, limit: Int) {
         switch self {
+        case .hour:  ("minute", 60)
         case .day:   ("hour", 24)
         case .week:  ("hour", 168)
         case .month: ("day", 30)
@@ -79,6 +83,7 @@ enum TokenRange: String, CaseIterable, PriceRange {
     /// Seconds per candle — the scrub's "9h ago" math.
     var step: TimeInterval {
         switch self {
+        case .hour:       60
         case .day, .week: 3600
         case .month:      86_400
         }
@@ -193,13 +198,23 @@ struct TokenChart {
 
         let (timeframe, limit) = range.ohlcv
         guard let ohlcvRoot = await IngestSupport.getJSON(
-            "\(base)/pools/\(poolAddress)/ohlcv/\(timeframe)?limit=\(limit)") as? [String: Any],
+            "\(base)/pools/\(poolAddress)/ohlcv/\(timeframe)?aggregate=1&limit=\(limit)") as? [String: Any],
               let data = ohlcvRoot["data"] as? [String: Any],
               let attrs = data["attributes"] as? [String: Any],
               let list = attrs["ohlcv_list"] as? [[Any]], list.count >= 2 else { return nil }
 
         // GeckoTerminal returns newest-first: [ts, open, high, low, close, vol].
-        let closes = list.reversed().compactMap { row -> Double? in
+        // Minute candles exist only where a trade happened, so sixty of them
+        // can span five hours (measured on DEGEN, 2026-10-07): the hour keeps
+        // the candles of the last 3,600 seconds, and fewer than two is no hour.
+        let cutoff = range == .hour ? Date.now.timeIntervalSince1970 - 3600 : 0
+        let rows = list.filter { row in
+            guard cutoff > 0 else { return true }
+            let ts = (row.first as? Double) ?? (row.first as? Int).map(Double.init) ?? 0
+            return ts >= cutoff
+        }
+        guard rows.count >= 2 else { return nil }
+        let closes = rows.reversed().compactMap { row -> Double? in
             guard row.count >= 5 else { return nil }
             if let c = row[4] as? Double { return c }
             if let s = row[4] as? String { return Double(s) }
@@ -241,6 +256,7 @@ struct TokenChart {
                                 range: TokenRange) async -> TokenChart? {
         guard let network = alchemyNetwork[chain] else { return nil }
         let (interval, span): (String, TimeInterval) = switch range {
+        case .hour:  ("5m", 3600)
         case .day:   ("1h", 86_400)
         case .week:  ("1h", 7 * 86_400)
         case .month: ("1d", 30 * 86_400)
