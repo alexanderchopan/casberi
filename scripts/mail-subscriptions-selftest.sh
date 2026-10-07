@@ -16,6 +16,10 @@
 #   • (prd §1115) a header-less mail filed from a sender nobody added; a
 #     sender added before its list headers arrived standing as two rows; an
 #     added sender's row with no Stop tracking because it forgot it was added
+#   • (prd §1160) a weekly list that skipped one issue called stopped; a
+#     list silent for months still counted as writing; a stopped list sorted
+#     among the ones that write; a door that says "Writes about weekly" for a
+#     list that stopped
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -167,8 +171,42 @@ let everyone = MailSubscriptions.candidates(pool, added: ["added@x.example"], no
 check(everyone.map(\.id) == ["mia@example.com", "shop@x.example", "old@x.example"],
       "searched, every headerless sender kept, not added, not a list")
 
+// STOPPED (prd §1160): silent for twice its gap and three weeks at least;
+// under three mails, sixty days. Stopped lists sort last, then by volume.
+check(!MailSubscriptions.hasStopped(last: ago(14), cadenceDays: 7, now: now),
+      "a weekly list that skipped one issue still writes")
+check(MailSubscriptions.hasStopped(last: ago(21), cadenceDays: 7, now: now),
+      "a weekly list three weeks silent stopped")
+check(!MailSubscriptions.hasStopped(last: ago(20), cadenceDays: 1, now: now),
+      "a daily list over a holiday still writes: the floor is three weeks")
+check(!MailSubscriptions.hasStopped(last: ago(50), cadenceDays: 30, now: now)
+      && MailSubscriptions.hasStopped(last: ago(60), cadenceDays: 30, now: now),
+      "a monthly list stops at twice its gap")
+check(!MailSubscriptions.hasStopped(last: ago(59), cadenceDays: nil, now: now)
+      && MailSubscriptions.hasStopped(last: ago(60), cadenceDays: nil, now: now),
+      "under three mails, sixty days")
+let quiet = MailSubscriptions.compose([
+    mail("gone", "Gone", 70), mail("gone", "Gone", 77), mail("gone", "Gone", 84),
+    mail("gone", "Gone", 91), mail("gone", "Gone", 98),
+    mail("rare", "Rare", 40),
+    mail("fresh", "Fresh", 1),
+], now: now)
+check(quiet.map(\.id) == ["fresh", "rare", "gone"], "what writes leads, then what stopped")
+check(quiet.first { $0.id == "gone" }?.stopped == true, "a weekly list ten weeks silent stopped")
+check(quiet.first { $0.id == "rare" }?.stopped == false, "one mail forty days ago has not stopped yet")
+let busyButGone = MailSubscriptions.compose([
+    mail("gone", "Gone", 25), mail("gone", "Gone", 26), mail("gone", "Gone", 27), mail("gone", "Gone", 28),
+    mail("slow", "Slow", 5),
+], now: now)
+check(busyButGone.map(\.id) == ["slow", "gone"],
+      "a stopped list sorts after one that writes, however much it sent this month")
+check(MailSubscriptions.writesWords(quiet.first { $0.id == "gone" }!) == "Stopped writing",
+      "a door to a stopped list says so")
+check(MailSubscriptions.writesWords(quiet.first { $0.id == "fresh" }!) == "Writes to you",
+      "a door to a list that writes says how often")
+
 if failures > 0 { print("\(failures) assertion(s) failed"); exit(1) }
-print("  ok   keys, doors, cadence, compose, file, arrivals, candidates, search")
+print("  ok   keys, doors, cadence, compose, file, arrivals, candidates, search, stopped")
 SWIFT
 
 build() { swiftc -Onone -o "$work/run" "$1" "$work/main.swift" 2>"$work/err" || return 1 }
@@ -214,6 +252,16 @@ mutate "the quietest sender offered first" \
   's/if \$0\.count != \$1\.count \{ return \$0\.count > \$1\.count \}/if \$0.count != \$1.count { return \$0.count < \$1.count }/'
 mutate "an added sender's row forgets it was added" \
   's/byYou: sorted\.contains\(where: \\\.byYou\)/byYou: false/'
+mutate "a list that skipped one issue called stopped (no doubling)" \
+  's/cadenceDays \* 2\)/cadenceDays)/'
+mutate "a daily list over a holiday called stopped (no floor)" \
+  's/static let stoppedFloorDays = 21\.0/static let stoppedFloorDays = 2.0/'
+mutate "a list silent for months still writing (stopped never set)" \
+  's/stopped: hasStopped\(last: newest\.at, cadenceDays: cadence, now: now\)/stopped: false/'
+mutate "a stopped list sorted among the ones that write" \
+  's/if \$0\.stopped != \$1\.stopped \{ return !\$0\.stopped \}\n//'
+mutate "a door to a stopped list says how often it used to write" \
+  's/item\.stopped \? String\(localized: "Stopped writing"\) : //'
 
 # Wiring: the ingest keeps the headers through this key and door; the reading
 # composes through this function; the tile draws the reading; the pass runs
@@ -245,7 +293,17 @@ grep -q "MailSubscriptionStore.shared.remove(address: address)" Casberi/Casberi/
   || fail "drift: an added sender's sheet no longer stops tracking it (prd §1115)"
 grep -q "case .reminder, .edited, .list, .unsubscribe: return true" Casberi/Shared/Thing.swift \
   || fail "drift: a list's facts are no longer rowless — the mail's sheet prints its key and its link"
+grep -q "MailIngest.readListHeaders(provider, context: context, force: force)" Casberi/Casberi/Model/BridgeRefresh.swift \
+  || fail "drift: the sweep no longer reads the list headers of mail landed before ingest kept them (prd §1160)"
+grep -q 'BODY.PEEK\[HEADER.FIELDS (LIST-ID LIST-UNSUBSCRIBE)\]' Casberi/Casberi/Model/IMAPClient.swift \
+  || fail "drift: the header backfill no longer PEEKs (a fetch without .PEEK marks every old mail read)"
+grep -q "guard result.uidValidity == validity else { return 0 }" Casberi/Casberi/Model/MailBridge.swift \
+  || fail "drift: the header backfill no longer refuses an answer under a renumbered mailbox"
+grep -q "guard item.lastMonth > 0, !item.stopped else { return nil }" Casberi/Casberi/Screens/FeedScreen+MergedRoom.swift \
+  || fail "drift: Day's map measures lists that stopped (prd §1160)"
+grep -q "let writing = items.filter { !\$0.stopped }" Casberi/Casberi/Screens/MailSubscriptionViews.swift \
+  || fail "drift: Day's box counts lists that stopped as subscriptions (prd §1160)"
 grep -q "mail-subscriptions-selftest.sh" "$VERIFY" \
   || fail "not wired into verify.sh — the completeness guard requires it, with its reason"
 
-echo "✓ mail subscriptions: keys, doors, cadence, compose, file, arrivals, candidates, search, 13 mutations"
+echo "✓ mail subscriptions: keys, doors, cadence, compose, file, arrivals, candidates, search, stopped, header backfill, 18 mutations"

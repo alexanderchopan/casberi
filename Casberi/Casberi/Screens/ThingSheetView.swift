@@ -3111,7 +3111,7 @@ struct ThingSheetView: View {
     private var mailSubscriptionDoor: some View {
         if mailListRead, let list = mailList {
             DSDoorRow(icon: SubscriptionWords.planGlyph,
-                      title: Text(verbatim: MailSubscriptions.writesWords(list.cadenceDays))) {
+                      title: Text(verbatim: MailSubscriptions.writesWords(list))) {
                 dismiss()
                 chrome.open(.list(list.id))
             }

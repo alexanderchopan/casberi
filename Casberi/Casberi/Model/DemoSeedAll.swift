@@ -2741,6 +2741,12 @@ enum DemoSeedAll {
             ("Notion", "team@mail.notion.example", "updates.notion.example",
              "https://notion.example/unsubscribe",
              [("What's new in October", 6), ("What's new in September", 36)]),
+            // A weekly that went quiet ten weeks ago, so Day's tile has a
+            // list under Stopped (prd §1160).
+            ("The Sunday Loaf", "bake@sundayloaf.example", "letters.sundayloaf.example",
+             "https://sundayloaf.example/leave",
+             [("A starter that forgives you", 70), ("Rye, slowly", 77),
+              ("The case for a cold proof", 84), ("Week one: flour and water", 91)]),
         ]
         for (l, list) in lists.enumerated() {
             for (i, issue) in list.issues.enumerated() {

@@ -213,7 +213,7 @@ KNOWN_NON_REACH=(
   developer.apple.com developer.mozilla.org en.wikipedia.org www. example.com
   # The demo's mailing lists' unsubscribe links (prd §1111): opened in the
   # person's browser from a list's sheet, never fetched by us.
-  eats.example notion.example weeklyfold.example
+  eats.example notion.example weeklyfold.example sundayloaf.example
   # X's link shortener — appears ONLY in prose. Three comments in
   # XArchiveImport/ScreenshotTopics discuss the `https://t.co/…` shape
   # because handling it correctly is the whole point of those passages: an

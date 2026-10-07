@@ -83,6 +83,9 @@ enum MailSubscriptions {
         /// When each of its mails arrived, newest first: the days Day's
         /// calendar puts its face on (prd §1117).
         var arrivals: [Date] = []
+        /// It stopped writing (prd §1160, `hasStopped`): the tile lists it
+        /// last, under Stopped, and counts it in no figure.
+        var stopped = false
     }
 
     /// A sender the person could track (prd §1117): mail with no list header
@@ -100,6 +103,21 @@ enum MailSubscriptions {
 
     /// The window the box counts ("N mails in 30 days").
     static let windowDays = 30.0
+
+    /// A list that STOPPED (prd §1160): silent for twice its usual gap and
+    /// three weeks at least, so a weekly list that skips one issue, or a
+    /// daily one over a holiday, is not called stopped; under three mails
+    /// there is no gap to double, so sixty days. Stopped is a reading of the
+    /// mail kept, never of an unsubscribe: it says the list went quiet,
+    /// whatever made it.
+    static let stoppedFloorDays = 21.0
+    static let stoppedUncadencedDays = 60.0
+
+    static func hasStopped(last: Date, cadenceDays: Double?, now: Date) -> Bool {
+        let silent = now.timeIntervalSince(last) / 86_400
+        guard let cadenceDays else { return silent >= stoppedUncadencedDays }
+        return silent >= max(stoppedFloorDays, cadenceDays * 2)
+    }
 
     /// The list's identity. `List-Id: The Weekly Fold <weekly.fold.example>`
     /// keys on `weekly.fold.example`; a header with no brackets keys on its
@@ -222,8 +240,8 @@ enum MailSubscriptions {
         }
     }
 
-    /// Group, then order: most mail in the last thirty days first, then most
-    /// overall, then by name.
+    /// Group, then order: what still writes before what stopped, then most
+    /// mail in the last thirty days, then most overall, then by name.
     static func compose(_ mails: [Mail], now: Date) -> [Item] {
         let windowStart = now.addingTimeInterval(-windowDays * 86_400)
         let groups = Dictionary(grouping: mails, by: \.key)
@@ -233,16 +251,21 @@ enum MailSubscriptions {
             let link = sorted.lazy.compactMap { unsubscribeURL(from: $0.unsubscribe) }.first
             var sources: [String] = []
             for mail in sorted where !sources.contains(mail.source) { sources.append(mail.source) }
+            let cadence = cadenceDays(sorted.map(\.at))
             return Item(id: key, name: newest.sender, address: newest.address ?? sorted.compactMap(\.address).first,
                         count: sorted.count,
                         lastMonth: sorted.filter { $0.at >= windowStart }.count,
-                        cadenceDays: cadenceDays(sorted.map(\.at)),
+                        cadenceDays: cadence,
                         last: newest.at, since: oldest.at,
                         unsubscribe: link, sources: sources, mailIDs: sorted.map(\.id),
                         byYou: sorted.contains(where: \.byYou),
-                        arrivals: sorted.map(\.at))
+                        arrivals: sorted.map(\.at),
+                        stopped: hasStopped(last: newest.at, cadenceDays: cadence, now: now))
         }
+        // What still writes first, then what stopped (prd §1160), each by
+        // volume.
         return items.sorted {
+            if $0.stopped != $1.stopped { return !$0.stopped }
             if $0.lastMonth != $1.lastMonth { return $0.lastMonth > $1.lastMonth }
             if $0.count != $1.count { return $0.count > $1.count }
             return $0.name.localizedStandardCompare($1.name) == .orderedAscending
@@ -287,6 +310,12 @@ enum MailSubscriptions {
         case ..<45:   return String(localized: "Writes about monthly")
         default:      return String(localized: "Writes now and then")
         }
+    }
+
+    /// A door to a list from another page, as the list stands: a list that
+    /// stopped says so rather than how often it used to write (prd §1160).
+    static func writesWords(_ item: Item) -> String {
+        item.stopped ? String(localized: "Stopped writing") : writesWords(item.cadenceDays)
     }
 
     /// The sheet's big figure: how many a week, or a month when fewer.

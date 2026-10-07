@@ -222,7 +222,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1291 of 1354 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1292 of 1355 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -230,7 +230,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §5 — How it works today — Bob
 - §6 — How it works today — Alice (amended by §1113)
 - §7 — Outcomes — Bob (amended by §1100)
-- §8 — Outcomes — Alice (amended by §1119)
+- §8 — Outcomes — Alice (amended by §1119, §1160)
 - §9 — Problems
 - §10 — Solutions
 - §11 — Bob vs Alice, per feature
@@ -1468,13 +1468,13 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1108 — Frames and Logos take four tiles: a verb that adds an account heads the Accounts menu, a verb that moves money leads…
 - §1109 — The Nostr seat is removed; Lightning keeps the relay client (amended by §1110)
 - §1110 — Farcaster leaves the app: the seat, its rows, and Farcaster as an identity in Addresses
-- §1111 — Subscriptions get a place: Apps is its own door again and Settings is Casberi's alone, the Wallet's Coming up becomes… (amended by §1112, §1113, §1115, §1117, §1136)
+- §1111 — Subscriptions get a place: Apps is its own door again and Settings is Casberi's alone, the Wallet's Coming up becomes… (amended by §1112, §1113, §1115, §1117, §1136, §1160)
 - §1112 — The Wallet's Subscriptions tile maps where the money goes: categories by monthly cost, a press filters the list (amended by §1117)
 - §1113 — One identity per service: a plan, its app and its mailing list open each other, and both Subscriptions tiles are one… (amended by §1118)
 - §1114 — A biller that is a subscription opens the Wallet's sheet from Addresses
 - §1115 — A mail's sheet adds its sender to Day's Subscriptions (amended by §1117)
 - §1116 — Apps wears four squares
-- §1117 — The two Subscriptions tiles are one tile with two measures, and the verb is Track (amended by §1120, §1134, §1136)
+- §1117 — The two Subscriptions tiles are one tile with two measures, and the verb is Track (amended by §1120, §1134, §1136, §1160)
 - §1118 — What you follow is listed where you read it: Reading and Media get a Subscriptions tile, Work's Watch becomes Watchin… (amended by §1119, §1120, §1121, §1126, §1136)
 - §1119 — An app that needs only a name opens its Track tray over Apps, and every follow app's page keeps what only it can do (amended by §1120)
 - §1120 — The verb is Follow a feed, and the leftovers of the follow sweep (amended by §1121)
@@ -1515,6 +1515,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1157 — Home's rows lead with the app's icon, as notifications do, and Settings' app rows are one line
 - §1158 — Spotify reads where the web player reads: the albums and playlists you played, and what your friends are playing, off…
 - §1159 — An app's icon in the rooms tray long-presses to Settings, its account page
+- §1160 — Day's Subscriptions fills from the mail already here, and a list that went quiet stands under Stopped
 
 ## Dead rulings → what replaced them (generated)
 

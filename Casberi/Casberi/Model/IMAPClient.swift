@@ -178,6 +178,32 @@ enum IMAPClient {
                               exists: conn.messageCount)
     }
 
+    /// The list headers of mail landed before ingest kept them (prd §1160),
+    /// for `MailIngest.readListHeaders`. `uidValidity` is the session's, so
+    /// the caller can refuse an answer given under a renumbered mailbox.
+    struct ListHeaders {
+        let uidValidity: Int?
+        /// Every UID the server answered, with what it carried; both nil for
+        /// a mail from a person.
+        let answered: [String: (id: String?, unsubscribe: String?)]
+    }
+
+    static func listHeaders(host: String, user: String, password: String,
+                            uids: [String]) async throws -> ListHeaders {
+        let conn = try await Session.open(host: host)
+        defer { conn.close() }
+        try await conn.greeting()
+        try await conn.login(user: user, password: password)
+        _ = try await conn.selectInbox()
+        let raw = try await conn.fetchListHeaderFields(uids: uids)
+        // The answer is the header block alone, and a server may end it
+        // without the blank line `MailMIME` splits headers from a body on,
+        // so one is added: a second one after the first is only body.
+        let blank = Data([13, 10, 13, 10])
+        return ListHeaders(uidValidity: conn.uidValidity,
+                           answered: raw.mapValues { MailMIME.listHeaders(from: $0 + blank) })
+    }
+
     #if DEBUG
     /// One mail as `-appleReceiptProbe fetch` reads it: the message exactly as
     /// ingest would have decoded it, plus what ingest does not keep.
@@ -418,30 +444,56 @@ private final class Session {
     /// line — `fetchEnvelopes`'s line-by-line reader would corrupt that, so
     /// this reads each literal by byte count instead.
     func fetchBodies(uids: [String], maxBytes: Int) async throws -> [String: Data] {
-        guard !uids.isEmpty else { return [:] }
-        var out: [String: Data] = [:]
-        var i = 0
         // Batched (40 UIDs/round trip): a single command line for hundreds of
         // UIDs risks the server's own command-length limit, mirrored from the
         // 400-per-batch cap `stillPresent` already uses for UID FETCH.
+        // An answer with no literal is no body: the body pass reads it as a
+        // failed fetch, as it always has.
+        try await fetchLiterals(uids: uids, item: "BODY.PEEK[]<0.\(maxBytes)>", batch: 40)
+            .filter { !$0.value.isEmpty }
+    }
+
+    /// `UID FETCH <uids> (UID BODY.PEEK[HEADER.FIELDS (LIST-ID LIST-UNSUBSCRIBE)])`
+    /// — a mailing list's two headers and nothing else, a few hundred bytes a
+    /// mail (prd §1160). `.PEEK`, so nothing is marked read. Every UID the
+    /// server answered is in the result, an empty `Data` when the mail carries
+    /// neither header; a UID it did not answer (expunged) is absent.
+    func fetchListHeaderFields(uids: [String]) async throws -> [String: Data] {
+        try await fetchLiterals(uids: uids,
+                                item: "BODY.PEEK[HEADER.FIELDS (LIST-ID LIST-UNSUBSCRIBE)]", batch: 100)
+    }
+
+    /// One `UID FETCH` item that comes back as a literal, per UID, batched.
+    /// A UID answered without a literal (`""` or `NIL`) maps to empty `Data`,
+    /// so "answered with nothing" is distinct from "not answered". The UID is
+    /// read off the line that declares the literal, else off the line that
+    /// closes it, because RFC 3501 lets a server order the items either way.
+    private func fetchLiterals(uids: [String], item: String, batch: Int) async throws -> [String: Data] {
+        guard !uids.isEmpty else { return [:] }
+        var out: [String: Data] = [:]
+        var i = 0
         while i < uids.count {
-            let chunk = Array(uids[i..<min(i + 40, uids.count)])
+            let chunk = Array(uids[i..<min(i + batch, uids.count)])
             let t = nextTag()
-            send(line: "\(t) UID FETCH \(chunk.joined(separator: ",")) (UID BODY.PEEK[]<0.\(maxBytes)>)")
+            send(line: "\(t) UID FETCH \(chunk.joined(separator: ",")) (UID \(item))")
             while true {
                 let line = try await readLine()
                 if line.hasPrefix(t + " ") { break }
                 guard line.hasPrefix("* "), line.contains(" FETCH ") else { continue }
-                guard let uid = Self.digits(after: "UID ", in: line),
-                      let literalLen = Self.literalLength(atEndOf: line) else { continue }
-                out[uid] = try await readExact(literalLen)
-                // The literal's bytes are followed, on the SAME logical
-                // line, by whatever closes this FETCH (usually just ")") —
-                // read it out so the next readLine() starts clean at the
-                // next untagged response.
-                _ = try? await readLine()
+                let headUID = Self.digits(after: "UID ", in: line)
+                if let literalLen = Self.literalLength(atEndOf: line) {
+                    let data = try await readExact(literalLen)
+                    // The literal's bytes are followed, on the SAME logical
+                    // line, by whatever closes this FETCH (usually just ")") —
+                    // read it out so the next readLine() starts clean at the
+                    // next untagged response.
+                    let tail = (try? await readLine()) ?? ""
+                    if let uid = headUID ?? Self.digits(after: "UID ", in: tail) { out[uid] = data }
+                } else if let uid = headUID {
+                    out[uid] = Data()
+                }
             }
-            i += 40
+            i += batch
         }
         return out
     }

@@ -27,6 +27,10 @@ enum MailProvider: String, CaseIterable, Identifiable {
     /// a real network round trip (unlike Photos' local-only heal), so it's
     /// throttled independently of the foreground sweep's own 45s cooldown.
     var lastHealKey: String { "mail.\(bridgeID).lastHeal" }
+    /// The UIDs whose list headers were read (`MailIngest.readListHeaders`,
+    /// prd §1160), under the UIDVALIDITY they were read in.
+    var listHeadersReadKey: String { "mail.\(bridgeID).listHeadersRead" }
+    var lastListHeadersKey: String { "mail.\(bridgeID).lastListHeaders" }
 
     var address: String {
         get { UserDefaults.standard.string(forKey: addressKey) ?? "" }
@@ -361,5 +365,107 @@ enum MailIngest {
         context.saveHonestly()
         SpotlightIndex.remove(ids: removedIDs)
         return removedIDs.count
+    }
+
+    /// The UIDs already asked, and the numbering they were asked under.
+    struct ListHeaderLedger: Codable {
+        var uidValidity: Int
+        var uids: [String]
+    }
+
+    @MainActor private static var listHeadersRunning: Set<MailProvider> = []
+    /// Newest first, this many a pass: a header-only answer is a few hundred
+    /// bytes, so a pass is a few round trips, and a large inbox fills over
+    /// a few hours rather than in one foreground.
+    static let listHeadersPerPass = 300
+
+    /// **MAIL LANDED BEFORE THE LIST HEADERS WERE KEPT (prd §1160).** Ingest
+    /// reads `List-Id` and `List-Unsubscribe` off the bytes its body pass
+    /// fetches (§1111), so only mail landed after that carries them, and Day's
+    /// Subscriptions tile opened nearly empty for everyone with an inbox
+    /// already here. This asks the server for those two headers alone, for
+    /// every landed mail not yet asked, newest first, and keeps what it finds
+    /// as the same rowless facts ingest writes. A header, never a guess: a
+    /// mail that carries neither is asked once and left alone.
+    ///
+    /// **A ledger, never a done flag.** Every UID asked is kept, under the
+    /// UIDVALIDITY it was asked in (heal's, so this runs after heal learned
+    /// it): a renumbered mailbox voids the ledger rather than reading one
+    /// mail's answer onto another, and a UID the server did not answer
+    /// (expunged since; heal removes it) stays unasked. Hourly, as heal is,
+    /// and free once every mail has been asked: no unasked UID, no request.
+    @MainActor
+    static func readListHeaders(_ provider: MailProvider, context: ModelContext,
+                                force: Bool = false) async -> Int {
+        guard provider.connected, !listHeadersRunning.contains(provider) else { return 0 }
+        let defaults = UserDefaults.standard
+        if !force, let last = defaults.object(forKey: provider.lastListHeadersKey) as? Date,
+           Date.now.timeIntervalSince(last) < healInterval { return 0 }
+        guard let validity = defaults.object(forKey: provider.uidValidityKey) as? Int else { return 0 }
+        listHeadersRunning.insert(provider)
+        defer { listHeadersRunning.remove(provider) }
+        defaults.set(Date.now, forKey: provider.lastListHeadersKey)
+
+        let ledger = defaults.data(forKey: provider.listHeadersReadKey)
+            .flatMap { try? JSONDecoder().decode(ListHeaderLedger.self, from: $0) }
+        var asked = Set(ledger?.uidValidity == validity ? ledger?.uids ?? [] : [])
+
+        let prefix = "mail:\(provider.bridgeID):"
+        var held: Set<String> = []
+        var unasked: [(uid: String, thing: Thing)] = []
+        for (ref, thing) in IngestSupport.thingsByRef(context, source: provider.source)
+        where ref.hasPrefix(prefix) {
+            let uid = String(ref.dropFirst(prefix.count))
+            held.insert(uid)
+            guard !asked.contains(uid),
+                  !thing.factList.contains(where: { $0.action == .list }) else { continue }
+            unasked.append((uid, thing))
+        }
+        // A mail heal removed is never asked again: the ledger holds only
+        // what is still here.
+        asked.formIntersection(held)
+        let batch = unasked.sorted { $0.thing.capturedAt > $1.thing.capturedAt }
+            .prefix(listHeadersPerPass)
+        guard !batch.isEmpty, let password = TokenVault.get(provider.passwordKey) else {
+            if let ledger, ledger.uids.count != asked.count { store(asked, validity, provider) }
+            return 0
+        }
+
+        let result: IMAPClient.ListHeaders
+        do {
+            result = try await IMAPClient.listHeaders(host: provider.host, user: provider.address,
+                                                      password: password, uids: batch.map(\.uid))
+        } catch {
+            NSLog("Mail list headers failed (%@): %@", provider.rawValue, String(describing: error))
+            return 0
+        }
+        // Answered under another numbering: these UIDs name other mail.
+        guard result.uidValidity == validity else { return 0 }
+
+        var found = 0
+        for (uid, thing) in batch {
+            guard let headers = result.answered[uid] else { continue }
+            asked.insert(uid)
+            // The pass awaited the server; a row can be gone by now (build 256).
+            guard thing.isLive else { continue }
+            let facts = listFacts(listID: headers.id, unsubscribe: headers.unsubscribe,
+                                  address: MailSubscriptions.address(thing.authorEmail, sender: thing.authorHandle))
+            guard !facts.isEmpty, !thing.factList.contains(where: { $0.action == .list }) else { continue }
+            thing.facts += facts.map(\.encoded)
+            found += 1
+        }
+        store(asked, validity, provider)
+        NSLog("mailListHeaders| %@ | asked %d | answered %d | lists %d | left %d", provider.rawValue,
+              batch.count, result.answered.count, found, unasked.count - batch.count)
+        guard found > 0 else { return 0 }
+        context.saveHonestly()
+        MailSubscriptionsReading.shared.refresh(context)
+        return found
+    }
+
+    private static func store(_ asked: Set<String>, _ validity: Int, _ provider: MailProvider) {
+        guard let data = try? JSONEncoder().encode(ListHeaderLedger(uidValidity: validity, uids: asked.sorted()))
+        else { return }
+        DefaultsWrite.set(data, forKey: provider.listHeadersReadKey)
     }
 }

@@ -238,9 +238,12 @@ extension FeedScreen {
         let pick = mailSubscriptionsPick.flatMap { $0.over == signature && !tiles.isEmpty ? $0.tile : nil }
         let items: [MailSubscriptions.Item] = {
             guard let pick else { return all }
+            // The map measures what still writes, so a pick names only that.
             let keys = SubscriptionCategories.members(of: pick, drawn: drawn, slices: reading.slices)
-            return all.filter { keys.contains(mailSubscriptionKey($0)) }
+            return all.filter { !$0.stopped && keys.contains(mailSubscriptionKey($0)) }
         }()
+        let writing = items.filter { !$0.stopped }
+        let stopped = items.filter(\.stopped)
         Section {
             DSDoorRow(icon: "plus", title: Text(SubscriptionWords.track)) {
                 feedSheet = .mailSubscriptionAdd
@@ -263,21 +266,36 @@ extension FeedScreen {
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
             }
-            ForEach(items) { item in
-                Button {
-                    feedSheet = .mailSubscription(item.id)
-                } label: {
-                    MailSubscriptionRow(item: item, paid: mailSubscriptionIsPaid(item))
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(RowPress())
-                .dsHover()
-                .listRowInsets(EdgeInsets(top: Self.rowAir, leading: DSRoomChassis.rowInset,
-                                          bottom: Self.rowAir, trailing: DSRoomChassis.rowInset))
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
+            ForEach(writing) { item in mailSubscriptionRow(item) }
+            // What went quiet stands last, under its own name (prd §1160):
+            // still a door to its mail and its way out, counted in no figure.
+            if !stopped.isEmpty {
+                Text("Stopped")
+                    .dsText(.heading20)
+                    .foregroundStyle(DS.textPrimary)
+                    .accessibilityAddTraits(.isHeader)
+                    .listRowInsets(EdgeInsets(top: DS.Space.s6, leading: DSRoomChassis.rowInset,
+                                              bottom: DS.Space.s1, trailing: DSRoomChassis.rowInset))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                ForEach(stopped) { item in mailSubscriptionRow(item) }
             }
         }
+    }
+
+    private func mailSubscriptionRow(_ item: MailSubscriptions.Item) -> some View {
+        Button {
+            feedSheet = .mailSubscription(item.id)
+        } label: {
+            MailSubscriptionRow(item: item, paid: mailSubscriptionIsPaid(item))
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(RowPress())
+        .dsHover()
+        .listRowInsets(EdgeInsets(top: Self.rowAir, leading: DSRoomChassis.rowInset,
+                                  bottom: Self.rowAir, trailing: DSRoomChassis.rowInset))
+        .listRowBackground(Color.clear)
+        .listRowSeparator(.hidden)
     }
 
     /// A list's place on Day's map: the category of the app §1113's identity
@@ -292,7 +310,7 @@ extension FeedScreen {
     /// stays in the rows and out of the map.
     func mailSubscriptionsReading(_ items: [MailSubscriptions.Item]) -> SubscriptionCategories.Reading {
         SubscriptionCategories.read(measured: items.compactMap { item -> (key: String, measure: Double)? in
-            guard item.lastMonth > 0 else { return nil }
+            guard item.lastMonth > 0, !item.stopped else { return nil }
             return (key: mailSubscriptionKey(item), measure: Double(item.lastMonth))
         })
     }

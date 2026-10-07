@@ -36,12 +36,15 @@ struct MailSubscriptionsFigure: View {
         month == 1 ? String(localized: "1 mail a month") : String(localized: "\(month) mails a month")
     }
 
-    /// "6 subscriptions · 2 added by you" — the Wallet's line, how many and
-    /// one more fact.
+    /// "6 subscriptions · 2 added by you · 3 stopped" — the Wallet's line,
+    /// how many still write, then what else is on the list (prd §1160).
     static func line(_ items: [MailSubscriptions.Item]) -> String {
-        var parts = [String(localized: "\(items.count) subscriptions")]
-        let added = items.filter(\.byYou).count
+        let writing = items.filter { !$0.stopped }
+        var parts = [String(localized: "\(writing.count) subscriptions")]
+        let added = writing.filter(\.byYou).count
         if added > 0 { parts.append(String(localized: "\(added) added by you")) }
+        let stopped = items.count - writing.count
+        if stopped > 0 { parts.append(String(localized: "\(stopped) stopped")) }
         return parts.joined(separator: " · ")
     }
 
@@ -80,13 +83,17 @@ struct MailSubscriptionRow: View {
     }
 
     /// "About weekly · Last Oct 4 · Paid in Wallet". Under three mails there
-    /// is no cadence, so a sender you added says so in its place.
+    /// is no cadence, so a sender you added says so in its place. A list
+    /// that stopped stands under Stopped, so it says when it last wrote and
+    /// not how often it used to (prd §1160).
     static func line(_ item: MailSubscriptions.Item, paid: Bool) -> String {
         var parts: [String] = []
-        if let cadence = MailSubscriptions.cadenceWords(item.cadenceDays) {
-            parts.append(cadence)
-        } else if item.byYou {
-            parts.append(String(localized: "Added by you"))
+        if !item.stopped {
+            if let cadence = MailSubscriptions.cadenceWords(item.cadenceDays) {
+                parts.append(cadence)
+            } else if item.byYou {
+                parts.append(String(localized: "Added by you"))
+            }
         }
         parts.append(String(localized: "Last \(WalletSubscriptionRow.day(item.last))"))
         // No price outside the Wallet (§1113): the row names the room.
@@ -156,8 +163,10 @@ struct MailSubscriptionSheet: View {
 
     private func content(_ item: MailSubscriptions.Item) -> some View {
         SubscriptionPage(name: item.name,
-                         statement: MailSubscriptions.rate(item.cadenceDays)
-                             .map { SubscriptionStatement(figure: "\($0.count)", word: $0.word) },
+                         statement: item.stopped
+                             ? SubscriptionStatement(figure: String(localized: "Stopped"))
+                             : MailSubscriptions.rate(item.cadenceDays)
+                                 .map { SubscriptionStatement(figure: "\($0.count)", word: $0.word) },
                          facts: facts(item),
                          doors: doors(item)) {
             if !recent.live.isEmpty {

@@ -165,7 +165,7 @@ extension FeedScreen {
         guard let listID = ServiceLinks.shared.byPlan[item.id]?.listID,
               let list = MailSubscriptionsReading.shared.items.first(where: { $0.id == listID })
         else { return nil }
-        return MailSubscriptions.writesWords(list.cadenceDays)
+        return MailSubscriptions.writesWords(list)
     }
 }
 

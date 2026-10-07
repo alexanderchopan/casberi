@@ -598,6 +598,10 @@ enum BridgeRefresh {
             let s2 = slot(); BridgeRefresh.landingTask { @MainActor in
                 await BridgeRefresh.stagger(s2)
                 _ = await MailIngest.heal(provider, context: context, force: force)
+                // After heal, which learns the numbering this reads under:
+                // the list headers of mail landed before ingest kept them
+                // (prd §1160).
+                _ = await MailIngest.readListHeaders(provider, context: context, force: force)
             }
         }
         if SteamBridge.connected {

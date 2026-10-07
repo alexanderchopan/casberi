@@ -114,7 +114,7 @@ struct SubscriptionSheet: View {
         if let listID = link?.listID,
            let list = MailSubscriptionsReading.shared.items.first(where: { $0.id == listID }) {
             out.append(.init(id: "list", icon: SubscriptionWords.listGlyph,
-                             title: Text(verbatim: MailSubscriptions.writesWords(list.cadenceDays))) {
+                             title: Text(verbatim: MailSubscriptions.writesWords(list))) {
                 dismiss()
                 chrome.open(.list(listID))
             })
