@@ -126,27 +126,6 @@ extension FeedScreen {
             groupedSections(groups, nextEventID: nextEventID)
         }
     }
-
-    /// Home's last row (prd §1136c): the door to Day's Coming up. Home is
-    /// today; the week is one tap away, in the category about time.
-    @ViewBuilder
-    var comingUpDoor: some View {
-        Section {
-            // What waits past today, counted (prd §1141), so the door says
-            // whether it is worth a tap.
-            let later = comingUpLaterCount
-            DSDoorRow(icon: ScopeTileGlyph.comingUp,
-                      title: later > 0 ? Text("Coming up · \(later) this week") : Text("Coming up")) {
-                chrome.dayScope = .comingUp
-                chrome.lastChipTouch = Date.timeIntervalSinceReferenceDate
-                chrome.sourceRequest = RoomAccounts.dayRoom
-            }
-            .listRowBackground(Color.clear)
-            .listRowSeparator(.hidden)
-            .listRowInsets(.init(top: DS.Space.s4, leading: DSRoomChassis.rowInset,
-                                 bottom: DS.Space.s4, trailing: DSRoomChassis.rowInset))
-        }
-    }
 }
 
 /// The week ahead as seven days, today first, a pink dot under a day with

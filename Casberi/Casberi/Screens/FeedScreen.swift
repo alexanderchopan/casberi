@@ -746,10 +746,6 @@ struct FeedScreen: View {
     /// Day's Coming up tile (prd §1136c): every app's dated rows ahead, read
     /// in the tile's own `.task`, never in a body (§628).
     @State var dayComingUp: [Thing] = []
-    /// Home's day (prd §1141): today's calendar off EventKit and today's
-    /// dated rows, read on the screen's task.
-    @State var todaySchedule: [ScheduleItem] = []
-    @State var calendarReadable = true
     /// A tapped Themes cell (2026-07-18, the All feed's own treemap) — the
     /// same project detail door Home's map already opened.
     @State var openProject: ProjectRoute?
@@ -1836,14 +1832,6 @@ struct FeedScreen: View {
         // the rows' links, a heavy column, so they are read once per corpus
         // revision off the main actor, never in a body.
         .task(id: objectFoldKey) { await recomputeObjectKeys() }
-        // Home's day (prd §1139, §1141) is read here, on the screen: the list
-        // builds lazily, so a task on its last row would not run until you
-        // scrolled to it. Re-read whenever Home's rows change.
-        .task(id: allSnapshotKey) {
-            guard source == "All", filter.tag == "All" else { return }
-            loadDayComingUp()
-            loadTodaySchedule()
-        }
         // The page coat moved UP to the shell (prd §159, 2026-07-21): the crown
         // pour lives in MainSurface's background so it can run behind the chip
         // strip, and painting the opaque themed coat again HERE would slide

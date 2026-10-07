@@ -224,8 +224,8 @@ guard "the category opens its combined page, as the tray's row does" \
       "$FEED" 'chrome\.sourceRequest = category'
 guard "the app label carries when its thing landed" \
       "$FEED" 'appHeaderRow\(app, at: row\.date\)'
-guard "the window reads the grouped rows, not the split's" \
-      "$FEED" 'windowed\(byApp\.groups\)'
+guard "Home draws the whole day, no window and no Show older (§1154)" \
+      "$FEED" 'let window = \(shown: byApp\.groups, more: false, hidden: 0\)'
 guard "the header draws before its app's first row" \
       "$FEED" 'if let app = heads\[row\.id\]'
 guard "a row under a header is told whose header it stands under" \

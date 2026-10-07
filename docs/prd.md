@@ -64811,3 +64811,14 @@ Home was one "Today" section of app headers in time order (§1103), so the apps 
 ## §1153 — People gets Contacts' A–Z strip, and Settings' Search looks through every kind (user, 2026-10-06: "build 3 and 4", from the canvas "Settings UI, next round")
 
 People's list keeps its letter headers and gains Contacts' index on the trailing edge, above the floating bar (`LetterIndex`): a tap or a slide jumps to that letter's header (`AddressesSection.letterID`, the letters handed up through `onLetters`), a tick per letter, adjustable for VoiceOver, shown only on People with more than three letters and no search. Settings' Search (the bar's verb) opens one field on any kind, People's own field gone, and a query lists what it finds by kind, each kind only when it has a hit: Apps, Calendars, Feeds, Mailing lists, People, Subscriptions (`SettingsHome.searchEverything`). Measured: padding the People section to clear the strip hid its rows (a lazy stack inside a List row), so the strip sits beside the rows' trailing marks instead.
+
+## §1154 — Home ends with its categories: "Your day" and the Coming up door are deleted (user, 2026-10-06: "does this change also mean that we don't need 'coming up' at the bottom b/c they have 'day' already in the list"; "ya doesn't seem we need it now does it"; "at the end of the day is the end of the day"; supersedes §1141 and §1136c's door on Home; amends §1139)
+
+Home's sections are categories since §1152, and Day is one of them, its name a door to Day's combined page: the day's timeline in its box and its Coming up tile for the week. The schedule under Home's feeds said the day a second time.
+
+1. **"Your day" is deleted from view and model** (§723): `todayScheduleSections`, `ScheduleItem`, `TodaySchedule` and its EventKit read, `loadTodaySchedule`, `todaySchedule`, `calendarReadable` and Home's task that read them (`Screens/FeedScreen+TodaySchedule.swift` is gone).
+2. **The Coming up door that closed Home is deleted** (`comingUpDoor`, `comingUpLaterCount`). Day's Coming up tile is untouched and is reached from the Day section's name.
+3. **Home draws the whole day** (user: "we shouldn't have it say 'show more' b/c what would it show?", "at the end of the day is the end of the day"): its rows are not windowed (§264) and no "Show older" closes it. One row per app today keeps it short.
+4. **The category names stay in the primary ink.** Pink was weighed (option C's mock): it is the day's colour (§740), and Day's page opens on a pink "Today", so a pink category would read as a date.
+
+**Seen** on a private iPhone 17 Pro simulator, demo, dark. **Not seen:** the Mac, light theme, a device.

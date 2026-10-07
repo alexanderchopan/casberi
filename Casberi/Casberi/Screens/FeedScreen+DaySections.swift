@@ -165,9 +165,11 @@ extension FeedScreen {
         // be cut by a clock, and Home holds only today.
         let byApp = Self.groupedByApp(memo.groups)
         let heads = byApp.heads
-        // Windowed (prd §264). `lede` reads the FULL set so it does not move
-        // depending on whether the window is open.
-        let window = windowed(byApp.groups)
+        // NOT WINDOWED (prd §1154, user: "at the end of the day is the end
+        // of the day"): Home is today, one row per app, so it draws whole and
+        // ends where the day does. §264's window bounds a feed that reaches
+        // back; this one does not.
+        let window = (shown: byApp.groups, more: false, hidden: 0)
         let _ = { memo.windowHasMore = window.more }()
         // Home's box falls back to the newest thing when today chose no
         // cover (prd §1136i); that row stands in the box, so it leaves the
@@ -383,7 +385,6 @@ extension FeedScreen {
                 // window is over, and Mail never narrates its own end.
             }
         }
-        if window.more { olderRow(hidden: window.hidden) }
         }
     }
 
