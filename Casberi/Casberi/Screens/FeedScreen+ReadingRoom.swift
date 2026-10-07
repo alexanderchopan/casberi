@@ -44,11 +44,7 @@ extension FeedScreen {
         }
         Section {
             DSScopeTiles(sections: ReadingScope.allCases, active: chrome.readingScope,
-                         attention: [], verbs: [.search]) { picked in
-                if picked.isVerb {
-                    feedSheet = .readingFind(picked)
-                    return
-                }
+                         attention: []) { picked in
                 withAnimation(DS.Motion.standard) { chrome.readingScope = picked }
             }
             .listRowBackground(Color.clear)
@@ -95,9 +91,9 @@ extension FeedScreen {
     }
 
     #if DEBUG
-    /// `-readingScope highlights|subscriptions|follow|search` — land on a
-    /// tile, or raise Follow (Subscriptions' first row, §1118) or Search, at
-    /// mount (prd §1085; NSLogs `readingScope:`). Once per launch.
+    /// `-readingScope highlights|subscriptions|follow` — land on a tile, or
+    /// raise Follow (Subscriptions' first row, §1118), at mount (prd §1085;
+    /// NSLogs `readingScope:`). Once per launch.
     private func readingProbe() {
         guard !Self.readingProbed,
               let raw = UserDefaults.standard.string(forKey: "readingScope") else { return }
@@ -109,7 +105,7 @@ extension FeedScreen {
             return
         }
         guard let scope = ReadingScope(rawValue: raw) else { return }
-        if scope.isVerb { feedSheet = .readingFind(scope) } else { chrome.readingScope = scope }
+        chrome.readingScope = scope
     }
     #endif
 }

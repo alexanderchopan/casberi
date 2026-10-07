@@ -520,7 +520,7 @@ struct AppsScreen: View {
     private func trackTray(_ pick: TrackPick) -> some View {
         let landed = { landAfterTrack(pick.room) }
         if pick.room == .reading {
-            ReadingFindSheet(mode: .follow, onTracked: landed)
+            ReadingFindSheet(onTracked: landed)
         } else {
             FollowTrackTray(room: pick.room, seat: pick.seat, onTracked: landed)
         }

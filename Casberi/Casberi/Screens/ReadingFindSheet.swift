@@ -1,28 +1,19 @@
 import SwiftUI
 import SwiftData
 
-/// READING'S FOLLOW AND SEARCH (prd §1085), Markets' Add carried over: a tray
-/// with the field at the bottom on glass, where the thumb is (prd §752).
+/// READING'S FOLLOW (prd §1085), Markets' Add carried over: a tray with the
+/// field at the bottom on glass, where the thumb is (prd §752).
 ///
-/// **Follow**, before you type: the sites you keep saving from and follow
-/// nothing at (`ReadingRoom.suggestions`) — two saves or more in sixty days.
-/// Typing an address offers that site. Following adds it to RSS, which finds
-/// the site's feed on its next read (`FeedDiscovery`); a site that publishes
-/// none is said so and left unfollowed.
-///
-/// **Search**: what you read first, highlights included (`Retriever.find`,
-/// the composer's Find engine, over the room's own rows), then the site the
-/// query names, to follow. There is no keyless way to search the web for a
-/// feed by name, so a word finds only what you already have (§83).
+/// Before you type: the sites you keep saving from and follow nothing at
+/// (`ReadingRoom.suggestions`) — two saves or more in sixty days. Typing an
+/// address offers that site. Following adds it to RSS, which finds the
+/// site's feed on its next read (`FeedDiscovery`); a site that publishes none
+/// is said so and left unfollowed. Its Search half is deleted (prd §1171):
+/// the tray's search finds what you read, through Find.
 ///
 /// Optional environment only: on Mac Catalyst a sheet's content is evaluated
 /// where the presenter's `.environment` has not reached (prd §872).
 struct ReadingFindSheet: View {
-    enum Mode { case follow, search }
-
-    let mode: Mode
-    /// Opens a found row in the room's own sheet.
-    var onOpen: ((Thing) -> Void)? = nil
     /// After a follow landed and the tray closed (prd §1119): Apps takes the
     /// person to Reading's Subscriptions.
     var onTracked: (() -> Void)? = nil
@@ -33,7 +24,6 @@ struct ReadingFindSheet: View {
     @Environment(BridgeStore.self) private var store: BridgeStore?
 
     @State private var query = ""
-    @State private var corpus: [Thing] = []
     @State private var suggestions: [ReadingRoom.Suggestion] = []
     @State private var followed: Set<String> = []
     @State private var following: String? = nil
@@ -41,10 +31,9 @@ struct ReadingFindSheet: View {
     @FocusState private var fieldFocused: Bool
 
     private static let recentsKey = "reading.find.recents"
-    private static let resultCap = 20
 
     var body: some View {
-        DSTray(title: mode == .follow ? Following.Room.reading.verb : String(localized: "Search"),
+        DSTray(title: Following.Room.reading.verb,
                height: 640, detents: [.large]) {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 0) {
@@ -64,7 +53,7 @@ struct ReadingFindSheet: View {
             if let q = UserDefaults.standard.string(forKey: "readingQuery") { query = q }
             // `-readingFollowNow YES` presses Follow on the typed site (prd
             // §1119): the whole first follow, headless, from Apps to the room.
-            if mode == .follow, UserDefaults.standard.bool(forKey: "readingFollowNow"),
+            if UserDefaults.standard.bool(forKey: "readingFollowNow"),
                let site = ReadingRoom.site(in: query) {
                 Task { await follow(site) }
             }
@@ -77,22 +66,19 @@ struct ReadingFindSheet: View {
     // MARK: - The field
 
     private var field: some View {
-        DSTraySearchField(placeholder: mode == .follow ? String(localized: "A site's address")
-                                                       : String(localized: "Search your reading"),
+        DSTraySearchField(placeholder: String(localized: "A site's address"),
                           text: $query, focus: $fieldFocused,
-                          keyboard: mode == .follow ? .URL : .default,
+                          keyboard: .URL,
                           onSubmit: { remember(query) })
     }
 
     // MARK: - Before you type
 
     @ViewBuilder private var before: some View {
-        if mode == .follow {
-            if !suggestions.isEmpty {
-                DSTrayHead(String(localized: "Sites you save from"))
-                ForEach(suggestions, id: \.host) { s in
-                    siteRow(s.host, line: String(localized: "You saved \(s.count) lately"))
-                }
+        if !suggestions.isEmpty {
+            DSTrayHead(String(localized: "Sites you save from"))
+            ForEach(suggestions, id: \.host) { s in
+                siteRow(s.host, line: String(localized: "You saved \(s.count) lately"))
             }
         }
         if !recents.isEmpty {
@@ -115,20 +101,13 @@ struct ReadingFindSheet: View {
                 .padding(.horizontal, DS.Space.s4)
             }
         }
-        if (mode == .search || suggestions.isEmpty) && recents.isEmpty {
+        if suggestions.isEmpty && recents.isEmpty {
             footnote
         }
     }
 
     private var footnote: some View {
-        let text: Text = if mode == .follow {
-            Text("Type a site's address to follow it. Sites you save from twice show here.")
-        } else if trimmed.isEmpty {
-            Text("Finds what you read and kept, highlights included.")
-        } else {
-            Text("Nothing you read matches. Type a site's address to follow it.")
-        }
-        return DSFootnote(text)
+        DSFootnote(Text("Type a site's address to follow it. Sites you save from twice show here."))
             .padding(.horizontal, DS.Space.s4)
             .padding(.top, DS.Space.s4)
     }
@@ -136,48 +115,16 @@ struct ReadingFindSheet: View {
     // MARK: - As you type
 
     @ViewBuilder private var results: some View {
-        let hits = mode == .search ? Array(Retriever.find(trimmed, in: corpus.live).hits.prefix(Self.resultCap)) : []
-        if !hits.isEmpty {
-            DSTrayHead(String(localized: "In your reading"))
-            ForEach(hits.keyed) { row in
-                if let thing = row.live { thingRow(thing) }
-            }
-        }
         if let site = ReadingRoom.site(in: trimmed) {
             DSTrayHead(String(localized: "Follow"))
             siteRow(site, line: String(localized: "Its feed lands in Reading"))
         }
-        if hits.isEmpty && ReadingRoom.site(in: trimmed) == nil {
+        if ReadingRoom.site(in: trimmed) == nil {
             footnote
         }
     }
 
     // MARK: - Rows
-
-    private func thingRow(_ thing: Thing) -> some View {
-        let line = ReadingRoom.isHighlight(source: thing.source, kind: thing.kind.rawValue,
-                                           sourceRef: thing.sourceRef)
-            ? String(localized: "Highlight · \(thing.source)") : thing.source
-        return Button {
-            remember(query)
-            onOpen?(thing)
-        } label: {
-            HStack(spacing: DS.Space.s3) {
-                BridgeIcon(name: thing.source, size: DS.Face.rowCircle, circular: true)
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(verbatim: thing.title).dsText(.body17)
-                        .foregroundStyle(DS.textPrimary).lineLimit(1)
-                    Text(verbatim: line).dsText(.subhead12)
-                        .foregroundStyle(DS.textTertiary).lineLimit(1)
-                }
-                Spacer(minLength: 0)
-            }
-            .frame(minHeight: 60)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(RowPress())
-        .padding(.horizontal, DS.Space.s4)
-    }
 
     private func siteRow(_ host: String, line: String) -> some View {
         let on = ReadingRoom.covered(host, by: followed)
@@ -291,12 +238,6 @@ struct ReadingFindSheet: View {
                                        sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
         d.fetchLimit = 1_500
         let room = ((try? modelContext.fetch(d)) ?? []).filter(\.isLive)
-        let you = NoteSheetSource.keptSource
-        var k = FetchDescriptor<Thing>(predicate: #Predicate<Thing> { $0.source == you },
-                                       sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
-        k.fetchLimit = 500
-        let kept = ((try? modelContext.fetch(k)) ?? []).filter { $0.isLive && Highlight.isHighlight($0) }
-        corpus = room + kept
         // What you already follow: every RSS feed's site, and the sites the
         // room's feed rows come from (Substack's publications among them).
         var hosts = Set(RSSStore.shared.feeds.compactMap { ReadingRoom.host(of: $0.url) })

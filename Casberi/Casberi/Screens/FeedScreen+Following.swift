@@ -88,7 +88,7 @@ extension FeedScreen {
     func followingAddTray(_ room: Following.Room) -> some View {
         switch room {
         case .reading:
-            ReadingFindSheet(mode: .follow) { _ in }
+            ReadingFindSheet()
         case .media:
             FollowTrackTray(room: .media)
         case .work:

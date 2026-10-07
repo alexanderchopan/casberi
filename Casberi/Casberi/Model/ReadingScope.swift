@@ -6,7 +6,7 @@ import Foundation
 /// Foundation-only, its conformance beside every other in
 /// `ScopeTileGlyphs.swift`.
 enum ReadingScope: String, CaseIterable, Identifiable, Hashable, Sendable {
-    case all, highlights, subscriptions, search
+    case all, highlights, subscriptions
 
     var id: String { rawValue }
 
@@ -15,7 +15,6 @@ enum ReadingScope: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .all:        return String(localized: "All")
         case .highlights: return String(localized: "Highlights")
         case .subscriptions: return String(localized: "Subscriptions")
-        case .search:     return String(localized: "Search")
         }
     }
 
@@ -24,11 +23,9 @@ enum ReadingScope: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .all:        return String(localized: "Everything you read and save")
         case .highlights: return String(localized: "Every passage you kept")
         case .subscriptions: return String(localized: "Every site you follow")
-        case .search:     return String(localized: "Find something you read")
         }
     }
 
-    var isVerb: Bool { self == .search }
 }
 
 /// The Reading room's pure rules (prd §1085), compiled whole by

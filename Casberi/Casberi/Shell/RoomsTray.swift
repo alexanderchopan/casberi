@@ -598,9 +598,10 @@ struct RoomsTray: View {
     /// The kinds of the place you opened the tray from lead (Notes' notes,
     /// Settings' lists); then the tray's own names, headless, as the search
     /// has always drawn them (§1133e); then each other kind under its word,
-    /// A–Z.
+    /// A–Z; then the apps you could add (§1171a, user: "the tray should work
+    /// so that you can search for anything from anywhere"), last before Find.
     private enum Kind: Int, CaseIterable {
-        case names, calendars, feeds, mailLists, notes, people, subscriptions
+        case names, calendars, feeds, mailLists, notes, people, subscriptions, add
 
         var title: LocalizedStringKey? {
             switch self {
@@ -611,6 +612,7 @@ struct RoomsTray: View {
             case .notes:         "Notes"
             case .people:        "People"
             case .subscriptions: "Subscriptions"
+            case .add:           "Add"
             }
         }
 
@@ -678,6 +680,20 @@ struct RoomsTray: View {
             where !contact.isUnnamed && !ContactIndexSources.isYours(contact) {
             hits.append(Hit(id: "person:" + contact.id, kind: .people, name: contact.name,
                             mark: .face(.person(contact))) { landInSettings(.person(contact.name)) })
+        }
+        // Every catalogue app you have not connected, each opening the page
+        // its Connect stands on, as the catalogue's row does (prd §1171a).
+        // Markets is a place, never an app to add (§1167).
+        let connected = Set(bridges.bridges.filter { $0.status != .paused }.map(\.name))
+        for offer in BridgeCatalog.offers
+            where !connected.contains(offer.name) && BridgeCatalog.category(of: offer) != HomeScope.markets {
+            let name = offer.name
+            hits.append(Hit(id: "add:" + name, kind: .add, name: name,
+                            place: BridgeCatalog.category(of: offer), mark: .face(.app(name))) {
+                DSHaptic.selection()
+                close()
+                route.openSetup(forOffer: name)
+            })
         }
         for item in SubscriptionsReading.shared.items {
             hits.append(Hit(id: "plan:" + item.id, kind: .subscriptions, name: item.name,

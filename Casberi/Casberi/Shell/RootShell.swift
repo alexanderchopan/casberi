@@ -220,7 +220,7 @@ struct RootShell: View {
                 // Day's Subscriptions (prd §1111).
                 if let s = DayScope(rawValue: raw), !s.isVerb { chrome.dayScope = s }
                 // Reading's and Media's Subscriptions, Work's Watching (prd §1118).
-                if let s = ReadingScope(rawValue: raw), !s.isVerb { chrome.readingScope = s }
+                if let s = ReadingScope(rawValue: raw) { chrome.readingScope = s }
                 if let s = MediaScope(rawValue: raw) { chrome.mediaScope = s }
             }
         }

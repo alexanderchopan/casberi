@@ -50,8 +50,8 @@ enum ScopeTileGlyph {
     /// Markets' Alerts (prd §1081): the system's bell, the bell a note's
     /// reminder already wears for "tell me".
     static let alerts       = "bell"
-    /// Reading's Search and the Apps catalogue's (prd §1085, §1138): the
-    /// system's magnifier, the app's search glyph wherever a field searches.
+    /// The Apps catalogue's Search (prd §1138): the system's magnifier, the
+    /// app's search glyph wherever a field searches.
     static let search       = "magnifyingglass"
     /// Logos' Node scope (prd §991) — the node you run.
     static let node         = "server.rack"
@@ -130,7 +130,6 @@ extension ReadingScope: DSTileScope {
         case .all:        return ScopeTileGlyph.all
         case .highlights: return ScopeTileGlyph.highlights
         case .subscriptions: return ScopeTileGlyph.subscriptions
-        case .search:     return ScopeTileGlyph.search
         }
     }
 }

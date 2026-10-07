@@ -355,7 +355,7 @@ struct SettingsHome: View {
             }
         case .mailAdd:              MailSubscriptionAddTray()
         case .following(let id, let room): FollowingSheet(id: id, room: room)
-        case .followAdd:            ReadingFindSheet(mode: .follow) { _ in }
+        case .followAdd:            ReadingFindSheet()
         case .walletFollow:         WalletFollowSheet()
         }
     }

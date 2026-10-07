@@ -82,8 +82,6 @@ extension FeedScreen {
         case socialFaces
         /// Markets' Add (prd §1081): find a token or a stock and watch it.
         case watchAdd
-        /// Reading's Search (prd §1085).
-        case readingFind(ReadingScope)
         /// One thing followed, by its id and room (prd §1118).
         case following(String, Following.Room)
         /// A room's verb for what you follow: Reading's Follow tray, Media's
@@ -134,7 +132,6 @@ extension FeedScreen {
             case .worthALook: "worthALook"
             case .socialFaces: "socialFaces"
             case .watchAdd: "watchAdd"
-            case .readingFind(let scope): "readingFind:\(scope.rawValue)"
             case .following(let id, let room): "following:\(room.rawValue):\(id)"
             case .followingAdd(let room): "followingAdd:\(room.rawValue)"
             case .calendarSubscribe: "calendarSubscribe"
@@ -337,16 +334,6 @@ extension FeedScreen {
             FollowingSheet(id: id, room: room)
         case .followingAdd(let room):
             followingAddTray(room)
-        case .readingFind:
-            ReadingFindSheet(mode: .search) { thing in
-                // The find tray closes before the thing's sheet rises: one
-                // sheet at a time, never one raised from inside another (§872).
-                feedSheet = nil
-                Task { @MainActor in
-                    try? await Task.sleep(for: .milliseconds(450))
-                    openThing(thing)
-                }
-            }
         case .calendarSubscribe:
             CalendarSubscribeSheet()
         case .company(let company):

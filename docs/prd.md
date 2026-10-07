@@ -65046,6 +65046,13 @@ Every row in Settings leads with a `DS.Mark.notice` (38pt) icon, Today's (§1157
 4. **Notes is All · Folders · Voice · New.** `NotesScope.search` and `NotesSearchSheet` are deleted; the tray finds your notes.
 5. **Markets' bar is Add** (`TokensScope.add`, `plus`, the New tile's glyph), opening the same company search (`watchAdd`). Finding what you don't have stays in a place's Add, because the tray holds only what you have; not Watch, because `eye` is the Watchlist tile's. The Apps catalogue keeps its field for the same reason: it is the add flow.
 
-**Kept.** Reading's Search tile (§1085) searches inside a room, not a place in You, and was not asked about.
+**Kept, then deleted.** Reading's Search tile (§1085) was kept here, then deleted by §1171a.
 
 **Seen** on a private iPhone 17 Pro simulator over the demo: from Notes, "li" leads with four notes, then Apps (Linear, Lightning, Life, Splits); from Today, "sunday" finds The Sunday Loaf under Mail lists and two notes, and tapping the list raises its sheet over Settings; Notes' bar without Search, Markets' with Add alone, Settings with none. **Not seen:** the Mac and iPad rail (the tray hangs from the top there), a person landing, dark is all that was shot.
+
+### §1171a — The tray finds apps you could add, and Reading's Search is deleted (user, 2026-10-07: of searching for Instagram in the tray, "the tray should work so that you can search for anything from anywhere, so yes build it"; "we should remove readings search button"; amends §1171 item 1 and its "searches what you have", §1085's Search tile)
+
+1. **Add, last before Find**: every catalogue app you have not connected whose name holds the words, its category at the trailing edge, five at most; a tap opens the page its Connect stands on (`route.openSetup(forOffer:)`), the catalogue row's door. Markets is a place, never an app to add (§1167). So a person who types an app's name anywhere finds it, connected or not.
+2. **Reading is All · Highlights · Subscriptions.** `ReadingScope.search`, the `.readingFind` sheet and `ReadingFindSheet`'s search half (its corpus, `Retriever` hits, rows and the `Mode`) are deleted; the sheet is Follow alone. What you read is found through the tray's last row, Find.
+
+**Seen** on a fresh simulator with nothing connected: "insta" finds Instagram under Add, Social at its edge. **Not seen:** the tap into Instagram's page (the new simulator's tap access was not granted), Reading's tiles on screen.
