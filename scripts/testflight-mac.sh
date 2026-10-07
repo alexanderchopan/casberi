@@ -64,7 +64,7 @@ xattr -rc "$WORK/project" 2>/dev/null || true
 # No registered-device requirement for Mac Catalyst (unlike iOS), so this
 # doesn't need the unsigned workaround the iOS script exists for.
 echo "▶ Archiving (Release, Mac Catalyst, signed automatic)"
-xcodebuild \
+"$(dirname "$0")/xcb.sh" \
   -project "$WORK/project/Casberi.xcodeproj" \
   -scheme Casberi \
   -configuration Release \

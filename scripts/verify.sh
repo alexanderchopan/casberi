@@ -230,7 +230,7 @@ fi
 # `verify-mac.sh`'s own 2026-08-02 lesson about a run that looks silent).
 BUILDPID=""
 BUILDLOG="$OUT/ios-build.log"
-xcodebuild -project "$ROOT/Casberi/Casberi.xcodeproj" -scheme Casberi \
+"$ROOT/scripts/xcb.sh" -project "$ROOT/Casberi/Casberi.xcodeproj" -scheme Casberi \
   -destination "id=$DEVICE_ID" \
   -derivedDataPath "$DD" build -quiet >"$BUILDLOG" 2>&1 &
 BUILDPID=$!
@@ -3059,7 +3059,7 @@ print -P "%F{green}✓ build%f"
 # Foundation-only files against stubs. Anything needing a real `ModelContext`
 # belongs here.
 step "Unit tests (CasberiTests)"
-xcodebuild test -project "$ROOT/Casberi/Casberi.xcodeproj" -scheme Casberi \
+"$ROOT/scripts/xcb.sh" test -project "$ROOT/Casberi/Casberi.xcodeproj" -scheme Casberi \
   -destination "id=$DEVICE_ID" \
   -derivedDataPath "$DD" -only-testing:CasberiTests -quiet \
   || fail "unit tests failed — run the same xcodebuild test line for the output"
@@ -3137,7 +3137,7 @@ elif [[ -z "${SKIP_CATALYST:-}" ]]; then
   # keeps the verify-mac.sh 2026-08-01 lesson (an incremental dir keeps
   # yesterday's bundle, so an exit code is the only honest gate; a bundle
   # existing proves nothing).
-  if ! xcodebuild -project "$ROOT/Casberi/Casberi.xcodeproj" -scheme Casberi \
+  if ! "$ROOT/scripts/xcb.sh" -project "$ROOT/Casberi/Casberi.xcodeproj" -scheme Casberi \
        -destination 'platform=macOS,variant=Mac Catalyst' \
        -derivedDataPath "$CATDD" build -quiet >"$CATLOG" 2>&1; then
     grep -E "error:" "$CATLOG" | head -20 || true

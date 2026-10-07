@@ -36,9 +36,11 @@ Every index line below names the file to open. **Keep this file under 100KB** �
 From the canonical `~/Developer/casberi` copy, a plain build codesigns cleanly — no workaround needed:
 
 ```sh
-xcodebuild -project Casberi/Casberi.xcodeproj -scheme Casberi \
+scripts/xcb.sh -project Casberi/Casberi.xcodeproj -scheme Casberi \
   -destination "id=$(scripts/sim-device.py)" build
 ```
+
+**RULE: build through `scripts/xcb.sh`, never bare `xcodebuild`** — same arguments and exit, behind one machine-wide lock, so builds queue instead of running 3× over the cores (load 66 on 8, 2026-10-07). It says who holds the lock while it waits; `XCB_NO_LOCK=1` for a cheap `-showBuildSettings`. verify, verify-mac and both ship archives use it.
 
 Or just run `scripts/verify.sh` (build + install + screen sweep + answer probe).
 

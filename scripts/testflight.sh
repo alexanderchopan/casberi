@@ -106,7 +106,7 @@ xattr -rc "$WORK/project" 2>/dev/null || true
 # devices on the team profile), so iOS now signs the same way. Export then
 # re-signs for distribution but PRESERVES the archive's entitlements.
 echo "▶ Archiving (Release, signed automatic — entitlements ride the archive)"
-xcodebuild \
+"$(dirname "$0")/xcb.sh" \
   -project "$WORK/project/Casberi.xcodeproj" \
   -scheme Casberi \
   -configuration Release \

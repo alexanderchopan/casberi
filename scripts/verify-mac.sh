@@ -334,7 +334,7 @@ fi
 
 # ── 1. Build ───────────────────────────────────────────────────────────────
 step "Building Casberi (Mac Catalyst, derivedData: $DD)"
-xcodebuild -project "$ROOT/Casberi/Casberi.xcodeproj" -scheme Casberi \
+"$ROOT/scripts/xcb.sh" -project "$ROOT/Casberi/Casberi.xcodeproj" -scheme Casberi \
   -destination 'platform=macOS,variant=Mac Catalyst' \
   -derivedDataPath "$DD" build -quiet 2>&1 | grep -E "error:" | head -20
 # Gate on xcodebuild's OWN exit, not just the bundle's existence (2026-08-01):
