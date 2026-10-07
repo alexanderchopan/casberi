@@ -371,10 +371,13 @@ struct SettingsHome: View {
         }
     }
 
+    /// One line, as iOS Settings draws a row (prd §1157): the name, then its
+    /// state at the trailing edge before the chevron, so the 30pt icon is as
+    /// tall as the row's words.
     private func appRow(_ app: BridgeApp) -> some View {
         DSPushRow(title: Text(verbatim: app.name),
-                  subtitle: Text(verbatim: app.statusLine),
-                  subtitleTone: app.status == .attention ? DS.attentionInk : DS.textTertiary) {
+                  fact: Text(verbatim: app.statusLine),
+                  factTone: app.status == .attention ? DS.attentionInk : DS.textTertiary) {
             route.openSetup(forOffer: app.name)
         } leading: {
             BridgeIcon(name: app.name, size: DS.Face.row)
@@ -679,7 +682,6 @@ struct LetterIndex: View {
             ForEach(letters, id: \.self) { letter in
                 Text(verbatim: letter == "…" ? "•" : letter)
                     .dsText(.dockCaption10)
-                    .fontWeight(.semibold)
                     .foregroundStyle(DS.tint)
                     .frame(width: 20, height: Self.pitch)
             }

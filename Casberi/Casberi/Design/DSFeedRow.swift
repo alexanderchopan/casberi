@@ -81,17 +81,12 @@ struct DSFeedRow<Lead: View, Trailing: View, Below: View>: View {
     /// finger.
     static var headHeight: CGFloat { 44 }
 
-    /// The app header this row stands under in the All feed (prd §1103a). The
-    /// header names the app, so EVERY row under it draws no lead — a mark, a
-    /// face or a picture alike (user: "we have some that aren't indented, like
-    /// the social face") — and its words start flush under the app's name.
+    /// The app this row stands for on Home (prd §1103a, §1157). Home draws
+    /// the app's icon as the lead, beside the app's name over these words, as
+    /// a notification does (`FeedScreen.shapedListRow`), so EVERY row there
+    /// draws no lead of its own — a mark, a face or a picture alike — and its
+    /// words start at the column's left edge, under the app's name.
     @Environment(\.dsGroupedSource) private var groupedSource
-
-    /// Where the words start under an app header (prd §1103b, user: "we need
-    /// the message to share same indentation as the source title"): past the
-    /// header's badge mark and its gap, so the item's words and the app's
-    /// name stand in one column.
-    static var groupIndent: CGFloat { DS.Mark.badge + DS.Space.s2 }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -140,17 +135,16 @@ struct DSFeedRow<Lead: View, Trailing: View, Below: View>: View {
                     lead
                 }
             }
-            .padding(.leading, groupedSource == nil ? 0 : Self.groupIndent)
-            // Under an app header the row is as tall as its words (prd
-            // §1136j, user: "is this a lot of space between rows you only see
-            // four on the home screen"): it draws no lead, so the 44pt head a
-            // lead needs only pushed air between this app and the next. The
-            // header over it and the row's own insets keep the cell taller
-            // than a finger.
+            // On Home the row is as tall as its words (prd §1136j, user: "is
+            // this a lot of space between rows you only see four on the home
+            // screen"): it draws no lead, so the 44pt head a lead needs only
+            // pushed air between this app and the next. The app's name over
+            // it and the icon beside it (§1157) keep the cell taller than a
+            // finger.
             .frame(minHeight: groupedSource == nil ? Self.headHeight : 0,
                    alignment: groupedSource == nil ? .center : .top)
             below
-                .padding(.leading, groupedSource == nil ? Self.leadSize + DS.Space.s3 : Self.groupIndent)
+                .padding(.leading, groupedSource == nil ? Self.leadSize + DS.Space.s3 : 0)
         }
     }
 

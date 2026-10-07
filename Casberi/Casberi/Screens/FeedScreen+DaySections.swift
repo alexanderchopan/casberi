@@ -344,10 +344,6 @@ extension FeedScreen {
                 // the category be tappable?").
                 categoryHeaderRow(label)
                 ForEach(Array(rows.enumerated()), id: \.element.id) { i, row in
-                    if let app = heads[row.id] {
-                        appHeaderRow(app, at: row.date)
-                            .opacity(isQuiet(row) ? Self.quietRow : 1)
-                    }
                     if case .single(let item) = row.kind {
                         // `live` before ANY read (corollary 3, build 176 —
                         // see `ThingRowKeying`): this closure is re-evaluated
@@ -371,10 +367,11 @@ extension FeedScreen {
                             shapedListRow(thing, index: i, nextEventID: nextEventID,
                                           position: positions[i],
                                           imageOnly: imageOnly.contains(thing.id),
-                                          wideArt: anchor, grouped: true)
+                                          wideArt: anchor, grouped: true,
+                                          app: heads[row.id].map { (source: $0, date: row.date) })
                                 .opacity(!anchor && isQuiet(row) ? Self.quietRow : 1)
-                                // The header wears the app's mark; the row's
-                                // own copy of it stands empty (prd §1103).
+                                // The app's icon leads the row (prd §1157);
+                                // the row's own lead stands empty (§1103a).
                                 .environment(\.dsGroupedSource, row.source)
                         }
                     }
@@ -504,6 +501,11 @@ extension FeedScreen {
     /// inset went back to s2 was that EVERY gap was the same size; that is
     /// still not the case).
     static let rowAir: CGFloat = DS.Space.s1
+
+    /// The air above and below each of Home's rows (prd §1157): the gap
+    /// between two apps, which the app's header row held until the icon
+    /// moved into the row.
+    static let groupAir: CGFloat = DS.Space.s3
 
     /// Whether a row steps back on a skim — ambient, or already read.
     ///
@@ -682,36 +684,43 @@ extension FeedScreen {
         chrome.sourceRequest = category
     }
 
-    /// The app's name and, on Home, when its thing landed (prd §1152): the
-    /// sections are categories now, so the time rides the label.
-    private func appHeaderRow(_ source: String, at date: Date) -> some View {
-        Button {
-            DSHaptic.selection()
-            withAnimation(DS.Motion.standard) { filter.source = source }
-        } label: {
-            HStack(spacing: DS.Space.s2) {
-                BridgeIcon(name: source, size: DS.Mark.badge)
-                Text(BridgeCatalog.seatName(forSource: source)
-                     + " · " + date.formatted(date: .omitted, time: .shortened))
-                    .dsText(.label12)
-                    .foregroundStyle(DS.textSecondary)
-                    .lineLimit(1)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+    /// Home's lead (prd §1157): the app's icon at `DS.Mark.notice`, its own
+    /// door to the app's room (§1103's header tap). A row with no app beside
+    /// it keeps the column empty, so every row's words share one left edge.
+    @ViewBuilder
+    func appLead(_ source: String?) -> some View {
+        if let source {
+            Button {
+                DSHaptic.selection()
+                withAnimation(DS.Motion.standard) { filter.source = source }
+            } label: {
+                BridgeIcon(name: source, size: DS.Mark.notice)
+                    // The icon is 38pt; the door is a finger tall.
+                    .frame(minHeight: DS.Hit.min, alignment: .top)
+                    .contentShape(Rectangle())
             }
-            .frame(minHeight: DS.Mark.badge)
-            .contentShape(Rectangle())
+            .buttonStyle(PressSpring())
+            .accessibilityLabel(Text(verbatim: BridgeCatalog.seatName(forSource: source)))
+        } else {
+            Color.clear.frame(width: DS.Mark.notice, height: DS.Mark.notice)
         }
-        // The label hugs its item: a List gives any row ~44pt unless told
-        // otherwise, per row (`FeedScreen+RoomLedes`' fold anchor, same fix).
-        .environment(\.defaultMinListRowHeight, 0)
-        .buttonStyle(RowPress())
-        .accessibilityAddTraits(.isHeader)
-        .listRowBackground(Color.clear)
-        .listRowInsets(.init(top: DS.Space.s4,
-                             leading: DSRoomChassis.rowInset,
-                             bottom: 0,
-                             trailing: DSRoomChassis.rowInset))
-        .listRowSeparator(.hidden)
+    }
+
+    /// The row's top line on Home (prd §1152, §1157): the app's name, and
+    /// when its thing landed at the trailing edge, as a notification
+    /// carries its time.
+    func appLine(_ source: String, at date: Date) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+            Text(BridgeCatalog.seatName(forSource: source))
+                .dsText(.label12)
+                .foregroundStyle(DS.textSecondary)
+                .lineLimit(1)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            Text(date.formatted(date: .omitted, time: .shortened))
+                .dsText(.label12)
+                .foregroundStyle(DS.textSecondary)
+                .lineLimit(1)
+        }
     }
 
     @ViewBuilder

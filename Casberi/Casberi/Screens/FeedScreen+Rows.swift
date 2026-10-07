@@ -292,7 +292,8 @@ extension FeedScreen {
                                imageOnly: Bool = false,
                                wideArt: Bool = false,
                                replies: [String: [Thing]] = [:],
-                               grouped: Bool = false) -> some View {
+                               grouped: Bool = false,
+                               app: (source: String, date: Date)? = nil) -> some View {
         // AnyView: same metadata-depth insurance as GenRender (crash fix).
         // A Button since 2026-08-04 (the microanimation pass), not an
         // `onTapGesture`: the tap gesture gave no touch-down feedback, so a
@@ -301,14 +302,25 @@ extension FeedScreen {
         // why not `PressSpring`'s dip). Same single choke point, same one
         // gesture — tap opens the sheet, everything else stays long-press.
         // Zoom source removed with the thing-open zoom (prd 232, 2026-07-30).
+        //
+        // HOME READS AS NOTIFICATIONS (prd §1157, user: "what would apple
+        // do", "make the change"): the app's icon leads at `DS.Mark.notice`,
+        // level with the app's name, and spans the name, the title and the
+        // line; the name and the time ride the top line inside the row. The
+        // icon is its own door to the app's room, the header's tap (§1103);
+        // the rest of the row opens the thing.
         let skin = rowSkin(thing)
-        return Button {
-            openThing(thing)
-        } label: {
-            AnyView(shapedRow(thing, nextEventID: nextEventID, index: index,
-                              imageOnly: imageOnly, wideArt: wideArt,
-                              replies: replies))
-                .modifier(rowEntrance(index))
+        return HStack(alignment: .top, spacing: DS.Space.s3) {
+            if grouped { appLead(app?.source) }
+            Button {
+                openThing(thing)
+            } label: {
+                VStack(alignment: .leading, spacing: 2) {
+                    if let app { appLine(app.source, at: app.date) }
+                    AnyView(shapedRow(thing, nextEventID: nextEventID, index: index,
+                                      imageOnly: imageOnly, wideArt: wideArt,
+                                      replies: replies))
+                }
                 .contentShape(Rectangle())
                 // THE INK FOLLOWS ITS CARD. Every text token in this app is a
                 // `Color.adaptive` resolved against the trait, so overriding
@@ -318,8 +330,10 @@ extension FeedScreen {
                 // they have never taken. Nil (the neutral fills) keeps the
                 // page's own ramp; see `DS.RowSkin.ink`.
                 .environment(\.colorScheme, skin?.ink ?? colorScheme)
+            }
+            .buttonStyle(RowPress())
         }
-        .buttonStyle(RowPress())
+        .modifier(rowEntrance(index))
             // Mac/pointer polish (2026-07-31): the feed rendered bare rows
             // over `onTapGesture` until 2026-08-04 (now the Button above),
             // and this was the one surface a Mac cursor crossed with nothing
@@ -344,11 +358,12 @@ extension FeedScreen {
                                              skin: skin))
             // Feed rhythm: `rowAir` (prd §900, see its doc). A card that
             // stands alone keeps s2 — it has no padding of its own inside.
-            // Under an app header every row takes `rowAir` (prd §1103b): a
-            // post's s2 put it 4pt further under its label than its neighbours.
-            .listRowInsets(.init(top: standsAlone(thing) && !grouped ? DS.Space.s2 : Self.rowAir,
+            // On Home every row takes `groupAir` (prd §1157), a post
+            // included: the header row that held the gap between apps is
+            // gone, so the row carries it, the same above and below.
+            .listRowInsets(.init(top: grouped ? Self.groupAir : standsAlone(thing) ? DS.Space.s2 : Self.rowAir,
                                  leading: DSRoomChassis.rowInset,
-                                 bottom: standsAlone(thing) && !grouped ? DS.Space.s2 : Self.rowAir,
+                                 bottom: grouped ? Self.groupAir : standsAlone(thing) ? DS.Space.s2 : Self.rowAir,
                                  trailing: DSRoomChassis.rowInset))
             .listRowSeparator(.hidden)
             // A row is draggable OUT of the window on Mac (prd §631) — its

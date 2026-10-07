@@ -222,22 +222,26 @@ guard "each section is named by its category, a door to its page" \
       "$FEED" 'categoryHeaderRow\(label\)'
 guard "the category opens its combined page, as the tray's row does" \
       "$FEED" 'chrome\.sourceRequest = category'
-guard "the app label carries when its thing landed" \
-      "$FEED" 'appHeaderRow\(app, at: row\.date\)'
+guard "the app's row carries when its thing landed (§1157)" \
+      "$FEED" 'app: heads\[row\.id\]\.map \{ \(source: \$0, date: row\.date\) \}'
+guard "the app's name and time ride the row's top line (§1157)" \
+      "$FEED" 'if let app \{ appLine\(app\.source, at: app\.date\) \}'
 guard "Home draws the whole day, no window and no Show older (§1154)" \
       "$FEED" 'let window = \(shown: byApp\.groups, more: false, hidden: 0\)'
-guard "the header draws before its app's first row" \
-      "$FEED" 'if let app = heads\[row\.id\]'
+guard "the app's icon leads its row on Home (§1157)" \
+      "$FEED" 'if grouped \{ appLead\(app\?\.source\) \}'
+guard "the icon draws at the notification's rung, a door to the app's room (§1157)" \
+      "$FEED" 'BridgeIcon\(name: source, size: DS\.Mark\.notice\)'
 guard "a row under a header is told whose header it stands under" \
       "$FEED" '\.environment\(\\\.dsGroupedSource, row\.source\)'
 guard "a row under a header draws no lead, a face included (§1103a)" \
       "$ROW" 'if groupedSource == nil \{'
 guard "a picture lead rides the trailing edge as a thumbnail (§1103b)" \
       "$ROW" 'if groupedSource != nil, leadIsPicture \{'
-guard "the words start under the app's name, past the badge (§1103b)" \
-      "$ROW" 'groupedSource == nil \? 0 : Self\.groupIndent'
-guard "a post under a header takes the row air its neighbours take (§1103b)" \
-      "$FEED" 'standsAlone\(thing\) && !grouped \? DS\.Space\.s2 : Self\.rowAir'
+guard "the words start at the column's edge, the icon beside them (§1157)" \
+      "$ROW" 'groupedSource == nil \? Self\.leadSize \+ DS\.Space\.s3 : 0'
+guard "every row on Home takes the same air, a post included (§1157)" \
+      "$FEED" 'top: grouped \? Self\.groupAir : standsAlone\(thing\)'
 guard "a person's face rides inline before the title under a header (§1103c)" \
       "$ROW" 'if let groupedSource, let face \{'
 guard "a notice on a post network hands in its author's face (§1103c)" \

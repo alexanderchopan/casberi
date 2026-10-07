@@ -764,6 +764,10 @@ enum DS {
         /// row's thumbnail already uses, so a mark and a picture in the same
         /// slot are the same square.
         static let list: CGFloat = Face.list
+        /// A row that stands for its app, as a notification does (prd §1157):
+        /// Home's lead, level with the app's name, spanning the name, the
+        /// title and the line, at the size iOS gives a notification's icon.
+        static let notice: CGFloat = 38
         /// A catalog cell or card where the mark IS the item's identity, not a
         /// label on it.
         static let tile: CGFloat = Face.seat

@@ -64845,3 +64845,19 @@ Home's sections are categories since §1152, and Day is one of them, its name a 
 **Home's sections.** Home's section headers (§1152) are pink, the "You" section included, matching the titles; `categoryHeaderRow` uses the divider's default ink.
 
 **Checked.** `day-divider-audit.py`; on the simulator, Home reads "Home" in pink over pink Day and Social headers.
+
+## §1157 — Home's rows lead with the app's icon, as notifications do, and Settings' app rows are one line (user, 2026-10-07: "why not have the squircles be as tall as the text in them eg three lines like apple does", "why do we have different sized squircles in settings than we do on home", "what would apple do", "make the change"; amends §1103a, §1103b and §1071 for Home) — BUILT
+
+**Why the sizes differed.** Home drew the app as a 20pt badge on a label line over its item (§1103a); Settings drew a 30pt row icon (§1071). The badge belonged to one line of text; the row icon belonged to the row. Apple sizes an icon by what the screen is: a notification's icon leads its words at one size (Notification Center since iOS 16), and Settings draws a 29pt icon in a one-line row with its state at the trailing edge. §1103a cited "Notification Center's order" for the label line; that was iOS 10–11.
+
+1. **Home: the app's icon leads the row at `DS.Mark.notice` (38pt)**, top-aligned with the app's name, spanning the name, the title and the line. The app's name and the time are the row's top line inside it (`FeedScreen.appLine`), the time at the trailing edge. The separate header row (`appHeaderRow`) is deleted.
+2. **The icon is its own door to the app's room** (`FeedScreen.appLead`, `PressSpring`, a finger tall): §1103's header tap, kept. The rest of the row opens the thing.
+3. **Under it, the row draws no lead of its own** (§1103a stands): its words start at the column's left edge (`DSFeedRow.groupIndent` is deleted), a person's face stays inline before the title (§1103c) and a picture of the thing stays at the trailing edge (§1103b).
+4. **The gap between apps is the row's own** (`FeedScreen.groupAir`, s3 above and below), since the header row that held it is gone; a post takes the same.
+5. **Settings: an app row is one line** — the name, then its state ("Synced just now", in the attention ink when it needs you) as the trailing fact before the chevron (`SettingsHome.appRow`). The 30pt icon is as tall as the row's words. Casberi's own row keeps its subtitle.
+
+**Also.** `LetterIndex`'s redundant `.fontWeight(.semibold)` on a semibold rung is deleted (`design-ramp-audit.py` check 4, red on the base commit).
+
+**Guarded.** `feed-groups-selftest.sh`: the icon leads the row at the notice rung, the name and time ride the top line, the row carries its app and time, the words start at the column's edge, one air for every row on Home.
+
+**Not seen.** Written in a cloud session with no Xcode: not compiled, not run on a simulator, the Mac or a device. `verify.sh` is the first build.
