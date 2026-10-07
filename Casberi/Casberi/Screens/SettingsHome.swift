@@ -315,26 +315,22 @@ struct SettingsHome: View {
 
     // MARK: - Apps
 
-    /// Your apps under category headers (prd §1136 item 5), A–Z; each opens its own account page — its settings.
-    ///
-    /// **Every category ends in what you don't have yet (prd §1138):** "12 more
-    /// in Work ›" opens the catalogue on Work, and a category you have nothing
-    /// in still stands, as its header and that link alone. A search lists
-    /// only what you have.
+    /// Your apps under category headers (prd §1136 item 5), A–Z, Other
+    /// last; each opens its own account page — its settings. **Only yours
+    /// (prd §1145, user: "yes remove those links"):** what you could add is
+    /// Add's alone, so the "N more in <Category>" links are deleted.
     @ViewBuilder
     private var appsList: some View {
         let apps = connectedApps.filter { hit($0.name) }
-        let searching = !query.isEmpty
-        if apps.isEmpty, searching {
-            DSEmptyState(headline: DSProse.text("No apps"),
-                         words: Text("Nothing you've added matches."),
+        if apps.isEmpty {
+            DSEmptyState(headline: DSProse.text(query.isEmpty ? "No apps yet" : "No apps"),
+                         words: query.isEmpty ? Text("Add an app and it lands here.")
+                                              : Text("Nothing you've added matches."),
                          scale: .list(rows: 3))
         } else {
             let other = String(localized: "Other")
             let byCategory = Dictionary(grouping: apps) { BridgeCatalog.category(forSource: $0.name) ?? other }
-            let more = searching ? [:] : Self.moreByCategory(have: Set(connectedApps.map(\.name)))
-            // A–Z, as the catalogue's box reads (prd §1138), Other last.
-            let categories = Set(byCategory.keys).union(more.keys).sorted {
+            let categories = byCategory.keys.sorted {
                 if ($0 == other) != ($1 == other) { return $1 == other }
                 return $0.localizedStandardCompare($1) == .orderedAscending
             }
@@ -343,29 +339,10 @@ struct SettingsHome: View {
                     VStack(alignment: .leading, spacing: DS.Space.s1) {
                         Text(category).dsText(.heading17).foregroundStyle(DS.brandInk)
                         ForEach(byCategory[category] ?? []) { appRow($0) }
-                        if let n = more[category] {
-                            DSMoreLink(title: Text("\(n) more in \(category)")) {
-                                route.openCategory = category
-                                route.present(.apps)
-                            }
-                            .padding(.top, DS.Space.s1)
-                        }
                     }
                 }
             }
         }
-    }
-
-    /// How many of each category's catalogue apps you haven't added, by the
-    /// catalogue's own category rule. A category with none left draws no link.
-    private static func moreByCategory(have: Set<String>) -> [String: Int] {
-        var out: [String: Int] = [:]
-        for offer in BridgeCatalog.offers where !have.contains(offer.name) {
-            let category = BridgeCatalog.category(of: offer)
-            guard category != HomeScope.markets else { continue }
-            out[category, default: 0] += 1
-        }
-        return out
     }
 
     private func appRow(_ app: BridgeApp) -> some View {

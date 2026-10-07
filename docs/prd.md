@@ -64770,3 +64770,7 @@ A sweep of the phone's ways back found Settings leaving for other rooms: a Subsc
 ## §1144 — Reading's calendar draws each feed's own face, the rarest that wrote that day, and counts nothing (user, 2026-10-06: "the calendar in the reading room looks horrible"; "it should look like the other calendars"; "i don't think we need to count the number of feeds per day"; "RSS icon i guess is on every day and the other blogs aren't")
 
 Reading's Subscriptions box marked every post: a feed that posts many times a day filled every day with its title's letter ("F") and a post count. Now a feed marks a day once, wearing its row's picture (`WalletCalendar.Mark.url`, else its seat's mark), the rarest feed first so a blog takes the day it wrote over a feed that posts daily (`FollowingViews.marks`), and the box draws no count (`WalletCalendar.counts`). Day's and the Wallet's calendars are unchanged.
+
+## §1145 — Settings › Apps is only yours; Add is the one door to the rest (user, 2026-10-06: "clicking the N More in each category brings up the add menu"; "it is a bit confusing"; "yes remove those links"; amends §1138 item 3)
+
+Settings › Apps lists the apps you have, under category headers A–Z, Other last; the "N more in <Category>" links §1138 put under each category are deleted, because they opened the same catalogue as Add (§1142) and made two doors to one place. A category you have nothing in draws no header. With nothing connected the list says "No apps yet" over Add's sentence.
