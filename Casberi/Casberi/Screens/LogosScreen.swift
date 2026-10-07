@@ -106,11 +106,9 @@ struct LogosScreen: View {
         }
         .onAppear {
             countWeek()
-            takePendingOffer()
             if logos.connected { Task { await sync() } }
         }
         .onChange(of: logos.accounts) { _, _ in countWeek() }
-        .onChange(of: LogosObserver.shared.pendingOffer) { _, _ in takePendingOffer() }
     }
 
     /// The page's one sentence: the exposure while a network node is set;
@@ -396,11 +394,4 @@ struct LogosScreen: View {
         } while syncPending && logos.connected
     }
 
-    /// An offer handed in by link waits on `LogosObserver` until this page
-    /// can raise its consent tray.
-    private func takePendingOffer() {
-        guard let offer = LogosObserver.shared.pendingOffer else { return }
-        LogosObserver.shared.pendingOffer = nil
-        pairOffer = PairOffer(offer: offer)
-    }
 }

@@ -416,3 +416,8 @@ enum LogosObserverWire {
         return Data(base64Encoded: s)
     }
 }
+
+/// One offer is one bootstrap secret, single use.
+extension LogosObserverWire.Offer: Identifiable {
+    var id: String { secret }
+}

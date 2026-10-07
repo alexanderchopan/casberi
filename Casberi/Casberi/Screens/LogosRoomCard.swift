@@ -190,7 +190,10 @@ struct LogosRoomFigure: View {
     }
 
     @ViewBuilder private func chatEmpty(_ headline: String, _ words: String) -> some View {
-        DSEmptyState(headline: Text(headline), words: Text(words), scale: .room(section.skeleton))
+        // The fix is the point of each state ("Open Chat in Logos Basecamp…"),
+        // so it is drawn as the note, not only spoken as the words.
+        DSEmptyState(headline: Text(headline), words: Text(words),
+                     scale: .room(section.skeleton), note: Text(words))
     }
 
     @ViewBuilder private func note(_ text: String) -> some View {

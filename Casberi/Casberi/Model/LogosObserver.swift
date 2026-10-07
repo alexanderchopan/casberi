@@ -42,10 +42,6 @@ final class LogosObserver {
         }
     }
 
-    /// An offer that arrived by link (`logos-observer://pair?…`, the system
-    /// camera's hand-off), waiting for the Logos page to show its consent tray.
-    var pendingOffer: LogosObserverWire.Offer?
-
     /// The last thing the Observer refused, in words, for the page to show.
     private(set) var notice: String?
 
@@ -205,10 +201,13 @@ final class LogosObserver {
         switch await signed("GET", "/v2/chat/conversations", paired: paired, key: key) {
         case .answered(200, let json):
             switch LogosObserverWire.chatAvailability(json) {
-            case .notStarted?: chat = .notStarted
             case .available?:
-                chat = LogosObserverWire.conversations(json).map(ChatState.ready) ?? .unreachable
-            default: chat = .unreachable
+                chat = LogosObserverWire.conversations(json).map(ChatState.ready) ?? .notStarted
+            // The Observer answered, so it is reachable: a `null` body is its
+            // bridge to Basecamp failing (Basecamp closed, the bridge not
+            // started), which the person fixes the same way as an unstarted
+            // Chat — on their computer, never by checking the network.
+            default: chat = .notStarted
             }
         case .answered(let code, let json):
             if LogosObserverWire.refusal(status: code, json: json)?.dropsCredential == true {
