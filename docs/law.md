@@ -222,7 +222,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1314 of 1378 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1315 of 1379 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1525,7 +1525,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1168 — Today wears the inbox tray (amended by §1169)
 - §1169 — Empty Today is a preview of itself, and every room's All is a stack
 - §1170 — Settings' rows are Today's size
-- §1171 — One search: the tray finds everything you have, and a place's bar only adds [+2 sub-entries]
+- §1171 — One search: the tray finds everything you have, and a place's bar only adds (amended by §1185) [+2 sub-entries]
 - §1172 — Four small fixes: the box's figures share a column, a subscription in your head, Edit on a subscription, and Alerts'… (amended by §1180)
 - §1173 — The demo has three calendars
 - §1174 — A chart's windows are tiles, and the hour is one of them
@@ -1538,6 +1538,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1181 — The money receipt stands in the room's frame, its fourth tile keeps up with it, and its history is this year's totals
 - §1182 — A card spend draws its card, an open transfer its steps, and an event its day
 - §1184 — Every sheet's fourth tile keeps up with it, and a sheet is one row of four
+- §1185 — The tray's search stands its hits under their categories, and finds companies, what you hold and your things
 
 ## Dead rulings → what replaced them (generated)
 

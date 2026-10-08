@@ -1,0 +1,263 @@
+<!doctype html>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Search everything</title>
+<style>
+:root{--ground:#0b0b0f;--ink:#eeecf3;--ink2:#a29ead;--page:#000;--box:#1c1c1e;--raised:#2a2a2d;--sel:#1e6fe6;--text:#fff;--text2:#ebebf599;--text3:#ebebf566;
+  --pink:#ff2d87;--up:#30d158;--down:#ff453a;--rounded:ui-rounded,"SF Pro Rounded",-apple-system,sans-serif}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;-webkit-font-smoothing:antialiased;padding:32px 16px 64px}
+header,section,.verdict{max-width:1680px;margin:0 auto}
+h1{font:700 28px/34px var(--rounded)}
+h2{font:700 22px/28px var(--rounded);margin-top:48px}
+p.desc{font-size:15px;line-height:22px;color:var(--ink2);max-width:900px;margin-top:6px}
+.stage{display:flex;gap:28px;flex-wrap:wrap;margin-top:20px;align-items:flex-start}
+figure{width:393px;max-width:100%}
+figcaption{font-size:13px;line-height:19px;color:var(--ink2);margin:12px 6px 0}
+figcaption b{color:var(--ink)}
+code{font:12px ui-monospace,Menlo,monospace;color:var(--ink)}
+.tag{display:inline-block;font:600 12px var(--rounded);color:var(--ink2);background:#ffffff14;border-radius:99px;padding:3px 9px;margin-bottom:8px}
+.tag.new{color:#fff;background:var(--pink)}
+.tag.rec{color:#000;background:var(--up)}
+
+.phone{background:var(--page);color:var(--text);border-radius:48px;height:852px;overflow:hidden;position:relative;outline:1px solid #ffffff14;box-shadow:0 24px 70px #0008}
+.room{padding:62px 16px 0;opacity:.35;filter:blur(2px)}
+.title{font:700 34px/41px var(--rounded);margin-bottom:12px;white-space:nowrap}
+.title .p{color:var(--pink)} .title .dot{color:var(--text3);font-weight:400}
+.box{background:var(--box);border-radius:26px;height:236px}
+.tray{position:absolute;left:10px;right:10px;top:56px;bottom:300px;border-radius:32px;background:#1f1f22f2;backdrop-filter:blur(24px);outline:1px solid #ffffff14;padding:14px 16px;overflow:hidden}
+.field{display:flex;align-items:center;gap:8px;height:40px;border-radius:12px;background:#ffffff1a;padding:0 12px;font-size:17px;margin-bottom:4px}
+.field .g{color:var(--text2)} .field .q{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis} .field .x{color:var(--text3)}
+.caret{display:inline-block;width:2px;height:20px;background:var(--sel);vertical-align:-4px;margin-left:1px}
+.sec{display:flex;align-items:center;gap:6px;font-size:12px;line-height:16px;color:var(--text2);margin:12px 0 0}
+.sec .gl{font-size:12px;width:14px;text-align:center}
+.row{display:flex;align-items:center;gap:12px;min-height:50px}
+.row.sub{min-height:40px;padding-left:58px;gap:10px}
+.ic{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;font:700 15px var(--rounded);color:#fff;flex:none;background:var(--raised)}
+.ic.sq{border-radius:10px}
+.ic.big{width:46px;height:46px;border-radius:12px;font-size:19px}
+.ic.sm{width:28px;height:28px;font-size:12px}
+.ic.g{color:var(--text)}
+.b{flex:1;min-width:0}
+.n{font-size:17px;line-height:22px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.n.big{font-size:20px;line-height:25px;font-weight:600}
+.n.sm{font-size:15px;line-height:20px}
+.n mark{background:none;color:inherit;font-weight:600}
+.n .tk{color:var(--text2);font-weight:400}
+.s{font-size:13px;line-height:18px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.t{text-align:right;flex:none}
+.t .v{font-size:17px;line-height:22px;font-variant-numeric:tabular-nums}
+.t .d{font-size:13px;line-height:18px;font-variant-numeric:tabular-nums;color:var(--text3)}
+.t .d.up{color:var(--up)} .t .d.down{color:var(--down)}
+.t .w{font-size:15px;color:var(--text2)}
+.empty{font-size:15px;line-height:20px;color:var(--text2);margin:16px 0 6px}
+.fade{position:absolute;left:0;right:0;bottom:0;height:40px;background:linear-gradient(transparent,#1f1f22)}
+.kbd{position:absolute;left:0;right:0;bottom:0;height:292px;background:#2b2b2e;display:grid;place-items:center;color:var(--text3);font-size:13px}
+
+.verdict{margin-top:40px;font-size:15px;line-height:23px;color:var(--ink2);max-width:980px}
+.verdict b{color:var(--ink)}
+.verdict li{margin:6px 0 0 20px}
+.verdict h3{font:700 17px var(--rounded);color:var(--ink);margin-top:20px}
+</style>
+
+<header>
+  <h1>Search everything: an app that's also a stock, and your tokens</h1>
+  <p class="desc">Two test searches: <b>"spotify"</b> (an app you've connected, a stock, a subscription and a mailing list) and <b>"meta"</b> (the company behind Muse, Instagram and Threads, plus an earnings call on your calendar and MetaMask Card in Wallet). Each one is drawn in three layouts, then the token cases. The prices are the demo's sample quotes (<code>CompanyPacks.demoPrices</code>: SPOT 690, META 760), not real prices. The glyphs stand in for SF Symbols, and the letter squares stand in for app icons and company logos.</p>
+</header>
+
+<section>
+<h2>1 · "spotify": the same hits, three ways to group them</h2>
+<div class="stage">
+  <figure><span class="tag">Today</span><div class="phone" id="s0"></div>
+    <figcaption><b>What ships now.</b> The tray only matches names, so you get the app and the hand-off to Find. The stock, what you pay and the mail all hide behind that one row.</figcaption></figure>
+  <figure><span class="tag new">A · By kind</span><div class="phone" id="s1"></div>
+    <figcaption><b>Today's kinds, plus Markets and Things.</b> Every hit is there, but "Spotify" appears five times under five headers, and the headers name data types (Mail lists, Subscriptions), not places you know.</figcaption></figure>
+  <figure><span class="tag new">B · Best match on top</span><div class="phone" id="s2"></div>
+    <figcaption><b>One name, every face.</b> The best match leads in a larger row. Under it, in the text column, are the other faces of the same service: the stock, what you pay, the mail. This builds on §1113's one identity per service (<code>ServiceIdentity</code>), with the company coming from <code>CompanyPacks</code>.</figcaption></figure>
+  <figure><span class="tag rec">C · By category</span><div class="phone" id="s3"></div>
+    <figcaption><b>The tray's own categories.</b> Each hit stands under the category where it lives: the app and its plays in Media, the stock in Markets, the subscription and the charge in Wallet, the mail in Day. The empty tray is already a list of categories, and Home groups by category (§1152), so search reads the same way.</figcaption></figure>
+</div>
+</section>
+
+<section>
+<h2>2 · "meta": where grouping by category pays off</h2>
+<div class="stage">
+  <figure><span class="tag new">A · By kind</span><div class="phone" id="m1"></div>
+    <figcaption><b>By kind.</b> It's correct but flat. The earnings call is under Calendars and Muse is under Apps, and nothing says Muse and Instagram both come from the company at the top.</figcaption></figure>
+  <figure><span class="tag new">B · Best match on top</span><div class="phone" id="m2"></div>
+    <figcaption><b>The company leads</b>, because no app is called exactly "meta". Its faces are your apps made by Meta and the call on your calendar. MetaMask Card matched only the letters, so it falls below.</figcaption></figure>
+  <figure><span class="tag rec">C · By category</span><div class="phone" id="m3"></div>
+    <figcaption><b>Your example.</b> Markets leads because it holds the exact name. Then come Day (the earnings call, Meta's developer mail), Agents (Muse) and Social (Instagram, plus Threads to add), all in your dock order. Wallet's MetaMask Card sits further down, out of view here.</figcaption></figure>
+</div>
+</section>
+
+<section>
+<h2>3 · Tokens, a pasted address, a typo, nothing (drawn in C)</h2>
+<div class="stage">
+  <figure><div class="phone" id="t1"></div>
+    <figcaption><b>"eth".</b> Wallet leads with what you hold: the coin across every chain in one row, its value, and the amount underneath. Wrapped and staked versions follow, then the transfers you made. "ethereum", "Ether" and "$ETH" land on the same row (<code>TokenWatch.householdNames</code>, with <code>$</code> stripped as in <code>MarketsIndex.search</code>). A token you hold is shown once, in Wallet. Markets shows only coins you watch and don't hold. Under Hide balances, the figures become dots.</figcaption></figure>
+  <figure><div class="phone" id="t2"></div>
+    <figcaption><b>A pasted 0x… address.</b> It's recognised before any matching runs. If it's in your book, it shows by its name (the wallet you watch) with its transfers. A stranger's address gets <b>Watch this wallet</b>, as an Add row (§1171a). A token's contract address resolves to the token.</figcaption></figure>
+  <figure><div class="phone" id="t3"></div>
+    <figcaption><b>"spotfy".</b> Nothing contains those letters, so the nearest names show under one honest header, "Closest to". Close matching runs only when nothing matches exactly, so it never pushes aside a real hit.</figcaption></figure>
+  <figure><div class="phone" id="t4"></div>
+    <figcaption><b>Nothing at all.</b> One sentence says so, then the two places that look further. Markets' New searches the live market, shown here because the words could be a ticker. Find searches every word you've kept. Today the tray just shows Find, with no sentence.</figcaption></figure>
+</div>
+</section>
+
+<div class="verdict">
+  <b>Recommendation: C, by category</b>
+  <ul>
+    <li><b>Why C.</b> The tray is already a list of categories with apps under them, and Home is by category. Search that groups the same way reads as the same tray, filtered. A asks you to learn data types. B gets better when there's an exact name, but needs a second layout for when there isn't one (as with "meta").</li>
+    <li><b>Order.</b> First the place you opened from (as §1171 does now), then the category holding an exact name, then dock order (<code>CategoryOrder.current</code>).</li>
+    <li><b>Inside a category:</b> names (apps, accounts, people, lists), then money rows (holdings, stocks, subscriptions, with the figure at the trailing edge), then up to two things. Four rows at most. A category with more ends in "N more in Reading", which opens Find scoped to that category.</li>
+    <li><b>Apps to add</b> stay in their category with Add at the trailing edge, so Threads sits under Social instead of a separate Add section at the bottom.</li>
+    <li><b>Find is still the last row</b>, and still searches every word.</li>
+  </ul>
+  <h3>Already built, just not wired to the tray</h3>
+  <ul>
+    <li>Company search by name, ticker, or an app it makes: <code>MarketsIndex.search</code> + <code>CompanyPacks</code> (Muse → Meta, Spotify → SPOT).</li>
+    <li>Token names ↔ tickers: <code>TokenWatch.householdNames</code>. Holdings: <code>HoldingsCache</code>.</li>
+    <li>One identity per service (plan, app, mailing list): <code>ServiceIdentity</code>.</li>
+    <li>Things ranked by words and meaning: <code>Retriever.find</code>, the engine behind Find.</li>
+  </ul>
+  <h3>Engineering that comes with it</h3>
+  <ul>
+    <li>Search stops running in <code>body</code> on every keystroke. It waits about 150ms after the last key, ranks off the main actor, and only the things search uses the embedding model, capped.</li>
+    <li>Pasted text is recognised first: an address, a tx hash or a link.</li>
+    <li>Close-name matching for typos, used only when nothing matches exactly.</li>
+  </ul>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+const hi=(t,w)=>w?t.replace(new RegExp(esc(w),'i'),m=>`<mark>${m}</mark>`):t;
+const room=(a,b)=>`<div class="room"><div class="title"><span class="p">${a}</span> <span class="dot">·</span> ${b}</div><div class="box"></div></div>`;
+const field=q=>`<div class="field"><span class="g">⌕</span><span class="q">${q}<span class="caret"></span></span><span class="x">⊗</span></div>`;
+const shell=(a,b,q,body)=>`${room(a,b)}<div class="tray">${field(q)}${body}<div class="fade"></div></div><div class="kbd">keyboard</div>`;
+
+// glyph stand-ins for the dock categories (CategoryFold.glyphs)
+const G={Wallet:'$',Markets:'↗',Day:'▦',Agents:'›_',Media:'▶',Social:'❝',Reading:'▤',Life:'☺',Work:'⌨',Testnets:'⚗'};
+const sec=t=>`<div class="sec">${t}</div>`;
+const cat=c=>`<div class="sec"><span class="gl">${G[c]}</span>${c}</div>`;
+
+// a row: lead, name, line, trailing
+const row=({ic,col,shape='',name,w,sub,tr,cls=''})=>`<div class="row ${cls}">
+  <div class="ic ${shape}" ${col?`style="background:${col}"`:''}>${ic}</div>
+  <div class="b"><div class="n">${hi(name,w)}</div>${sub?`<div class="s">${sub}</div>`:''}</div>${tr||''}</div>`;
+const sub=({ic,col,shape='',name,w,tr})=>`<div class="row sub">
+  <div class="ic sm ${shape}" ${col?`style="background:${col}"`:''}>${ic}</div>
+  <div class="b"><div class="n sm">${hi(name,w)}</div></div>${tr||''}</div>`;
+const money=(v,d,dir)=>`<div class="t"><div class="v">${v}</div>${d?`<div class="d ${dir||''}">${d}</div>`:''}</div>`;
+const word=t=>`<div class="t"><div class="w">${t}</div></div>`;
+const find=w=>row({ic:'⌕',name:`Search your things for “${w}”`});
+
+// brand-ish squares (stand-ins for BridgeIcon and FMP logos)
+const SP='#1db954', META='#0866ff', IG='#d62976', TH='#333', MU='#5b5bd6', MM='#f6851b', ETH='#627eea', CARD='#2c2c2e';
+
+// ---------- spotify ----------
+const w='spotify';
+$('s0').innerHTML=shell('Alex','Today','spotify',
+  row({ic:'S',col:SP,shape:'sq',name:'Spotify',w,tr:word('Media')})+find(w));
+
+$('s1').innerHTML=shell('Alex','Today','spotify',
+  row({ic:'S',col:SP,shape:'sq',name:'Spotify',w,tr:word('Media')})+
+  sec('Markets')+
+  row({ic:'S',col:SP,name:'Spotify Technology <span class="tk">SPOT</span>',w,tr:money('$690.00','+1.4%','up')})+
+  sec('Subscriptions')+
+  row({ic:'S',col:SP,shape:'sq',name:'Spotify Premium',w,sub:'Renews 14 Oct',tr:money('$11.99','a month')})+
+  sec('Mail lists')+
+  row({ic:'S',col:SP,name:'Spotify',w,sub:'3 this month'})+
+  sec('Things')+
+  row({ic:'S',col:SP,shape:'sq',name:'Played Late Night Tales',sub:'Spotify · 9:40'}));
+
+$('s2').innerHTML=shell('Alex','Today','spotify',
+  `<div class="row" style="min-height:64px;margin-top:6px"><div class="ic big" style="background:${SP}">S</div>
+    <div class="b"><div class="n big"><mark>Spotify</mark></div><div class="s">Connected · Media</div></div></div>`+
+  sub({ic:'↗',name:'SPOT · Spotify Technology',tr:money('$690.00','+1.4%','up')})+
+  sub({ic:'$',name:'Premium, renews 14 Oct',tr:money('$11.99','a month')})+
+  sub({ic:'✉',name:'Mail · 3 this month'})+
+  sec('Things')+
+  row({ic:'S',col:SP,shape:'sq',name:'Played Late Night Tales',sub:'Spotify · 9:40'})+
+  row({ic:'$',col:CARD,name:'Spotify',w,sub:'Apple Card · 14 Sep',tr:money('−$11.99')})+
+  find(w));
+
+$('s3').innerHTML=shell('Alex','Today','spotify',
+  cat('Media')+
+  row({ic:'S',col:SP,shape:'sq',name:'Spotify',w,sub:'Played Late Night Tales · 9:40'})+
+  cat('Markets')+
+  row({ic:'S',col:SP,name:'Spotify Technology <span class="tk">SPOT</span>',w,tr:money('$690.00','+1.4%','up')})+
+  cat('Wallet')+
+  row({ic:'S',col:SP,shape:'sq',name:'Spotify Premium',w,sub:'Renews 14 Oct · Apple Card',tr:money('$11.99','a month')})+
+  cat('Day')+
+  row({ic:'S',col:SP,name:'Spotify',w,sub:'Mail list · 3 this month'})+
+  find(w));
+
+// ---------- meta ----------
+const m='meta';
+$('m1').innerHTML=shell('Alex','Today','meta',
+  row({ic:'M',col:MM,shape:'sq',name:'MetaMask Card',w:m,tr:word('Wallet')})+
+  sec('Markets')+
+  row({ic:'∞',col:META,name:'Meta Platforms <span class="tk">META</span>',w:m,tr:money('$760.00','+2.1%','up')})+
+  sec('Calendars')+
+  row({ic:'▦',name:'Meta earnings call',w:m,sub:'Wed 29 Oct · 22:30'})+
+  sec('Mail lists')+
+  row({ic:'∞',col:META,name:'Meta for Developers',w:m,sub:'2 this month'})+
+  sec('Add')+
+  row({ic:'@',col:TH,shape:'sq',name:'Threads',sub:'Made by Meta',tr:word('Social')}));
+
+$('m2').innerHTML=shell('Alex','Today','meta',
+  `<div class="row" style="min-height:64px;margin-top:6px"><div class="ic big" style="background:${META};border-radius:50%">∞</div>
+    <div class="b"><div class="n big"><mark>Meta</mark> Platforms <span class="tk">META</span></div><div class="s">Makes Muse, Instagram, Threads</div></div>${money('$760.00','+2.1%','up')}</div>`+
+  sub({ic:'M',col:MU,shape:'sq',name:'Muse · Agents'})+
+  sub({ic:'◎',col:IG,shape:'sq',name:'Instagram · Social'})+
+  sub({ic:'▦',name:'Earnings call · Wed 29 Oct'})+
+  sec('Apps')+
+  row({ic:'M',col:MM,shape:'sq',name:'MetaMask Card',w:m,tr:word('Wallet')})+
+  sec('Things')+
+  row({ic:'▤',name:'What Meta’s quarter says about ads',w:m,sub:'The Ledger · 2 Oct'})+
+  find(m));
+
+$('m3').innerHTML=shell('Alex','Today','meta',
+  cat('Markets')+
+  row({ic:'∞',col:META,name:'Meta Platforms <span class="tk">META</span>',w:m,sub:'Makes Muse, Instagram, Threads',tr:money('$760.00','+2.1%','up')})+
+  cat('Day')+
+  row({ic:'▦',name:'Meta earnings call',w:m,sub:'Wed 29 Oct · 22:30 · Calendar'})+
+  row({ic:'∞',col:META,name:'Meta for Developers',w:m,sub:'Mail list · 2 this month'})+
+  cat('Agents')+
+  row({ic:'M',col:MU,shape:'sq',name:'Muse',sub:'Meta’s model, on your key'})+
+  cat('Social')+
+  row({ic:'◎',col:IG,shape:'sq',name:'Instagram',sub:'Made by Meta'})+
+  row({ic:'@',col:TH,shape:'sq',name:'Threads',sub:'Made by Meta',tr:word('Add')}));
+
+// ---------- tokens ----------
+$('t1').innerHTML=shell('Alex','Today','eth',
+  cat('Wallet')+
+  row({ic:'Ξ',col:ETH,name:'Ether <span class="tk">ETH</span>',w:'eth',sub:'2.41 ETH on 4 chains',tr:money('$8,912','+0.8%','up')})+
+  row({ic:'Ξ',col:'#00a3ff',name:'Lido Staked Ether <span class="tk">stETH</span>',w:'eth',sub:'0.32 stETH · Ethereum',tr:money('$1,184')})+
+  row({ic:'↑',name:'Sent 0.5 ETH to Uniswap',w:'eth',sub:'Base · yesterday',tr:money('−$1,849')})+
+  row({ic:'⇄',name:'Swapped 1,000 USDC → 0.27 ETH',w:'eth',sub:'Ethereum · 3 Oct'})+
+  row({ic:'E',col:'#7b61ff',shape:'sq',name:'Ether.fi Cash',w:'eth',sub:'Card · 4 spends this week'})+
+  cat('Testnets')+
+  row({ic:'F',col:'#444',shape:'sq',name:'Frames',sub:'0.8 test ETH',tr:word('Devnet')}));
+
+$('t2').innerHTML=shell('Alex','Today','0x71C7656EC7ab88b098defB751B7401B5f6d8976F',
+  cat('Wallet')+
+  row({ic:'◐',col:'#3a3a3c',name:'Savings',sub:'0x71C7…976F · Watching',tr:money('$24,310')})+
+  row({ic:'↓',name:'Received 1,200 USDC',sub:'from Coinbase · 30 Sep',tr:money('+$1,200')})+
+  row({ic:'↑',name:'Sent 0.5 ETH to Uniswap',sub:'Base · yesterday',tr:money('−$1,849')})+
+  row({ic:'⌕',name:'All 14 transfers with this address'})+
+  `<div class="s" style="margin-top:14px;line-height:19px">A stranger’s address shows one row instead:<br><span style="color:var(--text)">＋ Watch this wallet</span></div>`);
+
+$('t3').innerHTML=shell('Alex','Today','spotfy',
+  sec('Closest to “spotfy”')+
+  row({ic:'S',col:SP,shape:'sq',name:'Spotify',sub:'Media · connected'})+
+  row({ic:'S',col:SP,name:'Spotify Technology <span class="tk">SPOT</span>',sub:'Markets',tr:money('$690.00','+1.4%','up')})+
+  row({ic:'S',col:SP,shape:'sq',name:'Spotify Premium',sub:'Wallet · renews 14 Oct',tr:money('$11.99','a month')})+
+  find('spotfy'));
+
+$('t4').innerHTML=shell('Alex','Today','qzx',
+  `<div class="empty">Nothing you have is called “qzx”.</div>`+
+  row({ic:'↗',name:'Look up “QZX” in Markets',sub:'Stocks and coins you don’t watch yet'})+
+  find('qzx'));
+</script>

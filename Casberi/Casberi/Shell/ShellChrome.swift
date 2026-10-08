@@ -369,6 +369,19 @@ final class ShellChrome {
     /// once it stands, and clears this.
     var walletFollowPending = false
 
+    /// What the tray's search asks Markets to open (prd §1185): a company's
+    /// sheet, or New with the words already typed. Markets raises it once it
+    /// stands, and clears this.
+    enum MarketsRequest: Equatable {
+        case company(CompanyPacks.Company)
+        case lookUp
+    }
+    var marketsRequest: MarketsRequest?
+
+    /// Words the tray's search hands to the sheet it opens (Markets' New,
+    /// Watch a wallet), typed into its field on appear and cleared there.
+    var searchDraft: String?
+
     struct AccountRail: Equatable {
         let source: String
         let slots: [DSAccountSlot]

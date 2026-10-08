@@ -31,6 +31,17 @@ extension FeedScreen {
                                  bottom: DSRoomChassis.leadGap, trailing: DSRoomChassis.inset))
             .listRowSeparator(.hidden)
         }
+        // The tray's search can open a company or New from any room (prd
+        // §1185), so it asks; the room raises once it stands. The box stands
+        // on every Markets tile, so the ask is heard whichever is picked.
+        .onChange(of: chrome.marketsRequest, initial: true) { _, request in
+            guard let request, isActive else { return }
+            chrome.marketsRequest = nil
+            switch request {
+            case .company(let company): openCompany(company)
+            case .lookUp: feedSheet = .watchAdd
+            }
+        }
     }
 
     /// "Watchlist" and its order, one menu, on the rows' line (prd §1081:

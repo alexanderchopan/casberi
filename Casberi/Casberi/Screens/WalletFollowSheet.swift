@@ -44,7 +44,11 @@ struct WalletFollowSheet: View {
         }
         .task { load() }
         .task(id: trimmed) { await resolve() }
-        .onAppear { fieldFocused = true }
+        .onAppear {
+            // The words the tray's search was holding (prd §1185).
+            if let draft = chrome?.searchDraft { query = draft; chrome?.searchDraft = nil }
+            fieldFocused = true
+        }
     }
 
     private var trimmed: String { query.trimmingCharacters(in: .whitespacesAndNewlines) }

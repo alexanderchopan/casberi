@@ -51,7 +51,11 @@ struct WatchAddSheet: View {
         }
         .task { await loadSuggestions() }
         .task(id: query) { await search() }
-        .onAppear { fieldFocused = true }
+        .onAppear {
+            // The words the tray's search was holding (prd §1185).
+            if let draft = chrome?.searchDraft { query = draft; chrome?.searchDraft = nil }
+            fieldFocused = true
+        }
     }
 
     // MARK: - The field, at the bottom on glass

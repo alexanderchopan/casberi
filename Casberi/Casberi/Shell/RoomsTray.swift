@@ -152,9 +152,9 @@ struct RoomsTray: View {
             if let words = UserDefaults.standard.string(forKey: "traySearch") {
                 await readKinds()
                 query = words
-                NSLog("[Casberi] traySearch: %@ | %d notes read", words, noteCorpus.count)
-                for (kind, hits) in sections(words) {
-                    NSLog("[Casberi] traySearch| %@ | %@", "\(kind)", hits.map(\.name).joined(separator: ", "))
+                NSLog("[Casberi] traySearch: %@ | %d notes, %d holdings read", words, noteCorpus.count, holdings.count)
+                for group in search(words) {
+                    NSLog("[Casberi] traySearch| %@ | %@", group.title, group.hits.map(\.name).joined(separator: ", "))
                 }
             }
         }
@@ -164,11 +164,15 @@ struct RoomsTray: View {
             // they are simply there.
             dealt = up
             if up && !reduceMotion { bounceTick += 1 }
-            if !up { query = ""; searching = false; noteCorpus = [] }
+            if !up { query = ""; searching = false; noteCorpus = []; holdings = [] }
         }
         .onChange(of: searching) { _, focused in
             if focused { Task { await readKinds() } }
         }
+        // The search runs once the typing pauses, never in a body (prd
+        // §1185), and again when the kinds it reads have landed.
+        .task(id: query) { await runSearch() }
+        .onChange(of: kindsRead) { _, _ in Task { await runSearch(pause: false) } }
     }
 
     // MARK: - The card
@@ -621,14 +625,34 @@ struct RoomsTray: View {
     /// One thing the search can land on.
     private struct Hit: Identifiable {
         let id: String
-        let kind: Kind
+        /// The group it stands under (prd §1185): a category, Markets or You.
+        let group: String
         let name: String
-        /// Where it lives ("Wallet", "You") for a name in the tray, else a
-        /// line under the name (a note's next line, a feed's app).
-        var place: String? = nil
+        /// Other words that find it: a ticker, a coin's other names, the
+        /// company that makes an app ("meta" finds Muse).
+        var aliases: [String] = []
+        var tier: TraySearch.Tier = .name
+        /// A sentence (a thing's title) matches at a word's start only.
+        var anyWord = false
+        /// Matched elsewhere already (a note Find's engine found by its words).
+        var given: TraySearch.Match? = nil
+        /// A line under the name.
         var line: String? = nil
+        var trailing: Trailing? = nil
+        /// The company a Markets row stands for, so its quote is read.
+        var company: CompanyPacks.Company? = nil
         let mark: Mark
         let act: () -> Void
+    }
+
+    /// What a hit draws at its trailing edge.
+    private enum Trailing {
+        /// A word: Add, for an app you could connect.
+        case word(String)
+        /// A company's price and day move, drawn as they arrive.
+        case quote(CompanyPacks.Listing)
+        /// A figure you hold or pay, already through Hide balances.
+        case money(String)
     }
 
     /// What a hit draws at its leading edge.
@@ -636,45 +660,67 @@ struct RoomsTray: View {
         case face(FolderItem.Face)
         case glyph(String)
         case icon(String, symbol: String?)
+        case asset(String)
         case dot(Color)
     }
 
-    /// THE ONE SEARCH'S KINDS (prd §1171, user: "should we make the tray
-    /// search be for everything and then we have no capsule for search").
-    /// The kinds of the place you opened the tray from lead (Notes' notes,
-    /// Settings' lists); then the tray's own names, headless, as the search
-    /// has always drawn them (§1133e); then each other kind under its word,
-    /// A–Z; then the apps you could add (§1171a, user: "the tray should work
-    /// so that you can search for anything from anywhere"), last before Find.
-    private enum Kind: Int, CaseIterable {
-        case names, calendars, feeds, mailLists, notes, people, subscriptions, add
-
-        var title: LocalizedStringKey? {
-            switch self {
-            case .names:         nil
-            case .calendars:     "Calendars"
-            case .feeds:         "Feeds"
-            case .mailLists:     "Mail lists"
-            case .notes:         "Notes"
-            case .people:        "People"
-            case .subscriptions: "Subscriptions"
-            case .add:           "Add"
-            }
-        }
-
-        /// How many rows a kind draws before Find takes over.
-        static let cap = 5
+    /// One group of results as the tray draws it.
+    private struct Found: Identifiable {
+        let id: String
+        let title: String
+        let glyph: String?
+        let hits: [Hit]
     }
 
-    /// The kinds the standing place holds, which lead the results: Notes'
-    /// notes, Settings' lists.
-    private var leadingKinds: Set<Kind> {
-        guard route.path.isEmpty else { return [] }
-        if Pinboard.isPinnedRoom(filter.source) { return [.notes] }
-        if HomeScope.Place(source: filter.source) == .settings {
-            return [.calendars, .feeds, .mailLists, .people, .subscriptions]
+    /// The search's answer, set after a pause in the typing, never in a body
+    /// (prd §1185): every keystroke rebuilt every hit and ran Find's engine
+    /// over your notes inside `body`, on every render.
+    @State private var results: [Found] = []
+    /// The words `results` answers, so "nothing" is said only once the
+    /// search for these words has run.
+    @State private var resultsFor = ""
+    /// What you hold, read with the other kinds when the field is focused.
+    @State private var holdings: [WalletPortfolio.Position] = []
+    /// Bumped when the kinds have been read, so a search typed before they
+    /// landed runs again with them.
+    @State private var kindsRead = 0
+
+    /// How long the typing pauses before the search runs.
+    static let searchPause = 140
+
+    /// Search the words after the pause and keep the answer; a newer word
+    /// cancels this one. Then read the quotes of the companies it shows.
+    private func runSearch(pause: Bool = true) async {
+        let words = query.trimmingCharacters(in: .whitespaces)
+        guard !words.isEmpty else {
+            results = []
+            resultsFor = ""
+            return
         }
-        return []
+        if pause {
+            try? await Task.sleep(for: .milliseconds(Self.searchPause))
+            guard !Task.isCancelled else { return }
+        }
+        let found = search(words)
+        results = found
+        resultsFor = words
+        let companies = found.flatMap(\.hits).compactMap(\.company)
+        if !companies.isEmpty { await CompanyQuotes.shared.load(companies) }
+    }
+
+    /// The group the place you stand in leads with: your notes and You's
+    /// places in You, Markets in Markets, a room in its category.
+    private var standingGroup: String? {
+        guard route.path.isEmpty, filter.source != "All" else { return nil }
+        if HomeScope.isMarkets(filter.source) { return Self.markets }
+        if HomeScope.contains(filter.source) { return TraySearch.you }
+        return standingCategory
+    }
+
+    /// The company behind an app, as a word that finds the app ("meta" finds
+    /// Muse and Instagram).
+    private static func maker(_ app: String) -> [String] {
+        CompanyPacks.makers[app].map { [$0.company] } ?? []
     }
 
     /// Everything the tray holds, as hits: You's places, each category and
@@ -682,95 +728,219 @@ struct RoomsTray: View {
     /// rows draw, so a hit lands where its icon would.
     private var nameHits: [Hit] {
         var hits = youDoors.map { door in
-            Hit(id: "you:" + door.key, kind: .names, name: door.word, place: String(localized: "You"),
-                mark: .face(.place(door.glyph)), act: door.act)
+            Hit(id: "you:" + door.key, group: door.key == Self.markets ? Self.markets : TraySearch.you,
+                name: door.word, mark: .face(.place(door.glyph)), act: door.act)
         }
         for category in categories {
-            hits.append(Hit(id: "cat:" + category, kind: .names, name: category,
+            hits.append(Hit(id: "cat:" + category, group: category, name: category,
                             mark: .glyph(CategoryFold.glyph(for: category))) { pickCategory(category) })
             for item in folder(for: category).items {
-                hits.append(Hit(id: category + ":" + item.id, kind: .names, name: item.name, place: category,
-                                mark: .face(item.face), act: item.act))
+                hits.append(Hit(id: category + ":" + item.id, group: category, name: item.name,
+                                aliases: Self.maker(item.name), mark: .face(item.face), act: item.act))
             }
         }
         return hits
     }
 
-    /// Settings' kinds, by name (prd §1171, was Settings' own search,
-    /// §1153): each lands where Settings would open it.
+    /// Settings' kinds, by name (prd §1171), each under the category it
+    /// belongs to (§1185) and landing where Settings would open it; then
+    /// every app you could add, under its own category.
     private var kindHits: [Hit] {
         var hits: [Hit] = []
         for cal in phoneCalendars {
-            hits.append(Hit(id: "cal:" + cal.id, kind: .calendars, name: cal.title, line: cal.account,
+            hits.append(Hit(id: "cal:" + cal.id, group: "Day", name: cal.title, line: cal.account,
                             mark: .dot(cal.color)) { landInSettings(.kind(.calendars)) })
         }
         for cal in CalendarSubscriptionStore.shared.calendars {
-            hits.append(Hit(id: "calsub:" + cal.id.uuidString, kind: .calendars, name: cal.displayName,
+            hits.append(Hit(id: "calsub:" + cal.id.uuidString, group: "Day", name: cal.displayName,
                             mark: .glyph(ScopeTileGlyph.calendars)) { landInSettings(.kind(.calendars)) })
         }
         for room in Following.Room.allCases {
+            let group = switch room {
+            case .reading: "Reading"
+            case .media:   "Media"
+            case .work:    "Work"
+            }
             for item in FollowingReading.shared.items(for: room) {
-                hits.append(Hit(id: "feed:\(room.rawValue):" + item.id, kind: .feeds, name: item.name,
+                hits.append(Hit(id: "feed:\(room.rawValue):" + item.id, group: group, name: item.name,
                                 line: item.seat, mark: .icon(item.seat, symbol: nil)) {
                     landInSettings(.sheet(.following(item.id, room)))
                 })
             }
         }
         for item in MailSubscriptionsReading.shared.items {
-            hits.append(Hit(id: "list:" + item.id, kind: .mailLists, name: item.name, line: item.address,
+            hits.append(Hit(id: "list:" + item.id, group: "Day", name: item.name, line: item.address,
                             mark: .icon(item.name, symbol: nil)) { landInSettings(.sheet(.mailList(item.id))) })
         }
         // People (prd §1136 item 3): they live in Settings, so the search
         // finds them by name and lands on them there.
         for contact in ContactIndexSources.contacts
             where !contact.isUnnamed && !ContactIndexSources.isYours(contact) {
-            hits.append(Hit(id: "person:" + contact.id, kind: .people, name: contact.name,
+            hits.append(Hit(id: "person:" + contact.id, group: TraySearch.you, name: contact.name,
                             mark: .face(.person(contact))) { landInSettings(.person(contact.name)) })
         }
-        // Every catalogue app you have not connected, each opening the page
-        // its Connect stands on, as the catalogue's row does (prd §1171a).
-        // Markets is a place, never an app to add (§1167).
-        let connected = Set(bridges.bridges.filter { $0.status != .paused }.map(\.name))
-        for offer in BridgeCatalog.offers
-            where !connected.contains(offer.name) && BridgeCatalog.category(of: offer) != HomeScope.markets {
-            let name = offer.name
-            hits.append(Hit(id: "add:" + name, kind: .add, name: name,
-                            place: BridgeCatalog.category(of: offer), mark: .face(.app(name))) {
-                DSHaptic.selection()
-                close()
-                route.openSetup(forOffer: name)
-            })
-        }
         for item in SubscriptionsReading.shared.items {
-            hits.append(Hit(id: "plan:" + item.id, kind: .subscriptions, name: item.name,
+            let figure = item.amount.map {
+                BalancePrivacy.shared.value(CardSpendRoom.money($0, code: item.currency))
+            }
+            hits.append(Hit(id: "plan:" + item.id, group: CategoryFold.walletRoom, name: item.name,
+                            aliases: Self.maker(item.name), tier: .money,
                             line: item.next.map { String(localized: "Renews \($0.formatted(.dateTime.month(.abbreviated).day()))") },
+                            trailing: figure.map(Trailing.money),
                             mark: .icon(item.name, symbol: nil)) { landInSettings(.sheet(.subscription(item.id))) })
         }
+        hits += addHits
         return hits
     }
 
-    /// Your notes whose name holds the words as you type them
-    /// ("pack" finds Packing list), then the ones Find's engine finds by
-    /// their words (`Retriever.find`, as Notes' search tray did, prd §1099).
+    /// Every catalogue app you have not connected, under its category with
+    /// Add at its edge, each opening the page its Connect stands on, as the
+    /// catalogue's row does (prd §1171a, §1185). Markets is a place, never an
+    /// app to add (§1167).
+    private var addHits: [Hit] {
+        let connected = Set(bridges.bridges.filter { $0.status != .paused }.map(\.name))
+        return BridgeCatalog.offers
+            .filter { !connected.contains($0.name) && BridgeCatalog.category(of: $0) != HomeScope.markets }
+            .map { offer in
+                let name = offer.name
+                return Hit(id: "add:" + name, group: BridgeCatalog.category(of: offer), name: name,
+                           aliases: Self.maker(name), tier: .add,
+                           trailing: .word(String(localized: "Add")), mark: .face(.app(name))) {
+                    DSHaptic.selection()
+                    close()
+                    route.openSetup(forOffer: name)
+                }
+            }
+    }
+
+    /// Your notes whose name holds the words as you type them ("pack" finds
+    /// Packing list), then the ones Find's engine finds by their words
+    /// (`Retriever.find`, as Notes' search tray did, prd §1099), as things.
     /// Values are read here, after the live check, so no row touches a
     /// deleted model.
     private func noteHits(_ words: String) -> [Hit] {
         let live = noteCorpus.live
-        let named = live.filter { $0.title.localizedStandardContains(words) }
+        let named = live.filter { TraySearch.match($0.title, words, anyWord: true) != nil }
         let byName = Set(named.map(\.id))
-        let found = Retriever.find(words, in: live).hits.filter { !byName.contains($0.id) }
-        return (named + found).prefix(Kind.cap).compactMap { thing in
+        // Find's engine reads meaning as well as words, so under four letters
+        // it finds what merely looks alike ("eth" found "something").
+        let found = words.count < Self.wordsFloor ? []
+            : Retriever.find(words, in: live).hits.filter { !byName.contains($0.id) }.prefix(TraySearch.thingCap)
+        return (named.map { ($0, false) } + found.map { ($0, true) }).compactMap { thing, byWords in
             guard thing.isLive else { return nil }
             let id = thing.id
             let line = NotePreview.line(title: thing.title, content: thing.content,
                                         isVoice: thing.kind == .voice, isLocked: NoteLock.isLocked(thing))
                 ?? thing.capturedAt.formatted(date: .abbreviated, time: .omitted)
-            return Hit(id: "note:" + id.uuidString, kind: .notes, name: thing.title, line: line,
+            return Hit(id: "note:" + id.uuidString, group: TraySearch.you, name: thing.title,
+                       tier: byWords ? .thing : .name, anyWord: true, given: byWords ? .word : nil, line: line,
                        mark: .icon(thing.source, symbol: BridgeIcon.noteSymbol(for: thing))) {
-                close()
-                if let url = URL(string: "casberi://thing/\(id.uuidString)") { openURL(url) }
+                openThing(id)
             }
         }
+    }
+
+    /// The companies behind every app whose name, ticker or app the words
+    /// find (`MarketsIndex.matches`, Markets' own rule, prd §1082), with
+    /// their quote at the edge. Only traded ones: an unlisted company has
+    /// nothing to open.
+    private func companyHits(_ words: String) -> [Hit] {
+        // A coin you hold stands once, in Wallet, with what you hold.
+        let held = Set(holdings.map { $0.symbol.uppercased() })
+        return companyPool.filter { hit in
+            guard let company = hit.company else { return false }
+            if case .token = company.listing, let t = company.listing.ticker, held.contains(t.uppercased()) { return false }
+            return MarketsIndex.matches(words, MarketsWatch.entry(company))
+        }
+    }
+
+    /// Every traded company, as hits — the pool a typo reaches too.
+    private var companyPool: [Hit] {
+        let connected = Set(bridges.bridges.filter { $0.status != .paused }.map(\.name))
+        return TokensScope.everyCompany.filter { $0.listing != .unlisted }.map { company in
+            let ticker = company.listing.ticker
+            let apps = MarketsIndex.appsLine(MarketsWatch.entry(company), connected: connected)
+            let line = ([ticker].compactMap(\.self) + [apps.prefix(3).joined(separator: ", ")])
+                .filter { !$0.isEmpty }.joined(separator: " · ")
+            return Hit(id: "company:" + company.name, group: Self.markets, name: company.name,
+                       aliases: [ticker].compactMap(\.self) + company.seats, tier: .money,
+                       line: line, trailing: .quote(company.listing), company: company,
+                       mark: .icon(company.seats.first ?? company.name, symbol: nil)) {
+                openCompany(company)
+            }
+        }
+    }
+
+    /// What you hold, one row a coin across every wallet (`WalletPortfolio`),
+    /// its value at the edge through Hide balances; "ethereum" finds ETH.
+    private var holdingHits: [Hit] {
+        holdings.map { p in
+            Hit(id: "hold:" + p.symbol, group: CategoryFold.walletRoom, name: p.symbol,
+                aliases: TraySearch.aliases(forSymbol: p.symbol), tier: .money,
+                line: p.holders.prefix(2).map(\.label).joined(separator: " · "),
+                trailing: .money(WalletValue.money(p.usd)), mark: .asset(p.symbol)) {
+                chrome.walletScope = nil
+                chrome.walletSection = .holdings
+                pick(CategoryFold.walletRoom)
+            }
+        }
+    }
+
+    /// Things you kept whose title has a word starting with the words — a
+    /// transfer ("Sent 0.5 ETH"), a play, a mail — under the category of the
+    /// app they came from, two a group at most (§1185). Read off the store by
+    /// title alone, newest first; the rest of the words are Find's.
+    private func thingHits(_ words: String) -> [Hit] {
+        let q = TraySearch.normalized(words)
+        guard q.count >= 2 else { return [] }
+        let kept = NoteSheetSource.keptSource, watched = TokenWatch.source
+        var seen = Set<UUID>()
+        var out: [Hit] = []
+        for term in [q] + TraySearch.otherNames(q) {
+            var d = FetchDescriptor<Thing>(predicate: #Predicate<Thing> { $0.title.localizedStandardContains(term) },
+                                           sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
+            d.fetchLimit = Self.thingFetch
+            for thing in (try? context.fetch(d)) ?? []
+                where thing.isLive && thing.source != kept && thing.source != watched {
+                guard seen.insert(thing.id).inserted,
+                      let group = BridgeCatalog.category(forSource: thing.source) else { continue }
+                let id = thing.id
+                let line = BridgeCatalog.seatName(forSource: thing.source) + " · "
+                    + thing.capturedAt.formatted(.dateTime.month(.abbreviated).day())
+                out.append(Hit(id: "thing:" + id.uuidString, group: group, name: thing.title,
+                               tier: .thing, anyWord: true, line: line,
+                               mark: .icon(thing.source, symbol: nil)) { openThing(id) })
+            }
+        }
+        return out
+    }
+
+    /// The shortest words Find's engine searches your notes by.
+    static let wordsFloor = 4
+
+    /// How many things a word reads off the store before ranking.
+    static let thingFetch = 40
+
+    /// A pasted address: the wallet you watch, by its name, or Watch this
+    /// wallet with the address already typed.
+    private func addressHits(_ words: String) -> [Hit] {
+        guard TraySearch.isEVMAddress(words) else { return [] }
+        let short = WalletStore.shortAddress(words)
+        if let entry = WalletStore.shared.addresses.first(where: { WalletWatch.sameAddress($0.address, words) }) {
+            return [Hit(id: "addr:" + entry.address, group: CategoryFold.walletRoom,
+                        name: entry.label.isEmpty ? short : entry.label, given: .exact,
+                        line: entry.label.isEmpty ? nil : short, mark: .face(.wallet(entry.address))) {
+                chrome.walletScope = entry.address
+                pick(CategoryFold.walletRoom)
+            }]
+        }
+        return [Hit(id: "watch:" + words, group: CategoryFold.walletRoom,
+                    name: String(localized: "Watch this wallet"), tier: .add, given: .exact,
+                    line: short, mark: .glyph("plus")) {
+            chrome.searchDraft = words
+            chrome.walletFollowPending = true
+            pick(CategoryFold.walletRoom)
+        }]
     }
 
     /// The tray closes, then Settings rises on what was found.
@@ -779,8 +949,25 @@ struct RoomsTray: View {
         screen(.casberi)
     }
 
+    /// Open a thing's sheet or page.
+    private func openThing(_ id: UUID) {
+        close()
+        if let url = URL(string: "casberi://thing/\(id.uuidString)") { openURL(url) }
+    }
+
+    /// A company you watch opens its own page; one you don't, its sheet in
+    /// Markets (`FeedScreen.openCompany`, asked through the shell).
+    private func openCompany(_ company: CompanyPacks.Company) {
+        if let thing = MarketsWatch.watchedThing(company, context: context) {
+            openThing(thing.id)
+            return
+        }
+        chrome.marketsRequest = .company(company)
+        pickCategory(Self.markets)
+    }
+
     /// Read what the kinds need once the field is focused: notes, the
-    /// phone's calendars, and the readings Settings keeps.
+    /// phone's calendars, what you hold, and the readings Settings keeps.
     private func readKinds() async {
         let you = NoteSheetSource.keptSource
         var d = FetchDescriptor<Thing>(predicate: #Predicate<Thing> { $0.source == you },
@@ -788,46 +975,58 @@ struct RoomsTray: View {
         d.fetchLimit = 2_000
         noteCorpus = ((try? context.fetch(d)) ?? []).filter { $0.isLive && Pinboard.inRoom($0) }
         phoneCalendars = PhoneCalendar.readable(context)
+        // The last reading of every wallet, never a fetch: the demo's own
+        // fixture, else each wallet's stored sample (`WalletPortfolio`).
+        let portfolio = DemoMode.isActive
+            ? WalletPortfolio.demoFixture()
+            : WalletPortfolio.from(groups: WalletIngest.lastKnownHoldingsByWallet())
+        holdings = portfolio.positions.filter { $0.usd >= 1 }
         // People are found from the index's snapshot, which only Settings
         // and the book built; build it here so a person is found first time.
         _ = ContactIndexSources.rebuild(context: context)
         MailSubscriptionsReading.shared.refresh(context)
         for room in Following.Room.allCases { FollowingReading.shared.refresh(room, context: context) }
         await SubscriptionsReading.shared.refresh(context)
+        kindsRead += 1
     }
 
-    /// The hits for the words, by kind: a name that STARTS with the words
-    /// first ("co": Coinbase before Acorns), then any word in it, then
-    /// anywhere; the tray's order within.
-    private func sections(_ words: String) -> [(Kind, [Hit])] {
-        let w = words.lowercased()
-        func ranked(_ hits: [Hit]) -> [Hit] {
-            hits.enumerated()
-                .compactMap { i, hit -> (Int, Int, Hit)? in
-                    guard hit.name.localizedStandardContains(words) else { return nil }
-                    let name = hit.name.lowercased()
-                    let rank = name.hasPrefix(w) ? 0 : name.contains(" " + w) ? 1 : 2
-                    return (rank, i, hit)
-                }
-                .sorted { $0.0 != $1.0 ? $0.0 < $1.0 : $0.1 < $1.1 }
-                .map(\.2)
+    /// THE HITS FOR THE WORDS, BY CATEGORY (prd §1185, user: "if i search
+    /// meta it could show it in markets, day (calendar if i had), agents and
+    /// so on"). Every kind becomes candidates and `TraySearch` groups them:
+    /// the place you stand in first, a group holding the exact name next,
+    /// then You, Markets and the dock's order. When nothing matches, the
+    /// names closest to the words, under "Closest to".
+    private func search(_ words: String) -> [Found] {
+        let hits = nameHits + kindHits + noteHits(words) + companyHits(words)
+            + holdingHits + thingHits(words) + addressHits(words)
+        let candidates = hits.enumerated().map { i, hit in
+            TraySearch.Candidate(index: i, group: hit.group, name: hit.name, aliases: hit.aliases,
+                                 tier: hit.tier, anyWord: hit.anyWord, given: hit.given)
         }
-        let byKind = Dictionary(grouping: ranked(kindHits), by: \.kind)
-        let lead = leadingKinds
-        let order = Kind.allCases.filter { $0 != .names }
-            .sorted { (lead.contains($0) ? 0 : 1, $0.rawValue) < (lead.contains($1) ? 0 : 1, $1.rawValue) }
-        var out: [(Kind, [Hit])] = []
-        let names = ranked(nameHits)
-        for kind in order {
-            // The tray's names stand after the place's own kinds and before
-            // the rest: opened from Notes, your notes lead.
-            if !lead.contains(kind), !names.isEmpty, !out.contains(where: { $0.0 == .names }) {
-                out.append((.names, names))
+        let groups = TraySearch.groups(candidates, query: words, standing: standingGroup,
+                                       dockOrder: CategoryOrder.current)
+        if !groups.isEmpty {
+            return groups.map { g in
+                Found(id: g.name, title: g.name == TraySearch.you ? HomeScope.title : g.name,
+                      glyph: g.name == TraySearch.you ? nil : CategoryFold.glyph(for: g.name),
+                      hits: g.hits.map { said(hits[$0.index], for: words) })
             }
-            let hits = kind == .notes ? noteHits(words) : Array((byKind[kind] ?? []).prefix(Kind.cap))
-            if !hits.isEmpty { out.append((kind, hits)) }
         }
-        if !names.isEmpty, !out.contains(where: { $0.0 == .names }) { out.append((.names, names)) }
+        let pool = nameHits.filter { !$0.id.hasPrefix("cat:") } + addHits + companyPool
+        let near = TraySearch.closest(words, among: pool.map(\.name))
+        guard !near.isEmpty else { return [] }
+        return [Found(id: "closest", title: String(localized: "Closest to “\(words)”"), glyph: nil,
+                      hits: near.map { pool[$0] })]
+    }
+
+    /// An app found through its maker says so ("meta" finds Instagram,
+    /// "Made by Meta"), or the row would not say why it is there.
+    private func said(_ hit: Hit, for words: String) -> Hit {
+        guard hit.line == nil, TraySearch.match(hit.name, words) == nil,
+              let maker = Self.maker(hit.name).first,
+              TraySearch.match(maker, words) != nil else { return hit }
+        var out = hit
+        out.line = String(localized: "Made by \(maker)")
         return out
     }
 
@@ -835,18 +1034,38 @@ struct RoomsTray: View {
     private var searchResults: some View {
         let words = query.trimmingCharacters(in: .whitespaces)
         VStack(alignment: .leading, spacing: 0) {
-            let found = sections(words)
-            ForEach(found, id: \.0) { kind, hits in
-                // The names go headless when they lead; under a kind they
-                // need a word, or they read as more of it.
-                if let title = kind.title ?? (found.first?.0 == kind ? nil : "Apps") {
-                    Text(title)
-                        .dsText(.label12)
-                        .foregroundStyle(DS.textSecondary)
-                        .padding(.top, DS.Space.s3)
-                        .accessibilityAddTraits(.isHeader)
+            ForEach(results) { group in
+                HStack(spacing: DS.Space.s1) {
+                    if let glyph = group.glyph {
+                        Image(systemName: glyph).dsGlyph(.caption)
+                    }
+                    Text(verbatim: group.title).dsText(.label12)
                 }
-                ForEach(hits) { hit in hitRow(hit) }
+                .foregroundStyle(DS.textSecondary)
+                .padding(.top, DS.Space.s3)
+                .accessibilityElement(children: .combine)
+                .accessibilityAddTraits(.isHeader)
+                ForEach(group.hits) { hit in hitRow(hit) }
+            }
+            // Nothing, said once the search for these words has run: what
+            // could look further — Markets' New for a word that could be a
+            // ticker — then Find.
+            if results.isEmpty, resultsFor == words {
+                Text("Nothing you have is called “\(words)”.")
+                    .dsText(.body17)
+                    .foregroundStyle(DS.textSecondary)
+                    .padding(.top, DS.Space.s3)
+                if TraySearch.looksLikeTicker(words) {
+                    let ticker = TraySearch.normalized(words).uppercased()
+                    hitRow(Hit(id: "lookup", group: Self.markets,
+                               name: String(localized: "Look up “\(ticker)” in Markets"),
+                               line: String(localized: "Stocks and coins you don’t watch yet"),
+                               mark: .glyph(CategoryFold.glyph(for: Self.markets))) {
+                        chrome.searchDraft = ticker
+                        chrome.marketsRequest = .lookUp
+                        pickCategory(Self.markets)
+                    })
+                }
             }
             // Your things, through Find: the one search over everything kept.
             Button(action: searchThings) {
@@ -876,6 +1095,8 @@ struct RoomsTray: View {
                         roundIcon(glyph, ink: DS.textPrimary, fill: DS.surfaceRaised, bounces: false)
                     case .icon(let name, let symbol):
                         BridgeIcon(name: name, size: Self.icon, circular: true, symbol: symbol)
+                    case .asset(let symbol):
+                        AssetMark(name: symbol, size: Self.icon)
                     case .dot(let color):
                         Circle().fill(color).frame(width: 14, height: 14)
                     }
@@ -894,19 +1115,47 @@ struct RoomsTray: View {
                     }
                 }
                 Spacer(minLength: DS.Space.s2)
-                if let place = hit.place {
-                    Text(verbatim: place)
-                        .dsText(.body17)
-                        .foregroundStyle(DS.textSecondary)
-                        .lineLimit(1)
-                }
+                trailing(hit.trailing)
             }
             .frame(minHeight: Self.resultHeight)
             .contentShape(Rectangle())
         }
         .buttonStyle(RowPress())
-        .accessibilityLabel(hit.place.map { Text(verbatim: "\(hit.name), \($0)") }
-                            ?? Text(verbatim: hit.name))
+        .accessibilityElement(children: .combine)
+    }
+
+    /// A hit's edge: Add, a figure, or a quote with its day's move.
+    @ViewBuilder
+    private func trailing(_ trailing: Trailing?) -> some View {
+        switch trailing {
+        case .word(let word):
+            Text(verbatim: word)
+                .dsText(.body17)
+                .foregroundStyle(DS.textSecondary)
+                .lineLimit(1)
+        case .money(let figure):
+            Text(verbatim: figure)
+                .dsText(.price17)
+                .monospacedDigit()
+                .foregroundStyle(DS.textPrimary)
+                .lineLimit(1)
+        case .quote(let listing):
+            if let quote = CompanyQuotes.shared.quote(listing) {
+                VStack(alignment: .trailing, spacing: 1) {
+                    Text(TokenChartStyle.priceText(quote.price))
+                        .dsText(.price17).monospacedDigit().foregroundStyle(DS.textPrimary)
+                        .lineLimit(1).minimumScaleFactor(0.7)
+                    if let change = quote.change {
+                        let flat = TokenChartStyle.isFlat(change)
+                        Text(TokenChartStyle.changeText(change))
+                            .dsText(.subhead12).fontWeight(.semibold).monospacedDigit()
+                            .foregroundStyle(flat ? DS.textTertiary : (change > 0 ? DS.confirmInk : DS.destructiveInk))
+                    }
+                }
+            }
+        case nil:
+            EmptyView()
+        }
     }
 
     static let resultHeight: CGFloat = 56

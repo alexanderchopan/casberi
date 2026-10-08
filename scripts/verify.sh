@@ -1979,6 +1979,11 @@ harness "Day strip self-test" "day strip self-test" "scripts/day-strip-selftest.
 # itself off, which line a row says, and a heat map that fills its box.
 harness "Markets self-test" "markets self-test" "scripts/markets-selftest.sh" "the markets self-test failed — run scripts/markets-selftest.sh"
 
+# The tray's one search, grouped by category (prd §1185): which hits match
+# (a word's start in a sentence, a coin by any name), which group leads, and
+# the closest names when nothing does.
+harness "Tray search self-test" "tray search" "scripts/tray-search-selftest.sh" "the tray search self-test failed — run scripts/tray-search-selftest.sh"
+
 # The Social room's faces, one per person across networks (prd §1079): joined
 # only by the Addresses index, never by a handle or a display name.
 harness "Followed people self-test" "followed people self-test" "scripts/followed-people-selftest.sh" "the followed people self-test failed — run scripts/followed-people-selftest.sh"
