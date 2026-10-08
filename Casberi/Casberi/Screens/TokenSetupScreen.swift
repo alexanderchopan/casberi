@@ -126,6 +126,7 @@ struct TokenSetupScreen: View {
             // (prd §1119); this page keeps the field that adds one, and a
             // door to the list.
             rows: [],
+            tiles: actTiles,
             teardown: {
                 TokenVault.delete(bridge.tokenKey)
                 bridge.onRemove()
@@ -193,12 +194,12 @@ struct TokenSetupScreen: View {
     @ViewBuilder private var tokenForm: some View {
         if bridge == .trello {
             trelloKeyBlock
-            if trelloKey != nil { setupBlock }
+            if trelloKey != nil { setupBlock() }
         } else if bridge == .jira {
             jiraSiteBlock
-            if jiraSite != nil { setupBlock }
+            if jiraSite != nil { setupBlock() }
         } else {
-            setupBlock
+            setupBlock()
         }
     }
 
@@ -230,7 +231,7 @@ struct TokenSetupScreen: View {
         // without one, and a door that goes nowhere is a dead control.
         if bridge == .trello {
             trelloKeyBlock
-            if trelloKey != nil { setupBlock }
+            if trelloKey != nil { setupBlock(door: false) }
         // Jira's two stages — Trello's shape, though for a different reason:
         // the door below doesn't depend on the site or email at all (it's a
         // fixed page, `TokenBridge.jira.setupURL`), but a token pasted before
@@ -239,9 +240,9 @@ struct TokenSetupScreen: View {
         // question answered before the credential that proves it.
         } else if bridge == .jira {
             jiraSiteBlock
-            if jiraSite != nil { setupBlock }
+            if jiraSite != nil { setupBlock(door: false) }
         } else if manualPathOpen || !deviceFlowOffered {
-            setupBlock
+            setupBlock(door: false)
         }
     }
 
@@ -328,6 +329,32 @@ struct TokenSetupScreen: View {
         DSHaptic.tap()
     }
 
+    /// THE WAYS IN, AS TILES (prd §1196): Sign in where GitHub offers it, and
+    /// Get key — the door the setup card used to carry — which also unfolds
+    /// the paste field it leads to. Only while there is a key to get: not
+    /// connected, or the key refused. The key sheet keeps its own door, since
+    /// it stands over the tiles.
+    private var actTiles: [AccountTile] {
+        guard !bridge.connected || BridgeHealth.needsReconnect(bridge.rawValue) != nil else { return [] }
+        var out: [AccountTile] = []
+        if deviceFlowOffered, case .idle = devicePhase {
+            out.append(AccountTile(id: "signIn", label: String(localized: "Sign in"),
+                                   glyph: "person.badge.key", act: startDeviceFlow))
+        }
+        if let url = doorURL {
+            out.append(AccountTile(id: "getKey", label: String(localized: "Get key"),
+                                   glyph: "key.horizontal", act: {
+                withAnimation(DS.Motion.standard) { manualPathOpen = true }
+                #if targetEnvironment(macCatalyst)
+                openURL(url)
+                #else
+                sheet = .web(url)
+                #endif
+            }))
+        }
+        return out
+    }
+
     /// The door above the token field. Every bridge but Trello has one fixed
     /// page; Trello's is built here from the key stored a stage earlier, which
     /// is what lets Casberi pin `scope=read` rather than ask someone to tick
@@ -345,7 +372,7 @@ struct TokenSetupScreen: View {
 
     /// Door, steps, field, proof, one sentence — in that order, because that
     /// is the order the person does them in.
-    private var setupBlock: some View {
+    private func setupBlock(door: Bool = true) -> some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             // Numbered only when there is NO door — then the list really
             // does start at 1. Under a door, numerals starting at 2 sent
@@ -353,7 +380,7 @@ struct TokenSetupScreen: View {
             BridgeSetupCard(steps: bridge.steps,
                             startingAt: doorURL == nil ? 1 : 2,
                             numbered: doorURL == nil) {
-                if let url = doorURL {
+                if door, let url = doorURL {
                     // Step one, doing itself (prd §218). This screen used to
                     // say "Open readwise.io/access_token" in body text and
                     // then leave you to retype it — an instruction the app
@@ -386,9 +413,9 @@ struct TokenSetupScreen: View {
         VStack(alignment: .leading, spacing: DS.Space.s3) {
             switch devicePhase {
             case .idle:
-                DSSlabButton(title: "Sign in with GitHub",
-                             systemImage: "person.badge.key",
-                             action: startDeviceFlow)
+                // The Sign in tile starts it (prd §1196): one way in, under
+                // the box, never a second slab saying the same.
+                EmptyView()
             case .requesting:
                 HStack(spacing: DS.Space.s2) {
                     DSSpinner(size: .regular)

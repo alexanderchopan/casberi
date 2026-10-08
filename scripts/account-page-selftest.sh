@@ -205,11 +205,18 @@ grep -q 'confirmationDialog' "$TMP/detail-bare.swift" \
 grep -qF 'Remove \(bridge.name)' "$TMP/detail-bare.swift" \
   && { echo "✗ BridgeDetailScreen says Remove where every other screen says Disconnect"; exit 1; }
 
-# 12. The mark has its own rung, and the page wears it.
-grep -q 'static let account: CGFloat = 76' "$TOKENS" \
-  || { echo "✗ DS.Mark.account is not 76 — the account page's head has one rung"; exit 1; }
-grep -q 'BridgeIcon(name: name, size: DS.Mark.account)' "$TMP/page-bare.swift" \
-  || { echo "✗ the header's mark is not on DS.Mark.account"; exit 1; }
+# 12. THE ROOM'S FRAME (prd §1196, amends §639's centred head): the page's
+#     top is a room's title, box and tiles, through the templates — never a
+#     head drawn to match — and the mark in the box is `hero`, because the
+#     box is one size (§760) and `account`'s 76pt clipped its last line.
+grep -q 'DSRoomTitleRow(title:' "$TMP/page-bare.swift" \
+  || { echo "✗ the account page lost the room's title row"; exit 1; }
+grep -q '\.dsRoomBox()' "$TMP/page-bare.swift" \
+  || { echo "✗ the account page's card is not the room's box (dsRoomBox)"; exit 1; }
+grep -q 'DSScopeTiles(sections:' "$TMP/page-bare.swift" \
+  || { echo "✗ the account page's verbs are not the rooms' tiles (DSScopeTiles)"; exit 1; }
+grep -q 'BridgeIcon(name: name, size: DS.Mark.hero)' "$TMP/page-bare.swift" \
+  || { echo "✗ the box's mark is not on DS.Mark.hero"; exit 1; }
 
 # 13. THE ACT DRAWS ROWS (prd §640). The flag that turns every slab primitive
 #     into its row form is set in exactly three places, all on this chassis —

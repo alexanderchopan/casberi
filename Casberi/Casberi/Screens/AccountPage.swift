@@ -112,6 +112,10 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
     /// first tap once, so they come through the same door. `AnyView` for
     /// `rowMenu`'s reason.
     var cardSheet: ((String) -> AnyView)? = nil
+    /// THE SEAT'S OWN ACTS AS TILES (prd §1196): Sign in, Get key — the ways
+    /// in that only this seat has. They lead the row; the chassis adds Open,
+    /// Website and Pause after them, four at most.
+    var tiles: [AccountTile] = []
     /// The disconnect's teardown — clears the bridge's own store, so the
     /// next foreground can't re-register the seat (`BridgeDisconnectSection`).
     var teardown: () -> Void
@@ -136,6 +140,7 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
     @Environment(BridgeStore.self) private var store
     @Environment(ShellChrome.self) private var chrome
     @Environment(HomeRoute.self) private var route
+    @Environment(\.openURL) private var openURL
 
     @State private var today = 0
     @State private var week = 0
@@ -196,7 +201,7 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
 
     private var pageList: some View {
         List {
-            header
+            roomFrame
             actSection
             // THE ROOM UNDER THE HALF SHEET (prd §653). A medium detent
             // covers the bottom half, and the act — the entry row the person
@@ -224,12 +229,8 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
         .listStyle(.plain)
         .listSectionSpacing(.compact)
         .scrollContentBackground(.hidden)
-        // THE PAGE'S OWN TOP (§524: every pour is ink). Its ORIGINAL reason
-        // — that arriving from the product page's bold wash must not drop to a
-        // bare gray form — expired with that page (§641); it stays because it
-        // is now this page's own head, and §639's first cut left it off, which
-        // made those three screens the only pages in the app with no top.
-        .bridgeSetupWash(name: name)
+        // No wash (prd §1196): the page's top is the room's frame now — the
+        // title, the box, the tiles — and no room pours behind its box.
         .dsAdaptiveContentWidth()
         .dsPageBackground()
         .dsSoftScrollEdges()
@@ -333,17 +334,51 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
         }
     }
 
-    // MARK: - 1. Header
+    // MARK: - 1. The room's frame (prd §1196)
 
-    private var header: some View {
-        VStack(spacing: DS.Space.s2) {
-            BridgeIcon(name: name, size: DS.Mark.account)
-                .settleIn()
+    /// THE ROOM'S FRAME ON EVERY ACCOUNT PAGE (prd §1196, user: "lets apply
+    /// this template now to all"): the title, the box, the tiles — a room's
+    /// three rows at a room's sizes, so a setup page and a room put their box
+    /// and tiles at one y. The title names the place (Apps, as Settings › Apps
+    /// › GitHub); the app is in the box, the way a contact is in its card.
+    @ViewBuilder private var roomFrame: some View {
+        DSRoomTitleRow(title: String(localized: "Apps"))
+            .padding(.horizontal, DSRoomChassis.inset)
+            .padding(.top, DS.Space.s2)
+            .frameRow()
+        card
+            .dsRoomBox()
+            .padding(.top, DS.Space.s3)
+            .settleIn(delay: 0.04)
+            .frameRow()
+        let shown = shownTiles
+        if !shown.isEmpty {
+            // Verbs, so none ever lights (prd §1178) — the user, of a filled
+            // primary in the mockup: "don't have it be blue if it's not
+            // active".
+            let scopes = shown.map(\.scope)
+            DSScopeTiles(sections: scopes, active: SheetTile.none, verbs: Set(scopes)) { pick in
+                shown.first { $0.id == pick.id }?.act()
+            }
+            .padding(.horizontal, DSRoomChassis.inset)
+            .padding(.top, DSRoomChassis.leadGap)
+            .settleIn(delay: 0.08)
+            .frameRow()
+        }
+    }
+
+    /// The box: the header this page always had — mark, name, whose account,
+    /// the state — centred in the room's box at its one size (§760).
+    private var card: some View {
+        VStack(spacing: DS.Space.s1) {
+            // `hero`, not `account`: the box is the room's one size (§760),
+            // and the mark, the name and three lines must fit it unclipped.
+            BridgeIcon(name: name, size: DS.Mark.hero)
+                .padding(.bottom, DS.Space.s1)
             Text(name)
-                .dsText(.heading40).foregroundStyle(DS.textPrimary)
-                .multilineTextAlignment(.center)
-                .lineLimit(2)
-                .minimumScaleFactor(0.7)
+                .dsText(.heading28).foregroundStyle(DS.textPrimary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
             // WHOSE ACCOUNT (prd §1162): "acme" under GitHub, as Settings draws
             // an Apple Account's email under its name. Only once connected —
             // a name left from a disconnected key would describe nothing here.
@@ -358,20 +393,74 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
             Text(AccountPageShape.stateLine(state, lands: lands))
                 .dsText(.subhead12).fontWeight(.medium)
                 .foregroundStyle(stateTone)
-            if let meta = metaLine {
-                Text(meta)
+                .lineLimit(1)
+            if let detail = cardDetail {
+                Text(detail)
                     .dsText(.label12).foregroundStyle(DS.textTertiary)
-                    .multilineTextAlignment(.center)
-            }
-            if !state.connected, let mode {
-                Text(mode.label)
-                    .dsText(.label12).foregroundStyle(DS.textTertiary)
+                    .lineLimit(1)
             }
         }
-        .frame(maxWidth: .infinity)
-        .padding(.top, DS.Space.s4)
-        .padding(.bottom, DS.Space.s3)
-        .plainAccountRow()
+        .multilineTextAlignment(.center)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    /// The box's last line, one fact: this week's rows (the Activity row's
+    /// fact, now that Open is a tile), else the last read, else how this seat
+    /// connects.
+    private var cardDetail: String? {
+        if lands, state.connected, !state.needsReconnecting {
+            return AccountPageShape.activityFact(today: today, week: week, connected: true)
+        }
+        if let meta = metaLine { return meta }
+        if !state.connected, let mode { return mode.label }
+        return nil
+    }
+
+    // MARK: - The tiles
+
+    /// The seat's own acts, then the chassis': Open (its rows in their room),
+    /// Website, Pause. Four at most (prd §1184's one row); Pause gives way
+    /// first and then stands as a row in the exits.
+    private var shownTiles: [AccountTile] {
+        var all = tiles
+        if lands, state.connected {
+            all.append(AccountTile(id: "open", label: String(localized: "Open"),
+                                   glyph: ScopeTileGlyph.open, act: openRoom))
+        }
+        if let url = websiteURL {
+            all.append(AccountTile(id: "website", label: String(localized: "Website"),
+                                   glyph: "safari", act: { openWebsite(url) }))
+        }
+        if let pause = pauseTile { all.append(pause) }
+        return Array(all.prefix(4))
+    }
+
+    /// The app's own site, from the catalogue's domains.
+    private var websiteURL: URL? {
+        SubscriptionAddTray.siteByOffer[name].flatMap { URL(string: "https://\($0)") }
+    }
+
+    /// Pause or Resume, where reading can be paused (prd §835: never on a
+    /// seat that lands nothing, unless it was paused before that ruling), and
+    /// not while the key needs fixing — there is nothing reading to pause.
+    private var pauseTile: AccountTile? {
+        guard state.connected, !state.needsReconnecting,
+              lands || seat?.status == .paused else { return nil }
+        let paused = seat?.status == .paused
+        return AccountTile(id: "pause",
+                           label: paused ? String(localized: "Resume") : String(localized: "Pause"),
+                           glyph: paused ? "play" : "pause",
+                           act: { store.togglePause(seatID) })
+    }
+
+    private var pauseIsTile: Bool { shownTiles.contains { $0.id == "pause" } }
+
+    private func openWebsite(_ url: URL) {
+        #if targetEnvironment(macCatalyst)
+        openURL(url)
+        #else
+        sheet = .web(url)
+        #endif
     }
 
     private var stateTone: Color {
@@ -422,21 +511,8 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
     // MARK: - 3. Plain rows
 
     @ViewBuilder private var factRows: some View {
-        // Activity — the way to the room. NOT DRAWN UNTIL THERE IS A SEAT
-        // (prd §641, the ruling that deleted the product page): it used to
-        // draw "—" with no chevron on the dark page, which is a read that
-        // says nothing, on the screen with the least room — the same defect
-        // §640b removed one row over when it pulled the notes box off a
-        // page with no account. Absent entirely for a
-        // seat that lands nothing (see `lands`).
-        if lands, state.connected {
-            AccountFactRow(glyph: "clock",
-                           title: String(localized: "Activity"),
-                           fact: AccountPageShape.activityFact(today: today, week: week,
-                                                               connected: true),
-                           opens: true,
-                           action: openRoom)
-        }
+        // The Activity row is the Open tile now, its fact the box's last line
+        // (prd §1196).
         // WHAT YOU PAY — the door to this app's plan in the Wallet, drawn only
         // when a plan is this app's by `ServiceIdentity`'s rule and the
         // Wallet's reading still holds it (prd §83). It names where the
@@ -644,7 +720,9 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
             // (a key still answered; Apple Intelligence still answered in the
             // cloud) — a control that changed a word and nothing else. A seat
             // paused before this ruling keeps Resume, so it is never stuck.
-            if lands || seat?.status == .paused {
+            // A row only where the tiles had no room for Pause (prd §1196).
+            let pauseRow = (lands || seat?.status == .paused) && !pauseIsTile
+            if pauseRow {
             Button {
                 store.togglePause(seatID)
                 DSHaptic.tap()
@@ -663,7 +741,7 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
             }
             BridgeDisconnectSection(bridgeID: seatID, name: source,
                                     teardown: teardown, note: disconnectNote, plain: true)
-                .padding(.top, lands || seat?.status == .paused ? 0 : DS.Space.s4)
+                .padding(.top, pauseRow ? 0 : DS.Space.s4)
                 .plainAccountRow()
         } else if seat != nil {
             // The credential is gone but the seat is still registered — a
@@ -781,6 +859,25 @@ private struct PlainAccountRow: ViewModifier {
 
 extension View {
     func plainAccountRow() -> some View { modifier(PlainAccountRow()) }
+
+    /// A row of the room's frame: no insets, because the title, the box and
+    /// the tiles each carry the room's own (`DSRoomChassis.inset`).
+    fileprivate func frameRow() -> some View {
+        listRowSeparator(.hidden)
+            .listRowBackground(Color.clear)
+            .listRowInsets(EdgeInsets())
+    }
+}
+
+/// One of an account page's tiles (prd §1196): a verb, drawn by
+/// `DSScopeTiles` as a thing sheet's are (`SheetTile`), in the caller's order.
+struct AccountTile {
+    let id: String
+    let label: String
+    let glyph: String
+    let act: () -> Void
+
+    var scope: SheetTile { SheetTile(id: id, label: label, glyph: glyph) }
 }
 
 /// disc glyph · heading17 title · trailing subhead12 fact · chevron only if
