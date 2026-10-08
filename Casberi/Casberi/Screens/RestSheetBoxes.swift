@@ -271,6 +271,72 @@ struct ThingSheetBox: View {
 
     var body: some View {
         if thing.isLive {
+            if thing.kind == .file, FileFirstPage.isDocument(thing.sourceRef),
+               thing.previewImageData != nil {
+                documentBox
+            } else {
+                plainBox
+            }
+        }
+    }
+
+    /// A document (prd §1192): its first page beside what it is — the app,
+    /// the kind, the page count, the folder it is in, and the day.
+    private var documentBox: some View {
+        HStack(alignment: .top, spacing: DS.Space.s4) {
+            PhotoWell(thing: thing)
+                .frame(width: 152)
+                .frame(maxHeight: .infinity)
+                .clipShape(RoundedRectangle(cornerRadius: DS.Radius.widget / 2, style: .continuous))
+                .accessibilityLabel(Text("First page"))
+            VStack(alignment: .leading, spacing: DS.Space.s1) {
+                HStack(spacing: DS.Space.s2) {
+                    BridgeIcon(name: thing.source, size: DS.Face.badge, circular: true)
+                    Text(verbatim: thing.source)
+                        .dsText(.label12)
+                        .foregroundStyle(DS.textSecondary)
+                }
+                Text(verbatim: kindWord)
+                    .dsText(.heading20)
+                    .foregroundStyle(DS.textPrimary)
+                    .padding(.top, DS.Space.s2)
+                if let pages = thing.factList.first(where: { $0.label == FileFirstPage.pagesLabel })?.value {
+                    Text(Int(pages) == 1 ? String(localized: "1 page") : String(localized: "\(pages) pages"))
+                        .dsText(.subhead12)
+                        .foregroundStyle(DS.textSecondary)
+                }
+                if let folder {
+                    Text(String(localized: "In \(folder)"))
+                        .dsText(.subhead12)
+                        .foregroundStyle(DS.textSecondary)
+                        .lineLimit(1)
+                }
+                Spacer(minLength: 0)
+                Text(verbatim: FeedScreen.dayWord(thing.capturedAt))
+                    .dsText(.label12)
+                    .foregroundStyle(DS.textSecondary)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .accessibilityElement(children: .combine)
+    }
+
+    /// "PDF", "Pages", "Word": the file's extension, said as a kind.
+    private var kindWord: String {
+        let ext = ((thing.sourceRef ?? thing.title) as NSString).pathExtension
+        return ext.isEmpty ? String(localized: "Document") : ext.uppercased()
+    }
+
+    /// The folder it sits in, when it sits in one.
+    private var folder: String? {
+        guard let ref = thing.sourceRef, let colon = ref.firstIndex(of: ":") else { return nil }
+        let parent = (String(ref[ref.index(after: colon)...]) as NSString).deletingLastPathComponent
+        let name = (parent as NSString).lastPathComponent
+        return name.isEmpty || name == "/" ? nil : name
+    }
+
+    private var plainBox: some View {
             VStack(alignment: .leading, spacing: DS.Space.s3) {
                 if ArticleSheetHead.hasArt(thing) {
                     art
@@ -302,7 +368,6 @@ struct ThingSheetBox: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .accessibilityElement(children: .combine)
-        }
     }
 
     /// What it says beyond its title: the summary, else words that are not

@@ -3473,6 +3473,11 @@ struct ThingSheetView: View {
             .dsRoomBox()
             .padding(.top, DS.Space.s3)
             .settleIn(delay: 0.06)
+            // A document's first page, read once and kept (prd §1192).
+            .task(id: thing.id) {
+                guard FileFirstPage.applies(thing) else { return }
+                _ = await FileFirstPage.readAndKeep(thing)
+            }
         VerbDial(thing: thing, verbs: sheetVerbs, onVerb: runVerb, onName: nil, keep: sheetKeep)
             .padding(.top, DSRoomChassis.leadGap)
             .settleIn(delay: 0.08)
@@ -3487,6 +3492,7 @@ struct ThingSheetView: View {
                          articleArt: !articleHead,
                          mailSender: !mailHead)
             .environment(\.priceHeadDrawn, chartHead)
+            .environment(\.postLeadPictureDrawn, PostSheetBox.picturesTheBox(thing))
             .environment(\.priceBoxTiles, chartHead ? { keep in AnyView(chartTiles(keep: keep)) } : nil)
             .environment(\.keepPassage, keepPassage)
     }
@@ -3497,17 +3503,18 @@ struct ThingSheetView: View {
         dialResult
     }
 
-    /// A post in the room's frame (prd §1188): the person is the title, the
-    /// words are the box, then the tiles, what it answered, and the words
-    /// whole when the box cut them.
+    /// A post in the room's frame (prd §1188, §1192): the person is the
+    /// title, the box its picture or the person, then the tiles, what it
+    /// answered, and the words whole, once.
     @ViewBuilder
     private var postFrame: some View {
+        let pictured = PostSheetBox.picturesTheBox(thing)
         DSRoomTitleRow(title: PostSheetBox.title(thing))
             .padding(.horizontal, DSRoomChassis.inset)
             .padding(.top, onBack == nil ? DS.Space.s4 : DS.Space.s3)
             .settleIn(delay: 0.04)
         PostSheetBox(thing: thing, onFace: facesAreDoors ? openAuthorProfile : nil)
-            .dsRoomBox()
+            .dsRoomBox(bleed: pictured)
             .padding(.top, DS.Space.s3)
             .settleIn(delay: 0.06)
         VerbDial(thing: thing, verbs: sheetVerbs, onVerb: runVerb, onName: nil, keep: sheetKeep)
@@ -3519,14 +3526,21 @@ struct ThingSheetView: View {
                 .padding(.horizontal, DSRoomChassis.leadInset)
                 .padding(.top, DS.Space.s6)
         }
-        if PostSheetBox.cutsWords(thing) {
-            Text(verbatim: SocialSheetSource.words(for: thing))
-                .dsText(.reading17)
-                .foregroundStyle(DS.textPrimary)
-                .textSelection(.enabled)
-                .fixedSize(horizontal: false, vertical: true)
+        Text(verbatim: SocialSheetSource.words(for: thing))
+            .dsText(.heading20)
+            .foregroundStyle(DS.textPrimary)
+            .textSelection(.enabled)
+            .fixedSize(horizontal: false, vertical: true)
+            .padding(.horizontal, DSRoomChassis.leadInset)
+            .padding(.top, DS.Space.s6)
+        // The counts stand in the person's box; with a picture there, here.
+        let counts = PostSheetBox.counts(thing)
+        if pictured, !counts.isEmpty {
+            Text(verbatim: counts.joined(separator: " · "))
+                .dsText(.subhead12)
+                .foregroundStyle(DS.textSecondary)
                 .padding(.horizontal, DSRoomChassis.leadInset)
-                .padding(.top, DS.Space.s6)
+                .padding(.top, DS.Space.s2)
         }
     }
 

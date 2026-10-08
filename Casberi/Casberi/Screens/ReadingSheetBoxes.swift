@@ -9,6 +9,11 @@ import SwiftUI
 
 // MARK: - A post
 
+/// A post in the room's frame (prd §1188, re-laid by §1192): its picture
+/// fills the box when it has one, with who and when over its foot; else the
+/// person stands in it — their face, handle, network and time, and what the
+/// network counted. The words are never in the box: they stand whole, once,
+/// under the tiles.
 struct PostSheetBox: View {
     let thing: Thing
     var onFace: (() -> Void)? = nil
@@ -19,48 +24,20 @@ struct PostSheetBox: View {
         return name.isEmpty ? SocialThread.shortHandle(thing.authorHandle ?? thing.source) : name
     }
 
-    var body: some View {
-        if thing.isLive {
-            VStack(alignment: .leading, spacing: DS.Space.s3) {
-                HStack(spacing: DS.Space.s2) {
-                    face
-                    VStack(alignment: .leading, spacing: 0) {
-                        Text(verbatim: "@\(SocialThread.shortHandle(thing.authorHandle ?? ""))")
-                            .dsText(.label12)
-                            .foregroundStyle(DS.textSecondary)
-                            .lineLimit(1)
-                        Text(verbatim: whereLine)
-                            .dsText(.label12)
-                            .foregroundStyle(DS.textSecondary)
-                            .lineLimit(1)
-                    }
-                }
-                Text(verbatim: SocialSheetSource.words(for: thing))
-                    .dsText(.heading20)
-                    .foregroundStyle(DS.textPrimary)
-                    .lineLimit(4)
-                    .fixedSize(horizontal: false, vertical: true)
-                Spacer(minLength: 0)
-                if !stamps.isEmpty {
-                    HStack(spacing: DS.Space.s2) {
-                        ForEach(stamps, id: \.self) { DSStamp(word: $0) }
-                    }
-                }
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            .accessibilityElement(children: .combine)
-        }
+    /// The picture the box leads with, when the post has one.
+    static func leadPicture(_ thing: Thing) -> String? {
+        let first = thing.imageURLs.first ?? thing.previewImageURL
+        guard let url = first, !url.isEmpty, !RemoteImageLoader.isDead(url) else { return nil }
+        return url
     }
 
-    /// "Bluesky · replying to @ana · Wednesday".
-    private var whereLine: String {
-        [thing.source, SocialThread.contextPhrase(for: thing), FeedScreen.dayWord(thing.capturedAt)]
-            .compactMap { $0 }
-            .joined(separator: " · ")
+    /// Whether the picture fills the box (and so stands down below).
+    static func picturesTheBox(_ thing: Thing) -> Bool {
+        leadPicture(thing) != nil || (thing.imageURLs.isEmpty && thing.previewImageData != nil)
     }
 
     /// What the network counted, only where it counted something.
-    private var stamps: [String] {
+    static func counts(_ thing: Thing) -> [String] {
         var out: [String] = []
         if let likes = thing.likeCount, likes > 0 {
             out.append(likes == 1 ? String(localized: "1 like") : String(localized: "\(likes) likes"))
@@ -71,20 +48,74 @@ struct PostSheetBox: View {
         return out
     }
 
-    /// Whether the box cut the words, so the sheet sets them whole under the
-    /// tiles. A count stands in for a measurement: four lines of the box
-    /// hold about this many characters on the narrowest phone.
-    static func cutsWords(_ thing: Thing) -> Bool {
-        SocialSheetSource.words(for: thing).count > 140
+    var body: some View {
+        if thing.isLive {
+            if Self.picturesTheBox(thing) { pictureBox } else { personBox }
+        }
+    }
+
+    private var whereLine: String {
+        ["@\(SocialThread.shortHandle(thing.authorHandle ?? ""))", thing.source,
+         FeedScreen.dayWord(thing.capturedAt)].joined(separator: " · ")
+    }
+
+    private var pictureBox: some View {
+        ZStack(alignment: .bottomLeading) {
+            Group {
+                if let url = Self.leadPicture(thing) {
+                    GeometryReader { geo in
+                        RemoteArt(urlString: url, width: geo.size.width,
+                                  height: geo.size.height, cornerRadius: 0)
+                    }
+                } else {
+                    PhotoWell(thing: thing)
+                }
+            }
+            LinearGradient(colors: [.clear, .black.opacity(0.55)], startPoint: .top, endPoint: .bottom)
+                .frame(height: 64)
+                .frame(maxHeight: .infinity, alignment: .bottom)
+                .allowsHitTesting(false)
+            Text(verbatim: whereLine)
+                .dsText(.label12)
+                .fontWeight(.semibold)
+                .foregroundStyle(Color.white)
+                .lineLimit(1)
+                .padding(DS.Space.s3)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(verbatim: "\(Self.title(thing)), \(whereLine)"))
+    }
+
+    private var personBox: some View {
+        VStack(spacing: DS.Space.s2) {
+            face.padding(.top, DS.Space.s1)
+            Text(verbatim: "@\(SocialThread.shortHandle(thing.authorHandle ?? ""))")
+                .dsText(.heading20)
+                .foregroundStyle(DS.textPrimary)
+                .lineLimit(1)
+            Text(verbatim: "\(thing.source) · \(FeedScreen.dayWord(thing.capturedAt)), \(thing.capturedAt.formatted(date: .omitted, time: .shortened))")
+                .dsText(.subhead12)
+                .foregroundStyle(DS.textSecondary)
+                .lineLimit(1)
+            Spacer(minLength: 0)
+            let counts = Self.counts(thing)
+            if !counts.isEmpty {
+                HStack(spacing: DS.Space.s2) {
+                    ForEach(counts, id: \.self) { DSStamp(word: $0) }
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .accessibilityElement(children: .combine)
     }
 
     @ViewBuilder private var face: some View {
         let mark = Group {
             if let avatar = thing.authorAvatarURL, !avatar.isEmpty {
-                RemoteThumb(urlString: avatar, size: DS.Face.seat,
+                RemoteThumb(urlString: avatar, size: DS.Face.profile,
                             fallback: thing.source, circular: true)
             } else {
-                BridgeIcon(name: thing.source, size: DS.Face.seat, circular: true)
+                BridgeIcon(name: thing.source, size: DS.Face.profile, circular: true)
             }
         }
         if let onFace {

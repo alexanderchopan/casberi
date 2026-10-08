@@ -12,8 +12,19 @@ import SwiftData
 /// everything around them: the pictures, the post it quotes, and how it landed.
 /// Source-neutral throughout — any social bridge answers the same shapes, so
 /// nothing here learns a network's name.
+/// The sheet's box already draws the post's first picture (prd §1192).
+private struct PostLeadPictureDrawnKey: EnvironmentKey { static let defaultValue = false }
+
+extension EnvironmentValues {
+    var postLeadPictureDrawn: Bool {
+        get { self[PostLeadPictureDrawnKey.self] }
+        set { self[PostLeadPictureDrawnKey.self] = newValue }
+    }
+}
+
 struct SocialPostContent: View {
     let thing: Thing
+    @Environment(\.postLeadPictureDrawn) private var leadDrawn
 
     /// The counts, the likers and the provenance sentence LEFT this view on
     /// 2026-08-12 (prd §363) for `SocialReceptionCard`, which the sheet draws
@@ -33,8 +44,10 @@ struct SocialPostContent: View {
     private var images: [String] {
         // Posts landed before `imageURLs` existed carry only the row's single
         // thumb — show that rather than nothing, until a refresh heals them.
-        thing.imageURLs.isEmpty
+        let all = thing.imageURLs.isEmpty
             ? [thing.previewImageURL].compactMap { $0 } : thing.imageURLs
+        // The first stands in the sheet's box (prd §1192); the rest follow.
+        return leadDrawn ? Array(all.dropFirst()) : all
     }
 
     var body: some View {
@@ -72,7 +85,7 @@ struct SocialPostContent: View {
     /// post. Several ride a strip that scrolls sideways inside its own lane, so
     /// a four-photo post keeps all four and the page never scrolls horizontally.
     @ViewBuilder private var photos: some View {
-        if images.isEmpty, let stored = StoredPixels.probe(thing) {   // decoded once, off main — prd §626
+        if images.isEmpty, !leadDrawn, let stored = StoredPixels.probe(thing) {   // decoded once, off main — prd §626
             // A picture the app already HOLDS rather than fetches (prd §363,
             // catching the sheet up with `PostCard`'s own 2026-08-06 fix). An
             // IMPORT has no URL to give — `ImportMedia` decodes the archive's

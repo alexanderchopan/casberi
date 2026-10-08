@@ -880,6 +880,22 @@ struct RootShell: View {
                 }
                 NSLog("[Casberi] saveLink: %@ (%@)", thing.title, content)
             }
+            // `-firstPageProbe "<title prefix>|<pdf path>"` stamps a PDF's first
+            // page and count on a file thing, as the sheet's own read would
+            // (prd §1192): the demo's files have no bytes to read.
+            if let raw = UserDefaults.standard.string(forKey: "firstPageProbe"),
+               let bar = raw.firstIndex(of: "|") {
+                let prefix = String(raw[..<bar])
+                let url = URL(fileURLWithPath: String(raw[raw.index(after: bar)...]))
+                let all = (try? modelContext.fetch(FetchDescriptor<Thing>())) ?? []
+                if let thing = all.first(where: { $0.title.hasPrefix(prefix) }) {
+                    let ok = FileFirstPage.keep(pdfAt: url, on: thing)
+                    modelContext.saveHonestly()
+                    NSLog("[Casberi] firstPageProbe: %@ %@", thing.title, ok ? "kept" : "unreadable")
+                } else {
+                    NSLog("[Casberi] firstPageProbe: no match for %@", prefix)
+                }
+            }
             // `-openThing "<title prefix>"` opens the newest thing whose title
             // starts with the prefix — the sheet-by-content route for headless
             // sheet checks (a UUID changes every install; a title doesn't).

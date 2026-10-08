@@ -17144,6 +17144,34 @@
         }
       }
     },
+    "%@ pages" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ páginas"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ページ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@페이지"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 页"
+          }
+        }
+      }
+    },
     "%@ paid %@ in gas" : {
       "localizations" : {
         "en" : {
@@ -39427,6 +39455,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "另有 1 笔已完成签名 — 可以执行"
+          }
+        }
+      }
+    },
+    "1 page" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1 página"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1ページ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1페이지"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1 页"
           }
         }
       }
@@ -68550,6 +68606,34 @@
         }
       }
     },
+    "Document" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Documento"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "書類"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "문서"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "文稿"
+          }
+        }
+      }
+    },
     "Dodo Payments answered — no payments in the last 30 days." : {
       "localizations" : {
         "es" : {
@@ -74451,6 +74535,34 @@
         }
       }
     },
+    "First page" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Primera página"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "最初のページ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "첫 페이지"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "第一页"
+          }
+        }
+      }
+    },
     "Fitness" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -80266,6 +80378,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "转入"
+          }
+        }
+      }
+    },
+    "In %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "En %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@内"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 안"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 %@ 中"
           }
         }
       }
@@ -110916,6 +111056,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "PagerDuty 已响应 — 一切正常。事件会在触发和解决时到达，因此读取为空意味着你的服务很平静。"
+          }
+        }
+      }
+    },
+    "Pages" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Páginas"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ページ数"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "페이지"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "页数"
           }
         }
       }

@@ -502,7 +502,10 @@ struct ThingContentView: View {
             if let ref = thing.sourceRef, FilesIngest.isVideoRef(ref) {
                 FileVideoContent(ref: ref, name: thing.title, note: thing.content,
                                  poster: StoredPixels.imageNow(for: thing))   // decoded once — prd §626
-            } else if let size = StoredPixels.probe(thing) {   // decoded once, off main — prd §626
+            } else if !FileFirstPage.isDocument(thing.sourceRef),
+                      let size = StoredPixels.probe(thing) {   // decoded once, off main — prd §626
+                // A document's stored picture is its first page, drawn in the
+                // sheet's box (prd §1192), never again here as the file.
                 StoredPicture(thing, size: size) { image in
                     FilePictureContent(image: image)
                 }
