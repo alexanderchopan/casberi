@@ -654,18 +654,11 @@ struct ThingSheetView: View {
                     // A PURCHASE takes the money sheet's shape (prd §895, §887):
                     // the merchant leads, the amount is the head rung.
                     if purchaseReading.archetype != .watch {
-                        SheetPartyHead(name: purchaseReading.subject, day: thing.capturedAt,
-                                       line: [purchaseReading.verb, thing.source]
-                                           .compactMap { $0 }.joined(separator: " · ")) {
-                            if let art = thing.previewImageURL, !art.isEmpty {
-                                RemoteThumb(urlString: art, size: DS.Face.shelf,
-                                            fallback: thing.source, circular: true)
-                            } else {
-                                SenderInitial(sender: purchaseReading.subject, size: DS.Face.shelf)
-                            }
-                        }
-                        .padding(.top, onBack == nil ? DS.Space.s4 : DS.Space.s3)
-                        .settleIn(delay: 0.04)
+                        // The merchant is the room's title (prd §1190).
+                        DSRoomTitleRow(title: purchaseReading.subject)
+                            .padding(.horizontal, DSRoomChassis.inset)
+                            .padding(.top, onBack == nil ? DS.Space.s4 : DS.Space.s3)
+                            .settleIn(delay: 0.04)
                     }
                     if purchaseReading.archetype != .watch {
                         // The room's frame (prd §1179): the receipt in the box.
@@ -693,13 +686,11 @@ struct ThingSheetView: View {
                     // saying, so keeping both would print the row twice.
                     // WORK leads with where it lives (prd §895): the source's
                     // mark and the pink day, the project on the line under it.
-                    SheetPartyHead(name: thing.source, day: thing.capturedAt,
-                                   line: workReading.project,
-                                   onFace: Corpus.earnsRoom(thing.source) ? openSourceRoom : nil) {
-                        BridgeIcon(name: thing.source, size: DS.Face.shelf, circular: true)
-                    }
-                    .padding(.top, onBack == nil ? DS.Space.s4 : DS.Space.s3)
-                    .settleIn(delay: 0.04)
+                    // The project is the room's title, else the app (prd §1190).
+                    DSRoomTitleRow(title: workReading.project ?? thing.source)
+                        .padding(.horizontal, DSRoomChassis.inset)
+                        .padding(.top, onBack == nil ? DS.Space.s4 : DS.Space.s3)
+                        .settleIn(delay: 0.04)
                     // The room's frame (prd §1179): the status in the box.
                     WorkStageView(thing: thing, reading: workReading,
                                   detail: WorkStage.statusDetail(
@@ -815,18 +806,18 @@ struct ThingSheetView: View {
                         rows.padding(.top, DSRoomChassis.leadGap)
                     }
                 } else if momentHead {
-                    SheetPartyHead(name: thing.source, day: momentStart,
-                                   line: momentLine,
-                                   onFace: Corpus.earnsRoom(thing.source) ? openSourceRoom : nil) {
-                        BridgeIcon(name: thing.source, size: DS.Face.shelf, circular: true)
-                            .coinFlip(trigger: thing.id)
-                    }
-                    .padding(.top, onBack == nil ? DS.Space.s4 : DS.Space.s3)
-                    .settleIn(delay: 0.04)
-                    // THE ROOM'S FRAME (prd §1179): the title and the clock in
-                    // the room's box, the tiles under it, the facts after.
+                    // THE ROOM'S FRAME (prd §1179, §1190): the title is the
+                    // room's; the box is where it is from, the clock and what
+                    // it measured; the tiles, then the facts.
+                    DSRoomTitleRow(title: TitleSeam.split(thing.title).name)
+                        .padding(.horizontal, DSRoomChassis.inset)
+                        .padding(.top, onBack == nil ? DS.Space.s4 : DS.Space.s3)
+                        .settleIn(delay: 0.04)
                     VStack(alignment: .leading, spacing: DS.Space.s4) {
-                        titleBlock
+                        Text(verbatim: momentSourceLine)
+                            .dsText(.label12)
+                            .foregroundStyle(DS.textSecondary)
+                            .lineLimit(1)
                         if let start = momentStart {
                             MomentSheetBlock(start: start, end: thing.endAt,
                                              overdue: thing.kind == .reminder && start < .now,
@@ -1790,15 +1781,13 @@ struct ThingSheetView: View {
         thing.kind == .reminder ? thing.dueAt : thing.capturedAt
     }
 
-    /// What a moment is, under its source's name: "Event · Work",
-    /// "Workout", "Reminder · Lisbon trip".
-    private var momentLine: String {
+    /// "Reminders · Lisbon trip", "Health · Workout" — where it is from and
+    /// what it is filed under, the kind not said again (prd §1190).
+    private var momentSourceLine: String {
         let workout = thing.factList.contains { $0.action == .metric }
-        let kind = workout ? String(localized: "Workout") : thing.kind.typeTag
-        guard !workout,
-              let tag = thing.tags.first(where: { $0 != thing.kind.typeTag && $0 != "Workout" })
-        else { return kind }
-        return "\(kind) · \(tag)"
+        let tag = workout ? String(localized: "Workout")
+            : thing.tags.first(where: { $0 != thing.kind.typeTag && $0 != "Workout" })
+        return [thing.source, tag].compactMap { $0 }.joined(separator: " · ")
     }
 
     /// Fit the sheet to its content (prd §886). It follows the content while

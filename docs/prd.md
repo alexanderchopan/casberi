@@ -65218,3 +65218,11 @@ Settings counts the phone's calendars through EventKit (§1150), and the demo's 
 2. **A saved Dexscreener page's title names the token** (`ThingSheetView.dexscreenerParts`): "PEPE $1.69B - Pepe / WETH on Ethereum / Uniswap - DEX Screener", measured off a saved page, titles the sheet "Pepe", symbol PEPE. Only that shape; any other title falls through to §915's seam untouched. `chartLine` went with the chart's old head (§723).
 
 **Seen** on a private iPhone 17 Pro simulator outside the demo: a saved PEPE pair, titled Pepe, Open · Watch · Share. **Not seen:** the tile after watching, a stock, a Dexscreener page in another language.
+
+## §1190 — A purchase, a Work receipt, a reminder and a workout take the room's title (user, 2026-10-08: "we need to do them all so lets continue", of the sheets still on the old layout; amends §895's purchase and Work heads and §892's moment head, whose boxes §1179 already drew)
+
+1. **A purchase**: the merchant is the room's title (`DSRoomTitleRow`), over §1179's receipt box. A watched product keeps its card.
+2. **A Work receipt**: the project is the title where the seat stamps one (`WorkStage.project`), else the app ("Linear"); the box is §1179's status, headline and deadline, and its state pill stands down when the status line above already says the same word ("In progress" stood twice).
+3. **A reminder or a workout**: the title is the room's (§915's seam), and the box says where it is from and what it is filed under (`momentSourceLine`: "Reminders · Lisbon trip", "Health · Workout"), then the clock and what it measured. The kind is not said again ("Reminders · Reminder" went), and `momentLine` went with the old head.
+
+**Seen** on a private iPhone 17 Pro simulator over the demo: Amazon.com (€25.00, Delivered), QM-412 under Linear (one "In progress", the due strip, Mark done · Share), Send Lisbon dates to Sam (Reminders · Lisbon trip, Due tomorrow, Reminders · Share). **Not seen:** a workout outside an event's day (Evening run draws §1182's slice), a project-stamped Work seat (Vercel, Sentry, PagerDuty), light mode.

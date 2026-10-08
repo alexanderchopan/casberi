@@ -222,7 +222,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1319 of 1383 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1320 of 1384 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1227,7 +1227,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §892 — A moment's sheet says when: events, reminders and workouts
 - §893 — A note's sheet leads with where it is from, the words under the dial
 - §894 — Chats and mail lead with who they are from, the dial under the head (amended by §1188)
-- §895 — Work items and purchases take the shared head
+- §895 — Work items and purchases take the shared head (amended by §1190)
 - §896 — A fold says its newest thing, and counts the rest on the line's tail (amended by §1103; part superseded by §902)
 - §897 — Media leads with its art, a chart with its asset (amended by §1186, §1188)
 - §898 — The swipe is dealt on the brand ground
@@ -1543,6 +1543,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1187 — A person, an app's wallet, a chain and a wallet stand in the room's frame; the grant sheet is deleted
 - §1188 — A price, an article, a post and a mail stand in the room's frame
 - §1189 — A token's Watch is the fourth tile, and a saved Dexscreener page is named for its token
+- §1190 — A purchase, a Work receipt, a reminder and a workout take the room's title
 
 ## Dead rulings → what replaced them (generated)
 

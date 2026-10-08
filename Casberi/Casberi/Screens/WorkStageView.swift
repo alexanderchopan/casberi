@@ -241,7 +241,10 @@ struct WorkStageView: View {
         // The state pill is the ONE place `Thing.mark` has ever been drawn on
         // a sheet: six Work seats write it (GitHub, GitLab, Linear, Jira,
         // Trello, Cloudflare) and until now nothing read it back.
-        if thing.kind != .transaction, let state = markWord {
+        // Not when the status line above already says the same word (prd
+        // §1190: "In progress" stood twice in one box).
+        if thing.kind != .transaction, let state = markWord,
+           state != (detail ?? reading.statusWord) {
             out.append((state, tint))
         }
         let typeTags = Set(ThingKind.allCases.map(\.typeTag))
