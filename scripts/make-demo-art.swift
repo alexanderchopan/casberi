@@ -278,9 +278,10 @@ let coins: [Coin] = [
     // The watched STOCKS (2026-09-23). `DemoSeedAll` stamps `sample:coin-aapl`
     // and friends on the Stocktwits rows and none was ever bundled, so the
     // rows drew nothing — found by `DemoPictureTests.everyNamedPictureIsBundled`.
+    // NVDA and TSLA wear their real marks since 2026-10-08 (`brand-nvda`,
+    // `brand-tsla`, the Financial Modeling Prep images the live row draws);
+    // AAPL keeps a monogram because no third party may draw the Apple logo.
     .init(symbol: "aapl", initial: "A", top: rgb(0x9AA3AD), bottom: rgb(0x5E6670)),
-    .init(symbol: "nvda", initial: "N", top: rgb(0x7FBF3F), bottom: rgb(0x4B8A1C)),
-    .init(symbol: "tsla", initial: "T", top: rgb(0xE8605A), bottom: rgb(0xB22A25)),
 ]
 
 let coinSide: CGFloat = 320

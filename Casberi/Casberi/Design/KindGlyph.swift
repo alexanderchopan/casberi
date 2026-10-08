@@ -370,8 +370,10 @@ enum BridgeGlyph {
         // really are one shape: "import your chats"; a BYOK key is not).
         case "grok":         return "bolt.circle"
         case "openrouter":   return "arrow.triangle.branch"
-        // Defensive only — `brand-nearai` is bundled, so `BridgeIcon` never
-        // reaches this. A seal, for the one seat whose answers carry one.
+        // Defensive only — `brand-near-ai` is bundled, so `BridgeIcon` never
+        // reaches this. (It was `brand-nearai` until 2026-10-08, a name the
+        // offer "NEAR AI" never resolves to, so every NEAR AI mark drew this
+        // seal.) A seal, for the one seat whose answers carry one.
         case "nearai", "near ai": return "checkmark.seal"
         // Defensive only — `brand-muse` is bundled, so `BridgeIcon` never
         // reaches this.
