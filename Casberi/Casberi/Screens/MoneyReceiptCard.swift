@@ -441,6 +441,16 @@ struct MoneyReceiptBox: View {
     /// the two faces with the arrow between them — the thing itself — the
     /// amount, its worth and day, and the status and network as stamps.
     var transfer: Transfer? = nil
+    /// A card spend (prd §1182): the card that paid, drawn beside the amount
+    /// — Apple Wallet's own picture of a transaction.
+    var card: Card? = nil
+    struct Card: Equatable {
+        let name: String
+        let last4: String?
+        let source: String
+        /// Apple Card is titanium; every other card draws on the raised fill.
+        var light: Bool { name.localizedCaseInsensitiveContains("Apple Card") }
+    }
     struct Transfer: Equatable {
         let mineAddress: String
         let mineLabel: String
@@ -458,7 +468,9 @@ struct MoneyReceiptBox: View {
     var onSubject: ((String) -> Void)?
 
     var body: some View {
-        if let transfer { transferBody(transfer) } else { receiptBody }
+        if let transfer { transferBody(transfer) }
+        else if let card { cardBody(card) }
+        else { receiptBody }
     }
 
     /// Apple Wallet's transaction detail, centred: who to whom, how much,
@@ -493,16 +505,107 @@ struct MoneyReceiptBox: View {
                 .lineLimit(1).minimumScaleFactor(0.8)
                 .padding(.top, 2)
             Spacer(minLength: DS.Space.s2)
-            HStack(spacing: DS.Space.s2) {
-                DSStamp(word: statusWord, weight: statusWeight)
-                if let network = t.network, !network.isEmpty {
-                    DSStamp(word: network, weight: .quiet)
+            if receipt.finality == .open {
+                // LIVE STATE WHERE IT CHANGES (prd §1182): a record still in
+                // the machine shows where it is — sent, confirming, settled —
+                // and re-composes in place as the bridge reads it again.
+                steps
+            } else {
+                HStack(spacing: DS.Space.s2) {
+                    DSStamp(word: statusWord, weight: statusWeight)
+                    if let network = t.network, !network.isEmpty {
+                        DSStamp(word: network, weight: .quiet)
+                    }
                 }
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text(verbatim: spoken(t)))
+    }
+
+    /// The card that paid beside what it paid (prd §1182): the card, then its
+    /// name, the amount, the day and time, the state.
+    private func cardBody(_ c: Card) -> some View {
+        HStack(alignment: .center, spacing: DS.Space.s4) {
+            cardArt(c)
+            VStack(alignment: .leading, spacing: 0) {
+                Text(verbatim: c.name)
+                    .dsText(.label12)
+                    .foregroundStyle(DS.textSecondary)
+                    .lineLimit(1)
+                Text(verbatim: cardStatement)
+                    .dsText(.heading34)
+                    .monospacedDigit()
+                    .foregroundStyle(receipt.amount?.tone == .gain ? DS.confirmInk : DS.textPrimary)
+                    .contentTransition(roll)
+                    .lineLimit(1).minimumScaleFactor(0.6)
+                    .padding(.top, DS.Space.s3)
+                Text(verbatim: landed.formatted(.dateTime.weekday(.wide).month(.abbreviated).day().hour().minute()))
+                    .dsText(.body17)
+                    .foregroundStyle(DS.textSecondary)
+                    .lineLimit(2).minimumScaleFactor(0.8)
+                    .padding(.top, 2)
+                Spacer(minLength: DS.Space.s2)
+                DSStamp(word: statusWord, weight: statusWeight)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(receipt.spokenLabel))
+        .accessibilityValue(Text(verbatim: [receipt.spokenValue, c.name].joined(separator: ", ")))
+    }
+
+    /// A card, portrait as Wallet stacks it: the issuer's mark, the last four.
+    private func cardArt(_ c: Card) -> some View {
+        RoundedRectangle(cornerRadius: DS.Radius.sheet, style: .continuous)
+            .fill(c.light ? Color(white: 0.91) : DS.surfaceRaised)
+            .frame(width: 112, height: 176)
+            .overlay(alignment: .topLeading) {
+                BridgeIcon(name: c.source, size: DS.Mark.row)
+                    .padding(DS.Space.s3)
+            }
+            .overlay(alignment: .bottomLeading) {
+                if let last4 = c.last4 {
+                    Text(verbatim: "••\(last4)")
+                        .dsText(.label12)
+                        .monospacedDigit()
+                        .foregroundStyle(c.light ? Color(white: 0.45) : DS.textSecondary)
+                        .padding(DS.Space.s3)
+                }
+            }
+            .accessibilityHidden(true)
+    }
+
+    /// A spend reads unsigned; a refund keeps its plus.
+    private var cardStatement: String {
+        guard let amount = receipt.amount else { return statement }
+        let number = amount.number.hasPrefix("+") ? amount.number : unsignedStatement
+        return number
+    }
+
+    /// Sent → Confirming → Settled, the middle lit while the record is open.
+    private var steps: some View {
+        let words = [String(localized: "Sent"), statusWord, String(localized: "Settled")]
+        return VStack(spacing: DS.Space.s1) {
+            HStack(spacing: 0) {
+                Circle().fill(DS.textPrimary).frame(width: 10, height: 10)
+                Capsule().fill(DS.textPrimary).frame(height: 2)
+                Circle().fill(DS.attention).frame(width: 12, height: 12)
+                Capsule().fill(DS.fillFaint).frame(height: 2)
+                Circle().fill(DS.fillFaint).frame(width: 10, height: 10)
+            }
+            HStack {
+                Text(verbatim: words[0]).foregroundStyle(DS.textSecondary)
+                Spacer()
+                Text(verbatim: words[1]).foregroundStyle(DS.attentionInk)
+                Spacer()
+                Text(verbatim: words[2]).foregroundStyle(DS.textTertiary)
+            }
+            .dsText(.label12)
+        }
+        .padding(.horizontal, DS.Space.s2)
+        .animation(DS.Motion.standard, value: receipt.finality)
     }
 
     /// One face and its name, a door to the address card.

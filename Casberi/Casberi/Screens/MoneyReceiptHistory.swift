@@ -11,14 +11,27 @@ struct MoneyHistoryRows: View {
     let rows: [KeyedThing]
     let total: Int
     let doorWord: String?
+    /// The header's trailing figure (a card spend: this month's total).
+    var trailing: String? = nil
+    /// A row's amount, trailing (prd §1182): a card spend's visits read as
+    /// their day and what they cost, never the shop's name again.
+    var amount: ((Thing) -> String?)? = nil
     var onOpen: (Thing) -> Void
     var onAll: (() -> Void)?
 
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
-            Text(verbatim: title)
-                .dsText(.heading17)
-                .foregroundStyle(DS.textPrimary)
+            HStack(alignment: .firstTextBaseline) {
+                Text(verbatim: title)
+                    .dsText(amount == nil ? .heading17 : .heading20)
+                    .foregroundStyle(amount == nil ? DS.textPrimary : DS.brandInk)
+                Spacer(minLength: DS.Space.s2)
+                if let trailing {
+                    Text(verbatim: trailing)
+                        .dsText(.heading17).monospacedDigit()
+                        .foregroundStyle(DS.textPrimary)
+                }
+            }
             if rows.isEmpty {
                 Text("Nothing before this one.")
                     .dsText(.body17)
@@ -28,13 +41,21 @@ struct MoneyHistoryRows: View {
                 if let thing = row.live {
                     Button { onOpen(thing) } label: {
                         HStack(spacing: DS.Space.s3) {
-                            VStack(alignment: .leading, spacing: 1) {
-                                Text(verbatim: thing.title)
+                            if let amount {
+                                Text(verbatim: thing.capturedAt.formatted(.dateTime.weekday(.wide).month(.abbreviated).day()))
                                     .dsText(.body17).foregroundStyle(DS.textPrimary).lineLimit(1)
-                                Text(verbatim: thing.capturedAt.formatted(.dateTime.month(.abbreviated).day()))
-                                    .dsText(.subhead12).foregroundStyle(DS.textTertiary).lineLimit(1)
+                                Spacer(minLength: DS.Space.s2)
+                                Text(verbatim: amount(thing) ?? "")
+                                    .dsText(.body17).monospacedDigit().foregroundStyle(DS.textPrimary)
+                            } else {
+                                VStack(alignment: .leading, spacing: 1) {
+                                    Text(verbatim: thing.title)
+                                        .dsText(.body17).foregroundStyle(DS.textPrimary).lineLimit(1)
+                                    Text(verbatim: thing.capturedAt.formatted(.dateTime.month(.abbreviated).day()))
+                                        .dsText(.subhead12).foregroundStyle(DS.textTertiary).lineLimit(1)
+                                }
+                                Spacer(minLength: DS.Space.s2)
                             }
-                            Spacer(minLength: DS.Space.s2)
                         }
                         .frame(minHeight: DS.Hit.min)
                         .contentShape(Rectangle())

@@ -168,6 +168,13 @@ struct ThingSheetView: View {
     /// This year with this party (prd §1181): sent and received, in dollars
     /// and counts, this transfer included.
     @State private var moneyYear = MoneyYear()
+    /// A card spend's visits this month, this one included, and their total
+    /// (prd §1182).
+    @State private var moneyMonth: [Thing] = []
+    @State private var moneyMonthTotal: String?
+    /// The event's day around it (prd §1182): this event and its neighbours
+    /// in a four-hour window, read on the sheet's task (§628).
+    @State private var dayBlocks: [EventDaySlice.Block] = []
     struct MoneyYear { var sentUSD = 0.0, sentCount = 0, receivedUSD = 0.0, receivedCount = 0 }
     /// Mirrors `MoneyActivityDriver.isTracking` for this record, so the control
     /// re-labels itself the moment it is used.
@@ -491,6 +498,7 @@ struct ThingSheetView: View {
                         .settleIn(delay: 0.04)
                     MoneyReceiptBox(receipt: moneyReceipt, landed: thing.capturedAt,
                                     transfer: moneyTransfer(moneyReceipt),
+                                    card: moneyCard,
                                     source: thing.source, cells: moneyCells(moneyReceipt),
                                     unnamed: moneyUnnamed, onSubject: openAddressCard)
                         // Read once per open (§628), the spec row's own read.
@@ -537,7 +545,18 @@ struct ThingSheetView: View {
                                         onAll: { openAddressCard(cp) })
                             .padding(.top, DS.Space.s6)
                             .settleIn(delay: 0.12)
-                    } else {
+                    } else if moneyCard != nil, moneyMonth.count > 1 {
+                        // This month at the shop (prd §1182): each visit as its
+                        // day and what it cost, the total in the header.
+                        MoneyHistoryRows(title: String(localized: "This month"),
+                                         rows: moneyMonth.keyed, total: moneyMonth.count,
+                                         doorWord: nil, trailing: moneyMonthTotal,
+                                         amount: Self.spendAmount,
+                                         onOpen: { walkingToScope = .none; walkingToNote = KeyedThing($0) },
+                                         onAll: nil)
+                            .padding(.top, DS.Space.s6)
+                            .settleIn(delay: 0.12)
+                    } else if moneyCard == nil {
                         MoneyHistoryRows(title: moneyHistoryTitle(moneyReceipt),
                                          rows: moneyHistory.keyed, total: moneyHistoryTotal,
                                          doorWord: moneyHistoryDoor(moneyReceipt),
@@ -790,6 +809,31 @@ struct ThingSheetView: View {
                     .padding(.top, onBack == nil ? DS.Space.s4 : DS.Space.s3)
                     .settleIn(delay: 0.04)
                     noteDial
+                } else if momentHead, thing.kind == .event,
+                          !thing.factList.contains(where: { $0.action == .metric }),
+                          let start = momentStart {
+                    // AN EVENT AS A SLICE OF ITS DAY (prd §1182): the title a
+                    // room's, the box the hours around it, the tiles, the facts.
+                    DSRoomTitleRow(title: TitleSeam.split(thing.title).name)
+                        .padding(.horizontal, DSRoomChassis.inset)
+                        .padding(.top, onBack == nil ? DS.Space.s4 : DS.Space.s3)
+                        .settleIn(delay: 0.04)
+                    EventDaySlice(start: start, end: thing.endAt,
+                                  allDay: thing.factList.contains { $0.action == .allDay },
+                                  blocks: dayBlocks)
+                        .dsRoomBox()
+                        .padding(.top, DS.Space.s3)
+                        .settleIn(delay: 0.06)
+                        .task(id: thing.id) { readDayBlocks(around: start) }
+                    VerbDial(thing: thing, verbs: sheetVerbs, onVerb: runVerb, onName: nil)
+                        .padding(.top, DSRoomChassis.leadGap)
+                        .settleIn(delay: 0.08)
+                    dialResult
+                    let rows = MomentSheetBlock(start: start, end: thing.endAt,
+                                                facts: thing.factList, part: .rows)
+                    if rows.hasRows {
+                        rows.padding(.top, DSRoomChassis.leadGap)
+                    }
                 } else if momentHead {
                     SheetPartyHead(name: thing.source, day: momentStart,
                                    line: momentLine,
@@ -2854,6 +2898,54 @@ struct ThingSheetView: View {
             network: WalletIngest.chainName(forContent: thing.content))
     }
 
+    /// This event and the others that overlap the four hours around it, as
+    /// plain blocks (prd §1182). One fetch by time; the kind is read in Swift.
+    private func readDayBlocks(around start: Date) {
+        guard thing.isLive else { return }
+        let cal = Calendar.current
+        let hour = cal.dateInterval(of: .hour, for: start)?.start ?? start
+        let from = cal.date(byAdding: .hour, value: -1, to: hour) ?? hour
+        let to = cal.date(byAdding: .hour, value: 3, to: hour) ?? hour
+        let early = cal.date(byAdding: .hour, value: -12, to: from) ?? from
+        let id = thing.id
+        let d = FetchDescriptor<Thing>(predicate: #Predicate { $0.capturedAt >= early && $0.capturedAt < to },
+                                       sortBy: [SortDescriptor(\Thing.capturedAt)])
+        let place = thing.factList.first { $0.action == .map }?.value
+        let name = TitleSeam.split(thing.title).name
+        dayBlocks = ((try? modelContext.fetch(d)) ?? [])
+            // A neighbour with this event's own name is the same meeting from
+            // a second calendar: drawn twice it reads as a duplicate.
+            .filter { $0.isLive && $0.kind == .event
+                && ($0.id == id || TitleSeam.split($0.title).name != name) }
+            .compactMap { t -> EventDaySlice.Block? in
+                let end = t.endAt ?? t.capturedAt.addingTimeInterval(3600)
+                guard end > from, t.capturedAt < to,
+                      !t.factList.contains(where: { $0.action == .allDay }) else { return nil }
+                return EventDaySlice.Block(id: t.id.uuidString, title: TitleSeam.split(t.title).name,
+                                           start: t.capturedAt, end: end, isThis: t.id == id,
+                                           place: t.id == id ? place : nil)
+            }
+    }
+
+    /// The card that paid, when this is a card spend (prd §1182): its name and
+    /// last four off the account label the bridge stamped ("Apple Card,
+    /// ending 4821").
+    private var moneyCard: MoneyReceiptBox.Card? {
+        let cardSources: Set<String> = ["Apple Wallet", "Gnosis Pay", "MetaMask Card", "ether.fi", "Privacy"]
+        guard cardSources.contains(thing.source), moneyReceipt?.mine == nil,
+              let account = thing.authorHandle, !account.isEmpty else { return nil }
+        let parts = account.components(separatedBy: ", ending ")
+        return MoneyReceiptBox.Card(name: parts[0],
+                                    last4: parts.count > 1 ? parts[1] : nil,
+                                    source: thing.source)
+    }
+
+    /// A spend's own figure, from the price the bridge stored.
+    static func spendAmount(_ thing: Thing) -> String? {
+        guard thing.isLive, let value = thing.priceValue else { return nil }
+        return abs(value).formatted(.currency(code: thing.priceCurrency ?? "USD"))
+    }
+
     /// An address nobody has named — the head says "Tap to name".
     private var moneyUnnamed: Bool {
         guard let receipt = moneyReceipt, receipt.party == nil || receipt.party?.isEmpty == true,
@@ -2960,6 +3052,16 @@ struct ThingSheetView: View {
             }
         }
         moneyYear = year
+        // A card spend's month (prd §1182): this visit and the others in the
+        // same calendar month, newest first, four at most, and their total.
+        if thing.source != "Wallet" {
+            let month = ([thing] + others).filter {
+                $0.isLive && cal.isDate($0.capturedAt, equalTo: thing.capturedAt, toGranularity: .month)
+            }.sorted { $0.capturedAt > $1.capturedAt }
+            moneyMonth = Array(month.prefix(4))
+            let sum = month.compactMap(\.priceValue).map(abs).reduce(0, +)
+            moneyMonthTotal = sum > 0 ? sum.formatted(.currency(code: thing.priceCurrency ?? "USD")) : nil
+        }
     }
 
     /// A transaction whose whole body is the explorer link AND carries nothing
