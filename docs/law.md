@@ -222,7 +222,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1325 of 1389 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1327 of 1391 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -923,12 +923,12 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §636 — Four faults found by using build 527: a dock that stopped scrolling, a clipped chip, a room drawn twice, and a card t…
 - §637 — The wallet rail's picked face sits in a glass pill, not a stroked box [+1 sub-entries]
 - §638 — The Markets category is deleted
-- §639 — Every bridge setup screen becomes ONE account page, and the first three are on it [+1 sub-entries]
+- §639 — Every bridge setup screen becomes ONE account page, and the first three are on it (amended by §1196) [+1 sub-entries]
 - §639b — Every remaining setup screen moves onto the account page, and the old chassis is deleted
 - §639c — The product page and the connection page take the account page's anatomy
 - §640 — The setup half of an account page draws rows, not slabs (amended by §1027)
 - §640b — The trip to the other site is ONE card, and nothing about an account is drawn before there is one
-- §641 — The product page is deleted: a row goes straight to setup
+- §641 — The product page is deleted: a row goes straight to setup (amended by §1196)
 - §641b — The honesty sweep §641 owed: eleven ceilings audited, two were stated nowhere
 - §642 — The shell is not built for a scene connected in the background: build 534's watchdog, and the third of its family
 - §642b — The gate asked the wrong object and blanked the Mac: `applicationState` is `.background` on EVERY launch of a scene-b…
@@ -942,7 +942,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §650 — The same one-shot, one seat over, and this one also moved the ref
 - §651 — Three signature paths, each with work sitting inside the frames it needed: launch, the swipe, the dock [+1 sub-entries]
 - §652 — The Safe room, six passes deep: the batch is read at last, the head names people, and "ready to execute" stops being…
-- §653 — The door opens beside the page, the row lights its paste, and the catalogue verb says the price
+- §653 — The door opens beside the page, the row lights its paste, and the catalogue verb says the price (amended by §1196)
 - §654 — The devnet drift detectors get a night to run on, and the Privacy chain gets its regression row
 - §654a — The Frames devnet restarted, the envelope did NOT move, and the alarm was mine
 - §654b — The rule sheet was 99.9% full, so three sessions' honest index lines broke the gate; one 12KB entry moves to docs/
@@ -1549,6 +1549,8 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1193 — The share sheet gets UIKit items, never a `Transferable` link
 - §1194 — Privy's Home is its balance line
 - §1195 — A checklist's last tick says "All done"
+- §1196 — Every account page stands in the room's frame: Apps, the app's card, its tiles (amended by §1197)
+- §1197 — Every account page's ways in are its tiles, and every app with a site has a Website tile
 
 ## Dead rulings → what replaced them (generated)
 
