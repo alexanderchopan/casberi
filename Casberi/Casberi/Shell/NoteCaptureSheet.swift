@@ -95,6 +95,8 @@ struct NoteCaptureSheet: View {
     let onLand: (Thing) -> Void
 
     @State private var draft = ""
+    /// The list's last box just ticked (prd §1193): "All done" for a beat.
+    @State private var allDone = false
     /// Which line has the keyboard (prd §983): the title, or the words
     /// under it. Two fields over ONE `draft` — see `titleText`.
     @FocusState private var field: NoteField?
@@ -253,12 +255,22 @@ struct NoteCaptureSheet: View {
                 Spacer(minLength: 0)
             }
             .overlay {
-                // The page's date (prd §983) — a fact, not a control.
-                Text(dateLine)
-                    .dsText(.label12)
-                    .foregroundStyle(DS.textTertiary)
-                    .lineLimit(1)
-                    .padding(.horizontal, 56)
+                // The page's date (prd §983) — a fact, not a control. The
+                // list's last tick turns it to "All done" for a beat, on the
+                // page itself: a toast stands behind this sheet (prd §1193).
+                ZStack {
+                    if allDone {
+                        DSStamp(word: String(localized: "All done"), weight: .good, glyph: "checkmark")
+                            .transition(.scale(scale: 0.6).combined(with: .opacity))
+                    } else {
+                        Text(dateLine)
+                            .dsText(.label12)
+                            .foregroundStyle(DS.textTertiary)
+                            .lineLimit(1)
+                            .transition(.opacity)
+                    }
+                }
+                .padding(.horizontal, 56)
             }
             .padding(.horizontal, DS.Space.s4)
             .padding(.top, DS.Space.s3)
@@ -371,6 +383,16 @@ struct NoteCaptureSheet: View {
             // the next New arrives empty.
             // A tick is kept as it is made (§1099), whatever closes the page.
             editor.onTick = { if let editing { saveEdit(editing, quiet: true) } }
+            editor.onFinish = {
+                #if DEBUG
+                NSLog("noteFinish: all done")
+                #endif
+                withAnimation(DS.Motion.bubble) { allDone = true }
+                Task { @MainActor in
+                    try? await Task.sleep(for: .seconds(1.6))
+                    withAnimation(DS.Motion.standard) { allDone = false }
+                }
+            }
             let focusOnOpen = chrome.noteFocusOnOpen
             chrome.noteFocusOnOpen = true
             if let id = chrome.noteToEdit {

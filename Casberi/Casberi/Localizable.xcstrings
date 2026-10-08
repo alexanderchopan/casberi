@@ -47728,6 +47728,34 @@
         }
       }
     },
+    "All done" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Todo listo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "すべて完了"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "모두 완료"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "全部完成"
+          }
+        }
+      }
+    },
     "All from %@" : {
       "localizations" : {
         "es" : {

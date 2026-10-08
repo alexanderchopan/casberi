@@ -2475,6 +2475,11 @@ struct ThingSheetView: View {
             // every word stays where it was.
             guard thing.isLive else { return }
             let next = NoteChecklist.toggled(thing.content, ordinal: ordinal)
+            // The last tick of a list is felt as a finish (prd §1193).
+            if NoteChecklist.finished(before: thing.content, after: next) {
+                DSHaptic.success()
+                chrome.flash(String(localized: "All done"), tone: .success)
+            }
             thing.content = next
             modelContext.saveHonestly()
             tickedBody = next

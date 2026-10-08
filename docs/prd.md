@@ -65267,3 +65267,12 @@ Privy picked in the Wallet led Home with `holdingsBlockSection`, the same drawin
 - Holdings is unchanged.
 
 **Seen** on a private iPhone 17 Pro simulator with two seeded app wallets and a month of samples: Wallet · Privy reads $473, +$93 since Sep 8, the line and 7d · 30d · Followed over the tiles.
+
+## §1195 — A checklist's last tick says "All done" (user, 2026-10-08: "the tick of the checklist: ok do it") — BUILT
+
+**What it does.** Ticking the last open box in a list of two or more (`NoteChecklist.finished(before:after:)`: every box ticked now, at least one open before) plays the success haptic in place of the selection tick and says so once. A list that was already done, a one-item list and an untick say nothing.
+
+- **On the note page** (`NoteEditor`'s `onFinish`), the date line over the title turns to a green `DSStamp` "✓ All done" with the bubble spring for 1.6s, then the date comes back. It is on the page because a toast draws under the full-screen note sheet and its keyboard.
+- **In the Notes box and the thing sheet**, where no sheet covers the shell, it is `chrome.flash("All done", tone: .success)`.
+
+**Seen** on a private iPhone 17 Pro simulator, frame by frame: "Before the move" with two boxes; the first tick sinks, the second turns the date into "✓ All done" for about 1.7s and back. **Not seen:** the haptic (the simulator has none), the Notes box and the thing-sheet toasts.

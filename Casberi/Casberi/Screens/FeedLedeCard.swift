@@ -48,6 +48,7 @@ struct FeedLedeCard: View {
     let thing: Thing
     /// The tick on a list in the Notes box (prd §1099) is a write.
     @Environment(\.modelContext) private var modelContext
+    @Environment(ShellChrome.self) private var chrome: ShellChrome?
     /// The Mac keyboard walk's selection. Taken as a parameter rather than
     /// drawn behind the row (`selectionWash`) because this card paints its own
     /// opaque surface — a wash underneath it would be invisible. Only ever
@@ -822,13 +823,18 @@ struct FeedLedeCard: View {
     /// brackets changes (`NoteChecklist.toggled`).
     private func tick(_ ordinal: Int) {
         guard thing.isLive, Pinboard.isNote(thing) else { return }
-        DSHaptic.selection()
+        let before = thing.content
+        let after = NoteChecklist.toggledSinking(before, ordinal: ordinal)
+        // The last tick of a list is felt as a finish (prd §1193).
+        let finished = NoteChecklist.finished(before: before, after: after)
+        if finished { DSHaptic.success() } else { DSHaptic.selection() }
         withAnimation(DS.Motion.standard) {
             // The ticked sink (prd §1100): a ticked item drops to the foot
             // of its run, as the page's tick does.
-            thing.content = NoteChecklist.toggledSinking(thing.content, ordinal: ordinal)
+            thing.content = after
         }
         modelContext.saveHonestly()
+        if finished { chrome?.flash(String(localized: "All done"), tone: .success) }
     }
 
     /// **THE PROSE TAKES THE LADDER (prd §1102).** It was a fixed seven,

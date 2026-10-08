@@ -222,7 +222,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1323 of 1387 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1325 of 1389 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1418,7 +1418,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1066 — The account picker is a glass pill in the title row (amended by §1127, §1128, §1129, §1133)
 - §1067 — The room sweep
 - §1068 — Social is one room
-- §1069 — A Safe leads with its balance
+- §1069 — A Safe leads with its balance (amended by §1194)
 - §1070 — A post's cover never prints its link
 - §1071 — One 30pt icon for rows, the tray and the account list (amended by §1094, §1157)
 - §1072 — Respond on 0xBow stands under Privacy Pools' headline
@@ -1547,6 +1547,8 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1191 — An agent chat, a chat, a journal entry, a vault note, a passage, review news and anything else stand in the room's frame (amended by §1192)
 - §1192 — A post's box is its picture or its person, its words stand once below; a document's box is its first page
 - §1193 — The share sheet gets UIKit items, never a `Transferable` link
+- §1194 — Privy's Home is its balance line
+- §1195 — A checklist's last tick says "All done"
 
 ## Dead rulings → what replaced them (generated)
 

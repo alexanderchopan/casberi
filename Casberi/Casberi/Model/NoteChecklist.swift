@@ -100,6 +100,14 @@ enum NoteChecklist {
         return text
     }
 
+    /// Whether this tick finished the list (prd §1193): every item of a list
+    /// of two or more is done now, and was not before. One tick, one moment.
+    static func finished(before: String, after: String) -> Bool {
+        guard let now = progress(after), now.total >= 2, now.done == now.total else { return false }
+        guard let was = progress(before) else { return true }
+        return was.done < was.total
+    }
+
     /// How much of the list is done, or nil when the text holds no list.
     static func progress(_ text: String) -> (done: Int, total: Int)? {
         var done = 0, total = 0

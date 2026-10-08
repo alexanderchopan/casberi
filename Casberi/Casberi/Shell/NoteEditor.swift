@@ -302,15 +302,20 @@ struct NoteEditor: UIViewRepresentable {
 
         @objc private func tapped(_ g: UITapGestureRecognizer) {
             guard let view, let index = circleLine(at: g.location(in: view)) else { return }
-            let lines = (view.text ?? "").components(separatedBy: "\n")
+            let before = view.text ?? ""
+            let lines = before.components(separatedBy: "\n")
             let out = NoteEditing.tick(lines: lines, at: index).joined(separator: "\n")
-            DSHaptic.selection()
+            // The last tick of a list is felt as a finish (prd §1193).
+            let finished = NoteChecklist.finished(before: NoteChecklist.stored(before),
+                                                  after: NoteChecklist.stored(out))
+            if finished { DSHaptic.success() } else { DSHaptic.selection() }
             let keep = view.selectedRange
             view.text = out
             view.selectedRange = NSRange(location: min(keep.location, (out as NSString).length), length: 0)
             parent.text = out
             restyle()
             parent.controller.onTick?()
+            if finished { parent.controller.onFinish?() }
         }
 
         @objc private func swiped(_ g: UISwipeGestureRecognizer) {
@@ -511,6 +516,8 @@ final class NoteEditorController {
     weak var coordinator: NoteEditor.Coordinator?
     /// A circle was ticked — the page saves it as it is made (§1099).
     var onTick: (() -> Void)?
+    /// The list's last box ticked (prd §1193).
+    var onFinish: (() -> Void)?
 
     func toggleChecklist() { coordinator?.toggleChecklist() }
     func format(_ style: NoteEditing.Inline) { coordinator?.format(style) }
