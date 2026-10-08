@@ -1,3 +1,4 @@
+import LinkPresentation
 import SwiftUI
 import UIKit
 
@@ -303,44 +304,52 @@ enum ShareCard {
 /// dropped the link, so an RSS article went out as a card with no way to
 /// the article. Two items, and each target takes all it can.
 ///
-/// A thing with no link offers its title as the card's text representation
-/// instead — never the app's own site in place of a link the thing does not
-/// have (§83).
-enum ShareCardPart: Transferable {
-    case card(UIImage, words: String?)
-    case link(URL)
-
-    /// The items for one card: the card, then the link when there is one.
-    static func items(image: UIImage, link: URL?, title: String) -> [ShareCardPart] {
-        guard let link else { return [.card(image, words: title)] }
-        return [.card(image, words: nil), .link(link)]
+/// The items are UIKit objects for `UIActivityViewController`, never a
+/// `Transferable` through `ShareLink` (prd §1193). CoreTransferable writes
+/// `public.url` as a property list (`[url, "", {}]`) however the
+/// representation is declared: a proxied `URL` did (§1018), and so did a
+/// `DataRepresentation` of the URL's own bytes, and X posted the plist as
+/// the text both times. A real `URL` handed to the activity controller
+/// reaches a share extension as an `NSURL`, the way every app's link does.
+///
+/// A thing with no link offers its title as text instead — never the app's
+/// own site in place of a link the thing does not have (§83).
+enum ShareCardPart {
+    /// The items for one card: the card, then the link when there is one,
+    /// else the words.
+    static func items(image: UIImage, link: URL?, title: String, subject: String) -> [Any] {
+        guard let link else { return [image, title] }
+        return [image, LinkItem(url: link, subject: subject, image: image)]
     }
 
-    static var transferRepresentation: some TransferRepresentation {
-        DataRepresentation(exportedContentType: .png) { part in
-            guard case .card(let image, _) = part else { return Data() }
-            return image.pngData() ?? Data()
+    /// The link, with the mail subject and the sheet's header (the title
+    /// over the card, as `SharePreview` drew it).
+    final class LinkItem: NSObject, UIActivityItemSource {
+        let url: URL
+        let subject: String
+        let image: UIImage
+
+        init(url: URL, subject: String, image: UIImage) {
+            self.url = url
+            self.subject = subject
+            self.image = image
         }
-        .exportingCondition { if case .card = $0 { true } else { false } }
-        // The link goes out as `public.url` DATA — the URL's own UTF-8 bytes,
-        // the convention every reader of that type decodes
-        // (`NSURL(dataRepresentation:)`, the pasteboard, every share
-        // extension). A `ProxyRepresentation` to a `URL` here let
-        // CoreTransferable serialise it as a CoreFoundation property list, and
-        // X posted those bytes as the text (`bplist00%C2%A3…https://…`) — the
-        // card arrived, the link did not (§1018, measured on device). No force
-        // unwrap on the part's own value: `exportingCondition` does not stop
-        // the closure from being CALLED (measured: a nil link trapped at the
-        // first tap), it only stops its result from being exported.
-        DataRepresentation(exportedContentType: .url) { part in
-            guard case .link(let url) = part else { return Data() }
-            return url.dataRepresentation
+
+        func activityViewControllerPlaceholderItem(_ controller: UIActivityViewController) -> Any { url }
+
+        func activityViewController(_ controller: UIActivityViewController,
+                                    itemForActivityType type: UIActivity.ActivityType?) -> Any? { url }
+
+        func activityViewController(_ controller: UIActivityViewController,
+                                    subjectForActivityType type: UIActivity.ActivityType?) -> String { subject }
+
+        func activityViewControllerLinkMetadata(_ controller: UIActivityViewController) -> LPLinkMetadata? {
+            let metadata = LPLinkMetadata()
+            metadata.originalURL = url
+            metadata.url = url
+            metadata.title = subject
+            metadata.imageProvider = NSItemProvider(object: image)
+            return metadata
         }
-        .exportingCondition { if case .link = $0 { true } else { false } }
-        ProxyRepresentation { part in
-            guard case .card(_, let words?) = part else { return "" }
-            return words
-        }
-        .exportingCondition { if case .card(_, _?) = $0 { true } else { false } }
     }
 }

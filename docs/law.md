@@ -222,7 +222,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1322 of 1386 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1323 of 1387 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1351,7 +1351,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1015 — The tray searches in place, pins the You row, and a hold is Manage account (amended by §1133; part superseded by §1033)
 - §1016 — Logos: a Rewards tile, mining read off your node, and the app's first own symbol (amended by §1155)
 - §1017 — One circle size: every mark and face is the face button's 46pt, and the row breathes
-- §1018 — The share sheet's link is `public.url` bytes, never a proxied `URL`
+- §1018 — The share sheet's link is `public.url` bytes, never a proxied `URL` (amended by §1193)
 - §1019 — The mail rooms carry All · Attachments · New, Gmail and iCloud Mail alike
 - §1020 — Highlights: a passage you keep off a reading page is a note of yours
 - §1021 — A Notes folder shares as one card
@@ -1546,6 +1546,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1190 — A purchase, a Work receipt, a reminder and a workout take the room's title
 - §1191 — An agent chat, a chat, a journal entry, a vault note, a passage, review news and anything else stand in the room's frame (amended by §1192)
 - §1192 — A post's box is its picture or its person, its words stand once below; a document's box is its first page
+- §1193 — The share sheet gets UIKit items, never a `Transferable` link
 
 ## Dead rulings → what replaced them (generated)
 

@@ -6,7 +6,7 @@ import SwiftData
 /// out, then the doors as rows (§746: a verb is a row). Messages and Mail
 /// open the system composer with the card attached and the link in the
 /// body; `Share…` is the system sheet with the card and the link as two
-/// items (`ShareCardPart`), so a target keeps both.
+/// UIKit items (`ShareCardPart`, prd §1193), so a target keeps both.
 ///
 /// Rows the device cannot honour are not drawn (§83): the simulator and a
 /// Mac with no Messages account have no Messages row; there is always
@@ -105,22 +105,17 @@ struct ShareTray: View {
                     if MessageCompose.canMail {
                         DSDoorRow(icon: "envelope", label: "Send in Mail") { composer = .mail }
                     }
-                    if let image, let voiceFile {
-                        // A voice note goes out as the card and the recording
-                        // (prd §1024), two items on the system sheet.
+                    if let image {
+                        // The card and the link (or a voice note's recording,
+                        // prd §1024) as UIKit items, never a `ShareLink`:
+                        // CoreTransferable sends a link as a plist (§1193).
                         DSDoorRow(icon: "square.and.arrow.up", label: "Share…") { activityUp = true }
                             .sheet(isPresented: $activityUp) {
-                                ActivitySheet(items: [image, voiceFile])
+                                ActivitySheet(items: voiceFile.map { [image, $0] as [Any] }
+                                    ?? ShareCardPart.items(image: image, link: model?.link,
+                                                           title: shareWords, subject: shareTitle))
                                     .ignoresSafeArea()
                             }
-                    } else if let image {
-                        ShareLink(items: ShareCardPart.items(image: image, link: model?.link, title: shareWords),
-                                  subject: Text(shareTitle),
-                                  preview: { _ in SharePreview(shareTitle, image: Image(uiImage: image)) }) {
-                            DSDoorRowLabel(icon: "square.and.arrow.up", title: Text("Share…"))
-                        }
-                        .buttonStyle(RowPress())
-                        .dsHover()
                     } else if nothingToDraw {
                         // No card to send, but the thing still goes out: its
                         // link, or its words (§83 — the door never vanishes).
@@ -164,18 +159,13 @@ struct ShareTray: View {
     }
 
     /// `Share…` with no card: the link when the thing has one, else the
-    /// subject in words.
-    @ViewBuilder private var fallbackShare: some View {
-        let label = DSDoorRowLabel(icon: "square.and.arrow.up", title: Text("Share…"))
-        if let link = model?.link {
-            ShareLink(item: link) { label }
-                .buttonStyle(RowPress())
-                .dsHover()
-        } else {
-            ShareLink(item: shareTitle) { label }
-                .buttonStyle(RowPress())
-                .dsHover()
-        }
+    /// subject in words — a real `URL`, never a `ShareLink`'s (§1193).
+    private var fallbackShare: some View {
+        DSDoorRow(icon: "square.and.arrow.up", label: "Share…") { activityUp = true }
+            .sheet(isPresented: $activityUp) {
+                ActivitySheet(items: [model?.link.map { $0 as Any } ?? shareTitle])
+                    .ignoresSafeArea()
+            }
     }
 
     /// The subject and the preview's name: the thing's title, or the room's

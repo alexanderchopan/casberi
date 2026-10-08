@@ -65247,3 +65247,13 @@ Settings counts the phone's calendars through EventKit (§1150), and the demo's 
 3. **A chat stays as it ships** (§1191).
 
 **Seen** on a private iPhone 17 Pro simulator: Contract — joinery.pdf stamped with a four-page PDF (the page, PDF, 4 pages, the folder, the day), and uma's "Critique day…" (the person in the box, 26 likes · 1 reply, the reply context, the words once). **Not seen:** a post with a picture (no demo post carries one), a real folder file or Dropbox PDF read live, light mode, the Mac.
+
+## §1193 — The share sheet gets UIKit items, never a `Transferable` link (user: "sharing rss to twitter doesn't work", 2026-10-08; amends §1018)
+
+**What it did.** Build 777 carries §1018, and sharing an RSS article to X from the share tray still posted the card with a property list as the text: the screenshot ends `…#post_153P%C3%90%08%0C%C2%88%C2%89%00…%04…%C2%8A`, a bplist trailer for `[url, "", {}]` (offsets 8, 12, 136, 137; the 121-byte URL fills 12 to 136). §1018 swapped the proxied `URL` for a `DataRepresentation(exportedContentType: .url)` of the URL's own bytes, and CoreTransferable wrote the same plist. The type, not the representation, is what it serialises.
+
+**Ruling.** The tray's `Share…` is `UIActivityViewController` (`ActivitySheet`) with UIKit items, the path the voice note already took (§1024): the card as a `UIImage`, then the link as a real `URL` through `ShareCardPart.LinkItem` (a `UIActivityItemSource` carrying the mail subject and the sheet's header, the title over the card, as `SharePreview` drew it), or the words when the thing has no link. The no-card fallback is the same sheet with the link or the words. A share extension receives an `NSURL`, the way every app's link reaches it. `ShareCardPart` is no longer `Transferable`.
+
+**Not changed.** `ThingShareLink` (the row's and the sheet's plain Share) is still `ShareLink(item: URL)`; it is not the tray and was not reported. If X posts a plist from there, it takes the same fix.
+
+**UNRUN.** No Swift toolchain and no device in the session that made this: nothing compiled. The device check is the share tray on an RSS thing → X, the post's text the article's URL alone and the card attached.
