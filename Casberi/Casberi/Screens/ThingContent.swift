@@ -1322,7 +1322,7 @@ private extension UIImage {
 /// paragraphs with no sign anything was missing — a silent truncation, the
 /// same class of dishonesty the app polices everywhere else (a cut needs a
 /// seam). "Show more" names what's hidden and lets it in.
-private struct ChatBubbles: View {
+struct ChatBubbles: View {
     let text: String
     @State private var expanded = false
 

@@ -12,6 +12,9 @@ import SwiftUI
 /// A milestone — L2BEAT's prose, what they class it as, and their citation.
 struct L2beatMilestoneHead: View {
 	let thing: Thing
+	/// In the room's frame (prd §1191): the box says the headline and the
+	/// kind, so the head keeps the summary, the facts and the source.
+	var inFrame = false
 
 	@Environment(\.openURL) private var openURL
 
@@ -30,6 +33,7 @@ struct L2beatMilestoneHead: View {
 			// : .heading40`): a statement takes the head rung, a paragraph
 			// steps down so it does not become a wall. One rule, reused, so a
 			// registry head and a post read as the same sheet.
+			if !inFrame {
 			Text(thing.title)
 				.dsText(thing.title.count > 100 ? .heading24 : .heading40)
 				.foregroundStyle(DS.textPrimary)
@@ -37,6 +41,7 @@ struct L2beatMilestoneHead: View {
 				.textSelection(.enabled)
 
 			kindLine(facts)
+			}
 
 			if let summary = thing.summary, !summary.isEmpty {
 				Text(summary)
@@ -164,6 +169,9 @@ struct L2beatRevisionHead: View {
 	let revision: L2beatSheet.Revision
 	let project: L2beatProject?
 	let risk: L2beatRisk?
+	/// In the room's frame (prd §1191): the box says what it is and the
+	/// headline, so the head keeps only what landed and the reading.
+	var inFrame = false
 
 	var body: some View {
 		if thing.isLive { liveBody }
@@ -172,6 +180,7 @@ struct L2beatRevisionHead: View {
 	@ViewBuilder private var liveBody: some View {
 		let name = project?.name ?? revision.projectID
 		VStack(alignment: .leading, spacing: DS.Space.s4) {
+			if !inFrame {
 			VStack(alignment: .leading, spacing: DS.Space.s2) {
 				Text(revision.isStageMove
 					? String(localized: "L2BEAT moved this chain's stage")
@@ -185,6 +194,7 @@ struct L2beatRevisionHead: View {
 				Text(name)
 					.dsText(.label12)
 					.foregroundStyle(DS.textTertiary)
+			}
 			}
 
 			// What it moved TO. Deliberately not a before→after pair: the ref records only
@@ -228,7 +238,14 @@ struct L2beatRevisionHead: View {
 		.frame(maxWidth: .infinity, alignment: .leading)
 	}
 
-	private var headline: String {
+	/// What the box says it was (prd §1191).
+	var label: String {
+		revision.isStageMove
+			? String(localized: "L2BEAT moved this chain's stage")
+			: String(localized: "L2BEAT revised its assessment")
+	}
+
+	var headline: String {
 		if revision.isStageMove {
 			return revision.afterStage?.meaning ?? thing.title
 		}

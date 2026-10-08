@@ -395,6 +395,7 @@ struct ThingSheetView: View {
                 let drawsFramedCheck: Bool = framedChain != nil || framedWallet != nil || privyApp != nil
                 let isPerson: Bool = socialShape == .person
                 let framesOwnTiles: Bool = drawsFramedCheck || isPerson
+                    || l2beatShape != nil || walletbeatShape != nil
                 let purchaseReading = self.purchaseReading
                 let workReading = self.workReading
                 let agentShape = self.agentShape
@@ -435,11 +436,20 @@ struct ThingSheetView: View {
                     && !articleHead && !postHead && !momentHead && noteShape == nil
                 let transcriptHead = socialShape == .transcript
                 let talkHead = agentConversation != nil || mailHead || transcriptHead
+                // ANYTHING ELSE (prd §1191): the sheet's last arm, in the
+                // room's frame with its own tiles.
+                let boxedByShape: Bool = moneyReceipt != nil || framedShot || isPerson
+                    || purchaseReading != nil || workReading != nil || agentConversation != nil
+                    || drawsFramedCheck || l2beatShape != nil || walletbeatShape != nil
+                    || noteShape != nil
+                let boxedByHead: Bool = chartHead || mailHead || transcriptHead || momentHead
+                    || postHead || mediaHead || articleHead
+                let plainHead: Bool = !boxedByShape && !boxedByHead
                 let ownHead: Bool = articleHead || postHead || framedShot || moneyReceipt != nil
                     || mediaHead || chartHead
                     || workReading != nil
                     || (purchaseReading.map { $0.archetype != .watch } ?? false)
-                    || momentHead || noteShape != nil || talkHead || framesOwnTiles
+                    || momentHead || noteShape != nil || talkHead || framesOwnTiles || plainHead
                 // Sequenced entrance (delight 2026-07-14): the sheet composes
                 // itself over the pouring wash — eyebrow, then title, then
                 // media, then spec — each a beat behind the last, one-shot.
@@ -704,24 +714,7 @@ struct ThingSheetView: View {
                         .settleIn(delay: 0.08)
                     dialResult
                 } else if let agentConversation {
-                    // The agent is who it is from; the conversation's own
-                    // title stays its headline (prd §894).
-                    SheetPartyHead(name: thing.source, day: thing.capturedAt,
-                                   line: Self.turnsLine(agentConversation),
-                                   onFace: Corpus.earnsRoom(thing.source) ? openSourceRoom : nil) {
-                        BridgeIcon(name: thing.source, size: DS.Face.shelf, circular: true)
-                    }
-                    .padding(.top, onBack == nil ? DS.Space.s4 : DS.Space.s3)
-                    .settleIn(delay: 0.04)
-                    Text(agentConversation.hero)
-                        .dsText(Self.titleRung(for: agentConversation.hero).style)
-                        .foregroundStyle(DS.textPrimary)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .textSelection(.enabled)
-                        .padding(.horizontal, DSRoomChassis.leadInset)
-                        .padding(.top, DS.Space.s6)
-                        .settleIn(delay: 0.06)
-                    noteDial
+                    agentFrame(agentConversation)
                 } else if drawsFramedCheck {
                 // A chain, a wallet or an app's wallet in the room's frame
                 // (prd §1187), each drawing its own tiles.
@@ -729,7 +722,6 @@ struct ThingSheetView: View {
                     .padding(.top, onBack == nil ? DS.Space.s4 : DS.Space.s3)
             } else if let l2beatShape {
                 l2beatHead(l2beatShape)
-                    .padding(.horizontal, DS.Space.s4)
                     .padding(.top, DS.Space.s3)
                     .settleIn(delay: 0.06)
             } else if let walletbeatShape {
@@ -738,7 +730,6 @@ struct ThingSheetView: View {
                 // card says better, and an incident's title is set inside the anatomy at
                 // reading size rather than printed twice.
                 walletbeatHead(walletbeatShape)
-                    .padding(.horizontal, DS.Space.s4)
                     .padding(.top, DS.Space.s3)
                     .settleIn(delay: 0.06)
             } else if let noteShape {
@@ -765,21 +756,7 @@ struct ThingSheetView: View {
                 } else if mailHead {
                     mailFrame
                 } else if transcriptHead {
-                    // The PERSON leads a chat; its "Chat with Ada" title is the
-                    // name said twice, so the name stands alone (prd §894).
-                    let name = Self.chatName(thing.title)
-                    SheetPartyHead(name: name, day: thing.capturedAt,
-                                   line: Self.chatLine(thing)) {
-                        Text(verbatim: String(name.prefix(1)).uppercased())
-                            .dsText(.badgeInitial12)
-                            .foregroundStyle(DS.textPrimary)
-                            .frame(width: DS.Face.shelf, height: DS.Face.shelf)
-                            .background(Circle().fill(DS.fillLine))
-                            .accessibilityHidden(true)
-                    }
-                    .padding(.top, onBack == nil ? DS.Space.s4 : DS.Space.s3)
-                    .settleIn(delay: 0.04)
-                    noteDial
+                    transcriptFrame
                 } else if momentHead, thing.kind == .event,
                           !thing.factList.contains(where: { $0.action == .metric }),
                           let start = momentStart {
@@ -847,10 +824,7 @@ struct ThingSheetView: View {
                 } else if articleHead {
                     articleFrame
                 } else {
-                    titleBlock
-                        .padding(.horizontal, DS.Space.s4)
-                        .padding(.top, DS.Space.s3)
-                        .settleIn(delay: 0.06)
+                    plainFrame
                 }
                 // Events speak through WHEN below; and when the content is
                 // just the title again (a short note with no body beyond its
@@ -1015,7 +989,7 @@ struct ThingSheetView: View {
                 }
                 let headDrawsTiles: Bool = moneyReceipt != nil || framedShot || articleHead
                     || noteShape != nil || talkHead || momentHead || mediaHead
-                    || workReading != nil || framesOwnTiles || postHead || chartHead
+                    || workReading != nil || framesOwnTiles || postHead || chartHead || plainHead
                 let purchaseAllowsDial: Bool = purchaseReading == nil || purchaseReading?.archetype == .watch
                 if !headDrawsTiles && purchaseAllowsDial {
                     // The disc dial, standardized across every sheet
@@ -1042,8 +1016,6 @@ struct ThingSheetView: View {
                 // conversation you can carry on. "Ask about this", "Copy as
                 // context" and the Pin chip are gone — the first two were the
                 // agent bar and the Copy disc said twice, and Pin is a disc now.
-                continueConversation
-                    .padding(.top, DS.Space.s4)
                 if !replies.isEmpty {
                     // One replies renderer (2026-07-16) — the thing sheet and
                     // the in-app walker show a reply identically, however deep
@@ -1893,13 +1865,42 @@ struct ThingSheetView: View {
                 L2beatRiskCard(chainID: chainID, showsHeader: false)
             }
         case .milestone:
-            L2beatMilestoneHead(thing: thing)
+            // In the room's frame (prd §1191): the chain is the title.
+            let facts = L2beatMilestoneBook.facts(ref: thing.sourceRef)
+            newsFrame(title: facts?.projectName ?? thing.source,
+                      label: facts?.kind.label ?? thing.source,
+                      urgent: thing.tags.contains(L2beatNewsParse.incidentTag),
+                      headline: thing.title) {
+                L2beatMilestoneHead(thing: thing, inFrame: true)
+            }
         case .revision:
             if let (revision, project, risk) = L2beatSheetSource.revisionSubject(for: thing) {
-                L2beatRevisionHead(thing: thing, revision: revision,
-                                   project: project, risk: risk)
+                let head = L2beatRevisionHead(thing: thing, revision: revision,
+                                              project: project, risk: risk, inFrame: true)
+                newsFrame(title: project?.name ?? revision.projectID, label: head.label,
+                          urgent: false, headline: head.headline) { head }
             }
         }
+    }
+
+    /// Review news in the room's frame (prd §1191): the chain or wallet is the
+    /// title, the box what happened, the tiles, then the reviewer's detail.
+    @ViewBuilder
+    private func newsFrame<Detail: View>(title: String, label: String, urgent: Bool,
+                                         headline: String,
+                                         @ViewBuilder detail: () -> Detail) -> some View {
+        DSRoomTitleRow(title: title)
+            .padding(.horizontal, DSRoomChassis.inset)
+        ReviewNewsBox(label: label, urgent: urgent,
+                      meta: FeedScreen.dayWord(thing.capturedAt), headline: headline)
+            .dsRoomBox()
+            .padding(.top, DS.Space.s3)
+        VerbDial(thing: thing, verbs: sheetVerbs, onVerb: runVerb, onName: nil)
+            .padding(.top, DSRoomChassis.leadGap)
+        dialResult
+        detail()
+            .padding(.horizontal, DSRoomChassis.leadInset)
+            .padding(.top, DS.Space.s6)
     }
 
     /// The Walletbeat head each shape leads with, in place of the title block.
@@ -1914,10 +1915,26 @@ struct ThingSheetView: View {
                 WalletbeatReportCard(walletID: walletID, showsHeader: false)
             }
         case .incident:
-            WalletbeatIncidentHead(thing: thing)
+            // In the room's frame (prd §1191): the wallet is the title.
+            let facts = WalletbeatIncidentBook.facts(ref: thing.sourceRef)
+            let wallet = facts?.wallets.first.flatMap { id in
+                WalletbeatDirectory.wallets.first { $0.id == id }?.name
+            }
+            newsFrame(title: wallet ?? thing.source,
+                      label: facts?.status.label ?? thing.source,
+                      urgent: thing.tags.contains(WalletbeatNewsParse.openTag),
+                      headline: thing.title) {
+                WalletbeatIncidentHead(thing: thing, inFrame: true)
+            }
         case .revision:
             if let (revision, attribute) = WalletbeatSheetSource.revisionAttribute(for: thing) {
-                WalletbeatRevisionHead(thing: thing, revision: revision, attribute: attribute)
+                let name = WalletbeatDirectory.wallets.first { $0.id == revision.walletID }?.name
+                    ?? revision.walletID
+                newsFrame(title: name, label: String(localized: "Walletbeat revised its review"),
+                          urgent: false, headline: attribute?.name ?? thing.title) {
+                    WalletbeatRevisionHead(thing: thing, revision: revision,
+                                           attribute: attribute, inFrame: true)
+                }
             }
         }
     }
@@ -1932,6 +1949,24 @@ struct ThingSheetView: View {
         let tags = NoteSheetSource.tags(for: thing)
         VStack(alignment: .leading, spacing: 0) {
             switch shape {
+            case .entry where !pagedNote && thing.kind != .voice && !NoteLock.isLocked(thing):
+                // A JOURNAL ENTRY IN THE ROOM'S FRAME (prd §1191): its first
+                // line is the title, the box its day, the time (and the place
+                // and weather where the journal kept them) and its picture,
+                // then the tiles, then the words after the first line.
+                let body = tickedBody ?? NoteSheetSource.prose(for: thing).text
+                let split = Self.keptTitleLine(Self.entrySplit(body), kept: false)
+                DSRoomTitleRow(title: split.first ?? TitleSeam.name(thing.title))
+                    .padding(.horizontal, DSRoomChassis.inset)
+                JournalEntryBox(thing: thing, sameDay: sameDayThings.count) { zoomingPhoto = true }
+                    .dsRoomBox()
+                    .padding(.top, DS.Space.s3)
+                noteDial
+                if !split.rest.isEmpty {
+                    noteProse(text: split.rest)
+                        .padding(.horizontal, DSRoomChassis.leadInset)
+                        .padding(.top, DS.Space.s6)
+                }
             case .entry:
                 // The entry's own photograph fills the lead's well (§882's
                 // picture, the article's); an entry without one starts at its
@@ -1999,19 +2034,14 @@ struct ThingSheetView: View {
                     noteDial
                 }
             case .note:
-                SheetPartyHead(name: thing.source, day: thing.capturedAt,
-                               line: thing.kind.typeTag,
-                               onFace: Corpus.earnsRoom(thing.source) ? openSourceRoom : nil) {
-                    BridgeIcon(name: thing.source, size: DS.Face.shelf, circular: true,
-                               symbol: BridgeIcon.noteSymbol(for: thing))
-                }
-                Text(TitleSeam.name(thing.title))
-                    .dsText(Self.titleRung(for: TitleSeam.name(thing.title)).style)
-                    .foregroundStyle(DS.textPrimary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .textSelection(.enabled)
-                    .padding(.horizontal, DSRoomChassis.leadInset)
-                    .padding(.top, DS.Space.s6)
+                // A VAULT NOTE IN THE ROOM'S FRAME (prd §1191): its name is the
+                // title, the box where it lives, when it was edited and its
+                // tags, then the tiles and the words.
+                DSRoomTitleRow(title: TitleSeam.name(thing.title))
+                    .padding(.horizontal, DSRoomChassis.inset)
+                VaultNoteBox(thing: thing, tags: tags)
+                    .dsRoomBox()
+                    .padding(.top, DS.Space.s3)
                 noteDial
                 // A vault note's body opens with its own title line; the head
                 // just set it, so the prose starts after it (prd §893).
@@ -2026,28 +2056,32 @@ struct ThingSheetView: View {
                 let cite = Self.citationParts(NoteSheetSource.citation(for: thing) ?? thing.source)
                 // The importer's locator ("page 42") rides the line.
                 let locator = (thing.summary ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-                SheetPartyHead(name: cite.work, day: thing.capturedAt,
-                               line: [cite.author, thing.source,
-                                      locator.count <= 24 && !locator.isEmpty ? locator : nil]
-                                   .compactMap { $0 }
-                                   .joined(separator: " · ")) {
-                    Image(systemName: "book.closed")
-                        .dsGlyph(.title)
-                        .foregroundStyle(DS.textPrimary)
-                        .frame(width: DS.Face.shelf, height: DS.Face.shelf)
-                        .background(Circle().fill(DS.fillLine))
-                        .accessibilityHidden(true)
-                }
-                Text("\u{201C}\(NoteSheetSource.passage(for: thing))\u{201D}")
-                    .dsText(.heading24)
-                    .foregroundStyle(DS.textPrimary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .textSelection(.enabled)
-                    .padding(.horizontal, DSRoomChassis.leadInset)
-                    .padding(.top, DS.Space.s6)
+                // A PASSAGE IN THE ROOM'S FRAME (prd §1191): the book is the
+                // title, the passage the box, who wrote it and where under it.
+                let passage = NoteSheetSource.passage(for: thing)
+                DSRoomTitleRow(title: cite.work)
+                    .padding(.horizontal, DSRoomChassis.inset)
+                PassageBox(passage: passage, author: cite.author,
+                           line: [cite.author, thing.source,
+                                  locator.count <= 24 && !locator.isEmpty ? locator : nil,
+                                  FeedScreen.dayWord(thing.capturedAt)]
+                               .compactMap { $0 }
+                               .joined(separator: " · "))
+                    .dsRoomBox()
+                    .padding(.top, DS.Space.s3)
                 noteDial
+                if PassageBox.cuts(passage) {
+                    Text("\u{201C}\(passage)\u{201D}")
+                        .dsText(.reading17)
+                        .foregroundStyle(DS.textPrimary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .textSelection(.enabled)
+                        .padding(.horizontal, DSRoomChassis.leadInset)
+                        .padding(.top, DS.Space.s6)
+                }
             }
-            if !tags.isEmpty {
+            // A vault note's tags stand in its box (prd §1191).
+            if !tags.isEmpty, shape != .note {
                 NoteTagRow(tags: tags)
                     .padding(.horizontal, DSRoomChassis.leadInset)
                     .padding(.top, DS.Space.s4)
@@ -2370,15 +2404,6 @@ struct ThingSheetView: View {
             .trimmingCharacters(in: .whitespaces) ?? ""
         let symbol = page[..<dash.lowerBound].split(separator: " ").first.map(String.init)
         return name.isEmpty ? nil : (name, symbol)
-    }
-
-    /// "Conversation · 9 turns" (prd §894).
-    static func turnsLine(_ c: AgentSheet.Conversation) -> String {
-        let n = c.counted ?? c.turns.count
-        let line = String(localized: "Conversation · \(n) turns")
-        // A Claude Code session names its project, as the old head did.
-        guard let project = c.project, !project.isEmpty else { return line }
-        return line + " · " + String(localized: "in \(project)")
     }
 
     /// A mail's sender, as `MailContentView` reads it.
@@ -3396,6 +3421,64 @@ struct ThingSheetView: View {
         }
     }
 
+    /// An agent chat in the room's frame (prd §1191): its title, the box of
+    /// what you asked and the reply's first words, the tiles (Continue
+    /// fourth), then the turns.
+    @ViewBuilder
+    private func agentFrame(_ reading: AgentSheet.Conversation) -> some View {
+        DSRoomTitleRow(title: reading.hero)
+            .padding(.horizontal, DSRoomChassis.inset)
+            .padding(.top, onBack == nil ? DS.Space.s4 : DS.Space.s3)
+            .settleIn(delay: 0.04)
+        AgentChatBox(thing: thing, reading: reading)
+            .dsRoomBox()
+            .padding(.top, DS.Space.s3)
+            .settleIn(delay: 0.06)
+        VerbDial(thing: thing, verbs: sheetVerbs, onVerb: runVerb, onName: nil,
+                 keep: continueKeep(reading))
+            .padding(.top, DSRoomChassis.leadGap)
+            .settleIn(delay: 0.08)
+        dialResult
+    }
+
+    /// A chat with a person in the room's frame (prd §1191): the person, the
+    /// box of how much and the last exchange, the tiles, then the chat.
+    @ViewBuilder
+    private var transcriptFrame: some View {
+        DSRoomTitleRow(title: Self.chatName(thing.title))
+            .padding(.horizontal, DSRoomChassis.inset)
+            .padding(.top, onBack == nil ? DS.Space.s4 : DS.Space.s3)
+            .settleIn(delay: 0.04)
+        ChatTranscriptBox(thing: thing)
+            .dsRoomBox()
+            .padding(.top, DS.Space.s3)
+            .settleIn(delay: 0.06)
+        VerbDial(thing: thing, verbs: sheetVerbs, onVerb: runVerb, onName: nil, keep: sheetKeep)
+            .padding(.top, DSRoomChassis.leadGap)
+            .settleIn(delay: 0.08)
+        dialResult
+    }
+
+    /// Anything else in the room's frame (prd §1191): its title, the box of
+    /// the thing (its picture, or its site or app said big), the tiles.
+    @ViewBuilder
+    private var plainFrame: some View {
+        // A file's name is whole ("Contract — joinery.pdf"): its dash is the
+        // file's own, never §915's seam.
+        DSRoomTitleRow(title: thing.kind == .file ? thing.title : TitleSeam.split(thing.title).name)
+            .padding(.horizontal, DSRoomChassis.inset)
+            .padding(.top, onBack == nil ? DS.Space.s4 : DS.Space.s3)
+            .settleIn(delay: 0.04)
+        ThingSheetBox(thing: thing)
+            .dsRoomBox()
+            .padding(.top, DS.Space.s3)
+            .settleIn(delay: 0.06)
+        VerbDial(thing: thing, verbs: sheetVerbs, onVerb: runVerb, onName: nil, keep: sheetKeep)
+            .padding(.top, DSRoomChassis.leadGap)
+            .settleIn(delay: 0.08)
+        dialResult
+    }
+
     /// The thing's own content. A charted row is handed the sheet's tiles to
     /// stand under its boxed price (prd §1188).
     @ViewBuilder
@@ -3565,7 +3648,7 @@ struct ThingSheetView: View {
     /// The checkups and the person whose one link is their source's own page
     /// (prd §1187), so its tile says the place.
     private var landsAtSource: Bool {
-        l2beatShape == .chain || walletbeatShape == .wallet || socialShape == .person
+        l2beatShape != nil || walletbeatShape != nil || socialShape == .person
             || isSocialPost
     }
 
@@ -3842,31 +3925,23 @@ struct ThingSheetView: View {
     /// question that really was left hanging — and otherwise opens the composer
     /// empty for the person to type. It never invents a question.
     @ViewBuilder
-    private var continueConversation: some View {
-        if thing.isLive, AgentKey.isConfigured, let reading = agentConversation {
-            let paired = AgentSheet.exchanges(reading.turns)
-            if !paired.history.isEmpty {
-                Button {
-                    DSHaptic.tap()
-                    dismiss()
-                    chrome.ask(
-                        paired.pending ?? "",
-                        withKey: true,
-                        seedHistory: paired.history.map {
-                            AgentTurn(question: $0.question, answer: $0.answer)
-                        },
-                        seedSystem: AgentSheet.continuationInstructions(
-                            source: thing.source, cut: reading.cut))
-                } label: {
-                    // A verb, so the door row's face (prd §746).
-                    DSDoorRowLabel(icon: "arrow.turn.down.right",
-                                   title: Text(AgentKey.active.map {
-                                       String(localized: "Carry on with \($0.agent)")
-                                   } ?? String(localized: "Carry on")))
-                }
-                .buttonStyle(RowPress())
-                .dsHover()
-            }
+    private func continueKeep(_ reading: AgentSheet.Conversation) -> VerbDial.Keep? {
+        guard thing.isLive, AgentKey.isConfigured else { return nil }
+        let paired = AgentSheet.exchanges(reading.turns)
+        guard !paired.history.isEmpty else { return nil }
+        // Carry it on with your agent (prd §632's chip, the fourth tile since
+        // §1191): the conversation so far as the agent's history.
+        return VerbDial.Keep(label: String(localized: "Continue"), glyph: "arrow.turn.down.right") {
+            DSHaptic.tap()
+            dismiss()
+            chrome.ask(
+                paired.pending ?? "",
+                withKey: true,
+                seedHistory: paired.history.map {
+                    AgentTurn(question: $0.question, answer: $0.answer)
+                },
+                seedSystem: AgentSheet.continuationInstructions(
+                    source: thing.source, cut: reading.cut))
         }
     }
 

@@ -267,7 +267,7 @@ guard 'l2beatHead(l2beatShape)' "$SHEETVIEW" \
   "the thing sheet no longer draws the L2BEAT anatomies — all three fall back to a link"
 guard '&& walletbeatShape == nil && l2beatShape == nil' "$SHEETVIEW" \
   "the generic content block draws UNDER an L2BEAT head — the row's URL printed twice"
-guard 'L2beatMilestoneHead(thing: thing)' "$SHEETVIEW" \
+guard 'L2beatMilestoneHead(thing: thing, inFrame: true)' "$SHEETVIEW" \
   "a milestone's sheet lost its own head"
 
 # ---- Reach --------------------------------------------------------------------------------------

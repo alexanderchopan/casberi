@@ -13,6 +13,9 @@ import SwiftUI
 /// A security incident — Walletbeat's prose, the facts they record, and their citations.
 struct WalletbeatIncidentHead: View {
 	let thing: Thing
+	/// In the room's frame (prd §1191): the box says the headline and the
+	/// status, so the head keeps the summary, the facts and the sources.
+	var inFrame = false
 
 	@Environment(\.openURL) private var openURL
 	/// The wallet whose report card is open over this sheet (prd §430).
@@ -28,6 +31,7 @@ struct WalletbeatIncidentHead: View {
 			// THE CONTAINER'S OWN TITLE RULE (prd §560) — see
 			// `L2beatSheetViews.liveBody`; the two registry heads shared the
 			// stray `heading40` and are swept together.
+			if !inFrame {
 			Text(thing.title)
 				.dsText(thing.title.count > 100 ? .heading24 : .heading40)
 				.foregroundStyle(DS.textPrimary)
@@ -35,6 +39,7 @@ struct WalletbeatIncidentHead: View {
 				.textSelection(.enabled)
 
 			statusLine(facts)
+			}
 
 			if let summary = thing.summary, !summary.isEmpty {
 				Text(summary)
@@ -209,6 +214,8 @@ struct WalletbeatRevisionHead: View {
 	let thing: Thing
 	let revision: WalletbeatSheet.Revision
 	let attribute: WalletbeatAttribute?
+	/// In the room's frame (prd §1191): the box says what changed.
+	var inFrame = false
 
 	var body: some View {
 		if thing.isLive { liveBody }
@@ -218,6 +225,7 @@ struct WalletbeatRevisionHead: View {
 		let name = WalletbeatDirectory.wallets.first { $0.id == revision.walletID }?.name
 			?? revision.walletID
 		VStack(alignment: .leading, spacing: DS.Space.s4) {
+			if !inFrame {
 			VStack(alignment: .leading, spacing: DS.Space.s2) {
 				Text(String(localized: "Walletbeat revised its review"))
 					.dsText(.label12)
@@ -229,6 +237,7 @@ struct WalletbeatRevisionHead: View {
 				Text(String(localized: "\(name) · \(revision.after.isJudged ? String(localized: "now rated") : String(localized: "no longer rated"))"))
 					.dsText(.label12)
 					.foregroundStyle(DS.textTertiary)
+			}
 			}
 
 			// BEFORE → AFTER where the ref records a before, and the verdict alone

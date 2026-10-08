@@ -80,8 +80,8 @@ echo "Drift guards"
 # `turns` is worthless if the content view still draws `content`.
 guard "the sheet asks AgentSheetSource for its shape" \
   'AgentSheetSource\.shape\(for: thing\)' "$VIEW"
-guard "the conversation head is drawn (prd §894: the shared head)" \
-  'Self\.turnsLine\(agentConversation\)' "$VIEW"
+guard "the conversation stands in the room's frame (prd §1191)" \
+  'AgentChatBox\(thing: thing, reading: reading\)' "$VIEW"
 guard "the receipt card is drawn" \
   'AgentReceiptCard\(reading: agentConversation\)' "$VIEW"
 # The reading is computed ONCE and handed down. Two derivations are two places
@@ -694,7 +694,7 @@ print("The consequence — the reading the head actually draws")
 
 // END TO END, and the reason both defects were worth a harness: every
 // assertion above is about a string, and this is about the sentence a person
-// reads. The sheet's head line (`turnsLine`, prd §894) draws `reading.project`
+// reads. The sheet's box (`AgentChatBox`, prd §1191) draws `reading.project`
 // as "in <project>".
 let readCode = AgentSheetSource.conversation(for: session)
 check("the head names the real project", readCode.project == "casberi")
