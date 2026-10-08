@@ -146,6 +146,8 @@ extension FeedScreen {
                 } label: {
                     WalletSubscriptionRow(item: item, writes: walletSubscriptionWrites(item))
                         .contentShape(Rectangle())
+                        // Just tracked: one pink pass as it lands (prd §1199).
+                        .arrivalWash(SubscriptionStore.shared.justTracked(item.id), hue: DS.brand)
                 }
                 .buttonStyle(RowPress())
                 .dsHover()

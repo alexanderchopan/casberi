@@ -110,6 +110,12 @@ struct DSScopeTiles<Scope: DSTileScope>: View {
     /// and never counted as the tap. Cleared by that release, or by a short
     /// window if no release reaches the button.
     @State private var held: Scope? = nil
+    /// Where each verb tile stands on screen, so what it opens can grow out
+    /// of it (`DSTileOrigin`, prd §1199).
+    @State private var verbFrames: [Scope: CGRect] = [:]
+    /// A plus turns a quarter each time it is pressed (prd §1199).
+    @State private var plusTurn: Double = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// The verb tile a finger is resting on (prd §973), and the one that has
     /// rested long enough to arm — past a tap, before the hold lands.
     @GestureState private var pressing: Scope? = nil
@@ -240,6 +246,12 @@ struct DSScopeTiles<Scope: DSTileScope>: View {
             if held == section { held = nil; return }
             guard !isOn else { return }
             DSHaptic.selection()
+            if isVerb, let frame = verbFrames[section] {
+                DSTileOrigin.mark(CGPoint(x: frame.midX, y: frame.midY))
+                if section.glyph == "plus", !reduceMotion {
+                    withAnimation(DS.Motion.press) { plusTurn += 90 }
+                }
+            }
             onPick(section)
         } label: {
             VStack(spacing: 2) {
@@ -248,6 +260,7 @@ struct DSScopeTiles<Scope: DSTileScope>: View {
                 // dock's (user, 2026-09-17). A room's scope grid stays still.
                 CategoryGlyph(name: arming == section ? (hold?.glyph ?? section.glyph) : section.glyph,
                               size: Self.glyphSize, isActive: strip && isOn)
+                    .rotationEffect(.degrees(isVerb && section.glyph == "plus" ? plusTurn : 0))
                 // A section that wants you says so in its WORD's tone, never
                 // a dot (user, 2026-09-24: "if we want yellow just make the
                 // word Risk yellow"). The picked tile stays white on its tint.
@@ -269,6 +282,9 @@ struct DSScopeTiles<Scope: DSTileScope>: View {
             .contentShape(shape)
         }
         .buttonStyle(PressSpring())
+        .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { frame in
+            if isVerb { verbFrames[section] = frame }
+        }
         .disabled(isInert)
         .simultaneousGesture(
             LongPressGesture(minimumDuration: 0.45)

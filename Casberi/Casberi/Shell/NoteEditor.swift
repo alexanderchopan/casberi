@@ -300,15 +300,103 @@ struct NoteEditor: UIViewRepresentable {
             g is UITapGestureRecognizer && other.view === view
         }
 
+        /// A tick drawing itself, so a second tap waits for it.
+        private var drawingTick = false
+
         @objc private func tapped(_ g: UITapGestureRecognizer) {
-            guard let view, let index = circleLine(at: g.location(in: view)) else { return }
+            guard !drawingTick, let view, let index = circleLine(at: g.location(in: view)) else { return }
+            // A box being ticked fills with a spring and a line crosses its
+            // words left to right before it sinks (prd §1199); an untick, or
+            // Reduce Motion, commits at once.
+            let lines = (view.text ?? "").components(separatedBy: "\n")
+            guard lines.indices.contains(index), NoteEditing.isDone(lines[index]) == false,
+                  !UIAccessibility.isReduceMotionEnabled,
+                  let layers = tickLayers(in: view, line: index, lines: lines) else {
+                commitTick(index)
+                return
+            }
+            drawingTick = true
+            DSHaptic.selection()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.34) { [weak self] in
+                layers.forEach { $0.removeFromSuperlayer() }
+                self?.drawingTick = false
+                self?.commitTick(index, felt: true)
+            }
+        }
+
+        /// The circle filling and the strike drawing, over the line as it
+        /// stands: Core Animation, because the words are one text view.
+        private func tickLayers(in view: UITextView, line index: Int, lines: [String]) -> [CALayer]? {
+            let ns = (view.text ?? "") as NSString
+            let start = lines[..<index].reduce(0) { $0 + ($1 as NSString).length + 1 }
+            let line = lines[index] as NSString
+            let lead = (lines[index].prefix(while: { $0 == " " }) as Substring).utf16.count
+            let mark = (NoteChecklist.editorMark as NSString).length
+            guard start + line.length <= ns.length, line.length > lead + mark else { return nil }
+            let manager = view.layoutManager
+            let container = view.textContainer
+            let inset = CGPoint(x: view.textContainerInset.left, y: view.textContainerInset.top)
+            func glyphs(_ r: NSRange) -> NSRange { manager.glyphRange(forCharacterRange: r, actualCharacterRange: nil) }
+            let markRect = manager.boundingRect(forGlyphRange: glyphs(NSRange(location: start + lead, length: 1)),
+                                                in: container).offsetBy(dx: inset.x, dy: inset.y)
+            var out: [CALayer] = []
+
+            let side = min(markRect.width, markRect.height) * 0.86
+            let disc = CAShapeLayer()
+            disc.frame = CGRect(x: markRect.midX - side / 2, y: markRect.midY - side / 2, width: side, height: side)
+            disc.path = UIBezierPath(ovalIn: disc.bounds).cgPath
+            disc.fillColor = UIColor(DS.tint).cgColor
+            let pop = CAKeyframeAnimation(keyPath: "transform.scale")
+            pop.values = [0.55, 1.12, 1]
+            pop.keyTimes = [0, 0.6, 1]
+            pop.duration = 0.3
+            pop.timingFunctions = [CAMediaTimingFunction(name: .easeOut), CAMediaTimingFunction(name: .easeInEaseOut)]
+            disc.add(pop, forKey: "pop")
+            view.layer.addSublayer(disc)
+            out.append(disc)
+
+            let words = NSRange(location: start + lead + mark, length: line.length - lead - mark)
+            var rects: [CGRect] = []
+            manager.enumerateEnclosingRects(forGlyphRange: glyphs(words), withinSelectedGlyphRange: NSRange(location: NSNotFound, length: 0),
+                                            in: container) { rect, _ in rects.append(rect) }
+            let font = view.font ?? .preferredFont(forTextStyle: .body)
+            for (i, rect) in rects.enumerated() {
+                let r = rect.offsetBy(dx: inset.x, dy: inset.y)
+                // The strikethrough's own height: half the x-height above the baseline.
+                let baseline = r.minY + font.ascender + (r.height - font.lineHeight) / 2
+                let y = baseline - font.xHeight / 2
+                let path = UIBezierPath()
+                path.move(to: CGPoint(x: r.minX, y: y))
+                path.addLine(to: CGPoint(x: r.maxX, y: y))
+                let strike = CAShapeLayer()
+                strike.path = path.cgPath
+                strike.strokeColor = UIColor(DS.textTertiary).cgColor
+                strike.lineWidth = 1.5
+                strike.lineCap = .round
+                strike.strokeEnd = 1
+                let draw = CABasicAnimation(keyPath: "strokeEnd")
+                draw.fromValue = 0
+                draw.toValue = 1
+                draw.beginTime = CACurrentMediaTime() + 0.06 + Double(i) * 0.08
+                draw.duration = 0.22
+                draw.fillMode = .backwards
+                draw.timingFunction = CAMediaTimingFunction(name: .easeOut)
+                strike.add(draw, forKey: "draw")
+                view.layer.addSublayer(strike)
+                out.append(strike)
+            }
+            return out
+        }
+
+        private func commitTick(_ index: Int, felt: Bool = false) {
+            guard let view else { return }
             let before = view.text ?? ""
             let lines = before.components(separatedBy: "\n")
             let out = NoteEditing.tick(lines: lines, at: index).joined(separator: "\n")
             // The last tick of a list is felt as a finish (prd §1193).
             let finished = NoteChecklist.finished(before: NoteChecklist.stored(before),
                                                   after: NoteChecklist.stored(out))
-            if finished { DSHaptic.success() } else { DSHaptic.selection() }
+            if finished { DSHaptic.success() } else if !felt { DSHaptic.selection() }
             let keep = view.selectedRange
             view.text = out
             view.selectedRange = NSRange(location: min(keep.location, (out as NSString).length), length: 0)

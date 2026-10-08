@@ -22,6 +22,7 @@ struct WatchRow: View {
     let closes: [Double]
     let line: WatchLine.Line?
     var isStock = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         DSFeedRow(name: name, line: lineText) {
@@ -35,10 +36,11 @@ struct WatchRow: View {
                     if let price {
                         Text(TokenChartStyle.priceText(price))
                             .dsText(.price17)
-                            .foregroundStyle(DS.textPrimary)
+                            .dsPriceRoll(price)
                             .monospacedDigit()
                             .lineLimit(1)
                             .minimumScaleFactor(0.7)
+                            .dsFigureArrives()
                     }
                     if let change {
                         let flat = TokenChartStyle.isFlat(change)
@@ -48,8 +50,10 @@ struct WatchRow: View {
                             .monospacedDigit()
                             .foregroundStyle(flat ? DS.textTertiary
                                              : (change > 0 ? DS.confirmInk : DS.destructiveInk))
+                            .contentTransition(.numericText(value: change))
                     }
                 }
+                .animation(reduceMotion ? nil : DS.Motion.standard, value: price == nil)
             }
         }
         .accessibilityElement(children: .ignore)
@@ -246,6 +250,7 @@ struct IndexRow: View {
     let quote: CompanyQuote?
     let watched: Bool
     let star: (() -> Void)?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         HStack(spacing: DS.Space.s3) {
@@ -261,15 +266,17 @@ struct IndexRow: View {
             if let quote {
                 VStack(alignment: .trailing, spacing: 1) {
                     Text(TokenChartStyle.priceText(quote.price))
-                        .dsText(.price17).monospacedDigit().foregroundStyle(DS.textPrimary)
+                        .dsText(.price17).monospacedDigit().dsPriceRoll(quote.price)
                         .lineLimit(1).minimumScaleFactor(0.7)
                     if let change = quote.change {
                         let flat = TokenChartStyle.isFlat(change)
                         Text(TokenChartStyle.changeText(change))
                             .dsText(.subhead12).fontWeight(.semibold).monospacedDigit()
                             .foregroundStyle(flat ? DS.textTertiary : (change > 0 ? DS.confirmInk : DS.destructiveInk))
+                            .contentTransition(.numericText(value: change))
                     }
                 }
+                .dsFigureArrives()
             }
             if let star {
                 Button(action: star) {
@@ -287,5 +294,7 @@ struct IndexRow: View {
             }
         }
         .frame(minHeight: 56)
+        // Each company's quote lands as its own answer comes back (prd §1199).
+        .animation(reduceMotion ? nil : DS.Motion.standard, value: quote == nil)
     }
 }

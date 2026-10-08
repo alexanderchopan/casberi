@@ -802,8 +802,9 @@ struct FeedLedeCard: View {
                         Text(verbatim: String(line.dropFirst(NoteChecklist.editorMark.count)))
                             .dsText(.body17)
                             .foregroundStyle(done ? DS.textTertiary : DS.textPrimary)
-                            .strikethrough(done, color: DS.textTertiary)
                             .lineLimit(1)
+                            // Drawn across, not stamped on (prd §1199).
+                            .dsStrikeDraw(done)
                     }
                 } else {
                     Text(verbatim: line)

@@ -9,6 +9,7 @@ import SwiftUI
 struct WalletSubscriptionsFigure: View {
     let subscriptions: [Subscriptions.Item]
     let monthly: Subscriptions.Total
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         let mask = BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil
@@ -17,6 +18,10 @@ struct WalletSubscriptionsFigure: View {
                 .dsText(.heading24).foregroundStyle(DS.textPrimary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
+                // Tracking or stopping one rolls the sum to its new figure
+                // (prd §1199).
+                .contentTransition(.numericText(value: monthly.monthly))
+                .animation(reduceMotion ? nil : DS.Motion.standard, value: monthly.monthly)
             line(mask: mask)
             Spacer(minLength: DS.Space.s1)
             WalletCalendar(marks: subscriptions.compactMap { item in

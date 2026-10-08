@@ -496,8 +496,13 @@ struct SubscriptionAddTray: View {
 
     private func add(name: String, amount: Double, currency: String, yearly: Bool,
                      anchor: Date, paysWith: String?, site: String) {
-        guard SubscriptionStore.shared.add(name: name, amount: amount, currency: currency, yearly: yearly,
-                                           anchor: anchor, paysWith: paysWith, site: site) != nil else { return }
+        // Inside an animation, so the list behind the tray opens a place for
+        // the row and the total rolls (prd §1199).
+        let kept = withAnimation(DS.Motion.standard) {
+            SubscriptionStore.shared.add(name: name, amount: amount, currency: currency, yearly: yearly,
+                                         anchor: anchor, paysWith: paysWith, site: site)
+        }
+        guard kept != nil else { return }
         DSHaptic.selection()
         chrome.flash(String(localized: "Tracking \(name)"))
         // One app's tray is done; a list goes back to the list, ticked.

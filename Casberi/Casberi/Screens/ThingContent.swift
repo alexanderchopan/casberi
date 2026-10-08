@@ -1429,6 +1429,7 @@ private struct VoiceContent: View {
     /// is the honest placeholder while this hasn't loaded, never invented
     /// peaks and valleys.
     @State private var envelope: [CGFloat]?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// Where playback stands, in seconds (prd §987): polled while playing,
     /// set by a seek, kept through a pause, back to zero at the end.
     @State private var position: Double = 0
@@ -1550,7 +1551,12 @@ private struct VoiceContent: View {
         let played = started ? (length.map { $0 > 0 ? position / $0 : 0 } ?? 0) : 0
         return HStack(spacing: Self.barGap) {
             ForEach(Array(bars.enumerated()), id: \.offset) { i, h in
+                // The envelope landing rises from the flat placeholder left
+                // to right, a bar at a time (prd §1199); Reduce Motion lands
+                // it at once.
                 Capsule().fill(DS.tint).frame(width: Self.barWidth, height: h)
+                    .animation(reduceMotion ? nil : DS.Motion.bubble.delay(Double(i) * 0.014),
+                               value: envelope == nil)
                     .opacity(!started ? 0.7
                              : (Double(i) + 0.5) / Double(bars.count) <= played ? 1 : 0.3)
             }

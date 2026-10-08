@@ -43,6 +43,7 @@ struct SettingsHome: View {
     /// the Wallet, Day or Reading, and only the tray led back.
     @State private var sheet: SettingsSheet?
     @Environment(\.openURL) private var openURL
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var unsubscribing: CalendarSubscriptionStore.Entry?
     /// Add a calendar's two ways (prd §1166): the phone's, or one by link.
     @State private var calendarChoice = false
@@ -635,6 +636,7 @@ struct SettingsHome: View {
                   subtitle: item.next.map { Text("Renews \($0.formatted(.dateTime.month(.abbreviated).day()))") }) {
             sheet = .subscription(item.id)
         } leading: { BridgeIcon(name: item.name, size: DS.Mark.notice) }
+        .arrivalWash(SubscriptionStore.shared.justTracked(item.id), hue: DS.brand)
     }
 
     private func feedRow(_ item: Following.Item) -> some View {
@@ -692,9 +694,15 @@ struct SettingsHome: View {
 
     private func rows<Item: Identifiable, Row: View>(_ items: [Item],
                                                      @ViewBuilder row: @escaping (Item) -> Row) -> some View {
+        // A row that leaves folds shut and the rest close the gap; one that
+        // arrives opens its place (prd §1199). The kind's count rolls with it.
         VStack(alignment: .leading, spacing: DS.Space.s2) {
-            ForEach(items) { row($0) }
+            ForEach(items) {
+                row($0).transition(.asymmetric(insertion: .opacity.combined(with: .move(edge: .top)),
+                                               removal: .opacity.combined(with: .scale(scale: 0.96, anchor: .top))))
+            }
         }
+        .animation(reduceMotion ? nil : DS.Motion.standard, value: items.map(\.id))
     }
 
     private func room(of item: Following.Item) -> Following.Room {

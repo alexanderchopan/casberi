@@ -65304,3 +65304,20 @@ Privy picked in the Wallet led Home with `holdingsBlockSection`, the same drawin
 5. **Life's glyph is an outline** (user: "fix"). SF Symbols names the pair backwards — rendered off AppKit, `face.smiling` draws a FILLED disc and `face.smiling.inverse` the outline — so `CategoryFold` takes `.inverse` (the rest of the box and the tray are outlines) and the tray's lit glyph takes `face.smiling`, the filled one the HIG reserves for selection. `law.md`'s §1050a line is updated.
 
 **Not seen:** compiled for the iOS Simulator and Mac Catalyst; `ds-template-audit`, `status-ink-audit`, `design-motion-audit`, `hero-tint-audit`, `tile-glyph-audit`, `day-strip-selftest`, `category-fold-selftest`, `category-order-selftest` green. Every simulator was stopped for load before it could be drawn.
+
+## §1199 — Things move when they change (user, 2026-10-08: "i'm more into things like how things load or microanimations", then "ok do all"; design canvas "Surprise and delight", round two) — BUILT
+
+**What it does.** Each motion marks a real change, once, on the app's own springs. Under Reduce Motion each one lands without moving; a tint or a haptic that carries the fact stays.
+
+- **A tick draws itself.** On the note page the circle fills with a spring and a line crosses the words left to right, then the item sinks (Core Animation over the `UITextView`, 0.34s, a second tap waits). In the Notes box the strike draws across (`dsStrikeDraw`).
+- **A voice note's bars rise** from the flat placeholder, left to right, when its envelope lands.
+- **New grows the page out of the tile.** A verb tile remembers where it was pressed (`DSTileOrigin`), and the note layer scales out of that point; a plus turns a quarter each press. Any other way in (Quick Note, a deep link) rises from the bottom as before.
+- **A price rolls only the digits that changed** (`dsPriceRoll`: `numericText(value:)`, the move's ink for 0.9s, then back), on watched rows and the company index. Each figure arrives as its own quote answers (`dsFigureArrives`), in the order they come back.
+- **A chart bends between ranges.** The marks are keyed by position, so a range switch over a drawn line glides each point to its new place; the first line still draws itself on.
+- **A one-tap connect shows it is asking.** In Apps the row's word becomes a spinner while the system asks, a check when it lands, then the row moves up as before. An app with a setup page still opens it.
+- **Subscriptions.** The monthly total rolls to its new sum, and a row just tracked by hand lands with one pink wash (`SubscriptionStore.justTracked`).
+- **Settings' lists** open a place for a row that arrives and fold one that leaves.
+
+**Not built from the canvas, and why.** Markets has no heat map since §1081, so "the map fills in" became the rows' arrivals. App icons are bundled, so an icon "loading" from a letter would be a fake. Unfollowing a feed deletes what it brought in, so it keeps its confirm instead of an Undo. Settings' counts do not roll yet, because §1197 was editing `DSCountTile` in the same hour.
+
+**Seen:** a clean build and the checks on the edited files. **Not seen:** any of it on screen — the simulators were shut down for load when it was built.

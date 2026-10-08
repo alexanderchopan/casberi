@@ -48,6 +48,13 @@ final class SubscriptionStore {
         return entry
     }
 
+    /// Tracked by hand in the last few seconds: the row that lands takes
+    /// one wash so the eye finds it (prd §1199).
+    func justTracked(_ id: String) -> Bool {
+        guard let at = entries[id]?.at else { return false }
+        return at.timeIntervalSinceNow > -8
+    }
+
     func remove(_ id: String) {
         guard entries[id] != nil else { return }
         mirror.noteRemoval(id)

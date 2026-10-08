@@ -454,3 +454,96 @@ extension View {
         modifier(ArrivalWash(on: on, hue: hue))
     }
 }
+
+// MARK: - A price that rolls (prd §1199)
+
+/// A quote's figure moving in place: only the digits that changed roll, up
+/// for a rise and down for a fall (`numericText(value:)`), tinted with the
+/// move for a beat and then back to its ink. Reduce Motion swaps the digits
+/// and keeps the tint, which is the fact.
+struct PriceRoll: ViewModifier {
+    let value: Double
+    let ink: Color
+    @State private var flash: Color?
+    @State private var beat = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    func body(content: Content) -> some View {
+        content
+            .foregroundStyle(flash ?? ink)
+            .contentTransition(.numericText(value: value))
+            .animation(reduceMotion ? nil : DS.Motion.standard, value: value)
+            .onChange(of: value) { old, new in
+                guard old != new else { return }
+                beat += 1
+                let mine = beat
+                flash = new > old ? DS.confirmInk : DS.destructiveInk
+                Task { @MainActor in
+                    try? await Task.sleep(for: .seconds(0.9))
+                    guard mine == beat else { return }
+                    withAnimation(.easeOut(duration: 0.8)) { flash = nil }
+                }
+            }
+    }
+}
+
+extension View {
+    /// The figure rolls to a new quote and blinks its direction (prd §1199).
+    func dsPriceRoll(_ value: Double, ink: Color = DS.textPrimary) -> some View {
+        modifier(PriceRoll(value: value, ink: ink))
+    }
+
+    /// A figure arriving when its own answer lands: a fade with a slight
+    /// grow from the trailing edge, in the order the answers come back
+    /// (prd §1199).
+    func dsFigureArrives() -> some View {
+        transition(.opacity.combined(with: .scale(scale: 0.92, anchor: .trailing)))
+    }
+}
+
+// MARK: - A strike that draws (prd §1199)
+
+/// The line through a ticked item, drawn left to right after the circle
+/// fills instead of appearing; it IS the strikethrough, at its height, so a
+/// one-line item is the only kind that wears it. Reduce Motion lands it.
+struct StrikeDraw: ViewModifier {
+    let on: Bool
+    var ink: Color = DS.textTertiary
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    func body(content: Content) -> some View {
+        content.overlay(alignment: .leading) {
+            Capsule()
+                .fill(ink)
+                .frame(height: 1.5)
+                .scaleEffect(x: on ? 1 : 0, y: 1, anchor: .leading)
+                .animation(reduceMotion ? nil : .easeOut(duration: 0.24).delay(on ? 0.08 : 0), value: on)
+                .accessibilityHidden(true)
+        }
+    }
+}
+
+extension View {
+    func dsStrikeDraw(_ on: Bool, ink: Color = DS.textTertiary) -> some View {
+        modifier(StrikeDraw(on: on, ink: ink))
+    }
+}
+
+// MARK: - Where a verb was pressed (prd §1199)
+
+/// The centre of the verb tile last pressed, on screen, for a moment: what it
+/// opens grows out of it (the Notes New tile's page) instead of rising from
+/// the bottom edge. Read within a second or not at all, so a page opened any
+/// other way (Quick Note, a deep link) keeps its own way in.
+@MainActor
+enum DSTileOrigin {
+    private static var last: (point: CGPoint, at: Date)?
+
+    static func mark(_ point: CGPoint) { last = (point, .now) }
+
+    /// The pressed point as a unit point of `size`, if the press was just now.
+    static func recent(in size: CGSize) -> UnitPoint? {
+        guard let last, last.at.timeIntervalSinceNow > -1, size.width > 0, size.height > 0 else { return nil }
+        return UnitPoint(x: last.point.x / size.width, y: last.point.y / size.height)
+    }
+}

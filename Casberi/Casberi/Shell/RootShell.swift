@@ -2548,9 +2548,20 @@ struct RootShell: View {
                     chrome.flight = ShellChrome.Flight(kind: thing.kind, title: thing.title)
                 })
             }
-            .transition(.move(edge: .bottom).combined(with: .opacity))
+            // From the New tile, the page grows out of the tile (prd §1199);
+            // any other way in rises from the bottom as before.
+            .transition(noteEntrance)
             .zIndex(3)
         }
+    }
+
+    private var noteEntrance: AnyTransition {
+        let screen = (UIApplication.shared.connectedScenes.first as? UIWindowScene)?.screen.bounds.size ?? .zero
+        guard !UIAccessibility.isReduceMotionEnabled, let anchor = DSTileOrigin.recent(in: screen) else {
+            return .move(edge: .bottom).combined(with: .opacity)
+        }
+        return .asymmetric(insertion: .scale(scale: 0.08, anchor: anchor).combined(with: .opacity),
+                           removal: .move(edge: .bottom).combined(with: .opacity))
     }
 
     // `toggleDoors` is DELETED with the octopus's folder (prd §697,

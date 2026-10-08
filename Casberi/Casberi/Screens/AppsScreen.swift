@@ -59,6 +59,10 @@ struct AppsScreen: View {
     /// name lifts as it takes its connected seat. `connectLiftToken` fires one
     /// lift; the name gates which row.
     @State private var justConnectedName: String?
+    /// A one-tap connect asking the system (prd §1199): the row's word turns
+    /// to a spinner while it asks, then a check, then the row moves.
+    @State private var connectingName: String?
+    @State private var connectedCheckName: String?
     @State private var connectLiftToken = 0
     /// Connect-count milestones (5 / 10 / 25 seats): the highest threshold
     /// already celebrated, persisted so each fires once, forever. Seeded to the
@@ -537,9 +541,20 @@ struct AppsScreen: View {
     }
 
     private func attemptConnect(_ offer: BridgeCatalog.Offer) {
+        withAnimation(DS.Motion.standard) { connectingName = offer.name }
         BridgeConnect.connect(offer, store: store, context: modelContext) { ok in
-            if ok { celebrateConnect(offer) }
-            else { chrome.flash("Couldn't connect \(offer.name).", tone: .failure) }
+            withAnimation(DS.Motion.standard) {
+                connectingName = nil
+                connectedCheckName = ok ? offer.name : nil
+            }
+            if ok {
+                celebrateConnect(offer)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.9) {
+                    if connectedCheckName == offer.name {
+                        withAnimation(DS.Motion.standard) { connectedCheckName = nil }
+                    }
+                }
+            } else { chrome.flash("Couldn't connect \(offer.name).", tone: .failure) }
         }
     }
 
@@ -1063,7 +1078,15 @@ struct AppsScreen: View {
                     // THE VERB IS THE ROW'S LAST WORD (prd §746) — the
                     // capsule that sat beside the row ran the same
                     // `rowAction`, so it was one act drawn twice.
-                    if let rowVerb = verb(entry) {
+                    if connectingName == entry.offer.name {
+                        DSSpinner(size: .small)
+                            .transition(.opacity.combined(with: .scale(scale: 0.6)))
+                    } else if connectedCheckName == entry.offer.name {
+                        Image(systemName: "checkmark.circle.fill")
+                            .dsGlyph(.title, weight: .regular)
+                            .foregroundStyle(DS.confirm)
+                            .transition(.scale(scale: 0.5).combined(with: .opacity))
+                    } else if let rowVerb = verb(entry) {
                         DSPushRowTrail(verb: rowVerb)
                     } else if entry.tier == 2, entry.bridge != nil {
                         // A connected account with no room is a door, and the

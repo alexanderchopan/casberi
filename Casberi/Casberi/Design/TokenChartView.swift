@@ -973,8 +973,13 @@ struct TokenChartView<R: PriceRange, Fallback: View>: View {
                 Button {
                     guard r != range else { return }
                     DSHaptic.tap()
-                    scrubIndex = nil
-                    range = r
+                    // A drawn line BENDS into the next range (prd §1199): the
+                    // marks are keyed by position, so Charts carries each
+                    // point to its new place on the glide.
+                    withAnimation(reduceMotion ? nil : DS.Motion.glide) {
+                        scrubIndex = nil
+                        range = r
+                    }
                     TokenChartStyle.remember(r, key: memoryKey)
                 } label: {
                     Text(r.label)
@@ -1142,24 +1147,29 @@ struct TokenChartView<R: PriceRange, Fallback: View>: View {
     @State private var noteRange: R?
 
     private func load() async {
+        // The first line draws itself on; a range switch over a drawn line
+        // bends it instead of wiping it again (prd §1199).
+        let switching = lastDrawn != nil && revealed
         if let cached = charts[range] {
             lastDrawn = cached
             phase = .ready
-            replayReveal()
+            if !switching { replayReveal() }
             return
         }
         if charts.isEmpty { phase = .loading }
         let fetched = await fetch(range)
         if let fetched {
-            charts[range] = fetched
-            lastDrawn = fetched
+            withAnimation(switching && !reduceMotion ? DS.Motion.glide : nil) {
+                charts[range] = fetched
+                lastDrawn = fetched
+            }
             phase = .ready
             // A note set by the range we just stepped BACK from survives one
             // success — clearing it here wiped the "No 7d prices yet"
             // explanation on the same beat it would first render, so the
             // revert read as a silent malfunction (review 2026-07-11).
             if noteRange == range { note = nil } else { noteRange = range }
-            replayReveal()
+            if !switching { replayReveal() }
             return
         }
         if range == R.base {
