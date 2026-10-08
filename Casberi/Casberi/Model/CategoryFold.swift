@@ -133,7 +133,10 @@ enum CategoryFold {
         "Work":     "laptopcomputer",
         // Day is what needs you next, Life what you made (prd §1049, §1050a).
         "Day":      "calendar.day.timeline.left",
-        "Life":     "face.smiling",
+        // SF Symbols names this pair backwards: `face.smiling` draws FILLED
+        // and `.inverse` the outline, so the outline every other category
+        // wears is `.inverse` (prd §1198, measured off the rendered glyphs).
+        "Life":     "face.smiling.inverse",
         "Agents":   "terminal",
         "Media":    "play.circle",
         "Social":   "bubble.left.and.bubble.right",

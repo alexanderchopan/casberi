@@ -222,7 +222,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1327 of 1391 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1328 of 1392 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1495,7 +1495,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1135 — An unwatched wallet's rows leave, under the name it was watched by too [+1 sub-entries]
 - §1136 — One place for lists: You is a room of four places, Settings holds everything you've connected, Home is Today then Com… (amended by §1138, §1139, §1164, §1166)
 - §1137 — Calendars you subscribe to [+11 sub-entries]
-- §1138 — The box's counts are the filter, on Sources and in the Apps catalogue (amended by §1140, §1142, §1145, §1166, §1167, §1171) [+1 sub-entries]
+- §1138 — The box's counts are the filter, on Sources and in the Apps catalogue (amended by §1140, §1142, §1145, §1166, §1167, §1171, §1198) [+1 sub-entries]
 - §1139 — Home is the whole of today: its feeds, then Later today (amended by §1154; part superseded by §1141)
 - §1142 — The catalogue is what you could add, rises as a sheet, and names its categories without figures
 - §1143 — What Settings opens rises over Settings
@@ -1534,7 +1534,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1177 — A room's bar is as wide as its tiles, and the tray's search takes its slot
 - §1178 — A thing sheet's acts are the rooms' tiles
 - §1179 — A thing sheet stands in the room's frame: the box, the tiles, the rest
-- §1180 — Settings' box and Markets' box are one box: the words stand at one edge on one baseline
+- §1180 — Settings' box and Markets' box are one box: the words stand at one edge on one baseline (amended by §1198)
 - §1181 — The money receipt stands in the room's frame, its fourth tile keeps up with it, and its history is this year's totals
 - §1182 — A card spend draws its card, an open transfer its steps, and an event its day
 - §1184 — Every sheet's fourth tile keeps up with it, and a sheet is one row of four
@@ -1551,6 +1551,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1195 — A checklist's last tick says "All done"
 - §1196 — Every account page stands in the room's frame: Apps, the app's card, its tiles (amended by §1197)
 - §1197 — Every account page's ways in are its tiles, and every app with a site has a Website tile
+- §1198 — Settings' and Markets' boxes fill the well, and the box's pick is a wash
 
 ## Dead rulings → what replaced them (generated)
 
