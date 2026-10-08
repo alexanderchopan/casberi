@@ -382,19 +382,25 @@ struct ThingSheetView: View {
                 // every call site and every self-test pin unchanged; the
                 // helpers outside the body still read the properties.
                 let socialShape = self.socialShape
-                let drawsSocialBody = socialShape == .post || socialShape == .notice
+                let drawsSocialBody: Bool = socialShape == .post || socialShape == .notice
                 let noteShape = self.noteShape
                 let walletbeatShape = self.walletbeatShape
                 let l2beatShape = self.l2beatShape
                 // A Privy app wallet (prd §803e) — a dictionary lookup.
                 let privyApp = thing.sourceRef.flatMap { PrivyHomeStore.shared.byRef[$0] }
+                // The checkups that stand in the room's frame (prd §1187) and
+                // draw their own tiles.
+                let framedChain: String? = l2beatShape == .chain ? L2beatWatch.chainID(from: thing) : nil
+                let framedWallet: String? = walletbeatShape == .wallet ? WalletbeatWatch.walletID(from: thing) : nil
+                let drawsFramedCheck: Bool = framedChain != nil || framedWallet != nil || privyApp != nil
+                let isPerson: Bool = socialShape == .person
+                let framesOwnTiles: Bool = drawsFramedCheck || isPerson
                 let purchaseReading = self.purchaseReading
                 let workReading = self.workReading
                 let agentShape = self.agentShape
                 let agentConversation = agentShape == .conversation ? self.agentConversation : nil
-                let agentGrant = agentShape == .grant ? self.agentGrant : nil
                 let linkOnlyBody = self.linkOnlyBody
-                let framedShot = moneyReceipt == nil
+                let framedShot: Bool = moneyReceipt == nil
                     && (thing.kind == .screenshot
                         || FilesIngest.isStoredPicture(thing.sourceRef))
                 // THE ARTICLE HEAD (prd §882) — drawn exactly where the generic
@@ -403,19 +409,19 @@ struct ThingSheetView: View {
                 // leave the picture to the head.
                 // MEDIA (prd §897) — a track, a video, an episode; it wins over
                 // the article head, which a video with a stored description met.
-                let mediaHead = MediaSheetBox.isMedia(thing) && ThingChart.kind(for: thing) == nil
+                let mediaHead: Bool = MediaSheetBox.isMedia(thing) && ThingChart.kind(for: thing) == nil
                     && moneyReceipt == nil && !framedShot
-                let chartHead = ThingChart.kind(for: thing) != nil
-                let articleHead = !mediaHead && ThingContentView.readsAsArticle(thing)
+                let chartHead: Bool = ThingChart.kind(for: thing) != nil
+                let readsAsArticle: Bool = !mediaHead && ThingContentView.readsAsArticle(thing)
                     && moneyReceipt == nil && !framedShot && !isSocialPost
-                    && socialShape != .person && purchaseReading == nil
-                    && workReading == nil && agentGrant == nil
-                    && agentConversation == nil && l2beatShape == nil
-                    && privyApp == nil && walletbeatShape == nil
-                    && noteShape == nil
+                let ownShape: Bool = socialShape == .person || purchaseReading != nil
+                    || workReading != nil
+                let ownReading: Bool = agentConversation != nil || l2beatShape != nil
+                    || privyApp != nil || walletbeatShape != nil || noteShape != nil
+                let articleHead: Bool = readsAsArticle && !ownShape && !ownReading
                 // THE POST HEAD (prd §884) — a post that leads with its person
                 // gets the article head's shape: who, the pink day, the words.
-                let postHead = isSocialPost
+                let postHead: Bool = isSocialPost
                     && SocialSheetSource.eyebrowLeadsWithPerson(thing, shape: socialShape)
                     && moneyReceipt == nil && !framedShot
                 // A MOMENT (prd §892): an event, a workout, a reminder — its
@@ -429,11 +435,11 @@ struct ThingSheetView: View {
                     && !articleHead && !postHead && !momentHead && noteShape == nil
                 let transcriptHead = socialShape == .transcript
                 let talkHead = agentConversation != nil || mailHead || transcriptHead
-                let ownHead = articleHead || postHead || framedShot || moneyReceipt != nil
+                let ownHead: Bool = articleHead || postHead || framedShot || moneyReceipt != nil
                     || mediaHead || chartHead
                     || workReading != nil
                     || (purchaseReading.map { $0.archetype != .watch } ?? false)
-                    || momentHead || noteShape != nil || talkHead
+                    || momentHead || noteShape != nil || talkHead || framesOwnTiles
                 // Sequenced entrance (delight 2026-07-14): the sheet composes
                 // itself over the pouring wash — eyebrow, then title, then
                 // media, then spec — each a beat behind the last, one-shot.
@@ -638,24 +644,7 @@ struct ThingSheetView: View {
                     // held "@alice started following you" at display size and
                     // the body held a link preview of their profile page; the
                     // face and the handle were on the record the whole time.
-                    SocialPersonContent(
-                        handle: thing.authorHandle ?? "",
-                        displayName: nil,
-                        avatarURL: thing.authorAvatarURL,
-                        source: thing.source,
-                        recent: personPosts,
-                        onOpenProfile: {
-                            faceTarget = .person(SocialProfile(
-                                source: thing.source, handle: thing.authorHandle ?? "",
-                                displayName: nil, bio: nil,
-                                avatarURL: thing.authorAvatarURL))
-                        },
-                        onOpenThing: {
-                            walkingToScope = .none
-                            walkingToNote = KeyedThing($0)
-                        })
-                        .padding(.top, DS.Space.s3)
-                        .settleIn(delay: 0.06)
+                    personFrame
                 } else if let purchaseReading {
                     // The purchase receipt / watched-product card (prd §364).
                     // It REPLACES the title block for the same reason the Work
@@ -723,16 +712,6 @@ struct ThingSheetView: View {
                         .padding(.top, DSRoomChassis.leadGap)
                         .settleIn(delay: 0.08)
                     dialResult
-                } else if let agentGrant {
-                    // A PERMISSION, not a bookmark (prd §367). The title slot
-                    // held "personal · openai/* · read, list" — three facts
-                    // joined and clamped at 80 — over a preview card of the
-                    // same dashboard every other grant links to, while the
-                    // expiry sat on `dueAt` with no route to any screen.
-                    AgentGrantView(grant: agentGrant)
-                        .padding(.horizontal, DS.Space.s4)
-                        .padding(.top, DS.Space.s3)
-                        .settleIn(delay: 0.06)
                 } else if let agentConversation {
                     // The agent is who it is from; the conversation's own
                     // title stays its headline (prd §894).
@@ -752,14 +731,13 @@ struct ThingSheetView: View {
                         .padding(.top, DS.Space.s6)
                         .settleIn(delay: 0.06)
                     noteDial
-                } else if let l2beatShape {
+                } else if drawsFramedCheck {
+                // A chain, a wallet or an app's wallet in the room's frame
+                // (prd §1187), each drawing its own tiles.
+                framedCheck(chain: framedChain, wallet: framedWallet, privy: privyApp)
+                    .padding(.top, onBack == nil ? DS.Space.s4 : DS.Space.s3)
+            } else if let l2beatShape {
                 l2beatHead(l2beatShape)
-                    .padding(.horizontal, DS.Space.s4)
-                    .padding(.top, DS.Space.s3)
-                    .settleIn(delay: 0.06)
-            } else if let privyApp {
-                // REPLACES the title block: the app's page, not a row's title.
-                PrivyAppHead(app: privyApp)
                     .padding(.horizontal, DS.Space.s4)
                     .padding(.top, DS.Space.s3)
                     .settleIn(delay: 0.06)
@@ -907,41 +885,7 @@ struct ThingSheetView: View {
                         .padding(.top, DS.Space.s6)
                         .settleIn(delay: 0.06)
                 } else if mediaHead {
-                    // THE ROOM'S FRAME (prd §1186): the title, the box (a video's
-                    // frame, or the cover beside who and when), the tiles, then
-                    // more from the artist or the channel.
-                    DSRoomTitleRow(title: MediaSheetBox.title(thing))
-                        .padding(.horizontal, DSRoomChassis.inset)
-                        .padding(.top, onBack == nil ? DS.Space.s4 : DS.Space.s3)
-                        .settleIn(delay: 0.04)
-                    MediaSheetBox(thing: thing, onOpen: mediaLink.map { url in { openURL(url) } })
-                        .dsRoomBox(bleed: MediaSheetBox.isVideo(thing))
-                        .padding(.top, DS.Space.s3)
-                        .settleIn(delay: 0.06)
-                        .task(id: thing.id) { readMediaMore() }
-                    VerbDial(thing: thing, verbs: mediaVerbs, onVerb: runVerb, onName: nil,
-                             keep: mediaKeep)
-                        .padding(.top, DSRoomChassis.leadGap)
-                        .settleIn(delay: 0.08)
-                    dialResult
-                    if !mediaMore.isEmpty {
-                        MoneyHistoryRows(title: mediaMoreTitle, rows: mediaMore.keyed,
-                                         total: mediaMore.count, doorWord: nil,
-                                         onOpen: { walkingToScope = .none; walkingToNote = KeyedThing($0) },
-                                         onAll: nil)
-                            .padding(.top, DS.Space.s6)
-                            .settleIn(delay: 0.12)
-                    } else if MediaSheetBox.isVideo(thing),
-                              let about = thing.summary?.trimmingCharacters(in: .whitespacesAndNewlines),
-                              !about.isEmpty {
-                        VStack(alignment: .leading, spacing: DS.Space.s2) {
-                            Text("About").dsText(.heading20).foregroundStyle(DS.brandInk)
-                            Text(verbatim: about).dsText(.body17).foregroundStyle(DS.textSecondary)
-                                .lineLimit(6)
-                        }
-                        .padding(.horizontal, DSRoomChassis.inset)
-                        .padding(.top, DS.Space.s6)
-                    }
+                    mediaFrame
                 } else if articleHead {
                     // The dial rides UNDER the head (prd §882): on a sheet
                     // that is mostly reading, the verbs were a whole article
@@ -987,11 +931,6 @@ struct ThingSheetView: View {
                 // primary ink with a real disclosure, so leaving this on would
                 // print every entry twice, the second time worse.
                 //
-                // A GRANT draws nothing here (prd §367): its `content` is the
-                // 1Claw dashboard URL — the same string on every grant in the
-                // corpus — so the preview card it drew could not tell anyone
-                // anything about the grant they opened.
-                //
                 // A CONVERSATION always draws, bypassing the title-stutter test
                 // for the reason a post does: what it draws is the transcript,
                 // and the test compares `content` (the opening ask) to the
@@ -1003,16 +942,17 @@ struct ThingSheetView: View {
                 // `LinkPreviewCard` re-scraping the page: for a Bitrefill order
                 // with no gift link that page is the account's orders list,
                 // the same URL on every order in the corpus.
-                let contentShown = moneyReceipt == nil && !framedShot
+                let shapeHasBody: Bool = moneyReceipt == nil && !framedShot
                     && socialShape != .person && noteShape == nil
                     && walletbeatShape == nil && l2beatShape == nil && privyApp == nil
-                    && agentShape != .grant && purchaseReading == nil
-                    // A reminder with a due date says it in its head (§892).
-                    && !(momentHead && thing.kind == .reminder && thing.dueAt != nil)
-                    && (drawsSocialBody || agentShape == .conversation
-                    || (!linkOnlyBody && thing.kind != .event
-                    && thing.content.trimmingCharacters(in: .whitespacesAndNewlines)
-                        != thing.title.trimmingCharacters(in: .whitespacesAndNewlines)))
+                    && purchaseReading == nil
+                // A reminder with a due date says it in its head (§892).
+                let dueInHead: Bool = momentHead && thing.kind == .reminder && thing.dueAt != nil
+                let wordsDiffer: Bool = thing.content.trimmingCharacters(in: .whitespacesAndNewlines)
+                    != thing.title.trimmingCharacters(in: .whitespacesAndNewlines)
+                let hasWords: Bool = drawsSocialBody || agentShape == .conversation
+                    || (!linkOnlyBody && thing.kind != .event && wordsDiffer)
+                let contentShown: Bool = shapeHasBody && !dueInHead && hasWords
                 if contentShown && !mediaHead {
                     ThingContentView(thing: thing, agent: agentConversation,
                                      articleArt: !articleHead,
@@ -1043,7 +983,8 @@ struct ThingSheetView: View {
                 // liked it, and one sentence saying how it got here. It stands
                 // where the spec table stood and takes that table's `From` row
                 // with it, so the two can never say the same thing twice.
-                if let reception {
+                // A person's box already says how they came (prd §1187).
+                if let reception, !isPerson {
                     SocialReceptionCard(reception: reception)
                         .padding(.horizontal, postHead ? DSRoomChassis.leadInset : DS.Space.s4)
                         .padding(.top, DS.Space.s6)
@@ -1061,7 +1002,8 @@ struct ThingSheetView: View {
                 }
                 // The stage already shows the counterparty (with its pencil),
                 // so its spec table drops the Who row instead of repeating it.
-                specTable(contentShown: contentShown, showsWho: moneyReceipt == nil)
+                specTable(contentShown: contentShown, showsWho: moneyReceipt == nil,
+                          drawn: !framesOwnTiles)
                     .padding(.horizontal, DS.Space.s4)
                     .padding(.top, DS.Space.s6)
                     .settleIn(delay: 0.18)
@@ -1127,9 +1069,11 @@ struct ThingSheetView: View {
                     .padding(.horizontal, DS.Space.s4)
                     .padding(.top, DS.Space.s3)
                 }
-                if moneyReceipt == nil && !framedShot && !articleHead && noteShape == nil && !talkHead
-                    && !momentHead && !mediaHead && workReading == nil
-                    && (purchaseReading == nil || purchaseReading?.archetype == .watch) {
+                let headDrawsTiles: Bool = moneyReceipt != nil || framedShot || articleHead
+                    || noteShape != nil || talkHead || momentHead || mediaHead
+                    || workReading != nil || framesOwnTiles
+                let purchaseAllowsDial: Bool = purchaseReading == nil || purchaseReading?.archetype == .watch
+                if !headDrawsTiles && purchaseAllowsDial {
                     // The disc dial, standardized across every sheet
                     // (2026-07-23) — it was B1-only (the wallet stage, the
                     // framed screenshot) and everything else kept the older
@@ -2612,8 +2556,16 @@ struct ThingSheetView: View {
     /// your wallet" here was a one-row card saying nothing the stage hadn't
     /// already shown better. The From row is gated by the same flag the Who
     /// row already used for the identical reason.
+    /// Nothing for a sheet in the room's frame that draws its own facts (prd
+    /// §1187). The gate lives here because an `if` around the call in the
+    /// body tipped its builder past the type checker's budget.
     @ViewBuilder
-    private func specTable(contentShown: Bool, showsWho: Bool = true) -> some View {
+    private func specTable(contentShown: Bool, showsWho: Bool = true, drawn: Bool) -> some View {
+        if drawn { specCard(contentShown: contentShown, showsWho: showsWho) }
+    }
+
+    @ViewBuilder
+    private func specCard(contentShown: Bool, showsWho: Bool) -> some View {
         // Built as a bool, not just conditionals inside the VStack, so the
         // whole card (padding, background) can be skipped when nothing
         // would render — a stage's typical wallet transfer now has zero
@@ -2640,10 +2592,6 @@ struct ThingSheetView: View {
         // person browsed to — "Site: bitrefill.com" under a gift-card order is
         // the leaked plumbing the Tokens exclusion beside it was written for,
         // and the dial's first disc already names where the door goes.
-        // A 1Claw grant's `content` is the dashboard root — the same URL on
-        // every grant in the corpus (prd §367), so "Site: 1claw.xyz" is a row
-        // that is true of the seat and says nothing about the thing. The dial's
-        // Open disc already goes there.
         // Gated on whether a CHART drew, not on one source's name (2026-08-16).
         // `thing.source != "Tokens"` was written when Tokens was the only
         // charted source, so a GeckoTerminal trending row — same dexscreener
@@ -3283,11 +3231,6 @@ struct ThingSheetView: View {
         return AgentSheetSource.conversation(for: thing)
     }
 
-    private var agentGrant: AgentSheet.Grant? {
-        guard agentShape == .grant else { return nil }
-        return AgentSheetSource.grant(for: thing)
-    }
-
     /// The primitives `WorkStage` reads. Built once so the reading and the
     /// clause detail below can't be derived from two different snapshots.
     private var workRow: WorkStage.Row {
@@ -3464,6 +3407,122 @@ struct ThingSheetView: View {
         return out
     }
 
+    /// A person in the room's frame (prd §1187): the handle is the title,
+    /// the face leads the box, then the tiles and what of theirs you have.
+    @ViewBuilder
+    private var personFrame: some View {
+        // In the room's frame since prd §1187: the handle is the
+        // title, the face leads the box, then the tiles and what
+        // of theirs you already have.
+        let handle = thing.authorHandle ?? ""
+        DSRoomTitleRow(title: SocialThread.shortHandle(handle))
+            .padding(.horizontal, DSRoomChassis.inset)
+            .padding(.top, onBack == nil ? DS.Space.s4 : DS.Space.s3)
+            .settleIn(delay: 0.04)
+        SocialPersonBox(
+            handle: handle,
+            displayName: nil,
+            avatarURL: thing.authorAvatarURL,
+            source: thing.source,
+            since: thing.capturedAt,
+            following: SocialPeople.isWatched(handle: handle, source: thing.source),
+            onOpenProfile: {
+                faceTarget = .person(SocialProfile(
+                    source: thing.source, handle: handle,
+                    displayName: nil, bio: nil,
+                    avatarURL: thing.authorAvatarURL))
+            })
+            .dsRoomBox()
+            .padding(.top, DS.Space.s3)
+            .settleIn(delay: 0.06)
+        VerbDial(thing: thing, verbs: sheetVerbs, onVerb: runVerb, onName: nil,
+                 keep: sheetKeep)
+            .padding(.top, DSRoomChassis.leadGap)
+            .settleIn(delay: 0.08)
+        dialResult
+        if !personPosts.isEmpty {
+            MoneyHistoryRows(title: String(localized: "Lately"), rows: personPosts,
+                             total: personPosts.count, doorWord: nil,
+                             onOpen: { walkingToScope = .none; walkingToNote = KeyedThing($0) },
+                             onAll: nil)
+                .padding(.top, DS.Space.s6)
+                .settleIn(delay: 0.12)
+        }
+    }
+
+    /// A track, a video or an episode in the room's frame (prd §1186).
+    @ViewBuilder
+    private var mediaFrame: some View {
+        // THE ROOM'S FRAME (prd §1186): the title, the box (a video's
+        // frame, or the cover beside who and when), the tiles, then
+        // more from the artist or the channel.
+        DSRoomTitleRow(title: MediaSheetBox.title(thing))
+            .padding(.horizontal, DSRoomChassis.inset)
+            .padding(.top, onBack == nil ? DS.Space.s4 : DS.Space.s3)
+            .settleIn(delay: 0.04)
+        MediaSheetBox(thing: thing, onOpen: mediaOpen)
+            .dsRoomBox(bleed: MediaSheetBox.isVideo(thing))
+            .padding(.top, DS.Space.s3)
+            .settleIn(delay: 0.06)
+            .task(id: thing.id) { readMediaMore() }
+        VerbDial(thing: thing, verbs: mediaVerbs, onVerb: runVerb, onName: nil,
+                 keep: mediaKeep)
+            .padding(.top, DSRoomChassis.leadGap)
+            .settleIn(delay: 0.08)
+        dialResult
+        if !mediaMore.isEmpty {
+            MoneyHistoryRows(title: mediaMoreTitle, rows: mediaMore.keyed,
+                             total: mediaMore.count, doorWord: nil,
+                             onOpen: { walkingToScope = .none; walkingToNote = KeyedThing($0) },
+                             onAll: nil)
+                .padding(.top, DS.Space.s6)
+                .settleIn(delay: 0.12)
+        } else if MediaSheetBox.isVideo(thing),
+                  let about = thing.summary?.trimmingCharacters(in: .whitespacesAndNewlines),
+                  !about.isEmpty {
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                Text("About").dsText(.heading20).foregroundStyle(DS.brandInk)
+                Text(verbatim: about).dsText(.body17).foregroundStyle(DS.textSecondary)
+                    .lineLimit(6)
+            }
+            .padding(.horizontal, DSRoomChassis.inset)
+            .padding(.top, DS.Space.s6)
+        }
+    }
+
+    /// A chain, a wallet or an app's wallet in the room's frame (prd §1187).
+    @ViewBuilder
+    private func framedCheck(chain: String?, wallet: String?, privy: PrivyHomeFeed.App?) -> some View {
+        if let chain {
+            L2beatChainSheet(chainID: chain) { keep in
+                VerbDial(thing: thing, verbs: sheetVerbs, onVerb: runVerb, onName: nil, keep: keep)
+                dialResult
+            }
+        } else if let wallet {
+            WalletbeatWalletSheet(walletID: wallet) { keep in
+                VerbDial(thing: thing, verbs: sheetVerbs, onVerb: runVerb, onName: nil, keep: keep)
+                dialResult
+            }
+        } else if let privy {
+            PrivyAppSheet(app: privy) {
+                VerbDial(thing: thing, verbs: sheetVerbs, onVerb: runVerb, onName: nil)
+                dialResult
+            }
+        }
+    }
+
+    /// Where a video's frame opens (prd §1186).
+    private var mediaOpen: (() -> Void)? {
+        guard let url = mediaLink else { return nil }
+        return { openURL(url) }
+    }
+
+    /// The checkups and the person whose one link is their source's own page
+    /// (prd §1187), so its tile says the place.
+    private var landsAtSource: Bool {
+        l2beatShape == .chain || walletbeatShape == .wallet || socialShape == .person
+    }
+
     private var sheetVerbs: [Verb] {
         var derived = VerbDerivation.verbs(for: thing)
         // WHERE you land, never "Open" — §302's Explorer ruling, generalised
@@ -3476,6 +3535,10 @@ struct ThingSheetView: View {
         if let word = purchaseReading?.destination, let first = derived.first,
            case .openURL = first.action {
             derived[0] = Verb(label: word, icon: first.icon, action: first.action)
+        } else if landsAtSource, let first = derived.first, case .openURL = first.action {
+            // A chain, a wallet or a person in the room's frame (prd §1187):
+            // the link is the reviewer's or the network's own page.
+            derived[0] = Verb(label: thing.source, icon: "arrow.up.right", action: first.action)
         }
         let extras = [joinVerb, episodeVerb, xPostVerb, dropboxVerb].compactMap { $0} + privyVerbs
         guard !extras.isEmpty else { return derived }

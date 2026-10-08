@@ -58,9 +58,6 @@ enum AgentSheet {
         /// A chat with an agent: the ask, the turns, and what the record says
         /// about how much of it we hold. ChatGPT, Claude, Gemini, Claude Code.
         case conversation
-        /// A permission: what can be reached, by which verbs, until when.
-        /// 1Claw's vault grants — a thing that was rendering as a bookmark.
-        case grant
     }
 
     /// The facts the shape decision reads. A value type on purpose: the
@@ -73,9 +70,6 @@ enum AgentSheet {
         /// an imported DM thread are `.chat` too, and they are transcripts of
         /// PEOPLE — social owns them, and asked first.
         var socialShaped: Bool
-        /// Is this a 1Claw policy row (`sourceRef` prefix)? The ref is the
-        /// record; nothing here reads a display string to decide a noun.
-        var grantRef: Bool
         /// Turns recovered from the stored transcript.
         var turns: Int
         /// `Thing.messageCount` — what the importer counted BEFORE its clamp.
@@ -86,18 +80,14 @@ enum AgentSheet {
     ///
     /// Order is load-bearing:
     ///
-    /// 1. **A grant is a permission before it is anything else** — it is a
-    ///    `.link` whose link is the same dashboard URL on every row in the
-    ///    corpus, so the kind cannot be allowed to decide.
-    /// 2. **Social wins any tie.** A `.chat` that `SocialSheet` shapes is a
+    /// 1. **Social wins any tie.** A `.chat` that `SocialSheet` shapes is a
     ///    conversation between people and already has an anatomy; claiming it
     ///    here would be two shapes for one row.
-    /// 3. **A conversation is a `.chat` that carries a conversation** — turns
+    /// 2. **A conversation is a `.chat` that carries a conversation** — turns
     ///    we could read, or a count the importer stamped. This is the data test
     ///    §363 ruled for, and it is what keeps Slack messages and Stocktwits
     ///    posts (both `.chat`, neither a transcript) out: they carry neither.
     static func shape(_ f: Facts) -> Shape? {
-        if f.grantRef { return .grant }
         guard !f.socialShaped, f.kind == "chat" else { return nil }
         return (f.turns > 0 || f.counted != nil) ? .conversation : nil
     }
@@ -420,92 +410,5 @@ enum AgentSheet {
         growing
             ? String(localized: "From your \(source) history. Sessions grow — re-importing updates this one in place.")
             : String(localized: "From your \(source) export.")
-    }
-
-    // MARK: - The grant reading
-
-    /// One vault grant: what can be reached, by which verbs, until when.
-    struct Grant: Equatable {
-        /// The secret path pattern — the grant's whole payload.
-        var path: String
-        var vault: String?
-        /// The verbs this key was given, in the words the API used.
-        var permissions: [String]
-        var granted: Date?
-        var expires: Date?
-        /// "Expires in 6 days" / "Expired" — nil when there is no clock, which
-        /// is most grants. A bar drawn against a guessed end date is the
-        /// invented fact this codebase bans.
-        var status: String?
-        /// Is the clock worth colouring? A grant with weeks left is a fact, not
-        /// an alarm.
-        var urgent: Bool
-        /// How much of the grant's life has elapsed, 0…1 — nil unless BOTH
-        /// ends are known, since a runway with one end guessed is a drawing of
-        /// something we do not know.
-        var fraction: Double?
-    }
-
-    struct GrantInput {
-        /// `Thing.title` — the fallback path only, for a row landed before the
-        /// bridge stamped its parts. Never parsed apart.
-        var title: String
-        /// `Thing.summary`, stamped by the 1Claw bridge (deleted 2026-09-06).
-        var path: String?
-        /// `Thing.authorHandle`.
-        var vault: String?
-        var permissions: [String]
-        var granted: Date?
-        var expires: Date?
-        var now: Date
-    }
-
-    static func grant(_ i: GrantInput) -> Grant {
-        let clock = expiry(i.expires, now: i.now)
-        let path = (i.path?.trimmingCharacters(in: .whitespacesAndNewlines)).flatMap {
-            $0.isEmpty ? nil : $0
-        }
-        return Grant(
-            // The title is the fallback, WHOLE — a row that predates the
-            // stamped fields shows the string it has always shown rather than
-            // a string this file guessed at by splitting on a separator.
-            path: path ?? i.title,
-            vault: i.vault,
-            permissions: i.permissions,
-            granted: i.granted,
-            expires: i.expires,
-            status: clock?.text,
-            urgent: clock?.urgent ?? false,
-            fraction: fraction(granted: i.granted, expires: i.expires, now: i.now))
-    }
-
-    /// The clock, in words. Day-boundary arithmetic rather than raw seconds: a
-    /// grant expiring at 09:00 tomorrow is "tomorrow" all of today, and
-    /// reporting it as "in 0 days" at 10:00 is the kind of true-but-useless
-    /// number a receipt exists to replace.
-    static func expiry(_ expires: Date?, now: Date) -> (text: String, urgent: Bool)? {
-        guard let expires else { return nil }
-        if expires <= now { return (String(localized: "Expired"), true) }
-        let cal = Calendar.current
-        let days = cal.dateComponents([.day],
-                                      from: cal.startOfDay(for: now),
-                                      to: cal.startOfDay(for: expires)).day ?? 0
-        switch days {
-        case ...0: return (String(localized: "Expires today"), true)
-        case 1:    return (String(localized: "Expires tomorrow"), true)
-        default:   return (String(localized: "Expires in \(days) days"), days <= urgentDays)
-        }
-    }
-
-    /// Two weeks. The same window `AppStoreConnectBridge` treats a TestFlight
-    /// build's death as news in — a deadline you can still act on.
-    static let urgentDays = 14
-
-    static func fraction(granted: Date?, expires: Date?, now: Date) -> Double? {
-        guard let granted, let expires else { return nil }
-        let total = expires.timeIntervalSince(granted)
-        guard total > 0 else { return nil }
-        let done = now.timeIntervalSince(granted) / total
-        return min(max(done, 0), 1)
     }
 }

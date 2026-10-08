@@ -78,7 +78,7 @@ guard "the content view asks the shape, not the kind" \
 guard "the sheet draws a body for a notice as well as a post" \
   'drawsSocialBody: Bool \{ socialShape == \.post \|\| socialShape == \.notice \}' "$VIEW"
 guard "the content gate reads drawsSocialBody" \
-  '\(drawsSocialBody \|\| agentShape == \.conversation' "$VIEW"
+  'hasWords: Bool = drawsSocialBody \|\| agentShape == \.conversation' "$VIEW"
 # …and the HERO does not move. A notice's hero is its own sentence; a post's is
 # the post's words. Sharing `isSocialPost` would put the post in the title slot
 # and drop the news.

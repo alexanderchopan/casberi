@@ -222,7 +222,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1316 of 1380 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1317 of 1381 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -628,11 +628,11 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §360 — The Mac half of the room controls: a pointer that gets an answer, a key that reaches a folded seat, and chrome that s…
 - §361 — The top band gets the feed's geometry (amended by §371)
 - §362 — One rail, two rooms: the social faces become a filter, pinned, at the wallet faces' size (part superseded by §450)
-- §363 — A social sheet is a post, not a record: the gate that asked the wrong question (part superseded by §583)
+- §363 — A social sheet is a post, not a record: the gate that asked the wrong question (amended by §1187; part superseded by §583)
 - §364 — A Work sheet is a receipt, not a record
 - §365 — A Life sheet is a stub, a card, a delivery or a frame
 - §366 — A note sheet is words: the category whose whole job was to show them, showing the fewest
-- §367 — An agent sheet is a conversation, and the conversation was in the record all along
+- §367 — An agent sheet is a conversation, and the conversation was in the record all along (part superseded by §1187)
 - §368 — A shopping sheet is a receipt or a watch, and the fork is not the price
 - §369 — The money receipt: every money thing gets a hero, and it speaks in sentences (amended by §524)
 - §370 — Verbose copy is a sentence that says what the screen already says
@@ -702,7 +702,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §416 — The wallet room gets section headers; the card labels stay
 - §417 — The wallet's cards finish their own anatomy, and the room's overviews get wired to their detail (amended by §447)
 - §418 — The agent rooms: how long the conversation was, code drawn as code, and carrying it on [+1 sub-entries]
-- §419 — Walletbeat — the wallet apps you use, reviewed by somebody independent (amended by §421, §430)
+- §419 — Walletbeat — the wallet apps you use, reviewed by somebody independent (amended by §421, §430, §1187)
 - §420 — CardPointers — the offers sitting unused on your cards, and the wire measured before a line was trusted (amended by §487; part superseded by §423)
 - §421 — Walletbeat is a publication you follow, and its directory belongs to the room (amended by §422, §430)
 - §422 — Three Walletbeat facts that were landed and on no screen (amended by §430)
@@ -711,7 +711,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §425 — A key that can sign and can never spend — Casberi as a Safe co-signer (amended by §426, §427, §913)
 - §426 — Building §425 — what the spec got right, the two things it got wrong, and the four questions it left unmeasured (amended by §427)
 - §427 — The multisig that cannot be repaired, and the key that dies quietly — two failures §425 could create and did not say (amended by §913)
-- §428 — L2BEAT — the rails your money sits on, reviewed by somebody independent (part superseded by §638)
+- §428 — L2BEAT — the rails your money sits on, reviewed by somebody independent (amended by §1187; part superseded by §638)
 - §429 — The L2BEAT surfaces, past §428 — an event with no date, a sort that said nothing, and a strip nothing ever named
 - §430 — Four Walletbeat facts, three of which were already in the corpus
 - §431 — The room's own settings door
@@ -1124,7 +1124,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §803b — Privy Home, measured: one authenticated read holds every app and its wallets
 - §803c — Privy is a seat: sign in on Privy Home, one row per app wallet, balances from the chain
 - §803d — Privy Home authenticates by COOKIE, measured on a real sign-in
-- §803e — The Privy room draws the mockup: app logos, last used, balances, an app page, and the display choices
+- §803e — The Privy room draws the mockup: app logos, last used, balances, an app page, and the display choices (amended by §1187)
 - §803f — Privy activity: what moved in your app wallets, the Home/Apps/Activity tiles, and the app page's own history
 - §803g — Privy money counts in the Wallet total, and the room's tiles are Apps | Activity (part superseded by §826)
 - §803h — The Privy seat is MEASURED against the person's own account
@@ -1540,6 +1540,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1184 — Every sheet's fourth tile keeps up with it, and a sheet is one row of four
 - §1185 — The tray's search stands its hits under their categories, and finds companies, what you hold and your things
 - §1186 — A song, a video and a picture stand in the room's frame
+- §1187 — A person, an app's wallet, a chain and a wallet stand in the room's frame; the grant sheet is deleted
 
 ## Dead rulings → what replaced them (generated)
 

@@ -283,6 +283,8 @@ enum SourceRename {
         "Altana", "Base Vibenet", "Hegotá UTXO", "Hegotá Privacy", "Reddit",
         "Ethrex Hegot\u{00e1}", "Ethrex Privacy", "Hegota Devnet", "Privacy Devnet",
         "Deals", "Shopify", "Cursor", "Nostr", "Farcaster",
+        // 1Claw's grants (retired §638): their sheet went with prd §1187.
+        "1Claw",
     ]
 
     /// The address-book network tags those seats wrote (`AddressBook.Network`

@@ -64,7 +64,6 @@ enum AgentSheetSource {
         AgentSheet.Facts(
             kind: thing.kind.rawValue,
             socialShaped: SocialSheetSource.shape(for: thing) != nil,
-            grantRef: Self.isGrantRef(thing.sourceRef),
             // Parsed rather than counted from a field, because the field is
             // exactly what can be missing: a chat landed before `enrichedText`
             // was written carries a count and no body, and one whose importer
@@ -117,47 +116,5 @@ enum AgentSheetSource {
     static func project(for thing: Thing) -> String? {
         let facet = thing.kind.typeTag
         return thing.tags.first { $0 != "Session" && $0 != facet && !$0.isEmpty }
-    }
-
-    // MARK: - The grant reading
-
-    @MainActor
-    static func grant(for thing: Thing, now: Date = .now) -> AgentSheet.Grant {
-        AgentSheet.grant(.init(
-            title: thing.title,
-            path: thing.summary,
-            vault: thing.authorHandle,
-            permissions: permissions(for: thing),
-            granted: thing.capturedAt,
-            expires: thing.dueAt,
-            now: now))
-    }
-
-    /// A 1Claw grant row, by its ref.
-    ///
-    /// INLINED here on 2026-09-06, when the 1Claw bridge was deleted with the
-    /// other retired seats. The seat is gone and nothing lands a grant any
-    /// more — but the rows somebody already has do NOT go with it, and a
-    /// sheet that stopped recognising them would degrade a shipped row into
-    /// the generic shape. Two string literals is a cheaper way to keep that
-    /// promise than keeping a bridge alive to answer them.
-    static func isGrantRef(_ ref: String?) -> Bool {
-        ref?.hasPrefix("1claw:policy:") ?? false
-    }
-
-    /// The verbs the key was granted, off the row's own tags.
-    ///
-    /// "Grant" is the facet naming the SHAPE; every other tag on the row is a
-    /// permission the API reported, stamped in the API's own words so nothing
-    /// here has to translate a security decision.
-    ///
-    /// The kind's own type tag comes off too — `Thing.init` prepends it, so a
-    /// grant row (`.link`) stores `["Link", "Grant", <verbs…>]` and "Link" was
-    /// being listed to the reader as a permission the key holds. Derived from
-    /// the thing's kind, not matched against the literal "Link", so the same
-    /// row landed under a different kind cannot bring it back.
-    static func permissions(for thing: Thing) -> [String] {
-        let facet = thing.kind.typeTag
-        return thing.tags.filter { $0 != "Grant" && $0 != facet && !$0.isEmpty }
     }
 }

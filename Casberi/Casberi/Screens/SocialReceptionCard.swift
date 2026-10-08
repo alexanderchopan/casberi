@@ -150,93 +150,67 @@ struct ReplyingToCard: View {
     }
 }
 
-/// A PERSON, not a link to one (prd §363).
-///
-/// A new follower landed as a `.link` whose title was a sentence and whose
-/// content was their profile URL, so the sheet drew that sentence at
-/// `heading40` and then a `LinkPreviewCard` fetching a profile page. Both
-/// halves of what it needed were already stamped on the row —
-/// `authorAvatarURL` and `authorHandle` — and the app has had a real person
-/// surface since §169.
-///
-/// The face is the hero and it is a DOOR: the tap opens `SocialProfileCard`,
-/// which carries the one verb this sheet is actually about (Watch), plus their
-/// bio, their wallet and their follow graph. What this view adds beneath it is
-/// the thing a profile card cannot know — what of theirs is already in YOUR
-/// corpus.
-struct SocialPersonContent: View {
+/// A PERSON, not a link to one (prd §363), in the room's frame since prd
+/// §1187: the face leads, centred, like a contact poster, the handle under
+/// the name, and how you know them in the stamps. The box is a DOOR to their
+/// profile (`SocialProfileCard`); what of theirs you already have is the
+/// sheet's list under the tiles.
+struct SocialPersonBox: View {
     let handle: String
     let displayName: String?
     let avatarURL: String?
     let source: String
-    /// Their posts already landed here. Empty is the ordinary case and reads
-    /// as one — most people who follow you have never posted anything you've
-    /// kept — so the section simply isn't there rather than saying "none".
-    let recent: [KeyedThing]
+    /// When they came to you: a follow's day.
+    let since: Date
+    /// You follow them back (`SocialPeople.isWatched`).
+    let following: Bool
     var onOpenProfile: () -> Void
-    var onOpenThing: (Thing) -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s4) {
-            Button(action: onOpenProfile) {
-                HStack(spacing: DS.Space.s3) {
+        Button(action: onOpenProfile) {
+            VStack(spacing: DS.Space.s2) {
+                Group {
                     if let avatarURL, !avatarURL.isEmpty {
-                        RemoteThumb(urlString: avatarURL, size: DS.Face.shelf,
+                        RemoteThumb(urlString: avatarURL, size: DS.Face.profile,
                                     fallback: source, circular: true)
                     } else {
-                        BridgeIcon(name: source, size: DS.Face.shelf, circular: true)
-                    }
-                    VStack(alignment: .leading, spacing: 2) {
-                        if let displayName, !displayName.isEmpty {
-                            Text(displayName)
-                                .dsText(.heading24).foregroundStyle(DS.textPrimary)
-                        }
-                        Text("@\(SocialThread.shortHandle(handle))")
-                            .dsText(.body17).foregroundStyle(DS.textTertiary)
-                    }
-                    Spacer(minLength: 0)
-                }
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(RowPress())
-            .dsHover()
-            .accessibilityHint(Text("Opens their profile"))
-            .dsTooltip(String(localized: "Opens their profile"))
-
-            if !recent.isEmpty {
-                VStack(alignment: .leading, spacing: DS.Space.s3) {
-                    Text("What they post")
-                        .dsText(.label12).foregroundStyle(DS.textTertiary)
-                    // `.live` INSIDE the closure (corollary 3): the array this
-                    // `ForEach` holds was filtered when the view value was
-                    // made, which is before any delete that lands while the
-                    // sheet is open.
-                    ForEach(recent) { row in
-                        if let thing = row.live {
-                            postLine(thing)
-                        }
+                        BridgeIcon(name: source, size: DS.Face.profile, circular: true)
                     }
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.top, DS.Space.s1)
+                if let displayName, !displayName.isEmpty {
+                    Text(verbatim: displayName)
+                        .dsText(.heading20)
+                        .foregroundStyle(DS.textPrimary)
+                        .lineLimit(1)
+                }
+                Text(verbatim: "@\(SocialThread.shortHandle(handle))")
+                    .dsText(displayName?.isEmpty == false ? .subhead12 : .heading20)
+                    .foregroundStyle(displayName?.isEmpty == false ? DS.textSecondary : DS.textPrimary)
+                    .lineLimit(1)
+                Text(verbatim: source)
+                    .dsText(.subhead12)
+                    .foregroundStyle(DS.textSecondary)
+                Spacer(minLength: 0)
+                HStack(spacing: DS.Space.s2) {
+                    DSStamp(word: String(localized: "Followed you \(FeedScreen.dayWord(since))"))
+                    if following { DSStamp(word: String(localized: "You follow them")) }
+                }
             }
-        }
-        .padding(.horizontal, DS.Space.s4)
-    }
-
-    private func postLine(_ thing: Thing) -> some View {
-        Button { onOpenThing(thing) } label: {
-            VStack(alignment: .leading, spacing: 2) {
-                LiveTimeText(date: thing.capturedAt)
-                Text(SocialSheetSource.words(for: thing))
-                    .dsText(.body17).foregroundStyle(DS.textPrimary)
-                    .lineLimit(2)
-                    .multilineTextAlignment(.leading)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .contentShape(Rectangle())
         }
-        .buttonStyle(RowPress())
-        .dsHover()
+        .buttonStyle(PressSpring())
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(verbatim: spoken))
+        .accessibilityHint(Text("Opens their profile"))
+    }
+
+    private var spoken: String {
+        let who = [displayName, "\(SocialThread.shortHandle(handle)) on \(source)"]
+            .compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: ", ")
+        var line = "\(who). " + String(localized: "Followed you \(FeedScreen.dayWord(since))")
+        if following { line += ". " + String(localized: "You follow them") }
+        return line
     }
 }

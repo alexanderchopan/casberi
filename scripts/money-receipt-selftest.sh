@@ -175,7 +175,11 @@ fi
 # A receipt suppresses the content area. Without this the sheet draws the
 # receipt AND the old `default:` branch under it — which for ten families is a
 # block-explorer URL rendered as a paragraph, the exact thing this pass removed.
-grep -q 'let contentShown = moneyReceipt == nil' "$SHEET" \
+# Spelled in two typed steps since prd §1187 (the body sits at the type
+# checker's budget): the shape gate leads with the receipt, and the content
+# flag is built on it.
+grep -q 'let shapeHasBody: Bool = moneyReceipt == nil' "$SHEET" \
+  && grep -q 'let contentShown: Bool = shapeHasBody' "$SHEET" \
   || { echo "✗ the content area is no longer suppressed under a receipt"; exit 1; }
 
 # The commentary FETCHES. Computing it per body evaluation would walk a source's

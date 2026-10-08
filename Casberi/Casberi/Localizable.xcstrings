@@ -29888,6 +29888,34 @@
         }
       }
     },
+    "%lld of %lld checks pass" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$lld de %2$lld comprobaciones superadas"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%2$lld件中%1$lld件合格"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%2$lld개 중 %1$lld개 통과"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%2$lld 项中通过 %1$lld 项"
+          }
+        }
+      }
+    },
     "%lld of %lld checks rated by Walletbeat" : {
       "localizations" : {
         "en" : {
@@ -35367,6 +35395,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "过去 30 天有 %lld 起钱包安全事件"
+          }
+        }
+      }
+    },
+    "%lld wallets" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld billeteras"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld個のウォレット"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "지갑 %lld개"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld 个钱包"
           }
         }
       }
@@ -73191,6 +73247,62 @@
         }
       }
     },
+    "Falls short" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No alcanza"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "不十分"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "미흡"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "未达标"
+          }
+        }
+      }
+    },
+    "Falls short: %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No alcanza: %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "不十分: %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "미흡: %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "未达标：%@"
+          }
+        }
+      }
+    },
     "February" : {
       "localizations" : {
         "es" : {
@@ -75047,6 +75159,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "关注了你"
+          }
+        }
+      }
+    },
+    "Followed you %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Te siguió %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@にフォローされました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@에 나를 팔로우함"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 关注了你"
           }
         }
       }
@@ -83649,6 +83789,34 @@
         }
       }
     },
+    "Lately" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Últimamente"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "最近"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "최근"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "最近"
+          }
+        }
+      }
+    },
     "Logos Observer" : {
       "localizations" : {
         "es" : {
@@ -83673,6 +83841,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "Logos Observer"
+          }
+        }
+      }
+    },
+    "Made by Privy" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Creada por Privy"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Privyが作成"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Privy가 만듦"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "由 Privy 创建"
           }
         }
       }
@@ -100676,6 +100872,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "不在你的地址中"
+          }
+        }
+      }
+    },
+    "Not judged" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Sin evaluar"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "未評価"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "평가 안 됨"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "未评估"
           }
         }
       }
@@ -153023,6 +153247,34 @@
         }
       }
     },
+    "What moved" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Movimientos"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "動いたもの"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이동 내역"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "资金变动"
+          }
+        }
+      }
+    },
     "What moved in your app wallets" : {
       "localizations" : {
         "es" : {
@@ -157013,6 +157265,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你已关注 %lld 个地址，已达上限。请先在其账户页面取消关注一个。"
+          }
+        }
+      }
+    },
+    "You follow them" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Lo sigues"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "フォロー中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "내가 팔로우함"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你已关注"
           }
         }
       }
@@ -173694,6 +173974,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "已配对 · 至 %@"
+          }
+        }
+      }
+    },
+    "pass" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "superadas"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "合格"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "통과"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "通过"
           }
         }
       }

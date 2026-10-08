@@ -40,8 +40,6 @@
 #     that never existed
 #   · a Slack message or a Stocktwits post — both `.chat`, neither a transcript
 #     — wearing a conversation's anatomy
-#   · a grant's expiry off by a day boundary, on the one surface whose job is
-#     "what can this agent reach, and until when"
 #
 # Pure, local, deterministic — no network, no simulator. Exit non-zero on
 # failure.
@@ -84,8 +82,6 @@ guard "the sheet asks AgentSheetSource for its shape" \
   'AgentSheetSource\.shape\(for: thing\)' "$VIEW"
 guard "the conversation head is drawn (prd §894: the shared head)" \
   'Self\.turnsLine\(agentConversation\)' "$VIEW"
-guard "the grant replaces the title block" \
-  'AgentGrantView\(grant: agentGrant\)' "$VIEW"
 guard "the receipt card is drawn" \
   'AgentReceiptCard\(reading: agentConversation\)' "$VIEW"
 # The reading is computed ONCE and handed down. Two derivations are two places
@@ -115,9 +111,6 @@ if any(n in code for n in ("hasFrom", "fromRow", "PlaceWords")):
     sys.exit(1)
 print("  ✓ the From row stays deleted (prd §736)")
 FROMGONE
-# A grant draws no content: its link is the same dashboard URL on every row.
-guard "a grant shows no link preview" \
-  'agentShape != \.grant' "$VIEW"
 # A row wears ONE anatomy. An Agents-category row the Work receipt draws
 # (Cursor's runs did, until prd §1049) keeps that receipt — asking this first
 # would take it away.
@@ -128,18 +121,21 @@ guard "a grant shows no link preview" \
 guard "the agent shape yields to the money receipt and the Work receipt" \
   'moneyReceipt == nil, workReading == nil' "$VIEW"
 
-# --- the ingest half --------------------------------------------------------
-# THE INGEST IS GONE (2026-09-06): the 1Claw bridge was deleted with the other
-# retired seats, so nothing stamps a grant's parts any more. Four guards over
-# `OneClawBridge.swift` stood here and are not replaced by nothing — what
-# survives the bridge is the READ, and the read is what still has to work,
-# because a corpus that already holds grant rows still draws their sheets.
-# `AgentSheetSource` owns both halves of that read now, so both are guarded
-# there rather than deleted with the writer.
-guard "a grant row is still recognised by its own ref" \
-  'ref\?\.hasPrefix\("1claw:policy:"\)' "$SOURCE"
-guard "the permissions still come off the row's tags, minus the facet" \
-  'thing\.tags\.filter \{ \$0 != "Grant"' "$SOURCE"
+# --- the grant is gone -----------------------------------------------------
+# 1Claw's grant sheet was deleted with prd §1187 (nothing has landed a grant
+# since the seat retired, §638), and its rows go with the retired seats'
+# sweep. A grant shape coming back would draw a sheet for rows nobody has.
+python3 - "$SOURCE" "$SHEET" "$VIEW" <<'GRANTGONE' || fail=1
+import sys
+for path in sys.argv[1:]:
+    code = "\n".join(l for l in open(path).read().splitlines()
+                     if not l.strip().startswith("//"))
+    for n in ("case grant", "grantRef", "AgentGrantView", "isGrantRef", "1claw:policy:"):
+        if n in code:
+            print(f"  ✗ {n} is back in {path.split('/')[-1]} — prd §1187 deleted the grant sheet")
+            sys.exit(1)
+print("  ✓ the grant sheet stays deleted (prd §1187)")
+GRANTGONE
 
 # --- negative guards --------------------------------------------------------
 # Read a COMMENT-STRIPPED copy: these files DOCUMENT what they must no longer do
@@ -241,9 +237,9 @@ func check(_ name: String, _ ok: Bool) {
     if ok { print("  ✓ \(name)") } else { print("  ✗ \(name)"); failures += 1 }
 }
 
-func facts(kind: String = "chat", socialShaped: Bool = false, grantRef: Bool = false,
+func facts(kind: String = "chat", socialShaped: Bool = false,
            turns: Int = 0, counted: Int? = nil) -> AgentSheet.Facts {
-    .init(kind: kind, socialShaped: socialShaped, grantRef: grantRef,
+    .init(kind: kind, socialShaped: socialShaped,
           turns: turns, counted: counted)
 }
 
@@ -262,12 +258,7 @@ check("a bare .chat with no transcript and no count has no shape",
 // transcripts of PEOPLE and already have an anatomy.
 check("a socially shaped chat is left to the social sheet",
       AgentSheet.shape(facts(socialShaped: true, turns: 40)) == nil)
-// A grant is a permission before it is a link — and before anything else,
-// because its `.link` kind is exactly what was drawing the wrong noun.
-check("a grant ref is a grant", AgentSheet.shape(facts(kind: "link", grantRef: true)) == .grant)
-check("a grant wins even against a social shape",
-      AgentSheet.shape(facts(kind: "link", socialShaped: true, grantRef: true)) == .grant)
-check("a plain link is not a grant", AgentSheet.shape(facts(kind: "link")) == nil)
+check("a link has no agent shape", AgentSheet.shape(facts(kind: "link")) == nil)
 check("a note is not a conversation", AgentSheet.shape(facts(kind: "note", turns: 4)) == nil)
 
 print("")
@@ -413,81 +404,6 @@ check("no project means no strip",
 check("an export says which export", named.provenance == "From your ChatGPT export.")
 check("a growing source says that it grows",
       cc.provenance == "From your Claude Code history. Sessions grow — re-importing updates this one in place.")
-
-print("")
-print("Grant — a permission with a clock")
-
-let now = Date(timeIntervalSince1970: 1_786_000_000)
-func grant(path: String? = "openai/*", vault: String? = "personal",
-           permissions: [String] = ["read", "list"],
-           granted: Date? = nil, expires: Date? = nil,
-           title: String = "personal · openai/* · read, list") -> AgentSheet.Grant {
-    AgentSheet.grant(.init(title: title, path: path, vault: vault,
-                           permissions: permissions, granted: granted,
-                           expires: expires, now: now))
-}
-
-check("the path is the stored field, not a split title", grant().path == "openai/*")
-// A row landed before the parts were stamped shows the string it has always
-// shown, WHOLE — never a guess made by splitting on a separator.
-check("a grant with no stamped path falls back to the whole title",
-      grant(path: nil).path == "personal · openai/* · read, list")
-check("an empty stamped path falls back too", grant(path: "   ").path
-        == "personal · openai/* · read, list")
-check("the permissions ride through in the API's own words",
-      grant().permissions == ["read", "list"])
-
-// MOST GRANTS HAVE NO CLOCK, and none of the three clock facts may appear for
-// them: a bar drawn against a guessed end date is an invented fact.
-let open = grant()
-check("a grant with no expiry has no status", open.status == nil)
-check("a grant with no expiry is not urgent", !open.urgent)
-check("a grant with no expiry has no runway", open.fraction == nil)
-
-let day = 86_400.0
-check("a grant expiring in six days says so and is urgent",
-      grant(expires: now + 6 * day).status == "Expires in 6 days"
-        && grant(expires: now + 6 * day).urgent)
-// The day boundary, not raw seconds: a grant expiring at 09:00 tomorrow is
-// "tomorrow" all of today, and "in 0 days" at 10:00 is the true-but-useless
-// number a receipt exists to replace.
-check("a grant expiring tomorrow says tomorrow",
-      grant(expires: now + day).status == "Expires tomorrow")
-check("a grant expiring today says today",
-      grant(expires: now + 600).status == "Expires today")
-// THE DAY BOUNDARY, and the only fixture that can prove it: late tonight,
-// expiring at nine tomorrow morning. That is ten hours away, so a raw-seconds
-// read calls it "today" — on the evening when acting on it still would have
-// been possible, and the morning it is already gone.
-let midnight = Calendar.current.startOfDay(for: now)
-check("ten hours across midnight reads as tomorrow, not today",
-      AgentSheet.expiry(midnight.addingTimeInterval(33 * 3600),
-                        now: midnight.addingTimeInterval(23 * 3600))?.text
-        == "Expires tomorrow")
-check("twenty-one hours inside one day is still today",
-      AgentSheet.expiry(midnight.addingTimeInterval(22 * 3600),
-                        now: midnight.addingTimeInterval(3600))?.text == "Expires today")
-check("an expired grant says so", grant(expires: now - day).status == "Expired")
-check("an expired grant is urgent", grant(expires: now - day).urgent)
-// Two weeks is the window a deadline can still be acted on. Beyond it the clock
-// is a fact, not an alarm.
-check("a grant expiring in thirty days is not urgent",
-      !grant(expires: now + 30 * day).urgent)
-check("a grant expiring in exactly fourteen days is urgent",
-      grant(expires: now + 14 * day).urgent)
-
-// The runway needs BOTH ends known, and never leaves its bar.
-check("a runway needs both ends",
-      grant(granted: nil, expires: now + 6 * day).fraction == nil
-        && grant(granted: now - day, expires: nil).fraction == nil)
-let half = grant(granted: now - 5 * day, expires: now + 5 * day).fraction
-check("a half-spent grant reads as half", half != nil && abs(half! - 0.5) < 0.001)
-check("an expired grant's runway is full, never past it",
-      grant(granted: now - 10 * day, expires: now - day).fraction == 1)
-check("a grant that has not started reads as empty, never negative",
-      grant(granted: now + day, expires: now + 10 * day).fraction == 0)
-check("a zero-length grant draws no runway",
-      grant(granted: now, expires: now).fraction == nil)
 
 print("")
 print("exchanges — turns as PAIRS, for carrying a conversation on (2026-08-20)")
@@ -652,30 +568,6 @@ mutate "the social shape stops winning a chat" \
 mutate "any chat becomes a conversation" \
   'return (f.turns > 0 || f.counted != nil) ? .conversation : nil' \
   'return .conversation'
-# The grant must be decided before the kind, since its kind is what was drawing
-# the wrong noun.
-mutate "the grant ref stops leading" \
-  'if f.grantRef { return .grant }' \
-  'if f.grantRef, f.kind == "reminder" { return .grant }'
-# The path, guessed by splitting the display title instead of read from a field.
-mutate "the grant path is split out of the title" \
-  'path: path ?? i.title' \
-  'path: path ?? String(i.title.split(separator: "·").dropFirst().first ?? "")'
-# The clock, at the day boundary. Raw seconds makes tomorrow-at-09:00 read as
-# "in 0 days" from 10:00 this morning.
-mutate "the expiry counts raw days instead of day boundaries" \
-  'let days = cal.dateComponents([.day],
-                                      from: cal.startOfDay(for: now),
-                                      to: cal.startOfDay(for: expires)).day ?? 0' \
-  'let days = Int(expires.timeIntervalSince(now) / 86_400)'
-# The urgency window, and the expired case that must always wear it.
-mutate "an expired grant stops being urgent" \
-  'if expires <= now { return (String(localized: "Expired"), true) }' \
-  'if expires <= now { return (String(localized: "Expired"), false) }'
-mutate "every dated grant is urgent" \
-  'default:   return (String(localized: "Expires in \(days) days"), days <= urgentDays)' \
-  'default:   return (String(localized: "Expires in \(days) days"), true)'
-# The runway clamp — an expired grant would draw past the end of its own bar.
 # An orphaned answer given an invented question — somebody else's words sent to
 # a provider as the person's own.
 mutate "an answer with no question is paired anyway" \
@@ -694,15 +586,12 @@ mutate "a clamped transcript stops saying so" \
   'if let cut, cut > 0 {' \
   'if let cut, cut < 0 {'
 
-mutate "the runway is not clamped" \
-  'return min(max(done, 0), 1)' \
-  'return done'
 
 # ============================================================================
 # THE SECOND HARNESS — `AgentSheetSource`, against the REAL `Thing`
 # ============================================================================
 # Everything above builds its fixtures by hand: `facts(kind:turns:)`,
-# `convo(title:project:)`, `grant(permissions:)`. That is right for
+# `convo(title:project:)`. That is right for
 # `AgentSheet`, which only ever sees values somebody passes it — but it is
 # structurally blind to `AgentSheetSource`, whose whole job is deciding WHICH
 # values to pass. A hand-built fixture is the author's belief about what a row
@@ -801,28 +690,6 @@ check("the facet is the THING's own type tag, not the literal \"Chat\"",
         && AgentSheetSource.project(for: noteSession) == "casberi")
 
 print("")
-print("permissions(for:) — the verbs, and nothing the initializer added")
-
-// THE SECOND SHIPPED DEFECT, same cause: a grant is a `.link`, so "Link" was
-// stored ahead of the verbs and listed to the reader as one of them — on the
-// single surface whose entire job is "what can this agent reach".
-let grantRow = Thing(kind: .link, title: "personal · openai/* · read, list",
-                     source: "1Claw", tags: ["Grant", "read", "list"],
-                     sourceRef: "1claw:policy:abc")
-check("a grant row stores [\"Link\", \"Grant\", <verbs…>]",
-      grantRow.tags == ["Link", "Grant", "read", "list"])
-check("…and the permissions are the verbs alone",
-      AgentSheetSource.permissions(for: grantRow) == ["read", "list"])
-check("the row is still recognised as a grant by its ref",
-      AgentSheetSource.isGrantRef(grantRow.sourceRef)
-        && AgentSheetSource.shape(for: grantRow) == .grant)
-// Derived from the kind here too.
-let notedGrant = Thing(kind: .note, title: "a note-kind grant", source: "1Claw",
-                       tags: ["Grant", "read"], sourceRef: "1claw:policy:def")
-check("the facet is the THING's own type tag, not the literal \"Link\"",
-      AgentSheetSource.permissions(for: notedGrant) == ["read"])
-
-print("")
 print("The consequence — the reading the head actually draws")
 
 // END TO END, and the reason both defects were worth a harness: every
@@ -836,19 +703,6 @@ check("…and it comes out of the headline, which needed the real project",
 let readGPT = AgentSheetSource.conversation(for: plain)
 check("a ChatGPT sheet names no project at all", readGPT.project == nil)
 check("…and its title is untouched", readGPT.hero == "SwiftData migration plan")
-
-// The grant's half of the same sentence: `AgentGrantView` draws
-// `grant.permissions` as the list of verbs the key holds, so this is the
-// surface where "Link" was being read as something an agent had been allowed
-// to do. `grant(for:)` is `@MainActor` and top-level code here is NOT
-// main-actor isolated (measured — it is a compile error), so the hop is
-// asserted rather than awaited: this runs on the main thread, and the sheet
-// it stands in for is a view body, which does too.
-let readGrant = MainActor.assumeIsolated {
-    AgentSheetSource.grant(for: grantRow, now: Date(timeIntervalSince1970: 1_786_000_000))
-}
-check("the grant view is handed the verbs alone",
-      readGrant.permissions == ["read", "list"])
 
 // The social hand-off, through the real reader: a row another sheet has
 // already shaped gets no agent anatomy, whatever its tags say.
@@ -929,10 +783,6 @@ mutate_src "project stops excluding the type tag (the shipped defect)" source \
   '        let facet = thing.kind.typeTag
         return thing.tags.first { $0 != "Session" && $0 != facet && !$0.isEmpty }' \
   '        return thing.tags.first { $0 != "Session" && !$0.isEmpty }'
-mutate_src "permissions stop excluding the type tag (the shipped defect)" source \
-  '        let facet = thing.kind.typeTag
-        return thing.tags.filter { $0 != "Grant" && $0 != facet && !$0.isEmpty }' \
-  '        return thing.tags.filter { $0 != "Grant" && !$0.isEmpty }'
 
 # The literal spelling, which reads identically on every row shipping today
 # and is exactly how this class comes back.
@@ -940,10 +790,6 @@ mutate_src "project hard-codes \"Chat\" instead of reading the kind" source \
   '        let facet = thing.kind.typeTag
         return thing.tags.first { $0 != "Session" && $0 != facet && !$0.isEmpty }' \
   '        return thing.tags.first { $0 != "Session" && $0 != "Chat" && !$0.isEmpty }'
-mutate_src "permissions hard-code \"Link\" instead of reading the kind" source \
-  '        let facet = thing.kind.typeTag
-        return thing.tags.filter { $0 != "Grant" && $0 != facet && !$0.isEmpty }' \
-  '        return thing.tags.filter { $0 != "Grant" && $0 != "Link" && !$0.isEmpty }'
 
 # …and the other end of the relationship. This one proves the FIXTURES: if
 # removing the prepend leaves the harness green, the things are not going
