@@ -65211,3 +65211,10 @@ Settings counts the phone's calendars through EventKit (§1150), and the demo's 
 5. **Notes and conversations already wear the tiles** (§1184's `VerbDial`), so they need no change.
 
 **Seen** on a private iPhone 17 Pro simulator: Uma shared a file with you (the subject, the Brief v3.pdf stamp, Copy · Translate · Track · Share), uma's "Critique day…" (the words, 26 likes · 1 reply, Bluesky · Translate · Follow · Share, the reply context), The case for small software and A quieter approach to notifications (the picture and headline, the words under), and a real PEPE pair saved from Dexscreener outside the demo (the figure, −2.9% · 1D, the line, 1H–1M). **Not seen:** a stock's live chart, a mail with no sender, an article with no picture, light mode, the Mac. **Left as it was:** a saved Dexscreener link's title is the page's own ("PEPE $1.69B - Pepe / WETH on …"), and a token you don't follow still offers "Follow this token" as a row under the stats rather than as the fourth tile.
+
+## §1189 — A token's Watch is the fourth tile, and a saved Dexscreener page is named for its token (user, 2026-10-08: "do the small fixes", of the two §1188 left as they were)
+
+1. **Watch is the fourth tile on a token's price** (`TokenChartContent.watchKeep`): the content hands its own keep back through `\.priceBoxTiles`, now a closure taking it, so the "Follow this token" slab under the stats stands down in the room's frame; the tile drops once the token is watched. Outside the frame the slab stays.
+2. **A saved Dexscreener page's title names the token** (`ThingSheetView.dexscreenerParts`): "PEPE $1.69B - Pepe / WETH on Ethereum / Uniswap - DEX Screener", measured off a saved page, titles the sheet "Pepe", symbol PEPE. Only that shape; any other title falls through to §915's seam untouched. `chartLine` went with the chart's old head (§723).
+
+**Seen** on a private iPhone 17 Pro simulator outside the demo: a saved PEPE pair, titled Pepe, Open · Watch · Share. **Not seen:** the tile after watching, a stock, a Dexscreener page in another language.

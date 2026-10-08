@@ -2551,10 +2551,33 @@ private struct TokenChartContent: View {
             chart
                 .environment(\.priceBoxed, true)
                 .dsRoomBox()
-            tiles
+            tiles(watchKeep)
                 .padding(.top, DSRoomChassis.leadGap)
         }
         rows
+    }
+
+    /// Watch as the fourth tile in the room's frame (prd §1189), where the
+    /// "Follow this token" slab stood: while it is not watched and the token
+    /// resolved. The tile drops once it is.
+    private var watchKeep: VerbDial.Keep? {
+        guard offersWatch, watchedTitle == nil, let resolved else { return nil }
+        return VerbDial.Keep(label: String(localized: "Watch"), glyph: ScopeTileGlyph.watch) {
+            watch(resolved)
+        }
+    }
+
+    private func watch(_ resolved: TokenWatch.Resolved) {
+        DSHaptic.tap()
+        if let watched = TokenWatch.add(resolved, context: modelContext) {
+            DSHaptic.success()
+            watchedTitle = watched.title
+            if let store {
+                TokenWatch.registerBridge(store: store, context: modelContext)
+            }
+        } else {
+            watchedTitle = "\(resolved.name) · $\(resolved.symbol)"
+        }
     }
 
     @Environment(\.priceBoxTiles) private var boxTiles
@@ -2580,7 +2603,7 @@ private struct TokenChartContent: View {
         VStack(alignment: .leading, spacing: DS.Space.s4) {
             if boxTiles == nil { chart }
             statStrip
-            if offersWatch { watchRow }
+            if offersWatch && boxTiles == nil { watchRow }
             watchAlerts(thing)
         }
         .padding(.top, boxTiles == nil ? 0 : DS.Space.s6)
@@ -2620,16 +2643,7 @@ private struct TokenChartContent: View {
             // the glyph disc, the left-anchored verb, one radius.
             DSSlabButton(title: String(localized: "Follow this token"),
                          systemImage: "eye") {
-                DSHaptic.tap()
-                if let watched = TokenWatch.add(resolved, context: modelContext) {
-                    DSHaptic.success()
-                    watchedTitle = watched.title
-                    if let store {
-                        TokenWatch.registerBridge(store: store, context: modelContext)
-                    }
-                } else {
-                    watchedTitle = "\(resolved.name) · $\(resolved.symbol)"
-                }
+                watch(resolved)
             }
         }
     }
@@ -2761,7 +2775,7 @@ private struct StockChartContent: View {
             chart
                 .environment(\.priceBoxed, true)
                 .dsRoomBox()
-            tiles
+            tiles(nil)
                 .padding(.top, DSRoomChassis.leadGap)
         }
         VStack(alignment: .leading, spacing: DS.Space.s4) {

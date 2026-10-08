@@ -2360,6 +2360,7 @@ struct ThingSheetView: View {
     /// "Ethereum — $ETH" as the name and the symbol (prd §897; the seam since
     /// §915). A row landed before §915 ("Ethereum · $ETH") still reads.
     static func chartParts(_ title: String) -> (name: String, symbol: String?) {
+        if let page = dexscreenerParts(title) { return page }
         let seam = TitleSeam.split(title)
         if let symbol = seam.line { return (seam.name, symbol) }
         let split = title.components(separatedBy: " · ")
@@ -2367,16 +2368,19 @@ struct ThingSheetView: View {
         return (split[0], split.dropFirst().joined(separator: " · "))
     }
 
-    /// "Token · $ETH", "Stock · $AAPL", "Metric".
-    static func chartLine(_ thing: Thing) -> String {
-        let kind: String
-        switch ThingChart.kind(for: thing) {
-        case .stock: kind = String(localized: "Stock")
-        case .postHogMetric: kind = String(localized: "Metric")
-        default: kind = String(localized: "Token")
-        }
-        guard let symbol = chartParts(thing.title).symbol else { return kind }
-        return "\(kind) · \(symbol)"
+    /// A pasted Dexscreener page's own title (prd §1189): "PEPE $1.69B -
+    /// Pepe / WETH on Ethereum / Uniswap - DEX Screener" is the token Pepe,
+    /// symbol PEPE. Only that shape, measured off a saved page; anything else
+    /// falls through untouched.
+    static func dexscreenerParts(_ title: String) -> (name: String, symbol: String?)? {
+        let suffix = " - DEX Screener"
+        guard title.hasSuffix(suffix) else { return nil }
+        let page = title.dropLast(suffix.count)
+        guard let dash = page.range(of: " - ") else { return nil }
+        let name = page[dash.upperBound...].components(separatedBy: " / ").first?
+            .trimmingCharacters(in: .whitespaces) ?? ""
+        let symbol = page[..<dash.lowerBound].split(separator: " ").first.map(String.init)
+        return name.isEmpty ? nil : (name, symbol)
     }
 
     /// "Conversation · 9 turns" (prd §894).
@@ -3411,13 +3415,13 @@ struct ThingSheetView: View {
                          articleArt: !articleHead,
                          mailSender: !mailHead)
             .environment(\.priceHeadDrawn, chartHead)
-            .environment(\.priceBoxTiles, chartHead ? AnyView(chartTiles) : nil)
+            .environment(\.priceBoxTiles, chartHead ? { keep in AnyView(chartTiles(keep: keep)) } : nil)
             .environment(\.keepPassage, keepPassage)
     }
 
     @ViewBuilder
-    private var chartTiles: some View {
-        VerbDial(thing: thing, verbs: sheetVerbs, onVerb: runVerb, onName: nil, keep: sheetKeep)
+    private func chartTiles(keep: VerbDial.Keep?) -> some View {
+        VerbDial(thing: thing, verbs: sheetVerbs, onVerb: runVerb, onName: nil, keep: keep ?? sheetKeep)
         dialResult
     }
 

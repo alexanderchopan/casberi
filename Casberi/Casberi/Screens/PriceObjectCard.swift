@@ -156,8 +156,12 @@ private struct PriceHeadDrawnKey: EnvironmentKey { static let defaultValue = fal
 private struct PriceBoxedKey: EnvironmentKey { static let defaultValue = false }
 
 /// The sheet's tiles, handed to a charted row's content so they stand under
-/// its boxed price and above its rows (prd §1188). Nil everywhere else.
-private struct PriceBoxTilesKey: EnvironmentKey { static let defaultValue: AnyView? = nil }
+/// its boxed price and above its rows (prd §1188). The content hands back its
+/// own fourth tile (a token's Watch, prd §1189), else the sheet's stands.
+/// Nil everywhere else.
+private struct PriceBoxTilesKey: EnvironmentKey {
+    static let defaultValue: ((VerbDial.Keep?) -> AnyView)? = nil
+}
 
 extension EnvironmentValues {
     var priceHeadDrawn: Bool {
@@ -168,7 +172,7 @@ extension EnvironmentValues {
         get { self[PriceBoxedKey.self] }
         set { self[PriceBoxedKey.self] = newValue }
     }
-    var priceBoxTiles: AnyView? {
+    var priceBoxTiles: ((VerbDial.Keep?) -> AnyView)? {
         get { self[PriceBoxTilesKey.self] }
         set { self[PriceBoxTilesKey.self] = newValue }
     }
