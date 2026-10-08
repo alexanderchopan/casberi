@@ -133,6 +133,8 @@ struct ThingSheetView: View {
         /// Track a subscription, filled in from a charge that repeats (prd
         /// §1181) — a case here for the reason `remind` is one.
         case track(String)
+        /// Follow this page's site, the Reading tray opened on its host (§1184).
+        case followSite(String)
 
         var id: String {
             switch self {
@@ -140,6 +142,7 @@ struct ThingSheetView: View {
             case .address(let entry):  return "address:\(entry.id)"
             case .remind(let ordinal, _): return "remind:\(ordinal)"
             case .track(let name): return "track:\(name)"
+            case .followSite(let host): return "followSite:\(host)"
             }
         }
     }
@@ -1093,7 +1096,7 @@ struct ThingSheetView: View {
                     // already plain grey, so the dial changes their shape,
                     // not their weight.
                     VerbDial(thing: thing, verbs: sheetVerbs,
-                             onVerb: runVerb, onName: nil)
+                             onVerb: runVerb, onName: nil, keep: sheetKeep)
                         .padding(.top, DS.Space.s6)
                         .settleIn(delay: 0.2)
                     dialResult
@@ -1460,6 +1463,11 @@ struct ThingSheetView: View {
             case .address(let entry):  AddressCard(entry: entry)
             case .remind(_, let text):
                 NoteRemindTray(note: thing, item: text)
+            case .followSite(let host):
+                ReadingFindSheet(initialQuery: host)
+                    .environment(chrome)
+                    .environment(bridges)
+                    .environment(\.modelContext, modelContext)
             case .track(let name):
                 SubscriptionAddTray(prefill: .init(name: name, site: nil))
                     // A Catalyst sheet does not inherit the presenter's
@@ -2308,7 +2316,7 @@ struct ThingSheetView: View {
     /// The dial, under a note's head (prd §893).
     @ViewBuilder private var noteDial: some View {
         VerbDial(thing: thing, verbs: sheetVerbs,
-                 onVerb: runVerb, onName: nil)
+                 onVerb: runVerb, onName: nil, keep: sheetKeep)
             .padding(.top, DS.Space.s6)
         dialResult
     }
@@ -2925,6 +2933,35 @@ struct ThingSheetView: View {
                                            start: t.capturedAt, end: end, isThis: t.id == id,
                                            place: t.id == id ? place : nil)
             }
+    }
+
+    /// THE FOURTH TILE ON EVERY OTHER SHEET (prd §1184): Follow the person
+    /// behind a post (the profile card's own act, `SocialPeople.watch`), or
+    /// the site behind a page you do not follow yet (Reading's tray, opened on
+    /// its host). Nil when you already do, or there is no one to follow.
+    private var sheetKeep: VerbDial.Keep? {
+        if SocialThread.isSocial(thing.source), let handle = thing.authorHandle, !handle.isEmpty,
+           !SocialPeople.isWatched(handle: handle, source: thing.source) {
+            let profile = SocialProfile(source: thing.source, handle: handle, displayName: nil,
+                                        bio: nil, avatarURL: thing.authorAvatarURL)
+            return VerbDial.Keep(label: String(localized: "Follow"), glyph: ScopeTileGlyph.watch) {
+                guard SocialPeople.watch(profile) else {
+                    chrome.flash(String(localized: "Already following @\(profile.shortHandle)."))
+                    return
+                }
+                chrome.flash(String(localized: "Following @\(profile.shortHandle)."), tone: .success)
+                Task { await SocialPeople.sync(source: profile.source, context: modelContext) }
+            }
+        }
+        guard thing.kind == .link, bridges != nil,
+              let page = thing.externalLink ?? (thing.content.hasPrefix("http") ? thing.content : nil),
+              let host = ReadingRoom.host(of: page) else { return nil }
+        let followed = Set(RSSStore.shared.feeds.compactMap { ReadingRoom.host(of: $0.url) })
+        guard !ReadingRoom.covered(host, by: followed),
+              RoomAccounts.roomSources(RoomAccounts.readingRoom).contains(thing.source) else { return nil }
+        return VerbDial.Keep(label: String(localized: "Follow"), glyph: ScopeTileGlyph.subscriptions) {
+            faceTarget = .followSite(host)
+        }
     }
 
     /// The card that paid, when this is a card spend (prd §1182): its name and

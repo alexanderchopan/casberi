@@ -165,13 +165,30 @@ struct VerbDial: View {
 
     /// The thing's acts, then Name, then Share: the order is the meaning
     /// (`SheetTile.keepsOrder`). A copy wears a checkmark for a beat.
+    /// FOUR TILES, ONE ROW (prd §1184, user: "we only want sheets to have
+    /// four tiles"): the thing's acts, at most three — two when the keep tile
+    /// stands, one fewer again with Name — Copy giving way first (the share
+    /// sheet copies too), then the last.
+    private var shown: [Verb] {
+        let room = 3 - (keep == nil ? 0 : 1) - (onName == nil ? 0 : 1)
+        var acts = verbs
+        while acts.count > room {
+            if let copy = acts.lastIndex(where: { if case .copyText = $0.action { return true }; return false }) {
+                acts.remove(at: copy)
+            } else {
+                acts.removeLast()
+            }
+        }
+        return acts
+    }
+
     private var tiles: [SheetTile] {
-        var out = verbs.map { verb in
+        var out = shown.map { verb in
             SheetTile(id: "verb:" + verb.id, label: Self.dialLabel(for: verb),
                       glyph: copied == verb.id ? "checkmark" : verb.icon)
         }
         if onName != nil { out.append(SheetTile(id: "name", label: "Name", glyph: "square.and.pencil")) }
-        if let keep, out.count < 3 { out.append(SheetTile(id: "keep", label: keep.label, glyph: keep.glyph)) }
+        if let keep { out.append(SheetTile(id: "keep", label: keep.label, glyph: keep.glyph)) }
         out.append(SheetTile(id: "share", label: "Share", glyph: "square.and.arrow.up"))
         return out
     }

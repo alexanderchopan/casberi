@@ -17,6 +17,9 @@ struct ReadingFindSheet: View {
     /// After a follow landed and the tray closed (prd §1119): Apps takes the
     /// person to Reading's Subscriptions.
     var onTracked: (() -> Void)? = nil
+    /// A site to start from (prd §1184): a sheet's Follow tile opens the tray
+    /// on the page's own host, one tap from following it.
+    var initialQuery: String? = nil
 
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
@@ -46,6 +49,7 @@ struct ReadingFindSheet: View {
         }
         .task { load() }
         .onAppear {
+            if let initialQuery, query.isEmpty { query = initialQuery }
             fieldFocused = true
             #if DEBUG
             // `-readingQuery "<text>"` fills the field (prd §1085): a
