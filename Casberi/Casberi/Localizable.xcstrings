@@ -44379,6 +44379,34 @@
         }
       }
     },
+    "About" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Acerca de"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "概要"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "정보"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "简介"
+          }
+        }
+      }
+    },
     "About the same as last month (%@)" : {
       "localizations" : {
         "es" : {
@@ -75651,6 +75679,34 @@
         }
       }
     },
+    "Found in it" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Encontrado en ella"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "見つかったもの"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "찾은 내용"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "从中找到"
+          }
+        }
+      }
+    },
     "Found on a wallet you watch" : {
       "localizations" : {
         "es" : {
@@ -93431,6 +93487,34 @@
         }
       }
     },
+    "More from %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Más de %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@のその他"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@의 다른 항목"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "更多来自 %@"
+          }
+        }
+      }
+    },
     "More from this book" : {
       "localizations" : {
         "es" : {
@@ -108838,6 +108922,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "以全屏方式打开照片"
+          }
+        }
+      }
+    },
+    "Opens the video" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Abre el vídeo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "動画を開きます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "동영상을 엽니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "打开视频"
           }
         }
       }

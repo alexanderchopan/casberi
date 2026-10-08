@@ -181,7 +181,9 @@ struct DSScopeTiles<Scope: DSTileScope>: View {
                     }
                 }
             }
-        } else if sections.count > 1 {
+        } else if sections.count > 1 || (!sections.isEmpty && sections.allSatisfy { verbs.contains($0) }) {
+            // One VERB still draws (a sheet whose only act is Share, prd §1186);
+            // one view alone is no choice, and draws nothing.
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: DS.Space.s2),
                                      count: Self.columns),
                       alignment: .leading,

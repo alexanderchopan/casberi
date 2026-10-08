@@ -68,9 +68,14 @@ struct FollowTrackTray: View {
     @State private var failure: String?
     @FocusState private var fieldFocused: Bool
 
-    init(room: Following.Room, seat: String? = nil, onGitHub: (() -> Void)? = nil,
-         onTracked: (() -> Void)? = nil) {
+    /// A name to start from (prd §1186): a video's Follow tile opens the tray
+    /// on its channel.
+    var initialQuery: String? = nil
+
+    init(room: Following.Room, seat: String? = nil, initialQuery: String? = nil,
+         onGitHub: (() -> Void)? = nil, onTracked: (() -> Void)? = nil) {
         self.room = room
+        self.initialQuery = initialQuery
         self.onGitHub = onGitHub
         self.onTracked = onTracked
         let picked = seat.flatMap(Target.init(rawValue:)).flatMap { Target.of(room).contains($0) ? $0 : nil }
@@ -100,7 +105,10 @@ struct FollowTrackTray: View {
                                   onSubmit: { Task { await submit() } })
             }
         }
-        .onAppear { fieldFocused = true }
+        .onAppear {
+            if let initialQuery, query.isEmpty { query = initialQuery }
+            fieldFocused = true
+        }
         .task(id: target == .podcasts ? query : "") {
             guard target == .podcasts else { return }
             let q = query.trimmingCharacters(in: .whitespacesAndNewlines)

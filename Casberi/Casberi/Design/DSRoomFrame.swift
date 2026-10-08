@@ -44,12 +44,23 @@ extension View {
     /// column — so a sheet's card and a room's box are the same box, never a
     /// second one drawn to match. What does not fit is clipped: the box never
     /// grows (§760), the rest of the sheet carries the overflow.
-    func dsRoomBox() -> some View {
-        frame(maxWidth: .infinity, minHeight: DSRoomChassis.leadBox,
-              maxHeight: DSRoomChassis.leadBox, alignment: .topLeading)
-            .clipped()
-            .dsRoomHeadBlock()
-            .padding(.horizontal, DSRoomChassis.inset)
+    ///
+    /// `bleed`: the content fills the whole box to its corners — a video's
+    /// frame, a picture (prd §1186) — the box's outer size and corner kept.
+    @ViewBuilder
+    func dsRoomBox(bleed: Bool = false) -> some View {
+        if bleed {
+            frame(maxWidth: .infinity, minHeight: DSRoomChassis.leadHeight,
+                  maxHeight: DSRoomChassis.leadHeight)
+                .clipShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+                .padding(.horizontal, DSRoomChassis.inset)
+        } else {
+            frame(maxWidth: .infinity, minHeight: DSRoomChassis.leadBox,
+                  maxHeight: DSRoomChassis.leadBox, alignment: .topLeading)
+                .clipped()
+                .dsRoomHeadBlock()
+                .padding(.horizontal, DSRoomChassis.inset)
+        }
     }
 
     /// The tiles' row, straight under the box.

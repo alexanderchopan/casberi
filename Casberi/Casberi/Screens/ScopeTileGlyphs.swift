@@ -76,6 +76,7 @@ enum ScopeTileGlyph {
     /// chasing each other, what comes round again. The Wallet's and Day's
     /// tiles share it, because they are one idea in two rooms.
     static let subscriptions = "arrow.triangle.2.circlepath"
+    static let open         = "arrow.up.right"
     /// Reading's Highlights (prd §1085): the system's highlighter, the pen a
     /// passage is kept with.
     static let highlights   = "highlighter"

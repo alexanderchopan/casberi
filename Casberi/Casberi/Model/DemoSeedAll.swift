@@ -2641,7 +2641,12 @@ enum DemoSeedAll {
             ("Lianne — Bibio", 20, "From Ambivalence Avenue (2009)"),
         ]
         out += spotify.enumerated().map { i, s in
-            row(.link, s.0, source: "Spotify", ref: "demo:spotify:\(i)", days: s.1, hour: 9) { t in
+            // The page a real play carries (`SpotifyPlays.page`); the demo's is
+            // Spotify's search for the song, so the sheet's Spotify tile opens.
+            let page = "https://open.spotify.com/search/"
+                + (s.0.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? "")
+            return row(.link, s.0, source: "Spotify", ref: "demo:spotify:\(i)", days: s.1, hour: 9,
+                       content: page) { t in
                 t.tags = ["Played"]
                 t.previewImageURL = art("spotify-\(i)")
                 t.summary = s.2

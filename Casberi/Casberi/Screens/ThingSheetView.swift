@@ -135,6 +135,8 @@ struct ThingSheetView: View {
         case track(String)
         /// Follow this page's site, the Reading tray opened on its host (§1184).
         case followSite(String)
+        /// Follow a video's channel, Media's tray opened on it (§1186).
+        case followChannel(seat: String, name: String)
 
         var id: String {
             switch self {
@@ -143,6 +145,7 @@ struct ThingSheetView: View {
             case .remind(let ordinal, _): return "remind:\(ordinal)"
             case .track(let name): return "track:\(name)"
             case .followSite(let host): return "followSite:\(host)"
+            case .followChannel(let seat, let name): return "followChannel:\(seat):\(name)"
             }
         }
     }
@@ -178,6 +181,8 @@ struct ThingSheetView: View {
     /// The event's day around it (prd §1182): this event and its neighbours
     /// in a four-hour window, read on the sheet's task (§628).
     @State private var dayBlocks: [EventDaySlice.Block] = []
+    /// More from this artist or channel (prd §1186), read on the task (§628).
+    @State private var mediaMore: [Thing] = []
     struct MoneyYear { var sentUSD = 0.0, sentCount = 0, receivedUSD = 0.0, receivedCount = 0 }
     /// Mirrors `MoneyActivityDriver.isTracking` for this record, so the control
     /// re-labels itself the moment it is used.
@@ -398,7 +403,7 @@ struct ThingSheetView: View {
                 // leave the picture to the head.
                 // MEDIA (prd §897) — a track, a video, an episode; it wins over
                 // the article head, which a video with a stored description met.
-                let mediaHead = MediaSheetHead.isMedia(thing) && ThingChart.kind(for: thing) == nil
+                let mediaHead = MediaSheetBox.isMedia(thing) && ThingChart.kind(for: thing) == nil
                     && moneyReceipt == nil && !framedShot
                 let chartHead = ThingChart.kind(for: thing) != nil
                 let articleHead = !mediaHead && ThingContentView.readsAsArticle(thing)
@@ -583,38 +588,51 @@ struct ThingSheetView: View {
                     // gaining a button's press styling.
                     // Big and unlifted (prd §885): the shadow floated a
                     // thumbnail; a picture the column's width is the page.
-                    ThingContentView(thing: thing)
+                    // THE ROOM'S FRAME (prd §1186): the title, the picture filling
+                    // the box — a screenshot cropped from its top, as the picture
+                    // grid crops one (§910) — a tap or the corner key to see it
+                    // whole, the tiles, then what was found in it.
+                    DSRoomTitleRow(title: TitleSeam.split(thing.title).name)
+                        .padding(.horizontal, DSRoomChassis.inset)
                         .padding(.top, onBack == nil ? DS.Space.s4 : DS.Space.s3)
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            if thing.sourceRef != nil { zoomingPhoto = true }
-                        }
-                        .dsHover()
-                        .accessibilityAddTraits(.isButton)
-                        .accessibilityHint(Text("Opens the photo full screen"))
-                        // The picture carries no word saying it's a door, and
-                        // on a pointer surface a cursor is the only thing that
-                        // can ask. Same sentence as the hint above it.
-                        .dsTooltip(String(localized: "Opens the photo full screen"))
-                        .settleIn(delay: 0.06)
-                    // What it is, the pink day, the title — under the
-                    // picture, the article and post heads' order (§885).
-                    PictureSheetHead(thing: thing,
-                                     onSource: Corpus.earnsRoom(thing.source) ? openSourceRoom : nil)
-                        .padding(.top, DS.Space.s3)
-                        .settleIn(delay: 0.1)
-                    // A moment the picture names sits with its title, not
-                    // under the dial — the dial stands alone (user, §885).
-                    if !facts.isEmpty {
-                        VStack(alignment: .leading, spacing: 0) { factRows }
-                            .padding(.top, DS.Space.s3)
-                            .settleIn(delay: 0.12)
+                        .settleIn(delay: 0.04)
+                    Button {
+                        if thing.sourceRef != nil || thing.previewImageData != nil { zoomingPhoto = true }
+                    } label: {
+                        PhotoWell(thing: thing, anchor: thing.kind == .screenshot ? .top : .center)
+                            .overlay(alignment: .topTrailing) {
+                                Image(systemName: "arrow.up.left.and.arrow.down.right")
+                                    .dsGlyph(.caption, weight: .bold)
+                                    .foregroundStyle(Color.white)
+                                    .frame(width: 32, height: 32)
+                                    .background(Circle().fill(Color.black.opacity(0.55)))
+                                    .padding(DS.Space.s3)
+                                    .accessibilityHidden(true)
+                            }
                     }
+                    .buttonStyle(PressSpring())
+                    .dsTapTarget()
+                    .dsRoomBox(bleed: true)
+                    .padding(.top, DS.Space.s3)
+                    .accessibilityLabel(Text(verbatim: TitleSeam.split(thing.title).name))
+                    .accessibilityHint(Text("Opens the photo full screen"))
+                    .dsTooltip(String(localized: "Opens the photo full screen"))
+                    .settleIn(delay: 0.06)
                     VerbDial(thing: thing, verbs: sheetVerbs,
                              onVerb: runVerb, onName: nil)
-                        .padding(.top, DS.Space.s6)
-                        .settleIn(delay: 0.14)
+                        .padding(.top, DSRoomChassis.leadGap)
+                        .settleIn(delay: 0.08)
                     dialResult
+                    // What the picture names, under the tiles (§885's facts).
+                    if !facts.isEmpty {
+                        VStack(alignment: .leading, spacing: DS.Space.s2) {
+                            Text("Found in it").dsText(.heading20).foregroundStyle(DS.brandInk)
+                                .padding(.horizontal, DSRoomChassis.inset)
+                            factRows
+                        }
+                        .padding(.top, DS.Space.s6)
+                        .settleIn(delay: 0.12)
+                    }
                 } else if socialShape == .person {
                     // A PERSON, not a link to one (prd §363). The title slot
                     // held "@alice started following you" at display size and
@@ -889,10 +907,41 @@ struct ThingSheetView: View {
                         .padding(.top, DS.Space.s6)
                         .settleIn(delay: 0.06)
                 } else if mediaHead {
-                    MediaSheetHead(thing: thing,
-                                   onSource: Corpus.earnsRoom(thing.source) ? openSourceRoom : nil)
+                    // THE ROOM'S FRAME (prd §1186): the title, the box (a video's
+                    // frame, or the cover beside who and when), the tiles, then
+                    // more from the artist or the channel.
+                    DSRoomTitleRow(title: MediaSheetBox.title(thing))
+                        .padding(.horizontal, DSRoomChassis.inset)
                         .padding(.top, onBack == nil ? DS.Space.s4 : DS.Space.s3)
+                        .settleIn(delay: 0.04)
+                    MediaSheetBox(thing: thing, onOpen: mediaLink.map { url in { openURL(url) } })
+                        .dsRoomBox(bleed: MediaSheetBox.isVideo(thing))
+                        .padding(.top, DS.Space.s3)
                         .settleIn(delay: 0.06)
+                        .task(id: thing.id) { readMediaMore() }
+                    VerbDial(thing: thing, verbs: mediaVerbs, onVerb: runVerb, onName: nil,
+                             keep: mediaKeep)
+                        .padding(.top, DSRoomChassis.leadGap)
+                        .settleIn(delay: 0.08)
+                    dialResult
+                    if !mediaMore.isEmpty {
+                        MoneyHistoryRows(title: mediaMoreTitle, rows: mediaMore.keyed,
+                                         total: mediaMore.count, doorWord: nil,
+                                         onOpen: { walkingToScope = .none; walkingToNote = KeyedThing($0) },
+                                         onAll: nil)
+                            .padding(.top, DS.Space.s6)
+                            .settleIn(delay: 0.12)
+                    } else if MediaSheetBox.isVideo(thing),
+                              let about = thing.summary?.trimmingCharacters(in: .whitespacesAndNewlines),
+                              !about.isEmpty {
+                        VStack(alignment: .leading, spacing: DS.Space.s2) {
+                            Text("About").dsText(.heading20).foregroundStyle(DS.brandInk)
+                            Text(verbatim: about).dsText(.body17).foregroundStyle(DS.textSecondary)
+                                .lineLimit(6)
+                        }
+                        .padding(.horizontal, DSRoomChassis.inset)
+                        .padding(.top, DS.Space.s6)
+                    }
                 } else if articleHead {
                     // The dial rides UNDER the head (prd §882): on a sheet
                     // that is mostly reading, the verbs were a whole article
@@ -1079,7 +1128,7 @@ struct ThingSheetView: View {
                     .padding(.top, DS.Space.s3)
                 }
                 if moneyReceipt == nil && !framedShot && !articleHead && noteShape == nil && !talkHead
-                    && !momentHead && workReading == nil
+                    && !momentHead && !mediaHead && workReading == nil
                     && (purchaseReading == nil || purchaseReading?.archetype == .watch) {
                     // The disc dial, standardized across every sheet
                     // (2026-07-23) — it was B1-only (the wallet stage, the
@@ -1463,6 +1512,11 @@ struct ThingSheetView: View {
             case .address(let entry):  AddressCard(entry: entry)
             case .remind(_, let text):
                 NoteRemindTray(note: thing, item: text)
+            case .followChannel(let seat, let name):
+                FollowTrackTray(room: .media, seat: seat, initialQuery: name)
+                    .environment(chrome)
+                    .environment(bridges)
+                    .environment(\.modelContext, modelContext)
             case .followSite(let host):
                 ReadingFindSheet(initialQuery: host)
                     .environment(chrome)
@@ -2962,6 +3016,67 @@ struct ThingSheetView: View {
         return VerbDial.Keep(label: String(localized: "Follow"), glyph: ScopeTileGlyph.subscriptions) {
             faceTarget = .followSite(host)
         }
+    }
+
+    /// Where a media thing plays: its page.
+    private var mediaLink: URL? {
+        let raw = thing.externalLink ?? thing.content
+        return raw.hasPrefix("http") ? URL(string: raw) : nil
+    }
+
+    /// The media sheet's acts: a song's page is its Spotify tile, so the
+    /// derived Open that lands on the same page goes (one door, one tile).
+    private var mediaVerbs: [Verb] {
+        guard mediaOpensInApp, let url = mediaLink else { return sheetVerbs }
+        return sheetVerbs.filter {
+            if case .openURL(let u) = $0.action { return u != url }
+            return true
+        }
+    }
+
+    private var mediaOpensInApp: Bool {
+        !MediaSheetBox.isVideo(thing) && thing.source != "Podcasts" && mediaLink != nil
+    }
+
+    /// The fourth tile (prd §1186): a song opens where it plays, named for
+    /// the app ("Spotify"); a video or a podcast Follows its channel, Media's
+    /// tray opened on the name, while you don't follow it.
+    private var mediaKeep: VerbDial.Keep? {
+        if mediaOpensInApp, let url = mediaLink {
+            return VerbDial.Keep(label: thing.source, glyph: ScopeTileGlyph.open) { openURL(url) }
+        }
+        guard MediaSheetBox.isVideo(thing) || thing.source == "Podcasts",
+              let channel = thing.authorHandle?.trimmingCharacters(in: .whitespaces), !channel.isEmpty,
+              bridges != nil,
+              !FollowingReading.shared.items(for: .media).contains(where: {
+                  $0.name.caseInsensitiveCompare(channel) == .orderedSame }) else { return nil }
+        return VerbDial.Keep(label: String(localized: "Follow"), glyph: ScopeTileGlyph.subscriptions) {
+            faceTarget = .followChannel(seat: thing.source, name: channel)
+        }
+    }
+
+    private var mediaMoreTitle: String {
+        let who = TitleSeam.split(thing.title).line ?? thing.authorHandle ?? thing.source
+        return String(localized: "More from \(who)")
+    }
+
+    /// The artist's other tracks, or the channel's other videos, you have —
+    /// the newest three (prd §1186).
+    private func readMediaMore() {
+        guard thing.isLive else { return }
+        let source = thing.source, id = thing.id
+        let artist = TitleSeam.split(thing.title).line
+        let channel = thing.authorHandle
+        guard artist != nil || channel != nil else { mediaMore = []; return }
+        var d = FetchDescriptor<Thing>(predicate: #Predicate { $0.source == source },
+                                       sortBy: [SortDescriptor(\Thing.capturedAt, order: .reverse)])
+        d.fetchLimit = 400
+        let mine = TitleSeam.split(thing.title).name
+        mediaMore = Array(((try? modelContext.fetch(d)) ?? []).filter { t in
+            guard t.isLive, t.id != id, TitleSeam.split(t.title).name != mine else { return false }
+            if let artist { return TitleSeam.split(t.title).line == artist }
+            return t.authorHandle == channel
+        }.prefix(3))
     }
 
     /// The card that paid, when this is a card spend (prd §1182): its name and

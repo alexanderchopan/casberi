@@ -22,9 +22,10 @@ struct MoneyHistoryRows: View {
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             HStack(alignment: .firstTextBaseline) {
+                // A list's name in the rooms' pink, as every list's is.
                 Text(verbatim: title)
-                    .dsText(amount == nil ? .heading17 : .heading20)
-                    .foregroundStyle(amount == nil ? DS.textPrimary : DS.brandInk)
+                    .dsText(.heading20)
+                    .foregroundStyle(DS.brandInk)
                 Spacer(minLength: DS.Space.s2)
                 if let trailing {
                     Text(verbatim: trailing)
@@ -49,7 +50,9 @@ struct MoneyHistoryRows: View {
                                     .dsText(.body17).monospacedDigit().foregroundStyle(DS.textPrimary)
                             } else {
                                 VStack(alignment: .leading, spacing: 1) {
-                                    Text(verbatim: thing.title)
+                                    // The thing alone (§915's seam): under "More from
+                                    // Boards of Canada" a row never says the artist again.
+                                    Text(verbatim: TitleSeam.split(thing.title).name)
                                         .dsText(.body17).foregroundStyle(DS.textPrimary).lineLimit(1)
                                     Text(verbatim: thing.capturedAt.formatted(.dateTime.month(.abbreviated).day()))
                                         .dsText(.subhead12).foregroundStyle(DS.textTertiary).lineLimit(1)
