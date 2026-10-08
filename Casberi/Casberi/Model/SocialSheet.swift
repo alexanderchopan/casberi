@@ -230,6 +230,14 @@ struct SocialReception: Equatable {
     /// shape where an empty card would otherwise read as a broken fetch.
     var ceiling: String?
 
+    /// The same reception without the network's counts, for a post whose
+    /// box already stamps them (prd §1188).
+    var withoutReadings: SocialReception {
+        var copy = self
+        copy.readings = []
+        return copy
+    }
+
     var isEmpty: Bool {
         readings.isEmpty && likers == nil && provenance == nil
             && recorded == nil && ceiling == nil

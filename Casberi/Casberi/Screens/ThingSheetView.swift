@@ -765,33 +765,14 @@ struct ThingSheetView: View {
                     // §897 it leads with the shared head — the asset's name, the
                     // pink day, what it is — and the price below drops its own
                     // name and symbol and takes the head rung.
-                    SheetPartyHead(name: Self.chartParts(thing.title).name, day: thing.capturedAt,
-                                   line: Self.chartLine(thing)) {
-                        BridgeIcon(name: thing.source, size: DS.Face.shelf, circular: true)
-                    }
-                    .padding(.top, onBack == nil ? DS.Space.s4 : DS.Space.s3)
-                    .settleIn(delay: 0.04)
+                    // In the room's frame since prd §1188: the asset is the
+                    // title; the content boxes the price and seats the tiles.
+                    DSRoomTitleRow(title: Self.chartParts(thing.title).name)
+                        .padding(.horizontal, DSRoomChassis.inset)
+                        .padding(.top, onBack == nil ? DS.Space.s4 : DS.Space.s3)
+                        .settleIn(delay: 0.04)
                 } else if mailHead {
-                    // The SENDER leads (prd §894): a mail is from someone, and
-                    // the subject is its headline.
-                    let sender = Self.mailSender(thing)
-                    SheetPartyHead(name: sender.map { SenderInitial.displayName(of: $0) } ?? thing.source,
-                                   day: thing.capturedAt,
-                                   line: [sender.flatMap(Self.mailAddress), thing.source]
-                                       .compactMap { $0 }.joined(separator: " · ")) {
-                        if let sender {
-                            SenderInitial(sender: sender, size: DS.Face.shelf)
-                        } else {
-                            BridgeIcon(name: thing.source, size: DS.Face.shelf, circular: true)
-                        }
-                    }
-                    .padding(.top, onBack == nil ? DS.Space.s4 : DS.Space.s3)
-                    .settleIn(delay: 0.04)
-                    titleBlock
-                        .padding(.horizontal, DSRoomChassis.leadInset)
-                        .padding(.top, DS.Space.s6)
-                        .settleIn(delay: 0.06)
-                    noteDial
+                    mailFrame
                 } else if transcriptHead {
                     // The PERSON leads a chat; its "Chat with Ada" title is the
                     // name said twice, so the name stands alone (prd §894).
@@ -869,36 +850,11 @@ struct ThingSheetView: View {
                         }
                     }
                 } else if postHead {
-                    // Who, then what they were answering, then the words — the
-                    // reply context sits under the person, not above them.
-                    PostSheetHead(thing: thing, onFace: facesAreDoors ? openAuthorProfile : nil)
-                        .padding(.top, onBack == nil ? DS.Space.s4 : DS.Space.s3)
-                        .settleIn(delay: 0.04)
-                    if let parent = thing.parent {
-                        replyingToRow(parent)
-                            .padding(.horizontal, DSRoomChassis.leadInset)
-                            .padding(.top, DS.Space.s4)
-                            .settleIn(delay: 0.05)
-                    }
-                    titleBlock
-                        .padding(.horizontal, DSRoomChassis.leadInset)
-                        .padding(.top, DS.Space.s6)
-                        .settleIn(delay: 0.06)
+                    postFrame
                 } else if mediaHead {
                     mediaFrame
                 } else if articleHead {
-                    // The dial rides UNDER the head (prd §882): on a sheet
-                    // that is mostly reading, the verbs were a whole article
-                    // away. Under the head, never at the top edge (§752).
-                    ArticleSheetHead(thing: thing,
-                                     onSource: Corpus.earnsRoom(thing.source) ? openSourceRoom : nil)
-                        .padding(.top, onBack == nil ? DS.Space.s4 : DS.Space.s3)
-                        .settleIn(delay: 0.06)
-                    VerbDial(thing: thing, verbs: sheetVerbs,
-                             onVerb: runVerb, onName: nil)
-                        .padding(.top, DS.Space.s6)
-                        .settleIn(delay: 0.1)
-                    dialResult
+                    articleFrame
                 } else {
                     titleBlock
                         .padding(.horizontal, DS.Space.s4)
@@ -954,11 +910,7 @@ struct ThingSheetView: View {
                     || (!linkOnlyBody && thing.kind != .event && wordsDiffer)
                 let contentShown: Bool = shapeHasBody && !dueInHead && hasWords
                 if contentShown && !mediaHead {
-                    ThingContentView(thing: thing, agent: agentConversation,
-                                     articleArt: !articleHead,
-                                     mailSender: !mailHead)
-                        .environment(\.priceHeadDrawn, chartHead)
-                        .environment(\.keepPassage, keepPassage)
+                    sheetContent(articleHead: articleHead, mailHead: mailHead, chartHead: chartHead)
                         .padding(.top, DS.Space.s3)
                         .settleIn(delay: 0.12)
                 }
@@ -985,7 +937,8 @@ struct ThingSheetView: View {
                 // with it, so the two can never say the same thing twice.
                 // A person's box already says how they came (prd §1187).
                 if let reception, !isPerson {
-                    SocialReceptionCard(reception: reception)
+                    // A post's counts stand in its box (prd §1188).
+                    SocialReceptionCard(reception: postHead ? reception.withoutReadings : reception)
                         .padding(.horizontal, postHead ? DSRoomChassis.leadInset : DS.Space.s4)
                         .padding(.top, DS.Space.s6)
                         .settleIn(delay: 0.16)
@@ -1071,7 +1024,7 @@ struct ThingSheetView: View {
                 }
                 let headDrawsTiles: Bool = moneyReceipt != nil || framedShot || articleHead
                     || noteShape != nil || talkHead || momentHead || mediaHead
-                    || workReading != nil || framesOwnTiles
+                    || workReading != nil || framesOwnTiles || postHead || chartHead
                 let purchaseAllowsDial: Bool = purchaseReading == nil || purchaseReading?.archetype == .watch
                 if !headDrawsTiles && purchaseAllowsDial {
                     // The disc dial, standardized across every sheet
@@ -3450,6 +3403,105 @@ struct ThingSheetView: View {
         }
     }
 
+    /// The thing's own content. A charted row is handed the sheet's tiles to
+    /// stand under its boxed price (prd §1188).
+    @ViewBuilder
+    private func sheetContent(articleHead: Bool, mailHead: Bool, chartHead: Bool) -> some View {
+        ThingContentView(thing: thing, agent: agentConversation,
+                         articleArt: !articleHead,
+                         mailSender: !mailHead)
+            .environment(\.priceHeadDrawn, chartHead)
+            .environment(\.priceBoxTiles, chartHead ? AnyView(chartTiles) : nil)
+            .environment(\.keepPassage, keepPassage)
+    }
+
+    @ViewBuilder
+    private var chartTiles: some View {
+        VerbDial(thing: thing, verbs: sheetVerbs, onVerb: runVerb, onName: nil, keep: sheetKeep)
+        dialResult
+    }
+
+    /// A post in the room's frame (prd §1188): the person is the title, the
+    /// words are the box, then the tiles, what it answered, and the words
+    /// whole when the box cut them.
+    @ViewBuilder
+    private var postFrame: some View {
+        DSRoomTitleRow(title: PostSheetBox.title(thing))
+            .padding(.horizontal, DSRoomChassis.inset)
+            .padding(.top, onBack == nil ? DS.Space.s4 : DS.Space.s3)
+            .settleIn(delay: 0.04)
+        PostSheetBox(thing: thing, onFace: facesAreDoors ? openAuthorProfile : nil)
+            .dsRoomBox()
+            .padding(.top, DS.Space.s3)
+            .settleIn(delay: 0.06)
+        VerbDial(thing: thing, verbs: sheetVerbs, onVerb: runVerb, onName: nil, keep: sheetKeep)
+            .padding(.top, DSRoomChassis.leadGap)
+            .settleIn(delay: 0.08)
+        dialResult
+        if let parent = thing.parent {
+            replyingToRow(parent)
+                .padding(.horizontal, DSRoomChassis.leadInset)
+                .padding(.top, DS.Space.s6)
+        }
+        if PostSheetBox.cutsWords(thing) {
+            Text(verbatim: SocialSheetSource.words(for: thing))
+                .dsText(.reading17)
+                .foregroundStyle(DS.textPrimary)
+                .textSelection(.enabled)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, DSRoomChassis.leadInset)
+                .padding(.top, DS.Space.s6)
+        }
+    }
+
+    /// A mail in the room's frame (prd §1188): the sender is the title, the
+    /// subject leads the box, then the tiles (the fourth tracks the sender
+    /// as a subscription while it is on no list), then the message.
+    @ViewBuilder
+    private var mailFrame: some View {
+        let sender = Self.mailSender(thing)
+        DSRoomTitleRow(title: sender.map { SenderInitial.displayName(of: $0) } ?? thing.source)
+            .padding(.horizontal, DSRoomChassis.inset)
+            .padding(.top, onBack == nil ? DS.Space.s4 : DS.Space.s3)
+            .settleIn(delay: 0.04)
+        MailSheetBox(thing: thing, sender: sender, address: sender.flatMap(Self.mailAddress))
+            .dsRoomBox()
+            .padding(.top, DS.Space.s3)
+            .settleIn(delay: 0.06)
+        VerbDial(thing: thing, verbs: sheetVerbs, onVerb: runVerb, onName: nil, keep: mailKeep)
+            .padding(.top, DSRoomChassis.leadGap)
+            .settleIn(delay: 0.08)
+        dialResult
+    }
+
+    /// Track a subscription (prd §1115, the fourth tile since §1188): only
+    /// once the reading says the sender is on no list.
+    private var mailKeep: VerbDial.Keep? {
+        guard mailListRead, mailList == nil, let address = mailSubscriptionAddress else { return nil }
+        return VerbDial.Keep(label: String(localized: "Track"), glyph: SubscriptionWords.planGlyph) {
+            addMailSubscription(address)
+        }
+    }
+
+    /// An article in the room's frame (prd §1188): the publication is the
+    /// title, the box the picture and the headline, then the tiles, then the
+    /// words.
+    @ViewBuilder
+    private var articleFrame: some View {
+        DSRoomTitleRow(title: ArticleSheetBox.publication(thing))
+            .padding(.horizontal, DSRoomChassis.inset)
+            .padding(.top, onBack == nil ? DS.Space.s4 : DS.Space.s3)
+            .settleIn(delay: 0.04)
+        ArticleSheetBox(thing: thing)
+            .dsRoomBox()
+            .padding(.top, DS.Space.s3)
+            .settleIn(delay: 0.06)
+        VerbDial(thing: thing, verbs: sheetVerbs, onVerb: runVerb, onName: nil, keep: sheetKeep)
+            .padding(.top, DSRoomChassis.leadGap)
+            .settleIn(delay: 0.08)
+        dialResult
+    }
+
     /// A track, a video or an episode in the room's frame (prd §1186).
     @ViewBuilder
     private var mediaFrame: some View {
@@ -3521,6 +3573,7 @@ struct ThingSheetView: View {
     /// (prd §1187), so its tile says the place.
     private var landsAtSource: Bool {
         l2beatShape == .chain || walletbeatShape == .wallet || socialShape == .person
+            || isSocialPost
     }
 
     private var sheetVerbs: [Verb] {
@@ -3601,10 +3654,6 @@ struct ThingSheetView: View {
                       title: Text(verbatim: MailSubscriptions.writesWords(list))) {
                 dismiss()
                 chrome.open(.list(list.id))
-            }
-        } else if mailListRead, let address = mailSubscriptionAddress {
-            DSDoorRow(icon: "plus", title: Text(SubscriptionWords.track)) {
-                addMailSubscription(address)
             }
         } else {
             Color.clear.frame(height: 0)

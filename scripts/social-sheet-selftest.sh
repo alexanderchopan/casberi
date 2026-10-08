@@ -116,7 +116,7 @@ guard "Corpus.liveRefPrefixes is derived from the per-source map" \
 guard "ImportRemoval.hasLiveHalf asks the per-source map" \
   'Corpus\.liveRefPrefixesBySource\[source\]' "$REMOVAL"
 guard "the reception block is drawn by the sheet" \
-  'SocialReceptionCard\(reception: reception\)' "$VIEW"
+  'SocialReceptionCard\(reception: postHead \? reception\.withoutReadings : reception\)' "$VIEW"
 guard "the reception is recomposed when the live read answers" \
   'live: live, context: modelContext' "$VIEW"
 # THE FROM ROW IS DELETED (prd §736), and these two guards became one.

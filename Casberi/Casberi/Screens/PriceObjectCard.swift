@@ -151,9 +151,25 @@ struct PriceObjectCard<Evidence: View>: View {
 /// price below it drops its name and symbol and takes the head rung.
 private struct PriceHeadDrawnKey: EnvironmentKey { static let defaultValue = false }
 
+/// A price drawn INSIDE the room's box (prd §1188): the figure, the move,
+/// the line and the windows in the box's one size, nothing else.
+private struct PriceBoxedKey: EnvironmentKey { static let defaultValue = false }
+
+/// The sheet's tiles, handed to a charted row's content so they stand under
+/// its boxed price and above its rows (prd §1188). Nil everywhere else.
+private struct PriceBoxTilesKey: EnvironmentKey { static let defaultValue: AnyView? = nil }
+
 extension EnvironmentValues {
     var priceHeadDrawn: Bool {
         get { self[PriceHeadDrawnKey.self] }
         set { self[PriceHeadDrawnKey.self] = newValue }
+    }
+    var priceBoxed: Bool {
+        get { self[PriceBoxedKey.self] }
+        set { self[PriceBoxedKey.self] = newValue }
+    }
+    var priceBoxTiles: AnyView? {
+        get { self[PriceBoxTilesKey.self] }
+        set { self[PriceBoxTilesKey.self] = newValue }
     }
 }

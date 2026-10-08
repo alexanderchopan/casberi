@@ -653,6 +653,8 @@ private struct GhostShimmer: View {
 struct TokenChartView<R: PriceRange, Fallback: View>: View {
     /// A thing sheet's own head names the asset (prd §897).
     @Environment(\.priceHeadDrawn) private var headDrawn
+    /// Drawn in the room's box (prd §1188).
+    @Environment(\.priceBoxed) private var boxed
     /// The UserDefaults key the chosen range persists under.
     let memoryKey: String
     /// One range's curve — nil means this range can't be answered.
@@ -780,7 +782,9 @@ struct TokenChartView<R: PriceRange, Fallback: View>: View {
     private var awaitingRange: Bool { charts[range] == nil && lastDrawn != nil }
 
     @ViewBuilder private var loaded: some View {
-        if let chart = shown, let identity = object {
+        if boxed, let chart = shown {
+            boxedLayout(chart)
+        } else if let chart = shown, let identity = object {
             PriceObjectCard(object: priceObject(chart, identity: identity)) {
                 VStack(alignment: .leading, spacing: DS.Space.s3) {
                     plot(chart)
@@ -990,6 +994,39 @@ struct TokenChartView<R: PriceRange, Fallback: View>: View {
         }
     }
 
+    /// The line's height inside the room's box: the figure above, the windows
+    /// below, all in the box's one size (prd §1188).
+    static var boxedPlotHeight: CGFloat { 64 }
+
+    /// The price in the room's box (prd §1188): the figure and its move on
+    /// one line, the line, then the windows as the room's chips.
+    private func boxedLayout(_ chart: TokenChart) -> some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                Text(TokenChartStyle.priceText(displayPrice))
+                    .dsText(.price40)
+                    .foregroundStyle(DS.textPrimary)
+                    .monospacedDigit()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+                    .contentTransition(.numericText())
+                    .animation(DS.Motion.standard, value: displayPrice)
+                if !awaitingRange {
+                    TokenDeltaPill(change: displayChange, label: range.label, solid: true)
+                }
+            }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(Text(spokenPrice))
+            plot(chart)
+                .opacity(awaitingRange ? 0.35 : 1)
+                .allowsHitTesting(!awaitingRange)
+                .animation(reduceMotion ? nil : DS.Motion.standard, value: awaitingRange)
+            Spacer(minLength: 0)
+            chipsOrCoarseLabel(chart)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+
     private func plot(_ chart: TokenChart) -> some View {
         // The breathing halo means LIVE and is now earned rather than assumed
         // (2026-08-16). `TokenChartPlot`'s own doc denied the Home row this
@@ -1000,6 +1037,7 @@ struct TokenChartView<R: PriceRange, Fallback: View>: View {
         // the read is no longer recent, so nothing is lost but the claim.
         let fresh = TokenChartStyle.isFresh(chart.fetchedAt)
         return TokenChartPlot(chart: chart, accent: accent,
+                              height: boxed ? Self.boxedPlotHeight : 140,
                               pulses: fresh, endpointDot: !fresh,
                               watchedX: watchedX(chart), levels: levels)
             // Draw-on reveal, replayed per range — a range switch is a
@@ -1010,7 +1048,7 @@ struct TokenChartView<R: PriceRange, Fallback: View>: View {
                 }
             }
             // Room for the high/low labels above and below the plot.
-            .padding(.vertical, 18)
+            .padding(.vertical, boxed ? 10 : 18)
             .chartOverlay { proxy in
                 GeometryReader { geo in
                     overlayContent(chart, proxy: proxy, geo: geo)
@@ -1039,8 +1077,10 @@ struct TokenChartView<R: PriceRange, Fallback: View>: View {
             let plot = geo[plotAnchor]
             let closes = chart.closes
 
-            // High and low, each tied to its point by a 2.5pt anchor dot.
-            if !chart.coarse, closes.count > 2,
+            // High and low, each tied to its point by a 2.5pt anchor dot. Not
+            // in the room's box (prd §1188): its short line has no margin for
+            // them, and the figure above says the price.
+            if !boxed, !chart.coarse, closes.count > 2,
                let hi = closes.max(), let lo = closes.min(),
                let iH = closes.firstIndex(of: hi), let iL = closes.firstIndex(of: lo),
                let xH = proxy.position(forX: Double(iH)), let yH = proxy.position(forY: hi),

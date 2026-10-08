@@ -2545,7 +2545,21 @@ private struct TokenChartContent: View {
     }
 
     @ViewBuilder private var liveBody: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s4) {
+        // In the room's frame (prd §1188): the price in the box, the sheet's
+        // tiles, then the rows.
+        if let tiles = boxTiles {
+            chart
+                .environment(\.priceBoxed, true)
+                .dsRoomBox()
+            tiles
+                .padding(.top, DSRoomChassis.leadGap)
+        }
+        rows
+    }
+
+    @Environment(\.priceBoxTiles) private var boxTiles
+
+    private var chart: some View {
             TokenChartView(chain: chain, address: address, since: since,
                            hero: true,
                            // The price as one object (prd §369 amendment). The
@@ -2560,10 +2574,16 @@ private struct TokenChartContent: View {
                     LinkPreviewCard(url: url)
                 }
             }
+    }
+
+    private var rows: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s4) {
+            if boxTiles == nil { chart }
             statStrip
             if offersWatch { watchRow }
             watchAlerts(thing)
         }
+        .padding(.top, boxTiles == nil ? 0 : DS.Space.s6)
         .padding(.horizontal, DS.Space.s4)
         .padding(.bottom, DS.Space.s3)
         .task { stats = await TokenStats.fetch(chain: chain, address: address) }
@@ -2736,7 +2756,26 @@ private struct StockChartContent: View {
     }
 
     @ViewBuilder private var liveBody: some View {
+        // In the room's frame (prd §1188), as a token's.
+        if let tiles = boxTiles {
+            chart
+                .environment(\.priceBoxed, true)
+                .dsRoomBox()
+            tiles
+                .padding(.top, DSRoomChassis.leadGap)
+        }
         VStack(alignment: .leading, spacing: DS.Space.s4) {
+            if boxTiles == nil { chart }
+            watchAlerts(thing)
+        }
+        .padding(.top, boxTiles == nil ? 0 : DS.Space.s6)
+        .padding(.horizontal, DS.Space.s4)
+        .padding(.bottom, DS.Space.s3)
+    }
+
+    @Environment(\.priceBoxTiles) private var boxTiles
+
+    private var chart: some View {
         TokenChartView(memoryKey: "stock.range.\(ticker)",
                        fetch: { (range: StockRange) in
                            await StockChart.fetch(ticker: ticker, range: range)
@@ -2756,10 +2795,6 @@ private struct StockChartContent: View {
                 LinkPreviewCard(url: url)
             }
         }
-        watchAlerts(thing)
-        }
-        .padding(.horizontal, DS.Space.s4)
-        .padding(.bottom, DS.Space.s3)
     }
 }
 

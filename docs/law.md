@@ -222,7 +222,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1317 of 1381 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1318 of 1382 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1214,9 +1214,9 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §879 — Things get their faces, and "Since you left" tells the truth about itself (amended by §1152)
 - §880 — "Since you left" wears the primary ink; the days inside it keep the pink
 - §881 — A digest reads by what needs you, and says each verb once (amended by §883)
-- §882 — An article's sheet opens like its room: the picture in the well, a pink day, the dial under the head
+- §882 — An article's sheet opens like its room: the picture in the well, a pink day, the dial under the head (amended by §1188)
 - §883 — A digest is the place and a count; only what needs you and money are not
-- §884 — A post's sheet leads with the person, the article head's shape
+- §884 — A post's sheet leads with the person, the article head's shape (amended by §1188)
 - §885 — A screenshot's sheet shows the picture big, its moment under its title, and no Zoom (amended by §1186)
 - §886 — A thing sheet opens at its content's height
 - §887 — A money sheet leads with the party, the amount at the head rung (part superseded by §1181)
@@ -1226,10 +1226,10 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §891 — A devnet event's sheet leads with the account
 - §892 — A moment's sheet says when: events, reminders and workouts
 - §893 — A note's sheet leads with where it is from, the words under the dial
-- §894 — Chats and mail lead with who they are from, the dial under the head
+- §894 — Chats and mail lead with who they are from, the dial under the head (amended by §1188)
 - §895 — Work items and purchases take the shared head
 - §896 — A fold says its newest thing, and counts the rest on the line's tail (amended by §1103; part superseded by §902)
-- §897 — Media leads with its art, a chart with its asset (amended by §1186)
+- §897 — Media leads with its art, a chart with its asset (amended by §1186, §1188)
 - §898 — The swipe is dealt on the brand ground
 - §898a — The brand ground steps down to B 42
 - §898b — The swipe's table is a sheet of frosted glass over the pink
@@ -1541,6 +1541,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1185 — The tray's search stands its hits under their categories, and finds companies, what you hold and your things
 - §1186 — A song, a video and a picture stand in the room's frame
 - §1187 — A person, an app's wallet, a chain and a wallet stand in the room's frame; the grant sheet is deleted
+- §1188 — A price, an article, a post and a mail stand in the room's frame
 
 ## Dead rulings → what replaced them (generated)
 
