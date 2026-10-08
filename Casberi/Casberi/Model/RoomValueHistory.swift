@@ -89,6 +89,15 @@ enum RoomValueHistory {
         for v in values { note(room: room, address: v.address, value: v.value, at: at) }
     }
 
+    /// Drop one series, so the line starts again from the next reading — for
+    /// a total whose MEMBERS changed (an app hidden), where joining the old
+    /// line to the new one would draw a move nobody's money made (§83).
+    static func forget(room: String, address: String) {
+        var book = book(room: room)
+        guard book.removeValue(forKey: address.lowercased()) != nil else { return }
+        write(book, room: room)
+    }
+
     /// One address's series, oldest first.
     static func samples(room: String, address: String) -> [WalletStore.ValueSample] {
         book(room: room)[address.lowercased()] ?? []

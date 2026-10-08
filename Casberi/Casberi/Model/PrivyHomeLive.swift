@@ -134,6 +134,29 @@ final class PrivyHomeStore {
         if let data = try? JSONEncoder().encode(balances) {
             DefaultsWrite.set(data, forKey: Self.balancesKey)
         }
+        noteShownTotal()
+    }
+
+    /// **WHAT YOUR APP WALLETS HELD, OVER TIME (prd §1194).** The Wallet's
+    /// Privy page leads with its balance and a line, as an address does; the
+    /// line is this series, one point per read that moved the total
+    /// (`RoomValueHistory`), because no address of yours is watched for it.
+    static let historyKey = "shown"
+
+    var valueSamples: [WalletStore.ValueSample] {
+        RoomValueHistory.samples(room: PrivyHomeFeed.source, address: Self.historyKey)
+    }
+
+    /// The shown apps' total, noted only once EVERY one of their wallets has
+    /// a reading: a pass reads 30 at a time, so a partial total would draw the
+    /// unread wallets arriving as a rise.
+    private func noteShownTotal() {
+        let shown = apps.filter { !hidden.contains(PrivyHomeFeed.ref($0)) }
+        guard !shown.isEmpty,
+              shown.allSatisfy({ $0.wallets.allSatisfy { balances[PrivyHomeFeed.key($0.address)] != nil } })
+        else { return }
+        RoomValueHistory.note(room: PrivyHomeFeed.source, address: Self.historyKey,
+                              value: walletHoldings.reduce(0) { $0 + $1.usd })
     }
 
     func setShowEmpty(_ on: Bool) {
@@ -180,6 +203,9 @@ final class PrivyHomeStore {
     func setHidden(_ ref: String, _ isHidden: Bool) {
         if isHidden { hidden.insert(ref) } else { hidden.remove(ref) }
         recompute()
+        // The total's members changed: the line starts again (§1194).
+        RoomValueHistory.forget(room: PrivyHomeFeed.source, address: Self.historyKey)
+        noteShownTotal()
         if let data = try? JSONEncoder().encode(hidden) { DefaultsWrite.set(data, forKey: Self.hiddenKey) }
     }
 

@@ -47,6 +47,17 @@ extension FeedScreen {
         return slice
     }
 
+    /// Whether an app the menu picked records a balance line of its own:
+    /// Privy, whose store notes its shown total per read (prd §1194). Every
+    /// other app's money is read with no history, so it draws no line.
+    func seatKeepsLine(_ seat: RoomAccounts.Seat) -> Bool {
+        seat.source == PrivyHomeFeed.source
+    }
+
+    func seatValueSamples(_ seat: RoomAccounts.Seat) -> [WalletStore.ValueSample] {
+        seatKeepsLine(seat) ? PrivyHomeStore.shared.valueSamples : []
+    }
+
     /// An app's share of the Wallet's money. A Safe is an account (prd
     /// §1069): its money is what its addresses hold, which no holder prefix
     /// names.
@@ -173,8 +184,10 @@ extension FeedScreen {
         // An app the menu picked has no recorded line of its own (samples are
         // per watched address), so its box states the number and draws no
         // line rather than the whole Wallet's under one app's name.
-        let samples = selectedSeat != nil ? []
-            : selectedWallet.map { wallet.valueSamples(forAddress: $0) }
+        // Privy records its shown total per read (prd §1194), so its pick
+        // draws that line.
+        let samples = selectedSeat.map(seatValueSamples)
+            ?? selectedWallet.map { wallet.valueSamples(forAddress: $0) }
                 ?? wallet.combinedValueSamples()
         let ranges = WalletRange.offered(for: samples)
         let active = ranges.contains(balanceRange) ? balanceRange
@@ -306,7 +319,7 @@ extension FeedScreen {
                             // the word leaves its row behind — a 20pt gap under
                             // the venue rail with nothing in it.
                             hidesEmptyCaption: true,
-                            awaitsLine: selectedSeat == nil,
+                            awaitsLine: selectedSeat.map(seatKeepsLine) ?? true,
                             // No mover line and a shorter chart — see the
                             // parameters' own docs (prd §483).
                             mover: nil,

@@ -65257,3 +65257,13 @@ Settings counts the phone's calendars through EventKit (§1150), and the demo's 
 **Not changed.** `ThingShareLink` (the row's and the sheet's plain Share) is still `ShareLink(item: URL)`; it is not the tray and was not reported. If X posts a plist from there, it takes the same fix.
 
 **UNRUN.** No Swift toolchain and no device in the session that made this: nothing compiled. The device check is the share tray on an RSS thing → X, the post's text the article's URL alone and the card attached.
+
+## §1194 — Privy's Home is its balance line (user, 2026-10-08: "on Privy's page, the landing needs to be balance sparkline. today it repeats the holdings that are in holdings."; amends §1069's money-first crown for Privy) — BUILT
+
+Privy picked in the Wallet led Home with `holdingsBlockSection`, the same drawing the Holdings tile draws one tap away. It now leads as an address does: the number, the change, the line and its range chips (`walletTilesSection`).
+
+- The line is Privy's own: `PrivyHomeStore.noteShownTotal` records the shown apps' total into `RoomValueHistory` (room `Privy`, key `shown`) after each balance read, only once every shown app's wallets have a reading (a pass reads 30 at a time, so a partial total would draw unread wallets arriving as a rise). Hiding or showing an app forgets the series (`RoomValueHistory.forget`), because a total whose members changed is a move nobody's money made (§83).
+- `FeedScreen.seatKeepsLine` names the apps that keep a line (Privy alone); they take this crown and `awaitsLine`, so before a second reading the box says the line starts then. Every other app with money (an exchange, a Safe) keeps §1069's holdings crown: none records a history.
+- Holdings is unchanged.
+
+**Seen** on a private iPhone 17 Pro simulator with two seeded app wallets and a month of samples: Wallet · Privy reads $473, +$93 since Sep 8, the line and 7d · 30d · Followed over the tiles.

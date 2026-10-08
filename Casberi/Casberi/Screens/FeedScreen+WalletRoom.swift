@@ -272,7 +272,16 @@ extension FeedScreen {
                         if slot.isShowing(chrome.walletScope) {
                             // An app the menu picked draws its own head here
                             // when it has one (prd §1048d); else the balance.
-                            if selectedSeat != nil, !walletScopeIsEmpty(.holdings) {
+                            if let seat = selectedSeat, seatKeepsLine(seat),
+                               !walletScopeIsEmpty(.holdings) {
+                                // An app that keeps its own line (Privy, prd
+                                // §1194, user: "the landing needs to be balance
+                                // sparkline. today it repeats the holdings")
+                                // leads as an address does: the number and
+                                // its line. Holdings stays Holdings' own.
+                                walletTilesSection(visible, streamTotal: streamTotal,
+                                                   drawsChart: true)
+                            } else if selectedSeat != nil, !walletScopeIsEmpty(.holdings) {
                                 // An app with money (an exchange, prd §1067;
                                 // a Safe, §1069, user: "Safe should still show
                                 // balance on home shouldn't it?") leads with
