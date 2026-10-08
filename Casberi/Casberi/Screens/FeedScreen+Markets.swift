@@ -20,7 +20,7 @@ extension FeedScreen {
         // same way you did settings").
         let tiles = TokensScope.box
         return Section {
-            DSCountGrid {
+            DSCountGrid(items: tiles.count) {
                 ForEach(tiles) { tile in
                     DSCountTile(count: nil, label: tile.label, glyph: tile.glyph,
                                 isOn: tile == chrome.tokensScope, inline: true) { pickTokensScope(tile) }

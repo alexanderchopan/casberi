@@ -293,7 +293,7 @@ struct SettingsHome: View {
         // never a dot), so it shows from every other kind too.
         let troubled: Set<SettingsScope> = connectedApps.contains { $0.status == .attention } ? [.apps] : []
         let widest = counts.map(\.1).max()
-        return DSCountGrid {
+        return DSCountGrid(items: counts.count) {
             ForEach(counts, id: \.0) { kind, n, label in
                 DSCountTile(count: n, label: label, isOn: kind == scope && !casberiOpen,
                             wants: troubled.contains(kind), inline: true, widest: widest) {

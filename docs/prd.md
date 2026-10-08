@@ -65294,3 +65294,12 @@ Privy picked in the Wallet led Home with `holdingsBlockSection`, the same drawin
 4. **Cleanup**: `DS.Mark.account` is deleted (the box wears `hero`).
 
 **Seen** on a private iPhone 17 Pro simulator before every simulator was stopped for load: Rocket Money (Sign in · Website), Stripe (Get key · Website), Files (Folder), Apple Intelligence (Turn on), L2BEAT (Follow · Website, the chain field under them), Gmail (Password · Website, the two fields under them). **Not seen:** Bluesky's Website tile, needs reconnecting, a paused seat (Resume), a four-tile page, an inert tile, the Mac.
+
+## §1198 — Settings' and Markets' boxes fill the well, and the box's pick is a wash (user, 2026-10-08: "lets do A w/ the lighter tint", of the canvas "Casberi — Apple polish gaps"; amends §1180's centred rows and §1138's solid pick for the inline box)
+
+1. **The rows fill the well.** `DSCountGrid` takes one `s2` inset on all four sides and its rows share what is left (`DSCountTile.cellHeight(items:)`: 52pt for four rows on the phone). Measured before: 39pt of air over and under the grid, 24pt at the sides, a 37pt pick, under the 44pt touch floor. The well is the same size (`DSRoomChassis.leadHeight`); only what stands in it moved.
+2. **The pick is concentric with the well**: `DS.Radius.widget` less the inset (`DSCountTile.cellRadius`, 12pt on the phone), where it had been the sheet's 16pt at a 24pt inset.
+3. **The inline pick is a wash** (`DS.tintDim`) **with blue ink** (`DSCountTile.pickInk`: the Increase Contrast blue in dark, `#0f5bb8` in light, ≥4.5:1 on the wash over the well in both; the shipped blue measures 3.4:1 there). The place tile under the box keeps the solid tint, so the two picks no longer stack two solid blues. The stacked count (the Apps catalogue's categories) keeps §1138's solid pick.
+4. **Not built:** canvas B's statement line over the box (declined, user: "i don't like the statement on top"). Life's glyph is `face.smiling` in `CategoryFold`; it measured filled on screen, and is NOT changed here until seen again.
+
+**Not seen:** compiled (iOS Simulator), `ds-template-audit`, `status-ink-audit`, `design-motion-audit`, `hero-tint-audit`, `day-strip-selftest` green; every simulator was stopped for load before it could be drawn. The Mac is not compiled.
