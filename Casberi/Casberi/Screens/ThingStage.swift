@@ -112,6 +112,16 @@ struct VerbDial: View {
     var onVerb: (Verb) -> Void
     /// The Name disc — present only when there's an address to name.
     var onName: (() -> Void)?
+    /// THE FOURTH TILE KEEPS UP WITH IT FOR YOU (prd §1181, user: "for since
+    /// we have only three tiles and a fourth is empty what can we put there …
+    /// what are we trying to get people to track"): Save a person, Watch a
+    /// wallet, Track a charge that repeats. Drawn only where it fits in four.
+    var keep: Keep? = nil
+    struct Keep {
+        let label: String
+        let glyph: String
+        let act: () -> Void
+    }
 
     /// The copy disc's own beat. A copy is the one verb on this dial whose
     /// whole effect is INVISIBLE — nothing opens, nothing moves, and the
@@ -161,6 +171,7 @@ struct VerbDial: View {
                       glyph: copied == verb.id ? "checkmark" : verb.icon)
         }
         if onName != nil { out.append(SheetTile(id: "name", label: "Name", glyph: "square.and.pencil")) }
+        if let keep, out.count < 3 { out.append(SheetTile(id: "keep", label: keep.label, glyph: keep.glyph)) }
         out.append(SheetTile(id: "share", label: "Share", glyph: "square.and.arrow.up"))
         return out
     }
@@ -168,6 +179,7 @@ struct VerbDial: View {
     private func pick(_ tile: SheetTile) {
         switch tile.id {
         case "name": onName?()
+        case "keep": keep?.act()
         case "share": sharing = true
         default:
             guard let verb = verbs.first(where: { "verb:" + $0.id == tile.id }) else { return }

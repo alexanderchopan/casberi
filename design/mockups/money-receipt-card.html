@@ -1,0 +1,137 @@
+<!doctype html>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Money receipt card</title>
+<style>
+:root{--ground:#0b0b0f;--ink:#eeecf3;--ink2:#a29ead;--page:#000;--box:#1c1c1e;--tile:#1a1a1c;--text:#fff;--text2:#ebebf599;--text3:#ebebf566;
+  --pink:#ff2d87;--tint:#4d9bff;--confirm:#30d158;--attention:#ff9f0a;--rounded:ui-rounded,"SF Pro Rounded",-apple-system,sans-serif}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;-webkit-font-smoothing:antialiased;padding:32px 16px 64px}
+header,section,.verdict{max-width:1240px;margin:0 auto}
+h1{font:700 28px/34px var(--rounded)}
+p.desc{font-size:15px;line-height:22px;color:var(--ink2);max-width:860px;margin-top:6px}
+.stage{display:flex;gap:28px;flex-wrap:wrap;margin-top:24px;align-items:flex-start}
+figure{width:393px;zoom:var(--z,1)}
+figcaption{font-size:13px;line-height:19px;color:var(--ink2);margin:12px 6px 0}
+figcaption b{color:var(--ink)}
+.tag{display:inline-block;font:600 12px var(--rounded);color:var(--ink2);background:#ffffff14;border-radius:99px;padding:3px 9px;margin-bottom:8px}
+.tag.new{color:#fff;background:var(--pink)}
+
+.phone{background:#0e0e10;border-radius:48px;height:852px;overflow:hidden;position:relative;outline:1px solid #ffffff14;box-shadow:0 24px 70px #0008}
+.sheet{position:absolute;inset:44px 0 0;background:var(--page);color:var(--text);border-radius:38px 38px 0 0;padding:20px 15px 0;overflow:hidden}
+.grab{width:36px;height:5px;border-radius:3px;background:#ffffff40;margin:-12px auto 14px}
+
+/* the sheet's head: the party, as every sheet leads */
+.head{display:flex;align-items:center;gap:12px;margin-bottom:15px}
+.disc{width:46px;height:46px;border-radius:50%;flex:none;display:grid;place-items:center;font:700 17px var(--rounded);color:#fff}
+.hb{flex:1;min-width:0}
+.hn{font:600 17px/22px -apple-system,BlinkMacSystemFont,sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hn.tint{color:var(--tint)}
+.hl{font-size:12px;line-height:16px;color:var(--text3);margin-top:2px}
+.hl.tint{color:var(--tint)}
+.day{font-size:12px;color:var(--pink);align-self:flex-start;margin-top:4px}
+
+/* the room's box: leadBox (206) inside the well's 15 + 15 */
+.box{background:var(--box);border-radius:26px;height:236px;padding:15px 12px;position:relative;overflow:hidden}
+.amt{display:flex;align-items:baseline;gap:6px}
+.amt b{font:700 56px/60px var(--rounded);font-variant-numeric:tabular-nums;letter-spacing:0}
+.amt b.in{color:var(--confirm)}
+.amt span{font:700 24px var(--rounded);color:var(--text2)}
+/* the room box's anatomy: a statement, one quiet line, a grid body (Settings' counts) */
+.fig{font:700 34px/40px var(--rounded);font-variant-numeric:tabular-nums;white-space:nowrap}
+.worth{font-size:15px;line-height:20px;color:var(--text2);margin-top:2px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 8px;margin-top:20px}
+.cell .v{font:700 22px/26px var(--rounded);font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cell .l{font-size:12px;line-height:16px;color:var(--text2)}
+.cell .v.att{color:var(--attention)}
+
+.sec{font-size:17px;line-height:22px;margin-top:2px}
+.sent{font-size:17px;line-height:22px;margin-top:12px;color:var(--text)}
+.stamp{position:absolute;left:12px;bottom:15px;font:600 12px var(--rounded);border-radius:99px;padding:4px 10px;background:#ffffff14;color:var(--text2)}
+.stamp.open{color:var(--attention);background:#ff9f0a22}
+
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:15px}
+.tile{height:52px;border-radius:16px;background:var(--tile);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:10px;font-weight:600;color:var(--tint)}
+.tile .g{font-size:19px;line-height:20px}
+
+.hist{margin-top:22px}
+.hist h4{font:600 17px/22px -apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif}
+.hist p{font-size:12px;color:var(--text3);margin-top:2px}
+.row{display:flex;align-items:center;gap:12px;min-height:56px}
+.rl{width:38px;height:38px;border-radius:50%;flex:none;display:grid;place-items:center;font:700 14px var(--rounded);color:#fff}
+.rb{flex:1;min-width:0}
+.rt{font-size:17px;line-height:22px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rs{font-size:12px;line-height:16px;color:var(--text3)}
+.ra{font:600 15px var(--rounded);font-variant-numeric:tabular-nums}
+.ra.in{color:var(--confirm)}
+.door{display:flex;align-items:center;justify-content:space-between;min-height:44px;color:var(--tint);font-size:17px}
+
+/* today */
+.old .party{display:flex;align-items:center;gap:12px}
+.old .amt b{font-size:64px;line-height:68px}
+.olddial{display:flex;justify-content:center;gap:14px;margin-top:18px}
+.od{display:flex;flex-direction:column;align-items:center;gap:5px;font-size:11px;color:var(--text2)}
+.od i{width:48px;height:48px;border-radius:50%;background:#1c1c1e;display:grid;place-items:center;font-style:normal;font-size:18px;color:#fff}
+
+.verdict{margin-top:40px;font-size:15px;line-height:23px;color:var(--ink2)}
+.verdict b{color:var(--ink)}
+.verdict li{margin:6px 0 0 20px}
+</style>
+
+<header>
+  <h1>Money receipt in the room's frame</h1>
+  <p class="desc">The party moves up into the sheet's head, the way every sheet leads. The box holds what happened: the amount on one line at one size, what it was worth, then its facts as rows (status, network, fee). The head already says who and what, so no sentence repeats it. Then three or four tiles, then your last three with that person as rows, and a door to all of them. Name is no longer a tile: tapping the face or name opens the address card where you name it, and an address with no name says so in the head. Demo data; glyphs stand in for SF Symbols.</p>
+</header>
+
+<section class="stage">
+  <figure><span class="tag">Today</span><div class="phone"><div class="sheet old" id="t0"></div></div>
+    <figcaption><b>The party row, a 64pt amount, the sentence, the history line and the stamp</b> in one card that grows with its words, then five round buttons.</figcaption></figure>
+  <figure><span class="tag new">Proposed · received</span><div class="phone"><div class="sheet" id="t1"></div></div>
+    <figcaption><b>maya.eth leads the sheet.</b> The box is a room's: the statement, one line, then a grid (Final, Base, $0.01, 12th). maya.eth is already in your Addresses, so the fourth tile is Watch: Basescan · Copy · Watch · Share. The history with maya.eth follows.</figcaption></figure>
+  <figure><span class="tag new">Proposed · no name yet</span><div class="phone"><div class="sheet" id="t2"></div></div>
+    <figcaption><b>An unnamed address says "Tap to name" in the tint under it.</b> The face and the words open the address card, where Name is. A send still waiting says Waiting in the attention colour. Someone not in your Addresses gets Save: Worldscan · Copy · Save · Share (World App moves to the address card).</figcaption></figure>
+  <figure><span class="tag new">Proposed · card spend</span><div class="phone"><div class="sheet" id="t3"></div></div>
+    <figcaption><b>A card spend is the same frame.</b> The merchant leads; the grid says how often it charges. A charge that repeats offers Track, which opens Track a subscription filled in: Wallet · Copy · Track · Share.</figcaption></figure>
+</section>
+
+<div class="verdict">
+  <b>What changes</b>
+  <ul>
+    <li><b>The box is a room's box</b>: a statement in white (the amount, number and token together), one quiet line (worth and when), then a two-by-two grid with the value over its label, as Settings' counts stand. The sentence that restated the head is deleted, and the stamp is the Status cell.</li>
+    <li><b>The history is rows, not bars</b>: the last three with this party, each opening its own sheet, then "All 15 with maya.eth ›" to their address card. The card's "your 12th from them" line goes; the count lives in the door.</li>
+    <li><b>The fourth tile keeps up with it for you</b>: Save a person (Addresses), Watch a wallet you saved, Track a charge that repeats. The same slot elsewhere: Follow a feed or post, Watch a token or stock. Naming happens on the address card that Save and the head both open.</li>
+    <li><b>The receipt's torn edge goes</b>: a room's box has no tear. Its job, saying a record is final, is the stamp's.</li>
+  </ul>
+</div>
+
+<script>
+// Each phone fits the window (user: "make these images smaller so they fit the window").
+const fit=()=>document.documentElement.style.setProperty('--z',Math.min(1,(innerHeight-60)/900,(innerWidth-32)/393).toFixed(3));
+fit();addEventListener('resize',fit);
+const $=id=>document.getElementById(id);
+const tiles=list=>`<div class="tiles">${list.map(([g,l,k])=>`<div class="tile ${k?'keep':''}"><span class="g">${g}</span>${l}</div>`).join('')}</div>`;
+const head=(bg,mk,name,line,day,unnamed)=>`<div class="grab"></div><div class="head"><div class="disc" style="background:${bg}">${mk}</div><div class="hb"><div class="hn ${unnamed?'tint':''}">${name}</div><div class="hl ${unnamed?'tint':''}">${line}</div></div><div class="day">${day}</div></div>`;
+// The history as rows (user, of the bars: "this is dumb"): the last three
+// with this party, each opening its own sheet, then the door to all of them.
+const hist=(title,rows,door,bg,mk)=>`<div class="hist"><h4>${title}</h4>${rows.map(([t,sub,amt,inb])=>`<div class="row"><div class="rl" style="background:${bg}">${mk}</div><div class="rb"><div class="rt">${t}</div><div class="rs">${sub}</div></div><div class="ra ${inb?'in':''}">${amt}</div></div>`).join('')}${door?`<div class="door"><span>${door}</span><span>›</span></div>`:''}</div>`;
+const maya=[['Received 500 USDC','Sep 28 · Base','+$500.00',1],['Sent 80 USDC','Sep 14 · Base','−$80.00',0],['Received 1,000 USDC','Aug 30 · Base','+$1,000.00',1]];
+
+$('t0').innerHTML=`<div class="grab"></div><div class="box" style="height:auto;padding:16px 12px 22px">
+  <div class="party"><div class="disc" style="background:#7b3fe4">M</div><div class="hb"><div class="hn">maya.eth</div><div class="hl">Received · Base</div></div><div class="day">2h</div></div>
+  <div style="margin-top:22px"><div class="amt"><b class="in">+1,240</b><span>USDC</span></div><div class="sec">$1,240.00</div>
+  <div class="sent">maya.eth sent you 1,240 USDC on Base.</div><div class="sec" style="color:var(--text2)">Your 12th from them, $9,870 in all.</div>
+  <div class="stamp" style="position:static;display:inline-block;margin-top:12px">Final</div></div></div>
+  <div class="olddial">${[['↗','Basescan'],['⧉','Copy'],['✎','Name'],['⌖','Pin'],['⇪','Share']].map(([g,l])=>`<div class="od"><i>${g}</i>${l}</div>`).join('')}</div>`+
+  hist('With maya.eth',maya,'All 15 with maya.eth','#7b3fe4','M');
+
+$('t1').innerHTML=head('#7b3fe4','M','maya.eth','Received · Base','2h')+
+  `<div class="box"><div class="fig">+1,240 USDC</div><div class="worth">$1,240.00 · 2h ago</div><div class="grid"><div class="cell"><div class="v">Final</div><div class="l">Status</div></div><div class="cell"><div class="v">Base</div><div class="l">Network</div></div><div class="cell"><div class="v">$0.01</div><div class="l">Fee</div></div><div class="cell"><div class="v">12th</div><div class="l">From maya.eth</div></div></div></div>`+
+  tiles([['↗','Basescan'],['⧉','Copy'],['◉','Watch',1],['⇪','Share']])+hist('With maya.eth',maya,'All 15 with maya.eth','#7b3fe4','M');
+
+$('t2').innerHTML=head('#3a3a3c','0x','0x7a3f…c91e','Tap to name','Now',true)+
+  `<div class="box"><div class="fig">−250 WLD</div><div class="worth">$412.50 · Just now</div><div class="grid"><div class="cell"><div class="v att">Waiting</div><div class="l">Status</div></div><div class="cell"><div class="v">World Chain</div><div class="l">Network</div></div><div class="cell"><div class="v">$0.02</div><div class="l">Fee</div></div><div class="cell"><div class="v">1st</div><div class="l">To this address</div></div></div></div>`+
+  tiles([['↗','Worldscan'],['⧉','Copy'],['＋','Save',1],['⇪','Share']])+`<div class="hist"><h4>First time with this address</h4><p>Nothing before today.</p></div>`;
+
+$('t3').innerHTML=head('#c8a165','B','Blue Bottle Coffee','Apple Card','Today')+
+  `<div class="box"><div class="fig">−$6.75</div><div class="worth">Coffee · Hayes Valley · Today</div><div class="grid"><div class="cell"><div class="v">Posted</div><div class="l">Status</div></div><div class="cell"><div class="v">Apple Card</div><div class="l">Card</div></div><div class="cell"><div class="v">$0.13</div><div class="l">Daily Cash</div></div><div class="cell"><div class="v">Every 5 days</div><div class="l">How often</div></div></div></div>`+
+  tiles([['↗','Wallet'],['⧉','Copy'],['↻','Track',1],['⇪','Share']])+hist('At Blue Bottle Coffee',[['Coffee','Oct 3 · Apple Card','−$5.50',0],['Coffee and a pastry','Sep 29 · Apple Card','−$11.25',0],['Coffee','Sep 24 · Apple Card','−$5.50',0]],'All 9 at Blue Bottle Coffee','#c8a165','B');
+</script>

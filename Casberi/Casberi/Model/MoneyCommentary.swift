@@ -35,6 +35,16 @@ import Foundation
 /// Each becomes drawable the day its bridge stamps the number it already
 /// computed. Until then the honest form is the sentence the bridge wrote.
 enum MoneyCommentary: Equatable {
+    /// Whether the receipt draws this beside its history rows (prd §1181):
+    /// the history and merchant bars ARE the rows now, so only what the rows
+    /// cannot say — a ladder, a rate, a note — still stands.
+    var drawsBesideRows: Bool {
+        switch self {
+        case .history, .merchant: return false
+        case .ladder, .rate, .note: return true
+        }
+    }
+
 
     /// A signed series with this counterparty — positive received, negative
     /// sent, oldest first, THIS row last.

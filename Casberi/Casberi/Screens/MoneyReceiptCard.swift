@@ -1,253 +1,6 @@
 import SwiftUI
 import Accessibility
 
-/// The receipt, drawn (prd §369, 2026-08-12) — the hero every money thing gets,
-/// replacing `ThingStage`'s three source-gated stages.
-///
-/// **One object, not a stack.** The first cut of this pass drew nine blocks:
-/// eyebrow, subject row, verb, amount, second reading, stamps, a chart card,
-/// a four-row spec slab, and the dial. Three of those blocks were labels for
-/// other blocks. This is a piece of paper carrying the whole moment, one card
-/// where the app says something about it, and the dial.
-///
-/// **NO PAPER, AND NO TEAR** (prd §583, 2026-09-03, user: *"i think it looks
-/// WAY better without the card"*). Until this pass the whole moment sat on a
-/// raised, ink-poured card whose bottom edge was scalloped when the record was
-/// final and flat when it wasn't. §495 had spread that paper to every sheet
-/// head in the app; §583 removes it from all of them, on the finding that the
-/// anatomy is what made a head legible and the object around it was a second
-/// boundary drawn for a block that already had one.
-///
-/// **What the tear said, the stamp already says.** That edge was the one piece
-/// of paper carrying real state, so it was checked rather than assumed: every
-/// `.open` receipt built in `MoneyReceipt` carries a stamp, and every one of
-/// those is `.settling` / `.pending` / `.screening` / `.yourTurn` /
-/// `.needsProof` / `.openPosition` — none of them quiet, all of them in
-/// attention ink. The silhouette and the word were two renderings of one fact.
-/// `MoneyReceipt.spokenLabel` still speaks that fact, so §369's VoiceOver fix
-/// stands untouched, and the success haptic still fires on the settle.
-///
-/// Every view here takes VALUES, never a `Thing` — so none of them can hold a
-/// tombstoned model across a re-render (the build-188 leaf rule). The one place
-/// a `Thing` is read is `MoneyReceiptSource`, on the main actor, behind
-/// `isLive`.
-struct MoneyReceiptCard: View {
-    let receipt: MoneyReceipt
-    /// When it landed — the pink day (prd §887). A value, like everything here.
-    let landed: Date
-    /// What kind of record this is ("Transaction", "Card"), under the name.
-    let kindWord: String
-    /// Opening the address behind the subject face (prd §369 amendment).
-    ///
-    /// A closure over a plain `String`, never a `Thing` — the liveness rule at
-    /// the top of this file is a harness guard, not a preference. nil leaves
-    /// the disc inert, which is the honesty rule doing its job: a face with
-    /// nowhere to go is not a door, and must not look like one.
-    var onSubject: ((String) -> Void)?
-    /// How long you have dealt with the other side (prd §1025): "Your first
-    /// transfer with Sam." or "With Sam since Jul 2." — a fact off the
-    /// transfers you hold, drawn quiet under the sentence. nil draws nothing.
-    var history: String? = nil
-    // `tear`, `torn` and `reduceMotion` were HERE and are deleted with the
-    // paper (prd §583). Nothing is animated on this card any more, so there is
-    // no motion for a motion preference to silence.
-
-    /// Whether this card has finished its first render.
-    ///
-    /// It is what keeps the settle haptic a TRANSITION and not an entrance: a
-    /// receipt that opens already final is history, and history must not buzz
-    /// every time the sheet is opened.
-    @State private var settled = false
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            // THE PARTY LEADS (prd §887), the post sheet's shape (§884): who,
-            // the day in the divider's pink, and what happened under the name
-            // — then the amount at the head rung. All the words stand in one
-            // column (the user, choosing this over the amount-first mock:
-            // "B looks cleaner b/c all the text is in the same place").
-            HStack(alignment: .center, spacing: DS.Space.s3) {
-                MoneySubjectDisc(subject: receipt.subject, mine: receipt.mine,
-                                 // The ring punches out the PAPER, and the
-                                 // paper is ink since §542 — a `surfaceRaised`
-                                 // ring on it draws a gray halo around the
-                                 // disc, which is the gray this ruling killed
-                                 // wearing a 1.5pt disguise.
-                                 ring: DS.inkGround, onOpen: onSubject)
-                VStack(alignment: .leading, spacing: 2) {
-                    HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                        Text(verbatim: nameLine)
-                            .dsText(.heading17).foregroundStyle(DS.textPrimary)
-                            .lineLimit(1).truncationMode(.middle)
-                            // Spoken in the composed label below.
-                            .accessibilityHidden(true)
-                        Spacer(minLength: DS.Space.s2)
-                        Text(FeedScreen.dayWord(landed))
-                            .dsText(.label12)
-                            .foregroundStyle(DS.brandInk)
-                            .lineLimit(1)
-                    }
-                    Text(verbatim: whatLine)
-                        .dsText(.subhead12).foregroundStyle(DS.textTertiary)
-                        .lineLimit(1)
-                        .accessibilityHidden(true)
-                }
-            }
-
-            // ONE element for the words (prd §369 amendment). Deliberately not
-            // wrapped around the whole card: the subject disc is a door now,
-            // and `children: .ignore` on the outer stack would swallow it.
-            VStack(alignment: .leading, spacing: 0) {
-                amountBlock
-
-                if let secondary = receipt.secondary {
-                    Text(verbatim: secondary)
-                        .dsText(.body17).foregroundStyle(DS.textPrimary)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .padding(.top, 2)
-                }
-
-                Text(verbatim: receipt.sentence)
-                    .dsText(.body17).foregroundStyle(DS.textPrimary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.top, DS.Space.s3)
-
-                if let history {
-                    Text(verbatim: history)
-                        .dsText(.body17).foregroundStyle(DS.textSecondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .padding(.top, 2)
-                }
-
-                if let stamp = receipt.stamp {
-                    DSStamp(word: stamp.word, weight: stamp.weight.stampWeight)
-                        .padding(.top, DS.Space.s3)
-                        // Spoken in the composed value below, so hearing it
-                        // here as well would say the state twice.
-                        .accessibilityHidden(true)
-                }
-            }
-            .padding(.top, DS.Space.s6)
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel(Text(receipt.spokenLabel))
-            .accessibilityValue(Text(verbatim: [receipt.spokenValue, history ?? ""]
-                .filter { !$0.isEmpty }.joined(separator: " ")))
-        }
-        // NO PAPER (prd §583, 2026-09-03, user: *"i think it looks WAY better
-        // without the card"*). §363 gave this card its raised ground, its ink
-        // pour and its scalloped edge, §498 lifted them into `DSReceiptPaper`
-        // so two rooms could not drift into two papers, and §583 deletes the
-        // paper from both. The head is the arrangement, not the object around
-        // it — `DSSheetHeadBlock`'s doc carries the full reasoning.
-        //
-        // **THE TEAR WAS STATE HERE AND THAT IS WHY THIS NEEDED CHECKING** —
-        // torn meant final, flat meant the paper was still in the machine
-        // (§363), and an edge cannot survive the surface it was an edge of. It
-        // is not lost: every `.open` receipt in `MoneyReceipt` carries a stamp
-        // and every one of those stamps is `.settling` / `.pending` /
-        // `.screening` / `.yourTurn` / `.needsProof` / `.openPosition`, none of
-        // them quiet — so the word in the corner was already saying, in
-        // attention ink, exactly what the edge was saying in silhouette.
-        // Measured against the six construction sites rather than assumed.
-        //
-        // `finality` itself is UNTOUCHED: `ThingSheetView` still gates the
-        // track-record control on `.open`, which was always the more useful
-        // half of it.
-        .dsSheetHeadBlock()
-        .onAppear { settled = true }
-        .onChange(of: receipt.finality) { _, now in
-            // The felt half of the settle SURVIVES the drawing (prd §583).
-            // Firing `DSHaptic` directly rather than through
-            // `ShellChrome.flash` is the documented exception rather than a
-            // shortcut: that rule exists so a felt outcome always has words on
-            // screen explaining it, and the stamp turning from "Pending" to
-            // "Settled" in the same instant IS those words — it was doing that
-            // beside the tear all along. A toast would be a second
-            // announcement of something the card just said better.
-            //
-            // Reduce Motion is no longer consulted, and that is correct rather
-            // than an oversight: it silenced an ANIMATION that no longer
-            // exists, never the haptic, which is a motion preference's
-            // deliberate exception here.
-            if settled && now == .torn { DSHaptic.success() }
-        }
-    }
-
-    /// The number leads and its unit sits a rung down, so the figure reads
-    /// first. A receipt with no stamped figure leads with its title instead —
-    /// a common, correct outcome (see `MoneyReceipt.titleFallback`), not a
-    /// degraded one.
-    @ViewBuilder private var amountBlock: some View {
-        if let amount = receipt.amount {
-            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2 - 2) {
-                Text(verbatim: amount.number)
-                    // The head rung (prd §887): the amount is what the sheet
-                    // was opened to see. A long figure still shrinks to fit.
-                    .dsText(.price64)
-                    .monospacedDigit()
-                    // A pending authorization that settles at a different
-                    // amount COUNTS to it (prd §369 amendment) — the one place
-                    // on this card where a change is worth watching, and until
-                    // now the one place it blinked. `value:` gives the roll a
-                    // direction and is present only when a real Double was
-                    // stamped; without it the digits still transition, they
-                    // just don't know which way they are going.
-                    .contentTransition(amount.numeric.map {
-                        .numericText(value: $0)
-                    } ?? .numericText())
-                    .foregroundStyle(tone(amount.tone))
-                    // Clamped to one line: a spoofed token's "name" is
-                    // attacker-controlled text, and rendering it huge across two
-                    // wrapped lines amplifies exactly the lie the security
-                    // warning below the receipt is calling out (2026-07-23).
-                    .lineLimit(1).minimumScaleFactor(0.6).truncationMode(.tail)
-                if let unit = amount.unit {
-                    Text(verbatim: unit)
-                        .dsText(.heading24).foregroundStyle(DS.textSecondary)
-                        .lineLimit(1)
-                }
-            }
-        } else if let title = receipt.titleFallback {
-            Text(verbatim: title)
-                .dsText(.heading24).foregroundStyle(DS.textPrimary)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-    }
-
-    /// The name the head leads with: the party, else the receipt's own lead
-    /// ("In your wallet" on a swap), so the line is never empty.
-    private var nameLine: String {
-        if let party = receipt.party, !party.isEmpty { return party }
-        return receipt.lead
-    }
-
-    /// What happened, under the name: "Received from · Transaction". When the
-    /// lead IS the name, the kind alone.
-    private var whatLine: String {
-        if let party = receipt.party, !party.isEmpty {
-            return "\(receipt.lead) · \(kindWord)"
-        }
-        return kindWord
-    }
-
-    private func tone(_ tone: MoneyReceipt.Tone) -> Color {
-        switch tone {
-        // Green on a gain is colour as STATE. A send stays primary: spending
-        // isn't a loss state, and red would editorialize.
-        case .gain:  return DS.confirmInk
-        case .warn:  return DS.attentionInk
-        case .plain: return DS.textPrimary
-        }
-    }
-}
-
-// `ReceiptPaper` WAS HERE and is deleted (prd §583, 2026-09-03). It was the
-// scalloped silhouette every sheet head in the app was clipped to; with the
-// paper gone there is no shape left to clip. Its `tear` fraction, its fitted
-// teeth and its interpolated bottom corners are all recoverable from git if a
-// future ruling ever wants a receipt edge back — but note what §583 measured
-// before removing it: the tear's state was fully redundant with the stamp,
-// which says the same thing in words and in attention ink.
 
 /// Slot 0 — four species of disc, four grades of knowing.
 ///
@@ -660,3 +413,248 @@ struct ReceiptLadder: View {
         .accessibilityLabel(Text(spoken))
     }
 }
+
+// MARK: - The receipt in the room's frame (prd §1181)
+
+/// One cell of the receipt's grid: a value over its label, as Settings'
+/// counts stand.
+struct MoneyReceiptCell: Identifiable, Equatable {
+    let value: String
+    let label: String
+    var wants = false
+    var id: String { label }
+}
+
+/// The receipt's box (prd §1181, user: "shouldn't this be IN the card?", then
+/// "on the rooms they have a title … but they don't have a logo"): the party's
+/// NAME is the sheet's title above the box, as a room's is, and its FACE leads
+/// inside the box with what happened and when — Today's card anatomy, each
+/// fact said once. Then the statement (the amount, number and token
+/// together), one quiet line (what it was worth), then one row of facts, a
+/// value over its label as Settings' counts stand. The sentence that restated
+/// the party is gone, and the stamp is the Status cell. The face and the name
+/// open the address card, where a name is given; an unnamed address says so.
+struct MoneyReceiptBox: View {
+    let receipt: MoneyReceipt
+    let landed: Date
+    /// A transfer between your wallet and someone (prd §1181): the box draws
+    /// the two faces with the arrow between them — the thing itself — the
+    /// amount, its worth and day, and the status and network as stamps.
+    var transfer: Transfer? = nil
+    struct Transfer: Equatable {
+        let mineAddress: String
+        let mineLabel: String
+        let theirAddress: String
+        let theirName: String
+        let sent: Bool
+        let usd: Double?
+        let network: String?
+    }
+    /// The app it came from, the eyebrow's word, as Today's card names its
+    /// app (user, of "Spent at · Card": "we can make all this text look better").
+    let source: String
+    let cells: [MoneyReceiptCell]
+    var unnamed = false
+    var onSubject: ((String) -> Void)?
+
+    var body: some View {
+        if let transfer { transferBody(transfer) } else { receiptBody }
+    }
+
+    /// Apple Wallet's transaction detail, centred: who to whom, how much,
+    /// worth and when, then the state (prd §1181, the design canvas
+    /// "Thing sheets, the Apple pass").
+    private func transferBody(_ t: Transfer) -> some View {
+        VStack(spacing: 0) {
+            HStack(spacing: DS.Space.s2) {
+                party(address: t.sent ? t.mineAddress : t.theirAddress,
+                      name: t.sent ? t.mineLabel : t.theirName)
+                HStack(spacing: 0) {
+                    Capsule().fill(DS.textTertiary).frame(width: 40, height: 2)
+                    Image(systemName: "chevron.right")
+                        .dsGlyph(.caption, weight: .bold)
+                        .foregroundStyle(DS.textTertiary)
+                }
+                .padding(.bottom, DS.Space.s4)
+                .accessibilityHidden(true)
+                party(address: t.sent ? t.theirAddress : t.mineAddress,
+                      name: t.sent ? t.theirName : t.mineLabel)
+            }
+            Text(verbatim: unsignedStatement)
+                .dsText(.heading34)
+                .monospacedDigit()
+                .contentTransition(roll)
+                .foregroundStyle(DS.textPrimary)
+                .lineLimit(1).minimumScaleFactor(0.6)
+                .padding(.top, DS.Space.s3)
+            Text(verbatim: worthLine(t))
+                .dsText(.body17)
+                .foregroundStyle(DS.textSecondary)
+                .lineLimit(1).minimumScaleFactor(0.8)
+                .padding(.top, 2)
+            Spacer(minLength: DS.Space.s2)
+            HStack(spacing: DS.Space.s2) {
+                DSStamp(word: statusWord, weight: statusWeight)
+                if let network = t.network, !network.isEmpty {
+                    DSStamp(word: network, weight: .quiet)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(verbatim: spoken(t)))
+    }
+
+    /// One face and its name, a door to the address card.
+    private func party(address: String, name: String) -> some View {
+        Button { onSubject?(address) } label: {
+            VStack(spacing: DS.Space.s1) {
+                WalletFace(address: address, size: DS.Face.shelf, circular: true)
+                Text(verbatim: name)
+                    .dsText(.label12)
+                    .foregroundStyle(DS.textSecondary)
+                    .lineLimit(1).truncationMode(.middle)
+            }
+            .frame(width: 72)
+        }
+        .buttonStyle(PressSpring())
+        .disabled(onSubject == nil)
+    }
+
+    /// The amount rolls to a re-read figure rather than cutting (prd §1181,
+    /// item 7 of the design pass: "the amount rolls in digit by digit").
+    private var roll: ContentTransition {
+        guard let amount = receipt.amount else { return .numericText() }
+        return amount.numeric.map { .numericText(value: $0) } ?? .numericText()
+    }
+
+    /// The amount without its sign: the arrow says which way it went.
+    private var unsignedStatement: String {
+        guard let amount = receipt.amount else { return statement }
+        let number = amount.number.trimmingCharacters(in: CharacterSet(charactersIn: "+-−"))
+        return [number, amount.unit].compactMap { $0 }.joined(separator: " ")
+    }
+
+    private func worthLine(_ t: Transfer) -> String {
+        let day = landed.formatted(.dateTime.weekday(.wide).month(.abbreviated).day())
+        guard let usd = t.usd, usd > 0 else { return day }
+        return "\(usd.formatted(.currency(code: "USD"))) · \(day)"
+    }
+
+    private var statusWord: String {
+        receipt.stamp?.word ?? (receipt.finality == .open ? String(localized: "Waiting") : String(localized: "Settled"))
+    }
+
+    private var statusWeight: DSStamp.Weight {
+        receipt.stamp?.weight.stampWeight ?? (receipt.finality == .open ? .waiting : .good)
+    }
+
+    private func spoken(_ t: Transfer) -> String {
+        let who = t.sent ? String(localized: "You sent \(t.theirName) \(unsignedStatement)")
+                         : String(localized: "\(t.theirName) sent you \(unsignedStatement)")
+        return [who, t.network, statusWord, landed.formatted(.dateTime.weekday(.wide))]
+            .compactMap { $0 }.joined(separator: ". ")
+    }
+
+    private var receiptBody: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            eyebrow
+            VStack(alignment: .leading, spacing: 0) {
+                Text(verbatim: statement)
+                    .dsText(.heading34)
+                    .monospacedDigit()
+                    .contentTransition(roll)
+                    .foregroundStyle(DS.textPrimary)
+                    .lineLimit(1).minimumScaleFactor(0.6)
+                if let secondary = receipt.secondary {
+                    Text(verbatim: secondary)
+                        .dsText(.body17)
+                        .foregroundStyle(DS.textSecondary)
+                        .lineLimit(1)
+                        .padding(.top, 2)
+                }
+                HStack(alignment: .top, spacing: DS.Space.s2) {
+                    ForEach(cells.prefix(3)) { cell in
+                        VStack(alignment: .leading, spacing: 0) {
+                            Text(verbatim: cell.value)
+                                .dsText(.heading20)
+                                .monospacedDigit()
+                                .foregroundStyle(cell.wants ? DS.attentionInk : DS.textPrimary)
+                                .lineLimit(1).minimumScaleFactor(0.7)
+                            Text(verbatim: cell.label)
+                                .dsText(.label12)
+                                .foregroundStyle(DS.textSecondary)
+                                .lineLimit(1).minimumScaleFactor(0.8)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
+                .padding(.top, DS.Space.s4)
+            }
+            .padding(.top, DS.Space.s4)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(Text(receipt.spokenLabel))
+            .accessibilityValue(Text(verbatim: [receipt.spokenValue, cellsSpoken]
+                .filter { !$0.isEmpty }.joined(separator: ", ")))
+        }
+    }
+
+    /// Who and when, Today's eyebrow at its rungs: the face, the name, what
+    /// happened, the day in the time's place. A door when there is an address.
+    @ViewBuilder private var eyebrow: some View {
+        let row = HStack(spacing: DS.Space.s2) {
+            MoneySubjectDisc(subject: receipt.subject, mine: receipt.mine, size: DS.Face.list, onOpen: nil)
+            Text(verbatim: unnamed ? String(localized: "Tap to name") : source)
+                .dsText(.label12)
+                .foregroundStyle(unnamed ? DS.tint : DS.textSecondary)
+                .lineLimit(1)
+            Spacer(minLength: DS.Space.s2)
+            Text(FeedScreen.dayWord(landed))
+                .dsText(.label12)
+                .foregroundStyle(DS.brandInk)
+                .lineLimit(1)
+        }
+        if let address = openable, let onSubject {
+            Button { onSubject(address) } label: { row.contentShape(Rectangle()) }
+                .buttonStyle(RowPress())
+                .accessibilityHint(Text("Opens what you know about this address"))
+        } else {
+            row
+        }
+    }
+
+    private var openable: String? {
+        if case .address(let address) = receipt.subject, !address.isEmpty { return address }
+        return nil
+    }
+
+    /// The facts, spoken after the receipt's finality.
+    private var cellsSpoken: String {
+        cells.map { "\($0.label) \($0.value)" }.joined(separator: ", ")
+    }
+
+    /// The sheet's title: the party, else the receipt's lead.
+    static func title(_ receipt: MoneyReceipt) -> String {
+        if let party = receipt.party, !party.isEmpty { return party }
+        return receipt.lead
+    }
+
+    private var statement: String {
+        if let amount = receipt.amount {
+            // A typographic minus, never the hyphen the amount was written with.
+            let number = amount.number.hasPrefix("-") ? "−" + amount.number.dropFirst() : amount.number
+            return [number, amount.unit].compactMap { $0 }.joined(separator: " ")
+        }
+        return receipt.titleFallback ?? receipt.lead
+    }
+}
+
+extension NumberFormatter {
+    /// "2nd", "3rd" in the reader's language.
+    static func localizedOrdinal(_ n: Int) -> String {
+        let f = NumberFormatter()
+        f.numberStyle = .ordinal
+        return f.string(from: NSNumber(value: n)) ?? "\(n)"
+    }
+}
+

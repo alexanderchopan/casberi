@@ -222,7 +222,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1311 of 1375 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1312 of 1376 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -870,7 +870,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §580 — The wait becomes a receipt, the destinations become tiles, and a pick mid-wait re-addresses the question
 - §581 — The chat becomes a terminal — blank paper, the switcher in the foot, and the answer as the screen [+3 sub-entries]
 - §582 — Bankr stops being promoted, and asks again
-- §583 — The sheet heads lose their paper (amended by §584)
+- §583 — The sheet heads lose their paper (amended by §584; part superseded by §1181)
 - §584 — The ramp is already right, and the pill was the real finding (amended by §585)
 - §585 — The lede, given to every room that has a figure
 - §586 — The feed's grammar, made mechanical [+1 sub-entries]
@@ -1219,7 +1219,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §884 — A post's sheet leads with the person, the article head's shape
 - §885 — A screenshot's sheet shows the picture big, its moment under its title, and no Zoom
 - §886 — A thing sheet opens at its content's height
-- §887 — A money sheet leads with the party, the amount at the head rung
+- §887 — A money sheet leads with the party, the amount at the head rung (part superseded by §1181)
 - §888 — The devnets' money draws as money
 - §889 — The screenshot passes see the screenshot
 - §890 — Every picture in the demo is its own (amended by §1026)
@@ -1358,7 +1358,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1022 — A checklist item becomes a reminder (amended by §1100)
 - §1023 — A sketch in a note
 - §1024 — A voice note shares as a card with its waveform, and the recording rides along
-- §1025 — Addresses gets smarter: four more suggestion rules, a named author, the first transfer, a book anchor, and Shortcuts
+- §1025 — Addresses gets smarter: four more suggestion rules, a named author, the first transfer, a book anchor, and Shortcuts (part superseded by §1181)
 - §1026 — The demo is one person's life, not one subject in every room
 - §1027 — An entry field's placeholder wraps, and its well spans the column
 - §1029 — A connect LANDS YOU IN THE ROOM, on every account page (amended by §1162)
@@ -1535,6 +1535,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1178 — A thing sheet's acts are the rooms' tiles
 - §1179 — A thing sheet stands in the room's frame: the box, the tiles, the rest
 - §1180 — Settings' box and Markets' box are one box: the words stand at one edge on one baseline
+- §1181 — The money receipt stands in the room's frame, its fourth tile keeps up with it, and its history is this year's totals
 
 ## Dead rulings → what replaced them (generated)
 

@@ -61,11 +61,11 @@ trap 'rm -rf "$TMP"' EXIT
 # no hero at all — if this reverts, the whole feature is invisible while every
 # assertion below still passes.
 grep -q 'if let moneyReceipt {' "$SHEET" \
-  || { echo "✗ ThingSheetView no longer draws MoneyReceiptCard as its hero"; exit 1; }
-# Argument-tolerant since the card gained `onSubject:` (prd §369 amendment) —
-# it asserts the CALL, not one spelling of its argument list.
-grep -q 'MoneyReceiptCard(receipt: moneyReceipt' "$SHEET" \
-  || { echo "✗ ThingSheetView's hero branch no longer builds MoneyReceiptCard"; exit 1; }
+  || { echo "✗ ThingSheetView no longer draws the money receipt as its hero"; exit 1; }
+# The receipt stands in the room's box since prd §1181 (`MoneyReceiptBox`,
+# `.dsRoomBox()`); it asserts the CALL, not one spelling of its argument list.
+grep -q 'MoneyReceiptBox(receipt: moneyReceipt' "$SHEET" \
+  || { echo "✗ ThingSheetView's hero branch no longer builds MoneyReceiptBox"; exit 1; }
 
 # --- the §369 amendment (2026-08-16) ----------------------------------------
 # Four changes whose failure mode is, in every case, that the card looks
@@ -100,8 +100,10 @@ grep -qE 'accessibilityValue\(Text\((verbatim: \[)?receipt\.spokenValue' "$CARD"
   || { echo "✗ the tear animation is back (prd §583 removed the edge it cut)"; exit 1; }
 ! grep -q 'static let tear = Animation' "$TOKENS" \
   || { echo "✗ DS.Motion.tear is back — a motion token nothing animates"; exit 1; }
-grep -q 'dsSheetHeadBlock()' "$CARD" \
-  || { echo "✗ the receipt head no longer takes the shared head metrics"; exit 1; }
+# Since prd §1181 the receipt stands in the room's box, the metrics every
+# room's box and every framed sheet share.
+grep -q 'MoneyReceiptBox(receipt: moneyReceipt' "$SHEET" && grep -q '\.dsRoomBox()' "$SHEET" \
+  || { echo "✗ the receipt no longer stands in the room's box (prd §1181)"; exit 1; }
 # WHAT THE TEAR SAID, THE STAMP MUST GO ON SAYING. This is the load-bearing
 # half of §583: the edge carried finality, and deleting it was only safe
 # because every state that resolves to `.open` also stamps a word in a
@@ -134,7 +136,7 @@ grep -q 'onSubject: openAddressCard' "$SHEET" \
   || { echo "✗ ThingSheetView grew a fourth sibling .sheet (one-screen-one-sheet)"; exit 1; }
 
 # 4. The figure counts rather than blinking.
-grep -q 'contentTransition(amount.numeric.map' "$CARD" \
+grep -q 'amount.numeric.map { .numericText' "$CARD" && grep -q 'contentTransition(roll)' "$CARD" \
   || { echo "✗ the figure no longer rolls when a pending amount settles"; exit 1; }
 
 # 5. The flat edge on the lock screen. Every failure here is a lock screen that
@@ -191,7 +193,7 @@ fi
 grep -q 'static func receiptPour' "$TOKENS" \
   || { echo "✗ DS.receiptPour is gone — the pour would be raw hex in a view"; exit 1; }
 if grep -qE '#[0-9a-fA-F]{6}' "$CARD"; then
-  echo "✗ MoneyReceiptCard holds raw hex (§8: every value routes through a token)"; exit 1
+  echo "✗ the receipt file holds raw hex (§8: every value routes through a token)"; exit 1
 fi
 
 # The two parsers that survived the stage retirement, and the two readers that
@@ -199,10 +201,11 @@ fi
 # self-move's Name disc back on, both of which render as "fine".
 grep -q 'struct SwapStage' "$STAGE" \
   || { echo "✗ SwapStage is gone — a swap's rate line has nothing to divide"; exit 1; }
-# Since prd §916 the disc also names a sender, a poster or a login
-# (`nameIdentityAction`); the self-move guard is the SAME `MovedStage` gate.
-grep -q 'MovedStage(thing) == nil ? (nameCounterpartyAction ?? nameIdentityAction) : nil' "$SHEET" \
-  || { echo "✗ the Name disc no longer stands down on a self-move"; exit 1; }
+# Since prd §1181 naming is the fourth tile's Save (`moneyKeep`), offered only
+# with a person on the other side — `moneyHasPerson`, the SAME `MovedStage`
+# gate: a self-move's other side is your own wallet.
+grep -q 'thing.source == "Wallet" && MovedStage(thing) == nil' "$SHEET" \
+  || { echo "✗ Save no longer stands down on a self-move"; exit 1; }
 
 # The probe. An absent receipt has six causes and only two are bugs; without
 # this hook there is no way to tell them apart on a device.

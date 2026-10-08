@@ -47,6 +47,9 @@ struct ThingSheetView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
     @Environment(ShellChrome.self) private var chrome
+    /// For the Track tray a repeating charge raises (prd §1181); optional, since a
+    /// Catalyst sheet may not carry it (§872), and then Track is not offered.
+    @Environment(BridgeStore.self) private var bridges: BridgeStore?
 
     @State private var confirmingVerb: Verb?
     /// The screenshot, opened full screen and zoomable (2026-08-02) — the Zoom
@@ -127,12 +130,16 @@ struct ThingSheetView: View {
         /// comment goes out of its way to avoid — caught by
         /// `money-receipt-selftest`'s own guard when one was first added.
         case remind(ordinal: Int, text: String)
+        /// Track a subscription, filled in from a charge that repeats (prd
+        /// §1181) — a case here for the reason `remind` is one.
+        case track(String)
 
         var id: String {
             switch self {
             case .person(let profile): return "person:\(profile.id)"
             case .address(let entry):  return "address:\(entry.id)"
             case .remind(let ordinal, _): return "remind:\(ordinal)"
+            case .track(let name): return "track:\(name)"
             }
         }
     }
@@ -154,6 +161,14 @@ struct ThingSheetView: View {
     /// since a Safe receipt's stamp and its signer sentence both read it.
     @State private var moneyReceipt: MoneyReceipt?
     @State private var moneySays: MoneyCommentary?
+    /// The last three with this party and how many there are in all (prd
+    /// §1181), read with the receipt, never in a body (§628).
+    @State private var moneyHistory: [Thing] = []
+    @State private var moneyHistoryTotal = 0
+    /// This year with this party (prd §1181): sent and received, in dollars
+    /// and counts, this transfer included.
+    @State private var moneyYear = MoneyYear()
+    struct MoneyYear { var sentUSD = 0.0, sentCount = 0, receivedUSD = 0.0, receivedCount = 0 }
     /// Mirrors `MoneyActivityDriver.isTracking` for this record, so the control
     /// re-labels itself the moment it is used.
     @State private var tracking = false
@@ -464,57 +479,72 @@ struct ThingSheetView: View {
                     // than the eyebrow above it and every row below it. The
                     // paper's edge hid that; without it the step is the first
                     // thing you see, which is how it was caught.
-                    MoneyReceiptCard(receipt: moneyReceipt,
-                                     landed: thing.capturedAt,
-                                     kindWord: moneyKindWord,
-                                     onSubject: openAddressCard,
-                                     history: counterpartyHistory)
-                        .settleIn(delay: 0.06)
+                    // THE ROOM'S FRAME (prd §1181): the party's name as the
+                    // sheet's title, the box (its face, what happened, the
+                    // amount, its worth, a row of facts), the tiles ending in
+                    // the act that keeps up with it, then the last three with
+                    // this party as rows — title, box, tiles, list, a room's order.
+                    // The party's name is the sheet's title, a room's own row.
+                    DSRoomTitleRow(title: MoneyReceiptBox.title(moneyReceipt))
+                        .padding(.horizontal, DSRoomChassis.inset)
+                        .padding(.top, onBack == nil ? DS.Space.s4 : DS.Space.s3)
+                        .settleIn(delay: 0.04)
+                    MoneyReceiptBox(receipt: moneyReceipt, landed: thing.capturedAt,
+                                    transfer: moneyTransfer(moneyReceipt),
+                                    source: thing.source, cells: moneyCells(moneyReceipt),
+                                    unnamed: moneyUnnamed, onSubject: openAddressCard)
                         // Read once per open (§628), the spec row's own read.
-                        .task(id: "firstSeen:\(thing.counterpartyAddress ?? "")") { readFirstSeen() }
-                    // The poisoning flag rides EVERY wallet stage now, not just
-                    // Sent/Received — a spoofed-address warning on a Swap or a
-                    // Moved leg is exactly as real, and used to be invisible
-                    // (those never earned a stage before 2026-07-21, and the
-                    // warning only ever rendered inside one).
+                        .task(id: "firstSeen:\(thing.counterpartyAddress ?? "")") {
+                            readFirstSeen()
+                            readMoneyHistory()
+                        }
+                        .dsRoomBox()
+                        .padding(.top, DS.Space.s3)
+                        .settleIn(delay: 0.06)
+                    VerbDial(thing: thing, verbs: walletVerbs, onVerb: runVerb, onName: nil,
+                             keep: moneyKeep)
+                        .padding(.top, DSRoomChassis.leadGap)
+                        .settleIn(delay: 0.08)
+                    dialResult
+                    // The poisoning flag rides EVERY wallet stage, and a record
+                    // still in the machine can be watched from the lock screen
+                    // (prd §369 amendment) — both under the tiles now.
                     if thing.isFlagged {
                         securityWarning
                             .padding(.horizontal, DS.Space.s4)
                             .padding(.top, DS.Space.s3)
-                            .settleIn(delay: 0.08)
+                            .settleIn(delay: 0.1)
                     }
-                    // What the app has to say about it — a sentence that has
-                    // already read the evidence under it. nil is the healthy
-                    // answer for most rows (a first transfer, a one-off
-                    // merchant), and then the receipt simply stands alone.
-                    // A record still in the machine can be watched from the
-                    // lock screen (prd §369 amendment). THE FLAT EDGE EARNS THE
-                    // CONTROL: it appears only while `finality == .open`, and
-                    // it is the tear that ends it.
                     if moneyReceipt.finality == .open {
                         trackRecordControl(moneyReceipt)
                             .padding(.horizontal, DS.Space.s4)
                             .padding(.top, DS.Space.s3)
                             .settleIn(delay: 0.11)
                     }
-                    VerbDial(thing: thing, verbs: walletVerbs,
-                             onVerb: runVerb,
-                             // A Moved leg's counterparty IS your own watched
-                             // wallet — it already has a name (via the Wallet
-                             // screen's rename), so the Name disc would just
-                             // offer to relabel it through the wrong flow.
-                             onName: MovedStage(thing) == nil ? (nameCounterpartyAction ?? nameIdentityAction) : nil)
-                        .padding(.top, DS.Space.s6)
-                        .settleIn(delay: 0.12)
-                    dialResult
-                    // THE HISTORY FOLLOWS THE DIAL, flat (prd §887) — the words
-                    // above it are the receipt, this is what the app read
-                    // around it. nil is the healthy answer for most rows.
-                    if let moneySays {
+                    // What the app read around it, when it is not the history the
+                    // rows already list: a Privacy Pools ladder, a swap's rate, a
+                    // note. The history and merchant bars are the rows now.
+                    if let moneySays, moneySays.drawsBesideRows {
                         MoneyCommentaryCard(commentary: moneySays)
                             .padding(.horizontal, DS.Space.s4)
                             .padding(.top, DS.Space.s6)
-                            .settleIn(delay: 0.14)
+                            .settleIn(delay: 0.11)
+                    }
+                    if moneyHasPerson, let cp = thing.counterpartyAddress {
+                        MoneyYearTotals(name: moneyPartyName(moneyReceipt),
+                                        sentUSD: moneyYear.sentUSD, sentCount: moneyYear.sentCount,
+                                        receivedUSD: moneyYear.receivedUSD, receivedCount: moneyYear.receivedCount,
+                                        onAll: { openAddressCard(cp) })
+                            .padding(.top, DS.Space.s6)
+                            .settleIn(delay: 0.12)
+                    } else {
+                        MoneyHistoryRows(title: moneyHistoryTitle(moneyReceipt),
+                                         rows: moneyHistory.keyed, total: moneyHistoryTotal,
+                                         doorWord: moneyHistoryDoor(moneyReceipt),
+                                         onOpen: { walkingToScope = .none; walkingToNote = KeyedThing($0) },
+                                         onAll: nil)
+                            .padding(.top, DS.Space.s6)
+                            .settleIn(delay: 0.12)
                     }
                 } else if framedShot {
                     // The framed exception (B1c): facts stand bare on the wash;
@@ -1386,6 +1416,13 @@ struct ThingSheetView: View {
             case .address(let entry):  AddressCard(entry: entry)
             case .remind(_, let text):
                 NoteRemindTray(note: thing, item: text)
+            case .track(let name):
+                SubscriptionAddTray(prefill: .init(name: name, site: nil))
+                    // A Catalyst sheet does not inherit the presenter's
+                    // environment (prd §872).
+                    .environment(chrome)
+                    .environment(bridges)
+                    .environment(\.modelContext, modelContext)
             }
         }
         // Walking a vault's own wikilink graph (2026-07-28) — a plain
@@ -2794,6 +2831,137 @@ struct ThingSheetView: View {
                                                   safe: safeCheck)
     }
 
+    // MARK: - The receipt in the room's frame (prd §1181)
+
+    /// The party's name for the history: the receipt's party, else its lead.
+    private func moneyPartyName(_ r: MoneyReceipt) -> String {
+        if let party = r.party, !party.isEmpty { return party }
+        return r.lead
+    }
+
+    /// The two sides of a wallet transfer, for the box's faces (prd §1181).
+    private func moneyTransfer(_ r: MoneyReceipt) -> MoneyReceiptBox.Transfer? {
+        guard moneyHasPerson, let cp = thing.counterpartyAddress, let mine = thing.walletAddress,
+              !mine.isEmpty else { return nil }
+        let mineLabel = WalletStore.shared.addresses
+            .first { $0.address.caseInsensitiveCompare(mine) == .orderedSame }
+            .map { $0.label.isEmpty ? WalletStore.shortAddress(mine) : $0.label } ?? WalletStore.shortAddress(mine)
+        return MoneyReceiptBox.Transfer(
+            mineAddress: mine, mineLabel: mineLabel,
+            theirAddress: cp, theirName: moneyPartyName(r),
+            sent: thing.transferDirection != "received",
+            usd: thing.transferUSD,
+            network: WalletIngest.chainName(forContent: thing.content))
+    }
+
+    /// An address nobody has named — the head says "Tap to name".
+    private var moneyUnnamed: Bool {
+        guard let receipt = moneyReceipt, receipt.party == nil || receipt.party?.isEmpty == true,
+              case .address(let a) = receipt.subject, !a.isEmpty else { return false }
+        return AddressBook.shared.entry(for: a) == nil && WalletIngest.knownLabel(for: a) == nil
+    }
+
+    /// Whether this is a Wallet transfer with a person on the other side:
+    /// not a Moved leg (your own wallet) and not a World ID grant (a contract).
+    private var moneyHasPerson: Bool {
+        thing.source == "Wallet" && MovedStage(thing) == nil
+            && !(thing.counterpartyAddress ?? "").isEmpty
+            && !WalletIngest.isWorldGrantHolder(thing.counterpartyAddress)
+    }
+
+    /// The row of facts, each a phrase read value-then-label (user: "wtf is
+    /// '2 times here'"): Settled · Status, then where it moved, then which
+    /// time this is with them — "2nd · With Sam", "2nd · Visit" — and, at a
+    /// merchant, when you were last there. Nothing the line above says.
+    private func moneyCells(_ r: MoneyReceipt) -> [MoneyReceiptCell] {
+        var out: [MoneyReceiptCell] = []
+        out.append(MoneyReceiptCell(value: r.stamp?.word ?? (r.finality == .open ? String(localized: "Waiting")
+                                                                                 : String(localized: "Final")),
+                                    label: String(localized: "Status"), wants: r.finality == .open))
+        if let network = WalletIngest.chainName(forContent: thing.content), !network.isEmpty {
+            out.append(MoneyReceiptCell(value: network, label: String(localized: "Network")))
+        }
+        if moneyHistoryTotal > 0 {
+            let ordinal = NumberFormatter.localizedOrdinal(moneyHistoryTotal + 1)
+            out.append(MoneyReceiptCell(value: ordinal,
+                                        label: moneyHasPerson ? String(localized: "With \(moneyPartyName(r))")
+                                                              : String(localized: "Visit")))
+            if !moneyHasPerson, let last = moneyHistory.first?.capturedAt {
+                out.append(MoneyReceiptCell(value: last.formatted(.dateTime.month(.abbreviated).day()),
+                                            label: String(localized: "Last visit")))
+            }
+        }
+        return out
+    }
+
+    private func moneyHistoryTitle(_ r: MoneyReceipt) -> String {
+        moneyHasPerson ? String(localized: "With \(moneyPartyName(r))")
+                       : String(localized: "At \(moneyPartyName(r))")
+    }
+
+    private func moneyHistoryDoor(_ r: MoneyReceipt) -> String? {
+        guard moneyHasPerson else { return nil }
+        return String(localized: "All \(moneyHistoryTotal + 1) with \(moneyPartyName(r))")
+    }
+
+    /// The fourth tile: the act that keeps up with it for you. Save a person
+    /// you have not, Watch one you have, Track a charge that repeats.
+    private var moneyKeep: VerbDial.Keep? {
+        if moneyHasPerson, let cp = thing.counterpartyAddress?.lowercased() {
+            if AddressBook.shared.entry(for: cp) == nil {
+                guard let name = nameCounterpartyAction else { return nil }
+                return VerbDial.Keep(label: String(localized: "Save"), glyph: "person.crop.circle.badge.plus", act: name)
+            }
+            guard !WalletStore.shared.addresses.contains(where: { $0.address.lowercased() == cp }) else { return nil }
+            return VerbDial.Keep(label: String(localized: "Watch"), glyph: ScopeTileGlyph.watch) {
+                let label = AddressBook.shared.name(for: cp) ?? ""
+                let added = WalletStore.shared.add(cp, label: label)
+                chrome.flash(added ? String(localized: "Watching \(label.isEmpty ? WalletStore.shortAddress(cp) : label)")
+                                   : String(localized: "Couldn't watch this wallet"),
+                             tone: added ? .success : .failure)
+            }
+        }
+        guard thing.source != "Wallet", moneyHistoryTotal >= 1, bridges != nil,
+              let receipt = moneyReceipt else { return nil }
+        let name = moneyPartyName(receipt)
+        return VerbDial.Keep(label: String(localized: "Track"), glyph: SubscriptionWords.planGlyph) {
+            faceTarget = .track(name)
+        }
+    }
+
+    /// The last three with this party, and how many in all: a Wallet transfer
+    /// by its counterparty, a card spend by its merchant in the same source.
+    private func readMoneyHistory() {
+        guard thing.isLive else { return }
+        let id = thing.id
+        var others: [Thing] = []
+        if let cp = thing.counterpartyAddress?.lowercased(), !cp.isEmpty, thing.source == "Wallet" {
+            let d = FetchDescriptor<Thing>(
+                predicate: #Predicate { $0.source == "Wallet" && $0.counterpartyAddress == cp },
+                sortBy: [SortDescriptor(\Thing.capturedAt, order: .reverse)])
+            others = ((try? modelContext.fetch(d)) ?? []).filter { $0.isLive && $0.id != id }
+        } else {
+            let source = thing.source, title = thing.title
+            let d = FetchDescriptor<Thing>(
+                predicate: #Predicate { $0.source == source && $0.title == title },
+                sortBy: [SortDescriptor(\Thing.capturedAt, order: .reverse)])
+            others = ((try? modelContext.fetch(d)) ?? []).filter { $0.isLive && $0.id != id }
+        }
+        moneyHistoryTotal = others.count
+        moneyHistory = Array(others.prefix(3))
+        // This year with them, this transfer included (prd §1181).
+        var year = MoneyYear()
+        let cal = Calendar.current
+        for t in others + [thing] where t.isLive && cal.isDate(t.capturedAt, equalTo: .now, toGranularity: .year) {
+            if t.transferDirection == "received" {
+                year.receivedCount += 1; year.receivedUSD += t.transferUSD ?? 0
+            } else {
+                year.sentCount += 1; year.sentUSD += t.transferUSD ?? 0
+            }
+        }
+        moneyYear = year
+    }
+
     /// A transaction whose whole body is the explorer link AND carries nothing
     /// else to read — the content view would render an empty block, so skip it
     /// (2026-08-12).
@@ -2892,8 +3060,10 @@ struct ThingSheetView: View {
     /// disc that really does open something is a small lie with no symptom.
     private var walletVerbs: [Verb] {
         var out: [Verb] = []
+        // "Explorer", whichever site it opens (prd §1181, user: "just say
+        // explorer"): a tile names the act, never the place.
         if let url = Capture.detectURL(in: thing.content) {
-            out.append(Verb(label: Self.explorerLabel(url), icon: "arrow.up.right",
+            out.append(Verb(label: String(localized: "Explorer"), icon: "arrow.up.right",
                             action: .openURL(url)))
         }
         // A World ID grant opens where the next one is claimed (prd §792) —
@@ -2905,22 +3075,6 @@ struct ThingSheetView: View {
         }
         out.append(Verb(label: "Copy link", icon: "doc.on.doc", action: .copyText))
         return out
-    }
-
-    /// "Etherscan" from `etherscan.io`, "mempool" from `mempool.space`. Falls
-    /// back to the generic word rather than inventing a name for a host we
-    /// don't recognize — a disc reading "Explorer" is honest everywhere.
-    static func explorerLabel(_ url: URL) -> String {
-        let host = (url.host() ?? "").lowercased()
-            .replacingOccurrences(of: "www.", with: "")
-        let known = ["etherscan.io": "Etherscan", "basescan.org": "Basescan",
-                     "gnosisscan.io": "Gnosisscan", "optimistic.etherscan.io": "Etherscan",
-                     "mempool.space": "mempool", "solscan.io": "Solscan",
-                     "app.0xbow.io": "0xBow", "app.safe.global": "Safe",
-                     "app.morpho.org": "Morpho", "app.hyperliquid.xyz": "Hyperliquid",
-                     "worldscan.org": "Worldscan"]
-        if let name = known[host] { return name }
-        return String(localized: "Explorer")
     }
 
     /// A podcast episode's own audio file, as a HAND-OFF (2026-08-06).
