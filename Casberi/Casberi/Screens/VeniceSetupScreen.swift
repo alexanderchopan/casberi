@@ -72,7 +72,7 @@ struct VeniceSetupScreen: View {
             // never applied to (2026-07-31). With one instruction left the
             // numerals go too, per §220's boundary.
             BridgeSetupCard(steps: [], numbered: false) {
-                DSSlabButton(title: "Get your API key",
+                DSSlabButton(tile: .getKey, title: "Get your API key",
                              detail: "venice.ai",
                              systemImage: "arrow.up.right",
                              url: URL(string: "https://venice.ai/settings/api"))

@@ -234,7 +234,7 @@ struct AppStoreConnectScreen: View {
                                    onOpen: { doorTapped = true })
                     } else {
                         // Verb over address, the 2026-08-14 anatomy.
-                        DSSlabButton(title: bridge.doorTitle,
+                        DSSlabButton(tile: .getKey, title: bridge.doorTitle,
                                      detail: bridge.doorHost,
                                      systemImage: "arrow.up.right", url: url,
                                      onOpen: { doorTapped = true })
@@ -248,7 +248,7 @@ struct AppStoreConnectScreen: View {
             // `.p8` is read where it landed, on the device it landed on,
             // and its own filename answers the Key ID field below.
             if pickLeads {
-                DSSlabButton(title: "Choose the .p8 file",
+                DSSlabButton(tile: .keyFile, title: "Choose the .p8 file",
                              systemImage: "doc.badge.arrow.up") {
                     DSHaptic.tap()
                     pickingKey = true

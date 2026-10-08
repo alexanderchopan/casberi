@@ -54,7 +54,7 @@ struct PrivyScreen: View {
     }
 
     @ViewBuilder private var connectBlock: some View {
-        DSSlabButton(title: "Connect Privy",
+        DSSlabButton(tile: .signIn, title: "Connect Privy",
                      systemImage: "person.badge.key",
                      action: { DSHaptic.tap(); result = nil; sheet = .card(id: "privyHome") })
         BridgeSyncStatusRows(syncing: syncing,

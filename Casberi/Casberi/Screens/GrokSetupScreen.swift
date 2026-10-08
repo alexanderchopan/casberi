@@ -78,7 +78,7 @@ struct GrokSetupScreen: View {
             // Verb over address, the 2026-08-14 anatomy.
             // Unnumbered — the door did step one (ruling 2026-08-14).
             BridgeSetupCard(steps: [], numbered: false) {
-                DSSlabButton(title: "Get your API key",
+                DSSlabButton(tile: .getKey, title: "Get your API key",
                              detail: "console.x.ai",
                              systemImage: "arrow.up.right",
                              url: URL(string: "https://console.x.ai/"))

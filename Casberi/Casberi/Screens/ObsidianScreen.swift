@@ -65,7 +65,7 @@ struct ObsidianScreen: View {
             // The screen's one verb, as the screen's one filled block
             // (prd §218) — it was a blue text row, which read as a link to
             // somewhere rather than the act itself.
-            DSSlabButton(title: "Choose your vault folder",
+            DSSlabButton(tile: .folder, title: "Choose your vault folder",
                          systemImage: "folder.badge.plus") { picking = true }
         }
         BridgeSyncStatusRows(syncing: syncing, syncingLine: String(localized: "Reading your notes…"),

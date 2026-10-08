@@ -136,7 +136,7 @@ struct InstagramImportScreen: View {
                     Spacer(minLength: 0)
                 }
             } else {
-                DSSlabButton(title: "Connect",
+                DSSlabButton(tile: .signIn, title: "Connect",
                              detail: String(localized: "Live notifications and saves"),
                              systemImage: "bell.badge",
                              busy: false) { sheet = .card(id: "igLive") }

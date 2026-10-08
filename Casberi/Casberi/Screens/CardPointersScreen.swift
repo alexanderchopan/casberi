@@ -84,7 +84,7 @@ struct CardPointersScreen: View {
             // flow's door must not leave the app. It carries `url:` rather
             // than a closure: a closure calling this screen's own `openURL`
             // resolves ABOVE the page and cannot be caught.
-            DSSlabButton(title: "Open the approval page",
+            DSSlabButton(tile: .approve, title: "Open the approval page",
                          systemImage: "safari",
                          url: URL(string: pending.verificationURLComplete))
         } else if needsPlus {
@@ -99,7 +99,7 @@ struct CardPointersScreen: View {
                              url: URL(string: upgradeURL))
             }
         } else {
-            DSSlabButton(title: "Connect CardPointers",
+            DSSlabButton(tile: .signIn, title: "Connect CardPointers",
                          systemImage: "person.badge.key",
                          action: connect)
         }

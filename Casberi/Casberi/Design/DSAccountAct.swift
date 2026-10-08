@@ -123,3 +123,83 @@ extension View {
             .contentShape(Rectangle())
     }
 }
+
+// MARK: - The act's verbs as tiles (prd §1197)
+
+/// One of an account page's tiles (prd §1197): a verb, drawn by
+/// `DSScopeTiles` as a thing sheet's are (`SheetTile`), in the caller's order.
+/// `enabled` false draws it in place, dimmed (the tiles never move).
+struct AccountTile {
+    let id: String
+    let label: String
+    let glyph: String
+    var enabled = true
+    let act: () -> Void
+
+    var scope: SheetTile { SheetTile(id: id, label: label, glyph: glyph) }
+
+    /// What a redraw compares: everything but the closure.
+    var key: String { "\(id)|\(label)|\(glyph)|\(enabled)" }
+}
+
+/// THE WORD AND GLYPH A SLAB TAKES AS A TILE (prd §1197). A slab's title is
+/// a sentence ("Get your API key", "Connect Rocket Money"); a tile is a word
+/// over a glyph, so the call site names which word, from this one table —
+/// the same act wears the same tile on every page.
+struct SlabTile: Equatable {
+    let label: String
+    let glyph: String
+
+    static let signIn  = SlabTile(label: String(localized: "Sign in"), glyph: "person.badge.key")
+    static let getKey  = SlabTile(label: String(localized: "Get key"), glyph: "key.horizontal")
+    static let getPassword = SlabTile(label: String(localized: "Password"), glyph: "key.horizontal")
+    static let keyFile = SlabTile(label: String(localized: "Key file"), glyph: "doc.badge.plus")
+    static let allow   = SlabTile(label: String(localized: "Allow"), glyph: "checkmark.shield")
+    static let folder  = SlabTile(label: String(localized: "Folder"), glyph: "folder.badge.plus")
+    static let photos  = SlabTile(label: String(localized: "Photos"), glyph: "photo.on.rectangle")
+    static let importFile = SlabTile(label: String(localized: "Import"), glyph: "square.and.arrow.down")
+    static let follow  = SlabTile(label: String(localized: "Follow"), glyph: ScopeTileGlyph.watch)
+    static let reconnect = SlabTile(label: String(localized: "Reconnect"), glyph: "arrow.clockwise")
+    static let turnOn  = SlabTile(label: String(localized: "Turn on"), glyph: "power")
+    static let ask     = SlabTile(label: String(localized: "Ask"), glyph: "sparkles")
+    static let approve = SlabTile(label: String(localized: "Approve"), glyph: "checkmark.seal")
+    static let getApp  = SlabTile(label: String(localized: "Get app"), glyph: "arrow.down.app")
+}
+
+/// The tiles a page's act slot hands up (prd §1197). A slab marked with a
+/// `SlabTile` and standing in an account page's act registers here and draws
+/// nothing in its row; the chassis draws the tiles under the box. Observable,
+/// not a preference: a `List` row's preferences do not reach the rows beside
+/// it.
+@MainActor @Observable
+final class AccountTileBoard {
+    private(set) var tiles: [AccountTile] = []
+
+    /// Writes only on a change, so a redraw that re-registers the same verb
+    /// invalidates nothing.
+    func put(_ tile: AccountTile) {
+        if let i = tiles.firstIndex(where: { $0.id == tile.id }) {
+            guard tiles[i].key != tile.key else { return }
+            tiles[i] = tile
+        } else {
+            tiles.append(tile)
+        }
+    }
+
+    func remove(_ id: String) {
+        tiles.removeAll { $0.id == id }
+    }
+}
+
+private struct AccountTileBoardKey: EnvironmentKey {
+    static let defaultValue: AccountTileBoard? = nil
+}
+
+extension EnvironmentValues {
+    /// Set on an account page's act slot only — never on `more()` or the key
+    /// sheet, which draw their slabs where they stand.
+    var accountTileBoard: AccountTileBoard? {
+        get { self[AccountTileBoardKey.self] }
+        set { self[AccountTileBoardKey.self] = newValue }
+    }
+}

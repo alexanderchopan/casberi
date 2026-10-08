@@ -137,7 +137,7 @@ struct PostHogScreen: View {
                 if let url = TokenBridge.posthog.setupURL {
                     // Step one, doing itself (prd §218) — verb over address,
                     // the 2026-08-14 anatomy.
-                    DSSlabButton(title: TokenBridge.posthog.doorTitle,
+                    DSSlabButton(tile: .getKey, title: TokenBridge.posthog.doorTitle,
                                  detail: TokenBridge.posthog.doorHost,
                                  systemImage: "arrow.up.right", url: url)
                 }

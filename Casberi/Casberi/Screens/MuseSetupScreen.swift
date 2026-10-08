@@ -92,7 +92,7 @@ struct MuseSetupScreen: View {
             BridgeSetupCard(steps: ["Add a payment method under Billing",
                                     "Meta shows the key only once"],
                             numbered: false) {
-                DSSlabButton(title: "Get your API key",
+                DSSlabButton(tile: .getKey, title: "Get your API key",
                              detail: "dev.meta.ai",
                              systemImage: "arrow.up.right",
                              url: URL(string: "https://dev.meta.ai/"))

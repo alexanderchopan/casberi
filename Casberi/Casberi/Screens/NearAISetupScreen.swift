@@ -64,7 +64,7 @@ struct NearAISetupScreen: View {
     @ViewBuilder private var setupBlock: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             BridgeSetupCard(steps: [], numbered: false) {
-                DSSlabButton(title: "Get your API key",
+                DSSlabButton(tile: .getKey, title: "Get your API key",
                              detail: "cloud.near.ai",
                              systemImage: "arrow.up.right",
                              url: URL(string: "https://cloud.near.ai"))

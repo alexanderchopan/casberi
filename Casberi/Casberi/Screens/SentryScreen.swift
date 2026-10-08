@@ -96,7 +96,7 @@ struct SentryScreen: View {
                 if let url = TokenBridge.sentry.setupURL {
                     // Step one, doing itself (prd §218) — verb over address,
                     // the 2026-08-14 anatomy.
-                    DSSlabButton(title: TokenBridge.sentry.doorTitle,
+                    DSSlabButton(tile: .getKey, title: TokenBridge.sentry.doorTitle,
                                  detail: TokenBridge.sentry.doorHost,
                                  systemImage: "arrow.up.right", url: url)
                 }

@@ -63,7 +63,7 @@ struct DuolingoScreen: View {
             }
             .padding(.vertical, DS.Space.s1)
         } else {
-            DSSlabButton(title: "Connect Duolingo",
+            DSSlabButton(tile: .signIn, title: "Connect Duolingo",
                          systemImage: "person.badge.key",
                          action: { DSHaptic.tap(); result = nil; sheet = .card(id: "duolingoLive") })
         }

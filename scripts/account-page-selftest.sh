@@ -218,6 +218,17 @@ grep -q 'DSScopeTiles(sections:' "$TMP/page-bare.swift" \
 grep -q 'BridgeIcon(name: name, size: DS.Mark.hero)' "$TMP/page-bare.swift" \
   || { echo "✗ the box's mark is not on DS.Mark.hero"; exit 1; }
 
+# 12b. A SLAB STANDS AS A TILE ONLY FROM THE ACT SLOT (prd §1197). The board
+#     its tile registers with is handed to the act slot alone: on `more()` or
+#     the key sheet a tagged slab would vanish from a screen whose tiles are
+#     not on it — the key sheet stands OVER the tiles.
+boards=$(grep -c 'environment(\\.accountTileBoard, board)' "$TMP/page-bare.swift" || true)
+[[ "$boards" -eq 1 ]] \
+  || { echo "✗ AccountPage hands its tile board to $boards places, expected 1 (the act slot)"; exit 1; }
+strayb=$(grep -rl 'accountTileBoard, ' Casberi --include='*.swift' | grep -v 'Screens/AccountPage.swift' || true)
+[[ -z "$strayb" ]] \
+  || { echo "✗ a tile board is set outside the chassis: $strayb"; exit 1; }
+
 # 13. THE ACT DRAWS ROWS (prd §640). The flag that turns every slab primitive
 #     into its row form is set in exactly three places, all on this chassis —
 #     the act slot, its second acts, and the key sheet that draws the same

@@ -378,7 +378,7 @@ struct ImportPickRow: View {
     let action: () -> Void
 
     var body: some View {
-        DSSlabButton(title: label, systemImage: "square.and.arrow.down") {
+        DSSlabButton(tile: .importFile, title: label, systemImage: "square.and.arrow.down") {
             DSHaptic.tap()
             action()
         }

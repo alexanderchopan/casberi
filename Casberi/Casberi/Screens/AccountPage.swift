@@ -143,6 +143,8 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
     @Environment(\.openURL) private var openURL
 
     @State private var today = 0
+    /// The verbs the act slot's slabs hand up as tiles (prd §1197).
+    @State private var board = AccountTileBoard()
     @State private var week = 0
     @State private var note = ""
     /// How far the roster's window has been opened, in `RowWindow` steps
@@ -357,8 +359,10 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
             // primary in the mockup: "don't have it be blue if it's not
             // active".
             let scopes = shown.map(\.scope)
-            DSScopeTiles(sections: scopes, active: SheetTile.none, verbs: Set(scopes)) { pick in
-                shown.first { $0.id == pick.id }?.act()
+            DSScopeTiles(sections: scopes, active: SheetTile.none, verbs: Set(scopes),
+                         inert: Set(shown.filter { !$0.enabled }.map(\.scope))) { pick in
+                guard let tile = shown.first(where: { $0.id == pick.id }), tile.enabled else { return }
+                tile.act()
             }
             .padding(.horizontal, DSRoomChassis.inset)
             .padding(.top, DSRoomChassis.leadGap)
@@ -422,7 +426,7 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
     /// Website, Pause. Four at most (prd §1184's one row); Pause gives way
     /// first and then stands as a row in the exits.
     private var shownTiles: [AccountTile] {
-        var all = tiles
+        var all = tiles + board.tiles
         if lands, state.connected {
             all.append(AccountTile(id: "open", label: String(localized: "Open"),
                                    glyph: ScopeTileGlyph.open, act: openRoom))
@@ -437,7 +441,7 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
 
     /// The app's own site, from the catalogue's domains.
     private var websiteURL: URL? {
-        SubscriptionAddTray.siteByOffer[name].flatMap { URL(string: "https://\($0)") }
+        AppHomepages.url(for: name, derived: SubscriptionAddTray.siteByOffer[name])
     }
 
     /// Pause or Resume, where reading can be paused (prd §835: never on a
@@ -500,6 +504,9 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
         // not inherit this (verified in the simulator: the door there
         // opened real Safari until it got one).
         .environment(\.openURL, doorAction)
+        // Its slabs stand as tiles under the box (prd §1197) — the act slot
+        // only, so the key sheet and `more()` draw theirs where they stand.
+        .environment(\.accountTileBoard, board)
         // THE ACT DRAWS ROWS, NOT SLABS (prd §640) — one environment flag, so
         // all 55 screens change with their call sites untouched. See
         // `Design/DSAccountAct.swift` for what each primitive becomes.
@@ -869,16 +876,6 @@ extension View {
     }
 }
 
-/// One of an account page's tiles (prd §1196): a verb, drawn by
-/// `DSScopeTiles` as a thing sheet's are (`SheetTile`), in the caller's order.
-struct AccountTile {
-    let id: String
-    let label: String
-    let glyph: String
-    let act: () -> Void
-
-    var scope: SheetTile { SheetTile(id: id, label: label, glyph: glyph) }
-}
 
 /// disc glyph · heading17 title · trailing subhead12 fact · chevron only if
 /// it opens a screen. 56pt, no background. A row with no action is a READ,

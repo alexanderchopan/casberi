@@ -71,7 +71,7 @@ struct RocketMoneyScreen: View {
             }
             .padding(.vertical, DS.Space.s1)
         } else {
-            DSSlabButton(title: "Connect Rocket Money",
+            DSSlabButton(tile: .signIn, title: "Connect Rocket Money",
                          systemImage: "person.badge.key",
                          action: { DSHaptic.tap(); cancelled = false; result = nil
                                    harvestedThisCover = false; showLogin = true })

@@ -87,7 +87,7 @@ struct SteamScreen: View {
             // Verb over address, the 2026-08-14 anatomy.
             // Unnumbered — the door did step one (ruling 2026-08-14).
             BridgeSetupCard(steps: steps, numbered: false) {
-                DSSlabButton(title: "Get your API key",
+                DSSlabButton(tile: .getKey, title: "Get your API key",
                              detail: "steamcommunity.com",
                              systemImage: "arrow.up.right",
                              url: URL(string: "https://steamcommunity.com/dev/apikey"))

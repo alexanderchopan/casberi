@@ -98,7 +98,7 @@ struct BankrSetupScreen: View {
                 String(localized: "Bankr answers from its own wallet, not yours."),
                 String(localized: "It can't see the wallets you follow here."),
             ], numbered: false)
-            DSSlabButton(title: "Connect",
+            DSSlabButton(tile: .signIn, title: "Connect",
                          detail: String(localized: "Sign in to Bankr"),
                          systemImage: "person.crop.circle",
                          busy: checking) { sheet = .card(id: "bankrSignIn") }

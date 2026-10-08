@@ -66,7 +66,7 @@ struct BridgeDetailScreen: View {
                 // is a manage page's one verb, which is what §190
                 // made the slab FOR — and glass is the floating
                 // layer's material by §8, never content's.
-                DSSlabButton(title: String(localized: "Reconnect"),
+                DSSlabButton(tile: .reconnect, title: String(localized: "Reconnect"),
                              systemImage: "arrow.triangle.2.circlepath") {
                     store.reconnect(bridge.id)
                     DSHaptic.success()
@@ -96,7 +96,7 @@ struct BridgeDetailScreen: View {
             // door slab (prd §613) — the pair the rest of this screen already
             // wears, where before it was two hand-rolled capsules in two
             // different materials.
-            DSSlabButton(title: String(localized: "Choose more photos"),
+            DSSlabButton(tile: .photos, title: String(localized: "Choose more photos"),
                          systemImage: "photo") {
                 DSHaptic.tap()
                 presentLimitedPicker()

@@ -70,7 +70,7 @@ struct WiseScreen: View {
                                    systemImage: "arrow.up.right", url: url,
                                    onOpen: { doorTapped = true })
                     } else {
-                        DSSlabButton(title: bridge.doorTitle,
+                        DSSlabButton(tile: .getKey, title: bridge.doorTitle,
                                      detail: bridge.doorHost,
                                      systemImage: "arrow.up.right", url: url,
                                      onOpen: { doorTapped = true })

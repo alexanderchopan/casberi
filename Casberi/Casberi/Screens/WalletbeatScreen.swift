@@ -137,7 +137,7 @@ struct WalletbeatScreen: View {
 			// whole registry, so there is nothing to name before they can arrive. Before §421
 			// they were gated behind watching a wallet — not a decision anyone took, just the
 			// watch list doubling as the connect act.
-			DSSlabButton(title: String(localized: "Follow the security news"),
+			DSSlabButton(tile: .follow, title: String(localized: "Follow the security news"),
 						 systemImage: "eye", action: follow)
 		}
 	}

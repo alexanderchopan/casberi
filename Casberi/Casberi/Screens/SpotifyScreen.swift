@@ -69,7 +69,7 @@ struct SpotifyScreen: View {
             }
             .padding(.vertical, DS.Space.s1)
         } else {
-            DSSlabButton(title: "Connect Spotify",
+            DSSlabButton(tile: .signIn, title: "Connect Spotify",
                          systemImage: "person.badge.key",
                          action: { DSHaptic.tap(); cancelled = false; result = nil
                                    harvestedThisCover = false; showLogin = true })

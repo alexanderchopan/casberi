@@ -71,7 +71,7 @@ struct MailScreen: View {
             BridgeSetupCard(steps: provider.steps, numbered: false) {
                 if let url = provider.setupURL {
                     // Verb over address, the 2026-08-14 anatomy.
-                    DSSlabButton(title: provider.doorTitle,
+                    DSSlabButton(tile: .getPassword, title: provider.doorTitle,
                                  detail: provider.doorHost,
                                  systemImage: "arrow.up.right", url: url)
                 }

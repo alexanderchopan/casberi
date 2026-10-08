@@ -99,7 +99,7 @@ struct AppleWalletScreen: View {
         // The screen's one verb as the screen's one filled block (prd §218) —
         // it was a plain list row, which on a page with no rows around it read
         // as a label rather than the act itself.
-        DSSlabButton(title: connecting ? "Connecting…" : "Connect Apple Wallet",
+        DSSlabButton(tile: .allow, title: connecting ? "Connecting…" : "Connect Apple Wallet",
                      systemImage: "creditcard",
                      busy: connecting,
                      enabled: !connecting) {

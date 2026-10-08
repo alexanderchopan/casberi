@@ -164,7 +164,7 @@ struct ChatGPTImportScreen: View {
     @ViewBuilder private var keyBlock: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             BridgeSetupCard(steps: [], numbered: false) {
-                DSSlabButton(title: "Get your API key",
+                DSSlabButton(tile: .getKey, title: "Get your API key",
                              detail: AgentProvider.openai.console,
                              systemImage: "arrow.up.right",
                              url: URL(string: "https://\(AgentProvider.openai.console)"))

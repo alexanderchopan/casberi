@@ -66,7 +66,7 @@ struct FilesScreen: View {
             }
             .padding(.vertical, DS.Space.s1)
         } else {
-            DSSlabButton(title: "Choose a folder",
+            DSSlabButton(tile: .folder, title: "Choose a folder",
                          systemImage: "folder.badge.plus") { picking = true }
         }
         BridgeSyncStatusRows(syncing: syncing, syncingLine: String(localized: "Reading your files…"),

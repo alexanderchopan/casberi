@@ -64,7 +64,7 @@ struct AcornsScreen: View {
             }
             .padding(.vertical, DS.Space.s1)
         } else {
-            DSSlabButton(title: "Connect Acorns",
+            DSSlabButton(tile: .signIn, title: "Connect Acorns",
                          systemImage: "person.badge.key",
                          action: { DSHaptic.tap(); cancelled = false; result = nil
                                    harvestedThisCover = false; showLogin = true })

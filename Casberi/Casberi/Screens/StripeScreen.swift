@@ -86,7 +86,7 @@ struct StripeScreen: View {
                 if let url = TokenBridge.stripe.setupURL {
                     // Step one, doing itself (prd §218) — verb over address,
                     // the 2026-08-14 anatomy.
-                    DSSlabButton(title: TokenBridge.stripe.doorTitle,
+                    DSSlabButton(tile: .getKey, title: TokenBridge.stripe.doorTitle,
                                  detail: TokenBridge.stripe.doorHost,
                                  systemImage: "arrow.up.right", url: url)
                 }

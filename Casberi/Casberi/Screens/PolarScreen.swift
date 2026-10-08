@@ -95,7 +95,7 @@ struct PolarScreen: View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             BridgeSetupCard(steps: [TokenBridge.polar.steps[0]], numbered: false) {
                 if let url = TokenBridge.polar.setupURL {
-                    DSSlabButton(title: TokenBridge.polar.doorTitle,
+                    DSSlabButton(tile: .getKey, title: TokenBridge.polar.doorTitle,
                                  detail: TokenBridge.polar.doorHost,
                                  systemImage: "arrow.up.right", url: url)
                 }

@@ -132,7 +132,7 @@ struct L2beatScreen: View {
 				"Following L2BEAT — incidents for every chain"
 			])
 		} else {
-			DSSlabButton(title: String(localized: "Follow the incidents"),
+			DSSlabButton(tile: .follow, title: String(localized: "Follow the incidents"),
 						 systemImage: "eye", action: follow)
 		}
 	}

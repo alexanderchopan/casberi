@@ -48,14 +48,14 @@ struct AppleIntelligenceScreen: View {
             // was drawn, an ask answers on the phone and its badge says so —
             // the switch is never a control that does nothing (§83).
             if on {
-                DSSlabButton(title: "Ask Apple Intelligence",
+                DSSlabButton(tile: .ask, title: "Ask Apple Intelligence",
                              detail: "About your things",
                              systemImage: "bubble.left.and.bubble.right") {
                     DSHaptic.tap()
                     chrome.composerRequest += 1
                 }
             } else {
-                DSSlabButton(title: "Turn on",
+                DSSlabButton(tile: .turnOn, title: "Turn on",
                              detail: "Free — no key",
                              systemImage: "apple.intelligence",
                              action: turnOn)

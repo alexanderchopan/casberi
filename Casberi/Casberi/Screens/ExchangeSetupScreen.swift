@@ -92,7 +92,7 @@ struct ExchangeSetupScreen: View {
             BridgeSetupCard(steps: steps, numbered: false) {
                 if let url = setupURL {
                     // Verb over address, the 2026-08-14 anatomy.
-                    DSSlabButton(title: "Get your API key",
+                    DSSlabButton(tile: .getKey, title: "Get your API key",
                                  detail: doorHost,
                                  systemImage: "arrow.up.right", url: url)
                 }

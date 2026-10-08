@@ -646,12 +646,50 @@ struct DSSlabButton: View {
         self.action = {}; self.url = url; self.onOpen = onOpen
     }
 
+    /// THE SAME VERB, AS A TILE ON AN ACCOUNT PAGE (prd §1197): in a page's
+    /// act slot the slab stands under the box as `tile`'s word and glyph and
+    /// draws nothing where it was; anywhere else (the key sheet, `more()`, a
+    /// screen that is not an account page) it draws as before.
+    private(set) var tile: SlabTile? = nil
+
+    init(tile: SlabTile, title: String, detail: String = "", systemImage: String? = nil,
+         busy: Bool = false, enabled: Bool = true, action: @escaping () -> Void) {
+        self.init(title: title, detail: detail, systemImage: systemImage,
+                  busy: busy, enabled: enabled, action: action)
+        self.tile = tile
+    }
+
+    init(tile: SlabTile, title: String, detail: String = "", systemImage: String? = nil,
+         busy: Bool = false, enabled: Bool = true, url: URL?,
+         onOpen: @escaping () -> Void = {}) {
+        self.init(title: title, detail: detail, systemImage: systemImage,
+                  busy: busy, enabled: enabled, url: url, onOpen: onOpen)
+        self.tile = tile
+    }
+
     /// Inside an account page's act this draws its ROW form (prd §640).
     @Environment(\.accountAct) private var accountAct
+    @Environment(\.accountTileBoard) private var tileBoard
     @Environment(\.openURL) private var openURL
 
     var body: some View {
-        if accountAct { actRow } else { slab }
+        if let tile, let tileBoard { hoisted(tile, on: tileBoard) }
+        else if accountAct { actRow } else { slab }
+    }
+
+    /// Registers the verb with the page's tiles and takes no room. `fire`
+    /// keeps this slab's own `openURL`, so a door still opens beside the page
+    /// (prd §653).
+    private func hoisted(_ tile: SlabTile, on board: AccountTileBoard) -> some View {
+        let id = "slab:\(tile.label)|\(title)"
+        let entry = AccountTile(id: id, label: tile.label, glyph: tile.glyph,
+                                enabled: enabled && !busy, act: fire)
+        return Color.clear
+            .frame(height: 0)
+            .accessibilityHidden(true)
+            .onAppear { board.put(entry) }
+            .onChange(of: entry.key) { _, _ in board.put(entry) }
+            .onDisappear { board.remove(id) }
     }
 
     private func fire() {

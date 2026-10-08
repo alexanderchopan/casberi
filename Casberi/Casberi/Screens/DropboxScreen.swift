@@ -71,7 +71,7 @@ struct DropboxScreen: View {
             // The screen's one verb, as the screen's one filled block
             // (prd §218) — it was a blue text row, which read as a link to
             // somewhere rather than the act itself.
-            DSSlabButton(title: "Connect Dropbox",
+            DSSlabButton(tile: .signIn, title: "Connect Dropbox",
                          systemImage: "person.badge.key",
                          action: connect)
             if cancelled {
