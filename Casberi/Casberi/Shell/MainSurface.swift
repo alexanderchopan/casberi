@@ -1002,6 +1002,9 @@ struct MainSurface: View {
     /// foreground, and a corpus count change (an arrival or a deletion). A chip
     /// tap changes only the ORDER, which is frozen until foreground anyway.
     @State private var liveChips: [String]?
+    /// A routed door moved the filter (prd §1208): the next source change is
+    /// that move, and the scopes it picked stand.
+    @State private var keepScopes = false
 
     /// Connected live-room bridges (Logos) earn a chip with nothing
     /// landed, so connecting one changes the label set without changing the
@@ -2077,10 +2080,23 @@ struct MainSurface: View {
             // On the phone a category is a section of the Feed and an app
             // rises as a sheet over it (prd §1208), whichever door wrote the
             // filter: the page underneath stays where it was, else the Feed.
-            if source != "All", routeIntoFeed(source) {
-                let back = old == source || HomeScope.isFeedSection(old)
-                    || RoomAccounts.host(ofSource: old) != nil ? "All" : old
-                if filter.source != back { filter.source = back }
+            if source != "All", let routed = routeIntoFeed(source) {
+                // A category left the filter on the Feed; an app rose as a
+                // sheet over the page you were on, so that page comes back.
+                if routed == .app {
+                    let back = old == source || HomeScope.isFeedSection(old)
+                        || RoomAccounts.host(ofSource: old) != nil ? "All" : old
+                    if filter.source != back {
+                        keepScopes = true
+                        filter.source = back
+                    }
+                }
+                return
+            }
+            // Back on a page a routed door put you on: the scopes that door
+            // picked (Media's Read, a follow list) stand, and nothing resets.
+            if keepScopes {
+                keepScopes = false
                 return
             }
             // The doors that write `filter.source` directly (a deep link, a
@@ -2157,7 +2173,7 @@ struct MainSurface: View {
         .onChange(of: chrome.sourceRequest) { _, request in
             guard let request else { return }
             chrome.sourceRequest = nil
-            if routeIntoFeed(request) {
+            if routeIntoFeed(request) != nil {
                 ChipMemory.visited(request)
                 return
             }
@@ -2555,25 +2571,47 @@ struct MainSurface: View {
     /// names an app of one raises that app as a sheet over the page you are
     /// on (§1208a). The Wallet and Testnets stay places, and the rail's
     /// layouts keep their rooms. True when the request was handled here.
-    private func routeIntoFeed(_ label: String) -> Bool {
-        guard !isRegular else { return false }
-        if label == RoomAccounts.readingRoom {
-            chrome.mediaScope = .read
-            chrome.feedJump = RoomAccounts.mediaRoom
-            if filter.source != "All" { filter.source = "All" }
-            return true
-        }
-        if HomeScope.isFeedSection(label) {
-            chrome.feedJump = label
-            if filter.source != "All" { filter.source = "All" }
-            return true
+    private func routeIntoFeed(_ label: String) -> Routed? {
+        guard !isRegular else { return nil }
+        let section: String? = label == RoomAccounts.readingRoom ? RoomAccounts.mediaRoom
+            : HomeScope.isFeedSection(label) ? label : nil
+        if let section {
+            if label == RoomAccounts.readingRoom { chrome.mediaScope = .read }
+            // A door that asked for the section's follow list (prd §1118).
+            if let room = chrome.landingFollowing, ShellChrome.roomName(room) == section {
+                chrome.pickFollowing(room)
+            }
+            chrome.landingFollowing = nil
+            chrome.feedJump = section
+            chrome.routedRequest = label
+            if filter.source != "All" {
+                keepScopes = true
+                filter.source = "All"
+            }
+            return .section
         }
         if let fold = RoomAccounts.host(ofSource: label), HomeScope.isFeedSection(fold.room) {
-            chrome.appSheet = ShellChrome.AppSheet(source: label)
-            return true
+            let sheet = ShellChrome.AppSheet(source: label)
+            chrome.routedRequest = label
+            // A sheet still closing refuses a second one (UIKit's "already
+            // presenting"), so a door taken from inside one waits it out, as
+            // `ShellChrome.openApp` does.
+            if route.sheet != nil || !route.path.isEmpty {
+                route.path = []
+                Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(450))
+                    chrome.appSheet = sheet
+                }
+            } else {
+                chrome.appSheet = sheet
+            }
+            return .app
         }
-        return false
+        return nil
     }
+
+    /// What `routeIntoFeed` did with a request.
+    enum Routed { case section, app }
 
     /// One step left or right in the strip's order. The swipe's whole job.
     private func step(_ delta: Int) {

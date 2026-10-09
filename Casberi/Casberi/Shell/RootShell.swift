@@ -2673,12 +2673,15 @@ struct RootShell: View {
         // twice at most, unless you have moved since.
         case "room":
             guard let room = url.pathComponents.filter({ $0 != "/" }).first else { return }
+            chrome.routedRequest = nil
             chrome.sourceRequest = room
             let before = sceneState.filter.source
             Task { @MainActor in
                 for wait in [2.0, 3.0] {
                     try? await Task.sleep(for: .seconds(wait))
-                    guard sceneState.filter.source == before else { return }
+                    // A category the Feed already scrolled to (prd §1208)
+                    // moves no filter, so "you have not moved" is not a miss.
+                    guard sceneState.filter.source == before, chrome.routedRequest != room else { return }
                     chrome.sourceRequest = nil
                     try? await Task.sleep(for: .milliseconds(50))
                     chrome.sourceRequest = room

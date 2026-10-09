@@ -799,6 +799,14 @@ extension FeedScreen {
     /// them — is part of the key.
     func chronoDays(_ roomThings: [Thing]) -> [(String, [Thing])] {
         let key = derivationKey(roomThings)
+        // A section of the Feed's scroll memoises apart, so the Feed's own
+        // derivation and every other section keep theirs (prd §1208).
+        if let section = Self.sectionCapNow?.category {
+            if let held = memo.sectionDays[section], held.key == key { return held.days }
+            let days = liveFirst(chronoGroups(roomThings))
+            memo.sectionDays[section] = (key, days)
+            return days
+        }
         if memo.key != key {
             memo.key = key
             memo.days = liveFirst(chronoGroups(roomThings))

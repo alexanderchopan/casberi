@@ -240,9 +240,16 @@ enum PivotCompose {
         lazy var recent: [Thing] = {
             var d = FetchDescriptor<Thing>(sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
             d.fetchLimit = window
+            // Every column the matches and the facts read, so none faults a
+            // row in one at a time on the main actor.
             d.propertiesToFetch = FeedScreen.lightColumns
+                + [\Thing.authorEmail, \Thing.authorHandle, \Thing.transferUSD, \Thing.dueAt,
+                   \Thing.sourceRef, \Thing.walletAddress, \Thing.counterpartyAddress]
             return (try? context.fetch(d)) ?? []
         }()
+        // A span narrows the fetch itself, so a busy app's month is not lost
+        // behind its newest rows.
+        let start = q.span?.start ?? .distantPast, end = q.span?.end ?? .distantFuture
         switch q.subject {
         case .person(let id, let name):
             if let contact = ContactIndexSources.contacts.first(where: { $0.id == id }) {
@@ -264,26 +271,32 @@ enum PivotCompose {
                 })
             }
         case .app(let name):
-            var d = FetchDescriptor<Thing>(predicate: #Predicate { $0.source == name },
-                                           sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
+            var d = FetchDescriptor<Thing>(predicate: #Predicate {
+                $0.source == name && $0.capturedAt >= start && $0.capturedAt < end
+            }, sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
             d.fetchLimit = cap
             add((try? context.fetch(d)) ?? [])
-            // Its seat under another source name, its mail, its charges.
+            // Its seat under another source name, its mail, its charges — by
+            // whole words, and never for a name too short to be one ("X").
             let word = name.lowercased().replacingOccurrences(of: " ", with: "")
+            let spoken = name.lowercased()
             add(recent.filter { thing in
                 BridgeCatalog.seatName(forSource: thing.source) == name
-                    || (thing.authorEmail?.lowercased().contains(word) ?? false)
-                    || contains(thing.title, name)
+                    || (word.count >= 3 && PivotWords.wordRange(of: word, in: (thing.authorEmail ?? "").lowercased()) != nil)
+                    || (spoken.count >= 3 && PivotWords.wordRange(of: spoken, in: thing.title.lowercased()) != nil)
             })
         case .category(let name):
             add(recent.filter { PivotTile.category(of: $0) == name })
         case .words(let words):
-            var d = FetchDescriptor<Thing>(predicate: #Predicate { $0.title.localizedStandardContains(words) },
-                                           sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
+            var d = FetchDescriptor<Thing>(predicate: #Predicate {
+                $0.title.localizedStandardContains(words) && $0.capturedAt >= start && $0.capturedAt < end
+            }, sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
             d.fetchLimit = cap
             add((try? context.fetch(d)) ?? [])
+            let folded = words.lowercased()
             add(recent.filter { thing in
-                contains(thing.authorHandle ?? "", words) || contains(thing.authorEmail ?? "", words)
+                PivotWords.wordRange(of: folded, in: (thing.authorHandle ?? "").lowercased()) != nil
+                    || PivotWords.wordRange(of: folded, in: (thing.authorEmail ?? "").lowercased()) != nil
             })
         case .span:
             guard let span = q.span else { break }
@@ -334,10 +347,6 @@ enum PivotCompose {
 
     typealias Related = PivotPage.Related
 
-    static func contains(_ text: String, _ term: String) -> Bool {
-        !term.isEmpty && text.range(of: term, options: [.caseInsensitive, .diacriticInsensitive]) != nil
-    }
-
     /// What the words could make a page of, best first (prd §1209 item 1):
     /// a person, an app you have, a category, then the words themselves —
     /// each narrowed by a time phrase when one was said.
@@ -347,8 +356,22 @@ enum PivotCompose {
         func q(_ s: PivotQuery.Subject) -> PivotQuery {
             PivotQuery(subject: s, span: time?.span, spanLabel: time?.label)
         }
-        if rest.isEmpty { return time == nil ? [] : [q(.span)] }
         var out: [PivotQuery] = []
+        // A name that is also a month ("April", "June") is still a person or
+        // an app: offered first, with no span.
+        if time != nil {
+            let whole = words.trimmingCharacters(in: .whitespaces)
+            for c in ContactIndexSources.contacts
+                where !c.isUnnamed && !ContactIndexSources.isYours(c)
+                    && (TraySearch.match(c.name, whole, anyWord: true).map { $0 <= .prefix } ?? false) {
+                out.append(PivotQuery(subject: .person(id: c.id, name: c.name)))
+                if out.count == 2 { break }
+            }
+            for app in apps where TraySearch.match(app, whole) == .exact {
+                out.append(PivotQuery(subject: .app(app)))
+            }
+        }
+        if rest.isEmpty { return Array((out + (time == nil ? [] : [q(.span)])).prefix(4)) }
         if let cat = categories.first(where: { $0.caseInsensitiveCompare(rest) == .orderedSame }) {
             out.append(q(.category(cat)))
         }

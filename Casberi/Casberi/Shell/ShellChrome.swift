@@ -228,6 +228,9 @@ final class ShellChrome {
     /// THE FEED IS ONE SCROLL (prd §1208): a category the tray, a widget or
     /// a link asked for, which the Feed scrolls to and clears.
     var feedJump: String?
+    /// The last request the phone routed into the Feed or a sheet, so a door
+    /// that retries (`casberi://room`) knows it landed.
+    var routedRequest: String?
     /// The Feed's folded sections, by category (prd §1208a): a fold stays
     /// until the person opens it again, across launches.
     var feedFolded: Set<String> = ShellChrome.storedFolds() {

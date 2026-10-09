@@ -49,7 +49,9 @@ extension FeedScreen {
             Self.scrollCategory(of: $0) ?? ""
         }
         ForEach(scrollCategories, id: \.self) { category in
-            scrollSection(category, byCategory[category] ?? [], nextEventID: nextEventID)
+            // Live again inside the closure: `List` may run it after a heal
+            // deleted a row the body's own filter saw alive.
+            scrollSection(category, (byCategory[category] ?? []).live, nextEventID: nextEventID)
         }
     }
 

@@ -994,7 +994,16 @@ struct RoomsTray: View {
                        line: q.subject == .span ? nil : q.spanLabel, mark: mark) {
                 DSHaptic.selection()
                 close()
-                chrome.pivot = q
+                // Over a sheet still closing, a second one is refused.
+                if route.sheet != nil || !route.path.isEmpty {
+                    route.path = []
+                    Task { @MainActor in
+                        try? await Task.sleep(for: .milliseconds(450))
+                        chrome.pivot = q
+                    }
+                } else {
+                    chrome.pivot = q
+                }
             }
         }
         return [Found(id: Self.pivotGroup, title: String(localized: "Everything"),

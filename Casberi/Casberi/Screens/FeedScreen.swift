@@ -656,6 +656,9 @@ struct FeedScreen: View {
         var key: Int?
         var days: [(String, [Thing])] = []
         var groups: [(String, [FeedRow])] = []
+        /// The Feed's scroll keeps each section's days apart (prd §1208): one
+        /// shared `key` written by every section missed on every pass.
+        var sectionDays: [String: (key: Int, days: [(String, [Thing])])] = [:]
         /// The cover (prd §389c) — picked from `days` and lifted out of
         /// `groups`, so it is stored as an id and resolved against the first
         /// day at render (never held as a `Thing` across renders: this class
