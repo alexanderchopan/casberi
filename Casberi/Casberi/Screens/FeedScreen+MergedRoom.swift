@@ -93,7 +93,12 @@ extension FeedScreen {
             .min { Self.dayWhen($0) < Self.dayWhen($1) }
         let subscriptions = chrome.dayScope == .subscriptions
         let comingUp = chrome.dayScope == .comingUp
-        let cover = heroShown || subscriptions || comingUp ? nil : (next ?? visible.first { $0.isLive })
+        let anyCover = heroShown || subscriptions || comingUp ? nil : (next ?? visible.first { $0.isLive })
+        // In the Feed's scroll (prd §1208c) only the timeline earns the box:
+        // a plain cover stands down and its thing stays a row.
+        let inFeed = Self.sectionCapNow != nil
+        let timeline = anyCover.map { $0.id == next?.id && !(dayStrip?.isEmpty ?? true) } ?? false
+        let cover = inFeed && !timeline ? nil : anyCover
         // Box B (prd §1087): the next thing over today's shape, while there
         // is a next thing and a day to draw; else the cover, as every room.
         // Subscriptions draws its own figure in the box (prd §1111).
@@ -105,7 +110,7 @@ extension FeedScreen {
             Section { dayAheadRow(cover, strip: strip) }
         } else if let cover {
             Section { ledeListRow(cover) }
-        } else if !heroShown {
+        } else if !heroShown && !inFeed {
             Section {
                 emptyLeadRow(headline: DSProse.text("Nothing ahead"),
                              words: Text("Your calendar, to-dos and mail appear here"))

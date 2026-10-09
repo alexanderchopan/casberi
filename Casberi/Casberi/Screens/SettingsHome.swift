@@ -58,8 +58,12 @@ struct SettingsHome: View {
             DSRoomTitleRow(title: casberiOpen ? String(localized: "Settings") : String(localized: "Sources"))
                 .dsRoomTitleListRow()
             Section {
-                countsBox
-                    .dsRoomLeadListRow()
+                // Under the Settings tile the box is Casberi's own settings
+                // (prd §1208c); under Sources, the kinds you connected.
+                Group {
+                    if casberiOpen { SettingsRows(style: .box) } else { countsBox }
+                }
+                .dsRoomLeadListRow()
             }
             Section {
                 YouTilesRow(active: casberiOpen ? .settings : .sources)
@@ -312,31 +316,12 @@ struct SettingsHome: View {
 
     // MARK: - Casberi
 
-    /// Casberi's own options, pinned first (prd §1136 item 3): every row
-    /// below opens that connection's settings, and this is Casberi's.
-    private var casberiRow: some View {
-        DSPushRow(title: Text(verbatim: "Casberi"),
-                  subtitle: Text("Name, photo, data")) {
-            withAnimation(DS.Motion.standard) { casberiOpen = true }
-        } leading: {
-            CasberiMark(size: DS.Mark.notice * 0.7)
-                .frame(width: DS.Mark.notice, height: DS.Mark.notice)
-                .background(RoundedRectangle(cornerRadius: DS.Radius.appIcon(DS.Mark.notice), style: .continuous)
-                    .fill(DS.fillFaint))
-        }
-    }
 
     @ViewBuilder
+    /// Under the Settings tile the settings are the box (prd §1208c), so the
+    /// list is only the colophon; Sources is the tile beside it.
     private var casberiOptions: some View {
-        DSPushRow(title: Text("Settings"), subtitle: Text("Back to everything you've connected")) {
-            withAnimation(DS.Motion.standard) { casberiOpen = false }
-        } leading: {
-            Image(systemName: "chevron.left")
-                .dsGlyph(.body, weight: .semibold)
-                .foregroundStyle(DS.brandInk)
-                .frame(width: DS.Mark.notice, height: DS.Mark.notice)
-        }
-        SettingsRows()
+        SettingsRows(style: .colophon)
     }
 
     // MARK: - Sheets over Settings (prd §1143)
@@ -374,7 +359,6 @@ struct SettingsHome: View {
     private var appsList: some View {
         VStack(alignment: .leading, spacing: DS.Space.s6) {
             if query.isEmpty {
-                if hasName { casberiRow }
                 if !startHere.isEmpty {
                     VStack(alignment: .leading, spacing: DS.Space.s2) {
                         Text("Start here").dsText(.heading20).foregroundStyle(DS.brandInk)

@@ -57,79 +57,53 @@ extension FeedScreen {
 
     @ViewBuilder
     private func scrollSection(_ category: String, _ things: [Thing], nextEventID: UUID?) -> some View {
-        let folded = chrome.feedFolded.contains(category)
-        Section {
-            scrollHeader(category, folded: folded,
-                         today: things.lazy.filter { Self.groupingCalendar.isDateInToday($0.capturedAt) }.count)
-        }
-        if !folded {
-            let cap = sectionCaps[category] ?? Self.sectionFirstRows
-            let _ = { Self.sectionCapNow = (category, cap) }()
-            categorySections(category, things, nextEventID: nextEventID)
-            let _ = { Self.sectionCapNow = nil }()
-        }
+        Section { scrollHeader(category) }
+        let cap = sectionCaps[category] ?? Self.sectionFirstRows
+        let _ = { Self.sectionCapNow = (category, cap) }()
+        categorySections(category, things, nextEventID: nextEventID)
+        let _ = { Self.sectionCapNow = nil }()
     }
 
-    /// Each category's own sections — the room's box, tiles and list — as
-    /// its page draws them. Life and Agents have no tiles of their own, so
-    /// they draw the cover and the days.
+    /// Each category's own sections — the room's tiles and list — as its
+    /// page draws them, WITHOUT the newest thing's cover (prd §1208c, user:
+    /// "in most places its just waste of space"): `heroShown` is the rooms'
+    /// own word for "the box is taken", so their covers stand down and the
+    /// newest thing stays a row. A box that says more than the newest thing
+    /// stays — Day's timeline, a Subscriptions or Coming up figure.
     @ViewBuilder
     private func categorySections(_ category: String, _ things: [Thing], nextEventID: UUID?) -> some View {
         switch category {
         case RoomAccounts.dayRoom:
             dayRoomSections(things, nextEventID: nextEventID, heroShown: false)
         case RoomAccounts.workRoom:
-            workRoomSections(things, nextEventID: nextEventID, heroShown: false)
+            workRoomSections(things, nextEventID: nextEventID, heroShown: true)
         case RoomAccounts.mediaRoom:
-            mediaRoomSections(things, nextEventID: nextEventID, heroShown: false)
+            mediaRoomSections(things, nextEventID: nextEventID, heroShown: true)
         case RoomAccounts.socialRoom:
-            socialRoomSections(things, nextEventID: nextEventID, heroShown: false)
+            socialRoomSections(things, nextEventID: nextEventID, heroShown: true)
         default:
-            let days = chronoDays(things)
-            groupedSections(days, nextEventID: nextEventID, cover: ledeThingID(in: days))
+            groupedSections(chronoDays(things), nextEventID: nextEventID)
         }
     }
 
-    /// The section's name, pink, the section's handle (prd §1208a): a press
-    /// folds it to one line — the name and how many came today — and opens
-    /// it again.
-    private func scrollHeader(_ category: String, folded: Bool, today: Int) -> some View {
-        Button {
-            DSHaptic.selection()
-            withAnimation(DS.Motion.standard) {
-                if folded {
-                    chrome.feedFolded.remove(category)
-                } else {
-                    chrome.feedFolded.insert(category)
-                    sectionCaps[category] = nil
-                }
-            }
-        } label: {
-            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s3) {
-                FeedDayDivider(label: category) { EmptyView() }
-                    .textCase(nil)
-                Spacer(minLength: 0)
-                if folded {
-                    (today > 0 ? Text("\(today) today") : Text("Nothing today"))
-                        .dsText(.body17)
-                        .foregroundStyle(DS.textTertiary)
-                        .transition(.opacity)
-                }
-            }
+    /// A section's name (prd §1208c): a chapter's title — heading28 in the
+    /// pink every title wears, with a chapter's air above it — and nothing
+    /// to press: the sections do not fold (§1208c retires §1208a's fold).
+    private func scrollHeader(_ category: String) -> some View {
+        Text(category)
+            .dsText(.heading28)
+            .foregroundStyle(DS.brandInk)
+            .lineLimit(1)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(RowPress())
-        .accessibilityAddTraits(.isHeader)
-        .accessibilityHint(folded ? Text("Opens this section") : Text("Folds this section"))
-        .id(Self.scrollAnchor(category))
-        .padding(.leading, DSRoomChassis.rowInset)
-        .padding(.trailing, DSRoomChassis.rowInset)
-        .padding(.top, DS.Space.s6)
-        .padding(.bottom, DS.Space.s1)
-        .listRowInsets(EdgeInsets())
-        .listRowBackground(Color.clear)
-        .listRowSeparator(.hidden)
+            .accessibilityAddTraits(.isHeader)
+            .id(Self.scrollAnchor(category))
+            .padding(.leading, DSRoomChassis.rowInset)
+            .padding(.trailing, DSRoomChassis.rowInset)
+            .padding(.top, DS.Space.s8 + DS.Space.s4)
+            .padding(.bottom, DS.Space.s2)
+            .listRowInsets(EdgeInsets())
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
     }
 
     /// More (prd §1208 item 4): ten more rows in place; the scroll goes on
@@ -157,12 +131,11 @@ extension FeedScreen {
         .listRowSeparator(.hidden)
     }
 
-    /// The tray asked for a category (prd §1208 item 6): open it if folded,
-    /// then scroll its name to the top.
+    /// The tray asked for a category (prd §1208 item 6): scroll its name to
+    /// the top.
     func settleFeedJump(_ proxy: ScrollViewProxy) {
         guard source == "All", let category = chrome.feedJump else { return }
         chrome.feedJump = nil
-        chrome.feedFolded.remove(category)
         Task { @MainActor in
             try? await Task.sleep(for: .milliseconds(120))
             withAnimation(DS.Motion.standard) {

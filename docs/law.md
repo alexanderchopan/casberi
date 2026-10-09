@@ -222,12 +222,12 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1341 of 1407 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1342 of 1408 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
 - §4 — Persona variables (amended by §1126)
-- §5 — How it works today — Bob
+- §5 — How it works today — Bob (amended by §1208c)
 - §6 — How it works today — Alice (amended by §1113)
 - §7 — Outcomes — Bob (amended by §1100)
 - §8 — Outcomes — Alice (amended by §1119, §1160, §1163)
@@ -1558,11 +1558,12 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1204 — Reading folds into Media: one category, tiles All · Play · Read · Subscriptions, and Highlights is deleted
 - §1205 — Every company in the demo wears its mark: a sweep, nine App Store marks, and the faces that skipped a bundled one
 - §1206 — Frames, the devnet, is removed, model and all; Logos is the Testnets category's one seat, and the website counts the…
-- §1207 — One walk with neighbours in its title, the tray as a black page of modules, the bar always there, every page a compos… (amended by §1208, §1209a)
+- §1207 — One walk with neighbours in its title, the tray as a black page of modules, the bar always there, every page a compos… (amended by §1208, §1208c, §1209a)
 - §1207a — Phase 1 built
-- §1208 — The Feed is one scroll: every category stacked in its own frame, the Wallet apart, an app on top (amended by §1208a, §1208b)
-- §1208a — The scroll's three touches, and no app names under a section
+- §1208 — The Feed is one scroll: every category stacked in its own frame, the Wallet apart, an app on top (amended by §1208a, §1208b, §1208c)
+- §1208a — The scroll's three touches, and no app names under a section (amended by §1208c)
 - §1208b — The Feed opens on its contents, then the sections
+- §1208c — The Feed's sections lose their covers and their fold; Settings shows Casberi's settings; Notes and Markets stand on t…
 - §1209 — Generative search, v1: words become a page, with no model
 - §1209a — The band is face · bar · ✎ on every page; a thing's sheet opens its names' pages; no pins
 

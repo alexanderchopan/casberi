@@ -231,21 +231,6 @@ final class ShellChrome {
     /// The last request the phone routed into the Feed or a sheet, so a door
     /// that retries (`casberi://room`) knows it landed.
     var routedRequest: String?
-    /// The Feed's folded sections, by category (prd §1208a): a fold stays
-    /// until the person opens it again, across launches.
-    var feedFolded: Set<String> = ShellChrome.storedFolds() {
-        didSet {
-            guard feedFolded != oldValue,
-                  let data = try? JSONEncoder().encode(feedFolded.sorted()) else { return }
-            DefaultsWrite.set(data, forKey: Self.foldsKey)
-        }
-    }
-    private static let foldsKey = "feed.folded"
-    private static func storedFolds() -> Set<String> {
-        guard let data = UserDefaults.standard.data(forKey: foldsKey),
-              let names = try? JSONDecoder().decode([String].self, from: data) else { return [] }
-        return Set(names)
-    }
     /// An app picked from the face, risen as a sheet over the Feed (prd
     /// §1208a; §1132's rule that every place on the phone is a sheet).
     var appSheet: AppSheet?

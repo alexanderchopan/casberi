@@ -2553,6 +2553,10 @@ struct MainSurface: View {
         }
         // The phone reads its own walk (prd §1207), Wallet first.
         if !isRegular {
+            // The Feed's own places stand after it (prd §1208c).
+            if HomeScope.contains(from), HomeScope.contains(to), from != to {
+                return to == "All" ? .leading : .trailing
+            }
             let walk = phoneWalk
             let place: (String) -> Int? = { walk.firstIndex(of: HomeScope.walkStop($0)) }
             if let a = place(from), let b = place(to) { return b >= a ? .trailing : .leading }
@@ -2709,6 +2713,11 @@ struct MainSurface: View {
         // scroll and an app rises as a sheet (`routeIntoFeed`), so a room
         // off the walk (Testnets) goes back to the Feed.
         if !isRegular {
+            // Notes and Markets stand on the Feed (prd §1208c): a swipe right
+            // goes back to it, a swipe left raises the tray.
+            if HomeScope.contains(filter.source), filter.source != "All" {
+                return delta < 0 ? "All" : nil
+            }
             let walk = phoneWalk
             let here = HomeScope.walkStop(filter.source)
             guard let i = walk.firstIndex(of: here) else { return delta < 0 ? "All" : nil }

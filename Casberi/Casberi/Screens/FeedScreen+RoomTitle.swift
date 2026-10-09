@@ -64,6 +64,10 @@ extension FeedScreen {
     /// the walk and wherever the rail stands.
     private var walkNeighbours: (before: String?, after: String?)? {
         guard roomScopeInRoom else { return nil }
+        // Notes and Markets are the Feed's own places (prd §1208c, user: "to
+        // get back to feed its complicated"): the Feed stands before them,
+        // pressable, and nothing after.
+        if HomeScope.contains(source), source != "All" { return ("All", nil) }
         let walk = HomeScope.phoneWalk(chips: chrome.chipOrder)
         guard let i = walk.firstIndex(of: HomeScope.walkStop(source)) else { return nil }
         return (i > 0 ? walk[i - 1] : nil, i + 1 < walk.count ? walk[i + 1] : nil)

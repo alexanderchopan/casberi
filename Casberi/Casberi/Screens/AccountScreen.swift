@@ -33,6 +33,10 @@ struct SettingsRows: View {
     @State private var languageOpen = false
     @State private var chipOrderOpen = false
     @State private var detail: AccountDetail?
+    /// How the rows draw (prd §1208c): as rows, as the Settings box's grid,
+    /// or only the colophon under that box.
+    var style: Style = .rows
+    enum Style { case rows, box, colophon }
 
     /// What the Notifications row says without being opened (prd §770): the
     /// digest's cadence, and the categories switched off by name, because
@@ -65,8 +69,15 @@ struct SettingsRows: View {
             // big avatar hero lived here for an hour on 2026-07-10 and was
             // rejected: personalization paints your SPACE — it never builds a
             // profile of you.)
-            rowList(allRows)
-            colophon
+            switch style {
+            case .rows:
+                rowList(allRows)
+                colophon
+            case .box:
+                boxGrid(allRows)
+            case .colophon:
+                colophon
+            }
         }
             .onAppear { readCounts(); markMilestone() }
             // The count is re-read when the app comes back to this screen —
@@ -145,6 +156,8 @@ struct SettingsRows: View {
             .onAppear {
                 // Through `open` like a click, so on the Mac the hooks prove
                 // the PANE path the person takes (prd §876), not a sheet.
+                // The colophon under the Settings box answers none of them.
+                guard style != .colophon else { return }
                 if UserDefaults.standard.bool(forKey: "openDiagnostics") {
                     open(.diagnostics) { diagnosticsOpen = true }
                 }
@@ -561,6 +574,35 @@ struct SettingsRows: View {
     /// the finger). No horizontal inset of its own — the Accounts screen's
     /// content already carries the page's (prd §590, the same lesson one
     /// section over).
+    /// THE SETTINGS BOX (prd §1208c, user: "make it be the actual settings
+    /// that are in the settings menu"): every setting two across, glyph and
+    /// word, as Sources' counts and Markets' categories stand; each opens
+    /// what its row opens.
+    private func boxGrid(_ rows: [RowSpec]) -> some View {
+        DSCountGrid(items: rows.count) {
+            ForEach(rows, id: \.title) { row in
+                DSCountTile(count: nil, label: String(localized: String.LocalizationValue(row.title)),
+                            glyph: Self.glyph(row.title), isOn: false, inline: true, action: row.action)
+            }
+        }
+    }
+
+    /// Each setting's glyph in the box.
+    private static func glyph(_ title: String) -> String {
+        switch title {
+        case "Avatar": "person.crop.circle"
+        case "Name": "signature"
+        case "Data": "externaldrive"
+        case "Diagnostics": "stethoscope"
+        case "Dock order": "arrow.up.arrow.down"
+        case "Theme": "circle.lefthalf.filled"
+        case "Notifications": "bell"
+        case "Language": "globe"
+        case "Support": "questionmark.circle"
+        default: "sparkles"
+        }
+    }
+
     private func rowList(_ rows: [RowSpec]) -> some View {
         VStack(spacing: DS.Space.s1) {
             ForEach(rows, id: \.title) { row in
