@@ -190,21 +190,34 @@ struct RoomsTray: View {
         let standsFull = railInset > 0 && (searching || !query.isEmpty)
         let height = standsFull ? full : min(contentHeight, full)
         let gap = Self.gap(inner: width - 2 * DS.Space.s4)
+        // **THREE CARDS, ONE SCROLL (prd §1203 item 6, user: "can they be
+        // detached from each other … like how we have the search bar").**
+        // You (your row, then Recent), the Wallet, and the categories each
+        // stand on their own glass, the way the search capsule floats beside
+        // the face, and the stack scrolls as one menu. A search's results are
+        // one card under the field.
         return ScrollView {
-            VStack(alignment: .leading, spacing: 0) {
-                if railInset > 0 { searchField }
+            VStack(alignment: .leading, spacing: Self.cardGap) {
+                if railInset > 0 { card { searchField } }
                 if query.trimmingCharacters(in: .whitespaces).isEmpty {
-                    youRow(gap: gap)
-                    recentRow(gap: gap)
-                    ForEach(Array(categories.enumerated()), id: \.element) { index, category in
-                        categoryRow(category, index: index + 2, gap: gap)
+                    card {
+                        youRow(gap: gap)
+                        recentRow(gap: gap)
+                    }
+                    if walletCard {
+                        card { categoryRow(CategoryFold.walletCategory, index: 2, gap: gap, leads: false) }
+                    }
+                    if !feedCategories.isEmpty {
+                        card {
+                            ForEach(Array(feedCategories.enumerated()), id: \.element) { index, category in
+                                categoryRow(category, index: index + 3, gap: gap)
+                            }
+                        }
                     }
                 } else {
-                    searchResults
+                    card { searchResults }
                 }
             }
-            .padding(.vertical, DS.Space.s3)
-            .padding(.horizontal, DS.Space.s4)
             .background {
                 GeometryReader { g in
                     Color.clear
@@ -217,7 +230,9 @@ struct RoomsTray: View {
         .scrollBounceBehavior(.basedOnSize)
         .scrollDismissesKeyboard(.interactively)
         .frame(width: width, height: max(height, 1))
-        .dsGlass(cornerRadius: Self.radius)
+        // The stack's own corner clips a card scrolled under its edge to the
+        // cards' shape, so nothing square shows past the glass.
+        .clipShape(RoundedRectangle(cornerRadius: Self.radius, style: .continuous))
         // Above the face, in its column: the menu grows out of the button
         // that raised it, as Messages' grows out of its plus. Beside the
         // rail's face on the iPad and the Mac (§1133f), clear of the Mac's
@@ -227,6 +242,20 @@ struct RoomsTray: View {
         .padding(.top, railTopInset)
         .accessibilityAddTraits(.isModal)
     }
+
+    /// One of the tray's cards: its rows on their own glass, the corner the
+    /// whole card had (prd §1203 item 6).
+    private func card<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 0) { content() }
+            .padding(.vertical, DS.Space.s3)
+            .padding(.horizontal, DS.Space.s4)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .dsGlass(cornerRadius: Self.radius)
+    }
+
+    /// The air between two cards: the gap the search capsule keeps from the
+    /// face beside it.
+    static let cardGap: CGFloat = DS.Space.s2
 
     /// Where the card stands: by the face's corner.
     private var corner: Alignment { railInset > 0 ? .topLeading : .bottomLeading }
@@ -254,6 +283,15 @@ struct RoomsTray: View {
                 && CategoryFold.isCategory($0) && !(chrome.categoryVenues[$0] ?? []).isEmpty
         }
     }
+
+    /// The categories' card: every row but the Wallet's, which has a card of
+    /// its own (prd §1203 item 6).
+    private var feedCategories: [String] {
+        categories.filter { $0 != CategoryFold.walletCategory }
+    }
+
+    /// Whether the Wallet's card stands: it holds a connected seat.
+    private var walletCard: Bool { categories.contains(CategoryFold.walletCategory) }
 
     /// Markets is a You door, not a category row (prd §1123, user: "it's only
     /// one app tile that is important but is part of a long catalogue list
@@ -407,11 +445,14 @@ struct RoomsTray: View {
     /// an icon lands in the room scoped to it, the one showing ringed. The
     /// standing category fills its glyph; a broken app inside wears the
     /// attention hue on the category's glyph, and the label says it too.
-    private func categoryRow(_ category: String, index: Int, gap: CGFloat) -> some View {
+    ///
+    /// The Wallet's row draws no disc of its own (prd §1203 item 6): its door
+    /// is the You row's, so the row is its name and its apps.
+    private func categoryRow(_ category: String, index: Int, gap: CGFloat, leads: Bool = true) -> some View {
         let lit = standingCategory == category
         let needsYou = broken(category)
         let folder = folder(for: category)
-        return wrapped(folder, gap: gap) {
+        return wrapped(folder, gap: gap, leads: leads) {
             Button {
                 pickCategory(category)
             } label: {
@@ -1279,10 +1320,10 @@ struct RoomsTray: View {
     /// category, so You's six tiles all fit on one row"). The App Library's
     /// grammar: a name, then its icons in one grid; every line the same six
     /// columns, You's places on one line, a long category simply running on.
-    private func wrapped<Name: View, Lead: View>(_ folder: Folder, gap: CGFloat,
+    private func wrapped<Name: View, Lead: View>(_ folder: Folder, gap: CGFloat, leads: Bool = true,
                                                   @ViewBuilder name: () -> Name,
                                                   @ViewBuilder lead: () -> Lead) -> some View {
-        var cells: [RunCell] = [.lead]
+        var cells: [RunCell] = leads ? [.lead] : []
         if let action = folder.action { cells.append(.action(action)) }
         cells += folder.items.map(RunCell.item)
         let lines = stride(from: 0, to: cells.count, by: Self.lineSlots).map {

@@ -65366,7 +65366,7 @@ Privy picked in the Wallet led Home with `holdingsBlockSection`, the same drawin
 3. **In a room opened on top, the face is ‹** (`RootShell.seatBack`): one tap lands on that pole. The tray is the face on either pole, or a swipe right then the face. — BUILT
 4. **The Wallet is a door in the tray's You row**, second, after the Feed: the two pages a swipe moves between lead the row in the swipe's order. It is aggregated like Home, so it is a place, not a category among categories. — BUILT
 5. **The title on the two poles reads "Feed Wallet"**, the standing one bold, the other grey and tappable; every other place keeps its own title ("Wallet · Safe", "Social", "You · Notes"). A tappable grey word is a narrow exception to §752: a third way to make the move the swipe and the tray already make, never the only one. "Today" becomes **Feed** (amends §1166), in the title, the You tile, the tray door and the swipe's card. — BUILT
-6. **The tray is three detached cards that scroll as one stack**: You (your row, then Recent), the Wallet (its apps, with no disc of its own: the door is in You), and the categories. — TO BUILD
+6. **The tray is three detached cards that scroll as one stack**: You (your row, then Recent), the Wallet (its apps, with no disc of its own: the door is in You), and the categories (`RoomsTray.card`, `cardGap`; the search field and its results are a card of their own beside the rail). — BUILT
 7. **Reading and Media merge** into one category, Media, with tiles All · Play · Read · Subscriptions; Highlights stay in Notes (§1020). Each day draws rows, then the grid. — TO BUILD
 8. **Frames, the devnet, is removed**, model and all (§723). Logos stays, a row until it is real. — TO BUILD
 
@@ -65374,4 +65374,4 @@ Privy picked in the Wallet led Home with `holdingsBlockSection`, the same drawin
 
 **Not yet ruled.** Markets' and Logos' final homes; whether the Wallet's row in the categories keeps a disc once the cards land.
 
-**Checked (items 1–5).** iOS build; on an iPhone 17 Pro simulator: Feed → swipe left → Wallet with the title swapped; the Wallet's swipe left raised the tray with the Wallet door lit; Social from the tray wore ‹ and its tap and a swipe right each landed back on the pole it came from; a tap on the grey word switched pages both ways; the Feed's swipe right raised the tray.
+**Checked (items 1–5).** iOS build; on an iPhone 17 Pro simulator: Feed → swipe left → Wallet with the title swapped; the Wallet's swipe left raised the tray with the Wallet door lit; Social from the tray wore ‹ and its tap and a swipe right each landed back on the pole it came from; a tap on the grey word switched pages both ways; the Feed's swipe right raised the tray. Item 6: the tray raised over the demo stood as three cards, You and Recent, the Wallet's apps with no disc, then Day and Social on, and scrolled as one.
