@@ -253,6 +253,21 @@ struct NoteCaptureSheet: View {
                 .buttonStyle(PressSpring())
                 .accessibilityLabel(hasContent ? Text("Keep the note and go back") : Text("Back to your things"))
                 Spacer(minLength: 0)
+                // ALL NOTES (prd §1207 item 6): Notes left You's tiles, so
+                // the page you write on is the door to the ones you wrote.
+                // Keeps this one first, as the way down does.
+                Button {
+                    DSHaptic.tap()
+                    keepAndClose()
+                    chrome.sourceRequest = Pinboard.room
+                } label: {
+                    Text("All notes")
+                        .dsText(.body17)
+                        .foregroundStyle(DS.textSecondary)
+                        .frame(height: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(RowPress())
             }
             .overlay {
                 // The page's date (prd §983) — a fact, not a control. The

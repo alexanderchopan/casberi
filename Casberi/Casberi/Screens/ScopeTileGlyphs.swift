@@ -223,7 +223,7 @@ extension YouTile: DSTileScope {
         switch self {
         case .feed:     return ScopeTileGlyph.feed
         case .markets:  return CategoryFold.glyph(for: HomeScope.markets)
-        case .notes:    return ScopeTileGlyph.notes
+        case .sources:  return ScopeTileGlyph.apps
         case .settings: return ScopeTileGlyph.settings
         }
     }

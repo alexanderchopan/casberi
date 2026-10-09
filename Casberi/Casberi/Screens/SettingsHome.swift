@@ -55,14 +55,14 @@ struct SettingsHome: View {
         // Notes' and Markets' do on every screen, by construction.
         ScrollViewReader { proxy in
         List {
-            YouHead(place: .settings)
+            DSRoomTitleRow(title: casberiOpen ? String(localized: "Settings") : String(localized: "Sources"))
                 .dsRoomTitleListRow()
             Section {
                 countsBox
                     .dsRoomLeadListRow()
             }
             Section {
-                YouTilesRow(active: .settings)
+                YouTilesRow(active: casberiOpen ? .settings : .sources)
                     .dsRoomTilesListRow()
             }
             Section {
@@ -186,6 +186,11 @@ struct SettingsHome: View {
                 .environment(bridges)
                 .environment(self.route)
                 .environment(\.modelContext, context)
+        }
+        .onChange(of: chrome.settingsPick, initial: true) { _, pick in
+            guard let pick else { return }
+            withAnimation(DS.Motion.standard) { casberiOpen = pick == .settings }
+            chrome.settingsPick = nil
         }
         .onChange(of: chrome.settingsLanding, initial: true) { _, landing in
             // The tray's search found something Settings holds (prd §1171):

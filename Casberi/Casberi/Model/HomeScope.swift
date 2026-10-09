@@ -102,7 +102,13 @@ enum HomeScope {
 enum YouTile: String, CaseIterable, Identifiable, Hashable, Sendable {
     /// Home: the feed, Today then Coming up (§1136 item 7). Spelled `feed`
     /// because `home` is the wallet family's Home tile, another glyph.
-    case feed, markets, notes, settings
+    ///
+    /// **Feed · Markets · Sources · Settings (prd §1207 item 9).** Notes left
+    /// the tiles: a note is written from ✎ in the bottom band, anywhere, and
+    /// read from the note sheet and the bar. Sources is everything you have
+    /// connected (the master list, §1136); Settings is Casberi's own options,
+    /// which were the master list's pinned row.
+    case feed, markets, sources, settings
 
     var id: String { rawValue }
 
@@ -113,7 +119,7 @@ enum YouTile: String, CaseIterable, Identifiable, Hashable, Sendable {
         // the box still says it is today's.
         case .feed:     return String(localized: "Feed")
         case .markets:  return String(localized: "Markets")
-        case .notes:    return String(localized: "Notes")
+        case .sources:  return String(localized: "Sources")
         case .settings: return String(localized: "Settings")
         }
     }
@@ -123,17 +129,16 @@ enum YouTile: String, CaseIterable, Identifiable, Hashable, Sendable {
         switch self {
         case .feed:     return String(localized: "Today, then what is coming up")
         case .markets:  return String(localized: "What you watch")
-        case .notes:    return String(localized: "Your notes and everything you pinned")
-        case .settings: return String(localized: "Everything you have connected")
+        case .sources:  return String(localized: "Everything you have connected")
+        case .settings: return String(localized: "Casberi's own options")
         }
     }
 
     /// The tile standing for the shell's `source`, or nil outside You.
     init?(source: String) {
         if source == "All" { self = .feed }
-        else if source == Pinboard.room { self = .notes }
         else if HomeScope.isMarkets(source) { self = .markets }
-        else if HomeScope.Place(source: source) == .settings { self = .settings }
+        else if HomeScope.Place(source: source) == .settings { self = .sources }
         else { return nil }
     }
 }

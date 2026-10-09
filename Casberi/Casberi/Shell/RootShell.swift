@@ -2380,6 +2380,17 @@ struct RootShell: View {
                                       }
                                   },
                                   onBack: seatBack)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            // ✎ AT THE BAND'S OTHER END (prd §1207 item 6):
+                            // a note from anywhere. Not over Notes and
+                            // Markets, whose own tiles ride this band.
+                            .overlay(alignment: .trailing) {
+                                if padShell.railInset == 0, sceneState.route.path.isEmpty,
+                                   !Pinboard.isPinnedRoom(filter.source), !HomeScope.isMarkets(filter.source) {
+                                    NoteDoor { chrome.newNote += 1 }
+                                        .transition(.opacity)
+                                }
+                            }
                     }
                 }
                 }

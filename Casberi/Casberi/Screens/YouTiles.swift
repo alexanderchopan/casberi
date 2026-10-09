@@ -21,16 +21,15 @@ struct YouTilesRow: View {
     static func open(_ tile: YouTile, chrome: ShellChrome, route: HomeRoute) {
         DSHaptic.selection()
         switch tile {
-        case .settings:
+        case .sources, .settings:
+            // One screen, two faces (prd §1207 item 9): the master list, or
+            // Casberi's options opened in place.
+            chrome.settingsPick = tile
             route.present(.casberi)
         default:
             if !route.path.isEmpty { route.path = [] }
             chrome.lastChipTouch = Date.timeIntervalSinceReferenceDate
-            switch tile {
-            case .feed:    chrome.sourceRequest = "All"
-            case .notes:   chrome.sourceRequest = Pinboard.room
-            default:       chrome.sourceRequest = HomeScope.markets
-            }
+            chrome.sourceRequest = tile == .feed ? "All" : HomeScope.markets
         }
     }
 }

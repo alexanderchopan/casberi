@@ -53,3 +53,28 @@ struct DockDoors: View {
             }
     }
 }
+
+/// ✎ in the bottom band (prd §1207 item 6): writes a note from any page.
+/// The face's glass and size, so the band's two ends are one family.
+struct NoteDoor: View {
+    @Environment(ShellChrome.self) private var chrome
+    let action: () -> Void
+
+    var body: some View {
+        let size = DSDock.agentSize(fold: chrome.fold)
+        Button {
+            DSHaptic.tap()
+            action()
+        } label: {
+            Image(systemName: "square.and.pencil")
+                .dsGlyph(.body, weight: .semibold)
+                .foregroundStyle(DS.textPrimary)
+                .frame(width: size, height: size)
+                .dsGlassDoor(nil)
+                .contentShape(Circle())
+                .dsHover()
+        }
+        .buttonStyle(PressSpring())
+        .accessibilityLabel(Text("New note"))
+    }
+}

@@ -104,7 +104,13 @@ extension FeedScreen {
             // thing TODAY, and the categories hold the past.
             memo.days = perfAccum("dayGrouping") {
                 source == "All"
-                    ? dayGroups(visible.filter { $0.isLive && Self.groupingCalendar.isDateInToday($0.capturedAt) })
+                    // NO MONEY ON THE FEED (prd §1207 item 10): the Wallet
+                    // is its own stop beside it, so a transaction there was a
+                    // second copy, and the cover never leads with one.
+                    ? dayGroups(visible.filter {
+                        $0.isLive && Self.groupingCalendar.isDateInToday($0.capturedAt)
+                            && BridgeCatalog.category(forSource: $0.source) != CategoryFold.walletCategory
+                    })
                     : recentDaysThenCoarseTail(visible)
             }
             // The cover is chosen over THINGS and before the fold (prd §389c),
