@@ -833,6 +833,19 @@ struct RootShell: View {
                     NSLog("[Casberi] demoEnter: ready")
                 }
             }
+            // `-demoExit <s>` — take the pill's Exit after a delay, so where
+            // leaving lands can be seen with no tap (prd §1166).
+            let demoExitDelay = UserDefaults.standard.double(forKey: "demoExit")
+            if demoExitDelay > 0 {
+                Task { @MainActor in
+                    try? await Task.sleep(for: .seconds(demoExitDelay))
+                    DemoLeave.run(context: modelContext, store: bridges, route: sceneState.route,
+                                  filter: sceneState.filter, chrome: chrome)
+                    try? await Task.sleep(for: .seconds(2))
+                    NSLog("[Casberi] demoExit: source=%@ sheet=%@", sceneState.filter.source,
+                          String(describing: sceneState.route.sheet))
+                }
+            }
             // `-demoProbe YES` — one NSLog per fact, the `-todayProbe`
             // truncation lesson (a joined multi-line message gets cut by the
             // log reader). Waits a beat so a `-demoEnter` on the SAME launch

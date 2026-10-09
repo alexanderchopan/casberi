@@ -133,6 +133,11 @@ enum DemoLeave {
             // on screen to re-render through it.
             try? await Task.sleep(for: .milliseconds(420))
             DemoMode.exit(context: context, store: store)
+            // An app's sheet (prd §1208) is the shell's, not the route's, so
+            // `present` below leaves it up: Exit taken inside Telegram's sheet
+            // left Telegram standing over Sources with its rows deleted,
+            // drawing "One inbox for all your apps" (user, 2026-10-09).
+            chrome.appSheet = nil
             filter.source = "All"
             filter.tag = "All"
             // SETTINGS, WHERE A FIRST RUN SETS UP (prd §1166, user: "i think
