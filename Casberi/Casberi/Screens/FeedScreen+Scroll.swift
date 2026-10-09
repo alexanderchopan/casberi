@@ -356,10 +356,16 @@ struct GlanceTile: View {
         Button(action: action) {
             VStack(alignment: .leading, spacing: 0) {
                 if let (shot, size) = picture {
-                    StoredPicture(shot, size: size) { image in
-                        Image(uiImage: image).resizable().scaledToFill()
+                    // PINNED TO THE BAND (prd §1208i): a filled picture
+                    // reports its filled size, and `maxWidth: .infinity`
+                    // never caps it — a wide strip widened the whole tile
+                    // past its column, over its neighbour and off the screen.
+                    GeometryReader { geo in
+                        StoredPicture(shot, size: size) { image in
+                            Image(uiImage: image).resizable().scaledToFill()
+                        }
+                        .frame(width: geo.size.width, height: geo.size.height)
                     }
-                    .frame(maxWidth: .infinity)
                     .frame(height: Self.artHeight)
                     .clipped()
                 }

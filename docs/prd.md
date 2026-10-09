@@ -65519,6 +65519,12 @@ UNVERIFIED on a device: written on a machine with no Xcode, so neither build nor
 ## §1208h — The newest category leads the glance, the whole width (user, 2026-10-09, on the canvas "Casberi — Today's tiles, the Apple way", board A: "in A the top thing is the newest thing?", then "I think it should be the newest thing"; amends §1208d item 1)
 The category the Feed's box came from stands first, the whole width (`GlanceTile(wide:)`), with its next thing after the box's — never the box's own, so nothing shows twice — and the thing after that as a line under it; a picture leads it when one of today's has one. The other categories stay two across in the dock's order. With no picture the wide tile is shorter (128pt) than the grid's (168pt). A category whose only thing today is the box's has no wide tile; the grid stands alone.
 
+## §1208i — A glance tile's picture is pinned to its band (user, 2026-10-09, of the Media tile with "Spotify · YouTube · RSS" drawn across it and off the screen: "look at spotify card. messed up"; corrects §1208e item 2's cause)
+1. **The cause was the picture, not the mark.** The tile beside Media drew a wide strip of words as its picture; `.scaledToFill()` at the 72pt band reports the FILLED width (~318pt), and `.frame(maxWidth: .infinity)` never caps a child wider than its proposal, so the tile grew past its column, over Media and off the screen's leading edge. §1208e's mark fix stands on its own but did not touch this.
+2. **The band is a `GeometryReader` with the picture framed to its size, then clipped** — the shape every other filled picture already takes (`ShapedRows`' stored picture, CLAUDE.md's `scaledToFill` gotcha). A picture of any aspect now fills the band and never sizes the tile.
+
+UNVERIFIED on a device: written on a machine with no Xcode, so neither build nor tile was seen before commit.
+
 ## §1211 — Search finds what things SAY, teaches when empty, and reaches iOS (user, 2026-10-09, asked "is there anything we can or should do to improve our search ability? or just surprise and delight to its experience?", then of eight proposals: "do all"; builds on §1185 and §1209)
 
 The tray's search, eight changes, all on the phone and none through a model:
