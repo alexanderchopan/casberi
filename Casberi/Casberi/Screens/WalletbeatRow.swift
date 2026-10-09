@@ -92,10 +92,14 @@ struct WalletbeatNewsRow: View {
 
 	@ViewBuilder private var liveBody: some View {
 		let open = thing.tags.contains(WalletbeatNewsParse.openTag)
-		let wallet = thing.authorHandle.flatMap { id in
+		let facts = WalletbeatIncidentBook.facts(ref: thing.sourceRef)
+		// The wallet the incident names: the id the landing stamps, else the
+		// incident book's first wallet — a row landed without the stamp
+		// still wears the mark of the wallet it is about.
+		let wallet = (thing.authorHandle ?? facts?.wallets.first).flatMap { id in
 			WalletbeatDirectory.wallets.first { $0.id == id }
 		}
-		let mine = WalletbeatIncidentBook.facts(ref: thing.sourceRef)
+		let mine = facts
 			.map { facts in facts.wallets.contains { watchedWallets.contains($0) } }
 			?? thing.authorHandle.map { watchedWallets.contains($0) } ?? false
 		let tags = thing.tags.filter { $0 != WalletbeatNewsParse.openTag }

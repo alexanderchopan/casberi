@@ -635,7 +635,7 @@ struct SettingsHome: View {
         DSPushRow(title: Text(verbatim: item.name),
                   subtitle: item.next.map { Text("Renews \($0.formatted(.dateTime.month(.abbreviated).day()))") }) {
             sheet = .subscription(item.id)
-        } leading: { BridgeIcon(name: item.name, size: DS.Mark.notice) }
+        } leading: { BridgeIcon(name: SubscriptionFace.mark(for: item.name) ?? item.name, size: DS.Mark.notice) }
         .arrivalWash(SubscriptionStore.shared.justTracked(item.id), hue: DS.brand)
     }
 
@@ -648,7 +648,7 @@ struct SettingsHome: View {
     private func newsletterRow(_ item: MailSubscriptions.Item) -> some View {
         DSPushRow(title: Text(verbatim: item.name), subtitle: item.address.map { Text(verbatim: $0) }) {
             sheet = .mailList(item.id)
-        } leading: { BridgeIcon(name: item.name, size: DS.Mark.notice) }
+        } leading: { BridgeIcon(name: SubscriptionFace.mark(for: item.name) ?? item.name, size: DS.Mark.notice) }
     }
 
     /// EVERY CALENDAR CASBERI READS (prd §1150, user: "it should show every

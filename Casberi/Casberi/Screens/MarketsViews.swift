@@ -22,11 +22,14 @@ struct WatchRow: View {
     let closes: [Double]
     let line: WatchLine.Line?
     var isStock = false
+    /// A system symbol standing for the company's mark (`WatchFace.systemMark`).
+    var glyph: String? = nil
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         DSFeedRow(name: name, line: lineText) {
-            WatchFace(url: logo, lettered: lettered, onWhite: isStock && logo != nil)
+            WatchFace(url: logo, lettered: lettered, onWhite: isStock && (logo != nil || glyph != nil),
+                      symbol: glyph)
         } trailing: {
             HStack(spacing: DS.Space.s3) {
                 if closes.count >= 2, let change {
@@ -92,16 +95,30 @@ struct WatchFace: View {
     let lettered: String
     var size: CGFloat = DS.Face.rowCircle
     var onWhite = false
+    /// A system symbol drawn in place of the logo — Apple's, which no third
+    /// party may draw as a picture (`systemMark`).
+    var symbol: String? = nil
+
+    /// The company whose mark is a system symbol, by ticker: Apple wears
+    /// `apple.logo`, the glyph an Apple charge wears (prd §1202), never a
+    /// fetched or drawn copy of its logo.
+    static func systemMark(forTicker ticker: String) -> String? {
+        ticker.uppercased() == "AAPL" ? BridgeGlyph.symbol(for: "Apple") : nil
+    }
 
     var body: some View {
         ZStack {
             Circle().fill(onWhite ? Color.white : DS.tint.opacity(0.85))
-            if url == nil {
+            if let symbol {
+                Image(systemName: symbol)
+                    .font(.system(size: size * 0.5, weight: .semibold))
+                    .foregroundStyle(onWhite ? Color.black : Color.white)
+            } else if url == nil {
                 Text(verbatim: String(lettered.prefix(2)).uppercased())
                     .font(.system(size: size * 0.38, weight: .bold))
                     .foregroundStyle(.white)
             }
-            if let url {
+            if symbol == nil, let url {
                 RemoteThumb(urlString: url, size: onWhite ? size * 0.72 : size,
                             fallback: TokenWatch.source, circular: !onWhite)
             }

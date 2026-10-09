@@ -22,8 +22,16 @@ private enum BridgeIconArt {
     private static var names: [String: String] = [:]
     private static var images: [String: UIImage?] = [:]
 
+    /// A name that wears another brand's mark: one company's second service
+    /// (prd §1203), never a lookalike.
+    private static let aliases: [String: String] = ["uber eats": "brand-uber"]
+
     static func assetName(for name: String) -> String {
         if let hit = names[name] { return hit }
+        if let alias = aliases[name.lowercased()] {
+            names[name] = alias
+            return alias
+        }
         let made = "brand-" + Corpus.canonicalSource(name).lowercased()
             .folding(options: .diacriticInsensitive, locale: Locale(identifier: "en_US_POSIX"))
             .replacingOccurrences(of: " ", with: "-")

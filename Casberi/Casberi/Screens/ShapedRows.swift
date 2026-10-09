@@ -418,6 +418,32 @@ struct BandRow: View {
         return icon
     }
 
+    /// The ref families of a protocol's own rows on the Wallet seat — a vote,
+    /// an unlock, a position (`AerodromeDeFi`, `HyperliquidDeFi`) — and the
+    /// protocol each names. Such a row is ABOUT the protocol, so its mark
+    /// leads, not the wallet's identicon.
+    static let protocolRefFamilies: [String: String] = [
+        "aerodrome": "Aerodrome", "hyperliquid": "Hyperliquid",
+    ]
+
+    /// The bundled mark of the brand this row is about, when it names one:
+    /// a protocol's dated row on the Wallet seat, and a Bitrefill order's
+    /// merchant ("Amazon.com", "Uber"), whose product still is a picture of
+    /// a gift card where the merchant's own mark says who it is for. Nil for
+    /// a name with no mark, which keeps the row's own lead.
+    private var brandMark: String? {
+        guard let ref = thing.sourceRef else { return nil }
+        if thing.source == "Wallet", let colon = ref.firstIndex(of: ":"),
+           let name = Self.protocolRefFamilies[String(ref[..<colon])] {
+            return SubscriptionFace.mark(for: name)
+        }
+        if thing.source == "Bitrefill", ref.hasPrefix("bitrefill:order:"),
+           let merchant = thing.transferCounterparty, !merchant.isEmpty {
+            return SubscriptionFace.mark(for: merchant)
+        }
+        return nil
+    }
+
     /// The address a Wallet row draws an identicon for — the visual twin of
     /// the address label, shown only when more than one wallet is watched.
     private var identiconAddress: String? {
@@ -520,6 +546,8 @@ struct BandRow: View {
         case avatar(String)
         case blockie(String)
         case initial(String)
+        /// A brand the row is ABOUT, wearing its bundled mark (`brandMark`).
+        case brand(String)
         case publisher(String)
         case thumb(String, perishable: Bool, circular: Bool)
         case screenshot
@@ -564,6 +592,8 @@ struct BandRow: View {
         if let avatar = identityAvatarURL {
             // Whose post this is, when several accounts are followed.
             return .avatar(avatar)
+        } else if let mark = brandMark {
+            return .brand(mark)
         } else if let addr = identiconAddress {
             return .blockie(addr)
         } else if let sender = mailSender, SenderInitial.letter(of: sender) != nil {
@@ -783,6 +813,8 @@ struct BandRow: View {
             WalletBlockie(address: addr, size: DS.Face.rowCircle)
         case .initial(let sender):
             SenderInitial(sender: sender, size: DS.Face.rowCircle)
+        case .brand(let mark):
+            BridgeIcon(name: mark, size: DS.Mark.row, circular: true)
         case .publisher(let publisher):
             RemoteThumb(urlString: publisher, size: DS.Mark.row, fallback: thing.source)
         case .thumb(let image, let perishable, let circular):
@@ -1714,9 +1746,22 @@ struct SenderInitial: View {
     var size: CGFloat = DS.Face.row
 
     var body: some View {
+        // A sender that IS a service we bundle a mark for (a list from Linear
+        // or Notion) wears that mark, as Day's Subscriptions tile already
+        // does for the same list (`SubscriptionFace.mark`); a person keeps
+        // their letter.
+        if let mark = SubscriptionFace.mark(for: Self.displayName(of: sender)) {
+            BridgeIcon(name: mark, size: size, circular: true)
+                .accessibilityLabel("From \(Self.displayName(of: sender))")
+        } else {
+            letterDisc
+        }
+    }
+
+    private var letterDisc: some View {
         let letter = Self.letter(of: sender) ?? "?"
         let hue = Double(Self.hash(sender) % 360) / 360.0
-        Circle()
+        return Circle()
             .fill(Color(hue: hue, saturation: 0.48, brightness: 0.52))
             .frame(width: size, height: size)
             .overlay(

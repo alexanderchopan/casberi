@@ -185,7 +185,14 @@ enum BrandMark {
     }
 
     static func image(for name: String) -> UIImage? {
-        UIImage(named: "brand-" + slug(for: name))
+        if let own = UIImage(named: "brand-" + slug(for: name)) { return own }
+        // MetaMask's contracts (its EIP-7702 delegator, "Metamask Delegator")
+        // wear MetaMask's own mark, the one Walletbeat's snapshot bundles; a
+        // name with a mark of its own (MetaMask Card) took it above.
+        if name.range(of: "metamask", options: .caseInsensitive) != nil {
+            return UIImage(named: "brand-wb-metamask")
+        }
+        return nil
     }
 }
 

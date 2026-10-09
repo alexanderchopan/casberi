@@ -914,10 +914,14 @@ struct ContactFace: View {
         // wears their INITIALS in the ring — forty identical grey
         // silhouettes told nobody apart (the design pass, 2026-09-25;
         // §753's rule for a face with no picture).
-        if contact.lead.kind == .biller, BridgeIcon.hasMark(contact.name) {
-            // A biller wears its own mark when the app knows it (prd §1106),
-            // as the Subscriptions tile's face does; else the initials below.
-            BridgeIcon(name: contact.name, size: size, circular: true)
+        if contact.kind != .person || contact.lead.kind == .wallet,
+           let mark = SubscriptionFace.mark(for: contact.name) {
+            // A company wears its own mark when the app knows it (prd §1106,
+            // widened by §1203 from billers to every one that is not a
+            // person, and to an address named for one — an exchange's deposit
+            // wallet, a router, a card's Safe), as the
+            // Subscriptions tile's face does; else the rules below.
+            BridgeIcon(name: mark, size: size, circular: true)
         } else if let photo {
             Image(uiImage: photo)
                 .resizable().scaledToFill()

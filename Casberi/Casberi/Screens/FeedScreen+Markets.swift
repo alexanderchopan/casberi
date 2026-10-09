@@ -355,7 +355,8 @@ extension FeedScreen {
                            closes: pulse?.closes ?? [],
                            line: marketsLine(thing, price: price, quoteCap: quote?.marketCap,
                                              pulse: pulse, stock: stock),
-                           isStock: stock != nil)
+                           isStock: stock != nil,
+                           glyph: stock.flatMap(WatchFace.systemMark(forTicker:)))
         if let stock {
             let company = CompanyPacks.Company(name: TokensAsk.name(of: thing.title),
                                                listing: .stock(stock), seats: [TokenWatch.source])
