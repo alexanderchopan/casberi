@@ -2084,6 +2084,8 @@ struct MainSurface: View {
                 return
             }
             CategoryFold.remember(source)
+            // The pole a room opened on top goes back to (prd §1203).
+            if HomeScope.isPole(source) { chrome.lastPole = source }
             // A person scope belongs to ONE network, so it dies with the room
             // (prd §362) — unlike the wallet scope, which spans its category on
             // purpose. Carried into the next room it would match no row there and
@@ -2545,7 +2547,14 @@ struct MainSurface: View {
             // brings up the tray").** The walk's far end has nothing after
             // it either, so a swipe left there opens the tray instead of
             // springing home. Both ends of the walk now lead somewhere.
-            let atEnd = delta > 0 || HomeScope.contains(filter.source)
+            //
+            // **Since §1203 the walk is two poles, so these are its two ends**:
+            // a swipe right on the Feed and a swipe left on the Wallet. A room
+            // opened on top springs back from a swipe left; its swipe right is
+            // the way back out (`neighbour`).
+            let atEnd = isRegular
+                ? (delta > 0 || HomeScope.contains(filter.source))
+                : HomeScope.isPole(filter.source)
             if atEnd, route.path.isEmpty, !chrome.roomsTray {
                 DSHaptic.selection()
                 withAnimation(DS.Motion.folder) { chrome.roomsTray = true }
@@ -2605,6 +2614,19 @@ struct MainSurface: View {
     /// whole corpus takes more swipes than nine; nobody crosses the corpus
     /// by swiping — a flick on the dock and a tap is how you jump far.
     private func neighbour(_ delta: Int) -> String? {
+        // **TWO POLES ON THE PHONE (prd §1203, user: "i think it is something
+        // about all the swiping in the app … you swipe between wallet, today,
+        // and maybe thats it").** The Feed and the Wallet stand side by side;
+        // every other room opens on top of the pole you came from, so its
+        // swipe right goes back there and its swipe left goes nowhere. You's
+        // places (Notes, Markets) stand at the Feed's place. The rail's walk
+        // below is untouched: the iPad and the Mac keep every room in a row.
+        if !isRegular {
+            let wallet = CategoryFold.walletRoom
+            if HomeScope.contains(filter.source) { return delta > 0 ? wallet : nil }
+            if filter.source == wallet { return delta < 0 ? "All" : nil }
+            return delta < 0 ? chrome.lastPole : nil
+        }
         // **…AND EACH OF ITS APPS (prd §1136 item 9, user: "i swipe and swipe
         // between the apps and when i hit the last one i swipe into the next
         // room").** A merged room is its combined page, then each connected
@@ -3427,8 +3449,14 @@ private struct PagerCover: View {
             let edge: Alignment = side >= 0 ? .leading : .trailing
             VStack(alignment: side >= 0 ? .leading : .trailing,
                    spacing: DS.Space.s3) {
-                if label == "All" {
-                    Text("All").dsText(.heading40).foregroundStyle(ink)
+                if HomeScope.contains(label) {
+                    // You's places by their own words: the Feed (prd §1203,
+                    // the source is "All") and, since a room opened on top
+                    // goes back to the pole it came from, Notes and Markets.
+                    Text(Pinboard.isPinnedRoom(label) ? String(localized: "Notes")
+                         : HomeScope.isMarkets(label) ? String(localized: "Markets")
+                         : String(localized: "Feed"))
+                        .dsText(.heading40).foregroundStyle(ink)
                 } else {
                     // Bare, as the dock draws it — no rim, no disc (user:
                     // a white one "looks accidental", a black one too, and

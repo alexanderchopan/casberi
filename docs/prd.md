@@ -65356,3 +65356,22 @@ Privy picked in the Wallet led Home with `holdingsBlockSection`, the same drawin
 3. **"Apple" wears `apple.logo`** (`KindGlyph`), by the user's ruling: the row is Apple's own charge, the one use SF Symbols' terms allow. Apple Intelligence keeps its own symbol and iCloud+ and Apple One keep theirs.
 
 **Checked.** iOS build; seen on an iPhone 17 Pro simulator: Spending's Uber, Apple and Blue Bottle, Coming up's Amazon and Shell.
+
+## §1203 — Two poles: the Feed and the Wallet are the only pages you swipe between, everything else opens on top, and the face goes back (user, 2026-10-08: "i feel like there are two poles that maybe are tension in the app, tracking finance things, and reading your app feeds", "my intuition tells me it is something about all the swiping in the app … something like you swipe between wallet, today, and maybe thats it", "i think wallet should be in the you row b/c it is aggregated like home", "so the tray you section, the title, and the swipe let you get between the two poles", "ok, i think we are ready to build it"; the design canvas "Casberi — Two Poles", boards D–H; amends §663's walk on the phone, §1132's "the face is never a back door", §1166's "Today") — BUILDING
+
+**Why.** A swipe says "these are side by side", and ten categories in a row read as ten small apps glued together. Feeds are a flow (what happened, read and leave) and the Wallet is a stock (what you have, check and act). Two poles, side by side, is a map a hand can hold; everything else is depth, not breadth.
+
+1. **The walk is two pages on the phone** (`MainSurface.neighbour`): the Feed and the Wallet. You's places (Notes, Markets) stand at the Feed's place, as §1127 had them. The Feed's swipe right and the Wallet's swipe left open the tray (§1062 and §1125's code, the two ends now one page apart). The iPad and Mac keep the rail's walk, untouched. — BUILT
+2. **Every other room opens on top of the pole you came from** (`ShellChrome.lastPole`, set on every landing on a pole). Its swipe right goes back there; its swipe left springs. — BUILT
+3. **In a room opened on top, the face is ‹** (`RootShell.seatBack`): one tap lands on that pole. The tray is the face on either pole, or a swipe right then the face. — BUILT
+4. **The Wallet is a door in the tray's You row**, second, after the Feed: the two pages a swipe moves between lead the row in the swipe's order. It is aggregated like Home, so it is a place, not a category among categories. — BUILT
+5. **The title on the two poles reads "Feed Wallet"**, the standing one bold, the other grey and tappable; every other place keeps its own title ("Wallet · Safe", "Social", "You · Notes"). A tappable grey word is a narrow exception to §752: a third way to make the move the swipe and the tray already make, never the only one. "Today" becomes **Feed** (amends §1166), in the title, the You tile, the tray door and the swipe's card. — BUILT
+6. **The tray is three detached cards that scroll as one stack**: You (your row, then Recent), the Wallet (its apps, with no disc of its own: the door is in You), and the categories. — TO BUILD
+7. **Reading and Media merge** into one category, Media, with tiles All · Play · Read · Subscriptions; Highlights stay in Notes (§1020). Each day draws rows, then the grid. — TO BUILD
+8. **Frames, the devnet, is removed**, model and all (§723). Logos stays, a row until it is real. — TO BUILD
+
+**The cost, accepted.** An app in another category is a trip through the tray, where a swipe walked to it before. Recent (§1136 item 8) keeps the six you use one tap away, the Feed's category names are doors (§1152), and a swipe right is back. Most visits are the Feed and one thing; a Feed that tours for you beats a swipe that tours ten rooms.
+
+**Not yet ruled.** Markets' and Logos' final homes; whether the Wallet's row in the categories keeps a disc once the cards land.
+
+**Checked (items 1–5).** iOS build; on an iPhone 17 Pro simulator: Feed → swipe left → Wallet with the title swapped; the Wallet's swipe left raised the tray with the Wallet door lit; Social from the tray wore ‹ and its tap and a swipe right each landed back on the pole it came from; a tap on the grey word switched pages both ways; the Feed's swipe right raised the tray.

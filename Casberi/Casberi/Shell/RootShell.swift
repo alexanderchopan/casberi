@@ -165,6 +165,15 @@ struct RootShell: View {
                        width: shellWidth,
                        paneVisible: sceneState.route.path.isEmpty)
     }
+    /// What the dock's seat goes back to, or nil while it is the face. A push
+    /// pops (prd §767, the Mac's). **On the phone a room opened on top of a
+    /// pole goes back to that pole (prd §1203)**: the Feed or the Wallet are
+    /// where you stand, and anything else is a level in.
+    private var seatBack: (() -> Void)? {
+        if !sceneState.route.path.isEmpty { return { sceneState.route.goBack() } }
+        guard horizontalSizeClass != .regular, !HomeScope.isPole(filter.source) else { return nil }
+        return { chrome.sourceRequest = chrome.lastPole }
+    }
     /// The bar↔surface morph (2026-07-20) — shared between `AgentBar` and
     /// `Composer`'s `glassNamespace`, both keying `matchedGeometryEffect` to
     /// the same `"agentMorph"` id.
@@ -2371,8 +2380,7 @@ struct RootShell: View {
                                           chrome.roomsTray.toggle()
                                       }
                                   },
-                                  onBack: sceneState.route.path.isEmpty
-                                      ? nil : { sceneState.route.goBack() })
+                                  onBack: seatBack)
                     }
                 }
                 }

@@ -38,7 +38,32 @@ extension FeedScreen {
     var youPlaceName: String {
         if Pinboard.isPinnedRoom(source) { return String(localized: "Notes") }
         if HomeScope.isMarkets(source) { return String(localized: "Markets") }
-        return String(localized: "Today")
+        // "Today" until prd §1203: beside "Wallet" it named a time where the
+        // other named a place, and said your money was not part of your day.
+        return String(localized: "Feed")
+    }
+
+    /// The room's title row: the two poles' title on the phone's Feed and
+    /// unpicked Wallet (prd §1203 item 5), else the category and its pick.
+    @ViewBuilder
+    var roomTitle: some View {
+        if let walletStands = poleStanding {
+            DSPoleTitleRow(walletStands: walletStands) {
+                chrome.sourceRequest = walletStands ? "All" : CategoryFold.walletRoom
+            }
+        } else {
+            DSRoomTitleRow(title: roomName, pick: roomPick)
+        }
+    }
+
+    /// Which pole this page is on the phone — true for the Wallet, false for
+    /// the Feed — or nil anywhere else, a picked Wallet included: "Wallet ·
+    /// Safe" is a level in, and names itself.
+    private var poleStanding: Bool? {
+        guard roomScopeInRoom, roomPick == nil else { return nil }
+        if source == "All" { return false }
+        if source == CategoryFold.walletRoom { return true }
+        return nil
     }
 
     /// What the title names after the category's dot, or nil while the room

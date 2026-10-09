@@ -1528,7 +1528,7 @@ struct FeedScreen: View {
             // scrolls with the rows and reserves nothing. NO ROOM DRAWS A
             // SLIDERS DISC (prd §1050f, amending §1033): an app's settings
             // open from its row in Apps.
-            DSRoomTitleRow(title: roomName, pick: roomPick)
+            roomTitle
                 #if DEBUG
                 .background { notesProbeHook }
                 #endif

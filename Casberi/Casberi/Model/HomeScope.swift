@@ -68,6 +68,13 @@ enum HomeScope {
     static func leavesWalk(_ label: String) -> Bool {
         label == Pinboard.room || label == markets
     }
+
+    /// **THE TWO POLES (prd §1203).** The Feed (and You's places, which stand
+    /// at its place) and the Wallet are the only pages a swipe moves between;
+    /// everything else opens on top of the pole you came from.
+    static func isPole(_ source: String) -> Bool {
+        contains(source) || source == CategoryFold.walletRoom
+    }
 }
 
 /// YOU'S FOUR PLACES AS TILES (prd §1136 item 1, user: "the magic of the app
@@ -88,9 +95,10 @@ enum YouTile: String, CaseIterable, Identifiable, Hashable, Sendable {
 
     var label: String {
         switch self {
-        // TODAY, NOT HOME (prd §1166, user: "YES! 'Today' is great!"): the
-        // place holds today and nothing older (§1136i), so it says so.
-        case .feed:     return String(localized: "Today")
+        // FEED (prd §1203, user: "Feed is good"; was "Today", §1166): beside
+        // "Wallet" a time read wrong against a place. The date line under
+        // the box still says it is today's.
+        case .feed:     return String(localized: "Feed")
         case .markets:  return String(localized: "Markets")
         case .notes:    return String(localized: "Notes")
         case .settings: return String(localized: "Settings")

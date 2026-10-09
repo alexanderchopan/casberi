@@ -69,3 +69,45 @@ struct DSRoomTitleRow: View {
             + Text(verbatim: pick).foregroundStyle(DS.textPrimary)
     }
 }
+
+/// **THE TWO POLES' TITLE (prd §1203 item 5, user: "i think if it is a gray
+/// label someone will want to tap it tho").** On the Feed and the Wallet the
+/// title names both pages, in the swipe's order: the one you stand on in the
+/// category pink, the other in the tertiary ink and pressable, the way
+/// "For you · Following" reads. A narrow exception to §752: the third way to
+/// make the move the swipe and the tray already make, never the only one.
+/// One height with `DSRoomTitleRow`, so nothing under it moves.
+struct DSPoleTitleRow: View {
+    /// Whether the Wallet is the page standing.
+    let walletStands: Bool
+    /// The other pole, pressed.
+    let onOther: () -> Void
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s3) {
+            word(String(localized: "Feed"), standing: !walletStands)
+            word(String(localized: "Wallet"), standing: walletStands)
+        }
+        .lineLimit(1)
+        .minimumScaleFactor(0.6)
+        .frame(maxWidth: .infinity, minHeight: DSRoomTitleRow.height,
+               maxHeight: DSRoomTitleRow.height, alignment: .leading)
+        .animation(DS.Motion.standard, value: walletStands)
+    }
+
+    @ViewBuilder
+    private func word(_ name: String, standing: Bool) -> some View {
+        if standing {
+            DSScreenHead(title: Text(verbatim: name), ink: DS.brandInk)
+                .fixedSize()
+        } else {
+            Button(action: onOther) {
+                DSScreenHead(title: Text(verbatim: name), ink: DS.textTertiary)
+                    .fixedSize()
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(RowPress())
+            .accessibilityHint(Text("Shows this page"))
+        }
+    }
+}

@@ -350,6 +350,7 @@ struct RoomsTray: View {
     private var youDoors: [Door] {
         let place = route.path.isEmpty ? HomeScope.Place(source: filter.source) : nil
         return doors(home: filter.source == "All" && route.path.isEmpty,
+                     wallet: filter.source == CategoryFold.walletRoom && route.path.isEmpty,
                      notes: Pinboard.isPinnedRoom(filter.source) && route.path.isEmpty,
                      markets: HomeScope.isMarkets(filter.source) && route.path.isEmpty,
                      place: place)
@@ -365,11 +366,15 @@ struct RoomsTray: View {
         let act: () -> Void
     }
 
-    private func doors(home: Bool = false, notes: Bool = false, markets: Bool = false,
-                       place: HomeScope.Place? = nil) -> [Door] {
+    private func doors(home: Bool = false, wallet: Bool = false, notes: Bool = false,
+                       markets: Bool = false, place: HomeScope.Place? = nil) -> [Door] {
         [
-            Door(word: String(localized: "Today"), glyph: home ? "tray.full.fill" : ScopeTileGlyph.feed,
+            Door(word: String(localized: "Feed"), glyph: home ? "tray.full.fill" : ScopeTileGlyph.feed,
                  lit: home, key: "All") { pick("All") },
+            // The other pole (prd §1203): the two pages a swipe moves between
+            // lead the row, in the swipe's order.
+            Door(word: String(localized: "Wallet"), glyph: CategoryFold.glyph(for: CategoryFold.walletCategory),
+                 lit: wallet, key: CategoryFold.walletRoom) { pickCategory(CategoryFold.walletCategory) },
             // You's four places, in the tiles' order (prd §1136 item 1):
             // Home, then A–Z. Apps and Addresses are filters inside Sources
             // now, the master list of everything you've connected.

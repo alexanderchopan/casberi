@@ -222,7 +222,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1332 of 1396 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1333 of 1397 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -961,7 +961,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §662f — The demo banner stops wearing the Agents glyph, goes blue, and pulses
 - §662g — The dock had not scrolled since §660, and the hold becomes UIKit's own long press
 - §662h — The scrub is deleted
-- §663 — A chip tap lands in the room and opens its folder; a swipe walks individual rooms in the dock's order (amended by §1136)
+- §663 — A chip tap lands in the room and opens its folder; a swipe walks individual rooms in the dock's order (amended by §1136, §1203)
 - §664 — The Privacy devnet room's Home drew a sentence over 240pt of nothing, and its Send tiles rode up over the last transa… (part superseded by §1038)
 - §665 — The devnet rooms: the Privacy room keeps its last read and publishes once, the vibenet Permissions grid fits its slot…
 - §666 — Toward excellent: 120Hz, one gesture gate, and a frame meter
@@ -1489,7 +1489,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1129 — The category's name comes back, in pink, and You's doors are places (amended by §1156)
 - §1130 — Threads can have notifications the way Instagram does, through its own sign-in; Meta's Threads API cannot give them
 - §1131 — Threads is a seat: its own sign-in, its Activity in Social
-- §1132 — Nothing pushes on the phone: what you open rises as one sheet
+- §1132 — Nothing pushes on the phone: what you open rises as one sheet (amended by §1203)
 - §1133 — Two controls: the face says where, the tiles say what (amended by §1136) [+5 sub-entries]
 - §1134 — Day's Track tray searches mail
 - §1135 — An unwatched wallet's rows leave, under the name it was watched by too [+1 sub-entries]
@@ -1520,7 +1520,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1162 — Connecting, made shorter: pasted keys reach your other devices, Paste is the commit, a wrong or refused key says why,… (amended by §1163)
 - §1163 — A seat has one name: every bridge `NetworkReach` names is its catalog name, so a refused key reaches the page, the ri…
 - §1164 — You can track a subscription without a card or an app: the tray opens on Popular and stays open, a free plan counts,… (amended by §1202)
-- §1166 — A first run lands on Settings, Home is Today, and Settings counts eight kinds over Start here and every app (amended by §1168, §1169, §1180) [+1 sub-entries]
+- §1166 — A first run lands on Settings, Home is Today, and Settings counts eight kinds over Start here and every app (amended by §1168, §1169, §1180, §1203) [+1 sub-entries]
 - §1167 — Markets is automatic: always a room, never an app to connect, and its box is two across (amended by §1180)
 - §1168 — Today wears the inbox tray (amended by §1169)
 - §1169 — Empty Today is a preview of itself, and every room's All is a stack
@@ -1556,6 +1556,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1200 — A share lands where you would look for it, and the pill names the place
 - §1201 — The Wallet's Home is four short lists, Spending is one of them, and Needs you holds what waits off chain too
 - §1202 — A merchant wears its own mark: an offer leads with the merchant, five App Store marks are bundled, and an "Apple" cha…
+- §1203 — Two poles: the Feed and the Wallet are the only pages you swipe between, everything else opens on top, and the face g…
 
 ## Dead rulings → what replaced them (generated)
 
