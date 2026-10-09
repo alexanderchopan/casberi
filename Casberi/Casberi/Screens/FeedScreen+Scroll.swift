@@ -108,7 +108,7 @@ extension FeedScreen {
                     .textCase(nil)
                 Spacer(minLength: 0)
                 if folded {
-                    Text(today > 0 ? "\(today) today" : String(localized: "Nothing today"))
+                    (today > 0 ? Text("\(today) today") : Text("Nothing today"))
                         .dsText(.body17)
                         .foregroundStyle(DS.textTertiary)
                         .transition(.opacity)
