@@ -3072,6 +3072,73 @@ enum DemoSeedAll {
     /// direction on every leg, and no security flag — an unpriced or one-sided
     /// window is declined by design, which is exactly what an under-seeded
     /// wallet looks like.
+    /// THE THREE TRANSFERS MADE TO FOOL YOU (prd §1107) — one each, so every
+    /// count on the Security tile's checkup has a row behind it. Each lands
+    /// the shape `WalletIngest` lands for that attack and then goes through
+    /// the SHIPPED flagger for it, so the flag is the rule's verdict, never
+    /// the seed's (§368): if a rule changed and stopped matching, the row
+    /// would land unflagged and the count would honestly fall to zero.
+    ///
+    /// - **Address poisoning**: zero USDC into Savings, an hour after Savings
+    ///   paid Sam, from an address that ends like Sam's. The anchor is what
+    ///   `knownGoodCounterparties` would hand the rule for Savings — an
+    ///   address it SENT to, and one the book names.
+    /// - **A fake token**: a swap that bought "ÚЅDС" (the measured capture:
+    ///   an accented U, a Cyrillic Ѕ and С). A swap is the arm that lands it;
+    ///   a received airdrop of an unheld token is dropped before any flag.
+    /// - **A fake transfer**: a `Transfer` event naming Everyday as the
+    ///   sender of a token it never held and nobody prices.
+    private static func flaggedMoves() -> [Thing] {
+        let savings = demoWallets[1].address
+        let sam = counterpartyAddress(for: "Sam")
+        let poisoner = "0x9e41c7b20d5fa8e36b0c47d1a2f9e85c3b7d" + String(sam.suffix(4))
+        let poisoning = row(.transaction, "Received 0 USDC", source: "Wallet",
+                            ref: "demo:wallet:flag:poisoning", days: 7, hour: 13,
+                            content: "Base · USDC") { t in
+            t.walletAddress = savings
+            t.transferDirection = "received"
+            t.transferAmount = "0 USDC"
+            t.counterpartyAddress = poisoner
+            MainActor.assumeIsolated {
+                WalletSafety.flagPoisoning(t, knownGood: [sam])
+            }
+        }
+        let spoof = "ÚЅDС"
+        let swap = row(.transaction, "Swapped 0.05 ETH → 160 \(spoof)", source: "Wallet",
+                       ref: "demo:wallet:flag:symbol", days: 15, hour: 20,
+                       content: "Base · Swap") { t in
+            t.walletAddress = demoWallet
+            // An unknown router: no name, so no " on …" clause, as the live
+            // swap arm leaves it.
+            t.counterpartyAddress = "0xa71c3e9b52d84f06c1e7a39b2d5f804e6c3a1b97"
+            MainActor.assumeIsolated {
+                WalletSafety.flagSpoofedSymbol(t, symbols: ["ETH", spoof])
+            }
+        }
+        let fake = row(.transaction, "Sent 25,000 BASEDROP", source: "Wallet",
+                       ref: "demo:wallet:flag:spam", days: 10, hour: 4,
+                       content: "Base · BASEDROP") { t in
+            t.walletAddress = demoWallet
+            t.transferDirection = "sent"
+            t.transferAmount = "25,000 BASEDROP"
+            t.counterpartyAddress = "0x3f8a2c91e07b4d56a1c9e2f7b48d03a6c5e19f72"
+            MainActor.assumeIsolated {
+                // Held: the two Base tokens the demo's own books hold (WETH
+                // and USDC, `WalletDemoState`); the price read ran and named
+                // nothing for this one.
+                WalletSafety.flagFakeTransfer(
+                    t, contract: "0x6d2e1b9a4c7f30e85a1d9c42b7e6f03a18c5d9e4",
+                    category: "erc20",
+                    held: ["0x4200000000000000000000000000000000000006",
+                           "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"],
+                    pricedUSD: nil, priceWasRead: true)
+                // Both directions, as ingest does: this symbol is plain.
+                WalletSafety.flagSpoofedSymbol(t, symbols: ["BASEDROP"])
+            }
+        }
+        return [poisoning, swap, fake]
+    }
+
     private static func walletRoom() -> [Thing] {
         var out: [Thing] = []
         let moves: [(Bool, String, String, Double, Double)] = [
@@ -3087,6 +3154,12 @@ enum DemoSeedAll {
             (false, "300 USDC",   "Gnosis Pay",  300, 25),
             (true,  "1,000 USDC", "Peer",      1_000, 27),
             (false, "0.05 ETH",   "Sam",         159, 29),
+            // Spending's examples (the Wallet Home): an exchange deposit
+            // this month, and early-September sends so "than this point in
+            // September" compares against something.
+            (false, "500 USDC",   "Coinbase",    500, 4),
+            (false, "250 USDC",   "Bitrefill",   250, 34),
+            (false, "0.10 ETH",   "Mia",         318, 36),
         ]
         out += moves.enumerated().map { i, m in
             let verb = m.0 ? "Received" : "Sent"
@@ -3111,6 +3184,18 @@ enum DemoSeedAll {
                 t.transferUSD = m.3
             }
         }
+        // A send to an address nobody named: Spending's place is the short
+        // address, as the row's own line draws it.
+        let stranger = "0x2f60c8e1d4b7a39051e6f2c7d80b14a5e93fa91c"
+        out.append(row(.transaction, "Sent 150 USDC to \(WalletStore.shortAddress(stranger))",
+                       source: "Wallet", ref: "demo:wallet:tx:stranger", days: 6, hour: 18,
+                       content: "Base · \(WalletStore.shortAddress(stranger))") { t in
+            t.walletAddress = walletFor(move: 0)
+            t.transferDirection = "sent"
+            t.transferAmount = "150 USDC"
+            t.counterpartyAddress = stranger
+            t.transferUSD = 150
+        })
         // A move between two of the person's own wallets (prd §1078): both
         // legs land, as they do live, and Home draws them as one row.
         let everyday = demoWallets[0], savings = demoWallets[1]
@@ -3128,6 +3213,7 @@ enum DemoSeedAll {
                 t.transferUSD = 1_590
             })
         }
+        out += flaggedMoves()
         // An approval, so the wallet room's exposure card has something real.
         // `.transaction` and a REAL `wallet:approval:` ref (2026-08-12).
         // `WalletApprovals` lands an approval as a `.transaction`, and the
@@ -3415,7 +3501,6 @@ enum DemoSeedAll {
             // cadence, and Notion's last one up two dollars inside the
             // price-rise window. The renewals fall across the next five weeks.
             ("Claude", 20.00, 6), ("Claude", 20.00, 36), ("Claude", 20.00, 66),
-            ("Cursor", 20.00, 25), ("Cursor", 20.00, 55), ("Cursor", 20.00, 85),
             ("Notion", 12.00, 10), ("Notion", 10.00, 40), ("Notion", 10.00, 70),
             ("Linear", 10.00, 16), ("Linear", 10.00, 46), ("Linear", 10.00, 76),
             ("iCloud+", 2.99, 3), ("iCloud+", 2.99, 33), ("iCloud+", 2.99, 63),
@@ -3423,7 +3508,18 @@ enum DemoSeedAll {
             // so Track a subscription offers it, as it offers Apple above.
             ("Spotify", 11.99, 12), ("Spotify", 11.99, 42),
         ]
-        return spends.enumerated().map { i, s in
+        // Notion's rise as `AppleWalletBridge.landChanges` lands it, through
+        // the shipped shaper's title and ref.
+        let rise = AppleWalletRoom.Creep(merchant: "Notion", was: 10, now: 12,
+                                         currency: "USD", at: at(10, 13))
+        let riseRow = row(.note, AppleWalletRoom.creepLine(rise), source: "Apple Wallet",
+                          ref: AppleWalletRoom.creepRef(rise), days: 10, hour: 13,
+                          tags: ["Price rise"]) { t in
+            t.transferCounterparty = rise.merchant
+            t.priceValue = rise.now
+            t.priceCurrency = rise.currency
+        }
+        return [riseRow] + spends.enumerated().map { i, s in
             row(.transaction, "\(s.0) · $\(String(format: "%.2f", s.1))",
                 source: "Apple Wallet", ref: "demo:applewallet:\(i)", days: s.2, hour: 12 + (i % 8),
                 content: "Apple Card") { t in
@@ -3657,6 +3753,10 @@ enum DemoSeedAll {
             ("Sent · £45.00 → $57.10", 45, "GBP", ["Transfer"], "sent", 19),
             ("Returned · £300 → €351", 300, "GBP",
              ["Transfer", "Returned"], "received", 41),
+            // Wise holding a transfer until you act (`hasActiveIssues`), so
+            // the Wallet's Needs you carries something off chain.
+            ("Needs attention · £200 → €235 · Deposit", 200, "GBP",
+             ["Transfer", "Pending", WiseShape.stuckTag], "sent", 0.2),
         ]
         out += wise.enumerated().map { i, w in
             row(.transaction, w.0, source: "Wise", ref: "wise:transfer:demo\(i)",

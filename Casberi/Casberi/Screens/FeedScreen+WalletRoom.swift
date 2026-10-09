@@ -1104,6 +1104,9 @@ extension FeedScreen {
     /// "now", so they come before anything dated, newest first. Peer's open
     /// trades and Rocket Money's bills are not here: neither stores a pending
     /// item or a due date the room could read.
+    /// How long a price rise stands in Needs you: one monthly cycle.
+    static let priceRiseWindow: TimeInterval = 30 * 86_400
+
     func walletUpcoming(_ visible: [Thing]) -> [Thing] {
         let now = Date.now
         let live = visible.live
@@ -1112,6 +1115,13 @@ extension FeedScreen {
             if thing.source == SafeBridge.sourceName { return walletSafePending.contains(ref) }
             if thing.source == PrivacyPoolsBridge.sourceName, ref.hasPrefix(PrivacyPoolsRoom.depositPrefix) {
                 return PrivacyPoolsRoom.state(tags: thing.tags).map { !$0.resolved } ?? false
+            }
+            // Off chain: a Wise transfer Wise is holding until you act, and a
+            // subscription that went up, until the next charge at the new
+            // price would land — the decision is keep it or cancel first.
+            if thing.source == WiseShape.source { return WiseShape.isStuck(tags: thing.tags) }
+            if thing.source == AppleWalletBridge.sourceName, thing.tags.contains("Price rise") {
+                return now.timeIntervalSince(thing.capturedAt) < Self.priceRiseWindow
             }
             return false
         }
@@ -1300,16 +1310,6 @@ extension FeedScreen {
         // its "new since" divider.
         walletDaySections(groups, boundary: boundaryID(in: groups), ownMoves: ownMoves,
                           nextEventID: nextEventID)
-    }
-
-    /// **WHAT'S AHEAD, AT THE HEAD OF HOME (prd §1041, moved by §1111): Needs
-    /// you, then each dated row under the day it falls due, soonest first** —
-    /// above what happened, the way a day's list reads from now. No "new
-    /// since" divider: a due row's `capturedAt` is when it was read, not news.
-    @ViewBuilder
-    func walletComingUpSections(_ upcoming: [Thing], nextEventID: UUID?) -> some View {
-        walletDaySections(walletComingUpDays(upcoming), boundary: nil,
-                          named: [Self.needsYouGroup], nextEventID: nextEventID)
     }
 
     /// **"NEEDS YOU" LEADS HOME (prd §1090, Work's §1080 carried over; Home's

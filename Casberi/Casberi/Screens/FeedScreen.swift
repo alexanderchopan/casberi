@@ -481,6 +481,8 @@ struct FeedScreen: View {
     @Environment(FeedFilter.self) var filter
 
     @State var feedSheet: FeedSheetRoute?
+    /// The Wallet Home sections opened past their five rows (`walletHomeDoor`).
+    @State var walletOpenSections: Set<String> = []
     /// Whether this device holds a GitHub key — the Watch tile's gate (prd
     /// §1031), so a demo seat with no key never draws a verb that cannot
     /// act (§83). Read in a `.task`, never a body (a Keychain read, §628).

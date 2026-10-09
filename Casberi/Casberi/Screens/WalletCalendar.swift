@@ -170,8 +170,8 @@ struct SubscriptionFace: View {
     var body: some View {
         if let url {
             WatchFace(url: url, lettered: name, size: size)
-        } else if BridgeIcon.hasMark(name) {
-            BridgeIcon(name: name, size: size, circular: true)
+        } else if let mark = Self.mark(for: name) {
+            BridgeIcon(name: mark, size: size, circular: true)
         } else {
             Text(verbatim: String(name.trimmingCharacters(in: .whitespaces).prefix(1)).uppercased())
                 .dsText(.badgeInitial12).foregroundStyle(DS.textSecondary)
@@ -179,5 +179,12 @@ struct SubscriptionFace: View {
                 .background(Circle().fill(DS.fillFaint))
                 .accessibilityHidden(true)
         }
+    }
+
+    /// The name a mark is bundled under: the name as written, else without
+    /// its web suffix, because a card's descriptor says "Netflix.com" where
+    /// the mark is Netflix's (`ServiceIdentity.names`).
+    static func mark(for name: String) -> String? {
+        ([name] + ServiceIdentity.names(name).dropFirst()).first(where: BridgeIcon.hasMark)
     }
 }

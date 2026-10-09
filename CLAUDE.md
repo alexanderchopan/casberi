@@ -213,6 +213,7 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - **The folded rooms' own views are deleted (prd §1059): the kind tiles (`RoomKindTiles`), Reminders' and Mail's tiles, the Calendar agenda and every room-level arm only a folded app reached; `FeedScreen.Shape` and `rowShape` stay for the rows. A mail's `Attached` fact stays (`MailIngest.attachedLabel`): the sheet and search read it** → prd §1059
 - `-connectReminders YES` — the real Reminders connect, seat included (relaunch to see it; `simctl privacy … grant reminders` first, `-demo.corpusAllowed NO` on a fresh install or the dev seed pours four) → prd §993
 - **Shares file by kind (`ShareHome`)** → prd §1200
+- **The Wallet's Home is four short lists (Needs you · Coming up · Spending · Transactions, five rows and a door, `FeedScreen+WalletHome.swift`); Spending is this month by place (`Spending`, `SpendingSource`), never a move of your own, a swap or a contract; Needs you takes a stuck Wise transfer and a price rise** → prd §1201
 - `-saveLink "<url>"` — keep a link as a paste would, once per URL (prd §1092; NSLogs `saveLink:`); pair with `-openThing`
 - `-openThing "<title prefix>"` — open the newest thing whose title starts with the prefix (NSLogs `openThing:`). It runs at mount, before ingest hooks land anything, so land first and relaunch.
 - `-answerProbe "<query>"` — run the answer path headless, NSLog the result (`-probeDelay <s>` to wait first). Deterministic unless the Apple Intelligence seat answers (prd §833).

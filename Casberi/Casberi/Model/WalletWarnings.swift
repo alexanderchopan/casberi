@@ -285,13 +285,26 @@ enum WalletWatch {
             // three spenders. Roll them up the way the live path does, over
             // the demo's own books and the approval rows the seed lands.
             var s = WalletDemoState.state
-            let approvals = ((try? context.fetch(FetchDescriptor<Thing>(
-                predicate: #Predicate { $0.source == "Wallet" }))) ?? [])
-                .live.filter { $0.sourceRef?.hasPrefix("wallet:approval:") ?? false }
+            let walletRows = ((try? context.fetch(FetchDescriptor<Thing>(
+                predicate: #Predicate { $0.source == "Wallet" }))) ?? []).live
+            let approvals = walletRows
+                .filter { $0.sourceRef?.hasPrefix("wallet:approval:") ?? false }
+            // The flagged transfers the seed landed, counted exactly as the
+            // live path counts its own (below): by the flag the shipped
+            // flaggers (`WalletSafety.flagPoisoning`, `flagSpoofedSymbol`,
+            // `flagFakeTransfer`) put on the row, never a number of the
+            // demo's choosing. These were hard zeros, so the Security tile's
+            // last three counts could never draw a row (§83).
+            var seenFlagged = Set<Thing.ID>()
+            let flagged = walletRows.filter { $0.isFlagged && seenFlagged.insert($0.id).inserted }
+            s.flagged = flagged
             s.activeApprovals = approvals
             s.warnings = warnings(positions: s.positions, morpho: s.morpho,
                                   safePending: WalletDemoState.safePending,
-                                  delegations: [], poisoningCount: 0, spoofedSymbolCount: 0,
+                                  delegations: [],
+                                  poisoningCount: flagged.filter { $0.hasSecurityFlag("poisoning") }.count,
+                                  spoofedSymbolCount: flagged.filter { $0.hasSecurityFlag("symbol") }.count,
+                                  fakeTransferCount: flagged.filter { $0.hasSecurityFlag("spam") }.count,
                                   approvalCount: max(approvals.count, s.exposure.spenderCount))
             return s
         }

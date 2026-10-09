@@ -414,13 +414,26 @@ enum AppleWalletBridge {
     }
 
     @available(iOS 17.4, *)
-    private static func currentAmount(_ balance: AccountBalance) -> CurrencyAmount? {
+    private static func currentAmount(_ balance: AccountBalance) -> SignedAmount? {
+        let current: Balance
         switch balance.currentBalance {
-        case .available(let b): return b.amount
-        case .booked(let b): return b.amount
-        case .availableAndBooked(let available, _): return available.amount
+        case .available(let b): current = b
+        case .booked(let b): current = b
+        case .availableAndBooked(let available, _): current = available
         @unknown default: return nil
         }
+        // A balance's amount carries no sign; `creditDebitIndicator` does. An
+        // asset account in debit is OVERDRAWN, and read unsigned it was money
+        // held in the Wallet total. Liabilities take `abs` at their reader.
+        // UNMEASURED: no simulator ships FinanceKit data.
+        let amount = current.amount
+        return SignedAmount(amount: current.creditDebitIndicator == .debit ? -amount.amount : amount.amount,
+                            currencyCode: amount.currencyCode)
+    }
+
+    private struct SignedAmount {
+        var amount: Decimal
+        var currencyCode: String
     }
 
     /// Turn transactions into rows, deduped on `sourceRef`.

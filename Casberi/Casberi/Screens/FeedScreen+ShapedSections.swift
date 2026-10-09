@@ -405,10 +405,11 @@ extension FeedScreen {
                 // activity", "'needs you' becomes a section in home").** Coming
                 // up became Subscriptions, so Needs you and the dated rows
                 // stand at the head of Home, above what happened.
-                walletComingUpSections(upcoming, nextEventID: nextEventID)
-                let stream = walletStream(all)
-                walletStreamSections(stream.rows, ownMoves: stream.ownMoves, nextEventID: nextEventID)
-                walletSeeAllSection(total: all.count)
+                //
+                // **FOUR SHORT LISTS (user, 2026-10-08):** Needs you, Coming
+                // up, Spending, Transactions, five rows each and a door
+                // (`Screens/FeedScreen+WalletHome.swift`).
+                walletHomeSections(upcoming: upcoming, all: all, nextEventID: nextEventID)
                 // **AN EMPTY LIST DRAWS ITS ROWS EMPTY (prd §769).** Watch a
                 // wallet, at the head of the Accounts pill's list, is the
                 // remedy, one tap away (§1107).

@@ -104,7 +104,7 @@ extension FeedScreen {
     /// history page (2026-07-20). Five is the count that still reads as "here's
     /// what's new" rather than a log — the reads above it are the point of this
     /// screen, and an unbounded stream buried all four of them.
-    static let walletPreviewRows = 12
+    static let walletPreviewRows = 5
 
     /// How many transactions lead the room from inside the balance card
     /// (2026-08-18, user ruling — the answer to "the transactions are at the

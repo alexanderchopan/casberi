@@ -431,11 +431,20 @@ enum WiseShape {
         var out = [String(localized: "Transfer")]
         switch stage(transfer.status) {
         case .sent:     break
-        case .pending:  out.append(String(localized: "Pending"))
+        case .pending:
+            out.append(String(localized: "Pending"))
+            // The title's stuck word as data, so the Wallet's Needs you can
+            // read it without parsing a title (prd §852's explicit `true`).
+            if transfer.hasActiveIssues == true { out.append(stuckTag) }
         case .returned: out.append(String(localized: "Returned"))
         }
         return out
     }
+
+    static var stuckTag: String { String(localized: "Needs attention") }
+
+    /// A transfer Wise will not send until you act — the Wallet's Needs you.
+    static func isStuck(tags: [String]) -> Bool { tags.contains(stuckTag) }
 
     /// What the seat proves it is reading: the balances, largest first, up to
     /// three, then "+N more". nil when nothing has been read yet.
