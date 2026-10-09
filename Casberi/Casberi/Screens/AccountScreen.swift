@@ -352,7 +352,10 @@ struct SettingsRows: View {
             // the seats no longer learn (prd §634), so this screen is the ONLY
             // thing deciding order — which is the other half of why it should
             // be named after what it governs.
-            RowSpec(title: "Dock order",
+            //
+            // "FEED ORDER" since prd §1208f (user, 2026-10-09): what it
+            // governs is now the Feed's sections first.
+            RowSpec(title: "Feed order",
                     value: CategoryOrder.current.prefix(3).joined(separator: ", "),
                     badge: ("arrow.up.arrow.down", DS.textPrimary),
                     action: { open(.dockOrder) { chipOrderOpen = true } }),
@@ -594,7 +597,7 @@ struct SettingsRows: View {
         case "Name": "signature"
         case "Data": "externaldrive"
         case "Diagnostics": "stethoscope"
-        case "Dock order": "arrow.up.arrow.down"
+        case "Feed order": "arrow.up.arrow.down"
         case "Theme": "circle.lefthalf.filled"
         case "Notifications": "bell"
         case "Language": "globe"

@@ -65498,3 +65498,7 @@ Under the Feed's box and tiles stand today's contents first — every app's newe
 1. **A tile with a picture** leads with it (72pt) over two lines; **a tile without one** draws no art band: its app's mark (22pt) beside the category, and up to four lines of the newest notification. Every tile is one height (168pt), so the grid's rows line up.
 2. **A source with no mark of its own** (a combined source whose name is a list) takes the category's glyph, never `BridgeIcon` drawing the name — the cause of the tile that spilled.
 3. **The face is felt**: `DSHaptic.selection()` as it opens and closes the tray.
+
+## §1208f — "Dock order" is "Feed order" (user, 2026-10-09: "change name of dock order in settings to feed order"; amends §533's name)
+1. **The setting is named for what it orders now**: the Feed's sections (§1152, §1208 item 5), the tray and every category bar read `CategoryOrder.current`. The row, its sheet's title and the Mac pane's heading say "Feed order"; the route case `.dockOrder` and the `dock.order` defaults keep their names, so a person's order carries over.
+2. **The four translations moved with the key** at `needs_review`: es "Orden del feed", ja "フィードの並び", ko "피드 순서", zh-Hans "订阅流顺序", each built on that language's existing "Feed".

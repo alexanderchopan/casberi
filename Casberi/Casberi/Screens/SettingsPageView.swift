@@ -24,7 +24,7 @@ struct SettingsPageView: View {
             case .diagnostics:
                 headed("Diagnostics") { DiagnosticsScreen() }
             case .dockOrder:
-                headed("Dock order") { CategoryOrderSheet() }
+                headed("Feed order") { CategoryOrderSheet() }
             }
         }
         .environment(\.dsInPane, true)

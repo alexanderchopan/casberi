@@ -582,7 +582,7 @@ extension FeedScreen {
     }
 
     /// Home's rows in category sections, in the person's category order
-    /// (prd §1152: the order Settings › Dock order sets and the tray reads,
+    /// (prd §1152: the order Settings › Feed order sets and the tray reads,
     /// user: "if in the dock settings the user changes the order it should
     /// change the order displayed on home feed"). A thing with no category
     /// (a note of yours) closes Home under You. `AppGroups` holds the rule.

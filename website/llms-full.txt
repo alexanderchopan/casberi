@@ -157,7 +157,7 @@ The Wallet widget puts your balance on the Home Screen. Tap it and Casberi opens
 
 #### Settings
 
-Behind your avatar, Settings is the third section: your photo and name, your data (all on your phone — export or delete anytime), dock order, light or dark, notifications, language, your key, and diagnostics. No account, no sign-in — there was never anything to sign up for.
+Behind your avatar, Settings is the third section: your photo and name, your data (all on your phone — export or delete anytime), feed order, light or dark, notifications, language, your key, and diagnostics. No account, no sign-in — there was never anything to sign up for.
 
 Your key is for an agent you bring — Claude, ChatGPT, Gemini, Venice, Bankr, or OpenRouter. It lives in the Keychain, and what it sends goes from your phone straight to that provider, billed to your key. There is no Casberi server in between.
 

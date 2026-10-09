@@ -5255,6 +5255,34 @@
         }
       }
     },
+    "Feed order" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Orden del feed"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "フィードの並び"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "피드 순서"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "订阅流顺序"
+          }
+        }
+      }
+    },
     "Feeds" : {
       "localizations" : {
         "es" : {
@@ -69986,34 +70014,6 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "距离清算的距离，由近到远：%@。"
-          }
-        }
-      }
-    },
-    "Dock order" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Orden del dock"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "ドックの並び"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "독 순서"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "程序坞顺序"
           }
         }
       }

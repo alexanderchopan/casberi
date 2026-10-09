@@ -119,7 +119,7 @@ enum CategoryOrder {
     /// Category names in the person's order (prd §1050j): the rooms tray and
     /// every glass category bar — Settings, Markets, Addresses, What this app
     /// reaches —
-    /// read the one order Settings › Dock order sets, so rearranging it moves
+    /// read the one order Settings › Feed order sets, so rearranging it moves
     /// them all. A name the order has never heard of sorts A–Z after it.
     static func sorted(_ names: [String]) -> [String] {
         let order = current

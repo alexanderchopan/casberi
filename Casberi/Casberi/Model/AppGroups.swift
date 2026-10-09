@@ -8,7 +8,7 @@ import Foundation
 ///
 /// Home is today (§1136 item 7). Its rows are first sorted into CATEGORY
 /// sections (`byCategory`), in the person's own category order — the one the
-/// tray and Settings › Dock order read, so rearranging it moves Home too —
+/// tray and Settings › Feed order read, so rearranging it moves Home too —
 /// and then, inside each section, every app gets a header (`group`), even one
 /// that brought a single thing, and stands as its NEWEST thing: the header is
 /// the door to the rest, as a fold's row was (§377), and nothing under it

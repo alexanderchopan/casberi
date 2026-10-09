@@ -222,7 +222,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1344 of 1410 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1345 of 1411 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -816,7 +816,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §530 — "The network refused it: the node refused the transaction" — the write path could not say why, and one refusal it sho… (part superseded by §1038)
 - §531 — The Hegotá account that could never be made again, and the faucet sentence that could never be said (part superseded by §1038)
 - §532 — Five sizes, one family: the type ramp becomes the brand
-- §533 — Category chips get a user-set order, past the 2026-08-11 constant
+- §533 — Category chips get a user-set order, past the 2026-08-11 constant (amended by §1208f)
 - §534 — ENS becomes a seat — follow a name you don't own, and know the whole ladder it walks (part superseded by §540)
 - §535 — Polar becomes a room — Stripe's doctrine applied to a second Merchant of Record
 - §536 — The per-source `@Query` safety net stopped trusting the one thing it still trusted
@@ -1566,6 +1566,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1208c — The Feed's sections lose their covers and their fold; Settings shows Casberi's settings; Notes and Markets stand on t… (amended by §1208d)
 - §1208d — The Feed at a glance in tiles, the section you are in above the scroll, a dot for what is new, and each section on it… (amended by §1208e)
 - §1208e — A glance tile gives its words the room when it has no picture, and never draws a name as a mark; the face is felt
+- §1208f — "Dock order" is "Feed order"
 - §1209 — Generative search, v1: words become a page, with no model
 - §1209a — The band is face · bar · ✎ on every page; a thing's sheet opens its names' pages; no pins
 
