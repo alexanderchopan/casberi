@@ -65515,3 +65515,6 @@ Under the Feed's box and tiles stand today's contents first — every app's newe
 4. **The Category widget is deleted** with its picker and its shelves (`widget.shelves` is swept from the app group). Every widget offers `.systemSmall` only (`widget-selftest.sh`).
 
 UNVERIFIED on a device: written on a machine with no Xcode, so neither build nor tile was seen before commit.
+
+## §1208h — The newest category leads the glance, the whole width (user, 2026-10-09, on the canvas "Casberi — Today's tiles, the Apple way", board A: "in A the top thing is the newest thing?", then "I think it should be the newest thing"; amends §1208d item 1)
+The category the Feed's box came from stands first, the whole width (`GlanceTile(wide:)`), with its next thing after the box's — never the box's own, so nothing shows twice — and the thing after that as a line under it; a picture leads it when one of today's has one. The other categories stay two across in the dock's order. With no picture the wide tile is shorter (128pt) than the grid's (168pt). A category whose only thing today is the box's has no wide tile; the grid stands alone.
