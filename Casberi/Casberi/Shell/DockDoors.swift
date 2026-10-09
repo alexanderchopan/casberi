@@ -71,7 +71,7 @@ struct NoteDoor: View {
                 .foregroundStyle(DS.textPrimary)
                 .frame(width: size, height: size)
                 .dsGlassDoor(nil)
-                .contentShape(Circle())
+                .dsTapTarget(Circle())
                 .dsHover()
         }
         .buttonStyle(PressSpring())
