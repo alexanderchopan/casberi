@@ -222,7 +222,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1334 of 1400 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1335 of 1401 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -936,7 +936,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §645 — The sheet draws the words the app holds: `enrichedText` stops being retrieval-only, and the four carve-outs stop bein… [+7 sub-entries]
 - §646 — The room materialised its own query four times a body pass, and the fourth of the watchdog family died on the first o…
 - §647 — A renamed seat's old rows had no seat at all, and a one-shot migration could never have caught them (amended by §650)
-- §648 — The card's whole vocabulary was keyed to a distance the swipe never travels
+- §648 — The card's whole vocabulary was keyed to a distance the swipe never travels (amended by §1207)
 - §649 — The dock's folder must touch the dock: the faces move above it (part superseded by §677) [+1 sub-entries]
 - §650 — The same one-shot, one seat over, and this one also moved the ref
 - §651 — Three signature paths, each with work sitting inside the frames it needed: launch, the swipe, the dock [+1 sub-entries]
@@ -1228,7 +1228,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §895 — Work items and purchases take the shared head (amended by §1190)
 - §896 — A fold says its newest thing, and counts the rest on the line's tail (amended by §1103; part superseded by §902)
 - §897 — Media leads with its art, a chart with its asset (amended by §1186, §1188)
-- §898 — The swipe is dealt on the brand ground
+- §898 — The swipe is dealt on the brand ground (amended by §1207)
 - §898a — The brand ground steps down to B 42
 - §898b — The swipe's table is a sheet of frosted glass over the pink
 - §898c — The swipe's table is the OTHER PAGE, flat: white under the dark card, black under the light one
@@ -1488,7 +1488,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1130 — Threads can have notifications the way Instagram does, through its own sign-in; Meta's Threads API cannot give them
 - §1131 — Threads is a seat: its own sign-in, its Activity in Social
 - §1132 — Nothing pushes on the phone: what you open rises as one sheet (amended by §1203)
-- §1133 — Two controls: the face says where, the tiles say what (amended by §1136) [+5 sub-entries]
+- §1133 — Two controls: the face says where, the tiles say what (amended by §1136, §1207) [+5 sub-entries]
 - §1134 — Day's Track tray searches mail
 - §1135 — An unwatched wallet's rows leave, under the name it was watched by too [+1 sub-entries]
 - §1136 — One place for lists: You is a room of four places, Settings holds everything you've connected, Home is Today then Com… (amended by §1138, §1139, §1164, §1166)
@@ -1504,7 +1504,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1149 — A connected app's line reads grey everywhere; a selected count stays blue
 - §1150 — Calendars counts every calendar Casberi reads
 - §1151 — The default order is the day first: Day, Social, Work, Wallet, Reading, Life, Media, Agents, Testnets
-- §1152 — Home is by category, in your dock order (amended by §1156)
+- §1152 — Home is by category, in your dock order (amended by §1156, §1207)
 - §1153 — People gets Contacts' A–Z strip, and Settings' Search looks through every kind (amended by §1171)
 - §1154 — Home ends with its categories: "Your day" and the Coming up door are deleted
 - §1155 — Logos gets Chat: your conversations from Basecamp, read through Observer and never kept; Rewards folds into Node (amended by §1155a)
@@ -1518,7 +1518,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1162 — Connecting, made shorter: pasted keys reach your other devices, Paste is the commit, a wrong or refused key says why,… (amended by §1163)
 - §1163 — A seat has one name: every bridge `NetworkReach` names is its catalog name, so a refused key reaches the page, the ri…
 - §1164 — You can track a subscription without a card or an app: the tray opens on Popular and stays open, a free plan counts,… (amended by §1202)
-- §1166 — A first run lands on Settings, Home is Today, and Settings counts eight kinds over Start here and every app (amended by §1168, §1169, §1180, §1203) [+1 sub-entries]
+- §1166 — A first run lands on Settings, Home is Today, and Settings counts eight kinds over Start here and every app (amended by §1168, §1169, §1180, §1203, §1207) [+1 sub-entries]
 - §1167 — Markets is automatic: always a room, never an app to connect, and its box is two across (amended by §1180)
 - §1168 — Today wears the inbox tray (amended by §1169)
 - §1169 — Empty Today is a preview of itself, and every room's All is a stack
@@ -1554,10 +1554,11 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1200 — A share lands where you would look for it, and the pill names the place
 - §1201 — The Wallet's Home is four short lists, Spending is one of them, and Needs you holds what waits off chain too
 - §1202 — A merchant wears its own mark: an offer leads with the merchant, five App Store marks are bundled, and an "Apple" cha…
-- §1203 — Two poles: the Feed and the Wallet are the only pages you swipe between, everything else opens on top, and the face g…
+- §1203 — Two poles: the Feed and the Wallet are the only pages you swipe between, everything else opens on top, and the face g… (amended by §1207)
 - §1204 — Reading folds into Media: one category, tiles All · Play · Read · Subscriptions, and Highlights is deleted
 - §1205 — Every company in the demo wears its mark: a sweep, nine App Store marks, and the faces that skipped a bundled one
 - §1206 — Frames, the devnet, is removed, model and all; Logos is the Testnets category's one seat, and the website counts the…
+- §1207 — One walk with neighbours in its title, the tray as a black page of modules, the bar always there, every page a compos…
 
 ## Dead rulings → what replaced them (generated)
 
