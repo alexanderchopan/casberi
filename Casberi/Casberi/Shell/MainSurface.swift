@@ -2551,7 +2551,7 @@ struct MainSurface: View {
                 return b >= a ? .trailing : .leading
             }
         }
-        // The phone reads its own walk (prd §1207), Wallet first.
+        // The phone reads its own walk (prd §1207), the Feed first (§1208g).
         if !isRegular {
             // The Feed's own places stand after it (prd §1208c).
             if HomeScope.contains(from), HomeScope.contains(to), from != to {
@@ -2763,9 +2763,9 @@ struct MainSurface: View {
         return rooms[idx + delta]
     }
 
-    /// The phone's walk (prd §1207 item 1): Wallet, the Feed, then every
-    /// category with a room in the dock's order, Testnets excepted. Read
-    /// left to right, so a swipe right (delta -1) walks toward the Wallet.
+    /// The phone's walk (prd §1208 item 1, §1208g): the Feed, then the
+    /// Wallet. Read left to right, so a swipe left (delta +1) walks toward
+    /// the Wallet.
     var phoneWalk: [String] { HomeScope.phoneWalk(chips: chipLabels) }
 
     /// A merged room's apps as stops in the walk (prd §1136 item 9): the

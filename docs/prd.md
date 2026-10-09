@@ -65502,3 +65502,7 @@ Under the Feed's box and tiles stand today's contents first — every app's newe
 ## §1208f — "Dock order" is "Feed order" (user, 2026-10-09: "change name of dock order in settings to feed order"; amends §533's name)
 1. **The setting is named for what it orders now**: the Feed's sections (§1152, §1208 item 5), the tray and every category bar read `CategoryOrder.current`. The row, its sheet's title and the Mac pane's heading say "Feed order"; the route case `.dockOrder` and the `dock.order` defaults keep their names, so a person's order carries over.
 2. **The four translations moved with the key** at `needs_review`: es "Orden del feed", ja "フィードの並び", ko "피드 순서", zh-Hans "订阅流顺序", each built on that language's existing "Feed".
+
+## §1208g — The Feed comes first: the title reads "Feed  Wallet" (user, 2026-10-09: "change the order of the titles from wallet / feed to feed / wallet. lets put feed first since it's what user opens app to"; amends §1208 item 1's order)
+1. **The phone's two places read Feed, then Wallet** (`HomeScope.phoneWalk`). The title row names them in that order, the standing word pink.
+2. **The swipe follows the title**: from the Feed a swipe left lands on the Wallet, and from the Wallet a swipe right goes back. Notes, Markets and a room off the walk still swipe right to the Feed.

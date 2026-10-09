@@ -70,10 +70,12 @@ enum HomeScope {
     }
 
     /// **THE PHONE'S TWO PLACES (prd §1208 item 1, retires §1207's walk).**
-    /// The Wallet and the Feed, one swipe apart; every category is a section
+    /// The Feed and the Wallet, one swipe apart; every category is a section
     /// of the Feed's scroll (`feedCategories`), never a page of the swipe.
+    /// The Feed leads (prd §1208g, user: "lets put feed first since it's
+    /// what user opens app to"), so its title reads "Feed  Wallet".
     @MainActor static func phoneWalk(chips: [String]) -> [String] {
-        [CategoryFold.walletRoom, "All"]
+        ["All", CategoryFold.walletRoom]
     }
 
     /// The categories the Feed stacks (prd §1208 item 2): every one with a
