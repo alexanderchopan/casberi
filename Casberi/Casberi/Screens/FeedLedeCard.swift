@@ -109,7 +109,11 @@ struct FeedLedeCard: View {
             if case .notes = FeedScreen.Shape(source: thing.source) { return true }
             return false
         }()
-        let category = journal ? "Notes" : BridgeCatalog.category(forSource: thing.source)
+        // Media's Read half keeps Reading's face, an article's own picture at
+        // its own aspect (prd §1204): the category is Media's, the face is not.
+        let category = journal ? "Notes"
+            : RoomAccounts.readSources.contains(thing.source) ? "Reading"
+            : BridgeCatalog.category(forSource: thing.source)
         // The three batch-two facts (prd §908), each read only where its
         // category could use it — a note body is a string walk and a work
         // reading a table lookup, neither owed to a song.

@@ -208,7 +208,10 @@ func rawStored() -> [String]? { UserDefaults.standard.stringArray(forKey: "chips
 // became a note of yours with no source of its own (§972). Pinned as a count
 // AND as the absences, so either slot creeping back fails here rather than
 // drawing a folder for a band nothing fills.
-check("nine slots: every catalogue category but Markets, a place in You (§1123, §1151)", d.count == 9)
+check("eight slots: every catalogue category but Markets, a place in You (§1123, §1151); Reading folded into Media (§1204)", d.count == 8)
+check("Reading is not a slot (folded into Media, §1204)", !d.contains("Reading"))
+check("a stored order from before §1204 sheds its Reading slot",
+      !CategoryOrder.reconcile(["Reading", "Media", "Wallet"]).contains("Reading"))
 check("Markets is not a slot (§1151)", !d.contains("Markets"))
 check("Testnets closes the order (§1151)", d.last == "Testnets")
 check("a stored order sheds its Markets slot (§1151)",
@@ -221,10 +224,10 @@ check("no duplicate slot", Set(d).count == d.count)
 check("Day leads (§1151)", d.first == "Day")
 check("Social, Work and the Wallet follow Day (§1151)",
       Array(d[1...3]) == ["Social", "Work", "Wallet"])
-check("Reading follows the Wallet (§1151)",
-      d[d.firstIndex(of: "Wallet")! + 1] == "Reading")
-check("Media follows Life (§1151, user: 'lets have media after Life')",
-      d[d.firstIndex(of: "Life")! + 1] == "Media")
+check("Media follows the Wallet, in Reading's slot (§1151, §1204)",
+      d[d.firstIndex(of: "Wallet")! + 1] == "Media")
+check("Life follows Media (§1204)",
+      d[d.firstIndex(of: "Media")! + 1] == "Life")
 check("Notes is not a slot (no category, §1056)", !d.contains("Notes"))
 check("All is not a category slot", !d.contains("All"))
 check("Pinned is not a category slot", !d.contains("Pinned"))
@@ -253,9 +256,9 @@ check("…and the real names it was mixed with still lead",
 check("…with nothing lost", Set(dirty) == Set(d))
 
 // --- reconcile: a stored list that repeats itself ---------------------------
-let dupes = CategoryOrder.reconcile(["Reading", "Reading", "Wallet", "Reading"])
-check("a repeated name takes one slot", dupes.filter { $0 == "Reading" }.count == 1)
-check("…at its FIRST appearance", Array(dupes.prefix(2)) == ["Reading", "Wallet"])
+let dupes = CategoryOrder.reconcile(["Agents", "Agents", "Wallet", "Agents"])
+check("a repeated name takes one slot", dupes.filter { $0 == "Agents" }.count == 1)
+check("…at its FIRST appearance", Array(dupes.prefix(2)) == ["Agents", "Wallet"])
 check("…and the list is still complete", Set(dupes) == Set(d) && dupes.count == d.count)
 
 // --- reconcile: a category the stored order predates ------------------------
@@ -263,10 +266,10 @@ check("…and the list is still complete", Set(dupes) == Set(d) && dupes.count =
 // somebody rearranges their strip, a later build adds a category, and their
 // stored list has no opinion about it.
 // Testnets and Notes stand in (Shopping, the old stand-in, left with §1051a).
-let older = CategoryOrder.reconcile(d.filter { $0 != "Testnets" && $0 != "Reading" })
-check("a category missing from a stored order still appears", older.contains("Testnets") && older.contains("Reading"))
+let older = CategoryOrder.reconcile(d.filter { $0 != "Testnets" && $0 != "Agents" })
+check("a category missing from a stored order still appears", older.contains("Testnets") && older.contains("Agents"))
 check("…at the tail, in default order",
-      Array(older.suffix(2)) == d.filter { $0 == "Testnets" || $0 == "Reading" })
+      Array(older.suffix(2)) == d.filter { $0 == "Testnets" || $0 == "Agents" })
 
 // --- rank -------------------------------------------------------------------
 check("rank follows the order given", CategoryOrder.rank(of: d[0], in: d) == 0)
@@ -277,14 +280,14 @@ check("…and reads the ORDER, not the default",
 check("an unknown label sorts last, not first",
       CategoryOrder.rank(of: "Gopher", in: d) == Int.max)
 check("…so it really does sort behind a category",
-      CategoryOrder.rank(of: "Gopher", in: d) > CategoryOrder.rank(of: "Reading", in: d))
+      CategoryOrder.rank(of: "Gopher", in: d) > CategoryOrder.rank(of: "Agents", in: d))
 
 // The sort as the strip performs it, over a mixed list — categories plus one
 // uncategorized source that has no slot anywhere.
-let mixed = ["Reading", "Gopher", "Wallet", "Media"]
+let mixed = ["Agents", "Gopher", "Wallet", "Media"]
 let sorted = mixed.sorted { CategoryOrder.rank(of: $0, in: d) < CategoryOrder.rank(of: $1, in: d) }
 check("the strip's own sort puts categories in order and strangers last",
-      sorted == ["Wallet", "Reading", "Media", "Gopher"])
+      sorted == ["Wallet", "Media", "Agents", "Gopher"])
 
 // --- set / reset / isCustom -------------------------------------------------
 CategoryOrder.reset()
@@ -299,10 +302,10 @@ check("…and reads as custom", CategoryOrder.isCustom)
 // cannot persist one — checked against the RAW store, not `current`, because
 // `current` reconciles on every read and would repair a broken write-side
 // reconcile silently.
-CategoryOrder.set(["All", "Pinned", "Reading"])
-check("set drops a non-category before PERSISTING it", rawStored()?.first == "Reading")
+CategoryOrder.set(["All", "Pinned", "Agents"])
+check("set drops a non-category before PERSISTING it", rawStored()?.first == "Agents")
 check("…and never persists what it was handed", rawStored()?.contains("All") != true)
-check("set drops a non-category before storing", CategoryOrder.current.first == "Reading")
+check("set drops a non-category before storing", CategoryOrder.current.first == "Agents")
 check("…and stores nothing else it was handed", !CategoryOrder.current.contains("All"))
 
 // Storing the default IS resetting — otherwise somebody who drags a chip and

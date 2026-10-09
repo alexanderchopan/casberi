@@ -46,10 +46,11 @@ struct RoomAccountsTests {
         // rows as "Privacy Pools"; its seat is "0xBow Privacy Pools").
         #expect(RoomAccounts.host(ofSource: PrivacyPoolsBridge.sourceName)?.seat.name == "0xBow Privacy Pools")
         #expect(RoomAccounts.host(ofSource: "0xBow Privacy Pools") != nil)
-        // Bitrefill folded in with §1051a; L2BEAT and Walletbeat went to Reading.
+        // Bitrefill folded in with §1051a; L2BEAT and Walletbeat went to
+        // Reading, which folded into Media (§1204).
         #expect(RoomAccounts.host(ofSource: "Bitrefill")?.room == CategoryFold.walletRoom)
-        #expect(RoomAccounts.host(ofSource: "L2BEAT")?.room == RoomAccounts.readingRoom)
-        #expect(RoomAccounts.host(ofSource: "Walletbeat")?.room == RoomAccounts.readingRoom)
+        #expect(RoomAccounts.host(ofSource: "L2BEAT")?.room == RoomAccounts.mediaRoom)
+        #expect(RoomAccounts.host(ofSource: "Walletbeat")?.room == RoomAccounts.mediaRoom)
         for room in [CategoryFold.walletRoom, "Markets", RoomAccounts.testnetsRoom] {
             #expect(RoomAccounts.host(ofSource: room) == nil, "\(room) stays its own room")
         }
@@ -57,31 +58,38 @@ struct RoomAccountsTests {
         #expect(RoomAccounts.host(ofSource: "Bluesky")?.room == RoomAccounts.socialRoom)
     }
 
-    // MARK: - Reading (prd §1052)
+    // MARK: - Media's Read half (prd §1052, folded into Media by §1204)
 
-    /// Reading's menu is the catalogue's Reading members, A to Z, with
-    /// NerdWallet, L2BEAT and Walletbeat among them and no Wallet app.
-    @Test func readingListsItsCatalogueAppsAToZ() {
+    /// Reading's apps are Media's Read half: the catalogue's Reading and Saves
+    /// members, A to Z, NerdWallet, L2BEAT and Walletbeat among them, filed
+    /// under Media, and no Wallet or Play app among them.
+    @Test func readHalfListsReadingsAppsAToZ() {
         let names = RoomAccounts.seats(for: RoomAccounts.readingRoom).map(\.name)
         for app in ["RSS", "Substack", "Readwise", "Kindle", "Bookmarks", "Raindrop",
                     "NerdWallet", "L2BEAT", "Walletbeat"] {
-            #expect(names.contains(app), "\(app) is in Reading")
+            #expect(names.contains(app), "\(app) is in Media's Read half")
         }
         #expect(!names.contains("Safe"))
+        #expect(!names.contains("YouTube"), "a Play app is not Read")
         #expect(names == names.sorted { $0.localizedStandardCompare($1) == .orderedAscending })
-        #expect(BridgeCatalog.category(forSource: "NerdWallet") == "Reading")
+        #expect(BridgeCatalog.category(forSource: "NerdWallet") == "Media")
     }
 
-    /// A folded reading app lands in Reading, scoped to it, and its rows ride
-    /// the room; an app's own rows are its own and nobody else's.
-    @Test func aReadingAppFoldsIntoReading() throws {
+    /// A reading app lands in Media, scoped to it; a share stamped "Reading"
+    /// rides Media and is Read; no room is named Reading any more.
+    @Test func aReadingAppFoldsIntoMedia() throws {
         let host = try #require(RoomAccounts.host(ofSource: "L2BEAT"))
-        #expect(host.room == RoomAccounts.readingRoom)
+        #expect(host.room == RoomAccounts.mediaRoom)
         #expect(host.seat.owns("L2BEAT"))
         #expect(!host.seat.owns("Walletbeat"))
-        #expect(RoomAccounts.rides(room: RoomAccounts.readingRoom, source: "RSS"))
-        #expect(!RoomAccounts.rides(room: RoomAccounts.readingRoom, source: "GitHub"))
-        #expect(BridgeCatalog.category(forSource: RoomAccounts.readingRoom) == "Reading")
+        #expect(RoomAccounts.rides(room: RoomAccounts.mediaRoom, source: "RSS"))
+        #expect(RoomAccounts.rides(room: RoomAccounts.mediaRoom, source: RoomAccounts.readingRoom))
+        #expect(!RoomAccounts.rides(room: RoomAccounts.mediaRoom, source: "GitHub"))
+        #expect(RoomAccounts.readSources.contains(RoomAccounts.readingRoom))
+        #expect(RoomAccounts.readSources.contains("RSS"))
+        #expect(!RoomAccounts.readSources.contains("YouTube"))
+        #expect(!RoomAccounts.mergedRooms.contains(RoomAccounts.readingRoom))
+        #expect(BridgeCatalog.category(forSource: RoomAccounts.readingRoom) == "Media")
     }
 
     // MARK: - Agents (prd §1054)

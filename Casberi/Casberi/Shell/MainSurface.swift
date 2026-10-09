@@ -2083,6 +2083,14 @@ struct MainSurface: View {
                 filter.source = fold.room
                 return
             }
+            // A door that still names Reading — a widget set up before
+            // §1204, `casberi://room/Reading`, a stored order — lands on
+            // Media's Read, which is what the Reading room became.
+            if source == RoomAccounts.readingRoom {
+                chrome.landingMediaScope = .read
+                filter.source = RoomAccounts.mediaRoom
+                return
+            }
             CategoryFold.remember(source)
             // The pole a room opened on top goes back to (prd §1203).
             if HomeScope.isPole(source) { chrome.lastPole = source }
@@ -2105,8 +2113,11 @@ struct MainSurface: View {
             chrome.notesScope = .all
             chrome.notesFolder = nil
             chrome.workScope = .all
-            chrome.readingScope = .all
             chrome.mediaScope = .all
+            if source == RoomAccounts.mediaRoom, let scope = chrome.landingMediaScope {
+                chrome.mediaScope = scope
+            }
+            chrome.landingMediaScope = nil
             chrome.socialScope = .all
             // Unless a door asked for the room's follow list (prd §1118).
             if let room = chrome.landingFollowing, ShellChrome.roomName(room) == source {

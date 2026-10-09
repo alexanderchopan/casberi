@@ -95,8 +95,11 @@ struct CategoryProvider: AppIntentTimelineProvider {
 
     private func entry(for configuration: PickCategoryIntent, now: Date) -> CategoryEntry {
         let pick = configuration.category ?? .notes
-        let shelf = WidgetShelves.published(now: now).first { $0.room == pick.id }
-        return CategoryEntry(date: now, room: pick.id, name: shelf?.name ?? pick.name, shelf: shelf)
+        // A widget set to Reading before it folded into Media (prd §1204)
+        // shows Media's shelf and opens Media.
+        let room = pick.id == "Reading" ? "Media" : pick.id
+        let shelf = WidgetShelves.published(now: now).first { $0.room == room }
+        return CategoryEntry(date: now, room: room, name: shelf?.name ?? pick.name, shelf: shelf)
     }
 }
 

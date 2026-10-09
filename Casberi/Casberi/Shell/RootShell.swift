@@ -228,8 +228,7 @@ struct RootShell: View {
                 if let s = WorkScope(rawValue: raw), !s.isVerb { chrome.workScope = s }
                 // Day's Subscriptions (prd §1111).
                 if let s = DayScope(rawValue: raw), !s.isVerb { chrome.dayScope = s }
-                // Reading's and Media's Subscriptions, Work's Watching (prd §1118).
-                if let s = ReadingScope(rawValue: raw) { chrome.readingScope = s }
+                // Media's Play, Read and Subscriptions (prd §1118, §1204).
                 if let s = MediaScope(rawValue: raw) { chrome.mediaScope = s }
             }
         }
@@ -553,6 +552,8 @@ struct RootShell: View {
                 // Voice notes under the retired "Voice" source converge onto
                 // `You` (prd §972), in the same every-launch shape.
                 SourceRename.sweepVoice(context: modelContext)
+                // Reading's digest switch folds into Media's (prd §1204), once.
+                Notifications.foldReadingIntoMedia()
                 // Stocktwits' watched tickers into Markets (2026-09-29).
                 SourceRename.sweepStockWatches(context: modelContext, store: bridges)
                 // The seats deleted 2026-10-01 (prd §1038): their rows, seat

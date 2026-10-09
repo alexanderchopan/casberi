@@ -77,9 +77,12 @@ enum ScopeTileGlyph {
     /// tiles share it, because they are one idea in two rooms.
     static let subscriptions = "arrow.triangle.2.circlepath"
     static let open         = "arrow.up.right"
-    /// Reading's Highlights (prd §1085): the system's highlighter, the pen a
-    /// passage is kept with.
-    static let highlights   = "highlighter"
+    /// Media's Play (prd §1204): a screen with play on it — what you watch,
+    /// play and listen to. Not `play.circle`, which is the dock's Media.
+    static let play         = "play.rectangle"
+    /// Media's Read (prd §1204): a book, freed when the Reading category
+    /// folded into Media. Highlights' highlighter went with its tile.
+    static let read         = "book"
     /// Social's To you (prd §1086): what is addressed to you — the system's
     /// one person, never `person.2` (Accounts, a list of people).
     static let toYou        = "person"
@@ -113,23 +116,14 @@ extension WorkScope: DSTileScope {
     }
 }
 
-/// The Media room's tiles (prd §1118).
+/// The Media room's tiles (prd §1118, §1204). Subscriptions wears the
+/// Wallet's and Day's glyph (§1118): one idea in every room that lists it.
 extension MediaScope: DSTileScope {
     var glyph: String {
         switch self {
         case .all:           return ScopeTileGlyph.all
-        case .subscriptions: return ScopeTileGlyph.subscriptions
-        }
-    }
-}
-
-/// The Reading room's tiles (prd §1085). Subscriptions wears the Wallet's
-/// and Day's glyph (§1118): one idea in every room that lists it.
-extension ReadingScope: DSTileScope {
-    var glyph: String {
-        switch self {
-        case .all:        return ScopeTileGlyph.all
-        case .highlights: return ScopeTileGlyph.highlights
+        case .play:          return ScopeTileGlyph.play
+        case .read:          return ScopeTileGlyph.read
         case .subscriptions: return ScopeTileGlyph.subscriptions
         }
     }

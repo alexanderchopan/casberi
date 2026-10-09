@@ -79,6 +79,22 @@ enum Notifications {
         }
     }
 
+    /// **Reading's switch folds into Media's (prd §1204)**, once: the two
+    /// categories are one, so their digests are one switch, and it stays on
+    /// unless both were off. A stored list from before the merge is the only
+    /// one that can name Reading; the flag keeps a later "Media off" from
+    /// being read as the old one.
+    static func foldReadingIntoMedia() {
+        let d = store
+        guard !d.bool(forKey: "notify.readingFolded") else { return }
+        if var off = d.stringArray(forKey: "notify.offCategories").map(Set.init) {
+            if !off.contains("Reading") { off.remove("Media") }
+            off.remove("Reading")
+            d.set(off.sorted(), forKey: "notify.offCategories")
+        }
+        d.set(true, forKey: "notify.readingFolded")
+    }
+
     /// The category a plan belongs to, through the catalog's own join. A
     /// source the catalog has never heard of (a thing you made yourself, with
     /// a date on it) falls to Life, the default `BridgeCatalog.category(of:)`

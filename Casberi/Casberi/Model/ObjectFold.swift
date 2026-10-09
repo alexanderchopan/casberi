@@ -40,7 +40,9 @@ enum ObjectFold {
         init?(room: String) {
             switch room {
             case "Work":    self = .work
-            case "Reading": self = .reading
+            // Media folds its Read half's articles (prd §1204): Reading
+            // folded into it, and the fold reads only those rows.
+            case "Reading", "Media": self = .reading
             default:        return nil
             }
         }

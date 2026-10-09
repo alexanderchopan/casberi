@@ -77,9 +77,10 @@ enum CategoryOrder {
         // Life, Media (user: "lets have media after Life"), Agents, and
         // Testnets last. Markets is a place in You (§1123), never a slot
         // (user: "Markets is not longer in those categories"). A stored order
-        // keeps its own.
-        "Day", "Social", "Work", "Wallet", "Reading", "Life",
-        "Media", "Agents", "Testnets",
+        // keeps its own. Media stands in Reading's slot since Reading folded
+        // into it (prd §1204): most of what it holds is still reading.
+        "Day", "Social", "Work", "Wallet", "Media", "Life",
+        "Agents", "Testnets",
     ]
 
     /// The order in force — the stored one reconciled against `defaultOrder`,

@@ -53,11 +53,14 @@ extension FeedScreen {
     /// The list: the verb first, then every thing followed, the busiest this
     /// month first. A row opens its sheet; a follow read from an account
     /// (Twitch) opens too, without Stop tracking.
+    ///
+    /// `verb` names the first row where one room lists two kinds (Media's
+    /// sites and its channels, prd §1204), so the two rows say which is which.
     @ViewBuilder
-    func followingSections(_ room: Following.Room) -> some View {
+    func followingSections(_ room: Following.Room, verb: String? = nil) -> some View {
         let items = FollowingReading.shared.items(for: room)
         Section {
-            DSDoorRow(icon: "plus", title: Text(verbatim: room.verb)) {
+            DSDoorRow(icon: "plus", title: Text(verbatim: verb ?? room.verb)) {
                 feedSheet = .followingAdd(room)
             }
             .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.rowInset,

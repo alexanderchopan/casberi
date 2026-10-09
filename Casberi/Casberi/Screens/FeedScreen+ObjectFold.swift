@@ -1,7 +1,7 @@
 import SwiftData
 import SwiftUI
 
-// ONE ROW PER OBJECT IN WORK AND READING (prd §1079, `Model/ObjectFold.swift`).
+// ONE ROW PER OBJECT IN WORK AND MEDIA'S READ (prd §1079, §1204, `Model/ObjectFold.swift`).
 //
 // The key is read off a row's link, which is `content` — a heavy column the
 // merged room's query leaves out (`lightColumns`), so reading it in a body
@@ -26,7 +26,9 @@ extension FeedScreen {
             if !objectKeys.isEmpty { objectKeys = [:] }
             return
         }
-        let members = RoomAccounts.roomSources(source)
+        // Media's keys are its Read half's (prd §1204): a video or a song
+        // saved twice is two plays, never one object.
+        let members = RoomAccounts.roomSources(source == RoomAccounts.mediaRoom ? RoomAccounts.readingRoom : source)
         let container = modelContext.container
         let limit = Self.sourceRoomFetchLimit
         let keys = await Task.detached(priority: .utility) { () -> [UUID: String] in

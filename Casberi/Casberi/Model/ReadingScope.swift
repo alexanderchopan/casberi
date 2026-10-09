@@ -1,48 +1,8 @@
 import Foundation
 
-/// The Reading room's tiles (prd §1085, §1118): All, Highlights — every
-/// passage you kept, from any app — Subscriptions, every feed you follow
-/// with Track a subscription as its first row, then the verb, Search, last.
-/// Foundation-only, its conformance beside every other in
-/// `ScopeTileGlyphs.swift`.
-enum ReadingScope: String, CaseIterable, Identifiable, Hashable, Sendable {
-    case all, highlights, subscriptions
-
-    var id: String { rawValue }
-
-    var label: String {
-        switch self {
-        case .all:        return String(localized: "All")
-        case .highlights: return String(localized: "Highlights")
-        case .subscriptions: return String(localized: "Subscriptions")
-        }
-    }
-
-    var summary: String {
-        switch self {
-        case .all:        return String(localized: "Everything you read and save")
-        case .highlights: return String(localized: "Every passage you kept")
-        case .subscriptions: return String(localized: "Every site you follow")
-        }
-    }
-
-}
-
-/// The Reading room's pure rules (prd §1085), compiled whole by
-/// `reading-room-selftest.sh`.
+/// Reading's pure rules (prd §1085), Media's Read half since §1204: the
+/// Follow tray's suggestions. Compiled whole by `reading-room-selftest.sh`.
 enum ReadingRoom {
-    /// The apps whose every row is a passage someone highlighted.
-    static let highlightSources: Set<String> = ["Readwise", "Kindle"]
-
-    /// Whether a row is a highlight: a Readwise or Kindle passage, or one you
-    /// kept from a reading body yourself (`Highlight.isHighlight`, prd §1020 —
-    /// a note of yours whose ref names its origin).
-    static func isHighlight(source: String, kind: String, sourceRef: String?) -> Bool {
-        guard kind == "note" else { return false }
-        if highlightSources.contains(source) { return true }
-        return source == "You" && (sourceRef?.hasPrefix("highlight:") ?? false)
-    }
-
     /// A save: a link you kept, with when you kept it.
     struct Save: Sendable {
         let url: String

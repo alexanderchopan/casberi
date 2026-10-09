@@ -227,7 +227,7 @@ struct ReadingFindSheet: View {
 
     /// The tray closes onto the list the follow joined.
     private func landOnSubscriptions() {
-        chrome?.readingScope = .subscriptions
+        chrome?.mediaScope = .subscriptions
         dismiss()
         onTracked?()
     }

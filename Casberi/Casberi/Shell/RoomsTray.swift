@@ -314,7 +314,6 @@ struct RoomsTray: View {
         "Agents":   "terminal.fill",
         "Media":    "play.circle.fill",
         "Social":   "bubble.left.and.bubble.right.fill",
-        "Reading":  "book.fill",
         "Testnets": "flask.fill",
         "Life":     "face.smiling",            // the filled one; the names run backwards
     ]
@@ -803,8 +802,7 @@ struct RoomsTray: View {
         }
         for room in Following.Room.allCases {
             let group = switch room {
-            case .reading: "Reading"
-            case .media:   "Media"
+            case .reading, .media: "Media"   // one category since prd §1204
             case .work:    "Work"
             }
             for item in FollowingReading.shared.items(for: room) {

@@ -883,7 +883,7 @@ extension Contact {
             case .bluesky:                                           category = "Social"
             case .github:                                            category = "Work"
             case .contact, .email:                                   category = "Life"
-            case .feed:                                              category = "Reading"
+            case .feed:                                              category = "Media"   // Reading folded in, §1204
             }
             if !out.contains(category) { out.append(category) }
         }

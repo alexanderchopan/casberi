@@ -745,10 +745,6 @@ struct FeedScreen: View {
     @State var dayMakeOpen = false
     /// Watch was tapped in the Work room with more than one seat that keeps
     /// a watch (prd §1057).
-    /// The highlights you kept yourself (`Highlight`, prd §1020): notes of
-    /// yours, so outside Reading's query; read when Highlights is picked
-    /// (prd §1085).
-    @State var keptHighlights: [Thing] = []
     /// Today's shape under Day's next thing (prd §1087). Value types only.
     @State var dayStrip: DayStrip?
     /// Day's Coming up tile (prd §1136c): every app's dated rows ahead, read
@@ -893,7 +889,6 @@ struct FeedScreen: View {
     #if DEBUG
     /// `-marketsScope` fires once per launch, not once per page build.
     @MainActor static var marketsProbed = false
-    @MainActor static var readingProbed = false
     @MainActor static var notesProbed = false
     @MainActor static var socialProbed = false
     @MainActor static var walletFollowProbed = false

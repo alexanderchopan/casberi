@@ -29,7 +29,9 @@ enum ShareHome: String, Sendable, CaseIterable {
     /// The pill's words: the place, never "Casberi".
     var confirmation: String {
         switch self {
-        case .reading: return String(localized: "Saved to Reading")
+        // Media's Read since Reading folded into Media (prd §1204); the
+        // source stays "Reading", which is what Read lists.
+        case .reading: return String(localized: "Saved to Media")
         case .media:   return String(localized: "Saved to Media")
         case .notes:   return String(localized: "Saved to Notes")
         }

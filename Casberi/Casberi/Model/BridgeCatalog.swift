@@ -809,19 +809,12 @@ enum BridgeCatalog {
         ("Day",     "Calendar",    ["Schedule", "Mail"]),
         ("Life",    "Apple Health", ["Fitness", "People", "Storage", "Learning", "Notes"]),
         ("Agents",  "Claude",      ["Agent"]),
-        ("Media",   "YouTube",     ["Watching", "Listening", "Games", "Images", "Photos"]),
+        // MEDIA HOLDS READING (prd §1204, user: "reading for example maybe
+        // goes with media", then "i like 'play'"): what you read, watch and
+        // listen to, one category with Play and Read tiles. The groups keep
+        // their own names, so a reading app's page still says "Reading".
+        ("Media",   "YouTube",     ["Watching", "Listening", "Games", "Images", "Photos", "Reading", "Saves"]),
         ("Social",  "Bluesky",     ["Network"]),
-        // Reading sits AHEAD of Shopping (user ruling 2026-08-06, "should
-        // reading come before shopping?"). Two reasons, both about the band
-        // rather than the taste: Reading is 6 seats to Shopping's 1, and every
-        // one of them is a live connect that fills the feed with something to
-        // READ (RSS, Substack, Readwise, Raindrop, Kindle, Bookmarks)
-        // — the app's own core loop. Shopping is the narrowest band in the
-        // catalog: Bitrefill is crypto gift cards (Open Food Facts, a barcode
-        // scanner rather than a feed, was retired 2026-09-06 with the Markets
-        // seats, prd §638; Shopify and Deals followed someone else's catalogue
-        // and were deleted 2026-10-01, prd §1049).
-        ("Reading", "Readwise",    ["Reading", "Saves"]),
     ]
 
     static func category(of offer: Offer) -> String {

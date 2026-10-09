@@ -485,8 +485,6 @@ extension FeedScreen {
                 workRoomSections(visible, nextEventID: nextEventID, heroShown: heroShown)
             } else if source == RoomAccounts.dayRoom {
                 dayRoomSections(visible, nextEventID: nextEventID, heroShown: heroShown)
-            } else if source == RoomAccounts.readingRoom {
-                readingRoomSections(visible, nextEventID: nextEventID, heroShown: heroShown)
             } else if source == RoomAccounts.mediaRoom {
                 mediaRoomSections(visible, nextEventID: nextEventID, heroShown: heroShown)
             } else if source == RoomAccounts.socialRoom {
@@ -501,8 +499,8 @@ extension FeedScreen {
                 // `threadReplies` rides beside it for `shapedRow` to render
                 // inline. Scoped to `.social` — every other shape's `visible`
                 // passes through untouched.
-                // (The merged Social and Reading rooms draw their own
-                // sections since prd §1086 and §1085.)
+                // (The merged Social and Media rooms draw their own
+                // sections since prd §1086 and §1204.)
                 let rows = visible
                 let (roomThings, threadReplies): ([Thing], [String: [Thing]]) =
                     SocialRoom.foldsThreads(source) ? foldThreadReplies(rows) : (rows, [:])
@@ -517,12 +515,10 @@ extension FeedScreen {
                 // Pinterest's pins tile under their day at 2:3 (the picture
                 // rooms' grid, prd §910); a pin with no image stays a row.
                 let pins = source == "Pinterest"
-                // Media is one square grid (§1055): every picture tiles.
-                let media = source == RoomAccounts.mediaRoom
                 groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days),
                                 replies: threadReplies,
                                 cover: heroShown ? nil : ledeThingID(in: days),
-                                isTile: media ? Self.isMediaTile : (pins ? Self.isPinTile : nil),
+                                isTile: pins ? Self.isPinTile : nil,
                                 tileShape: pins ? .pin : .square,
                                 scopeControl: true)
             }

@@ -268,7 +268,7 @@ extension Following {
     /// followed: "Posts in Reading", "Uploads in Media", "Updates in Work".
     static func doorWords(_ room: Room) -> LocalizedStringKey {
         switch room {
-        case .reading: "Posts in Reading"
+        case .reading: "Posts in Media"   // Reading folded into Media, §1204
         case .media:   "New in Media"
         case .work:    "Updates in Work"
         }
@@ -296,7 +296,7 @@ struct FollowListDoor: View {
 
     static func words(_ room: Following.Room, _ count: Int) -> String {
         switch room {
-        case .reading: String(localized: "\(count) subscriptions in Reading")
+        case .reading: String(localized: "\(count) subscriptions in Media")
         case .media:   String(localized: "\(count) subscriptions in Media")
         case .work:    String(localized: "\(count) following in Work")
         }

@@ -100,14 +100,17 @@ enum RoomAccounts {
     /// Every room that has absorbed apps. Each is named for its category,
     /// so the category's tray row and the room are one name (the Wallet's
     /// balance room always was).
-    static let mergedRooms: [String] = [CategoryFold.walletRoom, testnetsRoom, readingRoom, agentsRoom, mediaRoom,
+    static let mergedRooms: [String] = [CategoryFold.walletRoom, testnetsRoom, agentsRoom, mediaRoom,
                                           lifeRoom, dayRoom, workRoom, socialRoom]
 
     /// The Testnets room (prd §1050, built §1050k). No seat carries the name;
     /// the room exists while Hegotá Frames or Logos is connected.
     static let testnetsRoom = "Testnets"
 
-    /// The Reading room (prd §1049, §1050d, §1051a, built §1052).
+    /// The Reading room (prd §1049, §1050d, §1051a, built §1052) folded into
+    /// Media (prd §1204). The name stays as the source a shared article is
+    /// stamped with (`ShareHome`) and the key of Media's Read half; no room
+    /// carries it, and a door that names it lands on Media's Read.
     static let readingRoom = "Reading"
 
     /// The Agents room (prd §1049, built §1054).
@@ -130,7 +133,8 @@ enum RoomAccounts {
     /// The merged room a category opens, nil while the category still opens
     /// its apps' own rooms.
     static func room(ofCategory category: String) -> String? {
-        mergedRooms.contains(category) ? category : nil
+        if category == readingRoom { return mediaRoom }
+        return mergedRooms.contains(category) ? category : nil
     }
 
     /// THE SCREEN A ROOM OF OWN-SCREEN APPS SHOWS (prd §1050k): the picked
@@ -151,8 +155,17 @@ enum RoomAccounts {
         let names = Set(seats.map(\.name))
         // Rows stamped under a seat's old name still belong to it (§647).
         let renamed = Corpus.renamedSources.filter { names.contains($0.value.current) }.keys.sorted()
-        return [room] + seats.compactMap(\.source) + renamed
+        // Media's query also reads the rows a share stamped "Reading"
+        // (`ShareHome`): the Reading room folded into Media (prd §1204), and
+        // a share from a device on an older build still lands there.
+        let legacy = room == mediaRoom ? [readingRoom] : []
+        return [room] + legacy + seats.compactMap(\.source) + renamed
     }
+
+    /// Whether a row is Media's Read half (prd §1204): an app that was
+    /// Reading's, or a share stamped "Reading". Everything else in Media is
+    /// Play. Read the set once per body, never per row.
+    static var readSources: Set<String> { Set(roomSources(readingRoom)) }
 
     /// Whether a row of `source` belongs in `room` as a folded app's row.
     static func rides(room: String, source: String) -> Bool {
@@ -181,8 +194,15 @@ enum RoomAccounts {
     }
 
     /// Reading's (prd §1049): RSS, Substack, Readwise, Kindle, Bookmarks,
-    /// Raindrop, NerdWallet, L2BEAT and Walletbeat (§1051a).
-    private static let reading = catalogSeats(readingRoom)
+    /// Raindrop, NerdWallet, L2BEAT and Walletbeat (§1051a). Since §1204 not a
+    /// room but Media's Read half: the apps whose catalogue group is Reading
+    /// or Saves, which the catalogue files under Media.
+    private static let reading: [Seat] = media.filter { seat in
+        BridgeCatalog.allOffers.contains { $0.name == seat.name && readGroups.contains($0.group) }
+    }
+
+    /// The catalogue groups that read (prd §1204).
+    static let readGroups: Set<String> = ["Reading", "Saves"]
 
     /// Agents' (prd §1049): every agent, its imported history and its keyed
     /// conversations alike.

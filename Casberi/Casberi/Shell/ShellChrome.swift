@@ -585,10 +585,12 @@ final class ShellChrome {
     var workScope: WorkScope = .all
     /// The Day room's picked tile (prd §1111): All or Subscriptions.
     var dayScope: DayScope = .all
-    /// The Reading room's picked tile (prd §1085).
-    var readingScope: ReadingScope = .all
-    /// The Media room's picked tile (prd §1118): All or Subscriptions.
+    /// The Media room's picked tile (prd §1118, §1204): All, Play, Read or
+    /// Subscriptions. Reading's own tile went with the room it folded into.
     var mediaScope: MediaScope = .all
+    /// Media's tile waiting for its room to arrive (prd §1204): a door that
+    /// still names Reading (a widget, a link) lands on Read.
+    var landingMediaScope: MediaScope?
     /// The Social room's picked tile (prd §1086).
     var socialScope: SocialScope = .all
 
@@ -1078,8 +1080,8 @@ final class ShellChrome {
 
     func pickFollowing(_ room: Following.Room) {
         switch room {
-        case .reading: readingScope = .subscriptions
-        case .media:   mediaScope = .subscriptions
+        // Reading's follows are listed in Media's Subscriptions (prd §1204).
+        case .reading, .media: mediaScope = .subscriptions
         case .work:    workScope = .watch
         }
     }
@@ -1087,8 +1089,7 @@ final class ShellChrome {
     /// The room that lists what you follow there (prd §1118).
     static func roomName(_ room: Following.Room) -> String {
         switch room {
-        case .reading: RoomAccounts.readingRoom
-        case .media:   RoomAccounts.mediaRoom
+        case .reading, .media: RoomAccounts.mediaRoom
         case .work:    RoomAccounts.workRoom
         }
     }

@@ -1,7 +1,9 @@
 #!/bin/zsh
-# Casberi reading-room self-test — Reading's Highlights and Follow (prd §1085):
+# Casberi reading-room self-test — Reading's Follow (prd §1085), and Media's
+# tiles since Reading folded into Media (prd §1204; Highlights is deleted):
 #
 #   Casberi/Casberi/Model/ReadingScope.swift   (compiled whole)
+#   Casberi/Casberi/Model/MediaScope.swift     (compiled whole)
 #
 # WHY A HARNESS. Both failures render as a calm list. Highlights that miss the
 # passages you kept yourself, or that take a Readwise article for a passage,
@@ -15,26 +17,31 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 SCOPE="Casberi/Casberi/Model/ReadingScope.swift"
-ROOM="Casberi/Casberi/Screens/FeedScreen+ReadingRoom.swift"
+ROOM="Casberi/Casberi/Screens/FeedScreen+MediaRoom.swift"
+MEDIA="Casberi/Casberi/Model/MediaScope.swift"
 SHEET="Casberi/Casberi/Screens/ReadingFindSheet.swift"
-for f in "$SCOPE" "$ROOM" "$SHEET"; do
+for f in "$SCOPE" "$ROOM" "$SHEET" "$MEDIA"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 # The wiring the pure rules rely on.
-grep -q 'ReadingRoom.isHighlight(' "$ROOM" \
-  || { echo "✗ the Highlights tile no longer reads ReadingRoom.isHighlight"; exit 1; }
-grep -q 'keptHighlights' "$ROOM" \
-  || { echo "✗ Highlights no longer reads the passages you kept yourself"; exit 1; }
+grep -q 'RoomAccounts.readSources' "$ROOM" \
+  || { echo "✗ Media no longer tells its Read half from Play — articles would tile"; exit 1; }
+grep -q '!read.contains($0.source) && Self.isMediaTile' "$ROOM" \
+  || { echo "✗ an article with a picture tiles in All — only Play's apps tile (prd §1204)"; exit 1; }
+grep -q 'followingSections(.reading' "$ROOM" \
+  || { echo "✗ Media's Subscriptions no longer lists the sites you follow"; exit 1; }
 grep -q 'ReadingRoom.saveSources.contains' "$SHEET" \
   || { echo "✗ Follow counts every row as a save — a feed's own rows would suggest its own site"; exit 1; }
 grep -q 'ReadingRoom.suggestions(' "$SHEET" \
   || { echo "✗ Follow no longer reads ReadingRoom.suggestions"; exit 1; }
-grep -q 'readingRoomSections(' Casberi/Casberi/Screens/FeedScreen+ShapedSections.swift \
-  || { echo "✗ the Reading room no longer draws its own sections"; exit 1; }
+grep -q 'mediaRoomSections(' Casberi/Casberi/Screens/FeedScreen+ShapedSections.swift \
+  || { echo "✗ the Media room no longer draws its own sections"; exit 1; }
+! grep -q 'readingRoomSections(' Casberi/Casberi/Screens/FeedScreen+ShapedSections.swift \
+  || { echo "✗ a Reading room draws again — it folded into Media (prd §1204)"; exit 1; }
 
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
-cp "$SCOPE" "$TMP/"
+cp "$SCOPE" "$MEDIA" "$TMP/"
 cat > "$TMP/main.swift" <<'SWIFT'
 import Foundation
 
@@ -44,15 +51,6 @@ func check(_ ok: Bool, _ what: String) {
 }
 let now = Date(timeIntervalSince1970: 2_000_000_000)
 func ago(_ days: Double) -> Date { now.addingTimeInterval(-days * 86_400) }
-
-// ── Highlights ───────────────────────────────────────────────────────
-check(ReadingRoom.isHighlight(source: "Readwise", kind: "note", sourceRef: "readwise:1"), "a Readwise passage is a highlight")
-check(ReadingRoom.isHighlight(source: "Kindle", kind: "note", sourceRef: "kindle:abc"), "a Kindle clipping is a highlight")
-check(ReadingRoom.isHighlight(source: "You", kind: "note", sourceRef: "highlight:6F1C"), "a passage you kept is a highlight")
-check(!ReadingRoom.isHighlight(source: "You", kind: "note", sourceRef: nil), "a note of yours is not")
-check(!ReadingRoom.isHighlight(source: "You", kind: "note", sourceRef: "note:1"), "a note with another ref is not")
-check(!ReadingRoom.isHighlight(source: "Readwise", kind: "link", sourceRef: nil), "a Readwise link is not a passage")
-check(!ReadingRoom.isHighlight(source: "RSS", kind: "note", sourceRef: nil), "an RSS row is not")
 
 // ── Hosts ────────────────────────────────────────────────────────────
 check(ReadingRoom.host(of: "https://www.stratechery.com/2026/x") == "stratechery.com", "www. is dropped")
@@ -106,10 +104,10 @@ check(ReadingRoom.site(in: "two words.com") == nil, "words with a dot are a sear
 check(ReadingRoom.site(in: "x.com") == nil, "a social network is never a site to follow")
 
 // ── The tiles ────────────────────────────────────────────────────────
-check(ReadingScope.allCases == [.all, .highlights, .subscriptions], "All, Highlights, Subscriptions; no verb: Follow is the Subscriptions list's first row (prd §1118) and Search is the tray's (prd §1171)")
+check(MediaScope.allCases == [.all, .play, .read, .subscriptions], "Media's tiles are All, Play, Read, Subscriptions, A–Z after All (prd §1204); no verb: Follow is the Subscriptions list's first row (prd §1118)")
 
 if failures > 0 { print("✗ \(failures) failed"); exit(1) }
-print("✓ reading room: highlights, hosts, suggestions, typed sites, tiles")
+print("✓ reading room: hosts, suggestions, typed sites, Media's tiles")
 SWIFT
-swiftc -O -o "$TMP/run" "$TMP/ReadingScope.swift" "$TMP/main.swift" 2>&1 | grep -v "^$" || true
+swiftc -O -o "$TMP/run" "$TMP/ReadingScope.swift" "$TMP/MediaScope.swift" "$TMP/main.swift" 2>&1 | grep -v "^$" || true
 "$TMP/run"
