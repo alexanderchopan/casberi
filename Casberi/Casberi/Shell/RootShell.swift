@@ -4737,7 +4737,7 @@ private struct AppSheetHost: ViewModifier {
         }
         #endif
         .sheet(item: Binding(get: { chrome.appSheet }, set: { chrome.appSheet = $0 })) { app in
-            FeedScreen(source: app.source, isActive: true)
+            FeedScreen(source: app.source, isActive: true, inSheet: true)
                 .environment(sceneState.route)
                 .environment(sceneState.filter)
                 .environment(sceneState.detail)

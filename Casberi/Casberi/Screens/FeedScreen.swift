@@ -92,6 +92,13 @@ struct FeedScreen: View {
     /// never pays again. Passed by `MainSurface`, which knows the chip order.
     let nearActive: Bool
 
+    /// Risen as a sheet over the Feed (prd §1208a). A sheet's `List` gives
+    /// its downward pull to `.refreshable` before the sheet's own dismiss,
+    /// so a room in a sheet with a pull could not be swiped closed (user,
+    /// 2026-10-09: "i'm unable to close this", the Calendar sheet). In a
+    /// sheet the pull is the close; the Feed behind it keeps the refresh.
+    let inSheet: Bool
+
     /// Latches true the first time this page is active/near, so a page already
     /// assembled once stays assembled — the built set only ever grows, spread
     /// A TRANSIENT bound on the room's own query, for the length of a swipe
@@ -167,8 +174,9 @@ struct FeedScreen: View {
     @Environment(\.horizontalSizeClass) var roomSizeClass
 
     init(source: String, hostRoom: String? = nil, isActive: Bool, nearActive: Bool = true,
-         rowBudget: Int? = nil) {
+         rowBudget: Int? = nil, inSheet: Bool = false) {
         self.source = source
+        self.inSheet = inSheet
         self.hostRoom = hostRoom
         self.rowBudget = rowBudget
         // The mark the trace was missing (PERF 2026-09-01). `mount` fires from
@@ -1510,7 +1518,7 @@ struct FeedScreen: View {
         // ONE pull, both outcomes. This List carried TWO `.refreshable` until
         // 2026-07-16 — SwiftUI keeps the outermost, so the real bridge sync
         // never ran on a pull; only the 600ms pulse stub did.
-        .refreshable { await performPull() }
+        .modifier(FeedPull(enabled: !inSheet) { await performPull() })
         // Mac's ⌘R (2026-07-28): a trackpad overscroll gesture is the only
         // trigger `.refreshable` gives Catalyst, and it isn't reliably
         // discoverable with a mouse — this runs the identical pull, just
@@ -2139,6 +2147,22 @@ private struct NoteFolderDeleteDialog: ViewModifier {
             Button(String(localized: "Cancel"), role: .cancel) { folder = nil }
         } message: {
             Text(String(localized: "What's in it stays in All."))
+        }
+    }
+}
+
+/// The room's pull, left off where the pull must close a sheet instead
+/// (`FeedScreen.inSheet`).
+private struct FeedPull: ViewModifier {
+    let enabled: Bool
+    let action: @Sendable () async -> Void
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if enabled {
+            content.refreshable { await action() }
+        } else {
+            content
         }
     }
 }
