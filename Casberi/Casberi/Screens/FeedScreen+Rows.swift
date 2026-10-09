@@ -333,6 +333,12 @@ extension FeedScreen {
             }
             .buttonStyle(RowPress())
         }
+        // New since you last looked (prd §1208d), on the Feed only.
+        .overlay(alignment: .leading) {
+            if source == "All", let since = newSince, thing.capturedAt > since {
+                NewDot(id: thing.id).offset(x: -DS.Space.s3)
+            }
+        }
         .modifier(rowEntrance(index))
             // Mac/pointer polish (2026-07-31): the feed rendered bare rows
             // over `onTapGesture` until 2026-08-04 (now the Button above),
@@ -352,10 +358,10 @@ extension FeedScreen {
             // `walkSelected` is only ever written on Mac, and `DS.isMac`
             // short-circuits ahead of the comparison — so no phone row ever
             // observes it (see `ShellChrome.canWalk`).
-            .listRowBackground(runBackground(position, bare: !standsAlone(thing),
+            .modifier(FeedRunBackground(base: runBackground(position, bare: !standsAlone(thing),
                                              selected: DS.isMac
                                                 && chrome.walkSelected == thing.id.uuidString,
-                                             skin: skin))
+                                             skin: skin)))
             // Feed rhythm: `rowAir` (prd §900, see its doc). A card that
             // stands alone keeps s2 — it has no padding of its own inside.
             // On Home every row takes `groupAir` (prd §1157), a post

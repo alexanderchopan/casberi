@@ -35,7 +35,7 @@ extension FeedScreen {
                     }
                     .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.rowInset,
                                               bottom: 0, trailing: DSRoomChassis.rowInset))
-                    .listRowBackground(Color.clear)
+                    .feedRowBackground()
                     .listRowSeparator(.hidden)
                 }
             }

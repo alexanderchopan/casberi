@@ -73,7 +73,7 @@ extension FeedScreen {
                 }
                 withAnimation(DS.Motion.standard) { chrome.socialScope = picked }
             }
-            .listRowBackground(Color.clear)
+            .feedRowBackground()
             .listRowSeparator(.hidden)
             .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
                                       bottom: DSRoomChassis.leadGap,

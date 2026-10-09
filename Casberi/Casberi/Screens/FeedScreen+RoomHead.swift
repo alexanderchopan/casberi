@@ -441,7 +441,7 @@ extension FeedScreen {
             // (`GitHubRowTag`), which is what made the head's ranking legible
             // as a list in the first place.
         }
-        .listRowBackground(Color.clear)
+        .feedRowBackground()
         .listRowSeparator(.hidden)
         .listRowInsets(EdgeInsets())
 
@@ -656,7 +656,7 @@ extension FeedScreen {
     func insightSection<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
         Section {
             content()
-                .listRowBackground(Color.clear)
+                .feedRowBackground()
                 .listRowSeparator(.hidden)
                 .listRowInsets(EdgeInsets())
         }

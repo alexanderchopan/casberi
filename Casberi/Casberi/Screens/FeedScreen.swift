@@ -659,6 +659,8 @@ struct FeedScreen: View {
         /// The Feed's scroll keeps each section's days apart (prd §1208): one
         /// shared `key` written by every section missed on every pass.
         var sectionDays: [String: (key: Int, days: [(String, [Thing])])] = [:]
+        /// Each Feed section's name, where it stands on screen (prd §1208d).
+        var sectionTops: [String: CGFloat] = [:]
         /// The cover (prd §389c) — picked from `days` and lifted out of
         /// `groups`, so it is stored as an id and resolved against the first
         /// day at render (never held as a `Thing` across renders: this class
@@ -1149,7 +1151,7 @@ struct FeedScreen: View {
             // feed is empty at all.
             if source == "All" { reconnectSection }
             Group { emptyState }
-                .listRowBackground(Color.clear)
+                .feedRowBackground()
                 .listRowSeparator(.hidden)
                 .listRowInsets(EdgeInsets())
         } else if source == LogosRoom.source {
@@ -1190,7 +1192,7 @@ struct FeedScreen: View {
             let visible = rows
             if visible.isEmpty && !keepsChromeWhenEmpty {
                 Group { filteredEmptyState }
-                    .listRowBackground(Color.clear)
+                    .feedRowBackground()
                     .listRowSeparator(.hidden)
                     .listRowInsets(EdgeInsets())
             } else {
@@ -1203,7 +1205,7 @@ struct FeedScreen: View {
             // screen each of those arms' notes describes. The corpus-shaped
             // empty state is the honest floor.
             Group { emptyState }
-                .listRowBackground(Color.clear)
+                .feedRowBackground()
                 .listRowSeparator(.hidden)
                 .listRowInsets(EdgeInsets())
         }
@@ -1497,7 +1499,7 @@ struct FeedScreen: View {
 
             // Room for the floating bar.
             Color.clear.frame(height: ShellMetrics.bottomInset - 40)
-                .listRowBackground(Color.clear)
+                .feedRowBackground()
                 .listRowSeparator(.hidden)
         }
         .listStyle(.plain)
@@ -1519,6 +1521,8 @@ struct FeedScreen: View {
         }
         .animation(DS.Motion.standard, value: listRevision(rows))   // new things rise in (debounced for All)
         .scrollContentBackground(.hidden)
+        .overlay(alignment: .top) { feedSectionPill }
+        .animation(DS.Motion.standard, value: feedSection)
         // Markets' and Notes' tiles left the floating bar (prd §1209a): the
         // band is face · bar · ✎ on every page, Notes' tiles stand under its
         // box as every page's do, and Markets' Watchlist and Alerts stand in
@@ -1998,6 +2002,8 @@ struct FeedScreen: View {
     /// The scroll's rows per section beyond the first five (prd §1208 item
     /// 4): More adds ten in place; a fold returns it to five.
     @State var sectionCaps: [String: Int] = [:]
+    /// The Feed section you are in, for the pill above the scroll (§1208d).
+    @State var feedSection: String?
 }
 
 /// What New makes in the Day room (prd §1056).

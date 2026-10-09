@@ -8979,6 +8979,34 @@
         }
       }
     },
+    "Shows this section" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Muestra esta sección"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "このセクションを表示"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 섹션을 표시합니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "显示此部分"
+          }
+        }
+      }
+    },
     "Sign in to Threads" : {
       "localizations" : {
         "es" : {

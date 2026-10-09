@@ -62,7 +62,7 @@ extension FeedScreen {
                     .listRowInsets(EdgeInsets(top: DS.Space.s2,
                                               leading: DSRoomChassis.rowInset(forMark: DS.Face.list),
                                               bottom: DS.Space.s2, trailing: DS.Space.s4))
-                    .listRowBackground(Color.clear)
+                    .feedRowBackground()
                     .listRowSeparator(.hidden)
                 }
             }
@@ -91,7 +91,7 @@ extension FeedScreen {
         .listRowInsets(EdgeInsets(top: DS.Space.s2,
                                   leading: DSRoomChassis.rowInset(forMark: DS.Face.list),
                                   bottom: DS.Space.s2, trailing: DS.Space.s4))
-        .listRowBackground(Color.clear)
+        .feedRowBackground()
         .listRowSeparator(.hidden)
     }
 
@@ -319,7 +319,7 @@ extension FeedScreen {
             )
             .listRowInsets(EdgeInsets(top: 0, leading: 0,
                                       bottom: DSRoomChassis.contentGap, trailing: 0))
-            .listRowBackground(Color.clear)
+            .feedRowBackground()
             .listRowSeparator(.hidden)
             .task { walletFollowProbe() }
             // The tray's Wallet folder leads with Follow a wallet (prd §1133)
@@ -417,7 +417,7 @@ extension FeedScreen {
                     }
                 }
                 .listRowInsets(WalletCardStyle.rowInsets)
-                .listRowBackground(Color.clear)
+                .feedRowBackground()
                 .listRowSeparator(.hidden)
             }
         }
@@ -577,7 +577,7 @@ extension FeedScreen {
                 DSFootnote(prose: String(localized: "Last read: \(list)"))
                     .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DSRoomChassis.inset,
                                               bottom: 0, trailing: DSRoomChassis.inset))
-                    .listRowBackground(Color.clear)
+                    .feedRowBackground()
                     .listRowSeparator(.hidden)
             }
         }
@@ -610,7 +610,7 @@ extension FeedScreen {
             DSSkeletonRows()
                 .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.rowInset(forMark: DS.Face.list),
                                           bottom: 0, trailing: DS.Space.s4))
-                .listRowBackground(Color.clear)
+                .feedRowBackground()
                 .listRowSeparator(.hidden)
         }
     }
@@ -656,7 +656,7 @@ extension FeedScreen {
             content
                 .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.rowInset(forMark: DS.Face.list),
                                           bottom: 0, trailing: DS.Space.s4))
-                .listRowBackground(Color.clear)
+                .feedRowBackground()
                 .listRowSeparator(.hidden)
         }
     }
@@ -727,7 +727,7 @@ extension FeedScreen {
                 .padding(.top, DS.Space.s8)
                 .padding(.bottom, DS.Space.s1)
                 .listRowInsets(EdgeInsets())
-                .listRowBackground(Color.clear)
+                .feedRowBackground()
                 .listRowSeparator(.hidden)
         }
     }
@@ -878,7 +878,7 @@ extension FeedScreen {
                     onOpen: { collection, name in
                         route.pushBridge(.nftCollection(wallet: entry.address, collection: collection, name: name))
                     })
-                    .listRowBackground(Color.clear)
+                    .feedRowBackground()
                     .listRowSeparator(.hidden)
                     .listRowInsets(WalletCardStyle.rowInsets)
             }
@@ -904,7 +904,7 @@ extension FeedScreen {
                     .id(SecurityAnchor.delegations.id)
                 WalletActingPartiesRows(holders: holders, acting: walletLive.acting)
                     .modifier(rowEntrance(2))
-                    .listRowBackground(Color.clear)
+                    .feedRowBackground()
                     .listRowSeparator(.hidden)
                     .listRowInsets(WalletCardStyle.rowInsets)
             }
@@ -944,7 +944,7 @@ extension FeedScreen {
                     feedSheet = .thing(thing, walk: .none)
                 }
                 .modifier(rowEntrance(2))
-                .listRowBackground(Color.clear)
+                .feedRowBackground()
                 .listRowSeparator(.hidden)
                 .listRowInsets(WalletCardStyle.rowInsets)
             }
@@ -1026,21 +1026,21 @@ extension FeedScreen {
                                       falls: walletLendingFalls,
                                       lineMenu: { AnyView(walletAlertLineMenu) })
                         .modifier(rowEntrance(2))
-                        .listRowBackground(Color.clear)
+                        .feedRowBackground()
                         .listRowSeparator(.hidden)
                         .listRowInsets(WalletCardStyle.rowInsets)
                 }
                 if perps {
                     WalletPerpsCard(book: walletLive.hyperliquid)
                         .modifier(rowEntrance(3))
-                        .listRowBackground(Color.clear)
+                        .feedRowBackground()
                         .listRowSeparator(.hidden)
                         .listRowInsets(WalletCardStyle.rowInsets)
                 }
                 if liquidity {
                     WalletLiquidityCard(book: walletLive.uniswap)
                         .modifier(rowEntrance(4))
-                        .listRowBackground(Color.clear)
+                        .feedRowBackground()
                         .listRowSeparator(.hidden)
                         .listRowInsets(WalletCardStyle.rowInsets)
                 }
@@ -1363,7 +1363,7 @@ extension FeedScreen {
                 .padding(.top, groupIndex == 0 ? DS.Space.s1 : DS.Space.s6)
                 .padding(.bottom, DS.Space.s1)
                 .listRowInsets(EdgeInsets())
-                .listRowBackground(Color.clear)
+                .feedRowBackground()
                 .listRowSeparator(.hidden)
                 ForEach(Array(dayRows.enumerated()), id: \.element.id) { i, row in
                     if row.id == boundary { newSinceDivider }
@@ -1434,7 +1434,7 @@ extension FeedScreen {
         .listRowInsets(EdgeInsets(top: DS.Space.s2,
                                   leading: DSRoomChassis.rowInset(forMark: DS.Face.list),
                                   bottom: DS.Space.s2, trailing: DS.Space.s4))
-        .listRowBackground(Color.clear)
+        .feedRowBackground()
         .listRowSeparator(.hidden)
     }
 
@@ -1544,7 +1544,7 @@ extension FeedScreen {
         .listRowInsets(EdgeInsets(top: DS.Space.s2,
                                   leading: DSRoomChassis.rowInset(forMark: DS.Face.list),
                                   bottom: DS.Space.s2, trailing: DS.Space.s4))
-        .listRowBackground(Color.clear)
+        .feedRowBackground()
         .listRowSeparator(.hidden)
     }
 
@@ -1602,7 +1602,7 @@ extension FeedScreen {
                 .listRowSeparator(.hidden)
                 // On the page itself, not in a card — a quiet continuation
                 // line, not another surface (user, 2026-07-20, twice).
-                .listRowBackground(Color.clear)
+                .feedRowBackground()
             }
         }
     }

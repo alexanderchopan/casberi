@@ -75,7 +75,7 @@ extension FeedScreen {
             )
             .listRowInsets(EdgeInsets(top: 0, leading: 0,
                                       bottom: DSRoomChassis.contentGap, trailing: 0))
-            .listRowBackground(Color.clear)
+            .feedRowBackground()
             .listRowSeparator(.hidden)
         }
         if active == .chat { logosChatSection }
@@ -116,7 +116,7 @@ extension FeedScreen {
                     .buttonStyle(RowPress())
                     .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DSRoomChassis.rowInset,
                                               bottom: DS.Space.s2, trailing: DSRoomChassis.rowInset))
-                    .listRowBackground(Color.clear)
+                    .feedRowBackground()
                     .listRowSeparator(.hidden)
                 }
             }
@@ -216,14 +216,14 @@ extension FeedScreen {
                 DSDoorRow(icon: "arrow.up.right", label: "Send") { feedSheet = .logosSend }
                     .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.rowInset,
                                               bottom: DS.Space.s2, trailing: DSRoomChassis.rowInset))
-                    .listRowBackground(Color.clear)
+                    .feedRowBackground()
                     .listRowSeparator(.hidden)
             }
         }
         if !cells.isEmpty {
             Section {
                 RoomHoldingsRows(cells: cells)
-                    .listRowBackground(Color.clear)
+                    .feedRowBackground()
                     .listRowSeparator(.hidden)
                     .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.rowInset(forMark: DS.Face.list),
                                               bottom: DS.Space.s4, trailing: DS.Space.s4))

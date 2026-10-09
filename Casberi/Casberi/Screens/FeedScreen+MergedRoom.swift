@@ -134,7 +134,7 @@ extension FeedScreen {
                     try? await Task.sleep(for: .seconds(300))
                 }
             }
-            .listRowBackground(Color.clear)
+            .feedRowBackground()
             .listRowSeparator(.hidden)
             .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
                                       bottom: DSRoomChassis.leadGap,
@@ -189,7 +189,7 @@ extension FeedScreen {
             await ServiceLinks.shared.refresh(modelContext, seats: bridges.bridges.map(\.name))
             mailSubscriptionProbe()
         }
-        .listRowBackground(Color.clear)
+        .feedRowBackground()
         .listRowSeparator(.hidden)
         .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DSRoomChassis.inset,
                                   bottom: DSRoomChassis.leadGap, trailing: DSRoomChassis.inset))
@@ -255,7 +255,7 @@ extension FeedScreen {
             }
             .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.rowInset,
                                       bottom: 0, trailing: DSRoomChassis.rowInset))
-            .listRowBackground(Color.clear)
+            .feedRowBackground()
             .listRowSeparator(.hidden)
             if reading.counted > 0 {
                 SubscriptionsSummary(reading: reading, tiles: tiles, pick: pick, mails: true) { tile in
@@ -268,7 +268,7 @@ extension FeedScreen {
                 }
                 .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DSRoomChassis.rowInset,
                                           bottom: DS.Space.s2, trailing: DSRoomChassis.rowInset))
-                .listRowBackground(Color.clear)
+                .feedRowBackground()
                 .listRowSeparator(.hidden)
             }
             ForEach(writing) { item in mailSubscriptionRow(item) }
@@ -281,7 +281,7 @@ extension FeedScreen {
                     .accessibilityAddTraits(.isHeader)
                     .listRowInsets(EdgeInsets(top: DS.Space.s6, leading: DSRoomChassis.rowInset,
                                               bottom: DS.Space.s1, trailing: DSRoomChassis.rowInset))
-                    .listRowBackground(Color.clear)
+                    .feedRowBackground()
                     .listRowSeparator(.hidden)
                 ForEach(stopped) { item in mailSubscriptionRow(item) }
             }
@@ -299,7 +299,7 @@ extension FeedScreen {
         .dsHover()
         .listRowInsets(EdgeInsets(top: Self.rowAir, leading: DSRoomChassis.rowInset,
                                   bottom: Self.rowAir, trailing: DSRoomChassis.rowInset))
-        .listRowBackground(Color.clear)
+        .feedRowBackground()
         .listRowSeparator(.hidden)
     }
 
@@ -365,7 +365,7 @@ extension FeedScreen {
         .dsHover()
         .macHoverLift()
         .id(thing.id.uuidString)
-        .listRowBackground(Color.clear)
+        .feedRowBackground()
         .listRowInsets(.init(top: DS.Space.s2, leading: DSRoomChassis.inset,
                              bottom: DSRoomChassis.leadGap, trailing: DSRoomChassis.inset))
         .listRowSeparator(.hidden)
@@ -439,7 +439,7 @@ extension FeedScreen {
             DSScopeTiles(sections: WorkScope.allCases, active: chrome.workScope, attention: [], verbs: []) { picked in
                 withAnimation(DS.Motion.standard) { chrome.workScope = picked }
             }
-            .listRowBackground(Color.clear)
+            .feedRowBackground()
             .listRowSeparator(.hidden)
             .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
                                       bottom: DSRoomChassis.leadGap,
@@ -454,7 +454,7 @@ extension FeedScreen {
             if waiting.isEmpty && rest.isEmpty && cover == nil {
                 Section {
                     DSSkeletonRows(label: Text("Nothing needs you, and nothing is due."))
-                        .listRowBackground(Color.clear)
+                        .feedRowBackground()
                         .listRowSeparator(.hidden)
                 }
             } else {

@@ -68,7 +68,7 @@ extension FeedScreen {
                 .padding(.top, DS.Space.s6)
                 .padding(.bottom, DS.Space.s1)
                 .listRowInsets(EdgeInsets())
-                .listRowBackground(Color.clear)
+                .feedRowBackground()
                 .listRowSeparator(.hidden)
         }
     }
@@ -89,7 +89,7 @@ extension FeedScreen {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, DS.Space.s1)
                 .listRowSeparator(.hidden)
-                .listRowBackground(Color.clear)
+                .feedRowBackground()
             }
         }
     }
@@ -114,7 +114,7 @@ extension FeedScreen {
                     .padding(.top, DS.Space.s6)
                     .padding(.bottom, DS.Space.s1)
                     .listRowInsets(EdgeInsets())
-                    .listRowBackground(Color.clear)
+                    .feedRowBackground()
                     .listRowSeparator(.hidden)
                     ForEach(open ? reading.places : Array(reading.places.prefix(Self.walletHomeCap)),
                             id: \.name) { place in
@@ -124,7 +124,7 @@ extension FeedScreen {
                         }
                         .listRowInsets(EdgeInsets(top: Self.rowAir, leading: DSRoomChassis.rowInset,
                                                   bottom: Self.rowAir, trailing: DSRoomChassis.rowInset))
-                        .listRowBackground(Color.clear)
+                        .feedRowBackground()
                         .listRowSeparator(.hidden)
                     }
                 }

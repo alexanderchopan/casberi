@@ -612,7 +612,7 @@ extension FeedScreen {
         if chatting, roomAgent != nil {
             Section {
                 AgentChatThread(source: agentSource)
-                    .listRowBackground(Color.clear)
+                    .feedRowBackground()
                     .listRowSeparator(.hidden)
                     .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DSRoomChassis.inset,
                                               bottom: DSRoomChassis.leadGap,
@@ -644,7 +644,7 @@ extension FeedScreen {
         if let agentTiles {
             Section {
                 agentTiles
-                    .listRowBackground(Color.clear)
+                    .feedRowBackground()
                     .listRowSeparator(.hidden)
                     .listRowInsets(EdgeInsets(top: leadHeld ? 0 : DS.Space.s2,
                                               leading: DSRoomChassis.inset,
@@ -658,7 +658,7 @@ extension FeedScreen {
             // The composer row, BELOW the tiles — where the list would be.
             Section {
                 AgentChatEntry(source: agentSource, provider: roomAgent)
-                    .listRowBackground(Color.clear)
+                    .feedRowBackground()
                     .listRowSeparator(.hidden)
                     .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
                                               bottom: DS.Space.s3, trailing: DSRoomChassis.inset))
@@ -733,7 +733,7 @@ extension FeedScreen {
                     tiles.dsRoomTilesListRow()
                 } else {
                     tiles
-                        .listRowBackground(Color.clear)
+                        .feedRowBackground()
                         .listRowSeparator(.hidden)
                         .listRowInsets(EdgeInsets(top: DS.Space.s2,
                                                   leading: DSRoomChassis.inset,
@@ -761,7 +761,7 @@ extension FeedScreen {
                         .map { RoomShareCard.Input.Row(at: $0.capturedAt, title: $0.title, facts: $0.facts) }
                     roomShare = RoomShareCard.Input(source: source, rows: rows)
                 }
-                .listRowBackground(Color.clear)
+                .feedRowBackground()
                 .listRowSeparator(.hidden)
                 .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
                                           bottom: DSRoomChassis.leadGap, trailing: DSRoomChassis.inset))

@@ -63,7 +63,7 @@ extension FeedScreen {
                          attention: [], verbs: []) { picked in
                 withAnimation(DS.Motion.standard) { chrome.mediaScope = picked }
             }
-            .listRowBackground(Color.clear)
+            .feedRowBackground()
             .listRowSeparator(.hidden)
             .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
                                       bottom: DSRoomChassis.leadGap,

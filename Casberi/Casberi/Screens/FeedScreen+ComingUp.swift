@@ -83,7 +83,7 @@ extension FeedScreen {
                maxHeight: DSRoomChassis.leadBox, alignment: .leading)
         .dsRoomHeadBlock()
         .task(id: chrome.dayScope) { loadDayComingUp() }
-        .listRowBackground(Color.clear)
+        .feedRowBackground()
         .listRowSeparator(.hidden)
         .listRowInsets(.init(top: DS.Space.s2, leading: DSRoomChassis.inset,
                              bottom: DSRoomChassis.leadGap, trailing: DSRoomChassis.inset))
@@ -103,7 +103,7 @@ extension FeedScreen {
                     .foregroundStyle(DS.textSecondary)
                     .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DSRoomChassis.rowInset,
                                               bottom: DS.Space.s2, trailing: DSRoomChassis.rowInset))
-                    .listRowBackground(Color.clear)
+                    .feedRowBackground()
                     .listRowSeparator(.hidden)
                 if !connectedSeatNames.contains("Calendar") {
                     DSDoorRow(icon: ScopeTileGlyph.calendars, label: "Connect Calendar") {
@@ -111,7 +111,7 @@ extension FeedScreen {
                     }
                     .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.rowInset,
                                               bottom: 0, trailing: DSRoomChassis.rowInset))
-                    .listRowBackground(Color.clear)
+                    .feedRowBackground()
                     .listRowSeparator(.hidden)
                 }
                 DSDoorRow(icon: ScopeTileGlyph.new, label: "Subscribe to a calendar") {
@@ -119,7 +119,7 @@ extension FeedScreen {
                 }
                 .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.rowInset,
                                           bottom: DS.Space.s4, trailing: DSRoomChassis.rowInset))
-                .listRowBackground(Color.clear)
+                .feedRowBackground()
                 .listRowSeparator(.hidden)
             }
         } else {

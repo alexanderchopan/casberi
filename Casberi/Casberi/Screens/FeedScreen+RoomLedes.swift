@@ -15,7 +15,7 @@ extension FeedScreen {
             Section {
                 DSScopeTiles(sections: TokensScope.bar, active: chrome.tokensScope,
                              strip: true, verbs: [.new]) { pickTokensScope($0) }
-                    .listRowBackground(Color.clear)
+                    .feedRowBackground()
                     .listRowSeparator(.hidden)
                     .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
                                               bottom: DSRoomChassis.leadGap,
@@ -90,7 +90,7 @@ extension FeedScreen {
             .frame(maxWidth: .infinity, minHeight: box, maxHeight: box, alignment: .topLeading)
             .clipped()
             .dsRoomHeadBlock()
-            .listRowBackground(Color.clear)
+            .feedRowBackground()
             .listRowInsets(.init(top: DS.Space.s2,
                                  leading: DSRoomChassis.inset,
                                  bottom: DSRoomChassis.leadGap,
@@ -141,7 +141,7 @@ extension FeedScreen {
                     // the holdings card: GenTagMap self-pads horizontally,
                     // so only the bottom needs closing.
                     .padding(.bottom, DS.Space.s3)
-                    .listRowBackground(Color.clear)
+                    .feedRowBackground()
                     .listRowSeparator(.hidden)
                     // The card needs the page gutter the bare map didn't.
                     .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DS.Space.s4,
@@ -175,7 +175,7 @@ extension FeedScreen {
                     .frame(height: 0)
                     .id(Self.themesFoldAnchor)
                     .environment(\.defaultMinListRowHeight, 0)
-                    .listRowBackground(Color.clear)
+                    .feedRowBackground()
                     .listRowSeparator(.hidden)
                     .listRowInsets(EdgeInsets())
                     .onAppear {
@@ -229,7 +229,7 @@ extension FeedScreen {
                 }
                 .buttonStyle(RowPress())
                 .dsHover()
-                .listRowBackground(Color.clear)
+                .feedRowBackground()
                 .listRowSeparator(.hidden)
                 .listRowInsets(EdgeInsets())
             }

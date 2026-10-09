@@ -304,7 +304,12 @@ extension FeedScreen {
         // THE CONTENTS LEAD (prd §1208b, user: "land on table of contents,
         // scroll to end of it and then Day starts there"): today's newest
         // from each app by category, every name a jump down to its section.
-        ForEach(groups, id: \.0) { label, rows in
+        // TODAY AT A GLANCE (prd §1208d, user: "people like seeing the
+        // newest image or icon that comes w/ a thing"): on the scrolling
+        // Feed the contents are one tile per category — its newest picture
+        // or app, its count, its newest line — each a jump to its section.
+        if scroll { contentsGrid(groups) }
+        ForEach(scroll ? [] : groups, id: \.0) { label, rows in
             // Bundles merge into the day card like any row-shaped thing —
             // only a single that stands alone (consent, token) breaks the run.
             let positions = cardRunPositions(
@@ -451,12 +456,12 @@ extension FeedScreen {
                     .padding(.leading, DSRoomChassis.rowInset)
                     .padding(.top, DS.Space.s3)
                     .listRowInsets(EdgeInsets())
-                    .listRowBackground(Color.clear)
+                    .feedRowBackground()
                     .listRowSeparator(.hidden)
                 DSSkeletonRows(count: 1)
                     .padding(.horizontal, DSRoomChassis.rowInset)
                     .listRowInsets(EdgeInsets())
-                    .listRowBackground(Color.clear)
+                    .feedRowBackground()
                     .listRowSeparator(.hidden)
             }
             .accessibilityHidden(true)
@@ -473,7 +478,7 @@ extension FeedScreen {
                 .foregroundStyle(DS.textSecondary)
                 .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DSRoomChassis.rowInset,
                                           bottom: DS.Space.s2, trailing: DSRoomChassis.rowInset))
-                .listRowBackground(Color.clear)
+                .feedRowBackground()
                 .listRowSeparator(.hidden)
         }
     }
@@ -522,7 +527,7 @@ extension FeedScreen {
                 // one place that decides whether a floor is honest at all.
                 CorpusFloor(oldest: oldest)
                     .padding(.vertical, DS.Space.s6)
-                    .listRowBackground(Color.clear)
+                    .feedRowBackground()
                     .listRowSeparator(.hidden)
             }
         }
@@ -585,7 +590,7 @@ extension FeedScreen {
             .settleIn()   // honours Reduce Motion; the seam it arrived beside is gone (§915)
             .frame(maxWidth: .infinity)
             .padding(.vertical, DS.Space.s1)
-            .listRowBackground(Color.clear)
+            .feedRowBackground()
             .listRowSeparator(.hidden)
     }
 
@@ -669,7 +674,7 @@ extension FeedScreen {
         .dsHover()
         .macHoverLift()
         .id(thing.id.uuidString)
-        .listRowBackground(Color.clear)
+        .feedRowBackground()
         // A wider gap below than above: the cover is its own object, and the
         // day's run begins under it rather than continuing from it. The
         // chassis's own numbers (prd §763), which every other lead now wears.
@@ -715,7 +720,7 @@ extension FeedScreen {
         .padding(.top, DS.Space.s3)
         .padding(.bottom, DS.Space.s1)
         .listRowInsets(EdgeInsets())
-        .listRowBackground(Color.clear)
+        .feedRowBackground()
         .listRowSeparator(.hidden)
     }
 
@@ -942,7 +947,7 @@ extension FeedScreen {
                     .padding(.top, DS.Space.s6)
                     .padding(.bottom, DS.Space.s1)
                     .listRowInsets(EdgeInsets())
-                    .listRowBackground(Color.clear)
+                    .feedRowBackground()
                     .listRowSeparator(.hidden)
                 }
                 // The day's pictures, first (prd §910): a grid cannot interleave
@@ -992,7 +997,7 @@ extension FeedScreen {
                 .foregroundStyle(DS.textTertiary)
                 .frame(maxWidth: .infinity)
                 .padding(.top, DS.Space.s6)
-                .listRowBackground(Color.clear)
+                .feedRowBackground()
                 .listRowSeparator(.hidden)
         }
     }
@@ -1192,7 +1197,7 @@ extension FeedScreen {
             .frame(minHeight: DS.Hit.min)
         }
         .buttonStyle(RowPress())
-        .listRowBackground(Color.clear)
+        .feedRowBackground()
         .listRowInsets(.init(top: Self.rowAir,
                              leading: DSRoomChassis.rowInset,
                              bottom: Self.rowAir,

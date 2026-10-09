@@ -40,6 +40,11 @@ extension FeedScreen {
         return category == RoomAccounts.readingRoom ? RoomAccounts.mediaRoom : category
     }
 
+    /// A section's identity in the Feed's list, apart from every other id
+    /// (the contents' tiles are keyed by the same names).
+    static let sectionPrefix = "feedSectionGroup:"
+    static func sectionID(_ category: String) -> String { sectionPrefix + category }
+
     /// The id a section's name carries, so the tray can scroll to it.
     static func scrollAnchor(_ category: String) -> String { "feedSection:\(category)" }
 
@@ -48,20 +53,44 @@ extension FeedScreen {
         let byCategory = Dictionary(grouping: visible.filter(\.isLive)) {
             Self.scrollCategory(of: $0) ?? ""
         }
-        ForEach(scrollCategories, id: \.self) { category in
+        ForEach(scrollCategories.map(Self.sectionID), id: \.self) { id in
+            let category = String(id.dropFirst(Self.sectionPrefix.count))
             // Live again inside the closure: `List` may run it after a heal
             // deleted a row the body's own filter saw alive.
             scrollSection(category, (byCategory[category] ?? []).live, nextEventID: nextEventID)
         }
     }
 
+    /// One category, on one panel (prd §1208d, user: "i think G is
+    /// necessary now"): the name caps its top, every row of the section
+    /// stands on the panel's fill, and an end cap rounds its foot.
     @ViewBuilder
     private func scrollSection(_ category: String, _ things: [Thing], nextEventID: UUID?) -> some View {
-        Section { scrollHeader(category) }
+        // A chapter's air stands between panels, never inside one.
+        Section {
+            Color.clear
+                .frame(height: DS.Space.s6)
+                .listRowInsets(EdgeInsets())
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+                .accessibilityHidden(true)
+            scrollHeader(category).listRowBackground(SectionPanel(part: .top))
+        }
         let cap = sectionCaps[category] ?? Self.sectionFirstRows
         let _ = { Self.sectionCapNow = (category, cap) }()
-        categorySections(category, things, nextEventID: nextEventID)
+        Group {
+            categorySections(category, things, nextEventID: nextEventID)
+        }
+        .environment(\.feedSectionPanel, true)
         let _ = { Self.sectionCapNow = nil }()
+        Section {
+            Color.clear
+                .frame(height: DS.Space.s4)
+                .listRowInsets(EdgeInsets())
+                .listRowSeparator(.hidden)
+                .listRowBackground(SectionPanel(part: .bottom))
+                .accessibilityHidden(true)
+        }
     }
 
     /// Each category's own sections — the room's tiles and list — as its
@@ -99,11 +128,49 @@ extension FeedScreen {
             .id(Self.scrollAnchor(category))
             .padding(.leading, DSRoomChassis.rowInset)
             .padding(.trailing, DSRoomChassis.rowInset)
-            .padding(.top, DS.Space.s8 + DS.Space.s4)
+            .padding(.top, DS.Space.s4)
             .padding(.bottom, DS.Space.s2)
+            // Where you are (prd §1208d): each name reports where it stands,
+            // so the pill above the scroll names the section you are in.
+            .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).minY } action: { y in
+                noteSectionTop(category, y)
+            }
             .listRowInsets(EdgeInsets())
-            .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
+    }
+
+    /// The line a section's name passes to become "where you are".
+    static let whereLine: CGFloat = 150
+
+    /// A name moved: the section you are in is the last whose name has
+    /// passed the line. Written only when it changes, so a scroll costs one
+    /// dictionary write per frame and a body pass per section crossed.
+    private func noteSectionTop(_ category: String, _ y: CGFloat) {
+        memo.sectionTops[category] = y
+        let current = scrollCategories.last { (memo.sectionTops[$0] ?? .infinity) < Self.whereLine }
+        if feedSection != current { feedSection = current }
+    }
+
+    /// THE TITLE SAYS WHERE YOU ARE (prd §1208d): once a section's name has
+    /// scrolled past, a floating pill names it — "Feed · Social" — the way
+    /// Music and Settings keep a page's name with you.
+    @ViewBuilder
+    var feedSectionPill: some View {
+        if scrollsCategories, let section = feedSection {
+            HStack(spacing: DS.Space.s1) {
+                Text("Feed").foregroundStyle(DS.textSecondary)
+                Text(verbatim: "·").foregroundStyle(DS.textTertiary)
+                Text(verbatim: section).foregroundStyle(DS.brandInk)
+            }
+            .dsText(.heading17)
+            .padding(.horizontal, DS.Space.s4)
+            .padding(.vertical, DS.Space.s2)
+            .dsGlass(cornerRadius: 999)
+            .padding(.top, DSDemoMark.screenClearance + DS.Space.s1)
+            .transition(.opacity.combined(with: .move(edge: .top)))
+            .accessibilityElement(children: .combine)
+            .allowsHitTesting(false)
+        }
     }
 
     /// More (prd §1208 item 4): ten more rows in place; the scroll goes on
@@ -123,7 +190,7 @@ extension FeedScreen {
             .frame(minHeight: DS.Hit.min)
         }
         .buttonStyle(RowPress())
-        .listRowBackground(Color.clear)
+        .feedRowBackground()
         .listRowInsets(.init(top: Self.rowAir,
                              leading: DSRoomChassis.rowInset,
                              bottom: Self.rowAir,
@@ -135,11 +202,175 @@ extension FeedScreen {
     /// the top.
     func settleFeedJump(_ proxy: ScrollViewProxy) {
         guard source == "All", let category = chrome.feedJump else { return }
+        #if DEBUG
+        NSLog("[Casberi] feedJump: %@", category)
+        #endif
         chrome.feedJump = nil
+        // Twice: once the list has its rows, and again once a list still
+        // laying out its sections above has settled (a cold landing).
         Task { @MainActor in
-            try? await Task.sleep(for: .milliseconds(120))
-            withAnimation(DS.Motion.standard) {
-                proxy.scrollTo(Self.scrollAnchor(category), anchor: .top)
+            // The section's own identity first — the list knows it before
+            // the section's rows are laid out — then its name, exactly.
+            try? await Task.sleep(for: .milliseconds(150))
+            withAnimation(DS.Motion.standard) { proxy.scrollTo(Self.sectionID(category), anchor: .top) }
+            try? await Task.sleep(for: .milliseconds(450))
+            withAnimation(DS.Motion.standard) { proxy.scrollTo(Self.scrollAnchor(category), anchor: .top) }
+        }
+    }
+}
+
+/// A section's panel (prd §1208d, amends §782 for the Feed's sections only):
+/// the room's fill, inset to the box's column, its top and foot rounded at
+/// the widget radius so a category reads as one object.
+struct SectionPanel: View {
+    enum Part { case top, middle, bottom }
+    let part: Part
+
+    var body: some View {
+        let r = DS.Radius.widget
+        UnevenRoundedRectangle(topLeadingRadius: part == .top ? r : 0,
+                               bottomLeadingRadius: part == .bottom ? r : 0,
+                               bottomTrailingRadius: part == .bottom ? r : 0,
+                               topTrailingRadius: part == .top ? r : 0,
+                               style: .continuous)
+            .fill(Self.fill)
+            .padding(.horizontal, DS.Space.s2)
+    }
+
+    /// A shade under the boxes and tiles (theirs is `fillFaint`), so they
+    /// keep their own wells on the panel.
+    static let fill = Color.adaptive(dark: "#111113", light: "#F2F2F7")
+}
+
+/// NEW SINCE YOU LOOKED (prd §1208d, user: "only if scrolling past it
+/// removes the dot"): a dot by a row that came after you last left, gone
+/// once the row has scrolled past the top, for the rest of the visit.
+struct NewDot: View {
+    let id: UUID
+    @State private var gone: Bool
+    /// What scrolled past this visit; a later visit's line moves anyway.
+    @MainActor static var seen: Set<UUID> = []
+
+    init(id: UUID) {
+        self.id = id
+        _gone = State(initialValue: NewDot.seen.contains(id))
+    }
+
+    var body: some View {
+        Circle()
+            .fill(DS.tint)
+            .frame(width: 8, height: 8)
+            .opacity(gone ? 0 : 1)
+            .onGeometryChange(for: Bool.self) { $0.frame(in: .global).maxY < FeedScreen.whereLine - 40 } action: { past in
+                guard past, !gone else { return }
+                NewDot.seen.insert(id)
+                withAnimation(DS.Motion.standard) { gone = true }
+            }
+            .accessibilityLabel(Text("New"))
+            .accessibilityHidden(gone)
+    }
+}
+
+extension FeedScreen {
+    /// The contents as tiles (prd §1208d): two across, one per category with
+    /// something today, in the dock's order.
+    @ViewBuilder
+    func contentsGrid(_ groups: [(String, [FeedRow])]) -> some View {
+        let tiles: [(String, Int, Thing, Thing?)] = groups.compactMap { label, rows in
+            let things = rows.compactMap { row -> Thing? in
+                if case .single(let item) = row.kind { return item.live }
+                return nil
+            }
+            guard let newest = things.first else { return nil }
+            // The picture is the newest one that has a picture today (user:
+            // "people like seeing the newest image"); the line stays newest.
+            return (label, things.count, newest, things.first { StoredPixels.probe($0) != nil })
+        }
+        if !tiles.isEmpty {
+            Section {
+                LazyVGrid(columns: [GridItem(.flexible(), spacing: DS.Space.s2),
+                                    GridItem(.flexible(), spacing: DS.Space.s2)],
+                          spacing: DS.Space.s2) {
+                    ForEach(tiles, id: \.0) { label, count, newest, pictured in
+                        GlanceTile(category: label, count: count, newest: newest, pictured: pictured) {
+                            DSHaptic.selection()
+                            chrome.sourceRequest = label
+                        }
+                    }
+                }
+                .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DSRoomChassis.inset,
+                                          bottom: 0, trailing: DSRoomChassis.inset))
+                .feedRowBackground()
+                .listRowSeparator(.hidden)
+            }
+        }
+    }
+}
+
+/// One category at a glance (prd §1208d): its newest thing's picture, else
+/// its app's mark, over the category's name, how many came today and the
+/// newest line. The whole tile jumps to the category's section.
+struct GlanceTile: View {
+    let category: String
+    let count: Int
+    let newest: Thing
+    /// Today's newest thing in the category with a picture, if any.
+    var pictured: Thing? = nil
+    let action: () -> Void
+
+    static let artHeight: CGFloat = 84
+
+    var body: some View {
+        Button(action: action) {
+            VStack(alignment: .leading, spacing: 0) {
+                art
+                    .frame(maxWidth: .infinity)
+                    .frame(height: Self.artHeight)
+                    .clipped()
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(alignment: .firstTextBaseline) {
+                        Text(verbatim: category)
+                            .dsText(.label12)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(DS.brandInk)
+                        Spacer(minLength: 0)
+                        Text(verbatim: "\(count)")
+                            .dsText(.label12)
+                            .foregroundStyle(DS.textTertiary)
+                    }
+                    Text(verbatim: newest.isLive ? newest.title : "")
+                        .dsText(.body17)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(DS.textPrimary)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .padding(.horizontal, DS.Space.s3)
+                .padding(.vertical, DS.Space.s2)
+            }
+            .frame(maxHeight: .infinity, alignment: .top)
+            .background(DS.fillFaint, in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+            .contentShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+        }
+        .buttonStyle(PressSpring())
+        .accessibilityLabel(Text(verbatim: "\(category), \(count). \(newest.isLive ? newest.title : "")"))
+        .accessibilityHint(Text("Shows this section"))
+    }
+
+    @ViewBuilder
+    private var art: some View {
+        if let shot = pictured, shot.isLive, let size = StoredPixels.probe(shot) {
+            StoredPicture(shot, size: size) { image in
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+            }
+        } else {
+            ZStack {
+                DS.fillFaint
+                BridgeIcon(name: newest.isLive ? newest.source : category, size: DS.Mark.row)
             }
         }
     }

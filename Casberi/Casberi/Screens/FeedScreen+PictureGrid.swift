@@ -233,7 +233,7 @@ extension FeedScreen {
                     }
                 }
             }
-            .listRowBackground(Color.clear)
+            .feedRowBackground()
             .listRowSeparator(.hidden)
             // The grid stands in the rows' column (prd §763), and its rows are
             // one gutter apart: this inset's bottom plus the next one's top.

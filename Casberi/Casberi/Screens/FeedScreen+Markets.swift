@@ -29,7 +29,7 @@ extension FeedScreen {
                                 isOn: tile == chrome.tokensScope, inline: true) { pickTokensScope(tile) }
                 }
             }
-            .listRowBackground(Color.clear)
+            .feedRowBackground()
             .listRowInsets(.init(top: DS.Space.s2, leading: DSRoomChassis.inset,
                                  bottom: DSRoomChassis.leadGap, trailing: DSRoomChassis.inset))
             .listRowSeparator(.hidden)
@@ -79,7 +79,7 @@ extension FeedScreen {
                 }
                 .accessibilityLabel(Text("Order: \(TokenWatchOrder.shared.mode.label)"))
             }
-            .listRowBackground(Color.clear)
+            .feedRowBackground()
             .listRowInsets(.init(top: DS.Space.s2, leading: DSRoomChassis.rowInset,
                                  bottom: 0, trailing: DSRoomChassis.rowInset))
             .listRowSeparator(.hidden)
@@ -107,7 +107,7 @@ extension FeedScreen {
                     .foregroundStyle(DS.textSecondary)
                     .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DSRoomChassis.rowInset,
                                               bottom: DS.Space.s2, trailing: DSRoomChassis.rowInset))
-                    .listRowBackground(Color.clear)
+                    .feedRowBackground()
                     .listRowSeparator(.hidden)
             }
         }
@@ -155,10 +155,10 @@ extension FeedScreen {
         if alerts.isEmpty {
             Section {
                 DSSkeletonRows(label: Text("No alerts yet."))
-                    .listRowBackground(Color.clear)
+                    .feedRowBackground()
                     .listRowSeparator(.hidden)
                 DSFootnote(Text("Open something you follow to set an alert."))
-                    .listRowBackground(Color.clear)
+                    .feedRowBackground()
                     .listRowSeparator(.hidden)
                     .listRowInsets(.init(top: 0, leading: DSRoomChassis.rowInset,
                                          bottom: 0, trailing: DSRoomChassis.rowInset))
@@ -208,7 +208,7 @@ extension FeedScreen {
                 Label("Delete alert", systemImage: "trash")
             }
         }
-        .listRowBackground(Color.clear)
+        .feedRowBackground()
         .listRowInsets(.init(top: Self.rowAir, leading: DSRoomChassis.rowInset,
                              bottom: Self.rowAir, trailing: DSRoomChassis.rowInset))
         .listRowSeparator(.hidden)
@@ -265,7 +265,7 @@ extension FeedScreen {
                         .buttonStyle(RowPress())
                     }
                 }
-                .listRowBackground(Color.clear)
+                .feedRowBackground()
                 .listRowSeparator(.hidden)
                 .listRowInsets(.init(top: DS.Space.s4, leading: DSRoomChassis.rowInset,
                                      bottom: 0, trailing: DSRoomChassis.rowInset))
@@ -282,7 +282,7 @@ extension FeedScreen {
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(RowPress())
-                    .listRowBackground(Color.clear)
+                    .feedRowBackground()
                     .listRowSeparator(.hidden)
                     .listRowInsets(.init(top: Self.rowAir, leading: DSRoomChassis.rowInset,
                                          bottom: Self.rowAir, trailing: DSRoomChassis.rowInset))

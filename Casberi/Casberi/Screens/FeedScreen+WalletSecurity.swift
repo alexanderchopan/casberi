@@ -103,7 +103,7 @@ extension FeedScreen {
                     }
                 }
                 .listRowInsets(WalletCardStyle.rowInsets)
-                .listRowBackground(Color.clear)
+                .feedRowBackground()
                 .listRowSeparator(.hidden)
             }
         }

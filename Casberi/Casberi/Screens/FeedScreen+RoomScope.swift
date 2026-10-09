@@ -76,7 +76,7 @@ extension FeedScreen {
                     onMore: { feedSheet = .socialFaces })
                 // The rail pads its own `s4`; the row gives it the screen's
                 // width so the strip scrolls edge to edge.
-                .listRowBackground(Color.clear)
+                .feedRowBackground()
                 .listRowSeparator(.hidden)
                 .listRowInsets(EdgeInsets(top: 0, leading: 0,
                                           bottom: DSRoomChassis.leadGap - DS.Space.s1,
@@ -189,7 +189,7 @@ extension FeedScreen {
                     },
                     more: visible.hidden,
                     onMore: { feedSheet = .socialFaces })
-                .listRowBackground(Color.clear)
+                .feedRowBackground()
                 .listRowSeparator(.hidden)
                 .listRowInsets(EdgeInsets(top: 0, leading: 0,
                                           bottom: DSRoomChassis.leadGap - DS.Space.s1,

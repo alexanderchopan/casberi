@@ -77,7 +77,7 @@ extension FeedScreen {
             Section {
                 DSScopeTiles(sections: NotesScope.allCases, active: chrome.notesScope,
                              strip: true, verbs: [.new], hold: notesHold) { pickNotesScope($0) }
-                    .listRowBackground(Color.clear)
+                    .feedRowBackground()
                     .listRowSeparator(.hidden)
                     .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
                                               bottom: DSRoomChassis.leadGap,

@@ -26,7 +26,7 @@ extension View {
         listRowInsets(.init(top: DS.Space.s2 + DSDemoMark.screenClearance,
                             leading: DSRoomChassis.inset,
                             bottom: 0, trailing: DSRoomChassis.inset))
-            .listRowBackground(Color.clear)
+            .feedRowBackground()
             .listRowSeparator(.hidden)
     }
 
@@ -35,7 +35,7 @@ extension View {
     func dsRoomLeadListRow() -> some View {
         listRowInsets(.init(top: DS.Space.s2, leading: DSRoomChassis.inset,
                             bottom: DSRoomChassis.leadGap, trailing: DSRoomChassis.inset))
-            .listRowBackground(Color.clear)
+            .feedRowBackground()
             .listRowSeparator(.hidden)
     }
 
@@ -67,7 +67,56 @@ extension View {
     func dsRoomTilesListRow() -> some View {
         listRowInsets(.init(top: 0, leading: DSRoomChassis.inset,
                             bottom: DSRoomChassis.leadGap, trailing: DSRoomChassis.inset))
-            .listRowBackground(Color.clear)
+            .feedRowBackground()
             .listRowSeparator(.hidden)
+    }
+}
+
+/// Whether a row stands inside one of the Feed's section panels (prd
+/// §1208d): every room row's background reads this, so the same rows a room
+/// draws bare stand on the panel inside the Feed's scroll.
+private struct FeedSectionPanelKey: EnvironmentKey {
+    static let defaultValue = false
+}
+
+extension EnvironmentValues {
+    var feedSectionPanel: Bool {
+        get { self[FeedSectionPanelKey.self] }
+        set { self[FeedSectionPanelKey.self] = newValue }
+    }
+}
+
+/// A room row's background: bare, as every room's rows stand (prd §749),
+/// or the section panel's fill inside the Feed's scroll (§1208d).
+struct FeedRowBackground: ViewModifier {
+    @Environment(\.feedSectionPanel) private var panel
+
+    func body(content: Content) -> some View {
+        if panel {
+            content.listRowBackground(SectionPanel(part: .middle))
+        } else {
+            content.listRowBackground(Color.clear)
+        }
+    }
+}
+
+extension View {
+    /// `.feedRowBackground()`, unless the row stands on a Feed
+    /// section's panel (§1208d).
+    func feedRowBackground() -> some View { modifier(FeedRowBackground()) }
+}
+
+/// A row's own background, or the section panel's fill inside the Feed's
+/// scroll (prd §1208d) — read on the row, where the environment is.
+struct FeedRunBackground<Base: View>: ViewModifier {
+    @Environment(\.feedSectionPanel) private var panel
+    let base: Base
+
+    func body(content: Content) -> some View {
+        if panel {
+            content.listRowBackground(SectionPanel(part: .middle))
+        } else {
+            content.listRowBackground(base)
+        }
     }
 }

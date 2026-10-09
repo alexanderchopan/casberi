@@ -120,7 +120,7 @@ extension FeedScreen {
             }
             .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.rowInset,
                                       bottom: 0, trailing: DSRoomChassis.rowInset))
-            .listRowBackground(Color.clear)
+            .feedRowBackground()
             .listRowSeparator(.hidden)
             // Only what has a monthly cost is totalled (§83): with none, the
             // list is Add and its rows, as before.
@@ -137,7 +137,7 @@ extension FeedScreen {
                 }
                 .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DSRoomChassis.rowInset,
                                           bottom: DS.Space.s2, trailing: DSRoomChassis.rowInset))
-                .listRowBackground(Color.clear)
+                .feedRowBackground()
                 .listRowSeparator(.hidden)
             }
             ForEach(items) { item in
@@ -153,7 +153,7 @@ extension FeedScreen {
                 .dsHover()
                 .listRowInsets(EdgeInsets(top: Self.rowAir, leading: DSRoomChassis.rowInset,
                                           bottom: Self.rowAir, trailing: DSRoomChassis.rowInset))
-                .listRowBackground(Color.clear)
+                .feedRowBackground()
                 .listRowSeparator(.hidden)
             }
         }
