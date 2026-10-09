@@ -212,7 +212,8 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - `-openSection <raw>` — with `-openRoom`, land on a wallet-family tile, Work's or Day's (`subscriptions`, prd §1111), or a Markets company pack by its category name (`Work`) at launch, no tap (DEBUG) → docs/hooks/system.md · prd §953
 - **The folded rooms' own views are deleted (prd §1059): the kind tiles (`RoomKindTiles`), Reminders' and Mail's tiles, the Calendar agenda and every room-level arm only a folded app reached; `FeedScreen.Shape` and `rowShape` stay for the rows. A mail's `Attached` fact stays (`MailIngest.attachedLabel`): the sheet and search read it** → prd §1059
 - `-connectReminders YES` — the real Reminders connect, seat included (relaunch to see it; `simctl privacy … grant reminders` first, `-demo.corpusAllowed NO` on a fresh install or the dev seed pours four) → prd §993
-- `-saveLink "<url>"` — keep a link as a paste would, once per URL (prd §1092; NSLogs `saveLink:`); pair with `-openThing` to open a YouTube or Telegram video's sheet
+- **Shares file by kind (`ShareHome`)** → prd §1200
+- `-saveLink "<url>"` — keep a link as a paste would, once per URL (prd §1092; NSLogs `saveLink:`); pair with `-openThing`
 - `-openThing "<title prefix>"` — open the newest thing whose title starts with the prefix (NSLogs `openThing:`). It runs at mount, before ingest hooks land anything, so land first and relaunch.
 - `-answerProbe "<query>"` — run the answer path headless, NSLog the result (`-probeDelay <s>` to wait first). Deterministic unless the Apple Intelligence seat answers (prd §833).
 - `-uiAnswerProbe "<query>"` — auto-open the composer and send through the real UI path (also read in `Shell/Composer.swift`).

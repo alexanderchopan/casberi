@@ -28,7 +28,10 @@ enum LinkHeal {
     /// The sources whose links `LinkTitle.enrich` is called on at landing.
     /// "Shortcuts" is the intent's default source; a person who names another
     /// one in the Shortcut is not reached, which is the conservative miss.
-    static let sources: Set<String> = ["You", "Shortcuts", "Bluesky"]
+    /// Reading and Media are where a share files its link (prd §1200,
+    /// `ShareHome`); the extension names nothing a page did not hand it.
+    static let sources: Set<String> = ["You", "Shortcuts", "Bluesky",
+                                       ShareHome.reading.source, ShareHome.media.source]
 
     static let perPass = 6
     static let pace: Duration = .milliseconds(1200)

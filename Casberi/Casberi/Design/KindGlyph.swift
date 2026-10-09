@@ -257,6 +257,10 @@ enum BridgeGlyph {
         case "bankr":     return "brain.head.profile"
         case "voice":     return "waveform"
         case "you":       return "person"
+        // A share filed in the room itself (prd §1200, `ShareHome`): the
+        // category's own glyph (`CategoryFold.glyphs`), never the blank `app`.
+        case "reading":   return "book"
+        case "media":     return "play.circle"
         case "apple health": return "heart"
         case "strava":    return "figure.run"
         case "garmin":    return "figure.outdoor.cycle"
