@@ -43,27 +43,35 @@ extension FeedScreen {
         return String(localized: "Feed")
     }
 
-    /// The room's title row: the two poles' title on the phone's Feed and
-    /// unpicked Wallet (prd §1203 item 5), else the category and its pick.
+    /// The room's title row. On the phone it names the walk's neighbours
+    /// (prd §1207 item 2): the stop before in grey, where you stand in pink
+    /// (with its pick), the stop after in grey, each grey word pressable.
     @ViewBuilder
     var roomTitle: some View {
-        if let walletStands = poleStanding {
-            DSPoleTitleRow(walletStands: walletStands) {
-                chrome.sourceRequest = walletStands ? "All" : CategoryFold.walletRoom
+        if let walk = walkNeighbours {
+            DSWalkTitleRow(before: walk.before.map(Self.walkWord),
+                           title: roomName,
+                           pick: roomPick,
+                           after: walk.after.map(Self.walkWord)) { forward in
+                chrome.sourceRequest = forward ? walk.after : walk.before
             }
         } else {
             DSRoomTitleRow(title: roomName, pick: roomPick)
         }
     }
 
-    /// Which pole this page is on the phone — true for the Wallet, false for
-    /// the Feed — or nil anywhere else, a picked Wallet included: "Wallet ·
-    /// Safe" is a level in, and names itself.
-    private var poleStanding: Bool? {
-        guard roomScopeInRoom, roomPick == nil else { return nil }
-        if source == "All" { return false }
-        if source == CategoryFold.walletRoom { return true }
-        return nil
+    /// The stops either side of this page in the phone's walk, or nil off
+    /// the walk and wherever the rail stands.
+    private var walkNeighbours: (before: String?, after: String?)? {
+        guard roomScopeInRoom else { return nil }
+        let walk = HomeScope.phoneWalk(chips: chrome.chipOrder)
+        guard let i = walk.firstIndex(of: HomeScope.walkStop(source)) else { return nil }
+        return (i > 0 ? walk[i - 1] : nil, i + 1 < walk.count ? walk[i + 1] : nil)
+    }
+
+    /// A stop's word in the title: the Feed for "All", else its category.
+    private static func walkWord(_ stop: String) -> String {
+        stop == "All" ? String(localized: "Feed") : stop
     }
 
     /// What the title names after the category's dot, or nil while the room

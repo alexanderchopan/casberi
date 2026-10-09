@@ -222,10 +222,6 @@ final class ShellChrome {
     /// `RootShell`'s stack (`RoomsTray`), so the seat stays above it and the
     /// same tap that opened it closes it (§705's toggle, one size up).
     var roomsTray = false
-    /// The pole the person last stood on (prd §1203): the Feed, one of You's
-    /// places, or the Wallet. A room opened on top goes back here — from the
-    /// seat's ‹ or a swipe right.
-    var lastPole = "All"
 
     /// The one transient message surface — the glass toast above the bar.
     /// Any screen can flash an outcome ("On your list", "Copied", a denial);

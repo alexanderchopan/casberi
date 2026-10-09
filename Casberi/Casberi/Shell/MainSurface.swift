@@ -2092,8 +2092,6 @@ struct MainSurface: View {
                 return
             }
             CategoryFold.remember(source)
-            // The pole a room opened on top goes back to (prd §1203).
-            if HomeScope.isPole(source) { chrome.lastPole = source }
             // A person scope belongs to ONE network, so it dies with the room
             // (prd §362) — unlike the wallet scope, which spans its category on
             // purpose. Carried into the next room it would match no row there and
@@ -2524,6 +2522,12 @@ struct MainSurface: View {
                 return b >= a ? .trailing : .leading
             }
         }
+        // The phone reads its own walk (prd §1207), Wallet first.
+        if !isRegular {
+            let walk = phoneWalk
+            let place: (String) -> Int? = { walk.firstIndex(of: HomeScope.walkStop($0)) }
+            if let a = place(from), let b = place(to) { return b >= a ? .trailing : .leading }
+        }
         let labels = chipLabels
         // Notes and Markets sit at Home's place in the walk (prd §1127).
         let start = HomeScope.contains(from) ? "All" : from
@@ -2556,7 +2560,7 @@ struct MainSurface: View {
             // the way back out (`neighbour`).
             let atEnd = isRegular
                 ? (delta > 0 || HomeScope.contains(filter.source))
-                : HomeScope.isPole(filter.source)
+                : true
             if atEnd, route.path.isEmpty, !chrome.roomsTray {
                 DSHaptic.selection()
                 withAnimation(DS.Motion.folder) { chrome.roomsTray = true }
@@ -2623,11 +2627,17 @@ struct MainSurface: View {
         // swipe right goes back there and its swipe left goes nowhere. You's
         // places (Notes, Markets) stand at the Feed's place. The rail's walk
         // below is untouched: the iPad and the Mac keep every room in a row.
+        //
+        // **ONE WALK OF CATEGORIES (prd §1207 item 1, amends §1203).** The
+        // two poles came back as the walk's first two stops: Wallet, the
+        // Feed, then each category in the dock's order. Apps are not stops
+        // (an app is a pick inside its category's page), Testnets is the
+        // tray's alone, and a room off the walk goes back to the Feed.
         if !isRegular {
-            let wallet = CategoryFold.walletRoom
-            if HomeScope.contains(filter.source) { return delta > 0 ? wallet : nil }
-            if filter.source == wallet { return delta < 0 ? "All" : nil }
-            return delta < 0 ? chrome.lastPole : nil
+            let walk = phoneWalk
+            let here = HomeScope.walkStop(filter.source)
+            guard let i = walk.firstIndex(of: here) else { return delta < 0 ? "All" : nil }
+            return walk.indices.contains(i + delta) ? walk[i + delta] : nil
         }
         // **…AND EACH OF ITS APPS (prd §1136 item 9, user: "i swipe and swipe
         // between the apps and when i hit the last one i swipe into the next
@@ -2668,6 +2678,11 @@ struct MainSurface: View {
               rooms.indices.contains(idx + delta) else { return nil }
         return rooms[idx + delta]
     }
+
+    /// The phone's walk (prd §1207 item 1): Wallet, the Feed, then every
+    /// category with a room in the dock's order, Testnets excepted. Read
+    /// left to right, so a swipe right (delta -1) walks toward the Wallet.
+    var phoneWalk: [String] { HomeScope.phoneWalk(chips: chipLabels) }
 
     /// A merged room's apps as stops in the walk (prd §1136 item 9): the
     /// connected ones its menu shows, A–Z, each by the source `go(to:)`

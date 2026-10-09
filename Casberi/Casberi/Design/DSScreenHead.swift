@@ -70,44 +70,48 @@ struct DSRoomTitleRow: View {
     }
 }
 
-/// **THE TWO POLES' TITLE (prd §1203 item 5, user: "i think if it is a gray
-/// label someone will want to tap it tho").** On the Feed and the Wallet the
-/// title names both pages, in the swipe's order: the one you stand on in the
-/// category pink, the other in the tertiary ink and pressable, the way
-/// "For you · Following" reads. A narrow exception to §752: the third way to
-/// make the move the swipe and the tray already make, never the only one.
-/// One height with `DSRoomTitleRow`, so nothing under it moves.
-struct DSPoleTitleRow: View {
-    /// Whether the Wallet is the page standing.
-    let walletStands: Bool
-    /// The other pole, pressed.
-    let onOther: () -> Void
+/// **THE WALK'S TITLE (prd §1207 item 2, widens §1203's two poles).** The
+/// title names your neighbours: the stop before in the tertiary ink, where
+/// you stand in the category pink (with its pick after a dot), the stop
+/// after in the tertiary ink, the grey words pressable — the way "For you ·
+/// Following" reads. A narrow exception to §752: the third way to make the
+/// move the swipe and the tray already make, never the only one. One height
+/// with `DSRoomTitleRow`, so nothing under it moves; the row scrolls with
+/// the standing word kept in view when the three are wider than the screen.
+struct DSWalkTitleRow: View {
+    let before: String?
+    let title: String
+    var pick: String? = nil
+    let after: String?
+    /// A grey word pressed: true for the one after.
+    let onStep: (Bool) -> Void
 
     var body: some View {
-        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s3) {
-            word(String(localized: "Feed"), standing: !walletStands)
-            word(String(localized: "Wallet"), standing: walletStands)
+        ScrollViewReader { proxy in
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(alignment: .firstTextBaseline, spacing: DS.Space.s3) {
+                    if let before { neighbour(before, forward: false) }
+                    DSRoomTitleRow(title: title, pick: pick)
+                        .fixedSize()
+                        .id("standing")
+                    if let after { neighbour(after, forward: true) }
+                }
+            }
+            .scrollDisabled(true)
+            .onAppear { proxy.scrollTo("standing", anchor: .center) }
         }
-        .lineLimit(1)
-        .minimumScaleFactor(0.6)
         .frame(maxWidth: .infinity, minHeight: DSRoomTitleRow.height,
                maxHeight: DSRoomTitleRow.height, alignment: .leading)
-        .animation(DS.Motion.standard, value: walletStands)
     }
 
-    @ViewBuilder
-    private func word(_ name: String, standing: Bool) -> some View {
-        if standing {
-            DSScreenHead(title: Text(verbatim: name), ink: DS.brandInk)
+    private func neighbour(_ name: String, forward: Bool) -> some View {
+        Button { onStep(forward) } label: {
+            DSScreenHead(title: Text(verbatim: name), ink: DS.textTertiary)
+                .lineLimit(1)
                 .fixedSize()
-        } else {
-            Button(action: onOther) {
-                DSScreenHead(title: Text(verbatim: name), ink: DS.textTertiary)
-                    .fixedSize()
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(RowPress())
-            .accessibilityHint(Text("Shows this page"))
+                .contentShape(Rectangle())
         }
+        .buttonStyle(RowPress())
+        .accessibilityHint(Text("Shows this page"))
     }
 }

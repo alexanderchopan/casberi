@@ -69,11 +69,24 @@ enum HomeScope {
         label == Pinboard.room || label == markets
     }
 
-    /// **THE TWO POLES (prd §1203).** The Feed (and You's places, which stand
-    /// at its place) and the Wallet are the only pages a swipe moves between;
-    /// everything else opens on top of the pole you came from.
-    static func isPole(_ source: String) -> Bool {
-        contains(source) || source == CategoryFold.walletRoom
+    /// **THE PHONE'S WALK (prd §1207 item 1, amends §1203's two poles).**
+    /// Wallet, the Feed ("All", where You's places stand), then every
+    /// category with a room in the dock's order, Testnets excepted (the
+    /// tray's alone). Apps are never stops: an app is a pick inside its
+    /// category's page. Left to right, so a swipe right walks toward the
+    /// Wallet.
+    @MainActor static func phoneWalk(chips: [String]) -> [String] {
+        let present = Set(chips)
+        let rest = CategoryOrder.current.filter {
+            $0 != CategoryFold.walletRoom && $0 != RoomAccounts.testnetsRoom && present.contains($0)
+        }
+        return [CategoryFold.walletRoom, "All"] + rest
+    }
+
+    /// Where `source` stands in the walk: You's places at the Feed's, an
+    /// app at its category's.
+    @MainActor static func walkStop(_ source: String) -> String {
+        contains(source) ? "All" : (RoomAccounts.host(ofSource: source)?.room ?? source)
     }
 }
 
