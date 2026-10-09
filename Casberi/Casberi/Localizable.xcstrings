@@ -2337,6 +2337,34 @@
         }
       }
     },
+    "1 conversation" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1 conversación"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1件の会話"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "대화 1개"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1 个对话"
+          }
+        }
+      }
+    },
     "1 mail" : {
       "localizations" : {
         "es" : {
@@ -7803,6 +7831,34 @@
         }
       }
     },
+    "Name this person" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ponle nombre a esta persona"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "この人に名前を付ける"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 사람 이름 지정"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "为此人命名"
+          }
+        }
+      }
+    },
     "New in Media" : {
       "localizations" : {
         "es" : {
@@ -8051,6 +8107,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "没有匹配的邮件"
+          }
+        }
+      }
+    },
+    "Not delivered" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No entregado"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "未配信"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "전달되지 않음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "未送达"
+          }
+        }
+      }
+    },
+    "Not delivered yet" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aún no entregado"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "まだ配信されていません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "아직 전달되지 않음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "尚未送达"
           }
         }
       }
@@ -8331,6 +8443,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "1 次"
+          }
+        }
+      }
+    },
+    "Only on this phone. Their address changes when they restart Basecamp." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Solo en este teléfono. Su dirección cambia cuando reinicia Basecamp."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "このiPhoneのみ。相手がBasecampを再起動するとアドレスが変わります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 휴대폰에만 저장됩니다. 상대가 Basecamp를 다시 시작하면 주소가 바뀝니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "仅保存在此手机上。对方重启 Basecamp 后地址会改变。"
           }
         }
       }
@@ -8807,6 +8947,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "移除 %@"
+          }
+        }
+      }
+    },
+    "Reply in Logos Basecamp on your computer" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Responde en Logos Basecamp en tu ordenador"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "コンピュータのLogos Basecampで返信"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "컴퓨터의 Logos Basecamp에서 답장하세요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在电脑上的 Logos Basecamp 中回复"
           }
         }
       }
@@ -10379,6 +10547,34 @@
         }
       }
     },
+    "You and %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tú y %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "あなたと%@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "나와 %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你和 %@"
+          }
+        }
+      }
+    },
     "You follow this" : {
       "localizations" : {
         "es" : {
@@ -10543,6 +10739,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你已关注 %lld 个 — 已达上限。请先取消关注一个；为地址命名仍然不限量。"
+          }
+        }
+      }
+    },
+    "You, %@ and %lld others" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tú, %1$@ y %2$lld más"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "あなた、%1$@、ほか%2$lld人"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "나, %1$@ 외 %2$lld명"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你、%1$@ 和另外 %2$lld 人"
+          }
+        }
+      }
+    },
+    "You, %@ and 1 other" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tú, %@ y 1 más"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "あなた、%@、ほか1人"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "나, %@ 외 1명"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你、%@ 和另外 1 人"
           }
         }
       }
