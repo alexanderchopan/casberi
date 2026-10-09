@@ -69,18 +69,28 @@ enum HomeScope {
         label == Pinboard.room || label == markets
     }
 
-    /// **THE PHONE'S WALK (prd §1207 item 1, amends §1203's two poles).**
-    /// Wallet, the Feed ("All", where You's places stand), then every
-    /// category with a room in the dock's order, Testnets excepted (the
-    /// tray's alone). Apps are never stops: an app is a pick inside its
-    /// category's page. Left to right, so a swipe right walks toward the
-    /// Wallet.
+    /// **THE PHONE'S TWO PLACES (prd §1208 item 1, retires §1207's walk).**
+    /// The Wallet and the Feed, one swipe apart; every category is a section
+    /// of the Feed's scroll (`feedCategories`), never a page of the swipe.
     @MainActor static func phoneWalk(chips: [String]) -> [String] {
+        [CategoryFold.walletRoom, "All"]
+    }
+
+    /// The categories the Feed stacks (prd §1208 item 2): every one with a
+    /// room, in the dock's order, the Wallet (its own place) and Testnets
+    /// (the tray's) excepted.
+    @MainActor static func feedCategories(chips: [String]) -> [String] {
         let present = Set(chips)
-        let rest = CategoryOrder.current.filter {
+        return CategoryOrder.current.filter {
             $0 != CategoryFold.walletRoom && $0 != RoomAccounts.testnetsRoom && present.contains($0)
         }
-        return [CategoryFold.walletRoom, "All"] + rest
+    }
+
+    /// Whether the phone shows `source` as a section of the Feed rather than
+    /// a page: a category's combined room, the Wallet and Testnets excepted.
+    @MainActor static func isFeedSection(_ source: String) -> Bool {
+        source != CategoryFold.walletRoom && source != RoomAccounts.testnetsRoom
+            && RoomAccounts.mergedRooms.contains(source)
     }
 
     /// Where `source` stands in the walk: You's places at the Feed's, an

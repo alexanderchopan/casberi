@@ -1766,6 +1766,9 @@ struct RootShell: View {
         .sheet(item: $deepLinkPerson) { person in
             rootPresented(SocialProfileCard(profile: person))
         }
+        // AN APP PICKED FROM THE FACE RISES AS A SHEET (prd §1208a).
+        .modifier(AppSheetHost(chrome: chrome, sceneState: sceneState,
+                               bridges: bridges, modelContext: modelContext))
         .sheet(item: $safeAsk) { ask in
             rootPresented(SafeAskSheet(ask: ask, paired: true))
         }
@@ -4669,3 +4672,30 @@ enum ShellMetrics {
     }
 }
 #endif
+
+/// An app picked from the face, risen as a sheet over the Feed (prd §1208a):
+/// its own page, swiped down to return where you were. It carries the Feed's
+/// whole environment, because a sheet inherits none on Catalyst (prd §872)
+/// and the room reads every one of them. A modifier of its own, so
+/// `RootShell`'s body stays inside the type-checker's budget.
+private struct AppSheetHost: ViewModifier {
+    let chrome: ShellChrome
+    let sceneState: SceneState
+    let bridges: BridgeStore
+    let modelContext: ModelContext
+
+    func body(content: Content) -> some View {
+        content.sheet(item: Binding(get: { chrome.appSheet }, set: { chrome.appSheet = $0 })) { app in
+            FeedScreen(source: app.source, isActive: true)
+                .environment(sceneState.route)
+                .environment(sceneState.filter)
+                .environment(sceneState.detail)
+                .environment(bridges)
+                .environment(chrome)
+                .environment(\.modelContext, modelContext)
+                .environment(\.locale, LanguageStore.shared.locale)
+                .presentationDragIndicator(.visible)
+                .presentationBackground(DS.themedPage)
+        }
+    }
+}

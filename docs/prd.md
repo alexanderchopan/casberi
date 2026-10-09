@@ -65428,7 +65428,9 @@ Privy picked in the Wallet led Home with `holdingsBlockSection`, the same drawin
 
 **Phases.** 1 · the walk, the title, the strip, the tray's page, the face, the band's ✎, the Feed's tiles, doors and no money. 2 · the bar always there, resolving names. 3 · every page on one composing engine, then pivots, pins and the Feed composing itself.
 
-**§1207a — Phase 1 built (2026-10-09, user: "ok build this whole thing").** As ruled, with four readings the build made:
+## §1207a — Phase 1 built (2026-10-09, user: "ok build this whole thing")
+
+As ruled, with four readings the build made:
 - **The tiles read A–Z** (§995 is every room's rule): Feed · Markets · Settings · Sources. Sources wears the apps grid it opens on (`tile-glyph-audit.py` alias).
 - **Notes is off You's tiles; its room keeps its own tiles on the band**, and the note page's top-right "All notes" keeps the note and lands there. ✎ stands at the band's trailing end on every page except Notes and Markets, whose own tiles ride that band.
 - **The strip slides the page flat, and the next page is its title word arriving** in the title's pink from the edge (`PagerCover`): the next room is not mounted until the turn, so its rows cannot slide in. The swipe table (`DS.swipeTable`, `swipeTableInk`, §898c–e) is deleted with the dealt card; `dock-selftest.sh` §12 guards the flat page and the deletion.
@@ -65448,7 +65450,8 @@ Privy picked in the Wallet led Home with `holdingsBlockSection`, the same drawin
 
 Unchanged from §1207: the tray as a black page of modules (item 5), ✎ in the band (item 6), the bar always there (item 7, phase 2), pivots (item 8), the Feed composing itself (item 11). iPad and Mac keep the rail. Phase 1 of §1207 shipped as build 781 and stands until this is built.
 
-**§1208a — The scroll's three touches, and no app names under a section (user, 2026-10-09: "probably get rid of this b/ what if there are 20 in a category … thats what the face is for", "what happens if i tap the face and then tap instagram … i would say maybe even a sheet", "we want a continuous scroll so you should be able to scroll past all into day if you want", then "yes do it!" to the three touches below; amends §1208 items 5–7).**
+## §1208a — The scroll's three touches, and no app names under a section (user, 2026-10-09: "probably get rid of this b/ what if there are 20 in a category … thats what the face is for", "what happens if i tap the face and then tap instagram … i would say maybe even a sheet", "we want a continuous scroll so you should be able to scroll past all into day if you want", then "yes do it!" to the three touches below; amends §1208 items 5–7)
+
 - **Nothing stops the scroll.** Every section starts open; the Feed's own section runs straight into Day, Day into Social, and so on. Folding is the person's choice, never the default.
 - **A row opens its sheet** — the thing's own sheet, the one every row opens today — and swiping it down returns to the same place in the scroll. A row is never dead (§83), and nothing expands first.
 - **A section's pink name folds it** to one line (its name and how many came today); pressed again it opens. The name is the section's handle and the row is the thing's, so the two never compete.

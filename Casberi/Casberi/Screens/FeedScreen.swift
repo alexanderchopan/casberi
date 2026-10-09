@@ -1421,8 +1421,10 @@ struct FeedScreen: View {
             // the strip up the screen. The SCOPE chips were hooked here and
             // the FACE rail was not, because the first report named the chips.
             .onChange(of: chrome.walletScope) { _, _ in returnToRoomTop(proxy) }
-            .onAppear { settleFeedDoor(proxy) }
-            .onChange(of: chrome.feedDoor) { _, _ in settleFeedDoor(proxy) }
+            // THE TRAY JUMPS (prd §1208 item 6): a category asked for scrolls
+            // the Feed to its section, opened if it was folded.
+            .onAppear { settleFeedJump(proxy) }
+            .onChange(of: chrome.feedJump) { _, _ in settleFeedJump(proxy) }
     }
 
     /// The id the room's head carries, so a scope change can return to it.
@@ -1995,6 +1997,9 @@ struct FeedScreen: View {
     /// screen: it must not collapse when a thing lands, or scrolling back would
     /// undo itself every sync.
     @State var windowSteps = Self.initialWindowSteps
+    /// The scroll's rows per section beyond the first five (prd §1208 item
+    /// 4): More adds ten in place; a fold returns it to five.
+    @State var sectionCaps: [String: Int] = [:]
 }
 
 /// What New makes in the Day room (prd §1056).

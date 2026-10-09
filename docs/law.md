@@ -222,7 +222,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1336 of 1402 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1338 of 1404 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1559,7 +1559,9 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1205 — Every company in the demo wears its mark: a sweep, nine App Store marks, and the faces that skipped a bundled one
 - §1206 — Frames, the devnet, is removed, model and all; Logos is the Testnets category's one seat, and the website counts the…
 - §1207 — One walk with neighbours in its title, the tray as a black page of modules, the bar always there, every page a compos… (amended by §1208)
-- §1208 — The Feed is one scroll: every category stacked in its own frame, the Wallet apart, an app on top
+- §1207a — Phase 1 built
+- §1208 — The Feed is one scroll: every category stacked in its own frame, the Wallet apart, an app on top (amended by §1208a)
+- §1208a — The scroll's three touches, and no app names under a section
 
 ## Dead rulings → what replaced them (generated)
 

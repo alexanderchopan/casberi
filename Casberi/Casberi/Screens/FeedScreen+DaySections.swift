@@ -276,6 +276,7 @@ extension FeedScreen {
                              tailDays: tailDayGroups.count, tailDrawn: tailDrawn)
         }
         #endif
+        let scroll = scrollsCategories
         return Group {
         // THE COVER STANDS ABOVE THE FIRST DIVIDER (prd §906): the same
         // height as every room's lead, never under "Today". It is already
@@ -294,13 +295,13 @@ extension FeedScreen {
         if source == "All" { reconnectSection }
         // "Nothing yet today" only when today truly holds nothing: a box
         // holding today's one thing IS today.
-        if source == "All", groups.isEmpty,
+        if source == "All", !scroll, groups.isEmpty,
            !(homeCover.map { $0.isLive && Self.groupingCalendar.isDateInToday($0.capturedAt) } ?? false) {
             // With nothing connected, a preview of what Today becomes (prd
             // §1169); the first connect takes it all away.
             if bridges.connectedCount == 0 { todayPreview } else { nothingYetToday }
         }
-        ForEach(groups, id: \.0) { label, rows in
+        ForEach(scroll ? [] : groups, id: \.0) { label, rows in
             // Bundles merge into the day card like any row-shaped thing —
             // only a single that stands alone (consent, token) breaks the run.
             let positions = cardRunPositions(
@@ -392,6 +393,9 @@ extension FeedScreen {
                 // window is over, and Mail never narrates its own end.
             }
         }
+        // THE FEED IS ONE SCROLL ON THE PHONE (prd §1208): every category
+        // in its own frame, stacked, in place of today's category runs.
+        if scroll { feedScrollSections(visible, nextEventID: nextEventID) }
         }
     }
 
@@ -794,8 +798,11 @@ extension FeedScreen {
         // Windowed (prd §264) — `coarse` and `boundary` are computed against
         // the FULL set above, so a label or a divider does not change meaning
         // when the window opens.
-        let window = windowed(groups)
-        let _ = { memo.windowHasMore = window.more }()
+        // Inside the Feed's scroll a section draws its own cap, and its tail
+        // is More, never the room's Show older (prd §1208 item 4).
+        let capNow = Self.sectionCapNow
+        let window = windowed(groups, budget: capNow?.rows)
+        let _ = { if capNow == nil { memo.windowHasMore = window.more } }()
         // THE COVER STANDS ABOVE THE FIRST DAY, in every room (prd §906).
         // It used to draw INSIDE the first day's section, under that day's
         // header, while the photo rooms, the kind-tile rooms and every head
@@ -829,7 +836,9 @@ extension FeedScreen {
                        replies: replies, coarse: coarse.contains(label),
                        dated: dated, cover: cover, isTile: isTile, tileShape: tileShape)
         }
-        if window.more { olderRow(hidden: window.hidden) }
+        if window.more {
+            if let capNow { sectionMoreRow(capNow.category) } else { olderRow(hidden: window.hidden) }
+        }
     }
 
     /// A day group as a native section: the day's rows share ONE sheet card
@@ -1110,8 +1119,10 @@ extension FeedScreen {
     /// one. It is the total minus what is drawn, over the same groups, so it
     /// cannot disagree with `more`.
     private func windowed<T>(_ groups: [(String, [T])],
+                             budget: Int? = nil,
                              weight: (T) -> Int = { _ in 1 })
         -> (shown: [(String, [T])], more: Bool, hidden: Int) {
+        let windowRowBudget = budget ?? self.windowRowBudget
         var shown: [(String, [T])] = []
         var rows = 0
         func result(_ more: Bool) -> (shown: [(String, [T])], more: Bool, hidden: Int) {
@@ -1131,7 +1142,7 @@ extension FeedScreen {
                 // over an import's day). One day bigger than the whole budget
                 // is the same case with nothing above it. A day that fits in
                 // one step waits whole for the next tap.
-                if group.1.count > Self.windowRowTarget, remaining > 0 {
+                if group.1.count > (budget == nil ? Self.windowRowTarget : 0), remaining > 0 {
                     shown.append((group.0, Array(group.1.prefix(remaining))))
                 }
                 return result(true)

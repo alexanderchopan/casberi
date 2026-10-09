@@ -2073,7 +2073,16 @@ struct MainSurface: View {
         // never passes through `go`. `CategoryFold.remember` is a no-op for a
         // source that belongs to no catalog category, so this costs a
         // dictionary lookup on every source switch and nothing else.
-        .onChange(of: filter.source, initial: true) { _, source in
+        .onChange(of: filter.source, initial: true) { old, source in
+            // On the phone a category is a section of the Feed and an app
+            // rises as a sheet over it (prd §1208), whichever door wrote the
+            // filter: the page underneath stays where it was, else the Feed.
+            if source != "All", routeIntoFeed(source) {
+                let back = old == source || HomeScope.isFeedSection(old)
+                    || RoomAccounts.host(ofSource: old) != nil ? "All" : old
+                if filter.source != back { filter.source = back }
+                return
+            }
             // The doors that write `filter.source` directly (a deep link, a
             // bundle row in All, ⌘1–9, the composer) never pass through
             // `go(to:)`, so a folded app's name is caught here too and sent on
@@ -2148,6 +2157,10 @@ struct MainSurface: View {
         .onChange(of: chrome.sourceRequest) { _, request in
             guard let request else { return }
             chrome.sourceRequest = nil
+            if routeIntoFeed(request) {
+                ChipMemory.visited(request)
+                return
+            }
             go(to: request, landNow: true)
             ChipMemory.visited(request)
             // A pick closes the folder, like a stack — a beat later, once the
@@ -2537,6 +2550,31 @@ struct MainSurface: View {
         return b >= a ? .trailing : .leading
     }
 
+    /// **ON THE PHONE THE FEED HOLDS THE CATEGORIES (prd §1208).** A door
+    /// that names a category scrolls the Feed to its section; a door that
+    /// names an app of one raises that app as a sheet over the page you are
+    /// on (§1208a). The Wallet and Testnets stay places, and the rail's
+    /// layouts keep their rooms. True when the request was handled here.
+    private func routeIntoFeed(_ label: String) -> Bool {
+        guard !isRegular else { return false }
+        if label == RoomAccounts.readingRoom {
+            chrome.mediaScope = .read
+            chrome.feedJump = RoomAccounts.mediaRoom
+            if filter.source != "All" { filter.source = "All" }
+            return true
+        }
+        if HomeScope.isFeedSection(label) {
+            chrome.feedJump = label
+            if filter.source != "All" { filter.source = "All" }
+            return true
+        }
+        if let fold = RoomAccounts.host(ofSource: label), HomeScope.isFeedSection(fold.room) {
+            chrome.appSheet = ShellChrome.AppSheet(source: label)
+            return true
+        }
+        return false
+    }
+
     /// One step left or right in the strip's order. The swipe's whole job.
     private func step(_ delta: Int) {
         guard let target = neighbour(delta) else {
@@ -2628,11 +2666,10 @@ struct MainSurface: View {
         // places (Notes, Markets) stand at the Feed's place. The rail's walk
         // below is untouched: the iPad and the Mac keep every room in a row.
         //
-        // **ONE WALK OF CATEGORIES (prd §1207 item 1, amends §1203).** The
-        // two poles came back as the walk's first two stops: Wallet, the
-        // Feed, then each category in the dock's order. Apps are not stops
-        // (an app is a pick inside its category's page), Testnets is the
-        // tray's alone, and a room off the walk goes back to the Feed.
+        // **TWO PLACES AGAIN (prd §1208, retiring §1207's walk).** The
+        // Wallet and the Feed; the categories are sections of the Feed's
+        // scroll and an app rises as a sheet (`routeIntoFeed`), so a room
+        // off the walk (Testnets) goes back to the Feed.
         if !isRegular {
             let walk = phoneWalk
             let here = HomeScope.walkStop(filter.source)

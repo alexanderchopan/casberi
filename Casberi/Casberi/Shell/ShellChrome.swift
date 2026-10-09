@@ -225,11 +225,31 @@ final class ShellChrome {
     /// Which face of the Settings screen a You tile asked for (prd §1207
     /// item 9): Sources or Casberi's own options. Read and cleared there.
     var settingsPick: YouTile?
-    /// A Feed row pressed (prd §1207 item 10): the category it landed in
-    /// scrolls to this row, then clears it. `feedDoorLit` is the row lit
-    /// for a moment after the scroll.
-    var feedDoor: UUID?
-    var feedDoorLit: UUID?
+    /// THE FEED IS ONE SCROLL (prd §1208): a category the tray, a widget or
+    /// a link asked for, which the Feed scrolls to and clears.
+    var feedJump: String?
+    /// The Feed's folded sections, by category (prd §1208a): a fold stays
+    /// until the person opens it again, across launches.
+    var feedFolded: Set<String> = ShellChrome.storedFolds() {
+        didSet {
+            guard feedFolded != oldValue,
+                  let data = try? JSONEncoder().encode(feedFolded.sorted()) else { return }
+            DefaultsWrite.set(data, forKey: Self.foldsKey)
+        }
+    }
+    private static let foldsKey = "feed.folded"
+    private static func storedFolds() -> Set<String> {
+        guard let data = UserDefaults.standard.data(forKey: foldsKey),
+              let names = try? JSONDecoder().decode([String].self, from: data) else { return [] }
+        return Set(names)
+    }
+    /// An app picked from the face, risen as a sheet over the Feed (prd
+    /// §1208a; §1132's rule that every place on the phone is a sheet).
+    var appSheet: AppSheet?
+    struct AppSheet: Identifiable, Equatable {
+        let source: String
+        var id: String { source }
+    }
 
     /// The one transient message surface — the glass toast above the bar.
     /// Any screen can flash an outcome ("On your list", "Copied", a denial);
