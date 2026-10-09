@@ -313,7 +313,7 @@ extension FeedScreen {
         return HStack(alignment: .top, spacing: DS.Space.s3) {
             if grouped { appLead(app?.source) }
             Button {
-                openThing(thing)
+                openFromFeed(thing)
             } label: {
                 VStack(alignment: .leading, spacing: 2) {
                     if let app { appLine(app.source, at: app.date) }
@@ -332,6 +332,15 @@ extension FeedScreen {
                 .environment(\.colorScheme, skin?.ink ?? colorScheme)
             }
             .buttonStyle(RowPress())
+        }
+        // The row a Feed press landed on, lit for a moment (prd §1207 item 10).
+        .background {
+            if chrome.feedDoorLit == thing.id {
+                RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous)
+                    .fill(DS.fillFaint)
+                    .padding(-DS.Space.s2)
+                    .transition(.opacity)
+            }
         }
         .modifier(rowEntrance(index))
             // Mac/pointer polish (2026-07-31): the feed rendered bare rows
@@ -935,6 +944,43 @@ struct RowEntrance: ViewModifier {
         if let waveAt, Date.timeIntervalSinceReferenceDate - waveAt >= Self.cascadeWindow { shown = true; return }
         withAnimation(DS.Motion.standard.delay(Double(min(index, 12)) * style.step)) {
             shown = true
+        }
+    }
+}
+
+extension FeedScreen {
+    /// **THE FEED'S SECTIONS ARE DOORS (prd §1207 item 10).** A row pressed
+    /// on the Feed lands in its category, scrolled to that row and lit for a
+    /// moment; the row opens from there. Everywhere else, and for a row with
+    /// no category page, the press opens the thing as it always has.
+    func openFromFeed(_ thing: Thing) {
+        guard source == "All", roomScopeInRoom,
+              let category = BridgeCatalog.category(forSource: thing.source),
+              RoomAccounts.mergedRooms.contains(category) || category == RoomAccounts.readingRoom else {
+            openThing(thing)
+            return
+        }
+        DSHaptic.selection()
+        chrome.feedDoor = thing.id
+        chrome.sourceRequest = category
+    }
+
+    /// The landing half: scroll to the pressed row once this page holds it,
+    /// light it, and let it go.
+    func settleFeedDoor(_ proxy: ScrollViewProxy) {
+        guard let id = chrome.feedDoor, source != "All" else { return }
+        chrome.feedDoor = nil
+        Task { @MainActor in
+            // After the page's first rows have laid out.
+            try? await Task.sleep(for: .milliseconds(350))
+            withAnimation(DS.Motion.standard) {
+                proxy.scrollTo(id.uuidString, anchor: .center)
+            }
+            withAnimation(DS.Motion.standard) { chrome.feedDoorLit = id }
+            try? await Task.sleep(for: .milliseconds(1400))
+            if chrome.feedDoorLit == id {
+                withAnimation(DS.Motion.standard) { chrome.feedDoorLit = nil }
+            }
         }
     }
 }

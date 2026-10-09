@@ -1421,6 +1421,8 @@ struct FeedScreen: View {
             // the strip up the screen. The SCOPE chips were hooked here and
             // the FACE rail was not, because the first report named the chips.
             .onChange(of: chrome.walletScope) { _, _ in returnToRoomTop(proxy) }
+            .onAppear { settleFeedDoor(proxy) }
+            .onChange(of: chrome.feedDoor) { _, _ in settleFeedDoor(proxy) }
     }
 
     /// The id the room's head carries, so a scope change can return to it.

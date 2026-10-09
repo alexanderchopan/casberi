@@ -225,6 +225,11 @@ final class ShellChrome {
     /// Which face of the Settings screen a You tile asked for (prd §1207
     /// item 9): Sources or Casberi's own options. Read and cleared there.
     var settingsPick: YouTile?
+    /// A Feed row pressed (prd §1207 item 10): the category it landed in
+    /// scrolls to this row, then clears it. `feedDoorLit` is the row lit
+    /// for a moment after the scroll.
+    var feedDoor: UUID?
+    var feedDoorLit: UUID?
 
     /// The one transient message surface — the glass toast above the bar.
     /// Any screen can flash an outcome ("On your list", "Copied", a denial);
