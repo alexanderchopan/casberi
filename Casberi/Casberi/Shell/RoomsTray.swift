@@ -734,7 +734,7 @@ struct RoomsTray: View {
             try? await Task.sleep(for: .milliseconds(Self.searchPause))
             guard !Task.isCancelled else { return }
         }
-        let found = search(words)
+        let found = pivotFound(words) + search(words)
         results = found
         resultsFor = words
         let companies = found.flatMap(\.hits).compactMap(\.company)
@@ -976,6 +976,33 @@ struct RoomsTray: View {
     }
 
     /// The tray closes, then Settings rises on what was found.
+    /// GENERATIVE SEARCH LEADS (prd §1209): what the words could make a
+    /// page of — a person, an app you have, a category, a span, the words —
+    /// each a row that composes that page over the Feed.
+    private func pivotFound(_ words: String) -> [Found] {
+        let apps = bridges.bridges.filter { $0.status != .paused }.map(\.name)
+        let offers = PivotCompose.resolve(words, apps: apps, categories: categories)
+        guard !offers.isEmpty else { return [] }
+        let hits = offers.map { q -> Hit in
+            let mark: Mark = switch q.subject {
+            case .person: .glyph("person")
+            case .app(let name): .face(.app(name))
+            case .category(let name): .glyph(CategoryFold.glyph(for: name))
+            case .words, .span: .glyph("text.magnifyingglass")
+            }
+            return Hit(id: "pivot:" + q.id, group: Self.pivotGroup, name: q.offerTitle,
+                       line: q.subject == .span ? nil : q.spanLabel, mark: mark) {
+                DSHaptic.selection()
+                close()
+                chrome.pivot = q
+            }
+        }
+        return [Found(id: Self.pivotGroup, title: String(localized: "Everything"),
+                      glyph: "text.magnifyingglass", hits: hits)]
+    }
+
+    static let pivotGroup = "pivot"
+
     private func landInSettings(_ landing: SettingsLanding) {
         chrome.settingsLanding = landing
         screen(.casberi)

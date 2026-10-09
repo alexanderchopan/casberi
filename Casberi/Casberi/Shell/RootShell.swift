@@ -2388,7 +2388,8 @@ struct RootShell: View {
                             // a note from anywhere. Not over Notes and
                             // Markets, whose own tiles ride this band.
                             .overlay(alignment: .trailing) {
-                                if padShell.railInset == 0, sceneState.route.path.isEmpty,
+                                // Never over the tray, whose bar takes this end.
+                                if padShell.railInset == 0, sceneState.route.path.isEmpty, !chrome.roomsTray,
                                    !Pinboard.isPinnedRoom(filter.source), !HomeScope.isMarkets(filter.source) {
                                     NoteDoor { chrome.newNote += 1 }
                                         .transition(.opacity)
@@ -4685,7 +4686,40 @@ private struct AppSheetHost: ViewModifier {
     let modelContext: ModelContext
 
     func body(content: Content) -> some View {
-        content.sheet(item: Binding(get: { chrome.appSheet }, set: { chrome.appSheet = $0 })) { app in
+        content
+        // A PAGE MADE FROM WORDS (prd §1209): the tray's "Everything with…"
+        // rises here, with the same environment as an app's sheet.
+        .sheet(item: Binding(get: { chrome.pivot }, set: { chrome.pivot = $0 })) { query in
+            PivotPage(start: query)
+                .environment(sceneState.route)
+                .environment(sceneState.filter)
+                .environment(sceneState.detail)
+                .environment(bridges)
+                .environment(chrome)
+                .environment(\.modelContext, modelContext)
+                .environment(\.locale, LanguageStore.shared.locale)
+                .presentationDragIndicator(.visible)
+                .presentationBackground(DS.themedPage)
+        }
+        #if DEBUG
+        // `-pivot "<words>"` composes the first page the words resolve to,
+        // 6s after mount (prd §1209; NSLogs `pivot:` and each offer).
+        .task {
+            guard let words = UserDefaults.standard.string(forKey: "pivot") else { return }
+            try? await Task.sleep(for: .seconds(6))
+            _ = ContactIndexSources.rebuild(context: modelContext)
+            let apps = bridges.bridges.filter { $0.status != .paused }.map(\.name)
+            let offers = PivotCompose.resolve(words, apps: apps, categories: CategoryOrder.current)
+            for q in offers { NSLog("[Casberi] pivot| %@ | %@", words, q.offer) }
+            if let first = offers.first {
+                let found = PivotCompose.things(for: first, context: modelContext)
+                NSLog("[Casberi] pivot: %@ | %d things | %d related", first.offer, found.count,
+                      PivotCompose.related(found, excluding: first).count)
+                chrome.pivot = first
+            }
+        }
+        #endif
+        .sheet(item: Binding(get: { chrome.appSheet }, set: { chrome.appSheet = $0 })) { app in
             FeedScreen(source: app.source, isActive: true)
                 .environment(sceneState.route)
                 .environment(sceneState.filter)

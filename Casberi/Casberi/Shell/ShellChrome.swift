@@ -246,6 +246,8 @@ final class ShellChrome {
     /// An app picked from the face, risen as a sheet over the Feed (prd
     /// §1208a; §1132's rule that every place on the phone is a sheet).
     var appSheet: AppSheet?
+    /// A page composed from search words (prd §1209), risen as a sheet.
+    var pivot: PivotQuery?
     struct AppSheet: Identifiable, Equatable {
         let source: String
         var id: String { source }

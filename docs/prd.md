@@ -65457,3 +65457,16 @@ Unchanged from §1207: the tray as a black page of modules (item 5), ✎ in the 
 - **A section's pink name folds it** to one line (its name and how many came today); pressed again it opens. The name is the section's handle and the row is the thing's, so the two never compete.
 - **An app picked from the face rises as a sheet over the Feed** (§1132's rule: on the phone every place is a sheet): its own box, tiles and list; swipe down and you are back in the Feed where you were. The face never turns into ‹ (§1208 item 6's ‹ is withdrawn).
 - **A section's header names the category alone**; which apps it holds is the face's to show (a category can hold twenty).
+
+## §1209 — Generative search, v1: words become a page, with no model (user, 2026-10-09: "what is generative search then", "for generative what can we do w/o relying on subperformance of on device ai w/ no ai model", "can you build that and ship it next?", then "build and ship w/o asking me any questions"; builds §1207 items 7–8 in part) — BUILT
+
+**Why.** The tray's search finds things; §1207 promised a page made for what you asked. The on-device model is too slow and too unreliable to write one, so v1 composes it by rules over what the app already holds: nothing on the page is generated text, and nothing it says can be wrong in a way a sentence could.
+
+1. **The words resolve on the phone** (`PivotWords`, `PivotCompose.resolve`): a person in Addresses, an app you have, a dock category, a time phrase ("last week", "yesterday", "October" — English in v1, on word boundaries), else the words themselves; a time phrase narrows any of the others ("Spotify last month").
+2. **The tray leads with what the words could make a page of**: an "Everything" group above the results — "Everything with Uma", "Everything from Spotify · Last month", "Everything that says “budget”" — each a row that raises the page as a sheet (§1132's rule).
+3. **The page is every room's frame** (`PivotPage`): the subject's name in pink with the span after its dot; the box is the next dated match, else the newest, with counted facts under it (how many, from how many apps, the newest, the next, money moved under Hide balances); the tiles are All and the categories actually present; the list is the matches, newest first, twenty then More.
+4. **Names among the results are chips that make their own page** — the people and apps most present — and the way back is the first chip, "Back to …" (in the content, §752).
+5. **No model, and it says so by not pretending**: free questions ("what did Uma say about the budget?") stay with the keyed agents and Apple Intelligence (§833); v1 finds and composes, it does not answer.
+6. **A row opens its thing's sheet over the page.** `-pivot "<words>"` composes the first offer 6s after mount (DEBUG; NSLogs `pivot|` per offer and `pivot:` with the count).
+
+Not in v1: the bar always on screen (§1207 item 7), pink names inside rows, and pins.
