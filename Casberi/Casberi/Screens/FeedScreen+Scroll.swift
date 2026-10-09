@@ -307,9 +307,10 @@ extension FeedScreen {
     }
 }
 
-/// One category at a glance (prd §1208d): its newest thing's picture, else
-/// its app's mark, over the category's name, how many came today and the
-/// newest line. The whole tile jumps to the category's section.
+/// One category at a glance (prd §1208d, §1208e): a tile with a picture
+/// leads with it over two lines; a tile without one gives the whole tile to
+/// the words — its app's mark beside the category, up to four lines — so
+/// more of the notification fits. The whole tile jumps to the section.
 struct GlanceTile: View {
     let category: String
     let count: Int
@@ -318,21 +319,32 @@ struct GlanceTile: View {
     var pictured: Thing? = nil
     let action: () -> Void
 
-    static let artHeight: CGFloat = 84
+    static let artHeight: CGFloat = 72
+    /// Every tile one height, so the grid's rows line up whatever the words.
+    static let height: CGFloat = 168
 
     var body: some View {
+        let picture = pictured.flatMap { $0.isLive ? $0 : nil }.flatMap { shot in
+            StoredPixels.probe(shot).map { (shot, $0) }
+        }
         Button(action: action) {
             VStack(alignment: .leading, spacing: 0) {
-                art
+                if let (shot, size) = picture {
+                    StoredPicture(shot, size: size) { image in
+                        Image(uiImage: image).resizable().scaledToFill()
+                    }
                     .frame(maxWidth: .infinity)
                     .frame(height: Self.artHeight)
                     .clipped()
-                VStack(alignment: .leading, spacing: 2) {
-                    HStack(alignment: .firstTextBaseline) {
+                }
+                VStack(alignment: .leading, spacing: DS.Space.s1) {
+                    HStack(spacing: DS.Space.s2) {
+                        if picture == nil { mark }
                         Text(verbatim: category)
                             .dsText(.label12)
                             .fontWeight(.semibold)
                             .foregroundStyle(DS.brandInk)
+                            .lineLimit(1)
                         Spacer(minLength: 0)
                         Text(verbatim: "\(count)")
                             .dsText(.label12)
@@ -340,16 +352,17 @@ struct GlanceTile: View {
                     }
                     Text(verbatim: newest.isLive ? newest.title : "")
                         .dsText(.body17)
-                        .fontWeight(.semibold)
+                        .fontWeight(.medium)
                         .foregroundStyle(DS.textPrimary)
-                        .lineLimit(2)
+                        .lineLimit(picture == nil ? 4 : 2)
                         .multilineTextAlignment(.leading)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .padding(.horizontal, DS.Space.s3)
-                .padding(.vertical, DS.Space.s2)
+                .padding(.vertical, DS.Space.s3)
+                Spacer(minLength: 0)
             }
-            .frame(maxHeight: .infinity, alignment: .top)
+            .frame(maxWidth: .infinity, minHeight: Self.height, maxHeight: Self.height, alignment: .topLeading)
             .background(DS.fillFaint, in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
             .clipShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
             .contentShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
@@ -359,19 +372,19 @@ struct GlanceTile: View {
         .accessibilityHint(Text("Shows this section"))
     }
 
+    /// The newest thing's app, else — a source with no mark of its own — the
+    /// category's glyph, never a name drawn as a mark.
     @ViewBuilder
-    private var art: some View {
-        if let shot = pictured, shot.isLive, let size = StoredPixels.probe(shot) {
-            StoredPicture(shot, size: size) { image in
-                Image(uiImage: image)
-                    .resizable()
-                    .scaledToFill()
-            }
+    private var mark: some View {
+        let source = newest.isLive ? newest.source : ""
+        if BridgeCatalog.category(forSource: source) != nil {
+            BridgeIcon(name: source, size: DS.Mark.badge)
+                .frame(width: DS.Mark.badge, height: DS.Mark.badge)
         } else {
-            ZStack {
-                DS.fillFaint
-                BridgeIcon(name: newest.isLive ? newest.source : category, size: DS.Mark.row)
-            }
+            Image(systemName: CategoryFold.glyph(for: category))
+                .dsGlyph(.caption)
+                .foregroundStyle(DS.brandInk)
+                .frame(width: DS.Mark.badge, height: DS.Mark.badge)
         }
     }
 }

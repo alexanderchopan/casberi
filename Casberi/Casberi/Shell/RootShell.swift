@@ -2380,6 +2380,9 @@ struct RootShell: View {
                                       // the search. Pressed again it closes
                                       // (§705). The rail's own face does the
                                       // same, so the two seats are one door.
+                                      // Felt as it opens and as it closes
+                                      // (user: "add haptic to the face button").
+                                      DSHaptic.selection()
                                       withAnimation(DS.Motion.standard) {
                                           chrome.roomsTray.toggle()
                                       }
