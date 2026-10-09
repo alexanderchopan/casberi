@@ -222,7 +222,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1331 of 1395 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1332 of 1396 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1519,7 +1519,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1161 — Track a subscription is one tap: the cards offer what they charged twice, a typed name finds the app, and the price i… (amended by §1164)
 - §1162 — Connecting, made shorter: pasted keys reach your other devices, Paste is the commit, a wrong or refused key says why,… (amended by §1163)
 - §1163 — A seat has one name: every bridge `NetworkReach` names is its catalog name, so a refused key reaches the page, the ri…
-- §1164 — You can track a subscription without a card or an app: the tray opens on Popular and stays open, a free plan counts,…
+- §1164 — You can track a subscription without a card or an app: the tray opens on Popular and stays open, a free plan counts,… (amended by §1202)
 - §1166 — A first run lands on Settings, Home is Today, and Settings counts eight kinds over Start here and every app (amended by §1168, §1169, §1180) [+1 sub-entries]
 - §1167 — Markets is automatic: always a room, never an app to connect, and its box is two across (amended by §1180)
 - §1168 — Today wears the inbox tray (amended by §1169)
@@ -1555,6 +1555,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1199 — Things move when they change
 - §1200 — A share lands where you would look for it, and the pill names the place
 - §1201 — The Wallet's Home is four short lists, Spending is one of them, and Needs you holds what waits off chain too
+- §1202 — A merchant wears its own mark: an offer leads with the merchant, five App Store marks are bundled, and an "Apple" cha…
 
 ## Dead rulings → what replaced them (generated)
 

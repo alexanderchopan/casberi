@@ -65348,3 +65348,11 @@ Privy picked in the Wallet led Home with `holdingsBlockSection`, the same drawin
 **Not changed.** Security's Signatures count and Needs you both list the Safe queue. Address poisoning, fake tokens and fake transfers count WARNINGS, one per kind, so each reads 0 or 1 however many rows match.
 
 **Checked.** iOS build; seen on an iPhone 17 Pro simulator, iOS 27: all four sections, the in-place open, Spending's places with Coinbase and `…a91c`, Needs you's Wise and Notion rows, Security's six counts. **Not run:** verify.sh, the Mac. No self-test for `Spending` yet.
+
+## §1202 — A merchant wears its own mark: an offer leads with the merchant, five App Store marks are bundled, and an "Apple" charge wears Apple's logo (user, 2026-10-08: "logos are missing", "download the images and yes do an apple symbole that is an apple", of the card offers "these are missing"; amends §1164's "never the Apple logo" for this one row) — BUILT
+
+1. **An offer leads with its merchant** (`FeedScreen+Rows`, `.cardPointers`): the merchant's bundled mark through `SubscriptionFace.mark(for:)`, else the card's initials as before. Still never card artwork.
+2. **Five marks, each the company's own 512px App Store artwork** (§1164's source): Uber, Blue Bottle Coffee, Amazon Shopping, Shell, Hilton Honors (`brand-uber`, `brand-blue-bottle`, `brand-amazon`, `brand-shell`, `brand-hilton`).
+3. **"Apple" wears `apple.logo`** (`KindGlyph`), by the user's ruling: the row is Apple's own charge, the one use SF Symbols' terms allow. Apple Intelligence keeps its own symbol and iCloud+ and Apple One keep theirs.
+
+**Checked.** iOS build; seen on an iPhone 17 Pro simulator: Spending's Uber, Apple and Blue Bottle, Coming up's Amazon and Shell.

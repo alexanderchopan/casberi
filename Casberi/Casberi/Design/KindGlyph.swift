@@ -168,6 +168,10 @@ enum BridgeGlyph {
         // Two plans with no App Store app to take a mark from (prd §1164).
         case "icloud+":   return "icloud"
         case "apple one": return "square.stack"
+        // An "Apple" charge (App Store, Apple Store) wears Apple's own mark,
+        // by the user's ruling (prd §1202): the one row where the logo
+        // refers to Apple itself, which SF Symbols' terms allow.
+        case "apple":     return "apple.logo"
         case "day one":   return "1.circle"
         case "bookmarks": return "bookmark.fill"
         case "safari":    return "globe"

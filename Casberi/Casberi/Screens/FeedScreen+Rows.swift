@@ -498,17 +498,23 @@ extension FeedScreen {
             case .cardPointers:
                 // ONE ANATOMY (prd §744): the card's initials at the 26pt lead,
                 // not `WalletRow`'s 36, so this room's column matches every other.
-                DSFeedRow(name: CardPointers.merchant(title: thing.title,
-                                                      card: thing.authorHandle),
+                // The offer is the MERCHANT's, so its own mark leads where one
+                // is bundled (prd §1202); the card's initials otherwise.
+                let merchant = CardPointers.merchant(title: thing.title, card: thing.authorHandle)
+                DSFeedRow(name: merchant,
                           // Their words for what the offer gives, never a
                           // number we made (§420's no-total refusal, on the row
                           // this time).
                           line: DSFeed.line(thing.summary)) {
-                    WalletMarkView(mark: CardPointers.initials(card: thing.authorHandle).isEmpty
-                                     ? .kind(thing.kind)
-                                     : .monogram(CardPointers.initials(card: thing.authorHandle),
-                                                 tint: DS.textSecondary),
-                                   size: DS.Mark.row)
+                    if let mark = SubscriptionFace.mark(for: merchant) {
+                        BridgeIcon(name: mark, size: DS.Mark.row, circular: true)
+                    } else {
+                        WalletMarkView(mark: CardPointers.initials(card: thing.authorHandle).isEmpty
+                                         ? .kind(thing.kind)
+                                         : .monogram(CardPointers.initials(card: thing.authorHandle),
+                                                     tint: DS.textSecondary),
+                                       size: DS.Mark.row)
+                    }
                 } trailing: {
                     if let due = thing.dueAt {
                         Text(FeedLedeFace.dueLine(due))
