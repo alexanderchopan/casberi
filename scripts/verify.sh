@@ -96,16 +96,23 @@ DEVICE_ID="$(python3 "$ROOT/scripts/sim-device.py" "$DEVICE")" \
 # succeeding until they don't. Hence a sweep in the pass that already runs
 # on every change, rather than a note somebody has to remember.
 #
-# THREE THINGS MUST SURVIVE, protected by ABSOLUTE PATH and never by name:
+# FIVE THINGS MUST SURVIVE, protected by ABSOLUTE PATH and never by name:
 #   • $DD, CasberiCatalystDD, CasberiMacDD — this pass's and verify-mac.sh's
 #     three fixed dirs; clearing one makes that leg's next build go cold.
+#   • CasberiReleaseDD, CasberiReleaseDDMac — the ship archives' dirs
+#     (testflight.sh); ships can sit more than two days apart, and a cold
+#     Release archive is the slowest build there is.
 #   • the NEWEST `Casberi-*` — Xcode's own live dir for this checkout.
 # By path, because a stray sharing a keeper's NAME has already happened: a
 # second `CasberiCatalystDD` nested inside DerivedData (6 GB) was swept on
 # 2026-09-02 while the real one, one directory up, was correctly kept.
 #
-# The 14-day floor is what makes a CONCURRENT session safe — a dir another
-# session is building into was touched today, so it can never match. Age is
+# The 2-day floor is what makes a CONCURRENT session safe — a dir another
+# session is building into was touched today, so it can never match. It was
+# 14 days until 2026-10-09, when 37 per-worktree `Casberi-<name>` dirs at
+# ~3.2 GB each (111 GB) had piled up inside it: sessions churn faster than a
+# fortnight, so the floor swept almost nothing. A session idle two days pays
+# one cold build on return, nothing worse. Age is
 # the NEWEST mtime among the dir and the three subdirectories a build
 # actually writes, not the dir's own: adding a file updates a directory's
 # mtime but rewriting one does not, so a warm dir rebuilt in place every day
@@ -131,11 +138,13 @@ if [[ -z "${SKIP_DD_SWEEP:-}" ]]; then
       done
       print -r -- $newest
     }
-    local _cutoff=$(( $(date +%s) - 14 * 86400 ))
+    local _cutoff=$(( $(date +%s) - 2 * 86400 ))
     local _live="$(ls -dt "$HOME/Library/Developer/Xcode/DerivedData"/Casberi-*(N) 2>/dev/null | head -1)"
     local -a _keep
     _keep=("$DD" "$HOME/Library/Developer/CasberiCatalystDD"
-           "$HOME/Library/Developer/CasberiMacDD" "$_live")
+           "$HOME/Library/Developer/CasberiMacDD"
+           "$HOME/Library/Developer/CasberiReleaseDD"
+           "$HOME/Library/Developer/CasberiReleaseDDMac" "$_live")
     local -a _swept
     local _freed=0 _d _kb
     for _d in "$HOME/Library/Developer/"Casberi*(N/) \
