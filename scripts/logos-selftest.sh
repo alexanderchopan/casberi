@@ -307,6 +307,20 @@ check(v?.count == 2 && v?.claimable == 1200, "leader/claim/vouchers")
 print("your node — what lands")
 let synced = LogosWire.NodeSnapshot(reachable: true, phase: "Following", height: 71763, tip: "bb", peers: 8, vouchers: 0, claimable: 0)
 let syncing = LogosWire.NodeSnapshot(reachable: true, phase: "InitialBlockDownload", height: 100, tip: "aa", peers: 3, vouchers: 0, claimable: 0)
+
+print("your node — its stage (prd §1214)")
+check(syncing.stage == .syncing && LogosWire.NodeSnapshot.unreachable.stage == .syncing, "not Following is Syncing")
+check(synced.stage == .inSync, "Following with nothing more is In sync")
+var mines = synced; mines.mining = true
+var minesUnpaid = mines; minesUnpaid.miningPays = false
+check(mines.stage == .mining && minesUnpaid.stage == .inSync, "mining is a stage only where the network pays for it")
+var ticketed = mines; ticketed.tickets = 3
+var vouched = synced; vouched.vouchers = 1; vouched.claimable = 600
+var emptyVoucher = synced; emptyVoucher.vouchers = 1; emptyVoucher.claimable = 0
+check(ticketed.stage == .earning && vouched.stage == .earning, "a ticket, or a voucher worth something, is Earning")
+check(emptyVoucher.stage == .inSync, "a voucher worth nothing earns nothing")
+var syncingTickets = syncing; syncingTickets.tickets = 2
+check(syncingTickets.stage == .syncing, "a node behind is Syncing whatever it holds")
 check(LogosWire.nodeEvents(old: nil, new: synced).isEmpty, "first sight lands nothing — a node already in sync did not just sync")
 check(LogosWire.nodeEvents(old: syncing, new: synced).map(\.title) == ["Your node is in sync — height 71,763"], "catching up lands once")
 check(LogosWire.nodeEvents(old: synced, new: syncing).map(\.title) == ["Your node fell behind"], "falling behind lands")

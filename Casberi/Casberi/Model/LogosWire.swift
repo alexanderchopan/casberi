@@ -980,6 +980,30 @@ extension LogosWire {
         var synced: Bool { reachable && phase == "Following" }
         static let unreachable = NodeSnapshot(reachable: false)
 
+        /// **Where the node is on Basecamp's own bar (prd §1214):** Started ·
+        /// Syncing · Funded · Aged · Proposing · Earning, in the stages the
+        /// Observer can show today. Funded, Aged and Proposing need a stake
+        /// read the Observer does not serve yet, so they are not guessed:
+        /// a synced node that mines is Mining, one holding a reward is
+        /// Earning, and the rest is In sync.
+        enum Stage: Equatable { case syncing, inSync, mining, earning }
+
+        var stage: Stage {
+            guard synced else { return .syncing }
+            if (tickets ?? 0) > 0 || ((vouchers ?? 0) > 0 && (claimable ?? 0) > 0) { return .earning }
+            if mining == true, miningPays != false { return .mining }
+            return .inSync
+        }
+
+        var stageWord: String {
+            switch stage {
+            case .syncing: return String(localized: "Syncing")
+            case .inSync:  return String(localized: "In sync")
+            case .mining:  return String(localized: "Mining")
+            case .earning: return String(localized: "Earning")
+            }
+        }
+
         /// What to keep after reading `self`: an unreachable reading keeps
         /// everything `last` knew, marked unreachable, so the next reading is
         /// measured against the node as it was, not against a blank.

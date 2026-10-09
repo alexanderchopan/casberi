@@ -65584,3 +65584,9 @@ UNVERIFIED on a device: written on a machine with no Xcode, so neither build nor
 14. **Sections skip what the tiles showed** (user: "Sections skip what tiles showed"): the box's thing, the same news again, and each tile's line or two (`glanceShown`) are left out of the sections below.
 
 The widgets were checked on the simulator only in their empty state: the demo publishes none (§217) and the simulator has no StandBy, so the tinted and clear Home Screen, StandBy and midnight remain a device check.
+
+## §1214 — The Node box says the stage Basecamp's bar says (user, 2026-10-09, running a node from Basecamp on a MacBook Air: on the bar Started · Syncing · Funded · Aged · Proposing · Earning, asked to "check whether it carries these stages", then "yes" to building what the Observer can show; amends §1213 item 7)
+
+1. **The headline is the node's stage, in Basecamp's words** (`NodeSnapshot.stage`, `stageWord`): **Syncing** while the phase is not `Following` (a node behind is Syncing whatever it holds), **Earning** when a mining ticket is ready or a voucher is worth something, **Mining** when the node mines on a network that pays for it, else **In sync**. The block and peers stay the line under it.
+2. **Funded, Aged and Proposing are not guessed.** They need the wallet's stake, when it becomes eligible and blocks proposed, which the Observer's read routes do not serve (measured in `v2_node.py`, 2026-10-09: `/cryptarchia/info`, `/network/info`, `/pow/status`, `/pow/rewards/claimable`, `/leader/claim/vouchers` only). A read-only stake read is asked of the Observer's developer; until then those stages are absent, never inferred.
+3. Not seen on a device: the demo carries no node, and a clean install drew no Logos page for `-logosNode` to land in (the hook logged nothing). `logos-selftest.sh` holds the stage rules.

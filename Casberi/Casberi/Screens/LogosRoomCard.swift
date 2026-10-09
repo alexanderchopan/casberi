@@ -107,9 +107,10 @@ struct LogosRoomFigure: View {
     @ViewBuilder private var node: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             if let snap = head.node, snap.reachable, let h = snap.height {
-                // **The state in words, the numbers under it (prd §1213):**
-                // "In sync" is the answer; the height is how you'd check it.
-                Text(snap.synced ? String(localized: "In sync") : String(localized: "Syncing"))
+                // **The stage in words, the numbers under it (prd §1213,
+                // §1214):** Basecamp's bar names where the node is; the
+                // height is how you'd check it.
+                Text(snap.stageWord)
                     .dsText(.heading24)
                     .foregroundStyle(DS.textPrimary)
                 note([String(localized: "Block \(LogosWire.amount(Decimal(h)))"),
