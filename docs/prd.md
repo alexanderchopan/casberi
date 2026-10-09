@@ -65547,3 +65547,11 @@ UNVERIFIED on a device: written on a machine with no Xcode, so neither build nor
 
 1. The wide lead tile is deleted from view and model (`GlanceTile.wide`, `then`, `wideHeight`): every category is a square, two across.
 2. The box's category still leads the grid, drawing its next thing; a thing titled as the box's (an alarm that fired again) counts as the box's, and a category whose only thing is the box's draws no tile. Its count stays the category's whole count.
+
+## §1208k — A glance tile says what is new, when, how much and who (user, 2026-10-09, of five proposed improvements to the tiles, the long press left out: "Do all but don't add the long press"; amends §1208d and §1208e)
+
+1. A tile without a picture draws the newest thing, then the one before it in grey, two lines.
+2. The count is what came since your last visit ("4 new", `FeedScreen.fresh` against the Feed's `newSince`), at the tile's foot; nothing is drawn at zero. The day's whole count is no longer shown.
+3. The head carries when the newest is: an age, or how soon an event or a due reminder is (`LiveTimeText.short`).
+4. Money leads with its figure (`MoneyClause.split`), `heading24`, the name under it.
+5. Social shows the people in today's things (`FeedScreen.cast`, by handle, two or more) as a row of `DS.Face.badge` faces through `DSLeadCast`, never a pile.

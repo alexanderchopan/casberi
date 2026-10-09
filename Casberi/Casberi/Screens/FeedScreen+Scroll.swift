@@ -300,10 +300,10 @@ extension FeedScreen {
         let leadCategory = lede.flatMap { $0.isLive ? Self.scrollCategory(of: $0) : nil }
         // The same news twice (an alarm that fired again) is the box's too.
         let ledeTitle = lede.flatMap { $0.isLive ? TitleSeam.split($0.title).0 : nil }
-        let tiles: [(String, Int, [Thing])] = lists.compactMap { label, things in
-            guard label == leadCategory else { return (label, things.count, things) }
+        let tiles: [(String, [Thing])] = lists.compactMap { label, things in
+            guard label == leadCategory else { return (label, things) }
             let rest = things.filter { $0.id != ledeID && TitleSeam.split($0.title).0 != ledeTitle }
-            return rest.isEmpty ? nil : (label, things.count, rest)
+            return rest.isEmpty ? nil : (label, rest)
         }
         let ordered = tiles.filter { $0.0 == leadCategory } + tiles.filter { $0.0 != leadCategory }
         if !ordered.isEmpty {
@@ -311,12 +311,14 @@ extension FeedScreen {
                 LazyVGrid(columns: [GridItem(.flexible(), spacing: DS.Space.s2),
                                     GridItem(.flexible(), spacing: DS.Space.s2)],
                           spacing: DS.Space.s2) {
-                    ForEach(ordered, id: \.0) { label, count, things in
+                    ForEach(ordered, id: \.0) { label, things in
                         // The picture is the newest one that has a picture
                         // today (user: "people like seeing the newest
                         // image"); the line stays newest.
-                        GlanceTile(category: label, count: count, newest: things[0],
-                                   pictured: things.first { StoredPixels.probe($0) != nil }) {
+                        GlanceTile(category: label, fresh: Self.fresh(things, since: newSince),
+                                   newest: things[0], next: things.dropFirst().first,
+                                   pictured: things.first { StoredPixels.probe($0) != nil },
+                                   cast: label == "Social" ? Self.cast(of: things) : nil) {
                             DSHaptic.selection()
                             chrome.sourceRequest = label
                         }
@@ -331,16 +333,45 @@ extension FeedScreen {
     }
 }
 
-/// One category at a glance (prd §1208d, §1208e): a tile with a picture
-/// leads with it over two lines; a tile without one gives the whole tile to
-/// the words — its app's mark beside the category, up to four lines — so
-/// more of the notification fits. The whole tile jumps to the section.
+extension FeedScreen {
+    /// How many of a tile's things came since your last visit (prd §1208k).
+    static func fresh(_ things: [Thing], since: Date?) -> Int {
+        guard let since else { return 0 }
+        return things.filter { $0.isLive && $0.capturedAt > since }.count
+    }
+
+    /// The people in a category's things today, by handle, newest first:
+    /// two or more, or nobody (one face is the app's mark's job).
+    static func cast(of things: [Thing]) -> ThingCastRoll? {
+        var seen = Set<String>()
+        var members: [ThingCastMember] = []
+        for thing in things where thing.isLive {
+            guard let handle = thing.authorHandle?.trimmingCharacters(in: .whitespaces),
+                  !handle.isEmpty, seen.insert(handle.lowercased()).inserted else { continue }
+            members.append(ThingCastMember(handle: handle, avatarURL: thing.authorAvatarURL))
+        }
+        guard members.count >= 2 else { return nil }
+        return ThingCastRoll(members: Array(members.prefix(ThingCast.memberCap)),
+                             total: members.count, when: .now)
+    }
+}
+
+/// One category at a glance (prd §1208d, §1208e, §1208k): a tile with a
+/// picture leads with it; a tile without one gives the tile to the words —
+/// the newest thing, then the one before it in grey. The head says how many
+/// came since your last visit and when the newest is; money leads with its
+/// figure; Social shows who. The whole tile jumps to the section.
 struct GlanceTile: View {
     let category: String
-    let count: Int
+    /// How many came since your last visit; nothing is said at zero.
+    let fresh: Int
     let newest: Thing
+    /// The thing before the newest, under it in grey when there is room.
+    var next: Thing? = nil
     /// Today's newest thing in the category with a picture, if any.
     var pictured: Thing? = nil
+    /// The people in today's Social things, when there are two or more.
+    var cast: ThingCastRoll? = nil
     let action: () -> Void
 
     static let artHeight: CGFloat = 72
@@ -351,6 +382,9 @@ struct GlanceTile: View {
         let picture = pictured.flatMap { $0.isLive ? $0 : nil }.flatMap { shot in
             StoredPixels.probe(shot).map { (shot, $0) }
         }
+        let title = newest.isLive ? newest.title : ""
+        let money = MoneyClause.split(title)
+        let follower = next.flatMap { $0.isLive ? $0.title : nil }
         Button(action: action) {
             VStack(alignment: .leading, spacing: 0) {
                 if let (shot, size) = picture {
@@ -376,32 +410,75 @@ struct GlanceTile: View {
                             .foregroundStyle(DS.brandInk)
                             .lineLimit(1)
                         Spacer(minLength: 0)
-                        Text(verbatim: "\(count)")
+                        // When the newest is: an age, or how soon an event
+                        // starts.
+                        Text(verbatim: LiveTimeText.short(moment))
                             .dsText(.label12)
                             .foregroundStyle(DS.textTertiary)
+                            .lineLimit(1)
                     }
-                    Text(verbatim: newest.isLive ? newest.title : "")
-                        .dsText(.body17)
-                        .fontWeight(.medium)
-                        .foregroundStyle(DS.textPrimary)
-                        .lineLimit(picture == nil ? 4 : 2)
-                        .multilineTextAlignment(.leading)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                    if picture == nil, let cast {
+                        DSLeadCast(roll: cast, source: newest.isLive ? newest.source : "", size: DS.Face.badge)
+                            .padding(.vertical, DS.Space.s1)
+                    }
+                    if let money {
+                        // Money leads with its figure, the name under it.
+                        Text(verbatim: money.amount)
+                            .dsText(.heading24)
+                            .monospacedDigit()
+                            .foregroundStyle(DS.textPrimary)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
+                        Text(verbatim: money.title)
+                            .dsText(.subhead12)
+                            .foregroundStyle(DS.textSecondary)
+                            .lineLimit(1)
+                    } else {
+                        Text(verbatim: title)
+                            .dsText(.body17)
+                            .fontWeight(.medium)
+                            .foregroundStyle(DS.textPrimary)
+                            .lineLimit(picture != nil ? 2 : (cast != nil || follower != nil ? 2 : 4))
+                            .multilineTextAlignment(.leading)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    if picture == nil, cast == nil, let follower, !follower.isEmpty {
+                        Text(verbatim: follower)
+                            .dsText(.subhead12)
+                            .foregroundStyle(DS.textSecondary)
+                            .lineLimit(2)
+                            .padding(.top, DS.Space.s1)
+                    }
                 }
                 .padding(.horizontal, DS.Space.s3)
                 .padding(.vertical, DS.Space.s3)
                 Spacer(minLength: 0)
+                if fresh > 0 {
+                    Text("\(fresh) new")
+                        .dsText(.label12)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(DS.textSecondary)
+                        .padding(.horizontal, DS.Space.s3)
+                        .padding(.bottom, DS.Space.s3)
+                }
             }
-            .frame(maxWidth: .infinity,
-                   minHeight: Self.height, maxHeight: Self.height,
+            .frame(maxWidth: .infinity, minHeight: Self.height, maxHeight: Self.height,
                    alignment: .topLeading)
             .background(DS.fillFaint, in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
             .clipShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
             .contentShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
         }
         .buttonStyle(PressSpring())
-        .accessibilityLabel(Text(verbatim: "\(category), \(count). \(newest.isLive ? newest.title : "")"))
+        .accessibilityLabel(Text(verbatim: "\(category). \(title)"))
+        .accessibilityValue(fresh > 0 ? Text("\(fresh) new") : Text(verbatim: ""))
         .accessibilityHint(Text("Shows this section"))
+    }
+
+    /// The moment the newest is about: an event's start (`capturedAt`), a
+    /// reminder's due date, else when it came.
+    private var moment: Date {
+        guard newest.isLive else { return .now }
+        return newest.kind == .event ? newest.capturedAt : (newest.dueAt ?? newest.capturedAt)
     }
 
     /// The newest thing's app, else — a source with no mark of its own — the
