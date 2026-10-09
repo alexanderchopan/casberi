@@ -394,42 +394,9 @@ enum DS {
         })
     }
 
-    /// **The table a swipe is dealt on (prd §898c, §898e).** Flat: no light,
-    /// no frost, no hue. **Under the dark card it is the CROWN's colour
-    /// (prd §898e, user: "white is too stark" → "we could do the color of our
-    /// room head crowns" → "b seems most within the same design system"):
-    /// `#1a1a1a` is `fillFaint`'s dark `#ffffff1a` over the black page, the
-    /// well every room's lead stands in, made opaque — so the table is a
-    /// colour the eye already knows from the card it is under, not a third
-    /// one.** A lighter charcoal (`gray100`, `#2c2c2e`) lifted the card more
-    /// and was declined as random: a grey that answers to nothing on screen.
-    /// Accepted with it: a black card on `#1a1a1a` is 1.2:1, so the card's
-    /// edge is its lit top (`pourInk`) and the shadow all but vanishes.
-    /// §898d's `#f2f2f7` read too stark. Under the light card the table stays
-    /// black, the other page (§898c). `dock-selftest.sh` holds `fillFaint`'s
-    /// dark value to `#ffffff1a` beside this one, so the two cannot drift.
-    ///
-    /// The pink is retired here, not deleted from the record: §898 dealt the
-    /// swipe on the mark's hue in shadow (`#8c2451`), §898a stepped it to
-    /// `#6b1c3e`, §898b put frosted glass over it, and the same evening the
-    /// user moved off the hue three times. The day divider already speaks
-    /// in the mark's hue once per screen (§740), so a second place for the
-    /// voice was never needed. `brand` and `brandInk` are untouched.
-    ///
-    /// **Nil on a vivid page or a photo**, `brandInk`'s own rule: a ground
-    /// the person coloured themselves is louder than the app's, and "the
-    /// other page" is undefined over a photo. The swipe then leaves the
-    /// ground alone and the cover's word takes the page's ramp.
-    static var swipeTable: Color? {
-        if vividBackground { return nil }
-        return Color.adaptive(dark: "#1a1a1a", light: "#000000")
-    }
-
-    /// What is written on `swipeTable`: the room's mark and its name. White
-    /// on both tables since §898e (the crown's `#1a1a1a` under the dark card,
-    /// 17.4:1; black under the light one, 21:1) — so it is `textPrimary` in
-    /// dark and the other page's ink in light, never the light page's black.
-    static let swipeTableInk = Color.fixed("#ffffff")
+    // The swipe's table (`swipeTable`, `swipeTableInk`, prd §898–§898e) is
+    // deleted with the dealt card: since prd §1207 item 3 the pages are one
+    // strip, slid on the page's own ground in the page's own ink.
 
     // MARK: - Semantic state  — orange attention, red destructive, green confirm
 

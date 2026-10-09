@@ -61,6 +61,9 @@ ALIASES = {
     # row of its Subscriptions tile, which wears its own name.)
     # Social's Follow (prd §1086) watches a person privately: the same meaning.
     ("SocialScope", "follow"): "watch",
+    # You's Sources (prd §1207 item 9) is the master list that opens on your
+    # apps (SettingsScope.apps): the same meaning, so the same grid.
+    ("YouTile", "sources"): "apps",
     # You's Today (prd §1168) IS the "All" source, the dock's inbox tray.
 }
 
@@ -268,6 +271,7 @@ extension YouTile: DSTileScope {
     var glyph: String {
         switch self {
         case .feed: return ScopeTileGlyph.feed
+        case .sources: return ScopeTileGlyph.apps
         }
     }
 }

@@ -166,10 +166,9 @@ grep -q 'chrome.pageDragX = 0' "$TMP/main.nc" \
 # disagreement is the finding, and this is what stops it recurring. Nothing
 # else can see it: the build is clean, the app turns pages perfectly, and a
 # screenshot cannot photograph a ramp.
-grep -q 'let lift = reduceMotion ? 0 : min(1, abs(chrome.pageDragProgress))' "$TMP/main.nc" \
-  || { echo "✗ PagerDrag no longer keys the card to the drag's COMMIT PROGRESS — if it is"; \
-       echo "  back on a fraction of the screen width, the card reaches 15% of every signal"; \
-       echo "  at the moment the page turns and reads as a plain slide (§648)."; fail=1; }
+grep -q 'let lift: CGFloat = 0' "$TMP/main.nc" \
+  || { echo "✗ PagerDrag lifts the page into a card again — since prd §1207 item 3 the"; \
+       echo "  pages are one strip and the page slides flat (amends §648)."; fail=1; }
 grep -q 'heading \* 4 \* lift' "$TMP/main.nc" \
   || { echo "✗ the tilt is no longer on the same ramp as the rest of the card — §632's 4° is"; \
        echo "  the ruling, and it is only reached if it rides the turn."; fail=1; }
@@ -787,7 +786,7 @@ for page in data notifications diagnostics language dockOrder; do
 done
 
 
-# --- 12. THE SWIPE IS DEALT ON THE CROWN'S COLOUR, AND THE COVER DRAWS NO GROUND (prd §898, §898c, §898e) --
+# --- 12. THE SWIPE SLIDES ON THE PAGE'S OWN GROUND, AND THE COVER DRAWS NO GROUND (prd §1207 item 3, amending §898, §898c, §898e) --
 # The ground under a room swipe is the shell's own coat — the crown's
 # #1a1a1a under the dark card, black under the light one, flat (`SwipeGround`,
 # `DS.swipeTable`) — lit on the turn's ramp and gone at rest; the cover is
@@ -801,7 +800,7 @@ done
 grep -q 'SwipeGround()' "$TMP/main.nc" \
   || { echo "✗ the shell's coat no longer mounts SwipeGround — the swipe is dealt on"; \
        echo "  the page colour again (prd §898)."; fail=1; }
-grep -q 'ground.opacity(min(1, abs(chrome.pageDragProgress)))' "$TMP/main.nc" \
+grep -q 'DS.themedPage.opacity(min(1, abs(chrome.pageDragProgress)' "$TMP/main.nc" \
   || { echo "✗ SwipeGround is off the turn's ramp — the table and the card would disagree"; \
        echo "  about when a turn is a turn (§648's cause, again)."; fail=1; }
 awk '/^private struct PagerCover/,/^}/' "$TMP/main.nc" > "$TMP/cover.nc"
@@ -810,9 +809,9 @@ awk '/^private struct PagerCover/,/^}/' "$TMP/main.nc" > "$TMP/cover.nc"
 grep -qE 'dsPageBackground|RoomSnapshots|Image\(uiImage|themedPage|clipShape' "$TMP/cover.nc" \
   && { echo "✗ PagerCover paints a ground, a picture or a card again — over the table"; \
        echo "  that is a black rectangle sliding in (prd §898)."; fail=1; }
-grep -q 'DS.swipeTableInk' "$TMP/cover.nc" \
-  || { echo "✗ the cover's word is not swipeTableInk — textPrimary is the page's own ink"; \
-       echo "  and vanishes into the other page (prd §898c)."; fail=1; }
+grep -q 'DS.brandInk' "$TMP/cover.nc" \
+  || { echo "✗ the cover's word is not the title's pink — the next page arriving names"; \
+       echo "  itself as its title will (prd §1207 items 2, 3)."; fail=1; }
 grep -q 'drawHierarchy' "$TMP/main.nc" \
   && { echo "✗ a window snapshot is back in MainSurface — nothing reads one since §898."; fail=1; }
 awk '/^private struct SwipeGround/,/^}/' "$TMP/main.nc" > "$TMP/ground-view.nc"
@@ -823,22 +822,9 @@ grep -qE 'BrandSheet|\.task\(|Image\(uiImage|GeometryReader' "$TMP/ground-view.n
   || { echo "✗ BrandSheet.swift is back — §898c deleted the frosted sheet with the pink"; \
        echo "  it was lit for (§723)."; fail=1; }
 strip_comments "Casberi/Casberi/Design/DesignTokens.swift" > "$TMP/tokens.nc"
-awk '/static var swipeTable: Color\?/,/^    }/' "$TMP/tokens.nc" > "$TMP/ground.nc"
-[ -s "$TMP/ground.nc" ] \
-  || { echo "✗ DS.swipeTable is gone or renamed (prd §898c)."; fail=1; }
-grep -q 'if vividBackground { return nil }' "$TMP/ground.nc" \
-  || { echo "✗ swipeTable no longer stands down on a vivid page or a photo — the other"; \
-       echo "  page is undefined over a picture (prd §898, §740's rule)."; fail=1; }
-grep -q 'Color.adaptive(dark: "#1a1a1a", light: "#000000")' "$TMP/ground.nc" \
-  || { echo "✗ swipeTable is not the crown's colour under dark (#1a1a1a) and black under"; \
-       echo "  light — a hue, a white or a third grey is back (prd §898c, §898e, §542)."; fail=1; }
-# #1a1a1a IS the crown: fillFaint's dark #ffffff1a over the black page. Move
-# the crown's fill and the table stops matching it (prd §898e).
-grep -q 'static let fillFaint  = Color.adaptive(dark: "#ffffff1a"' "$TMP/tokens.nc" \
-  || { echo "✗ fillFaint's dark value moved — the swipe table (#1a1a1a) was the crown's"; \
-       echo "  well made opaque; re-derive DS.swipeTable with it (prd §898e)."; fail=1; }
-grep -q 'static let swipeTableInk = Color.fixed("#ffffff")' "$TMP/tokens.nc" \
-  || { echo "✗ swipeTableInk is not white — both tables are dark since prd §898e."; fail=1; }
+grep -q 'swipeTable' "$TMP/tokens.nc" \
+  && { echo "✗ DS.swipeTable is back — the dealt card and its table are retired by prd"; \
+       echo "  §1207 item 3; a token nothing reads is a deleted feature's model."; fail=1; }
 [ ! -f "Casberi/Casberi/Shell/RoomSnapshots.swift" ] \
   || { echo "✗ RoomSnapshots.swift is back — a store with no reader (prd §723, §898)."; fail=1; }
 

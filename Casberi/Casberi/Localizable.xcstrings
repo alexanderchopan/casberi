@@ -3855,6 +3855,34 @@
         }
       }
     },
+    "Casberi's own options" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Las opciones propias de Casberi"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberi自体の設定"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberi 자체 설정"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberi 自身的选项"
+          }
+        }
+      }
+    },
     "Channels, shows and boards you follow" : {
       "localizations" : {
         "es" : {
