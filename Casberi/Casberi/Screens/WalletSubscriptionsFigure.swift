@@ -16,6 +16,7 @@ struct WalletSubscriptionsFigure: View {
         VStack(alignment: .leading, spacing: DS.Space.s1) {
             Text("\(mask ?? CardSpendRoom.money(monthly.monthly, code: "USD")) a month")
                 .dsText(.heading24).foregroundStyle(DS.textPrimary)
+                .monospacedDigit()
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
                 // Tracking or stopping one rolls the sum to its new figure

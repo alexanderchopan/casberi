@@ -814,7 +814,7 @@ struct BandRow: View {
         case .initial(let sender):
             SenderInitial(sender: sender, size: DS.Face.rowCircle)
         case .brand(let mark):
-            BridgeIcon(name: mark, size: DS.Mark.row, circular: true)
+            BridgeIcon(name: mark, size: DS.Face.rowCircle, circular: true)
         case .publisher(let publisher):
             RemoteThumb(urlString: publisher, size: DS.Mark.row, fallback: thing.source)
         case .thumb(let image, let perishable, let circular):
@@ -1095,12 +1095,12 @@ struct TokenRow: View {
     private var vitals: String? {
         let parsed = TokensAsk.symbol(of: thing.title)
         let symbol: String? = parsed == thing.title ? nil : parsed
-        let size: String? = if let cap = pulse.marketCap {
+        let scale: String? = if let cap = pulse.marketCap {
             "\(TokenStats.compact(cap)) cap"
         } else if let fdv = pulse.fdv {
             "\(TokenStats.compact(fdv)) FDV"
         } else { nil }
-        let joined = [symbol, size].compactMap(\.self).joined(separator: " · ")
+        let joined = [symbol, scale].compactMap(\.self).joined(separator: " · ")
         return joined.isEmpty ? nil : joined
     }
 }
@@ -1409,7 +1409,9 @@ enum RemoteImageLoader {
 /// frame must not read worse than having no art at all).
 struct RemoteThumb: View {
     let urlString: String
-    var size: CGFloat = DS.Mark.row
+    // The row's face tier (the same 30pt `DS.Mark.row` names): a thumb
+    // standing in a row's lead is a face (`face-ramp-audit.py`).
+    var size: CGFloat = DS.Face.row
     /// The bridge whose glyph stands in when the URL turns out dead.
     var fallback: String? = nil
     /// A perishable image (a live-stream frame) changes behind its URL —

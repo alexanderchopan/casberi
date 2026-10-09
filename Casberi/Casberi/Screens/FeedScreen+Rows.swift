@@ -507,7 +507,7 @@ extension FeedScreen {
                           // this time).
                           line: DSFeed.line(thing.summary)) {
                     if let mark = SubscriptionFace.mark(for: merchant) {
-                        BridgeIcon(name: mark, size: DS.Mark.row, circular: true)
+                        BridgeIcon(name: mark, size: DS.Face.rowCircle, circular: true)
                     } else {
                         WalletMarkView(mark: CardPointers.initials(card: thing.authorHandle).isEmpty
                                          ? .kind(thing.kind)

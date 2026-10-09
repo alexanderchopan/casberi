@@ -471,6 +471,8 @@ struct PriceRoll: ViewModifier {
     func body(content: Content) -> some View {
         content
             .foregroundStyle(flash ?? ink)
+            // Tabular, so the price's line never reflows mid-roll.
+            .monospacedDigit()
             .contentTransition(.numericText(value: value))
             .animation(reduceMotion ? nil : DS.Motion.standard, value: value)
             .onChange(of: value) { old, new in

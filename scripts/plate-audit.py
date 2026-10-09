@@ -85,6 +85,7 @@ WELL_ALLOWED = {
     "Glass.swift": (0, "the definition itself"),
     "DSRoomHead.swift": (1, "the room lead's well, `dsRoomHeadBlock` (prd §766)"),
     "DSRoomScopeChrome.swift": (1, "a room scope's figure well (prd §766)"),
+    "DSCountTile.swift": (1, "Settings' and Markets' count box, which IS the room's lead well (prd §766, §1198)"),
     "Composer.swift": (1, "the composer's draft field — the floating layer"),
     "VoiceListeningBand.swift": (1, "the live transcript, one band for the composer and the note sheet (§970) — the floating layer"),
     "AgentChatView.swift": (1, "the agent room's entry field — the one thing §782 "

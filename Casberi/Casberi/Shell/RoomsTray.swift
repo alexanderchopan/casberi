@@ -408,10 +408,6 @@ struct RoomsTray: View {
         [
             Door(word: String(localized: "Feed"), glyph: home ? "tray.full.fill" : ScopeTileGlyph.feed,
                  lit: home, key: "All") { pick("All") },
-            // The other pole (prd §1203): the two pages a swipe moves between
-            // lead the row, in the swipe's order.
-            Door(word: String(localized: "Wallet"), glyph: CategoryFold.glyph(for: CategoryFold.walletCategory),
-                 lit: wallet, key: CategoryFold.walletRoom) { pickCategory(CategoryFold.walletCategory) },
             // You's four places, in the tiles' order (prd §1136 item 1):
             // Home, then A–Z. Apps and Addresses are filters inside Sources
             // now, the master list of everything you've connected.
@@ -431,6 +427,12 @@ struct RoomsTray: View {
             Door(word: String(localized: "Settings"), glyph: ScopeTileGlyph.settings,
                  lit: place == .settings || place == .apps || place == .addresses,
                  key: HomeScope.Place.settings.source) { screen(.casberi) },
+            // The other pole (prd §1203) closes the row (user, 2026-10-08:
+            // "move the wallet to the last position … feed markets notes
+            // settings wallet"): the Feed's places in its tiles' order, then
+            // the Wallet, where the swipe left lands and its card begins.
+            Door(word: String(localized: "Wallet"), glyph: CategoryFold.glyph(for: CategoryFold.walletCategory),
+                 lit: wallet, key: CategoryFold.walletRoom) { pickCategory(CategoryFold.walletCategory) },
         ]
     }
 

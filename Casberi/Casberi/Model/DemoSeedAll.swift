@@ -3503,7 +3503,9 @@ enum DemoSeedAll {
         let rise = AppleWalletRoom.Creep(merchant: "Notion", was: 10, now: 12,
                                          currency: "USD", at: at(10, 13))
         let riseRow = row(.note, AppleWalletRoom.creepLine(rise), source: "Apple Wallet",
-                          ref: AppleWalletRoom.creepRef(rise), days: 10, hour: 13,
+                          // `demo:` first, so leaving the demo clears it and
+                          // never a real price rise (the shaper's ref after it).
+                          ref: "demo:" + AppleWalletRoom.creepRef(rise), days: 10, hour: 13,
                           tags: ["Price rise"]) { t in
             t.transferCounterparty = rise.merchant
             t.priceValue = rise.now

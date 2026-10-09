@@ -198,8 +198,9 @@ mutate "home's empty copy promises a load state it cannot know (§83)" \
 # grepping raw source scores prose as compliance (the Obsidian/Cursor lesson).
 strip_comments() { perl -pe 's{//.*$}{}g' "$1"; }
 HISTORY="Casberi/Casberi/Screens/WalletHistoryScreen.swift"
+WALLETHOME="Casberi/Casberi/Screens/FeedScreen+WalletHome.swift"
 for f in "$MAIN" "$FEED" "$CHROME" "$SWITCH" "$CHROMEVIEW" "$SCOPEHEAD" \
-         "$SRC" "$CHASSIS" "$CHIPS" "$EMPTYFIG" "$HISTORY"; do
+         "$SRC" "$CHASSIS" "$CHIPS" "$EMPTYFIG" "$HISTORY" "$WALLETHOME"; do
   strip_comments "$f" > "$work/$(basename $f).bare"
 done
 
@@ -421,8 +422,10 @@ guard FeedScreen.swift "walletLive.warnings" \
   "the dot no longer rides warnings — presence-lighting is the §83 overclaim that retired 'Needs attention'"
 guard FeedScreen.swift "case .holdings:" \
   "the wallet block no longer switches on the scope"
-guard FeedScreen.swift "walletComingUpSections(upcoming, nextEventID: nextEventID)" \
-  "Coming up no longer lists what's ahead (prd §1041)"
+# Coming up is one of Home's four short lists since prd §1201, which amends
+# §1041's placement; it still lists only what is ahead, soonest first.
+guard FeedScreen+WalletHome.swift "walletComingUpDays(upcoming)" \
+  "Coming up no longer lists what's ahead (prd §1041, §1201)"
 deny FeedScreen.swift "ahead: upcoming" \
   "what's ahead is back on Home — Home is only what happened (prd §1041)"
 guard FeedScreen.swift "let all = visible.live.filter { !promoted.contains(\$0.id) }" \
@@ -453,10 +456,14 @@ import re, sys
 src = open(sys.argv[1]).read()
 home = re.search(r"case \.home:(.*?)case \.subscriptions:", src, re.S)
 subs = re.search(r"case \.subscriptions:(.*?)case \.holdings:", src, re.S)
-ok = home and subs \
-    and "walletComingUpSections(upcoming" in home.group(1) and "walletStream(all)" in home.group(1) \
-    and home.group(1).index("walletComingUpSections(upcoming") < home.group(1).index("walletStream(all)") \
-    and "walletSubscriptionsSections" in subs.group(1) and "walletComingUpSections" not in subs.group(1)
+# Home is four short lists since prd §1201 (`walletHomeSections`): what is
+# ahead (`walletComingUpDays`) is built before what happened (`walletStream`).
+lists = re.search(r"func walletHomeSections\(.*?\n    }\n", src, re.S)
+ok = home and subs and lists \
+    and "walletHomeSections(upcoming: upcoming, all: all" in home.group(1) \
+    and "walletComingUpDays(upcoming)" in lists.group(0) and "walletStream(all)" in lists.group(0) \
+    and lists.group(0).index("walletComingUpDays(upcoming)") < lists.group(0).index("walletStream(all)") \
+    and "walletSubscriptionsSections" in subs.group(1) and "walletComingUp" not in subs.group(1)
 sys.exit(0 if ok else 1)
 PY
 # A repeating bill lives on ONE tile: Coming up and Home leave it to Subscriptions.
