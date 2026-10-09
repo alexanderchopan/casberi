@@ -3323,7 +3323,11 @@ private struct PagerDrag<Content: View>: View {
         // was the honest-motion version of a dead control.
         //
         // Reduce Motion still slides flat, as before.
-        let lift = reduceMotion ? 0 : min(1, abs(chrome.pageDragProgress))
+        // ONE STRIP (prd §1207 item 3, retires §648's card): the page slides
+        // flat with the finger — no lift, no tilt, no shadow — and the next
+        // one comes in from the edge. The card said "a separate thing",
+        // right when the app was its feeds.
+        let lift: CGFloat = 0
         // The direction of travel, for the tilt. Taken from the offset rather
         // than from the progress so a rubber-band pull and a real turn agree
         // about which way the card is leaning.
@@ -3462,7 +3466,9 @@ private struct PagerCover: View {
             let landing = CategoryFold.isCategory(label)
                 ? (CategoryFold.landing(category: label, present: venues) ?? label)
                 : label
-            let ink = DS.swipeTable == nil ? DS.textPrimary : DS.swipeTableInk
+            // The page's own ground and ink (§1207 item 3 retires §898's
+            // brand ground): the next page arriving, not a card dealt.
+            let ink = DS.textPrimary
             let edge: Alignment = side >= 0 ? .leading : .trailing
             VStack(alignment: side >= 0 ? .leading : .trailing,
                    spacing: DS.Space.s3) {
@@ -3473,7 +3479,7 @@ private struct PagerCover: View {
                     Text(Pinboard.isPinnedRoom(label) ? String(localized: "Notes")
                          : HomeScope.isMarkets(label) ? String(localized: "Markets")
                          : String(localized: "Feed"))
-                        .dsText(.heading40).foregroundStyle(ink)
+                        .dsText(.heading40).foregroundStyle(DS.brandInk)
                 } else {
                     // Bare, as the dock draws it — no rim, no disc (user:
                     // a white one "looks accidental", a black one too, and
@@ -3490,8 +3496,8 @@ private struct PagerCover: View {
                         BridgeIcon(name: landing, size: DS.Mark.hero, circular: true)
                     }
                     Text(label)
-                        .dsText(.heading24)
-                        .foregroundStyle(ink)
+                        .dsText(.heading40)
+                        .foregroundStyle(DS.brandInk)
                 }
             }
             .padding(.horizontal, DS.Space.s6)
@@ -3528,8 +3534,8 @@ private struct SwipeGround: View {
     @Environment(ShellChrome.self) private var chrome
 
     var body: some View {
-        if let ground = DS.swipeTable {
-            ground.opacity(min(1, abs(chrome.pageDragProgress)))
+        if chrome.pageDragTarget != nil {
+            DS.themedPage.opacity(min(1, abs(chrome.pageDragProgress) * 4))
         }
     }
 }
