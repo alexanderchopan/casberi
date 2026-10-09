@@ -65555,3 +65555,14 @@ UNVERIFIED on a device: written on a machine with no Xcode, so neither build nor
 3. The head carries when the newest is: an age, or how soon an event or a due reminder is (`LiveTimeText.short`).
 4. Money leads with its figure (`MoneyClause.split`), `heading24`, the name under it.
 5. Social shows the people in today's things (`FeedScreen.cast`, by handle, two or more) as a row of `DS.Face.badge` faces through `DSLeadCast`, never a pile.
+
+## §1213 — Logos chat says who, then what (user, 2026-10-09, on the canvas "Logos, the Apple pass": "i noticed for example the chats all say 'direct message' but not the sender", then "do all that you can"; builds on §1155)
+
+1. **A conversation is named for its person, never its kind.** Basecamp names every direct conversation "Direct message", so the list read the same words four times. A direct conversation is titled by the other person: the name you gave them, else their short chat address (`Conversation.title(names:)`); a generic name ("Direct message", "Group chat") names nobody and is dropped. The person is the Observer's optional `peer`, else the first sender its messages name: the phone reads the newest 12 conversations' messages once per read, in memory only like everything chat (`LogosObserver.enrich`).
+2. **The preview says who.** "You: …" for your line, "Mira: …" in a group (`previewLine`).
+3. **The box leads with the newest conversation** — its person, its newest line, then "N conversations · 4m" — never a count over the kind's name.
+4. **A conversation reads as Messages.** A time over every gap of more than 15 minutes, the author over each run in a group, the people under a group's name, yours trailing in ink and theirs leading in the faint fill (`DSChatBubble`, the one shape behind words outside a control, in `Design/` so no screen hand-rolls it), and the foot says where to reply: "Reply in Logos Basecamp on your computer".
+5. **Name this person.** A direct conversation's tray names its person on this phone only (`LogosChatNames`, a name keyed by chat address, never a message); chat_module 0.3.0 renews a person's address at every Basecamp launch, so the alert says a name holds until they restart Basecamp. A name in Addresses for the same address also counts.
+6. **No delivery claim.** Basecamp shows a message RLN dropped as sent, and the Observer's dev measured that `chat_module.get_messages` carries no delivery state (2026-10-09). A message you sent draws no delivery word; the phone reads an optional `delivery` (`sent`/`pending`/`failed`) and draws "Not delivered yet"/"Not delivered" only if an Observer ever says so. An unknown word claims nothing.
+7. **Node in words.** The Node box leads with "In sync" or "Syncing"; the height and peers are the line under it ("Block 13,982 · 461 peers").
+8. A row's short fact ("4m") takes its width before a long preview does (`DSPushRowLabel.factFits`).

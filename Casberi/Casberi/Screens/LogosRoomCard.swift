@@ -107,11 +107,14 @@ struct LogosRoomFigure: View {
     @ViewBuilder private var node: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             if let snap = head.node, snap.reachable, let h = snap.height {
-                DSFigureReading(number: LogosWire.amount(Decimal(h)),
-                                caption: [String(localized: "height"),
-                                          snap.synced ? String(localized: "in sync") : String(localized: "syncing"),
-                                          snap.peers.map { $0 == 1 ? String(localized: "1 peer") : String(localized: "\($0) peers") }]
-                                    .compactMap { $0 }.joined(separator: " · "))
+                // **The state in words, the numbers under it (prd §1213):**
+                // "In sync" is the answer; the height is how you'd check it.
+                Text(snap.synced ? String(localized: "In sync") : String(localized: "Syncing"))
+                    .dsText(.heading24)
+                    .foregroundStyle(DS.textPrimary)
+                note([String(localized: "Block \(LogosWire.amount(Decimal(h)))"),
+                      snap.peers.map { $0 == 1 ? String(localized: "1 peer") : String(localized: "\($0) peers") }]
+                        .compactMap { $0 }.joined(separator: " · "))
                 if let line = Self.earnings(snap) { note(line) }
                 if let v = snap.vouchers, v > 0, let worth = snap.claimable {
                     note(v == 1
@@ -160,14 +163,27 @@ struct LogosRoomFigure: View {
 
     @ViewBuilder private var chatReading: some View {
         switch LogosObserver.shared.chat {
+        // **Who, then what (prd §1213):** the newest conversation leads the
+        // box, its person and its newest line, and the count is the caption.
         case .ready(let convos) where !convos.isEmpty:
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                DSFigureReading(number: LogosWire.amount(Decimal(convos.count)),
-                                caption: convos.count == 1 ? String(localized: "conversation")
-                                                           : String(localized: "conversations"))
-                if let newest = convos.first {
-                    note([newest.title, newest.preview].compactMap { $0 }.joined(separator: " · "))
+            let names = LogosChatNames.shared
+            let newest = convos[0]
+            VStack(alignment: .leading, spacing: DS.Space.s1) {
+                Text(newest.title(names: names.name))
+                    .dsText(.heading24)
+                    .foregroundStyle(DS.textPrimary)
+                    .lineLimit(1)
+                if let line = newest.previewLine(names: names.name) {
+                    Text(line)
+                        .dsText(.body17)
+                        .foregroundStyle(DS.textSecondary)
+                        .lineLimit(2)
                 }
+                Spacer(minLength: 0)
+                note([convos.count == 1 ? String(localized: "1 conversation")
+                                        : String(localized: "\(convos.count) conversations"),
+                      newest.lastActivity.map { FeedScreen.chatAge($0) }]
+                        .compactMap { $0 }.joined(separator: " · "))
             }
         case .ready:
             chatEmpty(String(localized: "No conversations"),

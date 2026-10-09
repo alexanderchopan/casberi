@@ -333,22 +333,124 @@ enum LogosObserverWire {
         /// From an earlier session of the person's Basecamp identity, which
         /// is new at every Basecamp launch on chat_module 0.3.0.
         let historyOnly: Bool
+        /// The other person in a direct conversation: the Observer's optional
+        /// `peer`, else the first sender its messages name (`enriched`).
+        var peer: String? = nil
+        /// The newest message, once the conversation's messages were read:
+        /// what the preview says, and who said it.
+        var last: ChatMessage? = nil
+        /// Everyone but you who wrote in it, in the order they first wrote.
+        var senders: [String] = []
 
-        var title: String {
-            nickname ?? name ?? (direct ? String(localized: "Direct conversation")
-                                        : String(localized: "Group conversation"))
+        /// **Who, never what kind (prd §1213).** Basecamp names every direct
+        /// conversation "Direct message", so a list of them was a list of the
+        /// same words. A direct conversation is titled by its person: the
+        /// name you gave them, else their short address. `names` is the
+        /// person's own naming (`LogosChatNames.name`).
+        func title(names: (String) -> String?) -> String {
+            if let nickname { return nickname }
+            if direct {
+                if let peer { return names(peer) ?? LogosWire.short(peer) }
+                if let name, !Self.isGeneric(name) { return name }
+                return String(localized: "Direct conversation")
+            }
+            if let name, !Self.isGeneric(name) { return name }
+            return String(localized: "Group conversation")
+        }
+
+        /// The row's line: the newest message with its author ("You: …", and
+        /// in a group "Mira: …"), else the Observer's preview.
+        func previewLine(names: (String) -> String?) -> String? {
+            guard let last else { return preview }
+            if last.fromSelf { return String(localized: "You: \(last.content)") }
+            if !direct, let sender = last.sender {
+                return "\(names(sender) ?? LogosWire.short(sender)): \(last.content)"
+            }
+            return last.content
+        }
+
+        /// "You, Mira and 2 others": a group's people, under its name.
+        func people(names: (String) -> String?) -> String? {
+            guard !direct, let first = senders.first else { return nil }
+            let who = names(first) ?? LogosWire.short(first)
+            switch senders.count {
+            case 1: return String(localized: "You and \(who)")
+            case 2: return String(localized: "You, \(who) and 1 other")
+            default: return String(localized: "You, \(who) and \(senders.count - 1) others")
+            }
+        }
+
+        /// The conversation with what its messages say about it.
+        func enriched(with messages: [ChatMessage]) -> Conversation {
+            var out = self
+            var seen = Set<String>()
+            out.senders = messages.compactMap { m in
+                guard !m.fromSelf, let s = m.sender, seen.insert(s).inserted else { return nil }
+                return s
+            }
+            if direct, out.peer == nil { out.peer = out.senders.first }
+            out.last = messages.last
+            return out
+        }
+
+        /// A name Basecamp gives every conversation of a kind, which names
+        /// nobody.
+        static func isGeneric(_ name: String) -> Bool {
+            ["direct message", "direct conversation", "direct chat", "private chat",
+             "group", "group chat", "group conversation"]
+                .contains(name.trimmingCharacters(in: .whitespaces).lowercased())
         }
     }
 
     struct ChatMessage: Equatable, Identifiable {
+        /// What the Observer says became of a message you sent (`delivery`,
+        /// optional): Basecamp shows a message RLN dropped as sent, so the
+        /// phone claims nothing it was not told (prd §1213).
+        enum Delivery: Equatable { case sent, pending, failed }
+
         let fromSelf: Bool
         let sender: String?
         let content: String
         let timestampMs: Int64
+        var delivery: Delivery? = nil
         /// chat_module gives a message no id, so this is the key the
         /// Observer and the phone de-duplicate on.
         var id: String { "\(timestampMs)|\(sender ?? "self")|\(content)" }
         var date: Date { Date(timeIntervalSince1970: TimeInterval(timestampMs) / 1000) }
+    }
+
+    /// One line of a conversation as drawn: a time between messages more
+    /// than 15 minutes apart, the author over the first of a run in a group,
+    /// and the message.
+    enum ChatLine: Equatable, Identifiable {
+        case time(Date)
+        case author(String, id: String)
+        case message(ChatMessage)
+
+        var id: String {
+            switch self {
+            case .time(let d): return "t\(d.timeIntervalSince1970)"
+            case .author(_, let id): return "a\(id)"
+            case .message(let m): return "m\(m.id)"
+            }
+        }
+    }
+
+    static func lines(_ messages: [ChatMessage], group: Bool,
+                      names: (String) -> String?, gapMs: Int64 = 15 * 60 * 1000) -> [ChatLine] {
+        var out: [ChatLine] = []
+        var previous: ChatMessage?
+        for m in messages {
+            let gap = previous.map { m.timestampMs - $0.timestampMs > gapMs } ?? true
+            if gap { out.append(.time(m.date)) }
+            if group, !m.fromSelf, let sender = m.sender,
+               gap || previous?.sender != sender || previous?.fromSelf == true {
+                out.append(.author(names(sender) ?? LogosWire.short(sender), id: m.id))
+            }
+            out.append(.message(m))
+            previous = m
+        }
+        return out
     }
 
     /// `{available, reason?, …}`: false when Basecamp's Chat app has not
@@ -380,7 +482,8 @@ enum LogosObserverWire {
                                 preview: text(d, "preview"),
                                 lastActivity: ms.map { Date(timeIntervalSince1970: $0 / 1000) },
                                 messageCount: (d["message_count"] as? NSNumber)?.intValue,
-                                historyOnly: d["history_only"] as? Bool ?? false)
+                                historyOnly: d["history_only"] as? Bool ?? false,
+                                peer: text(d, "peer"))
         }
         .sorted { ($0.lastActivity ?? .distantPast) > ($1.lastActivity ?? .distantPast) }
     }
@@ -395,10 +498,21 @@ enum LogosObserverWire {
                   let ts = (d["timestamp_ms"] as? NSNumber)?.int64Value else { return nil }
             let m = ChatMessage(fromSelf: d["from_self"] as? Bool ?? false,
                                 sender: (d["sender"] as? String).flatMap { $0.isEmpty ? nil : $0 },
-                                content: content, timestampMs: ts)
+                                content: content, timestampMs: ts,
+                                delivery: delivery(d["delivery"] as? String))
             return seen.insert(m.id).inserted ? m : nil
         }
         .sorted { $0.timestampMs < $1.timestampMs }
+    }
+
+    /// An unknown word is no claim, so it reads as nothing.
+    static func delivery(_ word: String?) -> ChatMessage.Delivery? {
+        switch word?.lowercased() {
+        case "sent", "delivered": return .sent
+        case "pending", "queued", "retrying": return .pending
+        case "failed", "dropped": return .failed
+        default: return nil
+        }
     }
 
     /// The messages request's target. The conversation id is percent-encoded

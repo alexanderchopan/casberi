@@ -179,7 +179,9 @@ let convos = W.conversations(parse("""
  {"kind":"direct"}]}
 """))!
 check(convos.map(\.id) == ["new", "old"], "newest activity first; a conversation with no id is dropped")
-check(convos[0].title == "Terricola" && convos[1].title == "LEZ testers" && convos[0].direct && !convos[1].direct,
+let none: (String) -> String? = { _ in nil }
+check(convos[0].title(names: none) == "Terricola" && convos[1].title(names: none) == "LEZ testers"
+      && convos[0].direct && !convos[1].direct,
       "title is nickname, then name; kind decides direct")
 check(convos[1].historyOnly, "history_only survives")
 check(W.conversations(parse(#"{"available":true,"conversations":[{"convo_id":"raw","kind":"direct"}]}"#))?.first?.id == "raw",
@@ -196,6 +198,44 @@ check(msgs[0].fromSelf && msgs[0].sender == nil && msgs[2].sender == nil, "an em
 check(W.messagesTarget(convo: "a b/c?d") == "/v2/chat/messages?convo=a%20b%2Fc%3Fd",
       "the conversation id is percent-encoded once, in the signed target")
 check(W.messagesTarget(convo: "c1", sinceMs: 42) == "/v2/chat/messages?convo=c1&since_ms=42", "since_ms rides the target")
+
+print("Who, never what kind (prd §1213)")
+let dms = W.conversations(parse("""
+{"available":true,"conversations":[
+ {"id":"a","kind":"direct","name":"Direct message","last_activity_ms":3000},
+ {"id":"b","kind":"direct","name":"Direct message","peer":"0xfeedbeefcafe0001","last_activity_ms":2000},
+ {"id":"g","kind":"group","name":"Group chat","last_activity_ms":1000}]}
+"""))!
+check(dms[0].title(names: none) == "Direct conversation", "Basecamp's \"Direct message\" names nobody")
+check(dms[1].peer == "0xfeedbeefcafe0001" && dms[1].title(names: none) == LogosWire.short("0xfeedbeefcafe0001"),
+      "an Observer's peer titles the conversation by its address")
+check(dms[1].title(names: { $0 == "0xfeedbeefcafe0001" ? "Ana" : nil }) == "Ana", "a name you gave wins over the address")
+check(dms[2].title(names: none) == "Group conversation", "a generic group name names nobody either")
+let thread: [W.ChatMessage] = [
+    .init(fromSelf: false, sender: "0xaaaa1111bbbb2222", content: "hi", timestampMs: 0),
+    .init(fromSelf: true, sender: nil, content: "hey", timestampMs: 60_000, delivery: W.delivery("pending")),
+    .init(fromSelf: false, sender: "0xaaaa1111bbbb2222", content: "ok", timestampMs: 120_000),
+    .init(fromSelf: false, sender: "0xcccc3333dddd4444", content: "me too", timestampMs: 180_000),
+    .init(fromSelf: false, sender: "0xcccc3333dddd4444", content: "later", timestampMs: 180_000 + 16 * 60_000)]
+let a = dms[0].enriched(with: Array(thread.prefix(3)))
+check(a.peer == "0xaaaa1111bbbb2222" && a.title(names: none) == LogosWire.short("0xaaaa1111bbbb2222"),
+      "with no peer field, a direct conversation is titled by its first sender")
+check(a.previewLine(names: none) == "ok", "a direct preview carries no author for the other person")
+check(dms[0].enriched(with: Array(thread.prefix(2))).previewLine(names: none) == "You: hey", "your own line says You")
+let g = dms[2].enriched(with: thread)
+check(g.peer == nil && g.senders == ["0xaaaa1111bbbb2222", "0xcccc3333dddd4444"], "a group keeps its senders, never a peer")
+check(g.previewLine(names: { $0 == "0xcccc3333dddd4444" ? "Mira" : nil }) == "Mira: later", "a group preview says who")
+check(g.people(names: { $0 == "0xaaaa1111bbbb2222" ? "Ana" : nil }) == "You, Ana and 1 other", "a group's people")
+let lines = W.lines(thread, group: true, names: none)
+let authors = lines.filter { if case .author = $0 { return true }; return false }.count
+let times = lines.filter { if case .time = $0 { return true }; return false }.count
+check(times == 2, "a time opens the thread and every gap over 15 minutes")
+check(authors == 4, "an author opens each run of another person's messages, and again after a time")
+check(W.lines(thread, group: false, names: none).allSatisfy { if case .author = $0 { return false }; return true },
+      "a direct conversation draws no author lines")
+check(thread[1].delivery == .pending && W.delivery("delivered") == .sent && W.delivery("failed") == .failed
+      && W.delivery(nil) == nil && W.delivery("bogus") == nil,
+      "delivery is read only from the words it knows; anything else claims nothing")
 
 print("Several Observers, routed by scope (prd §1155a)")
 struct P { let id: String; let granted: [String] }

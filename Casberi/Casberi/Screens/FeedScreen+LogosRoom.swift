@@ -100,16 +100,18 @@ extension FeedScreen {
     @ViewBuilder
     var logosChatSection: some View {
         let observer = LogosObserver.shared
+        let names = LogosChatNames.shared
         Section {
             if case .ready(let convos) = observer.chat {
                 ForEach(convos) { convo in
                     Button {
-                        feedSheet = .logosChat(id: convo.id, title: convo.title)
+                        feedSheet = .logosChat(id: convo.id, title: convo.title(names: names.name))
                     } label: {
                         DSPushRowLabel(
-                            title: Text(convo.title),
-                            subtitle: (convo.preview ?? (convo.historyOnly ? String(localized: "From an earlier session") : nil)).map { Text($0) },
-                            fact: convo.lastActivity.map { Text(Self.chatAge($0)) }) {
+                            title: Text(convo.title(names: names.name)),
+                            subtitle: (convo.previewLine(names: names.name) ?? (convo.historyOnly ? String(localized: "From an earlier session") : nil)).map { Text($0) },
+                            fact: convo.lastActivity.map { Text(Self.chatAge($0)) },
+                            factFits: true) {
                             DSGlyphLead(glyph: convo.direct ? "person" : "person.2", size: DS.Face.list)
                         }
                     }

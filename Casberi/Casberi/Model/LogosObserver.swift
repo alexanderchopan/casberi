@@ -223,7 +223,10 @@ final class LogosObserver {
     func readChat() async {
         // The demo shows what a paired Chat looks like (prd §1155): sample
         // conversations, nothing read and nothing sent.
-        if DemoMode.isActive { chat = .ready(DemoChat.conversations()); return }
+        if DemoMode.isActive {
+            chat = .ready(DemoChat.conversations().map { $0.enriched(with: DemoChat.messages(in: $0.id)) })
+            return
+        }
         guard let paired = chatPairing else { chat = pairings.isEmpty ? .notPaired : .notGranted; return }
         guard let key = Self.readKey(account: paired.deviceID) else { chat = .notPaired; return }
         if case .ready = chat {} else { chat = .loading }
@@ -231,7 +234,9 @@ final class LogosObserver {
         case .answered(200, let json):
             switch LogosObserverWire.chatAvailability(json) {
             case .available?:
-                chat = LogosObserverWire.conversations(json).map(ChatState.ready) ?? .notStarted
+                guard let convos = LogosObserverWire.conversations(json) else { chat = .notStarted; return }
+                chat = .ready(enrichedKeepingKnown(convos))
+                await enrich(convos, paired: paired, key: key)
             // The Observer answered, so it is reachable: a `null` body is its
             // bridge to Basecamp failing (Basecamp closed, the bridge not
             // started), which the person fixes the same way as an unstarted
@@ -248,6 +253,41 @@ final class LogosObserver {
             chat = code == 403 ? .notGranted : .unreachable
         case .failed, .pinMismatch:
             chat = .unreachable
+        }
+    }
+
+    /// **Who wrote, read once per conversation (prd §1213).** The list names
+    /// no person, so the newest conversations' messages are read for their
+    /// sender and their newest line — at most `enrichCap`, newest first, and
+    /// kept in memory with everything else here.
+    private static let enrichCap = 12
+    private var enrichedByID: [String: LogosObserverWire.Conversation] = [:]
+
+    /// The list as read, with what an earlier read learned about each
+    /// conversation still on it while this read fetches again.
+    private func enrichedKeepingKnown(_ convos: [LogosObserverWire.Conversation]) -> [LogosObserverWire.Conversation] {
+        convos.map { convo in
+            guard let known = enrichedByID[convo.id] else { return convo }
+            var out = convo
+            out.peer = convo.peer ?? known.peer
+            out.senders = known.senders
+            // A newer list line beats an older message.
+            if let last = known.last, (convo.lastActivity ?? .distantPast) <= last.date.addingTimeInterval(1) {
+                out.last = last
+            }
+            return out
+        }
+    }
+
+    private func enrich(_ convos: [LogosObserverWire.Conversation], paired: Paired, key: Data) async {
+        for convo in convos.prefix(Self.enrichCap) {
+            guard case .answered(200, let json) = await signed(
+                "GET", LogosObserverWire.messagesTarget(convo: convo.id), paired: paired, key: key),
+                  let messages = LogosObserverWire.messages(json) else { continue }
+            enrichedByID[convo.id] = convo.enriched(with: messages)
+            // The pairing may have gone, or a newer read replaced the list.
+            guard case .ready(let current) = chat else { return }
+            chat = .ready(current.map { $0.id == convo.id ? convo.enriched(with: messages) : $0 })
         }
     }
 
@@ -280,6 +320,7 @@ final class LogosObserver {
     private func drop(_ paired: Paired) {
         pairings.removeAll { $0.deviceID == paired.deviceID }
         Self.deleteKey(account: paired.deviceID)
+        if chatPairing == nil { enrichedByID = [:] }
         if chatPairing == nil { chat = pairings.isEmpty ? .notPaired : .notGranted }
     }
 
@@ -398,15 +439,26 @@ enum DemoChat {
         Int64((Date().timeIntervalSince1970 - minutes * 60) * 1000)
     }
 
+    /// The names the demo person gave (`LogosChatNames`), so the demo shows
+    /// a named person beside one still known only by address.
+    static let names: [String: String] = ["0x7c41e2b0d93a5f18": "Ana Kovač",
+                                          "0x19ad04c7e6b2f350": "Mira"]
+
     static func conversations() -> [LogosObserverWire.Conversation] {
-        [.init(id: "demo-ana", direct: true, name: nil, nickname: "Ana Kovač",
+        // Named as Basecamp names them ("Direct message"), so the demo shows
+        // the person, not the kind (prd §1213).
+        [.init(id: "demo-ana", direct: true, name: "Direct message", nickname: nil,
                preview: "Node's synced. Pairing the phone now",
                lastActivity: Date(timeIntervalSince1970: TimeInterval(ago(4)) / 1000),
-               messageCount: 4, historyOnly: false),
+               messageCount: 5, historyOnly: false),
+         .init(id: "demo-tom", direct: true, name: "Direct message", nickname: nil,
+               preview: "Did the reset take your accounts too?",
+               lastActivity: Date(timeIntervalSince1970: TimeInterval(ago(38)) / 1000),
+               messageCount: 1, historyOnly: false),
          .init(id: "demo-ops", direct: false, name: "Node operators", nickname: nil,
                preview: "Reset lands with 0.4, back up your keys",
                lastActivity: Date(timeIntervalSince1970: TimeInterval(ago(95)) / 1000),
-               messageCount: 3, historyOnly: false),
+               messageCount: 4, historyOnly: false),
          .init(id: "demo-quill", direct: false, name: "Quillmark beta", nickname: nil,
                preview: "1.4 is in review",
                lastActivity: Date(timeIntervalSince1970: TimeInterval(ago(60 * 26)) / 1000),
@@ -419,10 +471,14 @@ enum DemoChat {
             return [.init(fromSelf: false, sender: "0x7c41e2b0d93a5f18", content: "Did your node finish syncing?", timestampMs: ago(31)),
                     .init(fromSelf: true, sender: nil, content: "Just about. 461 peers, mining since this morning", timestampMs: ago(27)),
                     .init(fromSelf: false, sender: "0x7c41e2b0d93a5f18", content: "Nice. Three tickets ready on mine", timestampMs: ago(12)),
+                    .init(fromSelf: false, sender: "0x7c41e2b0d93a5f18", content: "Want to try a send once the testnet's back?", timestampMs: ago(11)),
                     .init(fromSelf: true, sender: nil, content: "Node's synced. Pairing the phone now", timestampMs: ago(4))]
+        case "demo-tom":
+            return [.init(fromSelf: false, sender: "0xa3d9f07b2c615e84", content: "Did the reset take your accounts too?", timestampMs: ago(38))]
         case "demo-ops":
             return [.init(fromSelf: false, sender: "0x19ad04c7e6b2f350", content: "Heads up: testnet resets with 0.4", timestampMs: ago(140)),
                     .init(fromSelf: false, sender: "0xe08b33f1a4c79d26", content: "Same genesis accounts?", timestampMs: ago(120)),
+                    .init(fromSelf: true, sender: nil, content: "Mine started empty last time", timestampMs: ago(118)),
                     .init(fromSelf: false, sender: "0x19ad04c7e6b2f350", content: "Reset lands with 0.4, back up your keys", timestampMs: ago(95))]
         case "demo-quill":
             return [.init(fromSelf: true, sender: nil, content: "Build's up for testers", timestampMs: ago(60 * 28)),
@@ -430,5 +486,36 @@ enum DemoChat {
         default:
             return []
         }
+    }
+}
+
+
+/// **The names you give the people you chat with on Logos (prd §1213).**
+/// chat_module names nobody, so a person is their chat address until you
+/// name them. Kept on this phone only — a name, never a message — and
+/// keyed by the address, which chat_module 0.3.0 renews at every Basecamp
+/// launch, so a name holds until they restart Basecamp. A name in Addresses
+/// for the same address also counts.
+@MainActor @Observable
+final class LogosChatNames {
+    static let shared = LogosChatNames()
+    private static let key = "logos.chatNames.v1"
+    private(set) var names: [String: String]
+
+    private init() {
+        names = UserDefaults.standard.data(forKey: Self.key)
+            .flatMap { try? JSONDecoder().decode([String: String].self, from: $0) } ?? [:]
+    }
+
+    func name(_ address: String) -> String? {
+        if DemoMode.isActive, let demo = DemoChat.names[address] { return demo }
+        return names[address] ?? AddressBook.shared.name(for: address)
+    }
+
+    /// An empty name forgets the one given.
+    func set(_ name: String, for address: String) {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        names[address] = trimmed.isEmpty ? nil : trimmed
+        if let data = try? JSONEncoder().encode(names) { DefaultsWrite.set(data, forKey: Self.key) }
     }
 }

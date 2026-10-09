@@ -30,6 +30,9 @@ struct DSPushRowLabel<Leading: View>: View {
     /// `false` draws no chevron: the row is a fact, not a door (honesty rule —
     /// a chevron promises more behind the tap).
     var opens = true
+    /// A short fact that must never truncate ("4m" beside a long preview):
+    /// it takes its width before the words do.
+    var factFits = false
     @ViewBuilder let leading: () -> Leading
 
     var body: some View {
@@ -50,6 +53,7 @@ struct DSPushRowLabel<Leading: View>: View {
             .layoutPriority(1)
             Spacer(minLength: DS.Space.s2)
             DSPushRowTrail(fact: fact, factTone: factTone, busy: busy, opens: opens)
+                .fixedSize(horizontal: factFits, vertical: false)
         }
         .contentShape(Rectangle())
     }
