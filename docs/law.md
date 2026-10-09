@@ -222,7 +222,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1351 of 1417 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1352 of 1418 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1568,8 +1568,9 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1208e — A glance tile gives its words the room when it has no picture, and never draws a name as a mark; the face is felt
 - §1208f — "Dock order" is "Feed order"
 - §1208g — The Feed comes first: the title reads "Feed Wallet"
-- §1208h — The newest category leads the glance, the whole width
+- §1208h — The newest category leads the glance, the whole width (amended by §1208j)
 - §1208i — A glance tile's picture is pinned to its band
+- §1208j — Only the box holds the newest; every glance tile is a square
 - §1209 — Generative search, v1: words become a page, with no model
 - §1209a — The band is face · bar · ✎ on every page; a thing's sheet opens its names' pages; no pins
 - §1210 — Three widgets, each a small tile: Notes, Wallet, Feed

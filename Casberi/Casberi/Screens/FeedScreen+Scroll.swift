@@ -291,38 +291,34 @@ extension FeedScreen {
             }
             return things.isEmpty ? nil : (label, things)
         }
-        // THE NEWEST LEADS (prd §1208h, user: "I think it should be the
-        // newest thing"): the category the Feed's box came from stands wide
-        // first, with its next thing after the box's, so nothing shows twice.
+        // ONLY THE BOX HOLDS THE NEWEST, AND EVERY TILE IS A SQUARE (prd
+        // §1208j, user: "it should be in a square", "only the one on top
+        // should be in the card"): the box's category leads the grid with
+        // its next thing, so nothing shows twice; a category whose one thing
+        // is the box's draws no tile.
         let ledeID = lede.flatMap { $0.isLive ? $0.id : nil }
         let leadCategory = lede.flatMap { $0.isLive ? Self.scrollCategory(of: $0) : nil }
-        let leadRest = lists.first { $0.0 == leadCategory }?.1.filter { $0.id != ledeID } ?? []
-        let wide = leadRest.isEmpty ? nil : leadCategory
-        let small = lists.filter { $0.0 != wide }
-        if !lists.isEmpty {
+        // The same news twice (an alarm that fired again) is the box's too.
+        let ledeTitle = lede.flatMap { $0.isLive ? TitleSeam.split($0.title).0 : nil }
+        let tiles: [(String, Int, [Thing])] = lists.compactMap { label, things in
+            guard label == leadCategory else { return (label, things.count, things) }
+            let rest = things.filter { $0.id != ledeID && TitleSeam.split($0.title).0 != ledeTitle }
+            return rest.isEmpty ? nil : (label, things.count, rest)
+        }
+        let ordered = tiles.filter { $0.0 == leadCategory } + tiles.filter { $0.0 != leadCategory }
+        if !ordered.isEmpty {
             Section {
-                VStack(spacing: DS.Space.s2) {
-                    if let wide, let first = leadRest.first {
-                        GlanceTile(category: wide, count: leadRest.count + 1, newest: first,
-                                   pictured: leadRest.first { StoredPixels.probe($0) != nil },
-                                   wide: true,
-                                   then: leadRest.dropFirst().first.map { $0.isLive ? $0.title : "" }) {
+                LazyVGrid(columns: [GridItem(.flexible(), spacing: DS.Space.s2),
+                                    GridItem(.flexible(), spacing: DS.Space.s2)],
+                          spacing: DS.Space.s2) {
+                    ForEach(ordered, id: \.0) { label, count, things in
+                        // The picture is the newest one that has a picture
+                        // today (user: "people like seeing the newest
+                        // image"); the line stays newest.
+                        GlanceTile(category: label, count: count, newest: things[0],
+                                   pictured: things.first { StoredPixels.probe($0) != nil }) {
                             DSHaptic.selection()
-                            chrome.sourceRequest = wide
-                        }
-                    }
-                    LazyVGrid(columns: [GridItem(.flexible(), spacing: DS.Space.s2),
-                                        GridItem(.flexible(), spacing: DS.Space.s2)],
-                              spacing: DS.Space.s2) {
-                        ForEach(small, id: \.0) { label, things in
-                            // The picture is the newest one that has a picture
-                            // today (user: "people like seeing the newest
-                            // image"); the line stays newest.
-                            GlanceTile(category: label, count: things.count, newest: things[0],
-                                       pictured: things.first { StoredPixels.probe($0) != nil }) {
-                                DSHaptic.selection()
-                                chrome.sourceRequest = label
-                            }
+                            chrome.sourceRequest = label
                         }
                     }
                 }
@@ -345,17 +341,11 @@ struct GlanceTile: View {
     let newest: Thing
     /// Today's newest thing in the category with a picture, if any.
     var pictured: Thing? = nil
-    /// The lead tile, the whole width (prd §1208h): three lines, and the
-    /// thing after it in a fourth.
-    var wide: Bool = false
-    var then: String? = nil
     let action: () -> Void
 
     static let artHeight: CGFloat = 72
     /// Every tile one height, so the grid's rows line up whatever the words.
     static let height: CGFloat = 168
-    /// The lead tile with no picture: the words and the line after them.
-    static let wideHeight: CGFloat = 128
 
     var body: some View {
         let picture = pictured.flatMap { $0.isLive ? $0 : nil }.flatMap { shot in
@@ -394,23 +384,16 @@ struct GlanceTile: View {
                         .dsText(.body17)
                         .fontWeight(.medium)
                         .foregroundStyle(DS.textPrimary)
-                        .lineLimit(wide ? (picture == nil ? 3 : 2) : (picture == nil ? 4 : 2))
+                        .lineLimit(picture == nil ? 4 : 2)
                         .multilineTextAlignment(.leading)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                    if wide, let then, !then.isEmpty {
-                        Text(verbatim: then)
-                            .dsText(.subhead12)
-                            .foregroundStyle(DS.textSecondary)
-                            .lineLimit(1)
-                    }
                 }
                 .padding(.horizontal, DS.Space.s3)
                 .padding(.vertical, DS.Space.s3)
                 Spacer(minLength: 0)
             }
             .frame(maxWidth: .infinity,
-                   minHeight: wide && picture == nil ? Self.wideHeight : Self.height,
-                   maxHeight: wide && picture == nil ? Self.wideHeight : Self.height,
+                   minHeight: Self.height, maxHeight: Self.height,
                    alignment: .topLeading)
             .background(DS.fillFaint, in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
             .clipShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))

@@ -65542,3 +65542,8 @@ The tray's search, eight changes, all on the phone and none through a model:
 The floating "Feed · Social" pill (`feedSectionPill`) is a button now: a press scrolls the Feed back to its title (`returnToRoomTop`, the same move a scope change makes), with a tap haptic and `PressSpring`, and the pill leaves as the first section's name passes back under the line. It took no touch before (`allowsHitTesting(false)`); the row under it gives up the pill's width while it stands.
 
 UNVERIFIED on a device: written on a machine with no Xcode, so neither build nor press was seen before commit.
+
+## §1208j — Only the box holds the newest; every glance tile is a square (user, 2026-10-09, of the wide Social tile under the buttons: "what is the logic here … the top card below the buttons is also in a row not a square. it should be in a square", then "only the one on top should be in the card"; amends §1208h)
+
+1. The wide lead tile is deleted from view and model (`GlanceTile.wide`, `then`, `wideHeight`): every category is a square, two across.
+2. The box's category still leads the grid, drawing its next thing; a thing titled as the box's (an alarm that fired again) counts as the box's, and a category whose only thing is the box's draws no tile. Its count stays the category's whole count.
