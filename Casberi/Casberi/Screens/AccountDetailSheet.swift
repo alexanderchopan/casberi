@@ -854,6 +854,7 @@ struct AccountDetailSheet: View {
         for thing in things { modelContext.delete(thing) }
         modelContext.saveHonestly()
         SpotlightIndex.removeAll()
+        TraySearchHistory.clear()
         // The store doesn't own the sidecars — clear them by hand so
         // "everything" is literally true: voice audio, the background photo,
         // the avatar, and the name you're greeted by. Setting the stores'

@@ -163,6 +163,25 @@ struct NewNoteIntent: AppIntent {
     }
 }
 
+/// Everything with… from Shortcuts and Siri (prd §1211 item 8): the words
+/// become the page search would make — a person, an app, a span or the words
+/// — composed in the app. A flag, like the Quick Note's, because a cold
+/// launch has no live router yet.
+struct EverythingIntent: AppIntent {
+    static let title: LocalizedStringResource = "Everything with…"
+    static let description = IntentDescription("Opens a page in Casberi of everything with a person, from an app, or from a time.")
+    static let openAppWhenRun = true
+
+    @Parameter(title: "Words", requestValueDialog: "Everything with what?")
+    var words: String
+
+    func perform() async throws -> some IntentResult {
+        UserDefaults(suiteName: SharedStore.appGroup)?
+            .set(words, forKey: "everything.request")
+        return .result()
+    }
+}
+
 struct CasberiShortcuts: AppShortcutsProvider {
     static var appShortcuts: [AppShortcut] {
         AppShortcut(
@@ -195,6 +214,15 @@ struct CasberiShortcuts: AppShortcutsProvider {
             ],
             shortTitle: "New note",
             systemImageName: "square.and.pencil"
+        )
+        AppShortcut(
+            intent: EverythingIntent(),
+            phrases: [
+                "Everything with someone in \(.applicationName)",
+                "Search \(.applicationName)",
+            ],
+            shortTitle: "Everything with…",
+            systemImageName: "text.magnifyingglass"
         )
     }
 }

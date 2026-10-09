@@ -582,6 +582,13 @@ struct RootShell: View {
                 await SpotlightIndex.reindexAll(context: modelContext)
                 await SyncReconcile.dedupeBySourceRef(context: modelContext)
                 #endif
+                // The pages search makes, in Spotlight (prd §1211 item 8),
+                // once a day: the people you deal with and the apps you have.
+                if !SpotlightIndex.pagesFresh {
+                    let people = ContactIndexSources.rebuild(context: modelContext)
+                    SpotlightIndex.indexPages(people: people,
+                                              apps: bridges.bridges.filter { $0.status != .paused }.map(\.name))
+                }
 
                 // One-time migrations run once per install (bump the version
                 // when adding one) — steady-state launches skip the scans.
@@ -1743,8 +1750,14 @@ struct RootShell: View {
         }
         // A Spotlight result opens the thing itself, not the app's front door.
         .onContinueUserActivity(CSSearchableItemActionType) { activity in
-            guard let idString = activity.userInfo?[CSSearchableItemActivityIdentifier] as? String,
-                  let id = UUID(uuidString: idString) else { return }
+            guard let idString = activity.userInfo?[CSSearchableItemActivityIdentifier] as? String else { return }
+            // A page ("Everything with Rui", prd §1211 item 8) opens the page.
+            if idString.hasPrefix(SpotlightIndex.pagePrefix) {
+                if ContactIndexSources.contacts.isEmpty { _ = ContactIndexSources.rebuild(context: modelContext) }
+                if let q = SpotlightIndex.page(for: idString) { openPage(q) }
+                return
+            }
+            guard let id = UUID(uuidString: idString) else { return }
             let all = (try? modelContext.fetch(FetchDescriptor<Thing>(
                 predicate: #Predicate { $0.id == id }
             ))) ?? []
@@ -2106,6 +2119,15 @@ struct RootShell: View {
         if group?.bool(forKey: "note.request") == true {
             group?.removeObject(forKey: "note.request")
             chrome.newNote += 1
+        }
+        // Everything with… from Shortcuts (prd §1211 item 8): the words'
+        // page, through the same door as its link.
+        if let words = group?.string(forKey: "everything.request") {
+            group?.removeObject(forKey: "everything.request")
+            var c = URLComponents()
+            c.scheme = "casberi"; c.host = "everything"
+            c.queryItems = [URLQueryItem(name: "q", value: words)]
+            if let url = c.url { route(url) }
         }
         // A notification was tapped (prd §306). The tap left the link rather
         // than opening it, because a notification can COLD-LAUNCH the app and
@@ -2630,6 +2652,21 @@ struct RootShell: View {
     /// ("Open in Casberi") — `.onOpenURL` fires for both, and the app only
     /// registers one document type (`.opml`, Info.plist), so a file URL here
     /// is always that.
+    /// Raise a page made from words over wherever the shell stands; over a
+    /// sheet still closing, a second one is refused, so it waits.
+    private func openPage(_ q: PivotQuery) {
+        if sceneState.route.sheet != nil || deepLinkThing != nil {
+            sceneState.route.path = []
+            deepLinkThing = nil
+            Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(450))
+                chrome.pivot = q
+            }
+        } else {
+            chrome.pivot = q
+        }
+    }
+
     private func route(_ url: URL) {
         // A Logos Observer's pairing QR, scanned by the system camera
         // (2026-10-03): land on the Logos page, which raises the consent tray.
@@ -2705,6 +2742,17 @@ struct RootShell: View {
         // link: the New tile's own raise, wherever the shell stands.
         case "note":
             chrome.newNote += 1
+        // casberi://everything?q=<words> — the page the words make (prd
+        // §1211 item 8), the door Shortcuts' Everything with… opens.
+        case "everything":
+            let words = URLComponents(url: url, resolvingAgainstBaseURL: false)?
+                .queryItems?.first { $0.name == "q" }?.value ?? ""
+            guard !words.trimmingCharacters(in: .whitespaces).isEmpty else { return }
+            if ContactIndexSources.contacts.isEmpty { _ = ContactIndexSources.rebuild(context: modelContext) }
+            let apps = bridges.bridges.filter { $0.status != .paused }.map(\.name)
+            let q = PivotCompose.resolve(words, apps: apps, categories: CategoryOrder.current).first
+                ?? PivotQuery(subject: .words(words))
+            openPage(q)
         // casberi://brief — the agent, raised onto the brief (2026-07-25).
         // `casberi://brief` and `casberi://ask?q=` are GONE with the ask
         // (2026-10-01; dark since prd §697b). Nothing mints either any more,

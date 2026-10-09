@@ -27,6 +27,9 @@ struct PivotQuery: Identifiable, Hashable, Sendable {
     /// A stretch of time the page is narrowed to, and how it was said.
     var span: DateInterval? = nil
     var spanLabel: String? = nil
+    /// Words the page is narrowed to as well, when the subject came from a
+    /// search token and more was typed after it (prd §1211).
+    var narrow: String? = nil
 
     var id: String {
         let s: String = switch subject {
@@ -36,7 +39,7 @@ struct PivotQuery: Identifiable, Hashable, Sendable {
         case .words(let w): "words:" + w.lowercased()
         case .span: "span"
         }
-        return s + "|" + (spanLabel ?? "")
+        return s + "|" + (spanLabel ?? "") + (narrow.map { "|" + $0.lowercased() } ?? "")
     }
 
     /// The page's title: the subject, else the span.

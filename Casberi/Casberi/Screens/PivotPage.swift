@@ -80,12 +80,10 @@ struct PivotPage: View {
 
     @ViewBuilder
     private func box(_ rows: [Thing]) -> some View {
-        let now = Date.now
-        let next = rows.filter { ($0.dueAt ?? .distantPast) >= now }
-            .min { ($0.dueAt ?? now) < ($1.dueAt ?? now) }
+        let next = PivotCompose.next(in: rows)
         if let lead = next ?? rows.first {
             Button { opened = lead } label: {
-                FeedLedeCard(thing: lead, note: facts(rows, next: next))
+                FeedLedeCard(thing: lead, note: PivotCompose.facts(rows, next: next))
                     .contentShape(Rectangle())
             }
             .buttonStyle(RowPress())
@@ -99,27 +97,6 @@ struct PivotPage: View {
                 .dsRoomHeadBlock()
                 .dsRoomLeadListRow()
         }
-    }
-
-    /// The counted facts under the box (prd §1209 item 3): how many and from
-    /// how many apps, the newest, the next, and money moved — arithmetic, so
-    /// nothing in it can be wrong in a way a sentence could.
-    private func facts(_ rows: [Thing], next: Thing?) -> String {
-        var parts: [String] = []
-        let apps = Set(rows.map(\.source)).count
-        parts.append(apps > 1 ? String(localized: "\(rows.count) things from \(apps) apps")
-                              : String(localized: "\(rows.count) things"))
-        if let newest = rows.first {
-            parts.append(String(localized: "Newest \(PivotWords.relative(newest.capturedAt))"))
-        }
-        if let next, let due = next.dueAt {
-            parts.append(String(localized: "Next \(PivotWords.relative(due))"))
-        }
-        let moved = rows.compactMap(\.transferUSD).reduce(0) { $0 + abs($1) }
-        if moved >= 1 {
-            parts.append(BalancePrivacy.shared.value(WalletValue.money(moved)) + " " + String(localized: "moved"))
-        }
-        return parts.joined(separator: " · ")
     }
 
     // MARK: - Tiles
@@ -234,6 +211,33 @@ enum PivotCompose {
     static let window = 2_000
     static let cap = 400
 
+    /// The counted facts under the box (prd §1209 item 3): how many and from
+    /// how many apps, the newest, the next, and money moved — arithmetic, so
+    /// nothing in it can be wrong in a way a sentence could.
+    static func facts(_ rows: [Thing], next: Thing?) -> String {
+        var parts: [String] = []
+        let apps = Set(rows.map(\.source)).count
+        parts.append(apps > 1 ? String(localized: "\(rows.count) things from \(apps) apps")
+                              : String(localized: "\(rows.count) things"))
+        if let newest = rows.first {
+            parts.append(String(localized: "Newest \(PivotWords.relative(newest.capturedAt))"))
+        }
+        if let next, let due = next.dueAt {
+            parts.append(String(localized: "Next \(PivotWords.relative(due))"))
+        }
+        let moved = rows.compactMap(\.transferUSD).reduce(0) { $0 + abs($1) }
+        if moved >= 1 {
+            parts.append(BalancePrivacy.shared.value(WalletValue.money(moved)) + " " + String(localized: "moved"))
+        }
+        return parts.joined(separator: " · ")
+    }
+
+    /// The next dated thing still ahead, which the box leads with.
+    static func next(in rows: [Thing], now: Date = .now) -> Thing? {
+        rows.filter { ($0.dueAt ?? .distantPast) >= now }
+            .min { ($0.dueAt ?? now) < ($1.dueAt ?? now) }
+    }
+
     static func things(for q: PivotQuery, context: ModelContext) -> [Thing] {
         var found: [UUID: Thing] = [:]
         func add(_ list: [Thing]) { for t in list where t.isLive { found[t.id] = t } }
@@ -307,8 +311,15 @@ enum PivotCompose {
             add((try? context.fetch(d)) ?? [])
             add(recent.filter { thing in thing.dueAt.map { span.contains($0) } ?? false })
         }
+        // Words typed after a token narrow the page to the things that say
+        // them, in the title or the body (prd §1211).
+        let narrow = q.narrow?.trimmingCharacters(in: .whitespaces) ?? ""
+        func says(_ t: Thing) -> Bool {
+            narrow.isEmpty || [t.title, t.postText ?? "", t.summary ?? "", t.authorHandle ?? ""]
+                .contains { $0.localizedStandardContains(narrow) }
+        }
         return found.values
-            .filter { $0.isLive && PivotWords.inSpan(q.span, captured: $0.capturedAt, due: $0.dueAt) }
+            .filter { $0.isLive && PivotWords.inSpan(q.span, captured: $0.capturedAt, due: $0.dueAt) && says($0) }
             .sorted { $0.capturedAt > $1.capturedAt }
             .prefix(cap)
             .map { $0 }

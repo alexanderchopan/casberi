@@ -65518,3 +65518,16 @@ UNVERIFIED on a device: written on a machine with no Xcode, so neither build nor
 
 ## §1208h — The newest category leads the glance, the whole width (user, 2026-10-09, on the canvas "Casberi — Today's tiles, the Apple way", board A: "in A the top thing is the newest thing?", then "I think it should be the newest thing"; amends §1208d item 1)
 The category the Feed's box came from stands first, the whole width (`GlanceTile(wide:)`), with its next thing after the box's — never the box's own, so nothing shows twice — and the thing after that as a line under it; a picture leads it when one of today's has one. The other categories stay two across in the dock's order. With no picture the wide tile is shorter (128pt) than the grid's (168pt). A category whose only thing today is the box's has no wide tile; the grid stands alone.
+
+## §1211 — Search finds what things SAY, teaches when empty, and reaches iOS (user, 2026-10-09, asked "is there anything we can or should do to improve our search ability? or just surprise and delight to its experience?", then of eight proposals: "do all"; builds on §1185 and §1209)
+
+The tray's search, eight changes, all on the phone and none through a model:
+
+1. **The words inside things.** A thing is found by its post text, the source's abstract, a page's or picture's read text and its own text when that is not a link — over the newest 400 things you keep (`RoomsTray.thingCorpus`, read when the field is focused) — and its line shows the words where they stand (`RoomsTray.snippet`), a few words either side.
+2. **What the words mean.** From four letters, Find's own engine (`Retriever.find`) ranks the same 400 by meaning too; at most three such rows, weakest-ranked (`.inside`).
+3. **A typo in a thing's word.** When nothing matches, the closest word your newest things' titles use is searched instead, under "Showing “<word>”", before the names closest to the words.
+4. **Tokens.** As you type, the people, apps and times the words could be stand over the results as chips; one taken stands in the field (one person or app, one time), the words typed after it narrow its page (`PivotQuery.narrow`), and the results are that page's offer with its five newest things. A time said with a name becomes its own token.
+5. **An empty search teaches.** Focused and empty, the tray shows only Recent searches (five, this device, Clear, wiped by Delete everything) and Try: the person you dealt with last, your busiest app this week, Yesterday, Last week — each a token.
+6. **Bold.** The words you typed are bold where a row's name or line says them.
+7. **The top page counts itself.** The first "Everything" offer's line carries its counted facts (`PivotCompose.facts`, the page's own box line); Return opens it, and Find takes Return only when the words make no page. A page of words nothing says is not offered.
+8. **From iOS.** The 30 people you dealt with last and every app you have are Spotlight items ("Everything with Rui"), refreshed once a day; a tap opens the page. `casberi://everything?q=<words>` and the Shortcuts action Everything with… (`EverythingIntent`) open the page the words make.

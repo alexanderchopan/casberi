@@ -70,6 +70,11 @@ KNOWN_UNSWEPT = {
         "`-openRoom` reaches and the demo census composes, so a link shot "
         "would photograph a room the sweep already covers."
     ),
+    "everything": (
+        "composes the page the words make (prd §1211 item 8, Shortcuts' "
+        "Everything with… door), the same `PivotPage` the `-pivot` hook "
+        "raises; a link shot would photograph that page a second time."
+    ),
     "note": (
         "raises the note sheet (prd §982's Quick Note door), the same layer "
         "`-openNote YES` raises in the sweep; a link shot would photograph "

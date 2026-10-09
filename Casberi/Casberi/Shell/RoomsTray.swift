@@ -181,7 +181,10 @@ struct RoomsTray: View {
             // they are simply there.
             dealt = up
             if up && !reduceMotion { bounceTick += 1 }
-            if !up { query = ""; searching = false; noteCorpus = []; holdings = [] }
+            if !up {
+                query = ""; searching = false; noteCorpus = []; holdings = []
+                tokens = []; suggestions = []; thingCorpus = []; preview = [:]
+            }
         }
         .onChange(of: searching) { _, focused in
             if focused { Task { await readKinds() } }
@@ -189,6 +192,7 @@ struct RoomsTray: View {
         // The search runs once the typing pauses, never in a body (prd
         // §1185), and again when the kinds it reads have landed.
         .task(id: query) { await runSearch() }
+        .onChange(of: tokens) { _, _ in Task { await runSearch(pause: false) } }
         .onChange(of: kindsRead) { _, _ in Task { await runSearch(pause: false) } }
     }
 
@@ -226,7 +230,11 @@ struct RoomsTray: View {
         return ScrollView {
             VStack(alignment: .leading, spacing: Self.cardGap) {
                 if railInset > 0 { card { searchField } }
-                if query.trimmingCharacters(in: .whitespaces).isEmpty {
+                // Focused and empty, the search teaches alone, as
+                // Spotlight's suggestions do (prd §1211 item 5).
+                if showsSearchHome {
+                    card { searchHome }
+                } else if query.trimmingCharacters(in: .whitespaces).isEmpty && tokens.isEmpty {
                     // NO YOU ROW AND NO NAME (prd §1207 item 5, user: "the
                     // tray can drop your name it's superfluous now and
                     // settings already has a place"): Recent alone leads
@@ -641,17 +649,36 @@ struct RoomsTray: View {
             Image(systemName: "magnifyingglass")
                 .dsGlyph(.body)
                 .foregroundStyle(DS.textSecondary)
-            TextField(String(localized: "Search"), text: $query)
+            // The tokens, before the words (prd §1211 item 4); a tap takes
+            // one out.
+            if !tokens.isEmpty {
+                HStack(spacing: DS.Space.s1) {
+                    ForEach(tokens) { token in
+                        Button {
+                            DSHaptic.selection()
+                            tokens.removeAll { $0.id == token.id }
+                        } label: {
+                            Chip(text: token.label, glyph: token.glyph, selected: true)
+                        }
+                        .buttonStyle(PressSpring())
+                        .accessibilityLabel(Text("Remove \(token.label)"))
+                    }
+                }
+                .fixedSize()
+                .layoutPriority(1)
+            }
+            TextField(tokens.isEmpty ? String(localized: "Search") : "", text: $query)
                 .dsText(.body17)
                 .foregroundStyle(DS.textPrimary)
                 .focused($searching)
                 .submitLabel(.search)
                 .autocorrectionDisabled()
                 .textInputAutocapitalization(.never)
-                .onSubmit { searchThings() }
-            if !query.isEmpty {
+                .onSubmit { submit() }
+            if !query.isEmpty || !tokens.isEmpty {
                 Button {
                     query = ""
+                    tokens = []
                 } label: {
                     Image(systemName: "xmark.circle.fill")
                         .dsGlyph(.body)
@@ -683,8 +710,21 @@ struct RoomsTray: View {
         var trailing: Trailing? = nil
         /// The company a Markets row stands for, so its quote is read.
         var company: CompanyPacks.Company? = nil
+        /// The page an "Everything" row opens, so its facts can be counted
+        /// under it and Return can open it (prd §1211 item 7).
+        var pivot: PivotQuery? = nil
         let mark: Mark
         let act: () -> Void
+    }
+
+    /// A search token (prd §1211 item 4): a person, an app or a time, set
+    /// from a suggestion, standing in the field before the words.
+    private struct SearchToken: Identifiable, Hashable {
+        let id: String
+        let label: String
+        let glyph: String
+        var subject: PivotQuery.Subject? = nil
+        var span: DateInterval? = nil
     }
 
     /// What a hit draws at its trailing edge.
@@ -726,6 +766,27 @@ struct RoomsTray: View {
     /// Bumped when the kinds have been read, so a search typed before they
     /// landed runs again with them.
     @State private var kindsRead = 0
+    /// The newest things you keep (not your notes, not watched coins), read
+    /// when the field is focused: the words inside them, what they mean and
+    /// the word a typo meant are searched here (prd §1211 items 1–3).
+    @State private var thingCorpus: [Thing] = []
+    /// The tokens standing in the field, and the ones the words suggest.
+    @State private var tokens: [SearchToken] = []
+    @State private var suggestions: [SearchToken] = []
+    /// What an empty search offers to try (item 5), read with the kinds.
+    @State private var tries: [SearchToken] = []
+    /// The searches you made, newest first (item 5), read with the kinds.
+    @State private var recentSearches: [String] = []
+    /// The top page's counted facts, by its id (item 7).
+    @State private var preview: [String: String] = [:]
+
+    /// How many of your newest things the words are read inside.
+    static let corpusSize = 400
+    /// How many rows the words inside things and their meaning add.
+    static let bodyCap = 6
+    static let meaningCap = 3
+    /// The newest things a token's page shows under its offer.
+    static let tokenRows = 5
 
     /// How long the typing pauses before the search runs.
     static let searchPause = 140
@@ -734,18 +795,42 @@ struct RoomsTray: View {
     /// cancels this one. Then read the quotes of the companies it shows.
     private func runSearch(pause: Bool = true) async {
         let words = query.trimmingCharacters(in: .whitespaces)
-        guard !words.isEmpty else {
+        guard !words.isEmpty || !tokens.isEmpty else {
             results = []
             resultsFor = ""
+            suggestions = []
             return
         }
         if pause {
             try? await Task.sleep(for: .milliseconds(Self.searchPause))
             guard !Task.isCancelled else { return }
         }
-        let found = pivotFound(words) + search(words)
+        #if DEBUG
+        let began = Date.now
+        #endif
+        let found = tokens.isEmpty ? pivotFound(words) + search(words) : tokenFound(words)
+        suggestions = tokenSuggestions(words)
         results = found
         resultsFor = words
+        // The top page's facts, counted (prd §1211 item 7) — read once the
+        // rows are drawn, so the count never holds them up.
+        if let q = found.first?.hits.first?.pivot, preview[q.id] == nil {
+            let rows = PivotCompose.things(for: q, context: context)
+            preview[q.id] = rows.isEmpty ? String(localized: "Nothing yet")
+                : PivotCompose.facts(rows, next: PivotCompose.next(in: rows))
+        }
+        // A page of words nothing says is not offered: it would lead with
+        // "Nothing yet" over what the words did find.
+        if tokens.isEmpty, let q = results.first?.hits.first?.pivot, case .words = q.subject,
+           preview[q.id] == String(localized: "Nothing yet") {
+            results = results.compactMap { group in
+                let hits = group.hits.filter { $0.pivot?.id != q.id }
+                return hits.isEmpty ? nil : Found(id: group.id, title: group.title, glyph: group.glyph, hits: hits)
+            }
+        }
+        #if DEBUG
+        NSLog("[Casberi] traySearchTime| %@ | %d ms", words, Int(Date.now.timeIntervalSince(began) * 1000))
+        #endif
         let companies = found.flatMap(\.hits).compactMap(\.company)
         if !companies.isEmpty { await CompanyQuotes.shared.load(companies) }
     }
@@ -943,17 +1028,89 @@ struct RoomsTray: View {
             d.fetchLimit = Self.thingFetch
             for thing in (try? context.fetch(d)) ?? []
                 where thing.isLive && thing.source != kept && thing.source != watched {
-                guard seen.insert(thing.id).inserted,
-                      let group = BridgeCatalog.category(forSource: thing.source) else { continue }
-                let id = thing.id
-                let line = BridgeCatalog.seatName(forSource: thing.source) + " · "
-                    + thing.capturedAt.formatted(.dateTime.month(.abbreviated).day())
-                out.append(Hit(id: "thing:" + id.uuidString, group: group, name: thing.title,
-                               tier: .thing, anyWord: true, line: line,
-                               mark: .icon(thing.source, symbol: nil)) { openThing(id) })
+                guard seen.insert(thing.id).inserted, let hit = thingHit(thing) else { continue }
+                out.append(hit)
             }
         }
         return out
+    }
+
+    /// One thing as a hit, under its category, opening its sheet or page;
+    /// the line says where it came from and when, unless it says where the
+    /// words are.
+    private func thingHit(_ thing: Thing, line: String? = nil, given: TraySearch.Match? = nil) -> Hit? {
+        guard thing.isLive, let group = BridgeCatalog.category(forSource: thing.source) else { return nil }
+        let id = thing.id
+        return Hit(id: "thing:" + id.uuidString, group: group, name: thing.title,
+                   tier: .thing, anyWord: true, given: given, line: line ?? Self.whence(thing),
+                   mark: .icon(thing.source, symbol: nil)) { openThing(id) }
+    }
+
+    private static func whence(_ thing: Thing) -> String {
+        BridgeCatalog.seatName(forSource: thing.source) + " · "
+            + thing.capturedAt.formatted(.dateTime.month(.abbreviated).day())
+    }
+
+    /// THE WORDS INSIDE THINGS (prd §1211 items 1–2): a post's text, a
+    /// card's back, a page's words, a screenshot's read text — the line
+    /// shows them where they stand — and past four letters what the words
+    /// MEAN, through Find's engine (`Retriever`), over your newest things.
+    private func bodyHits(_ words: String, excluding titled: Set<String>) -> [Hit] {
+        let q = TraySearch.normalized(words)
+        guard q.count >= 3 else { return [] }
+        let live = thingCorpus.live
+        var seen = titled
+        var out: [Hit] = []
+        for thing in live where out.count < Self.bodyCap {
+            guard let snippet = Self.snippet(of: q, in: thing),
+                  seen.insert("thing:" + thing.id.uuidString).inserted,
+                  let hit = thingHit(thing, line: snippet, given: .word) else { continue }
+            out.append(hit)
+        }
+        if q.count >= Self.wordsFloor {
+            var meant = 0
+            for thing in Retriever.find(q, in: live).hits where meant < Self.meaningCap {
+                guard seen.insert("thing:" + thing.id.uuidString).inserted,
+                      let hit = thingHit(thing, given: .inside) else { continue }
+                out.append(hit)
+                meant += 1
+            }
+        }
+        return out
+    }
+
+    /// The words where they stand in a thing's body, a few words either
+    /// side: its post, the source's abstract, the page or picture's read
+    /// text, or its own text when that is not a link.
+    static func snippet(of words: String, in thing: Thing) -> String? {
+        let fields = [thing.postText, thing.summary, thing.enrichedText,
+                      thing.content.hasPrefix("http") ? nil : thing.content]
+        for case let text? in fields where !text.isEmpty {
+            guard let r = text.range(of: words, options: [.caseInsensitive, .diacriticInsensitive]) else { continue }
+            let start = text.index(r.lowerBound, offsetBy: -28, limitedBy: text.startIndex) ?? text.startIndex
+            let end = text.index(r.upperBound, offsetBy: 60, limitedBy: text.endIndex) ?? text.endIndex
+            var out = text[start..<end].split(whereSeparator: \.isWhitespace).joined(separator: " ")
+            // Whole words at the cut edges.
+            if start > text.startIndex, let space = out.firstIndex(of: " ") { out = "…" + out[out.index(after: space)...] }
+            if end < text.endIndex, let space = out.lastIndex(of: " ") { out = out[..<space] + "…" }
+            return out
+        }
+        return nil
+    }
+
+    /// The word a typo meant (prd §1211 item 3): the closest one your
+    /// newest things' titles use, never the words themselves.
+    private func corrected(_ words: String) -> String? {
+        var vocab = Set<String>()
+        for thing in thingCorpus.live {
+            for word in thing.title.lowercased().split(whereSeparator: { !$0.isLetter }) where word.count >= 4 {
+                vocab.insert(String(word))
+            }
+        }
+        let list = Array(vocab).sorted()
+        guard let i = TraySearch.closest(words, among: list, limit: 1).first,
+              list[i] != TraySearch.normalized(words).lowercased() else { return nil }
+        return list[i]
     }
 
     /// The shortest words Find's engine searches your notes by.
@@ -992,31 +1149,152 @@ struct RoomsTray: View {
         let apps = bridges.bridges.filter { $0.status != .paused }.map(\.name)
         let offers = PivotCompose.resolve(words, apps: apps, categories: categories)
         guard !offers.isEmpty else { return [] }
-        let hits = offers.map { q -> Hit in
-            let mark: Mark = switch q.subject {
-            case .person: .glyph("person")
-            case .app(let name): .face(.app(name))
-            case .category(let name): .glyph(CategoryFold.glyph(for: name))
-            case .words, .span: .glyph("text.magnifyingglass")
-            }
-            return Hit(id: "pivot:" + q.id, group: Self.pivotGroup, name: q.offerTitle,
-                       line: q.subject == .span ? nil : q.spanLabel, mark: mark) {
-                DSHaptic.selection()
-                close()
-                // Over a sheet still closing, a second one is refused.
-                if route.sheet != nil || !route.path.isEmpty {
-                    route.path = []
-                    Task { @MainActor in
-                        try? await Task.sleep(for: .milliseconds(450))
-                        chrome.pivot = q
-                    }
-                } else {
-                    chrome.pivot = q
-                }
-            }
+        let hits = offers.map { q in
+            Hit(id: "pivot:" + q.id, group: Self.pivotGroup, name: q.offerTitle,
+                line: q.subject == .span ? nil : q.spanLabel, pivot: q, mark: pivotMark(q)) { openPivot(q) }
         }
         return [Found(id: Self.pivotGroup, title: String(localized: "Everything"),
                       glyph: "text.magnifyingglass", hits: hits)]
+    }
+
+    private func pivotMark(_ q: PivotQuery) -> Mark {
+        switch q.subject {
+        case .person: .glyph("person")
+        case .app(let name): .face(.app(name))
+        case .category(let name): .glyph(CategoryFold.glyph(for: name))
+        case .words, .span: .glyph("text.magnifyingglass")
+        }
+    }
+
+    private func openPivot(_ q: PivotQuery) {
+        DSHaptic.selection()
+        close()
+        // Over a sheet still closing, a second one is refused.
+        if route.sheet != nil || !route.path.isEmpty {
+            route.path = []
+            Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(450))
+                chrome.pivot = q
+            }
+        } else {
+            chrome.pivot = q
+        }
+    }
+
+    /// WITH TOKENS (prd §1211 item 4): one page — the person or app, the
+    /// time, the words typed after them — offered with its facts, and its
+    /// newest things under it.
+    private func tokenFound(_ words: String) -> [Found] {
+        let subject = tokens.lazy.compactMap(\.subject).first
+        let span = tokens.first { $0.span != nil }
+        guard subject != nil || span != nil else { return [] }
+        var q = PivotQuery(subject: subject ?? (words.isEmpty ? .span : .words(words)),
+                           span: span?.span, spanLabel: span?.label)
+        if subject != nil, !words.isEmpty { q.narrow = words }
+        let rows = PivotCompose.things(for: q, context: context)
+        preview[q.id] = rows.isEmpty ? String(localized: "Nothing yet")
+            : PivotCompose.facts(rows, next: PivotCompose.next(in: rows))
+        let line = [q.subject == .span ? nil : q.spanLabel, q.narrow.map { "“\($0)”" }]
+            .compactMap { $0 }.joined(separator: " · ")
+        var out = [Found(id: Self.pivotGroup, title: String(localized: "Everything"), glyph: "text.magnifyingglass",
+                         hits: [Hit(id: "pivot:" + q.id, group: Self.pivotGroup, name: q.offerTitle,
+                                    line: line.isEmpty ? nil : line, pivot: q, mark: pivotMark(q)) { openPivot(q) }])]
+        let newest = rows.prefix(Self.tokenRows).compactMap { thingHit($0) }
+        if !newest.isEmpty {
+            out.append(Found(id: "tokenThings", title: String(localized: "Newest"), glyph: nil, hits: newest))
+        }
+        return out
+    }
+
+    /// The tokens the words could be (prd §1211 item 4): people and apps
+    /// they name, and a time they say or begin to — one of each kind in the
+    /// field at most.
+    private func tokenSuggestions(_ words: String) -> [SearchToken] {
+        let folded = words.lowercased().trimmingCharacters(in: .whitespaces)
+        guard folded.count >= 2 else { return [] }
+        let hasSubject = tokens.contains { $0.subject != nil }
+        let hasSpan = tokens.contains { $0.span != nil }
+        let time = PivotWords.timeSpan(in: words)
+        let rest = (time?.rest ?? words).trimmingCharacters(in: .whitespaces)
+        var out: [SearchToken] = []
+        if !hasSubject, rest.count >= 2 {
+            let people = ContactIndexSources.contacts
+                .filter { !$0.isUnnamed && !ContactIndexSources.isYours($0) }
+                .compactMap { c -> (Contact, TraySearch.Match)? in
+                    guard let m = TraySearch.match(c.name, rest, anyWord: true), m <= .word else { return nil }
+                    return (c, m)
+                }
+                .sorted { $0.1 < $1.1 }
+            out += people.prefix(2).map { Self.personToken($0.0.id, $0.0.name) }
+            let apps = bridges.bridges.filter { $0.status != .paused }.map(\.name)
+                .filter { TraySearch.match($0, rest).map { $0 <= .prefix } ?? false }
+            out += apps.prefix(2).map(Self.appToken)
+        }
+        if !hasSpan {
+            if let time {
+                out.append(SearchToken(id: "span:" + time.label, label: time.label, glyph: "calendar", span: time.span))
+            } else if folded.count >= 3 {
+                out += Self.spanPhrases.filter { $0.hasPrefix(folded) }.compactMap(Self.spanToken)
+            }
+        }
+        return Array(out.prefix(4))
+    }
+
+    static let spanPhrases = ["today", "yesterday", "this week", "last week", "this month", "last month"]
+
+    private static func personToken(_ id: String, _ name: String) -> SearchToken {
+        SearchToken(id: "person:" + id, label: name, glyph: "person", subject: .person(id: id, name: name))
+    }
+
+    private static func appToken(_ app: String) -> SearchToken {
+        SearchToken(id: "app:" + app, label: app, glyph: "square.grid.2x2", subject: .app(app))
+    }
+
+    private static func spanToken(_ phrase: String) -> SearchToken? {
+        guard let found = PivotWords.timeSpan(in: phrase) else { return nil }
+        return SearchToken(id: "span:" + found.label, label: found.label, glyph: "calendar", span: found.span)
+    }
+
+    /// Take a token: the words it came from leave the field, and a time
+    /// said with a name becomes its own token.
+    private func take(_ token: SearchToken) {
+        DSHaptic.selection()
+        let time = PivotWords.timeSpan(in: query)
+        if token.span != nil {
+            query = time?.rest ?? ""
+        } else {
+            if let time, !tokens.contains(where: { $0.span != nil }) {
+                tokens.append(SearchToken(id: "span:" + time.label, label: time.label, glyph: "calendar", span: time.span))
+            }
+            query = ""
+        }
+        tokens.removeAll { $0.id == token.id }
+        // The person or app first, then the time, as the offer reads.
+        if token.subject != nil { tokens.insert(token, at: 0) } else { tokens.append(token) }
+        suggestions = []
+    }
+
+    /// What an empty search offers (prd §1211 item 5): the person you dealt
+    /// with last, your busiest app this week, and two times.
+    private func trySuggestions() -> [SearchToken] {
+        var out: [SearchToken] = []
+        let people = ContactIndexSources.contacts
+            .filter { $0.kind == .person && !$0.isUnnamed && !ContactIndexSources.isYours($0) && $0.lastActedAt != nil }
+        if let c = people.max(by: { ($0.lastActedAt ?? .distantPast) < ($1.lastActedAt ?? .distantPast) }) {
+            out.append(Self.personToken(c.id, c.name))
+        }
+        let week = Date.now.addingTimeInterval(-7 * 86_400)
+        let connected = Set(bridges.bridges.filter { $0.status != .paused }.map(\.name))
+        var counts: [String: Int] = [:]
+        for thing in thingCorpus.live where thing.capturedAt >= week {
+            let app = BridgeCatalog.seatName(forSource: thing.source)
+            if connected.contains(app) { counts[app, default: 0] += 1 }
+        }
+        if let app = counts.max(by: { ($0.value, $1.key) < ($1.value, $0.key) })?.key {
+            out.append(Self.appToken(app))
+        }
+        out += ["yesterday", "last week"].compactMap(Self.spanToken)
+        return out
     }
 
     static let pivotGroup = "pivot"
@@ -1064,6 +1342,18 @@ struct RoomsTray: View {
         MailSubscriptionsReading.shared.refresh(context)
         for room in Following.Room.allCases { FollowingReading.shared.refresh(room, context: context) }
         await SubscriptionsReading.shared.refresh(context)
+        let kept = NoteSheetSource.keptSource, watched = TokenWatch.source
+        var recent = FetchDescriptor<Thing>(predicate: #Predicate<Thing> { $0.source != kept && $0.source != watched },
+                                            sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
+        recent.fetchLimit = Self.corpusSize
+        thingCorpus = ((try? context.fetch(recent)) ?? []).filter(\.isLive)
+        tries = trySuggestions()
+        recentSearches = TraySearchHistory.load()
+        // The pages search makes, in Spotlight too (item 8), once a day.
+        if !SpotlightIndex.pagesFresh {
+            SpotlightIndex.indexPages(people: ContactIndexSources.contacts,
+                                      apps: bridges.bridges.filter { $0.status != .paused }.map(\.name))
+        }
         kindsRead += 1
     }
 
@@ -1074,8 +1364,9 @@ struct RoomsTray: View {
     /// then You, Markets and the dock's order. When nothing matches, the
     /// names closest to the words, under "Closest to".
     private func search(_ words: String) -> [Found] {
+        let titled = thingHits(words)
         let hits = nameHits + kindHits + noteHits(words) + companyHits(words)
-            + holdingHits + thingHits(words) + addressHits(words)
+            + holdingHits + titled + bodyHits(words, excluding: Set(titled.map(\.id))) + addressHits(words)
         let candidates = hits.enumerated().map { i, hit in
             TraySearch.Candidate(index: i, group: hit.group, name: hit.name, aliases: hit.aliases,
                                  tier: hit.tier, anyWord: hit.anyWord, given: hit.given)
@@ -1091,9 +1382,21 @@ struct RoomsTray: View {
         }
         let pool = nameHits.filter { !$0.id.hasPrefix("cat:") } + addHits + companyPool
         let near = TraySearch.closest(words, among: pool.map(\.name))
-        guard !near.isEmpty else { return [] }
-        return [Found(id: "closest", title: String(localized: "Closest to “\(words)”"), glyph: nil,
-                      hits: near.map { pool[$0] })]
+        var out: [Found] = []
+        // A typo in a thing's word: what the word it meant finds (item 3).
+        if let fixed = corrected(words) {
+            let titledFixed = thingHits(fixed)
+            let found = titledFixed + bodyHits(fixed, excluding: Set(titledFixed.map(\.id)))
+            if !found.isEmpty {
+                out.append(Found(id: "fixed", title: String(localized: "Showing “\(fixed)”"), glyph: nil,
+                                 hits: Array(found.prefix(4))))
+            }
+        }
+        if !near.isEmpty {
+            out.append(Found(id: "closest", title: String(localized: "Closest to “\(words)”"), glyph: nil,
+                             hits: near.map { pool[$0] }))
+        }
+        return out
     }
 
     /// An app found through its maker says so ("meta" finds Instagram,
@@ -1111,6 +1414,11 @@ struct RoomsTray: View {
     private var searchResults: some View {
         let words = query.trimmingCharacters(in: .whitespaces)
         VStack(alignment: .leading, spacing: 0) {
+            // What the words could be, as tokens (prd §1211 item 4).
+            if !suggestions.isEmpty {
+                tokenStrip(suggestions)
+                    .padding(.top, DS.Space.s2)
+            }
             ForEach(results) { group in
                 HStack(spacing: DS.Space.s1) {
                     if let glyph = group.glyph {
@@ -1145,6 +1453,7 @@ struct RoomsTray: View {
                 }
             }
             // Your things, through Find: the one search over everything kept.
+            if !words.isEmpty {
             Button(action: searchThings) {
                 HStack(spacing: DS.Space.s3) {
                     roundIcon("magnifyingglass", ink: DS.textPrimary, fill: DS.surfaceRaised, bounces: false)
@@ -1158,11 +1467,107 @@ struct RoomsTray: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(RowPress())
+            }
         }
     }
 
+    /// Tokens to take, in a line that scrolls sideways.
+    private func tokenStrip(_ offered: [SearchToken]) -> some View {
+        ScrollView(.horizontal) {
+            HStack(spacing: DS.Space.s2) {
+                ForEach(offered) { token in
+                    Button { take(token) } label: {
+                        Chip(text: token.label, glyph: token.glyph)
+                    }
+                    .buttonStyle(PressSpring())
+                }
+            }
+        }
+        .scrollIndicators(.hidden)
+    }
+
+    /// AN EMPTY SEARCH TEACHES (prd §1211 item 5): what you searched lately,
+    /// then what you could, each a token.
+    @ViewBuilder
+    private var searchHome: some View {
+        if !recentSearches.isEmpty {
+            HStack {
+                Text("Recent searches").dsText(.label12).foregroundStyle(DS.textSecondary)
+                Spacer(minLength: 0)
+                Button {
+                    DSHaptic.selection()
+                    recentSearches = []
+                    TraySearchHistory.clear()
+                } label: {
+                    Text("Clear").dsText(.label12).foregroundStyle(DS.tint)
+                }
+                .buttonStyle(RowPress())
+                .dsTapTarget()
+            }
+            .accessibilityAddTraits(.isHeader)
+            ForEach(recentSearches, id: \.self) { words in
+                hitRow(Hit(id: "recent:" + words, group: "", name: words,
+                           mark: .glyph("clock.arrow.circlepath")) {
+                    DSHaptic.selection()
+                    query = words
+                })
+            }
+        }
+        if !tries.isEmpty {
+            Text("Try").dsText(.label12).foregroundStyle(DS.textSecondary)
+                .padding(.top, recentSearches.isEmpty ? 0 : DS.Space.s3)
+                .padding(.bottom, DS.Space.s2)
+                .accessibilityAddTraits(.isHeader)
+            tokenStrip(tries)
+        }
+    }
+
+    private var showsSearchHome: Bool {
+        searching && query.trimmingCharacters(in: .whitespaces).isEmpty && tokens.isEmpty
+            && (!recentSearches.isEmpty || !tries.isEmpty)
+    }
+
+    /// Return opens the top page when the words make one (prd §1211 item
+    /// 7), else hands them to Find.
+    private func submit() {
+        if let top = results.first?.hits.first, top.pivot != nil {
+            rememberSearch()
+            top.act()
+        } else {
+            searchThings()
+        }
+    }
+
+    /// Keep the words searched, tokens first, for an empty search to offer.
+    private func rememberSearch() {
+        let words = (tokens.map(\.label) + [query.trimmingCharacters(in: .whitespaces)])
+            .filter { !$0.isEmpty }.joined(separator: " ")
+        guard !words.isEmpty else { return }
+        recentSearches = TraySearchHistory.add(words, to: recentSearches)
+    }
+
+    /// The words you typed, bold where a row says them (prd §1211 item 6).
+    static func marked(_ text: String, _ words: String) -> AttributedString {
+        var out = AttributedString(text)
+        for word in words.split(whereSeparator: \.isWhitespace) where word.count >= 2 {
+            var from = out.startIndex
+            while from < out.endIndex,
+                  let r = out[from...].range(of: String(word), options: [.caseInsensitive, .diacriticInsensitive]) {
+                out[r].inlinePresentationIntent = .stronglyEmphasized
+                from = r.upperBound
+            }
+        }
+        return out
+    }
+
     private func hitRow(_ hit: Hit) -> some View {
-        Button(action: hit.act) {
+        let words = query.trimmingCharacters(in: .whitespaces)
+        let counted = hit.pivot.flatMap { preview[$0.id] }
+        let line = [hit.line, counted].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " · ")
+        return Button {
+            rememberSearch()
+            hit.act()
+        } label: {
             HStack(spacing: DS.Space.s3) {
                 Group {
                     switch hit.mark {
@@ -1180,12 +1585,12 @@ struct RoomsTray: View {
                 }
                 .frame(width: Self.icon, height: Self.icon)
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(verbatim: hit.name)
+                    Text(Self.marked(hit.name, words))
                         .dsText(.body17)
                         .foregroundStyle(DS.textPrimary)
                         .lineLimit(1)
-                    if let line = hit.line, !line.isEmpty {
-                        Text(verbatim: line)
+                    if !line.isEmpty {
+                        Text(Self.marked(line, words))
                             .dsText(.subhead12)
                             .foregroundStyle(DS.textTertiary)
                             .lineLimit(1)
@@ -1242,6 +1647,7 @@ struct RoomsTray: View {
         let words = query.trimmingCharacters(in: .whitespaces)
         guard !words.isEmpty else { return }
         DSHaptic.selection()
+        rememberSearch()
         close()
         chrome.openFind(words)
     }
@@ -1531,4 +1937,27 @@ struct RoomsTray: View {
     private func close() {
         withAnimation(liftMotion) { chrome.roomsTray = false }
     }
+}
+
+/// The searches the tray remembers (prd §1211 item 5), on this device only;
+/// Delete everything clears them.
+enum TraySearchHistory {
+    static let key = "traySearch.recent"
+    static let keep = 5
+
+    static func load() -> [String] {
+        guard let data = UserDefaults.standard.data(forKey: key) else { return [] }
+        return (try? JSONDecoder().decode([String].self, from: data)) ?? []
+    }
+
+    /// The list with the words first, kept to `keep`, written behind.
+    static func add(_ words: String, to list: [String]) -> [String] {
+        var out = list.filter { $0.caseInsensitiveCompare(words) != .orderedSame }
+        out.insert(words, at: 0)
+        out = Array(out.prefix(keep))
+        if let data = try? JSONEncoder().encode(out) { DefaultsWrite.set(data, forKey: key) }
+        return out
+    }
+
+    static func clear() { DefaultsWrite.remove(key) }
 }

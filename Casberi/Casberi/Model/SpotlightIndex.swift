@@ -81,7 +81,7 @@ enum SpotlightIndex {
 
     static func removeAll() {
         CSSearchableIndex.default()
-            .deleteSearchableItems(withDomainIdentifiers: [domain])
+            .deleteSearchableItems(withDomainIdentifiers: [domain, pagesDomain])
         // The index is empty now — clearing the watermark makes the next
         // launch reconcile rebuild it in full (the "explicit reset" path,
         // reached by Delete everything).
@@ -157,5 +157,67 @@ enum SpotlightIndex {
             }
         }
         if let newest { defaults.set(newest, forKey: watermarkKey) }
+    }
+
+    // MARK: - Pages (prd §1211 item 8)
+
+    /// "Everything with Rui", "Everything from Telegram": the pages search
+    /// composes, findable from the system's own search. A tapped result
+    /// opens the page (`RootShell`'s continue handler reads the prefix).
+    static let pagesDomain = "pages"
+    static let pagePrefix = "page:"
+    /// How many people get a page in Spotlight: the ones you deal with most
+    /// recently.
+    static let pagePeople = 30
+    private static let pagesKey = "spotlight.pages.at"
+
+    /// Index the people and apps that have a page, replacing the last set.
+    /// Names only — a person's name and an app's — never what the page holds.
+    @MainActor static func indexPages(people: [Contact], apps: [String]) {
+        let chosen = people
+            .filter { $0.kind == .person && !$0.isUnnamed && !ContactIndexSources.isYours($0) }
+            .sorted { ($0.lastActedAt ?? .distantPast) > ($1.lastActedAt ?? .distantPast) }
+            .prefix(pagePeople)
+        var items: [CSSearchableItem] = []
+        for c in chosen {
+            let q = PivotQuery(subject: .person(id: c.id, name: c.name))
+            items.append(pageItem(q, keywords: [c.name]))
+        }
+        for app in apps {
+            items.append(pageItem(PivotQuery(subject: .app(app)), keywords: [app]))
+        }
+        let index = CSSearchableIndex.default()
+        index.deleteSearchableItems(withDomainIdentifiers: [pagesDomain]) { _ in
+            index.indexSearchableItems(items)
+        }
+        UserDefaults.standard.set(Date.now, forKey: pagesKey)
+    }
+
+    /// Whether the pages were indexed in the last day.
+    static var pagesFresh: Bool {
+        guard let at = UserDefaults.standard.object(forKey: pagesKey) as? Date else { return false }
+        return Date.now.timeIntervalSince(at) < 86_400
+    }
+
+    private static func pageItem(_ q: PivotQuery, keywords: [String]) -> CSSearchableItem {
+        let attrs = CSSearchableItemAttributeSet(contentType: .text)
+        attrs.title = q.offerTitle
+        attrs.contentDescription = String(localized: "A page in Casberi")
+        attrs.keywords = keywords + ["Casberi"]
+        return CSSearchableItem(uniqueIdentifier: pagePrefix + q.id, domainIdentifier: pagesDomain,
+                                attributeSet: attrs)
+    }
+
+    /// The page a Spotlight identifier names, or nil for a thing's.
+    @MainActor static func page(for identifier: String) -> PivotQuery? {
+        guard identifier.hasPrefix(pagePrefix) else { return nil }
+        let id = String(identifier.dropFirst(pagePrefix.count)).split(separator: "|").first.map(String.init) ?? ""
+        if id.hasPrefix("person:") {
+            let key = String(id.dropFirst("person:".count))
+            let name = ContactIndexSources.contacts.first { $0.id == key }?.name ?? ""
+            return name.isEmpty ? nil : PivotQuery(subject: .person(id: key, name: name))
+        }
+        if id.hasPrefix("app:") { return PivotQuery(subject: .app(String(id.dropFirst("app:".count)))) }
+        return nil
     }
 }
