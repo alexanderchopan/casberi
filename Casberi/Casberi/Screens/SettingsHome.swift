@@ -65,9 +65,13 @@ struct SettingsHome: View {
                 }
                 .dsRoomLeadListRow()
             }
-            Section {
-                YouTilesRow(active: casberiOpen ? .settings : .sources)
-                    .dsRoomTilesListRow()
+            // Risen as a sheet (prd §1208m) it stands on nothing: the Feed's
+            // tiles belong to the Feed, and the pull closes it.
+            if route.sheet == nil {
+                Section {
+                    YouTilesRow(active: casberiOpen ? .settings : .sources)
+                        .dsRoomTilesListRow()
+                }
             }
             Section {
                 VStack(alignment: .leading, spacing: DS.Space.s6) {

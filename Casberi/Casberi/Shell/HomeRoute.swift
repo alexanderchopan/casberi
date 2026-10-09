@@ -142,6 +142,15 @@ final class HomeRoute {
     }
 
     /// The place a door names, or nil for a screen that pushes.
+    /// Whether a place rises as a sheet: the phone's one rule (§1208m).
+    @MainActor static var risesAsSheet: Bool {
+        #if targetEnvironment(macCatalyst)
+        false
+        #else
+        UIDevice.current.userInterfaceIdiom == .phone
+        #endif
+    }
+
     static func place(_ door: Node) -> HomeScope.Place? {
         switch door {
         // The catalogue is no place since prd §1136 (Apps left You's tiles):
@@ -220,7 +229,11 @@ final class HomeRoute {
     /// A You place (Apps, Addresses, Settings) lands in place instead (prd
     /// §1129): the stack empties and the shell cuts to it.
     @MainActor func present(_ door: Node) {
-        if let place = Self.place(door) {
+        // ONE RULE ON THE PHONE (prd §1208m, user: "we decided 1 rule"):
+        // Settings, Sources and Addresses rise as a sheet over the Feed, as
+        // Markets, your notes and every app do; the Wallet alone stands
+        // beside the Feed. iPad and the Mac keep their places.
+        if let place = Self.place(door), !Self.risesAsSheet {
             path = []
             closeSheet()
             placeRequest = place.source
