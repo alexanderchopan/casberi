@@ -102,9 +102,15 @@ extension FeedScreen {
         let folderList = chrome.notesScope == .folders && chrome.notesFolder == nil
         // Nothing filed holds the lead's box empty over the folder list, as
         // an empty room does (§979: the tiles never rise).
-        // Notes is off You's tiles (prd §1207 item 9): its own tiles ride the
-        // bar, so the lead holds the box alone.
-        standaloneLead(cover: cover, tiles: nil as DSScopeTiles<NotesScope>?, listEmpty: visible.isEmpty,
+        // Notes is off You's tiles (prd §1207 item 9) and its own tiles left
+        // the bar (prd §1209a): on the phone they stand under the box, as
+        // every page's do; beside the rail, the strip below.
+        standaloneLead(cover: cover,
+                       tiles: DSScopeDock<NotesScope>.atBottom(roomSizeClass)
+                           ? DSScopeTiles(sections: NotesScope.allCases, active: chrome.notesScope,
+                                          verbs: [.new], hold: notesHold) { pickNotesScope($0) }
+                           : nil,
+                       listEmpty: visible.isEmpty,
                        emptyWords: Text(emptyLine))
         notesInlineTiles
         if folderList {

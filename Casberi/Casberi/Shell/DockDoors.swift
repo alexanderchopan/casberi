@@ -78,3 +78,39 @@ struct NoteDoor: View {
         .accessibilityLabel(Text("New note"))
     }
 }
+
+/// THE BAR IN THE BAND (prd §1207 item 7, built §1209a): always there, full
+/// size, never shrinking while you read. A tap raises the tray with its
+/// search focused, where the words become a page (§1209). The face's glass
+/// and height, so the band reads as one row: face · bar · ✎.
+struct BandSearchBar: View {
+    @Environment(ShellChrome.self) private var chrome
+    let action: () -> Void
+
+    var body: some View {
+        let size = DSDock.agentSize(fold: chrome.fold)
+        Button {
+            DSHaptic.tap()
+            action()
+        } label: {
+            HStack(spacing: DS.Space.s2) {
+                Image(systemName: "magnifyingglass")
+                    .dsGlyph(.body)
+                    .foregroundStyle(DS.textSecondary)
+                Text("Search")
+                    .dsText(.body17)
+                    .foregroundStyle(DS.textTertiary)
+                    .lineLimit(1)
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, DS.Space.s4)
+            .frame(maxWidth: .infinity, minHeight: size, maxHeight: size)
+            .dsGlass(cornerRadius: size / 2)
+            .dsTapTarget(Capsule())
+            .dsHover()
+        }
+        .buttonStyle(PressSpring())
+        .accessibilityLabel(Text("Search"))
+        .accessibilityHint(Text("Find anything, or make a page of it"))
+    }
+}

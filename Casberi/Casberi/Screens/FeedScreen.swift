@@ -1519,15 +1519,10 @@ struct FeedScreen: View {
         }
         .animation(DS.Motion.standard, value: listRevision(rows))   // new things rise in (debounced for All)
         .scrollContentBackground(.hidden)
-        // The Tokens room's tiles — Watchlist and the company packs — on the
-        // phone's bottom line beside the seat, the Addresses control.
-        // Markets' and Notes' own tiles ride the floating bar (prd §1136
-        // item 2): under the box stand You's tiles, the same four on every
-        // place in You. One modifier, so this chain stays type-checkable.
-        .modifier(FeedRoomDocks(tokens: shape == .tokens, notes: Pinboard.isPinnedRoom(source),
-                                tokensScope: chrome.tokensScope, notesScope: chrome.notesScope,
-                                notesHold: notesHold,
-                                pickTokens: { pickTokensScope($0) }, pickNotes: { pickNotesScope($0) }))
+        // Markets' and Notes' tiles left the floating bar (prd §1209a): the
+        // band is face · bar · ✎ on every page, Notes' tiles stand under its
+        // box as every page's do, and Markets' Watchlist and Alerts stand in
+        // its box, adding a company from the bar's search.
         // Width buys COLUMNS in a picture room and LINE LENGTH everywhere else
         // (2026-08-17). The 700pt reading cap is right for prose and wrong for
         // a grid: a Mac window at 1120 drew the same three-across grid it draws

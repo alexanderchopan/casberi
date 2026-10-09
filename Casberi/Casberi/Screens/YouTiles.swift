@@ -53,24 +53,3 @@ extension FeedScreen {
         }
     }
 }
-
-/// The two rooms in You whose own tiles ride the floating bar: Markets'
-/// (prd §1081) and Notes' (prd §1136 item 2). Pass false to take one down.
-struct FeedRoomDocks: ViewModifier {
-    let tokens: Bool
-    let notes: Bool
-    let tokensScope: TokensScope
-    let notesScope: NotesScope
-    let notesHold: DSScopeTiles<NotesScope>.Hold
-    let pickTokens: (TokensScope) -> Void
-    let pickNotes: (NotesScope) -> Void
-
-    func body(content: Content) -> some View {
-        content
-            .dsScopeDock(sections: tokens ? TokensScope.bar : [],
-                         active: tokensScope, verbs: [.new], clearance: 0, onPick: pickTokens)
-            .dsScopeDock(sections: notes ? NotesScope.allCases : [],
-                         active: notesScope, verbs: [.new], clearance: 0,
-                         hold: notesHold, onPick: pickNotes)
-    }
-}

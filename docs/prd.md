@@ -65470,3 +65470,12 @@ Unchanged from §1207: the tray as a black page of modules (item 5), ✎ in the 
 6. **A row opens its thing's sheet over the page.** `-pivot "<words>"` composes the first offer 6s after mount (DEBUG; NSLogs `pivot|` per offer and `pivot:` with the count).
 
 Not in v1: the bar always on screen (§1207 item 7), pink names inside rows, and pins.
+
+## §1208b — The Feed opens on its contents, then the sections (user, 2026-10-09: "why not land on table of contents, scroll to end of it and then Day starts there? b/c as it is now you can't see all of the day's newest in one go", then "ok do 1. and when user gets to end of today and first section starts can it already be open?"; amends §1208 item 2)
+Under the Feed's box and tiles stand today's contents first — every app's newest today, under its category, as Home stood (§1152) — each category's name a jump down to its full section. Past the contents' end the full sections begin, Day first and already open (§1208a: every section starts open). Today's things are drawn twice on purpose: once at a glance, once in their section's frame.
+
+## §1209a — The band is face · bar · ✎ on every page; a thing's sheet opens its names' pages; no pins (user, 2026-10-09: "continue then ship", of Notes "agree we can put its buttons where its tiles are", of Markets "we could get rid of the new button and just let it come from the search bar", then "we got rid of pinned"; builds §1207 items 6–7, amends §1136 item 2, §1171b, §1207 item 8)
+1. **The bar is always there** (`BandSearchBar`): between the face and ✎ on every phone page, the face's glass and height; a tap raises the tray with its search focused (`ShellChrome.traySearchFocus`). It hides while the tray is up, whose own bar takes its place, and ✎ with it.
+2. **Notes' and Markets' capsules leave the band.** Notes' All · Folders · Voice · New stand under its box as every page's tiles do. Markets' Watchlist and Alerts stand in its box beside the categories, and New is gone: a company is added from the bar's search (the tray already finds companies under Markets), and an empty Watchlist says "Search for a company to watch it." `FeedRoomDocks` is deleted. The rail keeps its strips.
+3. **A thing's sheet ends with its names' pages** (`ThingPivotDoors`): "Everything with <its person>" and "Everything from <its app>", each raising §1209's page. A note of yours draws none.
+4. **No pins** (user: "we got rid of pinned", the word §1175 retired): a composed page is made again from the bar, never kept in the tray.

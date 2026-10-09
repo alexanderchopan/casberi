@@ -222,7 +222,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1339 of 1405 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1341 of 1407 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1491,7 +1491,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1133 — Two controls: the face says where, the tiles say what (amended by §1136, §1207) [+5 sub-entries]
 - §1134 — Day's Track tray searches mail
 - §1135 — An unwatched wallet's rows leave, under the name it was watched by too [+1 sub-entries]
-- §1136 — One place for lists: You is a room of four places, Settings holds everything you've connected, Home is Today then Com… (amended by §1138, §1139, §1164, §1166)
+- §1136 — One place for lists: You is a room of four places, Settings holds everything you've connected, Home is Today then Com… (amended by §1138, §1139, §1164, §1166, §1209a)
 - §1137 — Calendars you subscribe to [+11 sub-entries]
 - §1138 — The box's counts are the filter, on Sources and in the Apps catalogue (amended by §1140, §1142, §1145, §1166, §1167, §1171, §1198) [+1 sub-entries]
 - §1139 — Home is the whole of today: its feeds, then Later today (amended by §1154; part superseded by §1141)
@@ -1558,11 +1558,13 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1204 — Reading folds into Media: one category, tiles All · Play · Read · Subscriptions, and Highlights is deleted
 - §1205 — Every company in the demo wears its mark: a sweep, nine App Store marks, and the faces that skipped a bundled one
 - §1206 — Frames, the devnet, is removed, model and all; Logos is the Testnets category's one seat, and the website counts the…
-- §1207 — One walk with neighbours in its title, the tray as a black page of modules, the bar always there, every page a compos… (amended by §1208)
+- §1207 — One walk with neighbours in its title, the tray as a black page of modules, the bar always there, every page a compos… (amended by §1208, §1209a)
 - §1207a — Phase 1 built
-- §1208 — The Feed is one scroll: every category stacked in its own frame, the Wallet apart, an app on top (amended by §1208a)
+- §1208 — The Feed is one scroll: every category stacked in its own frame, the Wallet apart, an app on top (amended by §1208a, §1208b)
 - §1208a — The scroll's three touches, and no app names under a section
+- §1208b — The Feed opens on its contents, then the sections
 - §1209 — Generative search, v1: words become a page, with no model
+- §1209a — The band is face · bar · ✎ on every page; a thing's sheet opens its names' pages; no pins
 
 ## Dead rulings → what replaced them (generated)
 

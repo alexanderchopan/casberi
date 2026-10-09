@@ -295,13 +295,16 @@ extension FeedScreen {
         if source == "All" { reconnectSection }
         // "Nothing yet today" only when today truly holds nothing: a box
         // holding today's one thing IS today.
-        if source == "All", !scroll, groups.isEmpty,
+        if source == "All", groups.isEmpty,
            !(homeCover.map { $0.isLive && Self.groupingCalendar.isDateInToday($0.capturedAt) } ?? false) {
             // With nothing connected, a preview of what Today becomes (prd
             // §1169); the first connect takes it all away.
             if bridges.connectedCount == 0 { todayPreview } else { nothingYetToday }
         }
-        ForEach(scroll ? [] : groups, id: \.0) { label, rows in
+        // THE CONTENTS LEAD (prd §1208b, user: "land on table of contents,
+        // scroll to end of it and then Day starts there"): today's newest
+        // from each app by category, every name a jump down to its section.
+        ForEach(groups, id: \.0) { label, rows in
             // Bundles merge into the day card like any row-shaped thing —
             // only a single that stands alone (consent, token) breaks the run.
             let positions = cardRunPositions(

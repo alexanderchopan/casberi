@@ -420,3 +420,56 @@ private extension View {
             .listRowSeparator(.hidden)
     }
 }
+
+/// THE NAMES ON A THING ARE PAGES (prd §1209a): a thing's sheet ends with a
+/// door to everything with its person and everything from its app — the
+/// pivot, from wherever you are reading. Nothing draws for a note of yours
+/// or a thing whose person the app does not know.
+struct ThingPivotDoors: View {
+    let thing: Thing
+    let open: (PivotQuery) -> Void
+
+    var body: some View {
+        let doors = Self.queries(for: thing)
+        if !doors.isEmpty {
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(doors, id: \.id) { q in
+                    DSDoorRow(icon: q.doorGlyph, title: Text(verbatim: q.offerTitle)) { open(q) }
+                }
+            }
+        }
+    }
+
+    @MainActor
+    static func queries(for thing: Thing) -> [PivotQuery] {
+        guard thing.isLive, thing.source != NoteSheetSource.keptSource else { return [] }
+        var out: [PivotQuery] = []
+        let keys = ContactIndex.keys(source: thing.source, kind: thing.kind.rawValue, sourceRef: thing.sourceRef,
+                                     authorHandle: thing.authorHandle, walletAddress: thing.walletAddress,
+                                     counterpartyAddress: thing.counterpartyAddress,
+                                     authorEmail: thing.authorEmail, isNotification: false)
+        if !keys.isEmpty {
+            let wanted = Set(keys)
+            if let c = ContactIndexSources.contacts.first(where: { c in
+                !c.isUnnamed && !ContactIndexSources.isYours(c) && c.identities.contains { wanted.contains($0.key) }
+            }) {
+                out.append(PivotQuery(subject: .person(id: c.id, name: c.name)))
+            }
+        }
+        let app = BridgeCatalog.seatName(forSource: thing.source)
+        if !app.isEmpty { out.append(PivotQuery(subject: .app(app))) }
+        return out
+    }
+}
+
+extension PivotQuery {
+    /// The glyph a door to this page wears.
+    var doorGlyph: String {
+        switch subject {
+        case .person: "person"
+        case .app: "square.grid.2x2"
+        case .category(let name): CategoryFold.glyph(for: name)
+        case .words, .span: "text.magnifyingglass"
+        }
+    }
+}

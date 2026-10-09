@@ -2384,15 +2384,22 @@ struct RootShell: View {
                                   },
                                   onBack: seatBack)
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            // ✎ AT THE BAND'S OTHER END (prd §1207 item 6):
-                            // a note from anywhere. Not over Notes and
-                            // Markets, whose own tiles ride this band.
+                            // THE BAND IS FACE · BAR · ✎ (prd §1207 items 6
+                            // and 7, built §1209a): the bar is always there,
+                            // one tap from search, and ✎ writes a note from
+                            // anywhere, on every page; never over the tray,
+                            // whose own bar takes this place.
                             .overlay(alignment: .trailing) {
-                                // Never over the tray, whose bar takes this end.
-                                if padShell.railInset == 0, sceneState.route.path.isEmpty, !chrome.roomsTray,
-                                   !Pinboard.isPinnedRoom(filter.source), !HomeScope.isMarkets(filter.source) {
-                                    NoteDoor { chrome.newNote += 1 }
-                                        .transition(.opacity)
+                                if padShell.railInset == 0, sceneState.route.path.isEmpty, !chrome.roomsTray {
+                                    HStack(spacing: DS.Space.s2) {
+                                        BandSearchBar {
+                                            chrome.traySearchFocus = true
+                                            withAnimation(DS.Motion.standard) { chrome.roomsTray = true }
+                                        }
+                                        NoteDoor { chrome.newNote += 1 }
+                                    }
+                                    .padding(.leading, DSDock.agentSize(fold: chrome.fold) + DS.Space.s2)
+                                    .transition(.opacity)
                                 }
                             }
                     }

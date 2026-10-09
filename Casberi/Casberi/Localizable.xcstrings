@@ -5311,6 +5311,34 @@
         }
       }
     },
+    "Find anything, or make a page of it" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Encuentra cualquier cosa o crea una página con ello"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "何でも検索、またはそのページを作成"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "무엇이든 찾거나 그 페이지를 만듭니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "查找任何内容，或为它生成一个页面"
+          }
+        }
+      }
+    },
     "Find something to follow" : {
       "localizations" : {
         "es" : {
@@ -8723,6 +8751,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "搜索节目"
+          }
+        }
+      }
+    },
+    "Search for a company to watch it." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Busca una empresa para seguirla."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "企業を検索してウォッチします。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "회사를 검색해 관심 목록에 추가하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "搜索一家公司即可关注。"
           }
         }
       }

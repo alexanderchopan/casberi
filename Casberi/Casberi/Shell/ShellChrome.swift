@@ -251,6 +251,9 @@ final class ShellChrome {
     var appSheet: AppSheet?
     /// A page composed from search words (prd §1209), risen as a sheet.
     var pivot: PivotQuery?
+    /// The band's bar raised the tray (prd §1209a): its search takes the
+    /// keyboard as it opens. Read and cleared by the tray.
+    var traySearchFocus = false
     struct AppSheet: Identifiable, Equatable {
         let source: String
         var id: String { source }

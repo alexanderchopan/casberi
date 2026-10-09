@@ -18,7 +18,10 @@ extension FeedScreen {
         // Two across, each glyph and its word on one line, as Settings'
         // counts stand (prd §1167, user: "organize the markets header in
         // same way you did settings").
-        let tiles = TokensScope.box
+        // On the phone Watchlist and Alerts stand in the box (prd §1209a):
+        // the bar that held them is the band's search now, which adds.
+        let tiles = DSScopeDock<TokensScope>.atBottom(roomSizeClass)
+            ? [TokensScope.watchlist, .alerts] + TokensScope.box : TokensScope.box
         return Section {
             DSCountGrid(items: tiles.count) {
                 ForEach(tiles) { tile in
@@ -98,7 +101,8 @@ extension FeedScreen {
         // empty watchlist is fine"); the category tiles above are the index.
         if watches.isEmpty {
             Section {
-                Text("Nothing watched yet.")
+                (DSScopeDock<TokensScope>.atBottom(roomSizeClass)
+                     ? Text("Search for a company to watch it.") : Text("Nothing watched yet."))
                     .dsText(.body17)
                     .foregroundStyle(DS.textSecondary)
                     .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DSRoomChassis.rowInset,

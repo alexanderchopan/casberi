@@ -1111,6 +1111,17 @@ struct ThingSheetView: View {
                 }
                 relatedShelf
                     .padding(.top, DS.Space.s4)
+                // THE NAMES ON A THING ARE PAGES (prd §1209a): its person and
+                // its app, each a door to everything with them.
+                ThingPivotDoors(thing: thing) { query in
+                    dismiss()
+                    Task { @MainActor in
+                        try? await Task.sleep(for: .milliseconds(450))
+                        chrome.pivot = query
+                    }
+                }
+                .padding(.horizontal, DS.Space.s4)
+                .padding(.top, DS.Space.s4)
             }
             .padding(.bottom, DS.Space.s6)
         }
