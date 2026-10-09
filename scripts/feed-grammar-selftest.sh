@@ -140,8 +140,10 @@ guards() {
   # The door counts, from the window's own walk: every room's section path.
   # Home has no door since prd §1154 ("at the end of the day is the end of the
   # day": its rows are not windowed and no "Show older" closes it), so one.
+  # Inside the Feed's scroll a section's tail is More instead (prd §1208), on
+  # the same window, so the door is the else of that one branch.
   local doors
-  doors=$(grep -c -- 'if window.more { olderRow(hidden: window.hidden) }' <<< "$F" || true)
+  doors=$(grep -c -- 'olderRow(hidden: window.hidden)' <<< "$F" || true)
   [[ "$doors" == 1 ]] \
     || echo "a Show older door no longer carries the window's hidden count ($doors of 1)"
   grep -q -- 'DSPushRowLabel(title: Text("Show older")' <<< "$F" \
@@ -213,7 +215,7 @@ mutate "a fold counts its members again (prd §902)" rows \
 mutate "title money ungated" rows \
   's/guard moneyAmount == nil, thing\.priceValue != nil else/guard moneyAmount == nil else/'
 mutate "the door forgets its count" feed \
-  's/if window\.more \{ olderRow\(hidden: window\.hidden\) \}/if window.more { olderRow(hidden: 0) }/'
+  's/olderRow\(hidden: window\.hidden\)/olderRow(hidden: 0)/'
 mutate "rows doubled again" feed \
   's/static let rowAir: CGFloat = DS\.Space\.s1/static let rowAir: CGFloat = DS.Space.s2/'
 mutate "the demo stream live again" demo \
