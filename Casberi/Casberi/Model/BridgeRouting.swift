@@ -55,12 +55,6 @@ enum BridgeRouter {
         /// destination for L2BEAT's reason: riding `.token` would dismiss the
         /// raised sheet the moment the first watched account registered it.
         case logos
-        /// The Frames devnet — a WATCH LIST of addresses on screen with no
-        /// single credential to paste, so it needs its own destination for
-        /// the reason L2BEAT/Walletbeat do: riding `.token` would give it
-        /// `finishesOnConnect == true` and dismiss the raised sheet the
-        /// moment the first watched address registered the seat.
-        case frames
         case icloudMail
         case gmail
         case rss
@@ -314,7 +308,6 @@ enum BridgeRouter {
             case .huggingFace:    "huggingface"
             case .radicle:        "radicle"
             case .logos:          "logos"
-            case .frames:         FramesIdentity.seatID
             case .icloudMail:     "icloudmail"
             case .gmail:          "gmail"
             case .rss:            "rss"
@@ -436,7 +429,6 @@ enum BridgeRouter {
         Row(offer: "Hugging Face", id: "huggingface", destination: .huggingFace),
         Row(offer: "Radicle",    id: "radicle",    destination: .radicle),
         Row(offer: "Logos",      id: "logos",      destination: .logos),
-        Row(offer: "Hegotá Frames", id: FramesIdentity.seatID, destination: .frames),
         Row(offer: "iCloud Mail", id: "icloudmail",  destination: .icloudMail),
         Row(offer: "Gmail",       id: "gmail",       destination: .gmail),
         Row(offer: "RSS",       id: "rss",    destination: .rss),
@@ -625,7 +617,6 @@ struct BridgeDestinationView: View {
         case .huggingFace:    HuggingFaceScreen()
         case .radicle:        RadicleScreen()
         case .logos:          LogosScreen()
-        case .frames:         FramesScreen()
         case .icloudMail:     MailScreen(provider: .icloud)
         case .gmail:          MailScreen(provider: .gmail)
         case .rss:            RSSScreen()

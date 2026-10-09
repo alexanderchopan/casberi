@@ -621,8 +621,8 @@ struct NotifyLedger {
 /// on its own.
 ///
 /// **WHY THIS IS NOT IN `NotifySweep`.** That file is the one place a LANDED
-/// ROW becomes a notification and its own doc says so — but the Frames devnet
-/// lands no `Thing` at all by design (its subject is chain state, not news), so
+/// ROW becomes a notification and its own doc says so — but a devnet seat
+/// lands no `Thing` for its chain state by design (its subject is chain state, not news), so
 /// nothing it learns could ever have reached a lock screen through the corpus.
 /// `Notifications.likes` is the standing precedent for a notification with
 /// nothing behind it in the corpus; this is the second, with the same
@@ -659,27 +659,23 @@ enum NotifyDevnet {
     /// The seats, closed. Each carries its own copy so the words live where
     /// the harness can read them.
     ///
-    /// **Hegotá Frames joined in §728**, once it had reset detection of its
-    /// own to feed this (a stored genesis baseline, `FramesChainWatch.verdict`),
-    /// rather than a signal invented here.
+    /// Hegotá Frames joined in §728 and left with its seat (prd §1206).
     ///
     /// **A STALL IS NOT ANNOUNCED.** It takes nothing, it ends by itself, and
     /// nothing a notification could lead to would change it — §306's "can it
     /// be acted on", failed. The room says it instead.
     enum Seat: String, Sendable, CaseIterable {
-        case frames
         /// The Logos testnet (prd §1084), once it recorded the reset it
         /// observes (`LogosStore.resetSeen`, block 1's hash changing, §1035).
         case logos
 
-        /// **MUST equal `FramesIdentity.source`.** It routes the deep link and
+        /// **MUST equal the seat's source.** It routes the deep link and
         /// picks the brand mark for the right-hand slot, and a wrong string
         /// fails at neither — the notification arrives with a blank slot and
         /// opens the All feed. Tied to the constant by a drift guard in
         /// `notify-selftest.sh`.
         var source: String {
             switch self {
-            case .frames:  return "Hegotá Frames"
             // MUST equal `LogosRoom.source` (`notify-selftest.sh`).
             case .logos:   return "Logos"
             }
@@ -697,9 +693,8 @@ enum NotifyDevnet {
     }
 
     /// How long after a reset it is still the reason anything looks wrong.
-    /// The same week `FramesChainWatch` keeps saying it in the room — a
-    /// notification that outlived that sentence would land somebody in a room
-    /// that no longer explains itself.
+    /// A notification that outlived the room's own explanation would land
+    /// somebody in a room that no longer explains itself.
     static let resetWindow: TimeInterval = 7 * 86_400
 
     // MARK: A devnet was reset
@@ -728,8 +723,6 @@ enum NotifyDevnet {
         guard age >= 0, age <= resetWindow else { return nil }
         let body: String
         switch r.seat {
-        case .frames:
-            body = String(localized: "Hegotá Frames was relaunched from genesis, so everything it held is gone. Your key and the addresses you follow are still yours.")
         case .logos:
             body = String(localized: "The Logos testnet was reset, so every account on it starts empty. Your key and the accounts you follow are still yours.")
         }

@@ -530,7 +530,12 @@
   if (!el) { return; }
   var shelf = document.getElementById('catalog');
   if (!shelf) { return; }
-  var n = shelf.querySelectorAll('.mini-cell').length;
+  // The protocols the Wallet reads are apps too (user, 2026-10-08:
+  // "protocols are apps"): Aave, Morpho and the rest have no cell of their
+  // own (prd §515), so the shelf says how many it reads (`data-protocols`,
+  // pinned to the catalogue by catalog-sync.sh).
+  var n = shelf.querySelectorAll('.mini-cell').length
+    + (parseInt(shelf.getAttribute('data-protocols'), 10) || 0);
   if (n <= 0) { return; }
   var floored = Math.floor(n / 10) * 10;
   el.textContent = (floored >= 10 ? floored + '+' : String(n)) + ' apps';

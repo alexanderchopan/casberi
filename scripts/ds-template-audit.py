@@ -105,8 +105,6 @@ EXEMPT = {
     "Screens/ShapedRows.swift": (3, "feed rows — being rewritten by another session"),
     "Screens/PrivacyPoolsRoomCard.swift": (1, "a room head — being migrated by another session"),
     "Shell/DockFolderRow.swift": (2, "the dock, a user-protected differentiator: nothing about it changes here"),
-    # ── Not a pill, measured one by one.
-    "Screens/DevnetSendConsole.swift": (1, "the join bar between two legs, a drawing carried by an overlay"),
     # ── A real pill, kept on a stated reason and OWED.
     "Screens/WalletFeedTiles.swift": (1, "the wallet crown's face chips — a choice, but each carries a face, a value and a delta "
                                          "Chip cannot; owed with the room-head migration"),

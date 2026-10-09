@@ -335,17 +335,18 @@ def self_test():
     cases = []
 
     # A — an alias pointing at a name no offer carries.
-    # (Anchored on "Frames Devnet" since §1038 deleted the Hegotá UTXO and
-    # Ethrex Hegotá entries the first anchors named, and A–C went silent.)
-    cases.append(("A", (thing.replace('Rename(current: "Hegotá Frames")',
-                                      'Rename(current: "Hegotá Frames (old)")', 1),
+    # (Anchored on "Tokens" since §1206 deleted Hegotá Frames, whose
+    # "Frames Devnet" entry these named — as §1038 had deleted the Hegotá UTXO
+    # and Ethrex Hegotá entries the first anchors named, and A–C went silent.)
+    cases.append(("A", (thing.replace('"Tokens": Rename(current: "Markets")',
+                                      '"Tokens": Rename(current: "Markets (old)")', 1),
                         catalog, shell, resolvers, sweep, corpus)))
     # B — an alias key that is a live offer name.
-    cases.append(("B", (thing.replace('"Frames Devnet": Rename', '"Linear": Rename', 1),
+    cases.append(("B", (thing.replace('"Tokens": Rename', '"Linear": Rename', 1),
                         catalog, shell, resolvers, sweep, corpus)))
     # C — an alias key also declared retired.
     cases.append(("C", (thing.replace('"Kalshi", "Polymarket"',
-                                      '"Frames Devnet", "Polymarket"', 1),
+                                      '"Tokens", "Polymarket"', 1),
                         catalog, shell, resolvers, sweep, corpus)))
     # D — the wiring deleted from the join.
     cases.append(("D", (thing,

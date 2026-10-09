@@ -4,7 +4,9 @@ import Testing
 
 /// **A renamed app's records converge to ONE row under its current name**
 /// (prd §1147): two "Frames Devnet" records drew as two rows in Settings ›
-/// Apps after the seat became Hegotá Frames. Pure: `BridgeStore.converged`,
+/// Apps after the seat became Hegotá Frames. That seat is deleted (prd
+/// §1206), so the cases ride the live "Tokens" → "Markets" rename. Pure:
+/// `BridgeStore.converged`,
 /// never a store, whose write would replace the simulator's saved records.
 struct BridgeConvergeTests {
 
@@ -14,14 +16,14 @@ struct BridgeConvergeTests {
 
     @Test func twinsUnderAnOldNameBecomeOneUnderTheNewName() throws {
         let out = try #require(BridgeStore.converged(
-            [Self.app("Frames Devnet"), Self.app("Frames Devnet"), Self.app("GitHub")],
+            [Self.app("Tokens"), Self.app("Tokens"), Self.app("GitHub")],
             current: Corpus.canonicalSource))
-        #expect(out.map(\.name) == ["Hegotá Frames", "GitHub"])
+        #expect(out.map(\.name) == ["Markets", "GitHub"])
     }
 
     @Test func aLiveTwinWinsOverAPausedOne() throws {
         let out = try #require(BridgeStore.converged(
-            [Self.app("Hegotá Frames", .paused), Self.app("Frames Devnet")],
+            [Self.app("Markets", .paused), Self.app("Tokens")],
             current: Corpus.canonicalSource))
         #expect(out.count == 1)
         #expect(out.first?.status == .connected)

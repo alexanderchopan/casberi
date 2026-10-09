@@ -1,7 +1,7 @@
 import Foundation
 
 /// What the devnet seat has to say to a lock screen (2026-08-29, prd §522;
-/// the Frames devnet since §728).
+/// Logos since §1084).
 ///
 /// **THE GATHERING HALF ONLY.** Every rule — what is news, how long it stays
 /// news, what may be said about it — is `NotifyDevnet` in `NotifyPlan.swift`,
@@ -39,12 +39,8 @@ enum DevnetNotify {
     /// bare `devnet=0` cannot separate them — `-kalshiBookProbe`'s reason, on a
     /// feature nothing else in this repo can exercise.
     static func census() -> [String] {
-        let fWatching = FramesWatch.shared.addresses.count + (FramesKey.address() == nil ? 0 : 1)
-        let fReset = FramesLiveState.observedRelaunch()
         let lReset = LogosStore.shared.resetSeen
-        return ["frames watching=\(fWatching) relaunch=" +
-                (fReset.map { "\($0.key) observed \($0.at)" } ?? "none observed"),
-                "logos watching=\(LogosStore.shared.accounts.count) reset=" +
+        return ["logos watching=\(LogosStore.shared.accounts.count) reset=" +
                 (lReset.map { "\($0.key) observed \($0.at)" } ?? "none observed")]
     }
 
@@ -52,14 +48,6 @@ enum DevnetNotify {
 
     private static func resets() -> [NotifyDevnet.Reset] {
         var out: [NotifyDevnet.Reset] = []
-        // Hegotá Frames (prd §728). **The key counts as something watched**:
-        // the seat reads this phone's own account whether or not it is on the
-        // watch list, and a relaunch takes its balance just the same.
-        if let seen = FramesLiveState.observedRelaunch() {
-            out.append(.init(seat: .frames, key: seen.key, observedAt: seen.at,
-                             watching: FramesWatch.shared.addresses.count
-                                 + (FramesKey.address() == nil ? 0 : 1)))
-        }
         // Logos (prd §1084): the accounts watched, this phone's own among
         // them (Create watches it).
         if let seen = LogosStore.shared.resetSeen {

@@ -49,33 +49,14 @@ extension FeedScreen {
         /// Carries a handle and a source, so no `Thing` and no liveness
         /// question.
         case person(source: String, handle: String)
-        /// **THE SEND FORM, ON A SHEET (prd §553, §548).** Home holds the verbs
-        /// and the form holds the screen — routed here rather than presented by
-        /// the card: a `.sheet` on a view inside this List resolves to the same
-        /// presenting controller as this one and half-opens before closing again.
-        case framesSend
-        /// The Logos send form (prd §1084) — the same sheet, routed here for
-        /// `framesSend`'s reason.
+        /// The Logos send form (prd §1084), on a sheet: routed here because a
+        /// `.sheet` on a view inside this List resolves to the same presenting
+        /// controller as this one and half-opens before closing again.
         case logosSend
         /// One Logos conversation (prd §1155), read live from the Observer.
         /// Carries the conversation's id and title, never a message: nothing
         /// of the chat is kept.
         case logosChat(id: String, title: String)
-        /// ONE FRAMES TRANSACTION, and the three routes below it — all four
-        /// here for two reasons at once: the seat lands no
-        /// `Thing` so nothing can ride `.thing`, and every card that opens one
-        /// lives inside this List's rows, where a `.sheet` resolves to the same
-        /// presenting controller as this one and half-opens before closing.
-        ///
-        /// Carries the OWNING address beside the move: in an unscoped room
-        /// nothing else can say which of the shown addresses it belonged to.
-        case framesMove(FramesMove, String)
-        /// One FRAME — the object this chain is NAMED for, and until now the
-        /// one thing in the room that could not be opened anywhere. Carries the
-        /// whole move and an index rather than the frame alone, so the sheet
-        /// can draw the step in its sequence; a step out of its order is a step
-        /// without its meaning.
-        case framesFrame(FramesMove, Int)
         /// Everyone a social room's face row leaves behind its `+N` (prd §824),
         /// routed here since the row moved into the room (§959): a `.sheet`
         /// inside a List row tears this screen's own sheet down mid-rise.
@@ -110,16 +91,6 @@ extension FeedScreen {
         /// GitHub's watch tray (prd §1030): raised once on the arrival a
         /// connect made, and from the room's Watch tile (§1031).
         case githubWatch
-        /// One address that paid somebody else's gas, with the moves the room
-        /// is currently showing — passed rather than re-read, because the room
-        /// may be scoped and a sheet that quietly widened to every account
-        /// would answer a question nobody asked.
-        case framesPayer(FramesPayer, [FramesMove])
-        /// One watched Frames address, or this phone's own.
-        case framesAccount(FramesAccount)
-        /// Somebody asking this phone to pay their fee (prd §728c), opened by a
-        /// `casberi://frames/sponsor` link through `chrome.framesSponsorRequest`.
-        case framesSponsor(FramesSponsorRequest)
 
         var id: String {
             switch self {
@@ -147,14 +118,8 @@ extension FeedScreen {
             case .web(let url): "web:\(url.absoluteString)"
             case .nftPicks(let address, _): "nftPicks:\(address)"
             case .person(let source, let handle): "person:\(source):\(handle)"
-            case .framesSend: "framesSend"
             case .logosSend: "logosSend"
             case .logosChat(let id, _): "logosChat:\(id)"
-            case .framesMove(let m, _): "framesMove:\(m.id)"
-            case .framesFrame(let m, let i): "framesFrame:\(m.id)#\(i)"
-            case .framesPayer(let p, _): "framesPayer:\(p.id)"
-            case .framesAccount(let a): "framesAccount:\(a.address)"
-            case .framesSponsor(let r): "framesSponsor:\(r.id)"
             case .githubWatch: "githubWatch"
             }
         }
@@ -366,35 +331,6 @@ extension FeedScreen {
                 // and Positions' now, so it enumerates those groups itself.
                 onWalkToApprovals: nil,
                 onWalkToLending: nil)
-        case .framesMove(let move, let owner):
-            FramesMoveSheet(move: move, owner: owner) { index in
-                // Frame-to-frame through the ONE sheet: replacing the route
-                // swaps the tray's content in place, so the step rises where
-                // the transaction was rather than as a second sheet over it.
-                feedSheet = .framesFrame(move, index)
-            }
-        case .framesFrame(let move, let index):
-            FramesFrameSheet(move: move, index: index) { next in
-                // Step-to-step, the same route swap that opened this one.
-                feedSheet = .framesFrame(move, next)
-            }
-        case .framesPayer(let payer, let moves):
-            FramesPayerSheet(payer: payer, moves: moves) { move in
-                // The owner is this room's own scope: a sponsored transaction
-                // was read off one of the shown accounts, and the payer is by
-                // definition NOT it.
-                feedSheet = .framesMove(move, framesOwner(of: move))
-            }
-        case .framesSponsor(let request):
-            FramesSponsorSheet(request: request)
-        case .framesAccount(let account):
-            FramesAccountSheet(account: account) { section in
-                // The sheet's facts are doors: scope the room to this account
-                // and open the list the fact names.
-                chrome.framesScope = account.address
-                chrome.framesSection = section
-                feedSheet = nil
-            }
         case .web(let url):
             DSWebSheet(url: url) { feedSheet = nil }
         case .nftPicks(let address, let label):
@@ -431,7 +367,8 @@ extension FeedScreen {
         case .logosSend:
             // **A NATIVE TRANSFER, ONE SIGNER, NO MAX (prd §1084).** The
             // sender pays the fee and must hold its reserve besides, so the
-            // whole balance cannot send itself — Frames' reason for no Max.
+            // whole balance cannot send itself: a Max would be the dead
+            // control §83 bans.
             DevnetSendSheet(
                 venue: String(localized: "Logos"),
                 seat: LogosRoom.source,
@@ -443,104 +380,6 @@ extension FeedScreen {
                 isValidAddress: { LogosWire.watchableID($0) != nil },
                 isValidAmount: { LogosWire.typedAmount($0) != nil },
                 perform: { to, amount in await sendLogos(to: to, amount: amount) })
-        case .framesSend:
-            DevnetSendSheet(
-                venue: String(localized: "Frames"),
-                seat: FramesIdentity.source,
-                tint: DS.tint,
-                unit: String(localized: "test ETH"),
-                candidates: framesSendCandidates,
-                heldLine: framesHeldLine,
-                // **NO MAX**: the sender pays its own gas, so an amount equal
-                // to the whole balance cannot pay for itself and is a
-                // guaranteed failure — the dead control §83 bans wearing a
-                // convenience's clothing.
-                maxAmount: nil,
-                isValidAddress: DevnetSendParse.isValidAddress,
-                isValidAmount: { DevnetSendParse.weiData(from: $0) != nil },
-                perform: { to, amount in await sendFrames(to: to, amount: amount) },
-                // The one thing neither neighbour can say — see
-                // `FramesSendPlanSteps`.
-                // **THE VENUE STITCHES** (prd §548 sixth follow-up): this
-                // chain's whole capability is putting several frames under one
-                // signature, and until then the send built exactly two.
-                stitch: DevnetStitch(
-                    headName: String(localized: "Verify"),
-                    headDetail: String(localized: "An expiry check, then your signature · always first"),
-                    atomicity: .chosen(
-                        title: String(localized: "All or nothing"),
-                    // **BOTH STATES ARE SPELLED, and OFF is the one that
-                    // matters.** Measured on this chain (see
-                    // `FramesTransaction.atomicFlag`): with the flag clear, a
-                    // frame that fails leaves the frames before it SENT — the
-                    // recipient of a failed transaction's first frame still
-                    // holds the money. No other send in this app behaves that
-                    // way, so leaving OFF undescribed would be the §83 fake
-                    // status in the place it costs money.
-                        on: String(localized: "If any frame fails, none of them send."),
-                        off: String(localized: "A frame that fails leaves the ones before it sent.")),
-                    // The chain bounds the verify prefix at 500,000 gas and its
-                    // refusal names no remedy, so the sheet stops first. Eight
-                    // is well inside it and is also more legs than a list this
-                    // size can show without scrolling past the control.
-                    maxLegs: 8,
-                    atCapacity: String(localized: "That's as many frames as one transaction can carry here."),
-                    send: { legs, atomic in await sendFramesStitched(legs, atomic: atomic) },
-                    // **THE SAME STRIP THE ROOM DRAWS.** Not a preview invented
-                    // for this screen: `FramesSequenceStrip` is what the Frames
-                    // scope uses to show what a transaction DID, so composing in
-                    // it means composing in the shape the result will be read
-                    // in — and the join between cells is the only place the
-                    // all-or-nothing toggle is visible as a picture rather than
-                    // as a sentence.
-                    // Drawn on the commit tile's own tint fill since §571, so
-                    // it takes the palette for that ground — the same drawing,
-                    // not a second one written for the tile.
-                    preview: { legs, atomic in
-                        AnyView(FramesSequenceStrip(runs: [framesPreviewRun(legs)],
-                                                    joinProgress: atomic ? 1 : 0,
-                                                    palette: .onTint))
-                    },
-                    // **ASKED OF THE ENCODER, NEVER RE-SPELLED** (prd §571).
-                    // The list draws a tie between joined legs, and the rule
-                    // for which legs those are is `FramesTransaction.stitched`'s
-                    // — the last payload frame never carries the flag, which
-                    // the node enforces by refusing the transaction outright.
-                    // Reading it back off the run this file already builds for
-                    // the strip means the tie in the list and the tie in the
-                    // drawing are one fact with one door, rather than two
-                    // spellings that agree until somebody edits one.
-                    joins: { legs, atomic in
-                        guard atomic else { return Array(repeating: false, count: legs.count) }
-                        return framesPreviewRun(legs)
-                            .filter { $0.frame.mode != 1 }
-                            .map(\.joinedToNext)
-                    }),
-                // **TOKENS, THROUGH THE SAME SHEET (prd §728b).** The coin still
-                // goes through `perform`; a token rides the stitched path as a
-                // one-leg batch, so it is signed, noted and refreshed exactly as
-                // every other send here.
-                assets: framesSendAssets,
-                sendAsset: { to, amount, asset in
-                    await sendFramesStitched([DevnetSendLeg(address: to, amount: amount,
-                                                            asset: asset.id, unit: asset.unit)],
-                                             atomic: false)
-                },
-                planAsset: { destination, amount, asset in
-                    FramesSendPlanSteps.steps(destination: destination, amount: amount, asset: asset)
-                },
-                // **SOMEBODY ELSE CAN PAY (prd §728c)** — a row on the batch,
-                // drawn only when there is somebody you follow to ask.
-                payerChoice: DevnetPayerChoice(
-                    // A request is signed by this phone's secp256k1 key, so the
-                    // passkey account cannot ask — its sponsor would be asked to
-                    // pay for an account the request's signature does not speak for.
-                    candidates: framesSendsFromPasskey ? [] : framesPayerCandidates,
-                    ask: { legs, atomic, payer in
-                        await askFramesSponsor(legs, atomic: atomic, payer: payer)
-                    },
-                    paysHere: { FramesKey.holds($0) }),
-                senderChoice: framesSenderChoice)
         }
     }
 

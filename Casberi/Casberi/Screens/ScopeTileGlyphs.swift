@@ -14,12 +14,10 @@ enum ScopeTileGlyph {
     static let activity    = "clock.arrow.circlepath"
     static let holdings    = "chart.pie"
     static let accounts    = "person.2"
-    static let permissions = "key"
     /// The Wallet's Security tile (prd §1107): approvals, delegations, Safe
     /// signatures and the transfers made to fool you. It took Permissions'
     /// and Risk's tiles; neither of their glyphs (`key`, `shield`) is its own.
     static let security    = "lock.shield"
-    static let frames      = "square.stack.3d.down.right"
     /// Privy's Apps — "every app that made you a wallet" (user, 2026-09-19:
     /// *"on the privy screen, you're using the same icon for apps that we use
     /// for frames. We need a different icon for apps there"*, prd §831).
@@ -214,17 +212,6 @@ extension LogosSection: DSTileScope {
         case .holdings: return ScopeTileGlyph.holdings
         case .node:     return ScopeTileGlyph.node
         case .chat:     return ScopeTileGlyph.chat
-        }
-    }
-}
-
-extension FramesSection: DSTileScope {
-    var glyph: String {
-        switch self {
-        case .home:        return ScopeTileGlyph.home
-        case .holdings:    return ScopeTileGlyph.holdings
-        case .frames:      return ScopeTileGlyph.frames
-        case .permissions: return ScopeTileGlyph.permissions
         }
     }
 }

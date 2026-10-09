@@ -220,7 +220,6 @@ struct RootShell: View {
                 // A verb tile is never a page (prd §1039); the wallet family
                 // has none since §1107 and §1108.
                 if let s = WalletSection(rawValue: raw) { chrome.walletSection = s }
-                if let s = FramesSection(rawValue: raw) { chrome.framesSection = s }
                 if let s = LogosSection(rawValue: raw) { chrome.logosSection = s }
                 // And a Tokens company pack, by its category name ("Work").
                 if let s = TokensScope.all.first(where: { $0.category == raw }) { chrome.tokensScope = s }
@@ -2706,10 +2705,6 @@ struct RootShell: View {
                     predicate: #Predicate { $0.id == uuid }
                 )))?.first)
             }
-        // casberi://frames/sponsor?r=<request> — somebody asked this phone to
-        // pay for a Frames transaction (prd §728c). Lands in the Frames room
-        // and hands the request to it; a link that is not a readable request
-        // says so rather than opening a room with nothing to explain.
         // casberi://pair?uri=<wc:…> — a WalletConnect pairing link handed to
         // this phone as a signer (prd §913). Pairs and lands on the Safe page,
         // where the session and the ask show; a link that is not a pairing
@@ -2723,14 +2718,6 @@ struct RootShell: View {
                 if case .failure(let error) = await SafePeer.pair(uri: uri, context: { modelContext }) {
                     chrome.flash(SafeScreen.pairSentence(error), tone: .failure)
                 }
-            }
-        case "frames":
-            sceneState.filter.source = FramesIdentity.source
-            sceneState.filter.tag = "All"
-            if let request = FramesSponsor.request(from: url) {
-                chrome.framesSponsorRequest = request
-            } else {
-                chrome.flash(String(localized: "That payment request couldn't be read."), tone: .failure)
             }
         default: break
         }

@@ -403,16 +403,6 @@ enum NetworkReach {
                  // §289 case: every node request names this service to
                  // `NetworkLedger`, so a self-chosen address is attributed.
                  hosts: ["testnet.lez.logos.co", "the node address you give it"]),
-        // Frames devnet (prd §548, 2026-09-01) — a chain with its own hosts
-        // and a signing key of its own. Since prd §962 the chain is ethpandaops'
-        // `frames-devnet-0` (`FramesNetwork.current`), reached through ONE
-        // public endpoint. Its faucet is proof-of-work plus a captcha, so the
-        // app only OPENS that page — it is in the reach audit's non-reach
-        // denylist, and the old `faucet.frames.ethrex.xyz` claim is deleted.
-        Endpoint(service: "Hegotá Frames",
-                 reach: .whenConnected(bridge: "Hegotá Frames"),
-                 purpose: "Reads a followed address's balance and its frame transactions — what each frame did, what it spent of its two gas budgets, and who paid for it — from frames-devnet-0, the public test network for EIP-8141 frame transactions, run by the Ethereum Foundation's devops team. A read carries only the address you follow. Sending also sends one signed transaction: what leaves is a signature, never the key that made it — that key is a plain scalar held on this device, not the Secure Enclave, because this chain's money has no value to protect and the network itself may be reset without notice. Top up opens the network's faucet page in the browser; the app sends it nothing.",
-                 hosts: ["rpc.frames-devnet-0.ethpandaops.io"]),
         Endpoint(service: "0xBow Privacy Pools",
                  reach: .whenConnected(bridge: "0xBow Privacy Pools"),
                  purpose: "Reads your Privacy Pools deposits from the public chain and their review status from 0xBow's public API, for the wallets you follow.",

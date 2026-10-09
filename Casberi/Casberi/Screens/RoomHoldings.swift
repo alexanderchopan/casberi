@@ -4,7 +4,7 @@ import SwiftUI
 ///
 /// §683 did this for Home and §686/§687 for Activity. Holdings had drifted
 /// further than either: the Wallet and vibenet mapped TOKENS, Hegotá and the
-/// Privacy devnet mapped ADDRESSES, and Hegotá Frames had no such scope at all
+/// Privacy devnet mapped ADDRESSES, and a third devnet had no such scope at all
 /// — three answers to one question, plus an absence.
 ///
 /// **Holdings' job is the SPLIT, and where nothing splits it is not the slot**
@@ -41,53 +41,6 @@ enum RoomHoldings {
         /// The quantity as a number, in the asset's own unit; nil where the
         /// chain could not say (an unread decimals), which prices nothing.
         var quantity: Double? = nil
-    }
-
-    /// Every token held across the reached accounts, deduplicated by contract
-    /// and SUMMED — a room's "All" is the sum of what it watches, exactly as
-    /// its crown's is. Stated once here so two rooms cannot sum it two ways.
-    static func merged(_ perAccount: [[DevnetTokens.Holding]]) -> [DevnetTokens.Holding] {
-        var byContract: [String: DevnetTokens.Holding] = [:]
-        for holdings in perAccount {
-            for token in holdings {
-                if let seen = byContract[token.id] {
-                    byContract[token.id] = DevnetTokens.Holding(
-                        contract: seen.contract, symbol: seen.symbol,
-                        decimals: seen.decimals, raw: seen.raw + token.raw)
-                } else {
-                    byContract[token.id] = token
-                }
-            }
-        }
-        return byContract.values.sorted { ($0.amount ?? 0) > ($1.amount ?? 0) }
-    }
-
-    /// The coin and the tokens as drawable cells.
-    ///
-    /// **The coin is a cell like any other.** It is the largest holding on
-    /// nearly every account on these chains, and leaving it out would map the
-    /// small change while Home stated the rest.
-    ///
-    /// A token that could not name itself keeps its short address rather than
-    /// an invented name, and one whose decimals did not read shows no quantity
-    /// rather than a wrong one — `DevnetTokens.Holding`'s own rules.
-    /// **THE COIN'S UNIT IS THE ROOM'S; A TOKEN'S IS ITS OWN NAME.** The
-    /// rooms hand in their coin cell already spelled — each chain says "test
-    /// ETH" its own way — and the tokens are spelled here, without a unit,
-    /// because the cell and the row both name the asset beside the number.
-    /// Letting a room format its tokens too is what produced "8.4K ETH" next
-    /// to the word PEPE.
-    static func cells(coin: Cell?, tokens: [DevnetTokens.Holding]) -> [Cell] {
-        var out: [Cell] = []
-        if let coin { out.append(coin) }
-        for token in tokens {
-            out.append(Cell(name: token.symbol ?? WalletStore.shortAddress(token.contract),
-                            amount: token.amount.map(DevnetTokens.quantity)
-                                ?? String(localized: "amount couldn't be read"),
-                            symbol: token.symbol ?? "",
-                            quantity: token.amount))
-        }
-        return out
     }
 }
 

@@ -9,7 +9,7 @@ Key facts:
 - Every app sits in one of ten categories, each one inbox: Wallet, Markets, Testnets, Work, Day, Life, Agents, Media, Social and Reading. See a category all together, or pick one app to see it alone.
 - Wallet: one balance across self-custody wallets (Ethereum, Base, Arbitrum, World Chain, HyperEVM, Robinhood Chain, Tempo, Solana, Bitcoin and Lightning), Coinbase, Kraken, Binance and Gemini, ETH validators, and Wise and Apple Wallet cash. One timeline of card spends, transfers, deposits and swaps. Permissions, positions and risk show what could hurt you; Coming up lists Safe signatures and charges ahead. Railgun, Privacy Pools and Peer sit beside everything else. Watching is read-only: you paste an address or a name, never a seed phrase, and Casberi cannot move your funds.
 - Markets: follow the stock or token behind every app you use, with price alerts.
-- Testnets: the Hegotá Frames devnet and the Logos testnet, with test coins only.
+- Testnets: the Logos testnet, with test coins only.
 - Agents: read what every agent you use did, in one place. Ask Claude, ChatGPT, Gemini and others with your own key, kept in the Keychain and sent from the device straight to that provider, or Apple Intelligence with no key.
 - Notes and voice notes, an address book of everyone across your accounts, and share cards.
 - No account, no analytics, no trackers. iCloud sync is opt-in. Export, import and delete-everything are real controls.

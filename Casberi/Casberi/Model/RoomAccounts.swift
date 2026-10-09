@@ -25,7 +25,7 @@ enum RoomAccounts {
         let mark: String
         /// Whether a pick shows the app's own screen inside the merged room
         /// rather than narrowing the room's (prd §1050k): a testnet's tiles,
-        /// verbs and accounts are its own, and no view adds the two networks.
+        /// verbs and accounts are its own, and no view adds two networks.
         var ownScreen = false
 
         /// Whether a row of `source` is this app's: its own source, its
@@ -104,7 +104,8 @@ enum RoomAccounts {
                                           lifeRoom, dayRoom, workRoom, socialRoom]
 
     /// The Testnets room (prd §1050, built §1050k). No seat carries the name;
-    /// the room exists while Hegotá Frames or Logos is connected.
+    /// the room exists while Logos is connected (Hegotá Frames, its other
+    /// network, was deleted by prd §1206).
     static let testnetsRoom = "Testnets"
 
     /// The Reading room (prd §1049, §1050d, §1051a, built §1052) folded into
@@ -231,8 +232,6 @@ enum RoomAccounts {
     /// The testnets (prd §1050): test money, never in the Wallet's menu or
     /// total (§83).
     private static let testnets: [Seat] = [
-        Seat(name: FramesIdentity.source, source: FramesIdentity.source,
-             holder: nil, group: networks, mark: FramesIdentity.source, ownScreen: true),
         Seat(name: LogosRoom.source, source: LogosRoom.source,
              holder: nil, group: networks, mark: LogosRoom.source, ownScreen: true),
     ]

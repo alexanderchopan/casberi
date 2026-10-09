@@ -685,11 +685,6 @@ enum DemoSeedAll {
         "Snapchat": 5, "YouTube": 5, "Instagram": 4, "Privacy Pools": 4,
         "Apple Wallet": 3, "TikTok": 3,
         "Gmail": 2, "Files": 2, "Pinterest": 5,
-        // Hegotá Frames (prd §548) — landless for exactly Hegotá's reason,
-        // one line above: it lands no `Thing` at all, so its chip has no row
-        // to ride and needs its own weight or it sorts to the back of the
-        // strip while reading as connected.
-        "Hegotá Frames": 3,
         // Cloudflare (2026-08-08) — the `runway` figure kind had NO room
         // above the panel's 20-card cap, and the reason wasn't affinity, it
         // was that `runway` could not draw at all: `CloudflareRunwaySource
@@ -791,11 +786,6 @@ enum DemoSeedAll {
         // "Cloudflare" too, indistinguishable by name).
         CloudflareEstateStore.clear()
 
-        // Frames had a `teardownDemo` and nothing called it: it PERSISTS its
-        // fixture, so after Exit the room drew the demo's 17.99 test ETH as
-        // the person's own until a real read ran — and none runs with no key
-        // and no watch.
-        FramesLiveState.teardownDemo()
         LogosStore.shared.remove(demoLogosAccount)
 
         // Apple Wallet's own bespoke connected flag, and App Store Connect's
@@ -5239,11 +5229,6 @@ enum DemoSeedAll {
         // 5 · Cloudflare's estate snapshot — see `seedCloudflareEstate`'s own
         // doc for why the two cert rows alone don't reach the runway figure.
         seedCloudflareEstate()
-        // 5c · The Frames devnet's fixture account (prd §548). A FIXTURE and
-        // never a read: `DemoMode` reaches no network by ruling, and a live
-        // sweep would answer with an empty account and draw the seat as a
-        // room with nothing in it.
-        FramesLiveState.seedDemo()
         // 5c' · Logos' watched account (prd §1073): the rows below name it
         // (`CbgR…Sr2r`), and with no account watched the room's box said
         // "No account watched yet." over its own moves. A fixture balance,
@@ -5454,7 +5439,6 @@ enum DemoSeedAll {
         // status check D exists to catch.
         ("Peer", "Rides your wallet", "Lands settled fills, never trades."),
         ("Privacy Pools", "Rides your wallet", "Reads your deposits' review status."),
-        ("Hegotá Frames", "An account on this phone", "Reads what each frame of a transaction did."),
         ("Gnosis Pay", "Rides your wallet", "Reads what the card settled onchain."),
         ("MetaMask Card", "Rides your wallet", "Reads what the card settled onchain."),
         ("ether.fi", "Rides your wallet", "Reads what the card settled onchain."),

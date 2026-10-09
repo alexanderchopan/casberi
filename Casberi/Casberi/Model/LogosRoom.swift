@@ -1,14 +1,14 @@
 import Foundation
 
 /// The Logos room's SCOPE (prd §991) — the devnet family's template, this
-/// network's vocabulary. `FramesSection` is the shape (`order`, `resolve`
+/// network's vocabulary. Frames' section enum was the shape (`order`, `resolve`
 /// falling back to `.home`, `emptyHeadline`/`emptyBody` for a scope with
 /// nothing yet) and `DSRoomScopeChrome` is the shared control, which draws
 /// Home first and the rest in the alphabet (§936 amended): Home · Chat ·
 /// Holdings · Node (prd §1155: Rewards folded into Node to make room for
 /// Chat, the four-tile row §1107 kept). The verbs are rows, not tiles (prd §1108): Create is "New
 /// account" at the head of the Accounts menu and Send leads Holdings, as in
-/// Frames; Explorer's door is the Logos page's, and every row opens its own
+/// Frames (deleted, prd §1206); Explorer's door is the Logos page's, and every row opens its own
 /// transaction there.
 ///
 /// **What the family has that Logos does not, and why** (user, 2026-09-29:

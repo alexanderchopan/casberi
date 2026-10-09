@@ -965,13 +965,6 @@ struct AppsScreen: View {
         return { route.fromAccountsList(open) }
     }
 
-    /// **A DEVNET OPENS ITS ROOM, connected or not (user, 2026-09-28: "watch
-    /// addresses is kind of confusing").** Its account page led with a watch
-    /// field and addresses worth watching, so making your own account meant
-    /// watching a stranger first, then finding Activity, then Home. The room
-    /// always draws now, and its first act is Create account.
-    private static let devnetRooms: Set<String> = [FramesIdentity.source]
-
     /// **A CONNECTED ROW OPENS ITS ACCOUNT PAGE (prd §1050f, reversing
     /// §1040's land-in-room and §1033's status row).** An app's settings live
     /// here and nowhere else: no room draws a sliders disc, and a merged room's
@@ -981,12 +974,6 @@ struct AppsScreen: View {
         if entry.tier == 0 || entry.tier == 2, let bridge = entry.bridge {
             let destination = BridgeRouter.destination(forID: bridge.id)
             return { DSHaptic.tap(); route.openAccount(destination) }
-        }
-        // A devnet row with no account yet still opens its room, where its
-        // own create verb lives.
-        if Self.devnetRooms.contains(entry.offer.name) {
-            let room = entry.offer.name
-            return { DSHaptic.tap(); route.path = []; chrome.sourceRequest = room }
         }
         switch entry.tier {
         case 1:

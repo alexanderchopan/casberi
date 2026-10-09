@@ -158,14 +158,15 @@ struct RoomAccountsTests {
 
     // MARK: - Testnets (prd §1050k)
 
-    /// The two networks fold into Testnets, never into the Wallet: test money
-    /// and real money never share a room (§1050).
+    /// The network folds into Testnets, never into the Wallet: test money
+    /// and real money never share a room (§1050). Logos is its one network
+    /// since Hegotá Frames was deleted (prd §1206).
     @Test func theTestnetsFoldIntoTestnetsNotTheWallet() {
-        for source in [FramesIdentity.source, LogosRoom.source] {
-            #expect(RoomAccounts.host(ofSource: source)?.room == RoomAccounts.testnetsRoom)
-            #expect(!RoomAccounts.rides(room: CategoryFold.walletRoom, source: source))
-        }
+        #expect(RoomAccounts.host(ofSource: LogosRoom.source)?.room == RoomAccounts.testnetsRoom)
+        #expect(!RoomAccounts.rides(room: CategoryFold.walletRoom, source: LogosRoom.source))
         #expect(RoomAccounts.seats(for: CategoryFold.walletRoom).allSatisfy { !$0.ownScreen })
+        // A deleted network is no seat in the room (prd §1206, §723).
+        #expect(RoomAccounts.host(ofSource: "Hegot\u{00e1} Frames") == nil)
     }
 
     /// The room no seat names is its own category, so the strip folds it there
@@ -183,11 +184,11 @@ struct RoomAccountsTests {
     /// room that draws itself.
     @Test func theRoomShowsOneConnectedNetwork() {
         let room = RoomAccounts.testnetsRoom
-        let both: Set = [FramesIdentity.source, LogosRoom.source]
-        #expect(RoomAccounts.shownSource(room: room, scope: nil, names: both) == FramesIdentity.source)
-        #expect(RoomAccounts.shownSource(room: room, scope: "seat:Logos", names: both) == LogosRoom.source)
-        #expect(RoomAccounts.shownSource(room: room, scope: "seat:Logos",
-                                         names: [FramesIdentity.source]) == FramesIdentity.source)
+        let logos: Set = [LogosRoom.source]
+        #expect(RoomAccounts.shownSource(room: room, scope: nil, names: logos) == LogosRoom.source)
+        #expect(RoomAccounts.shownSource(room: room, scope: "seat:Logos", names: logos) == LogosRoom.source)
+        // A pick of a network that is not connected shows nothing, never it.
+        #expect(RoomAccounts.shownSource(room: room, scope: "seat:Logos", names: []) == nil)
         #expect(RoomAccounts.shownSource(room: room, scope: nil, names: []) == nil)
         #expect(RoomAccounts.shownSource(room: CategoryFold.walletRoom, scope: "seat:Safe",
                                          names: ["Safe"]) == nil)

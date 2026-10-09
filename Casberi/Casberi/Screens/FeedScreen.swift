@@ -984,15 +984,12 @@ struct FeedScreen: View {
                 chrome.walletSections = []
                 chrome.walletSectionAttention = []
             }
-            // The two testnet rooms' half of the same contract (PERF
+            // The testnet room's half of the same contract (PERF
             // 2026-09-01), replacing writes made from inside `roomBody` — see
-            // `framesSectionPublication`. `initial: true` for the reason the
-            // one above gives: both rooms' live state is usually already loaded by
-            // the time the room mounts, so a room that never changes afterwards
-            // would publish nothing and draw no switcher at all.
-            .onChange(of: framesSectionPublication, initial: true) { _, now in
-                chrome.framesSections = now
-            }
+            // `logosSectionPublication`. `initial: true` for the reason the
+            // one above gives: the room's live state is usually already loaded
+            // by the time the room mounts, so a room that never changes
+            // afterwards would publish nothing and draw no switcher at all.
             .onChange(of: logosSectionPublication, initial: true) { _, now in
                 chrome.logosSections = now
             }
@@ -1003,7 +1000,6 @@ struct FeedScreen: View {
             // switcher cannot appear over another room" true by construction
             // rather than by a source test in two files.
             .onDisappear {
-                if source == FramesIdentity.source { chrome.framesSections = [] }
                 if source == LogosRoom.source { chrome.logosSections = [] }
             }
     }
@@ -1113,11 +1109,11 @@ struct FeedScreen: View {
         // reads twice, which is what it read before.
         //
         // THE EXCEPTION, stated rather than glossed: the seats whose branches
-        // below return before they ever reach the rows (Frames, Logos)
+        // below return before they ever reach the rows (Logos)
         // previously paid one short-circuiting
         // `contains` and now pay `visible`'s `Corpus.surfaced` allocation too.
-        // It is free in fact and not in principle — each of those seats lands
-        // no `Thing` EVER, so the array it allocates over is empty — and it is
+        // It is free in fact and not in principle — such a seat lands few
+        // `Thing`s, so the array it allocates over is small — and it is
         // written down here because a premise that stops being true is exactly
         // what this change had to go and correct one property up.
         //
@@ -1153,53 +1149,6 @@ struct FeedScreen: View {
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
                 .listRowInsets(EdgeInsets())
-        } else if source == FramesIdentity.source,
-                  let head = FramesRoomSource.compose(scope: chrome.framesScope) {
-            // **A ROOM WITH LIVE CONTENT AND NO ROWS** — Hegotá's branch, one
-            // chain over, and needed for the same reason: without it the
-            // `if/else if` falls through BOTH arms and renders nothing at all.
-            // This seat lands no `Thing` EVER, so its rows are always zero and
-            // its entire content is this head.
-            // Published from `.onChange(of: framesSectionPublication)` up in
-            // `body`, NOT written here — see `framesSectionPublication` for what
-            // a body that writes its own observed state costs.
-            let framesScope = FramesSection.resolve(chrome.framesSection,
-                                                    present: chrome.framesSections)
-            // **BOX · TILES · MENU, THEN THE LIST (prd §1039).** The chrome
-            // draws the crown (`FramesRoomFigure` on its `.home` arm) or the
-            // scope's figure in one box, the tiles and the account menu under
-            // it — nothing that scopes the room at the top of the screen
-            // (§752) — and `FramesRoomList` draws the page's list: the moves
-            // on Home.
-            framesScopeChromeSection(framesScope, head: head)
-            framesMoneyDoorsSection(framesScope)
-            Group {
-                FramesRoomList(head: head,
-                               accounts: framesAccounts,
-                               section: framesScope,
-                               // **THESE ROWS WERE BUTTONS WIRED TO NOTHING**
-                               // (2026-09-02). `FramesRoomList` has built every
-                               // row as a `Button { onOpenMove(move) }` since
-                               // the room shipped and this closure was empty —
-                               // so a tap in Activity, Frames or Sponsors
-                               // highlighted and did nothing, which is §83's
-                               // dead control multiplied by every transaction
-                               // on screen.
-                               onOpenMove: { move, owner in
-                                   feedSheet = .framesMove(move, owner)
-                               },
-                               onOpenPayer: { payer in
-                                   feedSheet = .framesPayer(payer, framesShownMoves)
-                               },
-                               onOpenAccount: { feedSheet = .framesAccount($0) })
-            }
-            .listRowBackground(Color.clear)
-            .listRowSeparator(.hidden)
-            // The Wallet's row column (prd §950): a devnet list's icons centre
-            // on the same line as every other room's; its day headers step
-            // back to the tiles' edge themselves (`DSDayHeader`).
-            .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.rowInset(forMark: DS.Face.list),
-                                      bottom: DS.Space.s4, trailing: DS.Space.s4))
         } else if source == LogosRoom.source {
             // **THE LOGOS ROOM (prd §991)** — a devnet-family room that DOES land
             // rows. The chrome draws the box, the tiles and the account menu on
@@ -1223,7 +1172,7 @@ struct FeedScreen: View {
         // connected agent with no conversation yet matched nothing here at all.
         // Reported the moment the dock fix worked: *"i press the bankr tile i
         // just see a black screen"*. `LiveRoomSources`' own doc names this
-        // exact shape — it is why Frames and Logos each have an arm above
+        // exact shape — it is why Logos has an arm above
         // rather than a flag.
         } else if roomHasContent || agentRoomShown || Pinboard.isPinnedRoom(source)
                     || walletKeepsChrome || source == "All" || HomeScope.isMarkets(source) {
@@ -1245,8 +1194,8 @@ struct FeedScreen: View {
                 populatedRoom(visible)
             }
         } else {
-            // A LIVE-CONTENT ROOM WHOSE HEAD IS NIL (prd §911) — Frames with
-            // nothing watched. Every arm above declined, and
+            // A LIVE-CONTENT ROOM WHOSE HEAD IS NIL (prd §911). Every arm
+            // above declined, and
             // the chain used to fall through here and draw NOTHING: the black
             // screen each of those arms' notes describes. The corpus-shaped
             // empty state is the honest floor.
@@ -1280,10 +1229,8 @@ struct FeedScreen: View {
     ///
     /// Gated on the head actually COMPOSING, never on the source name alone:
     /// if there is no card to draw then the room really is its rows, and the
-    /// generic state is the right answer after all. Frames already has its own
-    /// arm above for the same structural reason (it lands no `Thing` ever, so
-    /// its rows are always zero) — this is that reasoning applied to the rooms
-    /// that land rows but can legitimately have none of them in view.
+    /// generic state is the right answer after all — the rooms that land rows
+    /// but can legitimately have none of them in view.
     private var keepsChromeWhenEmpty: Bool {
         // **AN AGENT ROOM'S TILES ARE HOW IT STOPS BEING EMPTY (prd §841).**
         // Without this the generic state replaces the whole room the
@@ -1978,15 +1925,6 @@ struct FeedScreen: View {
             feedSheet = .person(source: person.source, handle: person.handle)
             #endif
             chrome.personRequest = nil
-        }
-        // **A PAYMENT REQUEST A LINK OPENED (prd §728c).** `initial: true`
-        // because the link also switches the room: the Frames room's screen
-        // mounts AFTER the request is set, so a change-only handler would
-        // never see it.
-        .onChange(of: chrome.framesSponsorRequest, initial: true) { _, request in
-            guard let request else { return }
-            feedSheet = .framesSponsor(request)
-            chrome.framesSponsorRequest = nil
         }
         // A raised sheet owns the keyboard (Mac, 2026-07-31 — see
         // `ShellChrome.canWalk`). It matters most where the detail pane

@@ -5,8 +5,8 @@ import Foundation
 ///
 /// Every other bridge in this app is corpus-shaped: connecting it lands
 /// things, and its chip exists in `MainSurface.chipLabels` precisely because
-/// things with that source exist. The devnet rooms aren't — Frames and Logos
-/// land no `Thing` ever; their content is live chain state.
+/// things with that source exist. The devnet room isn't — Logos' content is
+/// live chain state first, and its rows second.
 /// Modelled the corpus way, a connected seat with nothing landed had no chip
 /// and therefore no room. (The founding members were the prediction markets,
 /// Kalshi and Polymarket, whose whole book was public and live; both were
@@ -22,13 +22,12 @@ enum LiveRoomSources {
     /// Sources whose ROOM has live content, so the chip is earned by the
     /// connection rather than by landed things — and so the room must not draw
     /// the generic "nothing here yet" empty state.
-    /// `FramesIdentity.source` is a member (prd §548): it lands no `Thing`
-    /// ever, so without membership its room draws the corpus-shaped empty
-    /// state over live chain content — and `FeedScreen`'s two arms both fall
-    /// through, which is a BLACK SCREEN. It is deliberately absent from
-    /// `venues` below: that narrower set drew `PredictionRoomBook`, and adding
-    /// a devnet to the wrong one is why a device report read "it is showing me
-    /// prediction markets".
+    /// Hegotá Frames was a member from prd §548 until it was deleted (§1206):
+    /// it landed no `Thing` ever, so without membership its room drew the
+    /// corpus-shaped empty state over live chain content. A devnet is
+    /// deliberately absent from `predictionVenues` below: that narrower set
+    /// drew `PredictionRoomBook`, and adding a devnet to the wrong one is why a
+    /// device report read "it is showing me prediction markets".
     /// Kalshi and Polymarket were the founding members and left on 2026-09-06
     /// with their code (prd §638's third amendment). Their rows persist in a
     /// corpus that has them, but `Corpus.retiredSources` refuses those rows a
@@ -36,7 +35,7 @@ enum LiveRoomSources {
     /// Logos (prd §991) joins for the devnets' reason with one difference: it
     /// DOES land rows, but a watch or a node with nothing landed yet is still
     /// a room with a crown and tiles, never the corpus-shaped empty state.
-    static let all: Set<String> = [FramesIdentity.source, LogosRoom.source]
+    static let all: Set<String> = [LogosRoom.source]
 
     /// **A KEYED AGENT EARNS ITS CHIP BY HOLDING A KEY (prd §842).**
     ///
@@ -51,8 +50,8 @@ enum LiveRoomSources {
     ///
     /// **It is SEPARATE from `all` above, and that separation is load-bearing.**
     /// `all` means "this room has live content and must not draw the corpus
-    /// empty state", which for the three devnets is true forever because they
-    /// land no `Thing` ever. An agent room is the opposite: it lands rows, it
+    /// empty state", which for a devnet is true forever because its content
+    /// is the chain's live state. An agent room is the opposite: it lands rows, it
     /// just has none YET. Folding these names into `all` would tell the feed
     /// this room never has rows, which is the mistake that file's own doc
     /// records twice — and `FeedScreen` already handles the empty agent room

@@ -33,7 +33,7 @@ import SwiftData
 /// and that half is what makes a mid-session CloudKit merge render correctly.
 /// But a ROOM is entered by `Thing.source`, and the surfaces that decide what a
 /// room draws compare that string to a seat's own identity (`FeedScreen`'s room
-/// heads: `source == FramesIdentity.source`; the venue switcher's scopes). Every
+/// heads: `source == LogosRoom.source`; the venue switcher's scopes). Every
 /// one of those would have to learn the alias independently, which is the
 /// cross-file promise `Thing.swift`'s own corollary 4 was written about. So the
 /// strings converge instead, and only display is tolerant.
@@ -279,17 +279,22 @@ enum SourceRename {
     /// "remove nostr"); Lightning keeps the relay client it reads through.
     /// Farcaster joined them the same day (prd §1110, user: "remove
     /// farcaster"): the seat, its casts, channels, likes and signer grants.
+    /// Hegotá Frames joined them 2026-10-08 (prd §1206, user: "the reality is
+    /// we could drop frames today b/c nobody really uses it"), with the name
+    /// it wore before §685's rename. It landed no rows of its own, so this is
+    /// for its seat record, its address-book tag, its defaults and its keys.
     static let droppedSources: Set<String> = [
         "Altana", "Base Vibenet", "Hegotá UTXO", "Hegotá Privacy", "Reddit",
         "Ethrex Hegot\u{00e1}", "Ethrex Privacy", "Hegota Devnet", "Privacy Devnet",
         "Deals", "Shopify", "Cursor", "Nostr", "Farcaster",
         // 1Claw's grants (retired §638): their sheet went with prd §1187.
         "1Claw",
+        "Hegotá Frames", "Frames Devnet",
     ]
 
     /// The address-book network tags those seats wrote (`AddressBook.Network`
-    /// held all four until the same day).
-    private static let droppedNetworks = ["vibenet", "hegota", "altana", "privacydevnet"]
+    /// held all four until the same day, and `frames` until prd §1206).
+    private static let droppedNetworks = ["vibenet", "hegota", "altana", "privacydevnet", "frames"]
 
     /// Every `UserDefaults` key those seats wrote begins with one of these —
     /// their watch lists, live-state caches, signer addresses, the Privacy
@@ -299,11 +304,14 @@ enum SourceRename {
     /// pass (`heal.due.cursor.pullRequests`); Nostr's watched accounts,
     /// hashtags and heal stamp (`nostr.accounts`, `nostr.hashtags`,
     /// `nostr.lastHeal`); Farcaster's accounts, channels, heal stamp,
-    /// follower ledgers and signer cursors (`farcaster.`).
+    /// follower ledgers and signer cursors (`farcaster.`); Hegotá Frames'
+    /// watch list, live-state cache, chain record, sent log, signer addresses
+    /// and passkey public key (`frames.`).
     private static let droppedDefaultsPrefixes = [
         "altana.", "vibenet.", "hegota.", "privacydevnet.",
         "room.value.history.privacyDevnet", "feed.reddit",
         "deals.", "shopify.", "heal.due.cursor.", "nostr.", "farcaster.",
+        "frames.",
     ]
 
     /// The Keychain services the devnets' signing keys lived under. Test money
@@ -311,6 +319,8 @@ enum SourceRename {
     private static let droppedKeychainServices = [
         "casberi-hegota-signer", "casberi-privacydevnet-signer",
         "casberi-privacydevnet-notes", "casberi-vibenet-signer",
+        // Hegotá Frames' signing key and its passkey account (prd §1206).
+        "casberi-frames-signer", "casberi-frames-passkey",
     ]
 
     /// Cursor's API key, in the shared token vault (`TokenBridge.tokenKey`,
@@ -320,10 +330,11 @@ enum SourceRename {
     private static let droppedVaultKeys = ["token.cursor"]
 
     /// `.v2` since prd §1049 added three seats, `.v3` since Nostr joined,
-    /// `.v4` since Farcaster joined (prd §1110): a device that ran the earlier
-    /// pass would otherwise never clear the new seats' defaults. The work it
-    /// repeats is idempotent — every delete finds nothing.
-    private static let droppedLocalKey = "sourceRename.droppedSeats.local.v4"
+    /// `.v4` since Farcaster joined (prd §1110), `.v5` since Hegotá Frames
+    /// joined (prd §1206): a device that ran the earlier pass would otherwise
+    /// never clear the new seats' defaults. The work it repeats is idempotent
+    /// — every delete finds nothing.
+    private static let droppedLocalKey = "sourceRename.droppedSeats.local.v5"
 
     /// Drops what the deleted seats left behind, in `sweepVoice`'s shape: the
     /// ROWS at every launch, because the store mirrors to CloudKit and a

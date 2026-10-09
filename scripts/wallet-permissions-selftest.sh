@@ -22,7 +22,6 @@ cd "$(dirname "$0")/.."
 
 SRC="Casberi/Casberi/Model/WalletPermissions.swift"
 MAP="Casberi/Casberi/Model/WalletPermissionsSource.swift"
-FIGURE="Casberi/Casberi/Screens/RoomPermissionsFigure.swift"
 # FeedScreen is split across files (prd §718). Every check reads the room as ONE
 # text, so a guard can neither fail nor pass because its code moved next door.
 FEED_DIR="$(mktemp -d -t feedscreen)"
@@ -442,37 +441,8 @@ strip "$GRANTS" | grep -q 'Image(systemName: "chevron'   && fail "the approvals 
 # bare `-A` counts the prose rather than the code under it (the ruling above).
 strip "$FEED" | sed '/^[[:space:]]*$/d' | grep -A 3 'first(where: { $0.isLive && $0.id == grant.thingID })' | grep -q 'chrome.flash' || fail "a stale approval row taps into silence again"
 
-# The card speaks as ONE sentence (§299), like the risk bars two scopes over.
-# §692 moved the card's own rendering onto the shared `RoomPermissionsFigure`
-# (`WalletPermissionsCard.body` is now a thin `kinds:`/`lead:` translation),
-# so the modifier lives there now — check both, since a future de-sharing
-# could legitimately move it back.
-# Since prd §924 the figure CONTAINS its keys (each a button VoiceOver can
-# reach, labelled with its holder) and still speaks the ordered sentence as
-# the container's own label — `.contain` beside `spoken`, never one alone.
-{ grep -q 'accessibilityElement(children: .combine)' "$FIGURE" ||
-  { grep -q 'accessibilityElement(children: .contain)' "$FIGURE" &&
-    grep -q 'RoomPermissions.spoken(kinds, lead: lead)' "$FIGURE"; }; } \
-  || fail "the card stopped speaking as one ordered sentence"
+# (The devnets' Permissions figure, `RoomPermissionsFigure`, and its two
+# guards — one ordered sentence, the count drawn as a figure — went with
+# Hegotá Frames, its last caller, prd §1206; the Wallet's card went with §1107.)
 
-# ...and the numerals must stay at figure size: the count IS the drawing now,
-# so demoting it back to a row-sized stat is the old list wearing a new doc.
-# §692 both moved this onto `RoomPermissionsFigure` AND shrank the token to
-# `.price17` (a well, not a bare numeral — the card's own doc comment says
-# so); check both files and both tokens, since either move could reverse.
-# Since prd §924 a count is drawn as MARKS — one key per permission, six
-# before "+N" — rather than as a numeral; either spelling of "the count is
-# drawn, not merely said" passes, and a figure that draws neither fails.
-# Since prd §936 a class is a BAR (`DSBarList`) as long as its count, under
-# the number (`DSFigureReading`) — a third spelling of "drawn, not said".
-# Since prd §944 (Wallet) and §951 (the devnets) the crown is the number over
-# one MARK PER HOLDER — the fourth spelling, and both crowns must carry it.
-{ grep -qE 'dsText\(\.price(40|17)\)' "$FIGURE" ||
-  { grep -q 'systemName: "key.fill"' "$FIGURE" &&
-    grep -q 'ForEach(0..<shown' "$FIGURE"; } ||
-  { grep -q 'DSBarList(bars:' "$FIGURE" &&
-    grep -q 'share: Double(kind.count)' "$FIGURE"; } ||
-  { grep -q 'DSFigureReading(number:' "$FIGURE" && grep -q 'WalletMarkView(mark: holder.mark' "$FIGURE"; }; } \
-  || fail "the devnets' slot counts are no longer drawn as figures (§546, keys since §924, bars since §936, holders since §951; the Wallet's card went with §1107)"
-
-print "  ok   18 mutations, 22 drift guards"
+print "  ok   18 mutations, 20 drift guards"

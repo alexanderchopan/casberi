@@ -69,7 +69,7 @@ esac
 [[ -z "$RED" ]] && RED=0; [[ -z "$AMBER" ]] && AMBER=0
 
 # The flagged rows themselves, so the ledger says WHAT moved without opening
-# the table: "✗ Frames — THE DEVNET RESTARTED" is a different night from
+# the table: "✗ L2BEAT — the milestone file moved" is a different night from
 # "⚠ Jupiter — 503", and a bare count makes them the same. Failures first.
 FLAGGED=$(print -r -- "$PLAIN" | grep -E '^ *(✗|⚠)' | sed -E 's/^ *//' \
           | awk '/^✗/{print; next} {a[NR]=$0} END{for(i=1;i<=NR;i++) if(i in a) print a[i]}')

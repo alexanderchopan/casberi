@@ -194,7 +194,6 @@ def check_complete(feedscreen: str) -> list[str]:
 MONEY_ROWS = {
     "BandRow": "Casberi/Casberi/Screens/ShapedRows.swift",
     "WalletHistoryRow": "Casberi/Casberi/Screens/WalletHistoryScreen.swift",
-    "FramesMoveRow": "Casberi/Casberi/Screens/FramesRoomCard.swift",
 }
 
 # An activity row with no amount, and why — a row that draws EVENTS rather

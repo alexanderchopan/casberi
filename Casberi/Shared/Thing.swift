@@ -158,6 +158,10 @@ enum Corpus {
         "Nostr",
         // Farcaster the same way (prd §1110, user: "remove farcaster").
         "Farcaster",
+        // Hegotá Frames the same way (prd §1206, user: "the reality is we
+        // could drop frames today b/c nobody really uses it"), with its
+        // name before §685's rename.
+        "Hegotá Frames", "Frames Devnet",
     ]
 
     /// Sources whose SEAT WAS RENAMED, and the name it answers to now
@@ -217,15 +221,13 @@ enum Corpus {
     /// So an entry may carry the prefix pair, and `SourceRename.sweep` rewrites
     /// both in the one pass.
     static let renamedSources: [String: Rename] = [
-        // prd §685, 2026-09-10 — the ethrex devnets became one family under
-        // the chain that hosts them, and the Frames devnet took the family's
-        // name. The NAME only: the rows stay keyed `frames:`, and no literal
-        // moved with this rename.
-        "Frames Devnet": Rename(current: "Hegotá Frames"),
+        // (prd §685's "Frames Devnet" → "Hegotá Frames" left with the seat,
+        // prd §1206: both names are in `retiredSources`, and the retired
+        // seats' sweep deletes their rows.)
         // prd §650, 2026-09-08 — the token-watch seat became "Tokens" when its
         // chart stopped being one vendor's (commit a2618a2, 2026-07-13). That
         // commit moved the ref prefix in the same breath, which is why this
-        // entry has one and the one above does not.
+        // entry has one and the one below does not.
         "Dexscreener": Rename(current: "Markets",
                               refPrefix: .init(old: "dexscreener:", current: "tokens:")),
         // 2026-09-29 — Tokens took in Stocktwits' watched stocks and became

@@ -97,15 +97,9 @@ ALLOWANCE = {
     # The rename field's destructive consequence, the empty card, and the name
     # nudge's consequence are three different surfaces of the address book.
     "AddressBookViews.swift": (3, "three surfaces; consequence of an edit (b)"),
-    # Three sheets in one file: Advanced (what is signed, (b)), who pays the
-    # fee (b), and the pay link's expiry (b).
-    "DevnetSendConsole.swift": (2, "the payer row's and the sponsor link's signing disclosures (b)"),
     # The quote's two lines never show together: "sign there" is the ready
     # state, the price drift is the quote.
     "ENSRenewCard.swift": (2, "exclusive states; signing and money (b)"),
-    # The devnet's test-ETH disclosure (b, the 3.1.5 line), and the passkey
-    # account's two branches (created vs create), which are exclusive (b).
-    "FramesScreen.swift": (3, "test ETH + exclusive key-custody states (b)"),
     # The reach screen (§967): Private Relay does not cover an app's own
     # requests (a), and what the ledger does not record (a).
     "NetworkReachScreen.swift": (2, "relay line and the ledger's ceiling; (a)"),

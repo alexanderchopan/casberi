@@ -222,7 +222,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1335 of 1399 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1334 of 1400 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -830,7 +830,6 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §544 — The send console — a keypad, not a form
 - §545 — One address book, and the roster's verbs move onto its own rows (amended by §562)
 - §546 — The Permissions slot stops repeating its own list — counts, big, no names (part superseded by §692, §944)
-- §548 — A seat for the chain that is only frames — the envelope Hegotá's could not sign (amended by §688, §698) [+12 sub-entries]
 - §549 — the demo's address book never leaves the device
 - §550 — The capsule above the bar stops being a daily headline and teaches the gesture, and the empty chat says where agents… (amended by §1047)
 - §551 — One rung for every scope headline, an empty Accounts scope that is a drawing rather than three tiers of text, and the…
@@ -1031,7 +1030,6 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §725 — The dock froze because the caps were for a hand, and the hand is what they landed on
 - §726 — Instagram grows a live door: notifications and saved posts, read with the person's own session cookies, and the expor… (amended by §731)
 - §727 — A token that came in with no price is a row on Wallet Home, not a reason to draw nothing (part superseded by §942)
-- §728 — The Frames devnet reads the chain itself: relaunch, stall, finality, where a send is, who signed, what a skipped fram…
 - §728b — Every Frames send carries a deadline, and the sheet sends tokens
 - §728c — Somebody else can pay: a Frames send can be signed as a request, and the phone asked pays for it from a link
 - §728d — A passkey account on Frames, and all four passes executed on chain
@@ -1300,7 +1298,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §958 — The rooms tray's You row has no Manage door; Connect opens Accounts and its switcher holds Manage (amended by §1012, §1033)
 - §959 — On the phone, a room's "whose" control stands in the room: GitHub and Pinterest pick from the Wallet's menu, the soci…
 - §960 — On the phone, Accounts' and Addresses' category tiles ride a glass capsule beside the seat, not under the search field
-- §962 — The Frames seat moves to ethpandaops' frames-devnet-0; one value names the chain, the faucet is a page, and the prefi… [+1 sub-entries]
+- §962 — The Frames seat moves to ethpandaops' frames-devnet-0; one value names the chain, the faucet is a page, and the prefi… (part superseded by §1206) [+1 sub-entries]
 - §963 — Vibenet says which accounts and key are this phone's, the scope is switches, the change is shown before it is signed,… (part superseded by §1038)
 - §964 — Frames, UTXO and Privacy split their accounts the way Vibenet does: On this phone, then Watching
 - §965 — Every button in the rooms answers the hand
@@ -1557,14 +1555,15 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1201 — The Wallet's Home is four short lists, Spending is one of them, and Needs you holds what waits off chain too
 - §1202 — A merchant wears its own mark: an offer leads with the merchant, five App Store marks are bundled, and an "Apple" cha…
 - §1203 — Two poles: the Feed and the Wallet are the only pages you swipe between, everything else opens on top, and the face g…
-- §1203 — Every company in the demo wears its mark: a sweep, nine App Store marks, and the faces that skipped a bundled one
 - §1204 — Reading folds into Media: one category, tiles All · Play · Read · Subscriptions, and Highlights is deleted
+- §1205 — Every company in the demo wears its mark: a sweep, nine App Store marks, and the faces that skipped a bundled one
+- §1206 — Frames, the devnet, is removed, model and all; Logos is the Testnets category's one seat, and the website counts the…
 
 ## Dead rulings → what replaced them (generated)
 
 Superseded, reversed, deleted or retired whole. Read the right-hand entry instead; the left one is history.
 
-§2→§1037 · §16→§100 · §17→§131 · §34→§1047 · §36a→§36o · §36j→§36o · §58a→§58i · §58h→§58i · §58i→§58j · §58j→§58k · §74→§1110 · §78→§114 · §113→§207 · §124a→§387 · §131→§228a/§1047 · §132→§1047 · §133→§1047 · §160→§212 · §162→§207 · §172→§1047 · §175→§1047 · §180→§1047 · §181→§336/§1047 · §184→§185 · §187→§1047 · §193→§1047 · §201→§518 · §213→§1047 · §214→§1047 · §225→§1047 · §232→§1047 · §248→§1047 · §249→§1047 · §266→§691 · §274→§1047 · §288→§1047 · §304→§1047 · §377a→§1047 · §386→§1047 · §409→§1038 · §437→§440 · §438→§440 · §488→§1038 · §547→§747 · §689→§1041 · §689b→§1041 · §689c→§1041 · §697b→§1047 · §775→§904 · §818→§916 · §877→§1047 · §922→§949 · §961→§969 · §1001→§1008 · §1002→§1015 · §1008→§1012 · §1011→§1013 · §1016a→§1017 · §1028→§1083 · §1040→§1050f · §1050g→§1111 · §1140→§1142 · §1141→§1154 · §1165→§1166
+§2→§1037 · §16→§100 · §17→§131 · §34→§1047 · §36a→§36o · §36j→§36o · §58a→§58i · §58h→§58i · §58i→§58j · §58j→§58k · §74→§1110 · §78→§114 · §113→§207 · §124a→§387 · §131→§228a/§1047 · §132→§1047 · §133→§1047 · §160→§212 · §162→§207 · §172→§1047 · §175→§1047 · §180→§1047 · §181→§336/§1047 · §184→§185 · §187→§1047 · §193→§1047 · §201→§518 · §213→§1047 · §214→§1047 · §225→§1047 · §232→§1047 · §248→§1047 · §249→§1047 · §266→§691 · §274→§1047 · §288→§1047 · §304→§1047 · §377a→§1047 · §386→§1047 · §409→§1038 · §437→§440 · §438→§440 · §488→§1038 · §547→§747 · §548→§1206 · §689→§1041 · §689b→§1041 · §689c→§1041 · §697b→§1047 · §728→§1206 · §775→§904 · §818→§916 · §877→§1047 · §922→§949 · §961→§969 · §1001→§1008 · §1002→§1015 · §1008→§1012 · §1011→§1013 · §1016a→§1017 · §1028→§1083 · §1040→§1050f · §1050g→§1111 · §1140→§1142 · §1141→§1154 · §1165→§1166
 
 ## Renumbered (generated)
 

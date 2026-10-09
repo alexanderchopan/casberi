@@ -455,31 +455,11 @@ enum BridgeCatalog {
         // read-only token there is nothing to mint and nothing to leak.
         Offer(name: "Radicle", tagline: "Peer-to-peer Git", group: "Work", connectable: true,
               needsSetup: true, added: day(2026, 8, 18)),
-        // The frame-transaction devnet (prd §548, user, 2026-09-01: "this one
-        // is for Frames specifically"). This chain implements no keyed
-        // nonces, so no bullet claims parallel sends, and no bullet claims
-        // coins — it has none. What it
-        // has that nothing else does is the SENDING, which is why that bullet
-        // leads: EIP-8141 is a draft, so no released library encodes a frame
-        // transaction at all.
-        //
         // NO USER-VISIBLE STRING IN ANY DEVNET SEAT MAY CALL THIS APP A WALLET,
-        // OR IMPLY IT BY COMPARISON (user, 2026-09-04). The tagline read "Send
-        // a transaction no wallet can make" and the lead bullet "no other
-        // wallet can encode one" — both position the app AS a wallet by saying
-        // it does what wallets cannot, and this app has already been rejected
-        // twice on crypto grounds (3.1.1 on BYOK, 3.1.5 on the devnet send).
-        // The capability is unchanged and still said: "no released library
-        // encodes one" is the same fact about EIP-8141 being a draft, with the
-        // comparison moved off the app and onto the tooling. `library` and
-        // `tooling` are safe words here; `wallet` is not.
-        //
-        // The reset bullet is not fine print. The network's own footer says it
-        // may be reset without notice, and a seat that let somebody keep
-        // something here without saying so would be the §83 failure on the
-        // page where they decide whether to connect.
-        Offer(name: "Hegotá Frames", tagline: "Try Ethereum's new frame transactions", group: "Testnets", connectable: true,
-              needsSetup: true, added: day(2026, 9, 1)),
+        // OR IMPLY IT BY COMPARISON (user, 2026-09-04): this app has already
+        // been rejected twice on crypto grounds (3.1.1 on BYOK, 3.1.5 on the
+        // devnet send). Hegotá Frames, the frame-transaction devnet that
+        // ruling was written for, is deleted (prd §1206).
         // Logos (prd §988, 2026-09-29) — the network Nomos/Codex/Waku became,
         // whose desktop suite is Basecamp. Wallet group beside the devnets,
         // because what it watches is an account on a TESTNET: the coins are
@@ -784,10 +764,11 @@ enum BridgeCatalog {
         // MARKETS AND TESTNETS ARE CATEGORIES OF THEIR OWN (prd §1050): once
         // the Wallet folded its money apps into one room, every tray entry is
         // a category, so Markets (a watchlist, not money you hold) stands
-        // alone, and the two devnets share Testnets, never inside Wallet: real
-        // money moves in Wallet, and test money must never share its room.
+        // alone, and the devnets stand in Testnets (Logos since Hegotá Frames
+        // went, prd §1206), never inside Wallet: real money moves in Wallet,
+        // and test money must never share its room.
         ("Markets", "Markets",     ["Markets"]),
-        ("Testnets", "Hegotá Frames", ["Testnets"]),
+        ("Testnets", "Logos",      ["Testnets"]),
         ("Work",    "GitHub",      ["Work"]),
         // "Home" is GONE from this list, not merely empty (2026-09-04). Life
         // absorbed it on 2026-07-23 because HomeKit was the lone app in its
@@ -1070,7 +1051,7 @@ enum BridgeSetupMode {
     static let noAccountSeats: Set<String> = ["Wallet", "Markets", "YouTube",
         "RSS", "Substack", "Podcasts", "Pinterest", "Bluesky",
         "Telegram", "Hugging Face", "Radicle",
-        "npm", "PyPI", "Walletbeat", "L2BEAT", "ENS", "Hegotá Frames",
+        "npm", "PyPI", "Walletbeat", "L2BEAT", "ENS",
         "ETH Validators", "NerdWallet", "Logos",
         // No key and no account — Apple's model, turned on (prd §833).
         "Apple Intelligence"]

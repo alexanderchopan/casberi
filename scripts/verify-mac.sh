@@ -262,7 +262,7 @@ step "Logic self-tests (all $(ls "$ROOT"/scripts/*-selftest.sh | wc -l | tr -d '
 typeset -a SELFTEST_FAILS
 export MST_OUT="$OUT"
 # A harness may fan its OWN mutations out concurrently (wallet-rooms,
-# frames-tx). Nested at full width that is ncpu x ncpu —
+# once frames-tx). Nested at full width that is ncpu x ncpu —
 # 64 `swiftc` on 8 cores against 16 GB — and the failure mode is memory pressure
 # and swap, which reads as the machine hanging rather than as a slow test. Three
 # keeps the tail of this swarm (one long harness alone on one core, which is

@@ -151,27 +151,6 @@ final class AddressBook {
         }
     }
 
-    /// Where an address has been MET — a tag on `Entry.networks`, never part
-    /// of its identity. `AddressBook.key(for:)` is unchanged: the same hex
-    /// keypair on a devnet and mainnet is the same entry, unioned rather than
-    /// split (2026-08-27, the address-book unification).
-    enum Network {
-        /// The Frames devnet (prd §548). In the set below because
-        /// `AddressKind.detect`'s five reads are mainnet RPCs, and asking them
-        /// about an address that exists only on a devnet answers "no code
-        /// anywhere" and confidently labels it `.wallet` — a fake status on a
-        /// screen about identity.
-        static let frames = "frames"
-
-        /// Chains `AddressKind.detect` must not ask about — its five reads
-        /// are mainnet RPCs, and asking them about an account on a chain they
-        /// do not cover answers "no code anywhere" and confidently mislabels
-        /// it `.wallet`.
-        private static let devnets: Set<String> = [frames]
-
-        static func isDevnet(_ tag: String) -> Bool { devnets.contains(tag) }
-    }
-
     struct Entry: Codable, Identifiable, Equatable {
         /// The address itself — as it was added, except that a NAME is stored
         /// as the address it resolves to (`AddressBook.resolvedForm`), because
@@ -226,9 +205,11 @@ final class AddressBook {
         /// (`AddressBook.search`), because a field the person can read and
         /// cannot search reads as broken search, whichever field it is.
         var note: String? = nil
-        /// Where this address has been MET — see `AddressBook.Network`. A
-        /// fill-in union, like `groups`: an address watched on a devnet and
-        /// later met on mainnet carries both tags. nil/empty means the
+        /// Where this address has been MET — a tag, never part of its
+        /// identity. A fill-in union, like `groups`: an address watched on a
+        /// devnet and later met on mainnet carries both tags. No seat writes
+        /// one since the last devnet that did went (prd §1206); the retired
+        /// seats' sweep (`SourceRename.sweepRetiredSeats`) drops their tags. nil/empty means the
         /// mainnet family, which is every entry written before this field
         /// existed. Optional for the Codable reason `groups` documents.
         var networks: [String]? = nil
@@ -261,16 +242,6 @@ final class AddressBook {
         /// documents.
         var accounts: [String]? = nil
         var id: String { AddressBook.key(for: address) }
-
-        /// True when every network tag on this entry is a devnet — the gate
-        /// `AddressKind.detect`/`detectPending` use to skip an address whose
-        /// mainnet bytecode reads mean nothing. A mainnet entry (nil/empty
-        /// tags) is never devnet-only, so every pre-existing wallet-book row
-        /// is untouched.
-        var isDevnetOnly: Bool {
-            guard let networks, !networks.isEmpty else { return false }
-            return networks.allSatisfy(AddressBook.Network.isDevnet)
-        }
 
         var short: String { WalletStore.shortAddress(address) }
 

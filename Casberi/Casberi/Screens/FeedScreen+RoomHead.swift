@@ -90,44 +90,16 @@ extension FeedScreen {
                 // almost always lands the row that changed it, and because the
                 // alternative is recomputing the whole chain on a timer.
                 String(chrome.roomRevision),
-                // **THE SEAT THAT BREAKS THE RESIDUAL ABOVE** (prd §548). That
-                // note is right about every other bridge: a sweep that changes
-                // a reading almost always lands the row that changed it, so the
-                // corpus revision moves and the head recomputes. The Frames
-                // devnet lands NO row, ever — its whole room is live state — so
-                // its revision is frozen at zero and this key would never
-                // change. Without its `identity` the head composed once while
-                // the demo fixture was still pouring, memoised empty, and the
-                // room said "Reading the chain…" forever. Found on a simulator,
-                // not by a check: nothing static can see a memo that never
-                // invalidates.
-                //
-                // SCOPED TO ITS OWN ROOM (PERF 2026-09-01). Read
-                // unconditionally this is correct and expensive in the wrong
-                // place: `identity` touches the devnet's live state, an
-                // `@Observable`, and this property is evaluated from EVERY
-                // room's body through `headKey` — so All, X and Wallet would
-                // each take an observation dependency on devnet state, and a
-                // sweep tick would invalidate whichever room you were actually
-                // standing in. The term is only ever load-bearing for the room
-                // whose own revision cannot move.
-                source == FramesIdentity.source ? FramesRoomSource.identity : "",
-                // Privy's balances land no row either (prd §803c), so its
-                // store's revision re-keys its head and nobody else's.
+                // Privy's balances land no row (prd §803c), so its store's
+                // revision re-keys its head and nobody else's — scoped to its
+                // own room, because `identity` reads an `@Observable` and this
+                // key is evaluated from every room's body (PERF 2026-09-01).
                 source == PrivyHomeFeed.source ? PrivyHomeStore.identity : "",
                 // **AN APP PICK IN A MERGED ROOM (prd §1048d).** `selectedWallet`
                 // reads nil for one, so the pick re-keys here, and a Privy pick
                 // carries Privy's store revision as its own room did.
                 RoomAccounts.isSeat(chrome.roomScope(source)) ? (chrome.roomScope(source) ?? "") : "",
                 chrome.walletScope == "seat:Privy" ? PrivyHomeStore.identity : "",
-                // **AND ITS SCOPE** (2026-09-02). The face rail scopes this
-                // room's head from today, so it belongs in the memo key for
-                // this property's own stated reason: a head that survived a
-                // scope change is a card describing rows that are no longer on
-                // screen — the face lighting while the card kept listing every
-                // account. Scoped to the room for the perf reason the Frames
-                // term above gives, and with the same nothing lost.
-                source == FramesIdentity.source ? (chrome.framesScope ?? "") : "",
                 String(revision.count), String(revision.signal)]
             .joined(separator: "|")
     }

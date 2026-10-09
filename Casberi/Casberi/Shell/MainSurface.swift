@@ -63,7 +63,7 @@ struct MainSurface: View {
     }
     @Environment(ShellChrome.self) private var chrome
     /// Read for the LIVE-room chips only (prd §234) — a connected devnet seat
-    /// (Hegotá, Frames) earns a chip with nothing landed yet, since its room's
+    /// (Logos) earns a chip with nothing landed yet, since its room's
     /// content is live chain state rather than the corpus.
     @Environment(BridgeStore.self) private var store
     // Per-WINDOW, not per-process (see `SceneState`): `RootShell` owns one of
@@ -1003,7 +1003,7 @@ struct MainSurface: View {
     /// tap changes only the ORDER, which is frozen until foreground anyway.
     @State private var liveChips: [String]?
 
-    /// Connected live-room bridges (Hegotá, Frames) earn a chip with nothing
+    /// Connected live-room bridges (Logos) earn a chip with nothing
     /// landed, so connecting one changes the label set without changing the
     /// corpus count. Cheap enough to read per body pass — it walks the ~25
     /// bridges, not the corpus — and it's what lets a chip appear the moment you
@@ -2188,7 +2188,7 @@ struct MainSurface: View {
             for: UIApplication.didBecomeActiveNotification)) { _ in
             if ProcessInfo.processInfo.isMacCatalystApp { freezeChips() }
         }
-        // Connecting a live-room bridge (Hegotá, Frames) earns a chip with
+        // Connecting a live-room bridge (Logos) earns a chip with
         // nothing landed, so it changes the label set without changing the
         // corpus count the watcher above keys on. Without this the new chip
         // would wait for the next arrival or foreground — i.e. you'd come back
@@ -2233,15 +2233,6 @@ struct MainSurface: View {
             // already standing in the Wallet still narrows it.
             chrome.pickSeat(fold.seat, in: fold.room)
             target = fold.room
-        } else if case let seat = BridgeCatalog.seatName(forSource: label),
-                  seat != label, LiveRoomSources.all.contains(seat) {
-            // **A LIVE ROOM BY ANOTHER NAME (prd §1102, user: "that page that
-            // says frames is connected is wrong").** "Frames" titled itself
-            // "Hegotá Frames" through the catalog, but every check that draws
-            // the room compares the raw source, so it missed them all and drew
-            // the generic "is connected" page with no box and no tiles. A live
-            // room lands no rows, so its seat name IS its source.
-            target = seat
         } else {
             target = label
         }

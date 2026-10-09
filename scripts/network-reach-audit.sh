@@ -45,12 +45,6 @@ KNOWN_NON_REACH=(
   # and the audit stayed green because nothing re-reads an entry's REASON when
   # the code underneath it changes. Landing a write is exactly the moment to
   # re-read every entry that says a host is never touched.
-  # The Frames devnet's explorer and faucet PAGE (prd §962): ethpandaops'
-  # faucet is proof-of-work plus hCaptcha, which a person does in a browser,
-  # so the app only opens it — `FramesActs.topUp` opens the page, no POST.
-  # If an in-app claim ever lands, this entry is wrong the same day (§531).
-  dora.frames-devnet-0.ethpandaops.io
-  faucet.frames-devnet-0.ethpandaops.io
   app.0xbow.io app.cal.com app.todoist.com kalshi.com opensea.io
   dexscreener.com twitch.tv stocktwits.com
   privacy.com polymarket.com app.safe.global app.uniswap.org

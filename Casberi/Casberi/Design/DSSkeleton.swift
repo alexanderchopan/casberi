@@ -32,10 +32,6 @@ enum DSSkeleton {
         case strip
         /// Ranked bars against a threshold.
         case ranked
-        /// Holders ranked by reach.
-        case holders
-        /// Framed transactions, a row of steps each.
-        case steps
         /// A to-do list: an open check circle beside each line (the
         /// Reminders room, prd §993). Reached by its caller, never a glyph —
         /// no wallet-family scope is a list of to-dos.
@@ -47,8 +43,6 @@ enum DSSkeleton {
             case ScopeTileGlyph.activity:    self = .bars
             case ScopeTileGlyph.holdings:    self = .treemap
             case ScopeTileGlyph.accounts:    self = .graph
-            case ScopeTileGlyph.permissions: self = .holders
-            case ScopeTileGlyph.frames:      self = .steps
             default:                         self = .ranked
             }
         }
@@ -176,23 +170,6 @@ struct DSSkeletonFigure: View {
                 pill(0, 30 + y, CGFloat(w), 14)
             }
             dashed([(225, 8), (225, 250)])
-        case .holders:
-            for (i, w) in [262.0, 190, 120, 70, 30].enumerated() {
-                let y = CGFloat(i) * 52
-                dot(14, 26 + y, 13)
-                pill(38, 16 + y, 120)
-                pill(38, 34 + y, 262, 10, DSSkeleton.track)
-                pill(38, 34 + y, CGFloat(w), 10)
-            }
-        case .steps:
-            let rows: [[CGFloat]] = [[70, 110, 60], [140, 50, 45, 30], [90, 90], [60, 60, 60, 80]]
-            for (i, widths) in rows.enumerated() {
-                var x: CGFloat = 0
-                for w in widths {
-                    box(x, 10 + CGFloat(i) * 64, w, 44, radius: 10)
-                    x += w + 8
-                }
-            }
         case .checklist:
             // Open circles, never a filled one: a checked circle would say
             // something was done, and this says nothing is here.

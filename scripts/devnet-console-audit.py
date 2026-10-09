@@ -11,8 +11,10 @@ on its FIRST run of this build (174pt a tile against a 146pt allowance, which
 put "Top up" off the bottom).
 
 §552/§552a's checks are gone with the console they guarded — there is no inline
-form, no `.decimalPad`, no keyboard toolbar and no 232pt budget any more. What
-replaces them is the same idea one layout up.
+form, no `.decimalPad`, no keyboard toolbar and no 232pt budget any more. The
+panel and amount-screen budgets that replaced them went with Hegotá Frames
+(prd §1206), whose verbs and plan strip they measured; what stays is the send
+sheet's grammar, which Logos uses (prd §1084).
 
 Static text checks; no build, no simulator. `--self-test` first, because a check
 that cannot demonstrate it catches anything certifies nothing.
@@ -24,66 +26,14 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 CONSOLE = ROOT / "Casberi/Casberi/Screens/DevnetSendConsole.swift"
-# The Frames verbs' dispatcher (prd §1108): Create heads the Accounts menu,
-# Send and Top up lead Holdings, and this file is what each row runs. It was
-# `FramesSendCard.swift`, the Actions block's panel, until the merge (§1039).
-CARD = ROOT / "Casberi/Casberi/Screens/FramesActs.swift"
 FEED = ROOT / "Casberi/Casberi/Screens/FeedScreen.swift"
-# The wallet room's half of FeedScreen (prd §718): read as one text with FEED.
-FEED_WALLET = ROOT / "Casberi/Casberi/Screens/FeedScreen+WalletRoom.swift"
 
-# **THE MEASURED ALLOWANCE, AND THE DEVICE IT IS MEASURED ON.** 390x844,
-# measured off a screenshot of this build rather than estimated: the section
-# strip's bottom edge sits at 526pt, so the room leaves 318 to the glass and 304
-# after the card's own bottom margin.
-#
-# **STATED CEILING, MEASURED RATHER THAN REASONED (prd §553 amendment).** None
-# of the chrome above scales with screen height, so this allowance shrinks
-# one-for-one with the screen. On an iPhone SE (667pt) the same build renders
-# the Send tile at y 502-634, leaving **33pt** below it — so the second tile is
-# entirely under the fold and the room scrolls, which is §552's own stated
-# ceiling arriving one surface later. Verified by installing on an SE simulator
-# and reading the pixels, not by arithmetic.
-#
-# This check therefore asserts the 844 case and CANNOT speak for smaller
-# hardware. That is deliberate: a budget that fails on every phone tells you
-# nothing on any of them, and the fix for the small ones is a smaller chrome or
-# a different surface — never a shorter verb (§552's ruling, unchanged).
-ROOM_ALLOWANCE = 304
-SMALLEST_MEASURED = ("iPhone SE", 667, 33)
-#   one line of price40 (a 40pt face at ~1.18x), rounded UP like every
-#   font-derived term — an over-stated term makes the budget stricter than the
-#   glass, an under-stated one makes the budget a lie.
-VERB_LINE = 48
-
-# **THE AMOUNT SCREEN'S OWN BUDGET (prd §548).** The panel's sum above governs
-# the ROOM; this governs the SHEET, and it exists because the Frames devnet
-# draws a plan strip there — the only thing on that screen saying the
-# transaction has parts.
-#
-# The screen is a plain `VStack` with NO `ScrollView`, so anything that does not
-# fit pushes the commit button off the bottom, drawn correctly and invisible.
-# That is the panel bug one surface over, which is what this file was written
-# for.
-#
-# Terms measured on an 844pt phone at sheet-top 124 (§553), so 720 of sheet:
-AMOUNT_SCREEN_FIXED = (
-    27    # grabber + top padding
-    + 44  # back row
-    + 76  # face at DS.Face.profile
-    + 40  # name + gap
-    + 92  # figure line
-    + 32  # subline row
-    + 232 # keypad, 4 x 58
-    + 66  # commit + gap
-    + 15  # bottom padding
-)
-# **THE FLOOR IS THE SMALLEST PHONE THE APP DEPLOYS TO, not the one it was
-# designed on.** iOS 18 still runs on a 667pt iPhone SE, where the sheet is
-# ~543pt — and slack that exists at 844 is gone by 736. A strip sized against
-# the big phone is one that silently disappears on the small one, which is the
-# same failure as a card that overflows: it renders perfectly and is not there.
-SHEET_ON_SMALLEST = 667 - 124
+# The sends the sheet runs (prd §1084). Hegotá Frames' two (`sendFrames`,
+# `sendFramesStitched`) and its verb dispatcher `FramesActs` went with the seat
+# (prd §1206), and with them the panel and amount-screen budgets this file
+# summed: the plan strip they measured was Frames' alone. What is left is the
+# sheet's own grammar and the one money rule.
+SENDS = ("sendLogos",)
 
 
 def strip_comments(text: str) -> str:
@@ -101,55 +51,22 @@ def strip_comments(text: str) -> str:
     return out
 
 
-def constant(text: str, name: str):
-    m = re.search(r"static let %s(?::\s*CGFloat)?\s*=\s*([A-Za-z0-9_.]+)" % re.escape(name), text)
-    if not m:
-        return None
-    raw = m.group(1)
-    scale = {"DS.Space.s1": 4, "DS.Space.s2": 8, "DS.Space.s3": 12,
-             "DS.Space.s4": 15, "DS.Space.s6": 24, "DS.Space.s8": 32,
-             "DS.Hit.min": 44, "DS.Face.profile": 76, "DS.Face.shelf": 46}
-    if raw in scale:
-        return scale[raw]
-    try:
-        return float(raw)
-    except ValueError:
-        return None
-
-
-def checks(console: str, card: str, feed: str):
+def checks(console: str, feed: str):
     """Every finding is a sentence about what breaks, not a rule number."""
     out = []
     c_bare = strip_comments(console)
-    k_bare = strip_comments(card)
 
     # 1. **THE VERBS ARE ROWS, AND NOT ON HOME (prd §1108, 2026-10-04).**
     #    §750 made them rows in an Actions block, after §553's loud price40
     #    tiles; the merge (§1039) made each a tile in the room's grid, and
-    #    §1108 cut the grid to four: Create is the Accounts menu's first row,
-    #    Send and Top up lead Holdings. What this asserts is that each still
-    #    has its door, gated by `FramesActs`, and no verb block grows back.
+    #    §1108 made them rows. No verb block grows back in the sheet's file.
     for name in ("DevnetSendPanel", "DevnetVerbRow", "DevnetCreatePanel"):
         if "struct %s" % name in c_bare:
             out.append("%s is back — the verbs are Holdings' rows and the menu's, not a block (prd §1108)" % name)
     if "DevnetTileSurface" in c_bare:
         out.append("the loud verb tile's surface is back — a verb is a row (§750, prd §1108)")
-    if "accountAction:" not in feed or "FramesActs.movesMoney(on:" not in feed:
-        out.append("the Frames room lost a verb's door — Create heads the Accounts menu, "
-                   "Send and Top up lead Holdings on the pages FramesActs allows (prd §1108)")
 
-    # 1b. THE PLAN STRIP STEPS ASIDE RATHER THAN RESERVING SPACE (prd §548).
-    #     The amount screen is a plain `VStack` with NO `ScrollView`, so a
-    #     reserved height pushes the commit button off the bottom — drawn
-    #     correctly and invisible, the panel bug one surface over. Whether the
-    #     slack is real depends on how the sheet's top inset scales, which is
-    #     not knowable from a static check, so this asserts the MECHANISM.
-    if "DevnetSendPlanStrip(" in console and "ViewThatFits" not in console:
-        out.append(
-            "the plan strip no longer steps aside — on a screen with no ScrollView a "
-            "reserved height pushes the commit button off the bottom")
-
-    # 3. THE KEYPAD IS OURS. §552a swapped it for the system pad on arithmetic
+    # 2. THE KEYPAD IS OURS. §552a swapped it for the system pad on arithmetic
     #    that was correct for a CARD and is meaningless on a sheet; what it cost
     #    was the room's whole visual language.
     if "struct DevnetKeypad" not in console:
@@ -157,44 +74,23 @@ def checks(console: str, card: str, feed: str):
     if ".decimalPad" in c_bare:
         out.append("the system keypad came back on the send sheet, which has the whole screen")
 
-    # 4. THE CARD DOES NOT PRESENT. A `.sheet` attached to a view inside a
+    # 3. THE SHEET DOES NOT PRESENT. A `.sheet` attached to a view inside a
     #    `List` row resolves to the same presenting controller as the screen's
     #    own and half-opens then closes — paid for three times already.
-    if ".sheet(" in k_bare:
-        out.append("FramesActs presents its own sheet — it will half-open and close inside a List row")
+    if ".sheet(" in c_bare:
+        out.append("the send sheet presents a sheet of its own — it will half-open and close")
 
-    # 5. ONE DISPATCHER. Each verb row runs what its tile ran; a tap handled
-    #    inline in the room is how Send stops selecting the page's account.
-    for verb in ("FramesActs.send(", "FramesActs.topUp(", "FramesActs.create("):
-        if verb not in feed:
-            out.append("the Frames room no longer routes a verb through %s" % verb)
-
-    # 6. THE DEMO REACHES IT, AND STOPS WHERE THE MONEY STARTS (prd §552b).
-    #    A scope's whole content gated on a device credential is invisible to
-    #    every demo check in this repo: they ask about seats, rows, heads and
-    #    figures, and this is none of those.
-    if "DemoMode.isActive" not in card:
-        out.append("the Frames panel cannot be reached in the demo — the room's default scope draws nothing on a tour")
-    for verb in ("sendFrames", "sendFramesStitched"):
+    # 4. THE DEMO STOPS WHERE THE MONEY STARTS (prd §552b). Every send the sheet
+    #    runs refuses in a demo: the tour's account is nobody's.
+    for verb in SENDS:
         m = re.search(r"func %s\b.*?\n    \}" % verb, feed, flags=re.S)
         if not m or "DemoMode.isActive" not in m.group(0):
             out.append("%s would sign and broadcast from a demo" % verb)
 
-    # 7. THE DELETED handsOff TILE STAYS DELETED (§553b). A tile that looks
-    #    like it acts in place and then leaves the app without saying so is the
-    #    promise that ruling closed; Frames' Top up says it OPENS (`opens`).
-    #    Read from the COMMENT-STRIPPED copies, or this fires on the paragraphs
-    #    that explain the deletion BY NAMING the flag.
-    for name, bare in (("DevnetSendConsole", c_bare), ("FramesActs", k_bare)):
-        if "handsOff" in bare:
-            out.append("%s brought back the handsOff tile — §553b deleted it" % name)
-
-    # 8. TOP UP DOES NOT ACT IN A DEMO — the tour's account is nobody's, and a
-    #    live faucet page for it, from a screen whose banner reads "none of this
-    #    is yours", is the gap this catches. The half stays and says why.
-    top = re.search(r"func topUp\(.*?\n    \}", card, flags=re.S)
-    if not top or "DemoMode.isActive" not in top.group(0):
-        out.append("Frames' Top up acts in a demo — the tour reaches something real")
+    # 5. THE DELETED handsOff TILE STAYS DELETED (§553b). Read from the
+    #    COMMENT-STRIPPED copy, or this fires on prose naming the flag.
+    if "handsOff" in c_bare:
+        out.append("DevnetSendConsole brought back the handsOff tile — §553b deleted it")
 
     return out
 
@@ -203,61 +99,37 @@ def self_test() -> int:
     good_console = """
 struct DevnetKeypad { }
 """
-    good_k = ('enum FramesActs {\n'
-              '    static func topUp(account: String?) {\n        guard !DemoMode.isActive else { return }\n    }\n')
-    good_f = ('    func sendFrames(x: String) async -> String? {\n        DemoMode.isActive\n    }\n'
-              '    func sendFramesStitched(x: String) async -> String? {\n        DemoMode.isActive\n    }\n'
-              '    accountAction: .init(title: t, symbol: "plus") { FramesActs.create(store: s) },\n'
-              '    if FramesActs.movesMoney(on: account) {}\n'
-              '    FramesActs.send(account: a) {}\n    FramesActs.topUp(account: a) {}\n'
-              '    FramesActs.create(store: s)\n')
+    good_f = ('    func sendLogos(to: String, amount: String) async -> String? {\n'
+              '        guard !DemoMode.isActive else { return nil }\n    }\n')
 
     cases = []
-    cases.append(("the shipping shape", good_console, good_k, good_f, False))
+    cases.append(("the shipping shape", good_console, good_f, False))
     cases.append(("the verb panel grows back on Home",
-                  good_console + "struct DevnetSendPanel: View { }\n", good_k, good_f, True))
+                  good_console + "struct DevnetSendPanel: View { }\n", good_f, True))
     cases.append(("a verb row grows back on Home",
-                  good_console + "struct DevnetVerbRow: View { }\n", good_k, good_f, True))
+                  good_console + "struct DevnetVerbRow: View { }\n", good_f, True))
     cases.append(("the loud verb tile's surface comes back",
-                  good_console + "DevnetTileSurface()\n", good_k, good_f, True))
-    cases.append(("Create leaves the Accounts menu",
-                  good_console, good_k, good_f.replace("accountAction:", "verbs:"), True))
-    cases.append(("Send and Top up lose their gate",
-                  good_console, good_k, good_f.replace("FramesActs.movesMoney(on: account)", "true"), True))
+                  good_console + "DevnetTileSurface()\n", good_f, True))
     cases.append(("the system keypad comes back",
                   good_console.replace("struct DevnetKeypad { }", "keyboardType(.decimalPad)"),
-                  good_k, good_f, True))
-    cases.append(("the card presents its own sheet from a List row",
-                  good_console, good_k + '.sheet(isPresented: $x)', good_f, True))
-    cases.append(("a verb handled inline instead of through FramesActs",
-                  good_console, good_k, good_f.replace("FramesActs.topUp(account: a) {}", "openURL(u)"), True))
-    cases.append(("the console cannot be reached in the demo",
-                  good_console, good_k.replace("DemoMode.isActive", "true"), good_f, True))
-    cases.append(("send would broadcast from a demo",
-                  good_console, good_k,
-                  good_f.replace("    func sendFrames(x: String) async -> String? {\n        DemoMode.isActive\n    }",
-                                 "    func sendFrames(x: String) async -> String? {\n        go()\n    }"), True))
-    cases.append(("the deleted handsOff tile comes back on the card",
-                  good_console, good_k + '.init(handsOff: true)\n', good_f, True))
-    cases.append(("the console grows a handsOff branch again",
-                  good_console + "\n    if topUp.handsOff { Image(systemName: a) }\n", good_k, good_f, True))
-    cases.append(("Top up acts in a demo",
-                  good_console,
-                  'enum FramesActs {\n    static func topUp(account: String?) {\n        openURL(u)\n    }\nDemoMode.isActive\n',
                   good_f, True))
+    cases.append(("the sheet presents its own sheet",
+                  good_console + '.sheet(isPresented: $x)\n', good_f, True))
+    cases.append(("send would broadcast from a demo",
+                  good_console, good_f.replace("guard !DemoMode.isActive else { return nil }", "go()"), True))
+    cases.append(("the send is gone and nothing says so",
+                  good_console, "", True))
+    cases.append(("the console grows a handsOff branch again",
+                  good_console + "\n    if topUp.handsOff { Image(systemName: a) }\n", good_f, True))
     # A comment naming a banned literal must not fire — these files explain
     # themselves by naming exactly what they must not do.
     cases.append(("a comment naming a banned literal does not fire",
-                  good_console + "\n    /// It is not `.decimalPad` any more.\n",
-                  good_k + "\n    /// No `.sheet(` here, deliberately.\n", good_f, False))
-    cases.append(("a comment naming the deleted handsOff flag does not fire",
-                  good_console + "\n    /// No outward-arrow branch for a `handsOff` tile any more.\n",
-                  good_k + "\n    /// `DevnetSendPanel.TopUp.handsOff` was deleted by §553b.\n",
-                  good_f, False))
+                  good_console + "\n    /// It is not `.decimalPad` any more, and no `.sheet(` here.\n"
+                  + "    /// `DevnetSendPanel.TopUp.handsOff` was deleted by §553b.\n", good_f, False))
 
     failed = 0
-    for name, c, k, f, should_fire in cases:
-        fired = bool(checks(c, k, f))
+    for name, c, f, should_fire in cases:
+        fired = bool(checks(c, f))
         ok = fired == should_fire
         print(("  \033[32m✓\033[39m " if ok else "  \033[31m✗\033[39m ") + name)
         if not ok:
@@ -271,19 +143,18 @@ def main() -> int:
     if self_test():
         print("\033[31m✗ devnet-console audit: its own self-test failed\033[39m")
         return 1
-    for p in (CONSOLE, CARD, FEED, FEED_WALLET):
+    for p in (CONSOLE, FEED):
         if not p.exists():
             print("\033[31m✗ devnet-console audit: %s is missing\033[39m" % p.name)
             return 1
     feed = "".join(p.read_text() for p in [FEED] + sorted(FEED.parent.glob("FeedScreen+*.swift")))
-    found = checks(CONSOLE.read_text(), CARD.read_text(), feed)
+    found = checks(CONSOLE.read_text(), feed)
     if found:
         for f in found:
             print("\033[31m✗ %s\033[39m" % f)
         return 1
-    print("\033[32m✓ devnet-console audit: the verbs are rows (the Accounts menu and Holdings), "
-          "the keypad is ours, the plan strip steps aside, and nothing acts in a demo "
-          "(prd §1108)\033[39m")
+    print("\033[32m✓ devnet-console audit: the verbs are rows, the keypad is ours, "
+          "and nothing sends in a demo (prd §1108, §1206)\033[39m")
     return 0
 
 

@@ -160,13 +160,22 @@ fi
 # is stale but still true, and the check still fails it, because a number that
 # drifts silently is what put "97" over a 101-cell shelf.
 say "Home page app count"
+# The protocols the Wallet reads count as apps (user, 2026-10-08: "protocols
+# are apps"): they have no cell (prd §515), so the shelf carries their number
+# as `data-protocols`, which must equal the Wallet offer's `alsoReads`.
 shelf_n="$(wc -l < "$tmp/web_shelf_raw" | tr -d ' ')"
+reads_n="$(grep -A1 'Offer(name: "Wallet",' "$CATALOG" | grep -oE 'alsoReads: \[[^]]*\]' | grep -oE '"[^"]+"' | wc -l | tr -d ' ')"
+page_reads="$(grep -oE 'id="catalog" data-protocols="[0-9]+"' "$INDEX" | grep -oE '[0-9]+' || echo 0)"
+if [ "$page_reads" != "$reads_n" ]; then
+  bad "the shelf says it reads $page_reads protocols; the Wallet offer reads $reads_n (data-protocols on #catalog)"
+fi
+total_n=$(( shelf_n + reads_n ))
 stated_n="$(grep -oE 'id="bk-count">[0-9]+\+? apps' "$INDEX" | grep -oE '[0-9]+' || echo 0)"
-want_n=$(( shelf_n / 10 * 10 ))
+want_n=$(( total_n / 10 * 10 ))
 if [ "$stated_n" != "$want_n" ]; then
-  bad "the home page says ${stated_n}+ apps; the shelf holds $shelf_n, so it should say ${want_n}+"
+  bad "the home page says ${stated_n}+ apps; the shelf holds $shelf_n and the Wallet reads $reads_n protocols, so it should say ${want_n}+"
 else
-  say "  ✓ ${stated_n}+ apps, the floor of the shelf's $shelf_n"
+  say "  ✓ ${stated_n}+ apps, the floor of the shelf's $shelf_n and the Wallet's $reads_n protocols"
 fi
 
 # === Check 2: every marquee name resolves to a real offer ================

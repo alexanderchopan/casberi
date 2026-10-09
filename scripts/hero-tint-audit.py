@@ -65,7 +65,6 @@ SOURCES = ["Casberi/Casberi", "Casberi/CasberiWidgets", "Casberi/Shared"]
 # caller is imitating.
 KNOWN_PAIR = {
     "DSActVerb.swift",        # the component; it defines the tile
-    "DevnetSendConsole.swift",  # §553's split panel: one tint half, one ink half
     # The wait's console (2026-09-02): Stop and Edit are that same split panel
     # one room over — Stop takes `DS.inkGround`, so exactly ONE block on the
     # surface is saturated and the budget this audit protects is kept. They
@@ -282,7 +281,7 @@ def self_test():
         ("passes a file with one tile", "A.swift", CLEAN, 0),
         ("flags  two tiles in one file", "A.swift", TWO_TILES, 1),
         ("passes two tiles in a KNOWN_PAIR file",
-         "DevnetSendConsole.swift", TWO_TILES, 0),
+         "Composer.swift", TWO_TILES, 0),
         ("passes a tile named only in comments", "A.swift", COMMENTED, 0),
         ("flags  a hand-rolled hero verb in a Button", "A.swift", HAND_ROLLED, 1),
         ("passes the component's own hand-rolled tile",

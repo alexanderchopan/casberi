@@ -233,14 +233,14 @@ fi
 
 # ── the devnet (prd §522, §728) ─────────────────────────────────────────────
 # The compiled half above proves the RULES. These guard the wiring it cannot
-# see — and the wiring is where a devnet seat fails: the Frames devnet lands no
-# `Thing` at all, so nothing it learns could ever reach a lock screen through
-# the corpus, and no audit in this repo could report that as a gap.
+# see — and the wiring is where a devnet seat fails: a reset is chain state,
+# never a landed `Thing`, so nothing it learns could ever reach a lock screen
+# through the corpus, and no audit in this repo could report that as a gap.
+# (Hegotá Frames' half went with the seat, prd §1206; Logos is the seat.)
 DEVNET="Casberi/Casberi/Model/DevnetNotify.swift"
-FRAMESB="Casberi/Casberi/Model/FramesBridge.swift"
-CHAINW="Casberi/Casberi/Model/FramesChainWatch.swift"
+LOGOSB="Casberi/Casberi/Model/LogosBridge.swift"
 BG="Casberi/Casberi/Model/WalletBackgroundRefresh.swift"
-for f in "$DEVNET" "$FRAMESB" "$CHAINW" "$BG"; do
+for f in "$DEVNET" "$LOGOSB" "$BG"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -250,7 +250,7 @@ guard "the headline has ONE authority, forwarded from the sweep" \
 # A seat name that does not equal the source the bridge really stamps fails at
 # NEITHER end: the notification arrives with a blank right-hand slot and its tap
 # opens the All feed. Derived from the bridges rather than typed twice here.
-for pair in "Frames:$FRAMESB" "Logos:Casberi/Casberi/Model/LogosRoom.swift"; do
+for pair in "Logos:Casberi/Casberi/Model/LogosRoom.swift"; do
   label="${pair%%:*}"; file="${pair#*:}"
   src=$(grep -oE 'static let source = "[^"]+"' "$file" | head -1 | sed 's/.*"\(.*\)"/\1/')
   if [[ -n "$src" ]] && grep -qF "return \"$src\"" "$PLAN"; then
@@ -261,12 +261,8 @@ for pair in "Frames:$FRAMESB" "Logos:Casberi/Casberi/Model/LogosRoom.swift"; do
   fi
 done
 
-# The window is restated in the Foundation-only file because it cannot see the
-# room's. Restated is fine; DIVERGED is a notification that outlives the
-# sentence it points at.
-guard "a reset stays sayable exactly as long as the room keeps saying it" \
-      'static let sayRelaunchFor: TimeInterval = 7 \* 86_400' "$CHAINW"
-guard "…and the notification uses that same week" \
+# A reset stays news for a week, and no longer.
+guard "a reset stays sayable for a week" \
       'static let resetWindow: TimeInterval = 7 \* 86_400' "$PLAN"
 
 # ONE submit, so a devnet alarm competes in the same batch as every other alarm
@@ -277,8 +273,8 @@ guard "the devnet plans ride the corpus sweep's one submit" \
 # §522's sticky record: without the KEY the ledger cannot tell one wipe from
 # the next, and the room's own date alone would announce the same reset on
 # every pass forever.
-guard "a relaunch stores the genesis hash that makes it announceable once" \
-      'UserDefaults\.standard\.set\(hash, forKey: Self\.relaunchHashKey\)' "$FRAMESB"
+guard "a reset stores the new block-1 hash that makes it announceable once" \
+      'if reset \{ resetSeen = \(hash, \.now\) \}' "$LOGOSB"
 
 # THE GATHERER HOLDS NO RULE. Every threshold lives in the compiled file; one
 # that drifted down here would be a rule no harness could ever reach — which is
@@ -480,7 +476,7 @@ ok(NotifyRules.deadlinePhrase(cal.date(byAdding: .day, value: -1, to: at(9))!,
                               now: at(9), calendar: cal) == "overdue", "the past reads 'overdue'")
 
 // ── the devnet (prd §522, §728) ─────────────────────────────────────────────
-// The Frames devnet lands no `Thing` at all, so `NotifySweep.classify`
+// A devnet reset is chain state, never a landed `Thing`, so `NotifySweep.classify`
 // structurally cannot reach any of this — and nothing in this repo can make a
 // devnet reset on demand. These fixtures are not the best proof the rules
 // hold; they are the only one.
@@ -490,34 +486,28 @@ func reset(_ seat: NotifyDevnet.Seat, key: String = "id-1-2",
            observed: Date = at(11), watching: Int = 2) -> NotifyDevnet.Reset {
     NotifyDevnet.Reset(seat: seat, key: key, observedAt: observed, watching: watching)
 }
-ok(NotifyDevnet.plan(reset: reset(.frames), now: dnow) != nil,
+ok(NotifyDevnet.plan(reset: reset(.logos), now: dnow) != nil,
    "a reset observed an hour ago is news")
-ok(NotifyDevnet.plan(reset: reset(.frames, watching: 0), now: dnow) == nil,
+ok(NotifyDevnet.plan(reset: reset(.logos, watching: 0), now: dnow) == nil,
    "NOBODY WATCHING, NOTHING TO SAY — a reset is only news about someone who had something there")
-ok(NotifyDevnet.plan(reset: reset(.frames, observed: dnow.addingTimeInterval(60)), now: dnow) == nil,
+ok(NotifyDevnet.plan(reset: reset(.logos, observed: dnow.addingTimeInterval(60)), now: dnow) == nil,
    "an observation from the FUTURE never fires (a clock that moved under us)")
-ok(NotifyDevnet.plan(reset: reset(.frames, observed: dnow.addingTimeInterval(-8 * 86_400)), now: dnow) == nil,
+ok(NotifyDevnet.plan(reset: reset(.logos, observed: dnow.addingTimeInterval(-8 * 86_400)), now: dnow) == nil,
    "a reset older than the week the room keeps explaining it never fires")
-ok(NotifyDevnet.plan(reset: reset(.frames, observed: dnow.addingTimeInterval(-6 * 86_400)), now: dnow) != nil,
+ok(NotifyDevnet.plan(reset: reset(.logos, observed: dnow.addingTimeInterval(-6 * 86_400)), now: dnow) != nil,
    "…and one inside that week still does")
 // The id is the whole of "fires once, ever" — and of a SECOND wipe being news.
-let dr1 = NotifyDevnet.plan(reset: reset(.frames, key: "id-1-2", observed: at(9)), now: dnow)!
-let dr2 = NotifyDevnet.plan(reset: reset(.frames, key: "id-1-2", observed: at(11)), now: dnow)!
+let dr1 = NotifyDevnet.plan(reset: reset(.logos, key: "id-1-2", observed: at(9)), now: dnow)!
+let dr2 = NotifyDevnet.plan(reset: reset(.logos, key: "id-1-2", observed: at(11)), now: dnow)!
 ok(dr1.id == dr2.id, "the same reset keeps ONE id however often the sticky record is re-read")
-let dr3 = NotifyDevnet.plan(reset: reset(.frames, key: "id-2-3"), now: dnow)!
+let dr3 = NotifyDevnet.plan(reset: reset(.logos, key: "id-2-3"), now: dnow)!
 ok(dr3.id != dr1.id, "a SECOND reset is a different id, so it is new news")
-ok(dr1.source == "Hegotá Frames",
-   "the plan carries its seat's source, so the right-hand slot gets its mark")
-ok(dr1.body.contains("addresses"),
-   "the body says the ADDRESSES survive — §515a's easily-missed half")
+ok(dr1.source == "Logos",
+   "the plan carries its seat's source (LogosRoom.source), so the right-hand slot gets its mark")
+ok(dr1.body.contains("Logos") && dr1.body.contains("accounts you follow"),
+   "the body names the testnet and says the followed accounts survive — §515a's easily-missed half")
 ok(dr1.cls == .alarm && !dr1.isTimeSensitive,
    "a devnet reset is an alarm that never breaks a Focus")
-// Logos (prd §1084) joins with its own words, under its own source.
-let lr = NotifyDevnet.plan(reset: reset(.logos), now: dnow)!
-ok(lr.source == "Logos", "the Logos reset carries the Logos source (LogosRoom.source)")
-ok(lr.body.contains("Logos") && lr.body.contains("accounts you follow"),
-   "the Logos body names the testnet and says the followed accounts survive")
-ok(lr.id != dr1.id, "a Logos reset and a Frames reset are two ids")
 ok(NotifyKind.nodeDown.cls == .alarm && NotifyKind.nodeDown.severity > NotifyKind.runningLow.severity
    && NotifyKind.nodeDown.severity < NotifyKind.priceRose.severity && !NotifyKind.nodeDown.isTimeSensitive,
    "a stopped node: an alarm above running low, below money, never breaking a Focus")
@@ -538,7 +528,7 @@ for seat in NotifyDevnet.Seat.allCases {
 }
 
 // Composed, and then batched like any other alarm.
-let dAll = NotifyDevnet.plans(resets: [reset(.frames), reset(.frames, key: "id-2-3")], now: dnow)
+let dAll = NotifyDevnet.plans(resets: [reset(.logos), reset(.logos, key: "id-2-3")], now: dnow)
 ok(dAll.count == 2, "two resets compose")
 let dCollapsed = NotifyRules.collapse(dAll)
 ok(dCollapsed.count == 1, "two devnet alarms collapse to one, like any other alarm")

@@ -289,10 +289,6 @@ tiles_at=$(print -r -- "$chrome_bare" | grep -n "DSScopeTiles(" | head -1 | cut 
 wallet_fn=$(sed -n '/func walletScopeChromeSection(/,/^    }$/p' "$work/FeedScreen.swift.bare")
 [[ "$wallet_fn" == *"figure: { scope in"* && "$wallet_fn" == *"walletScopeVisualSection(scope"* ]] \
   || fail "drift: the wallet no longer hands its section figure to the chrome (§765)"
-for sibling in "FramesRoomFigure(head: head,"; do
-  (( $(grep -c "$sibling" "$work/FeedScreen.swift.bare") == 2 )) \
-    || fail "drift: a devnet figure is drawn outside the chrome again — its tiles move between pages (§765): $sibling"
-done
 guard FeedScreen.swift "WalletSection.resolve(" \
   "the room reads chrome.walletSection raw instead of resolving it"
 

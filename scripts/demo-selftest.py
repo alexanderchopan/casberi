@@ -152,7 +152,6 @@ DEMO_FILES = {
     # network verbs under check B.
     "WalletWarnings": CASBERI / "Model/WalletWarnings.swift",
     "ExchangeBridge": CASBERI / "Model/ExchangeBridge.swift",
-    "FramesBridge": CASBERI / "Model/FramesBridge.swift",
     "WalletPortfolio": CASBERI / "Model/WalletPortfolio.swift",
 }
 
@@ -535,12 +534,8 @@ PROVIDER_ROW_SEAT = {"Venice", "Bankr", "OpenRouter", "Grok", "NEAR AI", "Muse"}
 
 KNOWN_ROWLESS_SEAT = {
     "Coinbase", "Kraken", "Binance", "Gemini Exchange",
-    # Hegotá Frames (prd §548) — rowless for a different reason from the ones
-    # above. Those ride the wallet and land under `source: "Wallet"`; this seat
-    # lands NO `Thing` at all, by ruling: its readings are live chain state and
-    # a devnet test address has no news. Its whole furnishing is the fixture
-    # account `FramesLiveState.seedDemo` installs, which check M holds it to.
-    "Hegotá Frames",
+    # (Hegotá Frames was rowless by ruling and furnished by a fixture account
+    # until the seat was deleted, prd §1206.)
 }
 
 # What proves each rowless seat is really furnished: (file key, regex). Each
@@ -567,16 +562,6 @@ ROWLESS_SEAT_FIXTURE = {
     "Kraken":          ("ExchangeBridge:demoBalances", r'\.kraken\)'),
     "Binance":         ("ExchangeBridge:demoBalances", r'\.binance\)'),
     "Gemini Exchange": ("ExchangeBridge:demoBalances", r'\.geminiExchange\)'),
-    # BOTH halves, the exchanges' rule: the fixture must exist AND something
-    # must install it, since a fixture nothing reads furnishes nothing and that
-    # half-wired state is exactly what a seat table would still claim as
-    # connected. `installDemo` is the only door that writes accounts without a
-    # read, so naming it pins the whole chain.
-    # `installDemo` is the only door that writes accounts without a read, so
-    # naming it pins the whole chain — and it is matched in `FramesBridge`
-    # rather than `DemoSeedAll`, because the call in `DemoSeedAll` is only the
-    # trigger and could keep passing over a `seedDemo` that had been emptied.
-    "Hegotá Frames": ("FramesBridge", r'FramesLiveState\.shared\.installDemo\('),
 }
 
 

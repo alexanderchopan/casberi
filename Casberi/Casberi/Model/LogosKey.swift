@@ -10,9 +10,9 @@ import Security
 ///
 /// ## ITS OWN KEY, ITS OWN SERVICE
 ///
-/// `FramesKey` holds a scalar of the same curve. It must not sign here: two
-/// chains, two nonce spaces, and a "remove this key" on one seat must never
-/// empty the other. `logos-selftest.sh` fails the build if this file names
+/// `FramesKey` held a scalar of the same curve (until Hegotá Frames was
+/// deleted, prd §1206). No other seat's key signs here: two chains, two nonce
+/// spaces, and a "remove this key" on one seat must never empty the other. `logos-selftest.sh` fails the build if this file names
 /// another seat's service.
 ///
 /// ## THE SAME WEAKER PROMISE FRAMES MADE, FOR THE SAME REASON
@@ -36,7 +36,8 @@ import Security
 /// that sends.
 enum LogosKey {
 
-    /// Its OWN service. Never `FramesKey`'s or `SignerKey`'s.
+    /// Its OWN service. Never another seat's (`SignerKey`'s, or the retired
+    /// `casberi-frames-signer`).
     private static let service = "casberi-logos-signer"
     private static let account = "device-secp256k1-schnorr"
     /// The account id this key signs as, cached so a menu can be drawn

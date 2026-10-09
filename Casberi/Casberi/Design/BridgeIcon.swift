@@ -23,7 +23,7 @@ private enum BridgeIconArt {
     private static var images: [String: UIImage?] = [:]
 
     /// A name that wears another brand's mark: one company's second service
-    /// (prd §1203), never a lookalike.
+    /// (prd §1205), never a lookalike.
     private static let aliases: [String: String] = ["uber eats": "brand-uber"]
 
     static func assetName(for name: String) -> String {

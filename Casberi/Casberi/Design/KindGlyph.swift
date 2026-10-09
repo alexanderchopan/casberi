@@ -386,17 +386,10 @@ enum BridgeGlyph {
         // Defensive only — `brand-muse` is bundled, so `BridgeIcon` never
         // reaches this.
         case "muse":         return "scribble"
-        // The Frames devnet bundles its own mark (`brand-hegota-frames`), so
-        // `BridgeIcon` never reaches this in practice — kept defensive, in the
+        // Logos bundles the λ its team sent (`brand-logos`), so `BridgeIcon`
+        // never reaches this in practice — kept defensive, in the
         // neutral-letterform shape (the App Store Connect precedent) rather
-        // than an invented theme icon. A frame glyph would name one of the
-        // chain's readings and silently rank it above the others, which is a
-        // claim a fallback that only appears when an asset FAILED TO LOAD has
-        // no business making. The literal carries the accent in the catalog's
-        // own normalization: Swift compares canonically, the harness does not.
-        case "hegotá frames": return "character"
-        // Logos bundles the λ its team sent (`brand-logos`), so this is the
-        // same defensive fallback, and the same neutral letterform.
+        // than an invented theme icon.
         case "logos":     return "character"
         default:          return "app"
         }

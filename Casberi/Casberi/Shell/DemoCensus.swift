@@ -223,9 +223,6 @@ enum DemoCensus {
             AWSRoomSource.compose(things: all.filter { $0.source == "AWS" }) != nil
                 ? .ok("composed") : .empty("compose returned nil")
         })
-        out.append(Surface(name: "framesRoom", gate: .required) {
-            FramesRoomSource.compose() != nil ? .ok("composed") : .empty("compose returned nil")
-        })
         out.append(Surface(name: "walletbeat.cards", gate: .required) {
             let n = WalletbeatState.cards().count
             return n > 0 ? .ok("\(n) cards") : .empty("no wallet cards read")

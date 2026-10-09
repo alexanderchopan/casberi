@@ -208,7 +208,6 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
 /* AWS's own real mark (the user's saved icon file, inlined per the site's
    no-hotlink rule), on AWS's own dark navy ("Squid Ink") ground. */
 .ai-aws { background: #232f3e; }
-.ai-framesdevnet { background: #fff; }
 /* Logos ships its λ on its own light-grey field — full-bleed, as Radicle. */
 .ai-logos { background: #dcdcd9; }
 .ai-logos img { width: 100%; height: 100%; border-radius: inherit; }

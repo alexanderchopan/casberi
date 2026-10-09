@@ -326,7 +326,7 @@ run_harnesses() {
   fi
 
   # A harness may fan its OWN mutations out concurrently (wallet-rooms,
-  # frames-tx). Nested at full width that is ncpu x ncpu —
+  # once frames-tx). Nested at full width that is ncpu x ncpu —
   # 64 `swiftc` on 8 cores against 16 GB — and the failure mode is memory pressure
   # and swap, which reads as the machine hanging rather than as a slow test. Three
   # keeps the tail of this swarm (one long harness alone on one core, which is
@@ -1043,20 +1043,15 @@ python3 "$ROOT/scripts/setup-anatomy-audit.py" --self-test >/dev/null   || fail 
 python3 "$ROOT/scripts/setup-anatomy-audit.py"   || fail "a setup screen drifted out of the family's anatomy — see the output above"
 print -P "%F{green}✓ setup anatomy audit%f"
 
-# The devnet send console fits the room it draws in (prd §552). Static, no
-# build, and mechanical because the failure is invisible: a card that overflows
-# renders perfectly — every element drawn, correctly, in the right order — and
-# the ones past the fold simply continue below it, so the build is green, every
-# other audit is green, and the screen sweep photographs a Send button that is
-# off the screen and certifies it. It shipped exactly that way: 601pt of card
-# under 545pt of measured chrome on a 956pt phone, with the keypad's last row,
-# the button and the footnote all below the fold. The console's height is a
-# written-down sum now and this is what re-adds it.
+# The devnet send sheet's grammar (prd §553, §1084): the keypad is ours, the
+# verbs are rows, the sheet presents nothing of its own, and the send refuses
+# in a demo. Static, no build. Its room-fit budgets went with Hegotá Frames
+# (prd §1206), whose panel and plan strip they measured.
 step "Devnet console audit"
 python3 "$ROOT/scripts/devnet-console-audit.py" --self-test >/dev/null \
   || fail "the devnet-console audit's own self-test failed — the check is broken, not the code"
 python3 "$ROOT/scripts/devnet-console-audit.py" \
-  || fail "the send console no longer fits the room — see the output above"
+  || fail "the devnet send sheet drifted — see the output above"
 print -P "%F{green}✓ devnet console audit%f"
 
 # The connect family's ARRANGEMENT, after §315 made its WORDS mechanical.
@@ -2672,25 +2667,6 @@ harness "Figure-voice pure-logic self-test" "figure-voice self-test" "scripts/fi
 # the only proof these rungs are ordered right.
 harness "Wallet Permissions rungs self-test" "11 mutations, 10 drift guards" "scripts/wallet-permissions-selftest.sh" "the wallet Permissions self-test failed — run scripts/wallet-permissions-selftest.sh"
 
-# THE FRAMES DEVNET'S ENCODER (prd §548) — the EIP-8141 frame transaction, seven
-# fields with the fees nested. A wrong field order or elision rule produces a
-# well-formed signature over a different digest that recovers to a real
-# address: green build, correct screen, refused chain. Its vectors are real
-# transactions off chain 81410 — two byte-exact with their keccak matching the
-# RPC's own hash — plus one synthetic with every field distinct, because the
-# five real transactions on that four-day-old chain are too alike to catch a
-# field swap. It also carries the send path's conduct guards: exactly one
-# signed write verb, a LITERAL signer (an empty one is refused here, measured
-# 5/5 against 0/5), and the signature entry seeded BEFORE the digest is taken;
-# and the shared devnet pieces it compiles — RLP, the room's tokens and
-# frames, the derived balance line and the permissions headline.
-harness "Frames devnet transaction self-test" "21 mutations, real on-chain vectors, and the send path's conduct" "scripts/frames-tx-selftest.sh" "the frames transaction self-test failed — run scripts/frames-tx-selftest.sh"
-# The Frames tile's FLOW (prd §925): steps by position, links between
-# consecutive positions, ends where runs stop. Catches a step landing in two
-# nodes or none, a link dropped when the previous step is forgotten, an end
-# counted for a run that flowed off the edge, a failed step folded into its
-# mode, and the biggest-first order breaking — four mutations, each proven to
-# have changed the source before it is trusted to fail.
 harness "Zerion lane self-test" "one request at a time, spaced, a 429 waited out on schedule, 4 mutations" "scripts/zerion-lane-selftest.sh" "the zerion lane self-test failed — run scripts/zerion-lane-selftest.sh"
 # The ask capsule (prd §543) — the one control that says who will answer, and
 # the deletions that made it the only one. Every failure renders as a perfectly

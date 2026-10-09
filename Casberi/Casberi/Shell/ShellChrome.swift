@@ -449,22 +449,14 @@ final class ShellChrome {
     /// cleared with it.
     var walletSectionAttention: Set<WalletSection> = []
 
-    /// The Frames devnet room's scope, the lists behind its switcher, and which
-    /// account its rail has scoped to — `walletSection`'s trio one room over,
-    /// deliberately SEPARATE properties rather than a shared generic pair: the
-    /// rooms publish different enums and only one may draw at a time, and
-    /// whoever writes a list owns its clear-on-exit.
-    ///
-    /// **Shell-held, exactly as Wallet's are** — because the figure, the rail
-    /// and the switcher are three sections of the room rather than children of
-    /// one card, and three sections cannot share a card's `@State`. Holding it
-    /// in a card is what left a devnet room's rails carrying the card's padding
-    /// instead of the room's.
-    var framesSection: FramesSection?
-    var framesSections: [FramesSection] = []
-    var framesScope: String?
     /// The Logos room's scope, its published scopes and its account pick
-    /// (prd §991) — the devnet's three, one seat over.
+    /// (prd §991) — `walletSection`'s trio one room over, deliberately
+    /// SEPARATE properties rather than a shared generic pair: the rooms publish
+    /// different enums and only one may draw at a time, and whoever writes a
+    /// list owns its clear-on-exit. **Shell-held, exactly as Wallet's are** —
+    /// the figure, the rail and the switcher are three sections of the room
+    /// rather than children of one card, and three sections cannot share a
+    /// card's `@State`.
     var logosSection: LogosSection?
     var logosSections: [LogosSection] = []
     var logosScope: String?
@@ -642,12 +634,6 @@ final class ShellChrome {
     /// downgraded the one door this change had to keep intact, so the request
     /// goes to the screen that owns the right destination.
     var personRequest: SocialProfile?
-
-    /// **A SPONSORSHIP REQUEST A LINK OPENED (prd §728c).** Set by `RootShell`'s
-    /// `casberi://frames/sponsor` route and consumed by `FeedScreen`, which
-    /// owns the Frames room's one sheet — `personRequest`'s own hop, for its
-    /// reason: the destination lives on the screen, not the shell.
-    var framesSponsorRequest: FramesSponsorRequest?
 
     /// The crown pour's hue override (prd §159, 2026-07-21). nil = Casberi's
     /// own tint, the permanent field; the Wallet feed sets a scoped wallet's

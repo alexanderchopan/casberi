@@ -52,26 +52,6 @@ enum DevnetConsole {
     /// that governs the silhouettes in the room's own bar.
     static let sheetFace = DS.Face.profile
 
-    /// **THE LEG LIST'S FACE AND ROW** (prd §571).
-    ///
-    /// Until this ruling every row in the stitch list was `sheetFace + s4` —
-    /// 91pt, the height a 76pt profile face needs — and drew a 36pt `Face.list`
-    /// inside it, so a row built for a hero face carried a list face and read
-    /// hollow. `Face.shelf` is the rung for a face that is one of SEVERAL
-    /// (`DS.Face.shelf`'s own words), which is what every row here is; the row
-    /// is that face plus one `s4`, which is the same arithmetic the old one
-    /// used and the same shell for head, leg and add (user, 2026-09-01: *"the
-    /// add frame card should be same size as the others"*).
-    static let legFace = DS.Face.shelf
-    static let legRow = DS.Face.shelf + DS.Space.s4
-
-    /// The plan strip's natural height — its own two `label12` lines plus the
-    /// cell's padding. **Not a reserved slot**: the strip is drawn inside a
-    /// `ViewThatFits`, so it takes this much where there is room and nothing
-    /// where there is not. See the call site for why a reserved height was
-    /// wrong.
-    static let planStripHeight: CGFloat = 40
-
     /// One key. `DS.Hit.min` is the floor and this is deliberately above it:
     /// this is the control people tap most in the room, and in a hurry.
     static let key: CGFloat = 58
@@ -141,15 +121,6 @@ enum DevnetAmountInput {
         return out
     }
 }
-
-// MARK: - The verbs
-
-// **HOME'S VERBS ARE TILES (prd §1039, 2026-10-01).** `DevnetSendPanel`,
-// `DevnetVerbRow` and `DevnetCreatePanel` drew Send, Top up and Create account
-// as rows in Home's Actions block (§750); the merge made them the last tiles of
-// the room's grid, dispatched by `FramesActs`, so the three views went with the
-// block (§723). The sheet below is unchanged: Send still raises it.
-
 
 // MARK: - The keypad
 
@@ -254,195 +225,19 @@ struct DevnetKeypad: View {
 /// **THE SET IS THIS DEVNET'S OWN ADDRESSES.** A social handle is never offered
 /// in the first place rather than accepted and refused later — the rule is
 /// enforced where it can be explained.
-/// ONE STEP A SEND WILL RUN, for a venue whose transaction has parts.
-///
-/// **Data, not a view, and that is the whole of the design.** The strip has to
-/// be computed from the destination and amount, which live as `@State` inside
-/// the sheet — so the caller cannot build the view, and a `@ViewBuilder` slot
-/// would mean a generic parameter on a struct with twelve stored properties
-/// and an inference break at both existing call sites. A venue hands over a
-/// pure function of two strings instead, and the sheet draws it.
-///
-/// Empty for every venue but the Frames devnet, where a send is not one act:
-/// it becomes a VERIFY frame that authorises and a SENDER frame that moves the
-/// value, and without the first the transaction has no payer and is invalid.
-/// WHAT YOUR SEND BECOMES — the steps, drawn between the figure and the
-/// keypad.
-///
-/// A READING, never a control: there is no way to edit a step, add one or
-/// change its order. That is a transaction builder and a different product.
-/// This says what the tap will do, on the one chain where that is not obvious.
-struct DevnetSendPlanStrip: View {
-    let steps: [DevnetSendStep]
-
-    var body: some View {
-        HStack(spacing: DS.Space.s2) {
-            ForEach(Array(steps.enumerated()), id: \.element.id) { index, step in
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(step.name)
-                        .dsText(.label12)
-                        .foregroundStyle(DS.textSecondary)
-                    Text(step.detail)
-                        .dsText(.label12)
-                        .foregroundStyle(DS.textTertiary)
-                }
-                .lineLimit(1)
-                if index < steps.count - 1 {
-                    Image(systemName: "arrow.right")
-                        .accessibilityHidden(true)
-                        .dsGlyph(.tick, weight: .semibold)
-                        .foregroundStyle(DS.textTertiary)
-                }
-            }
-            Spacer(minLength: 0)
-        }
-        .accessibilityElement(children: .combine)
-    }
-}
-
-struct DevnetSendStep: Equatable, Identifiable {
-    let name: String
-    let detail: String
-    var id: String { name + "|" + detail }
-}
-
-/// ONE LEG OF A STITCHED TRANSACTION, as the sheet holds it.
-///
-/// `id` is a `UUID` and deliberately not derived from the contents: two legs
-/// sending the same amount to the same address is a perfectly ordinary thing
-/// to build, and a content-derived id collapses them into one row that then
-/// animates and deletes wrongly.
-struct DevnetSendLeg: Identifiable, Equatable {
-    let id = UUID()
-    var address: String
-    var amount: String
-    /// Which asset this leg sends — `DevnetSendAsset.id`, empty for the coin.
-    var asset: String = ""
-    /// That asset's unit, carried so a list of mixed legs can say which is
-    /// which. Nil for the coin.
-    var unit: String? = nil
-}
-
-/// **WHO PAYS THE FEE, for a venue that can ask somebody else (prd §728c).**
-///
-/// Nil for every venue whose chain has no sponsorship. On Frames the sponsor
-/// is named BEFORE anybody signs, because the signature commits to the frame
-/// that says who pays — so the choice is a row on the list, and the verb it
-/// changes is the one beneath it.
-struct DevnetPayerChoice {
-    /// Who can be asked, by name. Never the sender.
-    let candidates: [(address: String, name: String?)]
-    /// Sign the batch as a request for `payer`, and return what to hand them.
-    let ask: (_ legs: [DevnetSendLeg], _ atomic: Bool, _ payer: String) async -> DevnetAskResult
-    /// **A PAYER THIS PHONE HOLDS PAYS AT ONCE (prd §1089).** Your own other
-    /// account needs no link: the sheet signs both halves here, so the tile
-    /// says Send rather than Ask to pay.
-    var paysHere: (String) -> Bool = { _ in false }
-}
-
-/// What asking produced: a link to share and when it stops working, or why not
-/// — or, for a payer on this phone, that it was sent (prd §1089).
-struct DevnetAskResult {
-    var link: URL? = nil
-    var expires: Date? = nil
-    var failure: String? = nil
-    var sent = false
-}
-
-/// **WHICH OF YOUR ACCOUNTS SENDS (prd §1089).** The passkey account was
-/// reachable only by picking it in the room's account menu before opening
-/// Send, so signing with Face ID — one of the three things this chain can do
-/// that an ordinary one cannot — was invisible from the sheet that does it.
-/// Drawn when the phone holds more than one account; picking runs the room's
-/// own account pick, so the sheet and the room never disagree about who sends.
-struct DevnetSenderChoice {
-    let candidates: [(address: String, name: String)]
-    let current: String?
-    let pick: (String) -> Void
-}
-
-/// **ONE THING THE SHEET CAN SEND (prd §728b).** A venue whose accounts hold
-/// tokens as well as the coin hands the sheet a list, and the unit beside the
-/// figure becomes the choice. The empty `id` is the coin; every other `id` is
-/// the token contract, which is also what the venue's send is told.
-struct DevnetSendAsset: Identifiable, Equatable {
-    let id: String
-    let unit: String
-    /// "12.5 available", or nil where the balance did not read.
-    let heldLine: String?
-    /// The token's own decimals. **Never a guess** — an asset whose decimals
-    /// did not read is not offered at all.
-    let decimals: Int
-}
-
-/// **WHAT TURNS THE SHEET INTO A BUILDER.** Nil for a venue whose send is one
-/// act — it gets byte-identical behaviour to before, and that is the whole
-/// reason this is a parameter rather than a second screen.
-struct DevnetStitch {
-    /// The head row's words, or nil for a venue with no built leg at all.
-    ///
-    /// Frames' VERIFY frame is BUILT, never chosen, so it is drawn as a row you
-    /// cannot tap rather than left out — leaving it out is what makes somebody
-    /// ask whether they were supposed to add it.
-    let headName: String?
-    let headDetail: String?
-    /// **WHETHER ALL-OR-NOTHING IS A DECISION (2026-09-04).**
-    ///
-    /// The chain lets you choose, and **BOTH states need describing**: off is
-    /// Frames' default and is behaviour no other send in this app has, so a
-    /// control that only describes ON leaves the dangerous state unexplained.
-    /// A case rather than three loose strings so the invalid states — a title
-    /// with no OFF sentence — cannot be built.
-    enum Atomicity: Equatable {
-        case chosen(title: String, on: String, off: String)
-    }
-    let atomicity: Atomicity
-    /// A ceiling, and the sentence for reaching it. The chain bounds the
-    /// verify prefix, so a long batch is refused by the node with a message
-    /// naming no remedy — better to stop before the signature.
-    let maxLegs: Int
-    let atCapacity: String
-    /// Returns nil on success, or the sentence to show on failure.
-    let send: ([DevnetSendLeg], Bool) async -> String?
-    /// **WHAT THIS BATCH WILL LOOK LIKE ONCE IT HAS RUN**, drawn by the venue
-    /// in the venue's own idiom, above the list.
-    ///
-    /// Optional and closure-shaped rather than a view this file builds,
-    /// because the whole value of it is that it is the SAME drawing the room
-    /// uses to show what happened — compose in the shape you will read the
-    /// result in. A generic preview invented here would be a second drawing of
-    /// the same thing, which is the drift `roomFigure`'s own guard exists for.
-    var preview: ((_ legs: [DevnetSendLeg], _ atomic: Bool) -> AnyView)? = nil
-
-    /// **WHICH LEGS ARE JOINED TO THE ONE BELOW THEM**, one `Bool` per leg in
-    /// order, so the list can draw the tie the strip draws (prd §571).
-    ///
-    /// The venue answers, because the rule is the venue's: on Frames the join
-    /// is `flags` bit 2 and the LAST payload frame never carries it, which the
-    /// node enforces by refusing the transaction outright. **The venue must
-    /// answer it by asking its own ENCODER rather than by re-spelling the
-    /// rule here** — a second spelling is how a screen ends up promising a
-    /// shape the signer does not produce, which is the fault this whole
-    /// parameter list is arranged to prevent.
-    ///
-    /// Nil for a venue that cannot join anything, and the list then draws no
-    /// ties at all rather than a decorative chain.
-    var joins: ((_ legs: [DevnetSendLeg], _ atomic: Bool) -> [Bool])? = nil
-}
-
 struct DevnetSendSheet: View {
     /// What this room is, for the picker's own footnote.
     let venue: String
     /// The seat this room IS — `Bridge.name` / `Thing.source`, which is what
     /// `BridgeIcon` resolves and what the send's shower rains one tile of (prd
     /// §655). Distinct from `venue`, which is the shortened word a person
-    /// reads ("Frames"); a tile needs the catalog spelling ("Hegotá Frames")
-    /// or it falls back to a blank glyph.
+    /// reads; a tile needs the catalog spelling or it falls back to a blank
+    /// glyph.
     let seat: String
     let tint: Color
     /// The word beside the figure. A WORD and never a chip while the venue
     /// moves only its native coin, since a control would open a one-item menu
-    /// — the dead control §83 bans. With `assets` it becomes a menu.
+    /// — the dead control §83 bans.
     let unit: String
     let candidates: [(address: String, name: String?)]
     /// What the sending account holds, already formatted. Nil when the sweep
@@ -458,37 +253,6 @@ struct DevnetSendSheet: View {
     /// Returns nil on success, or the sentence to show on failure.
     let perform: (String, String) async -> String?
 
-    /// **NON-NIL MAKES THIS A BUILDER** (prd §548 sixth follow-up). The amount
-    /// screen then ADDS a leg instead of sending, and a third screen lists what
-    /// has been built. Nil leaves a one-act send exactly as it was.
-    var stitch: DevnetStitch? = nil
-
-    /// **WHAT THE SHEET CAN SEND, when that is more than the coin (prd §728b).**
-    /// Fewer than two draws the plain unit exactly as before. With two or
-    /// more, the unit beside the figure opens a menu — the one place the
-    /// choice can sit without adding a row to a screen whose height is a
-    /// budget (`devnet-console-audit.py`).
-    var assets: [DevnetSendAsset] = []
-    /// Sends a non-coin asset. The coin still goes through `perform`, so a
-    /// venue that passes no assets is untouched.
-    var sendAsset: ((_ to: String, _ amount: String, _ asset: DevnetSendAsset) async -> String?)? = nil
-    /// **What this send BECOMES** — given the destination, the amount and the
-    /// asset currently chosen, the steps the transaction will run. A token
-    /// send runs different frames from a coin send, and a preview that did not
-    /// know which would be a description of the wrong transaction.
-    ///
-    /// Drawn ABOVE the keypad rather than below it, deliberately: the space
-    /// under the pad is where the thumb travels between the last digit and the
-    /// commit, so a strip there is read on the way past rather than looked at
-    /// — and a claim about what the transaction becomes belongs beside the
-    /// amount it describes, not adjacent to the button that fires it.
-    var planAsset: ((_ destination: String, _ amount: String, _ asset: DevnetSendAsset?) -> [DevnetSendStep])? = nil
-    /// Who pays the fee, when somebody else can (prd §728c). Nil draws no row.
-    var payerChoice: DevnetPayerChoice? = nil
-    /// Which account sends, when the phone holds more than one (prd §1089).
-    var senderChoice: DevnetSenderChoice? = nil
-
-
     @Environment(\.dismiss) private var dismiss
     @Environment(ShellChrome.self) private var chrome
 
@@ -499,53 +263,17 @@ struct DevnetSendSheet: View {
     @State private var errorText: String?
     @FocusState private var searching: Bool
 
-    /// The stitched legs, in the order they will run.
-    @State private var legs: [DevnetSendLeg] = []
-    /// **OFF BY DEFAULT, because the chain is off by default.** Defaulting it
-    /// on would be kinder and would misrepresent what the transaction does
-    /// unless the person changed it — and the point of the control is that
-    /// this chain's answer is the unusual one.
-    @State private var atomicChoice = false
-    @State private var assetID = ""
-    /// Nil is "you". An address is the sponsor being asked.
-    @State private var payer: String? = nil
-    /// Set once a request is signed: the sheet stops offering to send and
-    /// offers the link instead.
-    @State private var askReady: DevnetAskResult? = nil
-
-    /// What this send will DO.
-    private var atomic: Bool { atomicChoice }
-    /// Whether the who/amount pair is currently being walked to add a leg.
-    /// Starts true so a builder opens on the picker rather than on an empty
-    /// list, which is a screen with nothing on it but a button.
-    @State private var addingLeg = true
-
     private var picked: Bool { !destination.isEmpty }
-
-    private enum Screen { case who, amount, legs }
-
-    /// **ONE PLACE DECIDES WHICH SCREEN IS UP**, so a builder and a one-act
-    /// send cannot drift into two different navigation rules.
-    private var screen: Screen {
-        guard stitch != nil else { return picked ? .amount : .who }
-        guard addingLeg else { return .legs }
-        return picked ? .amount : .who
-    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            switch screen {
-            case .who:    whoScreen
-            case .amount: amountScreen
-            case .legs:   legsScreen
-            }
+            if picked { amountScreen } else { whoScreen }
         }
         .padding(.horizontal, DevnetConsole.cardPadding)
         .padding(.bottom, DevnetConsole.cardPadding)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(DS.surfaceSheet)
         .animation(DS.Motion.standard, value: picked)
-        .animation(DS.Motion.standard, value: addingLeg)
     }
 
     // MARK: Who
@@ -568,29 +296,6 @@ struct DevnetSendSheet: View {
 
     private var whoScreen: some View {
         VStack(alignment: .leading, spacing: DS.Space.s4) {
-            // **A WAY BACK TO WHAT YOU HAVE ALREADY BUILT.** Without it,
-            // reaching the picker from the list is a one-way door: the only
-            // exits are adding a leg you may not want or cancelling the whole
-            // transaction. Absent for a one-act send, where this screen IS the
-            // start and a back control would point at nothing.
-            if !legs.isEmpty {
-                Button {
-                    DSHaptic.selection()
-                    query = ""
-                    addingLeg = false
-                } label: {
-                    Image(systemName: "chevron.left")
-                        .accessibilityHidden(true)
-                        .dsGlyph(.body, weight: .semibold)
-                        .foregroundStyle(DS.textPrimary)
-                        .frame(width: DS.Hit.min, height: DS.Hit.min, alignment: .leading)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(PressSpring())
-                .accessibilityLabel(Text(String(localized: "Back to the frames")))
-                .dsHover()
-                .padding(.bottom, -DS.Space.s2)
-            }
             DSSlabField(placeholder: "Paste an address, or search", text: $query,
                         actionLabel: "", focus: $searching, glyph: "magnifyingglass",
                         size: .compact, submitLabel: .done,
@@ -700,12 +405,12 @@ struct DevnetSendSheet: View {
             .padding(.top, DS.Space.s4)
 
             HStack(spacing: DS.Space.s2) {
-                if let heldLine = shownHeldLine {
+                if let heldLine {
                     Text(heldLine)
                         .dsText(.label12)
                         .foregroundStyle(DS.textTertiary)
                 }
-                if assetID.isEmpty, let maxAmount, !maxAmount.isEmpty {
+                if let maxAmount, !maxAmount.isEmpty {
                     Button {
                         DSHaptic.selection()
                         amount = DevnetAmountInput.sanitize(maxAmount, previous: amount)
@@ -726,48 +431,6 @@ struct DevnetSendSheet: View {
             .padding(.top, DS.Space.s1)
 
             Spacer(minLength: DS.Space.s4)
-
-            // **FIXED HEIGHT, so the `Spacer` collapses around it rather than
-            // the strip being squeezed off.** Slack is not a budget: there is
-            // ~96pt of it on an 844pt phone, ~64 on an 812 and none on a 736,
-            // where the keypad starts pushing. A reading that silently
-            // disappears on small phones is the same class as a card that
-            // overflows and simply continues past the fold — which renders
-            // perfectly and is what `devnet-console-audit.py` exists for. Its
-            // height is a term in that audit's sum.
-            if let planAsset {
-                let steps = planAsset(destination, amount, selectedAsset)
-                if !steps.isEmpty {
-                    // **`ViewThatFits`, NOT a fixed height** (prd §548). The
-                    // first cut reserved 40pt and added it to this file's own
-                    // budget — then the arithmetic said the amount screen has
-                    // NEGATIVE slack on a 736pt phone before the strip exists
-                    // at all, using §553's own measured terms. Whether that is
-                    // real depends on how the sheet's top inset scales, which
-                    // was measured on an 844 and is not knowable from here.
-                    //
-                    // So the strip does not assert a number it cannot verify.
-                    // It draws where there is room and steps aside where there
-                    // is not, which is correct on every phone without anyone
-                    // having to know the geometry. The alternative — a
-                    // reserved height on a screen with no `ScrollView` — pushes
-                    // the commit button off the bottom, drawn correctly and
-                    // invisible, which is the panel bug this file exists for.
-                    //
-                    // Stepping aside is honest here because the strip is an
-                    // EXPLANATION, not a safety control: the transaction is
-                    // identical without it. A control would have to shrink the
-                    // screen instead.
-                    ViewThatFits(in: .vertical) {
-                        VStack(spacing: 0) {
-                            DevnetSendPlanStrip(steps: steps)
-                            Spacer(minLength: DS.Space.s3)
-                        }
-                        EmptyView()
-                    }
-                    .fixedSize(horizontal: false, vertical: false)
-                }
-            }
 
             DevnetKeypad(amount: $amount, tint: tint)
 
@@ -793,55 +456,12 @@ struct DevnetSendSheet: View {
         !busy && isValidAddress(destination) && amountIsValid
     }
 
-    // MARK: What is being sent (prd §728b)
+    private var amountIsValid: Bool { isValidAmount(amount) }
 
-    private var selectedAsset: DevnetSendAsset? { assets.first { $0.id == assetID } }
-    private var shownUnit: String { selectedAsset?.unit ?? unit }
-    private var shownHeldLine: String? {
-        if let asset = selectedAsset { return asset.heldLine }
-        return heldLine
-    }
-
-    /// A token is parsed at ITS decimals; the coin keeps the venue's own rule.
-    private var amountIsValid: Bool {
-        if let asset = selectedAsset, !asset.id.isEmpty {
-            return DevnetSendParse.unitsData(from: amount, decimals: asset.decimals) != nil
-        }
-        return isValidAmount(amount)
-    }
-
-    /// A batch whose legs send different assets has no one total and no one
-    /// unit, so each leg says its own and the tile says none.
-    private var mixedUnits: Bool { Set(legs.map(\.asset)).count > 1 }
-
-    @ViewBuilder private var unitLabel: some View {
-        if assets.count > 1 {
-            Menu {
-                ForEach(assets) { asset in
-                    Button {
-                        DSHaptic.selection()
-                        // A typed amount means nothing in another unit.
-                        if assetID != asset.id { assetID = asset.id; amount = "" }
-                    } label: {
-                        Text(asset.unit)
-                    }
-                }
-            } label: {
-                HStack(spacing: 4) {
-                    Text(shownUnit).dsText(.price17)
-                    Image(systemName: "chevron.up.chevron.down")
-                        .dsGlyph(.caption, weight: .semibold)
-                        .accessibilityHidden(true)
-                }
-                .foregroundStyle(tint)
-                .contentShape(Rectangle())
-            }
-            .accessibilityLabel(Text(String(localized: "What to send: \(shownUnit)")))
-        } else {
-            Text(unit)
-                .dsText(.price17)
-                .foregroundStyle(amount.isEmpty ? DS.textTertiary : DS.textSecondary)
-        }
+    private var unitLabel: some View {
+        Text(unit)
+            .dsText(.price17)
+            .foregroundStyle(amount.isEmpty ? DS.textTertiary : DS.textSecondary)
     }
 
     /// **THE BUTTON NAMES THE AMOUNT** once there is one (§538): it moves money
@@ -850,20 +470,13 @@ struct DevnetSendSheet: View {
     private var commit: some View {
         Button {
             DSHaptic.tap()
-            if stitch != nil { addLeg() } else { act() }
+            act()
         } label: {
             HStack(spacing: DS.Space.s2) {
-                Image(systemName: stitch == nil ? "arrow.up.right" : "plus")
+                Image(systemName: "arrow.up.right")
                     .dsGlyph(.subhead, weight: .semibold)
-                // **THE BUTTON NAMES WHAT IT DOES, and in a builder that is
-                // not sending.** "Send" on a screen that appends a leg is the
-                // §83 fake status in the one place it would cost money: you
-                // would tap it believing the transaction had gone.
-                Text(stitch == nil
-                     ? (armed ? "\(String(localized: "Send")) \(amount) \(shownUnit)"
-                              : String(localized: "Send"))
-                     : (armed ? String(localized: "Add \(amount) \(shownUnit)")
-                              : String(localized: "Add")))
+                Text(armed ? "\(String(localized: "Send")) \(amount) \(unit)"
+                           : String(localized: "Send"))
                 if busy { DSSpinner(size: .mini, onFill: true) }
             }
             .dsText(.body17)
@@ -880,549 +493,6 @@ struct DevnetSendSheet: View {
         .dsHover()
     }
 
-    // MARK: The legs
-
-    private func addLeg() {
-        legs.append(DevnetSendLeg(address: destination, amount: amount, asset: assetID,
-                                  unit: assetID.isEmpty ? nil : selectedAsset?.unit))
-        destination = ""
-        amount = ""
-        query = ""
-        errorText = nil
-        addingLeg = false
-    }
-
-    /// **THE SUM IS `Decimal`, NEVER `Double`.** A typed amount carries up to
-    /// 18 decimal places and `Double` holds ~15 significant digits, so a plain
-    /// sum silently rounds — on the one line that tells somebody how much is
-    /// about to leave. `Decimal` is 38 digits and exact for a handful of legs.
-    /// The wei conversion at send time still goes through
-    /// `DevnetSendParse.weiData`, which is string arithmetic throughout; this
-    /// figure is for reading, and never for signing.
-    private var total: String? {
-        guard !legs.isEmpty, !mixedUnits else { return nil }
-        var sum = Decimal(0)
-        for leg in legs {
-            guard let d = Decimal(string: leg.amount, locale: Locale(identifier: "en_US_POSIX"))
-            else { return nil }
-            sum += d
-        }
-        var text = "\(sum)"
-        if text.contains(".") {
-            while text.hasSuffix("0") { text.removeLast() }
-            if text.hasSuffix(".") { text.removeLast() }
-        }
-        return text
-    }
-
-    private var atCapacity: Bool { legs.count >= (stitch?.maxLegs ?? .max) }
-
-    private var legsScreen: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            if let stitch {
-                // **NO LABEL, AND NO STRIP UP HERE** (prd §571). "What will
-                // run" was a caption on a list that captions itself, and the
-                // strip has moved into the tile that sends it — this screen
-                // had TWO saturated blocks, the strip and the button, which is
-                // precisely what stops a hero tile reading (`hero-tint-audit`,
-                // §563 item 4). What the label bought was air above the rows,
-                // and the air stays.
-                //
-                // Asked from the encoder, never re-derived: `joins` reaches
-                // the venue's own builder, so the tie this list draws and the
-                // tie the strip draws are the same fact.
-                let joins = stitch.joins?(legs, atomic) ?? []
-
-                ScrollView {
-                    VStack(spacing: DS.Space.s2) {
-                        if let name = stitch.headName, let detail = stitch.headDetail {
-                            headRow(name: name, detail: detail)
-                        }
-                        ForEach(Array(legs.enumerated()), id: \.element.id) { index, leg in
-                            legRow(leg, joinsNext: index < joins.count && joins[index])
-                        }
-                        if atCapacity {
-                            Text(stitch.atCapacity)
-                                .dsText(.label12)
-                                .foregroundStyle(DS.textTertiary)
-                                .fixedSize(horizontal: false, vertical: true)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(.top, DS.Space.s1)
-                        } else {
-                            addRow
-                        }
-                    }
-                }
-                .scrollIndicators(.hidden)
-                // `s6`, not `s4`: with the label gone the first row sat hard
-                // against the sheet's own top corner (seen on the simulator).
-                // The air this buys is free — the list is top-anchored and the
-                // pool below it is the grammar's, not a shortage.
-                .padding(.top, DS.Space.s6)
-                .animation(DS.Motion.standard, value: atomic)
-
-                if let senderChoice, askReady == nil, senderChoice.candidates.count > 1 {
-                    senderRow(senderChoice)
-                }
-                atomicRow(stitch)
-                if let payerChoice, askReady == nil, !payerChoice.candidates.isEmpty {
-                    payerRow(payerChoice)
-                }
-
-                if let errorText {
-                    Text(errorText)
-                        .dsText(.label12)
-                        .foregroundStyle(DS.destructiveInk)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.bottom, DS.Space.s2)
-                }
-
-                if let ready = askReady, let link = ready.link {
-                    askShare(link, expires: ready.expires)
-                } else {
-                    sendAll
-                }
-            }
-        }
-    }
-
-    // MARK: Who sends (prd §1089)
-
-    /// The payer row's chrome and shape, one row above it: a choice about the
-    /// same transaction, both states spelled.
-    private func senderRow(_ choice: DevnetSenderChoice) -> some View {
-        let current = choice.candidates.first { candidate in
-            choice.current.map { candidate.address.caseInsensitiveCompare($0) == .orderedSame } ?? false
-        } ?? choice.candidates[0]
-        return HStack(spacing: DS.Space.s3) {
-            Text(String(localized: "From"))
-                .dsText(.body17)
-                .foregroundStyle(DS.textPrimary)
-            Spacer(minLength: DS.Space.s2)
-            Menu {
-                ForEach(choice.candidates, id: \.address) { candidate in
-                    Button {
-                        DSHaptic.selection()
-                        choice.pick(candidate.address)
-                    } label: {
-                        Text(candidate.name)
-                    }
-                }
-            } label: {
-                HStack(spacing: 4) {
-                    Text(current.name)
-                        .dsText(.body17)
-                        .lineLimit(1)
-                    Image(systemName: "chevron.up.chevron.down")
-                        .dsGlyph(.caption, weight: .semibold)
-                        .accessibilityHidden(true)
-                }
-                .foregroundStyle(tint)
-                .contentShape(Rectangle())
-            }
-        }
-        .modifier(DevnetAtomicRowChrome(animatesOn: false))
-    }
-
-    // MARK: Who pays (prd §728c)
-
-    private func payerName(_ address: String) -> String {
-        payerChoice?.candidates.first { $0.address.caseInsensitiveCompare(address) == .orderedSame }?.name
-            ?? WalletStore.shortAddress(address)
-    }
-
-    /// **A ROW, NOT A SCREEN**, on the atomic row's own chrome: it is a choice
-    /// about the same transaction the row above describes, and both states are
-    /// spelled (`DevnetStitch.Atomicity`'s rule) — "you" is the state nearly everyone
-    /// is in and must not read as the absence of a feature.
-    private func payerRow(_ choice: DevnetPayerChoice) -> some View {
-        HStack(spacing: DS.Space.s3) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(String(localized: "Who pays the fee"))
-                    .dsText(.body17)
-                    .foregroundStyle(DS.textPrimary)
-                DSFootnote(prose: payer == nil
-                     ? String(localized: "You do, from this account.")
-                     : payerChoice?.paysHere(payer!) == true
-                        ? String(localized: "Your other account pays. You'll confirm twice.")
-                        : String(localized: "They sign it too. Nothing sends until they do."))
-            }
-            Spacer(minLength: DS.Space.s2)
-            Menu {
-                Button {
-                    DSHaptic.selection()
-                    payer = nil
-                } label: {
-                    Text(String(localized: "You"))
-                }
-                ForEach(choice.candidates, id: \.address) { candidate in
-                    Button {
-                        DSHaptic.selection()
-                        payer = candidate.address
-                    } label: {
-                        Text(candidate.name ?? WalletStore.shortAddress(candidate.address))
-                    }
-                }
-            } label: {
-                HStack(spacing: 4) {
-                    Text(payer.map(payerName) ?? String(localized: "You"))
-                        .dsText(.body17)
-                        .lineLimit(1)
-                    Image(systemName: "chevron.up.chevron.down")
-                        .dsGlyph(.caption, weight: .semibold)
-                        .accessibilityHidden(true)
-                }
-                .foregroundStyle(tint)
-                .contentShape(Rectangle())
-            }
-        }
-        .modifier(DevnetAtomicRowChrome(animatesOn: false))
-    }
-
-    private func actAsk() {
-        guard let choice = payerChoice, let payer else { return }
-        busy = true
-        errorText = nil
-        let built = legs
-        let allOrNothing = atomic
-        Task { @MainActor in
-            let result = await choice.ask(built, allOrNothing, payer)
-            busy = false
-            if let failure = result.failure {
-                errorText = failure
-                return
-            }
-            DSHaptic.success()
-            // Paid on this phone: it went, so the sheet ends the way a send
-            // does (`actAll`), not on a link nobody needs.
-            if result.sent {
-                chrome.rain(sources: [seat])
-                dismiss()
-                return
-            }
-            askReady = result
-        }
-    }
-
-    /// **THE REQUEST IS SIGNED; NOW IT HAS TO REACH THEM.** One tile, in the
-    /// place the send tile stood, so the sheet still has one saturated block
-    /// (§563's hero rule) — and it says when the request stops working, since
-    /// that is the one thing the person handing it over needs to pass on.
-    @ViewBuilder private func askShare(_ link: URL, expires: Date?) -> some View {
-        VStack(alignment: .leading, spacing: DS.Space.s2) {
-            Text(String(localized: "Signed. Now send it to \(payer.map(payerName) ?? "")."))
-                .dsText(.body17)
-                .foregroundStyle(DS.textPrimary)
-                .fixedSize(horizontal: false, vertical: true)
-            if let expires {
-                DSFootnote(prose: String(localized: "It sends when they pay, and stops working at \(expires.formatted(date: .omitted, time: .shortened))."))
-            }
-            ShareLink(item: link,
-                      message: Text(String(localized: "Can you pay the fee for this on \(venue)?"))) {
-                HStack(spacing: DS.Space.s2) {
-                    Image(systemName: "square.and.arrow.up")
-                        .dsGlyph(.subhead, weight: .semibold)
-                        .accessibilityHidden(true)
-                    Text(String(localized: "Share the request"))
-                }
-                .dsText(.body17)
-                .foregroundStyle(.white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, DS.Space.s4)
-                .background(tint, in: RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous))
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .padding(.top, DS.Space.s2)
-        }
-        .padding(.top, DS.Space.s3)
-    }
-
-    /// **THE ROWS ARE ONE SIZE** (user, 2026-09-01: "the add frame card should
-    /// be same size as the others"). Every row here — the fixed head, a leg,
-    /// and the add control — is built from `rowShell`, so the add control
-    /// cannot drift into a thinner dashed strip that reads as a hint rather
-    /// than as the next item in the list.
-    ///
-    /// **No plate and no dashed outline (prd §782).** The rows stand on the
-    /// sheet in the column; the head's quiet ink and the add row's tint say
-    /// which is which, as the §571 dash colours did.
-    private func rowShell<Content: View>(@ViewBuilder content: () -> Content) -> some View {
-        content()
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .frame(height: DevnetConsole.legRow)
-            // **THE WHOLE ROW IS THE TARGET.** Found on the simulator, not by
-            // reading: SwiftUI hit-tests the glyph and the words and nothing
-            // between them, so "Add a frame" ignored every tap past the end of
-            // its own label while looking completely live — the §83 dead control.
-            .contentShape(Rectangle())
-    }
-
-    private func headRow(name: String, detail: String) -> some View {
-        rowShell {
-            HStack(spacing: DS.Space.s3) {
-                Image(systemName: "checkmark.seal")
-                    .accessibilityHidden(true)
-                    .dsGlyph(.title, weight: .semibold)
-                    .foregroundStyle(DS.textTertiary)
-                    .frame(width: DevnetConsole.legFace, height: DevnetConsole.legFace)
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(name)
-                        .dsText(.body17)
-                        .foregroundStyle(DS.textSecondary)
-                    Text(detail)
-                        .dsText(.label12)
-                        .foregroundStyle(DS.textTertiary)
-                }
-                Spacer(minLength: 0)
-            }
-        }
-        .accessibilityElement(children: .combine)
-    }
-
-    /// **THE FIGURE IS THE ROW'S CROWN** (prd §571), and the name is its
-    /// label — the two-tier rule at row scale, and the reverse of what shipped.
-    /// This is the list somebody reads to check what is about to leave, and on
-    /// it the AMOUNT was `body17` in `textSecondary` while the NAME — very
-    /// often an address-book label somebody typed, or a shortened hex stub —
-    /// was bold and primary. That is §563's inversion one surface down: the
-    /// thing you are here to check was the quietest thing in the row.
-    ///
-    /// **The "Send" subline is gone.** Every row in this list sends; a word
-    /// that is true of all of them distinguishes none of them, which is the
-    /// same finding as the Activity chart's "4 of them are frame…" (§554).
-    private func legRow(_ leg: DevnetSendLeg, joinsNext: Bool) -> some View {
-        rowShell {
-            HStack(spacing: DS.Space.s3) {
-                WalletFace(address: leg.address, size: DevnetConsole.legFace, circular: true)
-                Text(name(for: leg.address))
-                    .dsText(.body17)
-                    .foregroundStyle(DS.textSecondary)
-                    .lineLimit(1)
-                Spacer(minLength: DS.Space.s2)
-                // **THE FIGURE NEVER TRUNCATES, AND WEARS NO UNIT.** Seen on
-                // the simulator: a long name squeezed "0.001 test ETH" to
-                // "0.001 test…", which is an amount rendered as an unfinished
-                // word on the list somebody checks before signing. The unit is
-                // the same for every leg and is named once on the button that
-                // sends them, so repeating it per row buys only the width that
-                // broke the number. `layoutPriority` settles the rest: the
-                // name is the part that may be abbreviated, because a face
-                // sits beside it and the address is recoverable.
-                Text(leg.amount)
-                    .dsText(.stat24)
-                    .monospacedDigit()
-                    .foregroundStyle(DS.textPrimary)
-                    .lineLimit(1)
-                    .layoutPriority(1)
-                // **ONLY WHEN THE LEGS DIFFER (prd §728b).** The unit stays off
-                // a list whose legs all send one thing, for the reason above;
-                // a batch paying ETH and DAI together must say which is which.
-                if mixedUnits {
-                    Text(leg.unit ?? unit)
-                        .dsText(.label12)
-                        .foregroundStyle(DS.textTertiary)
-                        .lineLimit(1)
-                }
-                // **REMOVE IS A BUTTON, NOT A SWIPE.** A swipe here would be
-                // the only swipe in this sheet, and the list is short enough
-                // that a hidden gesture is a control nobody finds.
-                Button {
-                    DSHaptic.selection()
-                    legs.removeAll { $0.id == leg.id }
-                    if legs.isEmpty { addingLeg = true }
-                } label: {
-                    // **OUTLINED, NOT FILLED.** With the figure now at
-                    // `stat24` a filled disc beside it is the second-loudest
-                    // thing in the row, and it is the one control here nobody
-                    // came to use.
-                    Image(systemName: "minus.circle")
-                        .accessibilityHidden(true)
-                        .dsGlyph(.title, weight: .regular)
-                        .foregroundStyle(DS.textTertiary)
-                        .frame(width: DS.Hit.min, height: DS.Hit.min)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(PressSpring())
-                .accessibilityLabel(Text(String(localized: "Remove this frame")))
-                .dsHover()
-            }
-        }
-        // **THE TIE, WHERE YOU READ THE LIST** (prd §571). The strip draws
-        // all-or-nothing as a tie between two adjacent cells because atomicity
-        // is a RELATIONSHIP between two frames and every other encoding makes
-        // it a property of one of them. That drawing sat at the top of the
-        // screen (and now sits in the tile), so the list itself — the thing
-        // somebody actually reads leg by leg — was byte-identical in both
-        // states of the control. This is the strip's own encoding rotated a
-        // quarter turn: a bar bridging the gap between two joined rows.
-        //
-        // On the face's axis rather than the row's centre, so it reads as a
-        // chain running down the list. With no plate under the rows (prd §782)
-        // it runs face to face: the `s4` of air around both faces plus the
-        // stack's own `s2` gap.
-        //
-        // It can only ever draw a join the run declares: `joinsNext` comes
-        // from the venue's encoder, so the last leg never ties (the node
-        // refuses that flag outright) and the head row never ties (a VERIFY
-        // frame's flags are `0x03` and carry no join bit).
-        .overlay(alignment: .bottomLeading) {
-            Capsule()
-                .fill(tint)
-                // 4pt, not 3: measured on the simulator, a 3pt bar reads as a
-                // speck rather than a link.
-                .frame(width: 4, height: joinsNext ? DS.Space.s2 + DS.Space.s4 : 0)
-                .opacity(joinsNext ? 1 : 0)
-                .offset(x: DevnetConsole.legFace / 2 - 2, y: DS.Space.s2 + DS.Space.s4 / 2)
-                .accessibilityHidden(true)
-        }
-    }
-
-    private var addRow: some View {
-        Button {
-            DSHaptic.tap()
-            addingLeg = true
-        } label: {
-            rowShell {
-                HStack(spacing: DS.Space.s3) {
-                    Image(systemName: "plus")
-                        .accessibilityHidden(true)
-                        .dsGlyph(.title, weight: .semibold)
-                        .foregroundStyle(tint)
-                        .frame(width: DevnetConsole.legFace, height: DevnetConsole.legFace)
-                    Text(String(localized: "Add a frame"))
-                        .dsText(.body17)
-                        .foregroundStyle(tint)
-                    Spacer(minLength: 0)
-                }
-            }
-        }
-        .buttonStyle(PressSpring())
-        .dsHover()
-    }
-
-    @ViewBuilder
-    private func atomicRow(_ stitch: DevnetStitch) -> some View {
-        switch stitch.atomicity {
-        case let .chosen(title, on, off):
-            HStack(spacing: DS.Space.s3) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(title)
-                        .dsText(.body17)
-                        .foregroundStyle(DS.textPrimary)
-                    Text(atomicChoice ? on : off)
-                        .dsText(.label12)
-                        .foregroundStyle(DS.textTertiary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                Spacer(minLength: DS.Space.s2)
-                Toggle("", isOn: $atomicChoice)
-                    .labelsHidden()
-                    .tint(tint)
-            }
-            .modifier(DevnetAtomicRowChrome(animatesOn: atomicChoice))
-        }
-    }
-
-    /// The padding both arms share, lifted so the two can never drift apart in
-    /// the space they claim — which on a sheet this tight is visible.
-    private struct DevnetAtomicRowChrome: ViewModifier {
-        let animatesOn: Bool
-        func body(content: Content) -> some View {
-            // **NO WELL** (prd §571). A well raises a control off the page,
-            // and this one sits directly above the tile it changes with
-            // nothing between them — the container was drawing a boundary
-            // where the relationship is the point. What the well bought was
-            // separation from the rows above, which the gap now gives for free.
-            content
-                .padding(.vertical, DS.Space.s4)
-                .padding(.horizontal, DS.Space.s1)
-                .animation(DS.Motion.standard, value: animatesOn)
-        }
-    }
-
-    /// **THE COMMIT IS THE HERO TILE** (prd §571, §559's grammar).
-    ///
-    /// It was a 50pt capsule with its verb at `body17` — smaller than the
-    /// figures in the list above it — on a sheet whose whole reason is this one
-    /// act. `DSActVerb` puts the verb at `price40` hard against the bottom-left
-    /// with the disc above it, which is the same tile the room's Home panel
-    /// opened this sheet from, so the two are recognisably one act rather than
-    /// two spellings of it.
-    ///
-    /// **NAMES THE TOTAL, NOT THE COUNT** — §538's ruling on the one-act send,
-    /// unchanged: the tile moves money, so it says how much, and the count is
-    /// the one thing already visible in the list above it. The unit rides the
-    /// `price17` slot beside the verb's baseline rather than inside it, which
-    /// is the amount screen's own lockup.
-    ///
-    /// `disabled` is `legs.isEmpty` and NOT `!armedAll`: a busy tile keeps its
-    /// fill and spins in the disc, because it is acting rather than refusing.
-    private var sendAll: some View {
-        let asks = payer.map { !(payerChoice?.paysHere($0) ?? false) } ?? false
-        return DSActVerb(title: !asks
-                            ? (total.map { String(localized: "Send \($0)") } ?? String(localized: "Send"))
-                            : String(localized: "Ask to pay"),
-                  unit: asks ? payer.map(payerName) : (total == nil ? nil : (legs.first?.unit ?? unit)),
-                  glyph: asks ? "paperplane" : "arrow.up.right",
-                  tint: tint,
-                  busy: busy,
-                  disabled: legs.isEmpty,
-                  accessory: stitchPreview,
-                  act: payer == nil ? actAll : actAsk)
-            .armedPop(armedAll)
-            .animation(DS.Motion.standard, value: armedAll)
-    }
-
-    /// **THE STRIP, IN THE TILE IT SENDS.** The venue's own drawing of this
-    /// batch, moved off the top of the screen (prd §571): the sheet was
-    /// carrying two saturated blocks and a hero tile only reads while its fill
-    /// is the one saturated block on the surface. Drawn on the tint in
-    /// `Palette.onTint`, it is the SAME `FramesSequenceStrip` the room uses to
-    /// show what a transaction did — so you compose in the shape you will read
-    /// the result in, and the toggle's own picture now moves under your thumb.
-    ///
-    /// **Still absent below two legs**, on the reasoning that shipped with it:
-    /// a one-leg strip is a picture of a line. The tile then draws the disc
-    /// and air, which is `DSActVerb`'s ordinary look everywhere else.
-    private var stitchPreview: AnyView? {
-        guard let preview = stitch?.preview, legs.count > 1 else { return nil }
-        return AnyView(preview(legs, atomic)
-            .frame(height: 14)
-            .animation(DS.Motion.standard, value: atomic))
-    }
-
-    private var armedAll: Bool { !busy && !legs.isEmpty }
-
-    private func name(for address: String) -> String {
-        candidates.first { $0.address.caseInsensitiveCompare(address) == .orderedSame }?.name
-            ?? WalletStore.shortAddress(address)
-    }
-
-    private func actAll() {
-        guard let stitch else { return }
-        busy = true
-        errorText = nil
-        let built = legs
-        let allOrNothing = atomic
-        Task { @MainActor in
-            let failure = await stitch.send(built, allOrNothing)
-            busy = false
-            if let failure {
-                errorText = failure
-                return
-            }
-            DSHaptic.success()
-            // This room's own tile falls (prd §655). Setting the hue and the
-            // pulse alone left the ROSTER at whatever the last pull wrote, so
-            // a send made after a pull on All rained the whole connected
-            // sweep — every app in the app, over a devnet transfer.
-            chrome.rain(sources: [seat])
-            dismiss()
-        }
-    }
-
     /// **THE ENDING MIRRORS TOP UP** (prd §553): the sheet goes, it rains, and
     /// the crown moves — up there, down here. No receipt screen; the row lands
     /// in Activity, one chip away in the bar the sheet is covering.
@@ -1432,12 +502,7 @@ struct DevnetSendSheet: View {
         busy = true
         errorText = nil
         Task { @MainActor in
-            let failure: String?
-            if let asset = selectedAsset, !asset.id.isEmpty, let sendAsset {
-                failure = await sendAsset(to, spending, asset)
-            } else {
-                failure = await perform(to, spending)
-            }
+            let failure = await perform(to, spending)
             busy = false
             if let failure {
                 errorText = failure
@@ -1447,45 +512,5 @@ struct DevnetSendSheet: View {
             chrome.rain(sources: [seat])
             dismiss()
         }
-    }
-}
-
-// MARK: - Parsing, once
-
-/// **ONE PARSER, BOTH ROOMS (prd §553).** Each send card carried a private copy
-/// of these two, byte-identical, which is how a sheet shared by two rooms
-/// quietly starts accepting different amounts in each.
-enum DevnetSendParse {
-
-    static func isValidAddress(_ raw: String) -> Bool {
-        let s = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard s.count == 42, s.hasPrefix("0x") else { return false }
-        return s.dropFirst(2).allSatisfy(\.isHexDigit)
-    }
-
-    /// A typed decimal ETH amount to minimal big-endian wei bytes — string
-    /// arithmetic throughout, never `Double`: Hegotá's own faucet balances run
-    /// into the billions of ETH, well past `Double`'s exact-integer range.
-    static func weiData(from text: String) -> Data? {
-        unitsData(from: text, decimals: 18)
-    }
-
-    /// A typed decimal amount at a token's own `decimals` (prd §728b) — the
-    /// same string arithmetic, so a 6-decimal token is never scaled as 18.
-    static func unitsData(from text: String, decimals: Int) -> Data? {
-        guard (0...36).contains(decimals) else { return nil }
-        let s = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !s.isEmpty else { return nil }
-        let parts = s.split(separator: ".", omittingEmptySubsequences: false)
-        guard parts.count == 1 || parts.count == 2 else { return nil }
-        let whole = parts[0].isEmpty ? "0" : String(parts[0])
-        let frac = parts.count == 2 ? String(parts[1]) : ""
-        guard whole.allSatisfy(\.isNumber), frac.allSatisfy(\.isNumber), frac.count <= decimals
-        else { return nil }
-        let combined = whole + frac + String(repeating: "0", count: decimals - frac.count)
-        guard let word = SafeABI.word(uint256: combined) else { return nil }
-        let trimmed = word.drop(while: { $0 == 0 })
-        guard !trimmed.isEmpty else { return nil }
-        return Data(trimmed)
     }
 }
