@@ -63,7 +63,9 @@ extension FeedScreen {
     /// The stops either side of this page in the phone's walk, or nil off
     /// the walk and wherever the rail stands.
     private var walkNeighbours: (before: String?, after: String?)? {
-        guard roomScopeInRoom else { return nil }
+        // A page risen as a sheet (prd §1208l) stands on nothing: its own
+        // name alone, and the pull closes it.
+        guard roomScopeInRoom, !inSheet else { return nil }
         // Notes and Markets are the Feed's own places (prd §1208c, user: "to
         // get back to feed its complicated"): the Feed stands before them,
         // pressable, and nothing after.

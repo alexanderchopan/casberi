@@ -49,8 +49,8 @@ extension FeedScreen {
     static func scrollAnchor(_ category: String) -> String { "feedSection:\(category)" }
 
     @ViewBuilder
-    func feedScrollSections(_ visible: [Thing], nextEventID: UUID?) -> some View {
-        let byCategory = Dictionary(grouping: visible.filter(\.isLive)) {
+    func feedScrollSections(_ visible: [Thing], hiding shown: Set<UUID>, nextEventID: UUID?) -> some View {
+        let byCategory = Dictionary(grouping: visible.filter { $0.isLive && !shown.contains($0.id) }) {
             Self.scrollCategory(of: $0) ?? ""
         }
         ForEach(scrollCategories.map(Self.sectionID), id: \.self) { id in
@@ -74,8 +74,9 @@ extension FeedScreen {
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
                 .accessibilityHidden(true)
-            scrollHeader(category).listRowBackground(SectionPanel(part: .top))
+            scrollHeader(category, things).listRowBackground(SectionPanel(part: .top, lit: landedSection == category))
         }
+        let _ = { memo.sectionCounts[category] = things.count }()
         let cap = sectionCaps[category] ?? Self.sectionFirstRows
         let _ = { Self.sectionCapNow = (category, cap) }()
         Group {
@@ -115,29 +116,69 @@ extension FeedScreen {
         }
     }
 
-    /// A section's name (prd §1208c): a chapter's title — heading28 in the
-    /// pink every title wears, with a chapter's air above it — and nothing
-    /// to press: the sections do not fold (§1208c retires §1208a's fold).
-    private func scrollHeader(_ category: String) -> some View {
-        Text(category)
-            .dsText(.heading28)
-            .foregroundStyle(DS.brandInk)
-            .lineLimit(1)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .accessibilityAddTraits(.isHeader)
-            .id(Self.scrollAnchor(category))
-            .padding(.leading, DSRoomChassis.rowInset)
-            .padding(.trailing, DSRoomChassis.rowInset)
-            .padding(.top, DS.Space.s4)
-            .padding(.bottom, DS.Space.s2)
-            // Where you are (prd §1208d): each name reports where it stands,
-            // so the pill above the scroll names the section you are in.
-            .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).minY } action: { y in
-                noteSectionTop(category, y)
+    /// A section's name (prd §1208c, §1208l): a chapter's title in the pink
+    /// every title wears, its category's glyph before it and what is new
+    /// since your last visit after it (counting down as the dots fade).
+    /// Nothing to press: the sections do not fold (§1208c), and nothing in
+    /// the Feed opens a screen of its own (§1208a). As it reaches the top it
+    /// shrinks into the pill that names where you are.
+    private func scrollHeader(_ category: String, _ things: [Thing]) -> some View {
+        let seen = NewSeen.shared.ids
+        let fresh = newSince.map { since in
+            things.filter { $0.isLive && $0.capturedAt > since && !seen.contains($0.id) }.count
+        } ?? 0
+        let calm = reduceMotion
+        return HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+            Image(systemName: CategoryFold.glyph(for: category))
+                .dsGlyph(.body)
+                .foregroundStyle(DS.brandInk)
+                .accessibilityHidden(true)
+            Text(category)
+                .dsText(.heading28)
+                .foregroundStyle(DS.brandInk)
+                .lineLimit(1)
+            if fresh > 0 {
+                HStack(spacing: DS.Space.s1) {
+                    Circle().fill(DS.tint).frame(width: 7, height: 7)
+                    Text("\(fresh) new")
+                        .dsText(.subhead12)
+                        .foregroundStyle(DS.textSecondary)
+                        .monospacedDigit()
+                        .contentTransition(.numericText(value: Double(fresh)))
+                }
+                .transition(.opacity)
             }
-            .listRowInsets(EdgeInsets())
-            .listRowSeparator(.hidden)
+            Spacer(minLength: 0)
+        }
+        .animation(DS.Motion.standard, value: fresh)
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isHeader)
+        .id(Self.scrollAnchor(category))
+        .padding(.leading, DSRoomChassis.rowInset)
+        .padding(.trailing, DSRoomChassis.rowInset)
+        .padding(.top, DS.Space.s4)
+        .padding(.bottom, DS.Space.s2)
+        // THE HANDOFF (prd §1208l): tied to where the name stands, never a
+        // timer — between a little under the line and the line it shrinks
+        // toward the pill and fades; under Reduce Motion it only fades.
+        .visualEffect { content, proxy in
+            let y = proxy.frame(in: .global).minY
+            let t = min(max((Self.whereLine + Self.handoffSpan - y) / Self.handoffSpan, 0), 1)
+            return content
+                .scaleEffect(calm ? 1 : 1 - 0.25 * t, anchor: .leading)
+                .opacity(1 - t)
+        }
+        // Where you are (prd §1208d): each name reports where it stands,
+        // so the pill above the scroll names the section you are in.
+        .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).minY } action: { y in
+            noteSectionTop(category, y)
+        }
+        .listRowInsets(EdgeInsets())
+        .listRowSeparator(.hidden)
     }
+
+    /// How far above the line a name starts handing off to the pill.
+    static let handoffSpan: CGFloat = 56
 
     /// The line a section's name passes to become "where you are".
     static let whereLine: CGFloat = 150
@@ -148,7 +189,15 @@ extension FeedScreen {
     private func noteSectionTop(_ category: String, _ y: CGFloat) {
         memo.sectionTops[category] = y
         let current = scrollCategories.last { (memo.sectionTops[$0] ?? .infinity) < Self.whereLine }
-        if feedSection != current { feedSection = current }
+        guard feedSection != current else { return }
+        // The word pushes in from the way you are going, and a section
+        // crossed is felt once (prd §1208l) — a change of place, never a tap.
+        let order = scrollCategories
+        let from = feedSection.flatMap { order.firstIndex(of: $0) } ?? -1
+        let to = current.flatMap { order.firstIndex(of: $0) } ?? -1
+        feedSectionForward = to >= from
+        if feedSection != nil, current != nil { DSHaptic.selection() }
+        feedSection = current
     }
 
     /// THE TITLE SAYS WHERE YOU ARE (prd §1208d): once a section's name has
@@ -157,28 +206,58 @@ extension FeedScreen {
     /// Feed back to its top (prd §1212), the way the status bar does.
     @ViewBuilder
     func feedSectionPill(_ proxy: ScrollViewProxy) -> some View {
-        if scrollsCategories, let section = feedSection {
-            Button {
-                DSHaptic.tap()
-                returnToRoomTop(proxy)
-            } label: {
-                HStack(spacing: DS.Space.s1) {
-                    Text("Feed").foregroundStyle(DS.textSecondary)
-                    Text(verbatim: "·").foregroundStyle(DS.textTertiary)
-                    Text(verbatim: section).foregroundStyle(DS.brandInk)
+        Group {
+            if scrollsCategories, let section = feedSection {
+                // A press takes the Feed to its top (prd §1212); a hold lists
+                // the sections in Feed order with today's counts, and a pick
+                // scrolls there (prd §1208l).
+                Menu {
+                    ForEach(scrollCategories, id: \.self) { category in
+                        Button {
+                            chrome.feedJump = category
+                            settleFeedJump(proxy)
+                        } label: {
+                            Label {
+                                Text(verbatim: category)
+                            } icon: {
+                                Image(systemName: CategoryFold.glyph(for: category))
+                            }
+                            if let n = memo.sectionCounts[category], n > 0 {
+                                Text("\(n) today")
+                            }
+                        }
+                    }
+                } label: {
+                    HStack(spacing: DS.Space.s1) {
+                        Text("Feed").foregroundStyle(DS.textSecondary)
+                        Text(verbatim: "·").foregroundStyle(DS.textTertiary)
+                        Text(verbatim: section)
+                            .foregroundStyle(DS.brandInk)
+                            .id(section)
+                            .transition(reduceMotion ? .opacity
+                                        : .push(from: feedSectionForward ? .bottom : .top))
+                            .animation(DS.Motion.standard, value: section)
+                            .clipped()
+                    }
+                    .dsText(.heading17)
+                    .padding(.horizontal, DS.Space.s4)
+                    .padding(.vertical, DS.Space.s2)
+                    .dsGlass(cornerRadius: 999)
+                    .contentShape(Capsule())
+                } primaryAction: {
+                    DSHaptic.tap()
+                    returnToRoomTop(proxy)
                 }
-                .dsText(.heading17)
-                .padding(.horizontal, DS.Space.s4)
-                .padding(.vertical, DS.Space.s2)
-                .dsGlass(cornerRadius: 999)
-                .contentShape(Capsule())
+                .buttonStyle(PressSpring())
+                .padding(.top, DSDemoMark.screenClearance + DS.Space.s1)
+                .transition(reduceMotion ? .opacity : .opacity.combined(with: .move(edge: .top)))
+                .accessibilityElement(children: .combine)
+                .accessibilityHint(Text("Scrolls to the top. Hold for the sections."))
             }
-            .buttonStyle(PressSpring())
-            .padding(.top, DSDemoMark.screenClearance + DS.Space.s1)
-            .transition(.opacity.combined(with: .move(edge: .top)))
-            .accessibilityElement(children: .combine)
-            .accessibilityHint(Text("Scrolls to the top"))
         }
+        // The pill's own coming and going, and nothing else in the Feed: on
+        // the List it animated every row that landed as a section changed.
+        .animation(DS.Motion.standard, value: feedSection == nil)
     }
 
     /// More (prd §1208 item 4): ten more rows in place; the scroll goes on
@@ -209,7 +288,8 @@ extension FeedScreen {
     /// The tray asked for a category (prd §1208 item 6): scroll its name to
     /// the top.
     func settleFeedJump(_ proxy: ScrollViewProxy) {
-        guard source == "All", let category = chrome.feedJump else { return }
+        // The Feed on screen takes the jump, never one mounted beside it.
+        guard source == "All", isActive, let category = chrome.feedJump else { return }
         #if DEBUG
         NSLog("[Casberi] feedJump: %@", category)
         #endif
@@ -223,6 +303,12 @@ extension FeedScreen {
             withAnimation(DS.Motion.standard) { proxy.scrollTo(Self.sectionID(category), anchor: .top) }
             try? await Task.sleep(for: .milliseconds(450))
             withAnimation(DS.Motion.standard) { proxy.scrollTo(Self.scrollAnchor(category), anchor: .top) }
+            // LANDING (prd §1208l): the section you arrived at brightens once,
+            // so the eye finds where it landed.
+            try? await Task.sleep(for: .milliseconds(250))
+            withAnimation(DS.Motion.standard) { landedSection = category }
+            try? await Task.sleep(for: .milliseconds(900))
+            withAnimation(.easeOut(duration: 0.6)) { landedSection = nil }
         }
     }
 }
@@ -233,6 +319,8 @@ extension FeedScreen {
 struct SectionPanel: View {
     enum Part { case top, middle, bottom }
     let part: Part
+    /// Brightened once on landing (prd §1208l).
+    var lit = false
 
     var body: some View {
         let r = DS.Radius.widget
@@ -241,7 +329,7 @@ struct SectionPanel: View {
                                bottomTrailingRadius: part == .bottom ? r : 0,
                                topTrailingRadius: part == .top ? r : 0,
                                style: .continuous)
-            .fill(Self.fill)
+            .fill(lit ? DS.fillFaint : Self.fill)
             .padding(.horizontal, DS.Space.s2)
     }
 
@@ -253,15 +341,20 @@ struct SectionPanel: View {
 /// NEW SINCE YOU LOOKED (prd §1208d, user: "only if scrolling past it
 /// removes the dot"): a dot by a row that came after you last left, gone
 /// once the row has scrolled past the top, for the rest of the visit.
+/// What scrolled past this visit, observed, so a section's "N new" counts
+/// down as its dots fade (prd §1208l); a later visit's line moves anyway.
+@MainActor @Observable final class NewSeen {
+    static let shared = NewSeen()
+    var ids: Set<UUID> = []
+}
+
 struct NewDot: View {
     let id: UUID
     @State private var gone: Bool
-    /// What scrolled past this visit; a later visit's line moves anyway.
-    @MainActor static var seen: Set<UUID> = []
 
     init(id: UUID) {
         self.id = id
-        _gone = State(initialValue: NewDot.seen.contains(id))
+        _gone = State(initialValue: NewSeen.shared.ids.contains(id))
     }
 
     var body: some View {
@@ -271,7 +364,7 @@ struct NewDot: View {
             .opacity(gone ? 0 : 1)
             .onGeometryChange(for: Bool.self) { $0.frame(in: .global).maxY < FeedScreen.whereLine - 40 } action: { past in
                 guard past, !gone else { return }
-                NewDot.seen.insert(id)
+                NewSeen.shared.ids.insert(id)
                 withAnimation(DS.Motion.standard) { gone = true }
             }
             .accessibilityLabel(Text("New"))
@@ -283,44 +376,16 @@ extension FeedScreen {
     /// The contents as tiles (prd §1208d): two across, one per category with
     /// something today, in the dock's order.
     @ViewBuilder
-    func contentsGrid(_ groups: [(String, [FeedRow])], lede: Thing?) -> some View {
-        let lists: [(String, [Thing])] = groups.compactMap { label, rows in
-            let things = rows.compactMap { row -> Thing? in
-                if case .single(let item) = row.kind { return item.live }
-                return nil
-            }
-            return things.isEmpty ? nil : (label, things)
-        }
-        // ONLY THE BOX HOLDS THE NEWEST, AND EVERY TILE IS A SQUARE (prd
-        // §1208j, user: "it should be in a square", "only the one on top
-        // should be in the card"): the box's category leads the grid with
-        // its next thing, so nothing shows twice; a category whose one thing
-        // is the box's draws no tile.
-        let ledeID = lede.flatMap { $0.isLive ? $0.id : nil }
-        let leadCategory = lede.flatMap { $0.isLive ? Self.scrollCategory(of: $0) : nil }
-        // The same news twice (an alarm that fired again) is the box's too.
-        let ledeTitle = lede.flatMap { $0.isLive ? TitleSeam.split($0.title).0 : nil }
-        let tiles: [(String, [Thing])] = lists.compactMap { label, things in
-            guard label == leadCategory else { return (label, things) }
-            let rest = things.filter { $0.id != ledeID && TitleSeam.split($0.title).0 != ledeTitle }
-            return rest.isEmpty ? nil : (label, rest)
-        }
-        let ordered = tiles.filter { $0.0 == leadCategory } + tiles.filter { $0.0 != leadCategory }
-        if !ordered.isEmpty {
+    func contentsGrid(_ specs: [GlanceSpec]) -> some View {
+        if !specs.isEmpty {
             Section {
-                LazyVGrid(columns: [GridItem(.flexible(), spacing: DS.Space.s2),
-                                    GridItem(.flexible(), spacing: DS.Space.s2)],
-                          spacing: DS.Space.s2) {
-                    ForEach(ordered, id: \.0) { label, things in
-                        // The picture is the newest one that has a picture
-                        // today (user: "people like seeing the newest
-                        // image"); the line stays newest.
-                        GlanceTile(category: label, fresh: Self.fresh(things, since: newSince),
-                                   newest: things[0], next: things.dropFirst().first,
-                                   pictured: things.first { StoredPixels.probe($0) != nil },
-                                   cast: label == "Social" ? Self.cast(of: things) : nil) {
+                GlanceGrid {
+                    ForEach(specs, id: \.category) { spec in
+                        GlanceTile(category: spec.category, fresh: Self.fresh(spec.things, since: newSince),
+                                   newest: spec.newest, next: spec.next,
+                                   pictured: spec.pictured, cast: spec.cast) {
                             DSHaptic.selection()
-                            chrome.sourceRequest = label
+                            chrome.sourceRequest = spec.category
                         }
                     }
                 }
@@ -330,6 +395,64 @@ extension FeedScreen {
                 .listRowSeparator(.hidden)
             }
         }
+    }
+
+    /// One glance tile, decided once so the grid and the sections under it
+    /// agree on what the tile showed (prd §1208l).
+    struct GlanceSpec {
+        let category: String
+        let things: [Thing]
+        let newest: Thing
+        /// Drawn under the newest only on a tile with no picture or faces.
+        let next: Thing?
+        let pictured: Thing?
+        let cast: ThingCastRoll?
+    }
+
+    /// The tiles (prd §1208d, §1208j, §1208k): two across, one per category
+    /// with something today, in the dock's order, the box's category first
+    /// with what comes after the box's thing.
+    static func glanceSpecs(_ groups: [(String, [FeedRow])], lede: Thing?) -> [GlanceSpec] {
+        let lists: [(String, [Thing])] = groups.compactMap { label, rows in
+            let things = rows.compactMap { row -> Thing? in
+                if case .single(let item) = row.kind { return item.live }
+                return nil
+            }
+            return things.isEmpty ? nil : (label, things)
+        }
+        // ONLY THE BOX HOLDS THE NEWEST (prd §1208j); the same news twice
+        // (an alarm that fired again) is the box's too.
+        let ledeID = lede.flatMap { $0.isLive ? $0.id : nil }
+        let leadCategory = lede.flatMap { $0.isLive ? scrollCategory(of: $0) : nil }
+        let ledeTitle = lede.flatMap { $0.isLive ? TitleSeam.split($0.title).0 : nil }
+        let tiles: [(String, [Thing])] = lists.compactMap { label, things in
+            guard label == leadCategory else { return (label, things) }
+            let rest = things.filter { $0.id != ledeID && TitleSeam.split($0.title).0 != ledeTitle }
+            return rest.isEmpty ? nil : (label, rest)
+        }
+        let ordered = tiles.filter { $0.0 == leadCategory } + tiles.filter { $0.0 != leadCategory }
+        return ordered.map { label, things in
+            // The picture is the newest one that has a picture today (user:
+            // "people like seeing the newest image"); the line stays newest.
+            let pictured = things.first { StoredPixels.probe($0) != nil }
+            let cast = label == RoomAccounts.socialRoom ? Self.cast(of: things) : nil
+            let next = (pictured == nil && cast == nil) ? things.dropFirst().first : nil
+            return GlanceSpec(category: label, things: things, newest: things[0], next: next,
+                              pictured: pictured, cast: cast)
+        }
+    }
+
+    /// SECTIONS SKIP WHAT THE TILES SHOWED (prd §1208l, user: "Sections skip
+    /// what tiles showed"): the box's thing, the same news again, and each
+    /// tile's line or two, so nothing is read twice going down the Feed.
+    static func glanceShown(_ specs: [GlanceSpec], lede: Thing?) -> Set<UUID> {
+        var out = Set<UUID>()
+        if let lede, lede.isLive { out.insert(lede.id) }
+        for spec in specs {
+            if spec.newest.isLive { out.insert(spec.newest.id) }
+            if let next = spec.next, next.isLive { out.insert(next.id) }
+        }
+        return out
     }
 }
 
@@ -356,6 +479,19 @@ extension FeedScreen {
     }
 }
 
+/// Two across; one across at the accessibility text sizes, where a square
+/// cannot hold the words (prd §1208l).
+struct GlanceGrid<Content: View>: View {
+    @Environment(\.dynamicTypeSize) private var typeSize
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: DS.Space.s2),
+                                 count: typeSize.isAccessibilitySize ? 1 : 2),
+                  spacing: DS.Space.s2, content: content)
+    }
+}
+
 /// One category at a glance (prd §1208d, §1208e, §1208k): a tile with a
 /// picture leads with it; a tile without one gives the tile to the words —
 /// the newest thing, then the one before it in grey. The head says how many
@@ -373,6 +509,7 @@ struct GlanceTile: View {
     /// The people in today's Social things, when there are two or more.
     var cast: ThingCastRoll? = nil
     let action: () -> Void
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     static let artHeight: CGFloat = 72
     /// Every tile one height, so the grid's rows line up whatever the words.
@@ -438,7 +575,8 @@ struct GlanceTile: View {
                             .dsText(.body17)
                             .fontWeight(.medium)
                             .foregroundStyle(DS.textPrimary)
-                            .lineLimit(picture != nil ? 2 : (cast != nil || follower != nil ? 2 : 4))
+                            .lineLimit(typeSize.isAccessibilitySize ? nil
+                                       : picture != nil ? 2 : (cast != nil || follower != nil ? 2 : 4))
                             .multilineTextAlignment(.leading)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
@@ -462,7 +600,10 @@ struct GlanceTile: View {
                         .padding(.bottom, DS.Space.s3)
                 }
             }
-            .frame(maxWidth: .infinity, minHeight: Self.height, maxHeight: Self.height,
+            // A square, until the words need more (the accessibility sizes).
+            .frame(maxWidth: .infinity,
+                   minHeight: typeSize.isAccessibilitySize ? nil : Self.height,
+                   maxHeight: typeSize.isAccessibilitySize ? nil : Self.height,
                    alignment: .topLeading)
             .background(DS.fillFaint, in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
             .clipShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))

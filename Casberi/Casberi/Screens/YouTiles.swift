@@ -47,9 +47,12 @@ extension FeedScreen {
     /// under the box, the box's gap below (`standaloneLead`'s insets).
     @ViewBuilder
     func youTilesSection(_ active: YouTile) -> some View {
-        Section {
-            YouTilesRow(active: active)
-                .dsRoomTilesListRow()
+        // Not in a sheet (prd §1208l): the Feed's tiles belong to the Feed.
+        if !inSheet {
+            Section {
+                YouTilesRow(active: active)
+                    .dsRoomTilesListRow()
+            }
         }
     }
 }

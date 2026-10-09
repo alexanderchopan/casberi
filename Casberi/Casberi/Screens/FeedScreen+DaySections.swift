@@ -308,7 +308,8 @@ extension FeedScreen {
         // newest image or icon that comes w/ a thing"): on the scrolling
         // Feed the contents are one tile per category — its newest picture
         // or app, its count, its newest line — each a jump to its section.
-        if scroll { contentsGrid(groups, lede: homeCover) }
+        let glance = scroll ? Self.glanceSpecs(groups, lede: homeCover) : []
+        if scroll { contentsGrid(glance) }
         ForEach(scroll ? [] : groups, id: \.0) { label, rows in
             // Bundles merge into the day card like any row-shaped thing —
             // only a single that stands alone (consent, token) breaks the run.
@@ -403,7 +404,10 @@ extension FeedScreen {
         }
         // THE FEED IS ONE SCROLL ON THE PHONE (prd §1208): every category
         // in its own frame, stacked, in place of today's category runs.
-        if scroll { feedScrollSections(visible, nextEventID: nextEventID) }
+        if scroll {
+            feedScrollSections(visible, hiding: Self.glanceShown(glance, lede: homeCover),
+                               nextEventID: nextEventID)
+        }
         }
     }
 

@@ -137,8 +137,10 @@ struct DSScopeTiles<Scope: DSTileScope>: View {
     /// section; a room's tiles speak it too.
     private static var tileHeight: CGFloat { 52 }
 
+    /// The boxes', the panels' and the glance tiles' corner (prd §1208l):
+    /// one radius for every block on a page.
     private var shape: RoundedRectangle {
-        RoundedRectangle(cornerRadius: DS.Radius.sheet, style: .continuous)
+        RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous)
     }
 
     var body: some View {

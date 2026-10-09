@@ -175,7 +175,8 @@ enum SpotlightIndex {
     /// Names only — a person's name and an app's — never what the page holds.
     @MainActor static func indexPages(people: [Contact], apps: [String]) {
         let chosen = people
-            .filter { $0.kind == .person && !$0.isUnnamed && !ContactIndexSources.isYours($0) }
+            .filter { $0.kind == .person && $0.lead.kind != .wallet && !$0.isUnnamed
+                && !ContactIndexSources.isYours($0) }
             .sorted { ($0.lastActedAt ?? .distantPast) > ($1.lastActedAt ?? .distantPast) }
             .prefix(pagePeople)
         var items: [CSSearchableItem] = []

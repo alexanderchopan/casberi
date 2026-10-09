@@ -2417,16 +2417,22 @@ struct RootShell: View {
                             // anywhere, on every page; never over the tray,
                             // whose own bar takes this place.
                             .overlay(alignment: .trailing) {
-                                if padShell.railInset == 0, sceneState.route.path.isEmpty, !chrome.roomsTray {
+                                if padShell.railInset == 0, sceneState.route.path.isEmpty {
                                     HStack(spacing: DS.Space.s2) {
-                                        BandSearchBar {
-                                            chrome.traySearchFocus = true
-                                            withAnimation(DS.Motion.standard) { chrome.roomsTray = true }
+                                        // The tray's bar takes this one's place
+                                        // exactly (prd §1208l): it leaves at once,
+                                        // ✎ fades.
+                                        if !chrome.roomsTray {
+                                            BandSearchBar {
+                                                chrome.traySearchFocus = true
+                                                withAnimation(DS.Motion.standard) { chrome.roomsTray = true }
+                                            }
+                                            .transition(.identity)
+                                            NoteDoor { chrome.newNote += 1 }
+                                                .transition(.opacity)
                                         }
-                                        NoteDoor { chrome.newNote += 1 }
                                     }
                                     .padding(.leading, DSDock.agentSize(fold: chrome.fold) + DS.Space.s2)
-                                    .transition(.opacity)
                                 }
                             }
                     }

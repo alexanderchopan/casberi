@@ -669,6 +669,8 @@ struct FeedScreen: View {
         var sectionDays: [String: (key: Int, days: [(String, [Thing])])] = [:]
         /// Each Feed section's name, where it stands on screen (prd §1208d).
         var sectionTops: [String: CGFloat] = [:]
+        /// Each Feed section's count today, for the pill's menu (§1208l).
+        var sectionCounts: [String: Int] = [:]
         /// The cover (prd §389c) — picked from `days` and lifted out of
         /// `groups`, so it is stored as an id and resolved against the first
         /// day at render (never held as a `Thing` across renders: this class
@@ -788,7 +790,7 @@ struct FeedScreen: View {
     @Namespace private var zoomNS
     /// prd 43h: Reduce Motion is law — the hand-rolled moves (row entrances)
     /// fall back to plain state changes under it.
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.accessibilityReduceMotion) var reduceMotion
 
     /// Debounced snapshot for the unfiltered All room only (perf, 2026-07-28).
     /// A foreground refresh fires ~30 independent bridge saves (`BridgeRefresh`),
@@ -983,6 +985,9 @@ struct FeedScreen: View {
             // was already loaded) would otherwise publish nothing and draw no
             // control at all.
             .onChange(of: walletSectionPublication, initial: true) { _, now in
+                // The page mounted beside you (prd §1208l) is not the room on
+                // screen: only the room on screen, or a Wallet, publishes.
+                guard isActive || shape == .wallet else { return }
                 chrome.walletSections = now.sections
                 chrome.walletSectionAttention = now.attention
             }
@@ -993,7 +998,7 @@ struct FeedScreen: View {
             // "the toggle cannot appear over another room" true by
             // construction rather than by a source test in two files.
             .onDisappear {
-                guard shape == .wallet else { return }
+                guard shape == .wallet, isActive else { return }
                 chrome.walletSections = []
                 chrome.walletSectionAttention = []
             }
@@ -1004,6 +1009,7 @@ struct FeedScreen: View {
             // by the time the room mounts, so a room that never changes
             // afterwards would publish nothing and draw no switcher at all.
             .onChange(of: logosSectionPublication, initial: true) { _, now in
+                guard isActive else { return }
                 chrome.logosSections = now
             }
             // Cleared on the way OUT, which the body-path writes never did:
@@ -1530,7 +1536,6 @@ struct FeedScreen: View {
         .animation(DS.Motion.standard, value: listRevision(rows))   // new things rise in (debounced for All)
         .scrollContentBackground(.hidden)
         .overlay(alignment: .top) { feedSectionPill(proxy) }
-        .animation(DS.Motion.standard, value: feedSection)
         // Markets' and Notes' tiles left the floating bar (prd §1209a): the
         // band is face · bar · ✎ on every page, Notes' tiles stand under its
         // box as every page's do, and Markets' Watchlist and Alerts stand in
@@ -1930,7 +1935,7 @@ struct FeedScreen: View {
         // always pushed the fuller `PersonRoomScreen`, a silent downgrade of the
         // one door this change had to keep intact.
         .onChange(of: chrome.personRequest) { _, person in
-            guard let person else { return }
+            guard isActive, let person else { return }
             // The phone raises the person room (prd §1132: nothing pushes);
             // the Mac keeps the push.
             #if targetEnvironment(macCatalyst)
@@ -2012,6 +2017,10 @@ struct FeedScreen: View {
     @State var sectionCaps: [String: Int] = [:]
     /// The Feed section you are in, for the pill above the scroll (§1208d).
     @State var feedSection: String?
+    /// Whether the section the pill names came from below (prd §1208l).
+    @State var feedSectionForward = true
+    /// The section a tile's jump just landed on, brightened once (§1208l).
+    @State var landedSection: String?
 }
 
 /// What New makes in the Day room (prd §1056).

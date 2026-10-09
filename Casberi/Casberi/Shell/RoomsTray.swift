@@ -86,6 +86,8 @@ struct RoomsTray: View {
     /// What the tray's search holds (prd §1133e); cleared when it closes.
     @State private var query = ""
     @FocusState private var searching: Bool
+    /// A taken suggestion flies into the field (prd §1208l).
+    @Namespace private var tokenSpace
     /// What the search reads beyond the tray's own names (prd §1171), read
     /// when the field is first focused, never in a body (§628): your notes
     /// and the phone's calendars.
@@ -136,10 +138,10 @@ struct RoomsTray: View {
                     // The search's own capsule beside the face (prd §1176):
                     // out of the face's side as the card comes out of its top.
                     if railInset == 0 {
+                        // It replaces the band's bar where that bar stood, so
+                        // it neither grows nor fades in: one bar (§1208l).
                         searchCapsule(screen: geo.size)
-                            .transition(reduceMotion
-                                ? .opacity
-                                : .scale(scale: 0.2, anchor: .leading).combined(with: .opacity))
+                            .transition(.identity)
                     }
                 }
             }
@@ -624,9 +626,13 @@ struct RoomsTray: View {
         // Typing, the unfolded seat's row, so the card above keeps its gap.
         let height = typing ? DSDock.agentSize(minimized: false) : DSDock.agentSize(fold: chrome.fold)
         let bottom = typing ? DSDock.agentBottomInset(minimized: false) : DSDock.agentBottomInset(fold: chrome.fold)
+        // ONE BAR (prd §1208l): until you type it is the band's bar, in the
+        // band's bar's place — ✎'s room kept — and it widens as the keyboard
+        // comes, so the field you tapped is the field you type in.
+        let note = typing ? 0 : height + DS.Space.s2
         return searchControl
             .padding(.horizontal, DS.Space.s4)
-            .frame(width: max(DSRoomChassis.inset + width - beside, 1), height: height)
+            .frame(width: max(DSRoomChassis.inset + width - beside - note, 1), height: height)
             .dsGlass(cornerRadius: height / 2)
             .padding(.leading, beside)
             .padding(.bottom, bottom)
@@ -659,6 +665,7 @@ struct RoomsTray: View {
                             tokens.removeAll { $0.id == token.id }
                         } label: {
                             Chip(text: token.label, glyph: token.glyph, selected: true)
+                                .matchedGeometryEffect(id: token.id, in: tokenSpace)
                         }
                         .buttonStyle(PressSpring())
                         .accessibilityLabel(Text("Remove \(token.label)"))
@@ -1279,7 +1286,8 @@ struct RoomsTray: View {
     private func trySuggestions() -> [SearchToken] {
         var out: [SearchToken] = []
         let people = ContactIndexSources.contacts
-            .filter { $0.kind == .person && !$0.isUnnamed && !ContactIndexSources.isYours($0) && $0.lastActedAt != nil }
+            .filter { $0.kind == .person && $0.lead.kind != .wallet && !$0.isUnnamed
+                && !ContactIndexSources.isYours($0) && $0.lastActedAt != nil }
         if let c = people.max(by: { ($0.lastActedAt ?? .distantPast) < ($1.lastActedAt ?? .distantPast) }) {
             out.append(Self.personToken(c.id, c.name))
         }
@@ -1419,7 +1427,8 @@ struct RoomsTray: View {
                 tokenStrip(suggestions)
                     .padding(.top, DS.Space.s2)
             }
-            ForEach(results) { group in
+            ForEach(Array(results.enumerated()), id: \.element.id) { index, group in
+                VStack(alignment: .leading, spacing: 0) {
                 HStack(spacing: DS.Space.s1) {
                     if let glyph = group.glyph {
                         Image(systemName: glyph).dsGlyph(.caption)
@@ -1431,6 +1440,11 @@ struct RoomsTray: View {
                 .accessibilityElement(children: .combine)
                 .accessibilityAddTraits(.isHeader)
                 ForEach(group.hits) { hit in hitRow(hit) }
+                }
+                // The groups settle in one after another (prd §1208l).
+                .transition(reduceMotion ? .opacity
+                            : .opacity.combined(with: .offset(y: 8))
+                                .animation(DS.Motion.standard.delay(Double(min(index, 5)) * 0.04)))
             }
             // Nothing, said once the search for these words has run: what
             // could look further — Markets' New for a word that could be a
@@ -1476,8 +1490,13 @@ struct RoomsTray: View {
         ScrollView(.horizontal) {
             HStack(spacing: DS.Space.s2) {
                 ForEach(offered) { token in
-                    Button { take(token) } label: {
+                    Button {
+                        withAnimation(reduceMotion ? DS.Motion.standard : .spring(duration: 0.45, bounce: 0.2)) {
+                            take(token)
+                        }
+                    } label: {
                         Chip(text: token.label, glyph: token.glyph)
+                            .matchedGeometryEffect(id: token.id, in: tokenSpace, isSource: !tokens.contains(token))
                     }
                     .buttonStyle(PressSpring())
                 }

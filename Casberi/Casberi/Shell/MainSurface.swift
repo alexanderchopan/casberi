@@ -1404,6 +1404,28 @@ struct MainSurface: View {
     /// synchronous fallback and the background walk (PERF 2026-09-08).
     /// The screen the room on stage shows: itself, or — in a merged room of
     /// own-screen apps, Testnets — the picked app's (prd §1050k).
+    /// The place beside you on the phone's two-place walk, once it has been
+    /// mounted after a settled moment (prd §1208l); nil keeps the cover.
+    @State private var warmNeighbour: String?
+
+    private var walkNeighbour: String? {
+        guard !isRegular else { return nil }
+        let walk = HomeScope.phoneWalk(chips: chrome.chipOrder)
+        guard walk.count == 2, let i = walk.firstIndex(of: shownRoom) else { return nil }
+        return walk[1 - i]
+    }
+
+    private var readyNeighbour: String? {
+        guard let n = walkNeighbour, n == warmNeighbour else { return nil }
+        return n
+    }
+
+    /// Whether the neighbour stands to the right of the page you are on.
+    private func neighbourFromRight(_ neighbour: String) -> Bool {
+        let walk = HomeScope.phoneWalk(chips: chrome.chipOrder)
+        return (walk.firstIndex(of: neighbour) ?? 0) > (walk.firstIndex(of: shownRoom) ?? 0)
+    }
+
     private var shownRoom: String {
         let room = filter.source
         guard RoomAccounts.mergedRooms.contains(room) else { return room }
@@ -2594,7 +2616,12 @@ struct MainSurface: View {
             }
             return .section
         }
-        if let fold = RoomAccounts.host(ofSource: label), HomeScope.isFeedSection(fold.room) {
+        // ONE RULE FOR WHAT OPENS ON TOP (prd §1208l, user: "i want one
+        // rule"): Markets and your notes rise as a sheet over the Feed, as an
+        // app does and Settings and Sources do; the Wallet alone stands
+        // beside the Feed.
+        let onTop = label == HomeScope.markets || label == Pinboard.room
+        if onTop || RoomAccounts.host(ofSource: label).map({ HomeScope.isFeedSection($0.room) }) == true {
             let sheet = ShellChrome.AppSheet(source: label)
             chrome.routedRequest = label
             // A sheet still closing refuses a second one (UIKit's "already
@@ -2888,7 +2915,18 @@ struct MainSurface: View {
                 // §258 measured that pre-building the neighbour is what made
                 // swipes stall, so the full room mounts on commit and fades in
                 // over its own cover.
-                PagerCover()
+                // THE REAL PAGE FOLLOWS THE FINGER (prd §1208l): with two
+                // places on the phone, the one beside you is mounted (once the
+                // screen has settled, never inside a swipe) and slides in with
+                // the page you drag; the cover stands in only until then.
+                if let neighbour = readyNeighbour {
+                    PagerNeighbour(label: neighbour, fromRight: neighbourFromRight(neighbour)) {
+                        FeedScreen(source: neighbour, isActive: false, nearActive: true)
+                            .equatable()
+                    }
+                } else {
+                    PagerCover()
+                }
                 // THE ROOM FOLLOWS THE FINGER (2026-09-05). `PagerDrag` offsets
                 // the room by `chrome.pageDragX` while a swipe is in progress,
                 // in a body of its own so this surface is not re-evaluated on
@@ -2949,6 +2987,15 @@ struct MainSurface: View {
             // that died first). The gates are the walk's own modal flags: a
             // window-level recognizer must stand down when anything covers
             // the pager.
+            // Mount the neighbour once you have settled on a page: after a
+            // landing, never during one (§258's stall was a neighbour built
+            // inside the swipe).
+            .task(id: walkNeighbour) {
+                guard let next = walkNeighbour, next != warmNeighbour else { return }
+                try? await Task.sleep(for: .milliseconds(900))
+                guard !Task.isCancelled, chrome.pageDragTarget == nil else { return }
+                warmNeighbour = next
+            }
             .background {
                 PageSwipeCatcher(
                     enabled: { !chrome.walkModalOpen && !chrome.walkSheetOpen
@@ -3535,6 +3582,28 @@ private struct PagerDrag<Content: View>: View {
 /// The word is `DS.swipeTableInk` on the table (white on both tables,
 /// §898e) and the page's own primary where the table stands down (a vivid
 /// page or a photo, `DS.swipeTable == nil`).
+/// The page beside you, real, beneath the one you drag (prd §1208l): off
+/// its edge at rest, travelling with the finger toward its own place, and at
+/// rest in place when the turn commits, where the landing page replaces it.
+private struct PagerNeighbour<Content: View>: View {
+    let label: String
+    let fromRight: Bool
+    @ViewBuilder let content: Content
+    @Environment(ShellChrome.self) private var chrome
+
+    var body: some View {
+        let width = max(chrome.pagerFrame.width, 1)
+        let side: CGFloat = fromRight ? 1 : -1
+        let moving = chrome.pageDragTarget == label
+        content
+            .background { DS.themedPage.ignoresSafeArea() }
+            .offset(x: moving ? chrome.pageDragX + side * width : side * width)
+            .opacity(moving ? 1 : 0)
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+    }
+}
+
 private struct PagerCover: View {
     @Environment(ShellChrome.self) private var chrome
     @Environment(\.accessibilityReduceMotion) private var reduceMotion

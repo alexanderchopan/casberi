@@ -8951,6 +8951,34 @@
         }
       }
     },
+    "Scrolls to the top. Hold for the sections." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Desplaza al principio. Mantén pulsado para ver las secciones."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "先頭にスクロールします。長押しでセクションを表示します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "맨 위로 스크롤합니다. 길게 누르면 섹션이 표시됩니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "滚动到顶部。长按查看各个部分。"
+          }
+        }
+      }
+    },
     "Search a show" : {
       "localizations" : {
         "es" : {
@@ -84368,6 +84396,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "其订阅源会进入阅读"
+          }
+        }
+      }
+    },
+    "Its feed lands in Media" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Su feed llega a Medios"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "フィードはメディアに届きます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "피드는 미디어에 들어옵니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "其订阅源会进入媒体"
           }
         }
       }

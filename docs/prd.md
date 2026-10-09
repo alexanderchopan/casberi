@@ -65566,3 +65566,21 @@ UNVERIFIED on a device: written on a machine with no Xcode, so neither build nor
 6. **No delivery claim.** Basecamp shows a message RLN dropped as sent, and the Observer's dev measured that `chat_module.get_messages` carries no delivery state (2026-10-09). A message you sent draws no delivery word; the phone reads an optional `delivery` (`sent`/`pending`/`failed`) and draws "Not delivered yet"/"Not delivered" only if an Observer ever says so. An unknown word claims nothing.
 7. **Node in words.** The Node box leads with "In sync" or "Syncing"; the height and peers are the line under it ("Block 13,982 · 461 peers").
 8. A row's short fact ("4m") takes its width before a long preview does (`DSPushRowLabel.factFits`).
+## §1208l — The polish pass: one rule for what opens on top, sections skip what the tiles showed, the header hands off to the pill, the real page follows the swipe, one search bar (user, 2026-10-09, of a list merged from two sessions' Apple-polish reviews: "for the rest of the things you mentioned i want to do all of them, and yes for 15 i want one rule", then "Sections skip what tiles showed" and "All rise as sheets"; amends §1208d, §1208j, §1209a, §1212)
+
+1. **The tiles at the accessibility text sizes**: one column (`GlanceGrid`), and the tile grows with its words instead of clipping at 168 pt.
+2. **The pill's own animation**: it animates its own coming and going; the List no longer animates every row that lands as the section changes.
+3. **The real page follows the finger** on the phone's two-place walk: the page beside you (`PagerNeighbour`) is mounted once you have settled on a page (0.9 s, never inside a swipe, §258) and travels with the drag; `PagerCover` stands in until then and off the walk. A mounted neighbour publishes no shell state (`isActive` guards: the Wallet's tiles, Logos', a person request, a Feed jump).
+4. **The header hands off to the pill**, tied to where the name stands (`visualEffect`): within 56 pt of the line it shrinks toward the pill and fades; the pill's word pushes in from the way you scroll; a section crossed is one selection tick. A press still goes to the top (§1212); a hold lists the sections in Feed order with today's counts, and a pick scrolls there.
+5. **One search bar**: the tray's bar takes the band's bar's exact place (✎'s room kept) and widens as the keyboard comes; a taken suggestion flies into the field (`matchedGeometryEffect`); result groups settle one after another.
+6. **The header** carries its category's glyph and "N new" with a dot. No chevron and nothing to press (§1208a, §1208c).
+7. **Landing**: a tile's jump brightens its section's head once.
+8. **Counts roll** (`numericText`, tabular), and a section's "N new" counts down as its dots fade (`NewSeen`).
+9. **One corner**: every room's tiles take the boxes' and panels' radius (`DS.Radius.widget`).
+10. **Haptics for changes of state only**: a section crossed, a token taken; a tile tap stays a press.
+11. **Reduce Motion**: the handoff only fades, the pill's word and the result groups crossfade, the token's flight is the standard curve.
+12. **Old names**: Reading is Media in the one app string left and on the website (the shelf row, the docs' category lists, llms.txt).
+13. **One rule for what opens on top**: Markets and your notes rise as a sheet over the Feed, as an app, Settings and Sources do; the Wallet alone stands beside the Feed. In a sheet a page draws its own name and no Feed tiles.
+14. **Sections skip what the tiles showed** (user: "Sections skip what tiles showed"): the box's thing, the same news again, and each tile's line or two (`glanceShown`) are left out of the sections below.
+
+The widgets were checked on the simulator only in their empty state: the demo publishes none (§217) and the simulator has no StandBy, so the tinted and clear Home Screen, StandBy and midnight remain a device check.

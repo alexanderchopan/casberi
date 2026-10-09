@@ -121,7 +121,7 @@ struct ReadingFindSheet: View {
     @ViewBuilder private var results: some View {
         if let site = ReadingRoom.site(in: trimmed) {
             DSTrayHead(String(localized: "Follow"))
-            siteRow(site, line: String(localized: "Its feed lands in Reading"))
+            siteRow(site, line: String(localized: "Its feed lands in Media"))
         }
         if ReadingRoom.site(in: trimmed) == nil {
             footnote
