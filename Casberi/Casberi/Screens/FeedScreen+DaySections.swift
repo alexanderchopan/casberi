@@ -287,7 +287,7 @@ extension FeedScreen {
         // with nothing in it yet — the newest thing kept, so the box is never
         // the day's empty state while there is anything to show.
         let homeCover = ledeThing ?? fallbackCover
-        homeLead(homeCover)
+        homeLead(homeCover, heroShown: heroShown)
         // You's tiles under the box, the slot every room's tiles stand in
         // (prd §1136 item 1).
         if source == "All" { youTilesSection(.feed) }
@@ -420,11 +420,15 @@ extension FeedScreen {
     /// too few rows for one (`ledeMinRows`) — the day itself, so the tiles
     /// below always stand under a box and never at the top of the screen
     /// (prd §752, §862).
+    ///
+    /// A hero already holds the box (a live stream, prd §591b): it IS the
+    /// lead, so nothing stands under it. The cover is withheld for it, and
+    /// the empty day drew a second box saying "Friday" under a full one.
     @ViewBuilder
-    func homeLead(_ ledeThing: Thing?) -> some View {
+    func homeLead(_ ledeThing: Thing?, heroShown: Bool) -> some View {
         if let ledeThing, ledeThing.isLive {
             Section { ledeListRow(ledeThing) }
-        } else if source == "All" {
+        } else if source == "All", !heroShown {
             Section {
                 // With nothing connected the box says what fills it and where
                 // to go (prd §1166, user: "we need some explainer in the home

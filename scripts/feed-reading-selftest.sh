@@ -369,8 +369,12 @@ grep -q 'if let coverThing { Section { ledeListRow(coverThing) } }' "$FEED" \
   || { echo "✗ groupedSections no longer draws a shaped room's cover above the days (prd §906)"; exit 1; }
 # Home draws its cover through `homeLead` since prd §1136i (today's cover, else
 # the newest thing kept), still as the first Section above the day dividers.
-grep -q 'homeLead(homeCover)' "$FEED" && grep -q 'Section { ledeListRow(ledeThing) }' "$FEED" \
+grep -q 'homeLead(homeCover, heroShown: heroShown)' "$FEED" && grep -q 'Section { ledeListRow(ledeThing) }' "$FEED" \
   || { echo "✗ the All feed no longer draws its cover above the first divider (prd §906)"; exit 1; }
+# A hero holds Home's box (a live stream, §591b): the empty day may not stand
+# under it as a second box ("Friday" under a live stream, 2026-10-09).
+grep -q '} else if source == "All", !heroShown {' "$FEED" \
+  || { echo "✗ Home draws its empty day under a hero again — two boxes (prd §591b)"; exit 1; }
 grep -qE 'coverThing.isLive \{ ledeListRow\(coverThing\) \}|if let cover, cover.isLive \{ ledeListRow\(cover\) \}' "$FEED" \
   && { echo "✗ a cover is drawn inside a day section again — under its header, at a second height (prd §906)"; exit 1; }
 # A quiet head yields to the cover only where a cover can stand (prd §906).
