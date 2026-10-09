@@ -8923,6 +8923,34 @@
         }
       }
     },
+    "Scrolls to the top" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Desplaza hasta arriba"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "一番上までスクロールします"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "맨 위로 스크롤합니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "滚动到顶部"
+          }
+        }
+      }
+    },
     "Search a show" : {
       "localizations" : {
         "es" : {

@@ -1460,7 +1460,7 @@ struct FeedScreen: View {
     /// Scroll the room back to its own head, with the standard motion so it
     /// reads as the room resetting rather than as a jump of its own — which
     /// is the thing this exists to remove.
-    private func returnToRoomTop(_ proxy: ScrollViewProxy) {
+    func returnToRoomTop(_ proxy: ScrollViewProxy) {
         withAnimation(DS.Motion.standard) {
             proxy.scrollTo(Self.roomTitleAnchor, anchor: .top)
         }
@@ -1529,7 +1529,7 @@ struct FeedScreen: View {
         }
         .animation(DS.Motion.standard, value: listRevision(rows))   // new things rise in (debounced for All)
         .scrollContentBackground(.hidden)
-        .overlay(alignment: .top) { feedSectionPill }
+        .overlay(alignment: .top) { feedSectionPill(proxy) }
         .animation(DS.Motion.standard, value: feedSection)
         // Markets' and Notes' tiles left the floating bar (prd §1209a): the
         // band is face · bar · ✎ on every page, Notes' tiles stand under its

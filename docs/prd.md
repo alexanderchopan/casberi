@@ -65537,3 +65537,8 @@ The tray's search, eight changes, all on the phone and none through a model:
 6. **Bold.** The words you typed are bold where a row's name or line says them.
 7. **The top page counts itself.** The first "Everything" offer's line carries its counted facts (`PivotCompose.facts`, the page's own box line); Return opens it, and Find takes Return only when the words make no page. A page of words nothing says is not offered.
 8. **From iOS.** The 30 people you dealt with last and every app you have are Spotlight items ("Everything with Rui"), refreshed once a day; a tap opens the page. `casberi://everything?q=<words>` and the Shortcuts action Everything with… (`EverythingIntent`) open the page the words make.
+
+## §1212 — The pill above the Feed takes you to its top (user, 2026-10-09: "tapping feed at the top should take user to top of page"; amends §1208d item 2)
+The floating "Feed · Social" pill (`feedSectionPill`) is a button now: a press scrolls the Feed back to its title (`returnToRoomTop`, the same move a scope change makes), with a tap haptic and `PressSpring`, and the pill leaves as the first section's name passes back under the line. It took no touch before (`allowsHitTesting(false)`); the row under it gives up the pill's width while it stands.
+
+UNVERIFIED on a device: written on a machine with no Xcode, so neither build nor press was seen before commit.

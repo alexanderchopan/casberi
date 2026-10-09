@@ -153,23 +153,31 @@ extension FeedScreen {
 
     /// THE TITLE SAYS WHERE YOU ARE (prd §1208d): once a section's name has
     /// scrolled past, a floating pill names it — "Feed · Social" — the way
-    /// Music and Settings keep a page's name with you.
+    /// Music and Settings keep a page's name with you. A press takes the
+    /// Feed back to its top (prd §1212), the way the status bar does.
     @ViewBuilder
-    var feedSectionPill: some View {
+    func feedSectionPill(_ proxy: ScrollViewProxy) -> some View {
         if scrollsCategories, let section = feedSection {
-            HStack(spacing: DS.Space.s1) {
-                Text("Feed").foregroundStyle(DS.textSecondary)
-                Text(verbatim: "·").foregroundStyle(DS.textTertiary)
-                Text(verbatim: section).foregroundStyle(DS.brandInk)
+            Button {
+                DSHaptic.tap()
+                returnToRoomTop(proxy)
+            } label: {
+                HStack(spacing: DS.Space.s1) {
+                    Text("Feed").foregroundStyle(DS.textSecondary)
+                    Text(verbatim: "·").foregroundStyle(DS.textTertiary)
+                    Text(verbatim: section).foregroundStyle(DS.brandInk)
+                }
+                .dsText(.heading17)
+                .padding(.horizontal, DS.Space.s4)
+                .padding(.vertical, DS.Space.s2)
+                .dsGlass(cornerRadius: 999)
+                .contentShape(Capsule())
             }
-            .dsText(.heading17)
-            .padding(.horizontal, DS.Space.s4)
-            .padding(.vertical, DS.Space.s2)
-            .dsGlass(cornerRadius: 999)
+            .buttonStyle(PressSpring())
             .padding(.top, DSDemoMark.screenClearance + DS.Space.s1)
             .transition(.opacity.combined(with: .move(edge: .top)))
             .accessibilityElement(children: .combine)
-            .allowsHitTesting(false)
+            .accessibilityHint(Text("Scrolls to the top"))
         }
     }
 
