@@ -71350,30 +71350,30 @@
         }
       }
     },
-    "Each app’s newest, today, under its category. Connect apps in Settings." : {
+    "Each app’s newest, today, under its category. Connect apps in Sources." : {
       "localizations" : {
         "es" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Lo más nuevo de cada app, hoy, bajo su categoría. Conecta apps en Ajustes."
+            "value" : "Lo más nuevo de cada app, hoy, bajo su categoría. Conecta apps en Fuentes."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "各アプリの今日の最新を、カテゴリごとに。アプリは設定で接続します。"
+            "value" : "各アプリの今日の最新を、カテゴリごとに。アプリはソースで接続します。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "각 앱의 오늘 최신 항목을 카테고리별로. 앱은 설정에서 연결하세요."
+            "value" : "각 앱의 오늘 최신 항목을 카테고리별로. 앱은 소스에서 연결하세요."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "今天各个应用的最新内容，按类别排列。在设置中连接应用。"
+            "value" : "今天各个应用的最新内容，按类别排列。在来源中连接应用。"
           }
         }
       }

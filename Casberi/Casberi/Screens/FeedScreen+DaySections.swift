@@ -441,7 +441,7 @@ extension FeedScreen {
                 emptyLeadRow(headline: Text(Date.now.formatted(.dateTime.weekday(.wide))),
                              words: Text(Date.now.formatted(.dateTime.month(.wide).day())),
                              note: bridges.connectedCount == 0
-                                 ? Text("Each app’s newest, today, under its category. Connect apps in Settings.") : nil)
+                                 ? Text("Each app’s newest, today, under its category. Connect apps in Sources.") : nil)
             }
         }
     }
