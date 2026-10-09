@@ -277,6 +277,34 @@
         }
       }
     },
+    "%lld more": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld más"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "ほか %lld 件"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%lld개 더"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "另有 %lld 项"
+          }
+        }
+      }
+    },
     "%lld of %lld priced": {
       "localizations": {
         "en": {
@@ -625,34 +653,6 @@
         }
       }
     },
-    "Category": {
-      "localizations": {
-        "es": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Categoría"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "カテゴリ"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "카테고리"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "类别"
-          }
-        }
-      }
-    },
     "Checked %@": {
       "localizations": {
         "es": {
@@ -677,34 +677,6 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "%@ 检查过"
-          }
-        }
-      }
-    },
-    "Choose which category the widget shows.": {
-      "localizations": {
-        "es": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Elige qué categoría muestra el widget."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "ウィジェットに表示するカテゴリを選びます。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "위젯에 표시할 카테고리를 선택하세요."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "选择小组件显示的类别。"
           }
         }
       }
@@ -761,6 +733,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "按最近的截止时间排列。"
+          }
+        }
+      }
+    },
+    "Feed": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Feed"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "フィード"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "피드"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "订阅流"
           }
         }
       }
@@ -961,34 +961,6 @@
         }
       }
     },
-    "Nothing here yet": {
-      "localizations": {
-        "es": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Aún no hay nada aquí"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "まだ何もありません"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "아직 아무것도 없습니다"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "这里还没有内容"
-          }
-        }
-      }
-    },
     "Nothing in this window.": {
       "localizations": {
         "es": {
@@ -1101,6 +1073,34 @@
         }
       }
     },
+    "Nothing yet today": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Nada todavía hoy"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "今日はまだありません"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "오늘은 아직 없음"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "今天还没有内容"
+          }
+        }
+      }
+    },
     "One overdue.": {
       "localizations": {
         "es": {
@@ -1181,6 +1181,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "已解锁"
+          }
+        }
+      }
+    },
+    "Open Casberi to see today": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Abre Casberi para ver hoy"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Casberiを開いて今日を見る"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "오늘을 보려면 Casberi를 여세요"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "打开 Casberi 查看今天"
           }
         }
       }
@@ -1605,34 +1633,6 @@
         }
       }
     },
-    "The newest things in one category. Notes unless you pick another.": {
-      "localizations": {
-        "es": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Lo más reciente de una categoría. Notas, salvo que elijas otra."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "1つのカテゴリの最新の項目。別のカテゴリを選ばない限りノートです。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "한 카테고리의 최신 항목. 다른 카테고리를 고르지 않으면 노트입니다."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "一个类别中的最新内容。除非你另选，否则显示笔记。"
-          }
-        }
-      }
-    },
     "Then %@, %@.": {
       "localizations": {
         "en": {
@@ -1953,6 +1953,34 @@
         }
       }
     },
+    "What came today, in your Feed order.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Lo que llegó hoy, en el orden de tu feed."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "今日届いたもの、フィードの並びで。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "오늘 들어온 것, 피드 순서대로."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "今天收到的内容，按你的订阅流顺序。"
+          }
+        }
+      }
+    },
     "What your followed addresses are worth.": {
       "localizations": {
         "es": {
@@ -2117,6 +2145,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "一句话看懂你的一天。"
+          }
+        }
+      }
+    },
+    "Your newest notes.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Tus notas más recientes."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "最新のノート。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "최신 노트."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "你最新的笔记。"
           }
         }
       }

@@ -3,7 +3,7 @@ import SwiftData
 import WidgetKit
 
 /// Fills the app group the widgets read from (2026-08-14, prd §382): the
-/// wallet's line and flow, and the Category widget's shelves (2026-10-04).
+/// wallet's line and flow, your newest notes and the Feed's contents (§1210).
 ///
 /// Everything here already existed as a reading the app computes on every
 /// foreground anyway — the wallet series the balance card draws, the week's
@@ -45,18 +45,23 @@ enum WidgetPublish {
 
         if stale { WidgetCenter.shared.reloadTimelines(ofKind: WidgetWallet.kind) }
 
-        if WidgetPayload.write(shelves(things: things, context: context), key: WidgetShelves.key,
-                               stampKey: WidgetShelves.stampKey, defaults: group) {
-            WidgetCenter.shared.reloadTimelines(ofKind: WidgetShelves.kind)
+        if WidgetPayload.write(notes(context: context), key: WidgetNotes.key,
+                               stampKey: WidgetNotes.stampKey, defaults: group) {
+            WidgetCenter.shared.reloadTimelines(ofKind: WidgetNotes.kind)
+        }
+        if WidgetPayload.write(feed(things: things), key: WidgetFeedTile.key,
+                               stampKey: WidgetFeedTile.stampKey, defaults: group) {
+            WidgetCenter.shared.reloadTimelines(ofKind: WidgetFeedTile.kind)
         }
 
         sweepRetired(group)
     }
 
-    /// The payloads of widgets that no longer exist: the hero (§877), and the
+    /// The payloads of widgets that no longer exist: the hero (§877), the
     /// Today and kept-ask tiles with the pictures the Today rows led with
-    /// (2026-10-01) — plus the brief's request flag. Cleared rather than left
-    /// in the app group forever; a no-op once they are gone.
+    /// (2026-10-01), the Category widget (§1210) — plus the brief's request
+    /// flag. Cleared rather than left in the app group forever; a no-op once
+    /// they are gone.
     static let retiredKeys = ["widget.lede", "widget.ledeAt", "widget.themes", "widget.themesAt",
                               "widget.dayLead", "widget.dayLeadAt",
                               "widget.asks", "widget.asksAt",
@@ -64,6 +69,8 @@ enum WidgetPublish {
                               "widget.safe", "widget.safeAt",
                               "widget.requests", "widget.requestsAt",
                               "widget.people", "widget.peopleAt",
+                              // The Category widget's shelves (§1210).
+                              "widget.shelves", "widget.shelvesAt",
                               // The Daily Brief quick action's and the brief
                               // control's flag, left by an older build.
                               "brief.request"]
@@ -81,16 +88,12 @@ enum WidgetPublish {
         }
     }
 
-    /// The Category widget's shelves (2026-10-04): Notes first, always, then
-    /// every catalog category with something in it, in the tray's order.
+    /// The Notes widget's shelf (prd §1210): your two newest notes.
     ///
-    /// Notes reads its own fetch — the room's `source == "You"` — because a note from March is still the newest note, and the
-    /// newest-600 slice of a busy corpus has long since dropped it. The
-    /// categories read the slice, where their newest rows always are.
-    ///
-    /// Hide wallet balances (§374) takes the money categories off the Home
-    /// Screen whole: a row's title is where a transfer says how much.
-    static func shelves(things: [Thing], context: ModelContext) -> [WidgetShelf] {
+    /// Notes reads its own fetch — the room's `source == "You"` — because a
+    /// note from March is still the newest note, and the newest-600 slice of a
+    /// busy corpus has long since dropped it.
+    static func notes(context: ModelContext) -> WidgetShelf {
         var d = FetchDescriptor<Thing>(
             predicate: #Predicate { $0.source == "You" },
             sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
@@ -98,30 +101,38 @@ enum WidgetPublish {
         let notes = ((try? context.fetch(d)) ?? []).live
             .filter(Pinboard.inRoom)
             .sorted { $0.capturedAt > $1.capturedAt }
-        var out = [WidgetShelf(room: Pinboard.room, name: String(localized: "Notes"),
-                               glyph: "note.text", rows: rows(notes, stamp: { $0.capturedAt }))]
+        return WidgetShelf(room: Pinboard.room, name: String(localized: "Notes"),
+                           glyph: "note.text", rows: rows(notes, stamp: { $0.capturedAt }))
+    }
 
+    /// The Feed widget's contents (prd §1210): every category with something
+    /// today, in Feed order (`CategoryOrder.current`, Settings › Feed order),
+    /// and how many came today — the Feed's glance tiles (§1208d) as one tile.
+    ///
+    /// Counted over the caller's newest-600 slice, the same slice the Feed's
+    /// day reads. No money (§1208 item 7): the Wallet, Markets and Testnets
+    /// are left out, so Hide balances (§374) has nothing to withhold here.
+    static func feed(things: [Thing], now: Date = .now) -> WidgetFeed {
+        let calendar = Calendar.current
         let money: Set<String> = ["Wallet", "Markets", "Testnets"]
-        let hidden = BalancePrivacy.shared.hidden
-        var byCategory: [String: [Thing]] = [:]
-        for thing in things {
-            guard let category = BridgeCatalog.category(forSource: thing.source) else { continue }
-            if byCategory[category, default: []].count < WidgetShelves.rowCap {
-                byCategory[category, default: []].append(thing)
-            }
+        var today: [String: Int] = [:]
+        for thing in things where calendar.isDate(thing.capturedAt, inSameDayAs: now) {
+            guard let category = BridgeCatalog.category(forSource: thing.source),
+                  !money.contains(category) else { continue }
+            today[category, default: 0] += 1
         }
-        for category in BridgeCatalog.categories.map(\.name) {
-            guard !(hidden && money.contains(category)),
-                  let members = byCategory[category], !members.isEmpty else { continue }
-            out.append(WidgetShelf(room: category, name: category,
-                                   glyph: CategoryFold.glyph(for: category),
-                                   rows: rows(members, stamp: \.capturedAt)))
+        let order = CategoryOrder.current
+        let known = order.filter { today[$0] != nil }
+        let unknown = today.keys.filter { !order.contains($0) }
+            .sorted { $0.localizedStandardCompare($1) == .orderedAscending }
+        let sections = (known + unknown).map {
+            WidgetFeed.Section(room: $0, today: today[$0] ?? 0)
         }
-        return out
+        return WidgetFeed(day: calendar.startOfDay(for: now), sections: sections)
     }
 
     private static func rows(_ things: [Thing], stamp: (Thing) -> Date) -> [WidgetShelf.Row] {
-        things.prefix(WidgetShelves.rowCap).map { thing in
+        things.prefix(WidgetNotes.rowCap).map { thing in
             let words = thing.title.split(whereSeparator: \.isNewline)
                 .map { $0.trimmingCharacters(in: .whitespaces) }
                 .filter { !$0.isEmpty }
@@ -219,9 +230,20 @@ enum WidgetPublish {
             NSLog("[Casberi] widgetWallet| none — no watched wallet, or fewer than two aligned samples")
         }
 
-        for shelf in WidgetShelves.published(defaults: group) {
-            NSLog("[Casberi] widgetShelf| %@ (%@) rows=%d newest=%@", shelf.name, shelf.room,
+        if let shelf = WidgetNotes.published(defaults: group) {
+            NSLog("[Casberi] widgetNotes| rows=%d newest=%@",
                   shelf.rows.count, shelf.rows.first?.title ?? "none")
+        } else {
+            NSLog("[Casberi] widgetNotes| none")
+        }
+        if let feed = WidgetFeedTile.published(defaults: group) {
+            NSLog("[Casberi] widgetFeed| current=%@ sections=%d",
+                  feed.isCurrent() ? "YES" : "no", feed.sections.count)
+            for section in feed.sections {
+                NSLog("[Casberi] widgetFeed| %@ today=%d", section.room, section.today)
+            }
+        } else {
+            NSLog("[Casberi] widgetFeed| none")
         }
 
         // The week's flow. `none` is the HEALTHY answer for most weeks — the

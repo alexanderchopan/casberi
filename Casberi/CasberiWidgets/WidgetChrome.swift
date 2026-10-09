@@ -149,25 +149,24 @@ struct WidgetSpark: Shape {
 ///    so Hide balances (§374) takes the numbers and leaves the ratio standing —
 ///    the same split the curve above it already makes.
 struct WidgetFlowLanes: View {
+    /// No figures beside the bars: every tile is small (prd §1210), so the
+    /// ratio is the reading, and the total above it is the money.
     let band: WidgetFlowBand
-    /// The small family has no room for figures beside the bars; the ratio is
-    /// the reading there, and the total above it is the money.
-    var showsFigures = true
 
     var body: some View {
         // In is full ink and Out a third of it: which side is which is the
         // label's job, not a categorical hue's (prd §782).
         VStack(alignment: .leading, spacing: 5) {
-            lane(weight: band.inWeight, usd: band.inUSD,
+            lane(weight: band.inWeight,
                  label: String(localized: "In"),
                  fill: AnyShapeStyle(Color.primary))
-            lane(weight: band.outWeight, usd: band.outUSD,
+            lane(weight: band.outWeight,
                  label: String(localized: "Out"),
                  fill: AnyShapeStyle(Color.primary.opacity(0.32)))
         }
     }
 
-    private func lane(weight: Double, usd: Double?, label: String,
+    private func lane(weight: Double, label: String,
                       fill: AnyShapeStyle) -> some View {
         HStack(spacing: 7) {
             Text(label)
@@ -185,13 +184,6 @@ struct WidgetFlowLanes: View {
                 }
             }
             .frame(height: 12)
-            if showsFigures {
-                Text(usd.map { MoneyFormat.compactUSD($0) } ?? WidgetMask.figure)
-                    .dsText(.widgetSubline11)
-                    .foregroundStyle(.secondary)
-                    .monospacedDigit()
-                    .lineLimit(1)
-            }
         }
     }
 }

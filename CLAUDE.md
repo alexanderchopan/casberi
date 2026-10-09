@@ -441,7 +441,7 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 
 Deep links: `casberi://home`, `casberi://feed`, `casberi://feed/type/<Tag>` (internal, no UI produces it, prd §269), `casberi://account`, `casberi://settings`, `casberi://note` (a new note, prd §982), `casberi://room/<category | Your notes>` (the Category widget's door), `casberi://thing/<id>`, `casberi://person/<Bluesky|X>/<handle>`.
 
-- **Two widgets: Wallet, and Category (2026-10-04) — you pick a category, Notes by default; `WidgetPublish.shelves` publishes Notes plus every category with rows (money categories withheld under Hide balances), the picker lists what was published, black/white with a pink header (user: "we don't use blue"). `-widgetProbe YES` logs `widgetShelf|`.** The Today widget went with the ask (prd §877, 2026-10-01). `WidgetPublish` clears the retired tiles' payloads from the app group. → docs/hooks/system.md · prd §382 · §877
+- **Three widgets, each a small tile (prd §1210): Notes (two newest), Wallet, Feed (today's count per category in Feed order, no money, blank past midnight until the app counts again); the Category widget is deleted. `WidgetPublish` publishes `WidgetNotes` and `WidgetFeedTile` and sweeps retired payloads; `-widgetProbe YES` logs `widgetNotes|` and `widgetFeed|`.** The Today widget went with the ask (prd §877, 2026-10-01) → docs/hooks/system.md · prd §382 · §877 · §1210
 
 ## SwiftUI/UIKit gotchas already paid for
 

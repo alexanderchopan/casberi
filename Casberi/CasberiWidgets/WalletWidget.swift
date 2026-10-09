@@ -33,11 +33,8 @@ struct WalletWidget: Widget {
         }
         .configurationDisplayName("Wallet")
         .description("What your followed addresses are worth.")
-        // No large family: a curve and one figure cannot fill it, and the
-        // composition strip that COULD is a live protocol read the extension
-        // can neither afford nor make.
-        .supportedFamilies([.systemSmall, .systemMedium,
-                            .accessoryRectangular, .accessoryCircular])
+        // The small tile only (prd §1210): every Casberi widget is one size.
+        .supportedFamilies([.systemSmall])
     }
 }
 
@@ -88,79 +85,49 @@ struct WalletProvider: TimelineProvider {
 
 struct WalletWidgetView: View {
     let entry: WalletEntry
-    @Environment(\.widgetFamily) private var family
 
     var body: some View {
         Group {
             if let line = entry.line {
-                switch family {
-                case .accessoryCircular:
-                    // The curve alone — no figure at any size here. A circular
-                    // accessory has room for about four characters, and "$12K"
-                    // rounded onto a lock screen is a worse reading than the
-                    // shape it replaces. Works unchanged under §374 for the same
-                    // reason: shapes stay.
-                    ZStack {
-                        AccessoryWidgetBackground()
-                        WidgetSpark(normalized: line.normalizedPoints)
-                            .stroke(style: StrokeStyle(lineWidth: 2, lineCap: .round,
-                                                       lineJoin: .round))
-                            .padding(7)
-                    }
-                    .accessibilityLabel(Text("Wallet"))
-                case .accessoryRectangular:
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(figure).dsText(.widgetTitle14).lineLimit(1)
+                VStack(alignment: .leading, spacing: 4) {
+                    WidgetLabel(text: String(localized: "Wallet"))
+                    HStack(alignment: .firstTextBaseline, spacing: 6) {
+                        Text(figure)
+                            .dsText(.widgetFigure24)
+                            .foregroundStyle(.primary)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
                         if let change = changeText {
-                            Text(change).dsText(.widgetSubline11).opacity(0.75).lineLimit(1)
-                        }
-                        WidgetSpark(normalized: line.normalizedPoints)
-                            .stroke(style: StrokeStyle(lineWidth: 1.5, lineCap: .round,
-                                                       lineJoin: .round))
-                            .frame(height: 12)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                default:
-                    VStack(alignment: .leading, spacing: 4) {
-                        WidgetLabel(text: String(localized: "Wallet"))
-                        HStack(alignment: .firstTextBaseline, spacing: 6) {
-                            Text(figure)
-                                .dsText(.widgetFigure24)
-                                .foregroundStyle(.primary)
+                            Text(change)
+                                .dsText(.widgetSubline12)
+                                .foregroundStyle(changeInk)
                                 .lineLimit(1)
-                                .minimumScaleFactor(0.7)
-                            if let change = changeText {
-                                Text(change)
-                                    .dsText(.widgetSubline12)
-                                    .foregroundStyle(changeInk)
-                                    .lineLimit(1)
-                                    .monospacedDigit()
-                            }
+                                .monospacedDigit()
                         }
-                        if let stamp = WidgetStamp.text(for: line.asOf, now: entry.date,
-                                                        after: WidgetWallet.stampAfter) {
-                            Text(stamp)
+                    }
+                    if let stamp = WidgetStamp.text(for: line.asOf, now: entry.date,
+                                                    after: WidgetWallet.stampAfter) {
+                        Text(stamp)
+                            .dsText(.widgetSubline11)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+                    Spacer(minLength: 4)
+                    if let flow = entry.flow {
+                        WidgetFlowLanes(band: flow)
+                        if let note = pricedNote(flow) {
+                            Text(note)
                                 .dsText(.widgetSubline11)
                                 .foregroundStyle(.secondary)
                                 .lineLimit(1)
                         }
-                        Spacer(minLength: 4)
-                        if let flow = entry.flow {
-                            WidgetFlowLanes(band: flow, showsFigures: family == .systemMedium)
-                            if family == .systemMedium, let note = pricedNote(flow) {
-                                Text(note)
-                                    .dsText(.widgetSubline11)
-                                    .foregroundStyle(.secondary)
-                                    .lineLimit(1)
-                            }
-                        }
-                        WidgetSpark(normalized: line.normalizedPoints)
-                            .stroke(Color.primary, style: StrokeStyle(lineWidth: 2, lineCap: .round,
-                                                               lineJoin: .round))
-                            .frame(height: flowHeight(family))
                     }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                    WidgetSpark(normalized: line.normalizedPoints)
+                        .stroke(Color.primary, style: StrokeStyle(lineWidth: 2, lineCap: .round,
+                                                           lineJoin: .round))
+                        .frame(height: sparkHeight)
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             } else {
                 declined
             }
@@ -204,12 +171,11 @@ struct WalletWidgetView: View {
         return String(localized: "\(band.priced) of \(band.total) priced")
     }
 
-    /// The curve gives up height to the lanes when both are drawn — the lanes
-    /// carry a reading the curve cannot, so they win the space rather than the
-    /// tile trying to keep both at full size and clipping.
-    private func flowHeight(_ family: WidgetFamily) -> CGFloat {
-        guard entry.flow != nil else { return family == .systemMedium ? 44 : 34 }
-        return family == .systemMedium ? 26 : 20
+    /// The curve gives up height to the lanes, and to the disclosure under
+    /// them, so the tile keeps every reading rather than clipping one.
+    private var sparkHeight: CGFloat {
+        guard let flow = entry.flow else { return 34 }
+        return flow.owesDisclosure ? 14 : 20
     }
 
     /// Two causes, one sentence — and it names the ACTION rather than the

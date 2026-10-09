@@ -164,9 +164,36 @@ grep -qE '\$%\.1fK' "$TMP/panel.nc" \
 
 # Every tile the bundle declares must actually be in the bundle. A widget
 # struct that compiles and is never listed is invisible with no error anywhere.
-for w in WalletWidget ComposeControl NoteControl; do
+for w in NotesWidget WalletWidget FeedWidget ComposeControl NoteControl; do
   grep -q "        $w()" "$TMP/bundle.nc" \
     || { print -u2 "✗ $w is not in the widget bundle — it would never appear in the gallery"; exit 1; }
+done
+# Three widgets, each a small tile (prd §1210). The Category widget went with it.
+grep -q "        CategoryWidget()" "$TMP/bundle.nc" \
+  && { print -u2 "✗ CategoryWidget is back in the bundle — §1210 replaced it with Notes and Feed"; exit 1; }
+for wf in WalletWidget NotesWidget FeedWidget; do
+  f="Casberi/CasberiWidgets/$wf.swift"
+  [[ -f "$f" ]] || { print -u2 "missing $f"; exit 1; }
+  strip_comments "$f" > "$TMP/$wf.nc"
+  grep -q '.supportedFamilies(\[.systemSmall\])' "$TMP/$wf.nc" \
+    || { print -u2 "✗ $wf offers a size other than the small tile (prd §1210)"; exit 1; }
+done
+grep -q 'kind: WidgetNotes.kind' "$TMP/NotesWidget.nc" \
+  || { print -u2 "✗ the Notes widget no longer uses WidgetNotes.kind"; exit 1; }
+grep -q 'kind: WidgetFeedTile.kind' "$TMP/FeedWidget.nc" \
+  || { print -u2 "✗ the Feed widget no longer uses WidgetFeedTile.kind"; exit 1; }
+# A count of today is a DATE's reading: the tile draws it only on that day.
+grep -q 'feed.isCurrent(now: entry.date)' "$TMP/FeedWidget.nc" \
+  || { print -u2 "✗ the Feed widget draws its counts without asking whether they are today's"; exit 1; }
+# The Feed holds no money (§1208 item 7), so neither does its tile.
+grep -q '"Wallet", "Markets", "Testnets"' "$TMP/publish.nc" \
+  || { print -u2 "✗ the Feed widget's payload no longer leaves the money categories out"; exit 1; }
+# The flow band's disclosure is the one piece the tile may not drop (WidgetFlowBand.owesDisclosure).
+grep -q 'pricedNote(flow)' "$TMP/walletw.nc" \
+  || { print -u2 "✗ the wallet tile no longer says how much of the week its bars are drawn from"; exit 1; }
+for k in widget.shelves widget.shelvesAt; do
+  grep -q "\"$k\"" "$TMP/publish.nc" \
+    || { print -u2 "✗ the retired payload $k is no longer cleared"; exit 1; }
 done
 # ...and the three the ask took with it must STAY out (2026-10-01).
 for w in TodayWidget KeptAskWidget BriefControl; do
@@ -364,6 +391,22 @@ check(WidgetWallet.flow(now: now, defaults: d)?.inUSD == nil,
 eq(WidgetWallet.flow(now: now, defaults: d)?.outWeight, 0.5,
    "…and the shape still arrives")
 
+// ── the Feed tile (§1210): today's counts are a DATE's reading ───────────────
+var cal = Calendar(identifier: .gregorian)
+cal.timeZone = TimeZone(identifier: "UTC")!
+let noon = Date(timeIntervalSince1970: 1_760_000_000)   // 2025-10-09 08:53 UTC
+let feed = WidgetFeed(day: cal.startOfDay(for: noon),
+                      sections: [WidgetFeed.Section(room: "Day", today: 4),
+                                 WidgetFeed.Section(room: "Social", today: 12)])
+check(feed.isCurrent(now: noon, calendar: cal), "the counts are today's on the day they were counted")
+check(!feed.isCurrent(now: noon.addingTimeInterval(24 * 3600), calendar: cal),
+      "the next day they are not — yesterday's counts never draw as today's")
+check(!feed.isCurrent(now: noon.addingTimeInterval(-24 * 3600), calendar: cal),
+      "nor the day before")
+_ = WidgetPayload.write(feed, key: WidgetFeedTile.key, stampKey: WidgetFeedTile.stampKey, defaults: d)
+eq(WidgetFeedTile.published(defaults: d)?.sections.map(\.room) ?? [], ["Day", "Social"],
+   "the Feed order survives the round trip")
+
 // ── money ───────────────────────────────────────────────────────────────────
 eq(MoneyFormat.compactUSD(0), "$0", "zero")
 eq(MoneyFormat.compactUSD(950), "$950", "under a thousand keeps every digit")
@@ -481,6 +524,11 @@ mutate "a zero side is drawn as a hairline instead of nothing" \
   'guard scale > 0 else { return (0, 0) }
         return (inUSD / scale, outUSD / scale)|||guard scale > 0 else { return (0, 0) }
         return (max(0.08, inUSD / scale), max(0.08, outUSD / scale))' || mfail=1
+
+# The Feed tile's day.
+mutate "the Feed tile's counts stay current past midnight" \
+  WidgetPayload.swift \
+  'calendar.isDate(day, inSameDayAs: now)|||true' || mfail=1
 
 # Money.
 mutate "a change that rounds to zero is given a direction (§83)" \

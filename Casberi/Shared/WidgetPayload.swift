@@ -14,9 +14,9 @@ import Foundation
 /// shelf life, and a widget has no choice but to persist it, so instead it
 /// DROPS it once it ages out. The tile gets quieter, never wrong.
 ///
-/// One widget reads this since the ask retired (2026-10-01): the Wallet. The Today
-/// widget and the kept-ask widget went with the ask, and their payloads with
-/// them.
+/// Three widgets read this, each a small tile (prd §1210): Notes, Wallet and
+/// the Feed. The Today widget and the kept-ask widget went with the ask
+/// (2026-10-01), the Category widget with §1210, and their payloads with them.
 ///
 /// Freshness is per-payload, not global — see each type's own window.
 enum WidgetPayload {
@@ -328,24 +328,17 @@ enum WidgetWallet {
     }
 }
 
-// MARK: - The category shelf
+// MARK: - Notes
 
-/// One category's newest things, for the Category widget (2026-10-04): you
-/// pick a category when you add the tile (Notes by default), and it shows
-/// that category's newest rows.
-///
-/// The app publishes one shelf per category that has anything in it, plus
-/// Notes always, in the tray's order. The widget's picker lists exactly these,
-/// so it can never offer a category the app has never written.
+/// Your newest notes, for the Notes widget (prd §1210). Small tile only.
 ///
 /// A row is not a READING: "the newest note" stays true until a newer one
 /// lands. So the window is a week, not a day and a half, and past it the tile
 /// asks you to open the app rather than listing what was newest a week ago.
 struct WidgetShelf: Codable, Equatable {
-    /// The room the tile opens (`casberi://room/<room>`): a catalog category's
-    /// own name, or `Pinboard.room` for Notes.
+    /// The room the tile opens (`casberi://room/<room>`): `Pinboard.room`.
     let room: String
-    /// The word the tile draws ("Notes", "Work").
+    /// The word the tile draws ("Notes").
     let name: String
     let glyph: String
     let rows: [Row]
@@ -359,20 +352,66 @@ struct WidgetShelf: Codable, Equatable {
     }
 }
 
-enum WidgetShelves {
-    static let kind = "casberi.category"
-    static let key = "widget.shelves"
-    static let stampKey = "widget.shelvesAt"
+enum WidgetNotes {
+    static let kind = "casberi.notes"
+    static let key = "widget.notes"
+    static let stampKey = "widget.notesAt"
     static let freshness: TimeInterval = 7 * 24 * 3600
-    /// The large family's six rows; the smaller ones take a prefix.
-    static let rowCap = 6
+    /// The small tile's two rows.
+    static let rowCap = 2
     /// Notes' room name, spelled here because `Pinboard` is app-side.
     static let notesRoom = "Your notes"
 
     static func published(now: Date = .now,
                           defaults: UserDefaults? = UserDefaults(suiteName: SharedStore.appGroup))
-    -> [WidgetShelf] {
-        WidgetPayload.read([WidgetShelf].self, key: key, stampKey: stampKey,
-                           freshness: freshness, now: now, defaults: defaults) ?? []
+    -> WidgetShelf? {
+        WidgetPayload.read(WidgetShelf.self, key: key, stampKey: stampKey,
+                           freshness: freshness, now: now, defaults: defaults)
+    }
+}
+
+// MARK: - The Feed
+
+/// The Feed's contents in Feed order, for the Feed widget (prd §1210): each
+/// category with something today, in `CategoryOrder.current` (Settings › Feed
+/// order), and how many came today. The Feed's glance tiles (§1208d) at the
+/// size of one Home Screen tile.
+///
+/// A count of today is a DATE's reading, so the payload carries the day it
+/// counted. The widget draws the counts only on that day and says so once it
+/// has passed; it never shows yesterday's counts as today's.
+struct WidgetFeed: Codable, Equatable {
+    /// The start of the day the counts are for.
+    let day: Date
+    let sections: [Section]
+
+    struct Section: Codable, Equatable {
+        /// The category's name.
+        let room: String
+        /// How many came today.
+        let today: Int
+    }
+
+    /// Whether the counts are for the day `now` is in.
+    func isCurrent(now: Date = .now, calendar: Calendar = .current) -> Bool {
+        calendar.isDate(day, inSameDayAs: now)
+    }
+}
+
+enum WidgetFeedTile {
+    static let kind = "casberi.feed"
+    static let key = "widget.feed"
+    static let stampKey = "widget.feedAt"
+    /// Two days: long enough to say "open Casberi for today" the morning after,
+    /// short enough that a week-old order is not kept.
+    static let freshness: TimeInterval = 48 * 3600
+    /// The small tile's rows.
+    static let rowCap = 4
+
+    static func published(now: Date = .now,
+                          defaults: UserDefaults? = UserDefaults(suiteName: SharedStore.appGroup))
+    -> WidgetFeed? {
+        WidgetPayload.read(WidgetFeed.self, key: key, stampKey: stampKey,
+                           freshness: freshness, now: now, defaults: defaults)
     }
 }

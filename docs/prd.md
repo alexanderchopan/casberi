@@ -435,6 +435,7 @@ marks chronological position within the pair.
 | §991 (Logos has no Holdings: a token lives in an account nothing maps to an owner) | Home · Node · Rewards and no Holdings | amended by §1084 — v0.3 keeps a token holding as a shard on the holder's own account, so Holdings is a tile |
 | §1039 (Logos' one verb is Explorer) | the explorer was the room's only verb tile | amended by §1084 — Create · Explorer · Send, by page (`LogosSection.verbs(forAccount:keyAccount:)`) |
 | §74 (Farcaster grows likes, mentions, channels, replies, faces) | Farcaster was a keyless Network seat on the Snapchain node, with likes, recasts, mentions, channels, replies and faces | deleted by §1110 (user: "remove farcaster") — the seat, its ingest, signers, starter pack and probes are gone; stored rows are swept |
+| §877 (the widgets are Today and Wallet; amended 2026-10-04 to Wallet and Category) | Wallet and a Category tile you configure, small to large | amended by §1210 — three small tiles: Notes, Wallet, Feed; the Category widget is deleted |
 
 ## §1 — Thesis
 
@@ -65506,3 +65507,11 @@ Under the Feed's box and tiles stand today's contents first — every app's newe
 ## §1208g — The Feed comes first: the title reads "Feed  Wallet" (user, 2026-10-09: "change the order of the titles from wallet / feed to feed / wallet. lets put feed first since it's what user opens app to"; amends §1208 item 1's order)
 1. **The phone's two places read Feed, then Wallet** (`HomeScope.phoneWalk`). The title row names them in that order, the standing word pink.
 2. **The swipe follows the title**: from the Feed a swipe left lands on the Wallet, and from the Wallet a swipe right goes back. Notes, Markets and a room off the walk still swipe right to the Feed.
+
+## §1210 — Three widgets, each a small tile: Notes, Wallet, Feed (user, 2026-10-09: "with our new design we need widgets. i suggest we have three widgets. notes. wallet. and feed order and we make them only small tile size."; amends §877 and the 2026-10-04 Category widget)
+1. **Notes** (`NotesWidget`, `WidgetNotes`): the pink name over your two newest notes, each two lines and when; the tile opens Notes (`casberi://room/Your notes`). Empty, it says "Write a note in Casberi". A week-old shelf ages out.
+2. **Wallet** (`WalletWidget`): the small tile it already drew — the total, the change, the stamp, the week's In and Out, the line — and "6 of 9 priced" under the bars when the band owes it (`WidgetFlowBand.owesDisclosure`), which only the medium tile drew before. The medium, lock-screen rectangle and circle are gone.
+3. **Feed** (`FeedWidget`, `WidgetFeedTile`, `WidgetPublish.feed`): the Feed's contents in Feed order (Settings › Feed order, `CategoryOrder.current`) — each category with something today and how many came, four rows, the fourth "N more" past four; the tile opens the Feed. No money (§1208 item 7): Wallet, Markets and Testnets are left out. A count of today is a DATE's reading, so the payload carries its day and past midnight the tile says "Open Casberi to see today" until the app counts again.
+4. **The Category widget is deleted** with its picker and its shelves (`widget.shelves` is swept from the app group). Every widget offers `.systemSmall` only (`widget-selftest.sh`).
+
+UNVERIFIED on a device: written on a machine with no Xcode, so neither build nor tile was seen before commit.
