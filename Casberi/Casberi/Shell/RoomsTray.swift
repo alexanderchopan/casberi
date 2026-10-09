@@ -108,7 +108,15 @@ struct RoomsTray: View {
                     Button {
                         close()
                     } label: {
-                        DSBackdropBlur().ignoresSafeArea()
+                        // A PAGE'S GROUND ON THE PHONE (prd §1207 item 5): the
+                        // tray rises onto solid black, full height, so it reads
+                        // as a page you are on, not a menu over a blurred room;
+                        // beside the rail it keeps the blur.
+                        if railInset == 0 {
+                            Color.black.ignoresSafeArea()
+                        } else {
+                            DSBackdropBlur().ignoresSafeArea()
+                        }
                     }
                     .buttonStyle(.plain)
                     // …and a SWIPE anywhere else closes it too (2026-10-03,
@@ -178,7 +186,10 @@ struct RoomsTray: View {
     // MARK: - The card
 
     private func panel(screen: CGSize, top safeTop: CGFloat = 0) -> some View {
-        let width = min(screen.width * Self.widthShare, Self.maxWidth)
+        // The page's width on the phone (prd §1207 item 5): the room's own
+        // column, edge to edge; beside the rail the menu's 330.
+        let width = railInset > 0 ? min(screen.width * Self.widthShare, Self.maxWidth)
+            : screen.width - 2 * DSRoomChassis.inset
         // Beside the rail the field leads the card, which then stands at its
         // full height while searching so the field stays above the keyboard
         // however few results there are (prd §1133e); it hangs from the top,
@@ -186,10 +197,17 @@ struct RoomsTray: View {
         // field is the capsule under the card (§1176), so the card hugs what
         // it holds and grows up from the capsule as results arrive.
         let railTopInset = railInset > 0 ? safeTop + DSDemoMark.screenClearance + Self.railTop : 0
-        let full = (screen.height - railTopInset) * Self.heightShare
+        // Full height on the phone (prd §1207 item 5): everything above the
+        // band, under the status bar; three quarters beside the rail.
+        let full = railInset > 0
+            ? (screen.height - railTopInset) * Self.heightShare
+            : screen.height - safeTop - DSDock.seatClearance - DS.Space.s2
         let standsFull = railInset > 0 && (searching || !query.isEmpty)
-        let height = standsFull ? full : min(contentHeight, full)
-        let gap = Self.gap(inner: width - 2 * DS.Space.s4)
+        let height = (standsFull || railInset == 0) ? full : min(contentHeight, full)
+        // Six to a line across the whole width on the phone, so a full
+        // line reaches the card's far edge instead of stopping short.
+        let gap = railInset > 0 ? Self.gap(inner: width - 2 * DS.Space.s4)
+            : max(Self.iconGap, (width - 2 * DS.Space.s4 - CGFloat(Self.lineSlots) * Self.icon) / CGFloat(Self.lineSlots - 1))
         // **THREE CARDS, ONE SCROLL (prd §1203 item 6, user: "can they be
         // detached from each other … like how we have the search bar").**
         // You (your row, then Recent), the Wallet, and the categories each
@@ -200,9 +218,14 @@ struct RoomsTray: View {
             VStack(alignment: .leading, spacing: Self.cardGap) {
                 if railInset > 0 { card { searchField } }
                 if query.trimmingCharacters(in: .whitespaces).isEmpty {
-                    card {
-                        youRow(gap: gap)
-                        recentRow(gap: gap)
+                    // NO YOU ROW AND NO NAME (prd §1207 item 5, user: "the
+                    // tray can drop your name it's superfluous now and
+                    // settings already has a place"): Recent alone leads
+                    // (user: "it would only have recent"). Feed and Wallet
+                    // are the walk's, Markets, Sources and Settings the Feed's
+                    // tiles (user: "markets stays in feed"), and a note is ✎.
+                    if hasRecent {
+                        card { recentRow(gap: gap) }
                     }
                     if walletCard {
                         card { categoryRow(CategoryFold.walletCategory, index: 2, gap: gap, leads: false) }
@@ -242,6 +265,9 @@ struct RoomsTray: View {
         .padding(.top, railTopInset)
         .accessibilityAddTraits(.isModal)
     }
+
+    /// Whether Recent has anything to show (prd §1136 item 8).
+    private var hasRecent: Bool { !recentItems.isEmpty }
 
     /// One of the tray's cards: its rows on their own glass, the corner the
     /// whole card had (prd §1203 item 6).
@@ -551,48 +577,6 @@ struct RoomsTray: View {
         }
     }
 
-    /// You: the app's own places on one row (prd §1061, user: "put home
-    /// notes and settings in a row together and have a 'You' category
-    /// again"). A disc per door — Home, Notes, Markets (§1123), Apps,
-    /// Addresses, Settings — the glyphs in the brand pink (§976a), the standing door's
-    /// disc white behind the same glyph (§1053).
-    private func youRow(gap: CGFloat) -> some View {
-        // **A ROW LIKE EVERY OTHER (prd §1133, §1133c).** Your name, else You
-        // (`HomeScope.title`; since §1156 the screen titles name the place alone,
-        // so your name is here only; §1133d: the name line
-        // runs the card's width now, so the truncation §1133a answered is
-        // gone), then Home's disc where a category's own stands and the other
-        // five places, one line of six.
-        let doors = youDoors
-        let home = doors[0]
-        let rest = Folder(items: doors.dropFirst().map { door in
-            FolderItem(id: door.key, name: door.word, face: .place(door.glyph),
-                       lit: door.lit, act: door.act)
-        }, action: nil)
-        return wrapped(rest, gap: gap) {
-            Button(action: home.act) {
-                Text(verbatim: HomeScope.title)
-                    .dsText(.body17)
-                    .foregroundStyle(DS.textPrimary)
-                    .lineLimit(1)
-                    .frame(maxWidth: .infinity, minHeight: Self.nameHeight, alignment: .bottomLeading)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(RowPress())
-        } lead: {
-            Button(action: home.act) {
-                roundIcon(home.glyph, ink: DS.brand,
-                          fill: home.lit ? Color.white : DS.surfaceRaised,
-                          bounces: home.lit)
-            }
-            .buttonStyle(PressSpring())
-            .dsTapTarget()
-            .accessibilityLabel(Text(home.word))
-            .accessibilityAddTraits(home.lit ? .isSelected : [])
-        }
-        .modifier(Dealt(on: dealt, index: 0, reduceMotion: reduceMotion))
-    }
-
     // MARK: - Search (prd §1133)
 
     /// **ONE SEARCH (prd §1133, §1133e, user: "i like the search tho"; "fix
@@ -613,7 +597,9 @@ struct RoomsTray: View {
     /// Spotlight's do. Beside the rail the face is at the TOP, so there the
     /// field still leads the card (`searchField`).
     private func searchCapsule(screen: CGSize) -> some View {
-        let width = min(screen.width * Self.widthShare, Self.maxWidth)
+        // The bar reaches the page's far edge with the cards above it (prd
+        // §1207 item 5).
+        let width = screen.width - 2 * DSRoomChassis.inset
         let typing = chrome.keyboardUp
         // The room bar's slot (`DSScopeDock`), which fades while the tray
         // is up, so the search takes the bar's place (prd §1177).
