@@ -36,8 +36,7 @@ import Security
 /// that sends.
 enum LogosKey {
 
-    /// Its OWN service. Never another seat's (`SignerKey`'s, or the retired
-    /// `casberi-frames-signer`).
+    /// Its OWN service. Never another seat's (`SignerKey`'s).
     private static let service = "casberi-logos-signer"
     private static let account = "device-secp256k1-schnorr"
     /// The account id this key signs as, cached so a menu can be drawn
