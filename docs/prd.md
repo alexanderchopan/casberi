@@ -65447,3 +65447,10 @@ Privy picked in the Wallet led Home with `holdingsBlockSection`, the same drawin
 7. **No money in the Feed** (§1207 item 10 stands); a row opens its thing, since the section is the category now.
 
 Unchanged from §1207: the tray as a black page of modules (item 5), ✎ in the band (item 6), the bar always there (item 7, phase 2), pivots (item 8), the Feed composing itself (item 11). iPad and Mac keep the rail. Phase 1 of §1207 shipped as build 781 and stands until this is built.
+
+**§1208a — The scroll's three touches, and no app names under a section (user, 2026-10-09: "probably get rid of this b/ what if there are 20 in a category … thats what the face is for", "what happens if i tap the face and then tap instagram … i would say maybe even a sheet", "we want a continuous scroll so you should be able to scroll past all into day if you want", then "yes do it!" to the three touches below; amends §1208 items 5–7).**
+- **Nothing stops the scroll.** Every section starts open; the Feed's own section runs straight into Day, Day into Social, and so on. Folding is the person's choice, never the default.
+- **A row opens its sheet** — the thing's own sheet, the one every row opens today — and swiping it down returns to the same place in the scroll. A row is never dead (§83), and nothing expands first.
+- **A section's pink name folds it** to one line (its name and how many came today); pressed again it opens. The name is the section's handle and the row is the thing's, so the two never compete.
+- **An app picked from the face rises as a sheet over the Feed** (§1132's rule: on the phone every place is a sheet): its own box, tiles and list; swipe down and you are back in the Feed where you were. The face never turns into ‹ (§1208 item 6's ‹ is withdrawn).
+- **A section's header names the category alone**; which apps it holds is the face's to show (a category can hold twenty).
