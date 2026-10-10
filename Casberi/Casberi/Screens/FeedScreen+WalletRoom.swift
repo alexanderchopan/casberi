@@ -1303,13 +1303,14 @@ extension FeedScreen {
     /// `FeedRow`'s stored id, never the model.
     @ViewBuilder
     func walletStreamSections(_ rows: [FeedRow], ownMoves: [UUID: KeyedThing] = [:],
+                              panelled: Bool = false,
                               nextEventID: UUID?) -> some View {
         let groups = walletStreamDays(rows)
         // The same boundary the rest of the feed draws, over `FeedRow`'s own
         // stored dates — dropping it here would have quietly cost this room
         // its "new since" divider.
         walletDaySections(groups, boundary: boundaryID(in: groups), ownMoves: ownMoves,
-                          nextEventID: nextEventID)
+                          panelled: panelled, nextEventID: nextEventID)
     }
 
     /// **"NEEDS YOU" LEADS HOME (prd §1090, Work's §1080 carried over; Home's
@@ -1325,6 +1326,8 @@ extension FeedScreen {
     func walletDaySections(_ groups: [(String, [FeedRow])], boundary: String?,
                            ownMoves: [UUID: KeyedThing] = [:],
                            named: Set<String> = [],
+                           headless: Bool = false,
+                           panelled: Bool = false,
                            nextEventID: UUID?) -> some View {
         ForEach(Array(groups.enumerated()), id: \.element.0) { groupIndex, group in
             let (label, dayRows) = group
@@ -1347,24 +1350,30 @@ extension FeedScreen {
                 // scrolling under it. Nothing moves — the insets were already zeroed
                 // and every pad is spelled out, so the row lands where the header
                 // did.
-                HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                    // The day wears the brand hue, as every day header in
-                    // the feed does (prd §740); this was the one in primary.
-                    Text(label).dsText(.heading20)
-                        .foregroundStyle(named.contains(label) ? DS.textPrimary : DS.brandInk)
+                // A list whose panel already says its name draws no second
+                // header (prd §1219).
+                if !headless {
+                    HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                        // The day wears the brand hue, as every day header in
+                        // the feed does (prd §740); this was the one in primary.
+                        Text(label).dsText(.heading20)
+                            .foregroundStyle(named.contains(label) ? DS.textPrimary : DS.brandInk)
+                    }
+                    .textCase(nil)
+                    // On a panel the day stands in the rows' column, as the
+                    // Feed's days do (prd §1219).
+                    .padding(.leading, panelled ? DSRoomChassis.rowInset : DS.Space.s4)
+                    // The FIRST day heading sits directly under the scope
+                    // switcher, which already carries its own bottom inset — the
+                    // macro pad belongs BETWEEN days, not above the first one, and
+                    // spending it there opened a ~45pt dead band on Activity that
+                    // Home (whose lead section is a small header) never had.
+                    .padding(.top, groupIndex == 0 ? DS.Space.s1 : DS.Space.s6)
+                    .padding(.bottom, DS.Space.s1)
+                    .listRowInsets(EdgeInsets())
+                    .feedRowBackground()
+                    .listRowSeparator(.hidden)
                 }
-                .textCase(nil)
-                .padding(.leading, DS.Space.s4)
-                // The FIRST day heading sits directly under the scope
-                // switcher, which already carries its own bottom inset — the
-                // macro pad belongs BETWEEN days, not above the first one, and
-                // spending it there opened a ~45pt dead band on Activity that
-                // Home (whose lead section is a small header) never had.
-                .padding(.top, groupIndex == 0 ? DS.Space.s1 : DS.Space.s6)
-                .padding(.bottom, DS.Space.s1)
-                .listRowInsets(EdgeInsets())
-                .feedRowBackground()
-                .listRowSeparator(.hidden)
                 ForEach(Array(dayRows.enumerated()), id: \.element.id) { i, row in
                     if row.id == boundary { newSinceDivider }
                     switch row.kind {

@@ -1,7 +1,8 @@
 import SwiftUI
 
 /// **HOME IS FOUR SHORT LISTS (user, 2026-10-08): Needs you, Coming up,
-/// Spending, Transactions — five rows each, then a door.** Needs you, Coming
+/// Spending, Transactions — five rows each, then a door**, in the Feed's
+/// shape since prd §1219: a glance tile per list, each list on a panel. Needs you, Coming
 /// up and Spending open in place (they are bounded: what waits, what is
 /// dated, the places this month); Transactions keeps its history screen.
 extension FeedScreen {
@@ -14,35 +15,121 @@ extension FeedScreen {
         let groups = walletComingUpDays(upcoming)
         let needs = groups.first { $0.0 == Self.needsYouGroup }?.1 ?? []
         let dated = groups.filter { $0.0 != Self.needsYouGroup }.flatMap(\.1)
-
-        if !needs.isEmpty {
-            let open = walletOpenSections.contains("needs")
-            walletDaySections([(Self.needsYouGroup, open ? needs : Array(needs.prefix(Self.walletHomeCap)))],
-                              boundary: nil, named: [Self.needsYouGroup], nextEventID: nextEventID)
-            walletHomeDoor("needs", total: needs.count)
-        }
-
-        if !dated.isEmpty {
-            let open = walletOpenSections.contains("coming")
-            walletHomeTitle(String(localized: "Coming up"))
-            walletDaySections(walletRowDays(open ? dated : Array(dated.prefix(Self.walletHomeCap))),
-                              boundary: nil, nextEventID: nextEventID)
-            walletHomeDoor("coming", total: dated.count)
-        }
-
         // Spending reads every card and wallet together, so it stands on All.
-        if selectedSeat == nil, selectedWallet == nil {
+        let spends = selectedSeat == nil && selectedWallet == nil
+        let stream = walletStream(all)
+        // **THE FEED'S SHAPE (prd §1219, user: "we need to be reusing
+        // templates").** A tile per list with its most recent item — the
+        // Feed's `GlanceTile` — then each list on the Feed's panel, skipping
+        // what its tile showed (§1208l).
+        let specs = Self.walletGlance([
+            (Self.needsYouGroup, Self.things(needs)),
+            (Self.comingUpName, Self.things(dated)),
+            (Self.spendingName, spends ? [SpendingReading.shared.latest].compactMap { $0 } : []),
+            (Self.transactionsName, Self.things(stream.rows)),
+        ])
+        let shown = Self.glanceShown(specs, lede: nil)
+        let unseen: ([FeedRow]) -> [FeedRow] = { rows in
+            rows.filter { row in Self.things([row]).allSatisfy { !shown.contains($0.id) } }
+        }
+
+        Group {
+            contentsGrid(specs) { name in walletHomeJump(name) }
+        }
+        // The Spending reading starts here, whatever Home shows.
+        .task(id: walletSpendingKey) { await SpendingReading.shared.refresh(modelContext) }
+
+        let restNeeds = unseen(needs)
+        if !restNeeds.isEmpty {
+            let open = walletOpenSections.contains("needs")
+            walletPanel(Self.needsYouGroup, glyph: Self.walletHomeGlyph(Self.needsYouGroup), things: Self.things(restNeeds)) {
+                walletDaySections([(Self.needsYouGroup, open ? restNeeds : Array(restNeeds.prefix(Self.walletHomeCap)))],
+                                  boundary: nil, named: [Self.needsYouGroup], headless: true,
+                                  nextEventID: nextEventID)
+                walletHomeDoor("needs", total: restNeeds.count)
+            }
+        }
+
+        let restDated = unseen(dated)
+        if !restDated.isEmpty {
+            let open = walletOpenSections.contains("coming")
+            walletPanel(Self.comingUpName, glyph: Self.walletHomeGlyph(Self.comingUpName), things: Self.things(restDated)) {
+                walletDaySections(walletRowDays(open ? restDated : Array(restDated.prefix(Self.walletHomeCap))),
+                                  boundary: nil, panelled: true, nextEventID: nextEventID)
+                walletHomeDoor("coming", total: restDated.count)
+            }
+        }
+
+        if spends {
             walletSpendingSection
         }
 
-        if !all.isEmpty {
-            // The Spending reading starts here: this title stands whenever
-            // Home has rows, and Spending's own section may not exist yet.
-            walletHomeTitle(String(localized: "Transactions"))
-                .task(id: walletSpendingKey) { await SpendingReading.shared.refresh(modelContext) }
-            let stream = walletStream(all)
-            walletStreamSections(stream.rows, ownMoves: stream.ownMoves, nextEventID: nextEventID)
-            walletSeeAllSection(total: all.count)
+        let restMoves = unseen(stream.rows)
+        if !restMoves.isEmpty {
+            walletPanel(Self.transactionsName, glyph: Self.walletHomeGlyph(Self.transactionsName), things: Self.things(restMoves)) {
+                walletStreamSections(restMoves, ownMoves: stream.ownMoves, panelled: true, nextEventID: nextEventID)
+                walletSeeAllSection(total: all.count)
+            }
+        }
+    }
+
+    /// Home's lists in order, for the pill (prd §1219).
+    static var walletHomeNames: [String] { [needsYouGroup, comingUpName, spendingName, transactionsName] }
+
+    static func walletHomeGlyph(_ name: String) -> String {
+        switch name {
+        case needsYouGroup: return ScopeTileGlyph.alerts
+        case comingUpName: return ScopeTileGlyph.comingUp
+        case spendingName: return ScopeTileGlyph.cards
+        default: return ScopeTileGlyph.activity
+        }
+    }
+
+    static var comingUpName: String { String(localized: "Coming up") }
+    static var spendingName: String { String(localized: "Spending") }
+    static var transactionsName: String { String(localized: "Transactions") }
+
+    /// The live things behind a list's rows, in order.
+    static func things(_ rows: [FeedRow]) -> [Thing] {
+        rows.compactMap { row in
+            if case .single(let item) = row.kind { return item.live }
+            return nil
+        }
+    }
+
+    /// One tile per list that has something, its most recent item leading
+    /// and the one after it in grey, as the Feed's tiles are (prd §1219).
+    static func walletGlance(_ lists: [(String, [Thing])]) -> [GlanceSpec] {
+        lists.compactMap { name, things in
+            let live = things.filter(\.isLive)
+            guard let first = live.first else { return nil }
+            return GlanceSpec(category: name, things: live, newest: first,
+                              next: live.dropFirst().first, pictured: nil, cast: nil)
+        }
+    }
+
+    /// A Home list on the Feed's panel, under an identity the list knows
+    /// before its rows are laid out — the Feed's own `sectionID` — so a
+    /// tile can scroll to a list still off screen.
+    func walletPanel<Rows: View>(_ name: String, glyph: String, things: [Thing],
+                                 @ViewBuilder rows: @escaping () -> Rows) -> some View {
+        ForEach([Self.sectionID(name)], id: \.self) { _ in
+            panelSection(name, glyph: glyph, things: things, rows: rows)
+        }
+    }
+
+    /// A tile's press: its list's name comes to the top, where the pill
+    /// takes it over, and brightens once — the Feed's landing (prd §1208l),
+    /// the section's identity first, then its name, as `settleFeedJump` does.
+    func walletHomeJump(_ name: String) {
+        panelScrollTarget = Self.sectionID(name)
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(450))
+            panelScrollTarget = Self.scrollAnchor(name)
+            try? await Task.sleep(for: .milliseconds(250))
+            withAnimation(DS.Motion.standard) { landedSection = name }
+            try? await Task.sleep(for: .milliseconds(900))
+            withAnimation(.easeOut(duration: 0.6)) { landedSection = nil }
         }
     }
 
@@ -57,20 +144,6 @@ extension FeedScreen {
             groups[label, default: []].append(row)
         }
         return order.map { ($0, groups[$0] ?? []) }
-    }
-
-    /// A section's name, in the primary ramp: a section is named by what it
-    /// is, and only a day wears the brand hue (prd §740).
-    func walletHomeTitle(_ title: String) -> some View {
-        Section {
-            Text(verbatim: title).dsText(.heading20).foregroundStyle(DS.textPrimary)
-                .padding(.leading, DS.Space.s4)
-                .padding(.top, DS.Space.s6)
-                .padding(.bottom, DS.Space.s1)
-                .listRowInsets(EdgeInsets())
-                .feedRowBackground()
-                .listRowSeparator(.hidden)
-        }
     }
 
     /// "See all 9" under a capped section, "Show fewer" once it is open; no
@@ -105,18 +178,15 @@ extension FeedScreen {
         if !reading.places.isEmpty {
                 let open = walletOpenSections.contains("spending")
                 let mask = BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil
+                walletPanel(Self.spendingName, glyph: Self.walletHomeGlyph(Self.spendingName), things: []) {
                 Section {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Spending").dsText(.heading20).foregroundStyle(DS.textPrimary)
-                        Text(verbatim: Self.spendingLine(reading, mask: mask))
-                            .dsText(.label12).foregroundStyle(DS.textSecondary)
-                    }
-                    .padding(.leading, DS.Space.s4)
-                    .padding(.top, DS.Space.s6)
-                    .padding(.bottom, DS.Space.s1)
-                    .listRowInsets(EdgeInsets())
-                    .feedRowBackground()
-                    .listRowSeparator(.hidden)
+                    Text(verbatim: Self.spendingLine(reading, mask: mask))
+                        .dsText(.label12).foregroundStyle(DS.textSecondary)
+                        .padding(.leading, DSRoomChassis.rowInset)
+                        .padding(.bottom, DS.Space.s1)
+                        .listRowInsets(EdgeInsets())
+                        .feedRowBackground()
+                        .listRowSeparator(.hidden)
                     ForEach(open ? reading.places : Array(reading.places.prefix(Self.walletHomeCap)),
                             id: \.name) { place in
                         SubscriptionRow(name: place.name, line: Text(verbatim: Self.spendingTimes(place.count))) {
@@ -131,6 +201,7 @@ extension FeedScreen {
                 }
                 walletHomeDoor("spending", total: reading.places.count,
                                noun: String(localized: "All \(reading.places.count) places"))
+                }
         }
     }
 

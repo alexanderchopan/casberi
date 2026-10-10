@@ -33,6 +33,14 @@ extension FeedScreen {
         HomeScope.feedCategories(chips: chrome.chipOrder)
     }
 
+    /// The sections the pill names (prd §1208d): the Feed's categories, or
+    /// the Wallet Home's lists (prd §1219).
+    var pillSections: [String] {
+        if scrollsCategories { return scrollCategories }
+        if shape == .wallet, (chrome.walletSection ?? .home) == .home { return Self.walletHomeNames }
+        return []
+    }
+
     /// The section a thing stands in: its category, Reading's under Media
     /// (prd §1204), nil for anything with no category page (a note of yours).
     static func scrollCategory(of thing: Thing) -> String? {
@@ -66,24 +74,40 @@ extension FeedScreen {
     /// stands on the panel's fill, and an end cap rounds its foot.
     @ViewBuilder
     private func scrollSection(_ category: String, _ things: [Thing], nextEventID: UUID?) -> some View {
-        // A chapter's air stands between panels, never inside one.
-        Section {
-            Color.clear
-                .frame(height: DS.Space.s6)
-                .listRowInsets(EdgeInsets())
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-                .accessibilityHidden(true)
-            scrollHeader(category, things).listRowBackground(SectionPanel(part: .top, lit: landedSection == category))
-        }
         let _ = { memo.sectionCounts[category] = things.count }()
         let cap = sectionCaps[category] ?? Self.sectionFirstRows
-        let _ = { Self.sectionCapNow = (category, cap) }()
-        Group {
+        panelSection(category, glyph: CategoryFold.glyph(for: category), things: things) {
+            let _ = { Self.sectionCapNow = (category, cap) }()
             categorySections(category, things, nextEventID: nextEventID)
+            let _ = { Self.sectionCapNow = nil }()
+        }
+    }
+
+    /// A named section on its panel (prd §1208d): the name caps the top,
+    /// the rows stand on the panel's fill, an end cap rounds the foot. The
+    /// Feed's categories and the Wallet's Home lists (prd §1219) both draw
+    /// through this one template.
+    @ViewBuilder
+    func panelSection<Rows: View>(_ name: String, glyph: String, things: [Thing],
+                                  @ViewBuilder rows: () -> Rows) -> some View {
+        // A chapter's air stands between panels, never inside one. The name
+        // carries an identity the list knows before it is laid out, so a
+        // jump can land on a section still off screen.
+        Section {
+            ForEach([Self.scrollAnchor(name)], id: \.self) { _ in
+                Color.clear
+                    .frame(height: DS.Space.s6)
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                    .accessibilityHidden(true)
+                scrollHeader(name, glyph: glyph, things).listRowBackground(SectionPanel(part: .top, lit: landedSection == name))
+            }
+        }
+        Group {
+            rows()
         }
         .environment(\.feedSectionPanel, true)
-        let _ = { Self.sectionCapNow = nil }()
         Section {
             Color.clear
                 .frame(height: DS.Space.s4)
@@ -122,14 +146,14 @@ extension FeedScreen {
     /// Nothing to press: the sections do not fold (§1208c), and nothing in
     /// the Feed opens a screen of its own (§1208a). As it reaches the top it
     /// shrinks into the pill that names where you are.
-    private func scrollHeader(_ category: String, _ things: [Thing]) -> some View {
+    private func scrollHeader(_ category: String, glyph: String, _ things: [Thing]) -> some View {
         let seen = NewSeen.shared.ids
         let fresh = newSince.map { since in
             things.filter { $0.isLive && $0.capturedAt > since && !seen.contains($0.id) }.count
         } ?? 0
         let calm = reduceMotion
         return HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-            Image(systemName: CategoryFold.glyph(for: category))
+            Image(systemName: glyph)
                 .dsGlyph(.body)
                 .foregroundStyle(DS.brandInk)
                 .accessibilityHidden(true)
@@ -153,7 +177,6 @@ extension FeedScreen {
         .animation(DS.Motion.standard, value: fresh)
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(.isHeader)
-        .id(Self.scrollAnchor(category))
         .padding(.leading, DSRoomChassis.rowInset)
         .padding(.trailing, DSRoomChassis.rowInset)
         .padding(.top, DS.Space.s4)
@@ -188,11 +211,11 @@ extension FeedScreen {
     /// dictionary write per frame and a body pass per section crossed.
     private func noteSectionTop(_ category: String, _ y: CGFloat) {
         memo.sectionTops[category] = y
-        let current = scrollCategories.last { (memo.sectionTops[$0] ?? .infinity) < Self.whereLine }
+        let current = pillSections.last { (memo.sectionTops[$0] ?? .infinity) < Self.whereLine }
         guard feedSection != current else { return }
         // The word pushes in from the way you are going, and a section
         // crossed is felt once (prd §1208l) — a change of place, never a tap.
-        let order = scrollCategories
+        let order = pillSections
         let from = feedSection.flatMap { order.firstIndex(of: $0) } ?? -1
         let to = current.flatMap { order.firstIndex(of: $0) } ?? -1
         feedSectionForward = to >= from
@@ -207,29 +230,35 @@ extension FeedScreen {
     @ViewBuilder
     func feedSectionPill(_ proxy: ScrollViewProxy) -> some View {
         Group {
-            if scrollsCategories, let section = feedSection {
+            if !pillSections.isEmpty, let section = feedSection {
                 // A press takes the Feed to its top (prd §1212); a hold lists
                 // the sections in Feed order with today's counts, and a pick
-                // scrolls there (prd §1208l).
+                // scrolls there (prd §1208l). The Wallet's Home wears the same
+                // pill over its lists (prd §1219).
+                let wallet = shape == .wallet
                 Menu {
-                    ForEach(scrollCategories, id: \.self) { category in
+                    ForEach(pillSections, id: \.self) { category in
                         Button {
-                            chrome.feedJump = category
-                            settleFeedJump(proxy)
+                            if wallet {
+                                walletHomeJump(category)
+                            } else {
+                                chrome.feedJump = category
+                                settleFeedJump(proxy)
+                            }
                         } label: {
                             Label {
                                 Text(verbatim: category)
                             } icon: {
-                                Image(systemName: CategoryFold.glyph(for: category))
+                                Image(systemName: wallet ? Self.walletHomeGlyph(category) : CategoryFold.glyph(for: category))
                             }
-                            if let n = memo.sectionCounts[category], n > 0 {
+                            if !wallet, let n = memo.sectionCounts[category], n > 0 {
                                 Text("\(n) today")
                             }
                         }
                     }
                 } label: {
                     HStack(spacing: DS.Space.s1) {
-                        Text("Feed").foregroundStyle(DS.textSecondary)
+                        (wallet ? Text("Wallet") : Text("Feed")).foregroundStyle(DS.textSecondary)
                         Text(verbatim: "·").foregroundStyle(DS.textTertiary)
                         Text(verbatim: section)
                             .foregroundStyle(DS.brandInk)
@@ -376,7 +405,7 @@ extension FeedScreen {
     /// The contents as tiles (prd §1208d): two across, one per category with
     /// something today, in the dock's order.
     @ViewBuilder
-    func contentsGrid(_ specs: [GlanceSpec]) -> some View {
+    func contentsGrid(_ specs: [GlanceSpec], onPick: ((String) -> Void)? = nil) -> some View {
         if !specs.isEmpty {
             Section {
                 GlanceGrid {
@@ -385,7 +414,7 @@ extension FeedScreen {
                                    newest: spec.newest, next: spec.next,
                                    pictured: spec.pictured, cast: spec.cast) {
                             DSHaptic.selection()
-                            chrome.sourceRequest = spec.category
+                            if let onPick { onPick(spec.category) } else { chrome.sourceRequest = spec.category }
                         }
                     }
                 }

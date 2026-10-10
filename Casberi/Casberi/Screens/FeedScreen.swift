@@ -620,6 +620,8 @@ struct FeedScreen: View {
     /// layers below it, so passing it would mean a signature change on
     /// `shapedSections` and every room's builder — for one tap in one room.
     @State var cardScrollTarget: String?
+    /// A Wallet Home tile's jump (prd §1219), landing at the top.
+    @State var panelScrollTarget: String?
     /// The combined portfolio behind the treemap (2026-07-21, prd §155) — one
     /// derivation the balance headline, the concentration line, and the
     /// allocation tray all read, so nothing on this screen can disagree with
@@ -1403,6 +1405,15 @@ struct FeedScreen: View {
                 // unchanged binding would fire `onChange` once and then look
                 // broken on every later tap.
                 cardScrollTarget = nil
+            }
+            // A Home list's name to the top, where the pill takes it over —
+            // the Feed's landing (prd §1219).
+            .onChange(of: panelScrollTarget) { _, target in
+                guard let target else { return }
+                withAnimation(DS.Motion.standard) {
+                    proxy.scrollTo(target, anchor: .top)
+                }
+                panelScrollTarget = nil
             }
             // **A SCOPE CHANGE RETURNS TO THE TOP** (prd §495, user: *"when
             // you click any of the button on the toggle bar the bar jumps. we

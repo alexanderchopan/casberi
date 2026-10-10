@@ -65627,3 +65627,12 @@ Left as they are, on purpose: calendars keep Subscribe (§1137), a mail list kee
 Every `DSScopeTiles` row (the Feed's Feed · Markets · Settings · Sources, and every screen's tiles) draws its pick in the page's own ink: a white tile with black glyph and word in dark, a black one with white in light — Control Center's "on" (`DSScopeTiles.pickFill`, `pickInk`). The tint fill read as the system's stock blue, and the pink belongs to the title row above, so the row owns no colour of its own. Every tile keeps its plate, so the unpicked three still read as buttons (the plateless "quiet" row was declined for that reason). A verb tile keeps its tint ink (§969); a word that wants you keeps `attentionInk`.
 
 Declined: the segmented control with a sliding lens. The Feed's row is one view and three doors that rise as sheets (§1208m), so the lens could only ever sit on Feed.
+
+## §1219 — The Wallet's Home takes the Feed's shape, from the Feed's own parts (user, 2026-10-10: "we need to be reusing templates")
+
+1. **A glance tile per Home list**: Needs you, Coming up, Spending, Transactions, each the Feed's `GlanceTile` in its `GlanceGrid` (`contentsGrid`, now taking an `onPick`), showing that list's most recent item (the next due for Coming up, the latest purchase for Spending, `SpendingReading.latest`) and the one after it in grey. A list with nothing draws no tile; Spending's stands on All only. No "Biggest move" (user: "cheesy").
+2. **Each list on the Feed's panel** through one template, `panelSection` (the Feed's categories draw through it too): the name with its glyph caps the panel, the rows stand on its fill, an end cap rounds the foot. The list skips what its tile showed (§1208l's rule, `glanceShown`); a day inside a panel stands in the rows' column (`walletDaySections(panelled:)`).
+3. **A tile jumps to its list** and the list brightens once, the Feed's landing; the Feed's section pill names where you are, "Wallet · Coming up" (`pillSections`), and holds the four lists.
+4. **Four tiles, never more** (user: more tiles "made it look vibe coded").
+
+Next, agreed and not yet built: Holdings, Security and Subscriptions rise as sheets from their tiles, the Feed's rule for Markets, Settings and Sources (§1208m).

@@ -16,6 +16,8 @@ final class SpendingReading {
     private(set) var reading = Spending.Reading(total: 0, earlier: nil, places: [])
     /// True once a read has finished, so the section can tell "none" from "not yet".
     private(set) var read = false
+    /// The newest purchase, for Home's Spending tile (prd §1219).
+    private(set) var latest: Thing?
 
     private init() {}
 
@@ -43,6 +45,11 @@ final class SpendingReading {
         }
         let next = Spending.read(charges, now: now, calendar: calendar)
         if next != reading { reading = next }
+        // The newest charge that is a spend, back to its row (the rows are
+        // newest first, and a charge carries its row's moment).
+        let newestAt = raw.filter { $0.amount > 0 }.map(\.at).max()
+        let found = newestAt.flatMap { at in things.first { $0.capturedAt == at } }
+        if found?.id != latest?.id { latest = found }
         read = true
     }
 }
