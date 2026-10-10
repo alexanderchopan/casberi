@@ -1590,7 +1590,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1221 — Security's box is Settings' count grid
 - §1222 — What this app reaches takes the Feed's shape
 - §1223 — A Watchlist widget, small
-- §1223 — A Wallet box leads with its figure
+- §1224 — A Wallet box leads with its figure
 
 ## Dead rulings → what replaced them (generated)
 

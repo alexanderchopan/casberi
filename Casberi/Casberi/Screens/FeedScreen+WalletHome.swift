@@ -109,7 +109,7 @@ extension FeedScreen {
         }
     }
 
-    /// **A MONEY BOX LEADS WITH ITS FIGURE (prd §1223)**, as the Feed's
+    /// **A MONEY BOX LEADS WITH ITS FIGURE (prd §1224)**, as the Feed's
     /// money tiles do: the amount the row would show, through Hide balances,
     /// over who or what it was — the counterparty, a card's name, else the
     /// title's first clause, so a long title never runs out of the box.

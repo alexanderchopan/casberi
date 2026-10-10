@@ -401,7 +401,7 @@ extension FeedScreen {
         let pictured: Thing?
         let cast: ThingCastRoll?
         /// The figure and what it was, when the caller knows them better
-        /// than the title does (the Wallet's lists, prd §1223).
+        /// than the title does (the Wallet's lists, prd §1224).
         var money: (title: String, amount: String)? = nil
     }
 
