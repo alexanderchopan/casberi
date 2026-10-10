@@ -161,6 +161,19 @@ extension FeedScreen {
 
     static var subscriptionsOther: String { String(localized: "Other") }
 
+    /// A plan's name as the row says it: the catalogue app's own name when
+    /// the merchant is one (§1113's rule), else the merchant's name without
+    /// its web suffix when that is a service we draw a mark for ("Netflix.com"
+    /// is Netflix), else the name as the card wrote it.
+    static func shownName(_ raw: String) -> String {
+        if let offer = ServiceIdentity.offer(forPlan: raw, in: ServiceLinks.catalogue) { return offer }
+        let name = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let dot = name.lastIndex(of: "."), dot != name.startIndex,
+              name[name.index(after: dot)...].allSatisfy(\.isLetter) else { return raw }
+        let base = String(name[..<dot])
+        return BridgeIcon.hasMark(base) ? base : raw
+    }
+
     /// The list this plan's service mails you from, as its row says it
     /// (§1113's join, read by `ServiceLinks` from the tile's `.task`).
     func walletSubscriptionWrites(_ item: Subscriptions.Item) -> String? {
@@ -191,7 +204,10 @@ struct SubscriptionsSummary: View {
     let onPick: (String?) -> Void
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    static let mapHeight: CGFloat = 200
+    /// ONE SHORT ROW (user, 2026-10-10: the map was the biggest thing on
+    /// the page and said the least): the split at a glance, the list a
+    /// screen higher. Too short for two rows, so the layout lays one.
+    static let mapHeight: CGFloat = 64
 
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
@@ -243,35 +259,40 @@ struct SubscriptionsSummary: View {
     private func tileView(_ tile: HoldingsTreemapLayout.Tile) -> some View {
         let isOther = tile.id == SubscriptionCategories.otherKey
         let isLit = pick == tile.id
-        let small = min(tile.rect.width, tile.rect.height) < 72
+        // A narrow tile keeps its words and gives up its glyph.
+        let roomy = tile.rect.width >= 112
         Button {
             DSHaptic.selection()
             withAnimation(reduceMotion ? nil : DS.Motion.standard) {
                 onPick(isLit ? nil : tile.id)
             }
         } label: {
-            VStack(alignment: .leading, spacing: 0) {
-                if !isOther {
-                    Image(systemName: CategoryFold.glyph(for: tile.id))
-                        .dsGlyph(small ? .body : .title)
+            HStack(spacing: DS.Space.s2) {
+                if roomy {
+                    Image(systemName: isOther ? "ellipsis" : CategoryFold.glyph(for: tile.id))
+                        .dsGlyph(.body)
                         .foregroundStyle(isLit ? Color.white : DS.textPrimary)
+                        .frame(width: 22)
+                        .accessibilityHidden(true)
+                }
+                VStack(alignment: .leading, spacing: 0) {
+                    Text(verbatim: HoldingsTreemapLayout.percent(tile.share))
+                        .dsText(.price17)
+                        .monospacedDigit()
+                        .foregroundStyle(isLit ? Color.white : DS.textPrimary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
+                    Text(verbatim: Self.name(tile.id))
+                        .dsText(.label12)
+                        .foregroundStyle(isLit ? Color.white : DS.textSecondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
                 }
                 Spacer(minLength: 0)
-                Text(verbatim: HoldingsTreemapLayout.percent(tile.share))
-                    .dsText(small ? .label12 : .price17)
-                    .monospacedDigit()
-                    .foregroundStyle(isLit ? Color.white : DS.textPrimary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.6)
-                Text(verbatim: Self.name(tile.id))
-                    .dsText(.label12)
-                    .foregroundStyle(isLit ? Color.white : DS.textSecondary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
             }
-            .padding(small ? DS.Space.s2 : DS.Space.s3)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            .background(RoundedRectangle(cornerRadius: small ? 12 : 14, style: .continuous)
+            .padding(.horizontal, DS.Space.s3)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+            .background(RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .fill(isLit ? DS.tint : DS.fillFaint))
             .opacity(pick != nil && !isLit ? 0.35 : 1)
             .contentShape(Rectangle())
@@ -335,7 +356,10 @@ struct WalletSubscriptionRow: View {
 
     var body: some View {
         let mask = BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil
-        SubscriptionRow(name: item.name, line: Self.line(item, mask: mask, writes: writes)) {
+        // The app's own name when the card's merchant is a catalogue app
+        // ("Netflix.com" is Netflix, §1113's rule), else the merchant's.
+        SubscriptionRow(name: FeedScreen.shownName(item.name),
+                        line: Self.line(item, mask: mask, writes: writes)) {
             if item.amount == 0 {
                 Text(verbatim: SubscriptionWords.free)
                     .dsText(.price17).foregroundStyle(DS.textSecondary)
