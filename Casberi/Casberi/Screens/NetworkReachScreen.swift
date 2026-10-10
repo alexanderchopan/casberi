@@ -28,6 +28,7 @@ struct NetworkReachScreen: View {
     @State private var confirmForget = false
     /// A category's panel brightened once after a tile's jump (prd §1222).
     @State private var landed: String?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var connectedNames: Set<String> {
         Set(store.bridges.filter { $0.status == .connected }.map(\.name))
@@ -200,14 +201,16 @@ struct NetworkReachScreen: View {
     /// A tile's press: its category's panel to the top, brightened once —
     /// the Feed's landing (prd §1208l).
     private func jump(_ category: String, _ proxy: ScrollViewProxy) {
-        withAnimation(DS.Motion.standard) {
+        // Under Reduce Motion the scroll lands at once and the panel only
+        // brightens, never a travel.
+        withAnimation(reduceMotion ? nil : DS.Motion.standard) {
             proxy.scrollTo(Self.anchor(category), anchor: .top)
         }
         Task { @MainActor in
             try? await Task.sleep(for: .milliseconds(350))
-            withAnimation(DS.Motion.standard) { landed = category }
+            withAnimation(reduceMotion ? nil : DS.Motion.standard) { landed = category }
             try? await Task.sleep(for: .milliseconds(900))
-            withAnimation(.easeOut(duration: 0.6)) { landed = nil }
+            withAnimation(reduceMotion ? nil : .easeOut(duration: 0.6)) { landed = nil }
         }
     }
 
