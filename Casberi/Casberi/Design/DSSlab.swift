@@ -817,11 +817,14 @@ struct DSSlabDoor: View {
     /// A nil `url` is an inert control, drawn as one (§83) — the sibling's
     /// guard, which this door's first cut lacked.
     private var inert = false
+    /// `false` draws no chevron: a verb done where it stands ("Try again",
+    /// "Copy address") goes nowhere, and a chevron promises it does (§83).
+    private var opens = true
 
     init(title: String, detail: String = "", systemImage: String? = nil,
-         action: @escaping () -> Void) {
+         opens: Bool = true, action: @escaping () -> Void) {
         self.title = title; self.detail = detail; self.systemImage = systemImage
-        self.action = action
+        self.opens = opens; self.action = action
     }
 
     init(title: String, detail: String = "", systemImage: String? = nil,
@@ -863,9 +866,11 @@ struct DSSlabDoor: View {
                         .lineLimit(1)
                         .truncationMode(.middle)
                 }
-                Image(systemName: "chevron.right")
-                    .dsGlyph(.caption)
-                    .foregroundStyle(DS.textTertiary)
+                if opens {
+                    Image(systemName: "chevron.right")
+                        .dsGlyph(.caption)
+                        .foregroundStyle(DS.textTertiary)
+                }
             }
             .dsActRowFrame(glyphless: systemImage == nil)
         }
@@ -896,9 +901,11 @@ struct DSSlabDoor: View {
                         .dsText(.subhead12).foregroundStyle(DS.textTertiary)
                         .lineLimit(1)
                 }
-                Image(systemName: "chevron.right")
-                    .dsGlyph(.caption)
-                    .foregroundStyle(DS.textTertiary)
+                if opens {
+                    Image(systemName: "chevron.right")
+                        .dsGlyph(.caption)
+                        .foregroundStyle(DS.textTertiary)
+                }
             }
             .padding(.horizontal, DS.Space.s4)
             .frame(height: DSSlab.height)

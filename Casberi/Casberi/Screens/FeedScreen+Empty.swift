@@ -87,7 +87,7 @@ extension FeedScreen {
                 .settleIn(delay: 0.05)
             if words.offersDoor, let seat = quietSeat {
                 emptyDoor(String(localized: "Open \(seat.name)"), glyph: "slider.horizontal.3") {
-                    route.openSetup(forOffer: seat.name)
+                    route.openAccount(BridgeRouter.destination(forID: seat.id))
                 }
             }
         }

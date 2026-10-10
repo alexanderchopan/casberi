@@ -592,7 +592,9 @@ struct SettingsHome: View {
         DSPushRow(title: Text(verbatim: app.name),
                   fact: Text(verbatim: app.statusLine),
                   factTone: app.status == .attention ? DS.attentionInk : DS.textTertiary) {
-            route.openSetup(forOffer: app.name)
+            // By the seat, as the catalogue's connected row opens (prd
+            // §1050f): an offer with no setup page still has this one.
+            route.openAccount(BridgeRouter.destination(forID: app.id))
         } leading: {
             BridgeIcon(name: app.name, size: DS.Mark.notice)
         }

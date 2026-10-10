@@ -191,6 +191,8 @@ struct DSChevron: View {
 struct DSMoreLink: View {
     let title: Text
     var tint: Color = DS.tint
+    /// `false` draws no chevron: "Show fewer" folds in place, it goes nowhere.
+    var opens = true
     let action: () -> Void
 
     var body: some View {
@@ -203,9 +205,11 @@ struct DSMoreLink: View {
                     .dsText(.label12)
                     .monospacedDigit()
                     .lineLimit(1)
-                Image(systemName: "chevron.right")
-                    .dsGlyph(.tick, weight: .bold)
-                    .accessibilityHidden(true)
+                if opens {
+                    Image(systemName: "chevron.right")
+                        .dsGlyph(.tick, weight: .bold)
+                        .accessibilityHidden(true)
+                }
             }
             .foregroundStyle(tint)
             .contentShape(Rectangle())

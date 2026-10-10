@@ -405,7 +405,7 @@ struct SafeSignBlock: View {
                         // threshold of 1 is not answered by asking again.
                         if case .chainUnreadable = refusal {
                             DSSlabDoor(title: String(localized: "Try again"),
-                                       systemImage: "arrow.clockwise") {
+                                       systemImage: "arrow.clockwise", opens: false) {
                                 phase = .checking
                                 attempt += 1
                             }

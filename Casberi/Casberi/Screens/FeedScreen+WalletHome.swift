@@ -81,7 +81,8 @@ extension FeedScreen {
             let open = walletOpenSections.contains(key)
             Section {
                 DSMoreLink(title: open ? Text("Show fewer")
-                                       : Text(verbatim: noun ?? String(localized: "See all \(total)"))) {
+                                       : Text(verbatim: noun ?? String(localized: "See all \(total)")),
+                            opens: !open) {
                     withAnimation(DS.Motion.standard) {
                         if open { walletOpenSections.remove(key) } else { walletOpenSections.insert(key) }
                     }

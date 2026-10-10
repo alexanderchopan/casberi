@@ -335,7 +335,16 @@ final class HomeRoute {
     /// room is pushed, because it navigates through this very stack and its
     /// own doors would open behind a sheet.
     @MainActor func openSetup(forOffer name: String) {
-        guard let dest = BridgeRouter.destination(forOffer: name) else { return }
+        guard let dest = BridgeRouter.destination(forOffer: name) else {
+            // An offer with no routing row (Calendar, Reminders, Photos, …)
+            // returned here silently, so every door naming one was dead. It
+            // lands where its catalogue row's tap lands instead, through that
+            // row's own action (`openOffer`): a connected seat's page, or the
+            // one-tap connect.
+            openOffer = name
+            present(.apps)
+            return
+        }
         openAccount(dest)
     }
 

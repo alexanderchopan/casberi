@@ -168,7 +168,7 @@ struct RSSScreen: View {
             ForEach(parsed.namedGroups, id: \.name) { group in
                 DSSlabDoor(title: group.name,
                            detail: group.feeds.count == 1 ? "1 feed" : "\(group.feeds.count) feeds",
-                           systemImage: "folder") {
+                           systemImage: "folder", opens: false) {
                     importScope(group.feeds)
                 }
             }

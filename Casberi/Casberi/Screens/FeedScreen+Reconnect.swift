@@ -29,7 +29,7 @@ extension FeedScreen {
                               // there is nothing to reconnect. Its page says which.
                               fact: Text("Needs attention"),
                               factTone: DS.attentionInk) {
-                        route.openSetup(forOffer: app.name)
+                        route.openAccount(BridgeRouter.destination(forID: app.id))
                     } leading: {
                         BridgeIcon(name: app.name, size: DS.Face.row)
                     }

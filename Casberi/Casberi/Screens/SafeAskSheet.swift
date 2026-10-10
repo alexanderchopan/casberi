@@ -142,7 +142,7 @@ struct SafeStatementBlock: View {
                         pasteField
                     }
                     if case .chainUnreadable = refusal {
-                        DSSlabDoor(title: String(localized: "Try again"), systemImage: "arrow.clockwise") {
+                        DSSlabDoor(title: String(localized: "Try again"), systemImage: "arrow.clockwise", opens: false) {
                             phase = .checking
                             attempt += 1
                         }
@@ -204,7 +204,7 @@ struct SafeStatementBlock: View {
                 .frame(minHeight: 44)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .dsWell(cornerRadius: DS.Radius.control, recessed: true)
-            DSSlabDoor(title: String(localized: "Read it"), systemImage: "text.magnifyingglass") {
+            DSSlabDoor(title: String(localized: "Read it"), systemImage: "text.magnifyingglass", opens: false) {
                 phase = .checking
                 attempt += 1
             }
@@ -380,7 +380,7 @@ struct SafeRecoveryBlock: View {
                         .dsText(.subhead12).foregroundStyle(refusalTone(refusal))
                         .fixedSize(horizontal: false, vertical: true)
                     if case .chainUnreadable = refusal {
-                        DSSlabDoor(title: String(localized: "Try again"), systemImage: "arrow.clockwise") {
+                        DSSlabDoor(title: String(localized: "Try again"), systemImage: "arrow.clockwise", opens: false) {
                             phase = .checking
                             attempt += 1
                         }

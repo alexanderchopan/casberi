@@ -68,7 +68,7 @@ struct FollowImportSheet: View {
                     // different facts and never share a line (prd §85).
                     note("Couldn't reach \(source) just now. Try again in a moment.")
                     DSSlabDoor(title: String(localized: "Try again"),
-                               systemImage: "arrow.clockwise") {
+                               systemImage: "arrow.clockwise", opens: false) {
                         rows = nil
                         reachable = true
                         read = 0

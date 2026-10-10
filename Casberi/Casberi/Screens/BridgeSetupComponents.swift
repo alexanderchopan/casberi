@@ -326,7 +326,7 @@ struct BridgeSyncStatusRows: View {
             if failed, let retry {
                 DSSlabDoor(title: String(localized: "Try again"),
                            systemImage: "arrow.clockwise",
-                           action: retry)
+                           opens: false, action: retry)
                     .dsListRow()
             }
         }

@@ -255,7 +255,7 @@ struct SafeScreen: View {
                     .dsText(.subhead12).foregroundStyle(DS.destructiveInk)
                     .fixedSize(horizontal: false, vertical: true)
                 DSSlabDoor(title: String(localized: "Make a new key"),
-                           systemImage: "signature") {
+                           systemImage: "signature", opens: false) {
                     SignerKey.delete()
                     signerAddress = nil
                     signerPresence = .none
@@ -273,7 +273,7 @@ struct SafeScreen: View {
                     Spacer(minLength: 0)
                 }
                 DSSlabDoor(title: String(localized: "Copy address"),
-                           systemImage: "doc.on.doc") {
+                           systemImage: "doc.on.doc", opens: false) {
                     DSPasteboard.copy(address)
                     chrome.flash(String(localized: "Address copied"))
                 }
@@ -309,7 +309,7 @@ struct SafeScreen: View {
                 .buttonStyle(RowPress())
             } else {
                 DSSlabDoor(title: String(localized: "Make this phone a signer"),
-                           systemImage: "signature") {
+                           systemImage: "signature", opens: false) {
                     makeSigner()
                 }
                 // The one gray sentence this section gets, and it is spent
@@ -421,7 +421,7 @@ struct SafeScreen: View {
                 DSProse.text("This phone's vault-chip key is gone — Face ID was re-enrolled, which erases it by design. Have another owner swap its signer address out of the Safe.")
                     .dsText(.subhead12).foregroundStyle(DS.destructiveInk)
                     .fixedSize(horizontal: false, vertical: true)
-                DSSlabDoor(title: String(localized: "Make a new vault-chip key"), systemImage: "cpu") {
+                DSSlabDoor(title: String(localized: "Make a new vault-chip key"), systemImage: "cpu", opens: false) {
                     SafeEnclaveKey.delete()
                     enclavePresence = .none
                     enclaveAddress = nil
@@ -445,7 +445,7 @@ struct SafeScreen: View {
                     Spacer(minLength: 0)
                 }
                 if let address = enclaveAddress {
-                    DSSlabDoor(title: String(localized: "Copy signer address"), systemImage: "doc.on.doc") {
+                    DSSlabDoor(title: String(localized: "Copy signer address"), systemImage: "doc.on.doc", opens: false) {
                         DSPasteboard.copy(address)
                         chrome.flash(String(localized: "Address copied"))
                     }
@@ -462,7 +462,7 @@ struct SafeScreen: View {
                 }
                 .buttonStyle(RowPress())
             } else if SafeEnclaveKey.enclaveAvailable, enclaveRoute == true {
-                DSSlabDoor(title: String(localized: "Make a vault-chip key"), systemImage: "cpu") {
+                DSSlabDoor(title: String(localized: "Make a vault-chip key"), systemImage: "cpu", opens: false) {
                     makeEnclaveKey()
                 }
                 Text("A P-256 key born in the Secure Enclave. Its bytes never exist in the app, so there is nothing to export — the Safe takes it through a signer contract your other wallet deploys once.")
@@ -530,7 +530,7 @@ struct SafeScreen: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .dsWell(cornerRadius: DS.Radius.control, recessed: true)
                 DSSlabDoor(title: SafePeer.state.pairing ? String(localized: "Pairing…") : String(localized: "Pair a Safe app"),
-                           systemImage: "link") {
+                           systemImage: "link", opens: false) {
                     let link = pairingLink
                     pairingLink = ""
                     Task {
@@ -621,7 +621,7 @@ struct SafeScreen: View {
                     .frame(minHeight: 44)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .dsWell(cornerRadius: DS.Radius.control, recessed: true)
-                DSSlabDoor(title: String(localized: "Read the request"), systemImage: "text.magnifyingglass") {
+                DSSlabDoor(title: String(localized: "Read the request"), systemImage: "text.magnifyingglass", opens: false) {
                     readPastedRequest()
                 }
             }
