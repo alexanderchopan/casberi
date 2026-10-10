@@ -40,9 +40,15 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
     case home
     /// What you hold — tokens, then Positions (prd §1107).
     case holdings
+    /// MARKETS IS A WALLET TILE (prd §1232, user: "markets into wallet …
+    /// it could replace subscriptions as a button"): it opens Markets as the
+    /// Feed's button did, a sheet, the same page; never a section drawn here.
+    case markets
     /// What renews, and what it costs (prd §1111): every subscription, the
     /// user's to build up. Was `comingUp` (§1041, §1107); a remembered
-    /// "comingUp" resolves to Home.
+    /// "comingUp" resolves to Home. Not a tile since prd §1232 — a list on
+    /// Home — but still the page Home's list and Sources' count open, pinned
+    /// in a sheet (§1220).
     case subscriptions
     /// Who can act for you, and what is trying to fool you (prd §1107).
     case security
@@ -51,13 +57,13 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
 
     /// The publication's order. `allCases` already declares it, but the order
     /// is a RULING (see the type's doc), stated where a self-test can assert it.
-    static let order: [WalletSection] = [.home, .holdings, .subscriptions, .security]
+    static let order: [WalletSection] = [.home, .holdings, .markets, .security]
 
     /// Which scopes can be EMPTY. They sit at the tail, and each must carry an
     /// `emptyBody`.
     var isConditional: Bool {
         switch self {
-        case .home, .holdings: return false
+        case .home, .holdings, .markets: return false
         case .subscriptions, .security: return true
         }
     }
@@ -70,6 +76,7 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .home:     return String(localized: "Home")
         case .holdings: return String(localized: "Holdings")
+        case .markets:  return String(localized: "Markets")
         // The word the app converges on for what keeps coming (prd §1111):
         // Day's mail tile says it too.
         case .subscriptions: return String(localized: "Subscriptions")
@@ -83,6 +90,7 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .home:     return String(localized: "The line, and what moved")
         case .holdings: return String(localized: "Your tokens, and money you've deployed")
+        case .markets:  return String(localized: "What you follow")
         case .subscriptions: return String(localized: "What renews, and what it costs you")
         case .security: return String(localized: "Who can act for you, and what's trying to fool you")
         }
@@ -98,6 +106,7 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
         // drew nothing at all.
         case .home:     return String(localized: "No balance yet")
         case .holdings: return String(localized: "Nothing held")
+        case .markets:  return nil
         case .subscriptions: return String(localized: "No subscriptions yet")
         case .security: return String(localized: "Nothing to review")
         }
@@ -113,6 +122,8 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
             return String(localized: "What these accounts are worth, and the line it traces.")
         case .holdings:
             return String(localized: "Tokens sized by worth, then money lent, pooled or held as a perp. Dust below the floor is left out.")
+        case .markets:
+            return nil
         case .subscriptions:
             return String(localized: "Plans that renew on a card or account, the bills that repeat, and the ones you add.")
         case .security:

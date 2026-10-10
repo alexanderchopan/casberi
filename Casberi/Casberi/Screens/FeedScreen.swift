@@ -1447,6 +1447,15 @@ struct FeedScreen: View {
             // than extending it, so it wants its own ruling rather than a
             // quiet diff.
             .onChange(of: chrome.walletSection) { _, picked in
+                // **MARKETS OPENS AS IT DID FROM THE FEED (prd §1232)**: the
+                // same request the Feed's button made, so the same sheet and
+                // the same page, on every size class; the pick stays Home.
+                if picked == .markets {
+                    chrome.walletSection = .home
+                    chrome.lastChipTouch = Date.timeIntervalSinceReferenceDate
+                    chrome.sourceRequest = HomeScope.markets
+                    return
+                }
                 // **ON THE PHONE A WALLET TILE RISES AS A SHEET (prd §1220)**,
                 // the Feed's rule for Markets, Settings and Sources (§1208m):
                 // Home is the page, and every door that asks for Holdings,

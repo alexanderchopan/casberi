@@ -99,6 +99,9 @@ enum ScopeTileGlyph {
     static let newsletters  = "newspaper"
     /// Settings' Cards (prd §1166): the cards your card apps read.
     static let cards        = "creditcard"
+    /// The Wallet's Spending list (prd §1201, §1232): what you bought, by
+    /// place. It wore Cards' card until Cards became a list of its own.
+    static let spending     = "cart"
     /// Settings' Wallets (prd §1166): the wallets you watch.
     static let wallets      = "wallet.bifold"
 }
@@ -198,7 +201,8 @@ extension AgentRoomScope: DSTileScope {
     }
 }
 
-/// The Wallet's four (prd §1107; Coming up became Subscriptions, §1111).
+/// The Wallet's four (prd §1107, §1232): Home, Holdings, Markets, Security.
+/// Subscriptions keeps its glyph for the page Home's list opens.
 /// Watch is not a tile any more: it is the first row of the Accounts pill's
 /// list.
 extension WalletSection: DSTileScope {
@@ -206,6 +210,8 @@ extension WalletSection: DSTileScope {
         switch self {
         case .home:     return ScopeTileGlyph.home
         case .holdings: return ScopeTileGlyph.holdings
+        // Markets' own dock glyph (prd §1232): the tile opens Markets.
+        case .markets:  return CategoryFold.glyph(for: HomeScope.markets)
         case .subscriptions: return ScopeTileGlyph.subscriptions
         case .security: return ScopeTileGlyph.security
         }

@@ -53,8 +53,8 @@ func check(_ ok: Bool, _ what: String) {
 }
 
 // ORDER is a ruling, not an accident of declaration.
-check(WalletSection.order == [.home, .holdings, .subscriptions, .security],
-      "order is home → holdings → subscriptions → security")
+check(WalletSection.order == [.home, .holdings, .markets, .security],
+      "order is home → holdings → markets → security (prd §1232)")
 // **FOUR TILES, ONE ROW (prd §1107).** Positions folded into Holdings, the
 // loan risk with it; Permissions and Worth a look into Security; Watch into
 // the Accounts pill; and Coming up became Subscriptions (prd §1111), its
@@ -63,9 +63,12 @@ check(WalletSection.order == [.home, .holdings, .subscriptions, .security],
 for gone in ["positions", "comingUp", "risk", "permissions", "watch", "cards", "activity", "accounts"] {
     check(WalletSection(rawValue: gone) == nil, "\(gone) is not a scope (prd §1107)")
 }
-check(WalletSection.allCases.count == 4, "the wallet has four tiles — one row (prd §1107)")
-check(WalletSection.order.count == WalletSection.allCases.count,
-      "order lists every case once — a new scope cannot be silently unlisted")
+check(WalletSection.order.count == 4, "the wallet has four tiles — one row (prd §1107)")
+// **SUBSCRIPTIONS IS A PAGE, NOT A TILE (prd §1232):** Home's list and
+// Sources' count open it in a sheet. It is the one case off the row.
+check(Set(WalletSection.order).union([.subscriptions]) == Set(WalletSection.allCases)
+      && !WalletSection.order.contains(.subscriptions),
+      "order lists every case but Subscriptions once — a new scope cannot be silently unlisted")
 check(WalletSection.security.label == "Security", "the tile reads Security, not Safety or Risk (user)")
 check(WalletSection.subscriptions.label == "Subscriptions", "the tile reads Subscriptions — Day's tile says it too (prd §1111)")
 
@@ -81,6 +84,7 @@ check(WalletSection.order.first == .home, "home leads")
 check(WalletSection.home.isAlwaysPresent, "home is always present")
 check(!WalletSection.home.isConditional, "home is not conditional")
 check(!WalletSection.holdings.isConditional, "holdings is not conditional")
+check(!WalletSection.markets.isConditional, "markets is not conditional")
 for s in [WalletSection.subscriptions, .security] {
     check(s.isConditional, "\(s.rawValue) is conditional")
 }
@@ -90,16 +94,20 @@ let all = WalletSection.present()
 check(all == WalletSection.order, "every scope is present, in order")
 check(all.count == WalletSection.order.count, "no scope is hidden from anybody")
 
-// Every scope teaches its own empty state (prd §611, §799).
-for s in WalletSection.order {
+// Every scope DRAWN here teaches its own empty state (prd §611, §799);
+// Markets opens its own page (prd §1232) and draws nothing in the Wallet.
+let drawn = WalletSection.order.filter { $0 != .markets }
+check(WalletSection.markets.emptyHeadline == nil && WalletSection.markets.emptyBody == nil,
+      "markets draws no empty state here — it opens Markets")
+for s in drawn {
     check(!(s.emptyHeadline ?? "").isEmpty, "\(s.rawValue) names its own empty state")
     check(!(s.emptyBody ?? "").isEmpty, "\(s.rawValue) says what it would hold")
     check(s.emptyBody != s.summary, "\(s.rawValue)'s empty state is not its summary restated")
     check((s.emptyBody ?? "").count > 24, "\(s.rawValue)'s empty state teaches rather than labels")
 }
-let emptyBodies = WalletSection.order.compactMap(\.emptyBody)
+let emptyBodies = drawn.compactMap(\.emptyBody)
 check(Set(emptyBodies).count == emptyBodies.count, "no two scopes explain themselves the same way")
-let emptyHeads = WalletSection.order.compactMap(\.emptyHeadline)
+let emptyHeads = drawn.compactMap(\.emptyHeadline)
 check(Set(emptyHeads).count == emptyHeads.count, "no two scopes name the same empty state")
 for s in WalletSection.order {
     let words = (s.emptyHeadline ?? "") + " " + (s.emptyBody ?? "")
@@ -170,9 +178,9 @@ mutate() {
 }
 
 mutate "a conditional scope moved out of the tail (the strip reflows)" \
-  's/\[\.home, \.holdings, \.subscriptions, \.security\]/[.home, .security, .holdings, .subscriptions]/'
+  's/\[\.home, \.holdings, \.markets, \.security\]/[.home, .security, .holdings, .markets]/'
 mutate "home no longer leads" \
-  's/\[\.home, \.holdings, \.subscriptions/[.holdings, .home, .subscriptions/'
+  's/\[\.home, \.holdings, \.markets/[.holdings, .home, .markets/'
 mutate "resolve falls back to the first present scope instead of home" \
   's/guard let wanted, present\.contains\(wanted\) else \{ return \.home \}/guard let wanted, present.contains(wanted) else { return present.first ?? .home }/'
 mutate "a retired tile comes back as a scope (prd §1107)" \

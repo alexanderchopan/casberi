@@ -2470,6 +2470,7 @@ harness "Notification pure-logic self-test" "notify self-test" "scripts/notify-s
 # day an approval is revoked, or a strip drawn over a single scope, which is a
 # label wearing a control's clothes (§83). None of that fails a build or a sweep.
 harness "Wallet section scopes" "wallet sections" "scripts/wallet-section-selftest.sh" "the wallet section self-test failed — run scripts/wallet-section-selftest.sh"
+harness "Wallet card roll" "wallet card roll" "scripts/wallet-card-roll-selftest.sh" "the wallet card roll self-test failed — run scripts/wallet-card-roll-selftest.sh"
 
 # The Wallet's Subscriptions tile (prd §1105): which repeating charges are
 # subscriptions, how a card charge, a bill and a hand-added one merge, and the

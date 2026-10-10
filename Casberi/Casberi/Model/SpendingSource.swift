@@ -18,6 +18,9 @@ final class SpendingReading {
     private(set) var read = false
     /// The newest purchase, for Home's Spending tile (prd §1219).
     private(set) var latest: Thing?
+    /// Home's Cards (prd §1232): each card's month, what it owes and its
+    /// offers, in the order `WalletCardRoll` draws them.
+    private(set) var cards: [WalletCardRoll.Card] = []
 
     private init() {}
 
@@ -45,12 +48,46 @@ final class SpendingReading {
         }
         let next = Spending.read(charges, now: now, calendar: calendar)
         if next != reading { reading = next }
+        let roll = WalletCardRoll.compose(
+            spends: raw.compactMap { c in
+                guard let card = c.card, let usd = WalletCash.usd(c.amount, c.currency, rates: rates)
+                else { return nil }
+                return WalletCardRoll.Spend(card: card, app: c.app, usd: usd, at: c.at)
+            },
+            owed: Self.owed(),
+            offers: Self.offers(context),
+            now: now, calendar: calendar)
+        if roll != cards { cards = roll }
         // The newest charge that is a spend, back to its row (the rows are
         // newest first, and a charge carries its row's moment).
         let newestAt = raw.filter { $0.amount > 0 }.map(\.at).max()
         let found = newestAt.flatMap { at in things.first { $0.capturedAt == at } }
         if found?.id != latest?.id { latest = found }
         read = true
+    }
+
+    /// What each Apple Wallet credit account owes and when, as FinanceKit
+    /// last said it (the bridge's snapshots, never inferred).
+    private static func owed() -> [WalletCardRoll.Owed] {
+        let owed = AppleWalletBridge.owed
+        let dues = AppleWalletBridge.dues
+        return Set(owed.keys).union(dues.keys).map { name in
+            WalletCardRoll.Owed(card: name, app: AppleWalletBridge.sourceName,
+                                amount: owed[name]?.value, currency: owed[name]?.currency ?? "USD",
+                                due: dues[name].map { Date(timeIntervalSince1970: $0) })
+        }
+    }
+
+    /// CardPointers' offers still in play, on the card each is for; the
+    /// row's own fields, as `CardPointersRoomSource` reads them.
+    private static func offers(_ context: ModelContext) -> [WalletCardRoll.Offer] {
+        let source = CardPointersRoomSource.source
+        let d = FetchDescriptor<Thing>(predicate: #Predicate<Thing> { $0.source == source })
+        return ((try? context.fetch(d)) ?? []).live.compactMap { thing in
+            guard thing.sourceRef?.hasPrefix("cardpointers:offer:") ?? false, thing.mark != .done else { return nil }
+            let card = thing.authorHandle.flatMap { $0.isEmpty ? nil : $0 } ?? source
+            return WalletCardRoll.Offer(card: card, app: source, expires: thing.dueAt)
+        }
     }
 }
 
@@ -61,6 +98,14 @@ enum SpendingSource {
         var amount: Double
         var currency: String
         var at: Date
+        /// The card it went on, for Home's Cards; nil for a move that is no card's.
+        var card: String? = nil
+        var app: String = ""
+    }
+
+    /// A card spend's card as the person knows it.
+    static func cardName(forSource source: String) -> String {
+        source == EtherFiCash.source ? "ether.fi Cash" : source
     }
 
     @MainActor
@@ -78,13 +123,15 @@ enum SpendingSource {
                       let merchant = thing.transferCounterparty, !merchant.isEmpty else { return nil }
                 let refund = thing.tags.contains("Refund")
                 return Raw(place: merchant, amount: refund ? -abs(amount) : abs(amount),
-                           currency: currency, at: thing.capturedAt)
+                           currency: currency, at: thing.capturedAt,
+                           card: SubscriptionsSource.payer(of: thing), app: thing.source)
             case GnosisPayBridge.sourceName, MetaMaskCardBridge.source, EtherFiCash.source:
                 // The chain names no merchant for any of the three cards, so
                 // the card is the place.
                 guard CardSpendSeat.isSpend(thing, seat: thing.source),
                       let amount = thing.priceValue, let currency = thing.priceCurrency else { return nil }
-                return Raw(place: thing.source, amount: abs(amount), currency: currency, at: thing.capturedAt)
+                return Raw(place: thing.source, amount: abs(amount), currency: currency, at: thing.capturedAt,
+                           card: cardName(forSource: thing.source), app: thing.source)
             case WiseShape.source:
                 guard thing.transferDirection == "sent",
                       !thing.tags.contains(String(localized: "Pending")),

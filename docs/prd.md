@@ -65709,3 +65709,17 @@ Not done here: a Following list for Social (People already lists the Bluesky acc
 2. **Day is a door, never a Feed section**: `HomeScope.feedCategories` and `isFeedSection` leave it out, the scrolling Feed drops its things (box, glances, sections; `liveVisible`'s `dropsDay`), and Day and its apps rise as a sheet like Markets and Notes (`routeIntoFeed`): the calendar box (§1229), All · Coming up · New, the days.
 3. **Mail moves to Life** with Files and Contacts (`BridgeCatalog`: Day is Schedule alone, Life gains Mail). Day's Subscriptions tile went with it: Life is All · Subscriptions (`LifeScope`, `chrome.lifeScope`, `lifeRoomSections`), the mailing lists' box and rows unchanged; every door to the lists (a service door, Sources' count, `-openSection subscriptions`) lands on Life's.
 4. **Casberi leads Sources**: its first row, the mark, "Settings, data and notifications", opens Casberi's own options in place, with a "Sources" row back in the content (§752). `chrome.settingsPick` is `.sources` or `.casberi`.
+
+## §1232 — Markets is a Wallet tile; Wallet Home is Needs you · Subscriptions · Spending · Cards · Transactions (user, 2026-10-10: "markets should really go into wallet"; "it could replace subscriptions as a button"; "'needs you' and 'coming up' are they really materially different?"; "wallets home would be 'Needs you' not 'coming up'"; "is having a cards section useful in a way that isn't covered by spending? if so we should have it too")
+
+Amends §1107, §1111 and §1201.
+
+1. **The tiles: Home · Holdings · Markets · Security** (`WalletSection.order`). Markets opens exactly as the Feed's button did (§1231 took it off the Feed): the same `sourceRequest`, so the same sheet and page, on every size class, and the pick stays Home (`FeedScreen`'s `walletSection` change). It draws nothing in the Wallet and has no empty state here.
+2. **Subscriptions is not a tile**: `WalletSection.subscriptions` stays as the page Home's list and Sources' count open, pinned in a sheet (§1220). `wallet-section-selftest.sh` holds it as the one case off the row.
+3. **Home's lists, each with its box** (the 2×2 grid is not forced):
+   - **Needs you** took Coming up: one list, what waits on you undated first, then the dated rows under their days, five across both and a door. The name stays "Needs you", never "Now" or "Coming up".
+   - **Subscriptions** is a plain list (no calendar, no map): Track a subscription, the five that renew soonest, then "See all" to the whole page. Its box is the plan that renews next. Shown on All and an app pick; never on an address.
+   - **Spending** as §1201, wearing `cart` now (`ScopeTileGlyph.spending`).
+   - **Cards** (new): one row per card, with what it spent this month as the figure, what it owes and when (FinanceKit's own `nextPaymentDueDate`, never inferred), and its CardPointers offers with the first end. A row opens the app that reads the card. The box is the card that asks something of you soonest, else the most spent (`WalletCardRoll`, read with Spending, `wallet-card-roll-selftest.sh`). On All only.
+   - **Transactions** as before.
+4. A roster's box (Subscriptions, Cards) is drawn in `GlanceShell`, the same frame as a thing's `GlanceTile`, and its list keeps every row (the §1208l skip is for news, not rosters).

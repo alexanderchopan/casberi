@@ -416,6 +416,10 @@ extension FeedScreen {
                 if all.isEmpty {
                     walletSkeletonRowsSection
                 }
+            // **MARKETS IS NEVER DRAWN HERE (prd §1232).** Its tile opens the
+            // Markets sheet and the pick falls back to Home.
+            case .markets:
+                EmptyView()
             case .subscriptions:
                 // **SUBSCRIPTIONS AND NOTHING ELSE (prd §1111).** Add first,
                 // the person builds the list up, then every plan.

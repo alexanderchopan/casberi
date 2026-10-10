@@ -179,7 +179,7 @@ extension FeedScreen {
     @ViewBuilder
     func walletScopeVisualSection(_ section: WalletSection, upcoming: [Thing] = []) -> some View {
         switch section {
-        case .home:
+        case .home, .markets:
             EmptyView()
         // **SUBSCRIPTIONS, AND ONLY THEM (prd §1111).** The calendar shows
         // each renewal on its day and the statement what they cost a month;
@@ -555,7 +555,7 @@ extension FeedScreen {
     func walletScopeIsEmpty(_ section: WalletSection) -> Bool {
         switch section {
         // Subscriptions is decided by its own reading, in its figure.
-        case .home, .subscriptions: return false
+        case .home, .markets, .subscriptions: return false
         case .holdings:        return blockStream.els.isEmpty
         // Every kind the checkup counts, the same reads its sections draw on.
         case .security:        return walletSecurityCounts.isEmpty
