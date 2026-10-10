@@ -167,7 +167,9 @@ enum WidgetPublish {
                 symbol: StockWatch.symbol(of: thing) ?? thing.authorHandle
                     ?? TokensAsk.symbol(of: thing.title),
                 name: TokensAsk.name(of: thing.title),
-                price: reading?.price, change: reading?.change, at: reading?.at)
+                price: reading?.price, change: reading?.change, at: reading?.at,
+                // A token's reading IS its pulse, so the closes are the same read.
+                closes: TokenPulse.shared.pulse(for: thing).flatMap { WidgetWatch.sparkCloses($0.closes) })
         }
         let previous = WidgetWatch.published(defaults: group)
         let list = WidgetWatchlist(rows: WidgetWatch.carryForward(

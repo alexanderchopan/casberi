@@ -65788,3 +65788,14 @@ Amends §969's hosting. Since §1231 Notes rises as an app sheet, and the note p
 1. **The open flag is the chrome's** (`ShellChrome.noteOpen`), so a sheet can read it.
 2. **A sheet raises the page over itself** as a full-screen cover (`noteCover`): the app sheet, else the route sheet's stack. The shell's layer draws only when neither stands (`NoteHost.sheetStands`). One page view for both hosts (`NotePageLayer`).
 3. Over a sheet the page rises from the bottom; the grow-from-the-tile entrance (§1199) stays the layer's.
+
+## §1242 — The Watchlist tile draws every row whole, with its line (user, 2026-10-10: "watchlist widget doesn't show all data or sparkline pls fix"; amends §1223)
+
+One row on one line (symbol, price, move) did not fit the small tile: "MUSEGOD  $0.00…  −9.…" cut the price and the move.
+
+1. **A row is two lines**: the symbol over the price, the day's move over the day's line. The move and the line never cut; the symbol and the price shrink first, then the symbol cuts.
+2. **The line is the Markets row's** (`TokenPulse`'s closes, thinned to `WidgetWatch.sparkPoints` keeping both ends, `WidgetWatch.sparkCloses`), carried in the payload (`WidgetWatchlist.Row.closes`) and drawn only while its price may be (`WidgetWatch.spark`), so it ages out and carries forward with the price. Solid up, dashed down, grey when flat (§83). A stock has no line, as in Markets.
+3. **As many rows as the tile holds, four at most**: four two-line rows overrun a 158pt tile, so `ViewThatFits` tries four, then three, two, one, never a row cut short. The stamp counts only the rows drawn.
+4. One normalization for every tile's curve (`WidgetCurve.normalized`, the flat rule), the wallet's line and these.
+
+UNVERIFIED: written on a machine with no Xcode, so neither build nor tile was seen before commit. `widget-selftest.sh` holds the line's freshness, its carry, its thinning and the round trip.

@@ -440,7 +440,7 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 
 Deep links: `casberi://home`, `casberi://feed`, `casberi://feed/type/<Tag>` (internal, no UI produces it, prd §269), `casberi://account`, `casberi://settings`, `casberi://note` (a new note, prd §982), `casberi://room/<category | Your notes>` (the Category widget's door), `casberi://thing/<id>`, `casberi://person/<Bluesky|X>/<handle>`.
 
-- **Four widgets, each a small tile (prd §1210, §1223): Notes (two newest), Wallet, Feed (today's count per category in Feed order, no money, blank past midnight), Watchlist (four rows, symbol · price · move; a price stamped past 1h, dropped past a day); the Category widget is deleted. `WidgetPublish` publishes `WidgetNotes`, `WidgetFeedTile`, `WidgetWatch` (after the prices read) and sweeps retired payloads; `-widgetProbe YES` logs `widgetNotes|`, `widgetFeed|`, `widgetWatchlist|`.**
+- **Four widgets, each a small tile (prd §1210, §1223): Notes (two newest), Wallet, Feed (today's count per category in Feed order, no money, blank past midnight), Watchlist (up to four rows as the tile holds, symbol over price, move over the day's line; a price and its line stamped past 1h, dropped past a day, §1242); the Category widget is deleted. `WidgetPublish` publishes `WidgetNotes`, `WidgetFeedTile`, `WidgetWatch` (after the prices read) and sweeps retired payloads; `-widgetProbe YES` logs `widgetNotes|`, `widgetFeed|`, `widgetWatchlist|`.**
 
 ## SwiftUI/UIKit gotchas already paid for
 

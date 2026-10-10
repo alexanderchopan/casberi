@@ -10,6 +10,8 @@
 #     — WidgetWatch.quote / carryForward / priceText  (the Watchlist tile, §1223:
 #       a price is a reading — stamped past an hour, dropped past a day, and a
 #       failed read keeps the last price with its own time)
+#     — WidgetWatch.spark / sparkCloses  (§1242: the day's line ages with its
+#       price, and a thinned line still ends on the price)
 #
 # One widget since the ask retired (2026-10-01): the wallet. The Today and
 # kept-ask tiles, and the asks, deadlines, Safe-call, requests and people
@@ -191,6 +193,10 @@ grep -q 'kind: WidgetWatch.kind' "$TMP/WatchlistWidget.nc" \
 # rule, never straight off the row.
 grep -q 'WidgetWatch.quote(row, now: entry.date)' "$TMP/WatchlistWidget.nc" \
   || { print -u2 "✗ the Watchlist widget draws a price without asking whether it is still fresh"; exit 1; }
+grep -q 'WidgetWatch.spark(row, now: entry.date)' "$TMP/WatchlistWidget.nc" \
+  || { print -u2 "✗ the Watchlist widget draws a line without asking whether its price is still fresh"; exit 1; }
+grep -qE 'row\.closes\b' "$TMP/WatchlistWidget.nc" \
+  && { print -u2 "✗ the Watchlist widget reads row.closes directly — a day-old line would draw as now's"; exit 1; }
 grep -qE 'row\.price\b' "$TMP/WatchlistWidget.nc" \
   && { print -u2 "✗ the Watchlist widget reads row.price directly — a day-old price would draw as now's"; exit 1; }
 # The publisher runs after the prices read, in the foreground and the background task.
@@ -463,6 +469,32 @@ let newcomer = WidgetWatchlist.Row(ref: "base:0xnew", symbol: "NEW", name: "New"
 eq(WidgetWatch.carryForward([newcomer], from: prev)[0].price, nil,
    "a price is carried by ref, never onto another row")
 
+// The day's line is the same reading as the price (§1242).
+let withLine = WidgetWatchlist.Row(ref: "base:0xmuse", symbol: "MUSEGOD", name: "Musegod",
+                                   price: 0.000123, change: -0.094, at: readAt,
+                                   closes: [2, 3, 1, 1])
+eq(WidgetWatch.spark(withLine, now: now), [0.5, 1, 0, 0], "a fresh row's line is its closes, 0…1")
+check(WidgetWatch.spark(withLine, now: readAt.addingTimeInterval(WidgetWatch.priceFreshness + 1)) == nil,
+      "a line past a day does not draw, with its price")
+check(WidgetWatch.spark(eth, now: now) == nil, "a row with no closes draws no line")
+eq(WidgetWatch.spark(WidgetWatchlist.Row(ref: "x", symbol: "X", name: "X", price: 1, change: 0,
+                                         at: readAt, closes: [4, 4, 4]), now: now),
+   [0.5, 0.5, 0.5], "a flat day draws down the middle")
+let unreadLine = WidgetWatchlist.Row(ref: "base:0xmuse", symbol: "MUSEGOD", name: "Musegod",
+                                     price: nil, change: nil, at: nil)
+eq(WidgetWatch.carryForward([unreadLine], from: WidgetWatchlist(rows: [withLine]))[0].closes,
+   [2, 3, 1, 1], "a carried price keeps its line")
+let long = (0..<97).map(Double.init)
+let thinned = WidgetWatch.sparkCloses(long) ?? []
+eq(thinned.count, WidgetWatch.sparkPoints, "a long day thins to the line's points")
+eq(thinned.first, 0, "…from the first close")
+eq(thinned.last, 96, "…to the last, the price drawn beside it")
+eq(WidgetWatch.sparkCloses([1, 2, 3]), [1, 2, 3], "a short day is kept whole")
+check(WidgetWatch.sparkCloses([1]) == nil, "one close is no line")
+let roundTrip = WidgetWatchlist(rows: [withLine])
+_ = WidgetPayload.write(roundTrip, key: WidgetWatch.key, stampKey: WidgetWatch.stampKey, defaults: d)
+eq(WidgetWatch.published(defaults: d)?.rows.first?.closes, [2, 3, 1, 1], "the line survives the round trip")
+
 eq(WidgetWatch.priceText(254), "$254.00", "a stock's price keeps its cents")
 eq(WidgetWatch.priceText(0.5), "$0.5000", "under a dollar, four places")
 // The two below format in the reader's locale, so they assert the digits.
@@ -607,7 +639,16 @@ mutate "a failed read blanks the last price instead of carrying it" \
   'guard let previous else { return rows }|||return rows' || mfail=1
 mutate "a carried price is stamped now, so it never ages out" \
   WidgetPayload.swift \
-  'price: last.price, change: last.change, at: last.at)|||price: last.price, change: last.change, at: Date())' || mfail=1
+  'price: last.price, change: last.change, at: last.at,|||price: last.price, change: last.change, at: Date(),' || mfail=1
+mutate "a sparkline outlives its price — a day-old line draws as now's" \
+  WidgetPayload.swift \
+  'guard quote(row, now: now) != nil, let closes = row.closes|||guard let closes = row.closes' || mfail=1
+mutate "a carried price drops its line" \
+  WidgetPayload.swift \
+  'closes: last.closes)|||closes: nil)' || mfail=1
+mutate "a thinned line stops short of the price drawn beside it" \
+  WidgetPayload.swift \
+  '(Double(i) * Double(last) / Double(sparkPoints - 1)).rounded()|||(Double(i) * Double(last) / Double(sparkPoints)).rounded(.down)' || mfail=1
 
 # Money.
 mutate "a change that rounds to zero is given a direction (§83)" \

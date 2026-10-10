@@ -282,7 +282,14 @@ extension WidgetWalletLine {
     /// possible way to say nothing happened. `AgentPanel` has carried this rule
     /// (and a mutation test for it) since §334; this is the same rule at the one
     /// place the app draws a curve in another process.
-    var normalizedPoints: [Double] {
+    var normalizedPoints: [Double] { WidgetCurve.normalized(points) }
+}
+
+/// The flat-series rule, once, for every curve a tile draws (the wallet's
+/// line and the watchlist's sparklines): 0…1 by the series' own range, and a
+/// series that did not move draws down the middle, never along the floor.
+enum WidgetCurve {
+    static func normalized(_ points: [Double]) -> [Double] {
         guard let low = points.min(), let high = points.max() else { return [] }
         let span = high - low
         guard span > 0 else { return points.map { _ in 0.5 } }
@@ -444,6 +451,11 @@ struct WidgetWatchlist: Codable, Equatable {
         let change: Double?
         /// When the price was read. Nil with no price.
         let at: Date?
+        /// The day's closes behind the price, oldest first, at most
+        /// `WidgetWatch.sparkPoints` (`TokenPulse`'s, the Markets row's
+        /// sparkline). Nil for a stock, which Markets draws no line for either.
+        /// Read at `at`, so it ages out with the price.
+        var closes: [Double]? = nil
     }
 }
 
@@ -459,8 +471,10 @@ enum WidgetWatch {
     /// is read at most every 15 minutes while the app is open, so an hour is
     /// past the normal cadence.
     static let stampAfter: TimeInterval = 3600
-    /// The small tile's rows.
+    /// The small tile's rows, at most: it draws as many of them as fit.
     static let rowCap = 4
+    /// A sparkline's points: a 40pt line draws no more than this.
+    static let sparkPoints = 24
 
     static func published(now: Date = .now,
                           defaults: UserDefaults? = UserDefaults(suiteName: SharedStore.appGroup))
@@ -476,6 +490,26 @@ enum WidgetWatch {
         guard let price = row.price, let at = row.at,
               now.timeIntervalSince(at) < priceFreshness else { return nil }
         return (price, row.change, at)
+    }
+
+    /// The row's sparkline as 0…1, only while its price may be drawn: the
+    /// closes are the same reading, so a day-old line never draws as now's.
+    /// Nil with fewer than two closes.
+    static func spark(_ row: WidgetWatchlist.Row, now: Date = .now) -> [Double]? {
+        guard quote(row, now: now) != nil, let closes = row.closes, closes.count >= 2 else { return nil }
+        return WidgetCurve.normalized(closes)
+    }
+
+    /// Thins a series to `sparkPoints`, evenly, keeping the first and the
+    /// last close so the line ends on the price drawn beside it. Nil with
+    /// fewer than two.
+    static func sparkCloses(_ closes: [Double]) -> [Double]? {
+        guard closes.count >= 2 else { return nil }
+        guard closes.count > sparkPoints else { return closes }
+        let last = closes.count - 1
+        return (0..<sparkPoints).map { i in
+            closes[Int((Double(i) * Double(last) / Double(sparkPoints - 1)).rounded())]
+        }
     }
 
     /// A price in the tile's narrow column: whole dollars from $1,000, cents
@@ -500,7 +534,8 @@ enum WidgetWatch {
         return rows.map { row in
             guard row.price == nil, let last = old[row.ref], last.price != nil else { return row }
             return WidgetWatchlist.Row(ref: row.ref, symbol: row.symbol, name: row.name,
-                                       price: last.price, change: last.change, at: last.at)
+                                       price: last.price, change: last.change, at: last.at,
+                                       closes: last.closes)
         }
     }
 }
