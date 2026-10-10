@@ -320,21 +320,6 @@ struct SettingsRows: View {
         ].sorted { $0.title < $1.title }
     }
 
-    /// Diagnostics, on pre-release builds only (prd §1005). Dev-facing on
-    /// purpose: a TestFlight report becomes a screenshot of on-device facts
-    /// instead of a description (2026-07-09). On an App Store build it was a
-    /// developer's log one row above Language — the audit's plainest tell —
-    /// so the door exists where its reader does: DEBUG and TestFlight.
-    private var diagnosticsRows: [RowSpec] {
-        guard BuildChannel.isPreRelease else { return [] }
-        return [RowSpec(title: "Diagnostics",
-                        value: "",
-                        // The instrument, not the trace — the ECG line is the
-                        // Feed tab's glyph (ruled 2026-07-10: Feed keeps it).
-                        badge: ("stethoscope", DS.textPrimary),
-                        action: { open(.diagnostics) { diagnosticsOpen = true } })]
-    }
-
     /// Group two — the app itself: housekeeping, rarely visited. A–Z.
     private var secondaryRows: [RowSpec] {
         let rows: [RowSpec] = [
@@ -431,7 +416,9 @@ struct SettingsRows: View {
                             openURL(url)
                         }
                     }),
-        ] + diagnosticsRows
+        ]
+        // Diagnostics left Settings (user, 2026-10-10: "doesn't seem we need
+        // it anymore"); the screen opens from `-openDiagnostics` in DEBUG only.
         return rows.sorted { $0.title < $1.title }
     }
 
