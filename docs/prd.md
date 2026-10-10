@@ -65672,3 +65672,11 @@ The Wallet Home's glance boxes (§1219) draw money as the Feed's money tiles do:
 ## §1225 — Every top-level section of a Wallet page stands on the Feed's card (user, 2026-10-10: "why aren't they all pink? is it some hierarchy?" … "pk do it")
 
 The hierarchy, said once: pink names where you are (a page's title, a top-level section on its card, a day); white names a group inside a card. Holdings' Tokens, Positions and Apps and Security's six sections (Signatures, Delegations, Approvals, Address poisoning, Fake tokens, Fake transfers) were white `DSGroupHeader`s on the bare page while Home's lists stood pink on cards (§1219); they take the card now through `FeedScreen.walletCard` (`SectionPanelGroup` + `SectionPanelName`), each with its glyph, and a checkup count still lands on its section by the card's identity. Amends §1220's sheets and the "stay white" answer given the same day, which predated the card.
+
+## §1226 — Data reads in groups (user, 2026-10-10: "next i'd like to work on the data screen in settings")
+
+1. **The box**: the count, the size and "Private — nothing routes through us" stand in a well, as every screen's box does.
+2. **Three groups, by air, not names**: the switches (iCloud sync, Hide previews, Hide wallet balances), then your data (What this app reaches, Export, Import), then Delete. A tray is not a list, so no group header; space says where one ends.
+3. **Delete as rows**: one red row per wipe, stacked, each with its glyph (Delete things, Delete access, Delete signing key when there is one). The three words are now translated; they were drawn verbatim.
+4. **The Reaches line says what it knows**: with receipts, the ledger's verdict as before; without, "Nothing reached yet this week", never "85 reaching now" (a count of what could reach, read as traffic).
+5. **The one footnote stands last** (§748).

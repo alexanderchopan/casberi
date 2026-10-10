@@ -69,7 +69,6 @@ struct AccountDetailSheet: View {
     /// a fresh install and gets the door's standing subtitle instead.
     @State private var reach: NetworkReceiptsInsight.Reach?
     /// How many registry services are reachable right now.
-    @State private var reachingNow = 0
 
     var body: some View {
         DSTray(title: title, height: sheetHeight) {
@@ -98,9 +97,6 @@ struct AccountDetailSheet: View {
             keyedAgent = AgentKey.active
             librarianOn = AgentLibrarian.isEnabled
             reach = NetworkReceiptsInsight.compose(rows: NetworkLedger.shared.receiptRows())
-            reachingNow = NetworkReach.reachingNow(
-                connected: Set(store.bridges.filter { $0.status == .connected }.map(\.name))
-            ).count
         }
         // The export's other half — the file comes back in whole (dedupe by id).
         .fileImporter(isPresented: $importing,
@@ -166,13 +162,16 @@ struct AccountDetailSheet: View {
             }
             .buttonStyle(RowPress())
             .dsHover()
-            HStack(spacing: DS.Space.s8) {
+            // DELETE AS ROWS (prd §1226): one red row per wipe, stacked,
+            // each its own verb — never two words side by side.
+            Color.clear.frame(height: DS.Space.s3)  // a group's air (prd §1226)
+            VStack(alignment: .leading, spacing: DS.Space.s3) {
                 Button { confirmDelete = true } label: {
-                    dangerLabel("Delete things")
+                    actionLabel("Delete things", icon: "trash", destructive: true)
                 }
                 .buttonStyle(RowPress())
                 Button { confirmDeleteAccess = true } label: {
-                    dangerLabel("Delete access")
+                    actionLabel("Delete access", icon: "key", destructive: true)
                 }
                 .buttonStyle(RowPress())
                 // A THIRD verb, and only when there is a key (prd §425). It is
@@ -183,12 +182,11 @@ struct AccountDetailSheet: View {
                 // again. Different cost, different verb, different sentence.
                 if SafeSigner.hasAnyKey {
                     Button { confirmDeleteSigner = true } label: {
-                        dangerLabel("Delete signing key")
+                        actionLabel("Delete signing key", icon: "signature", destructive: true)
                     }
                     .buttonStyle(RowPress())
                 }
             }
-            .frame(maxWidth: .infinity)
             // Outcome lines arrive with the settle beat — a result, not a flicker.
             if let importResult {
                 Text(importResult)
@@ -200,6 +198,10 @@ struct AccountDetailSheet: View {
                     .dsText(.body17).foregroundStyle(DS.textSecondary)
                     .settleIn()
             }
+            // The tripwire, said out loud — last, the screen's one footnote
+            // (prd §748): see `SecretScan` (§277) for what it does and does not
+            // promise.
+            DSFootnote("Passwords and recovery phrases are kept out of search, Siri, and anything sent with your key.")
         }
     }
 
@@ -253,14 +255,6 @@ struct AccountDetailSheet: View {
     /// A destructive verb as red words — full 44pt hit target, no slab. The
     /// honesty rule holds: it's a real button that states exactly what the
     /// confirm beneath it will offer, it just no longer outranks Export.
-    private func dangerLabel(_ title: String) -> some View {
-        Text(title)
-            .dsText(.body17)
-            .foregroundStyle(DS.destructiveInk)
-            .frame(minHeight: 44)
-            .contentShape(Rectangle())
-    }
-
     private var sheetHeight: CGFloat {
         switch detail {
         // Now the one privacy home: + the two sub-page doors always ("What
@@ -289,6 +283,10 @@ struct AccountDetailSheet: View {
     /// ADP nudge is the same shape and cost 60 when it landed).
     private var privacyHeight: CGFloat {
         var height: CGFloat = icloudSync ? (syncHasLiveError ? 760 : 720) : 645
+        // The box's well, three groups' air and Delete as stacked rows
+        // (prd §1226).
+        height += 104
+        if SafeSigner.hasAnyKey { height += 52 }
         // The secret-scan sentence — always present, two lines.
         height += 60
         // The guard's notice (prd §607) — three wrapped lines, and it appears
@@ -359,6 +357,10 @@ struct AccountDetailSheet: View {
     /// failing sync, blue = the one filled button in `controls`).
     private var dataCard: some View {
         VStack(alignment: .leading, spacing: DS.Space.s4) {
+            // THE BOX (prd §1226): what is kept and that nothing routes
+            // through us, in a well like every screen's box; the switches
+            // and doors stand under it in named groups.
+            VStack(alignment: .leading, spacing: DS.Space.s3) {
             VStack(alignment: .leading, spacing: DS.Space.s1) {
                 Text(thingCount.formatted(.number.grouping(.automatic)))
                     .dsText(.price40).foregroundStyle(DS.textPrimary)
@@ -403,6 +405,11 @@ struct AccountDetailSheet: View {
                     DSFootnote("The librarian sends things to \(keyedAgent.company) on its own to name and summarize them.")
                 }
             }
+            }
+            .padding(DS.Space.s4)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .dsWell(cornerRadius: DS.Radius.widget)
+            Color.clear.frame(height: DS.Space.s3)  // a group's air (prd §1226)
             // iCloud sync. The container binds at launch, so a fresh flip says
             // WHEN it goes live instead of pretending it is. RULE (2026-07-27):
             // this used to read the toggle's own INTENT ("Synced to your
@@ -482,6 +489,7 @@ struct AccountDetailSheet: View {
             // actually reached this week (prd §967 — the registry and the
             // ledger were two sheets). The line is the ledger's own verdict
             // where there is one, so a host nobody declared reads here first.
+            Color.clear.frame(height: DS.Space.s3)  // a group's air (prd §1226)
             door("What this app reaches", reachLine, subtitleTone: reachTone) {
                 if !inPane { dismiss() }
                 route.push(.reach)
@@ -501,7 +509,6 @@ struct AccountDetailSheet: View {
             // because the on-device model is deliberately NOT redacted — it
             // never leaves, and "what's my wifi password?" is a fair question
             // to ask your own corpus.
-            DSFootnote("Passwords and recovery phrases are kept out of search, Siri, and anything sent with your key.")
         }
     }
 
@@ -522,7 +529,9 @@ struct AccountDetailSheet: View {
     /// in two phrasings reads as two facts.
     private var reachLine: String {
         guard let reach else {
-            return String(localized: "\(reachingNow) reaching now · \(NetworkReach.endpoints.count) listed")
+            // No receipts yet this week: say that, not a count of what could
+            // reach (prd §1226: "85 reaching now" read as traffic).
+            return String(localized: "Nothing reached yet this week")
         }
         guard reach.clean else {
             return reach.undeclaredHosts == 1
