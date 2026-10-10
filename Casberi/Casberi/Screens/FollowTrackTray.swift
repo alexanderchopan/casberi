@@ -123,7 +123,9 @@ struct FollowTrackTray: View {
     private var picker: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: DS.Space.s2) {
-                ForEach(Target.of(room)) { t in
+                // GitHub's chip only where GitHub's own tray can be raised:
+                // from Apps there is none, and the chip did nothing.
+                ForEach(Target.of(room).filter { $0 != .github || onGitHub != nil }) { t in
                     Button {
                         if t == .github, let onGitHub {
                             dismiss()
@@ -154,10 +156,7 @@ struct FollowTrackTray: View {
             Button {
                 Task { await track(hit: hit) }
             } label: {
-                Image(systemName: "plus")
-                    .dsGlyph(.title, weight: .regular).foregroundStyle(DS.tint)
-                    .frame(minWidth: 44, minHeight: 44)
-                    .contentShape(Rectangle())
+                DSFollowMark(on: false)
             }
             .buttonStyle(PressSpring())
             .accessibilityLabel(Text("Follow \(hit.displayName)"))

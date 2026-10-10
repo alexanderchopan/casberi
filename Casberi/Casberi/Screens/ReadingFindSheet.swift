@@ -147,11 +147,7 @@ struct ReadingFindSheet: View {
                 Button {
                     Task { await follow(host) }
                 } label: {
-                    Image(systemName: on ? "checkmark" : "plus")
-                        .dsGlyph(.title, weight: .regular)
-                        .foregroundStyle(on ? DS.textTertiary : DS.tint)
-                        .frame(minWidth: 44, minHeight: 44)
-                        .contentShape(Rectangle())
+                    DSFollowMark(on: on)
                 }
                 .buttonStyle(PressSpring())
                 .disabled(on)

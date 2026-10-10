@@ -16,7 +16,9 @@ enum MediaScope: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .all:           return String(localized: "All")
         case .play:          return String(localized: "Play")
         case .read:          return String(localized: "Read")
-        case .subscriptions: return String(localized: "Subscriptions")
+        // Follow's noun (prd §1230): what you track is Subscriptions, what
+        // you follow is Following.
+        case .subscriptions: return String(localized: "Following")
         }
     }
 

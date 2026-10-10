@@ -8,7 +8,7 @@ import SwiftData
 extension Following.Room {
     /// The tile's name: what is listed. Work watches; the rest subscribe.
     var tileWord: String {
-        self == .work ? String(localized: "Following") : String(localized: "Subscriptions")
+        String(localized: "Following")
     }
 
     /// The first row's words, and its tray's title (prd §1120): what the
@@ -271,7 +271,7 @@ extension Following {
     /// followed: "Posts in Reading", "Uploads in Media", "Updates in Work".
     static func doorWords(_ room: Room) -> LocalizedStringKey {
         switch room {
-        case .reading: "Posts in Media"   // Reading folded into Media, §1204
+        case .reading: "New in Media"   // Reading folded into Media, §1204
         case .media:   "New in Media"
         case .work:    "Updates in Work"
         }
@@ -289,7 +289,7 @@ struct FollowListDoor: View {
     @Environment(HomeRoute.self) private var route
 
     var body: some View {
-        DSDoorRow(icon: room == .work ? ScopeTileGlyph.watch : ScopeTileGlyph.subscriptions,
+        DSDoorRow(icon: ScopeTileGlyph.watch,
                   title: Text(verbatim: Self.words(room, count))) {
             route.closeConnectForm()
             route.path = []
@@ -299,8 +299,8 @@ struct FollowListDoor: View {
 
     static func words(_ room: Following.Room, _ count: Int) -> String {
         switch room {
-        case .reading: String(localized: "\(count) subscriptions in Media")
-        case .media:   String(localized: "\(count) subscriptions in Media")
+        case .reading: String(localized: "\(count) following in Media")
+        case .media:   String(localized: "\(count) following in Media")
         case .work:    String(localized: "\(count) following in Work")
         }
     }

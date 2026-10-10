@@ -98,7 +98,7 @@ struct SettingsHome: View {
                             cardsList
                         case .people:
                             VStack(alignment: .leading, spacing: DS.Space.s4) {
-                                verbRow("person.badge.plus", String(localized: "Add a person")) { add(.people) }
+                                verbRow("eye", String(localized: "Follow a wallet")) { add(.people) }
                                 if people == 0 { comesFrom(Self.peopleApps) } else { peopleList }
                             }
                         case .wallets:
@@ -266,8 +266,10 @@ struct SettingsHome: View {
         }
     }
 
+    /// What the Following count's door lands on (Media's tile, prd §1230):
+    /// sites and channels. Work's repos count in Work, not here.
     private var feeds: [Following.Item] {
-        Following.Room.allCases.flatMap { FollowingReading.shared.items(for: $0) }
+        [Following.Room.reading, .media].flatMap { FollowingReading.shared.items(for: $0) }
     }
 
     /// Eight counts, two across, A–Z, and THEY ARE THE FILTER (prd §1138;
@@ -669,7 +671,7 @@ enum SettingsScope: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .apps:          return String(localized: "Apps")
         case .calendars:     return String(localized: "Calendars")
         case .cards:         return String(localized: "Cards")
-        case .feeds:         return String(localized: "Feeds")
+        case .feeds:         return String(localized: "Following")
         // Whole everywhere since prd §1166 (user: "we going to say 'Subs'
         // everywhere?"): no shortened word on any surface.
         case .newsletters:   return String(localized: "Mail lists")

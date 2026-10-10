@@ -35,7 +35,7 @@ struct WatchAddSheet: View {
     private static let recentsKey = "markets.add.recents"
 
     var body: some View {
-        DSTray(title: String(localized: "Follow"), height: 640, detents: [.large]) {
+        DSTray(title: String(localized: "Follow a company"), height: 640, detents: [.large]) {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 0) {
                     if query.trimmingCharacters(in: .whitespaces).isEmpty {
@@ -271,12 +271,7 @@ struct WatchAddSheet: View {
                 }
             }
             Button(action: toggle) {
-                Image(systemName: on ? "star.fill" : "star")
-                    .dsGlyph(.title, weight: .regular)
-                    .foregroundStyle(on ? DS.brand : DS.textTertiary)
-                    .symbolEffect(.bounce, value: justStarred == id)
-                    .frame(minWidth: 44, minHeight: 44)
-                    .contentShape(Rectangle())
+                DSFollowMark(on: on, bounce: justStarred == id)
             }
             .buttonStyle(PressSpring())
             .accessibilityLabel(Text(on ? String(localized: "Stop following \(label)")

@@ -52,7 +52,7 @@ extension FeedScreen {
     var marketsListHead: some View {
         Section {
             HStack {
-                Text("Watchlist")
+                Text("Following")
                     .dsText(.heading20)
                     .foregroundStyle(DS.textPrimary)
                 Spacer(minLength: 0)
@@ -96,13 +96,23 @@ extension FeedScreen {
         // floating bar on the phone, or the strip below beside the rail.
         youTilesSection(.markets)
         tokensInlineTiles
+        // THE VERB LEADS THE LIST (prd §1230), as every Following and
+        // Subscriptions list's does.
+        Section {
+            DSDoorRow(icon: "plus", title: Text("Follow a company")) {
+                feedSheet = .watchAdd
+            }
+            .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.rowInset,
+                                      bottom: 0, trailing: DSRoomChassis.rowInset))
+            .feedRowBackground()
+            .listRowSeparator(.hidden)
+        }
         if watches.count > 1 { marketsListHead }
-        // An empty Watchlist says so in one line (prd §1167, user: "i think
-        // empty watchlist is fine"); the category tiles above are the index.
+        // An empty list says so in the one wording every Follow list uses
+        // (prd §1230); the verb above starts it.
         if watches.isEmpty {
             Section {
-                (DSScopeDock<TokensScope>.atBottom(roomSizeClass)
-                     ? Text("Search for a company to follow it.") : Text("Nothing followed yet."))
+                Text("Nothing followed yet")
                     .dsText(.body17)
                     .foregroundStyle(DS.textSecondary)
                     .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DSRoomChassis.rowInset,

@@ -122,7 +122,7 @@ extension MediaScope: DSTileScope {
         case .all:           return ScopeTileGlyph.all
         case .play:          return ScopeTileGlyph.play
         case .read:          return ScopeTileGlyph.read
-        case .subscriptions: return ScopeTileGlyph.subscriptions
+        case .subscriptions: return ScopeTileGlyph.watch
         }
     }
 }

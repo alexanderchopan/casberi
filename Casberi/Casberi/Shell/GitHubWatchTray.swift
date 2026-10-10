@@ -72,7 +72,7 @@ struct GitHubWatchTray: View {
 
     var body: some View {
         DSTray(title: String(localized: "Follow on GitHub"), height: 620,
-               detents: [.height(620), .large]) {
+               detents: [.large]) {
             ScrollView {
                 VStack(alignment: .leading, spacing: DS.Space.s3) {
                     DSSlabField(placeholder: AccountPageShape.findPlaceholder(

@@ -29,7 +29,7 @@ struct TokensScope: DSTileScope {
     var label: String {
         if self == .alerts { return String(localized: "Alerts") }
         if self == .new { return String(localized: "New") }
-        return category ?? String(localized: "Watchlist")
+        return category ?? String(localized: "Following")
     }
 
     var glyph: String {

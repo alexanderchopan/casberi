@@ -41,7 +41,7 @@ struct SocialFollowSheet: View {
     @FocusState private var fieldFocused: Bool
 
     var body: some View {
-        DSTray(title: String(localized: "Follow"), height: 640, detents: [.large]) {
+        DSTray(title: String(localized: "Follow a person"), height: 640, detents: [.large]) {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 0) {
                     if trimmed.isEmpty { before } else { results }
@@ -124,11 +124,7 @@ struct SocialFollowSheet: View {
                 Button {
                     Task { await followChannel(handle) }
                 } label: {
-                    Image(systemName: on ? "checkmark" : "plus")
-                        .dsGlyph(.title, weight: .regular)
-                        .foregroundStyle(on ? DS.textTertiary : DS.tint)
-                        .frame(minWidth: 44, minHeight: 44)
-                        .contentShape(Rectangle())
+                    DSFollowMark(on: on)
                 }
                 .buttonStyle(PressSpring())
                 .disabled(on)
@@ -189,12 +185,7 @@ struct SocialFollowSheet: View {
             Button {
                 follow(person)
             } label: {
-                Image(systemName: on ? "checkmark" : "plus")
-                    .dsGlyph(.title, weight: .regular)
-                    .foregroundStyle(on ? DS.textTertiary : DS.tint)
-                    .symbolEffect(.bounce, value: justFollowed == person.id)
-                    .frame(minWidth: 44, minHeight: 44)
-                    .contentShape(Rectangle())
+                DSFollowMark(on: on, bounce: justFollowed == person.id)
             }
             .buttonStyle(PressSpring())
             .disabled(on)

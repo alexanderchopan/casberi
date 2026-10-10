@@ -1727,6 +1727,34 @@
         }
       }
     },
+    "%lld following in Media" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Siguiendo %lld en Media"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Mediaで%lld件をフォロー中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Media에서 %lld개 팔로잉"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Media 中正在关注 %lld 个"
+          }
+        }
+      }
+    },
     "%lld following in Work" : {
       "localizations" : {
         "es" : {
@@ -6353,6 +6381,34 @@
         }
       }
     },
+    "Follow a company" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Seguir una empresa"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "企業をフォロー"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "회사 팔로우"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "关注一家公司"
+          }
+        }
+      }
+    },
     "Follow a feed" : {
       "localizations" : {
         "es" : {
@@ -6377,6 +6433,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "关注订阅源"
+          }
+        }
+      }
+    },
+    "Follow a person" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Seguir a una persona"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "人をフォロー"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "사람 팔로우"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "关注一个人"
           }
         }
       }

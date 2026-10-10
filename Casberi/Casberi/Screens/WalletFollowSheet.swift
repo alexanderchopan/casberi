@@ -32,7 +32,7 @@ struct WalletFollowSheet: View {
     private var wallet: WalletStore { WalletStore.shared }
 
     var body: some View {
-        DSTray(title: String(localized: "Follow"), height: 640, detents: [.large]) {
+        DSTray(title: String(localized: "Follow a wallet"), height: 640, detents: [.large]) {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 0) {
                     if trimmed.isEmpty { before } else { typed }
@@ -170,12 +170,8 @@ struct WalletFollowSheet: View {
             Button {
                 follow(target ?? WalletFollow.Target(address: address, label: name ?? "", chain: nil))
             } label: {
-                Image(systemName: on ? "checkmark" : "plus")
-                    .dsGlyph(.title, weight: .regular)
-                    .foregroundStyle(on || !wallet.canWatchMore ? DS.textTertiary : DS.tint)
-                    .symbolEffect(.bounce, value: justFollowed == WalletFollowSuggest.key(address))
-                    .frame(minWidth: 44, minHeight: 44)
-                    .contentShape(Rectangle())
+                DSFollowMark(on: on, dimmed: !wallet.canWatchMore,
+                             bounce: justFollowed == WalletFollowSuggest.key(address))
             }
             .buttonStyle(PressSpring())
             .disabled(on || !wallet.canWatchMore)

@@ -297,12 +297,7 @@ struct IndexRow: View {
             }
             if let star {
                 Button(action: star) {
-                    Image(systemName: watched ? "star.fill" : "star")
-                        .dsGlyph(.title, weight: .regular)
-                        .foregroundStyle(watched ? DS.brand : DS.textTertiary)
-                        .symbolEffect(.bounce, value: watched)
-                        .frame(minWidth: 44, minHeight: 44)
-                        .contentShape(Rectangle())
+                    DSFollowMark(on: watched, bounce: watched)
                 }
                 .buttonStyle(PressSpring())
                 .accessibilityLabel(Text(watched ? String(localized: "Stop following \(company.name)")
