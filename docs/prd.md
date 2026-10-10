@@ -65745,3 +65745,7 @@ Amends §1107, §1111 and §1201.
 2. **No category moves.** Obsidian, Apple Journal and Day One stay Life's; Notion stays Work's. Their tray icons stay in those rows and Markets' packs do not change (user: "in markets we separate them … i don't want to be messing with that"). No Notes category is added (user: "i don't want to add a new category to the catalogue").
 3. **An app's tray icon opens Notes narrowed to it**, titled "Notes · Obsidian" (`RoomAccounts` seats for `Pinboard.room`, `routeIntoFeed` and `go(to:)`, `roomPick`); the Notes door itself opens every note.
 4. **The buttons stay All · Folders · Voice · New.** Folders and Voice are yours (none of the imports keeps a folder or audio); New writes a note of yours.
+
+## §1236 — See the demo leaves Settings (user, 2026-10-10: "how do we have 'see the demo' in settings still? can someone actually do that?"; "i think we remove it less is more")
+
+The row stood only for an install with nothing connected and no wallet followed, the demo's re-entry door (§217's amendment). It is deleted with its gate (`demoRow`, `demoReentryAvailable`). The demo stays a mode the first run's cover leads into, and its pill's Exit leaves it.

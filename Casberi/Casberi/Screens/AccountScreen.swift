@@ -422,74 +422,12 @@ struct SettingsRows: View {
         return rows.sorted { $0.title < $1.title }
     }
 
-    /// Whether "See the demo" belongs on screen — the demo mode's re-entry
-    /// door (2026-08-07, prd §217 amendment). `hasSeen` makes the fork's own
-    /// demo card hide itself forever after one entry, which was correct for
-    /// the fork (offering a tour of the room you just walked out of is a
-    /// dead end) but left the demo enterable EXACTLY ONCE per install — the
-    /// wrong shape for its actual audience, someone showing the app to other
-    /// people, repeatedly, on a real phone.
-    ///
-    /// Gated on a DEMO-CLEAN corpus, and the gate is load-bearing, not
-    /// decorative: `seedBridgeState` writes PostHog metrics named
-    /// `signed_up`/`doc_exported`, and `DemoMode.exit` FORGETS those by
-    /// name — on a lived-in install with a real PostHog connection, exiting
-    /// a re-entered demo would destroy that person's real readings. A watched
-    /// real wallet fails the same way through the seeded balance curve. So
-    /// this reads true only when every connected bridge is a demo seat (by
-    /// NAME) and no wallet is watched. After a clean exit `bridgeStore.bridges`
-    /// is `[]`, which satisfies this trivially — re-entry is available the
-    /// moment the last one ends.
-    ///
-    /// **Checks against `BridgeApp.demo` WHOLE, not `DemoSeedAll.seats` alone
-    /// (fixed 2026-08-08, reported "I don't see the Settings row").**
-    /// `BridgeApp.demo` is `[Gmail, Calendar, ChatGPT, Reminders, Photos,
-    /// Claude, Wallet, Tokens] + DemoSeedAll.seats` — eight OLDER static
-    /// entries that predate `DemoMode` and seed automatically on every DEBUG
-    /// install that's been through onboarding (`BridgeStore.init`,
-    /// `DemoState.seedsDemoData`), independent of whether `DemoMode.begin`
-    /// was ever called. The first cut here only excused `DemoSeedAll.seats`,
-    /// so on the ordinary case — any dev/debug install, which is EVERY
-    /// install this got tested on — those eight static names failed
-    /// `allSatisfy` and the row never appeared. Reading the same array
-    /// `DemoMode.begin` actually writes (`store.bridges = BridgeApp.demo`)
-    /// is also the more honest source of truth: this gate can never drift
-    /// from what "a demo seat" means somewhere else again.
-    private var demoReentryAvailable: Bool {
-        guard !DemoMode.isActive else { return false }
-        guard WalletStore.shared.addresses.isEmpty else { return false }
-        let demoNames = Set(BridgeApp.demo.map(\.name))
-        return bridgeStore.bridges.allSatisfy { demoNames.contains($0.name) }
-    }
-
-    /// A single-row group, present only when `demoReentryAvailable` — kept
-    /// separate from `secondaryRows` rather than folded in with an `if`
-    /// inline, since `secondaryRows`' A–Z sort would otherwise need to run
-    /// twice (once to build the base list, once after a conditional insert)
-    /// for one row.
-    private var demoRow: [RowSpec] {
-        guard demoReentryAvailable else { return [] }
-        return [RowSpec(
-            title: "See the demo",
-            value: String(localized: "Sample data from every source"),
-            badge: ("eye", DS.textPrimary),
-            action: {
-                DSHaptic.tap()
-                DemoMode.begin(store: bridgeStore)
-                // Land on the feed BEFORE the pour starts, the same split
-                // the fork card and the greeting's CTA both use — a feed
-                // revealed already full reads as a screenshot, watched
-                // filling it reads as what the app does.
-                route.path = []
-                Task { @MainActor in
-                    await DemoMode.pourIfNeeded(context: modelContext)
-                }
-            })]
-    }
-
+    /// **SEE THE DEMO IS DELETED FROM SETTINGS (prd §1236, user: "i think we
+    /// remove it less is more").** The row stood only for an install with
+    /// nothing connected; the demo stays a mode the first run leads into.
     /// Every row in one A–Z field — the You/App groups are retired.
     private var allRows: [RowSpec] {
-        (primaryRows + secondaryRows + demoRow).sorted { $0.title < $1.title }
+        (primaryRows + secondaryRows).sorted { $0.title < $1.title }
     }
 
     /// The colophon — mark, name, build — at the very foot of Settings, below
