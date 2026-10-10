@@ -7,6 +7,9 @@
 #     — WidgetWalletLine.normalizedPoints  (a flat curve draws down the MIDDLE)
 #     — WidgetFlowBand             (the week's flow, and its disclosure)
 #     — WidgetRunway.positions     (the dated rail's window always contains now)
+#     — WidgetWatch.quote / carryForward / priceText  (the Watchlist tile, §1223:
+#       a price is a reading — stamped past an hour, dropped past a day, and a
+#       failed read keeps the last price with its own time)
 #
 # One widget since the ask retired (2026-10-01): the wallet. The Today and
 # kept-ask tiles, and the asks, deadlines, Safe-call, requests and people
@@ -164,14 +167,14 @@ grep -qE '\$%\.1fK' "$TMP/panel.nc" \
 
 # Every tile the bundle declares must actually be in the bundle. A widget
 # struct that compiles and is never listed is invisible with no error anywhere.
-for w in NotesWidget WalletWidget FeedWidget ComposeControl NoteControl; do
+for w in NotesWidget WalletWidget FeedWidget WatchlistWidget ComposeControl NoteControl; do
   grep -q "        $w()" "$TMP/bundle.nc" \
     || { print -u2 "✗ $w is not in the widget bundle — it would never appear in the gallery"; exit 1; }
 done
 # Three widgets, each a small tile (prd §1210). The Category widget went with it.
 grep -q "        CategoryWidget()" "$TMP/bundle.nc" \
   && { print -u2 "✗ CategoryWidget is back in the bundle — §1210 replaced it with Notes and Feed"; exit 1; }
-for wf in WalletWidget NotesWidget FeedWidget; do
+for wf in WalletWidget NotesWidget FeedWidget WatchlistWidget; do
   f="Casberi/CasberiWidgets/$wf.swift"
   [[ -f "$f" ]] || { print -u2 "missing $f"; exit 1; }
   strip_comments "$f" > "$TMP/$wf.nc"
@@ -182,6 +185,27 @@ grep -q 'kind: WidgetNotes.kind' "$TMP/NotesWidget.nc" \
   || { print -u2 "✗ the Notes widget no longer uses WidgetNotes.kind"; exit 1; }
 grep -q 'kind: WidgetFeedTile.kind' "$TMP/FeedWidget.nc" \
   || { print -u2 "✗ the Feed widget no longer uses WidgetFeedTile.kind"; exit 1; }
+grep -q 'kind: WidgetWatch.kind' "$TMP/WatchlistWidget.nc" \
+  || { print -u2 "✗ the Watchlist widget no longer uses WidgetWatch.kind"; exit 1; }
+# A price is a reading (§1223): the tile draws one only through the freshness
+# rule, never straight off the row.
+grep -q 'WidgetWatch.quote(row, now: entry.date)' "$TMP/WatchlistWidget.nc" \
+  || { print -u2 "✗ the Watchlist widget draws a price without asking whether it is still fresh"; exit 1; }
+grep -qE 'row\.price\b' "$TMP/WatchlistWidget.nc" \
+  && { print -u2 "✗ the Watchlist widget reads row.price directly — a day-old price would draw as now's"; exit 1; }
+# The publisher runs after the prices read, in the foreground and the background task.
+strip_comments "Casberi/Casberi/Model/BridgeRefresh.swift" > "$TMP/refresh.nc"
+strip_comments "Casberi/Casberi/Model/WalletBackgroundRefresh.swift" > "$TMP/bg.nc"
+grep -q 'WidgetPublish.watchlist(context: context, read: true)' "$TMP/refresh.nc" \
+  || { print -u2 "✗ the foreground refresh no longer publishes the watchlist after its prices read"; exit 1; }
+grep -q 'WidgetPublish.watchlist(context: context, read: true)' "$TMP/bg.nc" \
+  || { print -u2 "✗ the background task no longer publishes the watchlist"; exit 1; }
+grep -q 'guard !DemoMode.isActive,' "$TMP/publish.nc" \
+  || { print -u2 "✗ the watchlist publish no longer stands down in the demo (§217)"; exit 1; }
+grep -q 'WidgetWatch.carryForward(' "$TMP/publish.nc" \
+  || { print -u2 "✗ the watchlist publish no longer carries a price forward — a failed read would blank the tile"; exit 1; }
+grep -q 'if WidgetPayload.write(list, key: WidgetWatch.key,' "$TMP/publish.nc" \
+  || { print -u2 "✗ the watchlist publish no longer reloads only when its payload changed"; exit 1; }
 # A count of today is a DATE's reading: the tile draws it only on that day.
 grep -q 'feed.isCurrent(now: entry.date)' "$TMP/FeedWidget.nc" \
   || { print -u2 "✗ the Feed widget draws its counts without asking whether they are today's"; exit 1; }
@@ -407,6 +431,50 @@ _ = WidgetPayload.write(feed, key: WidgetFeedTile.key, stampKey: WidgetFeedTile.
 eq(WidgetFeedTile.published(defaults: d)?.sections.map(\.room) ?? [], ["Day", "Social"],
    "the Feed order survives the round trip")
 
+// ── the Watchlist tile (§1223): a price is a reading ─────────────────────────
+let readAt = now.addingTimeInterval(-600)
+let eth = WidgetWatchlist.Row(ref: "base:0xeth", symbol: "ETH", name: "Ethereum",
+                              price: 4512.3, change: 0.023, at: readAt)
+let aapl = WidgetWatchlist.Row(ref: "stocktwits:sym:AAPL", symbol: "AAPL", name: "Apple",
+                               price: nil, change: nil, at: nil)
+check(WidgetWatch.quote(eth, now: now) != nil, "a price read ten minutes ago draws")
+eq(WidgetWatch.quote(eth, now: now)?.at, readAt, "…with the moment it was read, for the stamp")
+check(WidgetWatch.quote(eth, now: readAt.addingTimeInterval(WidgetWatch.priceFreshness + 1)) == nil,
+      "a price past a day does not draw — the symbol stands alone")
+check(WidgetWatch.quote(aapl, now: now) == nil, "a row never priced draws no price")
+check(WidgetWatch.priceFreshness > WidgetWatch.stampAfter,
+      "a price is stamped before it is dropped")
+
+// A failed read keeps the last price, stamped by its own time; a new read wins.
+let prev = WidgetWatchlist(rows: [eth, WidgetWatchlist.Row(ref: "stocktwits:sym:AAPL", symbol: "AAPL",
+                                                          name: "Apple", price: 254, change: -0.01,
+                                                          at: readAt)])
+let unread = WidgetWatchlist.Row(ref: "base:0xeth", symbol: "ETH", name: "Ethereum",
+                                 price: nil, change: nil, at: nil)
+let fresh = WidgetWatchlist.Row(ref: "stocktwits:sym:AAPL", symbol: "AAPL", name: "Apple",
+                                price: 256, change: 0.004, at: now)
+let carried = WidgetWatch.carryForward([unread, fresh], from: prev)
+eq(carried[0].price, 4512.3, "an unpriced row keeps the last publish's price")
+eq(carried[0].at, readAt, "…and that price's own time, so it ages out on time")
+eq(carried[1].price, 256, "a row read this pass keeps its new price")
+eq(WidgetWatch.carryForward([unread], from: nil)[0].price, nil, "nothing to carry, nothing carried")
+let newcomer = WidgetWatchlist.Row(ref: "base:0xnew", symbol: "NEW", name: "New",
+                                   price: nil, change: nil, at: nil)
+eq(WidgetWatch.carryForward([newcomer], from: prev)[0].price, nil,
+   "a price is carried by ref, never onto another row")
+
+eq(WidgetWatch.priceText(254), "$254.00", "a stock's price keeps its cents")
+eq(WidgetWatch.priceText(0.5), "$0.5000", "under a dollar, four places")
+// The two below format in the reader's locale, so they assert the digits.
+let tiny = WidgetWatch.priceText(0.00001234)
+check(tiny.hasPrefix("$0") && tiny.hasSuffix("0000123"), "under a cent, three significant digits — got \(tiny)")
+check(WidgetWatch.priceText(4512.3).hasSuffix("512"), "from $1,000 the cents go")
+
+_ = WidgetPayload.write(WidgetWatchlist(rows: [eth, aapl]), key: WidgetWatch.key,
+                        stampKey: WidgetWatch.stampKey, defaults: d)
+eq(WidgetWatch.published(defaults: d)?.rows.map(\.symbol) ?? [], ["ETH", "AAPL"],
+   "the watchlist's order survives the round trip")
+
 // ── money ───────────────────────────────────────────────────────────────────
 eq(MoneyFormat.compactUSD(0), "$0", "zero")
 eq(MoneyFormat.compactUSD(950), "$950", "under a thousand keeps every digit")
@@ -530,6 +598,17 @@ mutate "the Feed tile's counts stay current past midnight" \
   WidgetPayload.swift \
   'calendar.isDate(day, inSameDayAs: now)|||true' || mfail=1
 
+# The Watchlist tile's prices.
+mutate "a price never ages out — a week-old price draws as now's" \
+  WidgetPayload.swift \
+  'now.timeIntervalSince(at) < priceFreshness else { return nil }|||true else { return nil }' || mfail=1
+mutate "a failed read blanks the last price instead of carrying it" \
+  WidgetPayload.swift \
+  'guard let previous else { return rows }|||return rows' || mfail=1
+mutate "a carried price is stamped now, so it never ages out" \
+  WidgetPayload.swift \
+  'price: last.price, change: last.change, at: last.at)|||price: last.price, change: last.change, at: Date())' || mfail=1
+
 # Money.
 mutate "a change that rounds to zero is given a direction (§83)" \
   MoneyFormat.swift \
@@ -542,4 +621,4 @@ mutate "percentLabel drops the sign on a real move" \
   'return String(format: "%@%.1f%%", pct > 0 ? "+" : "−", abs(pct))|||return String(format: "%.1f%%", abs(pct))' || mfail=1
 
 [[ $mfail -eq 0 ]] || { print -u2 "widget-selftest: a mutation SURVIVED — a check above proves nothing"; exit 1; }
-print "widget-selftest: OK — publish round trip, the freshness window, the flat curve, the flow band, the rail and the money table all pinned."
+print "widget-selftest: OK — publish round trip, the freshness window, the flat curve, the flow band, the rail, the watchlist's prices and the money table all pinned."

@@ -75,6 +75,11 @@ enum WalletBackgroundRefresh {
             // bridges land rows on foreground and through their own paths; this
             // asks what among them deserves telling.
             await runNotifySweep()
+            // The Watchlist widget's prices (prd §1223), last, so the sweep
+            // never waits on them; read only while the tile is on a Home Screen.
+            if !Task.isCancelled, let context = SharedStore.live?.mainContext {
+                await WidgetPublish.watchlist(context: context, read: true)
+            }
             state.complete(task, success: !Task.isCancelled)
         }
     }

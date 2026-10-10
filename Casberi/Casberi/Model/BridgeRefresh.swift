@@ -580,10 +580,12 @@ enum BridgeRefresh {
             }
         }
         // Not an ingest — the watchlist's 24h pulse for the feed-row
-        // sparkline. Exits instantly when no tokens are watched.
+        // sparkline. Exits instantly when no tokens are watched. Then the
+        // Watchlist widget, from the prices just read (prd §1223).
         let s = slot(); BridgeRefresh.landingTask { @MainActor in
             await BridgeRefresh.stagger(s)
             await TokenPulse.shared.refresh(context: context)
+            await WidgetPublish.watchlist(context: context, read: true)
         }
         for provider in MailProvider.allCases where provider.connected {
             let s = slot(); BridgeRefresh.landingTask { @MainActor in

@@ -14,9 +14,10 @@ import Foundation
 /// shelf life, and a widget has no choice but to persist it, so instead it
 /// DROPS it once it ages out. The tile gets quieter, never wrong.
 ///
-/// Three widgets read this, each a small tile (prd §1210): Notes, Wallet and
-/// the Feed. The Today widget and the kept-ask widget went with the ask
-/// (2026-10-01), the Category widget with §1210, and their payloads with them.
+/// Four widgets read this, each a small tile (prd §1210, §1223): Notes,
+/// Wallet, the Feed and the Watchlist. The Today widget and the kept-ask
+/// widget went with the ask (2026-10-01), the Category widget with §1210, and
+/// their payloads with them.
 ///
 /// Freshness is per-payload, not global — see each type's own window.
 enum WidgetPayload {
@@ -413,5 +414,93 @@ enum WidgetFeedTile {
     -> WidgetFeed? {
         WidgetPayload.read(WidgetFeed.self, key: key, stampKey: stampKey,
                            freshness: freshness, now: now, defaults: defaults)
+    }
+}
+
+// MARK: - The watchlist
+
+/// What you follow in Markets, for the Watchlist widget: each row's symbol,
+/// the price this app last read and its day move, in the watchlist's own
+/// order (`TokenWatchOrder`). Small tile only.
+///
+/// A row is not a reading; its price is. So the payload keeps a week, like
+/// Notes' shelf, and each price carries the moment it was read: the tile
+/// stamps a price past `stampAfter` and drops one past `priceFreshness`,
+/// leaving the symbol standing alone rather than an old price drawn as now's
+/// (§83).
+struct WidgetWatchlist: Codable, Equatable {
+    let rows: [Row]
+
+    struct Row: Codable, Equatable {
+        /// The watched row's `sourceRef`: what a later publish carries a
+        /// price forward by.
+        let ref: String
+        /// The ticker or the token's symbol ("AAPL", "ETH").
+        let symbol: String
+        /// The company's or the token's name, for VoiceOver.
+        let name: String
+        let price: Double?
+        /// The day move as a FRACTION (-0.048 is -4.8%), `TokenPulse`'s unit.
+        let change: Double?
+        /// When the price was read. Nil with no price.
+        let at: Date?
+    }
+}
+
+enum WidgetWatch {
+    static let kind = "casberi.watchlist"
+    static let key = "widget.watchlist"
+    static let stampKey = "widget.watchlistAt"
+    /// The list itself: a week, as Notes'.
+    static let freshness: TimeInterval = 7 * 24 * 3600
+    /// A price past this is not drawn.
+    static let priceFreshness: TimeInterval = 24 * 3600
+    /// A price past this is stamped ("as of 3h ago"). A watched token's pulse
+    /// is read at most every 15 minutes while the app is open, so an hour is
+    /// past the normal cadence.
+    static let stampAfter: TimeInterval = 3600
+    /// The small tile's rows.
+    static let rowCap = 4
+
+    static func published(now: Date = .now,
+                          defaults: UserDefaults? = UserDefaults(suiteName: SharedStore.appGroup))
+    -> WidgetWatchlist? {
+        WidgetPayload.read(WidgetWatchlist.self, key: key, stampKey: stampKey,
+                           freshness: freshness, now: now, defaults: defaults)
+    }
+
+    /// The row's price and move if they may be drawn at `now`: read, and
+    /// read within `priceFreshness`.
+    static func quote(_ row: WidgetWatchlist.Row, now: Date = .now)
+    -> (price: Double, change: Double?, at: Date)? {
+        guard let price = row.price, let at = row.at,
+              now.timeIntervalSince(at) < priceFreshness else { return nil }
+        return (price, row.change, at)
+    }
+
+    /// A price in the tile's narrow column: whole dollars from $1,000, cents
+    /// from $1, four places under it, three significant digits under a cent.
+    static func priceText(_ price: Double) -> String {
+        if price >= 1_000 {
+            return "$" + price.formatted(.number.precision(.fractionLength(0)))
+        }
+        if price >= 1 { return String(format: "$%.2f", price) }
+        if price >= 0.01 { return String(format: "$%.4f", price) }
+        return "$" + price.formatted(.number.precision(.significantDigits(1...3)).grouping(.never))
+    }
+
+    /// Carries a price forward from the last publish for a row this pass
+    /// could not price (a cold launch whose read failed), so the tile keeps
+    /// the last price with its stamp rather than blanking it. A carried price
+    /// still ages out by its own `at`.
+    static func carryForward(_ rows: [WidgetWatchlist.Row],
+                             from previous: WidgetWatchlist?) -> [WidgetWatchlist.Row] {
+        guard let previous else { return rows }
+        let old = Dictionary(previous.rows.map { ($0.ref, $0) }, uniquingKeysWith: { a, _ in a })
+        return rows.map { row in
+            guard row.price == nil, let last = old[row.ref], last.price != nil else { return row }
+            return WidgetWatchlist.Row(ref: row.ref, symbol: row.symbol, name: row.name,
+                                       price: last.price, change: last.change, at: last.at)
+        }
     }
 }

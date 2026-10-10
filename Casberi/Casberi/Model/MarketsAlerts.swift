@@ -63,12 +63,15 @@ final class PriceAlertStore {
 
     // MARK: - Checking
 
-    /// The price and day move this app last read for a watched row.
-    static func reading(for thing: Thing) -> (price: Double, change: Double?)? {
-        if let pulse = TokenPulse.shared.pulse(for: thing) { return (pulse.price, pulse.change24h) }
+    /// The price and day move this app last read for a watched row, and when
+    /// it read them (the Watchlist widget stamps an old price, §1223).
+    static func reading(for thing: Thing) -> (price: Double, change: Double?, at: Date)? {
+        if let pulse = TokenPulse.shared.pulse(for: thing) {
+            return (pulse.price, pulse.change24h, pulse.fetchedAt)
+        }
         if let symbol = StockWatch.symbol(of: thing),
            let quote = CompanyQuotes.shared.quote(.stock(symbol)) {
-            return (quote.price, quote.change)
+            return (quote.price, quote.change, quote.at)
         }
         return nil
     }

@@ -436,6 +436,7 @@ marks chronological position within the pair.
 | §1039 (Logos' one verb is Explorer) | the explorer was the room's only verb tile | amended by §1084 — Create · Explorer · Send, by page (`LogosSection.verbs(forAccount:keyAccount:)`) |
 | §74 (Farcaster grows likes, mentions, channels, replies, faces) | Farcaster was a keyless Network seat on the Snapchain node, with likes, recasts, mentions, channels, replies and faces | deleted by §1110 (user: "remove farcaster") — the seat, its ingest, signers, starter pack and probes are gone; stored rows are swept |
 | §877 (the widgets are Today and Wallet; amended 2026-10-04 to Wallet and Category) | Wallet and a Category tile you configure, small to large | amended by §1210 — three small tiles: Notes, Wallet, Feed; the Category widget is deleted |
+| §1210 (three widgets, each a small tile: Notes, Wallet, Feed) | three small tiles | amended by §1223 — a fourth small tile, Watchlist |
 
 ## §1 — Thesis
 
@@ -65654,3 +65655,12 @@ The Feed's rule (§1208m) for the Wallet: Home is the page, and Holdings, Securi
 5. **Data stays a tray** (`DSTray`, design law): switches and acts, not a scroll of things, so it takes no box or cards.
 
 Same pass: a sheet's title row reserves no band for the demo pill, which never covers a sheet (`dsRoomTitleListRow(inSheet:)`); the Wallet's move rows put their amount in the rows' column.
+
+## §1223 — A Watchlist widget, small (user, 2026-10-10: "create a small widget only for watchlist"; amends §1210)
+
+1. **A fourth small tile, Watchlist** (`WatchlistWidget`, `WidgetWatchlist`, `WidgetPublish.watchlist`): the pink name over the first four rows of what you follow in Markets, in the watchlist's own order (`TokenWatchOrder`: Movers first, My order or Recently followed), each its symbol, the price this app last read and the day's move; a move that rounds to zero takes no sign or colour (§83). Alerts that went off are not rows. The tile opens Markets (`casberi://room/Markets`). Empty, it says "Follow a company in Markets"; with nothing published for a week, "Open Casberi to see your watchlist".
+2. **A price is a reading.** Each carries when it was read (`PriceAlertStore.reading(for:)` now says when): past an hour the tile stamps the oldest ("as of 3h ago"), past a day it drops the price and the symbol stands alone. A read that fails keeps the last published price with its own time (`WidgetWatch.carryForward`), so a cold launch offline does not blank the tile.
+3. **Published after the prices read, not in the foreground pass**: `BridgeRefresh` publishes once the watchlist's pulse lands, and the background task after its notify sweep. A watched stock's quote is read for the tile only while one stands on a Home Screen (`WidgetCenter.currentConfigurations`); Markets otherwise reads it only when it draws the row. No new host. The demo publishes nothing (§217).
+4. Prices of what you follow are not your money; the tile shows no holding, so Hide balances (§374) has nothing to withhold.
+
+UNVERIFIED: written on a machine with no Xcode, so neither build nor tile was seen before commit. `widget-selftest.sh` holds the freshness, the carry-forward and the price text; `-widgetProbe YES` logs `widgetWatchlist|`.

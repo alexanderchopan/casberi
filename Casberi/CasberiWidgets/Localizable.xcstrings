@@ -793,6 +793,34 @@
         }
       }
     },
+    "Follow a company in Markets": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Sigue una empresa en Mercados"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "マーケットで企業をフォロー"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "마켓에서 회사를 팔로우하세요"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "在市场中关注一家公司"
+          }
+        }
+      }
+    },
     "Follow an address in Casberi": {
       "localizations": {
         "es": {
@@ -1209,6 +1237,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "打开 Casberi 查看今天"
+          }
+        }
+      }
+    },
+    "Open Casberi to see your watchlist": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Abre Casberi para ver tu lista de seguimiento"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Casberiを開いてウォッチリストを見る"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "관심 목록을 보려면 Casberi를 여세요"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "打开 Casberi 查看关注列表"
           }
         }
       }
@@ -1953,6 +2009,34 @@
         }
       }
     },
+    "Watchlist": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Lista de seguimiento"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "ウォッチリスト"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "관심 목록"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "关注列表"
+          }
+        }
+      }
+    },
     "What came today, in your Feed order.": {
       "localizations": {
         "es": {
@@ -1977,6 +2061,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "今天收到的内容，按你的订阅流顺序。"
+          }
+        }
+      }
+    },
+    "What you follow in Markets.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Lo que sigues en Mercados."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "マーケットでフォローしているもの。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "마켓에서 팔로우하는 항목."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "你在市场中关注的内容。"
           }
         }
       }
