@@ -376,7 +376,7 @@ extension FeedScreen {
                     ForEach(specs, id: \.category) { spec in
                         GlanceTile(category: spec.category, fresh: Self.fresh(spec.things, since: newSince),
                                    newest: spec.newest, next: spec.next,
-                                   pictured: spec.pictured, cast: spec.cast) {
+                                   pictured: spec.pictured, cast: spec.cast, figure: spec.money) {
                             DSHaptic.selection()
                             if let onPick { onPick(spec.category) } else { chrome.sourceRequest = spec.category }
                         }
@@ -400,6 +400,9 @@ extension FeedScreen {
         let next: Thing?
         let pictured: Thing?
         let cast: ThingCastRoll?
+        /// The figure and what it was, when the caller knows them better
+        /// than the title does (the Wallet's lists, prd §1223).
+        var money: (title: String, amount: String)? = nil
     }
 
     /// The tiles (prd §1208d, §1208j, §1208k): two across, one per category
@@ -501,6 +504,8 @@ struct GlanceTile: View {
     var pictured: Thing? = nil
     /// The people in today's Social things, when there are two or more.
     var cast: ThingCastRoll? = nil
+    /// The figure and what it was, given; else read off the title.
+    var figure: (title: String, amount: String)? = nil
     let action: () -> Void
     @Environment(\.dynamicTypeSize) private var typeSize
 
@@ -513,7 +518,7 @@ struct GlanceTile: View {
             StoredPixels.probe(shot).map { (shot, $0) }
         }
         let title = newest.isLive ? newest.title : ""
-        let money = MoneyClause.split(title)
+        let money = figure ?? MoneyClause.split(title)
         let follower = next.flatMap { $0.isLive ? $0.title : nil }
         GlanceShell(category: category, when: LiveTimeText.short(moment), fresh: fresh,
                     accessibility: Text(verbatim: "\(category). \(title)"), action: action) {

@@ -104,8 +104,40 @@ extension FeedScreen {
             let live = things.filter(\.isLive)
             guard let first = live.first else { return nil }
             return GlanceSpec(category: name, things: live, newest: first,
-                              next: live.dropFirst().first, pictured: nil, cast: nil)
+                              next: live.dropFirst().first, pictured: nil, cast: nil,
+                              money: walletFigure(first))
         }
+    }
+
+    /// **A MONEY BOX LEADS WITH ITS FIGURE (prd §1223)**, as the Feed's
+    /// money tiles do: the amount the row would show, through Hide balances,
+    /// over who or what it was — the counterparty, a card's name, else the
+    /// title's first clause, so a long title never runs out of the box.
+    static func walletFigure(_ thing: Thing) -> (title: String, amount: String)? {
+        guard thing.isLive else { return nil }
+        let sign = thing.transferDirection == "received" ? "+" : ""
+        let amount: String
+        if let usd = thing.transferUSD, usd.isFinite, usd != 0 {
+            amount = sign + WalletValue.payment(usd)
+        } else if let value = thing.priceValue, value.isFinite, value != 0 {
+            amount = sign + BalancePrivacy.shared.value(
+                abs(value).formatted(.currency(code: thing.priceCurrency ?? "USD")))
+        } else if let raw = WalletValue.transferAmount(thing),
+                  raw.contains(where: { ("1"..."9").contains($0) }) {
+            amount = sign + raw
+        } else {
+            return nil
+        }
+        let name = thing.transferCounterparty.flatMap { $0.isEmpty ? nil : $0 }
+            ?? (WalletCards.isSpend(thing) ? BridgeCatalog.seatName(forSource: thing.source) : nil)
+            ?? Self.firstClause(thing.title)
+        return (name, amount)
+    }
+
+    /// "Needs attention · £200 → €235 · Deposit" → "Needs attention".
+    static func firstClause(_ title: String) -> String {
+        let cut = [" · ", " — "].compactMap { title.range(of: $0)?.lowerBound }.min()
+        return cut.map { String(title[..<$0]) } ?? title
     }
 
     /// A Home list on the Feed's panel, under an identity the list knows

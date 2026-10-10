@@ -65664,3 +65664,7 @@ Same pass: a sheet's title row reserves no band for the demo pill, which never c
 4. Prices of what you follow are not your money; the tile shows no holding, so Hide balances (§374) has nothing to withhold.
 
 UNVERIFIED: written on a machine with no Xcode, so neither build nor tile was seen before commit. `widget-selftest.sh` holds the freshness, the carry-forward and the price text; `-widgetProbe YES` logs `widgetWatchlist|`.
+
+## §1223 — A Wallet box leads with its figure (user, 2026-10-10: "yes do it and fix the truncation")
+
+The Wallet Home's glance boxes (§1219) draw money as the Feed's money tiles do: the amount the row would show, through Hide balances (`WalletValue`), over who or what it was: the counterparty, a card's name, else the title's first clause ("Needs attention · £200 → €235 · Deposit" → "Needs attention"), so a long title never runs out of the box (`FeedScreen.walletFigure`, handed to `GlanceTile` as `figure`). A thing with no amount (a vote closing) keeps its title.
