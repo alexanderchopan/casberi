@@ -1414,7 +1414,10 @@ struct FeedScreen: View {
             // the Feed's landing (prd §1219).
             .onChange(of: panelScrollTarget) { _, target in
                 guard let target else { return }
-                withAnimation(DS.Motion.standard) {
+                // At once, as the Feed's jump lands (`settleFeedJump`).
+                var instant = Transaction()
+                instant.disablesAnimations = true
+                withTransaction(instant) {
                     proxy.scrollTo(target, anchor: .top)
                 }
                 panelScrollTarget = nil

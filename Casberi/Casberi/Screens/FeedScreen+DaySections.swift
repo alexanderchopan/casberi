@@ -407,6 +407,7 @@ extension FeedScreen {
         if scroll {
             feedScrollSections(visible, hiding: Self.glanceShown(glance, lede: homeCover),
                                nextEventID: nextEventID)
+            jumpRoom
         }
         }
     }

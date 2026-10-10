@@ -201,13 +201,17 @@ struct NetworkReachScreen: View {
     /// A tile's press: its category's panel to the top, brightened once —
     /// the Feed's landing (prd §1208l).
     private func jump(_ category: String, _ proxy: ScrollViewProxy) {
-        // Under Reduce Motion the scroll lands at once and the panel only
-        // brightens, never a travel.
-        withAnimation(reduceMotion ? nil : DS.Motion.standard) {
-            proxy.scrollTo(Self.anchor(category), anchor: .top)
-        }
+        // At once, as the Feed's jump lands (`settleFeedJump`): the
+        // brightening is what the eye follows, never a travel.
+        var instant = Transaction()
+        instant.disablesAnimations = true
         Task { @MainActor in
-            try? await Task.sleep(for: .milliseconds(350))
+            // Settled over a few passes, as the Feed's is (`landingPasses`).
+            for pass in 0..<FeedScreen.landingPasses {
+                if pass > 0 { try? await Task.sleep(for: .milliseconds(70)) }
+                withTransaction(instant) { proxy.scrollTo(Self.anchor(category), anchor: .top) }
+            }
+            try? await Task.sleep(for: .milliseconds(250))
             withAnimation(reduceMotion ? nil : DS.Motion.standard) { landed = category }
             try? await Task.sleep(for: .milliseconds(900))
             withAnimation(reduceMotion ? nil : .easeOut(duration: 0.6)) { landed = nil }

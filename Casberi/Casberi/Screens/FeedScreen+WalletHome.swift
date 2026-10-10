@@ -71,6 +71,7 @@ extension FeedScreen {
                 walletSeeAllSection(total: all.count)
             }
         }
+        jumpRoom
     }
 
     /// Home's lists in order, for the pill (prd §1219).
@@ -154,10 +155,13 @@ extension FeedScreen {
     /// takes it over, and brightens once — the Feed's landing (prd §1208l),
     /// the section's identity first, then its name, as `settleFeedJump` does.
     func walletHomeJump(_ name: String) {
-        panelScrollTarget = Self.sectionID(name)
         Task { @MainActor in
-            try? await Task.sleep(for: .milliseconds(450))
-            panelScrollTarget = Self.scrollAnchor(name)
+            // The Feed's landing: at once, settled over a few passes.
+            for pass in 0..<Self.landingPasses {
+                if pass > 0 { try? await Task.sleep(for: .milliseconds(70)) }
+                panelScrollTarget = Self.sectionID(name)
+                await Task.yield()
+            }
             try? await Task.sleep(for: .milliseconds(250))
             withAnimation(DS.Motion.standard) { landedSection = name }
             try? await Task.sleep(for: .milliseconds(900))

@@ -280,6 +280,28 @@ extension FeedScreen {
 
     /// The tray asked for a category (prd §1208 item 6): scroll its name to
     /// the top.
+    /// ROOM UNDER THE LAST SECTION (user, 2026-10-10: the landing "is
+    /// jarring and inconsistent"): without it the last sections cannot bring
+    /// their names to the top, so a jump to them stopped lower than the rest
+    /// and the pill named the section above. Air, not a footer.
+    static let jumpRoomHeight: CGFloat = 380
+
+    @ViewBuilder
+    var jumpRoom: some View {
+        Section {
+            Color.clear
+                .frame(height: Self.jumpRoomHeight)
+                .listRowInsets(EdgeInsets())
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+                .accessibilityHidden(true)
+        }
+    }
+
+    /// Instant landings it takes a lazily laid-out list to settle on a far
+    /// section (measured: one stops short by the rows it had not met).
+    static let landingPasses = 4
+
     func settleFeedJump(_ proxy: ScrollViewProxy) {
         // The Feed on screen takes the jump, never one mounted beside it.
         guard source == "All", isActive, let category = chrome.feedJump else { return }
@@ -287,15 +309,22 @@ extension FeedScreen {
         NSLog("[Casberi] feedJump: %@", category)
         #endif
         chrome.feedJump = nil
-        // Twice: once the list has its rows, and again once a list still
-        // laying out its sections above has settled (a cold landing).
+        // **ONE LANDING, EVERY TIME (user, 2026-10-10: "it is jarring and
+        // inconsistent").** An animated scroll travels to a position the list
+        // has only ESTIMATED (rows off screen are not measured yet), and the
+        // correction after it slid the page back the other way — up for one
+        // section, down for the next. So the jump lands at once, as a section
+        // index does (Contacts' letters), settles once more after layout, and
+        // the brightening below is what the eye follows.
         Task { @MainActor in
-            // The section's own identity first — the list knows it before
-            // the section's rows are laid out — then its name, exactly.
-            try? await Task.sleep(for: .milliseconds(150))
-            withAnimation(DS.Motion.standard) { proxy.scrollTo(Self.sectionID(category), anchor: .top) }
-            try? await Task.sleep(for: .milliseconds(450))
-            withAnimation(DS.Motion.standard) { proxy.scrollTo(Self.scrollAnchor(category), anchor: .top) }
+            var instant = Transaction()
+            instant.disablesAnimations = true
+            // A far section lands on the list's estimate first; each pass
+            // measures the rows it lands among, so a few settle it exactly.
+            for pass in 0..<Self.landingPasses {
+                try? await Task.sleep(for: .milliseconds(pass == 0 ? 60 : 70))
+                withTransaction(instant) { proxy.scrollTo(Self.sectionID(category), anchor: .top) }
+            }
             // LANDING (prd §1208l): the section you arrived at brightens once,
             // so the eye finds where it landed.
             try? await Task.sleep(for: .milliseconds(250))
