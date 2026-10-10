@@ -44,7 +44,7 @@ extension DSTileScope {
 /// sideways are one act on a grid that shows both, so one control does both.
 ///
 /// **The tile is the dock's category tile** — a 20pt glyph over the
-/// `dockCaption10` word, 52pt tall, the tint fill on the pick — so a scope reads
+/// `dockCaption10` word, 52pt tall, the pick filled in the page's ink (`pickFill`) — so a scope reads
 /// as the same kind of thing as the folder that opened the room. A short last
 /// row is left-aligned, and every column is the same width in every room.
 ///
@@ -70,7 +70,7 @@ struct DSScopeTiles<Scope: DSTileScope>: View {
     /// One scrolling row of dock-width tiles instead of the four-column grid
     /// (Accounts' category strip, 2026-09-17: "just use the way the dock
     /// looks with the icons"). The dock's own anatomy — 52pt tiles, glyph
-    /// over word, the pick filled in tint — and an unpicked tile draws no
+    /// over word, the pick filled in ink — and an unpicked tile draws no
     /// fill, because the dock's don't: a row of ten grey squares is the plate
     /// §782 deleted.
     var strip: Bool = false
@@ -130,6 +130,12 @@ struct DSScopeTiles<Scope: DSTileScope>: View {
     /// Frozen, like the dock's `CategoryGlyph`, so a wide symbol and a tall one
     /// seat the word at the same height.
     private static var glyphSize: CGFloat { 20 }
+    /// **THE PICK IS THE PAGE'S INK, NOT A COLOUR (user, 2026-10-10, "E1").**
+    /// White with black ink in dark, black with white in light — Control
+    /// Center's "on". The tint fill read as the system's stock blue, and the
+    /// pink belongs to the title above, so the row owns no colour of its own.
+    static var pickFill: Color { DS.textPrimary }
+    static var pickInk: Color { Color.adaptive(dark: "#000000", light: "#ffffff") }
     /// **GLYPH OVER WORD, everywhere (user, 2026-09-26, reversing "remove
     /// the glyphs" within the hour: "we do need those glyphs b/c we have them
     /// elsewhere in the app, it's a language — the app categories, and in the
@@ -265,17 +271,17 @@ struct DSScopeTiles<Scope: DSTileScope>: View {
                     .rotationEffect(.degrees(isVerb && section.glyph == "plus" ? plusTurn : 0))
                 // A section that wants you says so in its WORD's tone, never
                 // a dot (user, 2026-09-24: "if we want yellow just make the
-                // word Risk yellow"). The picked tile stays white on its tint.
+                // word Risk yellow"). The picked tile keeps its pick ink.
                 Text(section.label)
                     .dsText(.dockCaption10)
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
-                    .foregroundStyle(isOn ? Color.white : isInert ? DS.textTertiary : wants ? DS.attentionInk : isVerb ? DS.tint : DS.textPrimary)
+                    .foregroundStyle(isOn ? Self.pickInk : isInert ? DS.textTertiary : wants ? DS.attentionInk : isVerb ? DS.tint : DS.textPrimary)
             }
-            .foregroundStyle(isOn ? Color.white : isInert ? DS.textTertiary : isVerb ? DS.tint : DS.textPrimary)
+            .foregroundStyle(isOn ? Self.pickInk : isInert ? DS.textTertiary : isVerb ? DS.tint : DS.textPrimary)
             .frame(maxWidth: .infinity, minHeight: Self.tileHeight)
             // A disabled tile swaps its fill (§83), never only its ink.
-            .background { shape.fill(isOn ? DS.tint : (strip ? Color.clear : DS.surfaceRaised.opacity(isInert ? 0.45 : 1))) }
+            .background { shape.fill(isOn ? Self.pickFill : (strip ? Color.clear : DS.surfaceRaised.opacity(isInert ? 0.45 : 1))) }
             // **BECOMING THE PICK IS A CROSSFADE (prd §966).** The fill and the
             // ink ride the template's own clock, so a room whose pick handler
             // forgets `withAnimation` still slides the tint in under the

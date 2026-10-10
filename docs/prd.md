@@ -65621,3 +65621,9 @@ The widgets were checked on the simulator only in their empty state: the demo pu
 5. Sources' Subscriptions count reads "What renews, free or paid" (§1164: a free plan counts).
 
 Left as they are, on purpose: calendars keep Subscribe (§1137), a mail list keeps "Unsubscribe on <host>" (the sender's own word), and Stripe, Polar and Dodo rows keep "Subscription" for your customers' plans.
+
+## §1218 — The picked tile is the page's ink (user, 2026-10-10)
+
+Every `DSScopeTiles` row (the Feed's Feed · Markets · Settings · Sources, and every screen's tiles) draws its pick in the page's own ink: a white tile with black glyph and word in dark, a black one with white in light — Control Center's "on" (`DSScopeTiles.pickFill`, `pickInk`). The tint fill read as the system's stock blue, and the pink belongs to the title row above, so the row owns no colour of its own. Every tile keeps its plate, so the unpicked three still read as buttons (the plateless "quiet" row was declined for that reason). A verb tile keeps its tint ink (§969); a word that wants you keeps `attentionInk`.
+
+Declined: the segmented control with a sliding lens. The Feed's row is one view and three doors that rise as sheets (§1208m), so the lens could only ever sit on Feed.
