@@ -127,7 +127,7 @@ struct WatchAddSheet: View {
         let text: Text = if DemoMode.isActive && !query.isEmpty {
             Text("Search works once you leave the demo.")
         } else if query.isEmpty {
-            Text("Search by name, ticker, or paste a contract address on any chain.")
+            Text("Contract addresses work on any chain.")
         } else {
             Text("Nothing by that name. Try a ticker, or paste the contract address.")
         }

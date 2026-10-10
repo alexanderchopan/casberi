@@ -734,7 +734,7 @@ struct AddressCard: View {
                     reachSection
                     noteBlock
                     spine(things)
-                    nameNudge
+                    nameNudge(hasThings: !things.isEmpty)
                     // Room for the pinned verb bar. `DS.Hit.min` plus the
                     // bar's own padding — spelled from the token so the two
                     // cannot drift apart.
@@ -2240,13 +2240,17 @@ struct AddressCard: View {
     /// argument is live; once it carries a real name this would be a panel
     /// explaining a decision already made.
     @ViewBuilder
-    private var nameNudge: some View {
+    private func nameNudge(hasThings: Bool) -> some View {
         if unnamed, !editingName {
             VStack(alignment: .leading, spacing: 2) {
                 Text("Give them a name")
                     .dsText(.heading17).foregroundStyle(DS.textPrimary)
-                DSFootnote("It rewrites every transaction you have with this address, everywhere in the app.",
-                           scale: .page)
+                // A young card already says what lands here (prd §462), so
+                // the reason to name it is said only once something has.
+                if hasThings {
+                    DSFootnote("It rewrites every transaction you have with this address, everywhere in the app.",
+                               scale: .page)
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(DS.Space.s4)

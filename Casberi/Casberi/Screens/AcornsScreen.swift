@@ -93,7 +93,7 @@ struct AcornsScreen: View {
                              proof: result,
                              retry: { Task { await sync() } })
         unreadableBlock
-        DSSlabNote(text: "Your accounts and balances land in your feed. Read-only — Acorns is never asked to move money.",
+        DSSlabNote(text: "Read-only — Acorns is never asked to move money.",
                    plain: true)
     }
 

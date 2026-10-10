@@ -83,7 +83,7 @@ struct WalletConnectionScreen: View {
             // The promise, and the only thing left on this page that is not a
             // chain — the Disconnect that used to sit under it belongs to the
             // account page's exits (see this file's doc).
-            DSFootnote("Read-only — following can never trade or move funds. Activity is public, read across chains directly on \(DS.device).")
+            DSFootnote("Activity is public, read across chains directly on \(DS.device).")
                 .padding(.top, DS.Space.s3)
                 .plainAccountRow()
         }

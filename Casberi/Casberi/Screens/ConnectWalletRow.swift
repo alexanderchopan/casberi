@@ -76,7 +76,7 @@ struct ConnectWalletRow: View {
     /// the approval it leads to is the same one the direct open would get.
     private func manualPairingCard(_ uri: URL) -> some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
-            Text("Not listed? Copy the link into your wallet's scan screen — it's still waiting.")
+            Text("Not listed? Paste this link into your wallet's scanner.")
                 .dsText(.subhead12).foregroundStyle(DS.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
             HStack(spacing: DS.Space.s2) {

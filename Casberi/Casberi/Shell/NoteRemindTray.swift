@@ -66,7 +66,7 @@ struct NoteRemindTray: View {
                     }
                 }
                 .disabled(busy)
-                DSFootnote(Text("Lands in Reminders, in a list named Casberi, with this note as its link."))
+                DSFootnote(Text("Saved to Reminders, in a list named Casberi."))
             }
         }
     }

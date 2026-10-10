@@ -76,7 +76,7 @@ struct PrivyScreen: View {
                              syncingLine: String(localized: "Reading your Privy apps…"),
                              proof: result,
                              retry: { Task { await sync() } })
-        DSSlabNote(text: "Every app you made a wallet in lands in your feed. Balances are read from the chain, not from Privy.",
+        DSSlabNote(text: "Balances are read from the chain, not from Privy.",
                    plain: true)
     }
 

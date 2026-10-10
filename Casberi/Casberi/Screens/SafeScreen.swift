@@ -465,7 +465,7 @@ struct SafeScreen: View {
                 DSSlabDoor(title: String(localized: "Make a vault-chip key"), systemImage: "cpu", opens: false) {
                     makeEnclaveKey()
                 }
-                Text("A P-256 key born in the Secure Enclave. Its bytes never exist in the app, so there is nothing to export — the Safe takes it through a signer contract your other wallet deploys once.")
+                Text("Kept in the Secure Enclave, so it can't be exported. Your other wallet deploys its signer contract once.")
                     .dsText(.subhead12).foregroundStyle(DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -542,7 +542,7 @@ struct SafeScreen: View {
                         }
                     }
                 }
-                Text("In the Safe app, connect a wallet by WalletConnect and copy its link here. A paired app can ask this phone to sign a Safe transaction, statement or recovery, and nothing else — every other request is refused and lands in your feed.")
+                Text("In the Safe app, connect by WalletConnect and paste the link here. It can ask for Safe transactions, statements and recoveries only.")
                     .dsText(.subhead12).foregroundStyle(DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }

@@ -86,7 +86,6 @@ struct DuolingoScreen: View {
                              syncingLine: String(localized: "Reading your Duolingo…"),
                              proof: result,
                              retry: { Task { await sync() } })
-        DSSlabNote(text: "Every day you practise lands in your feed.", plain: true)
     }
 
     /// The streak is a FACT the profile read already returned, so it is said

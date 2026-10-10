@@ -214,7 +214,7 @@ struct AgentSpendRow: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 if let usd = entry.reportedUSD {
-                    Text("\(provider.company) reports \(String(format: "$%.2f", usd)) used on this key, across everything it's used for.")
+                    Text("\(provider.company) reports \(String(format: "$%.2f", usd)) on this key, all uses.")
                         .dsText(.subhead12).foregroundStyle(DS.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -301,7 +301,7 @@ struct AgentLibrarianRow: View {
         if AgentKey.active == provider, provider != .bankr, !AgentLibrarian.deviceCanDoIt {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
                 DSToggleRow(title: Text("Let your key organize"),
-                            detail: DSProse.text("Names screenshots and reads long chats so they can be found. No free on-device model here."),
+                            detail: DSProse.text("Names screenshots and reads long chats so they can be found."),
                             isOn: $enabled)
                 .onChange(of: enabled) { _, on in
                     AgentLibrarian.isEnabled = on

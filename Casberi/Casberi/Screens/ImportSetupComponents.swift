@@ -293,18 +293,19 @@ struct ImportUpkeepSection: View {
         if held > 0 || staleness != nil {
             if plain {
                 if held > 0 { removeLine }
-                footnote
-                    .padding(.vertical, DS.Space.s2)
-                    .listRowSeparator(.hidden)
-                    .listRowBackground(Color.clear)
+                if staleness != nil {
+                    footnote
+                        .padding(.vertical, DS.Space.s2)
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(Color.clear)
+                }
             } else {
                 Section {
                     if held > 0 { removeLine.dsListRow() }
                 } footer: {
-                    // The staleness line leads when there is one — it is the
-                    // fact worth reading — and the removal's own promise
-                    // follows it.
-                    footnote
+                    // The staleness line is the fact worth reading; the
+                    // removal's promise is the confirmation's to say.
+                    if staleness != nil { footnote }
                 }
             }
         }
@@ -341,14 +342,7 @@ struct ImportUpkeepSection: View {
         }
     }
 
-    private var footerText: String {
-        var parts: [String] = []
-        if let staleness { parts.append(staleness) }
-        if held > 0 {
-            parts.append(String(localized: "Removing takes out only what came from \(source); importing again brings it back."))
-        }
-        return parts.joined(separator: " ")
-    }
+    private var footerText: String { staleness ?? "" }
 
     private func run() async {
         removing = true

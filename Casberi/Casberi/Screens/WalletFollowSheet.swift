@@ -80,7 +80,7 @@ struct WalletFollowSheet: View {
             footnote(Text("You follow \(WalletStore.watchLimit) addresses, the most there is. Stop following one on its account page first."))
         }
         if near.isEmpty {
-            footnote(Text("Paste an address — 0x, Solana or Bitcoin — or type a name like vitalik.eth. Who you move money with shows here."))
+            footnote(Text("0x, Solana or Bitcoin, or a name like casberi.eth."))
         } else {
             // No heading over them (user: "get rid of 'near your money' that
             // is so weird"): each row's line already says why it is here.

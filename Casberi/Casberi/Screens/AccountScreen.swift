@@ -138,7 +138,7 @@ struct SettingsRows: View {
             } message: {
                 // The honest fact, where it's asked for rather than in a
                 // privacy screen nobody opens while typing.
-                Text("Only used to greet you. It stays on this iPhone.")
+                Text("Only used to greet you. It stays on \(DS.device).")
             }
             .onChange(of: avatarSelection) { _, item in
                 guard let item else { return }

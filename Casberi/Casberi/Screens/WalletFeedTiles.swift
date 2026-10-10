@@ -382,7 +382,7 @@ struct WalletBalanceHeadline: View {
                 // hands its slot to another drawing has a chart and simply is
                 // not showing it, so explaining an absence there would describe
                 // a line that exists.
-                DSFootnote("The line starts once a second reading lands.")
+                DSFootnote("The line starts at the next reading.")
                     .padding(.top, 2)
             }
         }

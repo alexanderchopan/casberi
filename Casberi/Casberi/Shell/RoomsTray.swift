@@ -1458,7 +1458,6 @@ struct RoomsTray: View {
                     let ticker = TraySearch.normalized(words).uppercased()
                     hitRow(Hit(id: "lookup", group: Self.markets,
                                name: String(localized: "Look up “\(ticker)” in Markets"),
-                               line: String(localized: "Stocks and coins you don’t watch yet"),
                                mark: .glyph(CategoryFold.glyph(for: Self.markets))) {
                         chrome.searchDraft = ticker
                         chrome.marketsRequest = .lookUp

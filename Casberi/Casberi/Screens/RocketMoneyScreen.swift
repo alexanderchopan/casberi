@@ -108,8 +108,6 @@ struct RocketMoneyScreen: View {
                              proof: result,
                              retry: { Task { await sync() } })
         unreadableBlock
-        DSSlabNote(text: "Your subscriptions and recurring bills land in your feed.",
-                   plain: true)
     }
 
     @ViewBuilder private var unreadableBlock: some View {

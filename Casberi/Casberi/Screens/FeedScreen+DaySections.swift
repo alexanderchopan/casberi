@@ -442,7 +442,7 @@ extension FeedScreen {
                 emptyLeadRow(headline: Text(Date.now.formatted(.dateTime.weekday(.wide))),
                              words: Text(Date.now.formatted(.dateTime.month(.wide).day())),
                              note: bridges.connectedCount == 0
-                                 ? Text("Each app’s newest, today, under its category. Connect apps in Sources.") : nil)
+                                 ? Text("Connect apps in Sources.") : nil)
             }
         }
     }
@@ -839,7 +839,7 @@ extension FeedScreen {
             if coverThing == nil && groups.isEmpty && roomScopePicked {
                 Section {
                     emptyLeadRow(headline: DSProse.text("Nothing here yet."),
-                                 words: Text("Nothing here yet."))
+                                 words: Text(verbatim: ""))
                 }
             }
             roomScopeSection
@@ -1001,7 +1001,7 @@ extension FeedScreen {
     @ViewBuilder
     func caughtUpFooter(_ rows: [Thing]) -> some View {
         if reachedFetchCeiling {
-            Text("Showing your most recent things — open a source to go further back")
+            Text("Most recent only — open a source for older")
                 .dsText(.subhead12)
                 .foregroundStyle(DS.textTertiary)
                 .frame(maxWidth: .infinity)

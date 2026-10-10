@@ -29,7 +29,7 @@ struct NoteTrashTray: View {
                 }
                 // The honesty line (§748's kept kind): where the notes are,
                 // for how long, and that another device does not have them.
-                DSFootnote(Text("Deleted notes stay on \(DS.device) for \(NoteTrashRules.keepDays) days, then they're gone."))
+                DSFootnote(Text("Kept \(NoteTrashRules.keepDays) days, then gone."))
             }
         }
         .onAppear { trash.purgeExpired() }

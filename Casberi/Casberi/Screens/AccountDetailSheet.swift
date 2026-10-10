@@ -485,7 +485,7 @@ struct AccountDetailSheet: View {
             // that an end-to-end claim requires ADP, and the honest way to
             // keep it is to say what today is.
             if icloudSync {
-                DSFootnote("Encrypted, but Apple holds the keys. Advanced Data Protection (\(DS.settingsAppName) › your name › iCloud) makes it yours alone.")
+                DSFootnote("Apple holds the keys unless Advanced Data Protection is on (\(DS.settingsAppName) › your name › iCloud).")
             }
             toggleRow("Hide previews", "…in the app switcher",
                       isOn: Binding(get: { hidePreviews }, set: { hidePreviews = $0; DSHaptic.tap() }))
@@ -617,7 +617,7 @@ struct AccountDetailSheet: View {
             }
             // The cadence and the exceptions, which no switch can say (§748).
             // The four named are `NotifyKind.standsAlone`, word for word.
-            DSFootnote("One digest per category each evening. A dispute, a deadline, a liquidation or a Safe signature comes at once.")
+            DSFootnote("Disputes, deadlines, liquidations and Safe signatures come at once.")
         }
         .task { notifyAuthorized = await Notifications.authorized() }
     }

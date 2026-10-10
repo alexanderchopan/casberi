@@ -1077,6 +1077,40 @@
         }
       }
     },
+    "%@ reports %@ on this key, all uses." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ reports %2$@ on this key, all uses."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ informa de %2$@ en esta clave, todos los usos."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ によると、このキーの利用は %2$@（すべての用途）。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@에 따르면 이 키 사용액은 %2$@입니다(모든 용도)."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ 报告此密钥共 %2$@（所有用途）。"
+          }
+        }
+      }
+    },
     "%@ sent you" : {
       "localizations" : {
         "es" : {
@@ -2393,6 +2427,34 @@
         }
       }
     },
+    "0x, Solana or Bitcoin, or a name like casberi.eth." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "0x, Solana o Bitcoin, o un nombre como casberi.eth."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "0x、Solana、Bitcoin、または casberi.eth のような名前。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "0x, Solana, Bitcoin 또는 casberi.eth 같은 이름."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "0x、Solana 或 Bitcoin 地址，或 casberi.eth 之类的名称。"
+          }
+        }
+      }
+    },
     "1 address followed" : {
       "localizations" : {
         "es" : {
@@ -3033,6 +3095,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "大约每周"
+          }
+        }
+      }
+    },
+    "Activity is public, read across chains directly on %@." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "La actividad es pública, y se lee directamente en las cadenas en %@."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アクティビティは公開されており、%@上で各チェーンから直接読み取ります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "활동은 공개되어 있으며, %@에서 여러 체인에 걸쳐 직접 읽습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "活动是公开的，直接在 %@ 上跨链读取。"
           }
         }
       }
@@ -3799,6 +3889,34 @@
         }
       }
     },
+    "Apple holds the keys unless Advanced Data Protection is on (%@ › your name › iCloud)." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Apple tiene las claves salvo que la Protección de Datos Avanzada esté activada (%@ › tu nombre › iCloud)."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "高度なデータ保護（%@ › あなたの名前 › iCloud）がオフの場合、鍵は Apple が保持します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "고급 데이터 보호(%@ › 내 이름 › iCloud)가 꺼져 있으면 키는 Apple이 보관합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "除非开启“高级数据保护”（%@ › 你的姓名 › iCloud），否则密钥由 Apple 保管。"
+          }
+        }
+      }
+    },
     "Asking your wallet what this connection can do…" : {
       "localizations" : {
         "es" : {
@@ -3907,6 +4025,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "返回 %@"
+          }
+        }
+      }
+    },
+    "Balances are read from the chain, not from Privy." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Los saldos se leen de la cadena, no de Privy."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "残高は Privy ではなくチェーンから読み取ります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "잔액은 Privy가 아니라 체인에서 읽습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "余额从链上读取，而非来自 Privy。"
           }
         }
       }
@@ -4331,6 +4477,34 @@
         }
       }
     },
+    "Connect apps in Sources." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Conecta apps en Fuentes."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アプリはソースで接続します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "앱은 소스에서 연결하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在来源中连接应用。"
+          }
+        }
+      }
+    },
     "Connected, but the session wouldn't close — open your wallet and disconnect Casberi. Nothing was followed." : {
       "localizations" : {
         "es" : {
@@ -4355,6 +4529,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "已连接，但会话无法关闭——请打开你的钱包并断开 Casberi 的连接。未关注任何内容。"
+          }
+        }
+      }
+    },
+    "Contract addresses work on any chain." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Las direcciones de contrato funcionan en cualquier red."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "どのチェーンの契約アドレスも使えます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "어느 체인의 컨트랙트 주소든 사용할 수 있습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "任意链上的合约地址均可使用。"
           }
         }
       }
@@ -4863,6 +5065,34 @@
         }
       }
     },
+    "Disputes, deadlines, liquidations and Safe signatures come at once." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Las disputas, los plazos, las liquidaciones y las firmas de Safe llegan al momento."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "異議申し立て、期限、清算、Safeの署名はすぐに届きます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "분쟁, 마감, 청산, Safe 서명은 즉시 도착합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "争议、截止日期、清算和 Safe 签名会立即送达。"
+          }
+        }
+      }
+    },
     "Dust" : {
       "localizations" : {
         "es" : {
@@ -4915,6 +5145,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "粉尘。"
+          }
+        }
+      }
+    },
+    "Each service sees your IP; iCloud Private Relay covers Safari, not apps." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cada servicio ve tu IP; iCloud Private Relay cubre Safari, no las apps."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "各サービスにあなたの IP が見えます。iCloud Private Relay が守るのは Safari で、アプリではありません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "각 서비스가 내 IP를 봅니다. iCloud 비공개 릴레이는 앱이 아닌 Safari만 보호합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "每项服务都会看到你的 IP；iCloud 专用代理只保护 Safari，不保护应用。"
           }
         }
       }
@@ -6515,6 +6773,202 @@
         }
       }
     },
+    "Its events show in Coming up and Day — nothing is added to your Calendar app." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Sus eventos aparecen en Próximamente y en Day — no se añade nada a tu app Calendario."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "予定は「予定」と Day に表示されます — カレンダーアプリには何も追加されません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "일정은 다가오는 일정과 Day에 표시됩니다 — 캘린더 앱에는 아무것도 추가되지 않습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "其中的日程会显示在“即将到来”和 Day 中 — 不会向你的日历 App 添加任何内容。"
+          }
+        }
+      }
+    },
+    "Most recent only — open a source for older" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Solo lo más reciente — abre una fuente para ver lo anterior"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "最近のもののみ — 古いものはソースを開いてください"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "최근 항목만 — 이전 항목은 소스를 여세요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "仅显示最近的内容 — 打开某个来源查看更早的"
+          }
+        }
+      }
+    },
+    "Names screenshots and reads long chats so they can be found." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Nombra capturas y lee chats largos para que puedan encontrarse."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "スクリーンショットに名前を付け、長いチャットを読んで検索できるようにします。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "스크린샷에 이름을 붙이고 긴 대화를 읽어 찾을 수 있게 합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "为截屏命名并读取长对话，使其可被检索。"
+          }
+        }
+      }
+    },
+    "Kept in the Secure Enclave, so it can't be exported. Your other wallet deploys its signer contract once." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Se guarda en el Secure Enclave, así que no se puede exportar. Tu otra cartera despliega su contrato firmante una vez."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Secure Enclave に保管されるため、書き出すことはできません。署名者コントラクトは別のウォレットが一度だけデプロイします。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Secure Enclave에 보관되므로 내보낼 수 없습니다. 서명자 컨트랙트는 다른 지갑이 한 번 배포합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "保存在 Secure Enclave 中，因此无法导出。其签名者合约由你的另一个钱包部署一次即可。"
+          }
+        }
+      }
+    },
+    "In the Safe app, connect by WalletConnect and paste the link here. It can ask for Safe transactions, statements and recoveries only." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "En la app de Safe, conecta por WalletConnect y pega aquí el enlace. Solo puede pedir transacciones, declaraciones y recuperaciones de Safe."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Safe アプリで WalletConnect による接続を選び、リンクをここに貼り付けてください。求められるのは Safe のトランザクション、ステートメント、リカバリーだけです。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Safe 앱에서 WalletConnect로 연결하고 링크를 여기에 붙여넣으세요. Safe 거래, 메시지, 복구만 요청할 수 있습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 Safe 应用中通过 WalletConnect 连接，并把链接粘贴到这里。它只能请求 Safe 交易、声明和恢复。"
+          }
+        }
+      }
+    },
+    "Not listed? Paste this link into your wallet's scanner." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "¿No aparece en la lista? Pega este enlace en el escáner de tu wallet."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "リストにない？ このリンクをウォレットのスキャナーに貼り付けてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "목록에 없나요? 이 링크를 지갑의 스캐너에 붙여넣으세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "没有列出？把这个链接粘贴到你钱包的扫描器中。"
+          }
+        }
+      }
+    },
+    "Kept %lld days, then gone." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Se guardan %lld días y luego desaparecen."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld日間残り、その後消えます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld일 동안 보관된 후 사라집니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "保留 %lld 天，之后消失。"
+          }
+        }
+      }
+    },
     "Nothing reached yet this week" : {
       "localizations" : {
         "es" : {
@@ -6543,6 +6997,62 @@
         }
       }
     },
+    "Only used to greet you. It stays on %@." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Solo se usa para saludarte. Se queda en %@."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "あいさつに使うだけです。%@から出ません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "인사할 때만 사용하며, %@에만 저장됩니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "仅用于向你打招呼，只保存在%@上。"
+          }
+        }
+      }
+    },
+    "People who reply to you on Bluesky show here." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aquí aparecen quienes te responden en Bluesky."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Blueskyであなたに返信した人がここに表示されます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Bluesky에서 내게 답장한 사람이 여기 표시됩니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 Bluesky 上回复过你的人会显示在这里。"
+          }
+        }
+      }
+    },
     "Poisoning" : {
       "localizations" : {
         "es" : {
@@ -6567,6 +7077,118 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "投毒"
+          }
+        }
+      }
+    },
+    "Read-only — Acorns is never asked to move money." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Solo lectura: nunca se le pide a Acorns que mueva dinero."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "読み取り専用で、Acorns に送金を依頼することはありません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "읽기 전용이며, Acorns에 송금을 요청하지 않습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "只读 — 绝不会要求 Acorns 转账。"
+          }
+        }
+      }
+    },
+    "Saved to Reminders, in a list named Casberi." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Se guarda en Recordatorios, en una lista llamada Casberi."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "リマインダーの「Casberi」リストに保存されます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "미리 알림의 Casberi 목록에 저장됩니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "保存到提醒事项中名为 Casberi 的列表。"
+          }
+        }
+      }
+    },
+    "The line starts at the next reading." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "La línea comienza con la próxima lectura."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "次の測定値が届くと、線の表示が始まります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "다음 값이 도착하면 선이 표시되기 시작합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "下一个读数到达后，折线就会开始显示。"
+          }
+        }
+      }
+    },
+    "Sites you save from twice show here." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Los sitios de los que guardas dos veces aparecen aquí."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "2回以上保存したサイトがここに表示されます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "두 번 저장한 사이트가 여기에 표시됩니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "保存过两次的网站会显示在这里。"
           }
         }
       }

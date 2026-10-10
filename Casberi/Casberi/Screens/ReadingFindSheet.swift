@@ -111,7 +111,7 @@ struct ReadingFindSheet: View {
     }
 
     private var footnote: some View {
-        DSFootnote(Text("Type a site's address to follow it. Sites you save from twice show here."))
+        DSFootnote(Text("Sites you save from twice show here."))
             .padding(.horizontal, DS.Space.s4)
             .padding(.top, DS.Space.s4)
     }

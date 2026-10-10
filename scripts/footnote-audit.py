@@ -40,7 +40,7 @@ FOUR CHECKS, all static — no build, no simulator:
 THE KEPT CATEGORIES (why an allowance may exceed one). Each is kept regardless
 of the cap, and each allowance below names which it is:
   (a) honesty and overclaim guards — §83's fake-status ban said out loud
-      ("Encrypted, but Apple holds the keys…", "… doesn't report token counts
+      ("Apple holds the keys unless Advanced Data Protection is on…", "… doesn't report token counts
       to us").
   (b) consent, money and signing disclosures — what a signature does, who pays,
       that a key cannot move money, that test ETH has no value (App Review

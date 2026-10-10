@@ -166,7 +166,7 @@ struct SocialFollowSheet: View {
         let text: Text = if DemoMode.isActive && !trimmed.isEmpty {
             Text("Search works once you leave the demo.")
         } else if trimmed.isEmpty {
-            Text("Search Bluesky by name. People who reply to you show here.")
+            Text("People who reply to you on Bluesky show here.")
         } else {
             Text("Nobody by that name on Bluesky.")
         }

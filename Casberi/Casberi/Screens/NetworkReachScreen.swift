@@ -289,7 +289,7 @@ struct NetworkReachScreen: View {
                 // those. Leaving that to be assumed on the one screen whose
                 // job is making the privacy claim checkable would be the fake
                 // status this app refuses everywhere else.
-                DSFootnote("Going straight means each service sees your IP, as any app or website does. iCloud Private Relay covers Safari browsing, not an app's own requests.")
+                DSFootnote("Each service sees your IP; iCloud Private Relay covers Safari, not apps.")
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
             }
