@@ -26,6 +26,9 @@ struct DSTray<Content: View>: View {
     /// to let a tray with unpredictable content length be dragged open past
     /// its natural size instead of clipping at a hard ceiling.
     var detents: Set<PresentationDetent>?
+    /// The title in the brand pink, as a place's title row wears it (prd
+    /// §1227: Data, opened from Settings, reads like Settings).
+    var brandTitle: Bool = false
     @ViewBuilder var content: () -> Content
 
     /// **THE MAC'S WAY OUT (2026-09-22, user: "when i click language in
@@ -109,7 +112,7 @@ struct DSTray<Content: View>: View {
                     // card-title rung it read as a taller card. 40 against the
                     // 12pt caption inside it is 3.3×.
                     .dsText(inPane ? .heading24 : .heading40)
-                    .foregroundStyle(DS.textPrimary)
+                    .foregroundStyle(brandTitle ? DS.brandInk : DS.textPrimary)
                     .multilineTextAlignment(.leading)
                     // …and therefore it WRAPS. See `titleHeight` above.
                     .fixedSize(horizontal: false, vertical: true)

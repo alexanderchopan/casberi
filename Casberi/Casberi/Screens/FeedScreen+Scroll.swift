@@ -741,3 +741,24 @@ struct SectionPanelGroup<Header: View, Rows: View>: View {
         }
     }
 }
+
+/// A SECTION'S CARD OUTSIDE A LIST (prd §1227): `SectionPanelGroup`'s card for
+/// a screen that is a plain stack (a tray), the same fill, radius and name.
+struct SectionPanelCard<Content: View>: View {
+    let name: String
+    let glyph: String
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            SectionPanelName(name: name, glyph: glyph)
+            VStack(alignment: .leading, spacing: DS.Space.s3) {
+                content
+            }
+            .padding(.horizontal, DSRoomChassis.rowInset)
+            .padding(.bottom, DS.Space.s4)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(SectionPanel.fill, in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+    }
+}

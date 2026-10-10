@@ -68,14 +68,23 @@ struct AccountDetailSheet: View {
     /// `NetworkReachScreen` composes it. Nil on an empty ledger, which is
     /// a fresh install and gets the door's standing subtitle instead.
     @State private var reach: NetworkReceiptsInsight.Reach?
-    /// How many registry services are reachable right now.
 
     var body: some View {
-        DSTray(title: title, height: sheetHeight) {
+        DSTray(title: title, height: sheetHeight,
+               detents: detail == .data ? [.large] : nil, brandTitle: detail == .data) {
             switch detail {
             case .data:
-                dataCard
-                controls
+                // THE BOX, THEN CARDS (prd §1227, user: "7 looks good"): the
+                // Wallet's shape, scrolling at full height; the switches stay
+                // switches, standing on the Privacy card.
+                ScrollView {
+                    VStack(alignment: .leading, spacing: DS.Space.s4) {
+                        dataCard
+                        controls
+                    }
+                    .padding(.bottom, DS.Space.s6)
+                }
+                .scrollIndicators(.hidden)
             case .notifications:
                 notifyCard
             }
@@ -156,16 +165,21 @@ struct AccountDetailSheet: View {
     /// both wipes reachable (each still confirms) without the chrome.
     private var controls: some View {
         VStack(alignment: .leading, spacing: DS.Space.s3) {
-            exportControl
-            Button { importing = true } label: {
-                actionLabel("Import", icon: "square.and.arrow.down")
+            SectionPanelCard(name: String(localized: "Your data"), glyph: "folder") {
+                door("What this app reaches", reachLine, subtitleTone: reachTone) {
+                    if !inPane { dismiss() }
+                    route.push(.reach)
+                }
+                exportControl
+                Button { importing = true } label: {
+                    actionLabel("Import", icon: "square.and.arrow.down")
+                }
+                .buttonStyle(RowPress())
+                .dsHover()
             }
-            .buttonStyle(RowPress())
-            .dsHover()
             // DELETE AS ROWS (prd §1226): one red row per wipe, stacked,
             // each its own verb — never two words side by side.
-            Color.clear.frame(height: DS.Space.s3)  // a group's air (prd §1226)
-            VStack(alignment: .leading, spacing: DS.Space.s3) {
+            SectionPanelCard(name: String(localized: "Delete"), glyph: "trash") {
                 Button { confirmDelete = true } label: {
                     actionLabel("Delete things", icon: "trash", destructive: true)
                 }
@@ -409,7 +423,7 @@ struct AccountDetailSheet: View {
             .padding(DS.Space.s4)
             .frame(maxWidth: .infinity, alignment: .leading)
             .dsWell(cornerRadius: DS.Radius.widget)
-            Color.clear.frame(height: DS.Space.s3)  // a group's air (prd §1226)
+            SectionPanelCard(name: String(localized: "Privacy"), glyph: "hand.raised") {
             // iCloud sync. The container binds at launch, so a fresh flip says
             // WHEN it goes live instead of pretending it is. RULE (2026-07-27):
             // this used to read the toggle's own INTENT ("Synced to your
@@ -489,10 +503,6 @@ struct AccountDetailSheet: View {
             // actually reached this week (prd §967 — the registry and the
             // ledger were two sheets). The line is the ledger's own verdict
             // where there is one, so a host nobody declared reads here first.
-            Color.clear.frame(height: DS.Space.s3)  // a group's air (prd §1226)
-            door("What this app reaches", reachLine, subtitleTone: reachTone) {
-                if !inPane { dismiss() }
-                route.push(.reach)
             }
             // The tripwire, said out loud (2026-08-18). `SecretScan` (prd
             // §277) has redacted spotted credentials from the Spotlight/Siri
