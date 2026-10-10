@@ -4,20 +4,17 @@ import SwiftUI
 // its head, so its section names take the rooms' pink as every list does.
 
 /// THE HISTORY AS ROWS (prd §1181, user, of the bars: "this is dumb"): the
-/// last three with this party, each opening its own sheet, then the door to
-/// all of them on the address card.
+/// last three with this party, each opening its own sheet. The door to all
+/// of them is `MoneyYearTotals`', on the address card.
 struct MoneyHistoryRows: View {
     let title: String
     let rows: [KeyedThing]
-    let total: Int
-    let doorWord: String?
     /// The header's trailing figure (a card spend: this month's total).
     var trailing: String? = nil
     /// A row's amount, trailing (prd §1182): a card spend's visits read as
     /// their day and what they cost, never the shop's name again.
     var amount: ((Thing) -> String?)? = nil
     var onOpen: (Thing) -> Void
-    var onAll: (() -> Void)?
 
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
@@ -65,9 +62,6 @@ struct MoneyHistoryRows: View {
                     }
                     .buttonStyle(RowPress())
                 }
-            }
-            if let doorWord, let onAll, total > rows.count {
-                DSMoreLink(title: Text(verbatim: doorWord), action: onAll)
             }
         }
         .padding(.horizontal, DSRoomChassis.inset)

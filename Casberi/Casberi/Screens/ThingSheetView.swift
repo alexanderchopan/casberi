@@ -573,19 +573,16 @@ struct ThingSheetView: View {
                         // This month at the shop (prd §1182): each visit as its
                         // day and what it cost, the total in the header.
                         MoneyHistoryRows(title: String(localized: "This month"),
-                                         rows: moneyMonth.keyed, total: moneyMonth.count,
-                                         doorWord: nil, trailing: moneyMonthTotal,
+                                         rows: moneyMonth.keyed,
+                                         trailing: moneyMonthTotal,
                                          amount: Self.spendAmount,
-                                         onOpen: { walkingToScope = .none; walkingToNote = KeyedThing($0) },
-                                         onAll: nil)
+                                         onOpen: { walkingToScope = .none; walkingToNote = KeyedThing($0) })
                             .padding(.top, DS.Space.s6)
                             .settleIn(delay: 0.12)
                     } else if moneyCard == nil {
                         MoneyHistoryRows(title: moneyHistoryTitle(moneyReceipt),
-                                         rows: moneyHistory.keyed, total: moneyHistoryTotal,
-                                         doorWord: moneyHistoryDoor(moneyReceipt),
-                                         onOpen: { walkingToScope = .none; walkingToNote = KeyedThing($0) },
-                                         onAll: nil)
+                                         rows: moneyHistory.keyed,
+                                         onOpen: { walkingToScope = .none; walkingToNote = KeyedThing($0) })
                             .padding(.top, DS.Space.s6)
                             .settleIn(delay: 0.12)
                     }
@@ -3078,11 +3075,6 @@ struct ThingSheetView: View {
                        : String(localized: "At \(moneyPartyName(r))")
     }
 
-    private func moneyHistoryDoor(_ r: MoneyReceipt) -> String? {
-        guard moneyHasPerson else { return nil }
-        return String(localized: "All \(moneyHistoryTotal + 1) with \(moneyPartyName(r))")
-    }
-
     /// The fourth tile: the act that keeps up with it for you. Save a person
     /// you have not, Watch one you have, Track a charge that repeats.
     private var moneyKeep: VerbDial.Keep? {
@@ -3429,9 +3421,7 @@ struct ThingSheetView: View {
         dialResult
         if !personPosts.isEmpty {
             MoneyHistoryRows(title: String(localized: "Lately"), rows: personPosts,
-                             total: personPosts.count, doorWord: nil,
-                             onOpen: { walkingToScope = .none; walkingToNote = KeyedThing($0) },
-                             onAll: nil)
+                             onOpen: { walkingToScope = .none; walkingToNote = KeyedThing($0) })
                 .padding(.top, DS.Space.s6)
                 .settleIn(delay: 0.12)
         }
@@ -3630,9 +3620,7 @@ struct ThingSheetView: View {
         dialResult
         if !mediaMore.isEmpty {
             MoneyHistoryRows(title: mediaMoreTitle, rows: mediaMore.keyed,
-                             total: mediaMore.count, doorWord: nil,
-                             onOpen: { walkingToScope = .none; walkingToNote = KeyedThing($0) },
-                             onAll: nil)
+                             onOpen: { walkingToScope = .none; walkingToNote = KeyedThing($0) })
                 .padding(.top, DS.Space.s6)
                 .settleIn(delay: 0.12)
         } else if MediaSheetBox.isVideo(thing),

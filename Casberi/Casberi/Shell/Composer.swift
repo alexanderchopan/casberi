@@ -107,7 +107,7 @@ struct Composer: View {
     /// `onConnectBankr`'s reason, stated in full above: this view is a ZStack
     /// layer inside `RootShell.shell` and sits above that view's environment
     /// injections, so an `@Environment(HomeRoute.self)` here dies on first
-    /// read. `agentsLink` draws only when this is non-nil, so the row can
+    /// read. The agent picker's "+" draws only when this is non-nil, so it can
     /// never be a control that does nothing (§83).
     var onOpenAgents: (() -> Void)? = nil
     /// Lowers the agent (docs/agent-brief.md ruling 9: staying is the
@@ -2341,43 +2341,6 @@ struct Composer: View {
 
     // MARK: - Ask chips + input bar (chat grammar: by the bottom)
 
-
-    /// WHERE AGENTS COME FROM (prd §550, 2026-09-01, user: "empty chat has a
-    /// link to where to set up agents").
-    ///
-    /// The other half of the capsule above the bar. That one says the agent is
-    /// there and how to reach it; this one says you can choose who answers,
-    /// and it says it HERE — on the empty chat, where "who is going to answer
-    /// this?" is the live question — rather than as an interruption somewhere
-    /// else — the placement argument the retired Bankr offer made, widened
-    /// from one seat to the category.
-    ///
-    /// **It retires the moment an agent exists.** Gated on
-    /// `configuredAgents.isEmpty`, so it is a first-run answer and not
-    /// permanent furniture — chrome is priced by frequency of use
-    /// (`AgentBar`'s rest ruling), and somebody who has pasted a key already
-    /// knows where these live; the ask capsule beside the field names their
-    /// destinations from then on. The on-device model is deliberately not part
-    /// of the gate: it is not a key, it cannot be set up, and counting it would
-    /// hide this from everyone on a device that has it.
-    ///
-    /// Not a §543 regression: that ruling deleted prepopulated ASKS — chips
-    /// that fired a question you had to spend a tap to learn the value of.
-    /// This runs nothing and fetches nothing; it opens a catalog.
-    @ViewBuilder private var agentsLink: some View {
-        if let onOpenAgents, atRest, configuredAgents.isEmpty {
-            HStack(spacing: 0) {
-                DSMoreLink(title: Text("Set up an agent"), action: onOpenAgents)
-                    .accessibilityLabel("Set up an agent")
-                    .accessibilityHint("Opens the agents in the app catalog")
-                Spacer(minLength: 0)
-            }
-            // The two band paddings are GONE with the band (prd §575): this
-            // is drawn inside the ask panel's head row now, beside the device
-            // disc, so the panel's own insets place it and a second set here
-            // pushed it off the row's trailing edge.
-        }
-    }
 
     /// THE ASK CHIPS ARE DELETED (prd §543, 2026-08-31).
     ///

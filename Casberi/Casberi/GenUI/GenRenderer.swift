@@ -1139,11 +1139,10 @@ private struct InsightHeader: View {
 /// The anniversary as the card itself — a photograph taken on this exact day
 /// in an earlier year, at a size worth looking at (2026-07-31).
 ///
-/// `OnThisDay` has ridden inside the heatmap card since 2026-07-21 precisely so
-/// it would never compete for a room's one hero slot, and that stays right
-/// wherever the anniversary is a TITLE: a journal entry, a note, a highlight —
-/// text that a line of text represents perfectly. A picture is the case that
-/// doesn't fit. Rendering "Memory · Jan 3, 2019" beside a date label describes
+/// `OnThisDay` rode inside the heatmap card from 2026-07-21 so it would never
+/// compete for a room's one hero slot (no caller passed it by 2026-10-09, and
+/// the row went). A title anniversary — a journal entry, a note — is a line of
+/// text; a picture is the case a line doesn't fit. Rendering "Memory · Jan 3, 2019" beside a date label describes
 /// a photograph the app is already holding in memory, which is the one thing a
 /// row can't do and a tile can.
 ///
@@ -1277,11 +1276,6 @@ struct CalendarHeatmapHero: View {
     /// Passed through to the grid — 53 (a year) unless a windowed source
     /// (the social recent-weeks heatmap) draws fewer columns.
     var minColumns: Int = 53
-    /// A real match from the same day in a prior year (delight pass
-    /// 2026-07-21) — rides INSIDE this same card rather than competing for
-    /// the feed's one-hero-per-source slot. nil renders nothing extra.
-    var onThisDay: OnThisDay.Echo? = nil
-    var onTapOnThisDay: (() -> Void)? = nil
     /// Whether the card takes a room lead's one height (prd §760). The GitHub
     /// setup page passes false: its year is a reading on an account page.
     var fillsLead: Bool = true
@@ -1382,44 +1376,6 @@ struct CalendarHeatmapHero: View {
                 }
             } else {
                 graph(window: nil)
-            }
-            // `isLive` because this card HOLDS the echo's model across renders
-            // and a heal can delete under it (COROLLARY 5 — a leaf view is
-            // re-evaluated on the model's own observation, with no help from
-            // the parent that built it).
-            if let onThisDay, onThisDay.thing.isLive {
-                Button {
-                    DSHaptic.selection()
-                    onTapOnThisDay?()
-                } label: {
-                    // THE PUSH ROW (`DSPushRowLabel`) rather than a hand-drawn
-                    // copy of it: the thing is the title, when is the quiet
-                    // line, and the chevron is the component's. Floored to a
-                    // 44pt target — the drawn row is shorter than a finger.
-                    //
-                    // The picture itself leads, when the anniversary IS one
-                    // (2026-07-31). Text-only was right while this card
-                    // only ever appeared beside journals and note vaults,
-                    // where a title is the thing; a Snapchat memory's
-                    // title is a date, and a photograph from seven years
-                    // ago is not something to describe in words when it's
-                    // sitting in the store. Gated on `previewImageData` —
-                    // never a fetch — so a journal or note anniversary,
-                    // which is most of them, gets no placeholder square;
-                    // `PhotoWell` then draws the bytes (decoded once, and
-                    // redaction-aware, unlike a bare `Image`).
-                    DSPushRowLabel(title: Text(verbatim: onThisDay.thing.title),
-                                   subtitle: Text(verbatim: onThisDay.label)) {
-                        if onThisDay.thing.previewImageData != nil {
-                            PhotoWell(thing: onThisDay.thing, size: 34)
-                                .accessibilityHidden(true)
-                        }
-                    }
-                    .dsTapTarget()
-                    .padding(.top, DS.Space.s1)
-                }
-                .buttonStyle(RowPress())
-                .dsHover()
             }
         }
     }
