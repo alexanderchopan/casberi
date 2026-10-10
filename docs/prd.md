@@ -65636,3 +65636,7 @@ Declined: the segmented control with a sliding lens. The Feed's row is one view 
 4. **Four tiles, never more** (user: more tiles "made it look vibe coded").
 
 Next, agreed and not yet built: Holdings, Security and Subscriptions rise as sheets from their tiles, the Feed's rule for Markets, Settings and Sources (§1208m).
+
+## §1220 — On the phone, a Wallet tile rises as a sheet (user, 2026-10-10: "ok so we are in agreement it can work like Feed's rule")
+
+The Feed's rule (§1208m) for the Wallet: Home is the page, and Holdings, Security and Subscriptions each rise as one sheet over it, as Markets, Settings and Sources rise over the Feed. The sheet is the Wallet screen pinned to that section (`FeedScreen.pinnedWalletSection`, `ShellChrome.AppSheet.walletSection`): titled with the section's name, its box, its lists, no tiles, and nothing published to the shell (`DSRoomScopeChrome(pinned:)`). Every door that asks for a section on the phone — a tile, a count, a notice, `-openSection` — lands in the sheet, because the change of `chrome.walletSection` is turned into it and the page stays on Home. iPad and Mac keep the page swap. Privy's apps stay in Holdings (§1124).

@@ -33,6 +33,9 @@ struct DSRoomScopeChrome<Scope: DSTileScope, Crown: View, Figure: View>: View {
 
     /// The room this chrome stands in — the key the published rail carries.
     let source: String
+    /// A section's page risen as a sheet (prd §1220): its box only, no tiles,
+    /// and the account rail left to the page underneath.
+    var pinned: Bool = false
     let sections: [Scope]
     let active: Scope
     let home: Scope
@@ -63,11 +66,11 @@ struct DSRoomScopeChrome<Scope: DSTileScope, Crown: View, Figure: View>: View {
 
     var body: some View {
         content
-            .onAppear { publish() }
-            .onChange(of: accounts) { _, _ in publish() }
-            .onChange(of: scope) { _, _ in publish() }
+            .onAppear { if !pinned { publish() } }
+            .onChange(of: accounts) { _, _ in if !pinned { publish() } }
+            .onChange(of: scope) { _, _ in if !pinned { publish() } }
             .onDisappear {
-                if chrome.accountRail?.source == source { chrome.accountRail = nil }
+                if !pinned, chrome.accountRail?.source == source { chrome.accountRail = nil }
             }
     }
 
@@ -103,12 +106,14 @@ struct DSRoomScopeChrome<Scope: DSTileScope, Crown: View, Figure: View>: View {
             // **THE TILES, THEN THE MENU, ON EVERY PAGE (prd §1039).** Home
             // drew Actions and the Overview rows under these until the merge;
             // the room's own list follows the chrome now, as in every room.
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                DSScopeTiles(sections: sections, active: active,
-                             attention: attention, inert: inert, onPick: onPick)
-                accountLine
+            if !pinned {
+                VStack(alignment: .leading, spacing: DS.Space.s2) {
+                    DSScopeTiles(sections: sections, active: active,
+                                 attention: attention, inert: inert, onPick: onPick)
+                    accountLine
+                }
+                .padding(.horizontal, DSRoomChassis.inset)
             }
-            .padding(.horizontal, DSRoomChassis.inset)
         }
         .padding(.top, DS.Space.s2)
     }

@@ -301,7 +301,7 @@ extension FeedScreen {
             // An app pick dims the scopes with nothing for that app (prd
             // §1078), and a remembered one of them resolves to Home.
             let inert = seatPicked ? walletInertSections(visible: visible, upcoming: upcoming) : []
-            let section = WalletSection.resolve(
+            let section = pinnedWalletSection ?? WalletSection.resolve(
                 chrome.walletSection,
                 present: walletSectionPublication.sections.filter { !inert.contains($0) })
             // The crown's own newest-few (§208, added 2026-08-18) exist for one

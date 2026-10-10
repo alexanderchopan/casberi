@@ -98,6 +98,9 @@ struct FeedScreen: View {
     /// 2026-10-09: "i'm unable to close this", the Calendar sheet). In a
     /// sheet the pull is the close; the Feed behind it keeps the refresh.
     let inSheet: Bool
+    /// A Wallet tile's page risen as a sheet (prd §1220): this one section,
+    /// its box, no tiles, and nothing published to the shell.
+    let pinnedWalletSection: WalletSection?
 
     /// Latches true the first time this page is active/near, so a page already
     /// assembled once stays assembled — the built set only ever grows, spread
@@ -174,9 +177,10 @@ struct FeedScreen: View {
     @Environment(\.horizontalSizeClass) var roomSizeClass
 
     init(source: String, hostRoom: String? = nil, isActive: Bool, nearActive: Bool = true,
-         rowBudget: Int? = nil, inSheet: Bool = false) {
+         rowBudget: Int? = nil, inSheet: Bool = false, pinnedWalletSection: WalletSection? = nil) {
         self.source = source
         self.inSheet = inSheet
+        self.pinnedWalletSection = pinnedWalletSection
         self.hostRoom = hostRoom
         self.rowBudget = rowBudget
         // The mark the trace was missing (PERF 2026-09-01). `mount` fires from
@@ -989,7 +993,7 @@ struct FeedScreen: View {
             .onChange(of: walletSectionPublication, initial: true) { _, now in
                 // The page mounted beside you (prd §1208l) is not the room on
                 // screen: only the room on screen, or a Wallet, publishes.
-                guard isActive || shape == .wallet else { return }
+                guard isActive || shape == .wallet, pinnedWalletSection == nil else { return }
                 chrome.walletSections = now.sections
                 chrome.walletSectionAttention = now.attention
             }
@@ -1000,7 +1004,7 @@ struct FeedScreen: View {
             // "the toggle cannot appear over another room" true by
             // construction rather than by a source test in two files.
             .onDisappear {
-                guard shape == .wallet, isActive else { return }
+                guard shape == .wallet, isActive, pinnedWalletSection == nil else { return }
                 chrome.walletSections = []
                 chrome.walletSectionAttention = []
             }
@@ -1440,7 +1444,21 @@ struct FeedScreen: View {
             // and it SUPERSEDES §357's placement for these two rooms rather
             // than extending it, so it wants its own ruling rather than a
             // quiet diff.
-            .onChange(of: chrome.walletSection) { _, _ in returnToRoomTop(proxy) }
+            .onChange(of: chrome.walletSection) { _, picked in
+                // **ON THE PHONE A WALLET TILE RISES AS A SHEET (prd §1220)**,
+                // the Feed's rule for Markets, Settings and Sources (§1208m):
+                // Home is the page, and every door that asks for Holdings,
+                // Security or Subscriptions — a tile, a count, a notice —
+                // lands in that sheet. The Mac and iPad keep the page swap.
+                if roomSizeClass == .compact, shape == .wallet, isActive, pinnedWalletSection == nil,
+                   let picked, picked != .home {
+                    chrome.walletSection = .home
+                    let sheet = ShellChrome.AppSheet(source: source, walletSection: picked)
+                    if chrome.appSheet == nil { chrome.appSheet = sheet }
+                    return
+                }
+                returnToRoomTop(proxy)
+            }
             // **AND ON AN ACCOUNT PICK** (prd §495, user: *"it makes the
             // silhouette and toggle bar jump to the top"*).
             //
@@ -1470,6 +1488,7 @@ struct FeedScreen: View {
     /// category's name is yours, else You (`HomeScope.title`), and the You
     /// pill beside it names the place.
     var roomName: String {
+        if let pinnedWalletSection { return pinnedWalletSection.label }
         if HomeScope.contains(source) { return youPlaceName }
         return BridgeCatalog.seatName(forSource: hostRoom ?? source)
     }

@@ -248,6 +248,7 @@ extension FeedScreen {
         Section {
             DSRoomScopeChrome(
                 source: "Wallet",
+                pinned: pinnedWalletSection != nil,
                 sections: chrome.walletSections,
                 active: active,
                 home: .home,
@@ -325,7 +326,7 @@ extension FeedScreen {
             // The tray's Wallet folder leads with Follow a wallet (prd §1133)
             // and can be opened from any room, so it asks; the room raises.
             .onChange(of: chrome.walletFollowPending, initial: true) { _, pending in
-                guard pending, isActive else { return }
+                guard pending, isActive, pinnedWalletSection == nil else { return }
                 chrome.walletFollowPending = false
                 feedSheet = .walletFollow
             }

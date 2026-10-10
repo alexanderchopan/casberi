@@ -241,7 +241,10 @@ final class ShellChrome {
     var traySearchFocus = false
     struct AppSheet: Identifiable, Equatable {
         let source: String
-        var id: String { source }
+        /// A Wallet tile's own page (prd §1220): Holdings, Security or
+        /// Subscriptions risen over Home, as Markets rises over the Feed.
+        var walletSection: WalletSection? = nil
+        var id: String { source + (walletSection.map { ":" + $0.rawValue } ?? "") }
     }
 
     /// The one transient message surface — the glass toast above the bar.
