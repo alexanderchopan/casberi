@@ -42,8 +42,12 @@ guard() {  # name, pattern, file
 echo "Drift guards — the wiring"
 guard "the sheet keeps the stored form, never the circles" \
   'NoteChecklist\.stored\(draft\)' "$CAPTURE"
+# Since 9f05f7cc the edit opens through `editableDraft` (the kept title put
+# back), which must still read the words through `editable`.
+guard "an edit opens through editableDraft" \
+  'draft = Self\.editableDraft\(note\)' "$CAPTURE"
 guard "an edit opens a kept list as circles" \
-  'draft = NoteChecklist\.editable\(note\.content\)' "$CAPTURE"
+  'let words = NoteChecklist\.editable\(note\.content\)' "$CAPTURE"
 guard "Return inside a list goes through continued" \
   'NoteChecklist\.continued\(old: old, new: new\)' "$CAPTURE"
 guard "a tick goes through toggled" \
