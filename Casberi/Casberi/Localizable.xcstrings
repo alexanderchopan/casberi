@@ -785,6 +785,34 @@
         }
       }
     },
+    "%@ from mining" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ por minería"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "マイニングで%@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "채굴로 %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "挖矿所得 %@"
+          }
+        }
+      }
+    },
     "%@ in gas since you started following, plus %@ somebody else paid for you." : {
       "localizations" : {
         "es" : {
@@ -1973,6 +2001,62 @@
         }
       }
     },
+    "%lld notes aging" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld notas madurando"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "熟成中のノート%lld件"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "숙성 중인 노트 %lld개"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld 张票据在熟化中"
+          }
+        }
+      }
+    },
+    "%lld notes can propose" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld notas pueden proponer"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "提案できるノート%lld件"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "제안할 수 있는 노트 %lld개"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld 张票据可以提议"
+          }
+        }
+      }
+    },
     "%lld on record %@. Following yours adds who can stop your transactions, and how long you'd have to get out." : {
       "localizations" : {
         "es" : {
@@ -2473,6 +2557,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "1 项需要你现在处理"
+          }
+        }
+      }
+    },
+    "1 note aging" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1 nota madurando"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "熟成中のノート1件"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "숙성 중인 노트 1개"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1 张票据在熟化中"
+          }
+        }
+      }
+    },
+    "1 note can propose" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1 nota puede proponer"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "提案できるノート1件"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "제안할 수 있는 노트 1개"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1 张票据可以提议"
           }
         }
       }
@@ -4331,6 +4471,34 @@
         }
       }
     },
+    "Couldn't follow this wallet" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se pudo seguir esta cartera"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "このウォレットをフォローできませんでした"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 지갑을 팔로우할 수 없습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "无法关注此钱包"
+          }
+        }
+      }
+    },
     "Couldn't reach %@" : {
       "localizations" : {
         "es" : {
@@ -4719,6 +4887,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "编辑标题"
+          }
+        }
+      }
+    },
+    "Eligible to propose" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Puede proponer"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "提案可能"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "제안 가능"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "可以提议"
           }
         }
       }
@@ -5955,6 +6151,62 @@
         }
       }
     },
+    "Follow it on the lock screen" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Síguelo en la pantalla de bloqueo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ロック画面でフォロー"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "잠금 화면에서 팔로우"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在锁定屏幕上关注"
+          }
+        }
+      }
+    },
+    "Follow on GitHub" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Seguir en GitHub"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "GitHubでフォロー"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "GitHub에서 팔로우"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 GitHub 上关注"
+          }
+        }
+      }
+    },
     "Follow something" : {
       "localizations" : {
         "es" : {
@@ -6175,6 +6427,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "已关注"
+          }
+        }
+      }
+    },
+    "following" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "siguiendo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "フォロー中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "팔로우 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "关注中"
           }
         }
       }
@@ -7043,6 +7323,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "来自你的邮件"
+          }
+        }
+      }
+    },
+    "Funded" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Con fondos"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "入金済み"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "자금 입금됨"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已注资"
+          }
+        }
+      }
+    },
+    "Funded, aging" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Con fondos, madurando"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "入金済み・熟成中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "자금 입금됨, 숙성 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已注资，熟化中"
           }
         }
       }
@@ -8307,6 +8643,34 @@
         }
       }
     },
+    "Nothing followed yet." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aún no sigues nada."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "まだ何もフォローしていません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "아직 팔로우한 항목이 없습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "尚未关注任何内容。"
+          }
+        }
+      }
+    },
     "Nothing in your wallet yet — follow an address from Apps → Wallet." : {
       "localizations" : {
         "es" : {
@@ -9175,6 +9539,34 @@
         }
       }
     },
+    "Search for a company to follow it." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Busca una empresa para seguirla."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "企業を検索してフォローしましょう。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "회사를 검색해 팔로우하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "搜索公司即可关注。"
+          }
+        }
+      }
+    },
     "Search for a company to watch it." : {
       "localizations" : {
         "es" : {
@@ -9679,6 +10071,34 @@
         }
       }
     },
+    "Stop tracking %@?" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "¿Dejar de controlar %@?"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@の追跡をやめますか？"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 추적을 중지할까요?"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "停止跟踪 %@？"
+          }
+        }
+      }
+    },
     "Stopped following %@" : {
       "localizations" : {
         "es" : {
@@ -9871,6 +10291,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "Logos 测试网已重置，所有账户都从零开始。你的密钥和关注的账户仍然保留。"
+          }
+        }
+      }
+    },
+    "The wallets you follow, and their apps" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Las carteras que sigues y sus apps"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "フォロー中のウォレットとそのアプリ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "팔로우하는 지갑과 그 앱"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你关注的钱包及其 App"
           }
         }
       }
@@ -10235,6 +10683,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "它带来的内容也会一并移除。"
+          }
+        }
+      }
+    },
+    "What renews, free or paid" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Lo que se renueva, gratis o de pago"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "更新されるもの（無料・有料）"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "갱신되는 항목, 무료 또는 유료"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "会续订的项目，免费或付费"
           }
         }
       }
@@ -137424,7 +137900,7 @@
         "es" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Dejar de seguir"
+            "value" : "Dejar de controlar"
           }
         },
         "ja" : {

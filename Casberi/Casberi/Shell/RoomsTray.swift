@@ -897,13 +897,13 @@ struct RoomsTray: View {
             for item in FollowingReading.shared.items(for: room) {
                 hits.append(Hit(id: "feed:\(room.rawValue):" + item.id, group: group, name: item.name,
                                 line: item.seat, mark: .icon(item.seat, symbol: nil)) {
-                    landInSettings(.sheet(.following(item.id, room)))
+                    close(); chrome.open(.followed(item.id, room))
                 })
             }
         }
         for item in MailSubscriptionsReading.shared.items {
             hits.append(Hit(id: "list:" + item.id, group: "Day", name: item.name, line: item.address,
-                            mark: .icon(item.name, symbol: nil)) { landInSettings(.sheet(.mailList(item.id))) })
+                            mark: .icon(item.name, symbol: nil)) { close(); chrome.open(.list(item.id)) })
         }
         // People (prd §1136 item 3): they live in Settings, so the search
         // finds them by name and lands on them there.
@@ -920,7 +920,7 @@ struct RoomsTray: View {
                             aliases: Self.maker(item.name), tier: .money,
                             line: item.next.map { String(localized: "Renews \($0.formatted(.dateTime.month(.abbreviated).day()))") },
                             trailing: figure.map(Trailing.money),
-                            mark: .icon(item.name, symbol: nil)) { landInSettings(.sheet(.subscription(item.id))) })
+                            mark: .icon(item.name, symbol: nil)) { close(); chrome.open(.plan(item.id)) })
         }
         hits += addHits
         return hits
@@ -1140,7 +1140,7 @@ struct RoomsTray: View {
             }]
         }
         return [Hit(id: "watch:" + words, group: CategoryFold.walletRoom,
-                    name: String(localized: "Watch this wallet"), tier: .add, given: .exact,
+                    name: String(localized: "Follow this wallet"), tier: .add, given: .exact,
                     line: short, mark: .glyph("plus")) {
             chrome.searchDraft = words
             chrome.walletFollowPending = true

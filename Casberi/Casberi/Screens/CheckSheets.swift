@@ -135,12 +135,12 @@ struct L2beatChainSheet<Tiles: View>: View {
 
     private var keep: VerbDial.Keep? {
         guard !watching, let project else { return nil }
-        return VerbDial.Keep(label: String(localized: "Watch"), glyph: ScopeTileGlyph.watch) {
+        return VerbDial.Keep(label: String(localized: "Follow"), glyph: ScopeTileGlyph.watch) {
             DSHaptic.tap()
             L2beatWatch.add(project, context: modelContext)
             L2beatWatch.registerBridge(store: store, context: modelContext)
             withAnimation(DS.Motion.standard) { watching = true }
-            chrome.flash(String(localized: "Watching \(project.name)"), tone: .success)
+            chrome.flash(String(localized: "Following \(project.name)"), tone: .success)
         }
     }
 
@@ -283,12 +283,12 @@ struct WalletbeatWalletSheet<Tiles: View>: View {
 
     private var keep: VerbDial.Keep? {
         guard !watching, let entry else { return nil }
-        return VerbDial.Keep(label: String(localized: "Watch"), glyph: ScopeTileGlyph.watch) {
+        return VerbDial.Keep(label: String(localized: "Follow"), glyph: ScopeTileGlyph.watch) {
             DSHaptic.tap()
             WalletbeatWatch.add(entry, context: modelContext)
             WalletbeatWatch.registerBridge(store: store, context: modelContext)
             withAnimation(DS.Motion.standard) { watching = true }
-            chrome.flash(String(localized: "Watching \(entry.name)"), tone: .success)
+            chrome.flash(String(localized: "Following \(entry.name)"), tone: .success)
         }
     }
 

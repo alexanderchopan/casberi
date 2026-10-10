@@ -133,7 +133,7 @@ struct TokenWatchScreen: View {
             return AccountPageShape.Row(
                 id: thing.id.uuidString,
                 title: symbolLabel(thing),
-                subline: line.isEmpty ? String(localized: "watching") : line,
+                subline: line.isEmpty ? String(localized: "following") : line,
                 weekCount: 0, hasNew: false, isYou: false,
                 avatarURL: thing.previewImageURL)
         }

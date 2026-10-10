@@ -222,7 +222,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1359 of 1425 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1360 of 1426 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1491,12 +1491,12 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1133 — Two controls: the face says where, the tiles say what (amended by §1136, §1207) [+5 sub-entries]
 - §1134 — Day's Track tray searches mail
 - §1135 — An unwatched wallet's rows leave, under the name it was watched by too [+1 sub-entries]
-- §1136 — One place for lists: You is a room of four places, Settings holds everything you've connected, Home is Today then Com… (amended by §1138, §1139, §1164, §1166, §1209a)
+- §1136 — One place for lists: You is a room of four places, Settings holds everything you've connected, Home is Today then Com… (amended by §1138, §1139, §1164, §1166, §1209a, §1217)
 - §1137 — Calendars you subscribe to [+11 sub-entries]
 - §1138 — The box's counts are the filter, on Sources and in the Apps catalogue (amended by §1140, §1142, §1145, §1166, §1167, §1171, §1198) [+1 sub-entries]
 - §1139 — Home is the whole of today: its feeds, then Later today (amended by §1154; part superseded by §1141)
 - §1142 — The catalogue is what you could add, rises as a sheet, and names its categories without figures
-- §1143 — What Settings opens rises over Settings
+- §1143 — What Settings opens rises over Settings (amended by §1217)
 - §1144 — Reading's calendar draws each feed's own face, the rarest that wrote that day, and counts nothing
 - §1145 — Settings › Apps is only yours; Add is the one door to the rest (amended by §1166)
 - §1147 — A renamed app's records take its current name and merge into one
@@ -1518,7 +1518,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1162 — Connecting, made shorter: pasted keys reach your other devices, Paste is the commit, a wrong or refused key says why,… (amended by §1163)
 - §1163 — A seat has one name: every bridge `NetworkReach` names is its catalog name, so a refused key reaches the page, the ri…
 - §1164 — You can track a subscription without a card or an app: the tray opens on Popular and stays open, a free plan counts,… (amended by §1202)
-- §1166 — A first run lands on Settings, Home is Today, and Settings counts eight kinds over Start here and every app (amended by §1168, §1169, §1180, §1203, §1207) [+1 sub-entries]
+- §1166 — A first run lands on Settings, Home is Today, and Settings counts eight kinds over Start here and every app (amended by §1168, §1169, §1180, §1203, §1207, §1217) [+1 sub-entries]
 - §1167 — Markets is automatic: always a room, never an app to connect, and its box is two across (amended by §1180)
 - §1168 — Today wears the inbox tray (amended by §1169)
 - §1169 — Empty Today is a preview of itself, and every room's All is a stack
@@ -1533,14 +1533,14 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1178 — A thing sheet's acts are the rooms' tiles
 - §1179 — A thing sheet stands in the room's frame: the box, the tiles, the rest
 - §1180 — Settings' box and Markets' box are one box: the words stand at one edge on one baseline (amended by §1198)
-- §1181 — The money receipt stands in the room's frame, its fourth tile keeps up with it, and its history is this year's totals
+- §1181 — The money receipt stands in the room's frame, its fourth tile keeps up with it, and its history is this year's totals (amended by §1217)
 - §1182 — A card spend draws its card, an open transfer its steps, and an event its day
 - §1184 — Every sheet's fourth tile keeps up with it, and a sheet is one row of four
 - §1185 — The tray's search stands its hits under their categories, and finds companies, what you hold and your things
 - §1186 — A song, a video and a picture stand in the room's frame
-- §1187 — A person, an app's wallet, a chain and a wallet stand in the room's frame; the grant sheet is deleted
+- §1187 — A person, an app's wallet, a chain and a wallet stand in the room's frame; the grant sheet is deleted (amended by §1217)
 - §1188 — A price, an article, a post and a mail stand in the room's frame (amended by §1192)
-- §1189 — A token's Watch is the fourth tile, and a saved Dexscreener page is named for its token
+- §1189 — A token's Watch is the fourth tile, and a saved Dexscreener page is named for its token (amended by §1217)
 - §1190 — A purchase, a Work receipt, a reminder and a workout take the room's title
 - §1191 — An agent chat, a chat, a journal entry, a vault note, a passage, review news and anything else stand in the room's frame (amended by §1192)
 - §1192 — A post's box is its picture or its person, its words stand once below; a document's box is its first page
@@ -1583,6 +1583,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1214 — The Node box says the stage Basecamp's bar says (amended by §1216)
 - §1215 — Logos chat is two-way, on the phone, as its own client
 - §1216 — The Node box reads the stake: Funded, aging, Eligible to propose
+- §1217 — Each kind that keeps coming has one home, and one verb
 
 ## Dead rulings → what replaced them (generated)
 

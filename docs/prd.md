@@ -65611,3 +65611,13 @@ The widgets were checked on the simulator only in their empty state: the demo pu
 4. The chain's test token keeps two decimals (`190.909090909` → 190.91); the zone's whole coins keep `LogosWire.amount`.
 5. **Proposing** stays absent: the dev found proposals in the systemd journal (Linux only) and will look for a blockchain RPC first; Casberi asks for the RPC, because a Mac node logs to Basecamp's own file.
 6. Not seen on a device: the user's node is funded tomorrow. `logos-observer-selftest.sh` holds the shape (the dev's own example values) and `logos-selftest.sh` the order.
+
+## §1217 — Each kind that keeps coming has one home, and one verb (user, 2026-10-09: "fix subscriptions like you said so it is 1 place and do a sweep of all the places we have subscriptions or track or follow to make sure we are handling them all in a unified way", then "Keep Subscriptions on all three" and "Follow everywhere"; amends §1136, §1143, §1166, §1171b, §1181, §1187, §1189)
+
+1. **One home each.** A subscription you pay lives in the Wallet's Subscriptions, a mail list in Day's Subscriptions, a site, channel or show in Media's Subscriptions (`ShellChrome.ListHome`). The noun Subscriptions stays on all three tiles (§1111).
+2. **Every other place is a door.** Sources' Subscriptions, Mail lists and Feeds counts no longer hold lists of their own: a press closes Sources and lands on the home tile (`ShellChrome.openHome`). The tray's search lands a plan, a list or a feed on its home's sheet (`ShellChrome.open`), never on a copy in Settings, so a plan's price leads to where prices live. A biller in People opens its plan in the Wallet. Settings' plan, list and feed sheets and lists are deleted.
+3. **Two verbs.** Track for subscriptions and mail lists, undone by "Stop tracking" (its confirmation says "Stop tracking X?", never Remove); Follow for everything else — wallets, tokens, chains, companies, people, feeds, repos — undone by "Stop following" (§1121 over §1143, §1166, §1171b, §1181, §1187, §1189: "Watch a wallet", the Watch tiles, "Watching X" are Follow). Markets keeps the noun Watchlist.
+4. **A tray says what its row says**: "Follow a site", "Follow a channel or show"; Work's tray reads "Follow <name>"; GitHub's is "Follow on GitHub".
+5. Sources' Subscriptions count reads "What renews, free or paid" (§1164: a free plan counts).
+
+Left as they are, on purpose: calendars keep Subscribe (§1137), a mail list keeps "Unsubscribe on <host>" (the sender's own word), and Stripe, Polar and Dodo rows keep "Subscription" for your customers' plans.

@@ -71,7 +71,7 @@ struct GitHubWatchTray: View {
     @State private var faces: [String] = []
 
     var body: some View {
-        DSTray(title: String(localized: "Watch on GitHub"), height: 620,
+        DSTray(title: String(localized: "Follow on GitHub"), height: 620,
                detents: [.height(620), .large]) {
             ScrollView {
                 VStack(alignment: .leading, spacing: DS.Space.s3) {

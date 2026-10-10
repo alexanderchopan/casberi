@@ -3084,11 +3084,11 @@ struct ThingSheetView: View {
                 return VerbDial.Keep(label: String(localized: "Save"), glyph: "person.crop.circle.badge.plus", act: name)
             }
             guard !WalletStore.shared.addresses.contains(where: { $0.address.lowercased() == cp }) else { return nil }
-            return VerbDial.Keep(label: String(localized: "Watch"), glyph: ScopeTileGlyph.watch) {
+            return VerbDial.Keep(label: String(localized: "Follow"), glyph: ScopeTileGlyph.watch) {
                 let label = AddressBook.shared.name(for: cp) ?? ""
                 let added = WalletStore.shared.add(cp, label: label)
-                chrome.flash(added ? String(localized: "Watching \(label.isEmpty ? WalletStore.shortAddress(cp) : label)")
-                                   : String(localized: "Couldn't watch this wallet"),
+                chrome.flash(added ? String(localized: "Following \(label.isEmpty ? WalletStore.shortAddress(cp) : label)")
+                                   : String(localized: "Couldn't follow this wallet"),
                              tone: added ? .success : .failure)
             }
         }
@@ -3815,7 +3815,7 @@ struct ThingSheetView: View {
                 // capsule, the one pill on the receipt.
                 DSDoorRowLabel(icon: tracking ? "bell.badge.slash" : "bell.badge",
                                title: tracking ? Text("Stop following it")
-                                               : Text("Watch it from the lock screen"))
+                                               : Text("Follow it on the lock screen"))
             }
             .buttonStyle(RowPress())
             .dsHover()

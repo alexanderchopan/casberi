@@ -19,7 +19,10 @@ extension Following.Room {
         switch self {
         // One verb in both rooms (user, 2026-10-05: "follow a feed … we can
         // use it in both places"): a channel and a show are feeds too.
-        case .reading, .media: String(localized: "Follow a feed")
+        // Each tray says what it follows, as its row does (prd §1204,
+        // §1217): a site, or a channel or show.
+        case .reading: String(localized: "Follow a site")
+        case .media:   String(localized: "Follow a channel or show")
         case .work:    String(localized: "Follow something")
         }
     }

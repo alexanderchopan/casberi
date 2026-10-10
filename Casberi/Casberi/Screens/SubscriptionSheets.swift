@@ -44,9 +44,9 @@ struct SubscriptionSheet: View {
             FollowingReading.shared.refresh(.reading, context: modelContext)
             FollowingReading.shared.refresh(.media, context: modelContext)
         }
-        .confirmationDialog(Text("Remove \(item?.name ?? "")?"), isPresented: $confirmingRemove,
+        .confirmationDialog(Text("Stop tracking \(item?.name ?? "")?"), isPresented: $confirmingRemove,
                             titleVisibility: .visible) {
-            Button("Remove", role: .destructive) {
+            Button("Stop tracking", role: .destructive) {
                 if let manualID = item?.manualID { SubscriptionStore.shared.remove(manualID) }
                 dismiss()
             }

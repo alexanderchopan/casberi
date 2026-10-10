@@ -42,7 +42,6 @@ struct SettingsHome: View {
     /// rises here, so a swipe down is Settings again. They used to land in
     /// the Wallet, Day or Reading, and only the tray led back.
     @State private var sheet: SettingsSheet?
-    @Environment(\.openURL) private var openURL
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var unsubscribing: CalendarSubscriptionStore.Entry?
     /// Add a calendar's two ways (prd §1166): the phone's, or one by link.
@@ -97,14 +96,6 @@ struct SettingsHome: View {
                             }
                         case .cards:
                             cardsList
-                        case .feeds:
-                            VStack(alignment: .leading, spacing: DS.Space.s4) {
-                                verbRow("plus", String(localized: "Follow a feed")) { add(.feeds) }
-                                kindList(feeds.filter { hit($0.name) }, empty: "Follow a feed and it lands here.") { feedRow($0) }
-                                if feeds.isEmpty { comesFrom(Self.feedApps) }
-                            }
-                        case .newsletters:
-                            newslettersList
                         case .people:
                             VStack(alignment: .leading, spacing: DS.Space.s4) {
                                 verbRow("person.badge.plus", String(localized: "Add a person")) { add(.people) }
@@ -112,17 +103,11 @@ struct SettingsHome: View {
                             }
                         case .wallets:
                             walletsList
-                        case .subscriptions:
-                            // The verb leads, as on the Wallet's list (prd
-                            // §1117), so an empty list is never a dead end
-                            // (§1164): the tray opens on Popular.
-                            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                                if query.isEmpty {
-                                    DSDoorRow(icon: "plus", title: Text(SubscriptionWords.track)) { add(.subscriptions) }
-                                }
-                                kindList(SubscriptionsReading.shared.items.filter { hit($0.name) },
-                                         empty: "Track a subscription and it lands here.") { subscriptionRow($0) }
-                            }
+                        // ONE PLACE EACH (prd §1217): a subscription lives in
+                        // the Wallet, a mail list in Day, a feed in Media; these
+                        // counts are doors to them, never lists of their own.
+                        case .feeds, .newsletters, .subscriptions:
+                            EmptyView()
                         }
                     }
                 }
@@ -166,7 +151,9 @@ struct SettingsHome: View {
             // `-settingsScope <kind>` lands on one of the box's counts (prd
             // §1138) with no tap, for the store captures the Mac cannot tap.
             if let raw = UserDefaults.standard.string(forKey: "settingsScope"),
-               let s = SettingsScope(rawValue: raw) { scope = s }
+               let s = SettingsScope(rawValue: raw) {
+                if let home = Self.home(of: s) { route.closeSheet(); chrome.openHome(home) } else { scope = s }
+            }
         }
         #endif
         .confirmationDialog(Text("Unsubscribe from this calendar?"),
@@ -311,6 +298,12 @@ struct SettingsHome: View {
             ForEach(counts, id: \.0) { kind, n, label in
                 DSCountTile(count: n, label: label, isOn: kind == scope && !casberiOpen,
                             wants: troubled.contains(kind), inline: true, widest: widest) {
+                    if let home = Self.home(of: kind) {
+                        DSHaptic.selection()
+                        route.closeSheet()
+                        chrome.openHome(home)
+                        return
+                    }
                     if casberiOpen { casberiOpen = false }
                     pick(kind)
                 }
@@ -333,19 +326,8 @@ struct SettingsHome: View {
     @ViewBuilder
     private func sheetContent(_ route: SettingsSheet) -> some View {
         switch route {
-        case .subscription(let id): SubscriptionSheet(id: id, showsMoney: false)
         case .subscriptionAdd:      SubscriptionAddTray()
-        case .mailList(let id):
-            MailSubscriptionSheet(id: id) { mailID in
-                // One sheet at a time (§872): the list closes, then the mail.
-                sheet = nil
-                Task { @MainActor in
-                    try? await Task.sleep(for: .milliseconds(450))
-                    if let url = URL(string: "casberi://thing/\(mailID.uuidString)") { openURL(url) }
-                }
-            }
         case .mailAdd:              MailSubscriptionAddTray()
-        case .following(let id, let room): FollowingSheet(id: id, room: room)
         case .followAdd:            ReadingFindSheet()
         case .walletFollow:         WalletFollowSheet()
         }
@@ -447,7 +429,7 @@ struct SettingsHome: View {
                 add(.calendars)
             } leading: { BridgeIcon(name: "Calendar", size: DS.Mark.notice) }
         case .wallet:
-            DSPushRow(title: Text("Watch a wallet"), subtitle: Text("Any address or name, no keys")) {
+            DSPushRow(title: Text("Follow a wallet"), subtitle: Text("Any address or name, no keys")) {
                 add(.wallets)
             } leading: { BridgeIcon(name: "Wallet", size: DS.Mark.notice) }
         case .subscription:
@@ -534,24 +516,6 @@ struct SettingsHome: View {
         }
     }
 
-    /// A list arrives through mail: with none connected, the mail apps;
-    /// with one, Track over the lists.
-    @ViewBuilder
-    private var newslettersList: some View {
-        let mailOn = bridges.bridges.contains { Self.mailApps.contains($0.name) && $0.status != .paused }
-        VStack(alignment: .leading, spacing: DS.Space.s4) {
-            if mailOn {
-                verbRow("plus", String(localized: "Track a mail list")) { add(.newsletters) }
-                kindList(MailSubscriptionsReading.shared.items.filter { hit($0.name) },
-                         empty: "Lists that write to your mail land here.") { newsletterRow($0) }
-            } else {
-                Text("Connect your mail and the lists that write to you show here.")
-                    .dsText(.body17).foregroundStyle(DS.textSecondary)
-                comesFrom(Self.mailApps)
-            }
-        }
-    }
-
     /// Watch a wallet, the wallets you watch, then every Wallet app, so the
     /// kind is the wallets' settings too (user: "Wallet is wallet settings
     /// or shows all the wallet stuff").
@@ -562,7 +526,7 @@ struct SettingsHome: View {
             .map(\.name)
             .sorted { $0.localizedStandardCompare($1) == .orderedAscending }
         return VStack(alignment: .leading, spacing: DS.Space.s4) {
-            verbRow("eye", String(localized: "Watch a wallet")) { add(.wallets) }
+            verbRow("eye", String(localized: "Follow a wallet")) { add(.wallets) }
             if !watched.isEmpty {
                 VStack(alignment: .leading, spacing: DS.Space.s2) {
                     ForEach(watched) { addr in
@@ -605,7 +569,11 @@ struct SettingsHome: View {
     @ViewBuilder
     private var peopleList: some View {
         AddressesSection(query: query, scope: $peopleScope,
-                         openPlan: { sheet = .subscription($0) },
+                         openPlan: { id in
+                             // A plan's one home is the Wallet (prd §1217).
+                             route.closeSheet()
+                             chrome.open(.plan(id))
+                         },
                          onLetters: { peopleLetters = $0 })
     }
 
@@ -617,33 +585,6 @@ struct SettingsHome: View {
 
     private func empty(_ words: LocalizedStringKey) -> some View {
         DSEmptyState(headline: DSProse.text("Nothing yet"), words: Text(words), scale: .list(rows: 3))
-    }
-
-    /// One kind's whole list, or what would fill it (prd §769).
-    @ViewBuilder
-    private func kindList<Item: Identifiable, Row: View>(_ items: [Item], empty words: LocalizedStringKey,
-                                                         @ViewBuilder row: @escaping (Item) -> Row) -> some View {
-        if items.isEmpty { empty(words) } else { rows(items, row: row) }
-    }
-
-    private func subscriptionRow(_ item: Subscriptions.Item) -> some View {
-        DSPushRow(title: Text(verbatim: item.name),
-                  subtitle: item.next.map { Text("Renews \($0.formatted(.dateTime.month(.abbreviated).day()))") }) {
-            sheet = .subscription(item.id)
-        } leading: { BridgeIcon(name: SubscriptionFace.mark(for: item.name) ?? item.name, size: DS.Mark.notice) }
-        .arrivalWash(SubscriptionStore.shared.justTracked(item.id), hue: DS.brand)
-    }
-
-    private func feedRow(_ item: Following.Item) -> some View {
-        DSPushRow(title: Text(verbatim: item.name), subtitle: Text(verbatim: item.seat)) {
-            sheet = .following(item.id, room(of: item))
-        } leading: { BridgeIcon(name: item.seat, size: DS.Mark.notice) }
-    }
-
-    private func newsletterRow(_ item: MailSubscriptions.Item) -> some View {
-        DSPushRow(title: Text(verbatim: item.name), subtitle: item.address.map { Text(verbatim: $0) }) {
-            sheet = .mailList(item.id)
-        } leading: { BridgeIcon(name: SubscriptionFace.mark(for: item.name) ?? item.name, size: DS.Mark.notice) }
     }
 
     /// EVERY CALENDAR CASBERI READS (prd §1150, user: "it should show every
@@ -701,10 +642,6 @@ struct SettingsHome: View {
         .animation(reduceMotion ? nil : DS.Motion.standard, value: items.map(\.id))
     }
 
-    private func room(of item: Following.Item) -> Following.Room {
-        Following.Room.allCases.first { FollowingReading.shared.items(for: $0).contains { $0.id == item.id } } ?? .reading
-    }
-
     private func calendarLine(_ entry: CalendarSubscriptionStore.Entry) -> String {
         guard let read = entry.lastRead else { return String(localized: "Not read yet") }
         let ahead = entry.ahead == 1
@@ -746,12 +683,12 @@ enum SettingsScope: String, CaseIterable, Identifiable, Hashable, Sendable {
         switch self {
         case .apps:          return String(localized: "Every app, by category")
         case .cards:         return String(localized: "The cards your card apps read")
-        case .wallets:       return String(localized: "The wallets you watch, and their apps")
+        case .wallets:       return String(localized: "The wallets you follow, and their apps")
         case .calendars:     return String(localized: "Every calendar Casberi reads")
         case .feeds:         return String(localized: "Sites, channels and repos you follow")
         case .newsletters:   return String(localized: "The lists that write to your mail")
         case .people:        return String(localized: "The people behind your accounts")
-        case .subscriptions: return String(localized: "What you pay for")
+        case .subscriptions: return String(localized: "What renews, free or paid")
         }
     }
 }
@@ -796,6 +733,19 @@ struct CalendarSubscribeSheet: View {
 
 /// Where the tray's search lands in Settings (prd §1171): a person on People
 /// with their name in the field, a kind's list, or a row's own sheet.
+extension SettingsHome {
+    /// The one home of a kind that lives in a room (prd §1217): Sources'
+    /// count for it is a door there.
+    static func home(of kind: SettingsScope) -> ShellChrome.ListHome? {
+        switch kind {
+        case .subscriptions: .plans
+        case .newsletters:   .lists
+        case .feeds:         .follows
+        default:             nil
+        }
+    }
+}
+
 enum SettingsLanding: Hashable {
     case person(String)
     case kind(SettingsScope)
@@ -804,18 +754,13 @@ enum SettingsLanding: Hashable {
 
 /// What Settings raises over itself (prd §1143).
 enum SettingsSheet: Identifiable, Hashable {
-    case subscription(String), subscriptionAdd
-    case mailList(String), mailAdd
-    case following(String, Following.Room), followAdd
+    case subscriptionAdd, mailAdd, followAdd
     case walletFollow
 
     var id: String {
         switch self {
-        case .subscription(let id):       "subscription:\(id)"
         case .subscriptionAdd:            "subscriptionAdd"
-        case .mailList(let id):           "mailList:\(id)"
         case .mailAdd:                    "mailAdd"
-        case .following(let id, let room): "following:\(room.rawValue):\(id)"
         case .followAdd:                  "followAdd"
         case .walletFollow:               "walletFollow"
         }

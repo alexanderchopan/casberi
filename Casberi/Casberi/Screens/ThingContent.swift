@@ -2571,7 +2571,7 @@ private struct TokenChartContent: View {
     /// resolved. The tile drops once it is.
     private var watchKeep: VerbDial.Keep? {
         guard offersWatch, watchedTitle == nil, let resolved else { return nil }
-        return VerbDial.Keep(label: String(localized: "Watch"), glyph: ScopeTileGlyph.watch) {
+        return VerbDial.Keep(label: String(localized: "Follow"), glyph: ScopeTileGlyph.watch) {
             watch(resolved)
         }
     }

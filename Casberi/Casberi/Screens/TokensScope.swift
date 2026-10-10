@@ -40,7 +40,7 @@ struct TokensScope: DSTileScope {
 
     var summary: String {
         if self == .alerts { return String(localized: "The price alerts you set") }
-        if self == .new { return String(localized: "Find something to watch") }
+        if self == .new { return String(localized: "Find something to follow") }
         guard let category else { return String(localized: "What you follow") }
         return String(localized: "The companies behind \(category)")
     }

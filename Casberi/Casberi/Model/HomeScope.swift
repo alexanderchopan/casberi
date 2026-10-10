@@ -140,7 +140,7 @@ enum YouTile: String, CaseIterable, Identifiable, Hashable, Sendable {
     var summary: String {
         switch self {
         case .feed:     return String(localized: "Today, then what is coming up")
-        case .markets:  return String(localized: "What you watch")
+        case .markets:  return String(localized: "What you follow")
         case .sources:  return String(localized: "Everything you have connected")
         case .settings: return String(localized: "Casberi's own options")
         }

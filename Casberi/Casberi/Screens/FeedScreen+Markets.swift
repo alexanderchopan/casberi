@@ -102,7 +102,7 @@ extension FeedScreen {
         if watches.isEmpty {
             Section {
                 (DSScopeDock<TokensScope>.atBottom(roomSizeClass)
-                     ? Text("Search for a company to watch it.") : Text("Nothing watched yet."))
+                     ? Text("Search for a company to follow it.") : Text("Nothing followed yet."))
                     .dsText(.body17)
                     .foregroundStyle(DS.textSecondary)
                     .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DSRoomChassis.rowInset,
