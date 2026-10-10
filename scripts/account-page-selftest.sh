@@ -152,8 +152,10 @@ sys.exit(0 if 0 <= a < b < c else 1)
 PY
 
 # 7. One presentation on the chassis; the adopters own none of their own.
-sheets=$(grep -c '\.sheet(' "$TMP/page-bare.swift" || true)
-[[ "$sheets" -eq 1 ]] || { echo "✗ AccountPage has $sheets .sheet modifiers — one screen, one sheet"; exit 1; }
+# Since prd §1240 the one presentation is `dsOneSheet` (a sheet, or a push
+# inside a sheet's stack); still exactly one.
+sheets=$(grep -cE '\.sheet\(|\.dsOneSheet\(' "$TMP/page-bare.swift" || true)
+[[ "$sheets" -eq 1 ]] || { echo "✗ AccountPage has $sheets presentations — one screen, one sheet"; exit 1; }
 for f in "$TMP/token-bare.swift" "$TMP/handle-bare.swift" "$TMP/detail-bare.swift"; do
   grep -q '\.sheet(' "$f" \
     && { echo "✗ ${f:t} presents a sheet of its own beside the chassis's — the sibling-sheet trap"; exit 1; }
