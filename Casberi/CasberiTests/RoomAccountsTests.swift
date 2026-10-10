@@ -124,20 +124,28 @@ struct RoomAccountsTests {
 
     /// Life is what you made, kept or did; Day what needs you next; Notes is
     /// no category, its journals Life's.
+    /// Day's apps file under Life (prd §1239) and Mail lives in Life (prd
+    /// §1231); the Day screen is still built from the calendar and to-do
+    /// apps, and an icon of theirs opens Day, never Life.
     @Test func lifeAndDaySplit() {
         let life = Set(RoomAccounts.seats(for: RoomAccounts.lifeRoom).map(\.name))
         let day = Set(RoomAccounts.seats(for: RoomAccounts.dayRoom).map(\.name))
         for app in ["Apple Journal", "Day One", "Obsidian", "Files", "Dropbox", "Apple Health",
-                    "Duolingo"] {
+                    "Duolingo", "Gmail", "iCloud Mail"] {
             #expect(life.contains(app), "\(app) is in Life")
         }
-        for app in ["Calendar", "Reminders", "Todoist", "Cal.com", "Calendly", "Gmail", "iCloud Mail"] {
-            #expect(day.contains(app), "\(app) is in Day")
+        #expect(day == ["Calendar", "Reminders", "Todoist", "Cal.com", "Calendly"])
+        #expect(day.isSubset(of: life), "Day's apps file under Life (prd §1239)")
+        for app in day {
+            #expect(RoomAccounts.host(ofSource: app)?.room == RoomAccounts.dayRoom, "\(app) opens Day")
+            #expect(RoomAccounts.isDaySource(app))
         }
-        #expect(life.isDisjoint(with: day))
+        #expect(!RoomAccounts.isDaySource("Gmail"))
         #expect(!life.contains("Photos"))
-        #expect(!BridgeCatalog.categories.map(\.name).contains("Notes"))
-        #expect(CategoryOrder.defaultOrder.contains("Day"))
+        let categories = BridgeCatalog.categories.map(\.name)
+        #expect(!categories.contains("Notes"))
+        #expect(!categories.contains("Day"))
+        #expect(!CategoryOrder.defaultOrder.contains("Day"))
     }
 
     // MARK: - Work (prd §1057)
