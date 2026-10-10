@@ -485,6 +485,8 @@ extension FeedScreen {
                 workRoomSections(visible, nextEventID: nextEventID, heroShown: heroShown)
             } else if source == RoomAccounts.dayRoom {
                 dayRoomSections(visible, nextEventID: nextEventID, heroShown: heroShown)
+            } else if source == RoomAccounts.lifeRoom {
+                lifeRoomSections(visible, nextEventID: nextEventID)
             } else if source == RoomAccounts.mediaRoom {
                 mediaRoomSections(visible, nextEventID: nextEventID, heroShown: heroShown)
             } else if source == RoomAccounts.socialRoom {

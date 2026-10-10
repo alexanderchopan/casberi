@@ -226,6 +226,8 @@ struct RootShell: View {
                 if let s = WorkScope(rawValue: raw), !s.isVerb { chrome.workScope = s }
                 // Day's Subscriptions (prd §1111).
                 if let s = DayScope(rawValue: raw), !s.isVerb { chrome.dayScope = s }
+                // Life's mailing lists (prd §1231; Day's until then).
+                if let s = LifeScope(rawValue: raw) { chrome.lifeScope = s }
                 // Media's Play, Read and Subscriptions (prd §1118, §1204).
                 if let s = MediaScope(rawValue: raw) { chrome.mediaScope = s }
             }
@@ -1000,7 +1002,7 @@ struct RootShell: View {
             // `SettingsRows`, stands on the screen this presents.
             if UserDefaults.standard.bool(forKey: "openSettings") {
                 // The Settings face, not Sources (prd §1208c).
-                chrome.settingsPick = .settings
+                chrome.settingsPick = .casberi
                 // `-openDelay <s>` (DEBUG) holds this and `-openRoom` until a
                 // demo poured in the same launch has landed: the Mac's store
                 // captures pour into a fresh scratch store every launch, and a
@@ -2733,7 +2735,7 @@ struct RootShell: View {
         case "settings":
             // Casberi's own settings (prd §1111, §1208c: the Settings face,
             // not Sources); the apps are casberi://apps.
-            chrome.settingsPick = .settings
+            chrome.settingsPick = .casberi
             sceneState.route.present(.casberi)
         // casberi://room/<category | Your notes> — the Category widget's
         // door (2026-10-04): the room a tray pick lands in. On a cold launch

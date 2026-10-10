@@ -83,8 +83,10 @@ enum HomeScope {
     /// (the tray's) excepted.
     @MainActor static func feedCategories(chips: [String]) -> [String] {
         let present = Set(chips)
+        // Day is a door of its own (prd §1231), never a Feed section.
         return CategoryOrder.current.filter {
-            $0 != CategoryFold.walletRoom && $0 != RoomAccounts.testnetsRoom && present.contains($0)
+            $0 != CategoryFold.walletRoom && $0 != RoomAccounts.testnetsRoom
+                && $0 != RoomAccounts.dayRoom && present.contains($0)
         }
     }
 
@@ -92,6 +94,7 @@ enum HomeScope {
     /// a page: a category's combined room, the Wallet and Testnets excepted.
     @MainActor static func isFeedSection(_ source: String) -> Bool {
         source != CategoryFold.walletRoom && source != RoomAccounts.testnetsRoom
+            && source != RoomAccounts.dayRoom
             && RoomAccounts.mergedRooms.contains(source)
     }
 
@@ -120,7 +123,13 @@ enum YouTile: String, CaseIterable, Identifiable, Hashable, Sendable {
     /// read from the note sheet and the bar. Sources is everything you have
     /// connected (the master list, §1136); Settings is Casberi's own options,
     /// which were the master list's pinned row.
-    case feed, markets, sources, settings
+    ///
+    /// **Feed · Day · Notes · Sources (prd §1231).** Day — the calendar and
+    /// to-dos — left the Feed's sections for a door of its own; Notes took
+    /// Settings' place (capture is half the core loop, and ✎ still writes);
+    /// Markets moved into the Wallet's tiles; Settings is Casberi's row at
+    /// the top of Sources.
+    case feed, day, notes, sources
 
     var id: String { rawValue }
 
@@ -130,9 +139,9 @@ enum YouTile: String, CaseIterable, Identifiable, Hashable, Sendable {
         // "Wallet" a time read wrong against a place. The date line under
         // the box still says it is today's.
         case .feed:     return String(localized: "Feed")
-        case .markets:  return String(localized: "Markets")
+        case .day:      return String(localized: "Day")
+        case .notes:    return String(localized: "Notes")
         case .sources:  return String(localized: "Sources")
-        case .settings: return String(localized: "Settings")
         }
     }
 
@@ -140,16 +149,17 @@ enum YouTile: String, CaseIterable, Identifiable, Hashable, Sendable {
     var summary: String {
         switch self {
         case .feed:     return String(localized: "Today, then what is coming up")
-        case .markets:  return String(localized: "What you follow")
+        case .day:      return String(localized: "Your calendar and to-dos")
+        case .notes:    return String(localized: "Your notes")
         case .sources:  return String(localized: "Everything you have connected")
-        case .settings: return String(localized: "Casberi's own options")
         }
     }
 
     /// The tile standing for the shell's `source`, or nil outside You.
     init?(source: String) {
         if source == "All" { self = .feed }
-        else if HomeScope.isMarkets(source) { self = .markets }
+        else if source == RoomAccounts.dayRoom { self = .day }
+        else if Pinboard.isPinnedRoom(source) { self = .notes }
         else if HomeScope.Place(source: source) == .settings { self = .sources }
         else { return nil }
     }

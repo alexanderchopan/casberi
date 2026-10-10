@@ -21,15 +21,20 @@ struct YouTilesRow: View {
     static func open(_ tile: YouTile, chrome: ShellChrome, route: HomeRoute) {
         DSHaptic.selection()
         switch tile {
-        case .sources, .settings:
-            // One screen, two faces (prd §1207 item 9): the master list, or
-            // Casberi's options opened in place.
-            chrome.settingsPick = tile
+        case .sources:
+            // The master list; Casberi's own options are its first row
+            // (prd §1231).
+            chrome.settingsPick = .sources
             route.present(.casberi)
         default:
             if !route.path.isEmpty { route.path = [] }
             chrome.lastChipTouch = Date.timeIntervalSinceReferenceDate
-            chrome.sourceRequest = tile == .feed ? "All" : HomeScope.markets
+            // Day and Notes rise as sheets over the Feed (`routeIntoFeed`).
+            chrome.sourceRequest = switch tile {
+            case .day: RoomAccounts.dayRoom
+            case .notes: Pinboard.room
+            default: "All"
+            }
         }
     }
 }

@@ -787,8 +787,11 @@ enum BridgeCatalog {
         // or did — journals, files, workouts, lessons. Photos moved to Media
         // (§1050b), and Notes' seats moved here when Notes stopped being a
         // category (§1049).
-        ("Day",     "Calendar",    ["Schedule", "Mail"]),
-        ("Life",    "Apple Health", ["Fitness", "People", "Storage", "Learning", "Notes"]),
+        // MAIL MOVES TO LIFE (prd §1231, user: "i think it goes well in life
+        // w/ files and contacts"): Day is the calendar and to-dos alone, a
+        // door of its own on the Feed; your inbox is personal admin.
+        ("Day",     "Calendar",    ["Schedule"]),
+        ("Life",    "Apple Health", ["Fitness", "People", "Storage", "Learning", "Notes", "Mail"]),
         ("Agents",  "Claude",      ["Agent"]),
         // MEDIA HOLDS READING (prd §1204, user: "reading for example maybe
         // goes with media", then "i like 'play'"): what you read, watch and

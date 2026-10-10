@@ -2620,8 +2620,12 @@ struct MainSurface: View {
         // rule"): Markets and your notes rise as a sheet over the Feed, as an
         // app does and Settings and Sources do; the Wallet alone stands
         // beside the Feed.
-        let onTop = label == HomeScope.markets || label == Pinboard.room
-        if onTop || RoomAccounts.host(ofSource: label).map({ HomeScope.isFeedSection($0.room) }) == true {
+        // Day rises the same way (prd §1231): its door is a Feed tile now,
+        // and so does an app that lives in it (Calendar, Reminders…).
+        let onTop = label == HomeScope.markets || label == Pinboard.room || label == RoomAccounts.dayRoom
+        if onTop || RoomAccounts.host(ofSource: label).map({
+            HomeScope.isFeedSection($0.room) || $0.room == RoomAccounts.dayRoom
+        }) == true {
             let sheet = ShellChrome.AppSheet(source: label)
             chrome.routedRequest = label
             // A sheet still closing refuses a second one (UIKit's "already

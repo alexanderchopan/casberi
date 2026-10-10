@@ -119,7 +119,14 @@ extension FeedScreen {
             ?? feedThings
         // Resolved once, not per row (prd §1079).
         let people = socialScopeMembers
+        // DAY IS ITS OWN DOOR (prd §1231): on the phone's scrolling Feed the
+        // calendar and to-dos stand behind the Day tile, never in the Feed —
+        // its box, its glances or its sections.
+        let dropsDay = source == "All" && scrollsCategories
         return base.filter { thing in
+            if dropsDay, BridgeCatalog.category(forSource: thing.source) == RoomAccounts.dayRoom {
+                return false
+            }
             // The Notes room's membership is decided entirely by the `@Query`
             // above (`source == "You"`, not the room's name), so there is no
             // source to match against
@@ -128,7 +135,7 @@ extension FeedScreen {
             // source` was false for every row the query had just correctly
             // handed over, and the room drew its own "nothing pinned" line over
             // a list that wasn't.
-            (source == "All" || Pinboard.isPinnedRoom(source) || thing.source == source
+            return (source == "All" || Pinboard.isPinnedRoom(source) || thing.source == source
              || RoomAccounts.rides(room: source, source: thing.source))
                 // A bulk import (Instagram, Snapchat) keeps its own room but
                 // stays OUT of All — thousands of things dated across years

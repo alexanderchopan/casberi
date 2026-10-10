@@ -91,9 +91,8 @@ extension FeedScreen {
         let now = Date.now
         let next = visible.filter { $0.isLive && Self.dayWhen($0) >= now }
             .min { Self.dayWhen($0) < Self.dayWhen($1) }
-        let subscriptions = chrome.dayScope == .subscriptions
         let comingUp = chrome.dayScope == .comingUp
-        let anyCover = heroShown || subscriptions || comingUp ? nil : (next ?? visible.first { $0.isLive })
+        let anyCover = heroShown || comingUp ? nil : (next ?? visible.first { $0.isLive })
         // In the Feed's scroll (prd §1208c) only the timeline earns the box:
         // a plain cover stands down and its thing stays a row.
         let inFeed = Self.sectionCapNow != nil
@@ -103,9 +102,7 @@ extension FeedScreen {
         // Box B (prd §1087): the next thing over today's shape, while there
         // is a next thing and a day to draw; else the cover, as every room.
         // Subscriptions draws its own figure in the box (prd §1111).
-        if subscriptions {
-            Section { mailSubscriptionsBox }
-        } else if comingUp {
+        if comingUp {
             Section { dayComingUpBox }
         } else if let cover, cover.id == next?.id, !marks.isEmpty {
             Section { dayAheadRow(cover, marks: marks) }
@@ -114,7 +111,7 @@ extension FeedScreen {
         } else if !heroShown && !inFeed {
             Section {
                 emptyLeadRow(headline: DSProse.text("Nothing ahead"),
-                             words: Text("Your calendar, to-dos and mail appear here"))
+                             words: Text("Your calendar and to-dos appear here"))
             }
         }
         let makes = dayMakes
@@ -134,9 +131,7 @@ extension FeedScreen {
                                       trailing: DSRoomChassis.inset))
         }
         roomScopeSection
-        if subscriptions {
-            mailSubscriptionsSections
-        } else if comingUp {
+        if comingUp {
             dayComingUpSections(nextEventID: nextEventID)
         } else {
             groupedSections(liftingCover(groups, id: cover?.id), nextEventID: nextEventID)
@@ -144,7 +139,37 @@ extension FeedScreen {
     }
 }
 
-// MARK: - Day's Subscriptions (prd §1111)
+// MARK: - Life (prd §1231)
+
+extension FeedScreen {
+    /// The Life room: All · Subscriptions, then what you made, kept or did —
+    /// or, on Subscriptions, the mailing lists that came with Mail (Day's
+    /// until prd §1231).
+    @ViewBuilder
+    func lifeRoomSections(_ visible: [Thing], nextEventID: UUID?) -> some View {
+        let lists = chrome.lifeScope == .subscriptions
+        if lists {
+            Section { mailSubscriptionsBox }
+        }
+        Section {
+            DSScopeTiles(sections: LifeScope.allCases, active: chrome.lifeScope) { picked in
+                withAnimation(DS.Motion.standard) { chrome.lifeScope = picked }
+            }
+            .feedRowBackground()
+            .listRowSeparator(.hidden)
+            .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
+                                      bottom: DSRoomChassis.leadGap,
+                                      trailing: DSRoomChassis.inset))
+        }
+        if lists {
+            mailSubscriptionsSections
+        } else {
+            groupedSections(chronoDays(visible), nextEventID: nextEventID)
+        }
+    }
+}
+
+// MARK: - Life's Subscriptions (Day's until prd §1231; prd §1111)
 
 extension FeedScreen {
     /// The mail seats a scoped Day reads lists from: every one on All, the

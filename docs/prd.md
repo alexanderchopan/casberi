@@ -65702,3 +65702,10 @@ Day's Box B (§1087) drew the next thing over today's timeline strip. It now dra
 5. **A dead control removed**: the Work follow tray opened from Apps offered a GitHub chip that did nothing (no GitHub tray to raise); it draws only where it can raise GitHub's.
 
 Not done here: a Following list for Social (People already lists the Bluesky accounts you follow).
+
+## §1231 — The Feed's row is Feed · Day · Notes · Sources; Day is a door, mail lives in Life (user, 2026-10-10: "calendar … moves to the markets button, and day stops appearing below in the feed"; "i think it goes well in life w/ files and contacts"; "notes is good"; "casberi becomes a source but is at the top above the apps")
+
+1. **The row**: Feed · Day · Notes · Sources (`YouTile`). Markets left it for the Wallet's tiles (§1232); Settings left it for Sources' first row. ✎ beside the search bar still writes a note anywhere; the Notes tile is your notes.
+2. **Day is a door, never a Feed section**: `HomeScope.feedCategories` and `isFeedSection` leave it out, the scrolling Feed drops its things (box, glances, sections; `liveVisible`'s `dropsDay`), and Day and its apps rise as a sheet like Markets and Notes (`routeIntoFeed`): the calendar box (§1229), All · Coming up · New, the days.
+3. **Mail moves to Life** with Files and Contacts (`BridgeCatalog`: Day is Schedule alone, Life gains Mail). Day's Subscriptions tile went with it: Life is All · Subscriptions (`LifeScope`, `chrome.lifeScope`, `lifeRoomSections`), the mailing lists' box and rows unchanged; every door to the lists (a service door, Sources' count, `-openSection subscriptions`) lands on Life's.
+4. **Casberi leads Sources**: its first row, the mark, "Settings, data and notifications", opens Casberi's own options in place, with a "Sources" row back in the content (§752). `chrome.settingsPick` is `.sources` or `.casberi`.

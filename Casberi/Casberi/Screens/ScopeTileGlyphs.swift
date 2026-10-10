@@ -146,8 +146,17 @@ extension DayScope: DSTileScope {
         switch self {
         case .all: return ScopeTileGlyph.all
         case .comingUp: return ScopeTileGlyph.comingUp
-        case .subscriptions: return ScopeTileGlyph.subscriptions
         case .new: return ScopeTileGlyph.new
+        }
+    }
+}
+
+/// Life's tiles (prd §1231): All, and the mailing lists that came with Mail.
+extension LifeScope: DSTileScope {
+    var glyph: String {
+        switch self {
+        case .all: return ScopeTileGlyph.all
+        case .subscriptions: return ScopeTileGlyph.subscriptions
         }
     }
 }
@@ -222,9 +231,9 @@ extension YouTile: DSTileScope {
     var glyph: String {
         switch self {
         case .feed:     return ScopeTileGlyph.feed
-        case .markets:  return CategoryFold.glyph(for: HomeScope.markets)
+        case .day:      return CategoryFold.glyph(for: RoomAccounts.dayRoom)
+        case .notes:    return ScopeTileGlyph.notes
         case .sources:  return ScopeTileGlyph.apps
-        case .settings: return ScopeTileGlyph.settings
         }
     }
 }

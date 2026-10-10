@@ -92,9 +92,7 @@ extension FeedScreen {
     func marketsWatchlistSections(_ visible: [Thing], nextEventID: UUID?) -> some View {
         let watches = marketsWatches(visible)
         marketsTilesSection
-        // You's tiles under the box (prd §1136 item 1); Search rides the
-        // floating bar on the phone, or the strip below beside the rail.
-        youTilesSection(.markets)
+        // The Feed's tiles left Markets (prd §1231): it is a Wallet tile now.
         tokensInlineTiles
         // THE VERB LEADS THE LIST (prd §1230), as every Following and
         // Subscriptions list's does.
@@ -156,7 +154,6 @@ extension FeedScreen {
     func marketsAlertsSections(_ visible: [Thing], nextEventID: UUID?) -> some View {
         let watches = marketsWatches(visible)
         marketsTilesSection
-        youTilesSection(.markets)
         tokensInlineTiles
         let byRef = Dictionary(watches.compactMap { t in t.sourceRef.map { ($0, t) } },
                                uniquingKeysWith: { a, _ in a })
@@ -240,7 +237,6 @@ extension FeedScreen {
         // own heat map and its lede gave way to it.
         marketsTilesSection
             .task(id: scope.id) { await quotes.load(pack) }
-        youTilesSection(.markets)
         tokensInlineTiles
         indexSection(String(localized: "From your apps"), split.yours, byName: byName,
                      connected: connected, watched: watched, watchAll: true)

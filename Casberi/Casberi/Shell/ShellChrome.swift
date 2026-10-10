@@ -224,7 +224,10 @@ final class ShellChrome {
     var roomsTray = false
     /// Which face of the Settings screen a You tile asked for (prd §1207
     /// item 9): Sources or Casberi's own options. Read and cleared there.
-    var settingsPick: YouTile?
+    var settingsPick: SettingsFace?
+    /// Which face the Sources page opens on: the master list, or Casberi's
+    /// own options (its first row, prd §1231).
+    enum SettingsFace { case sources, casberi }
     /// THE FEED IS ONE SCROLL (prd §1208): a category the tray, a widget or
     /// a link asked for, which the Feed scrolls to and clears.
     var feedJump: String?
@@ -597,6 +600,8 @@ final class ShellChrome {
     var workScope: WorkScope = .all
     /// The Day room's picked tile (prd §1111): All or Subscriptions.
     var dayScope: DayScope = .all
+    /// Life's tile (prd §1231): All, or the mailing lists.
+    var lifeScope: LifeScope = .all
     /// The Media room's picked tile (prd §1118, §1204): All, Play, Read or
     /// Subscriptions. Reading's own tile went with the room it folded into.
     var mediaScope: MediaScope = .all
@@ -1061,9 +1066,9 @@ final class ShellChrome {
                 walletSection = .subscriptions
                 sourceRequest = CategoryFold.walletRoom
             case .list:
-                mergedScope[RoomAccounts.dayRoom] = nil
-                dayScope = .subscriptions
-                sourceRequest = RoomAccounts.dayRoom
+                mergedScope[RoomAccounts.lifeRoom] = nil
+                lifeScope = .subscriptions
+                sourceRequest = RoomAccounts.lifeRoom
             case .followed(_, let room):
                 landOnFollowing(room)
             }
@@ -1085,9 +1090,9 @@ final class ShellChrome {
                 walletSection = .subscriptions
                 sourceRequest = CategoryFold.walletRoom
             case .lists:
-                mergedScope[RoomAccounts.dayRoom] = nil
-                dayScope = .subscriptions
-                sourceRequest = RoomAccounts.dayRoom
+                mergedScope[RoomAccounts.lifeRoom] = nil
+                lifeScope = .subscriptions
+                sourceRequest = RoomAccounts.lifeRoom
             case .follows:
                 landOnFollowing(.media)
             }

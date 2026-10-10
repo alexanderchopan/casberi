@@ -108,6 +108,8 @@ extension FeedScreen {
         switch category {
         case RoomAccounts.dayRoom:
             dayRoomSections(things, nextEventID: nextEventID, heroShown: false)
+        case RoomAccounts.lifeRoom:
+            lifeRoomSections(things, nextEventID: nextEventID)
         case RoomAccounts.workRoom:
             workRoomSections(things, nextEventID: nextEventID, heroShown: true)
         case RoomAccounts.mediaRoom:

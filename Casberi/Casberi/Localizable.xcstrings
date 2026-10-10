@@ -4953,6 +4953,34 @@
         }
       }
     },
+    "Day" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Día"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "デイ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "하루"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "日程"
+          }
+        }
+      }
+    },
     "Delete access" : {
       "localizations" : {
         "es" : {
@@ -5761,6 +5789,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "与…相关的一切"
+          }
+        }
+      }
+    },
+    "Everything you made, kept or did" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Todo lo que hiciste, guardaste o creaste"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "作ったもの、残したもの、したことすべて"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "만들고, 보관하고, 한 모든 것"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你创作、保存或做过的一切"
           }
         }
       }
@@ -7221,6 +7277,34 @@
         }
       }
     },
+    "Settings, data and notifications" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ajustes, datos y notificaciones"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "設定、データ、通知"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "설정, 데이터 및 알림"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "设置、数据和通知"
+          }
+        }
+      }
+    },
     "The line starts at the next reading." : {
       "localizations" : {
         "es" : {
@@ -7273,6 +7357,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "保存过两次的网站会显示在这里。"
+          }
+        }
+      }
+    },
+    "Your calendar and to-dos" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu calendario y tus pendientes"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "カレンダーとToDo"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "캘린더와 할 일"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的日历和待办事项"
+          }
+        }
+      }
+    },
+    "Your calendar and to-dos appear here" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu calendario y tus pendientes aparecen aquí"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "カレンダーとToDoがここに表示されます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "캘린더와 할 일이 여기에 표시됩니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的日历和待办事项会显示在这里"
           }
         }
       }

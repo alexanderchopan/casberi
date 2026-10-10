@@ -68,7 +68,7 @@ struct SettingsHome: View {
             // tiles belong to the Feed, and the pull closes it.
             if route.sheet == nil {
                 Section {
-                    YouTilesRow(active: casberiOpen ? .settings : .sources)
+                    YouTilesRow(active: .sources)
                         .dsRoomTilesListRow()
                 }
             }
@@ -83,8 +83,23 @@ struct SettingsHome: View {
                                     size: .slab, submitLabel: .search, action: {})
                     }
                     if casberiOpen {
+                        // The way back, in the content (prd §752): Sources.
+                        DSDoorRow(icon: "chevron.left", title: Text("Sources")) {
+                            withAnimation(DS.Motion.standard) { casberiOpen = false }
+                        }
                         casberiOptions
                     } else {
+                        // CASBERI LEADS SOURCES (prd §1231, user: "casberi
+                        // becomes a source but is at the top above the
+                        // apps"): its own options, where an app's settings
+                        // are on the phone.
+                        DSPushRow(title: Text(verbatim: "Casberi"),
+                                  subtitle: Text("Settings, data and notifications")) {
+                            withAnimation(DS.Motion.standard) { casberiOpen = true }
+                        } leading: {
+                            CasberiMark(size: DS.Mark.notice * 0.7)
+                                .frame(width: DS.Mark.notice, height: DS.Mark.notice)
+                        }
                         switch scope {
                         case .apps:
                             appsList
@@ -184,7 +199,7 @@ struct SettingsHome: View {
         }
         .onChange(of: chrome.settingsPick, initial: true) { _, pick in
             guard let pick else { return }
-            withAnimation(DS.Motion.standard) { casberiOpen = pick == .settings }
+            withAnimation(DS.Motion.standard) { casberiOpen = pick == .casberi }
             chrome.settingsPick = nil
         }
         .onChange(of: chrome.settingsLanding, initial: true) { _, landing in
