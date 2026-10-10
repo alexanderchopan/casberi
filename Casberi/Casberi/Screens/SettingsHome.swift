@@ -645,8 +645,8 @@ struct SettingsHome: View {
     }
 
     /// EVERY CALENDAR CASBERI READS (prd §1150, user: "it should show every
-    /// calendar read"): the phone's, by account, each opening Calendar's page
-    /// in Casberi, then the ones subscribed by link, each with Unsubscribe.
+    /// calendar read"): the phone's, by account, as facts, then the ones
+    /// subscribed by link, each with Unsubscribe.
     @ViewBuilder
     private var calendarsList: some View {
         let phone = phoneCalendars.filter { hit($0.title) }
@@ -660,9 +660,10 @@ struct SettingsHome: View {
         } else {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
                 ForEach(phone) { cal in
-                    DSPushRow(title: Text(verbatim: cal.title), subtitle: Text(verbatim: cal.account)) {
-                        route.openSetup(forOffer: "Calendar")
-                    } leading: {
+                    // A fact, not a door: the phone's calendars are chosen
+                    // in iOS, so the row draws no chevron (honesty rule).
+                    DSPushRowLabel(title: Text(verbatim: cal.title), subtitle: Text(verbatim: cal.account),
+                                   opens: false) {
                         Circle().fill(cal.color)
                             .frame(width: 14, height: 14)
                             .frame(width: DS.Mark.notice, height: DS.Mark.notice)
