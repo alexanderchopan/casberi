@@ -65723,3 +65723,10 @@ Amends §1107, §1111 and §1201.
    - **Cards** (new): one row per card, with what it spent this month as the figure, what it owes and when (FinanceKit's own `nextPaymentDueDate`, never inferred), and its CardPointers offers with the first end. A row opens the app that reads the card. The box is the card that asks something of you soonest, else the most spent (`WalletCardRoll`, read with Spending, `wallet-card-roll-selftest.sh`). On All only.
    - **Transactions** as before.
 4. A roster's box (Subscriptions, Cards) is drawn in `GlanceShell`, the same frame as a thing's `GlanceTile`, and its list keeps every row (the §1208l skip is for news, not rosters).
+
+## §1233 — An empty Day is Day, and New needs no connect; Apps' categories are the two-across box (user, 2026-10-10, on device: "i just clicked on day and it brought up this" — the generic "One inbox for all your apps"; "'day' probably needs a 'new' right to do event or reminder?"; "we need to make the categories of apps be like they are elsewhere")
+
+1. **Day is never replaced by the generic empty state**, as Today, Notes and Markets are not (`FeedScreen`'s room arms and `keepsChromeWhenEmpty`). An empty Day draws its calendar box, empty, titled "Nothing ahead" (§769), its buttons, and under them "Connect a calendar" while no Day app is connected (`dayHasApp`), which leads to Calendar's connect.
+2. **New stands with nothing connected**: an event opens Apple's Calendar, a reminder Apple's Reminders, neither needing Day to read them (`dayMakes`).
+3. **A door from inside an app sheet steps the sheet down first** (`openOutsideSheet`): the shell cannot raise a second sheet over it.
+4. **Apps' categories are `DSCountGrid`'s inline counts, two across**, the box Markets and Sources draw; the glyph grid with a blue pick is gone.

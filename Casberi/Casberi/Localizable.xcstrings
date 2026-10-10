@@ -4673,6 +4673,34 @@
         }
       }
     },
+    "Connect a calendar" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Conectar un calendario"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "カレンダーを接続"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "캘린더 연결"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "连接日历"
+          }
+        }
+      }
+    },
     "Connect apps in Sources." : {
       "localizations" : {
         "es" : {

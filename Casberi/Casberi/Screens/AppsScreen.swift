@@ -756,22 +756,21 @@ struct AppsScreen: View {
     /// again is A–Z. No figure: a count of apps you don't have is the
     /// catalogue's size, and every figure in the app means yours.
     private var categoryBox: some View {
+        // **TWO ACROSS, AS MARKETS' AND SOURCES' BOXES ARE (prd §1233, user:
+        // "we need to make the categories of apps be like they are
+        // elsewhere"):** `DSCountGrid` of inline counts; it was a grid of
+        // glyphs over words with a blue pick.
         let cats = scopes
-        let columns = min(5, max(3, (cats.count + 1) / 2))
-        return LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 2), count: columns),
-                         spacing: DS.Space.s2) {
+        return DSCountGrid(items: cats.count) {
             ForEach(cats) { cat in
                 DSCountTile(count: nil, label: cat.name ?? String(localized: "A–Z"), glyph: cat.glyph,
-                            isOn: scope == cat) {
+                            isOn: scope == cat, inline: true) {
                     withAnimation(DS.Motion.standard) {
                         scope = scope == cat ? CatalogScope(name: nil) : cat
                     }
                 }
             }
         }
-        .frame(maxWidth: .infinity, minHeight: DSRoomChassis.leadBox,
-               maxHeight: DSRoomChassis.leadBox)
-        .dsRoomHeadBlock()
     }
 
     /// Search on the phone is the bar's verb; where the rail stands there is

@@ -53,9 +53,11 @@ extension FeedScreen {
             .map(\.name))
         return DayMake.allCases.filter { make in
             switch make {
-            case .event:    return seats.contains("Calendar") && !DS.isMac
-            case .reminder: return seats.contains("Reminders")
-                                && HandOffState.answers("x-apple-reminderkit")
+            // **NEW NEEDS NO CONNECT (prd §1233, user: "'day' probably needs
+            // a 'new' right to do event or reminder?").** Both open Apple's own
+            // app to write one, which works whether or not Day reads it yet.
+            case .event:    return !DS.isMac
+            case .reminder: return HandOffState.answers("x-apple-reminderkit")
             case .email:    return dayCompose != nil
             }
         }
@@ -109,9 +111,14 @@ extension FeedScreen {
         } else if let cover {
             Section { ledeListRow(cover) }
         } else if !heroShown && !inFeed {
+            // **AN EMPTY DAY DRAWS ITS CALENDAR, EMPTY (prd §769, §1233).**
             Section {
-                emptyLeadRow(headline: DSProse.text("Nothing ahead"),
-                             words: Text("Your calendar and to-dos appear here"))
+                DayCalendarFigure(title: String(localized: "Nothing ahead"), when: "", line: "", marks: [])
+                    .dsRoomBox()
+                    .feedRowBackground()
+                    .listRowInsets(.init(top: DS.Space.s2, leading: 0,
+                                         bottom: DSRoomChassis.leadGap, trailing: 0))
+                    .listRowSeparator(.hidden)
             }
         }
         let makes = dayMakes
@@ -131,6 +138,19 @@ extension FeedScreen {
                                       trailing: DSRoomChassis.inset))
         }
         roomScopeSection
+        // With no calendar or to-do app connected, the first row is the act
+        // that fills the box (prd §1166's rule, §1233).
+        if !dayHasApp && !inFeed {
+            Section {
+                DSDoorRow(icon: "plus", title: Text("Connect a calendar")) {
+                    openOutsideSheet { route.openSetup(forOffer: "Calendar") }
+                }
+                .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.rowInset,
+                                          bottom: 0, trailing: DSRoomChassis.rowInset))
+                .feedRowBackground()
+                .listRowSeparator(.hidden)
+            }
+        }
         if comingUp {
             dayComingUpSections(nextEventID: nextEventID)
         } else {
@@ -358,6 +378,24 @@ extension FeedScreen {
             guard day >= start, day < end else { return nil }
             return .init(id: thing.id.uuidString, day: day, face: thing.source)
         }
+    }
+
+    /// A door to a screen the shell presents: from inside an app sheet the
+    /// shell cannot raise a second one over it, so the sheet steps down
+    /// first and the door opens once it has gone.
+    func openOutsideSheet(_ open: @escaping @MainActor () -> Void) {
+        guard inSheet, chrome.appSheet != nil else { open(); return }
+        chrome.appSheet = nil
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(450))
+            open()
+        }
+    }
+
+    /// Whether any of Day's apps is connected and not paused.
+    var dayHasApp: Bool {
+        let names = Set(RoomAccounts.seats(for: RoomAccounts.dayRoom).map(\.name))
+        return bridges.bridges.contains { names.contains($0.name) && $0.status != .paused }
     }
 
     /// Box B's row: the cover's tap, press and long press, drawing the next
