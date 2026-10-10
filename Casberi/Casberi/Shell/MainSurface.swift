@@ -764,13 +764,13 @@ struct MainSurface: View {
     private var appsPlace: some View {
         if showsPane {
             HStack(spacing: 0) {
-                AppsScreen()
+                SettingsHome()
                     .frame(maxWidth: .infinity)
                 accountsPane
                     .frame(width: PadLayout.paneWidth(for: surfaceWidth))
             }
         } else {
-            AppsScreen()
+            SettingsHome()
         }
     }
 
@@ -782,7 +782,7 @@ struct MainSurface: View {
         case .apps:
             // The catalogue rises as a sheet on the phone since prd §1142:
             // `HomeRoute.place` no longer cuts to it.
-            AppsScreen()
+            SettingsHome()
         case .casberi:
             SettingsHome()
         case .addresses:

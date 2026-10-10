@@ -229,6 +229,15 @@ final class HomeRoute {
     /// A You place (Apps, Addresses, Settings) lands in place instead (prd
     /// §1129): the stack empties and the shell cuts to it.
     @MainActor func present(_ door: Node) {
+        // **THE CATALOGUE IS SOURCES › APPS (prd §1234, user: "user needs to
+        // land on sources / apps").** The Apps screen was a second list of the
+        // same apps that nothing opened on purpose; every door that asked for
+        // it lands on Sources' Apps, which runs `openOffer` and clears
+        // `openCategory` (Sources lists every category at once).
+        let door: Node = door == .apps ? .casberi : door
+        if door == .casberi, openOffer != nil || openCategory != nil || openConnect {
+            openSources = true
+        }
         // ONE RULE ON THE PHONE (prd §1208m, user: "we decided 1 rule"):
         // Settings, Sources and Addresses rise as a sheet over the Feed, as
         // Markets, your notes and every app do; the Wallet alone stands
@@ -378,6 +387,10 @@ final class HomeRoute {
     /// just to the shelf); AppsScreen consumes it on appear, after the
     /// `.apps` push above has mounted the stack.
     var openOffer: String?
+
+    /// Land Settings on Sources › Apps (prd §1234): set by a door that asked
+    /// for the catalogue, consumed by `SettingsHome`.
+    var openSources = false
 
     /// Land Accounts on Connect — the rooms tray's one door to the catalog
     /// (prd §930; its Manage door is deleted, §958, because the screen's own

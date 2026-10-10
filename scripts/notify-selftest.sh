@@ -321,7 +321,7 @@ else
   printf '  ✓ the NotificationContent extension carries no entitlement and reads no shared store (§809a)\n'
 fi
 guard "the settings footnote names the four kinds that stand alone" \
-      'A dispute, a deadline, a liquidation or a Safe signature comes at once' "$SETTINGS"
+      'Disputes, deadlines, liquidations and Safe signatures come at once' "$SETTINGS"
 # `hasOwnApp` only orders the names, so a misspelt seat fails at nothing: that
 # app is simply named first as if it had no lock screen of its own.
 CATALOG="Casberi/Casberi/Model/BridgeCatalog.swift"

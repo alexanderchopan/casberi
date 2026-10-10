@@ -48,9 +48,6 @@ enum ScopeTileGlyph {
     /// Markets' Alerts (prd §1081): the system's bell, the bell a note's
     /// reminder already wears for "tell me".
     static let alerts       = "bell"
-    /// The Apps catalogue's Search (prd §1138): the system's magnifier, the
-    /// app's search glyph wherever a field searches.
-    static let search       = "magnifyingglass"
     /// Logos' Node scope (prd §991) — the node you run.
     static let node         = "server.rack"
     /// Logos' Chat scope (prd §1155): one speech bubble, a conversation —
@@ -261,12 +258,3 @@ extension SettingsScope: DSTileScope {
     }
 }
 
-
-/// The Apps catalogue's one verb (prd §1138).
-extension AppsBarScope: DSTileScope {
-    var glyph: String {
-        switch self {
-        case .search: return ScopeTileGlyph.search
-        }
-    }
-}

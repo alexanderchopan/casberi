@@ -65730,3 +65730,11 @@ Amends §1107, §1111 and §1201.
 2. **New stands with nothing connected**: an event opens Apple's Calendar, a reminder Apple's Reminders, neither needing Day to read them (`dayMakes`).
 3. **A door from inside an app sheet steps the sheet down first** (`openOutsideSheet`): the shell cannot raise a second sheet over it.
 4. **Apps' categories are `DSCountGrid`'s inline counts, two across**, the box Markets and Sources draw; the glyph grid with a blue pick is gone.
+
+## §1234 — The catalogue is Sources › Apps; the Apps screen is deleted (user, 2026-10-10: "why isn't the apps catalogue just the sources menu … how does one even get back to the apps catalogue today"; "ya for sure user needs to land on sources / apps")
+
+1. **One list of every app**: Sources' Apps (Start here, then every app by category, search). The Apps screen (`AppsScreen`) was a second list of the same apps that no door opened on purpose; it is deleted, with `AppsBarScope` and `ScopeTileGlyph.search`, which only it wore.
+2. **Every door that asked for the catalogue lands on Sources › Apps**: `HomeRoute.present(.apps)` presents `.casberi` and sets `openSources`, which `SettingsHome` consumes (Sources face, the Apps count, an empty field). The empty feed's pile and Browse apps, Sources' Cards Add, the composer's @apps and Agents doors, `casberi://apps`, and Connect on an app with no page of its own.
+3. **An app a door named runs as its row would** (`SettingsHome.openOffer`): a connected one opens its page, one that needs only a name raises its Track tray, one with a page opens it, and a one-tap app (Calendar, Photos, Reminders) fires the system's ask in place. It never goes back through `openSetup`, whose fallback for a pageless app is this.
+4. Start here keeps its four steps (§1166); Photos is not added (user: "without photos it is 3 things plus settings which seems reasonable").
+5. Categories stay as they are (user: "in markets we separate them … i don't want to be messing with that"). Markets, a built-in, is never a catalogue row (Sources' list and count and the tray's search already skip it).

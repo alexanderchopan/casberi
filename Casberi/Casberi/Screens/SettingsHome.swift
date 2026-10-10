@@ -46,6 +46,9 @@ struct SettingsHome: View {
     @State private var unsubscribing: CalendarSubscriptionStore.Entry?
     /// Add a calendar's two ways (prd §1166): the phone's, or one by link.
     @State private var calendarChoice = false
+    /// The Track tray of an app that needs only a name (prd §1119), raised
+    /// by a door that named it (prd §1234; the Apps screen's until then).
+    @State private var trackPick: TrackPick?
 
 
     var body: some View {
@@ -197,6 +200,44 @@ struct SettingsHome: View {
                 .environment(self.route)
                 .environment(\.modelContext, context)
         }
+        .background {
+            Color.clear.sheet(item: $trackPick) { pick in
+                Group {
+                    if pick.room == .reading {
+                        ReadingFindSheet(onTracked: { landAfterTrack(pick.room) })
+                    } else {
+                        FollowTrackTray(room: pick.room, seat: pick.seat,
+                                        onTracked: { landAfterTrack(pick.room) })
+                    }
+                }
+                .environment(chrome)
+                .environment(bridges)
+                .environment(route)
+                .environment(\.modelContext, context)
+            }
+        }
+        // **A DOOR THAT ASKED FOR THE CATALOGUE LANDS HERE (prd §1234)**:
+        // Sources, on Apps, and an app it named runs as its row would.
+        .onChange(of: route.openSources, initial: true) { _, wanted in
+            guard wanted else { return }
+            route.openSources = false
+            route.openCategory = nil
+            route.openConnect = false
+            withAnimation(DS.Motion.standard) {
+                casberiOpen = false
+                scope = .apps
+                query = ""
+            }
+        }
+        .onChange(of: route.openOffer, initial: true) { _, name in
+            guard let name else { return }
+            route.openOffer = nil
+            withAnimation(DS.Motion.standard) {
+                casberiOpen = false
+                scope = .apps
+            }
+            openOffer(name)
+        }
         .onChange(of: chrome.settingsPick, initial: true) { _, pick in
             guard let pick else { return }
             withAnimation(DS.Motion.standard) { casberiOpen = pick == .casberi }
@@ -237,18 +278,64 @@ struct SettingsHome: View {
         query.isEmpty || name.localizedCaseInsensitiveContains(query)
     }
 
+    /// An app that needs only a name, and the room its follows list in.
+    struct TrackPick: Identifiable {
+        let room: Following.Room
+        let seat: String
+        var id: String { seat }
+    }
+
+    /// An app named by a door (prd §1234): a connected one opens its page;
+    /// one that needs only a name raises its Track tray; one with a page
+    /// opens it; a one-tap app (Calendar, Photos, Reminders) fires the
+    /// system's ask right here. Never back through `openSetup`, whose
+    /// fallback for a pageless app is this.
+    private func openOffer(_ name: String) {
+        if let bridge = bridges.bridges.first(where: { $0.name == name }) {
+            route.openAccount(BridgeRouter.destination(forID: bridge.id))
+            return
+        }
+        guard let offer = BridgeCatalog.offers.first(where: { $0.name == name }) else { return }
+        if let room = FollowingReading.trackRoom(forSeat: name) {
+            trackPick = TrackPick(room: room, seat: name)
+            return
+        }
+        if let destination = BridgeRouter.destination(forOffer: name) {
+            route.openAccount(destination)
+            return
+        }
+        BridgeConnect.connect(offer, store: bridges, context: context) { ok in
+            if ok {
+                DSHaptic.success()
+                chrome.flash(BridgeConnect.landingMessage(offer), tone: .success)
+            } else {
+                chrome.flash("Couldn't connect \(offer.name).", tone: .failure)
+            }
+        }
+    }
+
+    /// A follow landed from the Track tray: leave for the room that lists it.
+    private func landAfterTrack(_ room: Following.Room) {
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(450))
+            route.closeSheet()
+            route.path = []
+            chrome.landOnFollowing(room)
+        }
+    }
+
     /// Each kind's own act, behind its first row (prd §1166): the bar's Add
     /// that also ran it is deleted, a second door to the same place.
     private func add(_ kind: SettingsScope) {
         DSHaptic.selection()
         switch kind {
         case .apps:
-            route.present(.apps)
+            withAnimation(DS.Motion.standard) { scope = .apps }
         case .calendars:
             calendarChoice = true
-        // A card arrives through its app, so Add opens the catalogue.
+        // A card arrives through its app, so Add opens Apps, here (§1234).
         case .cards:
-            route.present(.apps)
+            withAnimation(DS.Motion.standard) { scope = .apps; query = "" }
         // Each kind's own add tray, over Settings (prd §1143).
         case .feeds:         sheet = .followAdd
         case .newsletters:   sheet = .mailAdd

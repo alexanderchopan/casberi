@@ -355,14 +355,13 @@ grep -q 'chrome.roomsTray.toggle()' "$TMP/root.nc" \
 grep -q 'chrome.roomsTray.toggle()' "$TMP/main.nc" \
   || { echo "✗ the iPad rail's face no longer toggles the rooms tray (prd §1133f) — the two"; \
        echo "  seats are one door and must behave identically."; fail=1; }
-strip_comments "Casberi/Casberi/Screens/AppsScreen.swift" > "$TMP/apps.nc"
-# NO switcher since prd §1033: Manage is deleted, Apps is the one catalogue,
-# and a connected row with a room is a status (its room's own door manages it).
-# A returning `AccountsHeld` is §1033 undone.
-! grep -q 'AccountsHeld' "$TMP/apps.nc" \
-  || { echo "✗ Apps has a switcher again (prd §1033 deleted Manage)."; fail=1; }
-grep -q 'SettingsRows()' "$TMP/apps.nc" \
-  && { echo "✗ the Accounts screen draws SettingsRows again — Settings is its own screen (prd §933)."; fail=1; }
+# THE APPS SCREEN IS DELETED (prd §1234): Sources' Apps is the one catalogue,
+# and every door that asked for the catalogue lands there. Its switcher,
+# Settings rows and Casberi row went with it (§1033, §933, §1111).
+[ ! -f "Casberi/Casberi/Screens/AppsScreen.swift" ] \
+  || { echo "✗ the Apps screen is back — Sources' Apps is the catalogue (prd §1234)."; fail=1; }
+grep -q "let door: Node = door == .apps ? .casberi : door" "Casberi/Casberi/Shell/HomeRoute.swift" \
+  || { echo "✗ a door asking for the catalogue no longer lands on Sources (prd §1234)."; fail=1; }
 grep -rq 'openSettings = ' Casberi/Casberi --include='*.swift' \
   && { echo "✗ HomeRoute.openSettings is back — the doors present Settings outright (prd §933)."; fail=1; }
 # APPS AND SETTINGS ARE TWO DOORS AGAIN (prd §1111, reversing §1050g): the
@@ -376,8 +375,6 @@ grep -qE '^[[:space:]]*case casberi[[:space:]]*$' "Casberi/Casberi/Shell/HomeRou
   || { echo "✗ HomeRoute.Node lost Casberi's own settings page (prd §1111)."; fail=1; }
 ! grep -qE '^[[:space:]]*case settings[[:space:]]*$' "Casberi/Casberi/Shell/HomeRoute.swift" \
   || { echo "✗ a second Settings node is back — Settings is .casberi (prd §1111)."; fail=1; }
-grep -q 'casberiRow' "$TMP/apps.nc" \
-  && { echo "✗ Apps pins a Casberi row again — Settings has its own door (prd §1111)."; fail=1; }
 strip_comments "Casberi/Casberi/Shell/RoomsTray.swift" > "$TMP/tray.nc"
 # Since prd §1136 the You row is Home · Markets · Notes · Sources: Apps and
 # Addresses are filters inside Sources, which keeps Casberi's own settings as
@@ -774,7 +771,10 @@ strip_comments "Casberi/Casberi/Shell/HomeRoute.swift" > "$TMP/route.nc"
 [ "$(grep -c 'path.append(' "$TMP/route.nc")" -eq 1 ] \
   || { echo "✗ HomeRoute appends to path outside place(_:) — that push skips the"; \
        echo "  Accounts pane (prd §876)."; fail=1; }
-grep -q 'route.fromAccountsList(open)' "$TMP/apps.nc" \
+# The catalogue is Sources' Apps (prd §1234); a row there opens an account
+# page through `openAccount`, which replaces the pane's page itself.
+strip_comments "Casberi/Casberi/Screens/SettingsHome.swift" > "$TMP/apps.nc"
+grep -q 'route.openAccount(' "$TMP/apps.nc" \
   || { echo "✗ an Accounts row no longer REPLACES the pane's page — rows would stack"; \
        echo "  pages behind each other (prd §876)."; fail=1; }
 # Every SettingsPage case is opened by a row, or it is a page nothing reaches.
@@ -834,11 +834,11 @@ grep -q 'swipeTable' "$TMP/tokens.nc" \
 # no longer named one app, and the user ruled one door: a connected row in
 # Apps opens that app's account page. A hold on a tray mark stays deleted.
 strip_comments "Casberi/Casberi/Shell/RoomsTray.swift" > "$TMP/tray.nc"
-strip_comments "Casberi/Casberi/Screens/AppsScreen.swift" > "$TMP/apps.nc"
+strip_comments "Casberi/Casberi/Screens/SettingsHome.swift" > "$TMP/apps.nc"
 [ ! -f "Casberi/Casberi/Shell/RoomAccountDoor.swift" ] \
   && ! grep -q 'RoomAccountDoor' Casberi/Casberi/Screens/FeedScreen*.swift \
   || { echo "✗ a room draws a sliders disc again — settings open from Apps (prd §1050f)."; fail=1; }
-grep -q 'route.openAccount(destination)' "$TMP/apps.nc" \
+grep -q 'route.openAccount(BridgeRouter.destination(forID:' "$TMP/apps.nc" \
   || { echo "✗ a connected row in Apps no longer opens its account page (prd §1050f)."; fail=1; }
 # §1159 amended this: an app's icon in a tray row holds Open, then Settings,
 # its account page through the one call Settings' row makes. Any other hold in
