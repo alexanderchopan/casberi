@@ -268,8 +268,10 @@ m = re.search(r'static let room = "([^"]+)"', pin)
 assert m, "Pinboard.room literal not found"
 room = m.group(1)
 cats = set(re.findall(r'^\s*\("([^"]+)",\s*"[^"]+",\s*\[', catalog, re.M))
-# Notes is no category since §1056; Life and Day must parse.
-assert {"Wallet", "Life", "Day"} <= cats, f"category table not parsed: {sorted(cats)}"
+# Notes is no category since §1056, nor Day since §1239 (its apps file under
+# Life; the Day button is a screen). Wallet and Life must parse.
+assert {"Wallet", "Life"} <= cats, f"category table not parsed: {sorted(cats)}"
+assert "Day" not in cats, "Day is a category again — its apps file under Life (prd §1239)"
 offers = set(re.findall(r'Offer\(name:\s*"([^"]+)"', catalog))
 assert len(offers) > 50, f"offer table not parsed: {len(offers)}"
 aliases = {n.split(" ", 1)[1] for n in offers if " " in n}

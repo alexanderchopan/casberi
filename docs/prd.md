@@ -65764,3 +65764,10 @@ Supersedes §770's evening digest and its per-category switches; amends §809 an
 2. **Settings and Sources push too**: inside their route sheet, Data, Notifications, Language and Feed order push as `settingsPage`s (`SettingsRows.open`), and Sources' add trays, Track tray and calendar link push (`DSOneSheet` on `sheet`, `trackPick`; `calendarAdd`).
 3. **A pushed tray is a page** (`dsInPane`): its presentation half (detents, Mac sizing, grabber, corner) applies only when the tray IS the sheet (`DSTrayPresentation`), or a pushed tray would shrink the host sheet to its own height.
 4. Still stacked, next: an account page's own sheets (key, card, track), Addresses' contact sheet, and the sheets a thing sheet raises. The system's pickers (photos, share, documents, mail) stay sheets by design.
+
+## §1239 — Day files under Life; the Day button stays its screen (user, 2026-10-10: "do you think we should combine 'day' and 'life' into one category in the catalogue and feed?"; "wouldn't it make the catalogue more comprehensible tho?"; "yes that's how i think it should be")
+
+1. **The catalogue has seven categories**: Agents, Life, Media, Social, Testnets, Wallet, Work (Markets a built-in, never a row). Calendar, Reminders, Todoist, Cal.com and Calendly (group `Schedule`) file under Life, so Sources lists them there, the tray shows them in Life's row with no Day row, and Markets' Day pack folds into Life's.
+2. **The Day button is unchanged**: its screen is built from the `Schedule` apps (`RoomAccounts.day`, `dayGroup`, `isDaySource`), not a category, as Notes is built from the apps you write in (§1235). An icon of theirs still opens Day (`host(ofSource:)` asks Day first).
+3. Their rows stand on Day alone: never in Life's list or the Feed's Life section (`liveVisible`).
+4. Feed order loses its Day slot (`CategoryOrder.defaultOrder`); a stored order sheds it on reconcile.

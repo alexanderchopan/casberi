@@ -790,8 +790,11 @@ enum BridgeCatalog {
         // MAIL MOVES TO LIFE (prd §1231, user: "i think it goes well in life
         // w/ files and contacts"): Day is the calendar and to-dos alone, a
         // door of its own on the Feed; your inbox is personal admin.
-        ("Day",     "Calendar",    ["Schedule"]),
-        ("Life",    "Apple Health", ["Fitness", "People", "Storage", "Learning", "Notes", "Mail"]),
+        // DAY FILES UNDER LIFE (prd §1239, user: "wouldn't it make the
+        // catalogue more comprehensible tho?"): Calendar, Reminders, Todoist,
+        // Cal.com and Calendly are Life's in the catalogue, the tray and
+        // Markets; the Day button is still their screen (`RoomAccounts.day`).
+        ("Life",    "Apple Health", ["Fitness", "People", "Storage", "Learning", "Notes", "Mail", "Schedule"]),
         ("Agents",  "Claude",      ["Agent"]),
         // MEDIA HOLDS READING (prd §1204, user: "reading for example maybe
         // goes with media", then "i like 'play'"): what you read, watch and

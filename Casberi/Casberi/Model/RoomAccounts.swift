@@ -90,7 +90,9 @@ enum RoomAccounts {
     /// own, and every door that named its room lands in the merged room
     /// scoped to it. Nil for a source that is its own room.
     static func host(ofSource source: String) -> (room: String, seat: Seat)? {
-        for room in mergedRooms {
+        // Day first: its apps are Life's in the catalogue (prd §1239), and
+        // the Day screen, not Life, is where their rows stand.
+        for room in [dayRoom] + mergedRooms.filter({ $0 != dayRoom }) {
             if let seat = seats(for: room).first(where: { $0.owns(source) }) {
                 return (room, seat)
             }
@@ -227,7 +229,19 @@ enum RoomAccounts {
 
     /// Day's (prd §1049): Calendar, Reminders, Todoist, Cal.com, Calendly,
     /// Gmail and iCloud Mail.
-    private static let day = catalogSeats(dayRoom)
+    private static let day: [Seat] = BridgeCatalog.allOffers.filter { $0.group == dayGroup }
+        .map { Seat(name: $0.name, source: $0.name, holder: nil, group: "", mark: $0.name) }
+        .sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+
+    /// The catalogue group whose apps the Day screen is built from (prd
+    /// §1239): calendars and to-dos, filed under Life.
+    static let dayGroup = "Schedule"
+
+    /// Whether a row is Day's: it stands on the Day screen, never in Life's
+    /// list or the Feed's Life section.
+    static func isDaySource(_ source: String) -> Bool {
+        day.contains { $0.owns(source) }
+    }
 
     /// Work's (prd §1049): every builder seat, Dodo Payments included.
     private static let work = catalogSeats(workRoom)

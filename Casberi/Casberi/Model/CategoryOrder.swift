@@ -79,7 +79,8 @@ enum CategoryOrder {
         // (user: "Markets is not longer in those categories"). A stored order
         // keeps its own. Media stands in Reading's slot since Reading folded
         // into it (prd §1204): most of what it holds is still reading.
-        "Day", "Social", "Work", "Wallet", "Media", "Life",
+        // Day files under Life since prd §1239: no slot of its own.
+        "Social", "Work", "Wallet", "Media", "Life",
         "Agents", "Testnets",
     ]
 

@@ -124,7 +124,9 @@ extension FeedScreen {
         // its box, its glances or its sections.
         let dropsDay = source == "All" && scrollsCategories
         return base.filter { thing in
-            if dropsDay, BridgeCatalog.category(forSource: thing.source) == RoomAccounts.dayRoom {
+            // Day's apps are Life's in the catalogue (prd §1239), and their
+            // rows stand on Day alone, never in Life's list.
+            if dropsDay || source == RoomAccounts.lifeRoom, RoomAccounts.isDaySource(thing.source) {
                 return false
             }
             // WHAT YOU WRITE LIVES IN NOTES (prd §1235): an Obsidian, journal
