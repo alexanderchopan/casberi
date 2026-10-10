@@ -66,10 +66,21 @@ enum Pinboard {
         thing.source == "You" && (thing.kind == .note || thing.kind == .voice)
     }
 
-    /// Whether the room holds this thing: a note of yours. The `@Query`
-    /// fetches `source == "You"` (a kind cannot be predicated), and this is
-    /// the half the predicate could not say.
-    static func inRoom(_ thing: Thing) -> Bool { isNote(thing) }
+    /// **NOTES HOLDS EVERYTHING YOU WRITE (prd §1235, user: "notion in notes
+    /// is smart"; "they stay in life but live in the notes room").** The
+    /// apps whose entries list here, whatever their catalogue category:
+    /// Obsidian, Apple Journal and Day One stay Life's, Notion stays Work's,
+    /// so their tray icons and Markets' packs do not move; their entries
+    /// leave those rooms and the Feed and stand in Notes. Read-only, as they
+    /// always were: only a note of yours edits, locks or deletes (`isNote`).
+    static let writtenSources: [String] = ["Obsidian", "Apple Journal", "Day One", "Notion"]
+
+    static func isWritten(_ source: String) -> Bool { writtenSources.contains(source) }
+
+    /// Whether the room holds this thing: a note of yours, or an entry from
+    /// an app you write in. The `@Query` fetches those sources (a kind cannot
+    /// be predicated), and this is the half the predicate could not say.
+    static func inRoom(_ thing: Thing) -> Bool { isNote(thing) || isWritten(thing.source) }
 
     /// File a thing in a folder, or take it out with nil (prd §980). A model
     /// write and nothing else, so it is legal from the row's menu. One folder

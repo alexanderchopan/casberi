@@ -127,6 +127,12 @@ extension FeedScreen {
             if dropsDay, BridgeCatalog.category(forSource: thing.source) == RoomAccounts.dayRoom {
                 return false
             }
+            // WHAT YOU WRITE LIVES IN NOTES (prd §1235): an Obsidian, journal
+            // or Notion entry leaves Life, Work and the Feed.
+            if !Pinboard.isPinnedRoom(source), !Pinboard.isWritten(source),
+               Pinboard.isWritten(thing.source) {
+                return false
+            }
             // The Notes room's membership is decided entirely by the `@Query`
             // above (`source == "You"`, not the room's name), so there is no
             // source to match against

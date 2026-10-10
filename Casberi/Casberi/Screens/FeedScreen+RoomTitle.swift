@@ -85,6 +85,8 @@ extension FeedScreen {
     /// network the Testnets room is showing. You's places name themselves
     /// (`youPlaceName`, §1156), so they pick nothing.
     var roomPick: String? {
+        // Notes names the app you picked from the tray (prd §1235).
+        if Pinboard.isPinnedRoom(source) { return selectedSeat?.name }
         if HomeScope.contains(source) { return nil }
         if let rail = chrome.accountRail,
            rail.source == source || source == RoomAccounts.testnetsRoom,

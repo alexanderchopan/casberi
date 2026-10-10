@@ -257,7 +257,12 @@ struct FeedScreen: View {
             // Unbounded deliberately, unlike the All room above: this list is
             // as long as you made it by hand, so there is no corpus-scale
             // growth to bound. `rowBudget` is ignored for the same reason.
-            _things = Query(filter: #Predicate<Thing> { $0.source == "You" },
+            // Your notes, and the apps you write in (prd §1235), spelled out
+            // because a predicate cannot read `Pinboard.writtenSources`.
+            _things = Query(filter: #Predicate<Thing> {
+                                $0.source == "You" || $0.source == "Obsidian" || $0.source == "Apple Journal"
+                                    || $0.source == "Day One" || $0.source == "Notion"
+                            },
                             sort: \Thing.capturedAt, order: .reverse)
         } else if RoomAccounts.mergedRooms.contains(source) {
             // **A MERGED ROOM READS EVERY APP IT FOLDED IN (prd §1048, §1052).**

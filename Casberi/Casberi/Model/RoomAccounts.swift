@@ -69,6 +69,7 @@ enum RoomAccounts {
         case dayRoom: return day
         case workRoom: return work
         case socialRoom: return social
+        case Pinboard.room: return notes
         default: return []
         }
     }
@@ -217,6 +218,12 @@ enum RoomAccounts {
     /// Apple Health with Strava and Garmin, Duolingo, Contacts. Contacts
     /// lands no row (§916), so it never reaches the menu.
     private static let life = catalogSeats(lifeRoom)
+
+    /// Notes' (prd §1235): the apps you write in, picked from their tray
+    /// icons (they stay in Life's and Work's rows), so "Notes · Obsidian".
+    private static let notes: [Seat] = Pinboard.writtenSources.sorted {
+        $0.localizedStandardCompare($1) == .orderedAscending
+    }.map { Seat(name: $0, source: $0, holder: nil, group: "", mark: $0) }
 
     /// Day's (prd §1049): Calendar, Reminders, Todoist, Cal.com, Calendly,
     /// Gmail and iCloud Mail.

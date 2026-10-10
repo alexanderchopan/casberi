@@ -2270,11 +2270,18 @@ struct MainSurface: View {
         // `filter.source` and therefore out of every query, shape, empty
         // state and deep link downstream. A chip that resolves to nothing
         // does nothing, rather than routing to a room that isn't there.
+        // The Notes door opens every note; an app's icon narrows it (§1235).
+        if label == Pinboard.room { chrome.mergedScope[Pinboard.room] = nil }
         let target: String
         if CategoryFold.isCategory(label) {
             guard let landing = CategoryFold.landing(category: label, present: categoryVenues[label] ?? [])
             else { return }
             target = landing
+        } else if Pinboard.isWritten(label),
+                  let seat = RoomAccounts.seat(RoomAccounts.seatPrefix + label, in: Pinboard.room) {
+            // What you write lives in Notes (prd §1235).
+            chrome.pickSeat(seat, in: Pinboard.room)
+            target = Pinboard.room
         } else if let fold = RoomAccounts.host(ofSource: label) {
             // **AN APP FOLDED INTO A MERGED ROOM HAS NO ROOM (prd §1048, step
             // 4).** Every door that named it lands in the merged room, scoped
@@ -2599,6 +2606,17 @@ struct MainSurface: View {
     /// layouts keep their rooms. True when the request was handled here.
     private func routeIntoFeed(_ label: String) -> Routed? {
         guard !isRegular else { return nil }
+        // AN APP YOU WRITE IN OPENS NOTES, NARROWED TO IT (prd §1235); the
+        // Notes door itself opens every note.
+        if Pinboard.isWritten(label), let seat = RoomAccounts.seat(RoomAccounts.seatPrefix + label, in: Pinboard.room) {
+            chrome.pickSeat(seat, in: Pinboard.room)
+            return routeIntoFeed(Pinboard.room, keepingPick: true)
+        }
+        return routeIntoFeed(label, keepingPick: false)
+    }
+
+    private func routeIntoFeed(_ label: String, keepingPick: Bool) -> Routed? {
+        if label == Pinboard.room, !keepingPick { chrome.mergedScope[Pinboard.room] = nil }
         let section: String? = label == RoomAccounts.readingRoom ? RoomAccounts.mediaRoom
             : HomeScope.isFeedSection(label) ? label : nil
         if let section {

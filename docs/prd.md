@@ -65738,3 +65738,10 @@ Amends §1107, §1111 and §1201.
 3. **An app a door named runs as its row would** (`SettingsHome.openOffer`): a connected one opens its page, one that needs only a name raises its Track tray, one with a page opens it, and a one-tap app (Calendar, Photos, Reminders) fires the system's ask in place. It never goes back through `openSetup`, whose fallback for a pageless app is this.
 4. Start here keeps its four steps (§1166); Photos is not added (user: "without photos it is 3 things plus settings which seems reasonable").
 5. Categories stay as they are (user: "in markets we separate them … i don't want to be messing with that"). Markets, a built-in, is never a catalogue row (Sources' list and count and the tray's search already skip it).
+
+## §1235 — Notes holds everything you write: your notes, Obsidian, Apple Journal, Day One and Notion (user, 2026-10-10: "a world where the notes apps like obsidian etc sit in the same notes button"; "yes they should come too"; "they stay in life but live in the notes room"; "i think we tolerate the notes icons living in life"; "notion in notes is smart"; "ok lets put notion in notes")
+
+1. **Their entries list in Notes**, newest first with yours (`Pinboard.writtenSources`, `inRoom`, the room's `@Query`), and leave Life, Work and the Feed (`liveVisible`). Read-only, as before: only a note of yours edits, locks or deletes (`isNote`).
+2. **No category moves.** Obsidian, Apple Journal and Day One stay Life's; Notion stays Work's. Their tray icons stay in those rows and Markets' packs do not change (user: "in markets we separate them … i don't want to be messing with that"). No Notes category is added (user: "i don't want to add a new category to the catalogue").
+3. **An app's tray icon opens Notes narrowed to it**, titled "Notes · Obsidian" (`RoomAccounts` seats for `Pinboard.room`, `routeIntoFeed` and `go(to:)`, `roomPick`); the Notes door itself opens every note.
+4. **The buttons stay All · Folders · Voice · New.** Folders and Voice are yours (none of the imports keeps a folder or audio); New writes a note of yours.
