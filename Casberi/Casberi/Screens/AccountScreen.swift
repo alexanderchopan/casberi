@@ -38,16 +38,14 @@ struct SettingsRows: View {
     var style: Style = .rows
     enum Style { case rows, box, colophon }
 
-    /// What the Notifications row says without being opened (prd §770): the
-    /// digest's cadence, and the categories switched off by name, because
-    /// "3 of 9" tells you nothing about whether your wallet reaches you.
+    /// What the Notifications row says without being opened (prd §1237):
+    /// which of the two switches are on.
     private var notifySummary: String {
         let s = Notifications.settings
         guard s.anyOn else { return String(localized: "Off") }
-        let off = Notifications.Settings.categories.filter { s.off.contains($0) }
-        return off.isEmpty
-            ? String(localized: "Each evening")
-            : String(localized: "Each evening, not \(ListFormatter.localizedString(byJoining: off))")
+        let on = Notifications.Settings.switches.filter { s.isOn($0) }
+            .map { String(localized: String.LocalizationValue($0)) }
+        return ListFormatter.localizedString(byJoining: on)
     }
     @State private var avatarPickerOpen = false
     @State private var avatarDialogOpen = false

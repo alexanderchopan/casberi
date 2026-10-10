@@ -552,8 +552,6 @@ struct RootShell: View {
                 // Voice notes under the retired "Voice" source converge onto
                 // `You` (prd §972), in the same every-launch shape.
                 SourceRename.sweepVoice(context: modelContext)
-                // Reading's digest switch folds into Media's (prd §1204), once.
-                Notifications.foldReadingIntoMedia()
                 // Stocktwits' watched tickers into Markets (2026-09-29).
                 SourceRename.sweepStockWatches(context: modelContext, store: bridges)
                 // The seats deleted 2026-10-01 (prd §1038): their rows, seat
@@ -1946,8 +1944,6 @@ struct RootShell: View {
         // you were away" grounds on it; things landing from here on are
         // arriving while you're present.
         AppVisit.markOpened()
-        // The digest's reading hour learns from when the app is opened.
-        Notifications.recordOpen()
         // A STRANDED POUR resumes here (2026-08-07, found while writing the
         // spec for this feature's next pass). `pourIfNeeded` originally had
         // ONE call site — the onboarding cover's `onDismiss` — on the

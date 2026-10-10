@@ -333,7 +333,8 @@ struct AccountDetailSheet: View {
     /// eats a control. At nine it asks for more than the screen, which iOS
     /// clamps to full height — the honest answer for a list that long.
     private var notifyHeight: CGFloat {
-        400 + CGFloat(notifyCategories.count) * (31 + DS.Space.s4)
+        // Two switches since prd §1237, each with a line under its name.
+        400 + CGFloat(Notifications.Settings.switches.count) * (48 + DS.Space.s4)
             // The "Last sent …" clause and the taller status row under it.
             + (notifyAuthorized ? 75 : 0)
     }
@@ -604,30 +605,24 @@ struct AccountDetailSheet: View {
             // previews no state here, so it takes the neutral tone
             // (2026-08-10, was DS.tint).
             aliveRow("bell.badge.fill", DS.neutralBadge, "Notifications", notifyStatusLine)
-            // A category is its name alone (user, 2026-09-15: "just list the
-            // categories") — the accounts under it are not repeated here.
-            ForEach(notifyCategories, id: \.self) { category in
-                DSToggleRow(title: Text(category),
-                            isOn: Binding(get: { notifySettings.allows(category: category) },
-                                          set: { on in
-                                              if on { notifySettings.off.remove(category) }
-                                              else { notifySettings.off.insert(category) }
-                                              saveNotify()
-                                          }))
-            }
-            // The cadence and the exceptions, which no switch can say (§748).
-            // The four named are `NotifyKind.standsAlone`, word for word.
-            DSFootnote("Disputes, deadlines, liquidations and Safe signatures come at once.")
+            // **WALLET AND FEED, AS THINGS ARRIVE (prd §1237).** Two switches,
+            // one dimension: what you hear about. When is always "as Casberi
+            // finds it", which the footnote says, because no switch can.
+            notifySwitch(Notifications.Settings.wallet, detail: Text("Money in and out, loans, Safe signatures"))
+            notifySwitch(Notifications.Settings.feed, detail: Text("Everything else"))
+            DSFootnote("They arrive as Casberi finds them, one per app.")
         }
         .task { notifyAuthorized = await Notifications.authorized() }
     }
 
-    /// The categories this person has an account in. An in-memory walk of
-    /// the bridge list, never a fetch.
-    private var notifyCategories: [String] {
-        let mine = Set(store.bridges.filter { $0.status != .paused }
-            .compactMap { BridgeCatalog.category(forSource: $0.name) })
-        return BridgeCatalog.categories.map(\.name).filter { mine.contains($0) }
+    private func notifySwitch(_ name: String, detail: Text) -> some View {
+        DSToggleRow(title: Text(LocalizedStringKey(name)), detail: detail,
+                    isOn: Binding(get: { notifySettings.isOn(name) },
+                                  set: { on in
+                                      if on { notifySettings.off.remove(name) }
+                                      else { notifySettings.off.insert(name) }
+                                      saveNotify()
+                                  }))
     }
 
     private var notifyStatusLine: String {
@@ -640,9 +635,9 @@ struct AccountDetailSheet: View {
             }
             return "On"
         }
-        return Notifications.hasAsked
-            ? "Off in \(DS.settingsAppName)"
-            : "Asks when something arrives"
+        // Before iOS has been asked there is nothing to say (prd §1237, user:
+        // "get rid of 'asks when something arrives'").
+        return Notifications.hasAsked ? "Off in \(DS.settingsAppName)" : ""
     }
 
     /// Written straight through on every change — the sheet can be dismissed by
@@ -657,8 +652,10 @@ struct AccountDetailSheet: View {
             badge(glyph, tone)
             VStack(alignment: .leading, spacing: 1) {
                 Text(title).dsText(.body17).foregroundStyle(DS.textPrimary)
-                Text(value).dsText(.subhead12).foregroundStyle(DS.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                if !value.isEmpty {
+                    Text(value).dsText(.subhead12).foregroundStyle(DS.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
             Spacer(minLength: 0)
         }

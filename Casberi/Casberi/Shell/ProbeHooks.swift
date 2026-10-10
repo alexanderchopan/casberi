@@ -1948,14 +1948,11 @@ enum ProbeHooks {
                 let devnetPlans = DevnetNotify.plans()
                 let plans = corpusPlans + devnetPlans
                 let s = Notifications.settings
-                // Which categories are off, and what the digest already holds
-                // (prd §770), because a quiet probe has two new causes: a
-                // switch, or a queue waiting for its slot.
-                let queued = Notifications.digestState
-                NSLog("[Casberi] notify| corpus=%d planned=%d devnet=%d off=%@ queued=%d slot=%@ asked=%@",
+                // Which switches are off (prd §1237), because a quiet probe has
+                // a new cause: Wallet or Feed switched off.
+                NSLog("[Casberi] notify| corpus=%d planned=%d devnet=%d off=%@ asked=%@",
                       things.count, corpusPlans.count, devnetPlans.count,
                       s.off.isEmpty ? "none" : s.off.sorted().joined(separator: ","),
-                      queued.queue.count, queued.slot.map { "\($0)" } ?? "none",
                       Notifications.hasAsked ? "YES" : "NO")
                 // Why nothing planned, when nothing planned. One NSLog per
                 // line (the `-todayProbe` truncation lesson).
@@ -1985,7 +1982,8 @@ enum ProbeHooks {
                     }
                     NSLog("[Casberi] notifyPlan| %@ %@ %@ spent=%@ ts=%@ art=%@ mark=%@ id=%@ · %@",
                           plan.cls.rawValue, plan.kind.rawValue,
-                          plan.kind.standsAlone ? "alone" : "digest:" + Notifications.category(of: plan),
+                          plan.kind.standsAlone ? "alone"
+                              : "batch:" + Notifications.Settings.switchName(ofCategory: Notifications.category(of: plan)),
                           ledger.hasFired(plan.id) ? "YES" : "no",
                           plan.isTimeSensitive ? "YES" : "no",
                           art, plan.mark ?? "source", plan.id, plan.title)

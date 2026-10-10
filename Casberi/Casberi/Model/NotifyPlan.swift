@@ -747,27 +747,15 @@ enum NotifyDevnet {
 
 // MARK: - The digest (prd §770)
 
-/// Everything that does not stand alone arrives as ONE notification per
-/// category, once a day, all at the same slot (user ruling, prd §770: "we
-/// aren't trying to be someone's notification app, we are for them reading the
-/// app, and their notifications are really the problem for users today";
-/// amended the same day to "one per category a day"). Arriving together, they
-/// are one moment and one stack in Notification Center.
+/// **AS THINGS ARRIVE, ONE PER APP (prd §1237, replacing §770's evening
+/// digest).** Everything that does not stand alone goes out on the sweep that
+/// finds it, one notification per app: one arrival is itself; several are the
+/// app as the title and one line ("Ana replied · 4 more"), the faces as the
+/// thumbnail and the rows on the long press. The user: "the daily digests are
+/// weak".
 ///
-/// **Counts and app names, never a summary.** The daily whisper (§706) was cut
-/// because its line summarised a day and said nothing; this says only which
-/// apps have something and how much, which nothing can get wrong.
-///
-/// **Fixed slots, not a timer.** A local notification's content is frozen when
-/// it is scheduled and the background task runs when iOS decides, so the
-/// digest is one pending request per slot that every sweep REWRITES with the
-/// queue as it stands. Whatever reached the queue before the last sweep ahead
-/// of a slot is in that slot's notification. Once the slot has passed, iOS has
-/// delivered it, so the next sweep starts an empty queue. Nothing here needs
-/// the app to be running at 18:00.
-///
-/// Pure, like the rest of this file, so `notify-selftest.sh` drives the slot
-/// choice, the queue's lifecycle and the words.
+/// Pure, like the rest of this file, so `notify-selftest.sh` drives the
+/// grouping and the words.
 enum NotifyDigest {
 
     /// One thing waiting for the next slot. Carries strings only, the way
@@ -979,13 +967,19 @@ enum NotifyDigest {
     /// Two things are not a count, because a count would hide them (prd
     /// §883): something that needs you names itself (`App Review said no ·
     /// 4 more`), and money says how much arrived (`+$1,240`), since that
-    /// number IS the news. Everything else is `25 new`.
+    /// number IS the news. Everything else names its newest arrival and
+    /// counts the rest (`Ana replied · 4 more`, prd §1237), since one app's
+    /// batch has no place to name but the app.
     static func body(_ items: [Item]) -> String {
         guard let lead = facts(items).first else { return "" }
         let more = items.count - lead.items.count
         let tail = more > 0 ? " · " + String(localized: "\(more) more") : ""
         guard lead.kind.cls == .alarm || isMoney(lead.kind) else {
-            return String(localized: "\(items.count) new")
+            // The newest arrival names itself, then a count (prd §1237):
+            // "Ana replied · 4 more", never "5 new".
+            guard let newest = newestFirst(items).first else { return "" }
+            let others = items.count - 1
+            return newest.line + (others > 0 ? " · " + String(localized: "\(others) more") : "")
         }
         return lead.brief + tail
     }
@@ -1057,63 +1051,11 @@ enum NotifyDigest {
         return Double(top) / 100
     }
 
-    // MARK: - The reading hour
-
-    /// The evening the slot may move within. Every settings string says "each
-    /// evening", so the learned hour never leaves it.
-    static let readingWindow = (17 * 60)...(21 * 60)
-
-    /// How far back an open counts, and how many evenings it takes to trust a
-    /// habit. Fewer and a single late night would move the digest.
-    static let readingLookback: TimeInterval = 14 * 86_400
-    static let readingDaysNeeded = 3
-
-    /// The slot the digest is scheduled for: half an hour before the person
-    /// usually first opens the app in the evening, so it is waiting when they
-    /// look, rounded down to the quarter hour and kept inside
-    /// `readingWindow`. Each evening counts once, by its FIRST open, because a
-    /// person who opens the app five times after dinner has one reading hour,
-    /// not five. Too few evenings, and the fixed `slots` stand.
-    static func readingSlots(opens: [Date], now: Date, calendar: Calendar) -> [Int] {
-        var firstByDay: [Date: Int] = [:]
-        for open in opens where open <= now && now.timeIntervalSince(open) <= readingLookback {
-            let parts = calendar.dateComponents([.hour, .minute], from: open)
-            let minute = (parts.hour ?? 0) * 60 + (parts.minute ?? 0)
-            guard (16 * 60)..<(22 * 60) ~= minute else { continue }
-            let day = calendar.startOfDay(for: open)
-            firstByDay[day] = min(firstByDay[day] ?? .max, minute)
-        }
-        guard firstByDay.count >= readingDaysNeeded else { return slots }
-        let sorted = firstByDay.values.sorted()
-        let median = sorted[sorted.count / 2]
-        let slot = ((median - 30) / 15) * 15
-        return [min(max(slot, readingWindow.lowerBound), readingWindow.upperBound)]
-    }
-
     /// Newest first, ties by id, so neither the rows nor the lines depend on
     /// the queue's stored order.
     private static func newestFirst(_ items: [Item]) -> [Item] {
         items.sorted { $0.occurredAt != $1.occurredAt ? $0.occurredAt > $1.occurredAt : $0.id < $1.id }
     }
-
-    /// What survives between sweeps: the queue, and the slot it is scheduled
-    /// for. A nil slot means nothing is pending.
-    struct State: Codable, Sendable, Equatable {
-        var queue: [Item] = []
-        var slot: Date?
-    }
-
-    /// Minutes from midnight. One, and the count is the ruling ("one per
-    /// category a day"): an evening read, once the day's news is in. Every
-    /// slot this file can choose lives inside `readingWindow` (17:00 to
-    /// 21:00), so a digest can never land at night — which is why the app
-    /// needs no night rule of its own (prd §870).
-    static let slots = [18 * 60]
-
-    /// A bound on the queue, oldest dropped first. One slot a day and a
-    /// ledger that fires each id once keep it far below this; it exists so a
-    /// week without a sweep cannot grow a stored array without limit.
-    static let cap = 200
 
     /// Seats whose own iOS app already pushes the person about what Casberi
     /// reads from them. They are named AFTER the seats that have no lock
@@ -1134,59 +1076,9 @@ enum NotifyDigest {
         "Steam", "Dropbox", "Twitch", "Substack",
     ]
 
-    /// The id every slot's requests share a prefix with. The category and the
-    /// slot's own instant are appended by the scheduler, so no category's
-    /// digest replaces another's, nor yesterday's still in Notification Center.
-    static let requestPrefix = "digest:"
-
-    /// The next slot strictly after `now`.
-    ///
-    /// Walks forward day by day rather than assuming today has one left, so an
-    /// evening sweep lands on tomorrow's slot instead of a time already past.
-    ///
-    /// With any slot at all the walk always lands on day 0 or day 1, so the
-    /// three-day bound and the fallback below are only reachable through an
-    /// EMPTY `slots`, which nothing can hand in today (`readingSlots` returns
-    /// the fixed one or a learned one). It waits a day anyway rather than
-    /// returning `now`: the caller schedules on `slot - now`, so a `now` here
-    /// would buzz the digest out immediately — the loudest possible answer to
-    /// "I could not work out when this should go".
-    static func nextSlot(after now: Date, calendar: Calendar, slots: [Int] = slots) -> Date {
-        let today = calendar.startOfDay(for: now)
-        for offset in 0...2 {
-            guard let day = calendar.date(byAdding: .day, value: offset, to: today) else { continue }
-            for minute in slots.sorted() {
-                guard let when = calendar.date(bySettingHour: minute / 60, minute: minute % 60,
-                                               second: 0, of: day), when > now else { continue }
-                return when
-            }
-        }
-        return calendar.date(byAdding: .day, value: 1, to: now) ?? now
-    }
-
-    /// One sweep's step: forget what a passed slot delivered, fold the new
-    /// items in, drop whatever a switch now excludes, and choose the slot.
-    ///
-    /// The order is the rule. Clearing FIRST is what makes a delivered item
-    /// impossible to announce twice; upserting by id is what lets a growing
-    /// like count replace itself; filtering LAST is what makes a category
-    /// switched off take its queued items with it on the very next sweep.
-    static func advance(_ state: State, adding new: [Item], allowed: (Item) -> Bool,
-                        now: Date, calendar: Calendar,
-                        slots: [Int] = slots) -> State {
-        var queue = state.queue
-        if let slot = state.slot, slot <= now { queue = [] }
-        for item in new {
-            if let i = queue.firstIndex(where: { $0.id == item.id }) { queue[i] = item } else { queue.append(item) }
-        }
-        queue = queue.filter(allowed)
-        if queue.count > cap { queue.removeFirst(queue.count - cap) }
-        guard !queue.isEmpty else { return State(queue: [], slot: nil) }
-        // Keep a slot still ahead of us: the queue grew, but the evening it is
-        // waiting for did not move.
-        if let slot = state.slot, slot > now { return State(queue: queue, slot: slot) }
-        return State(queue: queue, slot: nextSlot(after: now, calendar: calendar, slots: slots))
-    }
+    /// The id every batch shares a prefix with; the app and its newest item
+    /// are appended, so no batch replaces another (prd §1237).
+    static let requestPrefix = "batch:"
 
     /// The apps in the order the body names them: seats with no lock screen of
     /// their own first, then the app with the newest item, then by name so the
@@ -1205,26 +1097,24 @@ enum NotifyDigest {
         }.map(\.name)
     }
 
-    /// The queue split by category, in a fixed order (by name) so the stack
-    /// never depends on a dictionary's.
+    /// One sweep's arrivals split by APP (prd §1237), in a fixed order (by
+    /// name) so the stack never depends on a dictionary's.
     static func groups(_ queue: [Item]) -> [[Item]] {
-        Dictionary(grouping: queue, by: \.category)
+        Dictionary(grouping: queue, by: \.seat)
             .sorted { $0.key < $1.key }.map(\.value)
     }
 
-    /// The notifications a queue becomes: one per category with something in it.
+    /// The notifications a sweep's arrivals become: one per app.
     static func plans(_ queue: [Item]) -> [NotifyPlan] {
         groups(queue).compactMap(plan)
     }
 
-    /// The notification ONE category's queue becomes. Nil for an empty queue.
+    /// The notification ONE app's arrivals become. Nil for none.
     ///
-    /// One item is simply that item: its own headline, words and door, so a
-    /// quiet day with one arrival reads like any notification.
-    ///
-    /// Several items are the place and a count (prd §883): the title is the
-    /// app when there is one, otherwise the category, and the body is one
-    /// line (`body`). The thumbnail says who and the long press says what.
+    /// One item is simply that item: its own headline, words and door. Several
+    /// are the app and one line (`body`): what needs you or the money first,
+    /// then a count ("Ana replied · 4 more"). The thumbnail says who and the
+    /// long press says what.
     static func plan(_ queue: [Item]) -> NotifyPlan? {
         guard let newest = queue.max(by: { $0.occurredAt < $1.occurredAt }) else { return nil }
         if queue.count == 1 {
@@ -1234,19 +1124,11 @@ enum NotifyDigest {
                               occurredAt: newest.occurredAt, source: newest.source,
                               place: newest.name)
         }
-        let names = apps(queue)
-        if names.count == 1 {
-            let path = newest.name.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? newest.name
-            return NotifyPlan(id: requestPrefix + newest.category + ":app", kind: .digest,
-                              title: names[0],
-                              body: body(queue),
-                              link: "casberi://feed/source/" + path,
-                              occurredAt: newest.occurredAt, source: newest.source)
-        }
-        return NotifyPlan(id: requestPrefix + newest.category + ":apps", kind: .digest,
-                          title: newest.category,
+        let path = newest.name.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? newest.name
+        return NotifyPlan(id: requestPrefix + newest.seat + ":" + newest.id, kind: .digest,
+                          title: apps(queue).first ?? newest.name,
                           body: body(queue),
-                          link: "casberi://feed",
-                          occurredAt: newest.occurredAt)
+                          link: "casberi://feed/source/" + path,
+                          occurredAt: newest.occurredAt, source: newest.source)
     }
 }

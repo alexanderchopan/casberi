@@ -96,8 +96,8 @@ guard "the deadline window rejects the past (> 0, not just <= window)" \
 # ("Apple Wallet · Sep 6" on a banner sent Sep 27).
 guard "a deadline plan is stamped with the sweep's clock, not the row's landing" \
       'occurredAt: now,' "$SWEEP"
-guard "the digest still schedules for a future slot (a trigger, not a fire-now)" \
-      'UNTimeIntervalNotificationTrigger' "$NOTIFY"
+guard "a batch goes out now, never held for a slot (prd §1237)" \
+      'identifier: plan\.id, content: content, trigger: nil' "$NOTIFY"
 # The daily whisper was cut (prd §706) — a pending one from an older install
 # must be pulled, or it fires once more with a tap that lands nowhere.
 guard "a retired install's pending whisper is pulled by id" \
@@ -292,15 +292,13 @@ fi
 # that decides which plans go where, and the promise the settings page makes.
 guard "submit sends alone only the kinds that stand alone" \
       'eligible\.filter \{ \$0\.kind\.standsAlone \}' "$NOTIFY"
-guard "…and everything else goes through the digest's one step" \
-      'NotifyDigest\.advance\(previous' "$NOTIFY"
-guard "a category switched off filters the digest's queue too" \
-      'allowed: \{ s\.allows\(category: \$0\.category\) \}' "$NOTIFY"
-guard "the digest is scheduled for the learned reading hour (prd §809)" \
-      'slots: NotifyDigest\.readingSlots\(opens: opens' "$NOTIFY"
-guard "…which learns from every foreground activation" \
-      'Notifications\.recordOpen\(\)' Casberi/Casberi/Shell/RootShell.swift
-guard "the digest is ranked by the most urgent thing inside it" \
+guard "…and everything else goes out now, one notification per app (prd §1237)" \
+      'NotifyDigest\.groups\(rest\.map\(digestItem\)\)' "$NOTIFY"
+guard "a switch off (Wallet or Feed) silences its arrivals before anything is claimed" \
+      'eligible = plans\.filter \{ s\.allows\(category: category\(of: \$0\)\) \}' "$NOTIFY"
+guard "the Wallet's apps answer to Wallet, every other category to Feed" \
+      'category == CategoryFold\.walletRoom \? wallet : feed' "$NOTIFY"
+guard "a batch is ranked by the most urgent thing inside it" \
       'content\.relevanceScore = NotifyDigest\.relevance\(group\)' "$NOTIFY"
 guard "a several-thing digest carries its card and answers to the extension's category" \
       'content\.categoryIdentifier = NotifyCard\.category' "$NOTIFY"
@@ -320,8 +318,8 @@ if [[ -e Casberi/NotificationContent/NotificationContent.entitlements ]] \
 else
   printf '  ✓ the NotificationContent extension carries no entitlement and reads no shared store (§809a)\n'
 fi
-guard "the settings footnote names the four kinds that stand alone" \
-      'Disputes, deadlines, liquidations and Safe signatures come at once' "$SETTINGS"
+guard "the settings footnote says when they arrive, which no switch can" \
+      'They arrive as Casberi finds them, one per app\.' "$SETTINGS"
 # `hasOwnApp` only orders the names, so a misspelt seat fails at nothing: that
 # app is simply named first as if it had no lock screen of its own.
 CATALOG="Casberi/Casberi/Model/BridgeCatalog.swift"
@@ -581,74 +579,14 @@ ok(Set(ts).isSubset(of: Set(NotifyKind.allCases.filter(\.standsAlone))),
    "a kind that pierces a Focus never waits for the evening slot")
 ok(NotifyKind.digest.cls == .arrival && !NotifyKind.digest.standsAlone,
    "the digest's own kind is an arrival and never stands alone")
-ok(NotifyDigest.slots.count == 1, "one slot a day, and no second")
-
-func tomorrow(_ d: Date) -> Date { cal.date(byAdding: .day, value: 1, to: d)! }
-ok(NotifyDigest.nextSlot(after: at(7), calendar: cal) == at(18),
-   "the morning waits for the evening slot")
-ok(NotifyDigest.nextSlot(after: at(18), calendar: cal) == tomorrow(at(18)),
-   "a slot that is now has passed, so tomorrow evening is next")
-ok(NotifyDigest.nextSlot(after: at(19), calendar: cal) == tomorrow(at(18)),
-   "after the evening slot, tomorrow evening")
-// The learned reading hour (§770) is the only thing that moves a slot since
-// §870, and it is handed in — so the walk must honour a slot that is not the
-// default, on both sides of it.
-ok(NotifyDigest.nextSlot(after: at(12), calendar: cal, slots: [17 * 60]) == at(17),
-   "a learned earlier hour is the slot, not the default 18:00")
-ok(NotifyDigest.nextSlot(after: at(19), calendar: cal, slots: [17 * 60]) == tomorrow(at(17)),
-   "…and once it has passed, tomorrow's")
-// Every slot this file can choose is inside the evening window, which is the
-// reason §870's deletion costs nothing: a digest cannot land at night.
-ok(NotifyDigest.slots.allSatisfy { NotifyDigest.readingWindow.contains($0) },
-   "the fixed slot is inside the evening window")
-// Unreachable today, and it may not fail LOUD if it ever becomes reachable:
-// the caller schedules on `slot - now`, so a `now` here would fire the digest
-// on the spot.
-ok(NotifyDigest.nextSlot(after: at(12), calendar: cal, slots: []) > at(23),
-   "no slot at all waits a day rather than buzzing now")
 
 func item(_ id: String, _ seat: String, at when: Date, category: String = "Work") -> NotifyDigest.Item {
     NotifyDigest.Item(id: id, seat: seat, name: seat, category: category,
                       kind: NotifyKind.moneyIn.rawValue, title: "t-\(id)", body: "b-\(id)",
                       link: "casberi://thing/\(id)", occurredAt: when, source: seat)
 }
-let everything: (NotifyDigest.Item) -> Bool = { _ in true }
-let s0 = NotifyDigest.State()
-let s1 = NotifyDigest.advance(s0, adding: [item("a", "Stripe", at: at(10))], allowed: everything,
-                              now: at(10), calendar: cal)
-ok(s1.queue.count == 1 && s1.slot == at(18), "the first arrival queues for the evening slot")
-let s2 = NotifyDigest.advance(s1, adding: [item("b", "GitHub", at: at(12))], allowed: everything,
-                              now: at(12), calendar: cal)
-ok(s2.queue.count == 2 && s2.slot == at(18), "a second arrival joins the same slot")
-var grown = item("a", "Stripe", at: at(13)); grown.title = "grown"
-let s2b = NotifyDigest.advance(s2, adding: [grown], allowed: everything,
-                               now: at(13), calendar: cal)
-ok(s2b.queue.count == 2 && s2b.queue.contains { $0.title == "grown" },
-   "the same id REPLACES its queued item, so a growing like is one line")
-let s3 = NotifyDigest.advance(s2, adding: [], allowed: everything,
-                              now: at(19), calendar: cal)
-ok(s3.queue.isEmpty && s3.slot == nil, "after its slot, a delivered digest is never announced again")
-let s4 = NotifyDigest.advance(s2, adding: [item("c", "X", at: at(19))], allowed: everything,
-                              now: at(19), calendar: cal)
-ok(s4.queue.map(\.id) == ["c"] && s4.slot == tomorrow(at(18)),
-   "an arrival after the evening slot starts tomorrow's digest on its own")
-let s5 = NotifyDigest.advance(s2, adding: [], allowed: { $0.category != "Work" },
-                              now: at(12), calendar: cal)
-ok(s5.queue.isEmpty && s5.slot == nil, "switching a category off takes its queued items with it")
-// A slot still ahead of us is KEPT, learned hour and all: the queue grew, but
-// the evening it waits for did not move. `at(17)` is a slot only the learned
-// reading hour can produce, so a re-chosen one would read as 18:00 and be
-// caught.
-let s6 = NotifyDigest.advance(NotifyDigest.State(queue: [item("a", "Stripe", at: at(9))], slot: at(17)),
-                              adding: [item("b", "GitHub", at: at(12))], allowed: everything,
-                              now: at(12), calendar: cal)
-ok(s6.slot == at(17) && s6.queue.count == 2, "a slot still ahead of us is kept, not re-chosen")
-let big = (0..<(NotifyDigest.cap + 5)).map { item("n\($0)", "RSS", at: at(10)) }
-let s7 = NotifyDigest.advance(s0, adding: big, allowed: everything, now: at(10), calendar: cal)
-ok(s7.queue.count == NotifyDigest.cap && s7.queue.first?.id == "n5",
-   "the queue is bounded, oldest dropped first")
 
-ok(NotifyDigest.plan([]) == nil, "an empty queue sends nothing")
+ok(NotifyDigest.plan([]) == nil, "nothing arrived, nothing sent")
 let lone = NotifyDigest.plan([item("a", "Stripe", at: at(10))])!
 ok(lone.title == "t-a" && lone.body == "b-a" && lone.link == "casberi://thing/a",
    "one item is simply that item: its own words and its own door")
@@ -662,25 +600,25 @@ func social(_ id: String, _ seat: String, _ kind: NotifyKind, at when: Date) -> 
 // body one line; only something that needs you, and money, are not a count.
 let oneApp = NotifyDigest.plan([social("a", "Bluesky", .likesReceived, at: at(10)),
                                 social("b", "Bluesky", .repliesReceived, at: at(11))])!
-ok(oneApp.kind == .digest && oneApp.title == "Bluesky" && oneApp.body == "2 new",
-   "one app with several things is its name and a count")
+ok(oneApp.kind == .digest && oneApp.title == "Bluesky" && oneApp.body == "b-b · 1 more",
+   "one app with several things is its name, its newest thing and a count (prd §1237)")
 ok(oneApp.link == "casberi://feed/source/Bluesky", "…and opens that app's room")
-let crowd = NotifyDigest.plan((0..<25).map {
+let crowd = NotifyDigest.plans((0..<25).map {
     social("s\($0)", ["Instagram", "Bluesky", "X"][$0 % 3], [.likesReceived, .followersGained, .repliesReceived][$0 % 3], at: at(8))
-})!
-ok(crowd.title == "Social" && crowd.body == "25 new", "several apps are the category and a count, however many")
-ok(crowd.link == "casberi://feed", "…and open All")
+})
+ok(crowd.map(\.title) == ["Bluesky", "Instagram", "X"],
+   "several apps are one notification EACH, in name order, never one for all of them")
 
-ok(NotifyDigest.plans([]).isEmpty, "no category queued, no notification")
+ok(NotifyDigest.plans([]).isEmpty, "nothing arrived, no notification")
 let split = NotifyDigest.plans([item("s", "Stripe", at: at(10), category: "Money"),
                                 item("g", "GitHub", at: at(11)), item("l", "Linear", at: at(12))])
-ok(split.map(\.title) == ["t-s", "Work"],
-   "one notification per category, in name order, never one for all of them")
-let twoRooms = NotifyDigest.plans([item("a", "Stripe", at: at(10), category: "Money"),
-                                   item("b", "Stripe", at: at(11), category: "Money"),
-                                   item("c", "GitHub", at: at(10)), item("d", "GitHub", at: at(11))])
-ok(twoRooms.count == 2 && Set(twoRooms.map(\.id)).count == 2,
-   "two categories' digests never share an id, so neither replaces the other")
+ok(split.map(\.title) == ["t-g", "t-l", "t-s"],
+   "one notification per app, whatever its category")
+let twoApps = NotifyDigest.plans([item("a", "Stripe", at: at(10), category: "Money"),
+                                  item("b", "Stripe", at: at(11), category: "Money"),
+                                  item("c", "GitHub", at: at(10)), item("d", "GitHub", at: at(11))])
+ok(twoApps.count == 2 && Set(twoApps.map(\.id)).count == 2,
+   "two apps' batches never share an id, so neither replaces the other")
 
 func pictured(_ id: String, _ seat: String, at when: Date,
               picture: String? = nil, mark: String? = nil) -> NotifyDigest.Item {
@@ -740,7 +678,9 @@ let outnumbered = NotifyDigest.plan([
     worked("p3", "Stripe", .payoutPaid, body: "Payout $40.00", usd: 40, at: 12),
     worked("r", "App Store Connect", .appRejected, body: "Metadata rejected · Casberi 2.0", at: 9),
 ])!
-ok(outnumbered.title == "Work" && outnumbered.body == "App Review said no · 3 more",
+// The title is the app since prd §1237 (a batch is one app's); the line is
+// the rule under test.
+ok(outnumbered.body == "App Review said no · 3 more",
    "what needs you names itself, even outnumbered by money")
 let approval = kinded("a", "Wallet", .approvalGranted, body: "Unlimited USDC to 0x9f…c1", at: at(8), category: "Wallet")
 ok(NotifyDigest.plan(paid + [approval])!.body == "New approval · 3 more",
@@ -751,11 +691,11 @@ let long = (0..<9).map { kinded("z\($0)", "App\($0 % 4)", NotifyKind.allCases[$0
                                 body: String(repeating: "word ", count: 20), at: at(8), category: "Work") }
 ok(NotifyDigest.plan(long)!.body == "Money challenged · 8 more",
    "the most urgent thing is the one named, however few of it arrived")
-for p in [oneApp, crowd, money, outnumbered, NotifyDigest.plan(long)!] {
+for p in [oneApp, crowd[0], money, outnumbered, NotifyDigest.plan(long)!] {
     // 28 and 32 characters: what the lock screen shows of a title and a body
     // line beside the icon, time and thumbnail on a 390pt phone (§809).
     ok(p.title.count <= 28 && !p.body.contains("\n") && p.body.count <= 32,
-       "a digest is a place and one line that fits: \(p.title) / \(p.body)")
+       "a batch is an app and one line that fits: \(p.title) / \(p.body)")
 }
 
 // ── the card (prd §881) ──────────────────────────────────────────────────────
@@ -767,13 +707,14 @@ let socialDay = [
     kinded("l3", "Bluesky", .likesReceived, title: "Liked by anna and 2 others", body: "hi", who: "anna", at: at(11)),
     kinded("q", "Bluesky", .repliesReceived, body: "can you share the build?", who: "jesse", at: at(8)),
     kinded("n", "Bluesky", .repliesReceived, body: "nice one", who: "rafa", at: at(12)),
-    kinded("v", "Bluesky", .followersGained, body: "New follower", who: "vitalik", at: at(7)),
+    kinded("v", "Bluesky", .followersGained, body: "New follower", who: "maya", at: at(7)),
 ].map { i -> NotifyDigest.Item in
     var i = i; i.tally = ["l1": 12, "l2": 30, "l3": 3][i.id]; return i
 }
-ok(NotifyDigest.plan(socialDay)!.body == "6 new", "a people day is a count; the faces say who")
+ok(NotifyDigest.plan(socialDay)!.body == "nice one · 5 more",
+   "a people day names its newest and counts the rest; the faces say who")
 let socialCard = NotifyDigest.card(socialDay)!
-ok(socialCard.rows.map { $0.who ?? $0.app } == ["rafa", "jesse", "vitalik", "Bluesky"],
+ok(socialCard.rows.map { $0.who ?? $0.app } == ["rafa", "jesse", "maya", "Bluesky"],
    "the card reads replies, then follows, then likes")
 ok(socialCard.rows.filter { $0.line.contains("like") }.count == 1
    && socialCard.rows.last?.line == "45 likes on 3 posts · anna, jesse, linda and 42 more"
@@ -800,33 +741,6 @@ ok(NotifyDigest.relevance([kinded("a", "W", .likesReceived, body: "a", at: at(9)
    "…so money outranks a like in the summary")
 ok(NotifyKind.allCases.filter { $0.severity == 0 }.allSatisfy { $0.digestRank < NotifyKind.runningLow.severity },
    "every arrival ranks below every alarm")
-
-// ── the reading hour (prd §809) ─────────────────────────────────────────────
-func evening(_ day: Int, _ hour: Int, _ minute: Int) -> Date {
-    cal.date(byAdding: .day, value: -day, to: cal.date(bySettingHour: hour, minute: minute, second: 0, of: at(12))!)!
-}
-let habit = [evening(1, 20, 10), evening(1, 21, 30), evening(2, 20, 40), evening(3, 19, 55), evening(4, 8, 0)]
-ok(NotifyDigest.readingSlots(opens: habit, now: at(12), calendar: cal) == [19 * 60 + 30],
-   "the digest waits half an hour before the usual first evening open (20:10), on the quarter hour")
-ok(NotifyDigest.readingSlots(opens: Array(habit.prefix(2)), now: at(12), calendar: cal) == NotifyDigest.slots,
-   "two evenings are not a habit, and the fixed slot stands")
-ok(NotifyDigest.readingSlots(opens: [evening(1, 16, 5), evening(2, 16, 10), evening(3, 16, 0)],
-                             now: at(12), calendar: cal) == [NotifyDigest.readingWindow.lowerBound],
-   "an early reader still gets the digest in the evening")
-// The window's OTHER edge, untested until §870 and the reason that deletion
-// costs nothing: no slot this file can choose lands at night, so the app needs
-// no night rule of its own on top of iOS's Focus.
-ok(NotifyDigest.readingSlots(opens: [evening(1, 21, 30), evening(2, 21, 40), evening(3, 21, 30)],
-                             now: at(12), calendar: cal) == [NotifyDigest.readingWindow.upperBound],
-   "a late reader is still read to in the evening — 21:30 learns 21:00, not 21:15")
-ok(NotifyDigest.readingSlots(opens: [evening(20, 20, 0), evening(21, 20, 0), evening(22, 20, 0)],
-                             now: at(12), calendar: cal) == NotifyDigest.slots,
-   "a habit older than the lookback no longer counts")
-let learned = NotifyDigest.advance(NotifyDigest.State(), adding: [item("x", "Stripe", at: at(10))],
-                                   allowed: everything, now: at(10), calendar: cal,
-                                   slots: [19 * 60 + 45])
-ok(learned.slot == cal.date(bySettingHour: 19, minute: 45, second: 0, of: at(10)),
-   "the learned hour is the slot the digest is scheduled for")
 
 // ── the card (prd §809) ─────────────────────────────────────────────────────
 let replies = ["linda", "jesse", "anna", "rafa", "sam"].enumerated().map {
@@ -974,18 +888,10 @@ mutate "a price alert you set waits for the evening digest (prd §1081)" \
        's/case \.disputeOpened, \.deadlineNear, \.positionAtRisk, \.safeSignatureNeeded, \.priceAlert:/case .disputeOpened, .deadlineNear, .positionAtRisk, .safeSignatureNeeded:/'
 mutate "a Safe signature waits for the evening digest" \
        's/case \.disputeOpened, \.deadlineNear, \.positionAtRisk, \.safeSignatureNeeded, \.priceAlert:/case .disputeOpened, .deadlineNear, .positionAtRisk, .priceAlert:/'
-mutate "a second digest a day" \
-       's/static let slots = \[18 \* 60\]/static let slots = [9 * 60, 18 * 60]/'
-mutate "every category folds into one digest again" \
-       's/Dictionary\(grouping: queue, by: \\\.category\)/Dictionary(grouping: queue, by: { _ in "" })/'
-mutate "two categories' app digests share one id and replace each other" \
-       's/requestPrefix \+ newest\.category \+ ":app"/requestPrefix + ":app"/'
-mutate "a delivered digest is announced again at the next slot" \
-       's/if let slot = state\.slot, slot <= now \{ queue = \[\] \}//'
-mutate "a growing like queues a second line instead of replacing its own" \
-       's/if let i = queue\.firstIndex\(where: \{ \$0\.id == item\.id \}\) \{ queue\[i\] = item \} else \{ queue\.append\(item\) \}/queue.append(item)/'
-mutate "a category switched off still speaks through what it already queued" \
-       's/queue = queue\.filter\(allowed\)//'
+mutate "every app folds into one notification again" \
+       's/Dictionary\(grouping: queue, by: \\\.seat\)/Dictionary(grouping: queue, by: { _ in "" })/'
+mutate "a batch counts instead of naming its newest thing" \
+       's/return newest\.line \+ /return "x" + /'
 mutate "apps with their own lock screen are named first" \
        's/if aOwn != bOwn \{ return !aOwn \}/if aOwn != bOwn { return aOwn }/'
 mutate "the thumbnail draws the same Stripe mark once per payout" \
@@ -1020,19 +926,6 @@ mutate "a like outranks money in the summary" \
        's/case \.likesReceived:        return 3/case .likesReceived:        return 19/'
 mutate "an arrival outranks an alarm in the summary" \
        's/case \.moneyIn, \.payoutPaid: return 15/case .moneyIn, .payoutPaid: return 25/'
-mutate "a single evening decides the reading hour" \
-       's/static let readingDaysNeeded = 3/static let readingDaysNeeded = 1/'
-mutate "the reading hour counts every open, not each evening's first" \
-       's/firstByDay\[day\] = min\(firstByDay\[day\] \?\? \.max, minute\)/firstByDay[open] = minute/'
-mutate "the learned hour leaves the evening" \
-       's/return \[min\(max\(slot, readingWindow\.lowerBound\), readingWindow\.upperBound\)\]/return [slot]/'
-mutate "the digest ignores the learned hour" \
-       's/slot: nextSlot\(after: now, calendar: calendar, slots: slots\)/slot: nextSlot(after: now, calendar: calendar)/'
-# §870: the two halves of the simplified slot walk, each on its own.
-mutate "a slot still ahead of us is thrown away and re-chosen" \
-       's/if let slot = state\.slot, slot > now \{ return State\(queue: queue, slot: slot\) \}//'
-mutate "a slot already past today is scheduled anyway" \
-       's/second: 0, of: day\), when > now else \{ continue \}/second: 0, of: day) else { continue }/'
 mutate "the card draws every row, however many" \
        's/return Array\(out\.prefix\(cardRowCap\)\)/return out/'
 

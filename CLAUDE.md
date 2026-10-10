@@ -316,8 +316,7 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - **A mutation that changed nothing is not a passing mutation — it is one that did not run (scripts/mutation-liveness-audit.py)** → docs/verify.md · prd §627
 - **A fetch or a Keychain read belongs in `onAppear`/`.task`, never in a body or a computed property a body reads (build 525)** → docs/verify.md · prd §628
 - `-notifyProbe` — what would notify, WITHOUT notifying (prd §306, 2026-08-05, Model/NotifySweep.swift + Model/NotifyPlan.swift) → docs/hooks/system.md · prd §306
-- **Notifications are one digest per category, once a day at 18:00, one switch per category; only a dispute, a deadline, a liquidation or a Safe signature stands alone (`NotifyKind.standsAlone`)** → docs/hooks/system.md · prd §770 · §706
-- **A digest is the PLACE and one line (prd §883): `Social` / `25 new`, `Wallet` / `+$1,240`, `Work` / `App Review said no · 3 more`.** → docs/hooks/system.md · prd §809 · §809a · §881 · §883
+- **Notifications are two switches, Wallet and Feed, sent as Casberi finds them, one per app ("Bluesky" / "Ana replied · 4 more"); `NotifyKind.standsAlone` goes on its own; no digest** → prd §1237
 - **L2BEAT — the rails your money sits on, reviewed by somebody independent** → docs/hooks/bridges.md · prd §428
 - **The Safe CO-SIGNER — a key that can sign and can never spend** (`-signerProbe`) → docs/hooks/wallet.md · prd §425
 - **The signer's four doors, no funded wallet (prd §913)** → docs/hooks/wallet.md · prd §913

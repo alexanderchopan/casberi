@@ -7165,6 +7165,34 @@
         }
       }
     },
+    "Money in and out, loans, Safe signatures" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Dinero que entra y sale, préstamos, firmas de Safe"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "入出金、ローン、Safeの署名"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "입출금, 대출, Safe 서명"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "资金进出、贷款、Safe 签名"
+          }
+        }
+      }
+    },
     "Most recent only — open a source for older" : {
       "localizations" : {
         "es" : {
@@ -7637,6 +7665,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "保存过两次的网站会显示在这里。"
+          }
+        }
+      }
+    },
+    "They arrive as Casberi finds them, one per app." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Llegan cuando Casberi los encuentra, uno por app."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberiが見つけ次第、アプリごとに1件届きます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberi가 찾는 대로 앱마다 하나씩 도착합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberi 一发现就送达，每个应用一条。"
           }
         }
       }

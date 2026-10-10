@@ -44,15 +44,29 @@ enum Notifications {
     struct Settings: Sendable, Equatable {
         var off: Set<String> = []
 
-        static var categories: [String] { BridgeCatalog.categories.map(\.name) }
+        /// **TWO SWITCHES, WALLET AND FEED (prd §1237, user: "lets do wallet
+        /// and feed as two categories and user can decide on or off and they
+        /// are for as things arrive").** The per-category switches and the
+        /// evening digest are deleted: the Wallet's apps answer to Wallet,
+        /// every other category to Feed.
+        static let wallet = "Wallet"
+        static let feed = "Feed"
+        static let switches = [wallet, feed]
+
+        /// The switch a catalogue category answers to.
+        static func switchName(ofCategory category: String) -> String {
+            category == CategoryFold.walletRoom ? wallet : feed
+        }
 
         /// Whether anything at all could fire — the gate on asking iOS for
         /// background time. Everything off means the task has no work, and
         /// asking for a run we would do nothing with is how an app earns a
         /// throttle it then can't spend when it matters.
-        var anyOn: Bool { !Set(Self.categories).isSubset(of: off) }
+        var anyOn: Bool { !Set(Self.switches).isSubset(of: off) }
 
-        func allows(category: String) -> Bool { !off.contains(category) }
+        func isOn(_ name: String) -> Bool { !off.contains(name) }
+
+        func allows(category: String) -> Bool { isOn(Self.switchName(ofCategory: category)) }
     }
 
     private static var store: UserDefaults {
@@ -63,36 +77,26 @@ enum Notifications {
         get {
             var s = Settings()
             let d = store
-            if let off = d.stringArray(forKey: "notify.offCategories") {
+            if let off = d.stringArray(forKey: "notify.offSwitches") {
                 s.off = Set(off)
+            } else if let old = d.stringArray(forKey: "notify.offCategories").map(Set.init) {
+                // Carried once from the per-category switches (prd §1237):
+                // Wallet stays off if it was; Feed is off only if every other
+                // category was, so nobody who silenced the lot hears more.
+                if old.contains(Settings.wallet) { s.off.insert(Settings.wallet) }
+                let others = BridgeCatalog.categories.map(\.name).filter { $0 != Settings.wallet }
+                if !others.isEmpty, Set(others).isSubset(of: old) { s.off.insert(Settings.feed) }
             } else if d.object(forKey: "notify.alarms") != nil,
                       !d.bool(forKey: "notify.alarms"), !d.bool(forKey: "notify.arrivals") {
                 // Both classes switched off under the old sheet: the person
                 // said "nothing", and a new layout must not overrule that.
-                s.off = Set(Settings.categories)
+                s.off = Set(Settings.switches)
             }
             return s
         }
         set {
-            let d = store
-            d.set(newValue.off.sorted(), forKey: "notify.offCategories")
+            store.set(newValue.off.sorted(), forKey: "notify.offSwitches")
         }
-    }
-
-    /// **Reading's switch folds into Media's (prd §1204)**, once: the two
-    /// categories are one, so their digests are one switch, and it stays on
-    /// unless both were off. A stored list from before the merge is the only
-    /// one that can name Reading; the flag keeps a later "Media off" from
-    /// being read as the old one.
-    static func foldReadingIntoMedia() {
-        let d = store
-        guard !d.bool(forKey: "notify.readingFolded") else { return }
-        if var off = d.stringArray(forKey: "notify.offCategories").map(Set.init) {
-            if !off.contains("Reading") { off.remove("Media") }
-            off.remove("Reading")
-            d.set(off.sorted(), forKey: "notify.offCategories")
-        }
-        d.set(true, forKey: "notify.readingFolded")
     }
 
     /// The category a plan belongs to, through the catalog's own join. A
@@ -187,12 +191,8 @@ enum Notifications {
         // furnished corpus.
         if !dryRun, DemoMode.isActive { return [] }
         let s = settings
-        let previous = digestState
         var eligible = plans.filter { s.allows(category: category(of: $0)) }
-        // Nothing new and nothing queued: no work, and no reason to ask iOS
-        // anything. A queue that is not empty still has to be walked, because
-        // its slot may have passed or its category may have been switched off.
-        guard !eligible.isEmpty || !previous.queue.isEmpty else { return [] }
+        guard !eligible.isEmpty else { return [] }
 
         // Ask only when something is genuinely in hand — and NEVER on a dry run.
         // A probe that prompts is a probe that changes the state it reports on:
@@ -200,16 +200,13 @@ enum Notifications {
         // `requestAuthorization` then BLOCKS on a dialog no headless run will
         // ever tap, so the probe hangs and prints nothing. Caught by
         // `-notifyProbe` logging a valid plan and then falling silent.
-        if !dryRun, !eligible.isEmpty {
-            _ = await askIfNeeded()
-        }
         if !dryRun {
+            _ = await askIfNeeded()
             guard await authorized() else { return [] }
         }
 
-        // Fires once, ever. Claim BEFORE batching so the count in "and N more"
-        // never includes an alarm we already told them about, and so an item
-        // already delivered in a digest never queues again.
+        // Fires once, ever. Claim BEFORE batching so the count in "4 more"
+        // never includes something we already told them about.
         if !dryRun {
             let fresh = Set(ledger.claim(eligible.map(\.id)))
             eligible = eligible.filter { fresh.contains($0.id) }
@@ -217,59 +214,27 @@ enum Notifications {
             eligible = eligible.filter { !ledger.hasFired($0.id) }
         }
 
+        // **AS THINGS ARRIVE (prd §1237).** What stands alone goes on its own;
+        // the rest goes out now, ONE notification per app per sweep ("Bluesky
+        // · Ana replied · 4 more"), so a busy refresh is a stack, not a flood.
         let alone = NotifyRules.collapse(eligible.filter { $0.kind.standsAlone })
-        let next = NotifyDigest.advance(previous,
-                                        adding: eligible.filter { !$0.kind.standsAlone }.map(digestItem),
-                                        allowed: { s.allows(category: $0.category) },
-                                        now: now, calendar: .current,
-                                        slots: NotifyDigest.readingSlots(opens: opens, now: now,
-                                                                         calendar: .current))
-        let digest = NotifyDigest.plans(next.queue)
-        guard !dryRun else { return alone + digest }
+        let rest = eligible.filter { !$0.kind.standsAlone }
+        let byID = Dictionary(rest.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        let batches = NotifyDigest.groups(rest.map(digestItem))
+        let batched = batches.compactMap(NotifyDigest.plan)
+        guard !dryRun else { return alone + batched }
 
         for plan in alone {
             await schedule(plan, photo: photos[plan.id], now: now)
         }
-        await scheduleDigest(next, previous: previous, now: now)
-        return alone + digest
-    }
-
-    // MARK: - The reading hour
-
-    /// When the person opened the app, newest last, kept only as long as
-    /// `NotifyDigest.readingSlots` looks back. Stored in the app group so the
-    /// background sweep schedules against the same habit the foreground saw.
-    /// Times only, on this device: nothing about what was opened.
-    static var opens: [Date] {
-        (store.array(forKey: "notify.opens") as? [Double] ?? []).map(Date.init(timeIntervalSince1970:))
-    }
-
-    /// Called on every foreground activation. One entry per activation, the
-    /// oldest dropped past the lookback, and bounded outright so a device
-    /// that is opened constantly cannot grow the array.
-    static func recordOpen(now: Date = .now) {
-        let floor = now.addingTimeInterval(-NotifyDigest.readingLookback).timeIntervalSince1970
-        var kept = (store.array(forKey: "notify.opens") as? [Double] ?? []).filter { $0 >= floor }
-        kept.append(now.timeIntervalSince1970)
-        store.set(Array(kept.suffix(200)), forKey: "notify.opens")
-    }
-
-    // MARK: - The digest (prd §770)
-
-    /// The queue and its slot, kept between sweeps in the app group so the
-    /// background task and a foreground sweep extend the same digest.
-    static var digestState: NotifyDigest.State {
-        get {
-            guard let data = store.data(forKey: "notify.digest"),
-                  let state = try? JSONDecoder().decode(NotifyDigest.State.self, from: data)
-            else { return NotifyDigest.State() }
-            return state
-        }
-        set {
-            if let data = try? JSONEncoder().encode(newValue) {
-                store.set(data, forKey: "notify.digest")
+        for group in batches {
+            if group.count == 1, let plan = byID[group[0].id] {
+                await schedule(plan, photo: photos[plan.id], now: now)
+            } else {
+                await scheduleBatch(group, now: now)
             }
         }
+        return alone + batched
     }
 
     private static func digestItem(_ plan: NotifyPlan) -> NotifyDigest.Item {
@@ -294,92 +259,42 @@ enum Notifications {
                                  tally: plan.tally)
     }
 
-    private static func digestRequestID(_ slot: Date, _ category: String) -> String {
-        NotifyDigest.requestPrefix + category + ":" + String(Int(slot.timeIntervalSince1970))
-    }
-
-    /// Rewrites the pending request for the slot with the queue as it stands.
-    /// Unchanged state schedules nothing, so a sweep with no news does not
-    /// churn a request or re-fetch its picture.
-    private static func scheduleDigest(_ next: NotifyDigest.State,
-                                       previous: NotifyDigest.State,
-                                       now: Date) async {
-        guard next != previous else { return }
-        digestState = next
-        // "Last sent" is said only once a slot has PASSED. Recording a digest
-        // when it is scheduled would put a time still to come on the settings
-        // sheet under the word "sent" (§83).
-        if let old = previous.slot, old <= now, let sent = NotifyDigest.plans(previous.queue).first {
-            rememberSent(sent, at: old)
+    /// One app's several arrivals as ONE notification, posted now (prd
+    /// §1237): the app as the title, its lead and a count as the body, the
+    /// faces and app tiles as the thumbnail, and the long press the card,
+    /// drawn by the NotificationContent extension (prd §809).
+    private static func scheduleBatch(_ group: [NotifyDigest.Item], now: Date) async {
+        guard let plan = NotifyDigest.plan(group) else { return }
+        let content = UNMutableNotificationContent()
+        content.title = plan.title
+        content.body = plan.body
+        content.sound = nil
+        content.interruptionLevel = .active
+        // One thread per app, so iOS stacks an app's batches together.
+        content.threadIdentifier = group.first?.seat ?? "batch"
+        content.relevanceScore = NotifyDigest.relevance(group)
+        var info: [AnyHashable: Any] = [:]
+        if let link = plan.link { info["link"] = link }
+        // Every picture rides the notification as an ATTACHMENT, the tile
+        // sheet first (iOS draws the first as the thumbnail), so the
+        // extension needs no app group and no shared folder (§809a).
+        var attachments: [UNNotificationAttachment] = []
+        if let sheet = await tileSheetPNG(for: group),
+           let made = write(sheet, id: plan.id + ".tiles", identifier: NotifyCard.headAttachment) {
+            attachments.append(made)
         }
-        let center = UNUserNotificationCenter.current()
-        // A pending slot that moved is pulled whole; one that stayed loses only
-        // the categories that emptied or were switched off, because re-adding
-        // an id replaces it. One that has passed is already delivered, and
-        // pulling a PENDING id cannot touch it. The bare slot id is the
-        // single-digest request an install scheduled before the split.
-        if let old = previous.slot, old > now {
-            let kept: Set<String> = old == next.slot ? Set(next.queue.map(\.category)) : []
-            let gone = Set(previous.queue.map(\.category)).subtracting(kept)
-            // Off main (see `removePending`). The ids it pulls are disjoint
-            // from every id added below, so the order the two land in is moot.
-            removePending(gone.map { digestRequestID(old, $0) }
-                + [NotifyDigest.requestPrefix + String(Int(old.timeIntervalSince1970))])
+        if var card = NotifyDigest.card(group) {
+            if !attachments.isEmpty { card.head = NotifyCard.headAttachment }
+            let faced = await withFaces(card, items: NotifyDigest.cardEntries(group).map(\.item), id: plan.id)
+            attachments += faced.files
+            if let data = faced.card.encoded() { info[NotifyCard.userInfoKey] = data }
+            content.categoryIdentifier = NotifyCard.category
         }
-        guard let slot = next.slot else { return }
-
-        for group in NotifyDigest.groups(next.queue) {
-            guard let plan = NotifyDigest.plan(group), let category = group.first?.category else { continue }
-            let content = UNMutableNotificationContent()
-            content.title = plan.title
-            content.body = plan.body
-            if group.count == 1 {
-                let dateline = NotifyRules.datelinePhrase(
-                    occurredAt: plan.occurredAt, deliveredAt: slot, calendar: .current)
-                content.subtitle = [plan.place, dateline].compactMap { $0 }.joined(separator: " · ")
-            }
-            // Lights the screen and makes no sound: one a category, once a
-            // day, neither hidden nor loud. One thread, so the categories
-            // arriving together read as one stack.
-            content.sound = nil
-            content.interruptionLevel = .active
-            content.threadIdentifier = "digest"
-            // Ranked by the most urgent thing inside, so a scheduled summary
-            // leads with the Wallet digest's transfer, not the Social one's like.
-            content.relevanceScore = NotifyDigest.relevance(group)
-            var info: [AnyHashable: Any] = [:]
-            if let link = plan.link { info["link"] = link }
-            if group.count == 1, let art = await attachment(for: plan, photo: nil) {
-                content.attachments = [art]
-            } else if group.count > 1 {
-                // Several things: the thumbnail is the faces and app tiles
-                // (§770), and the long press is the card, its rows drawn by
-                // the NotificationContent extension (prd §809), under the
-                // same picture at card size. Every picture rides the
-                // notification as an ATTACHMENT, the tile sheet first (iOS
-                // draws the first as the thumbnail), so the extension needs
-                // no app group and no shared folder (§809a).
-                var attachments: [UNNotificationAttachment] = []
-                if let sheet = await tileSheetPNG(for: group),
-                   let made = write(sheet, id: plan.id + ".tiles", identifier: NotifyCard.headAttachment) {
-                    attachments.append(made)
-                }
-                if var card = NotifyDigest.card(group) {
-                    if !attachments.isEmpty { card.head = NotifyCard.headAttachment }
-                    let faced = await withFaces(card, items: NotifyDigest.cardEntries(group).map(\.item),
-                                                id: plan.id)
-                    attachments += faced.files
-                    if let data = faced.card.encoded() { info[NotifyCard.userInfoKey] = data }
-                    content.categoryIdentifier = NotifyCard.category
-                }
-                content.attachments = attachments
-            }
-            content.userInfo = info
-            let trigger = UNTimeIntervalNotificationTrigger(
-                timeInterval: max(1, slot.timeIntervalSince(now)), repeats: false)
-            try? await center.add(UNNotificationRequest(identifier: digestRequestID(slot, category),
-                                                        content: content, trigger: trigger))
-        }
+        content.attachments = attachments
+        content.userInfo = info
+        try? await UNUserNotificationCenter.current().add(
+            UNNotificationRequest(identifier: plan.id, content: content, trigger: nil))
+        rememberSent(plan, at: now)
     }
 
     /// Delivered when the sweep finds it — there is no hold (prd §870).

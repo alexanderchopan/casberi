@@ -65749,3 +65749,11 @@ Amends §1107, §1111 and §1201.
 ## §1236 — See the demo leaves Settings (user, 2026-10-10: "how do we have 'see the demo' in settings still? can someone actually do that?"; "i think we remove it less is more")
 
 The row stood only for an install with nothing connected and no wallet followed, the demo's re-entry door (§217's amendment). It is deleted with its gate (`demoRow`, `demoReentryAvailable`). The demo stays a mode the first run's cover leads into, and its pill's Exit leaves it.
+
+## §1237 — Notifications are two switches, Wallet and Feed, sent as Casberi finds them (user, 2026-10-10: "get rid of 'asks when something arrives'"; "i don't think we should do by category anymore"; "we can't give user different dimensions like category and then frequency"; "the daily digests are weak. i say lets do wallet and feed as two categories and user can decide on or off and they are for as things arrive")
+
+Supersedes §770's evening digest and its per-category switches; amends §809 and §883.
+
+1. **Two switches** (`Notifications.Settings`): Wallet (the Wallet category's apps: money in and out, loans, Safe signatures) and Feed (every other category). Stored as `notify.offSwitches`; an install's old per-category list is carried once (Wallet off if it was, Feed off only if every other category was).
+2. **As Casberi finds them**: every sweep posts what it found, nothing is held. What stands alone (`NotifyKind.standsAlone`) goes on its own; the rest goes ONE notification per app per sweep (`NotifyDigest.groups` by seat, `scheduleBatch`): one arrival is itself; several are the app as the title and its newest thing and a count as the line ("Ana replied · 4 more"), what needs you or the money leading when present (§883), the faces as the thumbnail and the card on the long press (§809).
+3. **Deleted**: the 18:00 slot and the learned reading hour (`slots`, `nextSlot`, `readingSlots`, `State`, `advance`, `notify.digest`, `notify.opens`, `recordOpen`), the Reading-into-Media fold, the "Asks when something arrives" line, "Each evening" and the "come at once" footnote. The sheet's one footnote says when: "They arrive as Casberi finds them, one per app." Casberi has no server, so "as found" is as often as iOS lets it refresh.
