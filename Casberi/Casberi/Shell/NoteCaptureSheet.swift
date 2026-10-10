@@ -416,8 +416,9 @@ struct NoteCaptureSheet: View {
                     editing = note
                     openedToRead = !focusOnOpen
                     openedEditedAt = NoteEdits.edited(note)
-                    // A kept list opens as circles (prd §982).
-                    draft = NoteChecklist.editable(note.content)
+                    // A kept list opens as circles (prd §982), under its
+                    // title when the words alone would not make it.
+                    draft = Self.editableDraft(note)
                     openedDraft = draft
                     // The picture through the one off-main decode, never a
                     // bitmap made here (`row-cost-audit.py`).
@@ -1052,6 +1053,26 @@ struct NoteCaptureSheet: View {
 }
 
 extension NoteCaptureSheet {
+    /// The words the page opens on (prd §1099). The page's first line IS the
+    /// title, so a note whose title is not what its words would make — the
+    /// demo's, a note kept with its title apart from its words — opens with
+    /// that title as its first line. Without it the page showed the first
+    /// words as the title and an empty body, and the next edit wrote the
+    /// first words over the title. Decided by the save's own rule, so a note
+    /// the page wrote opens exactly as it was written.
+    static func editableDraft(_ note: Thing) -> String {
+        let words = NoteChecklist.editable(note.content)
+        guard note.kind != .voice else { return words }
+        let title = note.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !title.isEmpty else { return words }
+        let text = NoteChecklist.stored(words).trimmingCharacters(in: .whitespacesAndNewlines)
+        if text.isEmpty { return title == String(localized: "Photo") ? "" : title }
+        if let made = Capture.thing(from: text), titled(made.title, body: text) == note.title {
+            return words
+        }
+        return join(title, words)
+    }
+
     /// The title a body makes (prd §982): a list's first item names the note
     /// without its box, and a link in the first line names its thing, not
     /// its brackets.
