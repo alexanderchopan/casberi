@@ -109,7 +109,13 @@ private struct XLoginWebView: UIViewRepresentable {
                     })
                 else { return }
                 self.captured = true
-                XLiveAuth.store(authToken: auth.value, ct0: ct0.value)
+                // `twid` (`u%3D<id>`) names the account, for the messages
+                // read (prd §1244); a sign-in without it still connects.
+                let twid = cookies.first(where: {
+                    $0.name == "twid" && $0.domain.hasSuffix("x.com")
+                })
+                XLiveAuth.store(authToken: auth.value, ct0: ct0.value,
+                                userID: twid.flatMap { XLiveMessages.userID(fromTwid: $0.value) })
                 // `getAllCookies`'s completion is documented to land on the
                 // main queue already; dispatching anyway costs nothing and
                 // means this call site never depends on that being true.

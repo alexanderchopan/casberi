@@ -43,6 +43,8 @@ struct XArchiveImportScreen: View {
     @State private var liveConnected = false
     @State private var liveSyncing = false
     @State private var liveResult: BridgeProof?
+    /// The live messages read (prd §1244), off until turned on here.
+    @AppStorage(LiveMessages.Seat.x.defaultsKey) private var readsMessages = false
     /// The page's one presentation (`AccountPage.sheet`).
     @State private var sheet: AccountPageSheet?
 
@@ -121,6 +123,14 @@ struct XArchiveImportScreen: View {
                         .lineLimit(1)
                     Spacer(minLength: 0)
                 }
+                // Your direct messages (prd §1244): a decision, so a switch,
+                // and off until you make it. Turning it off keeps what came.
+                DSToggleRow(title: Text("Read your messages"),
+                            detail: Text("Each conversation lands as one thing. Off keeps what came."),
+                            isOn: $readsMessages)
+                    .onChange(of: readsMessages) { _, on in
+                        if on { Task { await syncLive() } }
+                    }
             } else {
                 DSSlabButton(tile: .signIn, title: "Connect",
                              detail: String(localized: "Live notifications"),

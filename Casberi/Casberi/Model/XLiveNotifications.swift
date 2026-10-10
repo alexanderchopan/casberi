@@ -28,6 +28,11 @@ import SwiftData
 enum XLiveAuth {
     private static let authTokenVaultKey = "x.live.authToken"
     private static let ct0VaultKey = "x.live.ct0"
+    /// Not a secret — the signed-in account's numeric id, off the `twid`
+    /// cookie the same sign-in sets (prd §1244). The messages read needs it
+    /// to tell your lines from theirs; a session stored before it was
+    /// harvested falls back to `XLiveMessages.viewerID` and keeps that.
+    private static let userIDKey = "x.live.userID"
 
     /// Both cookies together, or neither — `TrelloAuth`'s two-credential
     /// shape, because a lone `ct0` has no session behind it and a lone
@@ -42,9 +47,21 @@ enum XLiveAuth {
 
     static var connected: Bool { stored != nil }
 
-    static func store(authToken: String, ct0: String) {
+    static func store(authToken: String, ct0: String, userID: String? = nil) {
         TokenVault.set(authToken, for: authTokenVaultKey)
         TokenVault.set(ct0, for: ct0VaultKey)
+        // A new sign-in may be a different account: its id, or none.
+        if let userID { remember(userID: userID) }
+        else { UserDefaults.standard.removeObject(forKey: userIDKey) }
+    }
+
+    static var userID: String? {
+        UserDefaults.standard.string(forKey: userIDKey).flatMap { $0.isEmpty ? nil : $0 }
+    }
+
+    static func remember(userID: String) {
+        guard !userID.isEmpty else { return }
+        UserDefaults.standard.set(userID, forKey: userIDKey)
     }
 
     /// Clears the live pair only — an imported archive's rows are untouched,
@@ -53,6 +70,7 @@ enum XLiveAuth {
     static func clear() {
         TokenVault.delete(authTokenVaultKey)
         TokenVault.delete(ct0VaultKey)
+        UserDefaults.standard.removeObject(forKey: userIDKey)
         // The rosters go with the session (prd §772) — the `FollowerLedger`
         // teardown discipline `SocialLikers.forget` already carries, so
         // disconnecting doesn't leave casts to be re-adopted by a later
@@ -93,7 +111,8 @@ enum XLiveNotifications {
 
     @MainActor private static var running = false
 
-    /// Lands the newest notifications as things, deduped by `sourceRefPrefix`.
+    /// Lands the newest notifications as things, deduped by `sourceRefPrefix`,
+    /// then the DM inbox when its switch is on (prd §1244).
     /// nil = couldn't run at all (not signed in, or the read failed outright);
     /// 0 or more = a real read, however many were new.
     @MainActor
@@ -105,7 +124,12 @@ enum XLiveNotifications {
         defer { running = false }
 
         let (json, status) = await fetch(auth: auth)
-        guard status == 200, let entries = notificationEntries(json) else { return nil }
+        guard status == 200, let entries = notificationEntries(json) else {
+            // The messages read is its own endpoint (prd §1244): a rotated
+            // notifications query id must not silence it too.
+            guard LiveMessages.reads(.x) else { return nil }
+            return await landMessages(auth: auth, context: context)
+        }
 
         let landed = landedNotices(context: context)
         let now = Date.now
@@ -183,7 +207,32 @@ enum XLiveNotifications {
             added += 1
         }
         if added > 0 || healed > 0 { context.saveHonestly() }
+
+        // THE MESSAGES (prd §1244), only when turned on on the X page. Their
+        // own request after the notices, so a messages read that fails never
+        // costs the notices, and the count this returns is both.
+        if LiveMessages.reads(.x) {
+            added += await landMessages(auth: auth, context: context) ?? 0
+        }
         return added
+    }
+
+    /// One read of the DM inbox, landed: how many conversations are new or
+    /// grew, nil when the read failed. `-xLiveProbe YES` names which link.
+    @MainActor
+    private static func landMessages(auth: (authToken: String, ct0: String),
+                                     context: ModelContext) async -> Int? {
+        guard let url = XLiveMessages.url() else { return nil }
+        let (json, status) = await IngestSupport.getJSONStatus(
+            url.absoluteString, auth: "Bearer \(guestBearerToken)",
+            headers: headers(auth), service: "X notifications")
+        guard status == 200 else { return nil }
+        let me = XLiveAuth.userID ?? XLiveMessages.viewerID(json)
+        if XLiveAuth.userID == nil, let me { XLiveAuth.remember(userID: me) }
+        guard let conversations = XLiveMessages.conversations(json, me: me) else { return nil }
+        return LiveMessagesLanding.land(conversations, source: "X",
+                                        refPrefix: XLiveMessages.refPrefix,
+                                        context: context).news
     }
 
     /// The notices already in the store, keyed by ref.
@@ -248,10 +297,14 @@ enum XLiveNotifications {
                     NSLog("[Casberi] xLiveDebugBody| %@", body)
                 }
             }
+            // The messages read is its own endpoint: a rotated notifications
+            // query id says nothing about it.
+            await diagnoseMessages(auth: auth)
             return
         }
         guard let root = json as? [String: Any] else {
             NSLog("[Casberi] xLive| 200 with no JSON object — shape drift")
+            await diagnoseMessages(auth: auth)
             return
         }
         NSLog("[Casberi] xLive| top-level keys: %@", Array(root.keys).sorted().joined(separator: ", "))
@@ -329,24 +382,78 @@ enum XLiveNotifications {
            let body = String(data: data.prefix(1500), encoding: .utf8) {
             NSLog("[Casberi] xLiveEntryRaw| %@", body)
         }
+        await diagnoseMessages(auth: auth)
+    }
+
+    /// The messages read, link by link (prd §1244) — asked whether or not
+    /// the switch is on, and never landed. Prints keys, counts and names,
+    /// NEVER a message: this log is read on a desk, and somebody's private
+    /// words have no business in it.
+    @MainActor
+    private static func diagnoseMessages(auth: (authToken: String, ct0: String)) async {
+        NSLog("[Casberi] xLiveDM| switch %@", LiveMessages.reads(.x) ? "on" : "off")
+        guard let url = XLiveMessages.url() else { return }
+        let (json, status) = await IngestSupport.getJSONBody(
+            url.absoluteString, auth: "Bearer \(guestBearerToken)",
+            headers: headers(auth), service: "X notifications")
+        NSLog("[Casberi] xLiveDM| inbox HTTP %d", status)
+        if let root = json as? [String: Any] {
+            NSLog("[Casberi] xLiveDM| top-level keys: %@", Array(root.keys).sorted().joined(separator: ", "))
+            if status != 200, let errors = root["errors"] as? [[String: Any]] {
+                NSLog("[Casberi] xLiveDM| error: %@ (code %@)",
+                      (errors.first?["message"] as? String) ?? "(no message)",
+                      errors.first?["code"].map { "\($0)" } ?? "—")
+            }
+        }
+        guard let state = XLiveMessages.state(json) else {
+            NSLog("[Casberi] xLiveDM| no inbox_initial_state — shape drift or refused")
+            return
+        }
+        NSLog("[Casberi] xLiveDM| state keys: %@", Array(state.keys).sorted().joined(separator: ", "))
+        let entries = (state["entries"] as? [[String: Any]]) ?? []
+        let kinds = entries.compactMap { $0.keys.first }
+        NSLog("[Casberi] xLiveDM| %d entries (%@), %d users, %d conversations",
+              entries.count, Set(kinds).sorted().joined(separator: ", "),
+              (state["users"] as? [String: Any])?.count ?? 0,
+              (state["conversations"] as? [String: Any])?.count ?? 0)
+        let me = XLiveAuth.userID ?? XLiveMessages.viewerID(json)
+        NSLog("[Casberi] xLiveDM| you are %@ (%@)", me ?? "UNKNOWN",
+              XLiveAuth.userID != nil ? "twid cookie" : "inferred from the inbox")
+        let conversations = XLiveMessages.conversations(json, me: me) ?? []
+        NSLog("[Casberi] xLiveDM| %d conversations parsed", conversations.count)
+        for c in conversations.prefix(5) {
+            NSLog("[Casberi] xLiveDMConversation| %@ lines=%d group=%d face=%@ newest=%@",
+                  c.title, c.lines.count, c.isGroup ? 1 : 0, c.avatar == nil ? "no" : "yes",
+                  c.lines.last.map { ISO8601DateFormatter().string(from: $0.at) } ?? "—")
+        }
+        if let message = entries.first(where: { $0["message"] != nil })?["message"] as? [String: Any] {
+            let data = message["message_data"] as? [String: Any]
+            NSLog("[Casberi] xLiveDMShape| message keys: %@ · message_data keys: %@",
+                  Array(message.keys).sorted().joined(separator: ", "),
+                  Array((data ?? [:]).keys).sorted().joined(separator: ", "))
+        }
     }
 
     // MARK: - The request
 
     private static func fetch(auth: (authToken: String, ct0: String)) async -> (json: Any?, status: Int) {
         guard let url = requestURL() else { return (nil, 0) }
-        let cookie = "auth_token=\(auth.authToken); ct0=\(auth.ct0)"
-        let headers: [String: String] = [
-            "Cookie": cookie,
+        return await IngestSupport.getJSONStatus(
+            url.absoluteString, auth: "Bearer \(guestBearerToken)",
+            headers: headers(auth), service: "X notifications")
+    }
+
+    /// The headers x.com's own web client sends — shared by the notices and
+    /// the messages read (prd §1244), so the two can never drift apart.
+    private static func headers(_ auth: (authToken: String, ct0: String)) -> [String: String] {
+        [
+            "Cookie": "auth_token=\(auth.authToken); ct0=\(auth.ct0)",
             "X-Csrf-Token": auth.ct0,
             "X-Twitter-Active-User": "yes",
             "X-Twitter-Auth-Type": "OAuth2Session",
             "Origin": "https://x.com",
             "Referer": "https://x.com/",
         ]
-        return await IngestSupport.getJSONStatus(
-            url.absoluteString, auth: "Bearer \(guestBearerToken)",
-            headers: headers, service: "X notifications")
     }
 
     /// Best-effort variables/features, url-encoded onto the query string

@@ -67,6 +67,8 @@ enum SocialToYou {
         }
         guard let ref = row.sourceRef else { return false }
         if ref.hasPrefix("ig-live:notif:") || ref.hasPrefix("tiktok:live:notif:") { return true }
+        // A conversation read off your DM inbox (prd §1244) is to you whole.
+        if ref.hasPrefix("x-live:dm:") || ref.hasPrefix("ig-live:dm:") { return true }
         // A Threads notice is to you unless Threads was recommending a post.
         if ref.hasPrefix("threads-live:notif:") { return row.socialContext != "suggested" }
         if ref.hasPrefix("x-live:notif:") {

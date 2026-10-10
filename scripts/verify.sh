@@ -1651,6 +1651,12 @@ harness "Threads live self-test" "Threads live self-test" "scripts/threads-live-
 # for when a stored notice moves. A notice stamped with the sweep's clock reads
 # "minutes ago" for a like from hours ago, and nothing on screen can tell.
 harness "X live self-test" "X live self-test" "scripts/x-live-selftest.sh" "the X live self-test failed — run scripts/x-live-selftest.sh"
+# The X and Instagram DM reads (prd §1244): a message request lands beside your
+# conversations, your own lines carry your name or a one-to-one is titled with
+# yourself, Instagram's microseconds date a chat decades away, a second read
+# doubles a transcript — each renders as an ordinary row. Also holds the
+# switches, the no-mark-read rule and the probes' no-words rule.
+harness "Live messages self-test" "live messages self-test" "scripts/live-messages-selftest.sh" "the live messages self-test failed — run scripts/live-messages-selftest.sh"
 # Duolingo's practice-day door (prd §776) — the least-measured live seat in the
 # tree, so the harness is the only thing holding its parse at all: a JWT payload
 # read as plain base64 is nil for every token carrying a `-`, a day stamped at

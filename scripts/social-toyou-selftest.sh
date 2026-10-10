@@ -68,6 +68,9 @@ check(to(row("X", ref: "x-live:notif:1", title: "sam reposted your post")), "an 
 check(!to(row("X", ref: "x-live:notif:2", title: "New post from mia")), "X's new-post notice is about mia, not you")
 check(!to(row("X", ref: "x-live:notif:3", title: "New post notifications for mia and 6 others")), "X's digest is not to you")
 check(!to(row("X", ref: "x-archive:1")), "an archived post is not")
+check(to(row("X", ref: "x-live:dm:12-34", title: "Messages with Ana")), "an X conversation read live is to you")
+check(to(row("Instagram", ref: "ig-live:dm:340282", title: "Messages with Lena")), "an Instagram conversation read live is to you")
+check(!to(row("X", ref: "x:dm:12-34", title: "Messages")), "an archived conversation is not news")
 check(!SocialToYou.isToYou(row("Bluesky", "mention", text: "@"), myHandles: [""]), "an empty handle matches nothing")
 
 // ── What leads All ───────────────────────────────────────────────────

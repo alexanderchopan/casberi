@@ -176,7 +176,7 @@ enum NetworkReach {
         // deliberately does not (prd §1163).
         Endpoint(service: "X notifications",
                  reach: .whenConnected(bridge: "X"),
-                 purpose: "Reads your notifications, using your OWN X sign-in inside this app — not X's paid public API. The request carries the session cookies from that sign-in and nothing else.",
+                 purpose: "Reads your notifications, and your direct messages if you turn that on, using your OWN X sign-in inside this app — not X's paid public API. The requests carry the session cookies from that sign-in and nothing else, and never mark anything read.",
                  hosts: ["x.com"]),
         // The same door for Instagram (prd §726), credentialed for §701's
         // reason: a refusal here IS grounds for "Needs reconnecting" on the
@@ -186,7 +186,7 @@ enum NetworkReach {
         // registry confirms (prd §1163).
         Endpoint(service: "Instagram live",
                  reach: .whenConnected(bridge: "Instagram"),
-                 purpose: "Reads your notifications and your saved posts, using your OWN Instagram sign-in inside this app — a personal account has no API. The requests carry the session cookies from that sign-in and nothing else.",
+                 purpose: "Reads your notifications, your saved posts, and your direct messages if you turn that on, using your OWN Instagram sign-in inside this app — a personal account has no API. The requests carry the session cookies from that sign-in and nothing else, and never mark anything read.",
                  hosts: ["www.instagram.com"]),
         // And for TikTok (prd §731), for the same reason; the video-names
         // entry above is not credentialed, and "Link previews" shares the host.

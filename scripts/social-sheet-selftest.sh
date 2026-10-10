@@ -40,8 +40,10 @@ CATALOG="Casberi/Casberi/Model/BridgeCatalog.swift"
 THING="Casberi/Shared/Thing.swift"
 XLIVE="Casberi/Casberi/Model/XLiveNotifications.swift"
 IGLIVE="Casberi/Casberi/Model/InstagramLive.swift"
+XLIVEDM="Casberi/Casberi/Model/XLiveMessages.swift"
+IGLIVEDM="Casberi/Casberi/Model/InstagramLiveMessages.swift"
 REMOVAL="Casberi/Casberi/Model/ImportRemoval.swift"
-for f in "$SHEET" "$SOURCE" "$CARD" "$VIEW" "$CONTENT" "$POSTS" "$CATALOG" "$THING" "$XLIVE" "$IGLIVE" "$REMOVAL"; do
+for f in "$SHEET" "$SOURCE" "$CARD" "$VIEW" "$CONTENT" "$POSTS" "$CATALOG" "$THING" "$XLIVE" "$IGLIVE" "$XLIVEDM" "$IGLIVEDM" "$REMOVAL"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -98,14 +100,21 @@ guard "the archive sentence excludes a row that arrived live" \
 guard "the live notice namespace is the literal XLiveNotifications builds" \
   'static let sourceRefPrefix = "x-live:notif:"' "$XLIVE"
 guard "…and the same literal is X's entry in Corpus.liveRefPrefixesBySource" \
-  '^[[:space:]]*"X": \["x-live:notif:"\],' "$THING"
+  '^[[:space:]]*"X": \["x-live:notif:", "x-live:dm:"\],' "$THING"
+# The messages read (prd §1244) is the same miss waiting a third time: a
+# conversation under a prefix the set does not hold is kept out of All and
+# counted by "Remove import".
+guard "the X messages namespace is the literal XLiveMessages builds" \
+  'static let refPrefix = "x-live:dm:"' "$XLIVEDM"
 # INSTAGRAM, the same miss one seat over (prd §733): §726's notices landed
 # under `ig-live:notif:` for a day with the prefix absent from the live set, so
 # every one was kept out of All and wore "From your Instagram archive."
 guard "the Instagram notice namespace is the literal InstagramLive builds" \
   'static let noticeRefPrefix = "ig-live:notif:"' "$IGLIVE"
 guard "…and the same literal is Instagram's entry in Corpus.liveRefPrefixesBySource" \
-  '^[[:space:]]*"Instagram": \["ig-live:notif:"\],' "$THING"
+  '^[[:space:]]*"Instagram": \["ig-live:notif:", "ig-live:dm:"\],' "$THING"
+guard "the Instagram messages namespace is the literal InstagramLiveMessages builds" \
+  'static let refPrefix = "ig-live:dm:"' "$IGLIVEDM"
 # The flat set `arrivedLive` reads is DERIVED from the map, never spelled again
 # — a second spelling is how a seat reaches one reader and not the other.
 guard "Corpus.liveRefPrefixes is derived from the per-source map" \

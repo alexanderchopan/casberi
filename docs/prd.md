@@ -65808,3 +65808,16 @@ The box's category led the grid (§1208h, kept by §1208j), so each arrival from
 2. The rest of §1208j stands: only the box holds the newest, its category's tile draws what comes after it, and a category whose only thing is the box's draws no tile.
 
 UNVERIFIED: written on a machine with no Xcode, so neither build nor grid was seen before commit.
+
+## §1244 — X and Instagram read your direct messages, live, when you turn it on (user, 2026-10-10: "for each of the social apps we have can we read DMs. give me inventory", then "ok let's do twitter and instagram dm me")
+
+The inventory: no social seat read DMs live. X, Instagram and Telegram read them from an export behind §310's switch; Snapchat's export is its saved chats; TikTok's export DMs are not wired; Bluesky and Threads read none. The X and Instagram live sessions (§701, §726) already hold the cookies the networks' own Messages pages use, so the read is one more request on each.
+
+1. **A switch per seat, off by default** ("Read your messages", on the live half of the X and Instagram pages, `LiveMessages.Seat.defaultsKey`). §310's rule, applied to a live door: private correspondence enters the corpus because the person said so. Off keeps what came.
+2. **One thing per conversation**, `.chat` tagged `Conversation`, the imports' shape and clamp (60 lines, 4,000 characters, `messageCount` the whole). A live read sees the newest few messages, so the transcript GROWS: each pass appends the lines newer than the row's own time (`LiveMessages.merge`). Your lines say "You"; the title names the other people, or the group.
+3. **Their own namespaces**, `x-live:dm:<conversation id>` and `ig-live:dm:<thread id>`, in `Corpus.liveRefPrefixesBySource`: a conversation reaches All and is To you (`SocialToYou`), and "Remove import" steps over it. Never the exports' `x:dm:`/`instagram:dm:`, so a conversation read both ways is two rows, the archive and the live one.
+4. **The inbox only.** X: `dm/inbox_initial_state.json`, skipping `trusted: false` (a request); Instagram: `direct_v2/inbox/` (requests are `pending_inbox`, never asked). Encrypted chats are in neither response. A read never marks anything read.
+5. **Same throttle, same session rules.** Rides the ten-minute live sweep. X's DM read runs even when the notifications query id has rotated. A DM failure never clears the cookies. X learns your id from the `twid` cookie at sign-in, else from the one id every conversation shares.
+6. **The probes print shapes and names, never a message** (`-xLiveProbe YES`, `-igLiveProbe YES`, `xLiveDM|`/`igLiveDM|`); `-liveMessages x|instagram|both|off` flips the switches.
+
+UNMEASURED and UNVERIFIED: both endpoints are authored against their documented shapes with no session on any build host, and written on a machine with no Xcode, so neither build nor read was seen before commit. `live-messages-selftest.sh` holds the parse, the merge, the switches and the no-mark-read rule.

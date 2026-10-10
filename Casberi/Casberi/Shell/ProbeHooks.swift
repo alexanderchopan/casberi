@@ -863,6 +863,23 @@ enum ProbeHooks {
         Hook(key: "igLiveProbe") { _, _ in
             Task { @MainActor in await InstagramLive.diagnose() }
         },
+        // `-liveMessages x|instagram|both|off` — flip the live messages
+        // switches (prd §1244) as the account pages do, so the next sweep or
+        // `-xLiveProbe`/`-igLiveProbe` reads the DM inbox. The probes print
+        // shapes and names, never a message.
+        Hook(key: "liveMessages") { spec, _ in
+            let on: Set<LiveMessages.Seat> = switch spec.lowercased() {
+            case "x": [.x]
+            case "instagram": [.instagram]
+            case "both", "yes": [.x, .instagram]
+            default: []
+            }
+            for seat in LiveMessages.Seat.allCases {
+                UserDefaults.standard.set(on.contains(seat), forKey: seat.defaultsKey)
+            }
+            NSLog("[Casberi] liveMessages: x=%@ instagram=%@",
+                  on.contains(.x) ? "on" : "off", on.contains(.instagram) ? "on" : "off")
+        },
         // `-tiktokLiveSession "<cookie header>"` — store a TikTok web session
         // lifted from a signed-in browser, exactly as the in-app sign-in would
         // (prd §731). Refused unless it holds `sessionid`. On `secretArgKeys`.

@@ -339,10 +339,15 @@ enum Corpus {
     /// (correctly) stepped over. Renaming the namespaces into their source's
     /// family would have needed a rewrite of every landed, CloudKit-synced
     /// row; naming the owner here needs none.
+    ///
+    /// **Messages joined both seats (prd §1244)**: a conversation read off the
+    /// live DM inbox lands under `x-live:dm:` / `ig-live:dm:`, never the
+    /// export's `x:dm:` / `instagram:dm:`, so it reaches All and "Remove
+    /// import" steps over it.
     static let liveRefPrefixesBySource: [String: Set<String>] = [
         "Telegram": ["telegram:post:"],
-        "X": ["x-live:notif:"],
-        "Instagram": ["ig-live:notif:"],
+        "X": ["x-live:notif:", "x-live:dm:"],
+        "Instagram": ["ig-live:notif:", "ig-live:dm:"],
         "TikTok": ["tiktok:live:notif:"],
     ]
 

@@ -117,6 +117,9 @@ INTERPOLATION = re.compile(r'\\\(.*?\)')
 # phrase on that card is still a finding.
 KNOWN_ACRONYMS: set[str] = {
     "ETH",
+    # Graphics Interchange Format — the word X and Instagram both use for an
+    # animated picture, and what a live DM transcript names one (prd §1244).
+    "GIF",
     # Non-fungible token — the word every wallet and marketplace uses, and the
     # NFTs crown's own noun ("1 NFT", prd §943); "NFTs" already passes as mixed
     # case, and "Nft" is a spelling nobody uses.

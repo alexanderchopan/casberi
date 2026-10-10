@@ -28,6 +28,9 @@ import SwiftData
 /// again, and Instagram's checkpoint is a 400 with a `checkpoint_url`, not a
 /// 401).
 ///
+/// **Three reads since prd §1244**: the direct inbox joins when its switch is
+/// on (`InstagramLiveMessages`, landed by `LiveMessagesLanding`).
+///
 /// **Two reads, one session.** Notifications (`/api/v1/news/inbox/`) land
 /// under their own ref namespace, `ig-live:notif:`, X's `x-live:notif:`
 /// reasoning verbatim. Saved posts (`/api/v1/feed/saved/posts/`) land under
@@ -187,6 +190,20 @@ enum InstagramLive {
         let saved = await get("\(base)/feed/saved/posts/?count=\(savedPageSize)", auth: auth)
         if saved.status == 200, let items = savedMedia(saved.json) {
             added += landSaves(items, context: context)
+        }
+
+        // THE MESSAGES (prd §1244), only when turned on on the Instagram
+        // page: one more request on the same throttle. Independent of the
+        // two above, and a failure here never clears the cookies — the
+        // inbox read already said whether the session stands.
+        if LiveMessages.reads(.instagram) {
+            let direct = await get(base + InstagramLiveMessages.path, auth: auth)
+            if direct.status == 200,
+               let conversations = InstagramLiveMessages.conversations(direct.json, me: auth.userID) {
+                added += LiveMessagesLanding.land(conversations, source: "Instagram",
+                                                  refPrefix: InstagramLiveMessages.refPrefix,
+                                                  context: context).news
+            }
         }
         return added
     }
@@ -672,6 +689,35 @@ enum InstagramLive {
                 NSLog("[Casberi] igLiveSave| unparsed — keys %@",
                       Array(media.keys).sorted().joined(separator: ", "))
             }
+        }
+
+        // THE MESSAGES (prd §1244), asked whether or not the switch is on and
+        // never landed. Keys, counts and names — NEVER a message.
+        NSLog("[Casberi] igLiveDM| switch %@", LiveMessages.reads(.instagram) ? "on" : "off")
+        let direct = await get(base + InstagramLiveMessages.path, auth: auth)
+        NSLog("[Casberi] igLiveDM| inbox HTTP %d%@", direct.status,
+              classify(direct).map { " — \(describe($0))" } ?? "")
+        if let root = direct.json as? [String: Any] {
+            NSLog("[Casberi] igLiveDM| top-level keys: %@", Array(root.keys).sorted().joined(separator: ", "))
+            if direct.status != 200, let message = root["message"] as? String {
+                NSLog("[Casberi] igLiveDM| message: %@", message)
+            }
+        }
+        let threads = InstagramLiveMessages.threads(direct.json) ?? []
+        NSLog("[Casberi] igLiveDM| %d threads, you are %@", threads.count,
+              InstagramLiveMessages.viewerID(direct.json) ?? auth.userID)
+        let conversations = InstagramLiveMessages.conversations(direct.json, me: auth.userID) ?? []
+        NSLog("[Casberi] igLiveDM| %d conversations parsed", conversations.count)
+        for c in conversations.prefix(5) {
+            NSLog("[Casberi] igLiveDMConversation| %@ lines=%d group=%d face=%@ newest=%@",
+                  c.title, c.lines.count, c.isGroup ? 1 : 0, c.avatar == nil ? "no" : "yes",
+                  c.lines.last.map { ISO8601DateFormatter().string(from: $0.at) } ?? "—")
+        }
+        if let first = threads.first {
+            let items = (first["items"] as? [[String: Any]]) ?? []
+            NSLog("[Casberi] igLiveDMShape| thread keys: %@ · item types: %@",
+                  Array(first.keys).sorted().joined(separator: ", "),
+                  Set(items.compactMap { $0["item_type"] as? String }).sorted().joined(separator: ", "))
         }
     }
 
