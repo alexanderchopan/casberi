@@ -38,14 +38,13 @@ extension FeedScreen {
         if let portfolio = portfolioShown, !portfolio.isEmpty {
             let moves = walletHoldingMoves
             let fold = WalletTokenFold(portfolio.positions, total: portfolio.totalUSD)
-            Section {
+            walletCard(String(localized: "Tokens"), glyph: ScopeTileGlyph.holdings) {
                 // **TOKENS LEAD HOLDINGS, AND A LONG TAIL IS ONE ROW (prd
                 // §1107, user: "what if someone has dozens of tokens").** The
                 // list drew every token, so on a wallet holding forty the
                 // Positions under them were forty rows down. Each token worth
                 // a twentieth of the whole draws, five at most; the rest fold
                 // into one row that opens every one.
-                DSGroupHeader(word: String(localized: "Tokens"))
                 ForEach(fold.shown) { position in
                     walletTokenRow(position, portfolio: portfolio, moves: moves)
                 }
@@ -401,9 +400,7 @@ extension FeedScreen {
     var walletSignaturesSection: some View {
         let waiting = walletSignatureWarnings
         if !waiting.isEmpty {
-            Section {
-                DSGroupHeader(word: String(localized: "Signatures"))
-                    .id(SecurityAnchor.signatures.id)
+            walletCard(String(localized: "Signatures"), glyph: WalletWarning.Kind.safe.glyph, anchor: SecurityAnchor.signatures.id) {
                 VStack(alignment: .leading, spacing: 0) {
                     ForEach(waiting) { warning in
                         needsYouRow(glyph: warning.kind.glyph, critical: false,
@@ -900,9 +897,7 @@ extension FeedScreen {
                                                       acting: walletLive.acting)
         if !WalletPermissions.actingHolders(holders).isEmpty
             || walletLive.acting.contains(where: { $0.modulesUnreadable }) {
-            Section {
-                DSGroupHeader(word: String(localized: "Delegations"))
-                    .id(SecurityAnchor.delegations.id)
+            walletCard(String(localized: "Delegations"), glyph: WalletWarning.Kind.delegation.glyph, anchor: SecurityAnchor.delegations.id) {
                 WalletActingPartiesRows(holders: holders, acting: walletLive.acting)
                     .modifier(rowEntrance(2))
                     .feedRowBackground()
@@ -926,9 +921,7 @@ extension FeedScreen {
     @ViewBuilder
     var walletApprovalsSection: some View {
         if !walletLive.exposure.isEmpty {
-            Section {
-                DSGroupHeader(word: String(localized: "Approvals"))
-                    .id(SecurityAnchor.approvals.id)
+            walletCard(String(localized: "Approvals"), glyph: WalletWarning.Kind.approval.glyph, anchor: SecurityAnchor.approvals.id) {
                 WalletApprovalExposureCard(exposure: walletLive.exposure) { grant in
                     guard let thing = walletLive.activeApprovals
                         .first(where: { $0.isLive && $0.id == grant.thingID })
@@ -997,8 +990,7 @@ extension FeedScreen {
     @ViewBuilder
     func walletAppsSection(_ rows: [FeedRow], nextEventID: UUID?) -> some View {
         if !rows.isEmpty {
-            Section {
-                DSGroupHeader(word: String(localized: "Apps"))
+            walletCard(String(localized: "Apps"), glyph: ScopeTileGlyph.apps) {
                 ForEach(Array(rows.enumerated()), id: \.element.id) { i, row in
                     if case .single(let item) = row.kind, let thing = item.live {
                         shapedListRow(thing, index: i, nextEventID: nextEventID)
@@ -1020,8 +1012,7 @@ extension FeedScreen {
         let perps = !walletLive.hyperliquid.positions.isEmpty
         let liquidity = !walletLive.uniswap.isEmpty
         if lending || perps || liquidity {
-            Section {
-                DSGroupHeader(word: String(localized: "Positions"))
+            walletCard(String(localized: "Positions"), glyph: "building.columns") {
                 if lending {
                     WalletLendingCard(aave: walletLive.positions, morpho: walletLive.morpho,
                                       falls: walletLendingFalls,
@@ -1757,5 +1748,20 @@ struct WalletSeatLatestLead: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+}
+
+extension FeedScreen {
+    /// **EVERY TOP-LEVEL SECTION OF A WALLET PAGE STANDS ON THE FEED'S CARD
+    /// (prd §1225, user: "pk do it")**, its name in pink with its glyph, as
+    /// Home's lists do; white is left for a group inside a card. `anchor` is
+    /// where a checkup count lands.
+    func walletCard<Rows: View>(_ name: String, glyph: String, anchor: String? = nil,
+                                @ViewBuilder rows: () -> Rows) -> some View {
+        SectionPanelGroup(anchor: anchor) {
+            SectionPanelName(name: name, glyph: glyph)
+        } rows: {
+            Section { rows() }
+        }
     }
 }

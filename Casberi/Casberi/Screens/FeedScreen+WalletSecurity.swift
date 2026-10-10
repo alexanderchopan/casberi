@@ -89,9 +89,7 @@ extension FeedScreen {
                               word: String) -> some View {
         let flagged = walletLive.warnings.filter { $0.kind == kind }
         if !flagged.isEmpty {
-            Section {
-                DSGroupHeader(word: word)
-                    .id(anchor.id)
+            walletCard(word, glyph: kind.glyph, anchor: anchor.id) {
                 VStack(alignment: .leading, spacing: 0) {
                     ForEach(flagged) { warning in
                         needsYouRow(glyph: warning.kind.glyph,

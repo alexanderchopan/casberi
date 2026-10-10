@@ -65668,3 +65668,7 @@ UNVERIFIED: written on a machine with no Xcode, so neither build nor tile was se
 ## §1224 — A Wallet box leads with its figure (user, 2026-10-10: "yes do it and fix the truncation")
 
 The Wallet Home's glance boxes (§1219) draw money as the Feed's money tiles do: the amount the row would show, through Hide balances (`WalletValue`), over who or what it was: the counterparty, a card's name, else the title's first clause ("Needs attention · £200 → €235 · Deposit" → "Needs attention"), so a long title never runs out of the box (`FeedScreen.walletFigure`, handed to `GlanceTile` as `figure`). A thing with no amount (a vote closing) keeps its title.
+
+## §1225 — Every top-level section of a Wallet page stands on the Feed's card (user, 2026-10-10: "why aren't they all pink? is it some hierarchy?" … "pk do it")
+
+The hierarchy, said once: pink names where you are (a page's title, a top-level section on its card, a day); white names a group inside a card. Holdings' Tokens, Positions and Apps and Security's six sections (Signatures, Delegations, Approvals, Address poisoning, Fake tokens, Fake transfers) were white `DSGroupHeader`s on the bare page while Home's lists stood pink on cards (§1219); they take the card now through `FeedScreen.walletCard` (`SectionPanelGroup` + `SectionPanelName`), each with its glyph, and a checkup count still lands on its section by the card's identity. Amends §1220's sheets and the "stay white" answer given the same day, which predated the card.
