@@ -148,18 +148,26 @@ struct DSCountTile: View {
 struct DSCountGrid<Content: View>: View {
     /// How many counts stand in the box, two across, so the rows can share it.
     let items: Int
+    /// Inside a box that is already a well (the Wallet's Security, prd
+    /// §1221): the grid alone, never a well inside a well.
+    var bare = false
     @ViewBuilder let content: Content
 
     var body: some View {
-        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: DS.Space.s1, alignment: .leading), count: 2),
-                  alignment: .leading, spacing: DS.Space.s1) {
+        let grid = LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: DS.Space.s1, alignment: .leading), count: 2),
+                             alignment: .leading, spacing: DS.Space.s1) {
             content
         }
         .environment(\.dsCountCellHeight, DSCountTile.cellHeight(items: items))
-        .padding(DS.Space.s2)
-        .frame(maxWidth: .infinity, minHeight: DSRoomChassis.leadHeight,
-               maxHeight: DSRoomChassis.leadHeight, alignment: .top)
-        .dsWell(cornerRadius: DS.Radius.widget)
+        if bare {
+            grid.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        } else {
+            grid
+                .padding(DS.Space.s2)
+                .frame(maxWidth: .infinity, minHeight: DSRoomChassis.leadHeight,
+                       maxHeight: DSRoomChassis.leadHeight, alignment: .top)
+                .dsWell(cornerRadius: DS.Radius.widget)
+        }
     }
 }
 

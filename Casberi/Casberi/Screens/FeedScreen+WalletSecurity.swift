@@ -119,80 +119,32 @@ struct WalletSecurityFigure: View {
     let counts: WalletSecurityCounts
     let onJump: (FeedScreen.SecurityAnchor) -> Void
 
+    /// **SETTINGS' COUNT GRID (prd §1221, user: "make the security card look
+    /// like the settings and sources one -- 2 columns").** Six counts two
+    /// across in `DSCountTile`s; a count that wants you says so in its word
+    /// (§1004), and a zero is a fact, not a door (§83).
     var body: some View {
-        Grid(horizontalSpacing: DS.Space.s2, verticalSpacing: DS.Space.s4) {
-            GridRow(alignment: .top) {
-                cell(.signatures, glyph: WalletWarning.Kind.safe.glyph, count: counts.signatures,
-                     word: String(localized: "Signatures"), needsYou: counts.signatures > 0)
-                cell(.delegations, glyph: WalletWarning.Kind.delegation.glyph,
-                     count: counts.delegations,
-                     word: String(localized: "Delegations"), needsYou: false)
-                // A grant with no limit turns the count amber.
-                cell(.approvals, glyph: WalletWarning.Kind.approval.glyph, count: counts.approvals,
-                     word: String(localized: "Approvals"), needsYou: counts.unlimited > 0)
-            }
-            GridRow(alignment: .top) {
-                cell(.poisoning, glyph: WalletWarning.Kind.poisoning.glyph, count: counts.poisoning,
-                     word: String(localized: "Address poisoning"), needsYou: counts.poisoning > 0)
-                cell(.fakeTokens, glyph: WalletWarning.Kind.spoofedSymbol.glyph,
-                     count: counts.fakeTokens,
-                     word: String(localized: "Fake tokens"), needsYou: counts.fakeTokens > 0)
-                // Spam is noise to recognise, not an act (§1004's ink is for
-                // what wants you): it never turns amber.
-                cell(.fakeTransfers, glyph: WalletWarning.Kind.fakeTransfer.glyph,
-                     count: counts.fakeTransfers,
-                     word: String(localized: "Fake transfers"), needsYou: false)
-            }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
-    }
-
-    @ViewBuilder
-    private func cell(_ anchor: FeedScreen.SecurityAnchor, glyph: String, count: Int,
-                      word: String, needsYou: Bool) -> some View {
-        // **THE GLYPH AND THE COUNT SHARE A LINE (user: "clipping").** Stacked,
-        // a cell ran ~96pt and two rows of them overran the box; side by
-        // side, each cell is one line and its word, and both rows fit.
-        // The glyph and the count share a line, the word under them (two
-        // stacked rows clipped the box, user: "clipping").
-        let face = VStack(alignment: .leading, spacing: DS.Space.s1) {
-            HStack(spacing: DS.Space.s2) {
-                ZStack {
-                    Circle().fill(DS.fillFaint)
-                    Image(systemName: glyph)
-                        .dsGlyph(.subhead, weight: .semibold)
-                        .foregroundStyle(needsYou ? DS.attention : DS.textSecondary)
+        let cells: [(FeedScreen.SecurityAnchor, Int, String, Bool)] = [
+            (.signatures, counts.signatures, String(localized: "Signatures"), counts.signatures > 0),
+            (.delegations, counts.delegations, String(localized: "Delegations"), false),
+            // A grant with no limit wants you.
+            (.approvals, counts.approvals, String(localized: "Approvals"), counts.unlimited > 0),
+            // The tile's short word; the list under it keeps the full name.
+            (.poisoning, counts.poisoning, String(localized: "Poisoning"), counts.poisoning > 0),
+            (.fakeTokens, counts.fakeTokens, String(localized: "Fake tokens"), counts.fakeTokens > 0),
+            // Spam is noise to recognise, not an act: it never wants you.
+            (.fakeTransfers, counts.fakeTransfers, String(localized: "Fake transfers"), false),
+        ]
+        let widest = cells.map(\.1).max()
+        DSCountGrid(items: cells.count, bare: true) {
+            ForEach(cells, id: \.0) { anchor, count, word, wants in
+                DSCountTile(count: count, label: word, isOn: false, wants: wants,
+                            inline: true, widest: widest) {
+                    DSHaptic.selection()
+                    onJump(anchor)
                 }
-                .frame(width: Self.disc, height: Self.disc)
-                .accessibilityHidden(true)
-                Text("\(count)")
-                    .dsText(.heading28)
-                    .foregroundStyle(needsYou ? DS.attentionInk
-                                     : (count == 0 ? DS.textTertiary : DS.textPrimary))
-                    .monospacedDigit()
+                .disabled(count == 0)
             }
-            Text(word)
-                .dsText(.label12)
-                .foregroundStyle(DS.textSecondary)
-                .lineLimit(2)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .frame(maxWidth: .infinity, alignment: .topLeading)
-        .accessibilityElement(children: .combine)
-
-        // A count with something behind it is a door; a zero is a fact (§83).
-        if count > 0 {
-            Button {
-                DSHaptic.selection()
-                onJump(anchor)
-            } label: {
-                face.contentShape(Rectangle())
-            }
-            .buttonStyle(PressSpring())
-        } else {
-            face
         }
     }
-
-    static let disc: CGFloat = 36
 }

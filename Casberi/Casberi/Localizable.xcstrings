@@ -6431,6 +6431,34 @@
         }
       }
     },
+    "Poisoning" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Envenenamiento"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ポイズニング"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "포이즈닝"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "投毒"
+          }
+        }
+      }
+    },
     "following" : {
       "localizations" : {
         "es" : {

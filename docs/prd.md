@@ -65640,3 +65640,7 @@ Next, agreed and not yet built: Holdings, Security and Subscriptions rise as she
 ## §1220 — On the phone, a Wallet tile rises as a sheet (user, 2026-10-10: "ok so we are in agreement it can work like Feed's rule")
 
 The Feed's rule (§1208m) for the Wallet: Home is the page, and Holdings, Security and Subscriptions each rise as one sheet over it, as Markets, Settings and Sources rise over the Feed. The sheet is the Wallet screen pinned to that section (`FeedScreen.pinnedWalletSection`, `ShellChrome.AppSheet.walletSection`): titled with the section's name, its box, its lists, no tiles, and nothing published to the shell (`DSRoomScopeChrome(pinned:)`). Every door that asks for a section on the phone — a tile, a count, a notice, `-openSection` — lands in the sheet, because the change of `chrome.walletSection` is turned into it and the page stays on Home. iPad and Mac keep the page swap. Privy's apps stay in Holdings (§1124).
+
+## §1221 — Security's box is Settings' count grid (user, 2026-10-10: "we can also make the security card look like the settings and sources one -- 2 columns")
+
+`WalletSecurityFigure` draws its six counts two across in `DSCountTile`s inside a `DSCountGrid(bare: true)` (the box is already a well, so the grid draws none of its own). A count that wants you says so in its word (§1004); a zero is disabled, a fact and not a door (§83). The tile reads "Poisoning", the list under it keeps "Address poisoning". The glyph discs are gone with the old grid.
