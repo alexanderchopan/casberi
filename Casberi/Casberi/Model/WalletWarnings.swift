@@ -482,10 +482,14 @@ enum WalletWatch {
         if poisoningCount > 0 {
             out.append(WalletWarning(id: "poisoning", severity: .critical,
                                      kind: .poisoning,
+                                     // One line that fits the row; the name of
+                                     // the attack under it (user: the title
+                                     // was cut off).
                                      title: poisoningCount == 1
-                                         ? String(localized: "1 transfer looks like address poisoning")
-                                         : String(localized: "\(poisoningCount) transfers look like address poisoning"),
-                                     subtitle: nil, count: poisoningCount, address: nil))
+                                         ? String(localized: "1 lookalike address")
+                                         : String(localized: "\(poisoningCount) lookalike addresses"),
+                                     subtitle: String(localized: "Address poisoning"),
+                                     count: poisoningCount, address: nil))
         }
         // Critical, like poisoning: a symbol that copies USDC is a claim about
         // what you hold, and believing it is how the money goes.

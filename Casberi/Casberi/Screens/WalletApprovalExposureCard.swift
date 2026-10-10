@@ -155,11 +155,11 @@ struct WalletApprovalExposureCard: View {
     /// "No limit · USDC", "Capped · USDT", "All Field Notes".
     private func line(_ grant: WalletApprovalExposure.Grant) -> Text {
         if grant.forAll {
-            return Text(String(localized: "All")).foregroundStyle(DS.destructiveInk)
+            return Text(String(localized: "All")).foregroundStyle(DS.attentionInk)
                 + Text(" \(grant.symbol)").foregroundStyle(DS.textTertiary)
         }
         if grant.unlimited {
-            return Text(String(localized: "No limit")).foregroundStyle(DS.destructiveInk)
+            return Text(String(localized: "No limit")).foregroundStyle(DS.attentionInk)
                 + Text(" · \(grant.symbol)").foregroundStyle(DS.textTertiary)
         }
         return Text(String(localized: "Capped · \(grant.symbol)")).foregroundStyle(DS.textTertiary)
