@@ -65780,3 +65780,11 @@ Completes §1238.
 2. **Pushed now**: an account page's profile, thing and Track (`AccountPageSheet.pushes`); Addresses' contact and same-person sheets, and a contact's thing (the contact sheet brings no stack of its own when pushed); a thing sheet's face door and its walk to a note; a person room's thing; Wallet history's thing; the L2BEAT and Walletbeat cards; Logos' observer pairing; Safe's pasted ask; a subscription's edit tray; the starter-pack import; a post's and a reply's profile; a profile's follow import.
 3. **A pushed reading sheet sets no height** (`DSReadSheet` reads `dsInPane`), as a pushed tray does not (§1238 item 3).
 4. **Still rising, by design**: the system's own sheets (the in-app browser, Photos, Share, Files, Mail and Messages, Translate), the full-screen photo viewer and web sign-ins, and the views that keep a stack of their own (an account's key and card sheets, a post opened from a quote, Worth a look).
+
+## §1241 — The note page rises over the sheet it was opened from (user, 2026-10-10: "you click new and it opens behind the screen … you can't see it unless you pull sheet or whatever down")
+
+Amends §969's hosting. Since §1231 Notes rises as an app sheet, and the note page was a layer on the shell, so New, a row's tap and Edit opened it UNDER the sheet.
+
+1. **The open flag is the chrome's** (`ShellChrome.noteOpen`), so a sheet can read it.
+2. **A sheet raises the page over itself** as a full-screen cover (`noteCover`): the app sheet, else the route sheet's stack. The shell's layer draws only when neither stands (`NoteHost.sheetStands`). One page view for both hosts (`NotePageLayer`).
+3. Over a sheet the page rises from the bottom; the grow-from-the-tile entrance (§1199) stays the layer's.

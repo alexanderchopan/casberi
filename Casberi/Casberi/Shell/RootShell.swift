@@ -27,16 +27,12 @@ struct RootShell: View {
     @State private var windowScene: UIWindowScene?
     @State private var draft = ""
     @State private var composerOpen = false
-    /// The note sheet (prd §969) — raised by the Notes room's New tile
-    /// (`chrome.newNote`) or the `-openNote YES` hook; a layer beside the
-    /// agent's, never a system sheet.
-    @State private var noteOpen = false
     /// Something is over the room — the keyboard walk stands down (see the
     /// `walkModalOpen` hand-off below). A property, not an expression in the
     /// modifier chain: six `||` operands there put `RootShell`'s body past
     /// the type-checker's limit the day the note sheet joined them.
     private var modalUp: Bool {
-        composerOpen || noteOpen || deepLinkThing != nil
+        composerOpen || chrome.noteOpen || deepLinkThing != nil
             || deepLinkPerson != nil || safeAsk != nil || observerOffer != nil || !onboarded
     }
     @State private var deepLinkThing: Thing?
@@ -298,7 +294,7 @@ struct RootShell: View {
         }
         // The note sheet's two triggers (prd §969) — ONE modifier, because this
         // chain is at the type-checker's edge and two more tipped it over.
-        .modifier(NoteSheetHooks(noteOpen: $noteOpen, newNote: chrome.newNote, chrome: chrome))
+        .modifier(NoteSheetHooks(newNote: chrome.newNote, chrome: chrome))
         .onChange(of: composerOpen) { _, open in
             if open {
                 OnDeviceModel.resetConversation()
@@ -2610,17 +2606,11 @@ struct RootShell: View {
     /// gone, hosted as the agent is — a layer, never a system sheet — so it
     /// rises over the room and the dock alike. Built fresh on every raise,
     /// like the composer, so a kept note's draft never leaks into the next.
+    /// While a sheet stands (Notes rises as one, §1231) a layer here would
+    /// open UNDER it, so the sheet raises the page instead (`noteCover`).
     @ViewBuilder private var noteLayer: some View {
-        if noteOpen {
-            ZStack {
-                DS.page.ignoresSafeArea()
-                NoteCaptureSheet(onClose: {
-                    withAnimation(DS.Motion.standard) { noteOpen = false }
-                }, onLand: { thing in
-                    chrome.flash(String(localized: "Kept in Notes"), tone: .success)
-                    chrome.flight = ShellChrome.Flight(kind: thing.kind, title: thing.title)
-                })
-            }
+        if chrome.noteOpen && !NoteHost.sheetStands(chrome: chrome, route: sceneState.route) {
+            NotePageLayer(chrome: chrome)
             // From the New tile, the page grows out of the tile (prd §1199);
             // any other way in rises from the bottom as before.
             .transition(noteEntrance)
@@ -4809,6 +4799,13 @@ private struct AppSheetHost: ViewModifier {
                            pinnedWalletSection: app.walletSection)
                     .toolbar(.hidden, for: .navigationBar)
             }
+                // Notes' New, a row's tap and Edit open the note page over
+                // this sheet, never under it.
+                .noteCover(chrome, when: true) { page in
+                    page.environment(\.modelContext, modelContext)
+                        .environment(bridges)
+                        .environment(\.locale, LanguageStore.shared.locale)
+                }
                 .environment(\.dsInSheetStack, true)
                 .environment(sceneState.route)
                 .environment(sceneState.filter)

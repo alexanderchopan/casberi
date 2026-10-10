@@ -1132,7 +1132,6 @@ struct NotePicture: Equatable {
 /// `-openNote YES` hook at mount. One modifier, because `RootShell`'s body
 /// chain is at the type-checker's edge and two more modifiers tipped it.
 struct NoteSheetHooks: ViewModifier {
-    @Binding var noteOpen: Bool
     let newNote: Int
     /// Handed in: this sits above the `.environment(chrome)` RootShell's
     /// children get.
@@ -1144,13 +1143,13 @@ struct NoteSheetHooks: ViewModifier {
                 // A page already up is not rebuilt, so its `onAppear` would
                 // never consume a second request — and the next New would
                 // open that note (prd §1099). The page standing keeps the hand.
-                guard !noteOpen else {
+                guard !chrome.noteOpen else {
                     chrome.noteToEdit = nil
                     chrome.noteFocusOnOpen = true
                     chrome.noteVoiceOnOpen = false
                     return
                 }
-                withAnimation(DS.Motion.standard) { noteOpen = true }
+                withAnimation(DS.Motion.standard) { chrome.noteOpen = true }
             }
             #if DEBUG
             // `-noteType "…"` raises the sheet after `-noteTypeDelay` seconds
@@ -1160,18 +1159,62 @@ struct NoteSheetHooks: ViewModifier {
                 let set = UserDefaults.standard.double(forKey: "noteTypeDelay")
                 let delay = set > 0 ? set : 2.5
                 try? await Task.sleep(for: .seconds(delay))
-                withAnimation(DS.Motion.standard) { noteOpen = true }
+                withAnimation(DS.Motion.standard) { chrome.noteOpen = true }
             }
             #endif
             .onAppear {
                 if UserDefaults.standard.bool(forKey: "openNote") {
                     NSLog("[Casberi] openNote: raised")
-                    noteOpen = true
+                    chrome.noteOpen = true
                 }
             }
     }
 }
 
+/// The note page (prd §969): the page's ground and the sheet, closed and
+/// kept through the shell. One view for its two hosts: `RootShell`'s layer,
+/// and the cover a sheet raises over itself (`noteCover`).
+struct NotePageLayer: View {
+    let chrome: ShellChrome
+
+    var body: some View {
+        ZStack {
+            DS.page.ignoresSafeArea()
+            NoteCaptureSheet(onClose: {
+                withAnimation(DS.Motion.standard) { chrome.noteOpen = false }
+            }, onLand: { thing in
+                chrome.flash(String(localized: "Kept in Notes"), tone: .success)
+                chrome.flight = ShellChrome.Flight(kind: thing.kind, title: thing.title)
+            })
+        }
+    }
+}
+
+/// WHERE THE NOTE PAGE RISES (user, 2026-10-10: "you click new and it opens
+/// behind the screen"). Notes rises as an app sheet (§1231), and the shell's
+/// layer sits under any sheet, so while one stands the sheet hosts the page
+/// as a full-screen cover. The app sheet first, then the route sheet; the
+/// layer only when neither stands.
+enum NoteHost {
+    @MainActor
+    static func sheetStands(chrome: ShellChrome, route: HomeRoute) -> Bool {
+        if chrome.appSheet != nil { return true }
+        if case .node = route.sheet { return true }
+        return false
+    }
+}
+
+extension View {
+    /// The note page over this sheet while `hosted` (see `NoteHost`). `wrap`
+    /// re-injects what the sheet's own environment cannot hand a cover.
+    func noteCover<Wrapped: View>(_ chrome: ShellChrome, when hosted: Bool,
+                                  @ViewBuilder wrap: @escaping (NotePageLayer) -> Wrapped) -> some View {
+        fullScreenCover(isPresented: Binding(get: { hosted && chrome.noteOpen },
+                                             set: { if !$0 { chrome.noteOpen = false } })) {
+            wrap(NotePageLayer(chrome: chrome)).environment(chrome)
+        }
+    }
+}
 
 /// WHEN A NOTE WAS LAST CHANGED BY HAND (prd §1100), for the page's date
 /// line. A fact on the note (`ThingFact.Action.edited`, its value ISO 8601)

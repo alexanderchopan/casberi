@@ -825,6 +825,12 @@ struct MainSurface: View {
                     .dsSheetDismiss { route.closeSheet() }
                     .navigationDestination(for: HomeRoute.Node.self) { leafRoom($0) }
             }
+            // A note opened in here (a thing's Edit) rises over the sheet.
+            .noteCover(chrome, when: chrome.appSheet == nil) { page in
+                page.environment(\.modelContext, modelContext)
+                    .environment(store)
+                    .environment(\.locale, LanguageStore.shared.locale)
+            }
             .environment(\.dsInSheetStack, true)
             .dsNavSheet()
         }
