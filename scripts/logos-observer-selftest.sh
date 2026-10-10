@@ -166,6 +166,25 @@ check(down.node.value?.reachable == false, "node down is a reading, not an error
 check(W.snapshot(down) == .unreachable, "node down maps to unreachable")
 check(W.status(parse(#"{"v":1,"node":{"reachable":true}}"#)) == nil, "a v1 body is refused")
 
+print("The stake (Observer 874b746, prd §1216)")
+let staked = W.status(parse("""
+{"v":2,"node":{"reachable":true,"phase":"Following","height":9,"tip":"aa"},
+ "rewards":{"claimable_tickets":0,"slots_until_expiry":null,"vouchers":0,"total_claimable":"0",
+  "mining_balance":"190.909090909","mining_notes":212,
+  "consensus":{"pow_eligible_notes":0,"pow_eligible_balance":"0","pow_aging_notes":212,
+               "wallet_eligible_notes":1,"wallet_eligible_balance":"190.909090909"}}}
+"""))!
+let sr = staked.rewards.value!
+check(sr.miningBalance == Decimal(string: "190.909090909") && sr.miningNotes == 212, "mining_balance and mining_notes")
+check(sr.agingNotes == 212 && sr.eligibleNotes == 1 && sr.eligibleBalance == Decimal(string: "190.909090909"),
+      "eligible notes and balance add PoW and wallet; aging is PoW's")
+let plain = W.status(parse(#"{"v":2,"node":{"reachable":true,"phase":"Following","height":9,"tip":"aa"},"rewards":{"claimable_tickets":0,"vouchers":0,"total_claimable":"0","mining_balance":"5"}}"#))!.rewards.value!
+check(plain.miningBalance == 5 && plain.agingNotes == nil && plain.eligibleNotes == nil,
+      "no collector: the consensus counts are not told, never zero")
+let half = W.status(parse(#"{"v":2,"node":{"reachable":true,"phase":"Following","height":9,"tip":"aa"},"rewards":{"claimable_tickets":0,"vouchers":0,"consensus":{"pow_eligible_notes":2,"pow_aging_notes":true}}}"#))!.rewards.value!
+check(half.eligibleNotes == nil && half.agingNotes == nil, "half a count, or a Bool, is no count")
+check(W.snapshot(staked).eligibleNotes == 1 && W.snapshot(staked).stage == .eligible, "the snapshot carries the stake to the stage")
+
 print("Chat (chat.read, prd §1155)")
 check(W.scopeLabel("chat.read") == "Your chats" && W.isReadScope("chat.read"), "chat.read is a read scope with its own words")
 check(W.chatAvailability(parse(#"{"available":false,"reason":"chat_not_started"}"#)) == .notStarted,

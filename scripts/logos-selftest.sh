@@ -321,6 +321,14 @@ check(ticketed.stage == .earning && vouched.stage == .earning, "a ticket, or a v
 check(emptyVoucher.stage == .inSync, "a voucher worth nothing earns nothing")
 var syncingTickets = syncing; syncingTickets.tickets = 2
 check(syncingTickets.stage == .syncing, "a node behind is Syncing whatever it holds")
+var funded = synced; funded.miningBalance = 5; funded.mining = true
+var aging = funded; aging.agingNotes = 212
+var eligible = aging; eligible.eligibleNotes = 1
+var earningEligible = eligible; earningEligible.tickets = 1
+check(funded.stage == .funded && aging.stage == .aging && eligible.stage == .eligible && earningEligible.stage == .earning,
+      "Funded → aging → eligible → earning, each over the one before (prd §1216)")
+var zeroes = synced; zeroes.miningBalance = 0; zeroes.agingNotes = 0; zeroes.eligibleNotes = 0
+check(zeroes.stage == .inSync, "zero stake is no stage")
 check(LogosWire.nodeEvents(old: nil, new: synced).isEmpty, "first sight lands nothing — a node already in sync did not just sync")
 check(LogosWire.nodeEvents(old: syncing, new: synced).map(\.title) == ["Your node is in sync — height 71,763"], "catching up lands once")
 check(LogosWire.nodeEvents(old: synced, new: syncing).map(\.title) == ["Your node fell behind"], "falling behind lands")

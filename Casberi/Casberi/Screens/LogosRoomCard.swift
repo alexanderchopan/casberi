@@ -116,6 +116,7 @@ struct LogosRoomFigure: View {
                 note([String(localized: "Block \(LogosWire.amount(Decimal(h)))"),
                       snap.peers.map { $0 == 1 ? String(localized: "1 peer") : String(localized: "\($0) peers") }]
                         .compactMap { $0 }.joined(separator: " · "))
+                if let line = Self.stake(snap) { note(line) }
                 if let line = Self.earnings(snap) { note(line) }
                 if let v = snap.vouchers, v > 0, let worth = snap.claimable {
                     note(v == 1
@@ -126,6 +127,28 @@ struct LogosRoomFigure: View {
                 unread
             }
         }
+    }
+
+    /// The stake behind the stage (prd §1216): "1 note can propose · 190.9",
+    /// "212 notes aging", else what mining paid. Nil where nothing was told.
+    static func stake(_ snap: LogosWire.NodeSnapshot) -> String? {
+        if let n = snap.eligibleNotes, n > 0 {
+            let notes = n == 1 ? String(localized: "1 note can propose") : String(localized: "\(n) notes can propose")
+            return snap.eligibleBalance.map { "\(notes) · \(Self.tokens($0))" } ?? notes
+        }
+        if let n = snap.agingNotes, n > 0 {
+            return n == 1 ? String(localized: "1 note aging") : String(localized: "\(n) notes aging")
+        }
+        if let paid = snap.miningBalance, paid > 0 {
+            return String(localized: "\(Self.tokens(paid)) from mining")
+        }
+        return nil
+    }
+
+    /// The chain's test token carries decimals (190.909090909), unlike the
+    /// zone's whole coins, so it keeps two places rather than rounding up.
+    static func tokens(_ value: Decimal) -> String {
+        value.formatted(.number.precision(.fractionLength(0...2)).locale(Locale(identifier: "en_US")))
     }
 
     /// "Mining · 3 tickets ready", or nil when the node reports no mining.

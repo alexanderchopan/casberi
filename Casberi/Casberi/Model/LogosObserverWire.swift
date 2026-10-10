@@ -261,6 +261,16 @@ enum LogosObserverWire {
     struct Mining: Equatable { var isMining: Bool; var rewardsEnabled: Bool?; var autoClaim: Bool? }
     struct Rewards: Equatable {
         var tickets: Int?; var slotsUntilExpiry: Int?; var vouchers: Int?; var claimable: Decimal?
+        /// What mining has paid the node's wallet (`mining_balance`, a decimal
+        /// string), read straight off the node — every Observer serves it.
+        var miningBalance: Decimal? = nil
+        /// The optional collector's snapshot (Observer 874b746): how many notes
+        /// are aging and how many may lead. Absent wherever no collector runs,
+        /// which is every Basecamp on a Mac today, so nil is "not told".
+        var miningNotes: Int? = nil
+        var agingNotes: Int? = nil
+        var eligibleNotes: Int? = nil
+        var eligibleBalance: Decimal? = nil
     }
 
     struct Status: Equatable {
@@ -289,11 +299,31 @@ enum LogosObserverWire {
             return Mining(isMining: m, rewardsEnabled: d["rewards_enabled"] as? Bool,
                           autoClaim: d["auto_claim"] as? Bool)
         }
+        func decimal(_ v: Any?) -> Decimal? {
+            (v as? String).flatMap { Decimal(string: $0, locale: Locale(identifier: "en_US_POSIX")) }
+        }
+        func count(_ v: Any?) -> Int? {
+            // A JSON true is an NSNumber too; a count is never a Bool.
+            guard let n = v as? NSNumber, CFGetTypeID(n) != CFBooleanGetTypeID() else { return nil }
+            return n.intValue >= 0 ? n.intValue : nil
+        }
         let rewards: Read<Rewards> = read("rewards") { d in
             Rewards(tickets: (d["claimable_tickets"] as? NSNumber)?.intValue,
                     slotsUntilExpiry: (d["slots_until_expiry"] as? NSNumber)?.intValue,
                     vouchers: (d["vouchers"] as? NSNumber)?.intValue,
-                    claimable: (d["total_claimable"] as? String).flatMap { Decimal(string: $0, locale: Locale(identifier: "en_US_POSIX")) })
+                    claimable: decimal(d["total_claimable"]),
+                    miningBalance: decimal(d["mining_balance"]),
+                    miningNotes: count(d["mining_notes"]),
+                    agingNotes: (d["consensus"] as? [String: Any]).flatMap { count($0["pow_aging_notes"]) },
+                    eligibleNotes: (d["consensus"] as? [String: Any]).flatMap { c in
+                        // Either kind of note may lead; both must be told.
+                        guard let pow = count(c["pow_eligible_notes"]), let wallet = count(c["wallet_eligible_notes"]) else { return nil }
+                        return pow + wallet
+                    },
+                    eligibleBalance: (d["consensus"] as? [String: Any]).flatMap { c in
+                        guard let pow = decimal(c["pow_eligible_balance"]), let wallet = decimal(c["wallet_eligible_balance"]) else { return nil }
+                        return pow + wallet
+                    })
         }
         let observed = (obj["observed_at"] as? String).flatMap { ISO8601DateFormatter().date(from: $0) }
         return Status(observedAt: observed, node: node, peers: peers, mining: mining, rewards: rewards)
@@ -312,6 +342,10 @@ enum LogosObserverWire {
             snap.tickets = r.tickets
             snap.vouchers = r.vouchers
             snap.claimable = r.claimable
+            snap.miningBalance = r.miningBalance
+            snap.agingNotes = r.agingNotes
+            snap.eligibleNotes = r.eligibleNotes
+            snap.eligibleBalance = r.eligibleBalance
         }
         return snap
     }

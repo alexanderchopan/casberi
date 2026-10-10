@@ -976,6 +976,13 @@ extension LogosWire {
         /// never an amount: the route returns none, and a claim can still
         /// fail (the pool exhausted, the reward below the fee).
         var tickets: Int?
+        /// The stake (prd §1216), through an Observer only: what mining paid
+        /// the wallet, and — where the Observer runs its collector — how many
+        /// notes are aging and how many may lead, with their balance.
+        var miningBalance: Decimal?
+        var agingNotes: Int?
+        var eligibleNotes: Int?
+        var eligibleBalance: Decimal?
 
         var synced: Bool { reachable && phase == "Following" }
         static let unreachable = NodeSnapshot(reachable: false)
@@ -986,21 +993,32 @@ extension LogosWire {
         /// read the Observer does not serve yet, so they are not guessed:
         /// a synced node that mines is Mining, one holding a reward is
         /// Earning, and the rest is In sync.
-        enum Stage: Equatable { case syncing, inSync, mining, earning }
+        ///
+        /// Since prd §1216 the stake fills the middle when an Observer tells
+        /// it: **Funded** (mining paid the wallet), **Aging** (notes waiting
+        /// out their age), **Eligible** (notes that may lead — Basecamp's
+        /// "Aged"). Proposing still needs a count no route serves.
+        enum Stage: Equatable { case syncing, inSync, mining, funded, aging, eligible, earning }
 
         var stage: Stage {
             guard synced else { return .syncing }
             if (tickets ?? 0) > 0 || ((vouchers ?? 0) > 0 && (claimable ?? 0) > 0) { return .earning }
+            if (eligibleNotes ?? 0) > 0 { return .eligible }
+            if (agingNotes ?? 0) > 0 { return .aging }
+            if (miningBalance ?? 0) > 0 { return .funded }
             if mining == true, miningPays != false { return .mining }
             return .inSync
         }
 
         var stageWord: String {
             switch stage {
-            case .syncing: return String(localized: "Syncing")
-            case .inSync:  return String(localized: "In sync")
-            case .mining:  return String(localized: "Mining")
-            case .earning: return String(localized: "Earning")
+            case .syncing:  return String(localized: "Syncing")
+            case .inSync:   return String(localized: "In sync")
+            case .mining:   return String(localized: "Mining")
+            case .funded:   return String(localized: "Funded")
+            case .aging:    return String(localized: "Funded, aging")
+            case .eligible: return String(localized: "Eligible to propose")
+            case .earning:  return String(localized: "Earning")
             }
         }
 
