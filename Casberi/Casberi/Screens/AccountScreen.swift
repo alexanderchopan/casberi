@@ -55,10 +55,19 @@ struct SettingsRows: View {
 
     /// A row's page: in the Accounts pane where the shell has one (prd §876),
     /// else the sheet it has always raised. One decision, read by six rows.
+    ///
+    /// **And pushed inside Settings' own sheet on the phone (prd §1238)**:
+    /// one sheet at a time, the next step a page with Back.
     private func open(_ page: SettingsPage, sheet: () -> Void) {
-        guard route.paneHostsPushes else { sheet(); return }
-        DSHaptic.tap()
-        route.fromAccountsList { route.push(.settingsPage(page)) }
+        if route.paneHostsPushes {
+            DSHaptic.tap()
+            route.fromAccountsList { route.push(.settingsPage(page)) }
+        } else if route.sheet != nil {
+            DSHaptic.tap()
+            route.push(.settingsPage(page))
+        } else {
+            sheet()
+        }
     }
 
     var body: some View {

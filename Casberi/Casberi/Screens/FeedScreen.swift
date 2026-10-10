@@ -2009,9 +2009,9 @@ struct FeedScreen: View {
         // One `.sheet(item:)` for every sheet this screen presents — see
         // `FeedSheetRoute`'s doc comment for why five separate `.sheet`
         // modifiers here caused the first tap to silently self-dismiss.
-        .sheet(item: $feedSheet) { route in
-            sheetContent(route)
-        }
+        // ONE SHEET AT A TIME (prd §1238): inside an app sheet the next step
+        // pushes; elsewhere it rises (`feedSheetHost`).
+        .modifier(feedSheetHost)
         // GITHUB'S NEXT STEP AFTER A CONNECT (prd §1030). Keyed on `isActive`
         // too: the pager mounts neighbours, and a GitHub page built beside the
         // room in front must neither spend the landing nor raise a tray

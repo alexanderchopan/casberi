@@ -178,11 +178,8 @@ struct DSTray<Content: View>: View {
         // resting viewport on a body that scrolls, never a dead end; adding a
         // detent of our own to somebody else's set would leave the sheet
         // choosing between two nearly-equal heights on open.
-        .presentationDetents(detents ?? [.height(height + titleOverflow)])
         // …and the Mac twin of that line, because the line above does NOTHING
         // there (2026-08-20). See `dsSizedSheet`.
-        .dsSizedSheet(height + titleOverflow)
-        .presentationDragIndicator(.visible)
         // THE CORNER UIKIT DRAWS FOR US (prd §560, 2026-09-01). `DS.Radius`'s
         // own `presentedSheet` doc argues this for "the most-opened surface in
         // the app" and it had reached exactly three sheets — the reading
@@ -191,7 +188,6 @@ struct DSTray<Content: View>: View {
         // concentric corner and nothing changes; below 26 it pins the same 16
         // every drawn surface in this app already uses. A tray is a presented
         // sheet like any other and had no reason to be the exception.
-        .dsSheetCorner()
         // A tray with a SECOND, larger detent (the Hegotá key/send sheets'
         // own scroll-past-clipping fix) defaults to `.automatic` content
         // interaction — which on a sheet with more than one detent resizes
@@ -206,7 +202,6 @@ struct DSTray<Content: View>: View {
         // resize the sheet itself. Scoped to multi-detent trays only — a
         // single-height tray has nothing to scroll past, so it keeps
         // `.automatic` (unchanged behaviour for the ~30 other trays).
-        .presentationContentInteraction(detents != nil ? .scrolls : .automatic)
         // Feel, re-declared for this presentation (2026-08-01, user: the
         // sources tray's cells were silent). `DSHaptic` is a counter bump on a
         // shared bus, and the mapping from counter to feedback is a VIEW
@@ -222,6 +217,14 @@ struct DSTray<Content: View>: View {
         // HERE rather than at each call site because design law already says
         // every tray in this app is a `DSTray`, so one line covers all of them
         // and a tray built tomorrow can't be born silent.
+        // The presentation half, only when the tray IS the presentation: a
+        // tray pushed inside another sheet (prd §1238) or drawn in a pane
+        // must not set the HOST sheet's detents, or the whole sheet shrinks
+        // to the pushed tray's height.
+        .modifier(DSTrayPresentation(active: !inPane,
+                                     detents: detents ?? [.height(height + titleOverflow)],
+                                     height: height + titleOverflow,
+                                     scrolls: detents != nil))
         .dsSensoryFeedback()
 
         if inPane {
@@ -237,6 +240,28 @@ struct DSTray<Content: View>: View {
             tray.dsInk()
         } else {
             tray.presentationBackground(DS.surfaceSheet).dsColorScheme()
+        }
+    }
+}
+
+/// The tray's presentation modifiers (detents, Mac sizing, grabber, corner,
+/// content interaction), applied only when the tray is itself the sheet.
+private struct DSTrayPresentation: ViewModifier {
+    let active: Bool
+    let detents: Set<PresentationDetent>
+    let height: CGFloat
+    let scrolls: Bool
+
+    func body(content: Content) -> some View {
+        if active {
+            content
+                .presentationDetents(detents)
+                .dsSizedSheet(height)
+                .presentationDragIndicator(.visible)
+                .dsSheetCorner()
+                .presentationContentInteraction(scrolls ? .scrolls : .automatic)
+        } else {
+            content
         }
     }
 }

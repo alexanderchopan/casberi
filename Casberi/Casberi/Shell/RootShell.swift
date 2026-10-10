@@ -4802,8 +4802,13 @@ private struct AppSheetHost: ViewModifier {
         }
         #endif
         .sheet(item: Binding(get: { chrome.appSheet }, set: { chrome.appSheet = $0 })) { app in
-            FeedScreen(source: app.source, isActive: true, inSheet: true,
-                       pinnedWalletSection: app.walletSection)
+            // A stack, so the next step pushes inside the sheet rather than
+            // rising over it (prd §1238); the root draws no bar.
+            NavigationStack {
+                FeedScreen(source: app.source, isActive: true, inSheet: true,
+                           pinnedWalletSection: app.walletSection)
+                    .toolbar(.hidden, for: .navigationBar)
+            }
                 .environment(sceneState.route)
                 .environment(sceneState.filter)
                 .environment(sceneState.detail)

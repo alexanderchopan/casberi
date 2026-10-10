@@ -230,6 +230,40 @@ extension FeedScreen {
     /// budget. Behaviour is unchanged — this is still the ONE presentation
     /// this screen makes (see `FeedSheetRoute`'s doc for why five separate
     /// `.sheet` modifiers made the first tap self-dismiss).
+    /// The screen's one presentation: risen, or pushed inside an app sheet.
+    var feedSheetHost: some ViewModifier {
+        DSOneSheet(route: $feedSheet, pushes: pushesInSheet,
+                   raised: { sheetContent($0) }, pushed: { pushedSheetContent($0) })
+    }
+
+    /// Whether a route pushes inside this app sheet rather than rising over
+    /// it (prd §1238). Only inside an app sheet; the in-app browser is the
+    /// system's, and Worth a look keeps a stack of its own.
+    func pushesInSheet(_ route: FeedSheetRoute) -> Bool {
+        guard inSheet else { return false }
+        switch route {
+        case .web, .worthALook: return false
+        default: return true
+        }
+    }
+
+    /// A route pushed inside the app sheet: the same view, drawn as a page
+    /// (`dsInPane`: no grabber, no detents), the person room without the
+    /// stack it brings when it rises on its own.
+    @ViewBuilder
+    func pushedSheetContent(_ route: FeedSheetRoute) -> some View {
+        Group {
+            if case .person(let source, let handle) = route {
+                PersonRoomScreen(profile: SocialProfile(
+                    source: source, handle: handle,
+                    displayName: nil, bio: nil, avatarURL: nil))
+            } else {
+                sheetContent(route)
+            }
+        }
+        .environment(\.dsInPane, true)
+    }
+
     @ViewBuilder
     func sheetContent(_ route: FeedSheetRoute) -> some View {
         switch route {

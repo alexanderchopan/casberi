@@ -184,38 +184,25 @@ struct SettingsHome: View {
         } message: { entry in
             Text("Its events leave Coming up and Day.")
         }
-        .sheet(isPresented: $calendarAdd) {
+        // One sheet at a time (prd §1238): inside Settings' sheet these push.
+        .sheet(isPresented: Binding(get: { calendarAdd && route.sheet == nil },
+                                    set: { calendarAdd = $0 })) {
             CalendarSubscribeSheet()
+        }
+        .navigationDestination(isPresented: Binding(get: { calendarAdd && route.sheet != nil },
+                                                    set: { calendarAdd = $0 })) {
+            CalendarSubscribeSheet().environment(\.dsInPane, true)
         }
         .confirmationDialog(Text("Add a calendar"), isPresented: $calendarChoice, titleVisibility: .visible) {
             Button("Your phone’s calendars") { route.openSetup(forOffer: "Calendar") }
             Button("Subscribe by link") { calendarAdd = true }
         }
-        .sheet(item: $sheet) { route in
-            sheetContent(route)
-                // A Catalyst sheet does not inherit the presenter's
-                // environment (prd §872).
-                .environment(chrome)
-                .environment(bridges)
-                .environment(self.route)
-                .environment(\.modelContext, context)
-        }
-        .background {
-            Color.clear.sheet(item: $trackPick) { pick in
-                Group {
-                    if pick.room == .reading {
-                        ReadingFindSheet(onTracked: { landAfterTrack(pick.room) })
-                    } else {
-                        FollowTrackTray(room: pick.room, seat: pick.seat,
-                                        onTracked: { landAfterTrack(pick.room) })
-                    }
-                }
-                .environment(chrome)
-                .environment(bridges)
-                .environment(route)
-                .environment(\.modelContext, context)
-            }
-        }
+        .modifier(DSOneSheet(route: $sheet, pushes: { _ in route.sheet != nil },
+                             raised: { settingsSheet($0) },
+                             pushed: { settingsSheet($0).environment(\.dsInPane, true) }))
+        .modifier(DSOneSheet(route: $trackPick, pushes: { _ in route.sheet != nil },
+                             raised: { trackTray($0) },
+                             pushed: { trackTray($0).environment(\.dsInPane, true) }))
         // **A DOOR THAT ASKED FOR THE CATALOGUE LANDS HERE (prd §1234)**:
         // Sources, on Apps, and an app it named runs as its row would.
         .onChange(of: route.openSources, initial: true) { _, wanted in
@@ -276,6 +263,32 @@ struct SettingsHome: View {
     /// The landed name, over the kind you're on.
     private func hit(_ name: String) -> Bool {
         query.isEmpty || name.localizedCaseInsensitiveContains(query)
+    }
+
+    /// A sheet's content with the environment a Catalyst sheet does not
+    /// inherit (prd §872).
+    private func settingsSheet(_ raised: SettingsSheet) -> some View {
+        sheetContent(raised)
+            .environment(chrome)
+            .environment(bridges)
+            .environment(route)
+            .environment(\.modelContext, context)
+    }
+
+    @ViewBuilder
+    private func trackTray(_ pick: TrackPick) -> some View {
+        Group {
+            if pick.room == .reading {
+                ReadingFindSheet(onTracked: { landAfterTrack(pick.room) })
+            } else {
+                FollowTrackTray(room: pick.room, seat: pick.seat,
+                                onTracked: { landAfterTrack(pick.room) })
+            }
+        }
+        .environment(chrome)
+        .environment(bridges)
+        .environment(route)
+        .environment(\.modelContext, context)
     }
 
     /// An app that needs only a name, and the room its follows list in.
