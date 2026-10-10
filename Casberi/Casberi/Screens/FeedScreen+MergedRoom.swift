@@ -97,7 +97,8 @@ extension FeedScreen {
         // In the Feed's scroll (prd §1208c) only the timeline earns the box:
         // a plain cover stands down and its thing stays a row.
         let inFeed = Self.sectionCapNow != nil
-        let timeline = anyCover.map { $0.id == next?.id && !(dayStrip?.isEmpty ?? true) } ?? false
+        let marks = dayCalendarMarks(visible)
+        let timeline = anyCover.map { $0.id == next?.id && !marks.isEmpty } ?? false
         let cover = inFeed && !timeline ? nil : anyCover
         // Box B (prd §1087): the next thing over today's shape, while there
         // is a next thing and a day to draw; else the cover, as every room.
@@ -106,8 +107,8 @@ extension FeedScreen {
             Section { mailSubscriptionsBox }
         } else if comingUp {
             Section { dayComingUpBox }
-        } else if let cover, cover.id == next?.id, let strip = dayStrip, !strip.isEmpty {
-            Section { dayAheadRow(cover, strip: strip) }
+        } else if let cover, cover.id == next?.id, !marks.isEmpty {
+            Section { dayAheadRow(cover, marks: marks) }
         } else if let cover {
             Section { ledeListRow(cover) }
         } else if !heroShown && !inFeed {
@@ -125,14 +126,6 @@ extension FeedScreen {
                     return
                 }
                 if makes.count == 1 { makeInDay(makes[0]) } else { dayMakeOpen = true }
-            }
-            // Today's strip, read off the main path's body (§628) and again
-            // every five minutes while the room is open, so now moves.
-            .task(id: visible.count) {
-                while !Task.isCancelled {
-                    loadDayStrip()
-                    try? await Task.sleep(for: .seconds(300))
-                }
             }
             .feedRowBackground()
             .listRowSeparator(.hidden)
@@ -328,17 +321,23 @@ extension FeedScreen {
 }
 
 extension FeedScreen {
-    /// Today's events onto the strip (prd §1087).
-    func loadDayStrip() {
-        let connected = connectedSeatNames.contains("Calendar")
-        let events = DayStripSource.events(context: modelContext, calendarConnected: connected)
-        let strip = DayStrip.make(events, now: .now, calendar: .current)
-        if strip != dayStrip { dayStrip = strip }
+    /// The calendar's marks (prd §1229): every event and due to-do the Day
+    /// holds in the calendar's five weeks, each as its app's face.
+    func dayCalendarMarks(_ visible: [Thing]) -> [WalletCalendar.Mark] {
+        let cal = Calendar.current
+        let start = WalletCalendar.start(now: .now, calendar: cal)
+        guard let end = cal.date(byAdding: .day, value: WalletCalendar.weeks * 7, to: start) else { return [] }
+        return visible.compactMap { thing in
+            guard thing.isLive, thing.kind == .event || thing.dueAt != nil else { return nil }
+            let day = Self.dayWhen(thing)
+            guard day >= start, day < end else { return nil }
+            return .init(id: thing.id.uuidString, day: day, face: thing.source)
+        }
     }
 
     /// Box B's row: the cover's tap, press and long press, drawing the next
-    /// thing over today's strip.
-    func dayAheadRow(_ thing: Thing, strip: DayStrip) -> some View {
+    /// thing over the calendar (prd §1229).
+    func dayAheadRow(_ thing: Thing, marks: [WalletCalendar.Mark]) -> some View {
         let start = Self.dayWhen(thing)
         let minutes = Int(start.timeIntervalSinceNow / 60)
         let when: String = minutes <= 0 ? String(localized: "now")
@@ -346,14 +345,16 @@ extension FeedScreen {
             : start.formatted(date: Calendar.current.isDateInToday(start) ? .omitted : .abbreviated,
                               time: .shortened)
         let clock = start.formatted(date: .omitted, time: .shortened)
-        let line = [thing.endAt.map { "\(clock)–\($0.formatted(date: .omitted, time: .shortened))" } ?? clock,
+        // The span and the place; the start alone is already `when`, beside
+        // the title (prd §1229 — it was said twice).
+        let line = [thing.endAt.map { "\(clock)–\($0.formatted(date: .omitted, time: .shortened))" },
                     thing.factList.first { $0.action == .map }?.value]
             .compactMap(\.self).joined(separator: " · ")
         return Button {
             openThing(thing)
         } label: {
-            DayAheadCard(source: thing.source, title: thing.title, line: line, when: when, strip: strip,
-                         selected: DS.isMac && chrome.walkSelected == thing.id.uuidString)
+            DayCalendarFigure(title: thing.title, when: when, line: line, marks: marks)
+                .dsRoomBox()
                 .modifier(rowEntrance(0))
                 .contentShape(Rectangle())
         }
@@ -366,8 +367,8 @@ extension FeedScreen {
         .macHoverLift()
         .id(thing.id.uuidString)
         .feedRowBackground()
-        .listRowInsets(.init(top: DS.Space.s2, leading: DSRoomChassis.inset,
-                             bottom: DSRoomChassis.leadGap, trailing: DSRoomChassis.inset))
+        .listRowInsets(.init(top: DS.Space.s2, leading: 0,
+                             bottom: DSRoomChassis.leadGap, trailing: 0))
         .listRowSeparator(.hidden)
     }
 }

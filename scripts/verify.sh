@@ -1977,7 +1977,6 @@ harness "Reading room self-test" "reading room self-test" "scripts/reading-room-
 harness "Social to-you self-test" "social to-you self-test" "scripts/social-toyou-selftest.sh" "the social to-you self-test failed — run scripts/social-toyou-selftest.sh"
 harness "Wallet makeover self-test" "wallet makeover self-test" "scripts/wallet-makeover-selftest.sh" "the wallet makeover self-test failed — run scripts/wallet-makeover-selftest.sh"
 harness "YouTube player self-test" "youtube player self-test" "scripts/youtube-player-selftest.sh" "the YouTube player self-test failed — run scripts/youtube-player-selftest.sh"
-harness "Day strip self-test" "day strip self-test" "scripts/day-strip-selftest.sh" "the day strip self-test failed — run scripts/day-strip-selftest.sh"
 
 # Markets' watchlist and alerts (prd §1081): when an alert fires and turns
 # itself off, which line a row says, and a heat map that fills its box.
