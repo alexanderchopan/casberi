@@ -270,6 +270,15 @@ extension SocialScope: DSTileScope {
     }
 }
 
+extension MediaScope: DSTileScope {
+    var glyph: String {
+        switch self {
+        case .all: return ScopeTileGlyph.all
+        case .subscriptions: return ScopeTileGlyph.watch
+        }
+    }
+}
+
 extension YouTile: DSTileScope {
     var glyph: String {
         switch self {
