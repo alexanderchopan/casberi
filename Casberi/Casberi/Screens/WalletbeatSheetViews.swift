@@ -12,6 +12,8 @@ import SwiftUI
 
 /// A security incident — Walletbeat's prose, the facts they record, and their citations.
 struct WalletbeatIncidentHead: View {
+    /// Inside a sheet's stack the next step pushes (prd §1238).
+    @Environment(\.dsInSheetStack) private var inSheetStack
 	let thing: Thing
 	/// In the room's frame (prd §1191): the box says the headline and the
 	/// status, so the head keeps the summary, the facts and the sources.
@@ -59,7 +61,7 @@ struct WalletbeatIncidentHead: View {
 		// head is itself inside a presented sheet, which is the one place this app
 		// allows a nested `.sheet` (`ReplyingToRow`'s ruling). It hangs off `liveBody`
 		// so a row deleted underneath takes the card down with it.
-		.sheet(item: $openedWallet) { walletID in
+		.dsOneSheet(item: $openedWallet, pushes: { _ in inSheetStack }) { walletID in
 			WalletbeatCardScreen(walletID: walletID)
 		}
 	}

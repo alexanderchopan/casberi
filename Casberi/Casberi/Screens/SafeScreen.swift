@@ -14,6 +14,8 @@ import WalletConnectSign
 /// otherwise would be fake status (the same divergence Gnosis Pay's seat
 /// makes for the same reason).
 struct SafeScreen: View {
+    /// Inside a sheet's stack the next step pushes (prd §1238).
+    @Environment(\.dsInSheetStack) private var inSheetStack
     @Environment(\.modelContext) private var modelContext
     @Environment(BridgeStore.self) private var store
     // This window's stack (per-window since `SceneState`).
@@ -136,7 +138,7 @@ struct SafeScreen: View {
             Task { await readEnclave() }
             Task { await readGuards() }
         }
-        .sheet(item: $pastedAsk) { ask in
+        .dsOneSheet(item: $pastedAsk, pushes: { _ in inSheetStack }) { ask in
             SafeAskSheet(ask: ask, paired: false)
                 .environment(chrome)
         }

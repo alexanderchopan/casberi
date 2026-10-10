@@ -23,6 +23,8 @@ import SwiftData
 /// AND Social — and a chip is drawn only for a category that holds somebody,
 /// so a selected chip never stands over an empty list (the Accounts rule).
 struct AddressesSection: View {
+    /// Inside a sheet's stack the next step pushes (prd §1238).
+    @Environment(\.dsInSheetStack) private var inSheetStack
     /// The Accounts screen's search field, shared; the query filters the rows
     /// live over every identity a row carries. It is a filter, not a
     /// resolver (§690: a new address is asked for on the seat pages).
@@ -155,11 +157,11 @@ struct AddressesSection: View {
         } message: {
             Text("It rides every future transfer with this address. Blank clears it.")
         }
-        .sheet(item: $opened) { contact in
+        .dsOneSheet(item: $opened, pushes: { _ in inSheetStack }) { contact in
             ContactSheet(contact: contact) { Task { await refresh() } }
                 .dsReadSheet()
         }
-        .sheet(item: $asked) { pair in
+        .dsOneSheet(item: $asked, pushes: { _ in inSheetStack }) { pair in
             SamePersonSheet(a: pair.a, b: pair.b, whereA: Self.where(pair.a, pair.link),
                             whereB: Self.where(pair.b, pair.link), verdict: verdict) {
                 ContactLinksStore.shared.confirm(pair.link.a, pair.link.b)
@@ -1000,6 +1002,8 @@ struct ContactFace: View {
 /// each line saying HOW the app knows it: verified, you confirmed, from their
 /// contact card. "With you" (the things across the corpus) is the next pass.
 struct ContactSheet: View {
+    /// Inside a sheet's stack the next step pushes (prd §1238).
+    @Environment(\.dsInSheetStack) private var inSheetStack
     let contact: Contact
     /// Called after a change this sheet made (a rename, an unfollow) so the
     /// list behind it rebuilds; the sheet dismisses itself on those.
@@ -1081,8 +1085,18 @@ struct ContactSheet: View {
         func hash(into hasher: inout Hasher) { hasher.combine(id) }
     }
 
+    /// Pushed inside a sheet's stack (prd §1238) it brings no stack of its
+    /// own; risen on its own, it does.
     var body: some View {
-        NavigationStack {
+        if inSheetStack {
+            stackContent
+        } else {
+            NavigationStack { stackContent }
+        }
+    }
+
+    private var stackContent: some View {
+        Group {
             ScrollView {
                 VStack(alignment: .leading, spacing: DS.Space.s6) {
                     VStack(spacing: DS.Space.s3) {
@@ -1247,7 +1261,7 @@ struct ContactSheet: View {
                     }
                 }
             }
-            .sheet(item: $openedThing) { thing in ThingSheetView(thing: thing) }
+            .dsOneSheet(item: $openedThing, pushes: { _ in inSheetStack }) { thing in ThingSheetView(thing: thing) }
             .sheet(item: $composer) { which in
                 switch which {
                 case .messages:

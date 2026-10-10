@@ -108,24 +108,39 @@ extension View {
     /// only one without a chassis. `detent` binds the selection where the
     /// sheet moves itself. Ink is NOT folded in: the thing sheet paints its
     /// own ground.
-    @ViewBuilder
     func dsReadSheet(detent: Binding<PresentationDetent>? = nil,
                      fit: CGFloat? = nil) -> some View {
+        modifier(DSReadSheet(detent: detent, fit: fit))
+    }
+
+}
+
+/// `dsReadSheet`'s body. A reading sheet PUSHED inside another sheet (prd
+/// §1238) draws as a page (`dsInPane`) and sets no detents, or the host sheet
+/// would shrink to the pushed page's half height.
+private struct DSReadSheet: ViewModifier {
+    let detent: Binding<PresentationDetent>?
+    let fit: CGFloat?
+    @Environment(\.dsInPane) private var inPane
+
+    func body(content: Content) -> some View {
         // A FITTED sheet (prd §886) opens at its content's own height, with
         // the full height a drag away; the half/full pair is the fallback until
         // the content has been measured, and for every sheet that is not fitted.
-        if let detent, let fit {
-            presentationDetents([.height(fit), .large], selection: detent)
+        if inPane {
+            content
+        } else if let detent, let fit {
+            content.presentationDetents([.height(fit), .large], selection: detent)
                 .dsPageSheet()
                 .presentationDragIndicator(.visible)
                 .dsSheetCorner()
         } else if let detent {
-            presentationDetents([.medium, .large], selection: detent)
+            content.presentationDetents([.medium, .large], selection: detent)
                 .dsPageSheet()
                 .presentationDragIndicator(.visible)
                 .dsSheetCorner()
         } else {
-            presentationDetents([.medium, .large])
+            content.presentationDetents([.medium, .large])
                 .dsPageSheet()
                 .presentationDragIndicator(.visible)
                 .dsSheetCorner()

@@ -18,6 +18,8 @@ import Translation
 /// filing surface retired; renaming a cluster lives in project detail).
 /// Related streams last. Spacing does the separating — no hairlines.
 struct ThingSheetView: View {
+    /// Inside a sheet's stack the next step pushes (prd §1238).
+    @Environment(\.dsInSheetStack) private var inSheetStack
     @Bindable var thing: Thing
     /// Set only when this sheet is PUSHED inside another sheet's own
     /// NavigationStack (2026-07-23) — the Worth-a-look tray's flagged rows,
@@ -1374,7 +1376,7 @@ struct ThingSheetView: View {
         }
         // Whoever is behind a tapped face — a person theirs to watch from
         // here, or the address card for a wallet (prd §369 amendment).
-        .sheet(item: $faceTarget) { target in
+        .dsOneSheet(item: $faceTarget, pushes: { _ in inSheetStack }) { target in
             switch target {
             case .person(let profile): SocialProfileCard(profile: profile)
             case .address(let entry):  AddressCard(entry: entry)
@@ -1401,7 +1403,7 @@ struct ThingSheetView: View {
         }
         // Walking a vault's own wikilink graph (2026-07-28) — a plain
         // re-presentation of this same sheet over the linked note.
-        .sheet(item: $walkingToNote) { note in
+        .dsOneSheet(item: $walkingToNote, pushes: { _ in inSheetStack }) { note in
             // `walkingToScope` rather than `walk`: the neighbour doors set it
             // to this sheet's own scope so a walk keeps following the list two
             // doors in, and every OTHER walk in this file (a quote, a parent,

@@ -825,6 +825,7 @@ struct MainSurface: View {
                     .dsSheetDismiss { route.closeSheet() }
                     .navigationDestination(for: HomeRoute.Node.self) { leafRoom($0) }
             }
+            .environment(\.dsInSheetStack, true)
             .dsNavSheet()
         }
     }

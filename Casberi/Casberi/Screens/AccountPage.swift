@@ -52,6 +52,8 @@ import SwiftData
 /// model hand-off — the FILTER, which stands; its per-account control is
 /// deleted (§708).
 struct AccountPage<Act: View, More: View, KeySheet: View>: View {
+    /// Inside a sheet's stack the next step pushes (prd §1238).
+    @Environment(\.dsInSheetStack) private var inSheetStack
     /// The catalog name — mark, title, reach registry lookup.
     let name: String
     /// The BridgeStore seat id — notes and the visit stamp key on it.
@@ -241,7 +243,7 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
         // room's chevron still have a bar to sit in.
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
-        .sheet(item: $sheet) { which in
+        .dsOneSheet(item: $sheet, pushes: { inSheetStack && $0.pushes }) { which in
             switch which {
             case .key:
                 // THE HOST WRAPS THE SHEET, NOT ITS ROW. `AccountKeySheet`
@@ -787,6 +789,16 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
 /// sheet opens onto a row a foreground heal deleted underneath it. The sheet
 /// re-reads it, and draws nothing if it has gone.
 enum AccountPageSheet: Identifiable {
+    /// Whether it pushes inside a sheet's stack (prd §1238): a profile, a
+    /// thing and Track do; the key and card sheets keep stacks of their own
+    /// and the browser is the system's, so they rise.
+    var pushes: Bool {
+        switch self {
+        case .profile, .thing, .track: return true
+        default: return false
+        }
+    }
+
     case key
     case profile(SocialProfile)
     case thing(id: UUID)

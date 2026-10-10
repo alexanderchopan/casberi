@@ -28,6 +28,8 @@ extension L2beatDirectoryScreen.Layer: DSSectionScope {}
 /// comparison table — the surface actually built for finding one chain among 105 — made you
 /// scroll for it.
 struct L2beatDirectoryScreen: View {
+    /// Inside a sheet's stack the next step pushes (prd §1238).
+    @Environment(\.dsInSheetStack) private var inSheetStack
 	@Environment(\.modelContext) private var modelContext
 	@Environment(BridgeStore.self) private var store
 
@@ -159,7 +161,7 @@ struct L2beatDirectoryScreen: View {
 		.dsPageBackground()
 		.dsSoftScrollEdges()
 		.dsScreenTitle("Every chain")
-		.sheet(item: $opened) { chainID in
+		.dsOneSheet(item: $opened, pushes: { _ in inSheetStack }) { chainID in
 			L2beatCardScreen(chainID: chainID)
 		}
 		.onAppear(perform: load)

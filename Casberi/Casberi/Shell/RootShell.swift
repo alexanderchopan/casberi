@@ -4809,6 +4809,7 @@ private struct AppSheetHost: ViewModifier {
                            pinnedWalletSection: app.walletSection)
                     .toolbar(.hidden, for: .navigationBar)
             }
+                .environment(\.dsInSheetStack, true)
                 .environment(sceneState.route)
                 .environment(sceneState.filter)
                 .environment(sceneState.detail)

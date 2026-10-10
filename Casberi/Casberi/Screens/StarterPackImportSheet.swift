@@ -6,6 +6,8 @@ import SwiftUI
 /// consolidation fixed once already; isolating a second sheet's presentation
 /// in its own subview sidesteps it instead of re-risking it).
 struct StarterPacksDoor: View {
+    /// Inside a sheet's stack the next step pushes (prd §1238).
+    @Environment(\.dsInSheetStack) private var inSheetStack
     var onImport: (Int) -> Void
     @State private var open = false
 
@@ -16,7 +18,7 @@ struct StarterPacksDoor: View {
             BridgeIcon(name: "Bluesky", size: DS.Mark.list, circular: false)
         }
         .dsListRow()
-        .sheet(isPresented: $open) {
+        .dsOneSheet(isPresented: $open, pushes: inSheetStack) {
             StarterPackImportSheet(onImport: onImport)
         }
     }

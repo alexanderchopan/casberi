@@ -17,6 +17,8 @@ extension WalletbeatDirectoryScreen.Kind: DSSectionScope {}
 /// and "best" would be a lie — most of this list is a list of unknowns, and the screen has
 /// to say so rather than paint 32 confident strips.
 struct WalletbeatDirectoryScreen: View {
+    /// Inside a sheet's stack the next step pushes (prd §1238).
+    @Environment(\.dsInSheetStack) private var inSheetStack
 	@Environment(\.modelContext) private var modelContext
 	@Environment(BridgeStore.self) private var store
 
@@ -102,7 +104,7 @@ struct WalletbeatDirectoryScreen: View {
 		.dsPageBackground()
 		.dsSoftScrollEdges()
 		.dsScreenTitle("Every wallet")
-		.sheet(item: $opened) { walletID in
+		.dsOneSheet(item: $opened, pushes: { _ in inSheetStack }) { walletID in
 			WalletbeatCardScreen(walletID: walletID)
 		}
 		.onAppear(perform: load)

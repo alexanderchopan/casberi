@@ -19,6 +19,8 @@ import SwiftData
 /// encrypted to its owner and the sequencer answers it as an empty public
 /// account, which a watch would draw as a confident zero.
 struct LogosScreen: View {
+    /// Inside a sheet's stack the next step pushes (prd §1238).
+    @Environment(\.dsInSheetStack) private var inSheetStack
     @Environment(\.modelContext) private var modelContext
     @Environment(BridgeStore.self) private var store
     @Bindable private var logos = LogosStore.shared
@@ -101,7 +103,7 @@ struct LogosScreen: View {
         } message: {
             Text("Blank shows the id instead.")
         }
-        .sheet(item: $pairOffer) { box in
+        .dsOneSheet(item: $pairOffer, pushes: { _ in inSheetStack }) { box in
             LogosObserverPairTray(offer: box.offer) {
                 lastResult = .says(String(localized: "Paired with \(box.offer.name)."))
                 Task { await sync() }

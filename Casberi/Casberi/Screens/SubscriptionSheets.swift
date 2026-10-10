@@ -10,6 +10,8 @@ import SwiftData
 /// composes too, and its first doors are this service's other pages when it
 /// has them (`ServiceLinks`): the app's feed, and the list that mails you.
 struct SubscriptionSheet: View {
+    /// Inside a sheet's stack the next step pushes (prd §1238).
+    @Environment(\.dsInSheetStack) private var inSheetStack
     let id: String
     /// What it costs: the Wallet's sheet says it; Settings' never does (prd
     /// §1136 item 10, §1143), so it shows when it renews and where it is from.
@@ -56,7 +58,7 @@ struct SubscriptionSheet: View {
         // Renamed in the editor, the plan is under another id: this page has
         // nothing left to show, so it closes onto the list that holds it.
         .onChange(of: item == nil) { _, gone in if gone { dismiss() } }
-        .sheet(item: $editing) { manual in
+        .dsOneSheet(item: $editing, pushes: { _ in inSheetStack }) { manual in
             SubscriptionAddTray(editing: manual)
                 // A Catalyst sheet does not inherit the presenter's
                 // environment (prd §872).

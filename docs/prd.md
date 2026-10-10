@@ -65771,3 +65771,12 @@ Supersedes §770's evening digest and its per-category switches; amends §809 an
 2. **The Day button is unchanged**: its screen is built from the `Schedule` apps (`RoomAccounts.day`, `dayGroup`, `isDaySource`), not a category, as Notes is built from the apps you write in (§1235). An icon of theirs still opens Day (`host(ofSource:)` asks Day first).
 3. Their rows stand on Day alone: never in Life's list or the Feed's Life section (`liveVisible`).
 4. Feed order loses its Day slot (`CategoryOrder.defaultOrder`); a stored order sheds it on reconcile.
+
+## §1240 — One sheet at a time, the rest (user, 2026-10-10: "do the rest of the sheets")
+
+Completes §1238.
+
+1. **A flag says where a view stands**: `dsInSheetStack`, set on the app sheet's stack, the route sheet's stack and the connect form's. A view in one pushes its next step (`dsOneSheet(item:pushes:)`, `dsOneSheet(isPresented:pushes:)`); risen on its own, it still raises a sheet.
+2. **Pushed now**: an account page's profile, thing and Track (`AccountPageSheet.pushes`); Addresses' contact and same-person sheets, and a contact's thing (the contact sheet brings no stack of its own when pushed); a thing sheet's face door and its walk to a note; a person room's thing; Wallet history's thing; the L2BEAT and Walletbeat cards; Logos' observer pairing; Safe's pasted ask; a subscription's edit tray; the starter-pack import; a post's and a reply's profile; a profile's follow import.
+3. **A pushed reading sheet sets no height** (`DSReadSheet` reads `dsInPane`), as a pushed tray does not (§1238 item 3).
+4. **Still rising, by design**: the system's own sheets (the in-app browser, Photos, Share, Files, Mail and Messages, Translate), the full-screen photo viewer and web sign-ins, and the views that keep a stack of their own (an account's key and card sheets, a post opened from a quote, Worth a look).

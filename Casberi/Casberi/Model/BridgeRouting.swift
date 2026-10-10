@@ -718,6 +718,7 @@ struct ConnectFormSheet<Deeper: View>: View {
                 .dsSheetDismiss { dismiss() }
                 .navigationDestination(for: HomeRoute.Node.self) { deeper($0) }
         }
+        .environment(\.dsInSheetStack, true)
         // THE GRABBER WENT WITH THE WORD (prd §560, 2026-09-01). A
         // `presentationDragIndicator(.visible)` was here, and this was the
         // only nav sheet that had one: a tray exits by its grabber and a nav

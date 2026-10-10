@@ -12,6 +12,8 @@ import SwiftData
 /// Scoped by the same wallet the feed was scoped to — arriving here from a
 /// wallet-scoped feed keeps that scope rather than silently widening it.
 struct WalletHistoryScreen: View {
+    /// Inside a sheet's stack the next step pushes (prd §1238).
+    @Environment(\.dsInSheetStack) private var inSheetStack
     /// nil = every watched wallet (the feed's "All" chip).
     let scope: String?
 
@@ -135,7 +137,7 @@ struct WalletHistoryScreen: View {
         .dsPageBackground()
         .dsSoftScrollEdges()
         .dsScreenTitle(title)
-        .sheet(item: $sheetThing) { ThingSheetView(thing: $0) }
+        .dsOneSheet(item: $sheetThing, pushes: { _ in inSheetStack }) { ThingSheetView(thing: $0) }
     }
 
     /// Which watched wallet a transaction came from — only when more than one

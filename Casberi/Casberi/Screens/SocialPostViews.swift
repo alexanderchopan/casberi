@@ -310,6 +310,8 @@ struct SocialPostSheet: View {
 /// INSIDE the scroll container — a layer behind a NavigationStack never shows
 /// through its opaque backing (the gotcha this codebase already paid for).
 struct SocialPostThread: View {
+    /// Inside a sheet's stack the next step pushes (prd §1238).
+    @Environment(\.dsInSheetStack) private var inSheetStack
     let post: SocialCard
     let source: String
     /// Where a tapped reply goes — the enclosing stack pushes it.
@@ -369,7 +371,7 @@ struct SocialPostThread: View {
         // follows the theme.
         .background(DS.inkGround)
         .navigationBarTitleDisplayMode(.inline)
-        .sheet(item: $profile) { p in
+        .dsOneSheet(item: $profile, pushes: { _ in inSheetStack }) { p in
             SocialProfileCard(profile: p)
         }
         .task {
@@ -403,6 +405,8 @@ struct SocialPostThread: View {
 /// its face opens the person. Shared by the thing sheet and the walker, so a
 /// reply reads the same however deep you are.
 struct SocialRepliesSection: View {
+    /// Inside a sheet's stack the next step pushes (prd §1238).
+    @Environment(\.dsInSheetStack) private var inSheetStack
     let replies: [SocialReply]
     let source: String
     /// Where a tapped reply goes. The thing sheet opens the walker; the walker
@@ -423,7 +427,7 @@ struct SocialRepliesSection: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .sheet(item: $profile) { p in
+        .dsOneSheet(item: $profile, pushes: { _ in inSheetStack }) { p in
             SocialProfileCard(profile: p)
         }
     }
@@ -499,6 +503,8 @@ struct SocialRepliesSection: View {
 /// bridges cache profiles per launch, so opening one for someone already in
 /// your feed costs nothing.
 struct SocialProfileCard: View {
+    /// Inside a sheet's stack the next step pushes (prd §1238).
+    @Environment(\.dsInSheetStack) private var inSheetStack
     let profile: SocialProfile
     @Environment(\.modelContext) private var modelContext
     /// OPTIONAL on purpose (2026-07-16). This card opens from anywhere a face
@@ -568,7 +574,7 @@ struct SocialProfileCard: View {
             watched = SocialPeople.isWatched(handle: profile.handle, source: profile.source)
             loaded = await SocialPeople.profile(handle: profile.handle, source: profile.source)
         }
-        .sheet(item: $followImport) { target in
+        .dsOneSheet(item: $followImport, pushes: { _ in inSheetStack }) { target in
             FollowImportSheet(source: target.source, handle: target.handle) { added in
                 guard added > 0 else { return }
                 Task { await SocialPeople.sync(source: target.source, context: modelContext) }

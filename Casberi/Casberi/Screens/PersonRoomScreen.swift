@@ -15,6 +15,8 @@ import SwiftData
 /// `RootShell`'s environment) and migrating all of them is a separate,
 /// riskier change from adding a new door.
 struct PersonRoomScreen: View {
+    /// Inside a sheet's stack the next step pushes (prd §1238).
+    @Environment(\.dsInSheetStack) private var inSheetStack
     let profile: SocialProfile
     @Environment(\.modelContext) private var modelContext
 
@@ -136,7 +138,7 @@ struct PersonRoomScreen: View {
         .scrollContentBackground(.hidden)
         .navigationTitle(shown.title)
         .navigationBarTitleDisplayMode(.inline)
-        .sheet(item: $sheetThing) { thing in ThingSheetView(thing: thing) }
+        .dsOneSheet(item: $sheetThing, pushes: { _ in inSheetStack }) { thing in ThingSheetView(thing: thing) }
         .task { await load() }
     }
 
