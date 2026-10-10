@@ -21,9 +21,10 @@ extension View {
     }
 
     /// The title row: the room's name in the rows' column. The demo's pill
-    /// reserves its band above it (prd §1005).
-    func dsRoomTitleListRow() -> some View {
-        listRowInsets(.init(top: DS.Space.s2 + DSDemoMark.screenClearance,
+    /// reserves its band above it (prd §1005) — on a page, never in a sheet,
+    /// which the pill does not cover (prd §1220).
+    func dsRoomTitleListRow(inSheet: Bool = false) -> some View {
+        listRowInsets(.init(top: DS.Space.s2 + (inSheet ? 0 : DSDemoMark.screenClearance),
                             leading: DSRoomChassis.inset,
                             bottom: 0, trailing: DSRoomChassis.inset))
             .feedRowBackground()

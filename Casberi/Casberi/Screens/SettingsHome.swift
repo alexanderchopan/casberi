@@ -55,7 +55,7 @@ struct SettingsHome: View {
         ScrollViewReader { proxy in
         List {
             DSRoomTitleRow(title: casberiOpen ? String(localized: "Settings") : String(localized: "Sources"))
-                .dsRoomTitleListRow()
+                .dsRoomTitleListRow(inSheet: route.sheet != nil)
             Section {
                 // Under the Settings tile the box is Casberi's own settings
                 // (prd §1208c); under Sources, the kinds you connected.

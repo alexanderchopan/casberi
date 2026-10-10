@@ -1443,7 +1443,7 @@ extension FeedScreen {
         .accessibilityLabel(Text("Moved \(amount), \(route)"))
         .listRowInsets(EdgeInsets(top: DS.Space.s2,
                                   leading: DSRoomChassis.rowInset(forMark: DS.Face.list),
-                                  bottom: DS.Space.s2, trailing: DS.Space.s4))
+                                  bottom: DS.Space.s2, trailing: DSRoomChassis.rowInset))
         .feedRowBackground()
         .listRowSeparator(.hidden)
     }
@@ -1553,7 +1553,7 @@ extension FeedScreen {
         .accessibilityLabel(Text("\(received ? String(localized: "Received from") : String(localized: "Sent to")) \(who), \(amount.text)"))
         .listRowInsets(EdgeInsets(top: DS.Space.s2,
                                   leading: DSRoomChassis.rowInset(forMark: DS.Face.list),
-                                  bottom: DS.Space.s2, trailing: DS.Space.s4))
+                                  bottom: DS.Space.s2, trailing: DSRoomChassis.rowInset))
         .feedRowBackground()
         .listRowSeparator(.hidden)
     }

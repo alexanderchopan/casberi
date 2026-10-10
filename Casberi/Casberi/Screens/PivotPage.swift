@@ -29,7 +29,7 @@ struct PivotPage: View {
         let rows = filtered
         List {
             DSRoomTitleRow(title: query.title, pick: query.pick)
-                .dsRoomTitleListRow()
+                .dsRoomTitleListRow(inSheet: true)
             Section { box(rows) }
             if tiles.count > 1 {
                 Section {

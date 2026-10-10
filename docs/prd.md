@@ -65644,3 +65644,13 @@ The Feed's rule (§1208m) for the Wallet: Home is the page, and Holdings, Securi
 ## §1221 — Security's box is Settings' count grid (user, 2026-10-10: "we can also make the security card look like the settings and sources one -- 2 columns")
 
 `WalletSecurityFigure` draws its six counts two across in `DSCountTile`s inside a `DSCountGrid(bare: true)` (the box is already a well, so the grid draws none of its own). A count that wants you says so in its word (§1004); a zero is disabled, a fact and not a door (§83). The tile reads "Poisoning", the list under it keeps "Address poisoning". The glyph discs are gone with the old grid.
+
+## §1222 — What this app reaches takes the Feed's shape (user, 2026-10-10: "i want it like we have on Feed which is all boxes showing … same size as they are on feed and wallet … the categories when scrolled should be on cards")
+
+1. **The claim is the title row**, "There is no server." in the title's pink (`DSRoomTitleRow`), the system's title removed, so the screen has one head (§564).
+2. **The request map is the room's box** at its one size (`dsRoomBox`); the sentence that reads it ("… asks most … Hosts and counts only") stands under the box.
+3. **A box per category, every one showing**: the Feed's glance at its one size (`GlanceShell`, the frame `GlanceTile` now draws in), the busiest service and its receipt, else the first service and when it would reach. No "N more". A box jumps to its category's card and brightens it once. The glass capsule (`dsScopeDock`, `ReachScope`) is deleted.
+4. **Each category on the Feed's card** (`SectionPanelGroup` + `SectionPanelName`, the templates the Feed's and the Wallet's sections now draw through): every service once, "Not on the list" first on its own card, a service with no category under Casberi. The old groups' names (Reaching now, Only when you tap, Only if you connect them) are said on each row that has no receipt.
+5. **Data stays a tray** (`DSTray`, design law): switches and acts, not a scroll of things, so it takes no box or cards.
+
+Same pass: a sheet's title row reserves no band for the demo pill, which never covers a sheet (`dsRoomTitleListRow(inSheet:)`); the Wallet's move rows put their amount in the rows' column.

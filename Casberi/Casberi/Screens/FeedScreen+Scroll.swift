@@ -90,31 +90,10 @@ extension FeedScreen {
     @ViewBuilder
     func panelSection<Rows: View>(_ name: String, glyph: String, things: [Thing],
                                   @ViewBuilder rows: () -> Rows) -> some View {
-        // A chapter's air stands between panels, never inside one. The name
-        // carries an identity the list knows before it is laid out, so a
-        // jump can land on a section still off screen.
-        Section {
-            ForEach([Self.scrollAnchor(name)], id: \.self) { _ in
-                Color.clear
-                    .frame(height: DS.Space.s6)
-                    .listRowInsets(EdgeInsets())
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-                    .accessibilityHidden(true)
-                scrollHeader(name, glyph: glyph, things).listRowBackground(SectionPanel(part: .top, lit: landedSection == name))
-            }
-        }
-        Group {
+        SectionPanelGroup(anchor: Self.scrollAnchor(name), lit: landedSection == name) {
+            scrollHeader(name, glyph: glyph, things)
+        } rows: {
             rows()
-        }
-        .environment(\.feedSectionPanel, true)
-        Section {
-            Color.clear
-                .frame(height: DS.Space.s4)
-                .listRowInsets(EdgeInsets())
-                .listRowSeparator(.hidden)
-                .listRowBackground(SectionPanel(part: .bottom))
-                .accessibilityHidden(true)
         }
     }
 
@@ -152,15 +131,7 @@ extension FeedScreen {
             things.filter { $0.isLive && $0.capturedAt > since && !seen.contains($0.id) }.count
         } ?? 0
         let calm = reduceMotion
-        return HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-            Image(systemName: glyph)
-                .dsGlyph(.body)
-                .foregroundStyle(DS.brandInk)
-                .accessibilityHidden(true)
-            Text(category)
-                .dsText(.heading28)
-                .foregroundStyle(DS.brandInk)
-                .lineLimit(1)
+        return SectionPanelName(name: category, glyph: glyph) {
             if fresh > 0 {
                 HStack(spacing: DS.Space.s1) {
                     Circle().fill(DS.tint).frame(width: 7, height: 7)
@@ -172,15 +143,8 @@ extension FeedScreen {
                 }
                 .transition(.opacity)
             }
-            Spacer(minLength: 0)
         }
         .animation(DS.Motion.standard, value: fresh)
-        .accessibilityElement(children: .combine)
-        .accessibilityAddTraits(.isHeader)
-        .padding(.leading, DSRoomChassis.rowInset)
-        .padding(.trailing, DSRoomChassis.rowInset)
-        .padding(.top, DS.Space.s4)
-        .padding(.bottom, DS.Space.s2)
         // THE HANDOFF (prd §1208l): tied to where the name stands, never a
         // timer — between a little under the line and the line it shrinks
         // toward the pill and fades; under Reduce Motion it only fades.
@@ -551,97 +515,59 @@ struct GlanceTile: View {
         let title = newest.isLive ? newest.title : ""
         let money = MoneyClause.split(title)
         let follower = next.flatMap { $0.isLive ? $0.title : nil }
-        Button(action: action) {
-            VStack(alignment: .leading, spacing: 0) {
-                if let (shot, size) = picture {
-                    // PINNED TO THE BAND (prd §1208i): a filled picture
-                    // reports its filled size, and `maxWidth: .infinity`
-                    // never caps it — a wide strip widened the whole tile
-                    // past its column, over its neighbour and off the screen.
-                    GeometryReader { geo in
-                        StoredPicture(shot, size: size) { image in
-                            Image(uiImage: image).resizable().scaledToFill()
-                        }
-                        .frame(width: geo.size.width, height: geo.size.height)
+        GlanceShell(category: category, when: LiveTimeText.short(moment), fresh: fresh,
+                    accessibility: Text(verbatim: "\(category). \(title)"), action: action) {
+            if let (shot, size) = picture {
+                // PINNED TO THE BAND (prd §1208i): a filled picture
+                // reports its filled size, and `maxWidth: .infinity`
+                // never caps it — a wide strip widened the whole tile
+                // past its column, over its neighbour and off the screen.
+                GeometryReader { geo in
+                    StoredPicture(shot, size: size) { image in
+                        Image(uiImage: image).resizable().scaledToFill()
                     }
-                    .frame(height: Self.artHeight)
-                    .clipped()
+                    .frame(width: geo.size.width, height: geo.size.height)
                 }
-                VStack(alignment: .leading, spacing: DS.Space.s1) {
-                    HStack(spacing: DS.Space.s2) {
-                        if picture == nil { mark }
-                        Text(verbatim: category)
-                            .dsText(.label12)
-                            .fontWeight(.semibold)
-                            .foregroundStyle(DS.brandInk)
-                            .lineLimit(1)
-                        Spacer(minLength: 0)
-                        // When the newest is: an age, or how soon an event
-                        // starts.
-                        Text(verbatim: LiveTimeText.short(moment))
-                            .dsText(.label12)
-                            .foregroundStyle(DS.textTertiary)
-                            .lineLimit(1)
-                    }
-                    if picture == nil, let cast {
-                        DSLeadCast(roll: cast, source: newest.isLive ? newest.source : "", size: DS.Face.badge)
-                            .padding(.vertical, DS.Space.s1)
-                    }
-                    if let money {
-                        // Money leads with its figure, the name under it.
-                        Text(verbatim: money.amount)
-                            .dsText(.heading24)
-                            .monospacedDigit()
-                            .foregroundStyle(DS.textPrimary)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.7)
-                        Text(verbatim: money.title)
-                            .dsText(.subhead12)
-                            .foregroundStyle(DS.textSecondary)
-                            .lineLimit(1)
-                    } else {
-                        Text(verbatim: title)
-                            .dsText(.body17)
-                            .fontWeight(.medium)
-                            .foregroundStyle(DS.textPrimary)
-                            .lineLimit(typeSize.isAccessibilitySize ? nil
-                                       : picture != nil ? 2 : (cast != nil || follower != nil ? 2 : 4))
-                            .multilineTextAlignment(.leading)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                    if picture == nil, cast == nil, let follower, !follower.isEmpty {
-                        Text(verbatim: follower)
-                            .dsText(.subhead12)
-                            .foregroundStyle(DS.textSecondary)
-                            .lineLimit(2)
-                            .padding(.top, DS.Space.s1)
-                    }
-                }
-                .padding(.horizontal, DS.Space.s3)
-                .padding(.vertical, DS.Space.s3)
-                Spacer(minLength: 0)
-                if fresh > 0 {
-                    Text("\(fresh) new")
-                        .dsText(.label12)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(DS.textSecondary)
-                        .padding(.horizontal, DS.Space.s3)
-                        .padding(.bottom, DS.Space.s3)
-                }
+                .frame(height: Self.artHeight)
+                .clipped()
             }
-            // A square, until the words need more (the accessibility sizes).
-            .frame(maxWidth: .infinity,
-                   minHeight: typeSize.isAccessibilitySize ? nil : Self.height,
-                   maxHeight: typeSize.isAccessibilitySize ? nil : Self.height,
-                   alignment: .topLeading)
-            .background(DS.fillFaint, in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
-            .clipShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
-            .contentShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+        } mark: {
+            if picture == nil { mark }
+        } words: {
+            if picture == nil, let cast {
+                DSLeadCast(roll: cast, source: newest.isLive ? newest.source : "", size: DS.Face.badge)
+                    .padding(.vertical, DS.Space.s1)
+            }
+            if let money {
+                // Money leads with its figure, the name under it.
+                Text(verbatim: money.amount)
+                    .dsText(.heading24)
+                    .monospacedDigit()
+                    .foregroundStyle(DS.textPrimary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                Text(verbatim: money.title)
+                    .dsText(.subhead12)
+                    .foregroundStyle(DS.textSecondary)
+                    .lineLimit(1)
+            } else {
+                Text(verbatim: title)
+                    .dsText(.body17)
+                    .fontWeight(.medium)
+                    .foregroundStyle(DS.textPrimary)
+                    .lineLimit(typeSize.isAccessibilitySize ? nil
+                               : picture != nil ? 2 : (cast != nil || follower != nil ? 2 : 4))
+                    .multilineTextAlignment(.leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            if picture == nil, cast == nil, let follower, !follower.isEmpty {
+                Text(verbatim: follower)
+                    .dsText(.subhead12)
+                    .foregroundStyle(DS.textSecondary)
+                    .lineLimit(2)
+                    .padding(.top, DS.Space.s1)
+            }
         }
-        .buttonStyle(PressSpring())
-        .accessibilityLabel(Text(verbatim: "\(category). \(title)"))
-        .accessibilityValue(fresh > 0 ? Text("\(fresh) new") : Text(verbatim: ""))
-        .accessibilityHint(Text("Shows this section"))
     }
 
     /// The moment the newest is about: an event's start (`capturedAt`), a
@@ -664,6 +590,149 @@ struct GlanceTile: View {
                 .dsGlyph(.caption)
                 .foregroundStyle(DS.brandInk)
                 .frame(width: DS.Mark.badge, height: DS.Mark.badge)
+        }
+    }
+}
+
+/// THE GLANCE TILE'S FRAME (prd §1208d, §1222): one height, the room's faint
+/// fill, a press, a head of mark · category · when, then the words, then
+/// "N new". `GlanceTile` draws a thing in it; What this app reaches draws a
+/// category in it, so every glance in the app is one size.
+struct GlanceShell<Top: View, Mark: View, Words: View>: View {
+    let category: String
+    let when: String?
+    var fresh: Int = 0
+    let accessibility: Text
+    let action: () -> Void
+    @ViewBuilder let top: Top
+    @ViewBuilder let mark: Mark
+    @ViewBuilder let words: Words
+    @Environment(\.dynamicTypeSize) private var typeSize
+
+    var body: some View {
+        Button(action: action) {
+            VStack(alignment: .leading, spacing: 0) {
+                top
+                VStack(alignment: .leading, spacing: DS.Space.s1) {
+                    HStack(spacing: DS.Space.s2) {
+                        mark
+                        Text(verbatim: category)
+                            .dsText(.label12)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(DS.brandInk)
+                            .lineLimit(1)
+                        Spacer(minLength: 0)
+                        if let when {
+                            Text(verbatim: when)
+                                .dsText(.label12)
+                                .foregroundStyle(DS.textTertiary)
+                                .lineLimit(1)
+                        }
+                    }
+                    words
+                }
+                .padding(.horizontal, DS.Space.s3)
+                .padding(.vertical, DS.Space.s3)
+                Spacer(minLength: 0)
+                if fresh > 0 {
+                    Text("\(fresh) new")
+                        .dsText(.label12)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(DS.textSecondary)
+                        .padding(.horizontal, DS.Space.s3)
+                        .padding(.bottom, DS.Space.s3)
+                }
+            }
+            // A square, until the words need more (the accessibility sizes).
+            .frame(maxWidth: .infinity,
+                   minHeight: typeSize.isAccessibilitySize ? nil : GlanceTile.height,
+                   maxHeight: typeSize.isAccessibilitySize ? nil : GlanceTile.height,
+                   alignment: .topLeading)
+            .background(DS.fillFaint, in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+            .contentShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+        }
+        .buttonStyle(PressSpring())
+        .accessibilityLabel(accessibility)
+        .accessibilityValue(fresh > 0 ? Text("\(fresh) new") : Text(verbatim: ""))
+        .accessibilityHint(Text("Shows this section"))
+    }
+}
+
+/// A section's name on its panel (prd §1208c, §1222): the category's glyph
+/// and its name in the brand pink, then whatever the section says beside it.
+struct SectionPanelName<Trailing: View>: View {
+    let name: String
+    let glyph: String
+    @ViewBuilder var trailing: Trailing
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+            Image(systemName: glyph)
+                .dsGlyph(.body)
+                .foregroundStyle(DS.brandInk)
+                .accessibilityHidden(true)
+            Text(verbatim: name)
+                .dsText(.heading28)
+                .foregroundStyle(DS.brandInk)
+                .lineLimit(1)
+            trailing
+            Spacer(minLength: 0)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isHeader)
+        .padding(.leading, DSRoomChassis.rowInset)
+        .padding(.trailing, DSRoomChassis.rowInset)
+        .padding(.top, DS.Space.s4)
+        .padding(.bottom, DS.Space.s2)
+    }
+}
+
+extension SectionPanelName where Trailing == EmptyView {
+    init(name: String, glyph: String) {
+        self.init(name: name, glyph: glyph) { EmptyView() }
+    }
+}
+
+/// ONE SECTION, ON ONE PANEL (prd §1208d, §1222): a chapter's air, the name
+/// capping the panel's top, the rows on its fill (each row's
+/// `.feedRowBackground()` reads the environment), an end cap rounding the
+/// foot. The Feed's categories, the Wallet's Home lists and What this app
+/// reaches all stand in it. `anchor` gives the name an identity a `List`
+/// knows before laying it out, so a jump can land on it off screen.
+struct SectionPanelGroup<Header: View, Rows: View>: View {
+    var anchor: String? = nil
+    var lit = false
+    @ViewBuilder let header: Header
+    @ViewBuilder let rows: Rows
+
+    var body: some View {
+        Section {
+            ForEach([anchor ?? ""], id: \.self) { _ in
+                // A chapter's air stands between panels, never inside one.
+                Color.clear
+                    .frame(height: DS.Space.s6)
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                    .accessibilityHidden(true)
+                header
+                    .listRowInsets(EdgeInsets())
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(SectionPanel(part: .top, lit: lit))
+            }
+        }
+        Group {
+            rows
+        }
+        .environment(\.feedSectionPanel, true)
+        Section {
+            Color.clear
+                .frame(height: DS.Space.s4)
+                .listRowInsets(EdgeInsets())
+                .listRowSeparator(.hidden)
+                .listRowBackground(SectionPanel(part: .bottom))
+                .accessibilityHidden(true)
         }
     }
 }

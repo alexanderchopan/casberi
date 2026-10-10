@@ -1536,7 +1536,7 @@ struct FeedScreen: View {
                 // §1005, closing §946's "found, not fixed"): the well absorbed
                 // it under §919, but §930 put the title first, so the pill sat
                 // on the room's name and over the well's top edge.
-                .dsRoomTitleListRow()
+                .dsRoomTitleListRow(inSheet: inSheet)
             roomHead
                 .id(Self.roomTopAnchor)
             roomBody(rows)

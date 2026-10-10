@@ -24,10 +24,10 @@ import SwiftUI
 struct NetworkReachScreen: View {
     @Environment(BridgeStore.self) private var store
     @Environment(HomeRoute.self) private var route
-    @Environment(\.horizontalSizeClass) private var sizeClass
     @State private var entries: [NetworkLedger.Entry] = []
     @State private var confirmForget = false
-    @State private var scope = ReachScope(name: nil)
+    /// A category's panel brightened once after a tile's jump (prd §1222).
+    @State private var landed: String?
 
     private var connectedNames: Set<String> {
         Set(store.bridges.filter { $0.status == .connected }.map(\.name))
@@ -94,9 +94,7 @@ struct NetworkReachScreen: View {
     /// The chip's category, then the four states a service can be in. A
     /// reached row is sorted by recency, so the screen opens on what the app
     /// is talking to right now; the rest keep the registry's own order.
-    private var scoped: [ServiceRow] {
-        rows.filter { scope.name == nil || Self.categories[$0.endpoint.service] == scope.name }
-    }
+    private var scoped: [ServiceRow] { rows }
     private var reached: [ServiceRow] {
         scoped.filter { $0.requests > 0 }
               .sorted { ($0.last ?? .distantPast) > ($1.last ?? .distantPast) }
@@ -124,21 +122,43 @@ struct NetworkReachScreen: View {
     /// Accounts and Addresses strips' own order. Fewer than three draws no
     /// strip. A category with nothing behind it never gets a chip: a control
     /// that filters to an empty list is the dead control §83 bans.
-    private var scopes: [ReachScope] {
-        let held = Set(Self.categories.values)
-        return [ReachScope(name: nil)]
-            // The person's category order (prd §1050j), not A to Z.
-            + CategoryOrder.sorted(BridgeCatalog.categories.map(\.name).filter { held.contains($0) })
-                .map { ReachScope(name: $0) }
+    /// What a service does today, said where it stands (prd §1222): its
+    /// receipt when it reached this week, else when it would.
+    private enum ReachState { case reached, now, onTap, ifConnected }
+
+    private struct Placed: Identifiable {
+        let row: ServiceRow
+        let state: ReachState
+        var id: String { row.id }
     }
 
-    /// The dock category a registry service stands in: its own catalogue
-    /// row, else its owning seat's, else Agents for the key that reaches only
-    /// when you tap. nil for the always-on set (a saved link's own page, a
-    /// tapped location), which no category holds and only All draws.
-    ///
-    /// Here and not in `NetworkReach`, because a dozen Foundation-only
-    /// harnesses compile that file against stubs and the catalogue is not one.
+    /// The services a category holds, in the order the groups stood: what
+    /// reached this week, newest first, then what reaches now, on a tap, and
+    /// only if connected.
+    private var placed: [Placed] {
+        reached.map { Placed(row: $0, state: .reached) }
+            + reachingNow.map { Placed(row: $0, state: .now) }
+            + onTap.map { Placed(row: $0, state: .onTap) }
+            + available.map { Placed(row: $0, state: .ifConnected) }
+    }
+
+    /// Every category with a service in it, in the Feed's order; a service
+    /// with no category (Maps, the name resolvers) stands under Casberi.
+    private var panels: [(name: String, rows: [Placed])] {
+        let grouped = Dictionary(grouping: placed) { Self.categories[$0.row.endpoint.service] ?? Self.uncategorised }
+        let named = CategoryOrder.sorted(grouped.keys.filter { $0 != Self.uncategorised })
+        let order = named + (grouped[Self.uncategorised] == nil ? [] : [Self.uncategorised])
+        return order.map { ($0, grouped[$0] ?? []) }
+    }
+
+    private static let uncategorised = "Casberi"
+
+    private static func glyph(_ category: String) -> String {
+        category == uncategorised ? "app" : CategoryFold.glyph(for: category)
+    }
+
+    private static func anchor(_ category: String) -> String { "reach:\(category)" }
+
     private static func category(of endpoint: NetworkReach.Endpoint) -> String? {
         if let offer = BridgeCatalog.offers.first(where: { $0.name == endpoint.service }) {
             return BridgeCatalog.category(of: offer)
@@ -171,22 +191,72 @@ struct NetworkReachScreen: View {
 
     // MARK: - Body
 
-    /// Where a pick lands: the first row under the card. The head and the
-    /// week's card fill the first screen, so a pick from the bottom capsule
-    /// changed rows below the fold and looked like nothing happened — the
-    /// Accounts screen's `scopeAnchor` for the same reason.
-    private static let rowsAnchor = "reach-rows"
-
     var body: some View {
         ScrollViewReader { proxy in
             list(proxy)
         }
     }
 
-    private func pick(_ picked: ReachScope, _ proxy: ScrollViewProxy) {
+    /// A tile's press: its category's panel to the top, brightened once —
+    /// the Feed's landing (prd §1208l).
+    private func jump(_ category: String, _ proxy: ScrollViewProxy) {
         withAnimation(DS.Motion.standard) {
-            scope = picked
-            proxy.scrollTo(Self.rowsAnchor, anchor: .top)
+            proxy.scrollTo(Self.anchor(category), anchor: .top)
+        }
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(350))
+            withAnimation(DS.Motion.standard) { landed = category }
+            try? await Task.sleep(for: .milliseconds(900))
+            withAnimation(.easeOut(duration: 0.6)) { landed = nil }
+        }
+    }
+
+    /// One category at a glance, in the Feed's glance frame (prd §1222): the
+    /// service that asked most this week and its receipt, else the first
+    /// service and when it would reach.
+    private func glance(_ category: String, _ rows: [Placed], _ proxy: ScrollViewProxy) -> some View {
+        let busiest = rows.filter { $0.state == .reached }.max { $0.row.requests < $1.row.requests }
+        let lead = busiest ?? rows.first
+        let last = rows.compactMap(\.row.last).max()
+        let title = lead?.row.endpoint.service ?? ""
+        let line: String = {
+            guard let lead else { return "" }
+            if let busiest, let at = busiest.row.last { return receiptLine(busiest.row.requests, at) }
+            return stateLine(lead.state)
+        }()
+        return GlanceShell(category: category, when: last.map { LiveTimeText.short($0) },
+                           accessibility: Text(verbatim: "\(category). \(title)")) {
+            DSHaptic.selection()
+            jump(category, proxy)
+        } top: {
+            EmptyView()
+        } mark: {
+            Image(systemName: Self.glyph(category))
+                .dsGlyph(.caption)
+                .foregroundStyle(DS.brandInk)
+                .frame(width: DS.Mark.badge, height: DS.Mark.badge)
+        } words: {
+            Text(verbatim: title)
+                .dsText(.body17)
+                .fontWeight(.medium)
+                .foregroundStyle(DS.textPrimary)
+                .lineLimit(2)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            Text(verbatim: line)
+                .dsText(.subhead12)
+                .foregroundStyle(DS.textSecondary)
+                .lineLimit(2)
+                .padding(.top, DS.Space.s1)
+        }
+    }
+
+    /// When a service with nothing this week would reach (the old groups'
+    /// names, now said on the row).
+    private func stateLine(_ state: ReachState) -> String {
+        switch state {
+        case .reached, .now: return String(localized: "Reaching now")
+        case .onTap: return String(localized: "Only when you tap")
+        case .ifConnected: return String(localized: "Only if you connect them")
         }
     }
 
@@ -197,9 +267,10 @@ struct NetworkReachScreen: View {
                 // since §967). This screen exists to make ONE promise
                 // checkable, and a name over the claim would be two heads.
                 // Split into two keys: the second sentence is the MECHANISM.
-                DSScreenHead(title: Text("There is no server."))
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
+                // The claim stands where every screen's name does, in the
+                // title row's pink (prd §1222), never under a second name.
+                DSRoomTitleRow(title: String(localized: "There is no server."))
+                    .dsRoomTitleListRow(inSheet: true)
                 DSProse.text("Every request below goes straight from \(DS.device) to the service named.")
                     .dsText(.subhead12).foregroundStyle(DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -219,58 +290,72 @@ struct NetworkReachScreen: View {
             // The week's reading leads, when there is one (prd §299).
             if let reach {
                 Section {
+                    // The room's box at its one size (prd §1222, §760).
                     ReachCard(reach: reach)
+                        .dsRoomBox()
+                        .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: 0,
+                                                  bottom: DS.Space.s2, trailing: 0))
+                        .dsListRow()
+                    ReachCard.line(reach)
+                        .dsText(.label12).foregroundStyle(DS.textTertiary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.rowInset,
+                                                  bottom: DSRoomChassis.leadGap, trailing: DSRoomChassis.rowInset))
                         .dsListRow()
                 }
             }
 
-            // Where the rail stands the tiles sit inline; on the phone they
-            // ride the capsule beside the seat (`dsScopeDock`, prd §960).
-            if scopes.count > 2, !DSScopeDock<ReachScope>.atBottom(sizeClass) {
+            // A BOX PER CATEGORY, EVERY ONE SHOWING (prd §1222, user: "i
+            // want it like we have on Feed which is all boxes showing"): the
+            // Feed's glance at its one size, the busiest service leading.
+            // The glass capsule that filtered the list is gone.
+            if !panels.isEmpty {
                 Section {
-                    DSScopeTiles(sections: scopes, active: scope, strip: true) { pick($0, proxy) }
-                        .dsListRow()
+                    GlanceGrid {
+                        ForEach(panels, id: \.name) { panel in
+                            glance(panel.name, panel.rows, proxy)
+                        }
+                    }
+                    .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DSRoomChassis.inset,
+                                              bottom: 0, trailing: DSRoomChassis.inset))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
                 }
             }
 
-            Color.clear.frame(height: 0)
-                .listRowInsets(EdgeInsets())
-                .dsListRow()
-                .id(Self.rowsAnchor)
-
-            // The finding, under every scope: a host with no service has no
-            // category, so no chip may hide it (`AppsScreen.troubledScopes`'
-            // reason, one screen over).
+            // The finding first, on its own panel: a host with no service has
+            // no category, so no category may hide it.
             if !undeclared.isEmpty {
-                Section {
-                    // A row, not a header (prd §784): a plain list pins headers.
-                    Text("Not on the list").dsText(.label12).foregroundStyle(DS.textTertiary)
-                        .dsListRow()
+                SectionPanelGroup(anchor: Self.anchor("unlisted")) {
+                    SectionPanelName(name: String(localized: "Not on the list"), glyph: "questionmark.circle")
+                } rows: {
                     ForEach(undeclared) { receipt in
-                        hostRow(receipt).dsListRow()
+                        hostRow(receipt).reachPanelRow()
                     }
                 }
             }
 
+            // EACH CATEGORY ON ITS PANEL (prd §1222), the Feed's and the
+            // Wallet's card: every service once, its receipt or when it
+            // would reach under its name.
+            ForEach(panels, id: \.name) { panel in
+                SectionPanelGroup(anchor: Self.anchor(panel.name), lit: landed == panel.name) {
+                    SectionPanelName(name: panel.name, glyph: Self.glyph(panel.name))
+                } rows: {
+                    ForEach(panel.rows) { item in
+                        serviceRow(item.row, state: item.state).reachPanelRow()
+                    }
+                }
+            }
+
+            // A row, never a section footer: a plain list pins its footers
+            // on a plate (§782), measured on this screen.
             if !reached.isEmpty {
                 Section {
-                    Text("Reached this week").dsText(.label12).foregroundStyle(DS.textTertiary)
-                        .dsListRow()
-                    ForEach(reached) { row in
-                        serviceRow(row).dsListRow()
-                    }
-                    // A row, never a section footer: a plain list pins its
-                    // footers on a plate (§782), measured on this screen.
                     DSFootnote(prose: ceiling, scale: .page)
                         .dsListRow()
                 }
             }
-
-            // No section footers past the ceiling (prd §748): each group's
-            // name says when its services reach out.
-            group(String(localized: "Reaching now"), reachingNow)
-            group(String(localized: "Only when you tap"), onTap)
-            group(String(localized: "Only if you connect them"), available)
 
             if !entries.isEmpty {
                 Section {
@@ -289,7 +374,6 @@ struct NetworkReachScreen: View {
         .listSectionSpacing(.compact)
         .scrollContentBackground(.hidden)
         .environment(\.defaultMinListRowHeight, 0)
-        .dsScopeDock(sections: scopes, active: scope) { pick($0, proxy) }
         .dsAdaptiveContentWidth()
         .dsPageBackground()
         .dsSoftScrollEdges()
@@ -301,21 +385,22 @@ struct NetworkReachScreen: View {
         #if targetEnvironment(macCatalyst)
         .toolbar(.hidden, for: .navigationBar)
         #else
-        .toolbar { ToolbarItem(placement: .principal) { EmptyView() } }
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar(removing: .title)
         #endif
         // The ledger is read on appear, never in a body (§628): a snapshot
         // flushes and walks the store.
         .onAppear {
             entries = NetworkLedger.shared.snapshot()
             #if DEBUG
-            // `-reachScope "<Category>"` — PICK a category headlessly, the
-            // Accounts screen's `-appsShelf` one screen over.
+            // `-reachScope "<Category>"` — take a category's tile headlessly,
+            // the Accounts screen's `-appsShelf` one screen over.
             if let name = UserDefaults.standard.string(forKey: "reachScope") {
-                scope = ReachScope(name: name)
-                NSLog("reachScope| \(name) \(scoped.count) services")
+                let count = panels.first { $0.name == name }?.rows.count ?? 0
+                NSLog("reachScope| \(name) \(count) services")
                 Task { @MainActor in
                     try? await Task.sleep(for: .milliseconds(400))
-                    proxy.scrollTo(Self.rowsAnchor, anchor: .top)
+                    jump(name, proxy)
                 }
             }
             #endif
@@ -339,40 +424,27 @@ struct NetworkReachScreen: View {
         "Hosts you named yourself — a feed, a store, a saved site — are filed under the app that asked for them. Not recorded: pictures loading as you scroll, and live wallet-app connections."
     }
 
-    @ViewBuilder
-    private func group(_ title: String, _ rows: [ServiceRow]) -> some View {
-        if !rows.isEmpty {
-            Section {
-                Text(title).dsText(.label12).foregroundStyle(DS.textTertiary)
-                    .dsListRow()
-                ForEach(rows) { row in
-                    serviceRow(row).dsListRow()
-                }
-            }
-        }
-    }
-
     // MARK: - Rows
 
     /// A row that names a seat is a door to it (prd §736); the always-on set
     /// has no page and draws no chevron — never a control that looks
     /// pressable and isn't (§83).
     @ViewBuilder
-    private func serviceRow(_ row: ServiceRow) -> some View {
+    private func serviceRow(_ row: ServiceRow, state: ReachState) -> some View {
         if let destination = Self.destinations[row.endpoint.service] {
             Button {
                 DSHaptic.tap()
                 route.pushBridge(destination)
             } label: {
-                serviceLabel(row, opens: true)
+                serviceLabel(row, state: state, opens: true)
             }
             .buttonStyle(RowPress())
         } else {
-            serviceLabel(row, opens: false)
+            serviceLabel(row, state: state, opens: false)
         }
     }
 
-    private func serviceLabel(_ row: ServiceRow, opens: Bool) -> some View {
+    private func serviceLabel(_ row: ServiceRow, state: ReachState, opens: Bool) -> some View {
         HStack(alignment: .top, spacing: DS.Space.s3) {
             leadingIcon(row.endpoint)
             VStack(alignment: .leading, spacing: DS.Space.s1) {
@@ -384,6 +456,10 @@ struct NetworkReachScreen: View {
                 if row.requests > 0, let last = row.last {
                     Text(receiptLine(row.requests, last))
                         .dsText(.subhead12).monospacedDigit()
+                        .foregroundStyle(DS.textPrimary)
+                } else {
+                    Text(stateLine(state))
+                        .dsText(.subhead12)
                         .foregroundStyle(DS.textPrimary)
                 }
                 Text(row.endpoint.purpose)
@@ -475,14 +551,6 @@ struct NetworkReachScreen: View {
 /// screen's `CatalogScope` and Addresses' `AddressScope`, one type over, for
 /// the same reasons they give: one stored property, so the strip's `==`
 /// against its own elements never drifts.
-struct ReachScope: DSTileScope {
-    let name: String?
-    var id: String { name ?? "\u{1}all" }
-    var label: String { name ?? String(localized: "All") }
-    var glyph: String { CategoryFold.glyph(for: name ?? "All") }
-    var summary: String { name ?? String(localized: "Every service") }
-}
-
 /// The screen's lead (prd §299) — the reach map. One reading of a list you
 /// would otherwise have to add up yourself: how many requests, to how many
 /// services, whether any of them is undisclosed, and who dominates.
@@ -509,10 +577,9 @@ private struct ReachCard: View {
                 Spacer(minLength: DS.Space.s2)
                 verdict
             }
-            Text(subline)
-                .dsText(.label12).foregroundStyle(DS.textTertiary)
-                .fixedSize(horizontal: false, vertical: true)
-            UnitTreemap(count: reach.cells.count, height: 180, cell: { i in
+            // What is left of the room's one box under the count (prd §1222);
+            // the sentence that reads it stands under the box (`ReachLine`).
+            UnitTreemap(count: reach.cells.count, height: 128, cell: { i in
                 face(reach.cells[i], rank: i)
             }, readout: { i in
                 // The exact count under the cursor. The card's whole job is
@@ -568,7 +635,13 @@ private struct ReachCard: View {
     /// What the number alone can't say: who dominates, and the ledger's own
     /// ceiling. The second sentence used to be the paragraph above this card;
     /// it moved here rather than being said twice (§208).
-    private var subline: String {
+    /// The sentence that reads the map, under the box (prd §1222): who asks
+    /// most, and the promise that only hosts and counts are kept.
+    static func line(_ reach: NetworkReceiptsInsight.Reach) -> Text {
+        Text(verbatim: subline(reach))
+    }
+
+    private static func subline(_ reach: NetworkReceiptsInsight.Reach) -> String {
         let promise = String(localized: "Hosts and counts only — never what was asked.")
         guard let label = reach.leadLabel, let share = reach.leadShare else { return promise }
         if reach.cells.count == 1 {
@@ -638,5 +711,16 @@ private struct ReachCard: View {
         if cell.isTail { return DS.fillLine }
         return cell.declared ? DS.ink(magnitude: cell.share)
                               : DS.wash(DS.attention, magnitude: cell.share)
+    }
+}
+
+private extension View {
+    /// A row on a category's panel (prd §1222): the rows' column, the
+    /// panel's fill, no separator.
+    func reachPanelRow() -> some View {
+        listRowInsets(EdgeInsets(top: DS.Space.s1, leading: DSRoomChassis.rowInset,
+                                 bottom: DS.Space.s1, trailing: DSRoomChassis.rowInset))
+            .feedRowBackground()
+            .listRowSeparator(.hidden)
     }
 }
