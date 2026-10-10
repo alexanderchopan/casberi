@@ -65799,3 +65799,12 @@ One row on one line (symbol, price, move) did not fit the small tile: "MUSEGOD  
 4. One normalization for every tile's curve (`WidgetCurve.normalized`, the flat rule), the wallet's line and these.
 
 UNVERIFIED: written on a machine with no Xcode, so neither build nor tile was seen before commit. `widget-selftest.sh` holds the line's freshness, its carry, its thinning and the round trip.
+
+## §1243 — The glance tiles stand in Feed order and never move (user, 2026-10-10, of the tiles under the buttons: "the tiles aren't in same order as feed tho and they switch order dynamically"; amends §1208j item 2)
+
+The box's category led the grid (§1208h, kept by §1208j), so each arrival from another category moved a tile to the front, and the grid disagreed with the sections under it.
+
+1. **The tiles stand in Feed order** (`CategoryOrder.current`, Settings › Feed order), the order of the sections they jump to. Nothing moves a tile but a reorder in Settings, or a category gaining or losing its only thing today.
+2. The rest of §1208j stands: only the box holds the newest, its category's tile draws what comes after it, and a category whose only thing is the box's draws no tile.
+
+UNVERIFIED: written on a machine with no Xcode, so neither build nor grid was seen before commit.

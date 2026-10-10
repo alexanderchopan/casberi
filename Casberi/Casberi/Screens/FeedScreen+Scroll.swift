@@ -437,8 +437,10 @@ extension FeedScreen {
     }
 
     /// The tiles (prd §1208d, §1208j, §1208k): two across, one per category
-    /// with something today, in the dock's order, the box's category first
-    /// with what comes after the box's thing.
+    /// with something today, in Feed order, the sections' order under them
+    /// (prd §1243: the box's category no longer leads, so a new arrival never
+    /// moves a tile); the box's category draws what comes after the box's
+    /// thing.
     static func glanceSpecs(_ groups: [(String, [FeedRow])], lede: Thing?) -> [GlanceSpec] {
         let lists: [(String, [Thing])] = groups.compactMap { label, rows in
             let things = rows.compactMap { row -> Thing? in
@@ -457,8 +459,7 @@ extension FeedScreen {
             let rest = things.filter { $0.id != ledeID && TitleSeam.split($0.title).0 != ledeTitle }
             return rest.isEmpty ? nil : (label, rest)
         }
-        let ordered = tiles.filter { $0.0 == leadCategory } + tiles.filter { $0.0 != leadCategory }
-        return ordered.map { label, things in
+        return tiles.map { label, things in
             // The picture is the newest one that has a picture today (user:
             // "people like seeing the newest image"); the line stays newest.
             let pictured = things.first { StoredPixels.probe($0) != nil }

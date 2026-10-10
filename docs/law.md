@@ -222,7 +222,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1385 of 1451 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1386 of 1452 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1570,7 +1570,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1208g — The Feed comes first: the title reads "Feed Wallet"
 - §1208h — The newest category leads the glance, the whole width (amended by §1208j)
 - §1208i — A glance tile's picture is pinned to its band
-- §1208j — Only the box holds the newest; every glance tile is a square (amended by §1208l)
+- §1208j — Only the box holds the newest; every glance tile is a square (amended by §1208l, §1243)
 - §1208k — A glance tile says what is new, when, how much and who
 - §1208l — The polish pass: one rule for what opens on top, sections skip what the tiles showed, the header hands off to the pil…
 - §1208m — One rule on the phone: Settings, Sources and Addresses rise as a sheet too
@@ -1609,6 +1609,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1240 — One sheet at a time, the rest
 - §1241 — The note page rises over the sheet it was opened from
 - §1242 — The Watchlist tile draws every row whole, with its line
+- §1243 — The glance tiles stand in Feed order and never move
 
 ## Dead rulings → what replaced them (generated)
 
