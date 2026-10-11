@@ -1012,8 +1012,12 @@ struct FeedScreen: View {
             // control at all.
             .onChange(of: walletSectionPublication, initial: true) { _, now in
                 // The page mounted beside you (prd §1208l) is not the room on
-                // screen: only the room on screen, or a Wallet, publishes.
-                guard isActive || shape == .wallet, pinnedWalletSection == nil else { return }
+                // screen: only the room on screen, or a Wallet, publishes. A
+                // sheet risen over the Wallet (Markets) is "active" too, and
+                // its empty list took the Wallet's tiles until a swipe
+                // remounted it, so a sheet publishes only if it IS a Wallet.
+                guard isActive || shape == .wallet, pinnedWalletSection == nil,
+                      !inSheet || shape == .wallet else { return }
                 chrome.walletSections = now.sections
             }
             // Cleared on the way OUT, not merely overwritten on the way in.
@@ -1033,7 +1037,8 @@ struct FeedScreen: View {
             // by the time the room mounts, so a room that never changes
             // afterwards would publish nothing and draw no switcher at all.
             .onChange(of: logosSectionPublication, initial: true) { _, now in
-                guard isActive else { return }
+                // A sheet over the testnet room is not it (the Wallet's bug).
+                guard isActive, !inSheet || source == LogosRoom.source else { return }
                 chrome.logosSections = now
             }
             // Cleared on the way OUT, which the body-path writes never did:
