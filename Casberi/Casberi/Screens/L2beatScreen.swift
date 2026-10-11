@@ -60,6 +60,7 @@ struct L2beatScreen: View {
 			query: queryField,
 			onRemoveRow: unwatch,
 			onOpenRow: { sheet = .card(id: $0) },
+			cardPushes: { _ in true },
 			cardSheet: { id in AnyView(L2beatCardScreen(chainID: id)) },
 			teardown: { L2beatWatch.removeAll(context: modelContext) },
 			sheet: $sheet,

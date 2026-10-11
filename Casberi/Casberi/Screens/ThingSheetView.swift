@@ -1373,7 +1373,7 @@ struct ThingSheetView: View {
         // Walking the thread in-app (2026-07-16) — the parent this post
         // answers, or a reply under it. A read: no consent gate, the standing
         // rule for the thread section it grew out of.
-        .sheet(item: $walkingTo) { card in
+        .dsOneSheet(item: $walkingTo, pushes: { _ in inSheetStack }) { card in
             SocialPostSheet(post: card, source: thing.source)
         }
         // Whoever is behind a tapped face — a person theirs to watch from

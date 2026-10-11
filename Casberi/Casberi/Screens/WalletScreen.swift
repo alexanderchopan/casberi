@@ -81,6 +81,7 @@ struct WalletScreen: View {
             rows: rows,
             onRemoveRow: forget,
             onOpenRow: { sheet = .card(id: $0) },
+            cardPushes: { _ in true },
             cardSheet: { id in
                 if id == "connect" {
                     AnyView(WalletConnectPickerSheet(shared: sharedAccounts) { added in

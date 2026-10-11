@@ -63,6 +63,7 @@ struct WalletbeatScreen: View {
 			query: queryField,
 			onRemoveRow: unwatch,
 			onOpenRow: { sheet = .card(id: $0) },
+			cardPushes: { _ in true },
 			cardSheet: { id in AnyView(WalletbeatCardScreen(walletID: id)) },
 			teardown: { WalletbeatWatch.removeAll(context: modelContext) },
 			sheet: $sheet,

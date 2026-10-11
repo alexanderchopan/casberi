@@ -50,3 +50,45 @@ extension View {
                             pushed: { content($0).environment(\.dsInPane, true) }))
     }
 }
+
+/// **A STACK ONLY WHEN STANDING ALONE (prd §1247).** A view that wraps
+/// itself in a `NavigationStack` for its own pushes would nest a stack when
+/// it is itself pushed inside a sheet's; this adds the stack only when the
+/// view stands alone, and marks it as a sheet's stack so what it raises
+/// pushes too.
+struct DSSheetStack<Content: View>: View {
+    @Environment(\.dsInSheetStack) private var inSheetStack
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        if inSheetStack {
+            content()
+        } else {
+            NavigationStack { content().environment(\.dsInSheetStack, true) }
+        }
+    }
+}
+
+/// `DSSheetStack` for a stack that walks a typed path: alone it owns the
+/// path; inside a sheet's stack the caller pushes through an item instead.
+struct DSPathStack<Element: Hashable, Content: View>: View {
+    @Binding var path: [Element]
+    let alone: Bool
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        if alone {
+            NavigationStack(path: $path) { content() }
+        } else {
+            content()
+        }
+    }
+}
+
+extension View {
+    /// Applies `transform` only when `condition` holds.
+    @ViewBuilder
+    func dsIf<T: View>(_ condition: Bool, _ transform: (Self) -> T) -> some View {
+        if condition { transform(self) } else { self }
+    }
+}

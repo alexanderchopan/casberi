@@ -24,6 +24,7 @@ struct PrivyScreen: View {
             state: AccountPageState.of(name: "Privy", seatID: PrivyHomeFeed.seatID,
                                        connected: connected, store: store),
             mode: .signIn,
+            cardPushes: { $0 == "privyApps" },
             cardSheet: { id in
                 id == "privyApps"
                     ? AnyView(PrivyAppsSheet())

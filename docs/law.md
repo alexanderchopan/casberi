@@ -227,7 +227,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1390 of 1456 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1393 of 1459 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1617,6 +1617,9 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1243 — The glance tiles stand in Feed order and never move
 - §1244 — X and Instagram read your direct messages, live, when you turn it on
 - §1245 — Sources searches its apps
+- §1246 — Spending's tile is the month, never one purchase
+- §1247 — One sheet at a time, the last of them
+- §1248 — Notes' Folders shows Obsidian's vault folders
 - §1249 — The Safe loop closes: the phone's key is an owner, the queue is read in the background, the gateway takes the signatu…
 - §1250 — The Watchlist prices a coin as itself, draws every row's line, alerts on more than a price, and travels: Reorder, gas…
 

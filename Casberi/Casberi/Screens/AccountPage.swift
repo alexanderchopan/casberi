@@ -107,6 +107,9 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
     /// inferable default would force every one of the ~40 call sites to spell
     /// out a type they do not use.
     var rowMenu: ((String) -> AnyView)? = nil
+    /// Which cards push inside a sheet's stack rather than rising (prd
+    /// §1247): a card that is a page does; a web sign-in keeps its own sheet.
+    var cardPushes: (String) -> Bool = { _ in false }
     /// A SHEET only this seat can compose, raised through the page's ONE
     /// presentation (`.card`). L2BEAT's risk assessment and Walletbeat's
     /// review are screens of their own that no other seat has; a second
@@ -243,7 +246,7 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
         // room's chevron still have a bar to sit in.
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
-        .dsOneSheet(item: $sheet, pushes: { inSheetStack && $0.pushes }) { which in
+        .dsOneSheet(item: $sheet, pushes: { inSheetStack && sheetPushes($0) }) { which in
             switch which {
             case .key:
                 // THE HOST WRAPS THE SHEET, NOT ITS ROW. `AccountKeySheet`
@@ -788,13 +791,21 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
 /// followed package — and holding the model across a presentation is how a
 /// sheet opens onto a row a foreground heal deleted underneath it. The sheet
 /// re-reads it, and draws nothing if it has gone.
+extension AccountPage {
+    /// Whether a sheet this page raises pushes inside a sheet's stack.
+    func sheetPushes(_ which: AccountPageSheet) -> Bool {
+        if case .card(let id) = which { return cardPushes(id) }
+        return which.pushes
+    }
+}
+
 enum AccountPageSheet: Identifiable {
     /// Whether it pushes inside a sheet's stack (prd §1238): a profile, a
-    /// thing and Track do; the key and card sheets keep stacks of their own
-    /// and the browser is the system's, so they rise.
+    /// thing, Track and the key do (§1247); a card asks its page
+    /// (`cardPushes`), and the browser is the system's, so it rises.
     var pushes: Bool {
         switch self {
-        case .profile, .thing, .track: return true
+        case .key, .profile, .thing, .track: return true
         default: return false
         }
     }
@@ -1058,7 +1069,7 @@ struct AccountKeySheet<Content: View>: View {
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        NavigationStack {
+        DSSheetStack {
             List {
                 content()
                     // The same block the act slot draws, so the same grammar

@@ -434,6 +434,14 @@ guard FeedScreen.swift "case .holdings:" \
 # §1041's placement; it still lists only what is ahead, soonest first.
 guard FeedScreen+WalletHome.swift "walletComingUpDays(upcoming)" \
   "Coming up no longer lists what's ahead (prd §1041, §1201)"
+# Spending's tile is the month's sum, never one purchase: the newest purchase
+# is most days the newest move, so the tile read as Transactions' (prd §1246).
+guard FeedScreen+WalletHome.swift "Self.spendingGlance(SpendingReading.shared.reading)" \
+  "Spending's tile no longer draws the month — it matches Transactions' tile again (prd §1246)"
+guard FeedScreen+WalletHome.swift "amount: mask ?? AppleWalletRoom.money(reading.total, \"USD\")" \
+  "Spending's tile no longer leads with the month's total, through Hide balances (prd §1246)"
+deny FeedScreen+WalletHome.swift "SpendingReading.shared.latest" \
+  "Spending's tile is one purchase again — the same row and figure as Transactions' (prd §1246)"
 deny FeedScreen.swift "ahead: upcoming" \
   "what's ahead is back on Home — Home is only what happened (prd §1041)"
 guard FeedScreen.swift "let all = visible.live.filter { !promoted.contains(\$0.id) }" \

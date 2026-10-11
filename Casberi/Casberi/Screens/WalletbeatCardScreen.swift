@@ -465,7 +465,7 @@ struct WalletbeatCardScreen: View {
 	@Environment(\.dismiss) private var dismiss
 
 	var body: some View {
-		NavigationStack {
+		DSSheetStack {
 			ScrollView {
 				WalletbeatReportCard(walletID: walletID)
 					.padding(DS.Space.s4)

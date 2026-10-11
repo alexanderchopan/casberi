@@ -242,7 +242,7 @@ extension FeedScreen {
     func pushesInSheet(_ route: FeedSheetRoute) -> Bool {
         guard inSheet else { return false }
         switch route {
-        case .web, .worthALook: return false
+        case .web: return false
         default: return true
         }
     }
