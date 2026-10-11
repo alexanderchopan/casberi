@@ -400,28 +400,49 @@ struct NewDot: View {
 }
 
 extension FeedScreen {
-    /// The contents as tiles (prd §1208d): two across, one per category with
-    /// something today, in the dock's order.
+    /// **NEWEST (prd §1256, user: "i like the 'newest' card … build
+    /// newest. it's great").** The glance tiles cut each category's newest
+    /// to two lines in a square, and the sections under them showed the
+    /// same things again (user: "hard to read b/c they cut off the feed
+    /// item and harder to scan"). One card holds the newest few across every
+    /// category as the Feed's rows, the box's thing left out; the sections
+    /// skip them. A category is reached from the tray or its section's name.
     @ViewBuilder
-    func contentsGrid(_ specs: [GlanceSpec], onPick: ((String) -> Void)? = nil) -> some View {
-        if !specs.isEmpty {
-            Section {
-                GlanceGrid {
-                    ForEach(specs, id: \.category) { spec in
-                        GlanceTile(category: spec.category, fresh: Self.fresh(spec.things, since: newSince),
-                                   newest: spec.newest, next: spec.next,
-                                   pictured: spec.pictured, cast: spec.cast, figure: spec.money) {
-                            DSHaptic.selection()
-                            if let onPick { onPick(spec.category) } else { chrome.sourceRequest = spec.category }
-                        }
+    func newestCard(_ things: [Thing], nextEventID: UUID?) -> some View {
+        if !things.isEmpty {
+            panelSection(String(localized: "Newest"), glyph: "clock", things: things) {
+                let positions = cardRunPositions(count: things.count, isBreaker: { _ in false })
+                ForEach(Array(keyed(things).enumerated()), id: \.element.id) { i, item in
+                    if let thing = item.live {
+                        // Each row says its app and time, as Home's grouped
+                        // rows do (§1103a): across categories a title alone
+                        // ("Linea") says nothing of where it came from.
+                        shapedListRow(thing, index: i, nextEventID: nextEventID, position: positions[i],
+                                      grouped: true, app: (source: thing.source, date: thing.capturedAt))
+                            .environment(\.dsGroupedSource, thing.source)
                     }
                 }
-                .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DSRoomChassis.inset,
-                                          bottom: 0, trailing: DSRoomChassis.inset))
-                .feedRowBackground()
-                .listRowSeparator(.hidden)
             }
         }
+    }
+
+    /// How many rows Newest holds.
+    static let newestRows = 5
+
+    /// Today's newest live things across every category, the box's thing
+    /// and the same news again left out (prd §1208j's rule: only the box
+    /// holds the newest).
+    static func newestThings(_ groups: [(String, [FeedRow])], lede: Thing?) -> [Thing] {
+        let ledeID = lede.flatMap { $0.isLive ? $0.id : nil }
+        let ledeTitle = lede.flatMap { $0.isLive ? TitleSeam.split($0.title).0 : nil }
+        let things = groups.flatMap { _, rows in
+            rows.compactMap { row -> Thing? in
+                if case .single(let item) = row.kind { return item.live }
+                return nil
+            }
+        }
+        .filter { $0.isLive && $0.id != ledeID && TitleSeam.split($0.title).0 != ledeTitle }
+        return Array(things.sorted { $0.capturedAt > $1.capturedAt }.prefix(newestRows))
     }
 
     /// One glance tile, decided once so the grid and the sections under it
@@ -437,40 +458,6 @@ extension FeedScreen {
         /// The figure and what it was, when the caller knows them better
         /// than the title does (the Wallet's lists, prd §1224).
         var money: (title: String, amount: String)? = nil
-    }
-
-    /// The tiles (prd §1208d, §1208j, §1208k): two across, one per category
-    /// with something today, in Feed order, the sections' order under them
-    /// (prd §1243: the box's category no longer leads, so a new arrival never
-    /// moves a tile); the box's category draws what comes after the box's
-    /// thing.
-    static func glanceSpecs(_ groups: [(String, [FeedRow])], lede: Thing?) -> [GlanceSpec] {
-        let lists: [(String, [Thing])] = groups.compactMap { label, rows in
-            let things = rows.compactMap { row -> Thing? in
-                if case .single(let item) = row.kind { return item.live }
-                return nil
-            }
-            return things.isEmpty ? nil : (label, things)
-        }
-        // ONLY THE BOX HOLDS THE NEWEST (prd §1208j); the same news twice
-        // (an alarm that fired again) is the box's too.
-        let ledeID = lede.flatMap { $0.isLive ? $0.id : nil }
-        let leadCategory = lede.flatMap { $0.isLive ? scrollCategory(of: $0) : nil }
-        let ledeTitle = lede.flatMap { $0.isLive ? TitleSeam.split($0.title).0 : nil }
-        let tiles: [(String, [Thing])] = lists.compactMap { label, things in
-            guard label == leadCategory else { return (label, things) }
-            let rest = things.filter { $0.id != ledeID && TitleSeam.split($0.title).0 != ledeTitle }
-            return rest.isEmpty ? nil : (label, rest)
-        }
-        return tiles.map { label, things in
-            // The picture is the newest one that has a picture today (user:
-            // "people like seeing the newest image"); the line stays newest.
-            let pictured = things.first { StoredPixels.probe($0) != nil }
-            let cast = label == RoomAccounts.socialRoom ? Self.cast(of: things) : nil
-            let next = (pictured == nil && cast == nil) ? things.dropFirst().first : nil
-            return GlanceSpec(category: label, things: things, newest: things[0], next: next,
-                              pictured: pictured, cast: cast)
-        }
     }
 
     /// SECTIONS SKIP WHAT THE TILES SHOWED (prd §1208l, user: "Sections skip
@@ -492,21 +479,6 @@ extension FeedScreen {
     static func fresh(_ things: [Thing], since: Date?) -> Int {
         guard let since else { return 0 }
         return things.filter { $0.isLive && $0.capturedAt > since }.count
-    }
-
-    /// The people in a category's things today, by handle, newest first:
-    /// two or more, or nobody (one face is the app's mark's job).
-    static func cast(of things: [Thing]) -> ThingCastRoll? {
-        var seen = Set<String>()
-        var members: [ThingCastMember] = []
-        for thing in things where thing.isLive {
-            guard let handle = thing.authorHandle?.trimmingCharacters(in: .whitespaces),
-                  !handle.isEmpty, seen.insert(handle.lowercased()).inserted else { continue }
-            members.append(ThingCastMember(handle: handle, avatarURL: thing.authorAvatarURL))
-        }
-        guard members.count >= 2 else { return nil }
-        return ThingCastRoll(members: Array(members.prefix(ThingCast.memberCap)),
-                             total: members.count, when: .now)
     }
 }
 

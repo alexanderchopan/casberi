@@ -65932,3 +65932,11 @@ User: "turn the categories icons into the brand color. another is wallet needs a
 
 - A category row's disc stays first in its run, where it reads as a thing to tap; its glyph takes `DS.brandInk` (the attention hue still marks a broken app inside).
 - The Wallet's row leads with its own disc (`CategoryFold.glyph` for Wallet) like every category. It drew none because its door was the You row's (§1203 item 6); that row went with §1207 item 5. `categoryRow`'s and `wrapped`'s `leads` flag is deleted with it.
+
+## §1256 — Home's glance tiles become one Newest card (2026-10-11)
+
+User, of Home's category squares: "they are kind of hard to read b/c they cut off the feed item and harder to scan. i'm wondering if 'newest' or something should get it's own card"; of a count-per-category index, "people will always have N new so it's not really helpful info"; then "ya build newest. it's great."
+
+- Under the box and the doors, Home draws one **Newest** card (a pink clock glyph): the five newest live things across every category as the Feed's rows, each under its app's name and time (`grouped`, `dsGroupedSource`, §1103a). The box's thing and the same news again are left out (§1208j); the category sections skip what Newest shows.
+- The glance tiles on Home are deleted from view and model (`contentsGrid`, `glanceSpecs`, `cast(of:)`); the Wallet's Home keeps its tiles, which summarise (§1224).
+- A category is reached from the tray's disc (§1255) or its section's name; the tiles' jump is not replaced.

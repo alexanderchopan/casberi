@@ -301,15 +301,10 @@ extension FeedScreen {
             // §1169); the first connect takes it all away.
             if bridges.connectedCount == 0 { todayPreview } else { nothingYetToday }
         }
-        // THE CONTENTS LEAD (prd §1208b, user: "land on table of contents,
-        // scroll to end of it and then Day starts there"): today's newest
-        // from each app by category, every name a jump down to its section.
-        // TODAY AT A GLANCE (prd §1208d, user: "people like seeing the
-        // newest image or icon that comes w/ a thing"): on the scrolling
-        // Feed the contents are one tile per category — its newest picture
-        // or app, its count, its newest line — each a jump to its section.
-        let glance = scroll ? Self.glanceSpecs(groups, lede: homeCover) : []
-        if scroll { contentsGrid(glance) }
+        // NEWEST (prd §1256): the newest few across every category, as the
+        // Feed's rows on one card, where the glance tiles stood (§1208d).
+        let newest = scroll ? Self.newestThings(groups, lede: homeCover) : []
+        if scroll { newestCard(newest, nextEventID: nextEventID) }
         ForEach(scroll ? [] : groups, id: \.0) { label, rows in
             // Bundles merge into the day card like any row-shaped thing —
             // only a single that stands alone (consent, token) breaks the run.
@@ -405,7 +400,7 @@ extension FeedScreen {
         // THE FEED IS ONE SCROLL ON THE PHONE (prd §1208): every category
         // in its own frame, stacked, in place of today's category runs.
         if scroll {
-            feedScrollSections(visible, hiding: Self.glanceShown(glance, lede: homeCover),
+            feedScrollSections(visible, hiding: Set(newest.map(\.id)).union(homeCover.flatMap { $0.isLive ? [$0.id] : nil } ?? []),
                                nextEventID: nextEventID)
             jumpRoom
         }
