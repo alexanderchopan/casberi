@@ -65960,3 +65960,11 @@ Through the parts every sheet shares, so all nineteen heads change at once:
 - **More** holds the pivot doors (Everything from <app>, the person's page).
 - **The link is said once.** A plain sheet's box already draws the host and art, so its body draws no link card (`linkInBox`) and the link is Details' Site row.
 - Not changed: each kind's box (its content is the kind's own). A thing that carries nothing but a title (a Wise "Needs attention") still draws a box holding only its mark.
+
+## §1259 — The wallet balance line is green (2026-10-11)
+
+User, on a Wallet crown drawing its line red over "Unchanged": "wallet balance line should be green. not red or our brand color."
+
+- The crown's line (`WalletBalanceHeadline.accent`) is `TokenChartStyle.accent(up: true)` — green, pulled toward black in light — on every window, up, down or flat. It draws the balance, not its direction.
+- The direction stays in the signed figure under the number (`moveLine`): red for a loss, green for a gain, quiet for a move that rounds away. A loss is said once, in words.
+- Logos' crown is the same template (`RoomHomeCrown`, §683) and takes the same line. `onColor` still whitens it.

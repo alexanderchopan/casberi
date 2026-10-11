@@ -259,9 +259,13 @@ struct WalletBalanceHeadline: View {
     @State private var pillShown = false
     @State private var entered = false
 
+    /// **THE LINE IS GREEN (prd §1259, user: "wallet balance line should be
+    /// green. not red or our brand color").** The line draws the balance, not
+    /// its direction, so it takes one ink whatever the window did; the signed
+    /// figure under the number (`moveLine`) still states the direction in
+    /// colour, so a loss is said once, in words.
     private var accent: Color {
-        onColor ? .white
-                : TokenChartStyle.accent(change: chart?.change ?? 0, scheme: scheme)
+        onColor ? .white : TokenChartStyle.accent(up: true, scheme: scheme)
     }
 
     /// The number in the headline seat: the live total when the holdings read
