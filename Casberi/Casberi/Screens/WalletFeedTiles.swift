@@ -1249,6 +1249,10 @@ struct WalletWorthALookTray: View {
     /// it) — one sheet, one piece of chrome, the tray's own scroll position
     /// preserved underneath exactly as before.
     @State private var path: [Thing] = []
+    /// The thing walked to inside a sheet's stack (prd §1247).
+    @State private var opened: Thing?
+    /// Inside a sheet's stack the next step pushes (prd §1238).
+    @Environment(\.dsInSheetStack) private var inSheetStack
     /// The scrolling content's REAL height, measured once it lays out — the
     /// tray's own height is derived from this rather than guessed (see
     /// `estimatedContentHeight` for why the guess couldn't hold). Zero until
@@ -1413,7 +1417,9 @@ struct WalletWorthALookTray: View {
     }
 
     var body: some View {
-        NavigationStack(path: $path) {
+        // Pushed inside a sheet's stack (prd §1247) it walks to a thing
+        // through `opened`; alone it owns its stack and path, as before.
+        DSPathStack(path: $path, alone: !inSheetStack) {
         DSTray(title: String(localized: "Worth a look"), height: trayHeight, ink: true, detents: trayDetents) {
                 ScrollView {
                     VStack(alignment: .leading, spacing: DS.Space.s6) {
@@ -1476,7 +1482,10 @@ struct WalletWorthALookTray: View {
         // one level inside it), so it needs `dsInk()` applied again at this
         // outer level too — the same "wins the preference race" reasoning
         // `dsInk()` documents.
-        .dsInk()
+        .dsIf(!inSheetStack) { $0.dsInk() }
+        .navigationDestination(item: $opened) { thing in
+            ThingSheetView(thing: thing)
+        }
         .navigationDestination(for: Thing.self) { thing in
             // `.presentationDetents` is a preference DSTray declares on
             // itself, which stops applying once the stack pushes past it —
@@ -1494,9 +1503,7 @@ struct WalletWorthALookTray: View {
             // preferences too, so it's pinned again here, right beside the
             // detents fix.
             ThingSheetView(thing: thing, onBack: { path.removeLast() })
-                .presentationDetents(trayDetents)
-                .dsSizedSheet(trayHeight)
-                .dsInk()
+                .dsIf(!inSheetStack) { $0.presentationDetents(trayDetents).dsSizedSheet(trayHeight).dsInk() }
         }
         }
     }
@@ -1837,7 +1844,7 @@ struct WalletWorthALookTray: View {
     private func flaggedRow(_ thing: Thing) -> some View {
         Button {
             DSHaptic.selection()
-            path.append(thing)
+            if inSheetStack { opened = thing } else { path.append(thing) }
         } label: {
             HStack(spacing: DS.Space.s2) {
                 Text(WalletValue.transferAmount(thing) ?? WalletValue.title(thing))

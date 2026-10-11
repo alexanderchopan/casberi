@@ -1608,7 +1608,10 @@ enum DemoSeedAll {
         // `obsidian:` prefix so demo teardown can never delete a REAL vault
         // note — the `files:demo/` shape, for the same reason.
         return notes.enumerated().map { i, n in
-            row(.note, n.0, source: "Obsidian", ref: "obsidian:demo-vault/\(n.0).md",
+            // Filed in a vault folder named for its first topic, so Notes'
+            // Folders shows the vault's folders as a real vault does (prd
+            // §1248); `demo-vault/` stays the root teardown matches.
+            row(.note, n.0, source: "Obsidian", ref: "obsidian:demo-vault/\(n.1[0])/\(n.0).md",
                 days: n.2, hour: 20, content: n.0) { t in
                 t.ocrTopics = n.1
                 t.topicsAt = .now

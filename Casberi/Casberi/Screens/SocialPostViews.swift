@@ -207,6 +207,8 @@ struct SocialPhoto: View {
 /// the SHEET a tap walks into it in-app (its own thread, its own quote); in a
 /// feed row it is a read with no door of its own — see `walkable`.
 struct SocialQuoteCard: View {
+    /// Inside a sheet's stack the next step pushes (prd §1238).
+    @Environment(\.dsInSheetStack) private var inSheetStack
     let card: SocialCard
     let source: String
     /// Whether the card is a DOOR (the sheet) or just context (a feed row).
@@ -259,7 +261,7 @@ struct SocialQuoteCard: View {
         if walkable {
             Button { walking = true } label: { cardBody }
                 .buttonStyle(RowPress())
-                .sheet(isPresented: $walking) {
+                .dsOneSheet(isPresented: $walking, pushes: inSheetStack) {
                     SocialPostSheet(post: card, source: source)
                 }
         } else {
@@ -294,15 +296,37 @@ struct SocialPostSheet: View {
     /// — pushes onto the same path and the back chevron unwinds it.
     @State private var path: [SocialCard] = []
 
+    /// Inside a sheet's stack the walk pushes there (prd §1247).
+    @Environment(\.dsInSheetStack) private var inSheetStack
+
     var body: some View {
-        NavigationStack(path: $path) {
-            SocialPostThread(post: post, source: source, open: { path.append($0) })
-                .navigationDestination(for: SocialCard.self) { card in
-                    SocialPostThread(post: card, source: source, open: { path.append($0) })
-                }
+        if inSheetStack {
+            SocialPostWalk(post: post, source: source)
+        } else {
+            NavigationStack(path: $path) {
+                SocialPostThread(post: post, source: source, open: { path.append($0) })
+                    .navigationDestination(for: SocialCard.self) { card in
+                        SocialPostThread(post: card, source: source, open: { path.append($0) })
+                    }
+            }
+            .environment(\.dsInSheetStack, true)
+            .dsReadSheet()
+            .dsInk()
         }
-        .dsReadSheet()
-        .dsInk()
+    }
+}
+
+/// A post walk pushed inside a sheet's stack: each post pushes the next.
+private struct SocialPostWalk: View {
+    let post: SocialCard
+    let source: String
+    @State private var next: SocialCard?
+
+    var body: some View {
+        SocialPostThread(post: post, source: source, open: { next = $0 })
+            .navigationDestination(item: $next) { card in
+                SocialPostWalk(post: card, source: source)
+            }
     }
 }
 

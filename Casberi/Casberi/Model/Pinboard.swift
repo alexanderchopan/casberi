@@ -77,6 +77,22 @@ enum Pinboard {
 
     static func isWritten(_ source: String) -> Bool { writtenSources.contains(source) }
 
+    /// **AN OBSIDIAN NOTE'S VAULT FOLDER IS A FOLDER IN NOTES (prd §1248).**
+    /// The folder it sits in, read off the vault path its row keeps
+    /// (`obsidian:/<folder>/<note>.md`); nil at the vault's root and for every
+    /// other source (no other import keeps a folder). Read-only: it is the
+    /// vault's, so it neither renames nor deletes here.
+    static func vaultFolder(_ thing: Thing) -> String? {
+        guard thing.source == "Obsidian", let ref = thing.sourceRef, ref.hasPrefix("obsidian:") else { return nil }
+        let parts = ref.dropFirst("obsidian:".count).split(separator: "/")
+        guard parts.count > 1 else { return nil }
+        return String(parts[parts.count - 2])
+    }
+
+    /// An open vault folder's key in `chrome.notesFolder`, kept apart from a
+    /// folder of yours with the same name.
+    static let vaultPrefix = "vault:"
+
     /// Whether the room holds this thing: a note of yours, or an entry from
     /// an app you write in. The `@Query` fetches those sources (a kind cannot
     /// be predicated), and this is the half the predicate could not say.

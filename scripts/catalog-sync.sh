@@ -65,7 +65,10 @@ cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+
 # --- 1. Canonical sets from the Swift source of truth ---------------------
 # Each Offer(...) declares name and connectable on the same physical line.
 grep -oE 'Offer\(name: "[^"]+".*connectable: true'  "$CATALOG" \
-  | sed -E 's/.*name: "([^"]+)".*/\1/' | sort -u > "$tmp/connectable"
+  | sed -E 's/.*name: "([^"]+)".*/\1/' \
+  | grep -vx "Markets" | sort -u > "$tmp/connectable"
+# Markets is built in (prd §1167, §1234): never a catalogue row, so never a
+# shelf cell, though its offer stays for the room it builds.
 grep -oE 'Offer\(name: "[^"]+"' "$CATALOG" \
   | sed -E 's/.*name: "([^"]+)".*/\1/' | sort -u > "$tmp/all"
 

@@ -712,7 +712,7 @@ struct AddressCard: View {
     @State private var scrolled: CGFloat = 0
 
     var body: some View {
-        NavigationStack {
+        DSSheetStack {
             ScrollView {
                 // ONE fetch per body pass (2026-08-22, prd §444). `history` is
                 // a computed property that walks the corpus, and it had two

@@ -10,7 +10,7 @@ struct PrivyAppsSheet: View {
     var body: some View {
         let store = PrivyHomeStore.shared
         let apps = store.apps.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
-        NavigationStack {
+        DSSheetStack {
             List {
                 ForEach(apps) { app in
                     let ref = PrivyHomeFeed.ref(app)

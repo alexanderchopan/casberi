@@ -441,7 +441,7 @@ struct L2beatCardScreen: View {
 	@Environment(\.dismiss) private var dismiss
 
 	var body: some View {
-		NavigationStack {
+		DSSheetStack {
 			ScrollViewReader { proxy in
 				ScrollView {
 					L2beatRiskCard(

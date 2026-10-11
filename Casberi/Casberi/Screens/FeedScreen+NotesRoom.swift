@@ -30,8 +30,14 @@ extension FeedScreen {
             // A voice note of yours; a pinned row from a seat is not one.
             return thing.source == "You" && thing.kind.rawValue == "voice"
         case .folders:
-            guard let filed = thing.folder else { return false }
+            // Your folders, and Obsidian's vault folders (prd §1248).
+            let vault = Pinboard.vaultFolder(thing)
+            guard thing.folder != nil || vault != nil else { return false }
             guard let open = chrome.notesFolder else { return true }
+            if open.hasPrefix(Pinboard.vaultPrefix) {
+                return vault.map { Pinboard.vaultPrefix + $0 } == open
+            }
+            guard let filed = thing.folder else { return false }
             return NoteFolderName.key(filed) == NoteFolderName.key(open)
         case .all, .new:  return true
         }
@@ -192,6 +198,22 @@ extension FeedScreen {
                 }
                 .noteFolderRowChrome()
             }
+            // OBSIDIAN'S VAULT FOLDERS (prd §1248), after yours: the vault's
+            // own, so they open and never rename or delete here.
+            let vaults = Dictionary(grouping: filed.compactMap { $0.isLive ? Pinboard.vaultFolder($0) : nil },
+                                    by: { $0 }).mapValues(\.count)
+            ForEach(vaults.keys.sorted { $0.localizedStandardCompare($1) == .orderedAscending },
+                    id: \.self) { name in
+                DSPushRow(title: Text(verbatim: name),
+                          fact: Text(verbatim: "\(vaults[name] ?? 0)"),
+                          action: { openFolder(Pinboard.vaultPrefix + name) }) {
+                    BridgeIcon(name: "Obsidian", size: DS.Mark.row)
+                        .frame(width: DS.Mark.row, height: DS.Mark.row)
+                        .accessibilityHidden(true)
+                }
+                .frame(minHeight: DS.Hit.min)
+                .noteFolderRowChrome()
+            }
             // RECENTLY DELETED (prd §985), after the folders as in Apple
             // Notes, and only while it holds something: an empty one is a
             // door onto nothing.
@@ -231,8 +253,9 @@ extension FeedScreen {
 
     /// The open folder's name, under the tiles: the tap leads back to the
     /// folder list, as the lit Folders tile does.
-    private func openFolderRow(_ name: String) -> some View {
-        Section {
+    private func openFolderRow(_ open: String) -> some View {
+        let name = open.hasPrefix(Pinboard.vaultPrefix) ? String(open.dropFirst(Pinboard.vaultPrefix.count)) : open
+        return Section {
             DSDoorRow(icon: "chevron.left", title: Text(verbatim: name)) {
                 withAnimation(DS.Motion.standard) { chrome.notesFolder = nil }
             }

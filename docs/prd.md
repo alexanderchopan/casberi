@@ -65840,3 +65840,16 @@ Amends §1219's tile for Spending and §1232 item 3.
 
 Checked: `wallet-section-selftest.sh` guards the tile's reading and denies `SpendingReading.shared.latest`. Written on a machine with no Xcode: neither build nor screen was seen before commit.
 
+
+## §1247 — One sheet at a time, the last of them (user, 2026-10-11: "3 yes fix!")
+
+Completes §1238 and §1240.
+
+1. **A view that brings its own stack brings it only when standing alone** (`DSSheetStack`, `DSPathStack`): pushed inside a sheet's stack it uses that one, and alone it marks its own as a sheet's stack so what it raises pushes too. The L2BEAT and Walletbeat cards, the address card, Privy's apps and an app's key sheet use it; the cards §1240 pushed no longer nest a stack.
+2. **Pushed now**: an app's key sheet and the cards a page names (`AccountPage.cardPushes`: the Wallet's, L2BEAT's, Walletbeat's, Privy's apps), a post walked from a thing or a quote (`SocialPostWalk`), and Worth a look with the things it opens.
+3. **Still rising, by design**: the system's own sheets (browser, Photos, Share, Files, Mail, Translate), the full-screen photo viewer, and the web sign-ins.
+4. Back stands at the top-left of a pushed page, the system's (user: "i'm ok w 1"), the one control §752 allows at the top.
+
+## §1248 — Notes' Folders shows Obsidian's vault folders (user, 2026-10-11: "4 YES")
+
+An Obsidian note's folder is read off the vault path its row keeps (`Pinboard.vaultFolder`); Folders lists them after your own, each wearing Obsidian's mark and its count, and opens one as it opens yours (`Pinboard.vaultPrefix` keeps a vault folder apart from one of yours with the same name). The vault's, so never renamed or deleted here. The demo's vault notes stand in folders named for their first topic. No other import keeps a folder.
