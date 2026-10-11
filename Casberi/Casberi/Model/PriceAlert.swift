@@ -13,14 +13,14 @@ import Foundation
 /// - **below**: tell me when it falls to `target` (a price). Once, the same.
 /// - **move**: tell me when it moves `target` (a fraction, 0.10 = 10%) in a
 ///   day, up or down. Stays on, and fires at most once a calendar day.
-/// - **volume** (prd §1247): tell me when a token's day volume passes
+/// - **volume** (prd §1250): tell me when a token's day volume passes
 ///   `target` dollars. Tokens only (Dexscreener's pair states it). Stays on,
 ///   once a calendar day, as a move.
-/// - **gasBelow** (prd §1247): tell me when gas on a chain falls to `target`
+/// - **gasBelow** (prd §1250): tell me when gas on a chain falls to `target`
 ///   gwei. Its `ref` is the chain's (`GasPrice.ref`), not a watched row's.
 ///   Once, then off, as a level.
 ///
-/// Since §1247 the alerts ride iCloud key-value storage between your devices
+/// Since §1250 the alerts ride iCloud key-value storage between your devices
 /// (`PriceAlertStore`), merged by id with `merged`: a copy that went off
 /// stands against one still on, so a sync never re-arms a fired level.
 ///
@@ -42,7 +42,7 @@ struct PriceAlert: Codable, Identifiable, Equatable {
     /// When it last fired, for move's once-a-day rule and the Alerts tile.
     var firedAt: Date? = nil
     /// When the person last changed it by hand (switched it, re-armed it) or
-    /// a sweep moved its ref (§1247). Optional so the alerts stored before it
+    /// a sweep moved its ref (§1250). Optional so the alerts stored before it
     /// decode unchanged.
     var changedAt: Date? = nil
 
@@ -82,7 +82,7 @@ struct PriceAlert: Codable, Identifiable, Equatable {
         return next
     }
 
-    /// Two devices' copies of one alert, as one (§1247). A copy that is OFF —
+    /// Two devices' copies of one alert, as one (§1250). A copy that is OFF —
     /// a level that fired, or one switched off — stands against a copy still
     /// ON, unless the on copy was re-armed by hand after the off copy's last
     /// fact: so a device that never saw the crossing cannot sync a fired
@@ -126,7 +126,7 @@ struct PriceAlert: Codable, Identifiable, Equatable {
         return target / price - 1
     }
 
-    /// The custom sheet's percent (prd §1247): a move of that size in a day,
+    /// The custom sheet's percent (prd §1250): a move of that size in a day,
     /// up or down, typed as "7" or "7%" or "-7" (the sign is the field's, not
     /// the alert's: a move alert listens both ways). nil for nothing, zero, or
     /// a move of a whole price or more.

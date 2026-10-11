@@ -1,7 +1,7 @@
 import Foundation
 import SwiftData
 
-/// Following a coin by its own price (prd §1247; the rules are `CoinFollow`'s).
+/// Following a coin by its own price (prd §1250; the rules are `CoinFollow`'s).
 /// The follow, the launch sweep that converges the old wrapped and symbol-
 /// matched token follows onto it, and CoinPaprika's two keyless reads: the
 /// ticker (price, day move, cap, volume) and the historical ticks a chart and

@@ -285,7 +285,7 @@ struct WatchAddSheet: View {
     // MARK: - Keeping
 
     /// The ref a token's follow lands under: a household coin's wrapped
-    /// token is followed as the coin (prd §1247, `TokenWatch.add`).
+    /// token is followed as the coin (prd §1250, `TokenWatch.add`).
     private func ref(of token: TokenWatch.Resolved) -> String {
         if let id = CoinFollow.wrappedCoin(chain: token.chain, address: token.address) {
             return CoinFollow.ref(id)

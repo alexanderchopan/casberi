@@ -1082,7 +1082,7 @@ func runFixtures() {
     ok(NotifySweep.classify(row(ref: "logos:lez:6iArKUXxhUJqS7kCaPNhwMWt3ro71PDyBj7jwAyE2VQV:e246"), now: now) == nil,
        "test coins arriving never notify (§522: devnet content is not news)")
 
-    // ── Safe config (prd §1246): a new fallback handler or new code is the
+    // ── Safe config (prd §1249): a new fallback handler or new code is the
     //    "Module added" news one step over; an owner change alone stays a row ──
     ok(NotifySweep.classify(row(ref: "wallet:safeconfig:eth:0xabc:1790000000", source: "Safe",
                                 tags: ["Control changed"]), now: now) == .approvalGranted,

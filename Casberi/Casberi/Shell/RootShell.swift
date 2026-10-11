@@ -550,7 +550,7 @@ struct RootShell: View {
                 SourceRename.sweepVoice(context: modelContext)
                 // Stocktwits' watched tickers into Markets (2026-09-29).
                 SourceRename.sweepStockWatches(context: modelContext, store: bridges)
-                // Followed coins by their own price (prd §1247): a wrapped
+                // Followed coins by their own price (prd §1250): a wrapped
                 // native or an index coin followed as a DEX token converges
                 // onto its CoinPaprika follow, in place, before the dedupe.
                 CoinWatch.converge(context: modelContext)

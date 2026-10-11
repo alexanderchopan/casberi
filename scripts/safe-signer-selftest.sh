@@ -141,7 +141,7 @@ guard_check() {   # $1 = SafeStatementSigner path, $2 = SafeRecoverySigner path,
   printf '%s' "$st_code" | grep -q 'SafeMessageEncoder.getMessageHashCalldata(message: innerHash)' || return 1
   printf '%s' "$st_code" | grep -q 'guard chain.lowercased() == local.lowercased() else {' || return 1
   # …and the writes go to Safe alone: a known message's signature to the
-  # gateway first and the service second (prd §1246), a new message to the
+  # gateway first and the service second (prd §1249), a new message to the
   # service — three call sites, one signature each time.
   [[ $(printf '%s' "$st_code" | grep -o 'postJSONStatus\|postJSON(' | wc -l | tr -d ' ') -eq 3 ]] || return 1
   # The service's door is reached only when the gateway's did not take it.

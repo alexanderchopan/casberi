@@ -1,6 +1,6 @@
 import Foundation
 
-/// The one network call behind `SafeSimulation` (prd §1246): a pending Safe
+/// The one network call behind `SafeSimulation` (prd §1249): a pending Safe
 /// transaction, simulated as the Safe's own call on Alchemy, read when the
 /// sign block opens — in its `.task`, never in a body (§628).
 ///

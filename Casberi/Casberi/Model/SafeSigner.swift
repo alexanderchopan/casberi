@@ -344,14 +344,14 @@ enum SafeSigner {
     // MARK: - Reading the proposal
 
     /// The transaction service — the confirmation's SECOND door since prd
-    /// §1246 (the gateway below is tried first; see `post`). It was the only
+    /// §1249 (the gateway below is tried first; see `post`). It was the only
     /// door until then, on the belief that the gateway is a read path; the
     /// gateway's own `addConfirmation` route says otherwise, unmeasured.
     private static func baseURL(_ seg: String) -> String {
         "https://api.safe.global/tx-service/\(seg)/api/v1"
     }
 
-    /// The READ's host, and the write's first door (prd §1246) — Safe's own
+    /// The READ's host, and the write's first door (prd §1249) — Safe's own
     /// Client Gateway, which takes a bare
     /// `safeTxHash` as a transaction id (measured §789b). The proposal read
     /// moved here with the rest for §789's reason: the transaction service
@@ -559,7 +559,7 @@ enum SafeSigner {
             // reaches Safe and nothing else, and the sign block states an
             // amount in base units unless the descriptor itself names the
             // token — the same rule it keeps for a plain `transfer`.
-            // The OPERATION reads first (prd §1246): a DELEGATECALL outside a
+            // The OPERATION reads first (prd §1249): a DELEGATECALL outside a
             // known MultiSend is named for what it is, never summarised.
             reading: SafeCalldata.read(data: tx.data, to: tx.to, value: tx.value, safe: safeAddress,
                                        operation: tx.operation,
@@ -707,7 +707,7 @@ enum SafeSigner {
     }
 
     /// **The only write this app makes** — one signature, offered to Safe at
-    /// two doors in turn, never both successfully (prd §1246).
+    /// two doors in turn, never both successfully (prd §1249).
     ///
     /// 1. **Safe's Client Gateway**, `POST /v1/chains/{chainId}/transactions/
     ///    {safeTxHash}/confirmations` with `{"signedSafeTxHash": "0x…"}` —
@@ -758,7 +758,7 @@ enum SafeSigner {
         return status
     }
 
-    // MARK: - Which door took the last signature (prd §1246)
+    // MARK: - Which door took the last signature (prd §1249)
 
     /// Where the last posted signature landed. `neither` means both doors
     /// refused and the signature went to the clipboard.

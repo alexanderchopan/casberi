@@ -105,7 +105,7 @@ extension FeedScreen {
             .feedRowBackground()
             .listRowSeparator(.hidden)
         }
-        // Gas at the head of the list (prd §1247): Ethereum and Base, stamped
+        // Gas at the head of the list (prd §1250): Ethereum and Base, stamped
         // by age as a price is, its menu the gas alerts.
         Section {
             MarketsGasHead(gas: MarketsGas.shared)
@@ -167,7 +167,7 @@ extension FeedScreen {
         tokensInlineTiles
         let byRef = Dictionary(watches.compactMap { t in t.sourceRef.map { ($0, t) } },
                                uniquingKeysWith: { a, _ in a })
-        // A gas alert watches a chain, not a row (prd §1247).
+        // A gas alert watches a chain, not a row (prd §1250).
         let alerts = PriceAlertStore.shared.alerts
             .filter { byRef[$0.ref] != nil || GasPrice.network(fromRef: $0.ref) != nil }
             .sorted { $0.createdAt > $1.createdAt }
@@ -203,7 +203,7 @@ extension FeedScreen {
             HStack(spacing: DS.Space.s3) {
                 WatchFace(url: watched.flatMap(marketsLogo), lettered: alert.name,
                           onWhite: watched.flatMap { StockWatch.symbol(of: $0) } != nil,
-                          // A gas alert's face is the pump (prd §1247): it watches a chain.
+                          // A gas alert's face is the pump (prd §1250): it watches a chain.
                           symbol: alert.kind == .gasBelow ? MarketsGasHead.glyph : nil)
                 VStack(alignment: .leading, spacing: 1) {
                     Text(verbatim: alert.name).dsText(.body17).foregroundStyle(DS.textPrimary)
@@ -376,7 +376,7 @@ extension FeedScreen {
                            lettered: thing.authorHandle ?? TokensAsk.name(of: thing.title),
                            price: price,
                            change: Self.watchChange(thing),
-                           // A stock's day line (prd §1247), Yahoo's day closes
+                           // A stock's day line (prd §1250), Yahoo's day closes
                            // read off the body and drawn as a token's.
                            closes: pulse?.closes ?? TokenPulse.shared.stockLine(for: thing) ?? [],
                            line: marketsLine(thing, price: price, quoteCap: quote?.marketCap,
@@ -395,7 +395,7 @@ extension FeedScreen {
         }
     }
 
-    /// Pin to Lock Screen, from a row's long press (prd §1247): one row's
+    /// Pin to Lock Screen, from a row's long press (prd §1250): one row's
     /// price as a Live Activity, replacing any other; the same item unpins.
     func pinToLockScreen(_ thing: Thing) {
         guard thing.isLive, let ref = thing.sourceRef else { return }

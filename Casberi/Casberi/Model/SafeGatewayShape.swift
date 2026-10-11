@@ -79,7 +79,7 @@ enum SafeGatewayShape {
         let owners: [String]   // lowercased, sorted
         let modules: [String]  // lowercased, sorted
         let guardAddr: String? // lowercased; nil for none
-        /// The fallback handler and the singleton the Safe runs (prd §1246),
+        /// The fallback handler and the singleton the Safe runs (prd §1249),
         /// lowercased; nil for none, the zero address, or a body that does
         /// not carry the field. The gateway sends both as `{value, …}`.
         var fallbackHandler: String? = nil
@@ -147,7 +147,7 @@ enum SafeGatewayShape {
     /// The EXECUTED multisig transactions on the history's first page,
     /// newest first, at most `cap`, each in the transaction service's row
     /// shape that `SafeBridge.describe` and `landOutcome` already read (prd
-    /// §1246): `safeTxHash` (lowercased), `safe`, `nonce`, `isExecuted`,
+    /// §1249): `safeTxHash` (lowercased), `safe`, `nonce`, `isExecuted`,
     /// `executionDate`, and whatever of `to`/`value`/`dataDecoded`/
     /// `actionCount` the list's `txInfo` carries.
     ///
@@ -255,7 +255,7 @@ enum SafeGatewayShape {
 
     // MARK: - POST /v1/chains/{id}/transactions/{safeTxHash}/confirmations
 
-    /// The body of the gateway's `addConfirmation` (prd §1246) — the
+    /// The body of the gateway's `addConfirmation` (prd §1249) — the
     /// confirmation write's first door, `SafeSigner.post`. One field,
     /// `signedSafeTxHash`, the 65-byte signature hex; held here so
     /// `safe-gateway-selftest.sh` pins the shape the signer sends.

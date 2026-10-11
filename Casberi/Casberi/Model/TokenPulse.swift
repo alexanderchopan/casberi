@@ -27,7 +27,7 @@ final class TokenPulse {
 
     /// Keyed by the watchlist thing's sourceRef.
     private(set) var pulses: [String: Pulse] = [:]
-    /// A followed STOCK's day line (prd §1247), by its sourceRef: Yahoo's day
+    /// A followed STOCK's day line (prd §1250), by its sourceRef: Yahoo's day
     /// closes, the same read the stock's page draws, held fifteen minutes as
     /// a token's pulse is. Its own map, not a `Pulse`: a stock's price and day
     /// move stay Nasdaq's quote (`CompanyQuotes`), which the index row and
@@ -168,7 +168,7 @@ final class TokenPulse {
             $0.source == "Markets"
         })
         var stale: [(ref: String, chain: String, address: String)] = []
-        // A followed coin (prd §1247) reads CoinPaprika, by the id its ref
+        // A followed coin (prd §1250) reads CoinPaprika, by the id its ref
         // carries; a followed stock its day line. Both ride this gate.
         var coins: [(ref: String, id: String)] = []
         var stocks: [(ref: String, symbol: String)] = []

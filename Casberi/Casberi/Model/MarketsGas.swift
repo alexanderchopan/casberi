@@ -1,7 +1,7 @@
 import Foundation
 import Observation
 
-/// The gas the Watchlist's head draws and the gas alerts check (prd §1247):
+/// The gas the Watchlist's head draws and the gas alerts check (prd §1250):
 /// `eth_gasPrice` on Ethereum and Base, through `WalletApprovals.rpcRead`, the
 /// keyless hosts the Wallet's send preview reads its fee on
 /// (`WalletPrepare`). Held a minute, so a room redrawn or an alert check in

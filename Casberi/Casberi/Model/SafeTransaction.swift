@@ -423,18 +423,18 @@ enum SafeCalldata: Equatable {
     case enableModule(module: String)
     /// `disableModule(prevModule, module)` — the module being switched off
     /// is the SECOND argument; the first is the linked-list cursor, the same
-    /// shape as `removeOwner` (prd §1246).
+    /// shape as `removeOwner` (prd §1249).
     case disableModule(module: String)
     case setGuard(guardAddress: String)
     /// `setFallbackHandler(handler)` — the contract that answers every call
     /// the Safe itself does not, EIP-1271 signature checks included, so it can
-    /// approve a signature on the Safe's behalf (prd §1246).
+    /// approve a signature on the Safe's behalf (prd §1249).
     case setFallbackHandler(handler: String)
     /// `changeMasterCopy(masterCopy)` — the Safe's own code replaced. After
-    /// it executes, the "Safe" is whatever that contract says it is (prd §1246).
+    /// it executes, the "Safe" is whatever that contract says it is (prd §1249).
     case changeMasterCopy(masterCopy: String)
     /// A TOP-LEVEL `DELEGATECALL` to anything but a known MultiSend
-    /// deployment (prd §1246). The target's code runs in the Safe's own
+    /// deployment (prd §1249). The target's code runs in the Safe's own
     /// storage, so it can rewrite the owners, the threshold and the modules
     /// whatever its calldata appears to say — which is why the calldata is
     /// NOT read here: a sentence about what the bytes say would describe a
@@ -492,7 +492,7 @@ enum SafeCalldata: Equatable {
         let value: String
         let reading: SafeCalldata
         /// The entry's own calldata, hex — kept so a batch can be simulated
-        /// call by call from the Safe (prd §1246). Defaulted so every older
+        /// call by call from the Safe (prd §1249). Defaulted so every older
         /// construction still compiles.
         var data: String = ""
 
@@ -504,7 +504,7 @@ enum SafeCalldata: Equatable {
         var runsForeignCode: Bool { isDelegateCall && !SafeCalldata.isKnownMultiSend(to) }
     }
 
-    // MARK: - The MultiSend deployments (prd §1246)
+    // MARK: - The MultiSend deployments (prd §1249)
 
     /// Safe's own MultiSend and MultiSendCallOnly singletons, from
     /// `safe-global/safe-deployments` (`src/assets/v1.3.0/multi_send.json`,
@@ -555,7 +555,7 @@ enum SafeCalldata: Equatable {
     /// call stays `.undecoded`. `style` is how that description names
     /// addresses and tokens.
     ///
-    /// `operation` is the transaction's own (prd §1246), and it decides before
+    /// `operation` is the transaction's own (prd §1249), and it decides before
     /// the bytes do. Until then this reader never saw it, so a `multiSend` was
     /// walked as the Safe's batch whatever contract it went to and however it
     /// was called — and a top-level DELEGATECALL into any other contract was
@@ -735,7 +735,7 @@ enum SafeCalldata: Equatable {
             // An inner DELEGATECALL keeps the reading of what its bytes say and
             // is flagged on the row instead (`runsForeignCode`), as it always
             // was. The operation is handed down ONLY into a known MultiSend,
-            // which is what lets a nested batch walk (prd §1246).
+            // which is what lets a nested batch walk (prd §1249).
             calls.append(BatchCall(operation: operation, to: to, value: value,
                                    reading: read(data: data, to: to, value: value, safe: safe,
                                                  operation: isKnownMultiSend(to) ? operation : 0,
@@ -834,7 +834,7 @@ enum SafeCalldata: Equatable {
         case .batch(let calls):
             return !calls.isEmpty && calls.allSatisfy { $0.reading.isFullyReadable }
         // Named, never read: what the target's code does is not in these
-        // bytes, so the reading cannot be the whole story (prd §1246).
+        // bytes, so the reading cannot be the whole story (prd §1249).
         case .delegateCall: return false
         default: return true
         }
@@ -842,7 +842,7 @@ enum SafeCalldata: Equatable {
 
     /// Whether this call changes WHO CONTROLS the Safe — its owners, its
     /// threshold, its modules, its guard, its fallback handler, its own code,
-    /// or (a top-level DELEGATECALL) any of them at once (prd §1246). The
+    /// or (a top-level DELEGATECALL) any of them at once (prd §1249). The
     /// surface draws these in the attention ink and the delegatecall in the
     /// destructive one; a batch is asked about each of its calls.
     var changesControl: Bool {

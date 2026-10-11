@@ -321,7 +321,7 @@ enum NetworkReach {
                          // Safe is TWO hosts since 2026-09-17 (prd §789b): the
                          // Client Gateway answers every READ — what your Safes
                          // are, who signs for them, what is waiting — and,
-                         // since prd §1246, is offered the signature POST
+                         // since prd §1249, is offered the signature POST
                          // first; the transaction service takes it only when
                          // the gateway does not. Both are Safe's own.
                          "safe-client.safe.global", "api.safe.global",
@@ -338,11 +338,11 @@ enum NetworkReach {
                          "api.stocktwits.com",
                          "query1.finance.yahoo.com", "query2.finance.yahoo.com",
                          "api.nasdaq.com", "api.coinpaprika.com",
-                         // A followed coin's mark (prd §1247), keyless.
+                         // A followed coin's mark (prd §1250), keyless.
                          "static.coinpaprika.com",
                          // A watched stock's logo (prd §1081), keyless.
                          "financialmodelingprep.com",
-                         // Gas (prd §1247): `eth_gasPrice` on the keyless nodes
+                         // Gas (prd §1250): `eth_gasPrice` on the keyless nodes
                          // the Wallet's send preview reads (`WalletApprovals`).
                          "rpc.mevblocker.io", "eth.api.onfinality.io", "mainnet.base.org"]),
         // The thumbnail CDN is listed beside the API because a Daily Paper row

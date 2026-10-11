@@ -352,7 +352,7 @@ struct SafeSignBlock: View {
 
     @State private var phase: Phase = .checking
     @State private var signing = false
-    /// What the transaction would do to the Safe's balances (prd §1246) —
+    /// What the transaction would do to the Safe's balances (prd §1249) —
     /// asked in the check's `.task` once the refusals have passed, never in
     /// a body. nil while asking: nothing is drawn until it answers, the
     /// no-spinner-theater rule the block itself keeps.
@@ -453,7 +453,7 @@ struct SafeSignBlock: View {
 
     @ViewBuilder private func readyBody(_ ready: SafeSigner.Ready) -> some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
-            // WHAT IT DOES TO THE BALANCES (prd §1246), above the calls that
+            // WHAT IT DOES TO THE BALANCES (prd §1249), above the calls that
             // say how: the one question a signer asks first, answered by a
             // simulation of the Safe's own call — or a line saying why not.
             if let simulation { simulationBlock(simulation) }
@@ -618,7 +618,7 @@ struct SafeSignBlock: View {
                     // it can rewrite owners and threshold whatever else the
                     // batch appears to do. Into a known MultiSend it is a
                     // nested batch, the ordinary shape, and is not this
-                    // warning (prd §1246).
+                    // warning (prd §1249).
                     Text("Runs code as the Safe itself — it can change the owners.")
                         .dsText(.subhead12).foregroundStyle(DS.destructiveInk)
                         .fixedSize(horizontal: false, vertical: true)
@@ -669,7 +669,7 @@ struct SafeSignBlock: View {
         case .changeMasterCopy(let code):
             return String(localized: "Replaces this Safe's own code with \(WalletStore.shortAddress(code))'s — after this, the Safe does what that code says.")
         case .delegateCall(let target):
-            // The top-level twin of the batch row's warning (prd §1246),
+            // The top-level twin of the batch row's warning (prd §1249),
             // with the target named, because it is the whole reading.
             return String(localized: "Runs another contract's code as the Safe (\(WalletStore.shortAddress(target))) — it can change the owners.")
         case .batch(let calls):
@@ -698,7 +698,7 @@ struct SafeSignBlock: View {
         }
     }
 
-    /// The ink a reading is drawn in (prd §1246): a top-level DELEGATECALL in
+    /// The ink a reading is drawn in (prd §1249): a top-level DELEGATECALL in
     /// the destructive ink, any other change to who controls the Safe in the
     /// attention ink, an unreadable call in the attention ink, the rest
     /// plain. A batch's headline stays plain — its rows carry their own.
@@ -719,7 +719,7 @@ struct SafeSignBlock: View {
         return reading.isFullyReadable && !reading.changesControl ? DS.textSecondary : DS.attentionInk
     }
 
-    // MARK: - The simulation (prd §1246)
+    // MARK: - The simulation (prd §1249)
 
     /// The balance changes, or the reverted call, or why it was not
     /// simulated. ONE footnote under a simulated answer; none under a line

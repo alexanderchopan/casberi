@@ -4,7 +4,7 @@ import SwiftUI
 import ActivityKit
 
 /// One followed price on the Lock Screen and in the Dynamic Island (prd
-/// §1247): the symbol, the price this app last read, the day's move and the
+/// §1250): the symbol, the price this app last read, the day's move and the
 /// day's line. See `PriceActivityAttributes` and `PriceLive` for why it says
 /// its age: there is no push server, so past `PriceLive.stampAfter` — the
 /// activity's stale date, which iOS flips while the app sleeps — it reads

@@ -65830,7 +65830,7 @@ Amends §1171 ("no Search on Settings") for Sources' Apps; completes §1234 item
 2. **The Apps list keeps a Search field** (`SettingsHome`, the same `DSSlabField` a tray landing drew), always while Apps is the pick; it filters every category's rows by name as you type and hides Start here while it holds words. Picking another count clears it, as before.
 3. Under the other counts the field still stands only for a name the tray landed on (§1171).
 
-## §1246 — The Safe loop closes: the phone's key is an owner, the queue is read in the background, the gateway takes the signature, and the card reads what a transaction does (user, 2026-10-11: "for crypto i think improving watchlist and also Safe experience are areas", then "yea so the safe and watchlist ones u suggested")
+## §1249 — The Safe loop closes: the phone's key is an owner, the queue is read in the background, the gateway takes the signature, and the card reads what a transaction does (user, 2026-10-11: "for crypto i think improving watchlist and also Safe experience are areas", then "yea so the safe and watchlist ones u suggested")
 
 The inventory found the co-signer (§425, §913) reading transactions well and delivering them badly: the phone's own key was never an owner candidate, so "Your turn" never fired for it; the queue was read on foreground only; the confirmation POST went to the Transaction Service, whose keyless pool §789 measured empty; and a top-level DELEGATECALL was never named. Within §112 and §425 (no propose, no execute, never a hash computed alone):
 
@@ -65847,7 +65847,7 @@ Still declined: propose, reject (§652), execute, spending allowances, hardware 
 
 UNMEASURED and UNCOMPILED: written on a Linux machine with no Swift toolchain and no network to any API host. The gateway's `addConfirmation` and history shapes, and Alchemy's simulation response, are authored from their documentation; nothing was built or sent before commit. `safetx-selftest.sh`, `safe-gateway-selftest.sh` and `safe-signer-selftest.sh` hold the operation rule, the six deployments, the three selectors, the simulation and history parses and the gateway-first write. Hooks: `-safeProbe background` logs `safeBackground|`; `-signerProbe` adds `signer| lastDoor=`, `signer| phoneOwners=` and `signerSim|`.
 
-## §1247 — The Watchlist prices a coin as itself, draws every row's line, alerts on more than a price, and travels: Reorder, gas, a pinned price, a widget you choose (user, 2026-10-11: "for crypto i think improving watchlist and also Safe experience are areas", then "yea so the safe and watchlist ones u suggested")
+## §1250 — The Watchlist prices a coin as itself, draws every row's line, alerts on more than a price, and travels: Reorder, gas, a pinned price, a widget you choose (user, 2026-10-11: "for crypto i think improving watchlist and also Safe experience are areas", then "yea so the safe and watchlist ones u suggested")
 
 The inventory found BTC and SOL priced as WBTC and wSOL, every index coin followed as the most liquid Dexscreener token with its symbol (a guess that can name the wrong token, §83), stocks with no line on the row, a 10% move as the only percent, alerts on one device, and order changed one Move to top at a time. Within §1000 (no valuation), §1167.3 (nothing followed for you) and "nothing trades, never a portfolio":
 

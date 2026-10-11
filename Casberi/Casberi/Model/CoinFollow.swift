@@ -1,6 +1,6 @@
 import Foundation
 
-/// A COIN FOLLOWED BY ITS OWN PRICE (prd §1247).
+/// A COIN FOLLOWED BY ITS OWN PRICE (prd §1250).
 ///
 /// Bitcoin, Ether, Solana and every coin in the index (`CompanyPacks`'
 /// `.token` listings) are followed by their CoinPaprika id (`btc-bitcoin`,
@@ -64,7 +64,7 @@ enum CoinFollow {
 
     static func native(_ id: String) -> Coin? { natives.first { $0.id == id } }
 
-    /// The wrapped tokens the household names were pinned to until §1247
+    /// The wrapped tokens the household names were pinned to until §1250
     /// (`TokenWatch.householdNames`), by Dexscreener chain and address, case-
     /// folded the way a token's ref stores it (`tokens:<chain>:<lowercased>`).
     static let wrapped: [String: String] = [

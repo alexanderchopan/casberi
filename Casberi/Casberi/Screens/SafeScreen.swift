@@ -73,7 +73,7 @@ struct SafeScreen: View {
 
     private var hasWallets: Bool { !WalletStore.shared.addresses.isEmpty }
     /// A queue to read: a watched wallet, or this phone's own key, which is an
-    /// owner in its own right since prd §1246 — the co-signer's Safes are read
+    /// owner in its own right since prd §1249 — the co-signer's Safes are read
     /// with no wallet watched at all.
     private var canSync: Bool { hasWallets || SafeSigner.hasAnyKey }
     private var walletCount: Int { WalletStore.shared.addresses.count }

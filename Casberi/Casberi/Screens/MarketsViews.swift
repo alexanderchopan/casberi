@@ -134,7 +134,7 @@ struct WatchFace: View {
 /// The alerts a watched token or stock carries, on its page: each one you
 /// set with its switch, then one menu to add another (prd §1081). The
 /// choices are levels computed from the price now; Custom asks for a price
-/// or a day's move in percent (prd §1247), and a token's menu asks for a day
+/// or a day's move in percent (prd §1250), and a token's menu asks for a day
 /// volume too — Dexscreener's pair states a token's, nothing states a coin's
 /// or a stock's here.
 struct WatchAlertsSection: View {
@@ -314,7 +314,7 @@ struct WatchAlertsSection: View {
     }
 }
 
-// MARK: - Gas (prd §1247)
+// MARK: - Gas (prd §1250)
 
 /// Gas at the head of the Watchlist: what a send costs on Ethereum and Base
 /// now, in gwei, on one line, stamped with its age past `GasPrice.stampAfter`

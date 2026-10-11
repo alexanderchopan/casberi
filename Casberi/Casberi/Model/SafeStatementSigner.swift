@@ -288,7 +288,7 @@ enum SafeStatementSigner {
     /// `message` as a string or an EIP-712 object, plus `signature`).
     ///
     /// A signature on a message the service already knows is offered to the
-    /// Client Gateway first (prd §1246): `POST /v1/chains/{chainId}/messages/
+    /// Client Gateway first (prd §1249): `POST /v1/chains/{chainId}/messages/
     /// {messageHash}/signatures` with `{"signature": …}` — safe-client-
     /// gateway's `updateMessageSignature`, the transaction-confirmation door's
     /// twin, and for the same reason (the service's keyless pool, §789).

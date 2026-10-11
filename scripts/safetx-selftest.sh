@@ -5,7 +5,7 @@
 #   Casberi/Casberi/Model/SafeTransaction.swift   compiled WHOLE and unmodified
 #   Casberi/Casberi/Model/Keccak256.swift         its only dependency
 #   Casberi/Casberi/Model/SafeSimulation.swift    the sign block's balance
-#                                                 simulation (prd §1246), whole
+#                                                 simulation (prd §1249), whole
 #
 # WHY THIS IS THE MOST LOAD-BEARING HARNESS IN THE REPO. Every other check
 # here guards a wrong READING; this one guards a wrong SIGNATURE. A wrong
@@ -42,7 +42,7 @@ KECCAK="Casberi/Casberi/Model/Keccak256.swift"
 # too, and driven on its own by `clearsign-selftest.sh`.
 CLEARSIGN="Casberi/Casberi/Model/ClearSign.swift"
 SIGNER="Casberi/Casberi/Model/SafeSigner.swift"
-# The balance simulation's plan, request and parse (prd §1246) — Foundation-
+# The balance simulation's plan, request and parse (prd §1249) — Foundation-
 # only, compiled whole beside the reader whose `.batch` it plans from.
 SIMULATION="Casberi/Casberi/Model/SafeSimulation.swift"
 KEY="Casberi/Casberi/Model/SignerKey.swift"
@@ -105,7 +105,7 @@ for reach in 'URLSession' 'IngestSupport' 'SecItemAdd' 'import Security' 'import
   printf '%s' "$CODE" | grep -q "$reach" \
     && { echo "✗ SafeTransaction.swift reached $reach — it must stay Foundation-only so this harness can compile it whole"; exit 1; }
 done
-# The simulation's pure half reaches nothing either (prd §1246): its one
+# The simulation's pure half reaches nothing either (prd §1249): its one
 # network call lives in `SafeSimulator.swift`, so this file compiles whole.
 SIM_CODE=$(strip_comments "$SIMULATION")
 for reach in 'URLSession' 'IngestSupport' 'import SwiftData' 'import SwiftUI' 'UserDefaults'; do
@@ -114,7 +114,7 @@ for reach in 'URLSession' 'IngestSupport' 'import SwiftData' 'import SwiftUI' 'U
 done
 # …and the sign block asks for it in a `.task`, never a body (§628).
 grep -q 'simulation = await SafeSimulator.simulate(' "$CARD" \
-  || { echo "✗ the sign block no longer asks for the simulation in its .task (prd §1246)"; exit 1; }
+  || { echo "✗ the sign block no longer asks for the simulation in its .task (prd §1249)"; exit 1; }
 
 # The type strings are Safe's, verbatim. A single character here is a
 # different hash, and the mutation pass below proves each one is load-bearing
@@ -225,7 +225,7 @@ for verb in 'postJSONArray' 'deleteJSON' '"PUT"' '"PATCH"' '"DELETE"' 'httpMetho
   printf '%s' "$SIGNER_CODE" | grep -qF -- "$verb" \
     && { echo "✗ SafeSigner.swift gained a write verb ($verb) — the one-POST promise is now false"; exit 1; }
 done
-# TWO POSTS since prd §1246, of ONE signature, to Safe's two confirmation
+# TWO POSTS since prd §1249, of ONE signature, to Safe's two confirmation
 # doors in turn: the Client Gateway's `addConfirmation` first, the transaction
 # service's confirmations endpoint only when the gateway did not take it.
 # Still one write — the second door is reached only on a non-2xx from the
@@ -235,7 +235,7 @@ done
 printf '%s' "$SIGNER_CODE" | grep -q 'multisig-transactions/\\(safeTxHash)/confirmations/' \
   || { echo "✗ the second door no longer goes to the transaction service's confirmations endpoint"; exit 1; }
 printf '%s' "$SIGNER_CODE" | grep -q '(gatewayURL(rail))/transactions/\\(ready.safeTxHash)/confirmations"' \
-  || { echo "✗ the first door no longer goes to the gateway's confirmations endpoint (prd §1246)"; exit 1; }
+  || { echo "✗ the first door no longer goes to the gateway's confirmations endpoint (prd §1249)"; exit 1; }
 # …and the second door is reached ONLY when the first did not take it.
 printf '%s' "$SIGNER_CODE" | grep -q 'if (200..<300).contains(gateway) {' \
   || { echo "✗ the gateway's answer no longer decides whether the transaction service is asked — one signature could be posted twice"; exit 1; }
@@ -400,7 +400,7 @@ let TO   = "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd"
 let USDC = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
 let ONE_ETH = "1000000000000000000"
 // Safe's MultiSendCallOnly v1.3.0 (canonical) — a batch is the Safe's only
-// when it is DELEGATECALLed into a known MultiSend (prd §1246).
+// when it is DELEGATECALLed into a known MultiSend (prd §1249).
 let MS = "0x40A2aCCbd92BCA938b02010E17A5b8929b49130D"
 // transfer(0xabcd…abcd, 1_000_000) — one USDC at six decimals.
 let TRANSFER_CALLDATA =
@@ -644,7 +644,7 @@ func packedEntry(op: Int, to: String, value: Int, data: String) -> String {
         + String(format: "%064x", value) + String(format: "%064x", d.count / 2) + d
 }
 /// Every batch here is what Safe{Wallet} sends: a DELEGATECALL into a known
-/// MultiSend. Anything else is no longer read as the Safe's batch (§1246).
+/// MultiSend. Anything else is no longer read as the Safe's batch (§1249).
 func batchRead(_ data: String) -> SafeCalldata {
     SafeCalldata.read(data: data, to: MS, value: "0", safe: SAFE, operation: 1)
 }
@@ -770,8 +770,8 @@ check("a nested batch is walked, not refused",
 check("…and an empty batch is never 'fully readable' — [] is the refusal",
       !SafeCalldata.batch([]).isFullyReadable)
 
-// --- THE OPERATION READS FIRST (prd §1246) ----------------------------------
-// Until §1246 the reader never saw `operation`: a `multiSend` was walked as the
+// --- THE OPERATION READS FIRST (prd §1249) ----------------------------------
+// Until §1249 the reader never saw `operation`: a `multiSend` was walked as the
 // Safe's batch whatever contract it went to and however it was called, and a
 // top-level DELEGATECALL into any other contract was summarised as whatever its
 // calldata claimed — which is not the call being made.
@@ -816,7 +816,7 @@ for canonical in ["0xA238CBeb142c10Ef7Ad8442C6D1f9E89e07e7761", "0x998739BFdAAdd
 check("exactly six deployments are known", SafeCalldata.multiSendDeployments.count == 6)
 check("the Safe itself is not a MultiSend", !SafeCalldata.isKnownMultiSend(SAFE))
 
-print("three more changes to who controls the Safe (prd §1246)")
+print("three more changes to who controls the Safe (prd §1249)")
 check("disableModule(address,address) → 0xe009cfde",
       SafeCalldata.selector("disableModule(address,address)") == "0xe009cfde")
 check("setFallbackHandler(address) → 0xf08a0323",
@@ -847,7 +847,7 @@ check("a truncated disableModule is undecoded, never a module we made up",
       SafeCalldata.read(data: "0xe009cfde" + "0000000000000000000000001111111111111111111111111111111111111111",
                         to: SAFE, value: "0", safe: SAFE) == .undecoded(selector: "0xe009cfde"))
 
-// --- THE BALANCE SIMULATION (prd §1246) -------------------------------------
+// --- THE BALANCE SIMULATION (prd §1249) -------------------------------------
 // The plan decides what is asked; the parse decides what is drawn. Both are
 // pure, so both are pinned here. The response fixtures are AUTHORED from
 // Alchemy's reference, not captured — no build host reaches Alchemy.
@@ -1427,7 +1427,7 @@ mutate "an undecodable calldata claims to be decoded" \
   'if case .undecoded = self { return false }' \
   'if case .undecoded = self { return true }'
 
-# --- THE OPERATION, AND THREE MORE CONTROL CHANGES (prd §1246) --------------
+# --- THE OPERATION, AND THREE MORE CONTROL CHANGES (prd §1249) --------------
 
 # The batch walked for a DELEGATECALL into any contract — a stranger's code
 # described as the Safe's own batch.

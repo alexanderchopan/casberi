@@ -1,6 +1,6 @@
 import Foundation
 
-/// GAS AT THE HEAD OF THE WATCHLIST (prd §1247): what a transaction costs to
+/// GAS AT THE HEAD OF THE WATCHLIST (prd §1250): what a transaction costs to
 /// send on Ethereum and on Base right now, in gwei, read with `eth_gasPrice`
 /// on the hosts the Wallet's send preview already reads (`WalletApprovals`,
 /// `WalletPrepare`), and a "below N gwei" alert per chain.

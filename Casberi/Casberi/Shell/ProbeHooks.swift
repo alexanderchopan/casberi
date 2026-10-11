@@ -2772,7 +2772,7 @@ enum ProbeHooks {
                 }
             }
         },
-        // `-coinProbe <coinpaprika id>` — a followed coin's reads (prd §1247),
+        // `-coinProbe <coinpaprika id>` — a followed coin's reads (prd §1250),
         // MEASURED on-device: the ticker's fields, then each chart range's
         // closes or `absent`. The shapes `CoinFollow` parses were authored
         // from CoinPaprika's docs; this is the line that says they hold.
@@ -2797,7 +2797,7 @@ enum ProbeHooks {
                 }
             }
         },
-        // `-coinConvergeProbe YES` — run the launch sweep again (prd §1247) and
+        // `-coinConvergeProbe YES` — run the launch sweep again (prd §1250) and
         // list every followed coin: its ref, its title and the price kept from
         // when it was followed. A second run says `moved=0`.
         Hook(key: "coinConvergeProbe") { _, context in
@@ -2812,7 +2812,7 @@ enum ProbeHooks {
                       PriceAlertStore.shared.alerts(for: thing.sourceRef ?? "").count)
             }
         },
-        // `-gasProbe YES` — the Watchlist head's gas (prd §1247): one line a
+        // `-gasProbe YES` — the Watchlist head's gas (prd §1250): one line a
         // chain, the gwei, and whether the head would stamp it.
         Hook(key: "gasProbe") { _, _ in
             Task { @MainActor in
@@ -2828,7 +2828,7 @@ enum ProbeHooks {
             }
         },
         // `-pricePin "<symbol>"|off` — pin a followed row's price to the Lock
-        // Screen as its long press does (prd §1247), after one pulse, and log
+        // Screen as its long press does (prd §1250), after one pulse, and log
         // the outcome; `off` takes it down. The simulator draws Live
         // Activities; a pass shows the activity, never a background update.
         Hook(key: "pricePin") { raw, context in
@@ -3759,7 +3759,7 @@ enum ProbeHooks {
                       String(describing: SignerKey.presence()),
                       SignerKey.address() ?? "-",
                       SignerKey.biometryAvailable() ? "yes" : "no")
-                // Which door took the last posted signature (prd §1246) —
+                // Which door took the last posted signature (prd §1249) —
                 // `gateway` is the claim that pass makes, unmeasured until a
                 // device prints it.
                 if let door = SafeSigner.lastDoor() {
@@ -3823,7 +3823,7 @@ enum ProbeHooks {
                                   call.to, call.value, String(describing: call.reading))
                         }
                         // What the sign block draws above the calls (prd
-                        // §1246): the simulation, one line per change, or the
+                        // §1249): the simulation, one line per change, or the
                         // reason it was not simulated. UNMEASURED until a run
                         // on a real Safe prints `simulated`.
                         switch await SafeSimulator.simulate(chainId: ready.chainId, safe: ready.safeAddress,
@@ -3956,7 +3956,7 @@ enum ProbeHooks {
         // unreachable/none). Pairs with `-walletAddress` (a Safe address, to
         // exercise anything).
         // `-safeProbe background` runs the background task's Safe read
-        // instead (prd §1246) — the simulator never runs a BGAppRefreshTask,
+        // instead (prd §1249) — the simulator never runs a BGAppRefreshTask,
         // so this is the only exerciser it has; it NSLogs `safeBackground|`.
         Hook(key: "safeProbe") { spec, context in
             Task { @MainActor in

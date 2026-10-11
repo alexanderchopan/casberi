@@ -5,7 +5,7 @@ import ActivityKit
 #endif
 
 /// Pins one followed row's price to the Lock Screen, moves it whenever the
-/// app reads that price, and takes it down (prd §1247; the rules are
+/// app reads that price, and takes it down (prd §1250; the rules are
 /// `PriceLive`'s, the view `CasberiWidgets/PriceActivity.swift`).
 ///
 /// `MoneyActivityDriver`'s shape: the whole ActivityKit surface behind one

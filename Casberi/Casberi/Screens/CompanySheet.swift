@@ -50,7 +50,7 @@ struct CompanySheet: View {
                 EmptyView()
             }
         case .token(let symbol, let id):
-            // A coin's own line (prd §1247), CoinPaprika's ticks; the quote
+            // A coin's own line (prd §1250), CoinPaprika's ticks; the quote
             // alone when they do not answer.
             TokenChartView(memoryKey: "coin.range.\(id)",
                            fetch: { (range: TokenRange) in

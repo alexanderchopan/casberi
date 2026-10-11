@@ -43,7 +43,7 @@ struct TokenQuickRoute: Identifiable, Equatable {
     /// "tokens:" ref format live in exactly one place.
     @MainActor
     func watchedThing(in context: ModelContext) -> Thing? {
-        // A household coin's wrapped token is followed as the coin (prd §1247).
+        // A household coin's wrapped token is followed as the coin (prd §1250).
         let ref = CoinFollow.wrappedCoin(chain: chain, address: address).map(CoinFollow.ref) ?? "tokens:\(id)"
         var d = FetchDescriptor<Thing>(predicate: #Predicate { $0.sourceRef == ref })
         d.fetchLimit = 1

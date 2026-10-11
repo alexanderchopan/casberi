@@ -2,7 +2,7 @@ import WidgetKit
 import SwiftUI
 import AppIntents
 
-/// What you follow in Markets, on the Home Screen (prd §1223, §1242, §1247):
+/// What you follow in Markets, on the Home Screen (prd §1223, §1242, §1250):
 /// your watchlist in its own order, or the rows you chose for this tile, each
 /// its symbol, the price this app last read, the day's move and the day's
 /// line. Small (four two-line rows at most, as many as it holds), medium (six
@@ -25,7 +25,7 @@ struct WatchlistWidget: Widget {
         .supportedFamilies(Self.families)
     }
 
-    /// The small tile, the medium (prd §1247) and, where there is a Lock
+    /// The small tile, the medium (prd §1250) and, where there is a Lock
     /// Screen, its rectangle.
     static var families: [WidgetFamily] {
         #if targetEnvironment(macCatalyst)
@@ -36,7 +36,7 @@ struct WatchlistWidget: Widget {
     }
 }
 
-// MARK: - Choosing the rows (prd §1247)
+// MARK: - Choosing the rows (prd §1250)
 
 /// A row you follow, as the tile's settings offer it: read from the payload
 /// the app published, never from the network or the store.
@@ -180,7 +180,7 @@ struct WatchlistWidgetView: View {
             } else if chosen.isEmpty {
                 line(String(localized: "Follow a company in Markets"))
             } else if wide {
-                // One line a row (prd §1247): six at most, as many as the
+                // One line a row (prd §1250): six at most, as many as the
                 // tile holds, never a row cut short. Spelled out for
                 // `ViewThatFits`'s sake, as the small tile's are.
                 let all = Array(chosen.prefix(WidgetWatch.mediumCap))
@@ -209,7 +209,7 @@ struct WatchlistWidgetView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
-    /// The Lock Screen's rectangle (prd §1247): two one-line rows at most, no
+    /// The Lock Screen's rectangle (prd §1250): two one-line rows at most, no
     /// line (it does not fit beside a price there), the stamp when owed.
     @ViewBuilder private var accessory: some View {
         let all = Array(chosen.prefix(WidgetWatch.accessoryCap))
@@ -265,7 +265,7 @@ struct WatchlistWidgetView: View {
     }
 }
 
-/// One row on one line (prd §1247), for the medium tile and the Lock Screen:
+/// One row on one line (prd §1250), for the medium tile and the Lock Screen:
 /// the symbol, then the price, the day's line when there is room for it, and
 /// the move. The move never cuts; the symbol and the price shrink first.
 private struct WatchlistLineRow: View {

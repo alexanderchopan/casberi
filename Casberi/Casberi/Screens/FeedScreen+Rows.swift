@@ -734,7 +734,7 @@ struct RowVerbMenu: View {
     /// A watched row in Markets (prd §1081): Move to top and Stop watching.
     var onUnwatch: ((Thing) -> Void)? = nil
     var onMoveToTop: ((Thing) -> Void)? = nil
-    /// Markets (prd §1247): drag the list in My order, and pin a row's price
+    /// Markets (prd §1250): drag the list in My order, and pin a row's price
     /// to the Lock Screen.
     var onReorder: (() -> Void)? = nil
     var onPin: ((Thing) -> Void)? = nil
@@ -753,7 +753,7 @@ struct RowVerbMenu: View {
         let note = Pinboard.isNote(thing)
         // A watched row holds Move to top, Reorder (in My order), Pin to Lock
         // Screen (where Live Activities are on), Share and Stop following
-        // (prd §1081, §1247). Nothing else in the menu is about a thing you
+        // (prd §1081, §1250). Nothing else in the menu is about a thing you
         // follow.
         if let onUnwatch, let onMoveToTop, !PriceAlertStore.isAlertRow(thing) {
             Button {

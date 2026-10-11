@@ -5,7 +5,7 @@ import Foundation
 import ActivityKit
 #endif
 
-/// ONE PRICE ON THE LOCK SCREEN (prd §1247): a row you follow in Markets,
+/// ONE PRICE ON THE LOCK SCREEN (prd §1250): a row you follow in Markets,
 /// pinned from its long press — its symbol, the price this app last read, the
 /// day's move and the day's line. One at a time: pinning another replaces it.
 ///

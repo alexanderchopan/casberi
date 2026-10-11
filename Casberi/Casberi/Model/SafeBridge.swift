@@ -344,7 +344,7 @@ enum SafeBridge {
         guard let ids = SafeGatewayShape.queuedIDs(listed.json) else { return nil }
         var rows: [[String: Any]] = []
         for id in ids.prefix(queueDetailCap) {
-            // The background task's expiration cancels it (prd §1246); a read
+            // The background task's expiration cancels it (prd §1249); a read
             // cut short is an unreachable queue, never a shorter one.
             guard !Task.isCancelled else { return nil }
             let read = await SafeServiceGate.get("\(baseURL(chain))/transactions/\(id)")
@@ -385,12 +385,12 @@ enum SafeBridge {
         let modules: [String]  // lowercased, sorted
         let guardAddr: String? // lowercased; nil for the zero address (no guard)
         /// The fallback handler and the Safe's own code (its singleton), both
-        /// lowercased, nil for none (prd §1246) — the two other ways a Safe's
+        /// lowercased, nil for none (prd §1249) — the two other ways a Safe's
         /// control changes besides owners, threshold, modules and guard.
         var fallbackHandler: String? = nil
         var implementation: String? = nil
         /// True on a snapshot that READ the two fields above. A snapshot
-        /// written before §1246 decodes them as nil, which is "not read", not
+        /// written before §1249 decodes them as nil, which is "not read", not
         /// "none" — so a change is stated only between two snapshots that
         /// both read them, and the first pass after the update is silent.
         var extrasRead: Bool? = nil
@@ -424,7 +424,7 @@ enum SafeBridge {
         let chain: Chain
         let safeAddress: String
         let viaOwner: String?
-        /// `viaOwner` is one of THIS PHONE's signer keys (prd §1246), not a
+        /// `viaOwner` is one of THIS PHONE's signer keys (prd §1249), not a
         /// watched wallet — so rows file under the Safe itself, since the
         /// key is not an account anybody watches.
         var viaPhone = false
@@ -433,7 +433,7 @@ enum SafeBridge {
         var rowWallet: String { viaPhone ? safeAddress : (viaOwner ?? safeAddress) }
     }
 
-    // MARK: - This phone's own keys as owners (prd §1246)
+    // MARK: - This phone's own keys as owners (prd §1249)
 
     /// This phone's signer addresses, lowercased: the §425 key's own, and the
     /// Enclave key's signer contract where one has been read (prd §913 — the
@@ -441,7 +441,7 @@ enum SafeBridge {
     /// names it, `SafeSigner.standing`'s rule). Reads `UserDefaults` only —
     /// never the Keychain — so it costs nothing and raises no prompt.
     ///
-    /// Until §1246 neither was ever an owner candidate: a Safe naming only
+    /// Until §1249 neither was ever an owner candidate: a Safe naming only
     /// this phone (the co-signer §425 built) was invisible to the queue, and a
     /// Safe watched directly never said whose turn it was even when the
     /// phone was the owner it waited on.
@@ -603,7 +603,7 @@ enum SafeBridge {
     /// to also submit a pending tx to, and a never-executed Safe fails the
     /// nonce check even if someone bothers with a fake pending tx too).
     ///
-    /// `phone` (prd §1246) adds every Safe naming one of this phone's keys as
+    /// `phone` (prd §1249) adds every Safe naming one of this phone's keys as
     /// a CURRENT owner, with no `nonce > 0` and no non-empty-queue filter: a
     /// decoy has to be deployed naming an address that already exists, and a
     /// key this app generated has appeared nowhere — `signerSafes`'
@@ -772,7 +772,7 @@ enum SafeBridge {
     /// wording stands.
     private static func describe(_ tx: [String: Any], chain: Chain, safeAddress: String,
                                  facts: TokenFacts) -> String {
-        // A TOP-LEVEL DELEGATECALL outside a known MultiSend (prd §1246) is
+        // A TOP-LEVEL DELEGATECALL outside a known MultiSend (prd §1249) is
         // named for what it does to the Safe, before anything its calldata
         // claims — the sign block's `.delegateCall` reading, in the feed's
         // words, so the row and the sheet cannot disagree about it.
@@ -780,7 +780,7 @@ enum SafeBridge {
            !SafeCalldata.isKnownMultiSend(to) {
             return String(localized: "a call that runs another contract's code as the Safe")
         }
-        // An executed batch read off the history LIST (prd §1246), which
+        // An executed batch read off the history LIST (prd §1249), which
         // carries the gateway's own count and no decoded calls.
         if tx["dataDecoded"] == nil, let count = SafeGatewayShape.int(tx["actionCount"]), count > 1 {
             return String(localized: "a batch of \(count) actions")
@@ -868,7 +868,7 @@ enum SafeBridge {
         return humanize(method)
     }
 
-    /// A call that changes who controls the Safe, named for that (prd §1246)
+    /// A call that changes who controls the Safe, named for that (prd §1249)
     /// rather than split on its capitals — "enable module" said nothing about
     /// a contract that can move funds without a signature. The address is
     /// read POSITIONALLY: `disableModule(prevModule, module)` puts the module
@@ -1000,10 +1000,10 @@ enum SafeBridge {
     }
 
     /// Reads every Safe this pass touches (watched directly, watched through
-    /// a signer, or — since prd §1246 — owned by one of this phone's keys)
+    /// a signer, or — since prd §1249 — owned by one of this phone's keys)
     /// and lands a thing for every newly seen pending `safeTxHash`, plus a
     /// config-change alert for any Safe whose owners, threshold, modules,
-    /// guard, fallback handler or code drifted since last seen, plus (§1246)
+    /// guard, fallback handler or code drifted since last seen, plus (§1249)
     /// the executed transactions on its history's first page. Rides
     /// `WalletIngest.refresh` inside its running guard, like the other arms.
     @MainActor
@@ -1023,7 +1023,7 @@ enum SafeBridge {
     /// One pass's running state, threaded through `syncSafe` so a Safe
     /// reached twice in one pass (watched directly AND through a watched
     /// owner, or on two of its owners) is checked once and never lands the
-    /// same ref twice. Until §1246 the second sighting read the same
+    /// same ref twice. Until §1249 the second sighting read the same
     /// `existing` snapshot as the first, so it could insert a duplicate row
     /// (found by reading, not measured).
     private struct Pass {
@@ -1036,7 +1036,7 @@ enum SafeBridge {
     }
 
     /// The Safe-at-a-time half of a pass — the SAME routine for the
-    /// foreground sync and the background task (prd §1246), so the two cannot
+    /// foreground sync and the background task (prd §1249), so the two cannot
     /// land the same transaction two different ways. `known` is who "you"
     /// may be: the watched wallets, then this phone's keys. `history` reads
     /// the executed history too, which the background task does not.
@@ -1063,7 +1063,7 @@ enum SafeBridge {
         let detail = await safeDetail(chain: chain, address: safeAddress)
         let currentNonce = detail?.nonce
         let owners = detail?.config.owners ?? []
-        // WHO "you" are (prd §1246). Reached through a watched signer, that
+        // WHO "you" are (prd §1249). Reached through a watched signer, that
         // signer, as before. Watched directly, it used to be nobody — "we
         // don't know which of its N owners you are" — which was true only
         // while nothing in the app was an owner. Now it is the first watched
@@ -1158,7 +1158,7 @@ enum SafeBridge {
         }
     }
 
-    // MARK: - Executed history (prd §1246)
+    // MARK: - Executed history (prd §1249)
 
     /// The first page of a Safe's executed history, at most this many rows.
     /// The gateway's own page is twenty; one page per Safe per foreground is
@@ -1172,7 +1172,7 @@ enum SafeBridge {
     /// dated by its EXECUTION, never by this pass (§790's rule: a row the
     /// parse cannot date is dropped by `SafeGatewayShape.history`).
     ///
-    /// Until §1246 the feed knew only what it had watched go pending, so a
+    /// Until §1249 the feed knew only what it had watched go pending, so a
     /// Safe first seen today, or a transaction proposed and executed between
     /// two foregrounds, had no history at all in the corpus.
     @MainActor
@@ -1202,13 +1202,13 @@ enum SafeBridge {
         }
     }
 
-    // MARK: - Background reach (prd §1246)
+    // MARK: - Background reach (prd §1249)
 
     /// The background task's Safe read: the queue of every Safe this app has
     /// confirmed real, read through the Client Gateway and landed exactly as
     /// the foreground does (`syncSafe`), so a signature waiting on you is a
     /// row — and, through the notify sweep that runs next, a notification —
-    /// while the app is closed. Before §1246 a Safe was read only on a
+    /// while the app is closed. Before §1249 a Safe was read only on a
     /// foreground, so "your signature is needed" reached the lock screen only
     /// after you had already opened the app.
     ///
@@ -1354,7 +1354,7 @@ enum SafeBridge {
         }
         var title = String(localized: "\(have) of \(required) signatures collected on \(description)")
         // No suffix at all when no watched wallet or phone key is an owner —
-        // see `you` at the call site (prd §1246): we don't know which owner
+        // see `you` at the call site (prd §1249): we don't know which owner
         // you are.
         guard knowsYou else { return (title, []) }
         if entry.awaitsYou {
@@ -1540,7 +1540,7 @@ enum SafeBridge {
     /// itself.
     ///
     /// `capturedAt` dates the row by the transaction's own clock when the
-    /// caller has one (the executed history, prd §1246); `facts` is a
+    /// caller has one (the executed history, prd §1249); `facts` is a
     /// prefetch the caller already made for several rows at once.
     @MainActor
     private static func landOutcome(context: ModelContext, chain: Chain, hash: String, tx: [String: Any],
@@ -1759,7 +1759,7 @@ enum SafeBridge {
         let watched = WalletStore.shared.addresses.map(\.address)
         let addresses = await WalletIngest.resolvedAddresses(watched).filter { ENS.isHexAddress($0) }
         // A phone that holds a key reads its own Safes with no wallet watched
-        // at all (prd §1246) — the co-signer is an owner in its own right.
+        // at all (prd §1249) — the co-signer is an owner in its own right.
         guard !addresses.isEmpty || !phoneOwners().isEmpty else { return .landed(0) }
         let mark = SafeServiceGate.mark()
         var added = await sync(context: context, addresses: addresses,
@@ -1815,7 +1815,7 @@ enum SafeBridge {
                 out.append(String(localized: "removed its transaction guard"))
             }
         }
-        // The fallback handler and the Safe's own code (prd §1246), stated
+        // The fallback handler and the Safe's own code (prd §1249), stated
         // only between two snapshots that both READ them — see `extrasRead`.
         if old.extrasRead == true, new.extrasRead == true {
             if old.fallbackHandler != new.fallbackHandler {
@@ -1833,7 +1833,7 @@ enum SafeBridge {
     }
 
     /// The config changes that hand somebody new a way to act as the Safe
-    /// without its owners' signatures (prd §1246): a new fallback handler
+    /// without its owners' signatures (prd §1249): a new fallback handler
     /// (it answers EIP-1271 signature checks on the Safe's behalf) or new
     /// code. Tagged `Control changed`, which `NotifySweep` raises exactly as
     /// it raises `Module added` — the same news, "something new can move your
@@ -2045,7 +2045,7 @@ enum SafeBridge {
         // the Safe itself — the same rule the landing wording follows.
         let owners = detail?.config.owners ?? []
         // …or, for a row filed under the Safe itself, this phone's key when
-        // the Safe names it (prd §1246).
+        // the Safe names it (prd §1249).
         let you = owners.contains(address.lowercased()) ? address
             : knownOwner(in: owners, known: phoneOwners())
         let people = roster(owners: owners, tx: root, you: you)

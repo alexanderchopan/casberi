@@ -57,7 +57,7 @@ enum ProseLinks {
 enum ThingChart {
     case token(chain: String, address: String)
     case stock(ticker: String)
-    /// A coin followed by its CoinPaprika id (prd §1247).
+    /// A coin followed by its CoinPaprika id (prd §1250).
     case coin(id: String)
     case postHogMetric(event: String)
     /// A watched token with NO resolvable Dexscreener route but a real
@@ -2828,7 +2828,7 @@ private struct StockChartContent: View {
     }
 }
 
-/// A followed coin's price (prd §1247), drawn natively: CoinPaprika's
+/// A followed coin's price (prd §1250), drawn natively: CoinPaprika's
 /// historical ticks under the same `TokenChartView` a token and a stock wear,
 /// the figure the ticker's live price. The hour is not a range CoinPaprika's
 /// free ticks serve, so a coin's hour chip says it is missing rather than
@@ -2907,7 +2907,7 @@ private func watchAlerts(_ thing: Thing) -> some View {
        let ref = thing.sourceRef {
         WatchAlertsSection(ref: ref, name: TokensAsk.name(of: thing.title),
                            price: PriceAlertStore.reading(for: thing)?.price,
-                           // A day-volume alert is a DEX token's (prd §1247).
+                           // A day-volume alert is a DEX token's (prd §1250).
                            volume: TokenChart.route(from: thing.content) != nil)
             .padding(.top, DS.Space.s2)
     }

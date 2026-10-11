@@ -62,7 +62,7 @@ extension FeedScreen {
         // (standsAlone), so merging only ever joins the still-unpulsed rows.
         let positions = cardRunPositions(count: ordered.count,
                                          isBreaker: { standsAlone(ordered[$0]) })
-        // Drag to reorder (prd §1247): only in My order, only once Reorder was
+        // Drag to reorder (prd §1250): only in My order, only once Reorder was
         // asked for from a row's long press; the list's own handles move the
         // rows and the order saves through `TokenWatchOrder`, as Move to top's.
         let reorderable = marketsReordering && TokenWatchOrder.shared.mode == .manual
@@ -104,7 +104,7 @@ extension FeedScreen {
         }
     }
 
-    /// Reorder, from a row's long press (prd §1247): the list takes its drag
+    /// Reorder, from a row's long press (prd §1250): the list takes its drag
     /// handles. Offered only while the list is in My order.
     func startReorder() {
         guard TokenWatchOrder.shared.mode == .manual else { return }

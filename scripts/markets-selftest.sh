@@ -4,11 +4,11 @@
 #
 #   Casberi/Casberi/Model/PriceAlert.swift  (compiled whole)
 #   Casberi/Casberi/Model/WatchLine.swift   (compiled whole: the row's line)
-#   Casberi/Casberi/Model/CoinFollow.swift  (compiled whole, prd §1247: a coin
+#   Casberi/Casberi/Model/CoinFollow.swift  (compiled whole, prd §1250: a coin
 #     by its own price, CoinPaprika's answers and the launch sweep's plan)
-#   Casberi/Casberi/Model/GasPrice.swift    (compiled whole, prd §1247: gas)
+#   Casberi/Casberi/Model/GasPrice.swift    (compiled whole, prd §1250: gas)
 #
-# Since §1247 the alerts also hold: a custom move, a day volume, gas below a
+# Since §1250 the alerts also hold: a custom move, a day volume, gas below a
 # level, and the iCloud merge in which a fired alert beats a copy still on.
 #
 # WHY A HARNESS. Every failure here renders calmly. An alert that fires every
@@ -45,7 +45,7 @@ grep -q 'MarketsIndex.search(' Casberi/Casberi/Screens/WatchAddSheet.swift \
   || { echo "✗ Search no longer finds a company by an app it makes"; exit 1; }
 grep -q 'PriceAlertStore.shared.removeAll(ref: ref)' Casberi/Casberi/Screens/FeedScreen+Markets.swift \
   || { echo "✗ unwatching no longer takes the row's alerts with it — they would fire for a row you cannot see"; exit 1; }
-# §1247: the sweep runs every launch, the coin's sheet charts it, the alerts
+# §1250: the sweep runs every launch, the coin's sheet charts it, the alerts
 # ride the merge, a household coin is followed as the coin wherever it is
 # followed, and the index follows a coin by its id.
 grep -q 'CoinWatch.converge(context: modelContext)' Casberi/Casberi/Shell/RootShell.swift \
@@ -150,7 +150,7 @@ check(found.map(\.name) == ["GitLab", "Microsoft"], "a direct match before one f
 let merged = MarketsIndex.merged([[msft], [MarketsIndex.Entry(name: "Microsoft", ticker: "MSFT", apps: ["npm", "Teams"])]])
 check(merged.count == 1 && merged[0].apps == ["GitHub", "npm", "Teams"], "All holds each company once, with all its apps")
 
-// ── A custom move, a volume, gas (prd §1247) ─────────────────────────
+// ── A custom move, a volume, gas (prd §1250) ─────────────────────────
 check(PriceAlert.movePercent("7") == 0.07, "a typed 7 is a 7% move")
 check(PriceAlert.movePercent("-7.5%") == 0.075, "a typed sign is the field's, not the alert's: a move listens both ways")
 check(PriceAlert.movePercent("0") == nil && PriceAlert.movePercent("") == nil, "no move, no alert")
@@ -218,9 +218,9 @@ check(PriceAlert.merged(movedHere, movedThere).firedAt == t1, "a move's day trav
 check(PriceAlert.merged(movedThere, movedHere).firedAt == t1, "…from either side")
 let legacy = #"[{"id":"6F9619FF-8B86-D011-B42D-00C04FC964FF","ref":"r","name":"Pepe","kind":"above","target":15,"on":true,"createdAt":0}]"#
 let oldStore = try? JSONDecoder().decode([PriceAlert].self, from: Data(legacy.utf8))
-check(oldStore?.first?.changedAt == nil && oldStore?.count == 1, "alerts stored before §1247 still decode")
+check(oldStore?.first?.changedAt == nil && oldStore?.count == 1, "alerts stored before §1250 still decode")
 
-// ── A coin by its own price (prd §1247) ──────────────────────────────
+// ── A coin by its own price (prd §1250) ──────────────────────────────
 let tickerJSON = try! JSONSerialization.jsonObject(with: Data(#"{"id":"btc-bitcoin","symbol":"BTC","quotes":{"USD":{"price":61234.5,"volume_24h":31000000000,"market_cap":1200000000000,"percent_change_24h":-2.5}}}"#.utf8))
 let ticker = CoinFollow.ticker(from: tickerJSON)
 check(ticker?.price == 61234.5, "the ticker's price")

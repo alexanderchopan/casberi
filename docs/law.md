@@ -142,16 +142,16 @@ Privacy and Reddit. Frames and Logos are the devnets that remain.
 - Wallet, Frames and Logos take every room's anatomy: box · tiles · account menu · list (§1039). No Actions block and no Overview rows (§1039). Four tiles each and no verb among them: a verb that adds an account is the Accounts menu's first row (Watch a wallet, New account), a verb that moves money leads Holdings (Frames' Send · Top up, Logos' Send), per §774's page rule (§1107, §1108). Wallet-family Homes stand on the Wallet's lines (§953), and the wallet crowns draw a line, not a wash (§1005).
 - Addresses rows carry one line, the corpus's own word, never a company or a role. The trailing slot holds marks, never money (§918).
 - Onchain cards share one head, `CardSpendRoom`. `CardSpendSeat` alone decides which rows are spends (§858, §868). MetaMask Card reads Monad through an index (§860).
-- Markets' Watchlist follows a coin by its CoinPaprika id, never a DEX symbol match; wrapped-native and pre-cutoff index follows converge every launch. A stock row draws its day line. Alerts: price, custom move %, token day volume, gas below N gwei, synced through iCloud with fired winning. Reorder in My order; gas heads the list; one price pins to the Lock Screen as a Live Activity, stamped past 15 minutes (§1247).
+- Markets' Watchlist follows a coin by its CoinPaprika id, never a DEX symbol match; wrapped-native and pre-cutoff index follows converge every launch. A stock row draws its day line. Alerts: price, custom move %, token day volume, gas below N gwei, synced through iCloud with fired winning. Reorder in My order; gas heads the list; one price pins to the Lock Screen as a Live Activity, stamped past 15 minutes (§1250).
 
 ### 11. Signing and Safe
 - Reads and previews happen in the app. Signatures happen elsewhere, everywhere except the Safe co-signer surfaces (§112, narrowed by §425 and §913).
 - The co-signer is one vote in an N-of-M Safe and can never spend, because the contract enforces it (§425). It extends to a paired Safe app, a Secure Enclave owner, Safe statements and a recovery guardian. Farcaster signing is excluded (§913).
 - The sign block reads calls through ERC-7730 descriptors bundled in the app, never fetched at signing time (§834).
 - Safe reads go keyless through the Client Gateway (§789b).
-- The phone's keys are Safe owners: "Your turn" and the signature alert read them. The background task reads every known Safe's queue. A confirmation goes to the Client Gateway first, the Transaction Service only on a refusal, then the clipboard (§1246).
-- The operation reads before the calldata: a batch is a DELEGATECALL into a known MultiSend and nothing else; any other DELEGATECALL reads "Runs another contract's code as the Safe" in the destructive ink. `disableModule`, `setFallbackHandler` and `changeMasterCopy` change control (§1246).
-- The sign block simulates the Safe's own call on Alchemy (never Gnosis, never a DELEGATECALL) and draws net balance changes, or says why it did not. Executed history lands dated by execution time. "Review and sign" on the notification opens the sign block and never signs (§1246).
+- The phone's keys are Safe owners: "Your turn" and the signature alert read them. The background task reads every known Safe's queue. A confirmation goes to the Client Gateway first, the Transaction Service only on a refusal, then the clipboard (§1249).
+- The operation reads before the calldata: a batch is a DELEGATECALL into a known MultiSend and nothing else; any other DELEGATECALL reads "Runs another contract's code as the Safe" in the destructive ink. `disableModule`, `setFallbackHandler` and `changeMasterCopy` change control (§1249).
+- The sign block simulates the Safe's own call on Alchemy (never Gnosis, never a DELEGATECALL) and draws net balance changes, or says why it did not. Executed history lands dated by execution time. "Review and sign" on the notification opens the sign block and never signs (§1249).
 
 ### 12. Devnets (Frames, Logos)
 - Devnet rooms use the Wallet's shapes, and Home lists the moves (§1039; the Accounts and Activity tiles are gone). Holdings: a treemap over test money, a count and never a dollar total (§949). Moves: under the day, no ages (§950). Permissions: the Wallet's crown (§951). Frames: one column per transaction (§952).
@@ -174,7 +174,7 @@ Privacy and Reddit. Frames and Logos are the devnets that remain.
 - The digest goes out once each evening, half an hour before your usual first evening open, held inside 17:00–21:00 (18:00 with little history) (§809). There are no quiet hours; iOS Focus does that job (§870).
 - A digest is the place and one line: a count, a money figure, or the one thing that needs you (§883).
 - The widgets are Wallet and the Quick Note control; the Today widget is deleted with the ask (§1047, §982).
-- The Watchlist widget takes the rows you choose, small, medium and Lock Screen rectangular; none chosen is the whole list (§1247).
+- The Watchlist widget takes the rows you choose, small, medium and Lock Screen rectangular; none chosen is the whole list (§1250).
 
 ### 15. Demo
 - A fresh install pours the furnished demo at once, under a cover with no controls. Any tap or drag lifts it (§620). The demo is marked once: a floating blue pill on every screen, All included (§946, §919).
@@ -1617,8 +1617,8 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1243 — The glance tiles stand in Feed order and never move
 - §1244 — X and Instagram read your direct messages, live, when you turn it on
 - §1245 — Sources searches its apps
-- §1246 — The Safe loop closes: the phone's key is an owner, the queue is read in the background, the gateway takes the signatu…
-- §1247 — The Watchlist prices a coin as itself, draws every row's line, alerts on more than a price, and travels: Reorder, gas…
+- §1249 — The Safe loop closes: the phone's key is an owner, the queue is read in the background, the gateway takes the signatu…
+- §1250 — The Watchlist prices a coin as itself, draws every row's line, alerts on more than a price, and travels: Reorder, gas…
 
 ## Dead rulings → what replaced them (generated)
 

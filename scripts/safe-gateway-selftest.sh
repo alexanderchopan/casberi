@@ -3,7 +3,7 @@
 # dialects (prd §789b):
 #
 #   Casberi/Casberi/Model/SafeGatewayShape.swift   (compiled whole; since prd
-#                                                  §1246 also the executed
+#                                                  §1249 also the executed
 #                                                  history and the gateway
 #                                                  confirmation body)
 #   Casberi/Casberi/Model/SafeBridge.swift
@@ -80,15 +80,15 @@ grep -qF "$GATEWAY_HOST" "$S" \
 grep -qF "$TXSERVICE_HOST" "$S" \
   || { echo "✗ SafeSigner no longer names $TXSERVICE_HOST — the one confirmation POST has to land on the transaction service"; exit 1; }
 
-# …and since prd §1246 the confirmation is offered to the gateway FIRST, in the
+# …and since prd §1249 the confirmation is offered to the gateway FIRST, in the
 # body this harness pins below; the transaction service is the second door.
 grep -qF 'SafeGatewayShape.confirmationBody(signature: signature)' "$S" \
-  || { echo "✗ SafeSigner no longer sends the gateway confirmation body this harness pins (prd §1246)"; exit 1; }
+  || { echo "✗ SafeSigner no longer sends the gateway confirmation body this harness pins (prd §1249)"; exit 1; }
 grep -qF '/transactions/\(ready.safeTxHash)/confirmations"' "$S" \
-  || { echo "✗ SafeSigner no longer offers the confirmation to the gateway's addConfirmation (prd §1246)"; exit 1; }
+  || { echo "✗ SafeSigner no longer offers the confirmation to the gateway's addConfirmation (prd §1249)"; exit 1; }
 # The history read is the bridge's, on the gateway, first page only.
 grep -qF '/transactions/history")' "$B" \
-  || { echo "✗ SafeBridge no longer reads the gateway's executed history (prd §1246)"; exit 1; }
+  || { echo "✗ SafeBridge no longer reads the gateway's executed history (prd §1249)"; exit 1; }
 
 # The gateway is a host this app reaches, so the privacy screen has to say so.
 grep -qF "$GATEWAY_HOST" "$REACH" \
@@ -238,7 +238,7 @@ check(SafeGatewayShape.address("") == nil, "an empty string is no address")
 check(SafeGatewayShape.address(NSNull()) == nil, "a null is no address")
 check(SafeGatewayShape.int("7") == 7 && SafeGatewayShape.int(7) == 7, "an Int from either dialect")
 
-// ─── prd §1246: the fallback handler and the Safe's own code ───
+// ─── prd §1249: the fallback handler and the Safe's own code ───
 // AUTHORED from the gateway's `SafeState` (`fallbackHandler`, `implementation`,
 // both {value,…}), not captured — the measured body above predates the read.
 let extras = SafeGatewayShape.detail(json("""
@@ -257,7 +257,7 @@ check(SafeGatewayShape.detail(json("""
 check(d?.fallbackHandler == nil && d?.implementation == nil,
       "a body without the fields reads them as absent, never as something")
 
-// ─── prd §1246: GET …/safes/{addr}/transactions/history ───
+// ─── prd §1249: GET …/safes/{addr}/transactions/history ───
 // AUTHORED from safe-client-gateway's list shapes (TransactionItem, DateLabel,
 // MultisigExecutionInfo, Transfer/Custom/SettingsChange infos) — UNMEASURED.
 let H = "0x1111111111111111111111111111111111111111111111111111111111111111"
@@ -331,7 +331,7 @@ check(SafeGatewayShape.history(json(#"{"count":0}"#)) == nil, "a body with no re
 check(SafeGatewayShape.isHash(H) && !SafeGatewayShape.isHash("0x1234") && !SafeGatewayShape.isHash("multisig"),
       "a safeTxHash is 0x and 64 hex digits, nothing shorter")
 
-// ─── prd §1246: POST …/transactions/{safeTxHash}/confirmations ───
+// ─── prd §1249: POST …/transactions/{safeTxHash}/confirmations ───
 // The gateway's `addConfirmation` body, which `SafeSigner.post` sends first.
 let body = SafeGatewayShape.confirmationBody(signature: "0xabcd")
 check(body.count == 1 && body["signedSafeTxHash"] as? String == "0xabcd",
@@ -400,7 +400,7 @@ if [[ "${1:-}" == "--self-test" ]]; then
   mutate_shape 's/guard !owners\.isEmpty else \{ return nil \}//' \
                "a body with no owners returned as a Safe with nobody on it"
 
-  # prd §1246 — an undated history row dated by this pass instead of dropped.
+  # prd §1249 — an undated history row dated by this pass instead of dropped.
   mutate_shape 's/let executed = iso8601\(millis: tx\["timestamp"\]\)/let executed = iso8601(millis: tx["timestamp"]) ?? Optional("2026-01-01T00:00:00Z")/' \
                "an undated history row dated now instead of dropped"
   # …a failed execution landed as if it went through.

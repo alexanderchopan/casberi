@@ -950,7 +950,7 @@ struct ThingSheetView: View {
                     let signable: Bool = {
                         guard case .pending = check.status, thing.sourceRef != nil
                         else { return false }
-                        // Either of this phone's keys (prd §1246): a Safe that
+                        // Either of this phone's keys (prd §1249): a Safe that
                         // names only the Enclave owner lands rows now too.
                         return SignerKey.presence() != .none || SafeEnclaveKey.exists
                     }()

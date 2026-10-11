@@ -298,7 +298,7 @@ final class CompanyQuotes {
     }
 
     /// One parse for every CoinPaprika ticker (`CoinFollow.ticker`, prd
-    /// §1247), the followed coin's row and this pack's alike.
+    /// §1250), the followed coin's row and this pack's alike.
     nonisolated private static func coin(_ id: String) async -> CompanyQuote? {
         guard let ticker = await CoinWatch.ticker(id: id) else { return nil }
         return CompanyQuote(price: ticker.price, change: ticker.change24h,

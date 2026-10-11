@@ -39,7 +39,7 @@ enum WalletBackgroundRefresh {
         // reason to want it. Someone with Stripe connected and no wallet at all
         // still needs the pass that finds a dispute while they are away.
         //
-        // And for a Safe (prd §1246): a pending signature is the one thing
+        // And for a Safe (prd §1249): a pending signature is the one thing
         // this task now FINDS rather than only announces, so a known Safe or a
         // key on this phone is a reason to run on its own.
         guard !WalletStore.shared.addresses.isEmpty || Notifications.settings.anyOn
@@ -73,7 +73,7 @@ enum WalletBackgroundRefresh {
             // The same read a foreground does: holdings, which records the
             // value sample the balance sparkline draws from.
             _ = await WalletIngest.topHoldingsByWallet()
-            // The Safe queues (prd §1246), BEFORE the sweep so a signature
+            // The Safe queues (prd §1249), BEFORE the sweep so a signature
             // waiting on this person lands as a row the sweep can announce
             // while the app is closed. A full bridge read, unlike the rest:
             // bounded inside (`SafeBridge.backgroundSweep`), and cancelled by

@@ -5,7 +5,7 @@
 #   Casberi/Casberi/Design/TokenChartView.swift   (TokenChartStyle)
 #   Casberi/Casberi/Model/StockChart.swift
 #   Casberi/Casberi/Model/TokenChart.swift
-#   Casberi/Casberi/Model/CoinWatch.swift      (a coin's chart, prd §1247: guards)
+#   Casberi/Casberi/Model/CoinWatch.swift      (a coin's chart, prd §1250: guards)
 #
 # WHY A HARNESS. Every failure here renders as a perfectly good-looking chart.
 # `xcodebuild` is happy, a screen sweep photographs a plausible curve, and the
@@ -101,12 +101,12 @@ done
 # eleven money families had no hero for months.
 grep -q 'PriceObjectCard(object: priceObject(' "$CHART" \
   || { echo "✗ the chart no longer draws the price object as its hero"; exit 1; }
-# Three families since prd §1247: a token, a stock and a coin followed by its
+# Three families since prd §1250: a token, a stock and a coin followed by its
 # own price.
 [[ $(grep -c 'object: PriceObjectSource.identity(' "$CONTENT") -eq 3 ]] \
   || { echo "✗ token, stock and coin no longer ALL draw the object (they diverged by accident once already)"; exit 1; }
 
-# 9. A coin's chart is CoinPaprika's own ticks (prd §1247): a range its free
+# 9. A coin's chart is CoinPaprika's own ticks (prd §1250): a range its free
 #    API does not serve is absent, never drawn from coarser points, and the
 #    figure's move is measured against the price on screen, as a stock's.
 COIN="Casberi/Casberi/Model/CoinWatch.swift"

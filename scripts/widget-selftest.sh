@@ -12,11 +12,11 @@
 #       failed read keeps the last price with its own time)
 #     — WidgetWatch.spark / sparkCloses  (§1242: the day's line ages with its
 #       price, and a thinned line still ends on the price)
-#     — WidgetWatch.pick  (§1247: a tile set to show chosen rows draws them in
+#     — WidgetWatch.pick  (§1250: a tile set to show chosen rows draws them in
 #       the order chosen; nothing chosen, or none still followed, is the
 #       watchlist in its own order)
 #   Casberi/Shared/PriceActivityAttributes.swift
-#     — PriceLive  (§1247: the pinned price says "as of h:mm" past fifteen
+#     — PriceLive  (§1250: the pinned price says "as of h:mm" past fifteen
 #       minutes, never steps backwards, and ends after eight hours)
 #
 # One widget since the ask retired (2026-10-01): the wallet. The Today and
@@ -191,22 +191,22 @@ for wf in WalletWidget NotesWidget FeedWidget WatchlistWidget; do
   grep -q '.supportedFamilies(\[.systemSmall\])' "$TMP/$wf.nc" \
     || { print -u2 "✗ $wf offers a size other than the small tile (prd §1210)"; exit 1; }
 done
-# The Watchlist is the one tile with more sizes (prd §1247): small, medium and
+# The Watchlist is the one tile with more sizes (prd §1250): small, medium and
 # the Lock Screen's rectangle, which Mac Catalyst does not have.
 grep -q '.supportedFamilies(Self.families)' "$TMP/WatchlistWidget.nc" \
   || { print -u2 "✗ the Watchlist widget no longer takes its families from one list"; exit 1; }
 grep -q 'return \[.systemSmall, .systemMedium, .accessoryRectangular\]' "$TMP/WatchlistWidget.nc" \
-  || { print -u2 "✗ the Watchlist widget's sizes are not small, medium and the Lock Screen (prd §1247)"; exit 1; }
+  || { print -u2 "✗ the Watchlist widget's sizes are not small, medium and the Lock Screen (prd §1250)"; exit 1; }
 grep -q 'return \[.systemSmall, .systemMedium\]' "$TMP/WatchlistWidget.nc" \
   || { print -u2 "✗ Mac Catalyst's Watchlist sizes are gone — it has no Lock Screen family"; exit 1; }
-# Its rows are the ones chosen for it, through the one rule (§1247).
+# Its rows are the ones chosen for it, through the one rule (§1250).
 grep -q 'WidgetWatch.pick(entry.list?.rows ?? \[\], refs: entry.picks)' "$TMP/WatchlistWidget.nc" \
   || { print -u2 "✗ the Watchlist widget no longer picks its rows through WidgetWatch.pick"; exit 1; }
 grep -q 'AppIntentConfiguration(kind: WidgetWatch.kind' "$TMP/WatchlistWidget.nc" \
   || { print -u2 "✗ the Watchlist widget can no longer be set to the rows you choose"; exit 1; }
 grep -q 'Array(rows.prefix(WidgetWatch.publishCap))' "$TMP/publish.nc" \
   || { print -u2 "✗ the publisher writes only the small tile's four — a tile could not be set to any other row"; exit 1; }
-# The pinned price (§1247): in the bundle, and saying its age through the one rule.
+# The pinned price (§1250): in the bundle, and saying its age through the one rule.
 grep -q "        PriceActivity()" "$TMP/bundle.nc" \
   || { print -u2 "✗ PriceActivity is not in the widget bundle — a pinned price would never draw"; exit 1; }
 strip_comments "Casberi/CasberiWidgets/PriceActivity.swift" > "$TMP/priceactivity.nc"
@@ -564,7 +564,7 @@ eq(MoneyFormat.percentLabel(0.01), "0.0%", "a flat change is printed with NO sig
 eq(MoneyFormat.percentLabel(2.14), "+2.1%", "a rise carries a plus")
 eq(MoneyFormat.percentLabel(-0.43), "−0.4%", "a fall carries a minus and no negative digits")
 
-// ── the rows a tile is set to show (§1247) ─────────────────────────────────
+// ── the rows a tile is set to show (§1250) ─────────────────────────────────
 let r1 = WidgetWatchlist.Row(ref: "a", symbol: "A", name: "A", price: 1, change: 0, at: now)
 let r2 = WidgetWatchlist.Row(ref: "b", symbol: "B", name: "B", price: 2, change: 0, at: now)
 let r3 = WidgetWatchlist.Row(ref: "c", symbol: "C", name: "C", price: 3, change: 0, at: now)
@@ -580,7 +580,7 @@ eq(WidgetWatch.pick([], refs: ["a"]).count, 0, "nothing published, nothing drawn
 check(WidgetWatch.publishCap >= WidgetWatch.mediumCap && WidgetWatch.mediumCap > WidgetWatch.rowCap,
       "every tile's rows fit in what is published")
 
-// ── the pinned price (§1247) ───────────────────────────────────────────────
+// ── the pinned price (§1250) ───────────────────────────────────────────────
 let pinRead = now.addingTimeInterval(-60)
 check(PriceLive.stampText(at: pinRead, now: now) == nil, "a price read a minute ago is not stamped")
 check(PriceLive.stampText(at: now.addingTimeInterval(-14 * 60), now: now) == nil, "nor at fourteen minutes")
@@ -717,7 +717,7 @@ mutate "a thinned line stops short of the price drawn beside it" \
   WidgetPayload.swift \
   '(Double(i) * Double(last) / Double(sparkPoints - 1)).rounded()|||(Double(i) * Double(last) / Double(sparkPoints)).rounded(.down)' || mfail=1
 
-# The rows a tile is set to show (§1247).
+# The rows a tile is set to show (§1250).
 mutate "a tile set to rows no longer followed draws nothing instead of the watchlist" \
   WidgetPayload.swift \
   'return picked.isEmpty ? rows : picked|||return picked' || mfail=1
@@ -725,7 +725,7 @@ mutate "a tile's chosen rows draw in the watchlist's order, not the order chosen
   WidgetPayload.swift \
   'let picked = picks.compactMap { ref -> WidgetWatchlist.Row? in|||let picked = rows.map(\.ref).filter { picks.contains($0) }.compactMap { ref -> WidgetWatchlist.Row? in' || mfail=1
 
-# The pinned price (§1247).
+# The pinned price (§1250).
 mutate "the pinned price waits a day before saying its age" \
   PriceActivityAttributes.swift \
   'static let stampAfter: TimeInterval = 15 * 60|||static let stampAfter: TimeInterval = 24 * 3600' || mfail=1

@@ -453,7 +453,7 @@ struct WidgetWatchlist: Codable, Equatable {
         let at: Date?
         /// The day's closes behind the price, oldest first, at most
         /// `WidgetWatch.sparkPoints` (`TokenPulse`'s, the Markets row's
-        /// sparkline; a stock's day line since prd §1247). Read with the
+        /// sparkline; a stock's day line since prd §1250). Read with the
         /// price, so it ages out with it.
         var closes: [Double]? = nil
     }
@@ -473,11 +473,11 @@ enum WidgetWatch {
     static let stampAfter: TimeInterval = 3600
     /// The small tile's rows, at most: it draws as many of them as fit.
     static let rowCap = 4
-    /// The medium tile's one-line rows, at most (prd §1247).
+    /// The medium tile's one-line rows, at most (prd §1250).
     static let mediumCap = 6
-    /// The Lock Screen's rows, at most (prd §1247).
+    /// The Lock Screen's rows, at most (prd §1250).
     static let accessoryCap = 2
-    /// The rows published (prd §1247): enough for a tile to be set to show
+    /// The rows published (prd §1250): enough for a tile to be set to show
     /// any row you follow, not only the first four.
     static let publishCap = 24
     /// A sparkline's points: a 40pt line draws no more than this.
@@ -531,7 +531,7 @@ enum WidgetWatch {
     }
 
     /// The rows a tile set to show `picks` (refs, in the order picked)
-    /// draws, prd §1247: the picked rows still published, in that order. No
+    /// draws, prd §1250: the picked rows still published, in that order. No
     /// pick, or none still followed, is the watchlist in its own order, as the
     /// tile drew before it could be set.
     static func pick(_ rows: [WidgetWatchlist.Row], refs picks: [String]) -> [WidgetWatchlist.Row] {

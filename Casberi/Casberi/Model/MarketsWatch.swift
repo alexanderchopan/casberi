@@ -5,7 +5,7 @@ import SwiftData
 /// stars, "Watch all", the company's page and Search.
 ///
 /// A stock is watched by its ticker. A coin is followed by its CoinPaprika id
-/// and priced from CoinPaprika's ticker (prd §1247, `CoinWatch`): until then
+/// and priced from CoinPaprika's ticker (prd §1250, `CoinWatch`): until then
 /// it was the most liquid DEX token wearing its symbol, one pool's price and
 /// a wrapper's cap.
 @MainActor

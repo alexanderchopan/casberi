@@ -141,7 +141,7 @@ enum TokenWatch {
     @MainActor
     @discardableResult
     static func add(_ token: Resolved, context: ModelContext) -> Thing? {
-        // A household coin is followed by its own price (prd §1247): the
+        // A household coin is followed by its own price (prd §1250): the
         // wrapped token its name was pinned to is plumbing, so every door
         // that follows one (Add, a token's page, a holding) follows the coin.
         if let id = CoinFollow.wrappedCoin(chain: token.chain, address: token.address),

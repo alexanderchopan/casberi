@@ -1,7 +1,7 @@
 import Foundation
 
 /// What a pending Safe transaction would do to the Safe's own balances, asked
-/// of Alchemy's simulation API when the sign block opens (prd §1246) — the
+/// of Alchemy's simulation API when the sign block opens (prd §1249) — the
 /// plan, the request body and the parse, Foundation-only and pure, so
 /// `safetx-selftest.sh` compiles it whole beside `SafeTransaction.swift` and
 /// drives it with fixtures. The one network call is `SafeSimulator`.

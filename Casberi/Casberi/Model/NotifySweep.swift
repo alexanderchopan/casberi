@@ -266,7 +266,7 @@ enum NotifySweep {
         //   change alone doesn't notify (tag absent) — real, but not the
         //   fund-draining-outside-the-threshold shape this file reserves the
         //   right-hand slot for.
-        //   A new fallback handler or new code (prd §1246, "Control changed")
+        //   A new fallback handler or new code (prd §1249, "Control changed")
         //   is the same news one step over: something new can act as the Safe
         //   without its owners' signatures.
         if ref.hasPrefix("wallet:safeconfig:"),

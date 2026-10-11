@@ -2,7 +2,7 @@ import Foundation
 import Observation
 import SwiftData
 
-/// The price alerts you set (prd §1081), on this device and, since §1247, on
+/// The price alerts you set (prd §1081), on this device and, since §1250, on
 /// your others through iCloud key-value storage (`KeyValueMirror`, behind the
 /// same iCloud toggle as the address book). Each device still checks them on
 /// its own reads — there is no server — so the merge is what keeps two
@@ -101,7 +101,7 @@ final class PriceAlertStore {
         persist()
     }
 
-    /// The launch sweep renamed followed rows (prd §1247, `CoinWatch.converge`):
+    /// The launch sweep renamed followed rows (prd §1250, `CoinWatch.converge`):
     /// their alerts follow the new refs.
     func rewriteRefs(_ map: [String: String]) {
         let next = CoinFollow.rewrite(alerts: alerts, map: map, now: .now)
@@ -130,7 +130,7 @@ final class PriceAlertStore {
     /// row tagged Alert, which the notify sweep sends at once (`priceAlert`
     /// stands alone, prd §1081) and the Alerts tile lists.
     func check(context: ModelContext) async {
-        // A row pinned to the Lock Screen (prd §1247) is read here too, so the
+        // A row pinned to the Lock Screen (prd §1250) is read here too, so the
         // background task brings its price up to date with no alert set.
         let pinned = PriceActivityDriver.isPinned
         guard alerts.contains(where: \.on) || pinned else { return }
@@ -221,7 +221,7 @@ final class PriceAlertStore {
         context.insert(row)
     }
 
-    /// A gas alert went off (prd §1247): a Markets row tagged Alert under the
+    /// A gas alert went off (prd §1250): a Markets row tagged Alert under the
     /// same `alert:` ref, so the notify sweep sends it at once as a price
     /// alert's, and the Alerts tile lists it under Went off.
     private func landGas(_ alert: PriceAlert, gwei: Double, context: ModelContext) {

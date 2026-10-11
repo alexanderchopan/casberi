@@ -349,7 +349,7 @@ enum Notifications {
             : (plan.cls == .alarm ? .active : .passive)
         if let link = plan.link { content.userInfo = ["link": link] }
         // A Safe signature waiting on this person carries one action, "Review
-        // and sign" (prd §1246) — a door to the sign block, never a signature:
+        // and sign" (prd §1249) — a door to the sign block, never a signature:
         // the action opens the app on the row's sheet, and the Sign there is
         // still behind the key's own Face ID.
         if plan.kind == .safeSignatureNeeded { content.categoryIdentifier = Self.safeSignCategory }
@@ -719,7 +719,7 @@ enum Notifications {
     /// NotificationContent extension. No actions: every row in the card is
     /// already a door to its own thing, and a button repeating one would be
     /// the same door twice (§736). The one category WITH an action is the
-    /// Safe signature alert's (prd §1246): "Review and sign" says what the
+    /// Safe signature alert's (prd §1249): "Review and sign" says what the
     /// tap is for, on the one alert where the person's next act is theirs.
     /// On `daemon` for the reason `removePending` gives: it is called from
     /// `didFinishLaunching`, where a stalled daemon would hold the launch.
@@ -728,7 +728,7 @@ enum Notifications {
             UNUserNotificationCenter.current().setNotificationCategories([
                 UNNotificationCategory(identifier: NotifyCard.category, actions: [],
                                        intentIdentifiers: [], options: []),
-                // prd §1246: FOREGROUND, because the sign block is in the app
+                // prd §1249: FOREGROUND, because the sign block is in the app
                 // and a signature is never made from a notification;
                 // AUTHENTICATION REQUIRED, because the sheet it opens shows a
                 // Safe's pending transaction, which a locked phone should not.
@@ -744,7 +744,7 @@ enum Notifications {
         }
     }
 
-    /// The Safe signature alert's category and its one action (prd §1246).
+    /// The Safe signature alert's category and its one action (prd §1249).
     /// `nonisolated` because `registerCategories` runs on the daemon queue.
     nonisolated static let safeSignCategory = "safe.sign"
     nonisolated static let safeSignAction = "safe.sign.review"
