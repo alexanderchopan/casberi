@@ -116,7 +116,7 @@ struct PrivyAppSheet<Tiles: View>: View {
         return VStack(alignment: .leading, spacing: DS.Space.s2) {
             Text("What moved")
                 .dsText(.heading20)
-                .foregroundStyle(DS.brandInk)
+                .foregroundStyle(DS.headInk)
             ForEach(moved) { line in
                 DSFeedRow(name: line.title,
                           line: Text(line.when, format: .dateTime.month(.abbreviated).day().year())) {

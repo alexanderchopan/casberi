@@ -43,7 +43,7 @@ struct DSRoomTitleRow: View {
     @Environment(\.sizeCategory) private var sizeCategory
 
     var body: some View {
-        DSScreenHead(title: label, ink: DS.brandInk)
+        DSScreenHead(title: label, ink: DS.headInk)
             .lineLimit(1)
             .minimumScaleFactor(0.6)
             // ONE HEIGHT, whatever the name (prd §1136f, user: "the box should

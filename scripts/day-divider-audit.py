@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
-"""THE DAY DIVIDER WEARS THE BRAND HUE, AND NOTHING ELSE DOES (prd §740).
+"""THE DAY DIVIDER WEARS THE HEAD INK (prd §740, §1252).
+
+Since prd §1252 the words that name a place take `DS.headInk` (white words,
+pink glyphs); the day dividers were the first such words and still go
+through one token, so the hue can come back in one line. Every check below
+reads `headInk` where it read `brandInk`; the reasons are kept as written.
+
 
 The user asked for the feed cover's title in the brand pink. Mocked up it
 fails twice — ~1.8:1 on a `deckFill` ground, and a coloured figure on the
@@ -11,13 +17,13 @@ source, which is what makes it identity under §8 rather than decoration.
 perfectly ordinary feed. A header that slid back to `DS.textPrimary` looks
 like the build from two weeks ago. A new room that forgets `dated: false`
 puts the brand hue on "Your wallets", which looks deliberate. A second
-spelling of `#FF2D87` looks identical until somebody tunes one of them. None
+spelling of `#FA2D48` looks identical until somebody tunes one of them. None
 of it breaks a build, trips the ramp audit, or shows up in a screen sweep,
 because nothing is wrong on the screen you are looking at.
 
 Four checks.
 
-**(1) Both day headers take `DS.brandInk`.** The day label is drawn at exactly
+**(1) Both day headers take `DS.headInk`.** The day label is drawn at exactly
 two sites — `daySection` in `FeedScreen` and the All feed's `FeedDayDivider`
 (its own file since prd §767, where `bundledSections` used to draw the label
 inline); both must reach `brandInk`, and neither may fall back to
@@ -34,7 +40,7 @@ tenth non-dated room is fine and must not fail the build. Dropping below nine
 means one stopped opting out, which puts the brand hue on a label like
 "Not active".
 
-**(4) One spelling of the hex.** `#FF2D87` lives in `DesignTokens.swift` and
+**(4) One spelling of the hex.** `#FA2D48` lives in `DesignTokens.swift` and
 nowhere else. `CasberiMark` reads `DS.brand`.
 
 **(5) The sheet heads' day word (prd §882, §884).** A sheet has no divider, so
@@ -42,7 +48,7 @@ nowhere else. `CasberiMark` reads `DS.brand`.
 in the divider's pink (§885; the picture head went with prd §1186). It must read
 `FeedScreen.dayWord` — the divider's own function, which `dayLabel` must
 still delegate to — so the second pink in the app can only ever say a DAY,
-never "4d" or a clock time; and the head may take `DS.brandInk` exactly
+never "4d" or a clock time; and the head may take `DS.headInk` exactly
 once, so the hue does not spread to its title or byline.
 
 **STATED CEILINGS, because a check that oversells itself is worse than none.**
@@ -72,7 +78,7 @@ SHEET_HEADS = (
     "Casberi/Casberi/Screens/MoneyReceiptCard.swift",   # prd §887
     "Casberi/Casberi/Screens/SheetPartyHead.swift",   # prd §892
 )
-BRAND_HEX = "FF2D87"
+BRAND_HEX = "FA2D48"
 # Four since prd §1059: the folded rooms' named groups (Reminders' Doing and
 # Done, Mail's Waiting on you, CardPointers' deadlines, Walletbeat's wallets,
 # L2BEAT's chains) left with the room-level arms that drew them. What stands is
@@ -93,10 +99,10 @@ def audit(feed: str, tokens: str, mark: str, heads: dict) -> list:
     code = strip_comments(feed)
 
     # (1) both day headers take the brand ink
-    hits = len(re.findall(r"\.foregroundStyle\((?:dated \? )?DS\.brandInk", code))
+    hits = len(re.findall(r"\.foregroundStyle\((?:dated \? )?DS\.headInk", code))
     if hits < 2:
         out.append(
-            f"only {hits} of 2 day headers take DS.brandInk — a divider slid "
+            f"only {hits} of 2 day headers take DS.headInk — a divider slid "
             "back to the primary ramp (prd §740)"
         )
 
@@ -136,16 +142,16 @@ def audit(feed: str, tokens: str, mark: str, heads: dict) -> list:
         head_code = strip_comments(head)
         if not re.search(
             r"Text\(FeedScreen\.dayWord\([^)]*\)\)\s*\.dsText\([^)]*\)\s*"
-            r"\.foregroundStyle\(DS\.brandInk\)", head_code
+            r"\.foregroundStyle\(DS\.headInk\)", head_code
         ):
             out.append(
-                f"{name}'s day word is not `FeedScreen.dayWord` in DS.brandInk — "
+                f"{name}'s day word is not `FeedScreen.dayWord` in DS.headInk — "
                 "a sheet's pink must name a day the divider's way (prd §882)"
             )
-        inks = len(re.findall(r"DS\.brandInk", head_code))
+        inks = len(re.findall(r"DS\.headInk", head_code))
         if inks != 1:
             out.append(
-                f"{name} takes DS.brandInk {inks} times, expected 1 — the day "
+                f"{name} takes DS.headInk {inks} times, expected 1 — the day "
                 "word is a sheet head's only pink (prd §882)"
             )
     if not re.search(r"func dayLabel\([^)]*\)[^{]*\{\s*Self\.dayWord\(", code):
@@ -171,18 +177,18 @@ def self_test() -> bool:
                             coarse: Bool = false,
                             dated: Bool = true,
                             cover: UUID? = nil) -> some View {
-        Text(label).foregroundStyle(dated ? DS.brandInk : DS.textPrimary)
+        Text(label).foregroundStyle(dated ? DS.headInk : DS.textPrimary)
     }
-    func bundled() -> some View { Text(label).foregroundStyle(DS.brandInk) }
+    func bundled() -> some View { Text(label).foregroundStyle(DS.headInk) }
     func dayLabel(_ date: Date) -> String { Self.dayWord(date) }
     """ + "\n".join(f"    call{i}(dated: false)" for i in range(MIN_OPT_OUTS))
-    good_tokens = 'static let brand = Color.fixed("#FF2D87")'
+    good_tokens = 'static let brand = Color.fixed("#FA2D48")'
     good_mark = "static let pink = DS.brand"
     good_head = """
     Text(verbatim: publication).dsText(.label12).foregroundStyle(DS.textSecondary)
     Text(FeedScreen.dayWord(thing.capturedAt))
         .dsText(.label12)
-        .foregroundStyle(DS.brandInk)
+        .foregroundStyle(DS.headInk)
     """
 
     cases = [
@@ -190,7 +196,7 @@ def self_test() -> bool:
         (
             "the sheet's day word lost the ink",
             good_feed, good_tokens, good_mark, 1,
-            good_head.replace(".foregroundStyle(DS.brandInk)", ".foregroundStyle(DS.textTertiary)"),
+            good_head.replace(".foregroundStyle(DS.headInk)", ".foregroundStyle(DS.textTertiary)"),
         ),
         (
             "the sheet's day word is an age, not the divider's day",
@@ -200,7 +206,7 @@ def self_test() -> bool:
         (
             "the pink spread to a second line of the head",
             good_feed, good_tokens, good_mark, 1,
-            good_head + "Text(thing.title).foregroundStyle(DS.brandInk)",
+            good_head + "Text(thing.title).foregroundStyle(DS.headInk)",
         ),
         (
             "dayLabel re-spelled instead of delegating",
@@ -209,7 +215,7 @@ def self_test() -> bool:
         ),
         (
             "a header slid back to the primary ramp",
-            good_feed.replace("Text(label).foregroundStyle(DS.brandInk)",
+            good_feed.replace("Text(label).foregroundStyle(DS.headInk)",
                               "Text(label).foregroundStyle(DS.textPrimary)"),
             good_tokens, good_mark, 1,
         ),
@@ -227,12 +233,12 @@ def self_test() -> bool:
         (
             "the mark re-spells the hex",
             good_feed, good_tokens,
-            'static let pink = Color(hex: "#FF2D87")', 1,
+            'static let pink = Color(hex: "#FA2D48")', 1,
         ),
         (
             "a comment quoting the rule does not satisfy it",
-            good_feed.replace("Text(label).foregroundStyle(DS.brandInk)",
-                              "// .foregroundStyle(DS.brandInk)\n    Text(label)"),
+            good_feed.replace("Text(label).foregroundStyle(DS.headInk)",
+                              "// .foregroundStyle(DS.headInk)\n    Text(label)"),
             good_tokens, good_mark, 1,
         ),
     ]
@@ -285,7 +291,7 @@ def main() -> int:
         for f in findings:
             print(f"  ✗ {f}")
         return 1
-    print("day-divider-audit: clean — both dividers on DS.brandInk, "
+    print("day-divider-audit: clean — both dividers on DS.headInk, "
           f"{len(re.findall(r'dated: false', strip_comments(feed)))} named groups opted out")
     return 0
 

@@ -37,7 +37,7 @@ struct PostSheetHead: View {
                     Spacer(minLength: DS.Space.s2)
                     Text(FeedScreen.dayWord(thing.capturedAt))
                         .dsText(.label12)
-                        .foregroundStyle(DS.brandInk)
+                        .foregroundStyle(DS.headInk)
                         .lineLimit(1)
                 }
                 Text(verbatim: whereLine)

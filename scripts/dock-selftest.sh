@@ -809,8 +809,8 @@ awk '/^private struct PagerCover/,/^}/' "$TMP/main.nc" > "$TMP/cover.nc"
 grep -qE 'dsPageBackground|RoomSnapshots|Image\(uiImage|themedPage|clipShape' "$TMP/cover.nc" \
   && { echo "✗ PagerCover paints a ground, a picture or a card again — over the table"; \
        echo "  that is a black rectangle sliding in (prd §898)."; fail=1; }
-grep -q 'DS.brandInk' "$TMP/cover.nc" \
-  || { echo "✗ the cover's word is not the title's pink — the next page arriving names"; \
+grep -q 'DS.headInk' "$TMP/cover.nc" \
+  || { echo "✗ the cover's word is not the title's ink — the next page arriving names"; \
        echo "  itself as its title will (prd §1207 items 2, 3)."; fail=1; }
 grep -q 'drawHierarchy' "$TMP/main.nc" \
   && { echo "✗ a window snapshot is back in MainSurface — nothing reads one since §898."; fail=1; }

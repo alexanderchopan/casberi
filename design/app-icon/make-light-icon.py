@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Derive the LIGHT app-icon variant from the shipped DARK art.
 
-The mark is one ink (#FF2D87) over a plain ground; the eyes and suckers are
+The mark is one ink (#FA2D48) over a plain ground; the eyes and suckers are
 knocked OUT of the mark, so they are the ground rather than a painted colour
 (design/app-icon/README.md). The light variant is therefore not a re-drawing:
 it is the same coverage mask composited over white instead of black, which
@@ -18,7 +18,7 @@ Dependencies: none (pure stdlib PNG read/write).
 """
 import os, sys, zlib, struct
 
-MARK = (255, 45, 135)       # #FF2D87
+MARK = (250, 45, 72)        # #FA2D48, Apple Music's pink (prd §1252); was #FF2D87
 DARK_GROUND = (0, 0, 0)     # #000000
 LIGHT_GROUND = (255, 255, 255)
 

@@ -10,7 +10,10 @@ import Foundation
 /// Each chosen by the user from three rendered options (2026-09-15).
 /// `person.2` is also the People seat's glyph inside Life; kept on purpose.
 enum ScopeTileGlyph {
-    static let home        = "chart.xyaxis.line"
+    /// Bars since prd §1252 (user: "the 'home' on wallet and 'markets' icons
+    /// are basically the same. make home be bar chart"); it was the rising
+    /// line Markets' own glyph also draws.
+    static let home        = "chart.bar"
     static let activity    = "clock.arrow.circlepath"
     static let holdings    = "chart.pie"
     static let accounts    = "person.2"

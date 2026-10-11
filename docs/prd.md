@@ -65896,3 +65896,13 @@ User, on the Feed's section tiles: "when they are underneath a section header li
 - The first choice is spoken as the category itself ("Life", never "All"). Verbs are not choices: Social's Follow stays on Social's own screen.
 - The primary buttons are untouched (user: "the buttons for wallet and feed primary buttons ... should stay as they are"): Feed · Day · Notes · Sources and the Wallet's four tiles keep `DSScopeTiles`, and a category's own screen keeps its tiles. No segmented control (user: "having different types is weird").
 - Built in `SectionPanelName(choices:)` over `FeedScreen.sectionChoices(_:)`; the tile blocks stand down when `sectionCapNow` is set.
+
+## §1252 — White words, pink glyphs, Apple Music's pink (2026-10-11)
+
+User, looking at the pink on every title, section and day: "i really like the pink, but worry its too 'fun' and not what apple would do"; then, from Apple Music's sidebar, "white words everywhere but pink glyphs", "pink on every".
+
+- **Words take `DS.headInk`** (the page's ink: white in dark, black in light): a screen's title, a section's name and its picked choice (§1251), a day divider, a category's label, a sheet's day word, Settings' and the sheets' section heads. One token, so the words can take the hue back in one line. `day-divider-audit.py` and `dock-selftest.sh` read `headInk` where they read `brandInk`.
+- **Glyphs take `DS.brandInk`**: a section's symbol, a tile's, a category's mark. Every room's tiles draw pink glyphs and white words; a room's picked tile is one grey brighter (`surfaceRaised` under `fillStrong`), no longer white with black words.
+- **The Feed's and the Wallet's four are doors, not scopes** (`DSScopeTiles.bare`): on the phone every tile but Feed and Home opens a sheet, so a lit tile only ever marked the page the title names. No backing, no pick, pink glyphs, white words (user: "pink glyphs with … white words"). The Wallet's amber words for Holdings and Security are deleted from view and model (user: "they need to be white … we don't need it"); Needs you on Home says it in a row.
+- **The pink is Apple Music's, `#FA2D48`** (user: "make our octopus and the pink you are using the same color as apple music … you will also need to update our actual app icon too"). `DS.brand` and the mark take it; `brandInk` is `#fb3a53` dark and `#e0193a` light (Increase Contrast `#ff5c70` / `#b80d28`); the widget header follows. The app icon's dark art was recoloured from its own coverage and the light art re-derived (`make-light-icon.py`, `MARK` updated); tinted is unchanged. The website and the store pictures still carry `#FF2D87`.
+- **Wallet Home's glyph is `chart.bar`** (user: "the 'home' on wallet and 'markets' icons are basically the same. make home be bar chart").

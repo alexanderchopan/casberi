@@ -70,6 +70,6 @@ struct FeedDayDivider<Clause: View>: View {
         Text(label)
             .dsText(.heading20)
             .fontWeight(weight)
-            .foregroundStyle(dated ? DS.brandInk : DS.textPrimary)
+            .foregroundStyle(dated ? DS.headInk : DS.textPrimary)
     }
 }

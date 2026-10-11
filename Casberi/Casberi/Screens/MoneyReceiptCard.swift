@@ -714,7 +714,7 @@ struct MoneyReceiptBox: View {
             Spacer(minLength: DS.Space.s2)
             Text(FeedScreen.dayWord(landed))
                 .dsText(.label12)
-                .foregroundStyle(DS.brandInk)
+                .foregroundStyle(DS.headInk)
                 .lineLimit(1)
         }
         if let address = openable, let onSubject {

@@ -40,7 +40,7 @@ struct SheetPartyHead<Face: View>: View {
                     if let day {
                         Text(FeedScreen.dayWord(day))
                             .dsText(.label12)
-                            .foregroundStyle(DS.brandInk)
+                            .foregroundStyle(DS.headInk)
                             .lineLimit(1)
                     }
                 }

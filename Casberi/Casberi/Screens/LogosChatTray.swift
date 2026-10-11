@@ -85,7 +85,7 @@ struct LogosChatTray: View {
                 } label: {
                     Text(given == nil ? String(localized: "Name this person") : String(localized: "Rename"))
                         .dsText(.body17)
-                        .foregroundStyle(DS.brandInk)
+                        .foregroundStyle(DS.textPrimary)
                         .frame(minHeight: 44)
                 }
                 .buttonStyle(RowPress())

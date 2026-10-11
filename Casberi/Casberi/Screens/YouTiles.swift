@@ -10,7 +10,7 @@ struct YouTilesRow: View {
     @Environment(HomeRoute.self) private var route
 
     var body: some View {
-        DSScopeTiles(sections: YouTile.allCases, active: active) { picked in
+        DSScopeTiles(sections: YouTile.allCases, active: active, bare: true) { picked in
             guard picked != active else { return }
             YouTilesRow.open(picked, chrome: chrome, route: route)
         }
@@ -42,7 +42,7 @@ struct YouTilesRow: View {
 extension FeedScreen {
     /// You's tiles for a lead that takes a `DSScopeTiles` (`standaloneLead`).
     func youTiles(_ active: YouTile) -> DSScopeTiles<YouTile> {
-        DSScopeTiles(sections: YouTile.allCases, active: active) { picked in
+        DSScopeTiles(sections: YouTile.allCases, active: active, bare: true) { picked in
             guard picked != active else { return }
             YouTilesRow.open(picked, chrome: chrome, route: route)
         }

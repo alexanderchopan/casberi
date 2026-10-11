@@ -641,7 +641,7 @@ struct ThingSheetView: View {
                     // What the picture names, under the tiles (§885's facts).
                     if !facts.isEmpty {
                         VStack(alignment: .leading, spacing: DS.Space.s2) {
-                            Text("Found in it").dsText(.heading20).foregroundStyle(DS.brandInk)
+                            Text("Found in it").dsText(.heading20).foregroundStyle(DS.headInk)
                                 .padding(.horizontal, DSRoomChassis.inset)
                             factRows
                         }
@@ -3631,7 +3631,7 @@ struct ThingSheetView: View {
                   let about = thing.summary?.trimmingCharacters(in: .whitespacesAndNewlines),
                   !about.isEmpty {
             VStack(alignment: .leading, spacing: DS.Space.s2) {
-                Text("About").dsText(.heading20).foregroundStyle(DS.brandInk)
+                Text("About").dsText(.heading20).foregroundStyle(DS.headInk)
                 Text(verbatim: about).dsText(.body17).foregroundStyle(DS.textSecondary)
                     .lineLimit(6)
             }

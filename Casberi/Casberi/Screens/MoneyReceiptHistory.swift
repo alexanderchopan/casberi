@@ -22,7 +22,7 @@ struct MoneyHistoryRows: View {
                 // A list's name in the rooms' pink, as every list's is.
                 Text(verbatim: title)
                     .dsText(.heading20)
-                    .foregroundStyle(DS.brandInk)
+                    .foregroundStyle(DS.headInk)
                 Spacer(minLength: DS.Space.s2)
                 if let trailing {
                     Text(verbatim: trailing)
@@ -83,7 +83,7 @@ struct MoneyYearTotals: View {
         VStack(alignment: .leading, spacing: DS.Space.s3) {
             Text("This year with \(name)")
                 .dsText(.heading20)
-                .foregroundStyle(DS.brandInk)
+                .foregroundStyle(DS.headInk)
             HStack(spacing: DS.Space.s2) {
                 total(String(localized: "You sent"), sentUSD, sentCount, gain: false)
                 total(String(localized: "\(name) sent you"), receivedUSD, receivedCount, gain: true)

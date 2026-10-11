@@ -103,6 +103,13 @@ struct DSScopeTiles<Scope: DSTileScope>: View {
     /// can never fill for this account is a dead control (§83). The picked
     /// tile is never inert.
     var inert: Set<Scope> = []
+    /// **A ROW OF DOORS DRAWS NO BACKING AND NO PICK (prd §1252, user: "pink
+    /// glyphs with … white words").** The Feed's and the Wallet's four open
+    /// sheets on the phone (all but Feed and Home), so a lit tile only ever
+    /// marked the page the title already names: glyph over word on the page,
+    /// every glyph pink, every word in the page's ink. A room's own tiles
+    /// switch in place and keep their pick.
+    var bare: Bool = false
     let onPick: (Scope) -> Void
 
     /// The verb whose hold just fired. A `Button` still fires on the release
@@ -130,12 +137,13 @@ struct DSScopeTiles<Scope: DSTileScope>: View {
     /// Frozen, like the dock's `CategoryGlyph`, so a wide symbol and a tall one
     /// seat the word at the same height.
     private static var glyphSize: CGFloat { 20 }
-    /// **THE PICK IS THE PAGE'S INK, NOT A COLOUR (user, 2026-10-10, "E1").**
-    /// White with black ink in dark, black with white in light — Control
-    /// Center's "on". The tint fill read as the system's stock blue, and the
-    /// pink belongs to the title above, so the row owns no colour of its own.
-    static var pickFill: Color { DS.textPrimary }
-    static var pickInk: Color { Color.adaptive(dark: "#000000", light: "#ffffff") }
+    /// **THE PICK IS A LIFTED GREY, THE GLYPHS ARE PINK (prd §1252, user:
+    /// "white words everywhere but pink glyphs", "pink on every").** Music's
+    /// sidebar: every glyph in the hue, every word in the page's ink, the
+    /// picked row one grey brighter. It was the page's ink with black words
+    /// ("E1", 2026-10-10); the hue left the words for the glyphs.
+    static var pickInk: Color { DS.textPrimary }
+    static var glyphInk: Color { DS.brandInk }
     /// **GLYPH OVER WORD, everywhere (user, 2026-09-26, reversing "remove
     /// the glyphs" within the hour: "we do need those glyphs b/c we have them
     /// elsewhere in the app, it's a language — the app categories, and in the
@@ -276,12 +284,22 @@ struct DSScopeTiles<Scope: DSTileScope>: View {
                     .dsText(.dockCaption10)
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
-                    .foregroundStyle(isOn ? Self.pickInk : isInert ? DS.textTertiary : wants ? DS.attentionInk : isVerb ? DS.tint : DS.textPrimary)
+                    .foregroundStyle(isOn ? Self.pickInk : isInert ? DS.textTertiary : wants ? DS.attentionInk : DS.textPrimary)
             }
-            .foregroundStyle(isOn ? Self.pickInk : isInert ? DS.textTertiary : isVerb ? DS.tint : DS.textPrimary)
+            .foregroundStyle(isInert ? DS.textTertiary : Self.glyphInk)
             .frame(maxWidth: .infinity, minHeight: Self.tileHeight)
             // A disabled tile swaps its fill (§83), never only its ink.
-            .background { shape.fill(isOn ? Self.pickFill : (strip ? Color.clear : DS.surfaceRaised.opacity(isInert ? 0.45 : 1))) }
+            .background {
+                if bare {
+                    Color.clear
+                } else if isOn {
+                    // One grey brighter than an unpicked tile: the raised
+                    // fill under the strong wash, tokens only.
+                    shape.fill(DS.surfaceRaised).overlay(shape.fill(DS.fillStrong))
+                } else {
+                    shape.fill(strip ? Color.clear : DS.surfaceRaised.opacity(isInert ? 0.45 : 1))
+                }
+            }
             // **BECOMING THE PICK IS A CROSSFADE (prd §966).** The fill and the
             // ink ride the template's own clock, so a room whose pick handler
             // forgets `withAnimation` still slides the tint in under the

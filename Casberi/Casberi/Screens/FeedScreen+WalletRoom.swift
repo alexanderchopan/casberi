@@ -253,8 +253,8 @@ extension FeedScreen {
                 sections: chrome.walletSections,
                 active: active,
                 home: .home,
-                attention: chrome.walletSectionAttention,
                 inert: inert,
+                bare: true,
                 // Instant, for the reason §495 states at length: animating a
                 // swap between two slots of different natural height moves
                 // everything below and settles it back.
@@ -509,37 +509,16 @@ extension FeedScreen {
     // CHEAPER, since there is now one view to hoist instead of two.
 
     /// What this room publishes to the shell for §483's toggle — the scopes
-    /// that have something, and which of them want you.
-    ///
-    /// One value rather than two so a single `onChange` carries both; they are
-    /// read from the same live state on the same pass and must never be
-    /// published a frame apart, or the strip draws a dot on a scope it has
-    /// already stopped listing.
+    /// that have something. Which of them wanted you (the amber word, §1107)
+    /// is deleted with the word's colour (prd §1252, user: "they need to be
+    /// white … we don't need it"): Needs you on Home says it in a row.
     var walletSectionPublication: WalletSectionPublication {
-        guard shape == .wallet else { return .init(sections: [], attention: []) }
+        guard shape == .wallet else { return .init(sections: []) }
         // **EVERY SCOPE, ALWAYS (prd §611).** The five flags this used to
         // pass are now `walletScopeIsEmpty`, which decides between a scope's
         // figure and its empty state — the same expressions, one question,
         // so a chip can never lead somewhere blank (§483's Risk report).
-        //
-        // **`warnings`, not "does Risk exist".** A wallet with a 3.0 health
-        // factor HAS a risk reading and is in no trouble at all, so lighting
-        // the dot on the reading's presence would light it on every levered
-        // wallet forever; it lights only on a position past its protocol's
-        // own alert threshold, and never on a scope drawing its empty state.
-        let sections = WalletSection.present()
-        // **THE AMBER WORD FOLLOWS THE FACT (prd §1107).** A liquidation is a
-        // position's, so it lights Holdings; a Safe waiting, a grant with no
-        // limit, a delegate, or a transfer made to fool you lights Security.
-        var attention: Set<WalletSection> = []
-        if walletLive.warnings.contains(where: { $0.kind == .liquidation }) {
-            attention.insert(.holdings)
-        }
-        if walletLive.warnings.contains(where: { $0.kind != .liquidation }),
-           !walletScopeIsEmpty(.security) {
-            attention.insert(.security)
-        }
-        return .init(sections: sections, attention: attention)
+        return .init(sections: WalletSection.present())
     }
 
     /// **THE SCOPE'S RENDER GATE, SPELLED ONCE.** Before §611 these five
@@ -663,7 +642,6 @@ extension FeedScreen {
 
     struct WalletSectionPublication: Equatable {
         var sections: [WalletSection]
-        var attention: Set<WalletSection>
     }
 
     // MARK: - The wallet room's section headers
@@ -1351,7 +1329,7 @@ extension FeedScreen {
                         // The day wears the brand hue, as every day header in
                         // the feed does (prd §740); this was the one in primary.
                         Text(label).dsText(.heading20)
-                            .foregroundStyle(named.contains(label) ? DS.textPrimary : DS.brandInk)
+                            .foregroundStyle(named.contains(label) ? DS.textPrimary : DS.headInk)
                     }
                     .textCase(nil)
                     // On a panel the day stands in the rows' column, as the

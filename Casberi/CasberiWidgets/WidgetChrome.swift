@@ -31,10 +31,10 @@ enum WidgetChrome {
     static let loss = adaptive(dark: (255, 69, 58), light: (198, 46, 37))
 
     /// A tile's header: Casberi pink (user, 2026-10-04: "we don't use blue").
-    /// `DS.brandInk`'s two registers (`#b8306b` light, `#f5458f` dark), spelled
-    /// here because `Design/` is app-side: the mark's hue one notch softer, so
-    /// it reads as type on either ground.
-    static let header = adaptive(dark: (245, 69, 143), light: (184, 48, 107))
+    /// `DS.brandInk`'s two registers (`#e0193a` light, `#fb3a53` dark, Apple
+    /// Music's hue since prd §1252), spelled here because `Design/` is
+    /// app-side.
+    static let header = adaptive(dark: (251, 58, 83), light: (224, 25, 58))
 
     static func adaptive(dark: (Int, Int, Int), light: (Int, Int, Int)) -> Color {
         func ui(_ c: (Int, Int, Int)) -> UIColor {

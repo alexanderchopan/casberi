@@ -21,7 +21,7 @@ struct DayCalendarFigure: View {
                     .minimumScaleFactor(0.8)
                 Spacer(minLength: DS.Space.s2)
                 Text(verbatim: when)
-                    .dsText(.subhead12).foregroundStyle(DS.brandInk)
+                    .dsText(.subhead12).foregroundStyle(DS.headInk)
                     .lineLimit(1)
             }
             if !line.isEmpty {

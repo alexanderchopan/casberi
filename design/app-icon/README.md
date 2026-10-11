@@ -1,7 +1,7 @@
 # Handoff: Casberi App Icon
 
 ## Overview
-The Casberi app icon: **an octopus** — a rounded mantle with two eyes and five suckered arms, in one hot pink on a plain ground. Many arms, one animal: the product thesis (many things, one container) said as a creature rather than as a diagram.
+The Casberi app icon: **an octopus** — a rounded mantle with two eyes and five suckered arms, in Apple Music's pink (`#FA2D48`, prd §1252; `#FF2D87` until 2026-10-11) on a plain ground. Many arms, one animal: the product thesis (many things, one container) said as a creature rather than as a diagram.
 
 **This file described a BERRY until 2026-09-08, and it was wrong** (user: "the apps' mark is not a berri it is an octopus"). The berry — seven blue drupelets, hex-packed, named for *cache + berry* — was the earlier mark, and its generator (`icon-svg.js`) and three `casberi-icon-*.svg` outputs were deleted with this rewrite, because they emitted art the app has not shipped for some time and nothing else referenced them. Two things had been quietly reading the stale claim: `Design/BerryRain.swift`'s drop palette, commented "the icon's berry blues", and several `design/*/…mocks.html` boards drawing `.berry` confetti. Both are gone (the shower is `TileRain` now — see prd §655).
 
@@ -28,7 +28,7 @@ The suckers **taper outward** — r 2.6 nearest the mantle, then 1.9, then 1.3 a
 ### Colour
 | Role | Value |
 |------|-------|
-| Mark | `#FF2D87` |
+| Mark | `#FA2D48` |
 | Eyes and suckers | **the ground** — knocked out of the mark, not painted over it |
 | Ground (dark, tinted) | `#000000` |
 | Ground (light) | `#FFFFFF` |
@@ -43,8 +43,8 @@ iOS picks one of these by the appearance the person chose in the Home Screen edi
 
 | Variant | Mark | Ground | Note |
 |---------|------|--------|------|
-| light | `#FF2D87` | `#FFFFFF` | derived from the dark art — see below |
-| dark | `#FF2D87` | `#000000` | the drawing everything else comes from |
+| light | `#FA2D48` | `#FFFFFF` | derived from the dark art — see below |
+| dark | `#FA2D48` | `#000000` | the drawing everything else comes from |
 | tinted | `#FFFFFF` | `#000000` | greyscale; the system maps luminance to the person's tint |
 
 **The light PNG was a byte-for-byte copy of the dark one until 2026-09-22** (prd §869), so every person on the light or default appearance saw the dark drawing — pink on black — on a light home screen. The two files had the same md5.
@@ -65,4 +65,4 @@ Because the eyes and suckers are GROUND, they turn white for free — there is n
 - Shipped art lives in `Casberi/Casberi/Assets.xcassets/AppIcon.appiconset/` — `casberi-octopus-1024-{light,dark,tinted}.png`, wired in `Contents.json` as the universal iOS icon plus its dark and tinted luminosity variants.
 
 ## Unverified
-All three PNGs have now been decoded and read (2026-09-22): the dark art is exactly `#FF2D87` composited over black with a clean 101-step alpha ramp, the tinted art is the same mask in white on black, and the light art is that mask over white. **None of the three has been seen on a physical device** — they were read as pixels and rendered to a contact sheet, not installed. The squircle in any preview is an approximation; iOS applies its own.
+All three PNGs have now been decoded and read (2026-09-22): the dark art is exactly the mark composited over black with a clean 101-step alpha ramp, the tinted art is the same mask in white on black, and the light art is that mask over white. **None of the three has been seen on a physical device** — they were read as pixels and rendered to a contact sheet, not installed. The squircle in any preview is an approximation; iOS applies its own.

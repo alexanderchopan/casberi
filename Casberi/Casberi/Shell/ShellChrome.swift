@@ -467,11 +467,6 @@ final class ShellChrome {
     /// drift apart.
     var walletSections: [WalletSection] = []
 
-    /// Which of those scopes hold something that wants answering — the dot on
-    /// the strip. Published beside `walletSections` for the same reason and
-    /// cleared with it.
-    var walletSectionAttention: Set<WalletSection> = []
-
     /// The Logos room's scope, its published scopes and its account pick
     /// (prd §991) — `walletSection`'s trio one room over, deliberately
     /// SEPARATE properties rather than a shared generic pair: the rooms publish

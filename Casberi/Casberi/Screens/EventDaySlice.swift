@@ -37,7 +37,7 @@ struct EventDaySlice: View {
                 Spacer(minLength: DS.Space.s2)
                 Text(verbatim: FeedScreen.dayWord(start))
                     .dsText(.label12)
-                    .foregroundStyle(DS.brandInk)
+                    .foregroundStyle(DS.headInk)
             }
             if allDay {
                 Text("All day")

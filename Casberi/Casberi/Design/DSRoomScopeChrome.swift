@@ -43,6 +43,8 @@ struct DSRoomScopeChrome<Scope: DSTileScope, Crown: View, Figure: View>: View {
     /// Scopes with nothing for the account picked, drawn in place and not
     /// taking a tap (`DSScopeTiles.inert`, prd §1078).
     var inert: Set<Scope> = []
+    /// The tiles as doors, with no backing (`DSScopeTiles.bare`, prd §1252).
+    var bare: Bool = false
     let onPick: (Scope) -> Void
 
     let accounts: [DSAccountSlot]
@@ -109,7 +111,7 @@ struct DSRoomScopeChrome<Scope: DSTileScope, Crown: View, Figure: View>: View {
             if !pinned {
                 VStack(alignment: .leading, spacing: DS.Space.s2) {
                     DSScopeTiles(sections: sections, active: active,
-                                 attention: attention, inert: inert, onPick: onPick)
+                                 attention: attention, inert: inert, bare: bare, onPick: onPick)
                     accountLine
                 }
                 .padding(.horizontal, DSRoomChassis.inset)

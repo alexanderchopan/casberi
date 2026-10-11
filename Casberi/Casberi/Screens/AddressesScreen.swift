@@ -516,7 +516,7 @@ struct AddressesSection: View {
                         // recent Sam stood blank).
                         ForEach(recent, id: \.recentKey) { contact in row(contact) }
                     } header: {
-                        LetterHead(text: Text("Recent"), tone: DS.brandInk)
+                        LetterHead(text: Text("Recent"), tone: DS.headInk)
                     }
                 }
                 ForEach(Self.lettered(everyone), id: \.letter) { section in

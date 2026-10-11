@@ -3661,7 +3661,7 @@ private struct PagerCover: View {
                     Text(Pinboard.isPinnedRoom(label) ? String(localized: "Notes")
                          : HomeScope.isMarkets(label) ? String(localized: "Markets")
                          : String(localized: "Feed"))
-                        .dsText(.heading40).foregroundStyle(DS.brandInk)
+                        .dsText(.heading40).foregroundStyle(DS.headInk)
                 } else {
                     // Bare, as the dock draws it — no rim, no disc (user:
                     // a white one "looks accidental", a black one too, and
@@ -3679,7 +3679,7 @@ private struct PagerCover: View {
                     }
                     Text(label)
                         .dsText(.heading40)
-                        .foregroundStyle(DS.brandInk)
+                        .foregroundStyle(DS.headInk)
                 }
             }
             .padding(.horizontal, DS.Space.s6)

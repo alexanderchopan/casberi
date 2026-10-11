@@ -66,7 +66,7 @@ struct WatchRow: View {
     private var lineText: Text? {
         switch line {
         case .alert(let level):
-            return Text("Alert at \(level)").foregroundStyle(DS.brandInk)
+            return Text("Alert at \(level)").foregroundStyle(DS.textPrimary)
         case .holding(let value):
             return Text("You hold \(value)")
         case .sinceWatched(let move):

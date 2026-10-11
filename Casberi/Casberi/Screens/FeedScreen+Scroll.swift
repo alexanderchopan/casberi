@@ -230,7 +230,7 @@ extension FeedScreen {
                         (wallet ? Text("Wallet") : Text("Feed")).foregroundStyle(DS.textSecondary)
                         Text(verbatim: "·").foregroundStyle(DS.textTertiary)
                         Text(verbatim: section)
-                            .foregroundStyle(DS.brandInk)
+                            .foregroundStyle(DS.headInk)
                             .id(section)
                             .transition(reduceMotion ? .opacity
                                         : .push(from: feedSectionForward ? .bottom : .top))
@@ -659,7 +659,7 @@ struct GlanceShell<Top: View, Mark: View, Words: View>: View {
                         Text(verbatim: category)
                             .dsText(.label12)
                             .fontWeight(.semibold)
-                            .foregroundStyle(DS.brandInk)
+                            .foregroundStyle(DS.headInk)
                             .lineLimit(1)
                         Spacer(minLength: 0)
                         if let when {
@@ -721,7 +721,7 @@ struct SectionPanelName<Trailing: View>: View {
             if choices.isEmpty {
                 Text(verbatim: name)
                     .dsText(.heading28)
-                    .foregroundStyle(DS.brandInk)
+                    .foregroundStyle(DS.headInk)
                     .lineLimit(1)
             } else {
                 FlowLayout(spacing: DS.Space.s3, lineSpacing: 0) {
@@ -732,7 +732,7 @@ struct SectionPanelName<Trailing: View>: View {
                         } label: {
                             Text(verbatim: choice.label)
                                 .dsText(.heading28)
-                                .foregroundStyle(choice.on ? DS.brandInk : DS.textTertiary)
+                                .foregroundStyle(choice.on ? DS.headInk : DS.textTertiary)
                                 .lineLimit(1)
                         }
                         .buttonStyle(RowPress())

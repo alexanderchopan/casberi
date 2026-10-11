@@ -842,7 +842,7 @@ print -P "%F{green}✓ defaults-lock audit%f"
 # The day divider is the one line of type in the brand pink, and only a label
 # that names a TIME wears it (prd §740). A room grouped by something else
 # ("Your wallets", a repository, "Waiting on you") passes `dated: false`; the
-# nine that do are a floor, and `#FF2D87` is spelled once, in DesignTokens, so
+# nine that do are a floor, and `#FA2D48` is spelled once, in DesignTokens, so
 # the mark and the dividers cannot drift to two pinks. It reads shapes, not
 # colours: a wrong hex value or a room that should have opted out and didn't
 # passes this and is wrong on screen.

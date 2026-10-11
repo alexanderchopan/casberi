@@ -945,7 +945,7 @@ extension FeedScreen {
                             // The day wears the brand hue (prd §740); a group
                             // named by something other than time keeps the
                             // primary ramp.
-                            .foregroundStyle(dated ? DS.brandInk : DS.textPrimary)
+                            .foregroundStyle(dated ? DS.headInk : DS.textPrimary)
                     }
                     .textCase(nil)
                     .padding(.leading, DSRoomChassis.rowInset)

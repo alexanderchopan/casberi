@@ -324,8 +324,9 @@ enum DS {
 
     // MARK: - Brand  — the mark's pink, and the one line of type that shares it
 
-    /// **The brand hue, and the only one.** `#FF2D87` — the octopus mark's
-    /// pink, hoisted out of `CasberiMark` so the drawing and the one run of
+    /// **The brand hue, and the only one.** `#FA2D48` — Apple Music's pink
+    /// since prd §1252 (user: "make our octopus and the pink … the same color
+    /// as apple music"; it was `#FF2D87`), the octopus mark's hoisted out of `CasberiMark` so the drawing and the one run of
     /// type that shares it cannot drift to two pinks (§8: components hold zero
     /// raw hex, and a second copy of a hex IS a second value waiting to
     /// diverge). `CasberiMark.pink` reads this; nothing else may spell it.
@@ -334,10 +335,11 @@ enum DS {
     /// that changes colour between themes is two logos. Type wanting this hue
     /// takes `brandInk` below, which is the same hue with the contrast
     /// setting answered.
-    static let brand = Color.fixed("#FF2D87")
+    static let brand = Color.fixed("#FA2D48")
 
-    /// **The brand hue as INK** — the day dividers, and nothing else yet
-    /// (prd §740), one notch softer than the mark (prd §742).
+    /// **The brand hue as INK** — on GLYPHS since prd §1252 (a section's
+    /// symbol, a tile's, a category's mark); words take `headInk`. It was the
+    /// day dividers' (prd §740), one notch softer than the mark (prd §742).
     ///
     /// Why a colour rule that bans decoration admits this one. §8 allows
     /// identity, state or magnitude; a day header is the app's OWN voice —
@@ -385,14 +387,23 @@ enum DS {
     /// argument with the user's own choice is the correct outcome.
     static var brandInk: Color {
         if vividBackground { return textPrimary }
-        // Neither register re-spells the mark's hex: `brand` is the one
-        // spelling of `#FF2D87`, and these are deliberately NOT it (§742).
-        let darkInk = Color.fixed(moreContrast ? "#ff579f" : "#f5458f")
-        let lightInk = Color.fixed(moreContrast ? "#9c1b52" : "#b8306b")
+        // Music's hue (prd §1252) on glyphs: the mark's own value in dark,
+        // lifted under Increase Contrast; the light page takes it a step
+        // darker, as Music's own light tint reads. Neither re-spells `brand`.
+        let darkInk = Color.fixed(moreContrast ? "#ff5c70" : "#fb3a53")
+        let lightInk = Color.fixed(moreContrast ? "#b80d28" : "#e0193a")
         return Color(uiColor: UIColor { traits in
             UIColor(traits.userInterfaceStyle == .light ? lightInk : darkInk)
         })
     }
+
+    /// **THE INK OF A WORD THAT NAMES A PLACE (prd §1252, user: "white words
+    /// everywhere but pink glyphs").** A screen's title, a section's name, a
+    /// header's picked word, a day divider, a category's label: white in
+    /// dark, black in light, as Apple's apps set them. The pink moved to the
+    /// glyphs (`brandInk` on a symbol), Music's way. One token, so the words
+    /// can take the hue back in one line if the ruling turns.
+    static var headInk: Color { textPrimary }
 
     // The swipe's table (`swipeTable`, `swipeTableInk`, prd §898–§898e) is
     // deleted with the dealt card: since prd §1207 item 3 the pages are one

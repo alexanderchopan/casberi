@@ -112,7 +112,7 @@ struct DSTray<Content: View>: View {
                     // card-title rung it read as a taller card. 40 against the
                     // 12pt caption inside it is 3.3×.
                     .dsText(inPane ? .heading24 : .heading40)
-                    .foregroundStyle(brandTitle ? DS.brandInk : DS.textPrimary)
+                    .foregroundStyle(brandTitle ? DS.headInk : DS.textPrimary)
                     .multilineTextAlignment(.leading)
                     // …and therefore it WRAPS. See `titleHeight` above.
                     .fixedSize(horizontal: false, vertical: true)

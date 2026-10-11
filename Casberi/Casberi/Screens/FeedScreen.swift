@@ -1015,7 +1015,6 @@ struct FeedScreen: View {
                 // screen: only the room on screen, or a Wallet, publishes.
                 guard isActive || shape == .wallet, pinnedWalletSection == nil else { return }
                 chrome.walletSections = now.sections
-                chrome.walletSectionAttention = now.attention
             }
             // Cleared on the way OUT, not merely overwritten on the way in.
             // Every room writes this, so a stale non-empty list would leave the
@@ -1026,7 +1025,6 @@ struct FeedScreen: View {
             .onDisappear {
                 guard shape == .wallet, isActive, pinnedWalletSection == nil else { return }
                 chrome.walletSections = []
-                chrome.walletSectionAttention = []
             }
             // The testnet room's half of the same contract (PERF
             // 2026-09-01), replacing writes made from inside `roomBody` — see

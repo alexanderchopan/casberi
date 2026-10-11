@@ -439,7 +439,7 @@ struct CheckSection<Rows: View>: View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             Text(verbatim: title)
                 .dsText(.heading20)
-                .foregroundStyle(DS.brandInk)
+                .foregroundStyle(DS.headInk)
             rows()
         }
         .frame(maxWidth: .infinity, alignment: .leading)

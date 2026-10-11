@@ -487,7 +487,7 @@ struct SettingsHome: View {
             if query.isEmpty {
                 if !startHere.isEmpty {
                     VStack(alignment: .leading, spacing: DS.Space.s2) {
-                        Text("Start here").dsText(.heading20).foregroundStyle(DS.brandInk)
+                        Text("Start here").dsText(.heading20).foregroundStyle(DS.headInk)
                         ForEach(startHere) { step in startRow(step) }
                     }
                 }
@@ -507,7 +507,7 @@ struct SettingsHome: View {
                 }
                 VStack(alignment: .leading, spacing: DS.Space.s4) {
                     if query.isEmpty {
-                        Text("All apps").dsText(.heading20).foregroundStyle(DS.brandInk)
+                        Text("All apps").dsText(.heading20).foregroundStyle(DS.headInk)
                     }
                     ForEach(categories, id: \.self) { category in
                         VStack(alignment: .leading, spacing: DS.Space.s2) {
