@@ -227,7 +227,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1404 of 1470 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1405 of 1471 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1633,6 +1633,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1259 — The wallet balance line is green
 - §1260 — Day's calendar carries your subscriptions (amends §1229)
 - §1261 — Day's list carries your subscriptions too (amends §1260)
+- §1262 — The category's word in the title takes you back to the whole category (amends §1133)
 
 ## Dead rulings → what replaced them (generated)
 

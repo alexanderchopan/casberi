@@ -52,11 +52,40 @@ extension FeedScreen {
             DSWalkTitleRow(before: walk.before.map(Self.walkWord),
                            title: roomName,
                            pick: roomPick,
+                           onTitle: clearRoomPick,
                            after: walk.after.map(Self.walkWord)) { forward in
                 chrome.sourceRequest = forward ? walk.after : walk.before
             }
         } else {
-            DSRoomTitleRow(title: roomName, pick: roomPick)
+            DSRoomTitleRow(title: roomName, pick: roomPick, onTitle: clearRoomPick)
+        }
+    }
+
+    /// The title's category word pressed: drop the pick `roomPick` names and
+    /// show the whole category (prd §1262), as the tray's category row does.
+    /// Nil wherever the pick is not one to drop: You's places, and a network
+    /// the Testnets room stands on (it has no view across networks).
+    var clearRoomPick: (() -> Void)? {
+        guard roomPick != nil else { return nil }
+        if !Pinboard.isPinnedRoom(source), let rail = chrome.accountRail,
+           rail.source == source || source == RoomAccounts.testnetsRoom,
+           rail.slots.contains(where: { !$0.id.isEmpty && $0.isShowing(rail.scope) }) {
+            return {
+                DSHaptic.selection()
+                rail.onPick(nil)
+            }
+        }
+        guard selectedSeat != nil else { return nil }
+        let room = source
+        return {
+            DSHaptic.selection()
+            withAnimation(DS.Motion.standard) {
+                if room == CategoryFold.walletRoom {
+                    chrome.walletScope = nil
+                } else {
+                    chrome.mergedScope[room] = nil
+                }
+            }
         }
     }
 

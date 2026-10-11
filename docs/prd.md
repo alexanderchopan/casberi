@@ -65986,3 +65986,11 @@ User, after §1260 put renewals on Day's calendar: "they should show in the list
 - The row is the Subscriptions anatomy (`SubscriptionRow`): the plan's face and name, "Renews" (or "Next charge" when the cadence is unknown) and what pays it. No price, nothing trailing (§1113).
 - A tap opens the plan in the Wallet through its service door (`chrome.open(.plan(id))`), stepping Day's sheet down first (`openOutsideSheet`); the price is there.
 - Coming up's rows are unchanged: a Rocket Money bill already stands there as its own row (§1105), and a second row for the same plan would draw it twice.
+
+## §1262 — The category's word in the title takes you back to the whole category (amends §1133) (2026-10-11)
+
+User, of "Feed · Wallet · Privy": "you should be able to tap 'wallet' in the title to go back to the unified view … otherwise you have to go into the tray, which is fine but shouldn't be the only way".
+
+- Once a pick follows the dot, the category's word presses (`DSRoomTitleRow(onTitle:)`, `RowPress`) and drops the pick, as the tray's category row does (`FeedScreen.clearRoomPick`): an account-menu pick through the room's own `onPick(nil)`, an app picked in a merged room or Notes by clearing `walletScope` / `mergedScope[room]`.
+- The pick after the dot stays a label, and with nothing picked the row presses nothing (§1133 stands there). A network the Testnets room stands on keeps its name unpressable: it has no view across networks (§1050).
+- The tray stays the first way; this is the second, the narrow exception §1207 made for the walk's grey words.

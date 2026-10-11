@@ -40,6 +40,11 @@ struct DSScreenHead: View {
 struct DSRoomTitleRow: View {
     let title: String
     var pick: String? = nil
+    /// The category's word pressed while a pick follows it: back to the
+    /// whole category (prd §1262, user: "otherwise you have to go into the
+    /// tray, which is fine but shouldn't be the only way"). Nil keeps the
+    /// row a label.
+    var onTitle: (() -> Void)? = nil
     @Environment(\.sizeCategory) private var sizeCategory
     /// In a thing sheet the title is the thing's, and wraps (prd §1258).
     @Environment(\.dsTitleWraps) private var wraps
@@ -61,16 +66,39 @@ struct DSRoomTitleRow: View {
         }
     }
 
+    @ViewBuilder
     private var roomTitle: some View {
-        DSScreenHead(title: label, ink: DS.headInk)
+        if let pick, let onTitle {
+            // The category's word presses (prd §1262); the pick after the
+            // dot stays a label. Same rung, ink and height as the label row.
+            HStack(alignment: .firstTextBaseline, spacing: 0) {
+                Button(action: onTitle) {
+                    Text(verbatim: title)
+                        .foregroundStyle(DS.headInk)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(RowPress())
+                .accessibilityHint(Text("Shows everything in \(title)"))
+                (Text(verbatim: " · ").foregroundStyle(DS.textTertiary)
+                    + Text(verbatim: pick).foregroundStyle(DS.textPrimary))
+            }
+            .dsText(.heading34)
             .lineLimit(1)
             .minimumScaleFactor(0.6)
-            // ONE HEIGHT, whatever the name (prd §1136f, user: "the box should
-            // never move down!"): a long pair shrinks to fit, and the row used
-            // to shrink with it, so the box and the tiles under it moved with
-            // the length of your name. The row is the rung's full line, always.
+            .frame(maxWidth: .infinity, alignment: .leading)
             .frame(height: Self.height, alignment: .leading)
-            .accessibilityLabel(Text(verbatim: pick.map { "\(title), \($0)" } ?? title))
+            .accessibilityAddTraits(.isHeader)
+        } else {
+            DSScreenHead(title: label, ink: DS.headInk)
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+                // ONE HEIGHT, whatever the name (prd §1136f, user: "the box should
+                // never move down!"): a long pair shrinks to fit, and the row used
+                // to shrink with it, so the box and the tiles under it moved with
+                // the length of your name. The row is the rung's full line, always.
+                .frame(height: Self.height, alignment: .leading)
+                .accessibilityLabel(Text(verbatim: pick.map { "\(title), \($0)" } ?? title))
+        }
     }
 
     /// The rung's line at its full size, scaled for Dynamic Type as the
@@ -101,6 +129,7 @@ struct DSWalkTitleRow: View {
     let before: String?
     let title: String
     var pick: String? = nil
+    var onTitle: (() -> Void)? = nil
     let after: String?
     /// A grey word pressed: true for the one after.
     let onStep: (Bool) -> Void
@@ -110,7 +139,7 @@ struct DSWalkTitleRow: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(alignment: .firstTextBaseline, spacing: DS.Space.s3) {
                     if let before { neighbour(before, forward: false) }
-                    DSRoomTitleRow(title: title, pick: pick)
+                    DSRoomTitleRow(title: title, pick: pick, onTitle: onTitle)
                         .fixedSize()
                         .id("standing")
                     if let after { neighbour(after, forward: true) }
