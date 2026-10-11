@@ -171,6 +171,9 @@ extension FeedScreen {
         if lists {
             Section { mailSubscriptionsBox }
         }
+        // In the Feed's scroll the header names these choices (prd §1251);
+        // the tiles stand on the category's own screen.
+        if Self.sectionCapNow == nil {
         Section {
             DSScopeTiles(sections: LifeScope.allCases, active: chrome.lifeScope) { picked in
                 withAnimation(DS.Motion.standard) { chrome.lifeScope = picked }
@@ -180,6 +183,7 @@ extension FeedScreen {
             .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
                                       bottom: DSRoomChassis.leadGap,
                                       trailing: DSRoomChassis.inset))
+        }
         }
         if lists {
             mailSubscriptionsSections
@@ -499,6 +503,9 @@ extension FeedScreen {
                              words: Text("What you build lands here"))
             }
         }
+        // In the Feed's scroll the header names these choices (prd §1251);
+        // the tiles stand on the category's own screen.
+        if Self.sectionCapNow == nil {
         Section {
             DSScopeTiles(sections: WorkScope.allCases, active: chrome.workScope, attention: [], verbs: []) { picked in
                 withAnimation(DS.Motion.standard) { chrome.workScope = picked }
@@ -508,6 +515,7 @@ extension FeedScreen {
             .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
                                       bottom: DSRoomChassis.leadGap,
                                       trailing: DSRoomChassis.inset))
+        }
         }
         roomScopeSection
         if watching {

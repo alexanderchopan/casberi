@@ -65887,3 +65887,12 @@ The inventory found BTC and SOL priced as WBTC and wSOL, every index coin follow
 Not built, for a later ruling: cost basis and P&L (Holdings' question, not Markets'), auto-following holdings (§1167.3), funding rates, token unlocks.
 
 UNMEASURED and UNCOMPILED: written on a Linux machine with no Swift toolchain and no network to any API host. CoinPaprika's historical ticks, which intervals its free plan serves, and the `static.coinpaprika.com` logo path are authored from documentation. `markets-selftest.sh`, `widget-selftest.sh` and `price-chart-selftest.sh` hold the parses, the convergence (twice is a no-op), the alert rules, the sync merge, the Live Activity's stamping and the widget's fallback. Hooks: `-coinProbe <id>` (`coinProbe|`, the measurement), `-coinConvergeProbe YES`, `-gasProbe YES`, `-pricePin "<SYMBOL>"|off`.
+
+## §1251 — A Feed section's header names its choices (2026-10-10)
+
+User, on the Feed's section tiles: "when they are underneath a section header like they are today in some of the feed they just look like they were bolted on"; shown four ways (S1–S4), "s4 is gorgeous".
+
+- In the Feed's scroll, Life, Work, Media and Social draw **no tiles**. The section's header reads every choice at the title's own size (`heading28`), the picked word in the brand pink, the others grey: "**Life** Subscriptions", "Work **Coming up** Following". A tap on a grey word switches; the words wrap at the type's own leading (`FlowLayout(lineSpacing: 0)`).
+- The first choice is spoken as the category itself ("Life", never "All"). Verbs are not choices: Social's Follow stays on Social's own screen.
+- The primary buttons are untouched (user: "the buttons for wallet and feed primary buttons ... should stay as they are"): Feed · Day · Notes · Sources and the Wallet's four tiles keep `DSScopeTiles`, and a category's own screen keeps its tiles. No segmented control (user: "having different types is weird").
+- Built in `SectionPanelName(choices:)` over `FeedScreen.sectionChoices(_:)`; the tile blocks stand down when `sectionCapNow` is set.

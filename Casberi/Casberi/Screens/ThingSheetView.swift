@@ -950,7 +950,7 @@ struct ThingSheetView: View {
                     let signable: Bool = {
                         guard case .pending = check.status, thing.sourceRef != nil
                         else { return false }
-                        // Either of this phone's keys (prd §1249): a Safe that
+                        // Either of this phone's keys (prd §1251): a Safe that
                         // names only the Enclave owner lands rows now too.
                         return SignerKey.presence() != .none || SafeEnclaveKey.exists
                     }()
@@ -4392,13 +4392,16 @@ struct ThingSheetView: View {
 /// Minimal flow layout for tag chips (wraps like the prototype's flex-wrap).
 struct FlowLayout: Layout {
     var spacing: CGFloat = 8
+    /// The gap between wrapped lines; nil keeps `spacing` (prd §1251: a
+    /// header's words wrap at the type's own leading).
+    var lineSpacing: CGFloat? = nil
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
         let width = proposal.width ?? .infinity
         var x: CGFloat = 0, y: CGFloat = 0, rowH: CGFloat = 0
         for view in subviews {
             let size = view.sizeThatFits(.unspecified)
-            if x + size.width > width, x > 0 { x = 0; y += rowH + spacing; rowH = 0 }
+            if x + size.width > width, x > 0 { x = 0; y += rowH + (lineSpacing ?? spacing); rowH = 0 }
             x += size.width + spacing
             rowH = max(rowH, size.height)
         }
@@ -4410,7 +4413,7 @@ struct FlowLayout: Layout {
         for view in subviews {
             let size = view.sizeThatFits(.unspecified)
             if x + size.width > bounds.maxX, x > bounds.minX {
-                x = bounds.minX; y += rowH + spacing; rowH = 0
+                x = bounds.minX; y += rowH + (lineSpacing ?? spacing); rowH = 0
             }
             view.place(at: CGPoint(x: x, y: y), proposal: .unspecified)
             x += size.width + spacing

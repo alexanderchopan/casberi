@@ -64,6 +64,9 @@ extension FeedScreen {
                 }
             }
         }
+        // In the Feed's scroll the header names these choices (prd §1251);
+        // the tiles stand on the category's own screen.
+        if Self.sectionCapNow == nil {
         Section {
             DSScopeTiles(sections: SocialScope.allCases, active: chrome.socialScope,
                          attention: [], verbs: [.follow]) { picked in
@@ -81,6 +84,7 @@ extension FeedScreen {
             #if DEBUG
             .task { socialProbe() }
             #endif
+        }
         }
         roomScopeSection
         if you {

@@ -58,6 +58,9 @@ extension FeedScreen {
                 }())
             }
         }
+        // In the Feed's scroll the header names these choices (prd §1251);
+        // the tiles stand on the category's own screen.
+        if Self.sectionCapNow == nil {
         Section {
             DSScopeTiles(sections: MediaScope.allCases, active: chrome.mediaScope,
                          attention: [], verbs: []) { picked in
@@ -68,6 +71,7 @@ extension FeedScreen {
             .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
                                       bottom: DSRoomChassis.leadGap,
                                       trailing: DSRoomChassis.inset))
+        }
         }
         roomScopeSection
         if subscriptions {

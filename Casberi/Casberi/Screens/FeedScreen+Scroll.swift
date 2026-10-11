@@ -76,7 +76,8 @@ extension FeedScreen {
     private func scrollSection(_ category: String, _ things: [Thing], nextEventID: UUID?) -> some View {
         let _ = { memo.sectionCounts[category] = things.count }()
         let cap = sectionCaps[category] ?? Self.sectionFirstRows
-        panelSection(category, glyph: CategoryFold.glyph(for: category), things: things) {
+        panelSection(category, glyph: CategoryFold.glyph(for: category), things: things,
+                     choices: sectionChoices(category)) {
             let _ = { Self.sectionCapNow = (category, cap) }()
             categorySections(category, things, nextEventID: nextEventID)
             let _ = { Self.sectionCapNow = nil }()
@@ -89,9 +90,10 @@ extension FeedScreen {
     /// through this one template.
     @ViewBuilder
     func panelSection<Rows: View>(_ name: String, glyph: String, things: [Thing],
+                                  choices: [SectionChoice] = [],
                                   @ViewBuilder rows: () -> Rows) -> some View {
         SectionPanelGroup(anchor: Self.scrollAnchor(name), lit: landedSection == name) {
-            scrollHeader(name, glyph: glyph, things)
+            scrollHeader(name, glyph: glyph, things, choices: choices)
         } rows: {
             rows()
         }
@@ -127,13 +129,14 @@ extension FeedScreen {
     /// Nothing to press: the sections do not fold (§1208c), and nothing in
     /// the Feed opens a screen of its own (§1208a). As it reaches the top it
     /// shrinks into the pill that names where you are.
-    private func scrollHeader(_ category: String, glyph: String, _ things: [Thing]) -> some View {
+    private func scrollHeader(_ category: String, glyph: String, _ things: [Thing],
+                              choices: [SectionChoice] = []) -> some View {
         let seen = NewSeen.shared.ids
         let fresh = newSince.map { since in
             things.filter { $0.isLive && $0.capturedAt > since && !seen.contains($0.id) }.count
         } ?? 0
         let calm = reduceMotion
-        return SectionPanelName(name: category, glyph: glyph) {
+        return SectionPanelName(name: category, glyph: glyph, choices: choices) {
             if fresh > 0 {
                 HStack(spacing: DS.Space.s1) {
                     Circle().fill(DS.tint).frame(width: 7, height: 7)
@@ -701,6 +704,12 @@ struct GlanceShell<Top: View, Mark: View, Words: View>: View {
 struct SectionPanelName<Trailing: View>: View {
     let name: String
     let glyph: String
+    /// **THE HEADER NAMES ITS CHOICES (prd §1251, user: "s4 is gorgeous").**
+    /// In the Feed a section's tiles stand down and its header reads every
+    /// choice at the title's own size, the picked one in the pink and the
+    /// others grey ("Life Subscriptions"); a tap on a grey word switches.
+    /// Empty: the plain name, as before.
+    var choices: [SectionChoice] = []
     @ViewBuilder var trailing: Trailing
 
     var body: some View {
@@ -709,19 +718,77 @@ struct SectionPanelName<Trailing: View>: View {
                 .dsGlyph(.body)
                 .foregroundStyle(DS.brandInk)
                 .accessibilityHidden(true)
-            Text(verbatim: name)
-                .dsText(.heading28)
-                .foregroundStyle(DS.brandInk)
-                .lineLimit(1)
+            if choices.isEmpty {
+                Text(verbatim: name)
+                    .dsText(.heading28)
+                    .foregroundStyle(DS.brandInk)
+                    .lineLimit(1)
+            } else {
+                FlowLayout(spacing: DS.Space.s3, lineSpacing: 0) {
+                    ForEach(choices) { choice in
+                        Button {
+                            DSHaptic.selection()
+                            withAnimation(DS.Motion.standard) { choice.pick() }
+                        } label: {
+                            Text(verbatim: choice.label)
+                                .dsText(.heading28)
+                                .foregroundStyle(choice.on ? DS.brandInk : DS.textTertiary)
+                                .lineLimit(1)
+                        }
+                        .buttonStyle(RowPress())
+                        .accessibilityAddTraits(choice.on ? [.isSelected] : [])
+                    }
+                }
+            }
             trailing
             Spacer(minLength: 0)
         }
-        .accessibilityElement(children: .combine)
+        .accessibilityElement(children: choices.isEmpty ? .combine : .contain)
         .accessibilityAddTraits(.isHeader)
         .padding(.leading, DSRoomChassis.rowInset)
         .padding(.trailing, DSRoomChassis.rowInset)
         .padding(.top, DS.Space.s4)
         .padding(.bottom, DS.Space.s2)
+    }
+}
+
+/// One choice a section header names (prd §1251).
+struct SectionChoice: Identifiable {
+    let id: String
+    let label: String
+    let on: Bool
+    let pick: () -> Void
+}
+
+extension FeedScreen {
+    /// The choices a Feed section's header names: its category's filters,
+    /// the first one spoken as the category itself ("Life", not "All"), no
+    /// verbs (Social's Follow stays on Social's own screen).
+    func sectionChoices(_ category: String) -> [SectionChoice] {
+        switch category {
+        case RoomAccounts.lifeRoom:
+            return LifeScope.allCases.map { s in
+                SectionChoice(id: s.rawValue, label: s == .all ? category : s.label,
+                              on: chrome.lifeScope == s, pick: { chrome.lifeScope = s })
+            }
+        case RoomAccounts.workRoom:
+            return WorkScope.allCases.map { s in
+                SectionChoice(id: s.rawValue, label: s == .all ? category : s.label,
+                              on: chrome.workScope == s, pick: { chrome.workScope = s })
+            }
+        case RoomAccounts.mediaRoom:
+            return MediaScope.allCases.map { s in
+                SectionChoice(id: s.rawValue, label: s == .all ? category : s.label,
+                              on: chrome.mediaScope == s, pick: { chrome.mediaScope = s })
+            }
+        case RoomAccounts.socialRoom:
+            return SocialScope.allCases.filter { !$0.isVerb }.map { s in
+                SectionChoice(id: s.rawValue, label: s == .all ? category : s.label,
+                              on: chrome.socialScope == s, pick: { chrome.socialScope = s })
+            }
+        default:
+            return []
+        }
     }
 }
 
