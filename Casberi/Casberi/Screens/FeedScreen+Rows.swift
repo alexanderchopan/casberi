@@ -405,7 +405,9 @@ extension FeedScreen {
                 RowVerbMenu(thing: thing, room: source, run: { run($0, on: $1) }, onDelete: askDeleteNote,
                             onFile: fileThing, onNewFolder: { folderPrompt = .make(filing: $0) },
                             onUnwatch: source == TokenWatch.source ? { unwatch($0) } : nil,
-                            onMoveToTop: source == TokenWatch.source ? { moveToTop($0, in: things) } : nil)
+                            onMoveToTop: source == TokenWatch.source ? { moveToTop($0, in: things) } : nil,
+                            onReorder: source == TokenWatch.source ? { startReorder() } : nil,
+                            onPin: source == TokenWatch.source ? { pinToLockScreen($0) } : nil)
             } preview: {
                 // What the band could not fit (prd §412a) — the full title, the
                 // picture at a size worth looking at, the opening words. Until
@@ -732,6 +734,10 @@ struct RowVerbMenu: View {
     /// A watched row in Markets (prd §1081): Move to top and Stop watching.
     var onUnwatch: ((Thing) -> Void)? = nil
     var onMoveToTop: ((Thing) -> Void)? = nil
+    /// Markets (prd §1247): drag the list in My order, and pin a row's price
+    /// to the Lock Screen.
+    var onReorder: (() -> Void)? = nil
+    var onPin: ((Thing) -> Void)? = nil
     @Environment(ShellChrome.self) private var chrome
     @Environment(\.modelContext) private var modelContext
 
@@ -745,13 +751,32 @@ struct RowVerbMenu: View {
         // Edit, and Copy and Translate are the system's on selected words.
         // Nothing to open in another app, so no Open in app either.
         let note = Pinboard.isNote(thing)
-        // A watched row holds three (prd §1081): Move to top, Share, Stop
-        // watching. Nothing else in the menu is about a thing you watch.
+        // A watched row holds Move to top, Reorder (in My order), Pin to Lock
+        // Screen (where Live Activities are on), Share and Stop following
+        // (prd §1081, §1247). Nothing else in the menu is about a thing you
+        // follow.
         if let onUnwatch, let onMoveToTop, !PriceAlertStore.isAlertRow(thing) {
             Button {
                 onMoveToTop(thing)
             } label: {
                 Label("Move to top", systemImage: "arrow.up.to.line")
+            }
+            if let onReorder, TokenWatchOrder.shared.mode == .manual {
+                Button {
+                    onReorder()
+                } label: {
+                    Label("Reorder", systemImage: "arrow.up.arrow.down")
+                }
+            }
+            if let onPin, PriceActivityDriver.available {
+                let pinned = thing.sourceRef != nil && PriceActivityDriver.pinnedRef == thing.sourceRef
+                Button {
+                    onPin(thing)
+                } label: {
+                    Label(pinned ? String(localized: "Unpin from Lock Screen")
+                                 : String(localized: "Pin to Lock Screen"),
+                          systemImage: pinned ? "pin.slash" : "pin")
+                }
             }
             ThingShareLink(thing: thing) {
                 Label("Share", systemImage: "square.and.arrow.up")

@@ -277,7 +277,7 @@ enum SafeStatementSigner {
         let hexSignature = SafeABI.hex(signature)
         guard post else { return (.signedNotPosted(signature: hexSignature, status: 0), ready) }
         let status = await self.post(ready, signature: hexSignature)
-        if status == 201 || status == 200 { return (.posted, ready) }
+        if (200..<300).contains(status) { return (.posted, ready) }
         return (.signedNotPosted(signature: hexSignature, status: status), ready)
     }
 
@@ -286,8 +286,26 @@ enum SafeStatementSigner {
     /// Both bodies are read from the service's own serializers
     /// (`SafeMessageSignatureSerializer`: `signature`; `SafeMessageSerializer`:
     /// `message` as a string or an EIP-712 object, plus `signature`).
+    ///
+    /// A signature on a message the service already knows is offered to the
+    /// Client Gateway first (prd §1246): `POST /v1/chains/{chainId}/messages/
+    /// {messageHash}/signatures` with `{"signature": …}` — safe-client-
+    /// gateway's `updateMessageSignature`, the transaction-confirmation door's
+    /// twin, and for the same reason (the service's keyless pool, §789).
+    /// UNMEASURED: no build host has sent one; a non-2xx falls through to the
+    /// service as before. CREATING a message stays on the service: the
+    /// gateway's create route takes fields (`safeAppId`, `origin`) this app
+    /// has not measured, and a guessed body is a write nobody can read back.
     private static func post(_ ready: Ready, signature: String) async -> Int {
         if ready.knownToService {
+            let (_, gateway) = await IngestSupport.postJSONStatus(
+                "\(gatewayURL(chainId: ready.chainId))/messages/\(ready.safeMessageHash)/signatures",
+                body: ["signature": signature],
+                service: "Safe")
+            if (200..<300).contains(gateway) {
+                NSLog("safeSign| statement door=gateway status=%d", gateway)
+                return gateway
+            }
             let (_, status) = await IngestSupport.postJSONStatus(
                 "\(serviceURL(seg: ready.seg))/messages/\(ready.safeMessageHash)/signatures/",
                 auth: SafeServiceGate.authorization,

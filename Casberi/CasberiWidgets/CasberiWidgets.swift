@@ -11,9 +11,10 @@ import ActivityKit
 /// computes anything, none reaches the network, and none can (see
 /// `WidgetPayload`).
 ///
-/// Four widgets, each a small tile (prd §1210, §1223): your newest notes, the
-/// wallet drawing the line the balance card draws, the Feed's contents in Feed
-/// order, and your Markets watchlist. The Today widget (§877) went with the
+/// Four widgets (prd §1210, §1223): your newest notes, the wallet drawing the
+/// line the balance card draws, the Feed's contents in Feed order, each a
+/// small tile, and your Markets watchlist, small, medium or on the Lock
+/// Screen, set to the rows you choose (§1247). The Today widget (§877) went with the
 /// ask (2026-10-01) and the Category widget with §1210. Plus two Control
 /// Center buttons (capture and a Quick Note) and the Live Activities below.
 @main
@@ -31,6 +32,8 @@ struct CasberiWidgets: WidgetBundle {
         VoiceRecordingActivity()
         ImportActivity()
         MoneyActivity()
+        // One followed price, pinned from its row (prd §1247).
+        PriceActivity()
         #endif
     }
 }

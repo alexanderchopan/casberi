@@ -5,6 +5,7 @@
 #   Casberi/Casberi/Design/TokenChartView.swift   (TokenChartStyle)
 #   Casberi/Casberi/Model/StockChart.swift
 #   Casberi/Casberi/Model/TokenChart.swift
+#   Casberi/Casberi/Model/CoinWatch.swift      (a coin's chart, prd §1247: guards)
 #
 # WHY A HARNESS. Every failure here renders as a perfectly good-looking chart.
 # `xcodebuild` is happy, a screen sweep photographs a plausible curve, and the
@@ -100,8 +101,21 @@ done
 # eleven money families had no hero for months.
 grep -q 'PriceObjectCard(object: priceObject(' "$CHART" \
   || { echo "✗ the chart no longer draws the price object as its hero"; exit 1; }
-[[ $(grep -c 'object: PriceObjectSource.identity(' "$CONTENT") -eq 2 ]] \
-  || { echo "✗ token and stock no longer BOTH draw the object (they diverged by accident once already)"; exit 1; }
+# Three families since prd §1247: a token, a stock and a coin followed by its
+# own price.
+[[ $(grep -c 'object: PriceObjectSource.identity(' "$CONTENT") -eq 3 ]] \
+  || { echo "✗ token, stock and coin no longer ALL draw the object (they diverged by accident once already)"; exit 1; }
+
+# 9. A coin's chart is CoinPaprika's own ticks (prd §1247): a range its free
+#    API does not serve is absent, never drawn from coarser points, and the
+#    figure's move is measured against the price on screen, as a stock's.
+COIN="Casberi/Casberi/Model/CoinWatch.swift"
+grep -q 'guard let url = CoinFollow.historyURL(id, range: range.rawValue, now: .now) else { return nil }' "$COIN" \
+  || { echo "✗ a coin's chart no longer leaves an unserved range absent"; exit 1; }
+grep -q 'change: (price - first) / first' "$COIN" \
+  || { echo "✗ the coin delta no longer describes the price it is drawn under"; exit 1; }
+grep -q 'case .coin(let id):' "$CONTENT" \
+  || { echo "✗ a followed coin's page no longer leads with its chart"; exit 1; }
 
 # The title stands down, or the sheet prints the asset's name twice.
 grep -q 'ThingChart.kind(for: thing) != nil' "$SHEET" \

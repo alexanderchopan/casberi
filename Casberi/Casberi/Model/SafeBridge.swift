@@ -344,6 +344,9 @@ enum SafeBridge {
         guard let ids = SafeGatewayShape.queuedIDs(listed.json) else { return nil }
         var rows: [[String: Any]] = []
         for id in ids.prefix(queueDetailCap) {
+            // The background task's expiration cancels it (prd §1246); a read
+            // cut short is an unreachable queue, never a shorter one.
+            guard !Task.isCancelled else { return nil }
             let read = await SafeServiceGate.get("\(baseURL(chain))/transactions/\(id)")
             guard let row = SafeGatewayShape.txRow(read.json) else { return nil }
             rows.append(row)
@@ -381,6 +384,16 @@ enum SafeBridge {
         let owners: [String]   // lowercased, sorted
         let modules: [String]  // lowercased, sorted
         let guardAddr: String? // lowercased; nil for the zero address (no guard)
+        /// The fallback handler and the Safe's own code (its singleton), both
+        /// lowercased, nil for none (prd §1246) — the two other ways a Safe's
+        /// control changes besides owners, threshold, modules and guard.
+        var fallbackHandler: String? = nil
+        var implementation: String? = nil
+        /// True on a snapshot that READ the two fields above. A snapshot
+        /// written before §1246 decodes them as nil, which is "not read", not
+        /// "none" — so a change is stated only between two snapshots that
+        /// both read them, and the first pass after the update is silent.
+        var extrasRead: Bool? = nil
     }
     private struct SafeDetail: Sendable {
         let nonce: Int
@@ -395,7 +408,9 @@ enum SafeBridge {
                 "\(baseURL(chain))/safes/\(EIP55.checksum(address))")
             guard let d = SafeGatewayShape.detail(read.json) else { return nil }
             let config = SafeConfig(threshold: d.threshold, owners: d.owners,
-                                    modules: d.modules, guardAddr: d.guardAddr)
+                                    modules: d.modules, guardAddr: d.guardAddr,
+                                    fallbackHandler: d.fallbackHandler,
+                                    implementation: d.implementation, extrasRead: true)
             return SafeDetailBox(detail: SafeDetail(nonce: d.nonce, config: config))
         }
         return boxed?.detail
@@ -409,6 +424,42 @@ enum SafeBridge {
         let chain: Chain
         let safeAddress: String
         let viaOwner: String?
+        /// `viaOwner` is one of THIS PHONE's signer keys (prd §1246), not a
+        /// watched wallet — so rows file under the Safe itself, since the
+        /// key is not an account anybody watches.
+        var viaPhone = false
+
+        /// The wallet a landed row is filed under.
+        var rowWallet: String { viaPhone ? safeAddress : (viaOwner ?? safeAddress) }
+    }
+
+    // MARK: - This phone's own keys as owners (prd §1246)
+
+    /// This phone's signer addresses, lowercased: the §425 key's own, and the
+    /// Enclave key's signer contract where one has been read (prd §913 — the
+    /// same address on every chain the factory reached, so one cached read
+    /// names it, `SafeSigner.standing`'s rule). Reads `UserDefaults` only —
+    /// never the Keychain — so it costs nothing and raises no prompt.
+    ///
+    /// Until §1246 neither was ever an owner candidate: a Safe naming only
+    /// this phone (the co-signer §425 built) was invisible to the queue, and a
+    /// Safe watched directly never said whose turn it was even when the
+    /// phone was the owner it waited on.
+    static func phoneOwners() -> [String] {
+        var out: [String] = []
+        if let k1 = SignerKey.address() { out.append(k1.lowercased()) }
+        if SafeEnclaveKey.exists, let proxy = SafeEnclaveSigner.anyCachedAddress() {
+            out.append(proxy.lowercased())
+        }
+        return out
+    }
+
+    /// "You" on a Safe whose owner list is `owners`: the first of `known` (the
+    /// watched wallets, then this phone's keys) that is an owner now. Nil
+    /// when none is — then nobody's turn is claimed.
+    private static func knownOwner(in owners: [String], known: [String]) -> String? {
+        let set = Set(owners.map { $0.lowercased() })
+        return known.first { set.contains($0.lowercased()) }
     }
 
     /// Every Safe this app has ever confirmed real (cleared the spam filter
@@ -551,8 +602,16 @@ enum SafeBridge {
     /// stranger as owner is free to deploy but costs the deployer real gas
     /// to also submit a pending tx to, and a never-executed Safe fails the
     /// nonce check even if someone bothers with a fake pending tx too).
+    ///
+    /// `phone` (prd §1246) adds every Safe naming one of this phone's keys as
+    /// a CURRENT owner, with no `nonce > 0` and no non-empty-queue filter: a
+    /// decoy has to be deployed naming an address that already exists, and a
+    /// key this app generated has appeared nowhere — `signerSafes`'
+    /// `requireExecuted: false` argument, for the same address. Ownership is
+    /// re-read from the Safe's own state, since the reverse index says "was
+    /// named", not "is". A Safe already reached another way is not added twice.
     @MainActor
-    private static func candidates(addresses: [String]) async -> [Candidate] {
+    private static func candidates(addresses: [String], phone: [String] = []) async -> [Candidate] {
         var out: [Candidate] = []
         var discovered = Set<String>()
         for chain in chains where isChainActive(chain) {
@@ -570,6 +629,22 @@ enum SafeBridge {
                     rememberDetected(chain, safeAddress)
                     discovered.insert(safeAddress.lowercased())
                     out.append(Candidate(chain: chain, safeAddress: safeAddress, viaOwner: address))
+                }
+            }
+            for key in phone {
+                guard let owned = await ownerSafes(chain: chain, address: key) else { continue }
+                for safeAddress in owned {
+                    let lower = safeAddress.lowercased()
+                    guard !out.contains(where: {
+                        $0.chain.seg == chain.seg && $0.safeAddress.lowercased() == lower
+                    }) else { continue }
+                    guard let detail = await safeDetail(chain: chain, address: safeAddress),
+                          detail.config.owners.contains(key)
+                    else { continue }
+                    rememberDetected(chain, safeAddress)
+                    discovered.insert(lower)
+                    out.append(Candidate(chain: chain, safeAddress: safeAddress,
+                                         viaOwner: key, viaPhone: true))
                 }
             }
         }
@@ -697,6 +772,19 @@ enum SafeBridge {
     /// wording stands.
     private static func describe(_ tx: [String: Any], chain: Chain, safeAddress: String,
                                  facts: TokenFacts) -> String {
+        // A TOP-LEVEL DELEGATECALL outside a known MultiSend (prd §1246) is
+        // named for what it does to the Safe, before anything its calldata
+        // claims — the sign block's `.delegateCall` reading, in the feed's
+        // words, so the row and the sheet cannot disagree about it.
+        if SafeGatewayShape.int(tx["operation"]) == 1, let to = tx["to"] as? String,
+           !SafeCalldata.isKnownMultiSend(to) {
+            return String(localized: "a call that runs another contract's code as the Safe")
+        }
+        // An executed batch read off the history LIST (prd §1246), which
+        // carries the gateway's own count and no decoded calls.
+        if tx["dataDecoded"] == nil, let count = SafeGatewayShape.int(tx["actionCount"]), count > 1 {
+            return String(localized: "a batch of \(count) actions")
+        }
         if let decoded = tx["dataDecoded"] as? [String: Any] {
             // The protocol's own words beat a method name split on its
             // capitals — but never the readings above that already name a
@@ -752,6 +840,9 @@ enum SafeBridge {
         if method == "multiSend", let inner = batchCalls(params) {
             return describeBatch(inner, chain: chain, facts: facts)
         }
+        if let phrase = controlPhrase(method: method, params: params) {
+            return phrase
+        }
         if method == "transfer", let to = param(params, "to") {
             if let amountText = tokenAmountText(contract: fallbackTo, rawParam: param(params, "value"), facts: facts) {
                 return String(localized: "a transfer of \(amountText) to \(label(to))")
@@ -775,6 +866,39 @@ enum SafeBridge {
             return String(localized: "\(humanize(method)) on \(label(fallbackTo))")
         }
         return humanize(method)
+    }
+
+    /// A call that changes who controls the Safe, named for that (prd §1246)
+    /// rather than split on its capitals — "enable module" said nothing about
+    /// a contract that can move funds without a signature. The address is
+    /// read POSITIONALLY: `disableModule(prevModule, module)` puts the module
+    /// second behind a list cursor, and `changeMasterCopy`'s parameter is
+    /// `_masterCopy` in Safe's own ABI, so a name lookup would miss it.
+    /// Nil for anything else, and for a call whose address is not there.
+    private static func controlPhrase(method: String, params: [[String: Any]]) -> String? {
+        func address(at index: Int) -> String? {
+            guard params.indices.contains(index) else { return nil }
+            return params[index]["value"] as? String
+        }
+        switch method {
+        case "enableModule":
+            guard let module = address(at: 0) else { return nil }
+            return String(localized: "a new module (\(label(module))) that can move funds without a signature")
+        case "disableModule":
+            guard let module = address(at: 1) else { return nil }
+            return String(localized: "removing a module (\(label(module)))")
+        case "setGuard":
+            guard let guardAddress = address(at: 0) else { return nil }
+            return String(localized: "a new transaction guard (\(label(guardAddress)))")
+        case "setFallbackHandler":
+            guard let handler = address(at: 0) else { return nil }
+            return String(localized: "a new fallback handler (\(label(handler))) that can answer for the Safe")
+        case "changeMasterCopy":
+            guard let code = address(at: 0) else { return nil }
+            return String(localized: "replacing the Safe's own code (\(label(code)))")
+        default:
+            return nil
+        }
     }
 
     /// The nested calls inside a `multiSend` parameter list, or nil when the
@@ -875,115 +999,265 @@ enum SafeBridge {
         }
     }
 
-    /// Reads every Safe this pass touches (watched directly, or watched
-    /// through a signer) and lands a thing for every newly seen pending
-    /// `safeTxHash`, plus a config-change alert for any Safe whose owners,
-    /// threshold, modules, or guard drifted since last seen. Rides
+    /// Reads every Safe this pass touches (watched directly, watched through
+    /// a signer, or — since prd §1246 — owned by one of this phone's keys)
+    /// and lands a thing for every newly seen pending `safeTxHash`, plus a
+    /// config-change alert for any Safe whose owners, threshold, modules,
+    /// guard, fallback handler or code drifted since last seen, plus (§1246)
+    /// the executed transactions on its history's first page. Rides
     /// `WalletIngest.refresh` inside its running guard, like the other arms.
     @MainActor
     static func sync(context: ModelContext, addresses: [String], existing: Set<String>) async -> Int {
-        guard !addresses.isEmpty else { return 0 }
+        let phone = phoneOwners()
+        guard !addresses.isEmpty || !phone.isEmpty else { return 0 }
+        var pass = Pass(seen: existing)
+        for candidate in await candidates(addresses: addresses, phone: phone) {
+            await syncSafe(candidate, context: context, known: addresses + phone,
+                           history: true, pass: &pass)
+        }
+        let healed = apply(pass.heals, context: context)
+        if pass.added > 0 || healed { context.saveHonestly() }
+        return pass.added
+    }
+
+    /// One pass's running state, threaded through `syncSafe` so a Safe
+    /// reached twice in one pass (watched directly AND through a watched
+    /// owner, or on two of its owners) is checked once and never lands the
+    /// same ref twice. Until §1246 the second sighting read the same
+    /// `existing` snapshot as the first, so it could insert a duplicate row
+    /// (found by reading, not measured).
+    private struct Pass {
+        /// Every ref already in the store, plus every ref landed this pass.
+        var seen: Set<String>
         var added = 0
         var heals: [Heal] = []
-        var configChecked = Set<String>()   // one config check per (chain,safe) per pass
-        for candidate in await candidates(addresses: addresses) {
-            let chain = candidate.chain
-            let safeAddress = candidate.safeAddress
+        var configChecked = Set<String>()    // one config check per (chain,safe) per pass
+        var historyChecked = Set<String>()   // one history read per (chain,safe) per pass
+    }
 
-            let configKey = "\(chain.seg)|\(safeAddress.lowercased())"
-            if configChecked.insert(configKey).inserted,
-               let detail = await safeDetail(chain: chain, address: safeAddress) {
-                let owner = candidate.viaOwner ?? safeAddress
-                if syncConfig(context: context, chain: chain, safeAddress: safeAddress,
-                              ownerAddress: owner, existing: existing, config: detail.config) {
-                    added += 1
-                }
-            }
+    /// The Safe-at-a-time half of a pass — the SAME routine for the
+    /// foreground sync and the background task (prd §1246), so the two cannot
+    /// land the same transaction two different ways. `known` is who "you"
+    /// may be: the watched wallets, then this phone's keys. `history` reads
+    /// the executed history too, which the background task does not.
+    @MainActor
+    private static func syncSafe(_ candidate: Candidate, context: ModelContext, known: [String],
+                                 history: Bool, pass: inout Pass) async {
+        let chain = candidate.chain
+        let safeAddress = candidate.safeAddress
+        let configKey = "\(chain.seg)|\(safeAddress.lowercased())"
 
-            guard let pending = await pendingQueue(chain: chain, address: safeAddress) else { continue }
-            // ONE read for both facts. `safeDetail` is coalesced with a 60s
-            // TTL so a second call was free, but two call sites for one fact
-            // is how a nonce and an owner list end up describing different
-            // moments of the same Safe.
-            let detail = await safeDetail(chain: chain, address: safeAddress)
-            let currentNonce = detail?.nonce
-            let owners = detail?.config.owners ?? []
-            let facts = await prefetchFacts(chain: chain, txs: pending)
-            for tx in pending {
-                guard let safeTxHash = tx["safeTxHash"] as? String else { continue }
-                // STRANDED: the Safe has already executed past this nonce, so
-                // this transaction can never execute — its signatures are
-                // spent. Landing it as "2 of 3 signatures collected" would
-                // ask for a signature that cannot possibly help, which is the
-                // dead control the honesty rule forbids. It still shows in
-                // the sheet's own recheck (as `.replaced`) if it was landed
-                // before it went stale, and `resolveTracking` below lands its
-                // own closing thing the pass it goes stale.
-                if let currentNonce, let txNonce = tx["nonce"] as? Int, txNonce < currentNonce {
-                    continue
-                }
-                let ref = "wallet:safe:\(chain.seg):\(safeTxHash)"
-                let required = (tx["confirmationsRequired"] as? Int) ?? 0
-                let have = (tx["confirmations"] as? [[String: Any]])?.count ?? 0
-                let description = describe(tx, chain: chain, safeAddress: safeAddress, facts: facts)
-                // Only when we know exactly which of the Safe's owners is
-                // "you" — reached via a signer's own watched EOA — can we
-                // honestly say whose turn it is. Watching the Safe's own
-                // address doesn't tell us which of its N owners you are.
-                let yourTurn = candidate.viaOwner.map { !hasSigned(tx, owner: $0) } ?? false
-                let face = rowFace(have: have, required: required, yourTurn: yourTurn,
-                                   knowsYou: candidate.viaOwner != nil, description: description,
-                                   nonce: tx["nonce"] as? Int, safeNonce: currentNonce)
-                let door = safeTxURL(chain: chain, safeAddress: safeAddress, safeTxHash: safeTxHash)
-                if !existing.contains(ref) {
-                    // The door is this transaction's own page in Safe{Wallet}
-                    // (prd §912) — where the signature it asks for happens.
-                    let thing = Thing(kind: .transaction, title: face.title, content: door,
-                                      source: sourceName, sourceRef: ref)
-                    thing.walletAddress = candidate.viaOwner ?? safeAddress
-                    thing.summary = originNote(tx)
-                    // Tagged structurally (not parsed from the title above) so
-                    // `NotifySweep.classify` can tell "your turn" apart from
-                    // "waiting on others" without the localized-string trap —
-                    // the Stripe/Cursor/Apple-Wallet tag shape.
-                    thing.tags = face.tags
-                    context.insert(thing)
-                    SpotlightIndex.index([thing])
-                    added += 1
-                } else {
-                    // ALREADY LANDED — and until 2026-08-17 that meant the row
-                    // was never touched again, while `trackPending` below kept
-                    // refreshing the very same counts for the room head. So the
-                    // feed went on saying "2 of 3 — your signature is needed"
-                    // after two more owners signed, or after YOU signed in the
-                    // Safe app, until execution finally landed a closing row;
-                    // the head one line above it said something else. Collected
-                    // as a value and applied after the loop — see `heals`.
-                    heals.append(Heal(ref: ref, title: face.title, tags: face.tags, content: door))
-                }
-                // Seed/refresh tracking so this pending transaction's eventual
-                // resolution (executed, or replaced by a rival at the same
-                // nonce) can land its own closing thing, and so
-                // `SafeRoomSource` always reads this pass's live counts
-                // rather than whatever was true when the thing first landed.
-                // WHO is still outstanding, from the same `confirmations` the
-                // counts above come from — `roster` is the one reader of that
-                // array, so the head and the sheet cannot disagree about who
-                // has signed (§238's people rule, finally reaching the head).
-                let outstanding = roster(owners: owners, tx: tx, you: candidate.viaOwner)
-                    .filter { !$0.signed }.map { $0.address.lowercased() }
-                trackPending(ref: ref, seg: chain.seg, safeAddress: safeAddress, ownerAddress: candidate.viaOwner,
-                            have: have, required: required, yourTurn: yourTurn,
-                            submittedAt: ClaudeImport.parseDate(tx["submissionDate"] as? String),
-                            descriptionText: description, nonce: tx["nonce"] as? Int,
-                            unsignedOwners: outstanding, safeNonce: currentNonce)
+        if pass.configChecked.insert(configKey).inserted,
+           let detail = await safeDetail(chain: chain, address: safeAddress) {
+            if syncConfig(context: context, chain: chain, safeAddress: safeAddress,
+                          ownerAddress: candidate.rowWallet, existing: pass.seen, config: detail.config) {
+                pass.added += 1
             }
-            added += await resolveTracking(context: context, chain: chain, safeAddress: safeAddress,
-                                           pending: pending, currentNonce: currentNonce, existing: existing)
         }
-        let healed = apply(heals, context: context)
-        if added > 0 || healed { context.saveHonestly() }
-        return added
+
+        guard let pending = await pendingQueue(chain: chain, address: safeAddress) else { return }
+        // ONE read for both facts. `safeDetail` is coalesced with a 60s
+        // TTL so a second call was free, but two call sites for one fact
+        // is how a nonce and an owner list end up describing different
+        // moments of the same Safe.
+        let detail = await safeDetail(chain: chain, address: safeAddress)
+        let currentNonce = detail?.nonce
+        let owners = detail?.config.owners ?? []
+        // WHO "you" are (prd §1246). Reached through a watched signer, that
+        // signer, as before. Watched directly, it used to be nobody — "we
+        // don't know which of its N owners you are" — which was true only
+        // while nothing in the app was an owner. Now it is the first watched
+        // wallet or phone key the Safe's own owner list names; still nobody
+        // when none is, and then no turn is claimed.
+        let you = candidate.viaOwner ?? knownOwner(in: owners, known: known)
+        let facts = await prefetchFacts(chain: chain, txs: pending)
+        for tx in pending {
+            guard let safeTxHash = tx["safeTxHash"] as? String else { continue }
+            // STRANDED: the Safe has already executed past this nonce, so
+            // this transaction can never execute — its signatures are
+            // spent. Landing it as "2 of 3 signatures collected" would
+            // ask for a signature that cannot possibly help, which is the
+            // dead control the honesty rule forbids. It still shows in
+            // the sheet's own recheck (as `.replaced`) if it was landed
+            // before it went stale, and `resolveTracking` below lands its
+            // own closing thing the pass it goes stale.
+            if let currentNonce, let txNonce = tx["nonce"] as? Int, txNonce < currentNonce {
+                continue
+            }
+            let ref = "wallet:safe:\(chain.seg):\(safeTxHash)"
+            let required = (tx["confirmationsRequired"] as? Int) ?? 0
+            let have = (tx["confirmations"] as? [[String: Any]])?.count ?? 0
+            let description = describe(tx, chain: chain, safeAddress: safeAddress, facts: facts)
+            // Only when we know which of the Safe's owners is "you" can we
+            // honestly say whose turn it is — see `you` above.
+            let yourTurn = you.map { !hasSigned(tx, owner: $0) } ?? false
+            let face = rowFace(have: have, required: required, yourTurn: yourTurn,
+                               knowsYou: you != nil, description: description,
+                               nonce: tx["nonce"] as? Int, safeNonce: currentNonce)
+            let door = safeTxURL(chain: chain, safeAddress: safeAddress, safeTxHash: safeTxHash)
+            if !pass.seen.contains(ref) {
+                // The door is this transaction's own page in Safe{Wallet}
+                // (prd §912) — where the signature it asks for happens.
+                let thing = Thing(kind: .transaction, title: face.title, content: door,
+                                  source: sourceName, sourceRef: ref)
+                thing.walletAddress = candidate.rowWallet
+                thing.summary = originNote(tx)
+                // Tagged structurally (not parsed from the title above) so
+                // `NotifySweep.classify` can tell "your turn" apart from
+                // "waiting on others" without the localized-string trap —
+                // the Stripe/Cursor/Apple-Wallet tag shape.
+                thing.tags = face.tags
+                context.insert(thing)
+                SpotlightIndex.index([thing])
+                pass.seen.insert(ref)
+                pass.added += 1
+            } else {
+                // ALREADY LANDED — and until 2026-08-17 that meant the row
+                // was never touched again, while `trackPending` below kept
+                // refreshing the very same counts for the room head. So the
+                // feed went on saying "2 of 3 — your signature is needed"
+                // after two more owners signed, or after YOU signed in the
+                // Safe app, until execution finally landed a closing row;
+                // the head one line above it said something else. Collected
+                // as a value and applied after the loop — see `heals`.
+                pass.heals.append(Heal(ref: ref, title: face.title, tags: face.tags, content: door))
+            }
+            // Seed/refresh tracking so this pending transaction's eventual
+            // resolution (executed, or replaced by a rival at the same
+            // nonce) can land its own closing thing, and so
+            // `SafeRoomSource` always reads this pass's live counts
+            // rather than whatever was true when the thing first landed.
+            // WHO is still outstanding, from the same `confirmations` the
+            // counts above come from — `roster` is the one reader of that
+            // array, so the head and the sheet cannot disagree about who
+            // has signed (§238's people rule, finally reaching the head).
+            let outstanding = roster(owners: owners, tx: tx, you: you)
+                .filter { !$0.signed }.map { $0.address.lowercased() }
+            trackPending(ref: ref, seg: chain.seg, safeAddress: safeAddress,
+                         ownerAddress: candidate.viaPhone ? nil : candidate.viaOwner,
+                         have: have, required: required, yourTurn: yourTurn,
+                         submittedAt: ClaudeImport.parseDate(tx["submissionDate"] as? String),
+                         descriptionText: description, nonce: tx["nonce"] as? Int,
+                         unsignedOwners: outstanding, safeNonce: currentNonce)
+        }
+        // The hashes the loop-closer owns, taken BEFORE it runs: whatever it
+        // closes this pass, the history below must not land a second time.
+        let tracked = Set(loadTracking().filter {
+            $0.value.seg == chain.seg && $0.value.safeAddress.lowercased() == safeAddress.lowercased()
+        }.keys.compactMap { $0.split(separator: ":", maxSplits: 3).last.map { String($0).lowercased() } })
+        let closed = await resolveTracking(context: context, chain: chain, safeAddress: safeAddress,
+                                           pending: pending, currentNonce: currentNonce, existing: pass.seen)
+        pass.added += closed
+        if history, pass.historyChecked.insert(configKey).inserted {
+            await landHistory(context: context, chain: chain, safeAddress: safeAddress,
+                              rowWallet: candidate.rowWallet,
+                              skip: tracked.union(pending.compactMap {
+                                  ($0["safeTxHash"] as? String)?.lowercased()
+                              }),
+                              pass: &pass)
+        }
+    }
+
+    // MARK: - Executed history (prd §1246)
+
+    /// The first page of a Safe's executed history, at most this many rows.
+    /// The gateway's own page is twenty; one page per Safe per foreground is
+    /// one request, and a Safe busier than that between two foregrounds is
+    /// read back to its last twenty, never paged further.
+    private static let historyCap = 20
+
+    /// Lands every executed multisig transaction on the history's first page
+    /// that the corpus does not hold yet, as the SAME closing row the
+    /// loop-closer lands (`wallet:safeoutcome:<seg>:<hash>`, `landOutcome`),
+    /// dated by its EXECUTION, never by this pass (§790's rule: a row the
+    /// parse cannot date is dropped by `SafeGatewayShape.history`).
+    ///
+    /// Until §1246 the feed knew only what it had watched go pending, so a
+    /// Safe first seen today, or a transaction proposed and executed between
+    /// two foregrounds, had no history at all in the corpus.
+    @MainActor
+    private static func landHistory(context: ModelContext, chain: Chain, safeAddress: String,
+                                    rowWallet: String, skip: Set<String>, pass: inout Pass) async {
+        let read = await SafeServiceGate.get(
+            "\(baseURL(chain))/safes/\(EIP55.checksum(safeAddress))/transactions/history")
+        guard let rows = SafeGatewayShape.history(read.json, cap: historyCap) else { return }
+        let fresh = rows.filter { row in
+            guard let hash = (row["safeTxHash"] as? String)?.lowercased() else { return false }
+            return !skip.contains(hash) && !pass.seen.contains("wallet:safeoutcome:\(chain.seg):\(hash)")
+        }
+        guard !fresh.isEmpty else { return }
+        let facts = await prefetchFacts(chain: chain, txs: fresh)
+        for row in fresh {
+            guard let hash = (row["safeTxHash"] as? String)?.lowercased(),
+                  let executedAt = ClaudeImport.parseDate(row["executionDate"] as? String)
+            else { continue }
+            let landed = await landOutcome(context: context, chain: chain, hash: hash, tx: row,
+                                           executed: true, safeAddress: safeAddress,
+                                           ownerAddress: rowWallet, existing: pass.seen,
+                                           capturedAt: executedAt, facts: facts)
+            if landed > 0 {
+                pass.seen.insert("wallet:safeoutcome:\(chain.seg):\(hash)")
+                pass.added += landed
+            }
+        }
+    }
+
+    // MARK: - Background reach (prd §1246)
+
+    /// The background task's Safe read: the queue of every Safe this app has
+    /// confirmed real, read through the Client Gateway and landed exactly as
+    /// the foreground does (`syncSafe`), so a signature waiting on you is a
+    /// row — and, through the notify sweep that runs next, a notification —
+    /// while the app is closed. Before §1246 a Safe was read only on a
+    /// foreground, so "your signature is needed" reached the lock screen only
+    /// after you had already opened the app.
+    ///
+    /// BOUNDED, because iOS gives this task seconds: Safes one at a time,
+    /// each queue's detail reads sequential and capped (`queueDetailCap`),
+    /// the gateway's burst discipline unchanged; a wall-clock `budget`; and
+    /// the task's expiration handler cancels it, which every read honours.
+    /// No history and no owner lookups — the detected registry IS the list,
+    /// and every entry in it already cleared the spam filter once.
+    @MainActor
+    static func backgroundSweep(context: ModelContext, budget: Duration = .seconds(20)) async -> Int {
+        guard !DemoMode.isActive, !running else { return 0 }
+        let detected = ((UserDefaults.standard.array(forKey: detectedKey) as? [String]) ?? []).sorted()
+        guard !detected.isEmpty else { return 0 }
+        running = true
+        defer { running = false }
+        let watched = WalletStore.shared.addresses.map(\.address)
+            .filter { ENS.isHexAddress($0) }.map { $0.lowercased() }
+        let phone = phoneOwners()
+        let deadline = ContinuousClock.now.advanced(by: budget)
+        var pass = Pass(seen: IngestSupport.existingSourceRefs(context, source: sourceName))
+        for entry in detected {
+            guard !Task.isCancelled, ContinuousClock.now < deadline else { break }
+            let parts = entry.split(separator: ":", maxSplits: 1).map(String.init)
+            guard parts.count == 2, let chain = chains.first(where: { $0.seg == parts[0] }),
+                  isChainActive(chain) else { continue }
+            let safeAddress = parts[1]
+            // File the rows where the foreground would: under the Safe when
+            // it is watched itself, else under the watched owner that reaches
+            // it, else (a phone-only Safe) under the Safe.
+            let owners = await safeDetail(chain: chain, address: safeAddress)?.config.owners ?? []
+            let candidate: Candidate
+            if watched.contains(safeAddress.lowercased()) {
+                candidate = Candidate(chain: chain, safeAddress: safeAddress, viaOwner: nil)
+            } else if let owner = knownOwner(in: owners, known: watched) {
+                candidate = Candidate(chain: chain, safeAddress: safeAddress, viaOwner: owner)
+            } else if let key = knownOwner(in: owners, known: phone) {
+                candidate = Candidate(chain: chain, safeAddress: safeAddress, viaOwner: key, viaPhone: true)
+            } else {
+                candidate = Candidate(chain: chain, safeAddress: safeAddress, viaOwner: nil)
+            }
+            await syncSafe(candidate, context: context, known: watched + phone,
+                           history: false, pass: &pass)
+        }
+        let healed = apply(pass.heals, context: context)
+        if pass.added > 0 || healed { context.saveHonestly() }
+        NSLog("safeBackground| safes=%d landed=%d healed=%@ cancelled=%@",
+              detected.count, pass.added, healed ? "yes" : "no", Task.isCancelled ? "yes" : "no")
+        return pass.added
     }
 
     // MARK: - Keeping a landed row true
@@ -1079,8 +1353,9 @@ enum SafeBridge {
                     ["Ready to execute"])
         }
         var title = String(localized: "\(have) of \(required) signatures collected on \(description)")
-        // No suffix at all when the Safe is watched directly — see `yourTurn`'s
-        // own note at the call site: we don't know which owner you are.
+        // No suffix at all when no watched wallet or phone key is an owner —
+        // see `you` at the call site (prd §1246): we don't know which owner
+        // you are.
         guard knowsYou else { return (title, []) }
         if entry.awaitsYou {
             title += String(localized: " — your signature is needed")
@@ -1263,13 +1538,19 @@ enum SafeBridge {
     /// (the transaction's real clock) rather than an app-observed timestamp —
     /// more accurate, and needs nothing persisted beyond the tracking entry
     /// itself.
+    ///
+    /// `capturedAt` dates the row by the transaction's own clock when the
+    /// caller has one (the executed history, prd §1246); `facts` is a
+    /// prefetch the caller already made for several rows at once.
     @MainActor
     private static func landOutcome(context: ModelContext, chain: Chain, hash: String, tx: [String: Any],
                                     executed: Bool, safeAddress: String, ownerAddress: String?,
-                                    existing: Set<String>) async -> Int {
+                                    existing: Set<String>, capturedAt: Date? = nil,
+                                    facts prefetched: TokenFacts? = nil) async -> Int {
         let ref = "wallet:safeoutcome:\(chain.seg):\(hash)"
         guard !existing.contains(ref) else { return 0 }
-        let facts = await prefetchFacts(chain: chain, txs: [tx])
+        let facts: TokenFacts
+        if let prefetched { facts = prefetched } else { facts = await prefetchFacts(chain: chain, txs: [tx]) }
         let description = describe(tx, chain: chain, safeAddress: safeAddress, facts: facts)
         let elapsed = ClaudeImport.parseDate(tx["submissionDate"] as? String).map { start -> String in
             let end = executed ? (ClaudeImport.parseDate(tx["executionDate"] as? String) ?? .now) : .now
@@ -1291,6 +1572,7 @@ enum SafeBridge {
                           source: sourceName, sourceRef: ref)
         thing.walletAddress = ownerAddress ?? safeAddress
         thing.summary = originNote(tx)
+        if let capturedAt { thing.capturedAt = capturedAt }
         context.insert(thing)
         SpotlightIndex.index([thing])
         return 1
@@ -1476,7 +1758,9 @@ enum SafeBridge {
         defer { running = false }
         let watched = WalletStore.shared.addresses.map(\.address)
         let addresses = await WalletIngest.resolvedAddresses(watched).filter { ENS.isHexAddress($0) }
-        guard !addresses.isEmpty else { return .landed(0) }
+        // A phone that holds a key reads its own Safes with no wallet watched
+        // at all (prd §1246) — the co-signer is an owner in its own right.
+        guard !addresses.isEmpty || !phoneOwners().isEmpty else { return .landed(0) }
         let mark = SafeServiceGate.mark()
         var added = await sync(context: context, addresses: addresses,
                                existing: IngestSupport.existingSourceRefs(context, source: sourceName))
@@ -1531,7 +1815,33 @@ enum SafeBridge {
                 out.append(String(localized: "removed its transaction guard"))
             }
         }
+        // The fallback handler and the Safe's own code (prd §1246), stated
+        // only between two snapshots that both READ them — see `extrasRead`.
+        if old.extrasRead == true, new.extrasRead == true {
+            if old.fallbackHandler != new.fallbackHandler {
+                if let h = new.fallbackHandler {
+                    out.append(String(localized: "set a new fallback handler (\(WalletIngest.knownLabel(for: h) ?? WalletStore.shortAddress(h))) that can answer for it"))
+                } else {
+                    out.append(String(localized: "removed its fallback handler"))
+                }
+            }
+            if old.implementation != new.implementation, let code = new.implementation {
+                out.append(String(localized: "replaced its own code (\(WalletIngest.knownLabel(for: code) ?? WalletStore.shortAddress(code)))"))
+            }
+        }
         return out
+    }
+
+    /// The config changes that hand somebody new a way to act as the Safe
+    /// without its owners' signatures (prd §1246): a new fallback handler
+    /// (it answers EIP-1271 signature checks on the Safe's behalf) or new
+    /// code. Tagged `Control changed`, which `NotifySweep` raises exactly as
+    /// it raises `Module added` — the same news, "something new can move your
+    /// funds". Only between snapshots that both read the fields.
+    private static func controlChanged(old: SafeConfig, new: SafeConfig) -> Bool {
+        guard old.extrasRead == true, new.extrasRead == true else { return false }
+        return (old.fallbackHandler != new.fallbackHandler && new.fallbackHandler != nil)
+            || (old.implementation != new.implementation && new.implementation != nil)
     }
 
     private static func configSnapshotKey(_ seg: String, _ address: String) -> String {
@@ -1573,9 +1883,12 @@ enum SafeBridge {
         // this Safe's funds WITHOUT a signature, which is the same shape of
         // news as an ERC-20/permit2 approval landing (`NotifySweep.classify`
         // reuses `.approvalGranted` for it rather than a near-duplicate kind).
+        var tags: [String] = []
         if !Set(config.modules).subtracting(previous.modules).isEmpty {
-            thing.tags = ["Module added"]
+            tags.append("Module added")
         }
+        if controlChanged(old: previous, new: config) { tags.append("Control changed") }
+        if !tags.isEmpty { thing.tags = tags }
         context.insert(thing)
         SpotlightIndex.index([thing])
         return true
@@ -1731,7 +2044,10 @@ enum SafeBridge {
         // "You" is knowable only when the watched address is an OWNER and not
         // the Safe itself — the same rule the landing wording follows.
         let owners = detail?.config.owners ?? []
-        let you = owners.contains(address.lowercased()) ? address : nil
+        // …or, for a row filed under the Safe itself, this phone's key when
+        // the Safe names it (prd §1246).
+        let you = owners.contains(address.lowercased()) ? address
+            : knownOwner(in: owners, known: phoneOwners())
         let people = roster(owners: owners, tx: root, you: you)
 
         let isExecuted = (root["isExecuted"] as? Bool) ?? false

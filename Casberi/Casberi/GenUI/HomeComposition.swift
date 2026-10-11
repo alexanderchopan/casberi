@@ -78,6 +78,7 @@ enum HomeComposition {
             "Build", "Build failure", "Deploy",           // Vercel
             "Deadline", "Your turn",                      // reminders, Safe
             "Delivered", "Module added",                  // Safe, 7579
+            "Control changed",                            // Safe (prd §1246)
             "Deprecated", "Issue",
             "Mining", "Rewards", "Ticket",                // Logos (prd §1016)
             "Regression", "Resolved",                     // GitHub, Sentry

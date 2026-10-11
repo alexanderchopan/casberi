@@ -49,16 +49,30 @@ struct CompanySheet: View {
                            hero: true, object: (name: company.name, symbol: ticker)) {
                 EmptyView()
             }
-        case .token, .unlisted:
-            if let quote = CompanyQuotes.shared.quote(company.listing) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(TokenChartStyle.priceText(quote.price))
-                        .dsText(.price40).monospacedDigit().foregroundStyle(DS.textPrimary)
-                    if let change = quote.change {
-                        Text("\(TokenChartStyle.changeText(change)) today")
-                            .dsText(.body17)
-                            .foregroundStyle(change >= 0 ? DS.confirmInk : DS.destructiveInk)
-                    }
+        case .token(let symbol, let id):
+            // A coin's own line (prd §1247), CoinPaprika's ticks; the quote
+            // alone when they do not answer.
+            TokenChartView(memoryKey: "coin.range.\(id)",
+                           fetch: { (range: TokenRange) in
+                               DemoMode.isActive ? nil : await CoinWatch.chart(id: id, range: range)
+                           },
+                           hero: true, object: (name: company.name, symbol: symbol)) {
+                quoteBlock
+            }
+        case .unlisted:
+            quoteBlock
+        }
+    }
+
+    @ViewBuilder private var quoteBlock: some View {
+        if let quote = CompanyQuotes.shared.quote(company.listing) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(TokenChartStyle.priceText(quote.price))
+                    .dsText(.price40).monospacedDigit().foregroundStyle(DS.textPrimary)
+                if let change = quote.change {
+                    Text("\(TokenChartStyle.changeText(change)) today")
+                        .dsText(.body17)
+                        .foregroundStyle(change >= 0 ? DS.confirmInk : DS.destructiveInk)
                 }
             }
         }

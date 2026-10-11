@@ -127,6 +127,8 @@ extension FeedScreen {
         case .above: return String(localized: "Rises \(pct)%")
         case .below: return String(localized: "Falls \(pct)%")
         case .move:  return String(localized: "Moves \(pct)% in a day")
+        // Not among `PriceAlert.choices` (prd §1247): worded as the Alerts tile words them.
+        case .volume, .gasBelow: return WatchAlertsSection.title(template)
         }
     }
 

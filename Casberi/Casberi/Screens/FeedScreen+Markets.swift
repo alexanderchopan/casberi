@@ -105,6 +105,16 @@ extension FeedScreen {
             .feedRowBackground()
             .listRowSeparator(.hidden)
         }
+        // Gas at the head of the list (prd §1247): Ethereum and Base, stamped
+        // by age as a price is, its menu the gas alerts.
+        Section {
+            MarketsGasHead(gas: MarketsGas.shared)
+                .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.rowInset,
+                                          bottom: 0, trailing: DSRoomChassis.rowInset))
+                .feedRowBackground()
+                .listRowSeparator(.hidden)
+        }
+        .task { await MarketsGas.shared.load() }
         if watches.count > 1 { marketsListHead }
         // An empty list says so in the one wording every Follow list uses
         // (prd §1230); the verb above starts it.
@@ -157,7 +167,9 @@ extension FeedScreen {
         tokensInlineTiles
         let byRef = Dictionary(watches.compactMap { t in t.sourceRef.map { ($0, t) } },
                                uniquingKeysWith: { a, _ in a })
-        let alerts = PriceAlertStore.shared.alerts.filter { byRef[$0.ref] != nil }
+        // A gas alert watches a chain, not a row (prd §1247).
+        let alerts = PriceAlertStore.shared.alerts
+            .filter { byRef[$0.ref] != nil || GasPrice.network(fromRef: $0.ref) != nil }
             .sorted { $0.createdAt > $1.createdAt }
         if alerts.isEmpty {
             Section {
@@ -190,7 +202,9 @@ extension FeedScreen {
         return HStack(spacing: DS.Space.s3) {
             HStack(spacing: DS.Space.s3) {
                 WatchFace(url: watched.flatMap(marketsLogo), lettered: alert.name,
-                          onWhite: watched.flatMap { StockWatch.symbol(of: $0) } != nil)
+                          onWhite: watched.flatMap { StockWatch.symbol(of: $0) } != nil,
+                          // A gas alert's face is the pump (prd §1247): it watches a chain.
+                          symbol: alert.kind == .gasBelow ? MarketsGasHead.glyph : nil)
                 VStack(alignment: .leading, spacing: 1) {
                     Text(verbatim: alert.name).dsText(.body17).foregroundStyle(DS.textPrimary)
                         .dsCardLead(Text("Opens its page"), perform: open)
@@ -362,17 +376,48 @@ extension FeedScreen {
                            lettered: thing.authorHandle ?? TokensAsk.name(of: thing.title),
                            price: price,
                            change: Self.watchChange(thing),
-                           closes: pulse?.closes ?? [],
+                           // A stock's day line (prd §1247), Yahoo's day closes
+                           // read off the body and drawn as a token's.
+                           closes: pulse?.closes ?? TokenPulse.shared.stockLine(for: thing) ?? [],
                            line: marketsLine(thing, price: price, quoteCap: quote?.marketCap,
                                              pulse: pulse, stock: stock),
                            isStock: stock != nil,
                            glyph: stock.flatMap(WatchFace.systemMark(forTicker:)))
-        if let stock {
+        if let stock, let ref = thing.sourceRef {
             let company = CompanyPacks.Company(name: TokensAsk.name(of: thing.title),
                                                listing: .stock(stock), seats: [TokenWatch.source])
-            row.task(id: stock) { await CompanyQuotes.shared.load([company]) }
+            row.task(id: stock) {
+                await CompanyQuotes.shared.load([company])
+                await TokenPulse.shared.loadStockLine(ref: ref, symbol: stock)
+            }
         } else {
             row
+        }
+    }
+
+    /// Pin to Lock Screen, from a row's long press (prd §1247): one row's
+    /// price as a Live Activity, replacing any other; the same item unpins.
+    func pinToLockScreen(_ thing: Thing) {
+        guard thing.isLive, let ref = thing.sourceRef else { return }
+        let name = TokensAsk.name(of: thing.title)
+        if PriceActivityDriver.pinnedRef == ref {
+            Task { await PriceActivityDriver.unpin() }
+            DSHaptic.tap()
+            chrome.flash(String(localized: "Unpinned \(name)"))
+            return
+        }
+        Task {
+            switch await PriceActivityDriver.pin(thing) {
+            case .pinned:
+                DSHaptic.success()
+                chrome.flash(String(localized: "\(name) is on your Lock Screen"))
+            case .off:
+                DSHaptic.failure()
+                chrome.flash(String(localized: "Turn on Live Activities for Casberi in Settings"))
+            case .unread:
+                DSHaptic.failure()
+                chrome.flash(String(localized: "No price read for \(name) yet"))
+            }
         }
     }
 
@@ -382,8 +427,12 @@ extension FeedScreen {
                              pulse: TokenPulse.Pulse?, stock: String?) -> WatchLine.Line? {
         let alert = thing.sourceRef.flatMap { PriceAlertStore.shared.lineAlert(for: $0) }
         let alertText: String? = alert.map { a in
-            a.kind == .move ? String(localized: "a \(Int((a.target * 100).rounded()))% move")
-                            : TokenChartStyle.priceText(a.target)
+            switch a.kind {
+            case .move:          String(localized: "a \(WatchAlertsSection.movePercentText(a.target)) move")
+            case .volume:        String(localized: "\(TokenStats.compact(a.target)) volume")
+            case .above, .below: TokenChartStyle.priceText(a.target)
+            case .gasBelow:      GasPrice.text(a.target)
+            }
         }
         let holding = marketsHolding(thing).map { TokenStats.compact($0) }
         let since = WatchLine.since(anchor: thing.watchPriceUsd, price: price)

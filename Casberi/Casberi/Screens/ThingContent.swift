@@ -57,6 +57,8 @@ enum ProseLinks {
 enum ThingChart {
     case token(chain: String, address: String)
     case stock(ticker: String)
+    /// A coin followed by its CoinPaprika id (prd §1247).
+    case coin(id: String)
     case postHogMetric(event: String)
     /// A watched token with NO resolvable Dexscreener route but a real
     /// `TokenPulse` entry already in memory (2026-08-11) — currently only
@@ -84,6 +86,9 @@ enum ThingChart {
         }
         if let ticker = StockChart.route(from: thing.content) {
             return .stock(ticker: ticker)
+        }
+        if let id = CoinFollow.route(from: thing.content) {
+            return .coin(id: id)
         }
         // PostHog can't ride `route(from:)`: a watched metric's content is a
         // plain project URL, shared verbatim by its annotation, milestone and
@@ -352,6 +357,8 @@ struct ThingContentView: View {
                     TokenChartContent(thing: thing, chain: chain, address: address)
                 case .stock(let ticker):
                     StockChartContent(thing: thing, ticker: ticker)
+                case .coin(let id):
+                    CoinChartContent(thing: thing, id: id)
                 case .postHogMetric(let event):
                     // A watched metric leads with its own curve, and the
                     // project's annotations land on it as marks, so a spike
@@ -2821,11 +2828,74 @@ private struct StockChartContent: View {
     }
 }
 
+/// A followed coin's price (prd §1247), drawn natively: CoinPaprika's
+/// historical ticks under the same `TokenChartView` a token and a stock wear,
+/// the figure the ticker's live price. The hour is not a range CoinPaprika's
+/// free ticks serve, so a coin's hour chip says it is missing rather than
+/// drawing it from coarser points. No market-structure strip: liquidity and
+/// FDV are a DEX pair's facts, and a coin is not one pair. No ticks at all →
+/// a door to the coin's page in the browser (never fetched here, so never a
+/// preview card), not an empty chart.
+private struct CoinChartContent: View {
+    let thing: Thing
+    let id: String
+
+    private var since: (price: Double, date: Date)? {
+        guard thing.source == TokenWatch.source, let p = thing.watchPriceUsd, p > 0
+        else { return nil }
+        return (p, thing.capturedAt)
+    }
+
+    /// Liveness guard (build 188 — see `ThingRowKeying.swift`).
+    var body: some View {
+        if thing.isLive { liveBody }
+    }
+
+    @ViewBuilder private var liveBody: some View {
+        // In the room's frame (prd §1188), as a token's.
+        if let tiles = boxTiles {
+            chart
+                .environment(\.priceBoxed, true)
+                .dsRoomBox()
+            tiles(nil)
+                .padding(.top, DSRoomChassis.leadGap)
+        }
+        VStack(alignment: .leading, spacing: DS.Space.s4) {
+            if boxTiles == nil { chart }
+            watchAlerts(thing)
+        }
+        .padding(.top, boxTiles == nil ? 0 : DS.Space.s6)
+        .padding(.horizontal, DS.Space.s4)
+        .padding(.bottom, DS.Space.s3)
+    }
+
+    @Environment(\.priceBoxTiles) private var boxTiles
+
+    private var chart: some View {
+        TokenChartView(memoryKey: "coin.range.\(id)",
+                       fetch: { (range: TokenRange) in
+                           // The demo reaches nothing (§217).
+                           DemoMode.isActive ? nil : await CoinWatch.chart(id: id, range: range)
+                       },
+                       since: since,
+                       hero: true,
+                       object: PriceObjectSource.identity(
+                           title: thing.title,
+                           authorHandle: thing.authorHandle),
+                       levels: alertLevels(thing)) {
+            if let url = URL(string: CoinFollow.page(id)) {
+                ArticleDoor(url: url)
+            }
+        }
+    }
+}
+
 /// A watched row's price levels still on, for its chart (prd §1081).
 @MainActor
 private func alertLevels(_ thing: Thing) -> [Double] {
     guard thing.isLive, thing.source == TokenWatch.source, let ref = thing.sourceRef else { return [] }
-    return PriceAlertStore.shared.alerts(for: ref).filter { $0.on && $0.kind != .move }.map(\.target)
+    return PriceAlertStore.shared.alerts(for: ref)
+        .filter { $0.on && ($0.kind == .above || $0.kind == .below) }.map(\.target)
 }
 
 /// A watched row's alerts on its page (prd §1081) — only on the watchlist's
@@ -2836,7 +2906,9 @@ private func watchAlerts(_ thing: Thing) -> some View {
     if thing.isLive, thing.source == TokenWatch.source, !PriceAlertStore.isAlertRow(thing),
        let ref = thing.sourceRef {
         WatchAlertsSection(ref: ref, name: TokensAsk.name(of: thing.title),
-                           price: PriceAlertStore.reading(for: thing)?.price)
+                           price: PriceAlertStore.reading(for: thing)?.price,
+                           // A day-volume alert is a DEX token's (prd §1247).
+                           volume: TokenChart.route(from: thing.content) != nil)
             .padding(.top, DS.Space.s2)
     }
 }

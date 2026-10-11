@@ -284,8 +284,13 @@ struct WatchAddSheet: View {
 
     // MARK: - Keeping
 
+    /// The ref a token's follow lands under: a household coin's wrapped
+    /// token is followed as the coin (prd §1247, `TokenWatch.add`).
     private func ref(of token: TokenWatch.Resolved) -> String {
-        "tokens:\(token.chain):\(token.address.lowercased())"
+        if let id = CoinFollow.wrappedCoin(chain: token.chain, address: token.address) {
+            return CoinFollow.ref(id)
+        }
+        return "tokens:\(token.chain):\(token.address.lowercased())"
     }
 
     private func toggle(company: CompanyPacks.Company, on: Bool) {
@@ -315,7 +320,7 @@ struct WatchAddSheet: View {
             return
         }
         guard let thing = TokenWatch.add(token, context: modelContext) else { return }
-        landed(key: key, thing: thing)
+        landed(key: thing.sourceRef ?? key, thing: thing)
     }
 
     private func toggle(stock: StockWatch.Resolved) {

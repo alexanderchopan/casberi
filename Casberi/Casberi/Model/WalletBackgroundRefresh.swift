@@ -38,7 +38,12 @@ enum WalletBackgroundRefresh {
         // about the wallet's value line, so a wallet is no longer the only
         // reason to want it. Someone with Stripe connected and no wallet at all
         // still needs the pass that finds a dispute while they are away.
-        guard !WalletStore.shared.addresses.isEmpty || Notifications.settings.anyOn else { return }
+        //
+        // And for a Safe (prd §1246): a pending signature is the one thing
+        // this task now FINDS rather than only announces, so a known Safe or a
+        // key on this phone is a reason to run on its own.
+        guard !WalletStore.shared.addresses.isEmpty || Notifications.settings.anyOn
+                || SafeBridge.detectedCount() > 0 || SafeSigner.hasAnyKey else { return }
         let request = BGAppRefreshTaskRequest(identifier: taskID)
         // Notifications want a tighter cadence than the 4h holdings throttle —
         // a deadline three days out is no use announced two days late. This is
@@ -68,6 +73,14 @@ enum WalletBackgroundRefresh {
             // The same read a foreground does: holdings, which records the
             // value sample the balance sparkline draws from.
             _ = await WalletIngest.topHoldingsByWallet()
+            // The Safe queues (prd §1246), BEFORE the sweep so a signature
+            // waiting on this person lands as a row the sweep can announce
+            // while the app is closed. A full bridge read, unlike the rest:
+            // bounded inside (`SafeBridge.backgroundSweep`), and cancelled by
+            // the expiration handler above like everything else here.
+            if !Task.isCancelled, let context = SharedStore.live?.mainContext {
+                _ = await SafeBridge.backgroundSweep(context: context)
+            }
             // …and then the notification sweep (prd §306). It runs on whatever
             // has ALREADY landed rather than driving a full bridge refresh:
             // this task's budget is seconds, a full sweep is dozens of network

@@ -104,7 +104,11 @@ ALLOWANCE = {
     # requests (a), and what the ledger does not record (a).
     "NetworkReachScreen.swift": (2, "relay line and the ledger's ceiling; (a)"),
     # A Safe you cannot sign vs one you just signed — exclusive states (b).
-    "SafeQueueCard.swift": (2, "exclusive states; signing (b)"),
+    # The third (prd §1246) qualifies the balance simulation above the calls:
+    # "Simulated as the Safe's call, before signatures and gas" — an honesty
+    # guard on a figure (a), drawn only when a simulation answered, beside the
+    # sign block's signing disclosure (b). Both kept categories.
+    "SafeQueueCard.swift": (3, "exclusive states; signing (b); simulation's ceiling (a)"),
     # The watch form and the co-signer block: the second is the one place the
     # app says a key has no recovery phrase (b).
     "SafeScreen.swift": (2, "watch form + co-signer key custody (b)"),

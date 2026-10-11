@@ -532,6 +532,15 @@ enum BridgeRefresh {
         // §207) — reflect that in the catalog every foreground: connected
         // while a wallet is watched, dropped when the last one goes.
         store.reconcileWalletSeats()
+        // A phone that signs for a Safe reads that Safe's queue with no wallet
+        // watched at all (prd §1246); with one watched, `WalletIngest.refresh`
+        // below carries the phone's Safes in the same pass.
+        if WalletStore.shared.addresses.isEmpty, SafeSigner.hasAnyKey {
+            let s = slot(); BridgeRefresh.landingTask { @MainActor in
+                await BridgeRefresh.stagger(s)
+                _ = await SafeBridge.syncNow(context: context)
+            }
+        }
         if !WalletStore.shared.addresses.isEmpty {
             let s = slot(); BridgeRefresh.landingTask { @MainActor in
                 await BridgeRefresh.stagger(s)
@@ -586,6 +595,8 @@ enum BridgeRefresh {
             await BridgeRefresh.stagger(s)
             await TokenPulse.shared.refresh(context: context)
             await WidgetPublish.watchlist(context: context, read: true)
+            // The price pinned to the Lock Screen, from the same reads (prd §1247).
+            await PriceActivityDriver.sync(context: context)
         }
         for provider in MailProvider.allCases where provider.connected {
             let s = slot(); BridgeRefresh.landingTask { @MainActor in

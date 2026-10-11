@@ -47,6 +47,11 @@ KNOWN_NON_REACH=(
   # re-read every entry that says a host is never touched.
   app.0xbow.io app.cal.com app.todoist.com kalshi.com opensea.io
   dexscreener.com twitch.tv stocktwits.com
+  # A followed coin's page (prd §1247): its row's content and the door its
+  # sheet offers when CoinPaprika's ticks do not answer, opened in the
+  # person's browser. Every READ goes to `api.coinpaprika.com` and every mark
+  # to `static.coinpaprika.com`, both declared under Markets.
+  coinpaprika.com
   privacy.com polymarket.com app.safe.global app.uniswap.org
   aerodrome.finance app.hyperliquid.xyz
   cardpointers.com

@@ -4,6 +4,8 @@
 #
 #   Casberi/Casberi/Model/SafeTransaction.swift   compiled WHOLE and unmodified
 #   Casberi/Casberi/Model/Keccak256.swift         its only dependency
+#   Casberi/Casberi/Model/SafeSimulation.swift    the sign block's balance
+#                                                 simulation (prd §1246), whole
 #
 # WHY THIS IS THE MOST LOAD-BEARING HARNESS IN THE REPO. Every other check
 # here guards a wrong READING; this one guards a wrong SIGNATURE. A wrong
@@ -40,12 +42,15 @@ KECCAK="Casberi/Casberi/Model/Keccak256.swift"
 # too, and driven on its own by `clearsign-selftest.sh`.
 CLEARSIGN="Casberi/Casberi/Model/ClearSign.swift"
 SIGNER="Casberi/Casberi/Model/SafeSigner.swift"
+# The balance simulation's plan, request and parse (prd §1246) — Foundation-
+# only, compiled whole beside the reader whose `.batch` it plans from.
+SIMULATION="Casberi/Casberi/Model/SafeSimulation.swift"
 KEY="Casberi/Casberi/Model/SignerKey.swift"
 REACH="Casberi/Casberi/Model/NetworkReach.swift"
 CARD="Casberi/Casberi/Screens/SafeQueueCard.swift"
 SCREEN="Casberi/Casberi/Screens/SafeScreen.swift"
 VECTORS="scripts/support/safetx-vectors.py"
-for f in "$TX" "$KECCAK" "$CLEARSIGN" "$SIGNER" "$KEY" "$REACH" "$CARD" "$VECTORS"; do
+for f in "$TX" "$KECCAK" "$CLEARSIGN" "$SIGNER" "$SIMULATION" "$KEY" "$REACH" "$CARD" "$VECTORS"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -100,6 +105,17 @@ for reach in 'URLSession' 'IngestSupport' 'SecItemAdd' 'import Security' 'import
   printf '%s' "$CODE" | grep -q "$reach" \
     && { echo "✗ SafeTransaction.swift reached $reach — it must stay Foundation-only so this harness can compile it whole"; exit 1; }
 done
+# The simulation's pure half reaches nothing either (prd §1246): its one
+# network call lives in `SafeSimulator.swift`, so this file compiles whole.
+SIM_CODE=$(strip_comments "$SIMULATION")
+for reach in 'URLSession' 'IngestSupport' 'import SwiftData' 'import SwiftUI' 'UserDefaults'; do
+  printf '%s' "$SIM_CODE" | grep -qF -- "$reach" \
+    && { echo "✗ SafeSimulation.swift reached $reach — it must stay Foundation-only so this harness can compile it whole"; exit 1; }
+done
+# …and the sign block asks for it in a `.task`, never a body (§628).
+grep -q 'simulation = await SafeSimulator.simulate(' "$CARD" \
+  || { echo "✗ the sign block no longer asks for the simulation in its .task (prd §1246)"; exit 1; }
+
 # The type strings are Safe's, verbatim. A single character here is a
 # different hash, and the mutation pass below proves each one is load-bearing
 # — but only against the shipped spelling, so pin that spelling too.
@@ -209,10 +225,20 @@ for verb in 'postJSONArray' 'deleteJSON' '"PUT"' '"PATCH"' '"DELETE"' 'httpMetho
   printf '%s' "$SIGNER_CODE" | grep -qF -- "$verb" \
     && { echo "✗ SafeSigner.swift gained a write verb ($verb) — the one-POST promise is now false"; exit 1; }
 done
-[[ $(printf '%s' "$SIGNER_CODE" | grep -o 'postJSONStatus\|postJSON(' | wc -l | tr -d ' ') -eq 1 ]] \
-  || { echo "✗ SafeSigner.swift makes more than one POST — it may make exactly one"; exit 1; }
+# TWO POSTS since prd §1246, of ONE signature, to Safe's two confirmation
+# doors in turn: the Client Gateway's `addConfirmation` first, the transaction
+# service's confirmations endpoint only when the gateway did not take it.
+# Still one write — the second door is reached only on a non-2xx from the
+# first — and still Safe's own two hosts and nothing else (`host_check`).
+[[ $(printf '%s' "$SIGNER_CODE" | grep -o 'postJSONStatus\|postJSON(' | wc -l | tr -d ' ') -eq 2 ]] \
+  || { echo "✗ SafeSigner.swift's POST count changed — it may offer one signature at Safe's two confirmation doors and nothing else"; exit 1; }
 printf '%s' "$SIGNER_CODE" | grep -q 'multisig-transactions/\\(safeTxHash)/confirmations/' \
-  || { echo "✗ the one POST no longer goes to Safe's confirmations endpoint"; exit 1; }
+  || { echo "✗ the second door no longer goes to the transaction service's confirmations endpoint"; exit 1; }
+printf '%s' "$SIGNER_CODE" | grep -q '(gatewayURL(rail))/transactions/\\(ready.safeTxHash)/confirmations"' \
+  || { echo "✗ the first door no longer goes to the gateway's confirmations endpoint (prd §1246)"; exit 1; }
+# …and the second door is reached ONLY when the first did not take it.
+printf '%s' "$SIGNER_CODE" | grep -q 'if (200..<300).contains(gateway) {' \
+  || { echo "✗ the gateway's answer no longer decides whether the transaction service is asked — one signature could be posted twice"; exit 1; }
 # Every host this file names must be Safe's own. TWO of them are, since
 # 2026-09-17 (prd §789b): the one POST lands on the transaction service, where
 # a confirmation has to go, and the proposal READ moved to Safe's Client
@@ -373,6 +399,9 @@ let SAFE = "0x1234567890123456789012345678901234567890"
 let TO   = "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd"
 let USDC = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
 let ONE_ETH = "1000000000000000000"
+// Safe's MultiSendCallOnly v1.3.0 (canonical) — a batch is the Safe's only
+// when it is DELEGATECALLed into a known MultiSend (prd §1246).
+let MS = "0x40A2aCCbd92BCA938b02010E17A5b8929b49130D"
 // transfer(0xabcd…abcd, 1_000_000) — one USDC at six decimals.
 let TRANSFER_CALLDATA =
     "0xa9059cbb"
@@ -574,7 +603,7 @@ check("enableModule is named — a module moves funds outside the threshold enti
         == .enableModule(module: "0xABcdEFABcdEFabcdEfAbCdefabcdeFABcDEFabCD"))
 check("a multiSend whose payload is empty is a batch of nothing, not a lie",
       SafeCalldata.read(data: "0x8d80ff0a" + String(repeating: "0", count: 64),
-                        to: SAFE, value: "0", safe: SAFE) == .batch([]))
+                        to: MS, value: "0", safe: SAFE, operation: 1) == .batch([]))
 check("an unknown selector is UNDECODED and carries its four bytes",
       SafeCalldata.read(data: "0xdeadbeef" + String(repeating: "0", count: 64),
                         to: USDC, value: "0", safe: SAFE) == .undecoded(selector: "0xdeadbeef"))
@@ -614,6 +643,11 @@ func packedEntry(op: Int, to: String, value: Int, data: String) -> String {
     return String(format: "%02x", op) + String(to.dropFirst(2))
         + String(format: "%064x", value) + String(format: "%064x", d.count / 2) + d
 }
+/// Every batch here is what Safe{Wallet} sends: a DELEGATECALL into a known
+/// MultiSend. Anything else is no longer read as the Safe's batch (§1246).
+func batchRead(_ data: String) -> SafeCalldata {
+    SafeCalldata.read(data: data, to: MS, value: "0", safe: SAFE, operation: 1)
+}
 func multiSend(_ entries: [String]) -> String {
     let packed = entries.joined()
     let pad = String(repeating: "0", count: (64 - packed.count % 64) % 64)
@@ -622,8 +656,7 @@ func multiSend(_ entries: [String]) -> String {
 }
 let ONE_TRANSFER = packedEntry(op: 0, to: USDC, value: 0, data: TRANSFER_CALLDATA)
 
-let twoTransfers = SafeCalldata.read(data: multiSend([ONE_TRANSFER, ONE_TRANSFER]),
-                                     to: SAFE, value: "0", safe: SAFE)
+let twoTransfers = batchRead(multiSend([ONE_TRANSFER, ONE_TRANSFER]))
 check("two packed transfers walk into two calls",
       twoTransfers.batchCalls.count == 2)
 check("…and each inner call is read by the SAME decoder a lone one gets",
@@ -641,10 +674,8 @@ check("…and the destination comes off the PACKED entry, not the outer `to`",
 // byte of the address, which is a real number and a wrong one. This assertion
 // is what makes the "value word read one byte over" mutation fail; without it
 // the mutation SURVIVED, because nothing here had a value to get wrong.
-let withValue = SafeCalldata.read(
-    data: multiSend([packedEntry(op: 0, to: TO, value: 1, data: ""),
-                     packedEntry(op: 0, to: USDC, value: 0, data: TRANSFER_CALLDATA)]),
-    to: SAFE, value: "0", safe: SAFE)
+let withValue = batchRead(multiSend([packedEntry(op: 0, to: TO, value: 1, data: ""),
+                     packedEntry(op: 0, to: USDC, value: 0, data: TRANSFER_CALLDATA)]))
 check("a native-coin value inside a batch reads EXACTLY, off byte 21",
       withValue.batchCalls.first?.value == "1"
         && withValue.batchCalls.first?.reading == .send)
@@ -657,25 +688,20 @@ check("…and the entry beside it is unaffected",
 // An inner DELEGATECALL runs somebody else's code in the SAFE's own storage,
 // so it can rewrite the owner list whatever the rest of the batch claims. It
 // is the sharpest fact this decoder can surface and it must survive the walk.
-let delegated = SafeCalldata.read(
-    data: multiSend([packedEntry(op: 1, to: USDC, value: 0, data: TRANSFER_CALLDATA)]),
-    to: SAFE, value: "0", safe: SAFE)
+let delegated = batchRead(multiSend([packedEntry(op: 1, to: USDC, value: 0, data: TRANSFER_CALLDATA)]))
 check("an inner DELEGATECALL is carried, not flattened to a call",
       delegated.batchCalls.first?.isDelegateCall == true)
 check("…and an ordinary inner call is not marked as one",
       twoTransfers.batchCalls.first?.isDelegateCall == false)
 check("an operation that is neither CALL nor DELEGATECALL refuses the batch",
-      SafeCalldata.read(data: multiSend([packedEntry(op: 2, to: USDC, value: 0,
-                                                     data: TRANSFER_CALLDATA)]),
-                        to: SAFE, value: "0", safe: SAFE) == .batch([]))
+      batchRead(multiSend([packedEntry(op: 2, to: USDC, value: 0,
+                                                     data: TRANSFER_CALLDATA)])) == .batch([]))
 
 // THE PARTIAL CASE, which is the one the surface has to get right: nameable,
 // listable, and NOT complete.
-let mixed = SafeCalldata.read(
-    data: multiSend([ONE_TRANSFER,
+let mixed = batchRead(multiSend([ONE_TRANSFER,
                      packedEntry(op: 0, to: USDC, value: 0,
-                                 data: "0xdeadbeef" + String(repeating: "0", count: 64))]),
-    to: SAFE, value: "0", safe: SAFE)
+                                 data: "0xdeadbeef" + String(repeating: "0", count: 64))]))
 check("a batch with one unreadable call still walks and still lists",
       mixed.batchCalls.count == 2)
 check("…and the unreadable one arrives as .undecoded, exactly as it would alone",
@@ -693,17 +719,14 @@ func rawMultiSend(lengthOverride: Int? = nil, offsetOverride: Int? = nil,
         + String(format: "%064x", lengthOverride ?? packed.count / 2) + packed + pad
 }
 check("a length running past the buffer refuses the WHOLE batch",
-      SafeCalldata.read(data: rawMultiSend(lengthOverride: goodPacked.count / 2 + 64),
-                        to: SAFE, value: "0", safe: SAFE) == .batch([]))
+      batchRead(rawMultiSend(lengthOverride: goodPacked.count / 2 + 64)) == .batch([]))
 // TWO GOOD ENTRIES then a stray byte, so a walker returning what it already
 // has would return two real calls — the failure this must catch is a batch
 // that renders two true lines and is not the transaction being signed.
 check("a truncated final entry refuses the whole batch, never the first N",
-      SafeCalldata.read(data: rawMultiSend(packed: goodPacked + "00"),
-                        to: SAFE, value: "0", safe: SAFE) == .batch([]))
+      batchRead(rawMultiSend(packed: goodPacked + "00")) == .batch([]))
 check("an offset pointing past the arguments refuses",
-      SafeCalldata.read(data: rawMultiSend(offsetOverride: 4096),
-                        to: SAFE, value: "0", safe: SAFE) == .batch([]))
+      batchRead(rawMultiSend(offsetOverride: 4096)) == .batch([]))
 // A CRAFTED OFFSET MUST NOT TRAP. Swift's `+` is checked, so the first cut's
 // `args.count >= offset + 32` CRASHED THE PROCESS on an offset near Int.max —
 // and these bytes come off a proposal in Safe's transaction service, which any
@@ -712,48 +735,221 @@ check("an offset pointing past the arguments refuses",
 // by reading it.
 let INT_MAX_WORD = String(repeating: "0", count: 48) + "7fffffffffffffff"
 check("an offset near Int.max refuses instead of trapping",
-      SafeCalldata.read(data: "0x8d80ff0a" + INT_MAX_WORD + String(repeating: "0", count: 64),
-                        to: SAFE, value: "0", safe: SAFE) == .batch([]))
+      batchRead("0x8d80ff0a" + INT_MAX_WORD + String(repeating: "0", count: 64)) == .batch([]))
 check("a payload length near Int.max refuses instead of trapping",
-      SafeCalldata.read(data: "0x8d80ff0a" + String(format: "%064x", 32) + INT_MAX_WORD
-                              + String(repeating: "0", count: 64),
-                        to: SAFE, value: "0", safe: SAFE) == .batch([]))
+      batchRead("0x8d80ff0a" + String(format: "%064x", 32) + INT_MAX_WORD
+                              + String(repeating: "0", count: 64)) == .batch([]))
 check("an inner dataLength near Int.max refuses instead of trapping",
-      SafeCalldata.read(
-        data: multiSend([String(format: "%02x", 0) + String(USDC.dropFirst(2))
+      batchRead(multiSend([String(format: "%02x", 0) + String(USDC.dropFirst(2))
                          + String(format: "%064x", 0)
-                         + String(repeating: "0", count: 48) + "7fffffffffffffff"]),
-        to: SAFE, value: "0", safe: SAFE) == .batch([]))
+                         + String(repeating: "0", count: 48) + "7fffffffffffffff"])) == .batch([]))
 // A GOOD ENTRY FIRST, then the bad one — and that ordering is the whole test.
 // With the bad entry alone the walker's `calls` is still empty when it bails,
 // so returning `calls` and returning `[]` are the same bytes and a mutation
 // swapping them SURVIVES. This harness shipped exactly that mistake and the
 // mutation pass named it within the minute.
 check("an inner dataLength wider than the payload refuses the calls already walked",
-      SafeCalldata.read(
-        data: multiSend([ONE_TRANSFER,
+      batchRead(multiSend([ONE_TRANSFER,
                          String(format: "%02x", 0) + String(USDC.dropFirst(2))
                          + String(format: "%064x", 0)
-                         + String(format: "%064x", 4096)]),
-        to: SAFE, value: "0", safe: SAFE) == .batch([]))
+                         + String(format: "%064x", 4096)])) == .batch([]))
 // The OFFSET IS READ, not assumed to be 0x20. A hardcoded 0x20 misreads a
 // legal payload the encoder chose to place elsewhere.
 let shifted = "0x8d80ff0a" + String(format: "%064x", 64) + String(repeating: "0", count: 64)
     + String(format: "%064x", goodPacked.count / 2) + goodPacked
     + String(repeating: "0", count: (64 - goodPacked.count % 64) % 64)
 check("the ABI offset is READ — a payload placed past 0x20 still walks",
-      SafeCalldata.read(data: shifted, to: SAFE, value: "0", safe: SAFE).batchCalls.count == 2)
+      batchRead(shifted).batchCalls.count == 2)
 
 // A batch inside a batch is legal and terminates without a depth counter: an
 // inner payload is contained in its parent's and each entry costs 85 bytes of
 // header, so the length strictly decreases.
-let nested = SafeCalldata.read(
-    data: multiSend([packedEntry(op: 0, to: SAFE, value: 0, data: multiSend([ONE_TRANSFER]))]),
-    to: SAFE, value: "0", safe: SAFE)
+let nested = batchRead(multiSend([packedEntry(op: 1, to: MS, value: 0, data: multiSend([ONE_TRANSFER]))]))
 check("a nested batch is walked, not refused",
       nested.batchCalls.first?.reading.batchCalls.count == 1)
 check("…and an empty batch is never 'fully readable' — [] is the refusal",
       !SafeCalldata.batch([]).isFullyReadable)
+
+// --- THE OPERATION READS FIRST (prd §1246) ----------------------------------
+// Until §1246 the reader never saw `operation`: a `multiSend` was walked as the
+// Safe's batch whatever contract it went to and however it was called, and a
+// top-level DELEGATECALL into any other contract was summarised as whatever its
+// calldata claimed — which is not the call being made.
+print("the operation reads first — a DELEGATECALL is named, never summarised")
+let ONE_MS = multiSend([ONE_TRANSFER])
+check("a multiSend DELEGATECALLed into a known MultiSend is the batch",
+      SafeCalldata.read(data: ONE_MS, to: MS, value: "0", safe: SAFE, operation: 1).batchCalls.count == 1)
+check("the same multiSend DELEGATECALLed anywhere else is a delegatecall, never a batch",
+      SafeCalldata.read(data: ONE_MS, to: TO, value: "0", safe: SAFE, operation: 1)
+        == .delegateCall(target: EIP55.checksum(TO)))
+check("a multiSend CALLed — even into a known MultiSend — is NOT the Safe's batch",
+      SafeCalldata.read(data: ONE_MS, to: MS, value: "0", safe: SAFE, operation: 0)
+        == .undecoded(selector: "0x8d80ff0a"))
+check("…and with no operation given, the reader assumes CALL and refuses the batch",
+      SafeCalldata.read(data: ONE_MS, to: MS, value: "0", safe: SAFE).batchCalls.isEmpty)
+let topDelegate = SafeCalldata.read(data: TRANSFER_CALLDATA, to: USDC, value: "0", safe: SAFE, operation: 1)
+check("a top-level DELEGATECALL of transfer calldata is NOT read as a transfer",
+      topDelegate == .delegateCall(target: EIP55.checksum(USDC)))
+check("…even with no calldata at all — a delegatecall still runs the target's code",
+      SafeCalldata.read(data: "0x", to: TO, value: "0", safe: SAFE, operation: 1)
+        == .delegateCall(target: EIP55.checksum(TO)))
+check("…it is nameable, never fully readable, and it changes control",
+      topDelegate.isDecoded && !topDelegate.isFullyReadable && topDelegate.changesControl)
+check("the same calldata as a CALL is still the transfer",
+      SafeCalldata.read(data: TRANSFER_CALLDATA, to: USDC, value: "0", safe: SAFE, operation: 0)
+        == .erc20Transfer(recipient: "0xABcdEFABcdEFabcdEfAbCdefabcdeFABcDEFabCD", amount: "1000000"))
+check("an inner DELEGATECALL into a stranger runs foreign code; into a MultiSend it does not",
+      delegated.batchCalls.first?.runsForeignCode == true
+        && nested.batchCalls.first?.runsForeignCode == false)
+check("a batch carrying a foreign delegatecall changes control; plain transfers do not",
+      delegated.changesControl && !twoTransfers.changesControl)
+check("each batch call keeps its own calldata, which the simulation sends",
+      twoTransfers.batchCalls.first?.data == TRANSFER_CALLDATA)
+// The six deployments are recalled, so each mixed-case spelling is pinned as a
+// valid EIP-55 checksum of itself: a misremembered digit would break it.
+for canonical in ["0xA238CBeb142c10Ef7Ad8442C6D1f9E89e07e7761", "0x998739BFdAAdde7C933B942a68053933098f9EDa",
+                  "0x40A2aCCbd92BCA938b02010E17A5b8929b49130D", "0xA1dabEF33b3B82c7814B6D82A79e50F4AC44102B",
+                  "0x38869bf66a61cF6bDB996A6aE40D5853Fd43B526", "0x9641d764fc13c8B624c04430C7356C1C7C8102e2"] {
+    check("MultiSend \(canonical.prefix(10))… is known, and its spelling is its own checksum",
+          SafeCalldata.isKnownMultiSend(canonical) && EIP55.checksum(canonical.lowercased()) == canonical)
+}
+check("exactly six deployments are known", SafeCalldata.multiSendDeployments.count == 6)
+check("the Safe itself is not a MultiSend", !SafeCalldata.isKnownMultiSend(SAFE))
+
+print("three more changes to who controls the Safe (prd §1246)")
+check("disableModule(address,address) → 0xe009cfde",
+      SafeCalldata.selector("disableModule(address,address)") == "0xe009cfde")
+check("setFallbackHandler(address) → 0xf08a0323",
+      SafeCalldata.selector("setFallbackHandler(address)") == "0xf08a0323")
+check("changeMasterCopy(address) → 0x7de7edef",
+      SafeCalldata.selector("changeMasterCopy(address)") == "0x7de7edef")
+// (prevModule, module) — the module being switched off is the SECOND argument.
+let disableModuleData = "0xe009cfde"
+    + "0000000000000000000000001111111111111111111111111111111111111111"
+    + "0000000000000000000000002222222222222222222222222222222222222222"
+let disabled = SafeCalldata.read(data: disableModuleData, to: SAFE, value: "0", safe: SAFE)
+check("disableModule names the SECOND argument, not the list cursor",
+      disabled == .disableModule(module: EIP55.checksum("0x2222222222222222222222222222222222222222")))
+let fallback = SafeCalldata.read(data: "0xf08a0323"
+    + "000000000000000000000000abcdefabcdefabcdefabcdefabcdefabcdefabcd", to: SAFE, value: "0", safe: SAFE)
+check("setFallbackHandler is named with its handler",
+      fallback == .setFallbackHandler(handler: "0xABcdEFABcdEFabcdEfAbCdefabcdeFABcDEFabCD"))
+let masterCopy = SafeCalldata.read(data: "0x7de7edef"
+    + "000000000000000000000000abcdefabcdefabcdefabcdefabcdefabcdefabcd", to: SAFE, value: "0", safe: SAFE)
+check("changeMasterCopy is named with the new code",
+      masterCopy == .changeMasterCopy(masterCopy: "0xABcdEFABcdEFabcdEfAbCdefabcdeFABcDEFabCD"))
+check("all three change control, as enableModule and setGuard do",
+      disabled.changesControl && fallback.changesControl && masterCopy.changesControl
+        && SafeCalldata.read(data: enableModule, to: SAFE, value: "0", safe: SAFE).changesControl)
+check("…and a transfer does not",
+      !SafeCalldata.read(data: TRANSFER_CALLDATA, to: USDC, value: "0", safe: SAFE).changesControl)
+check("a truncated disableModule is undecoded, never a module we made up",
+      SafeCalldata.read(data: "0xe009cfde" + "0000000000000000000000001111111111111111111111111111111111111111",
+                        to: SAFE, value: "0", safe: SAFE) == .undecoded(selector: "0xe009cfde"))
+
+// --- THE BALANCE SIMULATION (prd §1246) -------------------------------------
+// The plan decides what is asked; the parse decides what is drawn. Both are
+// pure, so both are pinned here. The response fixtures are AUTHORED from
+// Alchemy's reference, not captured — no build host reaches Alchemy.
+print("the balance simulation — asked only where it can be, read only where it answers")
+let simETH = SafeTransaction(to: TO, value: ONE_ETH, data: "", operation: 0, nonce: 0)
+switch SafeSimulation.plan(chainId: 1, safe: SAFE, tx: simETH, reading: .send) {
+case .single(let call):
+    check("a plain send is ONE call, from the Safe, value as a hex quantity",
+          call.from == SAFE && call.to == TO && call.value == "0xde0b6b3a7640000" && call.data == "0x")
+default:
+    check("a plain send is ONE call, from the Safe, value as a hex quantity", false)
+}
+check("Gnosis Chain is not simulated — this app has no Alchemy host there",
+      SafeSimulation.plan(chainId: 100, safe: SAFE, tx: simETH, reading: .send) == .skip(.chainNotServed))
+let simDelegate = SafeTransaction(to: USDC, value: "0", data: TRANSFER_CALLDATA, operation: 1, nonce: 0)
+check("a top-level DELEGATECALL is never simulated",
+      SafeSimulation.plan(chainId: 1, safe: SAFE, tx: simDelegate, reading: topDelegate) == .skip(.delegateCall))
+let simBatchTx = SafeTransaction(to: MS, value: "0", data: multiSend([ONE_TRANSFER, ONE_TRANSFER]),
+                                 operation: 1, nonce: 0)
+if case .bundle(let calls) = SafeSimulation.plan(chainId: 8453, safe: SAFE, tx: simBatchTx, reading: twoTransfers) {
+    check("a batch of two CALLs is a bundle of two, each from the Safe, with its own calldata",
+          calls.count == 2 && calls.allSatisfy { $0.from == SAFE && $0.to == EIP55.checksum(USDC)
+                                                 && $0.data == TRANSFER_CALLDATA && $0.value == "0x0" })
+} else {
+    check("a batch of two CALLs is a bundle of two, each from the Safe, with its own calldata", false)
+}
+check("a batch with an inner DELEGATECALL is not simulated",
+      SafeSimulation.plan(chainId: 1, safe: SAFE, tx: simBatchTx, reading: delegated) == .skip(.delegateCall))
+let fourCalls = batchRead(multiSend([ONE_TRANSFER, ONE_TRANSFER, ONE_TRANSFER, ONE_TRANSFER]))
+check("a batch longer than the bundle limit is skipped, never simulated as its first three",
+      SafeSimulation.plan(chainId: 1, safe: SAFE, tx: simBatchTx, reading: fourCalls) == .skip(.tooManyCalls(4)))
+check("…and the limit is three", SafeSimulation.bundleLimit == 3)
+check("a batch that did not walk is not simulated",
+      SafeSimulation.plan(chainId: 1, safe: SAFE, tx: simBatchTx, reading: .batch([])) == .skip(.unreadable))
+check("the request names the single method", (SafeSimulation.requestBody(.single(
+      SafeSimulation.Call(from: SAFE, to: TO, value: "0x1", data: "0x")))?["method"] as? String)
+        == "alchemy_simulateAssetChanges")
+let bundleBody = SafeSimulation.requestBody(.bundle([
+    SafeSimulation.Call(from: SAFE, to: TO, value: "0x1", data: "0x"),
+    SafeSimulation.Call(from: SAFE, to: USDC, value: "0x0", data: TRANSFER_CALLDATA)]))
+check("the bundle's params are ONE array of calls",
+      (bundleBody?["method"] as? String) == "alchemy_simulateAssetChangesBundle"
+        && ((bundleBody?["params"] as? [Any])?.first as? [[String: Any]])?.count == 2)
+check("a skip has no request at all", SafeSimulation.requestBody(.skip(.failed)) == nil)
+check("a zero value is 0x0", SafeSimulation.quantity("0") == "0x0")
+check("an unreadable value refuses the plan", SafeSimulation.quantity("1.5") == nil)
+
+func simJSON(_ text: String) -> Any? { try? JSONSerialization.jsonObject(with: Data(text.utf8)) }
+let USDC_LOWER = USDC.lowercased()
+let SAFE_LOWER = SAFE.lowercased()
+let simAnswer = simJSON("""
+{"jsonrpc":"2.0","id":1,"result":{"changes":[
+ {"assetType":"ERC20","changeType":"TRANSFER","from":"\(SAFE_LOWER)","to":"0xabcdefabcdefabcdefabcdefabcdefabcdefabcd",
+  "rawAmount":"12000000000","amount":"12000","symbol":"USDC","decimals":6,"contractAddress":"\(USDC_LOWER)"},
+ {"assetType":"NATIVE","changeType":"TRANSFER","from":"0xabcdefabcdefabcdefabcdefabcdefabcdefabcd","to":"\(SAFE_LOWER)",
+  "rawAmount":"3100000000000000000","amount":"3.1","symbol":"ETH","decimals":18,"contractAddress":null},
+ {"assetType":"ERC20","changeType":"APPROVE","from":"\(SAFE_LOWER)","to":"0xabcdefabcdefabcdefabcdefabcdefabcdefabcd",
+  "rawAmount":"1","symbol":"USDC","decimals":6,"contractAddress":"\(USDC_LOWER)"},
+ {"assetType":"ERC20","changeType":"TRANSFER","from":"0x1111111111111111111111111111111111111111","to":"0x2222222222222222222222222222222222222222",
+  "rawAmount":"5","symbol":"DAI","decimals":18,"contractAddress":"0x6b175474e89094c44da98b954eedeac495271d0f"}
+],"gasUsed":"0x5208","error":null}}
+""")
+if case .changes(let lines)? = SafeSimulation.parse(simAnswer, safe: SAFE, bundle: false) {
+    check("the Safe's outflow reads negative, scaled by its decimals",
+          lines.first == SafeSimulation.Line(symbol: "USDC", amount: -12000, contract: USDC_LOWER))
+    check("its inflow reads positive, native coin with no contract",
+          lines.count == 2 && lines[1].symbol == "ETH" && abs(lines[1].amount - 3.1) < 1e-9 && lines[1].contract == nil)
+} else {
+    check("a simulated answer parses into lines", false)
+}
+let netted = simJSON("""
+{"result":[
+ {"changes":[{"assetType":"ERC20","changeType":"TRANSFER","from":"\(SAFE_LOWER)","to":"0x1111111111111111111111111111111111111111",
+   "rawAmount":"5000000","symbol":"USDC","decimals":6,"contractAddress":"\(USDC_LOWER)"}],"error":null},
+ {"changes":[{"assetType":"ERC20","changeType":"TRANSFER","from":"0x1111111111111111111111111111111111111111","to":"\(SAFE_LOWER)",
+   "rawAmount":"5000000","symbol":"USDC","decimals":6,"contractAddress":"\(USDC_LOWER)"}],"error":null}]}
+""")
+check("a bundle that sends and returns the same amount nets to NO line",
+      SafeSimulation.parse(netted, safe: SAFE, bundle: true) == .changes([]))
+check("…and the same body read as a single answer is unreadable, not empty",
+      SafeSimulation.parse(netted, safe: SAFE, bundle: false) == nil)
+let reverted = simJSON("""
+{"result":[{"changes":[],"error":null},{"changes":[],"error":{"message":"execution reverted","revertReason":"GS013"}}]}
+""")
+check("one reverted call reverts the whole bundle, with its reason",
+      SafeSimulation.parse(reverted, safe: SAFE, bundle: true) == .reverted("GS013"))
+check("a JSON-RPC error is not an answer",
+      SafeSimulation.parse(simJSON(#"{"error":{"code":-32602,"message":"bad params"}}"#), safe: SAFE, bundle: false) == nil)
+check("a result with no changes array is not an answer",
+      SafeSimulation.parse(simJSON(#"{"result":{"gasUsed":"0x0"}}"#), safe: SAFE, bundle: false) == nil)
+// A transfer touching the Safe that cannot be read must not shorten the list —
+// the missing line would be the one outflow nobody sees.
+check("an unreadable amount touching the Safe makes the WHOLE answer unreadable",
+      SafeSimulation.parse(simJSON("""
+{"result":{"changes":[{"assetType":"ERC20","changeType":"TRANSFER","from":"\(SAFE_LOWER)","to":"0x1111111111111111111111111111111111111111","symbol":"USDC"}]}}
+"""), safe: SAFE, bundle: false) == nil)
+check("an unnamed asset touching the Safe makes it unreadable too",
+      SafeSimulation.parse(simJSON("""
+{"result":{"changes":[{"assetType":"ERC20","changeType":"TRANSFER","from":"\(SAFE_LOWER)","to":"0x1111111111111111111111111111111111111111","rawAmount":"1","decimals":0}]}}
+"""), safe: SAFE, bundle: false) == nil)
+check("a simulation that moves nothing of the Safe's is an empty answer, not nil",
+      SafeSimulation.parse(simJSON(#"{"result":{"changes":[],"error":null}}"#), safe: SAFE, bundle: false) == .changes([]))
 
 print("the selectors are derived, and one of them is the cross-check rail")
 // `getTransactionHash` is the call §5 makes on the Safe itself. Its selector
@@ -948,7 +1144,7 @@ echo "safetx-selftest: compiling SafeTransaction + Keccak256 WHOLE and unmodifie
 # so this file was proven equivalent run-for-run by
 # `scripts/support/harness-opt-probe.sh` before the swap (2026-09-05, 5.1x faster).
 # Re-probe before trusting it again after adding mutations.
-swiftc -Onone -o "$TMP/run" "$TX" "$KECCAK" "$CLEARSIGN" "$TMP/signer.swift" "$TMP/main.swift" \
+swiftc -Onone -o "$TMP/run" "$TX" "$KECCAK" "$CLEARSIGN" "$SIMULATION" "$TMP/signer.swift" "$TMP/main.swift" \
   || { echo "✗ the shipped encoder does not compile Foundation-only — something reached the Keychain, the curve or SwiftData"; exit 1; }
 "$TMP/run" || exit 1
 
@@ -1018,7 +1214,7 @@ PY
   if [[ $? -ne 0 ]]; then
     echo "  ✗ $name — the mutation did not apply (the shipped source moved)"; exit 1
   fi
-  if ! swiftc -Onone -o "$TMP/mut" "$TMP/SafeTransaction.swift" "$KECCAK" "$CLEARSIGN" "$TMP/signer.swift" "$TMP/main.swift" 2>/dev/null; then
+  if ! swiftc -Onone -o "$TMP/mut" "$TMP/SafeTransaction.swift" "$KECCAK" "$CLEARSIGN" "$SIMULATION" "$TMP/signer.swift" "$TMP/main.swift" 2>/dev/null; then
     echo "  ✓ $name (rejected at compile)"; return
   fi
   if "$TMP/mut" > /dev/null 2>&1; then
@@ -1230,6 +1426,84 @@ mutate "removeOwner reads its list cursor as the owner" \
 mutate "an undecodable calldata claims to be decoded" \
   'if case .undecoded = self { return false }' \
   'if case .undecoded = self { return true }'
+
+# --- THE OPERATION, AND THREE MORE CONTROL CHANGES (prd §1246) --------------
+
+# The batch walked for a DELEGATECALL into any contract — a stranger's code
+# described as the Safe's own batch.
+mutate "a DELEGATECALL into any contract is walked as the Safe's batch" \
+  'if isKnownMultiSend(to), bytes.count >= 4,' \
+  'if bytes.count >= 4,'
+
+# A top-level DELEGATECALL summarised as whatever its calldata claims.
+mutate "a top-level DELEGATECALL is read as its calldata" \
+  '            return .delegateCall(target: EIP55.checksum(to))' \
+  '            return read(data: data, to: to, value: value, safe: safe, chainId: chainId, style: style)'
+
+mutate "a top-level DELEGATECALL claims to be fully read" \
+  'case .delegateCall: return false' \
+  'case .delegateCall: return true'
+
+mutate "a nested batch through a known MultiSend is flagged as foreign code" \
+  'var runsForeignCode: Bool { isDelegateCall && !SafeCalldata.isKnownMultiSend(to) }' \
+  'var runsForeignCode: Bool { isDelegateCall }'
+
+mutate "disableModule reads its list cursor as the module" \
+  'if let a = address(1) { return .disableModule(module: a) }' \
+  'if let a = address(0) { return .disableModule(module: a) }'
+
+mutate "a fallback handler stops counting as a change of control" \
+  '.enableModule, .disableModule, .setGuard, .setFallbackHandler,' \
+  '.enableModule, .disableModule, .setGuard,'
+
+# The simulation's own file. Same applier, same refusal of a missing anchor —
+# carried on the applier's own line, so `set -e` cannot swallow it.
+mutate_sim() {
+  local name="$1" frm="$2" to="$3"
+  cp "$SIMULATION" "$TMP/SafeSimulation.swift"
+  FRM="$frm" TO="$to" python3 - "$TMP/SafeSimulation.swift" <<'PY' || { echo "  ✗ $name — the mutation did not apply (the shipped source moved)"; exit 1; }
+import os, sys
+path = sys.argv[1]
+src = open(path).read()
+frm, to = os.environ["FRM"], os.environ["TO"]
+if frm not in src:
+    sys.exit(1)
+open(path, "w").write(src.replace(frm, to, 1))
+PY
+  if ! swiftc -Onone -o "$TMP/mut" "$TX" "$KECCAK" "$CLEARSIGN" "$TMP/SafeSimulation.swift" "$TMP/signer.swift" "$TMP/main.swift" 2>/dev/null; then
+    echo "  ✓ $name (rejected at compile)"; return
+  fi
+  if "$TMP/mut" > /dev/null 2>&1; then
+    echo "  ✗ $name — the harness still passed, so nothing was testing this"; exit 1
+  fi
+  echo "  ✓ $name"
+}
+
+# THE ONE THAT MATTERS: a change that touches the Safe and does not parse,
+# dropped — the list then omits exactly the outflow nobody could read.
+mutate_sim "an unreadable change touching the Safe is dropped, not refused" \
+  'guard let amount = amount(change), let symbol = assetName(change) else { return nil }' \
+  'guard let amount = amount(change), let symbol = assetName(change) else { continue }'
+
+mutate_sim "a batch past the bundle limit is simulated anyway" \
+  'guard calls.count <= bundleLimit else { return .skip(.tooManyCalls(calls.count)) }' \
+  'guard true else { return .skip(.tooManyCalls(calls.count)) }'
+
+mutate_sim "a batch with an inner DELEGATECALL is simulated as calls" \
+  'guard calls.allSatisfy({ $0.operation == 0 }) else { return .skip(.delegateCall) }' \
+  'guard true else { return .skip(.delegateCall) }'
+
+mutate_sim "the Safe's outflow reads as an inflow" \
+  'if from == me, to != me { sign = -1 }' \
+  'if from == me, to != me { sign = 1 }'
+
+mutate_sim "a reverted call in a bundle is ignored" \
+  'return .reverted(revertReason(error))' \
+  '_ = revertReason(error)'
+
+mutate_sim "an approval is counted as a balance change" \
+  'guard (change["changeType"] as? String)?.uppercased() == "TRANSFER" else { continue }' \
+  'guard true else { continue }'
 
 # --- the refusals, mutation-proven ------------------------------------------
 # `guard_check` above is greps, and a grep that cannot fail proves nothing. Each

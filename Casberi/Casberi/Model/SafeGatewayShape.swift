@@ -79,6 +79,11 @@ enum SafeGatewayShape {
         let owners: [String]   // lowercased, sorted
         let modules: [String]  // lowercased, sorted
         let guardAddr: String? // lowercased; nil for none
+        /// The fallback handler and the singleton the Safe runs (prd §1246),
+        /// lowercased; nil for none, the zero address, or a body that does
+        /// not carry the field. The gateway sends both as `{value, …}`.
+        var fallbackHandler: String? = nil
+        var implementation: String? = nil
     }
 
     private static let zeroAddress = "0x0000000000000000000000000000000000000000"
@@ -96,7 +101,16 @@ enum SafeGatewayShape {
             threshold: int(root["threshold"]) ?? 0,
             owners: owners,
             modules: addresses(root["modules"]).map { $0.lowercased() }.sorted(),
-            guardAddr: (raw == nil || raw == zeroAddress) ? nil : raw)
+            guardAddr: (raw == nil || raw == zeroAddress) ? nil : raw,
+            fallbackHandler: nonZero(root["fallbackHandler"]),
+            implementation: nonZero(root["implementation"]) ?? nonZero(root["masterCopy"]))
+    }
+
+    /// An address field, lowercased, with the zero address read as none —
+    /// trap 2's rule, for every field that can be absent.
+    private static func nonZero(_ any: Any?) -> String? {
+        guard let raw = address(any)?.lowercased(), raw != zeroAddress else { return nil }
+        return raw
     }
 
     // MARK: - GET /v1/chains/{id}/owners/{addr}/safes
@@ -126,6 +140,128 @@ enum SafeGatewayShape {
             else { return nil }
             return id
         }
+    }
+
+    // MARK: - GET /v1/chains/{id}/safes/{addr}/transactions/history
+
+    /// The EXECUTED multisig transactions on the history's first page,
+    /// newest first, at most `cap`, each in the transaction service's row
+    /// shape that `SafeBridge.describe` and `landOutcome` already read (prd
+    /// §1246): `safeTxHash` (lowercased), `safe`, `nonce`, `isExecuted`,
+    /// `executionDate`, and whatever of `to`/`value`/`dataDecoded`/
+    /// `actionCount` the list's `txInfo` carries.
+    ///
+    /// UNMEASURED: authored from safe-client-gateway's own transaction-list
+    /// shapes (`TransactionItem`, `DateLabel`, `MultisigExecutionInfo`,
+    /// `TransferTransactionInfo`, `CustomTransactionInfo`,
+    /// `SettingsChangeTransaction`), not from a captured response. So:
+    ///
+    ///   * only `TRANSACTION` rows whose id is `multisig_<safe>_<hash>` count
+    ///     — a module transaction, an incoming transfer, the creation row and
+    ///     the `DATE_LABEL` furniture are not a Safe transaction this app can
+    ///     close a loop on;
+    ///   * only `txStatus == "SUCCESS"` — a FAILED or CANCELLED execution did
+    ///     not "go through", and the closing row's sentence says it did;
+    ///   * **a row with no readable `timestamp` is DROPPED** (§790's rule):
+    ///     its only other date would be this pass's clock, and an executed
+    ///     transaction dated "now" is a fabricated recency;
+    ///   * nil only when the body is not a list at all — an empty history is
+    ///     `[]`, and a refused read is nil.
+    static func history(_ root: Any?, cap: Int = 20) -> [[String: Any]]? {
+        guard let root = root as? [String: Any],
+              let results = root["results"] as? [[String: Any]]
+        else { return nil }
+        var out: [[String: Any]] = []
+        for item in results {
+            guard out.count < cap else { break }
+            guard (item["type"] as? String) == "TRANSACTION",
+                  let tx = item["transaction"] as? [String: Any],
+                  let id = tx["id"] as? String
+            else { continue }
+            let parts = id.split(separator: "_").map(String.init)
+            guard parts.count == 3, parts[0] == "multisig",
+                  isHash(parts[2]),
+                  (tx["txStatus"] as? String) == "SUCCESS",
+                  let executed = iso8601(millis: tx["timestamp"])
+            else { continue }
+            let exec = (tx["executionInfo"] as? [String: Any]) ?? [:]
+            if let type = exec["type"] as? String, type != "MULTISIG" { continue }
+            let safe = parts[1]
+            var row: [String: Any] = [
+                "safe": safe,
+                "safeTxHash": parts[2].lowercased(),
+                "isExecuted": true,
+                "executionDate": executed,
+                "value": "0",
+                "data": "",
+            ]
+            if let nonce = int(exec["nonce"]) { row["nonce"] = nonce }
+            let info = (tx["txInfo"] as? [String: Any]) ?? [:]
+            switch (info["type"] as? String) ?? "" {
+            case "Transfer":
+                // A Safe's own multisig transfer is OUTGOING; the amount rides
+                // `transferInfo` and the token's address names its contract.
+                guard (info["direction"] as? String) == "OUTGOING",
+                      let recipient = address(info["recipient"]),
+                      let transfer = info["transferInfo"] as? [String: Any]
+                else { continue }  // a row this cannot read is dropped, never landed bare
+                let amount = (transfer["value"] as? String) ?? int(transfer["value"]).map({ String($0) })
+                switch (transfer["type"] as? String) ?? "" {
+                case "NATIVE_COIN":
+                    row["to"] = recipient
+                    if let amount { row["value"] = amount }
+                case "ERC20":
+                    guard let token = address(transfer["tokenAddress"]), let amount else { continue }
+                    row["to"] = token
+                    row["dataDecoded"] = [
+                        "method": "transfer",
+                        "parameters": [["name": "to", "value": recipient] as [String: Any],
+                                       ["name": "value", "value": amount] as [String: Any]],
+                    ] as [String: Any]
+                default:
+                    row["to"] = recipient
+                }
+            case "Custom":
+                if (info["isCancellation"] as? Bool) == true {
+                    // Safe's reject shape: zero, no data, to the Safe itself.
+                    row["to"] = safe
+                    break
+                }
+                if let to = address(info["to"]) { row["to"] = to }
+                if let value = (info["value"] as? String) ?? int(info["value"]).map({ String($0) }) {
+                    row["value"] = value
+                }
+                if let count = int(info["actionCount"]) { row["actionCount"] = count }
+                if let method = info["methodName"] as? String, !method.isEmpty,
+                   int(info["actionCount"]) == nil {
+                    row["dataDecoded"] = ["method": method, "parameters": [[String: Any]]()] as [String: Any]
+                }
+            case "SettingsChange":
+                row["to"] = safe
+                if let decoded = info["dataDecoded"] as? [String: Any] { row["dataDecoded"] = decoded }
+            default:
+                break
+            }
+            out.append(row)
+        }
+        return out
+    }
+
+    /// `0x` and 64 hex digits — a `safeTxHash`, and nothing shorter.
+    static func isHash(_ text: String) -> Bool {
+        let body = text.lowercased().hasPrefix("0x") ? text.dropFirst(2) : Substring(text)
+        return body.count == 64 && body.allSatisfy(\.isHexDigit)
+    }
+
+    // MARK: - POST /v1/chains/{id}/transactions/{safeTxHash}/confirmations
+
+    /// The body of the gateway's `addConfirmation` (prd §1246) — the
+    /// confirmation write's first door, `SafeSigner.post`. One field,
+    /// `signedSafeTxHash`, the 65-byte signature hex; held here so
+    /// `safe-gateway-selftest.sh` pins the shape the signer sends.
+    /// UNMEASURED against the live gateway.
+    static func confirmationBody(signature: String) -> [String: Any] {
+        ["signedSafeTxHash": signature]
     }
 
     // MARK: - GET /v1/chains/{id}/transactions/{id}

@@ -343,14 +343,16 @@ enum SafeSigner {
 
     // MARK: - Reading the proposal
 
-    /// The WRITE's host. One `POST`, to Safe's transaction service, because
-    /// that is where a confirmation has to land — the Client Gateway the
-    /// reads moved to (prd §789b) is a read path.
+    /// The transaction service — the confirmation's SECOND door since prd
+    /// §1246 (the gateway below is tried first; see `post`). It was the only
+    /// door until then, on the belief that the gateway is a read path; the
+    /// gateway's own `addConfirmation` route says otherwise, unmeasured.
     private static func baseURL(_ seg: String) -> String {
         "https://api.safe.global/tx-service/\(seg)/api/v1"
     }
 
-    /// The READ's host — Safe's own Client Gateway, which takes a bare
+    /// The READ's host, and the write's first door (prd §1246) — Safe's own
+    /// Client Gateway, which takes a bare
     /// `safeTxHash` as a transaction id (measured §789b). The proposal read
     /// moved here with the rest for §789's reason: the transaction service
     /// meters keyless callers against one exhausted pool, so leaving this
@@ -557,7 +559,10 @@ enum SafeSigner {
             // reaches Safe and nothing else, and the sign block states an
             // amount in base units unless the descriptor itself names the
             // token — the same rule it keeps for a plain `transfer`.
+            // The OPERATION reads first (prd §1246): a DELEGATECALL outside a
+            // known MultiSend is named for what it is, never summarised.
             reading: SafeCalldata.read(data: tx.data, to: tx.to, value: tx.value, safe: safeAddress,
+                                       operation: tx.operation,
                                        chainId: rail.chainId, style: .casberi()),
             have: confirmations.count, required: required,
             standing: Standing(safeAddress: safeAddress, seg: rail.seg,
@@ -667,12 +672,11 @@ enum SafeSigner {
         }
         let hexSignature = SafeABI.hex(signature)
         guard post else { return .signedNotPosted(signature: hexSignature, status: 0) }
-        let status = await self.post(seg: ready.seg, safeTxHash: ready.safeTxHash,
-                                     signature: hexSignature)
-        // 201 Created is the documented success; 200 is accepted too rather
-        // than treated as a failure, since a signature that really did land
-        // must not be reported as lost.
-        if status == 201 || status == 200 { return .posted }
+        let status = await self.post(ready, signature: hexSignature)
+        // Any 2xx is a signature that landed (201 Created is the transaction
+        // service's documented success; the gateway answers its own) — one
+        // that really did land must not be reported as lost.
+        if (200..<300).contains(status) { return .posted }
         return .signedNotPosted(signature: hexSignature, status: status)
     }
 
@@ -702,24 +706,86 @@ enum SafeSigner {
         SpotlightIndex.index([thing])
     }
 
-    /// **The only write this app makes.** One `POST`, one signature, to Safe's
-    /// own transaction service. The signature is its own authorization — the
-    /// service verifies it against the Safe's owner set before storing it —
-    /// and `SafeServiceGate.authorization` rides along only so this write
-    /// draws on the same quota the reads do (nil while no key ships, which is
-    /// today: prd §789).
+    /// **The only write this app makes** — one signature, offered to Safe at
+    /// two doors in turn, never both successfully (prd §1246).
     ///
-    /// The body shape and the path are read from the service's OWN source
-    /// (`SafeMultisigConfirmationSerializer`: a single `signature` field, hex,
-    /// at least 65 bytes; `multisig-transactions/<hash>/confirmations/`),
-    /// not from docs prose — the spec flagged this as the one thing to
-    /// re-measure before writing it.
-    private static func post(seg: String, safeTxHash: String, signature: String) async -> Int {
+    /// 1. **Safe's Client Gateway**, `POST /v1/chains/{chainId}/transactions/
+    ///    {safeTxHash}/confirmations` with `{"signedSafeTxHash": "0x…"}` —
+    ///    safe-client-gateway's `addConfirmation`, which relays the signature
+    ///    to the transaction service from its own side. The reads moved to
+    ///    this host for §789's reason (the transaction service's keyless pool
+    ///    is one exhausted 5,000-a-month quota shared by every keyless caller),
+    ///    and until now the one write stayed behind in that pool, so a
+    ///    signature this phone made went to the clipboard on most days.
+    ///    **UNMEASURED: no build host has sent one.** The route and the body's
+    ///    field name are read from the gateway's own controller and DTO, not
+    ///    from a response; a 4xx/5xx or no answer at all falls through.
+    /// 2. **The transaction service**, as before: `multisig-transactions/
+    ///    <hash>/confirmations/` with `{"signature": …}`, read from its own
+    ///    `SafeMultisigConfirmationSerializer`. `SafeServiceGate.authorization`
+    ///    rides along so this draws on the same quota the reads did (nil while
+    ///    no key ships — prd §789).
+    ///
+    /// Only a non-2xx from the gateway reaches the second door, so a
+    /// signature is never posted twice; a failure at both is handed back and
+    /// goes to the clipboard (`SafeSignBlock.sign`). Which door took it is
+    /// recorded (`lastDoor`), because "the gateway carries the write" is the
+    /// claim this pass makes and nothing else can show it held.
+    private static func post(_ ready: Ready, signature: String) async -> Int {
+        if let rail = rails.first(where: { $0.chainId == ready.chainId }) {
+            let (_, gateway) = await IngestSupport.postJSONStatus(
+                "\(gatewayURL(rail))/transactions/\(ready.safeTxHash)/confirmations",
+                body: SafeGatewayShape.confirmationBody(signature: signature),
+                service: "Safe")
+            if (200..<300).contains(gateway) {
+                recordDoor(.gateway, status: gateway)
+                return gateway
+            }
+            NSLog("safeSign| gateway confirmation refused status=%d — trying the transaction service", gateway)
+        }
+        let status = await postToService(seg: ready.seg, safeTxHash: ready.safeTxHash, signature: signature)
+        recordDoor((200..<300).contains(status) ? .transactionService : .neither, status: status)
+        return status
+    }
+
+    /// The transaction service's confirmations endpoint — the second door.
+    private static func postToService(seg: String, safeTxHash: String, signature: String) async -> Int {
         let (_, status) = await IngestSupport.postJSONStatus(
             "\(baseURL(seg))/multisig-transactions/\(safeTxHash)/confirmations/",
             auth: SafeServiceGate.authorization,
             body: ["signature": signature],
             service: "Safe")
         return status
+    }
+
+    // MARK: - Which door took the last signature (prd §1246)
+
+    /// Where the last posted signature landed. `neither` means both doors
+    /// refused and the signature went to the clipboard.
+    enum Door: String, Codable, Sendable {
+        case gateway, transactionService, neither
+    }
+
+    struct DoorRecord: Codable, Equatable, Sendable {
+        let door: Door
+        let status: Int
+        let at: Date
+    }
+
+    nonisolated private static let doorKey = "safe.signer.lastDoor.v1"
+
+    /// Persisted through `DefaultsWrite` (prd §721) and logged as
+    /// `safeSign|`, so `-signerProbe` and a device log both say which door a
+    /// real signature went through.
+    private static func recordDoor(_ door: Door, status: Int) {
+        let record = DoorRecord(door: door, status: status, at: .now)
+        NSLog("safeSign| door=%@ status=%d", door.rawValue, status)
+        if let data = try? JSONEncoder().encode(record) { DefaultsWrite.set(data, forKey: doorKey) }
+    }
+
+    /// The last record, or nil before any signature was posted.
+    static func lastDoor() -> DoorRecord? {
+        guard let data = UserDefaults.standard.data(forKey: doorKey) else { return nil }
+        return try? JSONDecoder().decode(DoorRecord.self, from: data)
     }
 }

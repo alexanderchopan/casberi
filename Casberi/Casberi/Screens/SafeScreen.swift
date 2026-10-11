@@ -72,6 +72,10 @@ struct SafeScreen: View {
     @State private var confirmForgetGuard: GuardianLedger.Entry?
 
     private var hasWallets: Bool { !WalletStore.shared.addresses.isEmpty }
+    /// A queue to read: a watched wallet, or this phone's own key, which is an
+    /// owner in its own right since prd §1246 — the co-signer's Safes are read
+    /// with no wallet watched at all.
+    private var canSync: Bool { hasWallets || SafeSigner.hasAnyKey }
     private var walletCount: Int { WalletStore.shared.addresses.count }
     private var safeCount: Int { SafeBridge.detectedCount() }
 
@@ -125,7 +129,7 @@ struct SafeScreen: View {
             // Watching is consent (prd §207): keep the catalog seat honest on
             // appear, and refresh the queue if a wallet's watched.
             store.reconcileWalletSeats()
-            if hasWallets { Task { await sync() } }
+            if canSync { Task { await sync() } }
             signerAddress = SignerKey.address()
             signerPresence = SignerKey.presence()
             readQueue()
@@ -719,7 +723,7 @@ struct SafeScreen: View {
     /// Refresh the queue for the watched wallets. The catalog seat is kept
     /// honest by `store.reconcileWalletSeats()`, not here.
     private func sync() async {
-        guard hasWallets, !syncing else { return }
+        guard canSync, !syncing else { return }
         syncing = true
         defer { syncing = false }
         let result = await SafeBridge.syncNow(context: modelContext)

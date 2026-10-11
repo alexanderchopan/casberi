@@ -223,7 +223,7 @@ enum NetworkReach {
         // so the row names the chains it really talks to.
         Endpoint(service: "Wallet",
                  reach: .whenConnected(bridge: "Wallet"),
-                 purpose: "Reads the public onchain activity, balances, approvals, and DeFi positions of the wallets you follow — across Ethereum, Base, Arbitrum, Optimism, Polygon, HyperEVM, Monad, World Chain and Solana. Each request carries only a public address you chose to follow. Block explorers open in your browser, not from here.",
+                 purpose: "Reads the public onchain activity, balances, approvals, and DeFi positions of the wallets you follow — across Ethereum, Base, Arbitrum, Optimism, Polygon, HyperEVM, Monad, World Chain and Solana. Each request carries only a public address you chose to follow. Before you sign a Safe transaction, the call it would make is simulated here from the Safe's public address, to show what it does to the Safe's balances. Block explorers open in your browser, not from here.",
                  hosts: ["api.g.alchemy.com", "eth-mainnet.g.alchemy.com",
                          "base-mainnet.g.alchemy.com", "arb-mainnet.g.alchemy.com",
                          "opt-mainnet.g.alchemy.com", "matic-mainnet.g.alchemy.com",
@@ -316,13 +316,14 @@ enum NetworkReach {
                  // false the day a second write ships — which is exactly the
                  // sweep this line was found in. What is said now is a fact
                  // about THIS send and holds however many others exist.
-                 purpose: "Reads your Aave, Spark and Morpho lending positions, Hyperliquid perps/spot/staked HYPE, veAERO locks on Aerodrome, and any Safe signatures awaiting you, for the wallets you follow — keyless, public data. Also reads Aave's public rate to compare against a vault you hold. If you make this phone a Safe signer and tap Sign, one 65-byte signature is sent to Safe's own service — a signature, never a transaction: it can never execute anything on its own. A statement your Safe signs (a sign-in, a Snapshot vote) is read back from Safe's service by its hash and the signature is sent the same way; a paired Safe app gets its signature over the WalletConnect relay instead. Before an Enclave key signs, Safe's passkey factory on the chain is asked to verify the exact bytes.",
+                 purpose: "Reads your Aave, Spark and Morpho lending positions, Hyperliquid perps/spot/staked HYPE, veAERO locks on Aerodrome, and any Safe signatures awaiting you, for the wallets you follow — keyless, public data. Also reads Aave's public rate to compare against a vault you hold. If you make this phone a Safe signer and tap Sign, one 65-byte signature is sent to Safe's own service (its gateway first, its transaction service only if the gateway does not take it) — a signature, never a transaction: it can never execute anything on its own. A statement your Safe signs (a sign-in, a Snapshot vote) is read back from Safe's service by its hash and the signature is sent the same way; a paired Safe app gets its signature over the WalletConnect relay instead. Before an Enclave key signs, Safe's passkey factory on the chain is asked to verify the exact bytes.",
                  hosts: ["blue-api.morpho.org", "app.morpho.org", "app.aave.com", "app.spark.fi",
                          // Safe is TWO hosts since 2026-09-17 (prd §789b): the
                          // Client Gateway answers every READ — what your Safes
-                         // are, who signs for them, what is waiting — and the
-                         // transaction service takes the one signature POST.
-                         // Both are Safe's own.
+                         // are, who signs for them, what is waiting — and,
+                         // since prd §1246, is offered the signature POST
+                         // first; the transaction service takes it only when
+                         // the gateway does not. Both are Safe's own.
                          "safe-client.safe.global", "api.safe.global",
                          "api.hyperliquid.xyz"]),
         // Markets (2026-09-29) is the Tokens seat with Stocktwits' watched
@@ -332,13 +333,18 @@ enum NetworkReach {
         // neither is a literal the audit could read without this line.
         Endpoint(service: "Markets",
                  reach: .whenConnected(bridge: "Markets"),
-                 purpose: "Fetches the public price history of a token or stock you follow to draw its chart on \(DS.device), and finds a company's ticker through Stocktwits' public symbol search. When you open a company pack, reads the public price and market cap of the companies and coins behind that category's accounts — Nasdaq's quote for a stock, CoinPaprika's for a coin. Draws a followed stock's logo from Financial Modeling Prep's public image. Carries only the ticker — nothing about you, and never a portfolio.",
+                 purpose: "Fetches the public price history of a token or stock you follow to draw its chart on \(DS.device), and finds a company's ticker through Stocktwits' public symbol search. When you open a company pack, reads the public price and market cap of the companies and coins behind that category's accounts — Nasdaq's quote for a stock, CoinPaprika's for a coin; a coin you follow is priced and charted by CoinPaprika too, and wears CoinPaprika's image of its mark. Draws a followed stock's logo from Financial Modeling Prep's public image. Reads the current gas price on Ethereum and Base from public nodes for the line above your watchlist and the gas alerts you set. Carries only the ticker — nothing about you, and never a portfolio.",
                  hosts: ["api.dexscreener.com", "api.geckoterminal.com",
                          "api.stocktwits.com",
                          "query1.finance.yahoo.com", "query2.finance.yahoo.com",
                          "api.nasdaq.com", "api.coinpaprika.com",
+                         // A followed coin's mark (prd §1247), keyless.
+                         "static.coinpaprika.com",
                          // A watched stock's logo (prd §1081), keyless.
-                         "financialmodelingprep.com"]),
+                         "financialmodelingprep.com",
+                         // Gas (prd §1247): `eth_gasPrice` on the keyless nodes
+                         // the Wallet's send preview reads (`WalletApprovals`).
+                         "rpc.mevblocker.io", "eth.api.onfinality.io", "mainnet.base.org"]),
         // The thumbnail CDN is listed beside the API because a Daily Paper row
         // draws its cover image, and an image loaded into a row is a real
         // reach even though `NetworkLedger` doesn't record it (its own stated

@@ -352,6 +352,11 @@ struct SafeSignBlock: View {
 
     @State private var phase: Phase = .checking
     @State private var signing = false
+    /// What the transaction would do to the Safe's balances (prd §1246) —
+    /// asked in the check's `.task` once the refusals have passed, never in
+    /// a body. nil while asking: nothing is drawn until it answers, the
+    /// no-spinner-theater rule the block itself keeps.
+    @State private var simulation: SafeSimulator.Outcome?
     /// Bumped by "Try again" on an unreachable chain (prd §717). It is the
     /// check's `.task` id, so a retry re-runs the SAME read-from-chain check
     /// and nothing else — it never signs, and every refusal still stands.
@@ -436,7 +441,11 @@ struct SafeSignBlock: View {
             }
             guard SafeSigner.hasAnyKey, let verdict = await prepare() else { return }
             switch verdict {
-            case .success(let ready): phase = .ready(ready)
+            case .success(let ready):
+                phase = .ready(ready)
+                simulation = nil
+                simulation = await SafeSimulator.simulate(chainId: ready.chainId, safe: ready.safeAddress,
+                                                          tx: ready.tx, reading: ready.reading)
             case .failure(let refusal): phase = .refused(refusal)
             }
         }
@@ -444,8 +453,12 @@ struct SafeSignBlock: View {
 
     @ViewBuilder private func readyBody(_ ready: SafeSigner.Ready) -> some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
+            // WHAT IT DOES TO THE BALANCES (prd §1246), above the calls that
+            // say how: the one question a signer asks first, answered by a
+            // simulation of the Safe's own call — or a line saying why not.
+            if let simulation { simulationBlock(simulation) }
             Text(verbatim: reading(ready))
-                .dsText(.body17).foregroundStyle(DS.textPrimary)
+                .dsText(.body17).foregroundStyle(Self.ink(for: ready.reading))
                 .fixedSize(horizontal: false, vertical: true)
             // A LONE CALL IN ITS PROTOCOL'S WORDS (prd §834): every value the
             // descriptor shows, then who wrote the words — they are the
@@ -599,11 +612,13 @@ struct SafeSignBlock: View {
                 .dsText(.label12).foregroundStyle(DS.textTertiary)
                 .frame(minWidth: 16, alignment: .trailing)
             VStack(alignment: .leading, spacing: 2) {
-                if call.isDelegateCall {
+                if call.runsForeignCode {
                     // The sharpest fact this decoder can state. A delegatecall
                     // runs someone else's code in the SAFE's own storage, so
                     // it can rewrite owners and threshold whatever else the
-                    // batch appears to do.
+                    // batch appears to do. Into a known MultiSend it is a
+                    // nested batch, the ordinary shape, and is not this
+                    // warning (prd §1246).
                     Text("Runs code as the Safe itself — it can change the owners.")
                         .dsText(.subhead12).foregroundStyle(DS.destructiveInk)
                         .fixedSize(horizontal: false, vertical: true)
@@ -611,7 +626,7 @@ struct SafeSignBlock: View {
                 Text(verbatim: sentence(for: call.reading, to: call.to,
                                         value: call.value, hash: ready.safeTxHash))
                     .dsText(.subhead12)
-                    .foregroundStyle(call.reading.isFullyReadable ? DS.textSecondary : DS.attentionInk)
+                    .foregroundStyle(Self.rowInk(for: call.reading))
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
@@ -645,8 +660,18 @@ struct SafeSignBlock: View {
             return String(localized: "Changes how many signatures this Safe needs to \(threshold).")
         case .enableModule(let module):
             return String(localized: "Lets \(WalletStore.shortAddress(module)) move funds without any signature at all.")
+        case .disableModule(let module):
+            return String(localized: "Stops \(WalletStore.shortAddress(module)) from moving funds without a signature.")
         case .setGuard(let guardAddress):
             return String(localized: "Puts \(WalletStore.shortAddress(guardAddress)) in front of every transaction.")
+        case .setFallbackHandler(let handler):
+            return String(localized: "Makes \(WalletStore.shortAddress(handler)) answer every call this Safe doesn't — signature checks included.")
+        case .changeMasterCopy(let code):
+            return String(localized: "Replaces this Safe's own code with \(WalletStore.shortAddress(code))'s — after this, the Safe does what that code says.")
+        case .delegateCall(let target):
+            // The top-level twin of the batch row's warning (prd §1246),
+            // with the target named, because it is the whole reading.
+            return String(localized: "Runs another contract's code as the Safe (\(WalletStore.shortAddress(target))) — it can change the owners.")
         case .batch(let calls):
             // Reached only for a batch NESTED inside a batch — the outer one
             // is answered by `reading(_:)` above, which draws the list. A
@@ -670,6 +695,105 @@ struct SafeSignBlock: View {
             return described.headline.hasSuffix(".") ? described.headline : described.headline + "."
         case .undecoded(let selector):
             return String(localized: "Casberi can't read what this does. It calls \(selector) on \(WalletStore.shortAddress(to)). Hash \(hash).")
+        }
+    }
+
+    /// The ink a reading is drawn in (prd §1246): a top-level DELEGATECALL in
+    /// the destructive ink, any other change to who controls the Safe in the
+    /// attention ink, an unreadable call in the attention ink, the rest
+    /// plain. A batch's headline stays plain — its rows carry their own.
+    static func ink(for reading: SafeCalldata) -> Color {
+        switch reading {
+        case .delegateCall: return DS.destructiveInk
+        case .batch: return DS.textPrimary
+        default:
+            return reading.changesControl || !reading.isFullyReadable ? DS.attentionInk : DS.textPrimary
+        }
+    }
+
+    /// The same rule for a call inside a batch, whose plain ink is the
+    /// secondary one: anything unread or control-changing in the attention
+    /// ink, a delegatecall reading in the destructive one.
+    static func rowInk(for reading: SafeCalldata) -> Color {
+        if case .delegateCall = reading { return DS.destructiveInk }
+        return reading.isFullyReadable && !reading.changesControl ? DS.textSecondary : DS.attentionInk
+    }
+
+    // MARK: - The simulation (prd §1246)
+
+    /// The balance changes, or the reverted call, or why it was not
+    /// simulated. ONE footnote under a simulated answer; none under a line
+    /// that says it was not simulated, which has nothing to qualify.
+    @ViewBuilder private func simulationBlock(_ outcome: SafeSimulator.Outcome) -> some View {
+        VStack(alignment: .leading, spacing: DS.Space.s1) {
+            switch outcome {
+            case .simulated(.changes(let lines)):
+                if lines.isEmpty {
+                    Text(verbatim: String(localized: "No balance of this Safe changes."))
+                        .dsText(.subhead12).foregroundStyle(DS.textSecondary)
+                } else {
+                    ForEach(Array(lines.enumerated()), id: \.offset) { _, line in
+                        Text(verbatim: Self.changeText(line))
+                            .dsText(.body17).monospacedDigit()
+                            .foregroundStyle(Self.changeInk(line))
+                            .lineLimit(1)
+                    }
+                }
+            case .simulated(.reverted(let reason)):
+                Text(verbatim: reason.map { String(localized: "The simulation reverted: \($0)") }
+                     ?? String(localized: "The simulation reverted."))
+                    .dsText(.subhead12).foregroundStyle(DS.attentionInk)
+                    .fixedSize(horizontal: false, vertical: true)
+            case .notSimulated(let why):
+                Text(verbatim: Self.notSimulatedLine(why))
+                    .dsText(.subhead12).foregroundStyle(DS.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            if case .simulated = outcome {
+                DSFootnote("Simulated as the Safe's call, before signatures and gas.")
+            }
+        }
+    }
+
+    /// "−12,000 USDC · …abcd" / "+3.1 ETH" — the app's one amount formatter,
+    /// through the §374 gate (`WalletValue.token`, so Hide balances masks the
+    /// figure and keeps the asset). A token line names its contract, because
+    /// a symbol is whatever a token calls itself and "+12,000 USDC" from a
+    /// look-alike is the one line on this screen a scam would write. A change
+    /// that rounds to nothing carries no sign (§83).
+    static func changeText(_ line: SafeSimulation.Line) -> String {
+        let sign = roundsAway(line.amount) ? "" : (line.amount < 0 ? "−" : "+")
+        let base = sign + WalletValue.token(abs(line.amount), line.symbol)
+        guard let contract = line.contract else { return base }
+        return base + " · " + WalletStore.shortAddress(contract)
+    }
+
+    /// Out in the destructive ink, in in the confirm ink, a rounded-away
+    /// change in neither.
+    static func changeInk(_ line: SafeSimulation.Line) -> Color {
+        if roundsAway(line.amount) { return DS.textSecondary }
+        return line.amount < 0 ? DS.destructiveInk : DS.confirmInk
+    }
+
+    /// Below what `WalletIngest.format` can print (four decimals under one),
+    /// a change reads "0.0000" — and a sign on that would claim a direction
+    /// the figure cannot show.
+    private static func roundsAway(_ amount: Double) -> Bool {
+        abs(amount) < 0.00005
+    }
+
+    static func notSimulatedLine(_ why: SafeSimulation.Skip) -> String {
+        switch why {
+        case .chainNotServed:
+            return String(localized: "Not simulated — Casberi can't simulate on this chain.")
+        case .delegateCall:
+            return String(localized: "Not simulated — it runs another contract's code as the Safe, which a simulation of the call can't reproduce.")
+        case .tooManyCalls(let count):
+            return String(localized: "Not simulated — \(count) calls is more than the simulator takes at once.")
+        case .unreadable:
+            return String(localized: "Not simulated — Casberi couldn't read the call well enough to send it.")
+        case .failed:
+            return String(localized: "Not simulated — the simulator didn't answer.")
         }
     }
 

@@ -2,7 +2,10 @@
 # Casberi Safe Client Gateway self-test — the translation between Safe's two
 # dialects (prd §789b):
 #
-#   Casberi/Casberi/Model/SafeGatewayShape.swift   (compiled whole)
+#   Casberi/Casberi/Model/SafeGatewayShape.swift   (compiled whole; since prd
+#                                                  §1246 also the executed
+#                                                  history and the gateway
+#                                                  confirmation body)
 #   Casberi/Casberi/Model/SafeBridge.swift
 #   Casberi/Casberi/Model/SafeSigner.swift
 #   Casberi/Casberi/Model/NetworkReach.swift
@@ -76,6 +79,16 @@ grep -qF "$GATEWAY_HOST" "$S" \
   || { echo "✗ SafeSigner no longer reads the proposal from $GATEWAY_HOST — signing would still be gated on the empty pool"; exit 1; }
 grep -qF "$TXSERVICE_HOST" "$S" \
   || { echo "✗ SafeSigner no longer names $TXSERVICE_HOST — the one confirmation POST has to land on the transaction service"; exit 1; }
+
+# …and since prd §1246 the confirmation is offered to the gateway FIRST, in the
+# body this harness pins below; the transaction service is the second door.
+grep -qF 'SafeGatewayShape.confirmationBody(signature: signature)' "$S" \
+  || { echo "✗ SafeSigner no longer sends the gateway confirmation body this harness pins (prd §1246)"; exit 1; }
+grep -qF '/transactions/\(ready.safeTxHash)/confirmations"' "$S" \
+  || { echo "✗ SafeSigner no longer offers the confirmation to the gateway's addConfirmation (prd §1246)"; exit 1; }
+# The history read is the bridge's, on the gateway, first page only.
+grep -qF '/transactions/history")' "$B" \
+  || { echo "✗ SafeBridge no longer reads the gateway's executed history (prd §1246)"; exit 1; }
 
 # The gateway is a host this app reaches, so the privacy screen has to say so.
 grep -qF "$GATEWAY_HOST" "$REACH" \
@@ -225,6 +238,105 @@ check(SafeGatewayShape.address("") == nil, "an empty string is no address")
 check(SafeGatewayShape.address(NSNull()) == nil, "a null is no address")
 check(SafeGatewayShape.int("7") == 7 && SafeGatewayShape.int(7) == 7, "an Int from either dialect")
 
+// ─── prd §1246: the fallback handler and the Safe's own code ───
+// AUTHORED from the gateway's `SafeState` (`fallbackHandler`, `implementation`,
+// both {value,…}), not captured — the measured body above predates the read.
+let extras = SafeGatewayShape.detail(json("""
+{"nonce":3,"threshold":2,
+ "owners":[{"value":"0xAA"},{"value":"0xBB"}],"modules":[],"guard":null,
+ "fallbackHandler":{"value":"0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99","name":"CompatibilityFallbackHandler"},
+ "implementation":{"value":"0x41675C099F32341bf84BFc5382aF534df5C7461a","name":"Safe 1.4.1"}}
+"""))
+check(extras?.fallbackHandler == "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+      "the fallback handler is unwrapped and lowercased, as every config address is")
+check(extras?.implementation == "0x41675c099f32341bf84bfc5382af534df5c7461a",
+      "the Safe's own code (its singleton) is read too")
+check(SafeGatewayShape.detail(json("""
+{"owners":["0xAA"],"fallbackHandler":{"value":"0x0000000000000000000000000000000000000000"}}
+"""))?.fallbackHandler == nil, "TRAP 2 again: a zero fallback handler is no handler")
+check(d?.fallbackHandler == nil && d?.implementation == nil,
+      "a body without the fields reads them as absent, never as something")
+
+// ─── prd §1246: GET …/safes/{addr}/transactions/history ───
+// AUTHORED from safe-client-gateway's list shapes (TransactionItem, DateLabel,
+// MultisigExecutionInfo, Transfer/Custom/SettingsChange infos) — UNMEASURED.
+let H = "0x1111111111111111111111111111111111111111111111111111111111111111"
+let H2 = "0x2222222222222222222222222222222222222222222222222222222222222222"
+let H3 = "0x3333333333333333333333333333333333333333333333333333333333333333"
+let H4 = "0x4444444444444444444444444444444444444444444444444444444444444444"
+let H5 = "0x5555555555555555555555555555555555555555555555555555555555555555"
+let H6 = "0x6666666666666666666666666666666666666666666666666666666666666666"
+let SAFE = "0x03916D54Cd6287325B6cF6A9A02a12F79676266C"
+let historyBody = json("""
+{"count":7,"next":"https://safe-client.safe.global/v1/chains/1/safes/x/transactions/history?cursor=limit%3D20","previous":null,
+ "results":[
+  {"type":"DATE_LABEL","timestamp":1778185200000},
+  {"type":"TRANSACTION","conflictType":"None","transaction":{"id":"multisig_\(SAFE)_\(H)","timestamp":1778199999000,
+    "txStatus":"SUCCESS","executionInfo":{"type":"MULTISIG","nonce":7,"confirmationsRequired":2,"confirmationsSubmitted":2},
+    "txInfo":{"type":"Transfer","direction":"OUTGOING","sender":{"value":"\(SAFE)"},
+      "recipient":{"value":"0xabcdefabcdefabcdefabcdefabcdefabcdefabcd"},
+      "transferInfo":{"type":"ERC20","tokenAddress":"0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "tokenSymbol":"USDC","decimals":6,"value":"1500000000"}}}},
+  {"type":"TRANSACTION","transaction":{"id":"multisig_\(SAFE)_\(H2)","timestamp":1778199000000,
+    "txStatus":"SUCCESS","executionInfo":{"type":"MULTISIG","nonce":6},
+    "txInfo":{"type":"Transfer","direction":"OUTGOING","recipient":{"value":"0xabcdefabcdefabcdefabcdefabcdefabcdefabcd"},
+      "transferInfo":{"type":"NATIVE_COIN","value":"1000000000000000000"}}}},
+  {"type":"TRANSACTION","transaction":{"id":"multisig_\(SAFE)_\(H3)",
+    "txStatus":"SUCCESS","executionInfo":{"type":"MULTISIG","nonce":5},"txInfo":{"type":"Custom"}}},
+  {"type":"TRANSACTION","transaction":{"id":"multisig_\(SAFE)_\(H4)","timestamp":1778190000000,
+    "txStatus":"FAILED","executionInfo":{"type":"MULTISIG","nonce":4},"txInfo":{"type":"Custom"}}},
+  {"type":"TRANSACTION","transaction":{"id":"transfer_\(SAFE)_e1015fc6905859c69","timestamp":1778180000000,
+    "txStatus":"SUCCESS","txInfo":{"type":"Transfer","direction":"INCOMING"}}},
+  {"type":"TRANSACTION","transaction":{"id":"multisig_\(SAFE)_\(H5)","timestamp":1778170000000,
+    "txStatus":"SUCCESS","executionInfo":{"type":"MULTISIG","nonce":3},
+    "txInfo":{"type":"Custom","to":{"value":"0x40A2aCCbd92BCA938b02010E17A5b8929b49130D"},"value":"0",
+      "methodName":"multiSend","actionCount":3,"isCancellation":false}}},
+  {"type":"TRANSACTION","transaction":{"id":"multisig_\(SAFE)_\(H6)","timestamp":1778160000000,
+    "txStatus":"SUCCESS","executionInfo":{"type":"MULTISIG","nonce":2},
+    "txInfo":{"type":"SettingsChange","dataDecoded":{"method":"setFallbackHandler",
+      "parameters":[{"name":"handler","type":"address","value":"0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99"}]}}}}
+ ]}
+""")
+let history = SafeGatewayShape.history(historyBody) ?? []
+check(history.map { $0["safeTxHash"] as? String ?? "" } == [H, H2, H5, H6],
+      "only EXECUTED MULTISIG rows land: the date label, the undated row, the failed one and the incoming transfer do not")
+check(!history.contains { ($0["safeTxHash"] as? String) == H3 },
+      "§790: a row the parse cannot date is DROPPED, never dated now")
+check(history.first?["executionDate"] as? String == "2026-05-08T00:26:39Z",
+      "the execution time becomes the ISO 8601 date the closing row is filed under")
+check(history.first?["isExecuted"] as? Bool == true && history.first?["nonce"] as? Int == 7,
+      "an executed row says so, with its nonce")
+check(history.first?["safe"] as? String == SAFE, "the Safe comes off the id")
+check(history.first?["to"] as? String == "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+      "an ERC-20 transfer is addressed to its TOKEN, as the service's row is")
+let decodedTransfer = history.first?["dataDecoded"] as? [String: Any]
+let transferParams = decodedTransfer?["parameters"] as? [[String: Any]]
+check(decodedTransfer?["method"] as? String == "transfer"
+        && transferParams?.first?["value"] as? String == "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd"
+        && transferParams?.last?["value"] as? String == "1500000000",
+      "…with the recipient and the raw amount where describe() reads a transfer")
+check(history[1]["to"] as? String == "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd"
+        && history[1]["value"] as? String == "1000000000000000000",
+      "a native send carries its recipient and its wei")
+check(history[2]["actionCount"] as? Int == 3 && history[2]["dataDecoded"] == nil,
+      "a batch carries the gateway's count, and no invented decoded calls")
+check((history[3]["dataDecoded"] as? [String: Any])?["method"] as? String == "setFallbackHandler"
+        && history[3]["to"] as? String == SAFE,
+      "a settings change carries its decoded call, addressed to the Safe")
+check(SafeGatewayShape.history(historyBody, cap: 2)?.count == 2, "the cap holds")
+check(SafeGatewayShape.history(json(#"{"results":[]}"#))?.isEmpty == true,
+      "an empty history is an empty list, not nil")
+check(SafeGatewayShape.history(nil) == nil, "a refused history read is nil, never an empty history")
+check(SafeGatewayShape.history(json(#"{"count":0}"#)) == nil, "a body with no results is unreadable")
+check(SafeGatewayShape.isHash(H) && !SafeGatewayShape.isHash("0x1234") && !SafeGatewayShape.isHash("multisig"),
+      "a safeTxHash is 0x and 64 hex digits, nothing shorter")
+
+// ─── prd §1246: POST …/transactions/{safeTxHash}/confirmations ───
+// The gateway's `addConfirmation` body, which `SafeSigner.post` sends first.
+let body = SafeGatewayShape.confirmationBody(signature: "0xabcd")
+check(body.count == 1 && body["signedSafeTxHash"] as? String == "0xabcd",
+      "the gateway confirmation is ONE field, signedSafeTxHash — not the service's `signature`")
+
 if failed > 0 { print("\n✗ \(failed) gateway-shape check(s) failed"); exit(1) }
 SWIFT
 
@@ -287,6 +399,16 @@ if [[ "${1:-}" == "--self-test" ]]; then
   # An unreadable body folded into an empty answer (prd §83 / §789).
   mutate_shape 's/guard !owners\.isEmpty else \{ return nil \}//' \
                "a body with no owners returned as a Safe with nobody on it"
+
+  # prd §1246 — an undated history row dated by this pass instead of dropped.
+  mutate_shape 's/let executed = iso8601\(millis: tx\["timestamp"\]\)/let executed = iso8601(millis: tx["timestamp"]) ?? Optional("2026-01-01T00:00:00Z")/' \
+               "an undated history row dated now instead of dropped"
+  # …a failed execution landed as if it went through.
+  mutate_shape 's/\(tx\["txStatus"\] as\? String\) == "SUCCESS",/(tx["txStatus"] as? String) != nil,/' \
+               "a FAILED execution counted as one that went through"
+  # …and the gateway confirmation body spelled the service's way.
+  mutate_shape 's/\["signedSafeTxHash": signature\]/["signature": signature]/' \
+               "the gateway confirmation sent under the service's field name"
 
   [[ $st_fail -eq 0 ]] || { echo "✗ a mutation went uncaught — this check certifies nothing"; exit 1; }
   echo "  ✓ every mutation caught"

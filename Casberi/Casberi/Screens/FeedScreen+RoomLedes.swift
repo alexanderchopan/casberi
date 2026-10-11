@@ -62,6 +62,10 @@ extension FeedScreen {
         // (standsAlone), so merging only ever joins the still-unpulsed rows.
         let positions = cardRunPositions(count: ordered.count,
                                          isBreaker: { standsAlone(ordered[$0]) })
+        // Drag to reorder (prd §1247): only in My order, only once Reorder was
+        // asked for from a row's long press; the list's own handles move the
+        // rows and the order saves through `TokenWatchOrder`, as Move to top's.
+        let reorderable = marketsReordering && TokenWatchOrder.shared.mode == .manual
         Section {
             ForEach(Array(keyed(ordered).enumerated()), id: \.element.id) { i, item in
                 // Corollary 3 (build 176) — see `ThingRowKeying`.
@@ -70,7 +74,42 @@ extension FeedScreen {
                                   position: positions[i])
                 }
             }
+            .onMove(perform: watchMove(ordered, enabled: reorderable))
         }
+        if marketsReordering {
+            Section {
+                DSDoorRow(icon: "checkmark", title: Text("Done")) {
+                    withAnimation(DS.Motion.standard) { marketsReordering = false }
+                    DSHaptic.tap()
+                }
+                .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.rowInset,
+                                          bottom: 0, trailing: DSRoomChassis.rowInset))
+                .feedRowBackground()
+                .listRowSeparator(.hidden)
+            }
+        }
+    }
+
+    /// The drop: the rows in their new order become My order. The refs are
+    /// read now, while the rows are drawn; a drop must not touch a model a
+    /// sync could have deleted in between (`ThingRowKeying`'s corollaries).
+    private func watchMove(_ ordered: [Thing], enabled: Bool) -> ((IndexSet, Int) -> Void)? {
+        guard enabled else { return nil }
+        let refs = ordered.map { $0.isLive ? $0.sourceRef : nil }
+        return { from, to in
+            var moved = refs
+            moved.move(fromOffsets: from, toOffset: to)
+            TokenWatchOrder.shared.saveManual(moved.compactMap(\.self))
+            DSHaptic.selection()
+        }
+    }
+
+    /// Reorder, from a row's long press (prd §1247): the list takes its drag
+    /// handles. Offered only while the list is in My order.
+    func startReorder() {
+        guard TokenWatchOrder.shared.mode == .manual else { return }
+        withAnimation(DS.Motion.standard) { marketsReordering = true }
+        DSHaptic.tap()
     }
 
     /// A shape's one glanceable block, in the room's lead box (prd §906).

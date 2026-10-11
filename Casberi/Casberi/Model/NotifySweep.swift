@@ -266,7 +266,11 @@ enum NotifySweep {
         //   change alone doesn't notify (tag absent) — real, but not the
         //   fund-draining-outside-the-threshold shape this file reserves the
         //   right-hand slot for.
-        if ref.hasPrefix("wallet:safeconfig:"), thing.tags.contains("Module added") {
+        //   A new fallback handler or new code (prd §1246, "Control changed")
+        //   is the same news one step over: something new can act as the Safe
+        //   without its owners' signatures.
+        if ref.hasPrefix("wallet:safeconfig:"),
+           thing.tags.contains("Module added") || thing.tags.contains("Control changed") {
             return .approvalGranted
         }
         // — DeFi liquidation proximity (2026-08-09): Aave and Morpho share the

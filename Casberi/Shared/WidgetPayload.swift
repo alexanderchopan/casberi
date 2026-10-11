@@ -453,8 +453,8 @@ struct WidgetWatchlist: Codable, Equatable {
         let at: Date?
         /// The day's closes behind the price, oldest first, at most
         /// `WidgetWatch.sparkPoints` (`TokenPulse`'s, the Markets row's
-        /// sparkline). Nil for a stock, which Markets draws no line for either.
-        /// Read at `at`, so it ages out with the price.
+        /// sparkline; a stock's day line since prd §1247). Read with the
+        /// price, so it ages out with it.
         var closes: [Double]? = nil
     }
 }
@@ -473,6 +473,13 @@ enum WidgetWatch {
     static let stampAfter: TimeInterval = 3600
     /// The small tile's rows, at most: it draws as many of them as fit.
     static let rowCap = 4
+    /// The medium tile's one-line rows, at most (prd §1247).
+    static let mediumCap = 6
+    /// The Lock Screen's rows, at most (prd §1247).
+    static let accessoryCap = 2
+    /// The rows published (prd §1247): enough for a tile to be set to show
+    /// any row you follow, not only the first four.
+    static let publishCap = 24
     /// A sparkline's points: a 40pt line draws no more than this.
     static let sparkPoints = 24
 
@@ -521,6 +528,21 @@ enum WidgetWatch {
         if price >= 1 { return String(format: "$%.2f", price) }
         if price >= 0.01 { return String(format: "$%.4f", price) }
         return "$" + price.formatted(.number.precision(.significantDigits(1...3)).grouping(.never))
+    }
+
+    /// The rows a tile set to show `picks` (refs, in the order picked)
+    /// draws, prd §1247: the picked rows still published, in that order. No
+    /// pick, or none still followed, is the watchlist in its own order, as the
+    /// tile drew before it could be set.
+    static func pick(_ rows: [WidgetWatchlist.Row], refs picks: [String]) -> [WidgetWatchlist.Row] {
+        guard !picks.isEmpty else { return rows }
+        let byRef = Dictionary(rows.map { ($0.ref, $0) }, uniquingKeysWith: { a, _ in a })
+        var seen = Set<String>()
+        let picked = picks.compactMap { ref -> WidgetWatchlist.Row? in
+            guard seen.insert(ref).inserted else { return nil }
+            return byRef[ref]
+        }
+        return picked.isEmpty ? rows : picked
     }
 
     /// Carries a price forward from the last publish for a row this pass

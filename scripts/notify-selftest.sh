@@ -1082,6 +1082,20 @@ func runFixtures() {
     ok(NotifySweep.classify(row(ref: "logos:lez:6iArKUXxhUJqS7kCaPNhwMWt3ro71PDyBj7jwAyE2VQV:e246"), now: now) == nil,
        "test coins arriving never notify (§522: devnet content is not news)")
 
+    // ── Safe config (prd §1246): a new fallback handler or new code is the
+    //    "Module added" news one step over; an owner change alone stays a row ──
+    ok(NotifySweep.classify(row(ref: "wallet:safeconfig:eth:0xabc:1790000000", source: "Safe",
+                                tags: ["Control changed"]), now: now) == .approvalGranted,
+       "a Safe whose fallback handler or code changed raises approvalGranted")
+    ok(NotifySweep.classify(row(ref: "wallet:safeconfig:eth:0xabc:1790000000", source: "Safe",
+                                tags: ["Module added"]), now: now) == .approvalGranted,
+       "a Safe that enabled a module still raises approvalGranted")
+    ok(NotifySweep.classify(row(ref: "wallet:safeconfig:eth:0xabc:1790000000", source: "Safe"), now: now) == nil,
+       "an untagged Safe config change (owners, threshold, guard) stays a row")
+    ok(NotifySweep.classify(row(ref: "wallet:safe:eth:0xabc", source: "Safe", tags: ["Your turn"]), now: now)
+       == .safeSignatureNeeded,
+       "a pending Safe transaction tagged Your turn raises safeSignatureNeeded")
+
     // ── positionAtRisk: Aave/Morpho share `wallet:defi:`, Hyperliquid its own ──
     ok(NotifySweep.classify(row(ref: "wallet:defi:aave:ethereum:0xabc:1700000000"), now: now) == .positionAtRisk,
        "an Aave risk-crossing row classifies as positionAtRisk")

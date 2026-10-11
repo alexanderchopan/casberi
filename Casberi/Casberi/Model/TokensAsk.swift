@@ -61,10 +61,11 @@ enum TokensAsk {
     static func moves(context: ModelContext) async -> [Move] {
         await TokenPulse.shared.refresh(context: context)
         return watched(context).compactMap { thing -> Move? in
-            guard let pulse = TokenPulse.shared.pulse(for: thing),
-                  let price = pulse.closes.last else { return nil }
+            // The pulse's price, not its last close: a followed coin's pulse
+            // may carry no line (prd §1247) and still has its ticker's price.
+            guard let pulse = TokenPulse.shared.pulse(for: thing), pulse.price > 0 else { return nil }
             return Move(thing: thing, symbol: symbol(of: thing.title),
-                        price: price, change: pulse.change24h)
+                        price: pulse.price, change: pulse.change24h)
         }
         .sorted { abs($0.change) > abs($1.change) }
     }

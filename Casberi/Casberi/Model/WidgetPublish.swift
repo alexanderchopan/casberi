@@ -168,12 +168,17 @@ enum WidgetPublish {
                     ?? TokensAsk.symbol(of: thing.title),
                 name: TokensAsk.name(of: thing.title),
                 price: reading?.price, change: reading?.change, at: reading?.at,
-                // A token's reading IS its pulse, so the closes are the same read.
-                closes: TokenPulse.shared.pulse(for: thing).flatMap { WidgetWatch.sparkCloses($0.closes) })
+                // A token's reading IS its pulse, so the closes are the same
+                // read; a stock's are its day line (prd §1247), read with its quote.
+                closes: (TokenPulse.shared.pulse(for: thing)?.closes ?? TokenPulse.shared.stockLine(for: thing))
+                    .flatMap { WidgetWatch.sparkCloses($0) })
         }
         let previous = WidgetWatch.published(defaults: group)
+        // Every row up to `publishCap`, not the small tile's four: a tile can
+        // be set to show any row you follow (prd §1247), and each tile takes
+        // its own few.
         let list = WidgetWatchlist(rows: WidgetWatch.carryForward(
-            Array(rows.prefix(WidgetWatch.rowCap)), from: previous))
+            Array(rows.prefix(WidgetWatch.publishCap)), from: previous))
         if WidgetPayload.write(list, key: WidgetWatch.key,
                                stampKey: WidgetWatch.stampKey, defaults: group) {
             WidgetCenter.shared.reloadTimelines(ofKind: WidgetWatch.kind)

@@ -421,7 +421,25 @@ enum SafeCalldata: Equatable {
     case swapOwner(old: String, new: String)
     case changeThreshold(threshold: String)
     case enableModule(module: String)
+    /// `disableModule(prevModule, module)` — the module being switched off
+    /// is the SECOND argument; the first is the linked-list cursor, the same
+    /// shape as `removeOwner` (prd §1246).
+    case disableModule(module: String)
     case setGuard(guardAddress: String)
+    /// `setFallbackHandler(handler)` — the contract that answers every call
+    /// the Safe itself does not, EIP-1271 signature checks included, so it can
+    /// approve a signature on the Safe's behalf (prd §1246).
+    case setFallbackHandler(handler: String)
+    /// `changeMasterCopy(masterCopy)` — the Safe's own code replaced. After
+    /// it executes, the "Safe" is whatever that contract says it is (prd §1246).
+    case changeMasterCopy(masterCopy: String)
+    /// A TOP-LEVEL `DELEGATECALL` to anything but a known MultiSend
+    /// deployment (prd §1246). The target's code runs in the Safe's own
+    /// storage, so it can rewrite the owners, the threshold and the modules
+    /// whatever its calldata appears to say — which is why the calldata is
+    /// NOT read here: a sentence about what the bytes say would describe a
+    /// call that is not the one being made.
+    case delegateCall(target: String)
     /// A batch — `multiSend`'s packed payload, WALKED (2026-09-07).
     ///
     /// **This case carried no calls until 2026-09-07, and that made the sign
@@ -473,9 +491,50 @@ enum SafeCalldata: Equatable {
         let to: String
         let value: String
         let reading: SafeCalldata
+        /// The entry's own calldata, hex — kept so a batch can be simulated
+        /// call by call from the Safe (prd §1246). Defaulted so every older
+        /// construction still compiles.
+        var data: String = ""
 
         /// An inner `DELEGATECALL`. Stated wherever this call is drawn.
         var isDelegateCall: Bool { operation == 1 }
+
+        /// An inner `DELEGATECALL` into a known MultiSend is a nested batch —
+        /// the same ordinary shape as the outer one — and is not the warning.
+        var runsForeignCode: Bool { isDelegateCall && !SafeCalldata.isKnownMultiSend(to) }
+    }
+
+    // MARK: - The MultiSend deployments (prd §1246)
+
+    /// Safe's own MultiSend and MultiSendCallOnly singletons, from
+    /// `safe-global/safe-deployments` (`src/assets/v1.3.0/multi_send.json`,
+    /// `multi_send_call_only.json`, and the same two under `v1.4.1/`): the
+    /// v1.3.0 `canonical` and `eip155` addresses and the one v1.4.1 address
+    /// (it has no eip155 variant). Recalled, not fetched — no build host here
+    /// reaches GitHub — and checked two ways: each recalled MIXED-CASE spelling
+    /// is a valid EIP-55 checksum of itself (`safetx-selftest.sh` pins all six,
+    /// so a misremembered digit would almost surely break its checksum), and
+    /// one MEASURED gateway response agrees: the real `multiSend` fixture in
+    /// `safe-gateway-selftest.sh` delegatecalls `0x9641…02e2`, the v1.4.1
+    /// MultiSendCallOnly below.
+    ///
+    /// **A missing entry fails toward the warning**: a delegatecall to a
+    /// MultiSend this list does not name reads as "runs another contract's
+    /// code as the Safe", which is literally true. v1.1.1 and the zkSync
+    /// deployments are deliberately absent — no chain this app reads uses them.
+    static let multiSendDeployments: Set<String> = [
+        "0xa238cbeb142c10ef7ad8442c6d1f9e89e07e7761",   // MultiSend 1.3.0, canonical
+        "0x998739bfdaadde7c933b942a68053933098f9eda",   // MultiSend 1.3.0, eip155
+        "0x40a2accbd92bca938b02010e17a5b8929b49130d",   // MultiSendCallOnly 1.3.0, canonical
+        "0xa1dabef33b3b82c7814b6d82a79e50f4ac44102b",   // MultiSendCallOnly 1.3.0, eip155
+        "0x38869bf66a61cf6bdb996a6ae40d5853fd43b526",   // MultiSend 1.4.1
+        "0x9641d764fc13c8b624c04430c7356c1c7c8102e2",   // MultiSendCallOnly 1.4.1
+    ]
+
+    /// Whether `address` is one of Safe's own MultiSend singletons. Case-
+    /// insensitive; anything that is not one is not.
+    static func isKnownMultiSend(_ address: String) -> Bool {
+        multiSendDeployments.contains(address.lowercased())
     }
 
     /// The four-byte selectors, DERIVED from their signatures at first use
@@ -495,9 +554,38 @@ enum SafeCalldata: Equatable {
     /// cannot name (prd §834); without one — or with no descriptor — such a
     /// call stays `.undecoded`. `style` is how that description names
     /// addresses and tokens.
+    ///
+    /// `operation` is the transaction's own (prd §1246), and it decides before
+    /// the bytes do. Until then this reader never saw it, so a `multiSend` was
+    /// walked as the Safe's batch whatever contract it went to and however it
+    /// was called — and a top-level DELEGATECALL into any other contract was
+    /// summarised as whatever its calldata claimed. Now:
+    ///
+    ///   * a DELEGATECALL into a known MultiSend carrying `multiSend(bytes)`
+    ///     is the batch it has always been;
+    ///   * a DELEGATECALL anywhere else is `.delegateCall`, and its bytes are
+    ///     not summarised;
+    ///   * a CALL carrying `multiSend(bytes)` is NOT a batch — the inner calls
+    ///     would be sent by that contract, not by the Safe — so it falls to the
+    ///     clear-signing registry or `.undecoded` like any other selector.
+    ///
+    /// Defaulted to 0, so a caller that forgets it can only lose the batch
+    /// reading (a refusal), never gain one it did not earn.
     static func read(data: String, to: String, value: String, safe: String,
+                     operation: Int = 0,
                      chainId: Int? = nil, style: ClearSign.Style = .canonical) -> SafeCalldata {
         let bytes = SafeABI.hexBytes(data) ?? []
+        if operation == 1 {
+            if isKnownMultiSend(to), bytes.count >= 4,
+               SafeABI.hex(Array(bytes.prefix(4))) == selector("multiSend(bytes)") {
+                // `[]` when the payload does not walk — see `batchCalls`. It
+                // renders as the sentence this case shipped with, so a payload
+                // this decoder cannot follow fails toward the old behaviour.
+                return .batch(batchCalls(args: Array(bytes.dropFirst(4)), safe: safe,
+                                         chainId: chainId, style: style))
+            }
+            return .delegateCall(target: EIP55.checksum(to))
+        }
         let isZeroValue = (SafeABI.word(uint256: value) ?? [1]).allSatisfy { $0 == 0 }
         if bytes.isEmpty {
             if isZeroValue, to.lowercased() == safe.lowercased() { return .rejection }
@@ -542,13 +630,16 @@ enum SafeCalldata: Equatable {
             if let n = number(0) { return .changeThreshold(threshold: n) }
         case selector("enableModule(address)"):
             if let a = address(0) { return .enableModule(module: a) }
+        case selector("disableModule(address,address)"):
+            // (prevModule, module) — `removeOwner`'s linked-list shape: the
+            // first argument is a cursor, the module going is the second.
+            if let a = address(1) { return .disableModule(module: a) }
         case selector("setGuard(address)"):
             if let a = address(0) { return .setGuard(guardAddress: a) }
-        case selector("multiSend(bytes)"):
-            // `[]` when the payload does not walk — see `batchCalls`. It
-            // renders as the sentence this case shipped with, so a payload
-            // this decoder cannot follow fails toward the old behaviour.
-            return .batch(batchCalls(args: args, safe: safe, chainId: chainId, style: style))
+        case selector("setFallbackHandler(address)"):
+            if let a = address(0) { return .setFallbackHandler(handler: a) }
+        case selector("changeMasterCopy(address)"):
+            if let a = address(0) { return .changeMasterCopy(masterCopy: a) }
         default:
             // Nothing above names it: ask the call's own protocol. The Safe is
             // the sender of every call it executes, so it is `@.from`.
@@ -641,9 +732,15 @@ enum SafeCalldata: Equatable {
             guard let dataLength = int(Array(payload[(i + 53)..<(i + 85)])), dataLength >= 0,
                   dataLength <= payload.count - i - 85 else { return [] }
             let data = hex(Array(payload[(i + 85)..<(i + 85 + dataLength)]))
+            // An inner DELEGATECALL keeps the reading of what its bytes say and
+            // is flagged on the row instead (`runsForeignCode`), as it always
+            // was. The operation is handed down ONLY into a known MultiSend,
+            // which is what lets a nested batch walk (prd §1246).
             calls.append(BatchCall(operation: operation, to: to, value: value,
                                    reading: read(data: data, to: to, value: value, safe: safe,
-                                                 chainId: chainId, style: style)))
+                                                 operation: isKnownMultiSend(to) ? operation : 0,
+                                                 chainId: chainId, style: style),
+                                   data: data))
             guard calls.count <= maxBatchCalls else { return [] }
             i += 85 + dataLength
         }
@@ -698,12 +795,13 @@ enum SafeCalldata: Equatable {
     /// every call inside it) would name an amount in — so the caller can read
     /// their decimals from the chain first and describe once (prd §834).
     static func tokensAsked(data: String, to: String, value: String, safe: String,
-                            chainId: Int) -> Set<String> {
+                            operation: Int = 0, chainId: Int) -> Set<String> {
         final class Box { var asked = Set<String>() }
         let box = Box()
         var style = ClearSign.Style.canonical
         style.token = { box.asked.insert($0.lowercased()); return nil }
-        _ = read(data: data, to: to, value: value, safe: safe, chainId: chainId, style: style)
+        _ = read(data: data, to: to, value: value, safe: safe, operation: operation,
+                 chainId: chainId, style: style)
         return box.asked
     }
 
@@ -735,7 +833,28 @@ enum SafeCalldata: Equatable {
         case .undecoded: return false
         case .batch(let calls):
             return !calls.isEmpty && calls.allSatisfy { $0.reading.isFullyReadable }
+        // Named, never read: what the target's code does is not in these
+        // bytes, so the reading cannot be the whole story (prd §1246).
+        case .delegateCall: return false
         default: return true
+        }
+    }
+
+    /// Whether this call changes WHO CONTROLS the Safe — its owners, its
+    /// threshold, its modules, its guard, its fallback handler, its own code,
+    /// or (a top-level DELEGATECALL) any of them at once (prd §1246). The
+    /// surface draws these in the attention ink and the delegatecall in the
+    /// destructive one; a batch is asked about each of its calls.
+    var changesControl: Bool {
+        switch self {
+        case .addOwner, .removeOwner, .swapOwner, .changeThreshold,
+             .enableModule, .disableModule, .setGuard, .setFallbackHandler,
+             .changeMasterCopy, .delegateCall:
+            return true
+        case .batch(let calls):
+            return calls.contains { $0.runsForeignCode || $0.reading.changesControl }
+        default:
+            return false
         }
     }
 

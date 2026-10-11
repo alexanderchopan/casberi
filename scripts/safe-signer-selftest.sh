@@ -140,8 +140,12 @@ guard_check() {   # $1 = SafeStatementSigner path, $2 = SafeRecoverySigner path,
   printf '%s' "$st_code" | grep -q 'guard threshold >= 2 else { return .failure(.thresholdTooLow(threshold)) }' || return 1
   printf '%s' "$st_code" | grep -q 'SafeMessageEncoder.getMessageHashCalldata(message: innerHash)' || return 1
   printf '%s' "$st_code" | grep -q 'guard chain.lowercased() == local.lowercased() else {' || return 1
-  # …and both writes go to Safe's service alone.
-  [[ $(printf '%s' "$st_code" | grep -o 'postJSONStatus\|postJSON(' | wc -l | tr -d ' ') -eq 2 ]] || return 1
+  # …and the writes go to Safe alone: a known message's signature to the
+  # gateway first and the service second (prd §1246), a new message to the
+  # service — three call sites, one signature each time.
+  [[ $(printf '%s' "$st_code" | grep -o 'postJSONStatus\|postJSON(' | wc -l | tr -d ' ') -eq 3 ]] || return 1
+  # The service's door is reached only when the gateway's did not take it.
+  printf '%s' "$st_code" | grep -q 'if (200..<300).contains(gateway) {' || return 1
   for host in $(printf '%s' "$st_code" | grep -oE 'https://[a-z0-9.-]+' | sort -u); do
     case "$host" in
       https://safe-client.safe.global|https://api.safe.global|https://app.safe.global) ;;
@@ -681,10 +685,13 @@ guard_mutate "words that do not hash to the ask are signed" statement \
 guard_mutate "a statement is signed for a 1-of-N Safe" statement \
   'guard threshold >= 2 else { return .failure(.thresholdTooLow(threshold)) }' \
   'guard threshold >= 1 else { return .failure(.thresholdTooLow(threshold)) }'
-guard_mutate "the statement signer grows a third write" statement \
+guard_mutate "the statement signer grows a fourth write" statement \
   'private static func post(_ ready: Ready, signature: String) async -> Int {' \
   'private static func post(_ ready: Ready, signature: String) async -> Int {
         _ = await IngestSupport.postJSONStatus("https://api.safe.global/tx-service/eth/api/v1/echo/", body: [:])'
+guard_mutate "the gateway's answer stops deciding whether the service is asked" statement \
+  'if (200..<300).contains(gateway) {' \
+  'if gateway == -1 {'
 guard_mutate "the statement signer reaches a host that is not Safe's" statement \
   '"https://safe-client.safe.global/v1/chains/\(chainId)"' \
   '"https://safe-gateway.example.com/v1/chains/\(chainId)"'

@@ -141,6 +141,13 @@ enum TokenWatch {
     @MainActor
     @discardableResult
     static func add(_ token: Resolved, context: ModelContext) -> Thing? {
+        // A household coin is followed by its own price (prd §1247): the
+        // wrapped token its name was pinned to is plumbing, so every door
+        // that follows one (Add, a token's page, a holding) follows the coin.
+        if let id = CoinFollow.wrappedCoin(chain: token.chain, address: token.address),
+           let coin = CoinFollow.native(id) {
+            return CoinWatch.add(coin, price: token.priceUsd.flatMap(Double.init), context: context)
+        }
         let ref = "tokens:\(token.chain):\(token.address.lowercased())"
         guard !IngestSupport.hasSourceRef(context, source: source, ref: ref) else { return nil }
         let thing = Thing(

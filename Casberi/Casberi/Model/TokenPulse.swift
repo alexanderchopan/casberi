@@ -27,6 +27,12 @@ final class TokenPulse {
 
     /// Keyed by the watchlist thing's sourceRef.
     private(set) var pulses: [String: Pulse] = [:]
+    /// A followed STOCK's day line (prd §1247), by its sourceRef: Yahoo's day
+    /// closes, the same read the stock's page draws, held fifteen minutes as
+    /// a token's pulse is. Its own map, not a `Pulse`: a stock's price and day
+    /// move stay Nasdaq's quote (`CompanyQuotes`), which the index row and
+    /// the alerts read, so a row can never quote two prices for one ticker.
+    private(set) var stockLines: [String: (closes: [Double], fetchedAt: Date)] = [:]
     private var refreshing = false
     /// Failed fetches ride the same 15-minute gate — a token neither
     /// provider can chart must not cost 3 GETs on every foreground forever.
@@ -48,6 +54,23 @@ final class TokenPulse {
         guard thing.source == "Markets" || thing.source == "GeckoTerminal",
               let ref = thing.sourceRef else { return nil }
         return pulses[ref]
+    }
+
+    /// A followed stock's day closes, or nil until they are read.
+    func stockLine(for thing: Thing) -> [Double]? {
+        guard let ref = thing.sourceRef, StockWatch.symbol(of: thing) != nil else { return nil }
+        return stockLines[ref]?.closes
+    }
+
+    /// Reads one stock's day line when the row stands (its `.task`), held
+    /// fifteen minutes. Never in the demo, which reaches nothing (§217).
+    func loadStockLine(ref: String, symbol: String) async {
+        guard !DemoMode.isActive else { return }
+        if let line = stockLines[ref], line.fetchedAt.timeIntervalSinceNow > -900 { return }
+        if let tried = lastTried[ref], tried.timeIntervalSinceNow > -900 { return }
+        lastTried[ref] = .now
+        guard let chart = await StockChart.fetch(ticker: symbol, range: .day) else { return }
+        stockLines[ref] = (closes: chart.closes, fetchedAt: .now)
     }
 
     /// Demo mode (prd §351 follow-up, 2026-08-11, user: "how come on tokens
@@ -145,16 +168,30 @@ final class TokenPulse {
             $0.source == "Markets"
         })
         var stale: [(ref: String, chain: String, address: String)] = []
+        // A followed coin (prd §1247) reads CoinPaprika, by the id its ref
+        // carries; a followed stock its day line. Both ride this gate.
+        var coins: [(ref: String, id: String)] = []
+        var stocks: [(ref: String, symbol: String)] = []
         for thing in (try? context.fetch(descriptor)) ?? [] {
-            guard let ref = thing.sourceRef,
-                  let route = TokenChart.route(from: thing.content) else { continue }
-            if let fresh = pulses[ref], fresh.fetchedAt.timeIntervalSinceNow > -900 { continue }
+            guard let ref = thing.sourceRef else { continue }
             if let tried = lastTried[ref], tried.timeIntervalSinceNow > -900 { continue }
-            stale.append((ref, route.chain, route.address))
+            if let symbol = StockWatch.symbol(of: thing) {
+                if let line = stockLines[ref], line.fetchedAt.timeIntervalSinceNow > -900 { continue }
+                stocks.append((ref, symbol))
+                continue
+            }
+            if let fresh = pulses[ref], fresh.fetchedAt.timeIntervalSinceNow > -900 { continue }
+            if let id = CoinFollow.id(fromRef: ref) {
+                coins.append((ref, id))
+            } else if let route = TokenChart.route(from: thing.content) {
+                stale.append((ref, route.chain, route.address))
+            }
         }
-        guard !stale.isEmpty else { return }
+        guard !stale.isEmpty || !coins.isEmpty || !stocks.isEmpty else { return }
         let stamp = Date.now
         for item in stale { lastTried[item.ref] = stamp }
+        for item in coins { lastTried[item.ref] = stamp }
+        for item in stocks { lastTried[item.ref] = stamp }
 
         // Tokens are independent and TokenChart.fetch can be up to 4 GETs
         // strung together across its tiers — an uncapped fan-out burst on
@@ -165,12 +202,31 @@ final class TokenPulse {
         let fetched = await IngestSupport.boundedGather(stale, maxConcurrent: 4) { item in
             (item.ref, await TokenChart.fetch(chain: item.chain, address: item.address))
         }
+        let fetchedCoins = await IngestSupport.boundedGather(coins, maxConcurrent: 4) { item in
+            (item.ref, await CoinWatch.pulse(id: item.id))
+        }
+        let fetchedStocks = await IngestSupport.boundedGather(stocks, maxConcurrent: 2) { item in
+            (item.ref, await StockChart.fetch(ticker: item.symbol, range: .day))
+        }
         var out: [String: Pulse] = [:]
         for (ref, chart) in fetched {
             guard let chart else { continue }
             out[ref] = Pulse(closes: chart.closes, change24h: chart.change,
                              price: chart.price, marketCap: chart.marketCap,
                              fdv: chart.fdv, fetchedAt: stamp)
+        }
+        // A coin's price, day move and cap are its ticker's; its line is the
+        // day's ticks when they answered, else no line (never a made one). A
+        // ticker without a day move reads no move, not a flat one.
+        for (ref, read) in fetchedCoins {
+            guard let read, let change = read.ticker.change24h else { continue }
+            out[ref] = Pulse(closes: read.closes, change24h: change,
+                             price: read.ticker.price, marketCap: read.ticker.marketCap,
+                             fdv: nil, fetchedAt: stamp)
+        }
+        for (ref, chart) in fetchedStocks {
+            guard let chart else { continue }
+            stockLines[ref] = (closes: chart.closes, fetchedAt: stamp)
         }
         pulses.merge(out) { _, new in new }
         // Home's watchlist tile reads this cache from a plain compose

@@ -348,6 +348,11 @@ enum Notifications {
         content.interruptionLevel = plan.isTimeSensitive ? .timeSensitive
             : (plan.cls == .alarm ? .active : .passive)
         if let link = plan.link { content.userInfo = ["link": link] }
+        // A Safe signature waiting on this person carries one action, "Review
+        // and sign" (prd §1246) — a door to the sign block, never a signature:
+        // the action opens the app on the row's sheet, and the Sign there is
+        // still behind the key's own Face ID.
+        if plan.kind == .safeSignatureNeeded { content.categoryIdentifier = Self.safeSignCategory }
         if let art = await attachment(for: plan, photo: photo) { content.attachments = [art] }
 
         // A nil trigger means "as soon as this is added", which is the whole
@@ -713,17 +718,36 @@ enum Notifications {
     /// The digest's category, so iOS hands its long press to the
     /// NotificationContent extension. No actions: every row in the card is
     /// already a door to its own thing, and a button repeating one would be
-    /// the same door twice (§736).
+    /// the same door twice (§736). The one category WITH an action is the
+    /// Safe signature alert's (prd §1246): "Review and sign" says what the
+    /// tap is for, on the one alert where the person's next act is theirs.
     /// On `daemon` for the reason `removePending` gives: it is called from
     /// `didFinishLaunching`, where a stalled daemon would hold the launch.
     nonisolated static func registerCategories() {
         daemon.async {
             UNUserNotificationCenter.current().setNotificationCategories([
                 UNNotificationCategory(identifier: NotifyCard.category, actions: [],
-                                       intentIdentifiers: [], options: [])
+                                       intentIdentifiers: [], options: []),
+                // prd §1246: FOREGROUND, because the sign block is in the app
+                // and a signature is never made from a notification;
+                // AUTHENTICATION REQUIRED, because the sheet it opens shows a
+                // Safe's pending transaction, which a locked phone should not.
+                // The response is the ordinary tap's: `handleTap` keeps the
+                // row's link and `RootShell` opens it on the next foreground.
+                UNNotificationCategory(identifier: Notifications.safeSignCategory,
+                                       actions: [UNNotificationAction(
+                                           identifier: Notifications.safeSignAction,
+                                           title: String(localized: "Review and sign"),
+                                           options: [.foreground, .authenticationRequired])],
+                                       intentIdentifiers: [], options: []),
             ])
         }
     }
+
+    /// The Safe signature alert's category and its one action (prd §1246).
+    /// `nonisolated` because `registerCategories` runs on the daemon queue.
+    nonisolated static let safeSignCategory = "safe.sign"
+    nonisolated static let safeSignAction = "safe.sign.review"
 
     /// Read-and-clear, for `RootShell`'s foreground pass.
     static func pendingLink() -> URL? {

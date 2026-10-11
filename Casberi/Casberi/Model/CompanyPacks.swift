@@ -297,13 +297,12 @@ final class CompanyQuotes {
                             marketCap: number(cap).flatMap { $0 > 0 ? $0 : nil }, at: .now)
     }
 
+    /// One parse for every CoinPaprika ticker (`CoinFollow.ticker`, prd
+    /// §1247), the followed coin's row and this pack's alike.
     nonisolated private static func coin(_ id: String) async -> CompanyQuote? {
-        guard let root = await IngestSupport.getJSON("https://api.coinpaprika.com/v1/tickers/\(id)") as? [String: Any],
-              let usd = (root["quotes"] as? [String: Any])?["USD"] as? [String: Any],
-              let price = usd["price"] as? Double else { return nil }
-        let cap = usd["market_cap"] as? Double
-        return CompanyQuote(price: price, change: (usd["percent_change_24h"] as? Double).map { $0 / 100 },
-                            marketCap: cap.flatMap { $0 > 0 ? $0 : nil }, at: .now)
+        guard let ticker = await CoinWatch.ticker(id: id) else { return nil }
+        return CompanyQuote(price: ticker.price, change: ticker.change24h,
+                            marketCap: ticker.marketCap, at: .now)
     }
 
     /// "$1,234.50", "-0.34%", "3,779,305,633,099" → a number; "N/A" → nil.

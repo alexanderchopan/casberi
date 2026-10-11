@@ -266,6 +266,10 @@ KNOWN_PROPER: set[str] = {
     "Rabby", "SafePal", "Trezor", "Raycast", "Takeout", "SteamID", "Venmo",
     "BNB", "SegWit", "MyActivity", "AuthKey", "Siri", "Mac", "Safari",
     "Spotlight", "Keychain",
+    # Apple's system surfaces, named as places (prd §1247): "Pin to Lock
+    # Screen" says where a price goes, and "Turn on Live Activities" names the
+    # Settings switch the person has to find, spelled as Settings spells it.
+    "Lock", "Screen", "Live", "Activities",
     # Apple's Messages app, named by the share tray's row ("Send in
     # Messages", docs/social-spec.md section 3). Mail is a catalog seat.
     "Messages",

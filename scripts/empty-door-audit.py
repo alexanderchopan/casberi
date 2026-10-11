@@ -55,6 +55,9 @@ ALLOWED = {
                             "carries the Safe page"),
     "CardPointersBridge.swift": (1, "the MCP offer payload names no URL (measured in its "
                                     "decoder); the merchant is in the title"),
+    "MarketsAlerts.swift": (1, "a gas alert that went off (prd §1247): a chain's gas has no "
+                               "page, and an explorer's gas page as a link would be fetched "
+                               "for its preview, a host the app does not read"),
 }
 
 CALL = re.compile(r"\bThing\(\s*kind\s*:")
