@@ -592,6 +592,14 @@ struct FeedScreen: View {
     }
 
     @State var confirming: (Verb, Thing)?
+    private var confirmingTitle: String {
+        guard let (verb, thing) = confirming, thing.isLive else { return "" }
+        return "\(verb.label): \(thing.title)?"
+    }
+    private var confirmingShown: Binding<Bool> {
+        Binding(get: { confirming?.1.isLive == true },
+                set: { if !$0 { confirming = nil } })
+    }
     /// The note a long press asked to delete, waiting on its confirmation.
     @State var deletingNote: Thing?
     /// Recently Deleted's tray (prd §985).
@@ -2042,9 +2050,10 @@ struct FeedScreen: View {
             // a background heal can delete this exact thing while the dialog
             // sits open, and reading `$0.1.title` on a dead model traps. If it
             // dies, the presentation binding flips false and the dialog leaves.
-            confirming.map { $0.1.isLive ? "\($0.0.label): \($0.1.title)?" : "" } ?? "",
-            isPresented: Binding(get: { confirming?.1.isLive == true },
-                                 set: { if !$0 { confirming = nil } }),
+            // Both are properties: inline, this chain timed out the Release
+            // type-checker (build 802).
+            confirmingTitle,
+            isPresented: confirmingShown,
             titleVisibility: .visible
         ) {
             if let (verb, thing) = confirming, thing.isLive {
