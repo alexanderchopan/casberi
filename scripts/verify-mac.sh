@@ -422,7 +422,11 @@ ok "app group container ($GROUP_LINE)"
 # reaches that screen by `route.pushBridge`, while the button reaches it by
 # `route.openSetup`, which RAISES it. The screen sweep opened the pushed copy,
 # screenshotted it, and passed — proving the screen and never the presentation.
-# So this step uses `-connectTap`, the door a person actually takes.
+# So this step uses `-connectTap`, the door a person actually takes: since prd
+# §1234 that is an unconnected app's Add row in Sources › Apps (`SettingsHome`,
+# `offerRow` → `route.openSetup`), and the hook lives beside it. 111c5512
+# deleted it with the Apps screen and this step failed every pass until it
+# came back.
 #
 # RSS deliberately, not an Apple bridge: it is a plain setup form with no
 # system permission behind it, so a failure here is the presentation and only

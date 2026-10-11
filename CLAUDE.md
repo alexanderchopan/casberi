@@ -235,7 +235,7 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - `-icloud.sync YES` — AppStorage override for the sync toggle copy.
 - `-onboarded YES` — AppStorage override that skips first-launch onboarding (fresh installs otherwise land on it, hiding the screen you deep-linked to).
 - `-pileTap "<Offer name>"` — fire an empty-feed pile tile's tap after the fall (NSLogs `pileTap:`). Stage it with `-fresh YES -onboarded YES`, terminate, then `-onboarded YES`.
-- `-openSetup "<Offer name>"` — push a bridge's setup screen (needs `casberi://account` opened after launch).
+- `-connectTap "<Offer name>"` — with `-deeplink casberi://account`, its Add row in Sources (`route.openSetup`); NSLogs `connectTap|` for verify-mac (8f4cb144). `-openSetup` is gone
 - `-theme.light` — AppStorage theme override; always pass explicitly for light/dark screenshots (the sim's stored value sticks) → docs/hooks/system.md · prd §204
 - `-howItWorksCTA <s>` — lift the first-launch cover after a delay (`Screens/IntroCover.swift`) → docs/hooks/system.md · prd §620
 - **The dock is CONTINUOUS — the fold tracks the scroll, folders open in place, the page follows the finger, press-and-slide picks (2026-09-05)** → docs/hooks/system.md · prd §621

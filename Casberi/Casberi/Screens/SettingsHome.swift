@@ -20,6 +20,10 @@ struct SettingsHome: View {
     @Environment(HomeRoute.self) private var route
     @Environment(\.modelContext) private var context
 
+    #if DEBUG
+    /// `-connectTap` fires once a launch, not at every mount.
+    @MainActor static var connectTapped = false
+    #endif
     @State private var scope: SettingsScope = .apps
     /// Casberi's own options, opened in place from its pinned row — the way a
     /// Notes folder opens (prd §980): its name leads back.
@@ -175,6 +179,21 @@ struct SettingsHome: View {
             if let raw = UserDefaults.standard.string(forKey: "settingsScope"),
                let s = SettingsScope(rawValue: raw) {
                 if let home = Self.home(of: s) { route.closeSheet(); chrome.openHome(home) } else { scope = s }
+            }
+            // `-connectTap "<Offer name>"` — the door an unconnected app's
+            // Add row in Sources › Apps takes (`offerRow`: `openSetup`), for
+            // verify-mac's connect gate. Never a direct push: a probe on a
+            // route no person takes proves the screen, never the act
+            // (8f4cb144, App Store 2.1(a), build 363). It says which door it
+            // took, because Mac pushes where the phone raises.
+            if let name = UserDefaults.standard.string(forKey: "connectTap"), !Self.connectTapped {
+                Self.connectTapped = true
+                scope = .apps
+                let raises = BridgeRouter.destination(forOffer: name)?.raisedByConnect == true
+                    && route.sheet == nil
+                NSLog("[Casberi] connectTap| %@ connect form for %@",
+                      raises ? "raising" : "pushing", name)
+                route.openSetup(forOffer: name)
             }
         }
         #endif
