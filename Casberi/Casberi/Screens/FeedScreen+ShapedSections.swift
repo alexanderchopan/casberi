@@ -698,12 +698,15 @@ extension FeedScreen {
     /// The groups with the covered thing lifted out, so it draws once (prd
     /// §763) — for a room that draws its cover by hand because something
     /// (tiles, a waiting section) must stand between the cover and the days.
-    func liftingCover(_ groups: [(String, [Thing])], id: UUID?) -> [(String, [Thing])] {
+    /// A day named in `keeping` stays though the cover was its only thing:
+    /// it still has rows of another kind (Day's renewals, prd §1261).
+    func liftingCover(_ groups: [(String, [Thing])], id: UUID?,
+                      keeping: Set<String> = []) -> [(String, [Thing])] {
         guard let id else { return groups }
         return groups.map { label, rows in
             (label, rows.filter { (thing: Thing) -> Bool in !(thing.isLive && thing.id == id) })
         }
-        .filter { !$0.1.isEmpty }
+        .filter { !$0.1.isEmpty || keeping.contains($0.0) }
     }
 
     /// THE STANDALONE LEAD, WHERE NO HEAD IS DRAWN (prd §815, §862, §911): the

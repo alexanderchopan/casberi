@@ -31,13 +31,17 @@ extension FeedScreen {
     /// THE DAY READS FORWARD (Calendar's agenda, §994): today and the days
     /// ahead, soonest first, then what already happened, newest day first.
     /// One list, so a mail that arrived this morning stands in today beside
-    /// the meeting after lunch.
-    private func dayRoomGroups(_ visible: [Thing]) -> [(String, [Thing])] {
+    /// the meeting after lunch. A day only a renewal stands on (prd §1261)
+    /// is a day too, with no things in it.
+    private func dayRoomGroups(_ visible: [Thing], renewals: [Subscriptions.Item]) -> [(String, [Thing])] {
         let cal = Self.groupingCalendar
         let today = cal.startOfDay(for: .now)
         var buckets: [Date: [Thing]] = [:]
         for thing in visible where thing.isLive {
             buckets[cal.startOfDay(for: Self.dayWhen(thing)), default: []].append(thing)
+        }
+        for day in renewals.compactMap(\.next).map(cal.startOfDay(for:)) where buckets[day] == nil {
+            buckets[day] = []
         }
         let ahead = buckets.keys.filter { $0 >= today }.sorted()
         let past = buckets.keys.filter { $0 < today }.sorted(by: >)
@@ -89,7 +93,8 @@ extension FeedScreen {
     /// the menu, then the days.
     @ViewBuilder
     func dayRoomSections(_ visible: [Thing], nextEventID: UUID?, heroShown: Bool) -> some View {
-        let groups = dayRoomGroups(visible)
+        let renewals = dayRenewals()
+        let groups = dayRoomGroups(visible, renewals: renewals)
         let now = Date.now
         let next = visible.filter { $0.isLive && Self.dayWhen($0) >= now }
             .min { Self.dayWhen($0) < Self.dayWhen($1) }
@@ -161,7 +166,11 @@ extension FeedScreen {
         if comingUp {
             dayComingUpSections(nextEventID: nextEventID)
         } else {
-            groupedSections(liftingCover(groups, id: cover?.id), nextEventID: nextEventID)
+            let byDay = Dictionary(grouping: renewals) {
+                dayLabel(Self.groupingCalendar.startOfDay(for: $0.next ?? .now))
+            }
+            groupedSections(liftingCover(groups, id: cover?.id, keeping: Set(byDay.keys)),
+                            nextEventID: nextEventID, renewals: byDay)
         }
     }
 }
@@ -396,6 +405,38 @@ extension FeedScreen {
             return .init(id: "subscription:\(item.id)", day: day, face: item.name)
         }
         return events + renewals
+    }
+
+    /// The renewals Day's list draws (prd §1261): from today to the end of
+    /// the calendar's five weeks, so the list and the calendar agree.
+    func dayRenewals(now: Date = .now) -> [Subscriptions.Item] {
+        let today = Self.groupingCalendar.startOfDay(for: now)
+        let end = WalletCalendar.window(now: now, calendar: Self.groupingCalendar).end
+        return SubscriptionsReading.shared.items
+            .filter { $0.next.map { $0 >= today && $0 < end } ?? false }
+            .sorted { FeedScreen.shownName($0.name) < FeedScreen.shownName($1.name) }
+    }
+
+    /// A renewal under its day (prd §1261): the plan's face and name, what
+    /// pays it, no price (§1113). The tap opens it in the Wallet, where its
+    /// price is.
+    func dayRenewalRow(_ item: Subscriptions.Item) -> some View {
+        let line = [item.cadenceDays == nil ? String(localized: "Next charge") : String(localized: "Renews"),
+                    item.paysWith].compactMap(\.self).joined(separator: " · ")
+        return Button {
+            openOutsideSheet { chrome.open(.plan(item.id)) }
+        } label: {
+            SubscriptionRow(name: FeedScreen.shownName(item.name), line: Text(verbatim: line)) {
+                EmptyView()
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(RowPress())
+        .dsHover()
+        .listRowInsets(EdgeInsets(top: Self.rowAir, leading: DSRoomChassis.rowInset,
+                                  bottom: Self.rowAir, trailing: DSRoomChassis.rowInset))
+        .feedRowBackground()
+        .listRowSeparator(.hidden)
     }
 
     /// A door to a screen the shell presents: from inside an app sheet the

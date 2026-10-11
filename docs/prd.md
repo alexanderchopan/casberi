@@ -65977,3 +65977,12 @@ User, on Day's calendar box: "if user clicks on day calendar their subscriptions
 - No price, no ring for a price rise: a price stays in the Wallet (§1113). The renewal does not join Day's list, its next-thing title or Coming up's rows; a Rocket Money bill already reaches Coming up as its own row (§1105's one tile per bill).
 - Day reads the Wallet's own reading (`SubscriptionsReading`, §1105), refreshed from Day's tiles' `.task` on `walletSubscriptionsKey`, never a second reader.
 - An empty Day with renewals ahead titles its box "Nothing on your calendar", not "Nothing ahead" (§769, §1233).
+
+## §1261 — Day's list carries your subscriptions too (amends §1260) (2026-10-11)
+
+User, after §1260 put renewals on Day's calendar: "they should show in the list too".
+
+- Each tracked subscription renewing from today to the end of the calendar's five weeks stands as a row under its day in Day's All list, after that day's things, A–Z (`dayRenewals`, `dayRenewalRow`), so the list and the calendar agree. A day only a renewal stands on is a day in the list.
+- The row is the Subscriptions anatomy (`SubscriptionRow`): the plan's face and name, "Renews" (or "Next charge" when the cadence is unknown) and what pays it. No price, nothing trailing (§1113).
+- A tap opens the plan in the Wallet through its service door (`chrome.open(.plan(id))`), stepping Day's sheet down first (`openOutsideSheet`); the price is there.
+- Coming up's rows are unchanged: a Rocket Money bill already stands there as its own row (§1105), and a second row for the same plan would draw it twice.

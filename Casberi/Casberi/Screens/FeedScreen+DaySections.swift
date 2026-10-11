@@ -802,7 +802,10 @@ extension FeedScreen {
                                  // Draw the room's scope control under the
                                  // cover (prd §959) — the day-grouped rooms
                                  // that pick a person or a source.
-                                 scopeControl: Bool = false) -> some View {
+                                 scopeControl: Bool = false,
+                                 // Day's renewals by day label, drawn after
+                                 // that day's things (prd §1261).
+                                 renewals: [String: [Subscriptions.Item]] = [:]) -> some View {
         // Computed once for the whole feed rather than per section: every
         // shaped room routes its groups through here, so the folded tail's
         // lighter header (prd §254) reaches all of them from one place.
@@ -846,7 +849,8 @@ extension FeedScreen {
         ForEach(window.shown, id: \.0) { label, rows in
             daySection(label, rows, nextEventID: nextEventID, boundary: boundary,
                        replies: replies, coarse: coarse.contains(label),
-                       dated: dated, cover: cover, isTile: isTile, tileShape: tileShape)
+                       dated: dated, cover: cover, isTile: isTile, tileShape: tileShape,
+                       renewals: renewals[label] ?? [])
         }
         if window.more {
             if let capNow { sectionMoreRow(capNow.category) } else { olderRow(hidden: window.hidden) }
@@ -890,7 +894,10 @@ extension FeedScreen {
                             // header at all — its rows are yours, ordered by
                             // when you acted, and a day over them would say
                             // the corpus's clock instead.
-                            headed: Bool = true) -> some View {
+                            headed: Bool = true,
+                            // Day's renewals on this day (prd §1261), after
+                            // its things: a plan has no time of day.
+                            renewals: [Subscriptions.Item] = []) -> some View {
         // LIVE ONLY, before anything reads a stored property (build 150 crash,
         // 2026-07-25 — pull-to-refresh, symbolicated to `countLabel` inside
         // this section's own header). `rows` is a DERIVED array (the day
@@ -919,7 +926,7 @@ extension FeedScreen {
         // Asked of what the section DRAWS, not of what it was handed: the
         // cover is lifted out above, so a day holding only the cover has a
         // header and nothing under it (2026-09-26).
-        if !tiles.isEmpty || !run.isEmpty {
+        if !tiles.isEmpty || !run.isEmpty || !renewals.isEmpty {
             Section {
                 // UNPINNED (2026-08-29) — a ROW, not a `header:`. The twin in
                 // `bundledSections` carries the full reasoning; the short of it is
@@ -973,6 +980,7 @@ extension FeedScreen {
                                       position: positions[i], replies: replies)
                     }
                 }
+                ForEach(renewals) { item in dayRenewalRow(item) }
             }
         }
     }
