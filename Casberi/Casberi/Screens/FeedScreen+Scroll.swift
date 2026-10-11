@@ -710,6 +710,7 @@ struct SectionPanelName<Trailing: View>: View {
     /// others grey ("Life Subscriptions"); a tap on a grey word switches.
     /// Empty: the plain name, as before.
     var choices: [SectionChoice] = []
+    var inset: CGFloat = DSRoomChassis.rowInset
     @ViewBuilder var trailing: Trailing
 
     var body: some View {
@@ -745,8 +746,8 @@ struct SectionPanelName<Trailing: View>: View {
         }
         .accessibilityElement(children: choices.isEmpty ? .combine : .contain)
         .accessibilityAddTraits(.isHeader)
-        .padding(.leading, DSRoomChassis.rowInset)
-        .padding(.trailing, DSRoomChassis.rowInset)
+        .padding(.leading, inset)
+        .padding(.trailing, inset)
         .padding(.top, DS.Space.s4)
         .padding(.bottom, DS.Space.s2)
     }
@@ -793,8 +794,8 @@ extension FeedScreen {
 }
 
 extension SectionPanelName where Trailing == EmptyView {
-    init(name: String, glyph: String) {
-        self.init(name: name, glyph: glyph) { EmptyView() }
+    init(name: String, glyph: String, inset: CGFloat = DSRoomChassis.rowInset) {
+        self.init(name: name, glyph: glyph, inset: inset) { EmptyView() }
     }
 }
 
@@ -846,15 +847,19 @@ struct SectionPanelGroup<Header: View, Rows: View>: View {
 struct SectionPanelCard<Content: View>: View {
     let name: String
     let glyph: String
+    /// How far in the name and rows stand from the card's edge. A card that
+    /// already stands in the room's column (Sources, prd §1253) takes the
+    /// difference, so its rows land where the Feed's do on the screen.
+    var inset: CGFloat = DSRoomChassis.rowInset
     @ViewBuilder let content: Content
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            SectionPanelName(name: name, glyph: glyph)
+            SectionPanelName(name: name, glyph: glyph, inset: inset)
             VStack(alignment: .leading, spacing: DS.Space.s3) {
                 content
             }
-            .padding(.horizontal, DSRoomChassis.rowInset)
+            .padding(.horizontal, inset)
             .padding(.bottom, DS.Space.s4)
         }
         .frame(maxWidth: .infinity, alignment: .leading)

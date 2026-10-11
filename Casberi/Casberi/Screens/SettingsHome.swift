@@ -53,6 +53,11 @@ struct SettingsHome: View {
     /// The Track tray of an app that needs only a name (prd §1119), raised
     /// by a door that named it (prd §1234; the Apps screen's until then).
     @State private var trackPick: TrackPick?
+    /// The categories whose More was pressed: every app shown (prd §1253).
+    @State private var openCategories: Set<String> = []
+    /// The apps by category (the cards) or A–Z (one list under letters),
+    /// remembered on this phone (prd §1253).
+    @AppStorage("sources.appsAZ") private var appsAZ = false
 
 
     var body: some View {
@@ -93,6 +98,7 @@ struct SettingsHome: View {
                                     glyph: "magnifyingglass", clearable: true,
                                     size: .slab, submitLabel: .search, action: {})
                     }
+                    if !casberiOpen, scope == .apps { orderWords }
                     if casberiOpen {
                         // The way back, in the content (prd §752): Sources.
                         DSDoorRow(icon: "chevron.left", title: Text("Sources")) {
@@ -142,6 +148,7 @@ struct SettingsHome: View {
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
             }
+            if !casberiOpen, scope == .apps, appsAZ { appsByLetter }
             // Room for the floating bar, as every room leaves it.
             Color.clear.frame(height: ShellMetrics.bottomInset - 40)
                 .listRowBackground(Color.clear)
@@ -155,6 +162,12 @@ struct SettingsHome: View {
             if showsLetterIndex {
                 LetterIndex(letters: peopleLetters) { letter in
                     proxy.scrollTo(AddressesSection.letterID(letter), anchor: .top)
+                }
+                .padding(.trailing, 2)
+                .padding(.bottom, ShellMetrics.bottomInset + DS.Space.s4)
+            } else if !casberiOpen, scope == .apps, appsAZ, query.isEmpty {
+                LetterIndex(letters: appLetters.map(\.letter)) { letter in
+                    proxy.scrollTo(Self.appLetterID(letter), anchor: .top)
                 }
                 .padding(.trailing, 2)
                 .padding(.bottom, ShellMetrics.bottomInset + DS.Space.s4)
@@ -498,27 +511,119 @@ struct SettingsHome: View {
             if offers.isEmpty {
                 DSEmptyState(headline: DSProse.text("No apps"), words: Text("Nothing matches."),
                              scale: .list(rows: 3))
-            } else {
+            } else if !appsAZ {
                 let other = String(localized: "Other")
                 let byCategory = Dictionary(grouping: offers) { BridgeCatalog.category(of: $0) }
                 let categories = byCategory.keys.sorted {
                     if ($0 == other) != ($1 == other) { return $1 == other }
                     return $0.localizedStandardCompare($1) == .orderedAscending
                 }
-                VStack(alignment: .leading, spacing: DS.Space.s4) {
-                    if query.isEmpty {
-                        Text("All apps").dsText(.heading20).foregroundStyle(DS.headInk)
-                    }
+                // **EACH CATEGORY IS A CARD, AS THE FEED'S SECTIONS ARE (prd
+                // §1253, user: "the section headers are too close to the list
+                // ending above them"):** the Feed's panel and name (a pink
+                // glyph, the name in the head ink), its row (the app over its
+                // state, no chevron) and its More, which opens the rest in
+                // place. "All apps" went: the cards say it. A search lists
+                // every match.
+                VStack(alignment: .leading, spacing: DS.Space.s6) {
                     ForEach(categories, id: \.self) { category in
-                        VStack(alignment: .leading, spacing: DS.Space.s2) {
-                            Text(category).dsText(.heading17).foregroundStyle(DS.textSecondary)
-                            ForEach((byCategory[category] ?? []).sorted {
-                                $0.name.localizedStandardCompare($1.name) == .orderedAscending
-                            }, id: \.name) { offerRow($0.name) }
+                        let apps = (byCategory[category] ?? []).sorted {
+                            $0.name.localizedStandardCompare($1.name) == .orderedAscending
+                        }
+                        let capped = query.isEmpty && !openCategories.contains(category)
+                        let shown = capped ? Array(apps.prefix(Self.categoryFirstRows)) : apps
+                        // The list row already stands in the room's column, so the card
+                        // takes the rest of `rowInset`: rows land where the Feed's do.
+                        SectionPanelCard(name: category, glyph: CategoryFold.glyph(for: category),
+                                         inset: DSRoomChassis.rowInset - DSRoomChassis.inset) {
+                            ForEach(shown, id: \.name) { offerRow($0.name, card: true) }
+                            if shown.count < apps.count {
+                                Button {
+                                    DSHaptic.tap()
+                                    withAnimation(DS.Motion.standard) { _ = openCategories.insert(category) }
+                                } label: {
+                                    DSPushRowLabel(title: Text("More from \(category)"), fact: nil,
+                                                   tint: DS.tint, opens: false) {
+                                        DSGlyphLead(glyph: "arrow.down", tint: DS.tint)
+                                    }
+                                    .frame(minHeight: DS.Hit.min)
+                                }
+                                .buttonStyle(RowPress())
+                            }
                         }
                     }
                 }
             }
+        }
+    }
+
+    // MARK: - By category or A–Z (prd §1253)
+
+    /// "By category A–Z", the Feed header's words (§1251): the order in the
+    /// head ink, the other grey, a tap switches.
+    private var orderWords: some View {
+        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s4) {
+            orderWord(Text("By category"), on: !appsAZ) { appsAZ = false }
+            orderWord(Text(verbatim: "A–Z"), on: appsAZ) { appsAZ = true }
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, DSRoomChassis.rowInset - DSRoomChassis.inset)
+    }
+
+    private func orderWord(_ word: Text, on: Bool, pick: @escaping () -> Void) -> some View {
+        Button {
+            guard !on else { return }
+            DSHaptic.selection()
+            withAnimation(DS.Motion.standard) { pick() }
+        } label: {
+            word.dsText(.heading20).foregroundStyle(on ? DS.headInk : DS.textTertiary)
+        }
+        .buttonStyle(RowPress())
+        .accessibilityAddTraits(on ? [.isSelected] : [])
+    }
+
+    /// Every app the search admits, A–Z under its first letter; anything
+    /// that does not start with a letter files under "#", last.
+    private var appLetters: [(letter: String, names: [String])] {
+        let names = BridgeCatalog.offers
+            .filter { BridgeCatalog.category(of: $0) != HomeScope.markets && hit($0.name) }
+            .map(\.name)
+            .sorted { $0.localizedStandardCompare($1) == .orderedAscending }
+        let groups = Dictionary(grouping: names) { name -> String in
+            let first = name.prefix(1).uppercased()
+            return first.range(of: "^[A-Z]$", options: .regularExpression) != nil ? first : "#"
+        }
+        return groups.keys
+            .sorted { ($0 == "#") != ($1 == "#") ? $1 == "#" : $0 < $1 }
+            .map { ($0, groups[$0] ?? []) }
+    }
+
+    static func appLetterID(_ letter: String) -> String { "apps-letter-\(letter)" }
+
+    /// The A–Z list as real rows, so the index can scroll to a letter.
+    @ViewBuilder
+    private var appsByLetter: some View {
+        ForEach(appLetters, id: \.letter) { group in
+            Section {
+                ForEach(group.names, id: \.self) { name in
+                    offerRow(name, card: true)
+                        .listRowInsets(.init(top: DS.Space.s1, leading: DSRoomChassis.rowInset,
+                                             bottom: DS.Space.s1, trailing: DSRoomChassis.rowInset))
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                }
+            } header: {
+                // The header's own insets, so the letter stands in the rows'
+                // column and not the system's header inset past it.
+                Text(verbatim: group.letter)
+                    .dsText(.heading20)
+                    .foregroundStyle(DS.headInk)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .listRowInsets(.init(top: DS.Space.s2, leading: DSRoomChassis.rowInset,
+                                         bottom: DS.Space.s1, trailing: DSRoomChassis.rowInset))
+                    .id(Self.appLetterID(group.letter))
+            }
+            .listSectionSpacing(DS.Space.s2)
         }
     }
 
@@ -595,10 +700,20 @@ struct SettingsHome: View {
 
     /// One catalogue app by name: yours wears its state and opens its page,
     /// one you could add says Add and opens the page its Connect stands on.
+    ///
+    /// In a category's card (`card`, prd §1253) a row takes the Feed's
+    /// anatomy: the 46pt mark, the name over its state, no chevron.
     @ViewBuilder
-    private func offerRow(_ name: String) -> some View {
+    private func offerRow(_ name: String, card: Bool = false) -> some View {
         if let app = bridges.bridges.first(where: { $0.name == name && $0.status != .paused }) {
-            appRow(app)
+            appRow(app, card: card)
+        } else if card {
+            DSPushRow(title: Text(verbatim: name), subtitle: Text("Add"),
+                      subtitleTone: DS.tint, opens: false) {
+                route.openSetup(forOffer: name)
+            } leading: {
+                BridgeIcon(name: name, size: DS.Face.seat)
+            }
         } else {
             DSPushRow(title: Text(verbatim: name), fact: Text("Add"), factTone: DS.tint) {
                 route.openSetup(forOffer: name)
@@ -607,6 +722,9 @@ struct SettingsHome: View {
             }
         }
     }
+
+    /// Rows a category's card shows before its More (prd §1253).
+    static let categoryFirstRows = 6
 
     /// Where an empty kind fills from: its apps, each one tap.
     private func comesFrom(_ names: [String]) -> some View {
@@ -692,15 +810,22 @@ struct SettingsHome: View {
     /// One line, as iOS Settings draws a row (prd §1157): the name, then its
     /// state at the trailing edge before the chevron, so the 30pt icon is as
     /// tall as the row's words.
-    private func appRow(_ app: BridgeApp) -> some View {
-        DSPushRow(title: Text(verbatim: app.name),
-                  fact: Text(verbatim: app.statusLine),
-                  factTone: app.status == .attention ? DS.attentionInk : DS.textTertiary) {
-            // By the seat, as the catalogue's connected row opens (prd
-            // §1050f): an offer with no setup page still has this one.
-            route.openAccount(BridgeRouter.destination(forID: app.id))
-        } leading: {
-            BridgeIcon(name: app.name, size: DS.Mark.notice)
+    @ViewBuilder
+    private func appRow(_ app: BridgeApp, card: Bool = false) -> some View {
+        let tone = app.status == .attention ? DS.attentionInk : DS.textTertiary
+        // By the seat, as the catalogue's connected row opens (prd §1050f):
+        // an offer with no setup page still has this one.
+        let open = { route.openAccount(BridgeRouter.destination(forID: app.id)) }
+        if card {
+            DSPushRow(title: Text(verbatim: app.name), subtitle: Text(verbatim: app.statusLine),
+                      subtitleTone: tone, opens: false, action: open) {
+                BridgeIcon(name: app.name, size: DS.Face.seat)
+            }
+        } else {
+            DSPushRow(title: Text(verbatim: app.name),
+                      fact: Text(verbatim: app.statusLine), factTone: tone, action: open) {
+                BridgeIcon(name: app.name, size: DS.Mark.notice)
+            }
         }
     }
 
