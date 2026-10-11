@@ -30,11 +30,10 @@ extension FeedScreen {
         // templates").** A tile per list with its most recent item — the
         // Feed's `GlanceTile` — then each list on the Feed's panel, skipping
         // what its tile showed (§1208l). Subscriptions and Cards are rosters,
-        // not news, so their tiles are a plain `GlanceShell` and their lists
-        // keep every row.
+        // not news, and Spending is the month's sum (prd §1246), so their
+        // tiles are a plain `GlanceShell` and their lists keep every row.
         let specs = Self.walletGlance([
             (Self.needsYouGroup, Self.things(needs + dated)),
-            (Self.spendingName, onAll ? [SpendingReading.shared.latest].compactMap { $0 } : []),
             (Self.transactionsName, Self.things(stream.rows)),
         ])
         let shown = Self.glanceShown(specs, lede: nil)
@@ -46,7 +45,7 @@ extension FeedScreen {
             func spec(_ name: String) -> GlanceSpec? { specs.first { $0.category == name } }
             if let s = spec(Self.needsYouGroup) { tiles.append(.listed(s)) }
             if let plan = plans.first { tiles.append(Self.planGlance(plan)) }
-            if let s = spec(Self.spendingName) { tiles.append(.listed(s)) }
+            if onAll, let s = Self.spendingGlance(SpendingReading.shared.reading) { tiles.append(s) }
             if let card = cards.first { tiles.append(Self.cardGlance(card)) }
             if let s = spec(Self.transactionsName) { tiles.append(.listed(s)) }
         }()
@@ -135,7 +134,15 @@ extension FeedScreen {
     /// same frame (`GlanceShell`) holding a figure and what it is.
     enum WalletGlance {
         case listed(GlanceSpec)
-        case plain(name: String, mark: String?, when: Date?, amount: String, title: String)
+        case plain(name: String, mark: Mark, when: Date?, amount: String, title: String)
+
+        /// What stands before the name: an app's mark, a face drawn for a
+        /// name, or nothing where the figure belongs to no one (Spending).
+        enum Mark {
+            case app(String)
+            case face(String)
+            case none
+        }
 
         var name: String {
             switch self {
@@ -167,12 +174,15 @@ extension FeedScreen {
                             } top: {
                                 EmptyView()
                             } mark: {
-                                if let mark {
-                                    BridgeIcon(name: mark, size: DS.Mark.badge)
+                                switch mark {
+                                case .app(let app):
+                                    BridgeIcon(name: app, size: DS.Mark.badge)
                                         .frame(width: DS.Mark.badge, height: DS.Mark.badge)
-                                } else {
-                                    SubscriptionFace(name: title, size: DS.Mark.badge)
+                                case .face(let face):
+                                    SubscriptionFace(name: face, size: DS.Mark.badge)
                                         .frame(width: DS.Mark.badge, height: DS.Mark.badge)
+                                case .none:
+                                    EmptyView()
                                 }
                             } words: {
                                 Text(verbatim: amount)
@@ -224,7 +234,7 @@ extension FeedScreen {
         }
         let name = shownName(item.name)
         let title = item.next.map { String(localized: "\(name) · Renews \(WalletSubscriptionRow.day($0))") } ?? name
-        return .plain(name: subscriptionsName, mark: nil, when: nil, amount: amount, title: title)
+        return .plain(name: subscriptionsName, mark: .face(title), when: nil, amount: amount, title: title)
     }
 
     /// **SUBSCRIPTIONS ON HOME IS A LIST (prd §1232, user: "if subscriptions
@@ -281,16 +291,16 @@ extension FeedScreen {
     static func cardGlance(_ card: WalletCardRoll.Card) -> WalletGlance {
         let mask = BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil
         if let owed = card.owed, let due = card.due {
-            return .plain(name: cardsName, mark: card.app, when: nil,
+            return .plain(name: cardsName, mark: .app(card.app), when: nil,
                           amount: mask ?? CardSpendRoom.money(owed, code: card.owedCurrency),
                           title: String(localized: "\(card.name) · Due \(WalletSubscriptionRow.day(due))"))
         }
         if card.spent > 0 || card.offers == 0 {
-            return .plain(name: cardsName, mark: card.app, when: nil,
+            return .plain(name: cardsName, mark: .app(card.app), when: nil,
                           amount: mask ?? AppleWalletRoom.money(max(card.spent, 0), "USD"),
                           title: String(localized: "\(card.name) · This month"))
         }
-        return .plain(name: cardsName, mark: card.app, when: nil,
+        return .plain(name: cardsName, mark: .app(card.app), when: nil,
                       amount: cardOffersWords(card.offers), title: card.name)
     }
 
@@ -519,19 +529,41 @@ extension FeedScreen {
     static func spendingLine(_ reading: Spending.Reading, now: Date = .now, mask: String?) -> String {
         let month = now.formatted(.dateTime.month(.wide))
         let total = String(localized: "\(mask ?? AppleWalletRoom.money(reading.total, "USD")) in \(month)")
+        guard let compare = spendingCompare(reading, now: now, mask: mask) else { return total }
+        return "\(total) · \(compare)"
+    }
+
+    /// "$280 less than this point in September", or nil under Hide balances
+    /// or with nothing read last month.
+    static func spendingCompare(_ reading: Spending.Reading, now: Date = .now, mask: String?) -> String? {
         guard mask == nil, let earlier = reading.earlier,
-              let last = Calendar.current.date(byAdding: .month, value: -1, to: now) else { return total }
+              let last = Calendar.current.date(byAdding: .month, value: -1, to: now) else { return nil }
         let lastMonth = last.formatted(.dateTime.month(.wide))
         let diff = reading.total - earlier
-        let compare: String
         if abs(diff) < 1 {
-            compare = String(localized: "about the same as this point in \(lastMonth)")
+            return String(localized: "about the same as this point in \(lastMonth)")
         } else if diff < 0 {
-            compare = String(localized: "\(AppleWalletRoom.money(-diff, "USD")) less than this point in \(lastMonth)")
+            return String(localized: "\(AppleWalletRoom.money(-diff, "USD")) less than this point in \(lastMonth)")
         } else {
-            compare = String(localized: "\(AppleWalletRoom.money(diff, "USD")) more than this point in \(lastMonth)")
+            return String(localized: "\(AppleWalletRoom.money(diff, "USD")) more than this point in \(lastMonth)")
         }
-        return "\(total) · \(compare)"
+    }
+
+    /// **THE MONTH, NEVER ONE PURCHASE (prd §1246, user: "what is the
+    /// difference between spending and transactions they show same
+    /// number").** The tile drew the newest purchase, which is most days the
+    /// newest move, so it matched Transactions' tile. It draws what the list
+    /// leads with: this month's total over last month to the same day.
+    static func spendingGlance(_ reading: Spending.Reading, now: Date = .now) -> WalletGlance? {
+        guard !reading.places.isEmpty else { return nil }
+        let mask = BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil
+        let month = now.formatted(.dateTime.month(.wide))
+        // The line stands alone here, so it opens a sentence.
+        let title = spendingCompare(reading, now: now, mask: mask)
+            .map { $0.prefix(1).uppercased() + $0.dropFirst() }
+            ?? String(localized: "So far in \(month)")
+        return .plain(name: spendingName, mark: .none, when: nil,
+                      amount: mask ?? AppleWalletRoom.money(reading.total, "USD"), title: title)
     }
 
     static func spendingTimes(_ count: Int) -> String {

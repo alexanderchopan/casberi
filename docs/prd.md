@@ -65829,3 +65829,14 @@ Amends §1171 ("no Search on Settings") for Sources' Apps; completes §1234 item
 1. **Sources rises as a sheet (§1208m), and a sheet covers the band**: face, bar and ✎ stand under it, so the tray's search, the one door §1171 left, could not be reached from the catalogue.
 2. **The Apps list keeps a Search field** (`SettingsHome`, the same `DSSlabField` a tray landing drew), always while Apps is the pick; it filters every category's rows by name as you type and hides Start here while it holds words. Picking another count clears it, as before.
 3. Under the other counts the field still stands only for a name the tray landed on (§1171).
+
+## §1246 — Spending's tile is the month, never one purchase (user, 2026-10-11: "what is the difference between spending and transactions they show same number"; "yes do 1")
+
+Amends §1219's tile for Spending and §1232 item 3.
+
+1. **The cause.** The Spending tile drew the newest purchase (`SpendingReading.latest`) and the Transactions tile the newest move. Most days the newest move is a purchase, so both tiles drew the same row and the same figure.
+2. **The tile draws what the list leads with**: this month's total (`Spending.Reading.total`, masked under Hide balances) over the line against last month to the same day ("$280 less than this point in September", `spendingCompare`), else "So far in October". A `GlanceShell` with no mark (`WalletGlance.Mark.none`): the figure belongs to no one place. It stands where the list does, on All with a place read.
+3. **Deleted**: `SpendingReading.latest`, read by nothing else (§723).
+
+Checked: `wallet-section-selftest.sh` guards the tile's reading and denies `SpendingReading.shared.latest`. Written on a machine with no Xcode: neither build nor screen was seen before commit.
+
