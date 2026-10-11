@@ -170,7 +170,14 @@ enum ScheduleIngest {
         var removedIDs: [UUID] = []
         for (ref, thing) in things where ref.hasPrefix("ekevent:") {
             let id = String(ref.dropFirst("ekevent:".count))
-            guard store.calendarItem(withIdentifier: id) == nil else { continue }
+            // The ref is the series' `eventIdentifier`, else its
+            // `calendarItemIdentifier` (`ingestEvents`), and each has its own
+            // lookup: `calendarItem(withIdentifier:)` answers nil for an
+            // `eventIdentifier`, so asking it alone deleted every event on
+            // your own calendars and kept only the subscribed ones, whose
+            // `eventIdentifier` is nil (user report 2026-10-11).
+            guard store.event(withIdentifier: id) == nil,
+                  store.calendarItem(withIdentifier: id) == nil else { continue }
             removedIDs.append(thing.id)
             context.delete(thing)
         }
