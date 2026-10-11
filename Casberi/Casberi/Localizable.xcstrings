@@ -897,6 +897,34 @@
         }
       }
     },
+    "%@ is %@ now." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ está en %2$@ ahora."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ は現在 %2$@ です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ 현재 %2$@입니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ 现在是 %2$@。"
+          }
+        }
+      }
+    },
     "%@ is already followed." : {
       "localizations" : {
         "es" : {
@@ -921,6 +949,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "%@ 已在关注中。"
+          }
+        }
+      }
+    },
+    "%@ is on your Lock Screen" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ está en tu pantalla bloqueada"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ をロック画面に表示中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 잠금 화면에 표시 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 已在锁定屏幕上"
           }
         }
       }
@@ -1303,6 +1359,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "今日 %@"
+          }
+        }
+      }
+    },
+    "%@ traded %@ today" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ negoció %2$@ hoy"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ の本日の取引高は %2$@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ 오늘 거래량 %2$@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ 今日成交 %2$@"
+          }
+        }
+      }
+    },
+    "%@ volume" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Volumen de %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ の取引高"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 거래량"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 成交量"
           }
         }
       }
@@ -3463,6 +3575,62 @@
         }
       }
     },
+    "Alert at a price or a move" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Avisar a un precio o con un movimiento"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "価格または変動で通知"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "가격 또는 변동 시 알림"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "按价格或涨跌提醒"
+          }
+        }
+      }
+    },
+    "Alert below %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Avisar por debajo de %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ を下回ったら通知"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 미만이면 알림"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "低于 %@ 时提醒"
+          }
+        }
+      }
+    },
     "Alert me when %@" : {
       "localizations" : {
         "es" : {
@@ -3487,6 +3655,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "在 %@ 以下情况时提醒我"
+          }
+        }
+      }
+    },
+    "Alert on a day's volume" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Avisar por el volumen del día"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1日の取引高で通知"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "하루 거래량으로 알림"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "按当日成交量提醒"
           }
         }
       }
@@ -3521,6 +3717,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "已设提醒：%1$@ %2$@"
+          }
+        }
+      }
+    },
+    "Alert when gas is below" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Avisar cuando el gas esté por debajo de"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ガス代が次を下回ったら通知"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "가스비가 다음 미만이면 알림"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Gas 低于以下值时提醒"
           }
         }
       }
@@ -4277,6 +4501,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你的应用背后"
+          }
+        }
+      }
+    },
+    "Below %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Por debajo de %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 未満"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 미만"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "低于 %@"
           }
         }
       }
@@ -5121,6 +5373,62 @@
         }
       }
     },
+    "Custom level…" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Nivel personalizado…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "カスタムの水準…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "사용자 지정 수준…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "自定义水平…"
+          }
+        }
+      }
+    },
+    "Custom price or move…" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Precio o movimiento personalizado…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "カスタムの価格または変動…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "사용자 지정 가격 또는 변동…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "自定义价格或涨跌…"
+          }
+        }
+      }
+    },
     "Custom price…" : {
       "localizations" : {
         "es" : {
@@ -5173,6 +5481,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "日程"
+          }
+        }
+      }
+    },
+    "Day volume above…" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Volumen del día por encima de…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1日の取引高が次を上回る…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "하루 거래량이 다음 초과…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "当日成交量高于…"
           }
         }
       }
@@ -5345,6 +5681,34 @@
         }
       }
     },
+    "Dollars, like 5M" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Dólares, como 5M"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ドル(例: 5M)"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "달러(예: 5M)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "美元,如 5M"
+          }
+        }
+      }
+    },
     "Due %@" : {
       "localizations" : {
         "es" : {
@@ -5425,6 +5789,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "粉尘。"
+          }
+        }
+      }
+    },
+    "Each conversation lands as one thing. Off keeps what came." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cada conversación llega como un elemento. Desactivado conserva lo que ya llegó."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "会話ごとに1つの項目として届きます。オフにしても届いたものは残ります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "대화마다 하나의 항목으로 들어옵니다. 끄면 이미 들어온 것은 남습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "每段对话作为一项内容收入。关闭后已收入的内容保留。"
           }
         }
       }
@@ -7137,6 +7529,118 @@
         }
       }
     },
+    "GIF" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "GIF"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "GIF"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "GIF"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "GIF"
+          }
+        }
+      }
+    },
+    "Gas below %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Gas por debajo de %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ガス代 %@ 未満"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "가스비 %@ 미만"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Gas 低于 %@"
+          }
+        }
+      }
+    },
+    "Gas on %@ is %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "El gas en %1$@ está en %2$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ のガス代は %2$@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ 가스비는 %2$@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ 上的 Gas 为 %2$@"
+          }
+        }
+      }
+    },
+    "Gas: %@. Opens gas alerts." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Gas: %@. Abre los avisos de gas."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ガス代: %@。ガス代の通知を開きます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "가스비: %@. 가스비 알림을 엽니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Gas:%@。打开 Gas 提醒。"
+          }
+        }
+      }
+    },
     "Its events show in Coming up and Day — nothing is added to your Calendar app." : {
       "localizations" : {
         "es" : {
@@ -7161,6 +7665,118 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "其中的日程会显示在“即将到来”和 Day 中 — 不会向你的日历 App 添加任何内容。"
+          }
+        }
+      }
+    },
+    "Makes %@ answer every call this Safe doesn't — signature checks included." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Hace que %@ responda a toda llamada que este Safe no atienda, incluidas las comprobaciones de firma."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "この Safe が応答しないすべての呼び出しに %@ が応答します — 署名の確認も含みます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 Safe가 응답하지 않는 모든 호출에 %@가 응답합니다 — 서명 확인 포함."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "让 %@ 应答此 Safe 不应答的每个调用——包括签名检查。"
+          }
+        }
+      }
+    },
+    "Messages in %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Mensajes en %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ のメッセージ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@의 메시지"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 中的消息"
+          }
+        }
+      }
+    },
+    "Messages with %@ and %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Mensajes con %1$@ y %2$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ と %2$@ とのメッセージ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ 및 %2$@와의 메시지"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "与 %1$@ 和 %2$@ 的消息"
+          }
+        }
+      }
+    },
+    "Messages with %@, %@ and %lld more" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Mensajes con %1$@, %2$@ y %3$lld más"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@、%2$@ ほか %3$lld 人とのメッセージ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@, %2$@ 외 %3$lld명과의 메시지"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "与 %1$@、%2$@ 等另外 %3$lld 人的消息"
           }
         }
       }
@@ -7217,6 +7833,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "仅显示最近的内容 — 打开某个来源查看更早的"
+          }
+        }
+      }
+    },
+    "Moves %@ in a day" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Se mueve %@ en un día"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1日で %@ 変動"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "하루에 %@ 변동"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "一天内涨跌 %@"
           }
         }
       }
@@ -7305,6 +7949,62 @@
         }
       }
     },
+    "No balance of this Safe changes." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ningún saldo de este Safe cambia."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "この Safe の残高は変わりません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 Safe의 잔액은 변하지 않습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "此 Safe 的余额均不变。"
+          }
+        }
+      }
+    },
+    "No price read for %@ yet" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aún no hay precio para %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ の価格はまだ取得していません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@의 가격을 아직 읽지 못했습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "尚未读取 %@ 的价格"
+          }
+        }
+      }
+    },
     "Not listed? Paste this link into your wallet's scanner." : {
       "localizations" : {
         "es" : {
@@ -7357,6 +8057,146 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "保留 %lld 天，之后消失。"
+          }
+        }
+      }
+    },
+    "Not simulated — %lld calls is more than the simulator takes at once." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Sin simular: %lld llamadas son más de las que el simulador admite a la vez."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "シミュレーションなし — %lld 件の呼び出しはシミュレーターが一度に扱える数を超えています。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "시뮬레이션 안 됨 — 호출 %lld개는 시뮬레이터가 한 번에 처리할 수 있는 수를 넘습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "未模拟——%lld 个调用超过了模拟器一次可处理的数量。"
+          }
+        }
+      }
+    },
+    "Not simulated — Casberi can't simulate on this chain." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Sin simular: Casberi no puede simular en esta cadena."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "シミュレーションなし — Casberi はこのチェーンではシミュレーションできません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "시뮬레이션 안 됨 — Casberi는 이 체인에서 시뮬레이션할 수 없습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "未模拟——Casberi 无法在此链上模拟。"
+          }
+        }
+      }
+    },
+    "Not simulated — Casberi couldn't read the call well enough to send it." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Sin simular: Casberi no pudo leer la llamada lo bastante bien para enviarla."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "シミュレーションなし — Casberi は送信できるほど呼び出しを読み取れませんでした。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "시뮬레이션 안 됨 — Casberi가 보낼 수 있을 만큼 호출을 읽지 못했습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "未模拟——Casberi 未能充分读取该调用以发送它。"
+          }
+        }
+      }
+    },
+    "Not simulated — it runs another contract's code as the Safe, which a simulation of the call can't reproduce." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Sin simular: ejecuta el código de otro contrato como el Safe, algo que una simulación de la llamada no puede reproducir."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "シミュレーションなし — 別のコントラクトのコードを Safe として実行するため、呼び出しのシミュレーションでは再現できません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "시뮬레이션 안 됨 — 다른 컨트랙트의 코드를 Safe로서 실행하므로 호출 시뮬레이션으로 재현할 수 없습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "未模拟——它以 Safe 身份运行另一个合约的代码,调用模拟无法重现。"
+          }
+        }
+      }
+    },
+    "Not simulated — the simulator didn't answer." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Sin simular: el simulador no respondió."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "シミュレーションなし — シミュレーターが応答しませんでした。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "시뮬레이션 안 됨 — 시뮬레이터가 응답하지 않았습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "未模拟——模拟器没有响应。"
           }
         }
       }
@@ -7417,6 +8257,62 @@
         }
       }
     },
+    "Now %@. A move listens up and down." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ahora %@. Un movimiento escucha al alza y a la baja."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "現在 %@。変動は上昇・下落の両方を通知します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "현재 %@. 변동은 오름과 내림을 모두 알립니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "现为 %@。涨跌提醒会关注上涨和下跌。"
+          }
+        }
+      }
+    },
+    "On %@, once" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "En %@, una vez"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ で1回"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@에서 한 번"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 %@ 上,一次"
+          }
+        }
+      }
+    },
     "Only used to greet you. It stays on %@." : {
       "localizations" : {
         "es" : {
@@ -7441,6 +8337,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "仅用于向你打招呼，只保存在%@上。"
+          }
+        }
+      }
+    },
+    "Or a move in a day, in %" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "O un movimiento en un día, en %"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "または1日の変動(%)"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "또는 하루 변동, %"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "或一天内的涨跌,单位 %"
           }
         }
       }
@@ -7473,6 +8397,34 @@
         }
       }
     },
+    "Pin to Lock Screen" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Fijar en la pantalla bloqueada"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ロック画面に固定"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "잠금 화면에 고정"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "固定到锁定屏幕"
+          }
+        }
+      }
+    },
     "Poisoning" : {
       "localizations" : {
         "es" : {
@@ -7501,6 +8453,34 @@
         }
       }
     },
+    "Read your messages" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Leer tus mensajes"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "メッセージを読む"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "메시지 읽기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "读取你的消息"
+          }
+        }
+      }
+    },
     "Read-only — Acorns is never asked to move money." : {
       "localizations" : {
         "es" : {
@@ -7525,6 +8505,146 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "只读 — 绝不会要求 Acorns 转账。"
+          }
+        }
+      }
+    },
+    "Reorder" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Reordenar"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "並べ替え"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "순서 변경"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "重新排序"
+          }
+        }
+      }
+    },
+    "Replaces this Safe's own code with %@'s — after this, the Safe does what that code says." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Sustituye el código propio de este Safe por el de %@; después, el Safe hace lo que diga ese código."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "この Safe 自身のコードを %@ のコードに置き換えます — 以後、Safe はそのコードのとおりに動作します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 Safe 자체의 코드를 %@의 코드로 바꿉니다 — 이후 Safe는 그 코드대로 동작합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "将此 Safe 自身的代码替换为 %@ 的代码——此后,Safe 按该代码行事。"
+          }
+        }
+      }
+    },
+    "Replied to a story" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Respondió a una historia"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ストーリーに返信しました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "스토리에 답장함"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "回复了快拍"
+          }
+        }
+      }
+    },
+    "Review and sign" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Revisar y firmar"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "確認して署名"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "검토 후 서명"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "检查并签名"
+          }
+        }
+      }
+    },
+    "Runs another contract's code as the Safe (%@) — it can change the owners." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ejecuta el código de otro contrato como el Safe (%@); puede cambiar los propietarios."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "別のコントラクトのコードを Safe として実行します(%@)— 所有者を変更できます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "다른 컨트랙트의 코드를 Safe로서 실행합니다(%@) — 소유자를 바꿀 수 있습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "以 Safe 身份运行另一个合约的代码(%@)——它可以更改所有者。"
           }
         }
       }
@@ -7613,6 +8733,202 @@
         }
       }
     },
+    "Shared a post" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Compartió una publicación"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "投稿をシェアしました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "게시물을 공유함"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "分享了帖子"
+          }
+        }
+      }
+    },
+    "Shared a reel" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Compartió un reel"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "リールをシェアしました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "릴스를 공유함"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "分享了 Reels"
+          }
+        }
+      }
+    },
+    "Shared a story" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Compartió una historia"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ストーリーをシェアしました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "스토리를 공유함"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "分享了快拍"
+          }
+        }
+      }
+    },
+    "Simulated as the Safe's call, before signatures and gas." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Simulado como la llamada del Safe, antes de firmas y gas."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "署名とガス代の前に、Safe の呼び出しとしてシミュレーションしました。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "서명과 가스비 이전에 Safe의 호출로 시뮬레이션했습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在签名和 Gas 之前,按 Safe 的调用模拟。"
+          }
+        }
+      }
+    },
+    "So far in %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Hasta ahora en %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ のこれまで"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 현재까지"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 至今"
+          }
+        }
+      }
+    },
+    "Stops %@ from moving funds without a signature." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Impide que %@ mueva fondos sin una firma."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ が署名なしで資金を動かせないようにします。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@가 서명 없이 자금을 옮기지 못하게 합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "阻止 %@ 在没有签名的情况下转移资金。"
+          }
+        }
+      }
+    },
+    "The last 24 hours, once a day at most" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Las últimas 24 horas, como mucho una vez al día"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "直近24時間、1日1回まで"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "최근 24시간, 하루 최대 한 번"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "过去 24 小时,每天最多一次"
+          }
+        }
+      }
+    },
     "The line starts at the next reading." : {
       "localizations" : {
         "es" : {
@@ -7669,6 +8985,62 @@
         }
       }
     },
+    "The simulation reverted." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "La simulación se revirtió."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "シミュレーションは失敗(revert)しました。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "시뮬레이션이 되돌려졌습니다(revert)."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "模拟已回滚。"
+          }
+        }
+      }
+    },
+    "The simulation reverted: %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "La simulación se revirtió: %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "シミュレーションは失敗(revert)しました: %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "시뮬레이션이 되돌려졌습니다(revert): %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "模拟已回滚:%@"
+          }
+        }
+      }
+    },
     "They arrive as Casberi finds them, one per app." : {
       "localizations" : {
         "es" : {
@@ -7693,6 +9065,174 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "Casberi 一发现就送达，每个应用一条。"
+          }
+        }
+      }
+    },
+    "Trades over %@ in a day" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Negocia más de %@ en un día"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1日の取引高が %@ 超"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "하루 거래량 %@ 초과"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "一天内成交超过 %@"
+          }
+        }
+      }
+    },
+    "Turn on Live Activities for Casberi in Settings" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Activa las Actividades en vivo de Casberi en Ajustes"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "設定で Casberi のライブアクティビティをオンにしてください"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "설정에서 Casberi의 실시간 현황을 켜세요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在“设置”中为 Casberi 打开实时活动"
+          }
+        }
+      }
+    },
+    "Unpin from Lock Screen" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Quitar de la pantalla bloqueada"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ロック画面から固定解除"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "잠금 화면에서 고정 해제"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "从锁定屏幕取消固定"
+          }
+        }
+      }
+    },
+    "Unpinned %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ ya no está fijado"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ の固定を解除しました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 고정 해제됨"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已取消固定 %@"
+          }
+        }
+      }
+    },
+    "Voice message" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Mensaje de voz"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ボイスメッセージ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "음성 메시지"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "语音消息"
+          }
+        }
+      }
+    },
+    "When the last 24 hours trade more than this, once a day at most." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cuando las últimas 24 horas negocien más que esto, como mucho una vez al día."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "直近24時間の取引高がこれを超えたとき、1日1回まで。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "최근 24시간 거래량이 이보다 많을 때, 하루 최대 한 번."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "当过去 24 小时成交超过此值时,每天最多一次。"
           }
         }
       }
@@ -7777,6 +9317,146 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你的数据"
+          }
+        }
+      }
+    },
+    "a %@ move" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "un movimiento de %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ の変動"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 변동"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 的涨跌"
+          }
+        }
+      }
+    },
+    "a call that runs another contract's code as the Safe" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "una llamada que ejecuta el código de otro contrato como el Safe"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "別のコントラクトのコードを Safe として実行する呼び出し"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "다른 컨트랙트의 코드를 Safe로서 실행하는 호출"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "以 Safe 身份运行另一个合约代码的调用"
+          }
+        }
+      }
+    },
+    "a new fallback handler (%@) that can answer for the Safe" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "un nuevo gestor de reserva (%@) que puede responder por el Safe"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Safe に代わって応答できる新しいフォールバックハンドラ(%@)"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Safe를 대신해 응답할 수 있는 새 폴백 핸들러(%@)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "可代表 Safe 应答的新回退处理器(%@)"
+          }
+        }
+      }
+    },
+    "a new module (%@) that can move funds without a signature" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "un nuevo módulo (%@) que puede mover fondos sin una firma"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "署名なしで資金を動かせる新しいモジュール(%@)"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "서명 없이 자금을 옮길 수 있는 새 모듈(%@)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "可在没有签名的情况下转移资金的新模块(%@)"
+          }
+        }
+      }
+    },
+    "a new transaction guard (%@)" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "una nueva protección de transacciones (%@)"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "新しいトランザクションガード(%@)"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "새 트랜잭션 가드(%@)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "新的交易守卫(%@)"
           }
         }
       }
@@ -180069,6 +181749,34 @@
         }
       }
     },
+    "removed its fallback handler" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "quitó su gestor de reserva"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "フォールバックハンドラを削除しました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "폴백 핸들러를 제거함"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "移除了其回退处理器"
+          }
+        }
+      }
+    },
     "removed its transaction guard" : {
       "localizations" : {
         "es" : {
@@ -180093,6 +181801,90 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "移除了其交易守卫"
+          }
+        }
+      }
+    },
+    "removing a module (%@)" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "quitar un módulo (%@)"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "モジュールの削除(%@)"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "모듈 제거(%@)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "移除一个模块(%@)"
+          }
+        }
+      }
+    },
+    "replaced its own code (%@)" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "sustituyó su propio código (%@)"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "自身のコードを置き換えました(%@)"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "자체 코드를 바꿈(%@)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "替换了自身代码(%@)"
+          }
+        }
+      }
+    },
+    "replacing the Safe's own code (%@)" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "sustituir el código propio del Safe (%@)"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Safe 自身のコードの置き換え(%@)"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Safe 자체 코드 교체(%@)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "替换 Safe 自身的代码(%@)"
           }
         }
       }
@@ -181270,6 +183062,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "集合"
+          }
+        }
+      }
+    },
+    "set a new fallback handler (%@) that can answer for it" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "estableció un nuevo gestor de reserva (%@) que puede responder por él"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "代わりに応答できる新しいフォールバックハンドラを設定しました(%@)"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "자신을 대신해 응답할 수 있는 새 폴백 핸들러를 설정함(%@)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "设置了可代其应答的新回退处理器(%@)"
           }
         }
       }

@@ -681,6 +681,34 @@
         }
       }
     },
+    "Choose what the tile shows, or nothing for your watchlist in its own order.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Elige qué muestra el mosaico, o nada para ver tu lista en su propio orden."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "タイルに表示するものを選びます。何も選ばなければウォッチリストを並び順のまま表示します。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "타일에 표시할 항목을 고르세요. 아무것도 고르지 않으면 관심 목록을 원래 순서대로 보여 줍니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "选择磁贴显示的内容;不选则按自选列表自身的顺序显示。"
+          }
+        }
+      }
+    },
     "Deadlines": {
       "localizations": {
         "es": {
@@ -845,6 +873,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "在 Casberi 中关注一个地址"
+          }
+        }
+      }
+    },
+    "Followed": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Seguidos"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "フォロー中"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "팔로우함"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "已关注"
           }
         }
       }
@@ -1661,6 +1717,34 @@
         }
       }
     },
+    "Show": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Mostrar"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "表示"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "표시"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "显示"
+          }
+        }
+      }
+    },
     "Something new": {
       "localizations": {
         "es": {
@@ -2425,6 +2509,34 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "你的内容，尽在一处"
+          }
+        }
+      }
+    },
+    "as of %@": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "a las %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ 時点"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "%@ 기준"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "截至 %@"
           }
         }
       }
