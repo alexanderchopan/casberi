@@ -244,6 +244,7 @@ struct DSSlabField: View {
 
     /// Inside an account page's act this draws its ROW form (prd §640).
     @Environment(\.accountAct) private var accountAct
+    @Environment(\.accountActInset) private var actInset
     /// The well's own focus, for a caller that passes none: a wrapped
     /// placeholder's second line sits below the field's one, and a tap there
     /// still has to put the caret in (prd §1027).
@@ -669,6 +670,7 @@ struct DSSlabButton: View {
 
     /// Inside an account page's act this draws its ROW form (prd §640).
     @Environment(\.accountAct) private var accountAct
+    @Environment(\.accountActInset) private var actInset
     @Environment(\.accountTileBoard) private var tileBoard
     @Environment(\.openURL) private var openURL
 
@@ -707,7 +709,7 @@ struct DSSlabButton: View {
                     DSActRow.disc(systemImage, tinted: enabled && !busy)
                 }
                 Text(LocalizedStringKey(title))
-                    .dsText(.heading17)
+                    .dsText(.body17)
                     .foregroundStyle(enabled && !busy ? DS.tint : DS.textTertiary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
@@ -836,6 +838,7 @@ struct DSSlabDoor: View {
 
     /// Inside an account page's act this draws its ROW form (prd §640).
     @Environment(\.accountAct) private var accountAct
+    @Environment(\.accountActInset) private var actInset
     @Environment(\.openURL) private var openURL
 
     var body: some View {
@@ -852,25 +855,24 @@ struct DSSlabDoor: View {
     /// on the page they stand in one column.
     private var actRow: some View {
         Button(action: fire) {
+            // The Feed's row (prd §1254): the name over the fact behind
+            // the door, no chevron — the row is the door.
             HStack(spacing: DS.Space.s3) {
                 if let systemImage { DSActRow.disc(systemImage) }
-                Text(LocalizedStringKey(title))
-                    .dsText(.heading17)
-                    .foregroundStyle(DS.textPrimary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-                Spacer(minLength: DS.Space.s2)
-                if !detail.isEmpty {
-                    Text(detail)
-                        .dsText(.subhead12).foregroundStyle(DS.textTertiary)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(LocalizedStringKey(title))
+                        .dsText(.body17)
+                        .foregroundStyle(DS.textPrimary)
                         .lineLimit(1)
-                        .truncationMode(.middle)
+                        .minimumScaleFactor(0.8)
+                    if !detail.isEmpty {
+                        Text(detail)
+                            .dsText(.subhead12).foregroundStyle(DS.textTertiary)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                    }
                 }
-                if opens {
-                    Image(systemName: "chevron.right")
-                        .dsGlyph(.caption)
-                        .foregroundStyle(DS.textTertiary)
-                }
+                Spacer(minLength: DS.Space.s2)
             }
             .dsActRowFrame(glyphless: systemImage == nil)
         }
@@ -934,6 +936,7 @@ struct DSSlabSwitch: View {
 
     /// Inside an account page's act this draws its ROW form (prd §640).
     @Environment(\.accountAct) private var accountAct
+    @Environment(\.accountActInset) private var actInset
 
     var body: some View {
         if accountAct { toggle.dsActRowFrame(glyphless: true) }
@@ -983,6 +986,7 @@ struct DSSlabNote: View {
     /// a centred paragraph in a left-aligned column of rows reads as a
     /// fragment of some other screen, and 56 call sites had to remember.
     @Environment(\.accountAct) private var accountAct
+    @Environment(\.accountActInset) private var actInset
 
     private var left: Bool { plain || accountAct }
 
@@ -991,7 +995,7 @@ struct DSSlabNote: View {
         // sentence has, so `footnote-audit.py` counts this note with the rest.
         // 15pt inside an act (prd §729) is the footnote's own rule now.
         DSFootnote(prose: text, centered: !left)
-            .padding(.leading, accountAct ? DSActRow.inset : 0)
+            .padding(.leading, accountAct ? actInset : 0)
             .padding(.vertical, left ? DS.Space.s2 : 0)
             .padding(.top, left ? 0 : DS.Space.s1)
     }
@@ -1020,6 +1024,7 @@ struct DSCheckList: View {
     /// at `body17` secondary a six-line list out-weighs every row it sits
     /// between.
     @Environment(\.accountAct) private var accountAct
+    @Environment(\.accountActInset) private var actInset
     /// The leading mark. Defaults to the granted-capability checkmark.
     var systemImage = "checkmark"
     /// Its color — confirm green reads as "yes, you have this"; tertiary is the
@@ -1045,7 +1050,7 @@ struct DSCheckList: View {
                 }
             }
         }
-        .padding(.leading, accountAct ? DSActRow.inset : 0)
+        .padding(.leading, accountAct ? actInset : 0)
         .padding(.vertical, accountAct ? DS.Space.s2 : 0)
     }
 }

@@ -79,24 +79,25 @@ enum DSActRow {
     /// rows with no left edge reads as ragged floating text. This is §545's
     /// finding on the field, one control over, and it takes §545's answer:
     /// the well tone with `DS.pourInk` over it, clipped to the circle.
+    ///
+    /// **NO DISC SINCE prd §1254** (user: "we don't use backing for the
+    /// buttons"): the glyph stands bare in the disc's box, pink as every
+    /// glyph is (§1252), a commit's in the tint. The box stays, so the title
+    /// column does not move.
     static func disc(_ glyph: String, tinted: Bool = false) -> some View {
         Image(systemName: glyph)
-            .dsGlyph(.subhead, weight: .medium)
-            .foregroundStyle(tinted ? DS.tint : DS.textSecondary)
+            .dsGlyph(.body, weight: .medium)
+            .foregroundStyle(tinted ? DS.tint : DS.brandInk)
             .frame(width: discSize, height: discSize)
-            .background {
-                if tinted {
-                    Circle().fill(DS.tint.opacity(0.14))
-                } else {
-                    Circle().fill(DS.surfaceWell)
-                        .overlay { Circle().fill(DS.pourInk) }
-                }
-            }
     }
 }
 
 private struct AccountActKey: EnvironmentKey {
     static let defaultValue = false
+}
+
+private struct AccountActInsetKey: EnvironmentKey {
+    static var defaultValue: CGFloat { DSActRow.inset }
 }
 
 extension EnvironmentValues {
@@ -105,6 +106,14 @@ extension EnvironmentValues {
     var accountAct: Bool {
         get { self[AccountActKey.self] }
         set { self[AccountActKey.self] = newValue }
+    }
+
+    /// Where a glyphless act row's words start: the title column on the
+    /// page, the card's edge inside a card (prd §1254), where the glyphs
+    /// stand bare and the wells start at the edge too.
+    var accountActInset: CGFloat {
+        get { self[AccountActInsetKey.self] }
+        set { self[AccountActInsetKey.self] = newValue }
     }
 }
 
@@ -117,8 +126,18 @@ extension View {
     /// The act row's own geometry — one modifier so the door, the commit, the
     /// entry and the verb are the same object at the same height.
     func dsActRowFrame(glyphless: Bool = false) -> some View {
-        frame(minHeight: DSActRow.height)
-            .padding(.leading, glyphless ? DSActRow.inset : 0)
+        modifier(ActRowFrame(glyphless: glyphless))
+    }
+}
+
+private struct ActRowFrame: ViewModifier {
+    let glyphless: Bool
+    @Environment(\.accountActInset) private var inset
+
+    func body(content: Content) -> some View {
+        content
+            .frame(minHeight: DSActRow.height)
+            .padding(.leading, glyphless ? inset : 0)
             .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(Rectangle())
     }

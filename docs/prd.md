@@ -65915,3 +65915,13 @@ User: "lets talk about how we can improve the sources list to be more like the f
 - A row in a card is the Feed's anatomy: the 46pt mark, the name over its state ("Synced 1h ago", or Add in tint), no chevron. Rows land on the Feed's column: the card takes `rowInset - inset` because its list row already stands in the room's column (`SectionPanelCard(inset:)`).
 - A card shows six apps, then "More from <category>", which opens the rest in place (`openCategories`); a search lists every match.
 - Under the search, "By category A–Z" in the Feed header's words (§1251): the order in the head ink, the other grey. A–Z is one list under letter headers with People's index on the trailing edge (`LetterIndex`), as real list rows so the index can scroll; the choice is remembered on the phone (`sources.appsAZ`). The categories are not named on a second line (offered, not taken).
+
+## §1254 — Setup pages take the Feed's cards (2026-10-11)
+
+User: "lets think how to apply this same style to our set up pages"; mocked on Claude and Coinbase, "we don't use backing for the buttons", then "yes i like these do it".
+
+- Every account page (`AccountPage`, all 61) names its place "Sources", not the deleted Apps (§1234).
+- Its tiles are bare doors (`DSScopeTiles.bare`, §1252): pink glyph, white word, no backing.
+- Until connected, or while reconnecting, the act stands in a **Connect** card ("Reconnect"); the facts and `more()` stand in a **More** card: the Feed's panel and name, the Feed's air between cards. A card is drawn only round rows that drew, measured (`actHeight`, `moreHeight`), so an act whose slabs all rose to the tiles leaves no empty card. Inside a card the rows stand in the Feed's column and a glyphless row's words start at the card's edge (`accountActInset`).
+- Every act and fact glyph stands bare in its box, pink (a commit's in the tint) — `DSActRow.disc` draws no disc. A door or fact row is the Feed's: the name over its fact, no chevron.
+- Kept: the system's back button (iOS's own glass control) and the system Paste button, whose look iOS fixes; the Disconnect a registered seat with no key still offers (the honest exit, §1196).

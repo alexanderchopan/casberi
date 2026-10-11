@@ -132,6 +132,7 @@ struct BridgeStepLines: View {
     /// grammar over a list read once. `acknowledges` and `doneThrough` are
     /// deleted with it, and so is every screen's step counter.
     @Environment(\.accountAct) private var accountAct
+    @Environment(\.accountActInset) private var actInset
 
     /// Unnumbered SENTENCES are facts, and facts read as one paragraph (user,
     /// 2026-09-24, on Apple Wallet's three promises: "supposed to be three
@@ -173,7 +174,7 @@ struct BridgeStepLines: View {
         // title column, where `DSSlabNote` and `DSCheckList` already sit,
         // because these lines explain the DOOR ABOVE THEM and text starting
         // at the margin under a column of discs draws a second left edge.
-        .padding(.leading, accountAct ? DSActRow.inset : (inCard ? 0 : DS.Space.s2))
+        .padding(.leading, accountAct ? actInset : (inCard ? 0 : DS.Space.s2))
         .padding(.trailing, DS.Space.s2)
         .padding(.top, accountAct ? 0 : DS.Space.s1)
         .padding(.bottom, accountAct ? DS.Space.s2 : DS.Space.s1)
@@ -287,6 +288,7 @@ struct BridgeSyncStatusRows: View {
     var retry: (() -> Void)? = nil
     /// Inset to the title column inside an act (prd §640).
     @Environment(\.accountAct) private var accountAct
+    @Environment(\.accountActInset) private var actInset
     @State private var shakes = 0
 
     var body: some View {
@@ -297,7 +299,7 @@ struct BridgeSyncStatusRows: View {
                     .dsText(.body17)
                     .foregroundStyle(DS.textTertiary)
             }
-            .padding(.leading, accountAct ? DSActRow.inset : 0)
+            .padding(.leading, accountAct ? actInset : 0)
             .padding(.vertical, accountAct ? DS.Space.s2 : 0)
             .dsListRow()
         } else if let proof {
@@ -320,7 +322,7 @@ struct BridgeSyncStatusRows: View {
                 .dsText(.body17)
                 .foregroundStyle(failed ? DS.attentionInk : DS.confirmInk)
             }
-            .padding(.leading, accountAct ? DSActRow.inset : 0)
+            .padding(.leading, accountAct ? actInset : 0)
             .padding(.vertical, accountAct ? DS.Space.s2 : 0)
             .dsListRow()
             if failed, let retry {

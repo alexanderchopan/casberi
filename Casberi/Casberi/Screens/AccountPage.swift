@@ -179,6 +179,11 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
     /// Whether the page is still on screen when the landing's beat ends —
     /// a person who left in that beat is not pulled back.
     @State private var onScreen = false
+    /// The act's and `more()`'s drawn heights (prd §1254): a slot whose
+    /// slabs all rose to the tiles draws nothing, and a card around nothing
+    /// would be a name over air, so a card stands only round what drew.
+    @State private var actHeight: CGFloat = 0
+    @State private var moreHeight: CGFloat = 0
     /// Whose account this is (prd §1162), read in `onAppear` and on change —
     /// never in the body.
     @State private var identity: String?
@@ -209,7 +214,7 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
     private var pageList: some View {
         List {
             roomFrame
-            actSection
+            connectCard
             // THE ROOM UNDER THE HALF SHEET (prd §653). A medium detent
             // covers the bottom half, and the act — the entry row the person
             // came back to paste into — lives there. While the door is up
@@ -228,12 +233,13 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
                     .containerRelativeFrame(.vertical) { height, _ in height / 2 }
                     .plainAccountRow()
             }
-            more().dsAccountAct().plainAccountRow()
-            factRows
+            moreCard
             roster
             exits
         }
         .listStyle(.plain)
+        // A card's air row is shorter than the system's 44pt floor (prd §1254).
+        .environment(\.defaultMinListRowHeight, 0)
         .listSectionSpacing(.compact)
         .scrollContentBackground(.hidden)
         // No wash (prd §1196): the page's top is the room's frame now — the
@@ -349,7 +355,9 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
     /// and tiles at one y. The title names the place (Apps, as Settings › Apps
     /// › GitHub); the app is in the box, the way a contact is in its card.
     @ViewBuilder private var roomFrame: some View {
-        DSRoomTitleRow(title: String(localized: "Apps"))
+        // Sources since prd §1254: the Apps screen is deleted (§1234), and
+        // every app's page is reached from Sources.
+        DSRoomTitleRow(title: String(localized: "Sources"))
             .padding(.horizontal, DSRoomChassis.inset)
             .padding(.top, DS.Space.s2)
             .frameRow()
@@ -365,7 +373,7 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
             // active".
             let scopes = shown.map(\.scope)
             DSScopeTiles(sections: scopes, active: SheetTile.none, verbs: Set(scopes),
-                         inert: Set(shown.filter { !$0.enabled }.map(\.scope))) { pick in
+                         inert: Set(shown.filter { !$0.enabled }.map(\.scope)), bare: true) { pick in
                 guard let tile = shown.first(where: { $0.id == pick.id }), tile.enabled else { return }
                 tile.act()
             }
@@ -517,7 +525,88 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
         // `Design/DSAccountAct.swift` for what each primitive becomes.
         .dsAccountAct()
         .padding(.vertical, DS.Space.s2)
+        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { actHeight = $0 }
         .plainAccountRow()
+    }
+
+    // MARK: - The cards (prd §1254)
+
+    /// **THE SETUP AND THE REST ARE THE FEED'S CARDS (prd §1254, user: "yes
+    /// i like these do it").** Until the app is connected (or while it needs
+    /// reconnecting) the act stands in a Connect card; the facts and
+    /// `more()` stand in a More card. Each is drawn only round rows that
+    /// drew, measured, so an act whose every slab rose to the tiles leaves
+    /// no empty card.
+    @ViewBuilder private var connectCard: some View {
+        let carded = (!state.connected || state.needsReconnecting) && actHeight > Self.drawnFloor
+        if carded {
+            cardTop(state.needsReconnecting ? String(localized: "Reconnect") : String(localized: "Connect"),
+                    glyph: "link", air: true)
+        }
+        actSection
+            .environment(\.feedSectionPanel, carded)
+            .environment(\.accountActInset, carded ? 0 : DSActRow.inset)
+        if carded { cardBottom }
+    }
+
+    @ViewBuilder private var moreCard: some View {
+        let carded = hasFacts || moreHeight > Self.drawnFloor
+        if carded { cardTop(String(localized: "More"), glyph: "ellipsis.circle", air: true) }
+        Group {
+            more().dsAccountAct()
+                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { moreHeight = $0 }
+                .plainAccountRow()
+            factRows
+        }
+        .environment(\.feedSectionPanel, carded)
+        .environment(\.accountActInset, carded ? 0 : DSActRow.inset)
+        if carded { cardBottom }
+    }
+
+    /// Taller than the act's own padding, shorter than any row.
+    private static var drawnFloor: CGFloat { 24 }
+
+    /// The card's name on its top (prd §1208d), after the Feed's air.
+    @ViewBuilder private func cardTop(_ name: String, glyph: String, air: Bool = false) -> some View {
+        if air {
+            Color.clear
+                .frame(height: DS.Space.s4)
+                .frameRow()
+                .accessibilityHidden(true)
+        }
+        SectionPanelName(name: name, glyph: glyph)
+            .listRowInsets(EdgeInsets())
+            .listRowSeparator(.hidden)
+            .listRowBackground(SectionPanel(part: .top))
+    }
+
+    private var cardBottom: some View {
+        Color.clear
+            .frame(height: DS.Space.s4)
+            .listRowInsets(EdgeInsets())
+            .listRowSeparator(.hidden)
+            .listRowBackground(SectionPanel(part: .bottom))
+            .accessibilityHidden(true)
+    }
+
+    /// Whether the More card has a fact row to hold — `factRows`' own
+    /// conditions, spelled once below.
+    private var hasFacts: Bool {
+        planID != nil || offersTrack || state.connected
+    }
+
+    /// This app's plan in the Wallet, when the Wallet still holds it.
+    private var planID: String? {
+        guard seat != nil || state.connected, let id = ServiceLinks.shared.byOffer[name]?.planID,
+              SubscriptionsReading.shared.items.contains(where: { $0.id == id }) else { return nil }
+        return id
+    }
+
+    /// An app you can hold a plan with and have not tracked (prd §1164).
+    private var offersTrack: Bool {
+        planID == nil && (seat != nil || state.connected) && SubscriptionPlans.sells(name)
+            && !SubscriptionPlans.isTracked(name, among: SubscriptionsReading.shared.items.map(\.name)
+                                                  + SubscriptionStore.shared.all.map(\.name))
     }
 
     // MARK: - 3. Plain rows
@@ -531,16 +620,13 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
         // figure lives and states none: what an app costs is the Wallet's
         // (prd §1111, §1106a). Gated on the SEAT as well as `state`: the plan
         // is a fact about an app you added, true while its key needs fixing.
-        if seat != nil || state.connected, let planID = ServiceLinks.shared.byOffer[name]?.planID,
-           SubscriptionsReading.shared.items.contains(where: { $0.id == planID }) {
+        if let planID {
             AccountFactRow(glyph: SubscriptionWords.planGlyph,
                            title: String(localized: "What you pay"),
                            fact: String(localized: "In Wallet"),
                            opens: true,
                            action: { openPlan(planID) })
-        } else if seat != nil || state.connected, SubscriptionPlans.sells(name),
-                  !SubscriptionPlans.isTracked(name, among: SubscriptionsReading.shared.items.map(\.name)
-                                                     + SubscriptionStore.shared.all.map(\.name)) {
+        } else if offersTrack {
             // TRACK — an app you can hold a plan with and haven't tracked
             // (prd §1164). Free plans count, so the row never asks whether
             // you pay; it opens the tray on this app's price.
@@ -878,12 +964,16 @@ enum AccountPageState {
 /// A plain row on the page background — no card, no separator, the page's
 /// own margins.
 private struct PlainAccountRow: ViewModifier {
+    /// Inside a card (prd §1254) the row stands on the card's middle and in
+    /// the Feed's row column.
+    @Environment(\.feedSectionPanel) private var panel
+
     func body(content: Content) -> some View {
-        content
+        let inset = panel ? DSRoomChassis.rowInset : DS.Space.s4
+        return content
             .listRowSeparator(.hidden)
-            .listRowBackground(Color.clear)
-            .listRowInsets(EdgeInsets(top: 0, leading: DS.Space.s4,
-                                      bottom: 0, trailing: DS.Space.s4))
+            .listRowBackground(panel ? AnyView(SectionPanel(part: .middle)) : AnyView(Color.clear))
+            .listRowInsets(EdgeInsets(top: 0, leading: inset, bottom: 0, trailing: inset))
     }
 }
 
@@ -924,9 +1014,9 @@ struct AccountFactRow: View {
         }
     }
 
+    /// The Feed's row (prd §1254): the name over its fact, no chevron.
     private var line: some View {
-        DSPushRowLabel(title: Text(title), fact: Text(fact),
-                       opens: opens) {
+        DSPushRowLabel(title: Text(title), subtitle: Text(fact), opens: false) {
             Self.disc(glyph)
         }
         .frame(minHeight: Self.height)
