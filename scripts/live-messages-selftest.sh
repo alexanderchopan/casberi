@@ -40,28 +40,28 @@ done
 # Drift guards: wiring the compiled functions cannot prove about themselves.
 # Code lines only, so a comment quoting a line cannot satisfy or trip these.
 code() { grep -vE '^[[:space:]]*//' "$1"; }
-code "$XLIVE" | grep -qF 'if LiveMessages.reads(.x)' \
+code "$XLIVE" | grep -F 'if LiveMessages.reads(.x)' >/dev/null \
   || { echo "✗ the X messages read no longer asks its switch — DMs would land for everyone"; exit 1; }
-code "$IGLIVE" | grep -qF 'if LiveMessages.reads(.instagram)' \
+code "$IGLIVE" | grep -F 'if LiveMessages.reads(.instagram)' >/dev/null \
   || { echo "✗ the Instagram messages read no longer asks its switch — DMs would land for everyone"; exit 1; }
-code "$XLIVE" | grep -qF 'LiveMessagesLanding.land(' \
+code "$XLIVE" | grep -F 'LiveMessagesLanding.land(' >/dev/null \
   || { echo "✗ the X messages read no longer lands through LiveMessagesLanding"; exit 1; }
-code "$IGLIVE" | grep -qF 'LiveMessagesLanding.land(' \
+code "$IGLIVE" | grep -F 'LiveMessagesLanding.land(' >/dev/null \
   || { echo "✗ the Instagram messages read no longer lands through LiveMessagesLanding"; exit 1; }
-code "$LAND" | grep -qF 'LiveMessages.merge(content: existing.content' \
+code "$LAND" | grep -F 'LiveMessages.merge(content: existing.content' >/dev/null \
   || { echo "✗ a landed conversation is no longer merged — new lines never reach it"; exit 1; }
 # A read never marks anything read: those are POSTs this app never sends.
-if code "$XLIVE" | grep -qE 'mark_read|markRead'; then
+if code "$XLIVE" | grep -E 'mark_read|markRead' >/dev/null; then
   echo "✗ the X live read sends a mark-read — reading here would clear the person's own unread"; exit 1
 fi
-if code "$IGLIVE" | grep -qE '/seen/|mark_seen|markSeen'; then
+if code "$IGLIVE" | grep -E '/seen/|mark_seen|markSeen' >/dev/null; then
   echo "✗ the Instagram live read marks a thread seen — reading here would clear the person's own unread"; exit 1
 fi
 # The probes print shapes and names, never a message's words.
-if code "$XLIVE" | grep -E 'xLiveDM' | grep -qE '\.text\b|lines\.map|\.content'; then
+if code "$XLIVE" | grep -E 'xLiveDM' | grep -E '\.text\b|lines\.map|\.content' >/dev/null; then
   echo "✗ the X messages probe prints message words"; exit 1
 fi
-if code "$IGLIVE" | grep -E 'igLiveDM' | grep -qE '\.text\b|lines\.map|\.content'; then
+if code "$IGLIVE" | grep -E 'igLiveDM' | grep -E '\.text\b|lines\.map|\.content' >/dev/null; then
   echo "✗ the Instagram messages probe prints message words"; exit 1
 fi
 echo "live-messages-selftest: drift guards ✓"
