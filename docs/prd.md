@@ -65925,3 +65925,10 @@ User: "lets think how to apply this same style to our set up pages"; mocked on C
 - Until connected, or while reconnecting, the act stands in a **Connect** card ("Reconnect"); the facts and `more()` stand in a **More** card: the Feed's panel and name, the Feed's air between cards. A card is drawn only round rows that drew, measured (`actHeight`, `moreHeight`), so an act whose slabs all rose to the tiles leaves no empty card. Inside a card the rows stand in the Feed's column and a glyphless row's words start at the card's edge (`accountActInset`).
 - Every act and fact glyph stands bare in its box, pink (a commit's in the tint) — `DSActRow.disc` draws no disc. A door or fact row is the Feed's: the name over its fact, no chevron.
 - Kept: the system's back button (iOS's own glass control) and the system Paste button, whose look iOS fixes; the Disconnect a registered seat with no key still offers (the honest exit, §1196).
+
+## §1255 — The tray's category glyphs are pink, and the Wallet has one (2026-10-11)
+
+User: "turn the categories icons into the brand color. another is wallet needs a wallet icon in its row"; on moving the glyph beside the name, "we don't want the glyph into the header b/c someone won't know to tap it"; mocked, "do it".
+
+- A category row's disc stays first in its run, where it reads as a thing to tap; its glyph takes `DS.brandInk` (the attention hue still marks a broken app inside).
+- The Wallet's row leads with its own disc (`CategoryFold.glyph` for Wallet) like every category. It drew none because its door was the You row's (§1203 item 6); that row went with §1207 item 5. `categoryRow`'s and `wrapped`'s `leads` flag is deleted with it.

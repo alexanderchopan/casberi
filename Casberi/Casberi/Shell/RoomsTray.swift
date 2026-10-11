@@ -247,7 +247,7 @@ struct RoomsTray: View {
                         card { recentRow(gap: gap) }
                     }
                     if walletCard {
-                        card { categoryRow(CategoryFold.walletCategory, index: 2, gap: gap, leads: false) }
+                        card { categoryRow(CategoryFold.walletCategory, index: 2, gap: gap) }
                     }
                     if !feedCategories.isEmpty {
                         card {
@@ -492,13 +492,19 @@ struct RoomsTray: View {
     /// standing category fills its glyph; a broken app inside wears the
     /// attention hue on the category's glyph, and the label says it too.
     ///
-    /// The Wallet's row draws no disc of its own (prd §1203 item 6): its door
-    /// is the You row's, so the row is its name and its apps.
-    private func categoryRow(_ category: String, index: Int, gap: CGFloat, leads: Bool = true) -> some View {
+    /// **THE GLYPH IS PINK, AND THE WALLET HAS ONE (prd §1255, user: "turn
+    /// the categories icons into the brand color … wallet needs a wallet
+    /// icon in its row").** The disc stays first in the run, where it reads
+    /// as a thing to tap (user: "someone won't know to tap it" in the
+    /// header); the glyph takes the brand ink, as every glyph has since
+    /// §1252. The Wallet drew no disc because its door was the You row's
+    /// (§1203 item 6); that row is gone (§1207 item 5), so it leads as every
+    /// category does.
+    private func categoryRow(_ category: String, index: Int, gap: CGFloat) -> some View {
         let lit = standingCategory == category
         let needsYou = broken(category)
         let folder = folder(for: category)
-        return wrapped(folder, gap: gap, leads: leads) {
+        return wrapped(folder, gap: gap) {
             Button {
                 pickCategory(category)
             } label: {
@@ -519,7 +525,7 @@ struct RoomsTray: View {
                 pickCategory(category)
             } label: {
                 roundIcon(glyph(for: category, lit: lit),
-                          ink: needsYou ? DS.attention : DS.textPrimary,
+                          ink: needsYou ? DS.attention : DS.brandInk,
                           fill: lit ? DS.fillStrong : DS.surfaceRaised,
                           bounces: lit)
             }
@@ -1775,10 +1781,10 @@ struct RoomsTray: View {
     /// category, so You's six tiles all fit on one row"). The App Library's
     /// grammar: a name, then its icons in one grid; every line the same six
     /// columns, You's places on one line, a long category simply running on.
-    private func wrapped<Name: View, Lead: View>(_ folder: Folder, gap: CGFloat, leads: Bool = true,
+    private func wrapped<Name: View, Lead: View>(_ folder: Folder, gap: CGFloat,
                                                   @ViewBuilder name: () -> Name,
                                                   @ViewBuilder lead: () -> Lead) -> some View {
-        var cells: [RunCell] = leads ? [.lead] : []
+        var cells: [RunCell] = [.lead]
         if let action = folder.action { cells.append(.action(action)) }
         cells += folder.items.map(RunCell.item)
         let lines = stride(from: 0, to: cells.count, by: Self.lineSlots).map {
