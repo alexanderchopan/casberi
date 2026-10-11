@@ -65821,3 +65821,11 @@ The inventory: no social seat read DMs live. X, Instagram and Telegram read them
 6. **The probes print shapes and names, never a message** (`-xLiveProbe YES`, `-igLiveProbe YES`, `xLiveDM|`/`igLiveDM|`); `-liveMessages x|instagram|both|off` flips the switches.
 
 UNMEASURED and UNVERIFIED: both endpoints are authored against their documented shapes with no session on any build host, and written on a machine with no Xcode, so neither build nor read was seen before commit. `live-messages-selftest.sh` holds the parse, the merge, the switches and the no-mark-read rule.
+
+## §1245 — Sources searches its apps (user, 2026-10-10: "when you go to sources there is no fab, notes, or search bar, so you can't search for apps")
+
+Amends §1171 ("no Search on Settings") for Sources' Apps; completes §1234 item 1, which named search as part of Sources' Apps and never drew it.
+
+1. **Sources rises as a sheet (§1208m), and a sheet covers the band**: face, bar and ✎ stand under it, so the tray's search, the one door §1171 left, could not be reached from the catalogue.
+2. **The Apps list keeps a Search field** (`SettingsHome`, the same `DSSlabField` a tray landing drew), always while Apps is the pick; it filters every category's rows by name as you type and hides Start here while it holds words. Picking another count clears it, as before.
+3. Under the other counts the field still stands only for a name the tray landed on (§1171).

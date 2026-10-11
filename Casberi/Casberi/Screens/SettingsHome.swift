@@ -24,9 +24,9 @@ struct SettingsHome: View {
     /// Casberi's own options, opened in place from its pinned row — the way a
     /// Notes folder opens (prd §980): its name leads back.
     @State private var casberiOpen = false
-    /// A name the tray's search landed on (prd §1171): People narrowed to it,
-    /// shown in a field you clear. Settings has no search of its own; the
-    /// tray's is the one search.
+    /// What Sources' Apps field filters (prd §1245), or a name the tray's
+    /// search landed on (prd §1171): People narrowed to it, shown in a field
+    /// you clear.
     @State private var query = ""
     @FocusState private var searchFocused: Bool
     @State private var peopleScope = AddressScope(name: nil)
@@ -77,8 +77,12 @@ struct SettingsHome: View {
             }
             Section {
                 VStack(alignment: .leading, spacing: DS.Space.s6) {
-                    // The name a tray search landed on (prd §1171), clearable.
-                    if !casberiOpen, !query.isEmpty {
+                    // SOURCES FINDS ITS APPS (prd §1245, user: "there is no
+                    // fab, notes, or search bar, so you can't search for
+                    // apps"): risen as a sheet it covers the band's bar, so
+                    // the Apps list keeps a field of its own. Elsewhere it
+                    // is the name a tray search landed on (§1171), clearable.
+                    if !casberiOpen, scope == .apps || !query.isEmpty {
                         DSSlabField(placeholder: String(localized: "Search"),
                                     text: $query, actionLabel: "",
                                     focus: $searchFocused,
