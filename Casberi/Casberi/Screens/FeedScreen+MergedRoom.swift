@@ -462,16 +462,20 @@ extension FeedScreen {
     /// thing over the calendar (prd §1229).
     func dayAheadRow(_ thing: Thing, marks: [WalletCalendar.Mark]) -> some View {
         let start = Self.dayWhen(thing)
-        let minutes = Int(start.timeIntervalSinceNow / 60)
-        let when: String = minutes <= 0 ? String(localized: "now")
-            : minutes < 60 ? String(localized: "in \(minutes) min")
-            : start.formatted(date: Calendar.current.isDateInToday(start) ? .omitted : .abbreviated,
-                              time: .shortened)
+        // The day alone, no clock (prd §1264): an all-day event read
+        // "12:00 AM", and the span under the title carries a timed one's.
+        let cal = Calendar.current
+        let when: String = cal.isDateInToday(start) ? String(localized: "Today")
+            : cal.isDateInTomorrow(start) ? String(localized: "Tomorrow")
+            : start.formatted(.dateTime.month(.abbreviated).day())
         let clock = start.formatted(date: .omitted, time: .shortened)
-        // The span and the place; the start alone is already `when`, beside
-        // the title (prd §1229 — it was said twice).
-        let line = [thing.endAt.map { "\(clock)–\($0.formatted(date: .omitted, time: .shortened))" },
-                    thing.factList.first { $0.action == .map }?.value]
+        let facts = thing.factList
+        let allDay = facts.contains { $0.action == .allDay }
+        // The time and the place: the span, else a timed start alone, never
+        // an all-day event's midnight (prd §1264).
+        let time = thing.endAt.map { "\(clock)–\($0.formatted(date: .omitted, time: .shortened))" }
+            ?? (allDay ? nil : clock)
+        let line = [time, facts.first { $0.action == .map }?.value]
             .compactMap(\.self).joined(separator: " · ")
         return Button {
             openThing(thing)

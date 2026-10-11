@@ -66002,3 +66002,10 @@ User, once their own calendar's events were back on Day (the heal had been delet
 - §1260 drew one face per day, the event's, so a renewal on any day an event or to-do also marked was hidden under it with a count. A renewal mark now `pairs` (`WalletCalendar.Mark.pairs`): on a day another face leads, it stands beside it, both at `WalletCalendar.pairSize` (16pt, 34pt together; unmeasured on the narrowest phone); the count shows only past the two drawn.
 - Today's and attention's ring stays a circle on the first face (a stroked capsule is §746's pill).
 - The Wallet's calendar and the looking-back ones set no `pairs` and draw as before.
+
+## §1264 — Day's box names the day, never the clock (amends §1229) (2026-10-11)
+
+User, of Day's box reading "Indigenous Peoples' D…  Oct 12, 2026 at 12:00 AM": "also remove the time here in the day calendar header".
+
+- Beside the next thing's title stands its day alone: "Today", "Tomorrow", else the month and day ("Oct 12"), no year and no clock. "now" and "in N min" went with the clock.
+- The line under the title carries the time: a timed event's span, else its start alone, then its place. An all-day event (its `.allDay` fact) draws no time, so nothing reads "12:00 AM".
