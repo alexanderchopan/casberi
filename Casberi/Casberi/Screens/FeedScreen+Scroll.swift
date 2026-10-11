@@ -672,6 +672,50 @@ struct SectionPanelGroup<Header: View, Rows: View>: View {
     }
 }
 
+/// **A THING SHEET'S NAMED BLOCK IS THE FEED'S CARD (prd §1258, user: "ya
+/// do it. but make sure you do ALL thing sheets").** The panel's fill, a pink
+/// glyph and the name in the head ink, a figure trailing when the block has
+/// one, the rows in the card's column. Every titled block on every sheet
+/// draws through this, so no sheet keeps a grey label over a loose list.
+struct SheetCard<Content: View>: View {
+    let name: String
+    let glyph: String
+    var trailing: String? = nil
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            SectionPanelName(name: name, glyph: glyph, inset: DS.Space.s4) {
+                if let trailing {
+                    Spacer(minLength: DS.Space.s2)
+                    Text(verbatim: trailing)
+                        .dsText(.heading17)
+                        .monospacedDigit()
+                        .foregroundStyle(DS.textPrimary)
+                        .lineLimit(1)
+                }
+            }
+            VStack(alignment: .leading, spacing: DS.Space.s3) {
+                content
+            }
+            .padding(.horizontal, DS.Space.s4)
+            .padding(.bottom, DS.Space.s4)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(SectionPanel.fill, in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+    }
+}
+
+/// Wraps a view that is already a block's rows in a `SheetCard` (prd §1258),
+/// for a builder whose rows end in modifiers of their own.
+struct SheetCardWrap: ViewModifier {
+    let name: String
+    let glyph: String
+    func body(content: Content) -> some View {
+        SheetCard(name: name, glyph: glyph) { content }
+    }
+}
+
 /// A SECTION'S CARD OUTSIDE A LIST (prd §1227): `SectionPanelGroup`'s card for
 /// a screen that is a plain stack (a tray), the same fill, radius and name.
 struct SectionPanelCard<Content: View>: View {

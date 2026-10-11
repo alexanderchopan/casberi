@@ -115,6 +115,7 @@ struct MomentSheetBlock: View {
             if part != .rows { clock }
             if part != .box, !rows.isEmpty {
                 FactRows(facts: rows)
+                    .modifier(SheetCardWrap(name: String(localized: "Details"), glyph: "list.bullet"))
                     .padding(.horizontal, DS.Space.s4)
                     .padding(.top, part == .rows ? 0 : DS.Space.s4)
             }

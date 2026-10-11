@@ -65948,3 +65948,15 @@ User, after Home's Newest (§1256): "should we consider the same treatment for w
 - Under the box and the tiles, the Wallet's Home draws one **Overview** card (`ScopeTileGlyph.home`): a row per list that has something — Needs you (how many wait, the newest's title), Subscriptions (the next plan's price and renewal), Spending (this month's sum and its comparison), Cards (the first card's figure) — each a pink glyph, the name over its line, the figure trailing, a press landing on the list (`walletHomeJump`). Transactions has no row: its list follows.
 - The lists under it keep every row: an Overview row names a list and shows none of its items, so §1208l's skipping has nothing to skip.
 - The Wallet's glance tiles are deleted from view and model (`WalletGlance`, `walletGlanceGrid`, `walletGlance`, `walletFigure`, `firstClause`), and with the Feed's (§1256) the glance tile itself (`GlanceTile`, `GlanceSpec`, `glanceShown`, `fresh`); `GlanceShell`/`GlanceGrid` stay for What this app reaches. Overview leads the pill's names.
+
+## §1258 — Every thing sheet takes the Feed's style (2026-10-11)
+
+User: "lets apply the same style as our feed which is now our overall design to our thing sheets"; mocked on an article, a post and a money receipt, "ya do it. but make sure you do ALL thing sheets".
+
+Through the parts every sheet shares, so all nineteen heads change at once:
+- **The title wraps.** `DSRoomTitleRow` inside a sheet (`dsTitleWraps`, set by `ThingSheetView`) reads the thing's name whole at `heading24`, up to four lines, instead of shrinking it to one.
+- **The tiles are bare doors** (`VerbDial` → `DSScopeTiles(bare:)`, §1252).
+- **Every named block is the Feed's card** (`SheetCard`: the panel, a pink glyph, the name in the head ink, a trailing figure when it has one): Found in it, About, More from this book, That day, On this date, Links to, Points at this, the related shelf, Replies, every `MoneyHistoryRows` list (This month, Lately, More from …), This year with …, What moved, the checks' Falls short / Passes / Not judged, and **Details** (the spec table and a moment's facts, `SheetCardWrap`).
+- **More** holds the pivot doors (Everything from <app>, the person's page).
+- **The link is said once.** A plain sheet's box already draws the host and art, so its body draws no link card (`linkInBox`) and the link is Details' Site row.
+- Not changed: each kind's box (its content is the kind's own). A thing that carries nothing but a title (a Wise "Needs attention") still draws a box holding only its mark.

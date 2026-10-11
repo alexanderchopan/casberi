@@ -640,11 +640,10 @@ struct ThingSheetView: View {
                     dialResult
                     // What the picture names, under the tiles (§885's facts).
                     if !facts.isEmpty {
-                        VStack(alignment: .leading, spacing: DS.Space.s2) {
-                            Text("Found in it").dsText(.heading20).foregroundStyle(DS.headInk)
-                                .padding(.horizontal, DSRoomChassis.inset)
+                        SheetCard(name: String(localized: "Found in it"), glyph: "text.viewfinder") {
                             factRows
                         }
+                        .padding(.horizontal, DS.Space.s4)
                         .padding(.top, DS.Space.s6)
                         .settleIn(delay: 0.12)
                     }
@@ -875,6 +874,7 @@ struct ThingSheetView: View {
                 let contentShown: Bool = shapeHasBody && !dueInHead && hasWords
                 if contentShown && !mediaHead {
                     sheetContent(articleHead: articleHead, mailHead: mailHead, chartHead: chartHead)
+                        .environment(\.linkInBox, plainHead)
                         .padding(.top, DS.Space.s3)
                         .settleIn(delay: 0.12)
                 }
@@ -919,7 +919,7 @@ struct ThingSheetView: View {
                 }
                 // The stage already shows the counterparty (with its pencil),
                 // so its spec table drops the Who row instead of repeating it.
-                specTable(contentShown: contentShown, showsWho: moneyReceipt == nil,
+                specTable(contentShown: contentShown && !plainHead, showsWho: moneyReceipt == nil,
                           drawn: !framesOwnTiles)
                     .padding(.horizontal, DS.Space.s4)
                     .padding(.top, DS.Space.s6)
@@ -1034,9 +1034,7 @@ struct ThingSheetView: View {
                 // fragment, and the others from the same work were already in
                 // the corpus with nothing to reach them.
                 if !siblingPassages.isEmpty {
-                    VStack(alignment: .leading, spacing: DS.Space.s2) {
-                        Text("More from this book")
-                            .dsText(.label12).foregroundStyle(DS.textTertiary)
+                    SheetCard(name: String(localized: "More from this book"), glyph: "book") {
                         NoteSiblingList(rows: siblingPassages) {
                             walkingToScope = .none
                             walkingToNote = KeyedThing($0)
@@ -1048,16 +1046,13 @@ struct ThingSheetView: View {
                 // THAT DAY (prd §366) — the corpus answering a question the
                 // journal app this entry came from structurally cannot.
                 if !sameDayThings.isEmpty {
-                    VStack(alignment: .leading, spacing: DS.Space.s2) {
-                        Text("That day")
-                            .dsText(.label12).foregroundStyle(DS.textTertiary)
-                            .padding(.horizontal, DS.Space.s4)
+                    SheetCard(name: String(localized: "That day"), glyph: "calendar") {
                         NoteSameDayShelf(rows: sameDayThings) {
                             walkingToScope = .none
                             walkingToNote = KeyedThing($0)
                         }
-                        .padding(.horizontal, DS.Space.s4)
                     }
+                    .padding(.horizontal, DS.Space.s4)
                     .padding(.top, DS.Space.s4)
                 }
                 // THE SAME DATE, IN OTHER YEARS (prd §399). Under "That day",
@@ -1065,9 +1060,7 @@ struct ThingSheetView: View {
                 // one answers about the date ACROSS the years — the wider
                 // reading, and the one that only exists once a journal is deep.
                 if !otherYears.isEmpty {
-                    VStack(alignment: .leading, spacing: DS.Space.s2) {
-                        Text("On this date")
-                            .dsText(.label12).foregroundStyle(DS.textTertiary)
+                    SheetCard(name: String(localized: "On this date"), glyph: "clock.arrow.circlepath") {
                         NoteOtherYearsList(rows: otherYears) {
                             walkingToScope = .none
                             walkingToNote = KeyedThing($0)
@@ -1114,19 +1107,25 @@ struct ThingSheetView: View {
                     .padding(.top, DS.Space.s4)
                 // THE NAMES ON A THING ARE PAGES (prd §1209a): its person and
                 // its app, each a door to everything with them.
-                ThingPivotDoors(thing: thing) { query in
-                    dismiss()
-                    Task { @MainActor in
-                        try? await Task.sleep(for: .milliseconds(450))
-                        chrome.pivot = query
+                if !ThingPivotDoors.queries(for: thing).isEmpty {
+                    SheetCard(name: String(localized: "More"), glyph: "ellipsis.circle") {
+                        ThingPivotDoors(thing: thing) { query in
+                            dismiss()
+                            Task { @MainActor in
+                                try? await Task.sleep(for: .milliseconds(450))
+                                chrome.pivot = query
+                            }
+                        }
                     }
+                    .padding(.horizontal, DS.Space.s4)
+                    .padding(.top, DS.Space.s4)
                 }
-                .padding(.horizontal, DS.Space.s4)
-                .padding(.top, DS.Space.s4)
             }
             .padding(.bottom, DS.Space.s6)
         }
         .scrollIndicators(.hidden)
+        // Every head's title row reads the thing's name whole (prd §1258).
+        .environment(\.dsTitleWraps, true)
         // A note of yours stands its three keys at the foot (prd §983).
         .safeAreaInset(edge: .bottom, spacing: 0) {
             if pagedNote { keptNoteBand }
@@ -2684,9 +2683,9 @@ struct ThingSheetView: View {
                     }
                 }
             }
-            // The rows stand on no plate (prd §782): the table's own column
-            // gathers them, and air separates it from the blocks around it.
+            // On the Feed's card since prd §1258, named Details.
             .frame(maxWidth: .infinity, alignment: .leading)
+            .modifier(SheetCardWrap(name: String(localized: "Details"), glyph: "list.bullet"))
             // Opening the sheet is the intent that buys the World ID read
             // (§785's rule) — one `eth_call`, cached a week, never from a row.
             .task(id: "firstSeen:\(thing.counterpartyAddress ?? "")") {
@@ -3630,8 +3629,7 @@ struct ThingSheetView: View {
         } else if MediaSheetBox.isVideo(thing),
                   let about = thing.summary?.trimmingCharacters(in: .whitespacesAndNewlines),
                   !about.isEmpty {
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                Text("About").dsText(.heading20).foregroundStyle(DS.headInk)
+            SheetCard(name: String(localized: "About"), glyph: "info.circle") {
                 Text(verbatim: about).dsText(.body17).foregroundStyle(DS.textSecondary)
                     .lineLimit(6)
             }
@@ -3972,7 +3970,7 @@ struct ThingSheetView: View {
     }
 
     private var noteLinksSection: some View {
-        noteLinkList("Links to", notes: liveLinkedNotes)
+        noteLinkList(String(localized: "Links to"), notes: liveLinkedNotes)
     }
 
     /// The inverse graph, generalized (2026-08-08, prd §340). A thing's own
@@ -3990,10 +3988,7 @@ struct ThingSheetView: View {
     /// thing's URL. An unlabelled mixed list would make the weaker one look
     /// like the stronger.
     private var pointsAtSection: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s2) {
-            Text("Points at this")
-                .dsText(.label12)
-                .foregroundStyle(DS.textTertiary)
+        SheetCard(name: String(localized: "Points at this"), glyph: "arrow.down.left") {
             ForEach(pointingAt, id: \.id) { tie in
                 Button {
                     walkTo(tie)
@@ -4033,12 +4028,9 @@ struct ThingSheetView: View {
     }
 
     @ViewBuilder
-    private func noteLinkList(_ title: LocalizedStringKey, notes: [KeyedThing],
+    private func noteLinkList(_ title: String, notes: [KeyedThing],
                               icon: String = "arrow.up.right") -> some View {
-        VStack(alignment: .leading, spacing: DS.Space.s2) {
-            Text(title)
-                .dsText(.label12)
-                .foregroundStyle(DS.textTertiary)
+        SheetCard(name: title, glyph: icon) {
             ForEach(notes) { note in
                 // `liveLinkedNotes` filters when this view VALUE is made; this
                 // runs again each time the closure is re-evaluated, which is
@@ -4078,12 +4070,11 @@ struct ThingSheetView: View {
             // one row never says it twice (prd §1079).
             if sameObject.isEmpty { keptBeforeRow } else { sameObjectRows }
             if !relatedStream.els.isEmpty {
-                Text(LocalizedStringKey(relatedTitle))
-                    .dsText(.label12)
-                    .foregroundStyle(DS.textTertiary)
-                    .padding(.horizontal, DS.Space.s4)
+                SheetCard(name: NSLocalizedString(relatedTitle, comment: ""), glyph: "square.stack") {
+                    GenRender(id: "root", els: relatedStream.els)
+                }
+                .padding(.horizontal, DS.Space.s4)
             }
-            GenRender(id: "root", els: relatedStream.els)
         }
     }
 

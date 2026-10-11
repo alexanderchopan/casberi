@@ -113,10 +113,7 @@ struct PrivyAppSheet<Tiles: View>: View {
 
     private var activity: some View {
         let mask = BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil
-        return VStack(alignment: .leading, spacing: DS.Space.s2) {
-            Text("What moved")
-                .dsText(.heading20)
-                .foregroundStyle(DS.headInk)
+        return SheetCard(name: String(localized: "What moved"), glyph: "arrow.left.arrow.right") {
             ForEach(moved) { line in
                 DSFeedRow(name: line.title,
                           line: Text(line.when, format: .dateTime.month(.abbreviated).day().year())) {

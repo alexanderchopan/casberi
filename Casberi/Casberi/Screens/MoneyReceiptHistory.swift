@@ -17,19 +17,8 @@ struct MoneyHistoryRows: View {
     var onOpen: (Thing) -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s2) {
-            HStack(alignment: .firstTextBaseline) {
-                // A list's name in the rooms' pink, as every list's is.
-                Text(verbatim: title)
-                    .dsText(.heading20)
-                    .foregroundStyle(DS.headInk)
-                Spacer(minLength: DS.Space.s2)
-                if let trailing {
-                    Text(verbatim: trailing)
-                        .dsText(.heading17).monospacedDigit()
-                        .foregroundStyle(DS.textPrimary)
-                }
-            }
+        // A list's name on the Feed's card (prd §1258), its figure trailing.
+        SheetCard(name: title, glyph: "clock", trailing: trailing) {
             if rows.isEmpty {
                 Text("Nothing before this one.")
                     .dsText(.body17)
@@ -80,10 +69,7 @@ struct MoneyYearTotals: View {
     var onAll: (() -> Void)?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s3) {
-            Text("This year with \(name)")
-                .dsText(.heading20)
-                .foregroundStyle(DS.headInk)
+        SheetCard(name: String(localized: "This year with \(name)"), glyph: "calendar") {
             HStack(spacing: DS.Space.s2) {
                 total(String(localized: "You sent"), sentUSD, sentCount, gain: false)
                 total(String(localized: "\(name) sent you"), receivedUSD, receivedCount, gain: true)

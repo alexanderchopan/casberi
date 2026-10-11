@@ -148,7 +148,7 @@ struct VerbDial: View {
 
     @ViewBuilder private var liveBody: some View {
         let tiles = self.tiles
-        DSScopeTiles(sections: tiles, active: SheetTile.none, verbs: Set(tiles)) { pick($0) }
+        DSScopeTiles(sections: tiles, active: SheetTile.none, verbs: Set(tiles), bare: true) { pick($0) }
             // In the rows' column, as a room's tiles stand: the discs were
             // centred and needed no inset; a grid does.
             .padding(.horizontal, DSRoomChassis.inset)

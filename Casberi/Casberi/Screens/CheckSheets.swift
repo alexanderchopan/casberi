@@ -430,19 +430,21 @@ struct CheckVerdictGlyph: View {
     }
 }
 
-/// A list's pink name over its rows, as every list under a sheet's tiles.
+/// A list on the Feed's card, as every list under a sheet's tiles (prd
+/// §1258): the reading's glyph, the name, its rows.
 struct CheckSection<Rows: View>: View {
     let title: String
     @ViewBuilder let rows: () -> Rows
 
     var body: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s2) {
-            Text(verbatim: title)
-                .dsText(.heading20)
-                .foregroundStyle(DS.headInk)
-            rows()
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        SheetCard(name: title, glyph: Self.glyph(title)) { rows() }
+    }
+
+    /// The verdict's own mark: short, passes, not judged.
+    private static func glyph(_ title: String) -> String {
+        if title == String(localized: "Falls short") { return "exclamationmark.triangle" }
+        if title == String(localized: "Passes") { return "checkmark.circle" }
+        return "questionmark.circle"
     }
 }
 

@@ -439,13 +439,12 @@ struct SocialRepliesSection: View {
     @State private var profile: SocialProfile?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s3) {
-            // Honest count: the fetch caps at replyCap, so a thread AT the cap
-            // may hold more — say "8+", never a false total (honesty rule).
-            Text(replies.count < SocialThread.replyCap
-                 ? "Replies · \(replies.count)"
-                 : "Replies · \(replies.count)+")
-                .dsText(.label12).foregroundStyle(DS.textTertiary)
+        // Honest count: the fetch caps at replyCap, so a thread AT the cap
+        // may hold more — say "8+", never a false total (honesty rule).
+        SheetCard(name: replies.count < SocialThread.replyCap
+                      ? String(localized: "Replies · \(replies.count)")
+                      : String(localized: "Replies · \(replies.count)+"),
+                  glyph: "bubble.left.and.bubble.right") {
             ForEach(Array(replies.enumerated()), id: \.element.id) { i, reply in
                 row(reply).staggerIn(index: min(i, 8))
             }

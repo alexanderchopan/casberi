@@ -41,8 +41,27 @@ struct DSRoomTitleRow: View {
     let title: String
     var pick: String? = nil
     @Environment(\.sizeCategory) private var sizeCategory
+    /// In a thing sheet the title is the thing's, and wraps (prd §1258).
+    @Environment(\.dsTitleWraps) private var wraps
 
     var body: some View {
+        if wraps {
+            // A THING'S TITLE WRAPS (prd §1258, user, of the sheets' one cut
+            // line: "ya do it"): a sheet is one thing, so its name reads
+            // whole, over as many lines as it needs, at the card-title rung.
+            label
+                .dsText(.heading24)
+                .foregroundStyle(DS.headInk)
+                .lineLimit(4)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityAddTraits(.isHeader)
+        } else {
+            roomTitle
+        }
+    }
+
+    private var roomTitle: some View {
         DSScreenHead(title: label, ink: DS.headInk)
             .lineLimit(1)
             .minimumScaleFactor(0.6)
@@ -113,5 +132,18 @@ struct DSWalkTitleRow: View {
         }
         .buttonStyle(RowPress())
         .accessibilityHint(Text("Shows this page"))
+    }
+}
+
+private struct DSTitleWrapsKey: EnvironmentKey {
+    static let defaultValue = false
+}
+
+extension EnvironmentValues {
+    /// A title row inside a thing sheet wraps instead of shrinking to one
+    /// line (prd §1258). Set by `ThingSheetView` only.
+    var dsTitleWraps: Bool {
+        get { self[DSTitleWrapsKey.self] }
+        set { self[DSTitleWrapsKey.self] = newValue }
     }
 }

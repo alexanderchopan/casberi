@@ -114,6 +114,8 @@ enum ThingChart {
 /// with its waveform. Everything here renders only what the record actually
 /// holds; nothing is fabricated.
 struct ThingContentView: View {
+    /// The sheet's box draws this link already (prd §1258).
+    @Environment(\.linkInBox) private var linkInBox
     let thing: Thing
 
     /// The conversation reading, when the sheet decided this row is one (prd
@@ -405,7 +407,11 @@ struct ThingContentView: View {
                 // Apple's player, read fresh from the post on the press.
                 TelegramVideoContent(post: post, storedImageURL: thing.previewImageURL)
             case .card(let url):
-                LinkPreviewCard(url: url, storedImageURL: thing.previewImageURL)
+                // A sheet whose box already draws the link (prd §1258) names
+                // it under Details; the card would say it twice.
+                if !linkInBox {
+                    LinkPreviewCard(url: url, storedImageURL: thing.previewImageURL)
+                }
             case .art(let art):
                 // A link with stored art but no openable URL — an Apple Music
                 // LIBRARY play comes back from MusicKit with no song.url, so
@@ -3235,3 +3241,16 @@ private struct GitHubReleaseContent: View {
 }
 
 
+
+private struct LinkInBoxKey: EnvironmentKey {
+    static let defaultValue = false
+}
+
+extension EnvironmentValues {
+    /// Set by a thing sheet whose box draws the thing's link, so the body
+    /// does not draw the link card again (prd §1258).
+    var linkInBox: Bool {
+        get { self[LinkInBoxKey.self] }
+        set { self[LinkInBoxKey.self] = newValue }
+    }
+}
