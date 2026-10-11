@@ -935,6 +935,11 @@ struct FeedScreen: View {
     /// Markets' My order is being dragged (prd §1250): the list stands in
     /// edit mode with its handles, a Done row at its foot.
     @State var marketsReordering = false
+    /// Typed here: inline as a ternary in the body's chain it timed out
+    /// the type-checker (build 802).
+    private var marketsEditMode: Binding<EditMode>? {
+        marketsReordering ? .constant(.active) : nil
+    }
 
     // MARK: - Body
 
@@ -1582,7 +1587,7 @@ struct FeedScreen: View {
         .listStyle(.plain)
         // Markets' reorder (prd §1250): the list's own drag handles, never a
         // drag gesture in scroll content. nil leaves every other room as it was.
-        .environment(\.editMode, marketsReordering ? .constant(.active) : nil)
+        .environment(\.editMode, marketsEditMode)
         // The wave every row lead measures a landing against (prd §901,
         // `LeadCycle`): a thing captured after this, appearing now, landed
         // while you were looking; the corpus the page opened to did not.
