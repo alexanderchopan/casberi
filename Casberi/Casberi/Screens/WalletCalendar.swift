@@ -24,6 +24,10 @@ struct WalletCalendar: View {
         /// The thing's own picture (a feed's mark, prd §1144); nil draws the
         /// app's mark by `face`, else its letter.
         var url: String? = nil
+        /// Draws beside the day's first face rather than under its count
+        /// (Day's renewals, prd §1263), so a day an event also marks shows
+        /// both.
+        var pairs = false
     }
 
     let marks: [Mark]
@@ -39,6 +43,8 @@ struct WalletCalendar: View {
     static let rowHeight: CGFloat = 27
     /// The face ramp's badge tier: a mark beside a day number.
     static let faceSize: CGFloat = DS.Face.badge
+    /// Two faces in one day: 34pt together with their gap.
+    static let pairSize: CGFloat = 16
 
     var body: some View {
         let cal = Calendar.current
@@ -84,29 +90,39 @@ struct WalletCalendar: View {
         let label = number == 1 && index > 0
             ? day.formatted(.dateTime.month(.abbreviated).day())
             : "\(number)"
+        // A pairing mark under another face stands beside it (prd §1263).
+        let partner = marks.first.flatMap { first in
+            marks.dropFirst().first { $0.pairs && $0.face != first.face }
+        }
         return ZStack {
             if let first = marks.first {
                 // A dated thing TAKES its day (the box is 206pt, prd §919):
                 // the face stands where the number would, the grid says which
                 // day it is, and today keeps its tint as a ring.
-                SubscriptionFace(name: first.face, size: Self.faceSize, url: first.url)
-                    .overlay {
-                        if marks.contains(where: \.attention) || isToday {
-                            Circle().strokeBorder(marks.contains(where: \.attention) ? DS.attention : DS.tint,
-                                                  lineWidth: 2)
-                                .padding(-2)
+                HStack(spacing: 2) {
+                    SubscriptionFace(name: first.face, size: partner == nil ? Self.faceSize : Self.pairSize,
+                                     url: first.url)
+                        .overlay {
+                            if marks.contains(where: \.attention) || isToday {
+                                Circle().strokeBorder(marks.contains(where: \.attention) ? DS.attention : DS.tint,
+                                                      lineWidth: 2)
+                                    .padding(-2)
+                            }
                         }
+                    if let partner {
+                        SubscriptionFace(name: partner.face, size: Self.pairSize, url: partner.url)
                     }
-                    .overlay(alignment: .bottomTrailing) {
-                        if counts, marks.count > 1 {
-                            Text(verbatim: "\(marks.count)")
-                                .dsText(.dockCaption10).monospacedDigit()
-                                .foregroundStyle(DS.textPrimary)
-                                .frame(width: 13, height: 13)
-                                .background(Circle().fill(DS.surfaceRaised))
-                                .offset(x: 6, y: 3)
-                        }
+                }
+                .overlay(alignment: .bottomTrailing) {
+                    if counts, marks.count > (partner == nil ? 1 : 2) {
+                        Text(verbatim: "\(marks.count)")
+                            .dsText(.dockCaption10).monospacedDigit()
+                            .foregroundStyle(DS.textPrimary)
+                            .frame(width: 13, height: 13)
+                            .background(Circle().fill(DS.surfaceRaised))
+                            .offset(x: 6, y: 3)
                     }
+                }
             } else {
                 Text(verbatim: label)
                     .dsText(.dockCaption10)

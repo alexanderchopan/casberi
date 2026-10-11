@@ -65994,3 +65994,11 @@ User, of "Feed · Wallet · Privy": "you should be able to tap 'wallet' in the t
 - Once a pick follows the dot, the category's word presses (`DSRoomTitleRow(onTitle:)`, `RowPress`) and drops the pick, as the tray's category row does (`FeedScreen.clearRoomPick`): an account-menu pick through the room's own `onPick(nil)`, an app picked in a merged room or Notes by clearing `walletScope` / `mergedScope[room]`.
 - The pick after the dot stays a label, and with nothing picked the row presses nothing (§1133 stands there). A network the Testnets room stands on keeps its name unpressable: it has no view across networks (§1050).
 - The tray stays the first way; this is the second, the narrow exception §1207 made for the walk's grey words.
+
+## §1263 — A renewal on an event's day stands beside it (amends §1260) (2026-10-11)
+
+User, once their own calendar's events were back on Day (the heal had been deleting them): "now it's showing my personal but not subscriptions" — plan renewals.
+
+- §1260 drew one face per day, the event's, so a renewal on any day an event or to-do also marked was hidden under it with a count. A renewal mark now `pairs` (`WalletCalendar.Mark.pairs`): on a day another face leads, it stands beside it, both at `WalletCalendar.pairSize` (16pt, 34pt together; unmeasured on the narrowest phone); the count shows only past the two drawn.
+- Today's and attention's ring stays a circle on the first face (a stroked capsule is §746's pill).
+- The Wallet's calendar and the looking-back ones set no `pairs` and draw as before.

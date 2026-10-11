@@ -389,7 +389,8 @@ extension FeedScreen {
     /// The calendar's marks (prd §1229): every event and due to-do the Day
     /// holds in the calendar's five weeks, each as its app's face, then each
     /// subscription's renewal as its plan's face (prd §1260), never its price.
-    /// Events come first, so a day both mark wears the event's face.
+    /// Events come first; a renewal on an event's day stands beside it
+    /// (`pairs`, prd §1263).
     func dayCalendarMarks(_ visible: [Thing]) -> [WalletCalendar.Mark] {
         let cal = Calendar.current
         let start = WalletCalendar.start(now: .now, calendar: cal)
@@ -402,7 +403,7 @@ extension FeedScreen {
         }
         let renewals: [WalletCalendar.Mark] = SubscriptionsReading.shared.items.compactMap { item in
             guard let day = item.next, day >= start, day < end else { return nil }
-            return .init(id: "subscription:\(item.id)", day: day, face: item.name)
+            return .init(id: "subscription:\(item.id)", day: day, face: item.name, pairs: true)
         }
         return events + renewals
     }
