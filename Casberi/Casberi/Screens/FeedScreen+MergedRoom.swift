@@ -113,7 +113,11 @@ extension FeedScreen {
         } else if !heroShown && !inFeed {
             // **AN EMPTY DAY DRAWS ITS CALENDAR, EMPTY (prd §769, §1233).**
             Section {
-                DayCalendarFigure(title: String(localized: "Nothing ahead"), when: "", line: "", marks: [])
+                // Renewals may still stand on it (prd §1260): then it is the
+                // calendar that is empty, not the weeks.
+                DayCalendarFigure(title: marks.isEmpty ? String(localized: "Nothing ahead")
+                                                       : String(localized: "Nothing on your calendar"),
+                                  when: "", line: "", marks: marks)
                     .dsRoomBox()
                     .feedRowBackground()
                     .listRowInsets(.init(top: DS.Space.s2, leading: 0,
@@ -131,6 +135,9 @@ extension FeedScreen {
                 }
                 if makes.count == 1 { makeInDay(makes[0]) } else { dayMakeOpen = true }
             }
+            // The renewals on the calendar (prd §1260) read the Wallet's own
+            // reading, from here, since Day may open before the Wallet has.
+            .task(id: walletSubscriptionsKey) { await SubscriptionsReading.shared.refresh(modelContext) }
             .feedRowBackground()
             .listRowSeparator(.hidden)
             .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
@@ -371,17 +378,24 @@ extension FeedScreen {
 
 extension FeedScreen {
     /// The calendar's marks (prd §1229): every event and due to-do the Day
-    /// holds in the calendar's five weeks, each as its app's face.
+    /// holds in the calendar's five weeks, each as its app's face, then each
+    /// subscription's renewal as its plan's face (prd §1260), never its price.
+    /// Events come first, so a day both mark wears the event's face.
     func dayCalendarMarks(_ visible: [Thing]) -> [WalletCalendar.Mark] {
         let cal = Calendar.current
         let start = WalletCalendar.start(now: .now, calendar: cal)
         guard let end = cal.date(byAdding: .day, value: WalletCalendar.weeks * 7, to: start) else { return [] }
-        return visible.compactMap { thing in
+        let events: [WalletCalendar.Mark] = visible.compactMap { thing in
             guard thing.isLive, thing.kind == .event || thing.dueAt != nil else { return nil }
             let day = Self.dayWhen(thing)
             guard day >= start, day < end else { return nil }
             return .init(id: thing.id.uuidString, day: day, face: thing.source)
         }
+        let renewals: [WalletCalendar.Mark] = SubscriptionsReading.shared.items.compactMap { item in
+            guard let day = item.next, day >= start, day < end else { return nil }
+            return .init(id: "subscription:\(item.id)", day: day, face: item.name)
+        }
+        return events + renewals
     }
 
     /// A door to a screen the shell presents: from inside an app sheet the

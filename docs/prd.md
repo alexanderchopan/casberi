@@ -65968,3 +65968,12 @@ User, on a Wallet crown drawing its line red over "Unchanged": "wallet balance l
 - The crown's line (`WalletBalanceHeadline.accent`) is `TokenChartStyle.accent(up: true)` — green, pulled toward black in light — on every window, up, down or flat. It draws the balance, not its direction.
 - The direction stays in the signed figure under the number (`moveLine`): red for a loss, green for a gain, quiet for a move that rounds away. A loss is said once, in words.
 - Logos' crown is the same template (`RoomHomeCrown`, §683) and takes the same line. `onColor` still whitens it.
+
+## §1260 — Day's calendar carries your subscriptions (amends §1229) (2026-10-11)
+
+User, on Day's calendar box: "if user clicks on day calendar their subscriptions should also show there don't u think". §1229's own ask was "perhaps the same one that shows subscriptions", and since §1232 the Wallet's Home lists its plans with no calendar, so a renewal's day was drawn only on the Subscriptions page.
+
+- Day's `WalletCalendar` draws each tracked subscription's next renewal in its five weeks as the plan's face (`SubscriptionFace`), after the events and to-dos (`dayCalendarMarks`), so a day both mark wears the event's face and counts both.
+- No price, no ring for a price rise: a price stays in the Wallet (§1113). The renewal does not join Day's list, its next-thing title or Coming up's rows; a Rocket Money bill already reaches Coming up as its own row (§1105's one tile per bill).
+- Day reads the Wallet's own reading (`SubscriptionsReading`, §1105), refreshed from Day's tiles' `.task` on `walletSubscriptionsKey`, never a second reader.
+- An empty Day with renewals ahead titles its box "Nothing on your calendar", not "Nothing ahead" (§769, §1233).
