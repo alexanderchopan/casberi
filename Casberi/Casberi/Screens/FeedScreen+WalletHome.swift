@@ -26,32 +26,24 @@ extension FeedScreen {
         let tracks = sources.map { !$0.isEmpty } ?? true
         let plans = tracks ? Self.walletHomePlans(SubscriptionsReading.shared.items(in: sources)) : []
         let cards = onAll ? SpendingReading.shared.cards : []
-        // **THE FEED'S SHAPE (prd §1219, user: "we need to be reusing
-        // templates").** A tile per list with its most recent item — the
-        // Feed's `GlanceTile` — then each list on the Feed's panel, skipping
-        // what its tile showed (§1208l). Subscriptions and Cards are rosters,
-        // not news, and Spending is the month's sum (prd §1246), so their
-        // tiles are a plain `GlanceShell` and their lists keep every row.
-        let specs = Self.walletGlance([
-            (Self.needsYouGroup, Self.things(needs + dated)),
-            (Self.transactionsName, Self.things(stream.rows)),
-        ])
-        let shown = Self.glanceShown(specs, lede: nil)
-        let unseen: ([FeedRow]) -> [FeedRow] = { rows in
-            rows.filter { row in Self.things([row]).allSatisfy { !shown.contains($0.id) } }
-        }
-        var tiles: [WalletGlance] = []
+        // **OVERVIEW (prd §1257, user: "ok do the overview card").** One
+        // card, a row per list — what it is, its figure, one line — each a
+        // jump to its list, where the tiles stood (§1219). The lists under it
+        // keep every row: a row here names a list, it does not show its items.
+        var lines: [OverviewLine] = []
         let _ = {
-            func spec(_ name: String) -> GlanceSpec? { specs.first { $0.category == name } }
-            if let s = spec(Self.needsYouGroup) { tiles.append(.listed(s)) }
-            if let plan = plans.first { tiles.append(Self.planGlance(plan)) }
-            if onAll, let s = Self.spendingGlance(SpendingReading.shared.reading) { tiles.append(s) }
-            if let card = cards.first { tiles.append(Self.cardGlance(card)) }
-            if let s = spec(Self.transactionsName) { tiles.append(.listed(s)) }
+            let waiting = Self.things(needs + dated).filter(\.isLive)
+            if let first = waiting.first {
+                lines.append(OverviewLine(name: Self.needsYouGroup, figure: "\(waiting.count)",
+                                          line: first.title))
+            }
+            if let plan = plans.first { lines.append(Self.planGlance(plan)) }
+            if onAll, let s = Self.spendingGlance(SpendingReading.shared.reading) { lines.append(s) }
+            if let card = cards.first { lines.append(Self.cardGlance(card)) }
         }()
 
         Group {
-            walletGlanceGrid(tiles)
+            walletOverview(lines)
         }
         // The Spending reading (and the cards it reads) starts here, whatever
         // Home shows; Subscriptions reads its own.
@@ -64,8 +56,8 @@ extension FeedScreen {
         // **NEEDS YOU, THEN WHAT IS DATED (prd §1232).** One list: what
         // waits on you, undated, leads; the dated rows follow under their
         // days. Five rows across both, then the door.
-        let restNeeds = unseen(needs)
-        let restDated = unseen(dated)
+        let restNeeds = needs
+        let restDated = dated
         if !restNeeds.isEmpty || !restDated.isEmpty {
             let open = walletOpenSections.contains("needs")
             let total = restNeeds.count + restDated.count
@@ -98,7 +90,7 @@ extension FeedScreen {
             walletCardsSection(cards)
         }
 
-        let restMoves = unseen(stream.rows)
+        let restMoves = stream.rows
         if !restMoves.isEmpty {
             walletPanel(Self.transactionsName, glyph: Self.walletHomeGlyph(Self.transactionsName), things: Self.things(restMoves)) {
                 walletStreamSections(restMoves, ownMoves: stream.ownMoves, panelled: true, nextEventID: nextEventID)
@@ -110,7 +102,7 @@ extension FeedScreen {
 
     /// Home's lists in order, for the pill (prd §1219, §1232).
     static var walletHomeNames: [String] {
-        [needsYouGroup, subscriptionsName, spendingName, cardsName, transactionsName]
+        [overviewName, needsYouGroup, subscriptionsName, spendingName, cardsName, transactionsName]
     }
 
     static func walletHomeGlyph(_ name: String) -> String {
@@ -128,84 +120,59 @@ extension FeedScreen {
     static var cardsName: String { String(localized: "Cards") }
     static var transactionsName: String { String(localized: "Transactions") }
 
-    // MARK: - The tiles
+    // MARK: - Overview (prd §1257)
 
-    /// A Home tile: a thing's, the Feed's `GlanceTile`, or a roster's, the
-    /// same frame (`GlanceShell`) holding a figure and what it is.
-    enum WalletGlance {
-        case listed(GlanceSpec)
-        case plain(name: String, mark: Mark, when: Date?, amount: String, title: String)
-
-        /// What stands before the name: an app's mark, a face drawn for a
-        /// name, or nothing where the figure belongs to no one (Spending).
-        enum Mark {
-            case app(String)
-            case face(String)
-            case none
-        }
-
-        var name: String {
-            switch self {
-            case .listed(let spec): return spec.category
-            case .plain(let name, _, _, _, _): return name
-            }
-        }
+    /// One of Overview's rows: a list's name, its figure, and one line.
+    struct OverviewLine {
+        let name: String
+        let figure: String
+        let line: String
     }
 
+    /// The card: the Feed's panel, a row per list with its pink glyph, the
+    /// name over the line and the figure trailing; a press lands on the list.
     @ViewBuilder
-    func walletGlanceGrid(_ tiles: [WalletGlance]) -> some View {
-        if !tiles.isEmpty {
-            Section {
-                GlanceGrid {
-                    ForEach(tiles, id: \.name) { tile in
-                        switch tile {
-                        case .listed(let spec):
-                            GlanceTile(category: spec.category, fresh: Self.fresh(spec.things, since: newSince),
-                                       newest: spec.newest, next: spec.next,
-                                       pictured: spec.pictured, cast: spec.cast, figure: spec.money) {
-                                DSHaptic.selection()
-                                walletHomeJump(spec.category)
-                            }
-                        case .plain(let name, let mark, let when, let amount, let title):
-                            GlanceShell(category: name, when: when.map { LiveTimeText.short($0) },
-                                        accessibility: Text(verbatim: "\(name). \(amount), \(title)")) {
-                                DSHaptic.selection()
-                                walletHomeJump(name)
-                            } top: {
-                                EmptyView()
-                            } mark: {
-                                switch mark {
-                                case .app(let app):
-                                    BridgeIcon(name: app, size: DS.Mark.badge)
-                                        .frame(width: DS.Mark.badge, height: DS.Mark.badge)
-                                case .face(let face):
-                                    SubscriptionFace(name: face, size: DS.Mark.badge)
-                                        .frame(width: DS.Mark.badge, height: DS.Mark.badge)
-                                case .none:
-                                    EmptyView()
-                                }
-                            } words: {
-                                Text(verbatim: amount)
-                                    .dsText(.heading24)
-                                    .monospacedDigit()
+    func walletOverview(_ lines: [OverviewLine]) -> some View {
+        if !lines.isEmpty {
+            walletPanel(Self.overviewName, glyph: ScopeTileGlyph.home, things: []) {
+                ForEach(lines, id: \.name) { item in
+                    Button {
+                        DSHaptic.selection()
+                        walletHomeJump(item.name)
+                    } label: {
+                        HStack(spacing: DS.Space.s3) {
+                            DSActRow.disc(Self.walletHomeGlyph(item.name))
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text(verbatim: item.name)
+                                    .dsText(.body17)
                                     .foregroundStyle(DS.textPrimary)
-                                    .lineLimit(1)
-                                    .minimumScaleFactor(0.7)
-                                Text(verbatim: title)
+                                Text(verbatim: item.line)
                                     .dsText(.subhead12)
-                                    .foregroundStyle(DS.textSecondary)
-                                    .lineLimit(2)
+                                    .foregroundStyle(DS.textTertiary)
+                                    .lineLimit(1)
                             }
+                            Spacer(minLength: DS.Space.s2)
+                            Text(verbatim: item.figure)
+                                .dsText(.heading17)
+                                .monospacedDigit()
+                                .foregroundStyle(DS.textPrimary)
+                                .lineLimit(1)
                         }
+                        .frame(minHeight: DSActRow.height)
+                        .contentShape(Rectangle())
                     }
+                    .buttonStyle(RowPress())
+                    .accessibilityLabel(Text(verbatim: "\(item.name). \(item.figure), \(item.line)"))
+                    .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.rowInset,
+                                              bottom: 0, trailing: DSRoomChassis.rowInset))
+                    .feedRowBackground()
+                    .listRowSeparator(.hidden)
                 }
-                .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DSRoomChassis.inset,
-                                          bottom: 0, trailing: DSRoomChassis.inset))
-                .feedRowBackground()
-                .listRowSeparator(.hidden)
             }
         }
     }
+
+    static var overviewName: String { String(localized: "Overview") }
 
     // MARK: - Subscriptions
 
@@ -222,7 +189,7 @@ extension FeedScreen {
     }
 
     /// The plan that renews next: its price, its name and the day.
-    static func planGlance(_ item: Subscriptions.Item) -> WalletGlance {
+    static func planGlance(_ item: Subscriptions.Item) -> OverviewLine {
         let mask = BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil
         let amount: String
         if item.amount == 0 {
@@ -234,7 +201,7 @@ extension FeedScreen {
         }
         let name = shownName(item.name)
         let title = item.next.map { String(localized: "\(name) · Renews \(WalletSubscriptionRow.day($0))") } ?? name
-        return .plain(name: subscriptionsName, mark: .face(title), when: nil, amount: amount, title: title)
+        return OverviewLine(name: subscriptionsName, figure: amount, line: title)
     }
 
     /// **SUBSCRIPTIONS ON HOME IS A LIST (prd §1232, user: "if subscriptions
@@ -288,20 +255,19 @@ extension FeedScreen {
     // MARK: - Cards
 
     /// The card that asks something of you soonest, else the most used.
-    static func cardGlance(_ card: WalletCardRoll.Card) -> WalletGlance {
+    static func cardGlance(_ card: WalletCardRoll.Card) -> OverviewLine {
         let mask = BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil
         if let owed = card.owed, let due = card.due {
-            return .plain(name: cardsName, mark: .app(card.app), when: nil,
-                          amount: mask ?? CardSpendRoom.money(owed, code: card.owedCurrency),
-                          title: String(localized: "\(card.name) · Due \(WalletSubscriptionRow.day(due))"))
+            return OverviewLine(name: cardsName,
+                                figure: mask ?? CardSpendRoom.money(owed, code: card.owedCurrency),
+                                line: String(localized: "\(card.name) · Due \(WalletSubscriptionRow.day(due))"))
         }
         if card.spent > 0 || card.offers == 0 {
-            return .plain(name: cardsName, mark: .app(card.app), when: nil,
-                          amount: mask ?? AppleWalletRoom.money(max(card.spent, 0), "USD"),
-                          title: String(localized: "\(card.name) · This month"))
+            return OverviewLine(name: cardsName,
+                                figure: mask ?? AppleWalletRoom.money(max(card.spent, 0), "USD"),
+                                line: String(localized: "\(card.name) · This month"))
         }
-        return .plain(name: cardsName, mark: .app(card.app), when: nil,
-                      amount: cardOffersWords(card.offers), title: card.name)
+        return OverviewLine(name: cardsName, figure: cardOffersWords(card.offers), line: card.name)
     }
 
     static func cardOffersWords(_ count: Int) -> String {
@@ -377,49 +343,6 @@ extension FeedScreen {
             if case .single(let item) = row.kind { return item.live }
             return nil
         }
-    }
-
-    /// One tile per list that has something, its most recent item leading
-    /// and the one after it in grey, as the Feed's tiles are (prd §1219).
-    static func walletGlance(_ lists: [(String, [Thing])]) -> [GlanceSpec] {
-        lists.compactMap { name, things in
-            let live = things.filter(\.isLive)
-            guard let first = live.first else { return nil }
-            return GlanceSpec(category: name, things: live, newest: first,
-                              next: live.dropFirst().first, pictured: nil, cast: nil,
-                              money: walletFigure(first))
-        }
-    }
-
-    /// **A MONEY BOX LEADS WITH ITS FIGURE (prd §1224)**, as the Feed's
-    /// money tiles do: the amount the row would show, through Hide balances,
-    /// over who or what it was — the counterparty, a card's name, else the
-    /// title's first clause, so a long title never runs out of the box.
-    static func walletFigure(_ thing: Thing) -> (title: String, amount: String)? {
-        guard thing.isLive else { return nil }
-        let sign = thing.transferDirection == "received" ? "+" : ""
-        let amount: String
-        if let usd = thing.transferUSD, usd.isFinite, usd != 0 {
-            amount = sign + WalletValue.payment(usd)
-        } else if let value = thing.priceValue, value.isFinite, value != 0 {
-            amount = sign + BalancePrivacy.shared.value(
-                abs(value).formatted(.currency(code: thing.priceCurrency ?? "USD")))
-        } else if let raw = WalletValue.transferAmount(thing),
-                  raw.contains(where: { ("1"..."9").contains($0) }) {
-            amount = sign + raw
-        } else {
-            return nil
-        }
-        let name = thing.transferCounterparty.flatMap { $0.isEmpty ? nil : $0 }
-            ?? (WalletCards.isSpend(thing) ? BridgeCatalog.seatName(forSource: thing.source) : nil)
-            ?? Self.firstClause(thing.title)
-        return (name, amount)
-    }
-
-    /// "Needs attention · £200 → €235 · Deposit" → "Needs attention".
-    static func firstClause(_ title: String) -> String {
-        let cut = [" · ", " — "].compactMap { title.range(of: $0)?.lowerBound }.min()
-        return cut.map { String(title[..<$0]) } ?? title
     }
 
     /// A Home list on the Feed's panel, under an identity the list knows
@@ -554,7 +477,7 @@ extension FeedScreen {
     /// number").** The tile drew the newest purchase, which is most days the
     /// newest move, so it matched Transactions' tile. It draws what the list
     /// leads with: this month's total over last month to the same day.
-    static func spendingGlance(_ reading: Spending.Reading, now: Date = .now) -> WalletGlance? {
+    static func spendingGlance(_ reading: Spending.Reading, now: Date = .now) -> OverviewLine? {
         guard !reading.places.isEmpty else { return nil }
         let mask = BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil
         let month = now.formatted(.dateTime.month(.wide))
@@ -562,8 +485,8 @@ extension FeedScreen {
         let title = spendingCompare(reading, now: now, mask: mask)
             .map { $0.prefix(1).uppercased() + $0.dropFirst() }
             ?? String(localized: "So far in \(month)")
-        return .plain(name: spendingName, mark: .none, when: nil,
-                      amount: mask ?? AppleWalletRoom.money(reading.total, "USD"), title: title)
+        return OverviewLine(name: spendingName,
+                            figure: mask ?? AppleWalletRoom.money(reading.total, "USD"), line: title)
     }
 
     static func spendingTimes(_ count: Int) -> String {

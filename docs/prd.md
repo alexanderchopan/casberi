@@ -65940,3 +65940,11 @@ User, of Home's category squares: "they are kind of hard to read b/c they cut of
 - Under the box and the doors, Home draws one **Newest** card (a pink clock glyph): the five newest live things across every category as the Feed's rows, each under its app's name and time (`grouped`, `dsGroupedSource`, §1103a). The box's thing and the same news again are left out (§1208j); the category sections skip what Newest shows.
 - The glance tiles on Home are deleted from view and model (`contentsGrid`, `glanceSpecs`, `cast(of:)`); the Wallet's Home keeps its tiles, which summarise (§1224).
 - A category is reached from the tray's disc (§1255) or its section's name; the tiles' jump is not replaced.
+
+## §1257 — The Wallet's Home tiles become one Overview card (2026-10-11)
+
+User, after Home's Newest (§1256): "should we consider the same treatment for wallet on home and perhaps it is 'overview'"; mocked beside today's squares, "damn that's a hard choice", then "ok do the overview card".
+
+- Under the box and the tiles, the Wallet's Home draws one **Overview** card (`ScopeTileGlyph.home`): a row per list that has something — Needs you (how many wait, the newest's title), Subscriptions (the next plan's price and renewal), Spending (this month's sum and its comparison), Cards (the first card's figure) — each a pink glyph, the name over its line, the figure trailing, a press landing on the list (`walletHomeJump`). Transactions has no row: its list follows.
+- The lists under it keep every row: an Overview row names a list and shows none of its items, so §1208l's skipping has nothing to skip.
+- The Wallet's glance tiles are deleted from view and model (`WalletGlance`, `walletGlanceGrid`, `walletGlance`, `walletFigure`, `firstClause`), and with the Feed's (§1256) the glance tile itself (`GlanceTile`, `GlanceSpec`, `glanceShown`, `fresh`); `GlanceShell`/`GlanceGrid` stay for What this app reaches. Overview leads the pill's names.

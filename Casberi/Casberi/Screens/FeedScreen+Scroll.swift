@@ -444,42 +444,6 @@ extension FeedScreen {
         .filter { $0.isLive && $0.id != ledeID && TitleSeam.split($0.title).0 != ledeTitle }
         return Array(things.sorted { $0.capturedAt > $1.capturedAt }.prefix(newestRows))
     }
-
-    /// One glance tile, decided once so the grid and the sections under it
-    /// agree on what the tile showed (prd §1208l).
-    struct GlanceSpec {
-        let category: String
-        let things: [Thing]
-        let newest: Thing
-        /// Drawn under the newest only on a tile with no picture or faces.
-        let next: Thing?
-        let pictured: Thing?
-        let cast: ThingCastRoll?
-        /// The figure and what it was, when the caller knows them better
-        /// than the title does (the Wallet's lists, prd §1224).
-        var money: (title: String, amount: String)? = nil
-    }
-
-    /// SECTIONS SKIP WHAT THE TILES SHOWED (prd §1208l, user: "Sections skip
-    /// what tiles showed"): the box's thing, the same news again, and each
-    /// tile's line or two, so nothing is read twice going down the Feed.
-    static func glanceShown(_ specs: [GlanceSpec], lede: Thing?) -> Set<UUID> {
-        var out = Set<UUID>()
-        if let lede, lede.isLive { out.insert(lede.id) }
-        for spec in specs {
-            if spec.newest.isLive { out.insert(spec.newest.id) }
-            if let next = spec.next, next.isLive { out.insert(next.id) }
-        }
-        return out
-    }
-}
-
-extension FeedScreen {
-    /// How many of a tile's things came since your last visit (prd §1208k).
-    static func fresh(_ things: [Thing], since: Date?) -> Int {
-        guard let since else { return 0 }
-        return things.filter { $0.isLive && $0.capturedAt > since }.count
-    }
 }
 
 /// Two across; one across at the accessibility text sizes, where a square
@@ -495,121 +459,15 @@ struct GlanceGrid<Content: View>: View {
     }
 }
 
-/// One category at a glance (prd §1208d, §1208e, §1208k): a tile with a
-/// picture leads with it; a tile without one gives the tile to the words —
-/// the newest thing, then the one before it in grey. The head says how many
-/// came since your last visit and when the newest is; money leads with its
-/// figure; Social shows who. The whole tile jumps to the section.
-struct GlanceTile: View {
-    let category: String
-    /// How many came since your last visit; nothing is said at zero.
-    let fresh: Int
-    let newest: Thing
-    /// The thing before the newest, under it in grey when there is room.
-    var next: Thing? = nil
-    /// Today's newest thing in the category with a picture, if any.
-    var pictured: Thing? = nil
-    /// The people in today's Social things, when there are two or more.
-    var cast: ThingCastRoll? = nil
-    /// The figure and what it was, given; else read off the title.
-    var figure: (title: String, amount: String)? = nil
-    let action: () -> Void
-    @Environment(\.dynamicTypeSize) private var typeSize
-
-    static let artHeight: CGFloat = 72
-    /// Every tile one height, so the grid's rows line up whatever the words.
+/// The glance frame's one height.
+enum GlanceMetrics {
     static let height: CGFloat = 168
-
-    var body: some View {
-        let picture = pictured.flatMap { $0.isLive ? $0 : nil }.flatMap { shot in
-            StoredPixels.probe(shot).map { (shot, $0) }
-        }
-        let title = newest.isLive ? newest.title : ""
-        let money = figure ?? MoneyClause.split(title)
-        let follower = next.flatMap { $0.isLive ? $0.title : nil }
-        GlanceShell(category: category, when: LiveTimeText.short(moment), fresh: fresh,
-                    accessibility: Text(verbatim: "\(category). \(title)"), action: action) {
-            if let (shot, size) = picture {
-                // PINNED TO THE BAND (prd §1208i): a filled picture
-                // reports its filled size, and `maxWidth: .infinity`
-                // never caps it — a wide strip widened the whole tile
-                // past its column, over its neighbour and off the screen.
-                GeometryReader { geo in
-                    StoredPicture(shot, size: size) { image in
-                        Image(uiImage: image).resizable().scaledToFill()
-                    }
-                    .frame(width: geo.size.width, height: geo.size.height)
-                }
-                .frame(height: Self.artHeight)
-                .clipped()
-            }
-        } mark: {
-            if picture == nil { mark }
-        } words: {
-            if picture == nil, let cast {
-                DSLeadCast(roll: cast, source: newest.isLive ? newest.source : "", size: DS.Face.badge)
-                    .padding(.vertical, DS.Space.s1)
-            }
-            if let money {
-                // Money leads with its figure, the name under it.
-                Text(verbatim: money.amount)
-                    .dsText(.heading24)
-                    .monospacedDigit()
-                    .foregroundStyle(DS.textPrimary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
-                Text(verbatim: money.title)
-                    .dsText(.subhead12)
-                    .foregroundStyle(DS.textSecondary)
-                    .lineLimit(1)
-            } else {
-                Text(verbatim: title)
-                    .dsText(.body17)
-                    .fontWeight(.medium)
-                    .foregroundStyle(DS.textPrimary)
-                    .lineLimit(typeSize.isAccessibilitySize ? nil
-                               : picture != nil ? 2 : (cast != nil || follower != nil ? 2 : 4))
-                    .multilineTextAlignment(.leading)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            if picture == nil, cast == nil, let follower, !follower.isEmpty {
-                Text(verbatim: follower)
-                    .dsText(.subhead12)
-                    .foregroundStyle(DS.textSecondary)
-                    .lineLimit(2)
-                    .padding(.top, DS.Space.s1)
-            }
-        }
-    }
-
-    /// The moment the newest is about: an event's start (`capturedAt`), a
-    /// reminder's due date, else when it came.
-    private var moment: Date {
-        guard newest.isLive else { return .now }
-        return newest.kind == .event ? newest.capturedAt : (newest.dueAt ?? newest.capturedAt)
-    }
-
-    /// The newest thing's app, else — a source with no mark of its own — the
-    /// category's glyph, never a name drawn as a mark.
-    @ViewBuilder
-    private var mark: some View {
-        let source = newest.isLive ? newest.source : ""
-        if BridgeCatalog.category(forSource: source) != nil {
-            BridgeIcon(name: source, size: DS.Mark.badge)
-                .frame(width: DS.Mark.badge, height: DS.Mark.badge)
-        } else {
-            Image(systemName: CategoryFold.glyph(for: category))
-                .dsGlyph(.caption)
-                .foregroundStyle(DS.brandInk)
-                .frame(width: DS.Mark.badge, height: DS.Mark.badge)
-        }
-    }
 }
 
 /// THE GLANCE TILE'S FRAME (prd §1208d, §1222): one height, the room's faint
 /// fill, a press, a head of mark · category · when, then the words, then
-/// "N new". `GlanceTile` draws a thing in it; What this app reaches draws a
-/// category in it, so every glance in the app is one size.
+/// "N new". What this app reaches draws a category in it (the Feed's and the
+/// Wallet's tiles went with prd §1256 and §1257).
 struct GlanceShell<Top: View, Mark: View, Words: View>: View {
     let category: String
     let when: String?
@@ -657,8 +515,8 @@ struct GlanceShell<Top: View, Mark: View, Words: View>: View {
             }
             // A square, until the words need more (the accessibility sizes).
             .frame(maxWidth: .infinity,
-                   minHeight: typeSize.isAccessibilitySize ? nil : GlanceTile.height,
-                   maxHeight: typeSize.isAccessibilitySize ? nil : GlanceTile.height,
+                   minHeight: typeSize.isAccessibilitySize ? nil : GlanceMetrics.height,
+                   maxHeight: typeSize.isAccessibilitySize ? nil : GlanceMetrics.height,
                    alignment: .topLeading)
             .background(DS.fillFaint, in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
             .clipShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
