@@ -349,9 +349,21 @@ grep -q 'AvatarChip(' "$TMP/doors.nc" \
 # Since prd §1133f both seats TOGGLE the rooms tray, which holds every room,
 # app, place and the search; a rail face that opened Apps left the iPad and
 # the Mac no way to a room's apps once §1133 deleted the title pill.
-grep -q 'chrome.roomsTray.toggle()' "$TMP/root.nc" \
-  || { echo "✗ the dock's face no longer TOGGLES the rooms tray (prd §705, §930, §1133f) —"; \
-       echo "  pressing it a second time must close what it opened."; fail=1; }
+# On the PHONE since prd §1280 the face goes to the Feed (user: "if we have
+# for wallet we should have for feed"); the bar is the tray's door there. It is
+# still never a dead control: pressed with the tray up it closes it, and on
+# the Feed it returns to the top. The rail's face keeps the toggle (below).
+grep -q 'chrome.goToFeed()' "$TMP/root.nc" \
+  || { echo "✗ the phone's face no longer goes to the Feed (prd §1280)."; fail=1; }
+SHELLCHROME="$ROOT/Casberi/Casberi/Shell/ShellChrome.swift"
+awk '/func goToFeed\(\)/{f=1} f{print} f&&/^    }/{exit}' "$SHELLCHROME" > "$TMP/gofeed.nc"
+grep -q 'roomsTray = false' "$TMP/gofeed.nc" \
+  || { echo "✗ goToFeed no longer closes the tray — the face over the tray must close it (prd §1280)."; fail=1; }
+grep -q 'feedTop += 1' "$TMP/gofeed.nc" \
+  || { echo "✗ goToFeed no longer returns the Feed to its top — pressed on the Feed the face"; \
+       echo "  would do nothing, §83's dead control (prd §1280)."; fail=1; }
+grep -q 'sourceRequest = "All"' "$TMP/gofeed.nc" \
+  || { echo "✗ goToFeed no longer lands on the Feed (prd §1280)."; fail=1; }
 grep -q 'chrome.roomsTray.toggle()' "$TMP/main.nc" \
   || { echo "✗ the iPad rail's face no longer toggles the rooms tray (prd §1133f) — the two"; \
        echo "  seats are one door and must behave identically."; fail=1; }
