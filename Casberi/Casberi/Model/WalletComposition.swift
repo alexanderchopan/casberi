@@ -295,6 +295,17 @@ struct WalletComposition: Equatable, Sendable {
                                   until: stake.exitableAt,
                                   isPermanent: false))
         }
+        // AZTEC still in a token-sale or grant vault, unstaked (§1279): out of
+        // the wallet's balance and not yet the person's to move.
+        for vault in aztecStaking.vaults where vault.held > 0 {
+            out.locks.append(Lock(id: "aztec-vault:\(vault.atp)",
+                                  place: "Aztec",
+                                  symbol: "AZTEC",
+                                  amount: vault.held,
+                                  power: nil,
+                                  until: nil,
+                                  isPermanent: false))
+        }
 
         // Biggest first within each list — the room's own convention (the
         // treemap, the allocation tray and the holdings rows all lead with

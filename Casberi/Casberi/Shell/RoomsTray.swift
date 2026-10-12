@@ -170,15 +170,9 @@ struct RoomsTray: View {
         }
         #endif
         .onChange(of: chrome.roomsTray) { _, up in
-            // Raised by the band's bar: the field takes the keyboard once it
-            // is on screen (prd §1209a).
-            if up, chrome.traySearchFocus {
-                chrome.traySearchFocus = false
-                Task { @MainActor in
-                    try? await Task.sleep(for: .milliseconds(280))
-                    searching = true
-                }
-            }
+            // The bar raises the tray with the keyboard DOWN (prd §1279,
+            // amends §1209a): the bar is the tray's only door on the phone, so
+            // Recent and the apps must be in view; a tap on the field types.
             // Deal the rows in once the card has landed; under Reduce Motion
             // they are simply there.
             dealt = up

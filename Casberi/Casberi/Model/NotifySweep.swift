@@ -243,6 +243,13 @@ enum NotifySweep {
         //   `AztecWire.events`, `aztec:seq:<address>:stopped:<slot>`). A
         //   missed proposal, a recovery and every proposal stay rows.
         if ref.hasPrefix("aztec:seq:"), ref.contains(":stopped:") { return .nodeDown }
+        // — Aztec mainnet: a sequencer holding your staked AZTEC stopped
+        //   attesting (prd §1279, `aztec:stake:<attester>:stopped:<slot>`),
+        //   and staked AZTEC you can now withdraw (`aztec:exit:`), the
+        //   `poolCleared` news: money ready for you, act whenever. An Aztec
+        //   vote (`aztec:vote:`) stays a row.
+        if ref.hasPrefix("aztec:stake:"), ref.contains(":stopped:") { return .nodeDown }
+        if ref.hasPrefix("aztec:exit:") { return .poolCleared }
 
         // — Wallet: something gained the power to move funds.
         //   `wallet:sol-approval:` is the same grant on Solana (an SPL

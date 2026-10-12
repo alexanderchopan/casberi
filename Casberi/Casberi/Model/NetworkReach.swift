@@ -303,6 +303,14 @@ enum NetworkReach {
                          "lite-api.jup.ag",
                          "usernames.worldcoin.org",
                          "static.usernames.app-backend.toolsforhumanity.com"]),
+        // Aztec staking (prd §1277, §1279) — the contracts are read through
+        // the mainnet hosts under "Wallet activity"; this host is Aztec's own
+        // public mainnet node, asked one staked sequencer at a time.
+        Endpoint(service: "Aztec staking",
+                 reach: .whenConnected(bridge: "Wallet"),
+                 purpose: "Reads the attestation record of each Aztec sequencer that holds AZTEC staked by a wallet you follow, from dRPC's public Aztec mainnet node. Carries the sequencer's address and nothing else about you.",
+                 hosts: ["aztec-mainnet.drpc.org"],
+                 credentialed: false),
         Endpoint(service: "Wallet DeFi & Safe",
                  reach: .whenConnected(bridge: "Wallet"),
                  // A SEND in a registry that is otherwise all reads, and it is

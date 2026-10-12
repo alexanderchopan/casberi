@@ -239,9 +239,8 @@ final class ShellChrome {
     var appSheet: AppSheet?
     /// A page composed from search words (prd §1209), risen as a sheet.
     var pivot: PivotQuery?
-    /// The band's bar raised the tray (prd §1209a): its search takes the
-    /// keyboard as it opens. Read and cleared by the tray.
-    var traySearchFocus = false
+    /// The face pressed on the Feed (prd §1279): the Feed returns to its top.
+    var feedTop = 0
     struct AppSheet: Identifiable, Equatable {
         let source: String
         /// A Wallet tile's own page (prd §1220): Holdings, Security or
@@ -1112,6 +1111,14 @@ final class ShellChrome {
         case .reading, .media: RoomAccounts.mediaRoom
         case .work:    RoomAccounts.workRoom
         }
+    }
+
+    /// The face on the phone (prd §1279): the Feed from anywhere, the tray
+    /// closed if it was up; on the Feed itself, back to its top.
+    func goToFeed() {
+        roomsTray = false
+        feedTop += 1
+        sourceRequest = "All"
     }
 
     /// The band's Wallet button (prd §1278): the Wallet on Home, on All, from

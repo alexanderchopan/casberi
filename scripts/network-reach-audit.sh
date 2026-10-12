@@ -40,6 +40,11 @@ KNOWN_NON_REACH=(
   # World's own page for its grant-claim app (prd §795) — the permalink a World
   # ID grant row opens in the person's browser. The app never fetches world.org.
   world.org
+  # Aztec staking's doors (prd §1279) — pages a landed row opens in the
+  # person's browser: the staking dashboard (withdraw), the explorer's
+  # sequencer page (a stopped sequencer), Nethermind's governance page (a
+  # vote). The app reads Aztec through the hosts NetworkReach discloses.
+  stake.aztec.network aztecscan.xyz aztecgov.nethermind.io
   # **A denylist entry is a claim about CONDUCT** (prd §531, 2026-08-30): a
   # devnet faucet sat here for a day after a Claim button began POSTing to it,
   # and the audit stayed green because nothing re-reads an entry's REASON when

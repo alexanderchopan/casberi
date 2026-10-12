@@ -1543,6 +1543,10 @@ struct FeedScreen: View {
             // the Feed to its section, opened if it was folded.
             .onAppear { settleFeedJump(proxy) }
             .onChange(of: chrome.feedJump) { _, _ in settleFeedJump(proxy) }
+            // The face pressed on the Feed (prd §1279): back to its top.
+            .onChange(of: chrome.feedTop) { _, _ in
+                if source == "All", isActive { returnToRoomTop(proxy) }
+            }
     }
 
     /// The id the room's head carries, so a scope change can return to it.

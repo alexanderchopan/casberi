@@ -2413,17 +2413,17 @@ struct RootShell: View {
                     // dead control — so it is not mounted at all.
                     if padShell.railInset == 0 || !sceneState.route.path.isEmpty {
                         DockDoors(onAccounts: {
-                                      // THE FACE OPENS THE ROOMS TRAY (prd
-                                      // §930), on every layout since §1133f:
-                                      // one button, every room, app, place and
-                                      // the search. Pressed again it closes
-                                      // (§705). The rail's own face does the
-                                      // same, so the two seats are one door.
-                                      // Felt as it opens and as it closes
-                                      // (user: "add haptic to the face button").
+                                      // THE FACE GOES TO THE FEED (prd §1279,
+                                      // amends §930 and §1207 item 4 on the
+                                      // phone): the band is three places, the
+                                      // Feed, the tray (the bar) and the
+                                      // Wallet. On the Feed it returns to the
+                                      // top; with the tray up it closes it.
+                                      // The rail's face on iPad and Mac still
+                                      // opens the tray (`SourceChips`).
                                       DSHaptic.selection()
                                       withAnimation(DS.Motion.standard) {
-                                          chrome.roomsTray.toggle()
+                                          chrome.goToFeed()
                                       }
                                   },
                                   onBack: seatBack)
@@ -2441,8 +2441,12 @@ struct RootShell: View {
                                         // exactly (prd §1208l): it leaves at once,
                                         // the Wallet fades.
                                         if !chrome.roomsTray {
+                                            // The tray's one door on the phone
+                                            // (prd §1279): it rises with the
+                                            // keyboard down, so Recent and the
+                                            // apps are in view; a tap on its
+                                            // field types.
                                             BandSearchBar {
-                                                chrome.traySearchFocus = true
                                                 withAnimation(DS.Motion.standard) { chrome.roomsTray = true }
                                             }
                                             .transition(.identity)

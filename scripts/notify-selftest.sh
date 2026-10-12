@@ -1082,6 +1082,15 @@ func runFixtures() {
     ok(NotifySweep.classify(row(ref: "logos:lez:6iArKUXxhUJqS7kCaPNhwMWt3ro71PDyBj7jwAyE2VQV:e246"), now: now) == nil,
        "test coins arriving never notify (§522: devnet content is not news)")
 
+    // ── Aztec mainnet staking (prd §1279): money ready and a stopped sequencer
+    //    notify; an Aztec vote stays a row ──
+    ok(NotifySweep.classify(row(ref: "aztec:exit:0x6f6cab6575da907fe9d035093b214b3c7eddb460:6197"), now: now) == .poolCleared,
+       "staked AZTEC that can be withdrawn notifies as money ready for you")
+    ok(NotifySweep.classify(row(ref: "aztec:stake:0x70df6cd7e15ca8633ceb17786d2c504c1e53e5f1:stopped:125119"), now: now) == .nodeDown,
+       "a staked sequencer that stopped attesting notifies")
+    ok(NotifySweep.classify(row(ref: "aztec:vote:6"), now: now) == nil,
+       "an Aztec vote stays a row")
+
     // ── Safe config (prd §1249): a new fallback handler or new code is the
     //    "Module added" news one step over; an owner change alone stays a row ──
     ok(NotifySweep.classify(row(ref: "wallet:safeconfig:eth:0xabc:1790000000", source: "Safe",

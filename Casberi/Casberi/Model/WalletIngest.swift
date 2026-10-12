@@ -808,6 +808,12 @@ enum WalletIngest {
                                                                    addresses: evmAddresses,
                                                                    existing: existing)
         added += etherfiUnstakeAdded ?? 0
+        // …and AZTEC staked on Aztec (prd §1279): an exit that can be taken
+        // out, a staked sequencer that stopped attesting, an Aztec vote still
+        // to come. Rides the same five-minute book the Positions card reads.
+        let aztecAdded = await AztecStaking.syncEvents(context: context, addresses: evmAddresses,
+                                                       existing: existing)
+        added += aztecAdded ?? 0
         // The seats have all run, so any generic row written earlier THIS pass
         // for a transaction one of them just claimed can now go (prd §271).
         // Must run here, after them: the wallet sweep lands first, so on the
