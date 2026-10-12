@@ -200,10 +200,10 @@ struct WalletConnectPickerSheet: View {
                         .opacity(on ? 1 : 0)
                 }
             }
+            // No backing (prd §1269): the check says it is picked.
             .padding(DS.Space.s3)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(on ? DS.tintDim : DS.fillFaint,
-                        in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+            .contentShape(Rectangle())
             .opacity(inert ? 0.5 : 1)
         }
         .buttonStyle(DSTileButtonStyle())

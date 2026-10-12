@@ -606,7 +606,7 @@ extension FeedScreen {
     var walletNFTDoorSection: some View {
         if let entry = nftShelfWallet {
             Section {
-                DSPushRow(title: Text("Choose collections"), tint: DS.tint,
+                DSPushRow(title: Text("Choose collections"), tint: DS.tint, opens: false,
                           action: {
                               feedSheet = .nftPicks(address: entry.address,
                                                     label: entry.label.isEmpty ? entry.short : entry.label)

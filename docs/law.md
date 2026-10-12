@@ -227,7 +227,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1411 of 1477 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1412 of 1478 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1640,6 +1640,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1266 — The add trays' groups are the Feed's cards; Settings' glyphs are pink
 - §1267 — No tile has a backing; Notes' folders are a Feed card
 - §1268 — The rest of the old style: contact and address cards, subscription sheets, Markets, count picks
+- §1269 — The last of the old style: Data, Notifications, and the rows still wearing chevrons or plates
 
 ## Dead rulings → what replaced them (generated)
 

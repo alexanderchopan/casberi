@@ -90,7 +90,8 @@ struct PrivyScreen: View {
                     isOn: Binding(get: { store.showEmpty }, set: { store.setShowEmpty($0) }))
         DSPushRow(title: Text("Hidden apps"),
                   fact: Text(store.hidden.isEmpty ? String(localized: "None")
-                                                  : String(localized: "\(store.hidden.count)"))) {
+                                                  : String(localized: "\(store.hidden.count)")),
+                  opens: false) {
             sheet = .card(id: "privyApps")
         }
     }

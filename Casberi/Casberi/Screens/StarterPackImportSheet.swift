@@ -14,6 +14,7 @@ struct StarterPacksDoor: View {
     var body: some View {
         DSPushRow(title: Text("Follow a starter pack"),
                   subtitle: DSProse.text("Someone's curated list, in one tap"),
+                  opens: false,
                   action: { open = true }) {
             BridgeIcon(name: "Bluesky", size: DS.Mark.list, circular: false)
         }
@@ -95,6 +96,7 @@ struct StarterPackImportSheet: View {
     private func packRow(_ pack: BlueskyStarterPacks.Pack) -> some View {
         DSPushRow(title: Text(verbatim: pack.name),
                   subtitle: Text(pack.creatorHandle.isEmpty ? "Bluesky" : "by @\(pack.creatorHandle)"),
+                  opens: false,
                   action: {
                       selected = pack
                       Task { await loadMembers(pack) }

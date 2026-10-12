@@ -570,22 +570,10 @@ struct AccountDetailSheet: View {
     private func door(_ title: String, _ subtitle: String,
                       subtitleTone: Color = DS.textTertiary,
                       action: @escaping () -> Void) -> some View {
+        // The Feed's row (prd §1269): no chevron, the row is the door.
         DSPushRow(title: Text(title), subtitle: Text(DSProse.unorphaned(subtitle)),
-                  subtitleTone: subtitleTone, action: action)
+                  subtitleTone: subtitleTone, opens: false, action: action)
     }
-
-    /// The colored squircle badge — the Apps-page glyph in a solid tone
-    /// (`IconChip` since 2026-08-10). The key and color trays' `aliveRow`
-    /// still wears it; the Privacy tray's rows dropped it in the Statement
-    /// pass (2026-08-03).
-    private func badge(_ glyph: String, _ tone: Color) -> some View {
-        IconChip(tone: tone, size: 38) {
-            Image(systemName: glyph).dsGlyph(.subhead)
-        }
-    }
-
-    /// An alive row — badge + title + live value. The Apps-page grammar, shared
-    /// by every dressed-up Account sheet.
 
     // MARK: - Notifications (prd §306)
 
@@ -600,11 +588,16 @@ struct AccountDetailSheet: View {
     /// decides what may reach a sleeping person, per person and system-wide,
     /// and it does it better than a switch in here can.
     private var notifyCard: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s4) {
+        // The Feed's card (prd §1269), named apart from the sheet's title.
+        SheetCard(name: String(localized: "Alerts"), glyph: "bell") {
             // A fixed accent regardless of what's actually on — the badge
             // previews no state here, so it takes the neutral tone
             // (2026-08-10, was DS.tint).
-            aliveRow("bell.badge.fill", DS.neutralBadge, "Notifications", notifyStatusLine)
+            // The sheet says "Notifications"; the card's first line is the state.
+            if !notifyStatusLine.isEmpty {
+                Text(notifyStatusLine).dsText(.subhead12).foregroundStyle(DS.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             // **WALLET AND FEED, AS THINGS ARRIVE (prd §1237).** Two switches,
             // one dimension: what you hear about. When is always "as Casberi
             // finds it", which the footnote says, because no switch can.
@@ -645,20 +638,6 @@ struct AccountDetailSheet: View {
     private func saveNotify() {
         Notifications.settings = notifySettings
         Task { await WalletBackgroundRefresh.runNotifySweep() }
-    }
-
-    private func aliveRow(_ glyph: String, _ tone: Color, _ title: String, _ value: String) -> some View {
-        HStack(spacing: DS.Space.s3) {
-            badge(glyph, tone)
-            VStack(alignment: .leading, spacing: 1) {
-                Text(title).dsText(.body17).foregroundStyle(DS.textPrimary)
-                if !value.isEmpty {
-                    Text(value).dsText(.subhead12).foregroundStyle(DS.textSecondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
-            Spacer(minLength: 0)
-        }
     }
 
     /// A toggle row — `DSToggleRow`, title + quiet subtitle + the switch, no

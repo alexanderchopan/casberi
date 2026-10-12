@@ -28,7 +28,7 @@ extension FeedScreen {
                               // narrowed, a folder no longer reachable — where
                               // there is nothing to reconnect. Its page says which.
                               fact: Text("Needs attention"),
-                              factTone: DS.attentionInk) {
+                              factTone: DS.attentionInk, opens: false) {
                         route.openAccount(BridgeRouter.destination(forID: app.id))
                     } leading: {
                         BridgeIcon(name: app.name, size: DS.Face.row)

@@ -66044,3 +66044,13 @@ User, going down the list of screens still in the old style: "yes"; of the backi
 - **Subscription sheets** (`SubscriptionPage`): the facts are a Details card, the doors a More card; a mailing list's Recent is a card.
 - **Markets:** Following and the index's section names take a pink glyph in the head ink; a coin's or a company's Alerts is a card.
 - **A picked count tile has no fill** (Sources' and Markets' boxes): the pick says itself in the tint of its figure and word.
+
+## §1269 — The last of the old style: Data, Notifications, and the rows still wearing chevrons or plates (2026-10-11)
+
+User: "keep going".
+
+- **Data:** its doors (What this app reaches) draw no chevron.
+- **Notifications:** an **Alerts** card (a pink bell; named apart from the sheet's title): the state line first, then the Wallet and Feed switches and the one footnote. The coloured badge row (`aliveRow`, `badge`) is deleted.
+- **No chevron** on the starter pack's rows, Home's Reconnect rows, Privy's Hidden apps and the NFTs' Choose collections: the row is the door.
+- **The wallet picker's rows** lose their filled plates; the check says what is picked.
+- Kept on purpose: the contact card's address rows (no section word, the user's ruling of 2026-09-25) and a few status words in grey (Following, In your book), which are facts, not headers.
