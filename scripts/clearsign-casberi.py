@@ -21,7 +21,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # Overridable so `clearsign-casberi-selftest.sh` merges into temp copies.
 BUNDLE = os.environ.get("CLEARSIGN_BUNDLE") or os.path.join(ROOT, "Casberi/Casberi/Resources/ClearSignRegistry.json")
 SOURCE = os.environ.get("CLEARSIGN_CASBERI") or os.path.join(ROOT, "scripts/support/clearsign-casberi.json")
-FORMAT_KEYS = ("key", "intent", "interpolatedIntent", "fields")
+FORMAT_KEYS = ("key", "intent", "interpolatedIntent", "fields", "when")
 
 
 def main():

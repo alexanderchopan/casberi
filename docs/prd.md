@@ -66205,3 +66205,12 @@ UNVERIFIED: written on a machine with no Xcode; neither build nor screen was see
 5. **Not built:** CoW's order contents (tokens, amounts) — not in the calldata; reading them needs CoW's API and a hash check, a host this file does not reach. EIP-1271 signed CoW orders and TWAP orders.
 
 **Seen:** real mainnet calldata through `ClearSign` (a V4 swap reads "Swap 0.01 ETH for at least 25.44902 USDC"; Tacit deposits, withdrawals and zaps; cancels); the build on a private simulator. The Needs you row on a private simulator (seen by the user). **Not seen:** a live Safe proposal in the sign block. Harnesses: `zfi-selftest.sh` (now with the Needs you guards), `clearsign-casberi-selftest.sh` (mainnet calls, 5 mutations); `clearsign-selftest.sh` still 528/530.
+
+## §1283 — The sign block reads exact-output swaps and NFT bids: Casberi's one ERC-7730 extension, `when` (amends §1282, §834) (user, 2026-10-12: "ok pls continue", of §1282's not-built list)
+
+1. **`when`.** A Casberi descriptor may give one function a second format that applies when the value at a path equals a constant (`Registry.Format.when`); the format with no `when` applies otherwise. Upstream descriptors never carry it, and two formats sharing a selector without it still describe nothing (the spec's rule). The registry's own vectors still read 528/530.
+2. **Exact-output swaps.** zRouter's V2/V3/V4 swaps with `exactOut` set read "Buy exactly <amount in the output token> for at most <limit in the input token>"; exact-in keeps §1282's wording and still refuses exact-output on its own.
+3. **NFT bids.** A Floorboard bid on NFTs reads "Bid on <pieces> from <collection>, up to <price>", with the ids it will take when it names any.
+4. **CoW order contents stay unbuilt, on purpose.** Showing an order's tokens and amounts means fetching it from CoW's API at signing time and checking it against the id's hash. The signer is built to reach Safe and nothing else (`SafeSigner`), so this waits for a ruling rather than adding a host to the one screen that signs.
+
+**Seen:** real mainnet calldata through `ClearSign` with `exactOut` flipped and an NFT bid (the vector Floorboard's own users made); the app builds. Harness: `clearsign-casberi-selftest.sh` (now 7 mutations, one on the matcher); `clearsign-selftest.sh`, `safetx-selftest.sh`, `safe-signer-selftest.sh` green.

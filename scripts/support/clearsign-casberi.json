@@ -82,6 +82,63 @@
      ]
     },
     {
+     "key": "swapV2(address to, bool exactOut, address tokenIn, address tokenOut, uint256 swapAmount, uint256 amountLimit, uint256 deadline)",
+     "when": {
+      "path": "exactOut",
+      "equals": "true"
+     },
+     "intent": "Swap",
+     "interpolatedIntent": "Buy exactly {swapAmount} for at most {amountLimit}",
+     "fields": [
+      {
+       "path": "swapAmount",
+       "label": "Buy exactly",
+       "format": "tokenAmount",
+       "visible": "always",
+       "params": {
+        "tokenPath": "tokenOut",
+        "nativeCurrencyAddress": [
+         "0x0000000000000000000000000000000000000000"
+        ]
+       }
+      },
+      {
+       "path": "amountLimit",
+       "label": "Pay at most",
+       "format": "tokenAmount",
+       "visible": "always",
+       "params": {
+        "tokenPath": "tokenIn",
+        "nativeCurrencyAddress": [
+         "0x0000000000000000000000000000000000000000"
+        ]
+       }
+      },
+      {
+       "path": "to",
+       "label": "Recipient",
+       "format": "addressName",
+       "visible": "always",
+       "params": {
+        "sources": [
+         "local",
+         "ens"
+        ],
+        "types": [
+         "eoa",
+         "contract"
+        ]
+       }
+      },
+      {
+       "path": "deadline",
+       "label": "Deadline",
+       "format": "date",
+       "visible": "always"
+      }
+     ]
+    },
+    {
      "key": "swapV3(address to, bool exactOut, uint24 swapFee, address tokenIn, address tokenOut, uint256 swapAmount, uint256 amountLimit, uint256 deadline)",
      "intent": "Swap",
      "interpolatedIntent": "Swap {swapAmount} for at least {amountLimit}",
@@ -149,6 +206,63 @@
      ]
     },
     {
+     "key": "swapV3(address to, bool exactOut, uint24 swapFee, address tokenIn, address tokenOut, uint256 swapAmount, uint256 amountLimit, uint256 deadline)",
+     "when": {
+      "path": "exactOut",
+      "equals": "true"
+     },
+     "intent": "Swap",
+     "interpolatedIntent": "Buy exactly {swapAmount} for at most {amountLimit}",
+     "fields": [
+      {
+       "path": "swapAmount",
+       "label": "Buy exactly",
+       "format": "tokenAmount",
+       "visible": "always",
+       "params": {
+        "tokenPath": "tokenOut",
+        "nativeCurrencyAddress": [
+         "0x0000000000000000000000000000000000000000"
+        ]
+       }
+      },
+      {
+       "path": "amountLimit",
+       "label": "Pay at most",
+       "format": "tokenAmount",
+       "visible": "always",
+       "params": {
+        "tokenPath": "tokenIn",
+        "nativeCurrencyAddress": [
+         "0x0000000000000000000000000000000000000000"
+        ]
+       }
+      },
+      {
+       "path": "to",
+       "label": "Recipient",
+       "format": "addressName",
+       "visible": "always",
+       "params": {
+        "sources": [
+         "local",
+         "ens"
+        ],
+        "types": [
+         "eoa",
+         "contract"
+        ]
+       }
+      },
+      {
+       "path": "deadline",
+       "label": "Deadline",
+       "format": "date",
+       "visible": "always"
+      }
+     ]
+    },
+    {
      "key": "swapV4(address to, bool exactOut, uint24 swapFee, int24 tickSpace, address tokenIn, address tokenOut, uint256 swapAmount, uint256 amountLimit, uint256 deadline)",
      "intent": "Swap",
      "interpolatedIntent": "Swap {swapAmount} for at least {amountLimit}",
@@ -186,6 +300,63 @@
        "visible": "always",
        "params": {
         "tokenPath": "tokenOut",
+        "nativeCurrencyAddress": [
+         "0x0000000000000000000000000000000000000000"
+        ]
+       }
+      },
+      {
+       "path": "to",
+       "label": "Recipient",
+       "format": "addressName",
+       "visible": "always",
+       "params": {
+        "sources": [
+         "local",
+         "ens"
+        ],
+        "types": [
+         "eoa",
+         "contract"
+        ]
+       }
+      },
+      {
+       "path": "deadline",
+       "label": "Deadline",
+       "format": "date",
+       "visible": "always"
+      }
+     ]
+    },
+    {
+     "key": "swapV4(address to, bool exactOut, uint24 swapFee, int24 tickSpace, address tokenIn, address tokenOut, uint256 swapAmount, uint256 amountLimit, uint256 deadline)",
+     "when": {
+      "path": "exactOut",
+      "equals": "true"
+     },
+     "intent": "Swap",
+     "interpolatedIntent": "Buy exactly {swapAmount} for at most {amountLimit}",
+     "fields": [
+      {
+       "path": "swapAmount",
+       "label": "Buy exactly",
+       "format": "tokenAmount",
+       "visible": "always",
+       "params": {
+        "tokenPath": "tokenOut",
+        "nativeCurrencyAddress": [
+         "0x0000000000000000000000000000000000000000"
+        ]
+       }
+      },
+      {
+       "path": "amountLimit",
+       "label": "Pay at most",
+       "format": "tokenAmount",
+       "visible": "always",
+       "params": {
+        "tokenPath": "tokenIn",
         "nativeCurrencyAddress": [
          "0x0000000000000000000000000000000000000000"
         ]
@@ -796,6 +967,85 @@
          "0x0000000000000000000000000000000000000000"
         ]
        }
+      },
+      {
+       "path": "terms.startPrice",
+       "label": "Opening bid",
+       "format": "tokenAmount",
+       "visible": "always",
+       "params": {
+        "tokenPath": "terms.quote",
+        "nativeCurrencyAddress": [
+         "0x0000000000000000000000000000000000000000"
+        ]
+       }
+      },
+      {
+       "path": "terms.endPrice",
+       "label": "Up to",
+       "format": "tokenAmount",
+       "visible": "always",
+       "params": {
+        "tokenPath": "terms.quote",
+        "nativeCurrencyAddress": [
+         "0x0000000000000000000000000000000000000000"
+        ]
+       }
+      },
+      {
+       "path": "terms.startTime",
+       "label": "Starts",
+       "format": "date",
+       "visible": {
+        "ifNotIn": [
+         "0"
+        ]
+       }
+      },
+      {
+       "path": "terms.duration",
+       "label": "Rises over",
+       "format": "duration",
+       "visible": "always"
+      }
+     ]
+    },
+    {
+     "key": "bid((address token, address quote, uint128 want, uint256 startPrice, uint256 endPrice, uint40 startTime, uint40 duration, bool isNFT, uint256[] ids) terms)",
+     "when": {
+      "path": "terms.isNFT",
+      "equals": "true"
+     },
+     "intent": "Bid on NFTs",
+     "interpolatedIntent": "Bid on {terms.want} from {terms.token}, up to {terms.endPrice}",
+     "fields": [
+      {
+       "path": "terms.want",
+       "label": "Pieces",
+       "format": "raw",
+       "visible": "always"
+      },
+      {
+       "path": "terms.token",
+       "label": "Collection",
+       "format": "addressName",
+       "visible": "always",
+       "params": {
+        "sources": [
+         "local",
+         "ens"
+        ],
+        "types": [
+         "eoa",
+         "contract"
+        ]
+       }
+      },
+      {
+       "path": "terms.ids.[]",
+       "label": "Only ids",
+       "format": "raw",
+       "visible": "always"
       },
       {
        "path": "terms.startPrice",

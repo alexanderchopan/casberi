@@ -112,6 +112,16 @@ enum ClearSign {
             let intent: String?
             let interpolatedIntent: String?
             let fields: [Field]
+            /// Casberi's one extension to ERC-7730 (prd §1283), carried only by
+            /// Casberi's own descriptors: this wording applies when the value
+            /// at `path` is `equals`, and the same function's format with no
+            /// `when` otherwise. It is how an exact-output swap names its
+            /// tokens the right way round, which one format cannot.
+            let when: When?
+        }
+        struct When: Decodable, Equatable {
+            let path: String
+            let equals: String
         }
         struct Field: Decodable {
             let path: String?
@@ -232,16 +242,34 @@ enum ClearSign {
         let selector = Array(data.prefix(4))
 
         // Match on the type-only signature's selector. Two keys sharing one is
-        // an invalid descriptor (the spec's rule), so it describes nothing.
-        var matched: (format: Registry.Format, fn: Function)?
+        // an invalid descriptor (the spec's rule), so it describes nothing —
+        // unless every format but one says `when` it applies (prd §1283).
+        var candidates: [(format: Registry.Format, fn: Function)] = []
         for format in descriptor.formats {
             guard let fn = Function(key: format.key), fn.selector == selector else { continue }
-            if matched != nil { return nil }
-            matched = (format, fn)
+            candidates.append((format, fn))
         }
-        guard let format = matched?.format, let fn = matched?.fn,
-              let args = ABI.decode(fn.params, Array(data.dropFirst(4)))
+        guard let base = candidates.first(where: { $0.format.when == nil }) ?? candidates.first,
+              candidates.filter({ $0.format.when == nil }).count <= 1,
+              candidates.allSatisfy({ $0.fn.params == base.fn.params }),
+              let args = ABI.decode(base.fn.params, Array(data.dropFirst(4)))
         else { return nil }
+        var format = base.format, fn = base.fn
+        if candidates.count > 1 {
+            let probe = Renderer(ctx: ctx, args: args, fields: [], depth: depth)
+            guard let pick = candidates.first(where: { c in
+                guard let when = c.format.when else { return false }
+                guard let values = probe.resolve(when.path), values.count == 1 else { return false }
+                return values[0].comparable == ClearSign.comparable(when.equals)
+            }) ?? candidates.first(where: { $0.format.when == nil }) else { return nil }
+            format = pick.format
+            fn = pick.fn
+        } else if base.format.when != nil {
+            // A conditional format alone applies only when its condition holds.
+            let probe = Renderer(ctx: ctx, args: args, fields: [], depth: depth)
+            guard let when = base.format.when, let values = probe.resolve(when.path), values.count == 1,
+                  values[0].comparable == ClearSign.comparable(when.equals) else { return nil }
+        }
 
         let renderer = Renderer(ctx: ctx, args: args, fields: format.fields, depth: depth)
         var lines: [Reading.Line] = []

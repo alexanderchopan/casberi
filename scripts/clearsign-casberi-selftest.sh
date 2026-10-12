@@ -83,7 +83,15 @@ let v4 = read("zRouter.swapV4")
 check(v4?.headline == "Swap 0.01 ETH for at least 25.44902 USDC", "a V4 swap in one sentence: \(v4?.headline ?? "nil")")
 check(v4?.owner == "Casberi", "…described by Casberi, never zFi")
 check(line(v4, "Recipient") == ["0xffc5fa5c95e22b2ec1b539eecc2024d3ca62d8ed"], "…to its recipient")
-check(read("zRouter.swapV2", patch: word(1, 1)) == nil, "an exact-output swap is refused, never read as exact-in")
+let exactOut = read("zRouter.swapV4", patch: word(1, 1))
+// The same bytes with exactOut set: the amount is now what is BOUGHT, in the
+// output token, and the limit what may be PAID, in the input token.
+check(exactOut?.headline == "Buy exactly 10000000000 USDC for at most 0.00000000002544902 ETH",
+      "an exact-output swap names each amount in its own token: \(exactOut?.headline ?? "nil")")
+check(line(exactOut, "Sell").isEmpty, "…and never borrows the exact-in wording")
+let exactOutV2 = read("zRouter.swapV2", patch: word(1, 1))
+check(line(exactOutV2, "Pay at most") == ["0.015354759544905336 ETH"] && line(exactOutV2, "Buy exactly").first?.contains("0xde34") == true,
+      "a V2 exact-output swap: the limit in ETH, the exact amount in its token")
 let multi = read("zRouter.multicall")
 check(multi?.intent == "Several zFi steps" && line(multi, "Step").count == 2, "a batch reads each step")
 check(!(multi?.lines.contains { $0.value.contains("Swap 0 ") } ?? true), "a step spending the whole balance never says \"Swap 0\"")
@@ -93,7 +101,11 @@ print("zFi boards")
 check(read("Swapboard.cancelOrder")?.headline == "Cancel an order" && line(read("Swapboard.cancelOrder"), "Order") == ["14"],
       "cancel order 14")
 check(read("Dutchboard.cancelUnwrap")?.headline == "Cancel an auction", "cancel an auction")
-check(read("Floorboard.bid") == nil, "an NFT bid is refused, never priced as token units")
+let nftBid = read("Floorboard.bid")
+check(nftBid?.intent == "Bid on NFTs" && line(nftBid, "Pieces") == ["5"] && line(nftBid, "Up to") == ["0.015 ETH"],
+      "an NFT bid counts pieces, never token units")
+check(line(nftBid, "Collection") == ["0x00000000008835cef3e0d2333695f288ee6b63a6"] && line(nftBid, "Only ids").isEmpty,
+      "…names its collection; a floor bid lists no ids")
 let tokenBid = read("Floorboard.bid", patch: word(8, 0))
 check(tokenBid?.intent == "Place a bid" && line(tokenBid, "Opening bid") == ["0.005 ETH"] && line(tokenBid, "Up to") == ["0.015 ETH"],
       "a token bid: opening 0.005 ETH, up to 0.015 ETH")
@@ -159,19 +171,18 @@ PY
   fi
   echo "  ✓ $name"
 }
-mutate "an exact-output swap read as exact-in" \
-  '"path": "exactOut",
-       "label": "Exact output",
-       "format": "raw",
-       "visible": {
-        "mustMatch": [
-         "false"
-        ]
-       }' \
-  '"path": "exactOut",
-       "label": "Exact output",
-       "format": "raw",
-       "visible": "never"'
+mutate "an exact-output swap's tokens swapped" \
+  '"label": "Buy exactly",
+       "format": "tokenAmount",
+       "visible": "always",
+       "params": {
+        "tokenPath": "tokenOut",' \
+  '"label": "Buy exactly",
+       "format": "tokenAmount",
+       "visible": "always",
+       "params": {
+        "tokenPath": "tokenIn",'
+mutate "a condition that never matches" '"equals": "true"' '"equals": "1"'
 mutate "a whole-balance step read as zero" \
   '"path": "amountIn",
        "label": "Sell",
@@ -187,20 +198,27 @@ mutate "a whole-balance step read as zero" \
        "visible": "always"'
 mutate "an NFT bid priced as tokens" \
   '"path": "terms.isNFT",
-       "label": "NFT",
-       "format": "raw",
-       "visible": {
-        "mustMatch": [
-         "false"
-        ]
-       }' \
+      "equals": "true"' \
   '"path": "terms.isNFT",
-       "label": "NFT",
-       "format": "raw",
-       "visible": "never"'
+      "equals": "false"'
 mutate "a CoW owner off the wrong bytes" '"orderUid.[32:52]"' '"orderUid.[0:20]"'
 mutate "Casberi's words under zFi's name" '"owner": "Casberi",
    "name": "zRouter (zFi)"' '"owner": "zFi",
    "name": "zRouter (zFi)"'
+
+# The matcher itself (ClearSign.swift): a condition that is not checked.
+cp "$CLEARSIGN" "$TMP/ClearSign.swift"
+python3 - "$TMP/ClearSign.swift" <<'PY' || { echo "  ✗ a condition not checked — the mutation did not apply"; exit 1; }
+import sys
+p = sys.argv[1]; s = open(p).read()
+f = "return values[0].comparable == ClearSign.comparable(when.equals)"
+if f not in s: sys.exit(2)
+open(p, "w").write(s.replace(f, "return true", 1))
+PY
+if xcrun swiftc -Onone -o "$TMP/mut" "$TMP/ClearSign.swift" "$TX" "$KECCAK" "$TMP/main.swift" 2>/dev/null \
+   && CS_BUNDLE="$PWD/$BUNDLE" CS_CALLS="$PWD/$CALLS" "$TMP/mut" > /dev/null 2>&1; then
+  echo "  ✗ a condition not checked — the harness still passed"; exit 1
+fi
+echo "  ✓ a condition not checked"
 
 echo "✓ Casberi clear-signing descriptors self-test passed"
