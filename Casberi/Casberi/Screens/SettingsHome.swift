@@ -672,8 +672,6 @@ struct SettingsHome: View {
                 // and rows are too small"), Today's 38pt (prd §1170).
                 CasberiMark(size: DS.Mark.notice * 0.7)
                     .frame(width: DS.Mark.notice, height: DS.Mark.notice)
-                    .background(RoundedRectangle(cornerRadius: DS.Radius.appIcon(DS.Mark.notice), style: .continuous)
-                        .fill(DS.fillFaint))
             }
         case .calendar:
             DSPushRow(title: Text("Add a calendar"), subtitle: Text("Your phone’s, or any by link")) {
@@ -691,12 +689,11 @@ struct SettingsHome: View {
     }
 
     private func glyphLead(_ glyph: String) -> some View {
+        // Bare and pink (prd §1272).
         Image(systemName: glyph)
             .dsGlyph(.body, weight: .regular)
-            .foregroundStyle(DS.tint)
+            .foregroundStyle(DS.brandInk)
             .frame(width: DS.Mark.notice, height: DS.Mark.notice)
-            .background(RoundedRectangle(cornerRadius: DS.Radius.appIcon(DS.Mark.notice), style: .continuous)
-                .fill(DS.fillFaint))
     }
 
     /// A kind on the Feed's card (prd §1265), in the room's column as the
@@ -748,9 +745,11 @@ struct SettingsHome: View {
 
     /// Where an empty kind fills from: its apps, each one tap.
     private func comesFrom(_ names: [String]) -> some View {
-        VStack(alignment: .leading, spacing: DS.Space.s2) {
-            Text("Comes from").dsText(.heading17).foregroundStyle(DS.textSecondary)
-            ForEach(names.filter { n in BridgeCatalog.offers.contains { $0.name == n } }, id: \.self) { offerRow($0) }
+        // The Feed's card (prd §1272), its apps as the apps' card rows.
+        kindCard(String(localized: "Comes from"), glyph: "square.grid.2x2") {
+            ForEach(names.filter { n in BridgeCatalog.offers.contains { $0.name == n } }, id: \.self) {
+                offerRow($0, card: true)
+            }
         }
     }
 

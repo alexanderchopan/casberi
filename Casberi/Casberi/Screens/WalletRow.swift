@@ -185,15 +185,14 @@ struct WalletMarkView: View {
     }
 }
 
-extension WalletRow where Trailing == DSChevron {
-    /// The door form — a row whose whole job is to open something.
+extension WalletRow where Trailing == EmptyView {
+    /// The door form — a row whose whole job is to open something. No
+    /// chevron since prd §1272: the row is its own door, as a Feed row is.
     init(mark: Mark, title: String, subtitle: String? = nil, titleWraps: Bool = false) {
         self.init(mark: mark, title: title, subtitle: subtitle,
-                  titleWraps: titleWraps) { DSChevron() }
+                  titleWraps: titleWraps) { EmptyView() }
     }
-}
 
-extension WalletRow where Trailing == EmptyView {
     /// The terminal form — a row that IS the whole read. No chevron, because
     /// a chevron promises more behind the tap (the honesty rule).
     init(terminal mark: Mark, title: String, subtitle: String? = nil) {

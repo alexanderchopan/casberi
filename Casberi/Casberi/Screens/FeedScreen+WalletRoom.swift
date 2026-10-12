@@ -431,10 +431,10 @@ extension FeedScreen {
         } label: {
             HStack(spacing: DS.Space.s3) {
                 ZStack {
-                    Circle().fill(DS.fillFaint)
+                    // Bare and pink (prd §1272).
                     Image(systemName: glyph)
-                        .dsGlyph(.subhead, weight: .semibold)
-                        .foregroundStyle(critical ? DS.destructive : DS.textPrimary)
+                        .dsGlyph(.body, weight: .semibold)
+                        .foregroundStyle(critical ? DS.destructive : DS.brandInk)
                         .accessibilityHidden(true)
                 }
                 .frame(width: DS.Face.list, height: DS.Face.list)
@@ -449,7 +449,6 @@ extension FeedScreen {
                     }
                 }
                 Spacer(minLength: 0)
-                DSChevron()
             }
             .padding(.vertical, DS.Space.s2)
             .contentShape(Rectangle())
@@ -621,12 +620,13 @@ extension FeedScreen {
     /// The 26pt disc every verb row in this room leads with.
     func walletDoorLead(_ glyph: String) -> some View {
         ZStack {
-            Circle().fill(DS.fillFaint)
+            // Bare and pink (prd §1272): no disc behind the glyph.
+            Color.clear
                 .frame(width: DS.Face.row, height: DS.Face.row)
             Image(systemName: glyph)
                 .accessibilityHidden(true)
-                .dsGlyph(.caption, weight: .semibold)
-                .foregroundStyle(DS.tint)
+                .dsGlyph(.body, weight: .semibold)
+                .foregroundStyle(DS.brandInk)
         }
     }
 

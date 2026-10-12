@@ -114,7 +114,6 @@ struct WalletTokenFoldRow: View {
             Text(WalletValue.money(fold.restUSD))
                 .dsText(.price17).foregroundStyle(DS.textPrimary)
                 .monospacedDigit()
-            DSChevron()
         }
     }
 

@@ -8,7 +8,7 @@ import SwiftUI
 /// seven glyph sizes (9, 10, 11, 12, 13, 14 and a text rung) on rows a person
 /// moves between in two taps. This is the one anatomy: an optional leading
 /// mark, a title, an optional quiet line under it, an optional trailing fact,
-/// and `DSChevron`.
+/// (the chevron is deleted, prd §1272).
 ///
 /// It draws NO padding and NO background — a List row, a room card and a
 /// sheet each own their own insets, and a template that guessed would be
@@ -102,9 +102,12 @@ struct DSPushRowTrail: View {
                     .dsGlyph(.caption)
                     .foregroundStyle(factTone)
                     .accessibilityHidden(true)
-            } else if opens {
-                DSChevron()
             }
+            // NO CHEVRON (prd §1272, user: "lets continue going through the
+            // list"): a Feed row is its own door, so a row in any list draws
+            // none; `opens` stays the row's meaning for VoiceOver and its
+            // callers. A door OUT of the app still names itself with its
+            // glyph (`arrow.up.right`), above.
         }
     }
 }
@@ -173,18 +176,6 @@ extension DSPushRow where Leading == EmptyView {
     }
 }
 
-/// The app's one "there's more" glyph on a row. Was `WalletRowChevron`, the
-/// wallet room's consolidation that the rest of the app never adopted.
-struct DSChevron: View {
-    var tint: Color = DS.textTertiary
-
-    var body: some View {
-        Image(systemName: "chevron.right")
-            .dsGlyph(.caption)
-            .foregroundStyle(tint)
-            .accessibilityHidden(true)
-    }
-}
 
 /// A count-link: "See all 128 ›" beside a section label or under a list.
 /// Eight hand-drawn copies at five chevron sizes before §715.

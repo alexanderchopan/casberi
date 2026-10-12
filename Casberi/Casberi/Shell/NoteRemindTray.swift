@@ -78,10 +78,11 @@ struct NoteRemindTray: View {
             act()
         } label: {
             HStack(spacing: DS.Space.s3) {
+                // Bare and pink (prd §1272).
                 Image(systemName: glyph)
-                    .dsGlyph(.caption, weight: .regular)
+                    .dsGlyph(.body, weight: .regular)
+                    .foregroundStyle(DS.brandInk)
                     .frame(width: DS.Mark.row, height: DS.Mark.row)
-                    .background(DS.fillFaint, in: Circle())
                 Text(verbatim: name)
                     .dsText(.body17)
                 Spacer(minLength: 0)

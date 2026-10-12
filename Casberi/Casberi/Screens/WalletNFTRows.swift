@@ -107,7 +107,6 @@ struct WalletNFTCollectionRows: View {
                 .dsText(.body17).foregroundStyle(DS.textPrimary)
                 .lineLimit(1)
             Spacer(minLength: 0)
-            if onOpen != nil { DSChevron() }
         }
         .padding(.vertical, DS.Space.s2)
         if let onOpen {

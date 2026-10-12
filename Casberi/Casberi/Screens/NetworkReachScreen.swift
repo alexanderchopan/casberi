@@ -478,10 +478,6 @@ struct NetworkReachScreen: View {
                     .padding(.top, 1)
             }
             Spacer(minLength: DS.Space.s2)
-            if opens {
-                DSChevron()
-                    .padding(.top, DS.Space.s1)
-            }
         }
         .padding(.vertical, DS.Space.s1)
         .contentShape(Rectangle())

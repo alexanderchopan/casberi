@@ -436,7 +436,6 @@ struct WalletBalanceHeadline: View {
                         // wallet "All" view). A chevron promises more behind
                         // the tap.
                         if onOpen != nil {
-                            DSChevron()
                         }
                     }
                     }
@@ -1859,7 +1858,6 @@ struct WalletWorthALookTray: View {
                     .dsText(.subhead12).foregroundStyle(DS.textTertiary)
                     .lineLimit(1)
                 Spacer(minLength: DS.Space.s2)
-                DSChevron()
             }
             .frame(height: Self.rowHeight)
             .padding(.horizontal, 3)

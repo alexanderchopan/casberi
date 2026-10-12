@@ -145,9 +145,8 @@ struct SocialThreadRest: View {
     let total: Int
 
     var body: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s3) {
-            Text("The rest of the thread · \(total) posts")
-                .dsText(.label12).foregroundStyle(DS.textTertiary)
+        // The Feed's card (prd §1272).
+        SheetCard(name: String(localized: "The rest of the thread · \(total) posts"), glyph: "text.bubble") {
             ForEach(Array(parts.enumerated()), id: \.offset) { _, part in
                 Text(ProseLinks.rendered(part))
                     .dsText(.body17).foregroundStyle(DS.textPrimary)

@@ -144,7 +144,6 @@ struct WalletApprovalExposureCard: View {
                         .foregroundStyle(DS.textPrimary)
                         .monospacedDigit()
                 }
-                DSChevron()
             }
             .contentShape(Rectangle())
         }
@@ -174,10 +173,10 @@ struct WalletApprovalExposureCard: View {
         } label: {
             HStack(spacing: DS.Space.s3) {
                 ZStack {
-                    Circle().fill(DS.fillFaint)
+                    // Bare and pink (prd §1272).
                     Image(systemName: "clock")
-                        .dsGlyph(.subhead, weight: .semibold)
-                        .foregroundStyle(DS.tint)
+                        .dsGlyph(.body, weight: .semibold)
+                        .foregroundStyle(DS.brandInk)
                         .accessibilityHidden(true)
                 }
                 .frame(width: DS.Face.list, height: DS.Face.list)
@@ -185,7 +184,6 @@ struct WalletApprovalExposureCard: View {
                     .dsText(.body17)
                     .foregroundStyle(DS.tint)
                 Spacer(minLength: 0)
-                DSChevron()
             }
             .contentShape(Rectangle())
         }

@@ -648,8 +648,7 @@ private struct SettingsTile: View {
 
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: DS.Radius.appIcon(DS.Mark.tile), style: .continuous)
-                .fill(DS.fillFaint)
+            // No tile behind the glyph (prd §1272).
             Image(systemName: glyph)
                 .accessibilityHidden(true)
                 .dsGlyph(.title, weight: .medium)

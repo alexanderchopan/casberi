@@ -5155,7 +5155,10 @@ enum DemoSeedAll {
             let key = WalletStore.historyKey(entry.address)
             let existing = (UserDefaults.standard.data(forKey: key))
                 .flatMap { try? JSONDecoder().decode([WalletStore.ValueSample].self, from: $0) }
-            guard (existing?.count ?? 0) < 3 else { continue }
+            // A history poured before Degen left the demo (2026-10-11) is
+            // poured again, or its holdings keep the token the table dropped.
+            let stale = existing?.contains { $0.holdings?["DEGEN"] != nil } ?? false
+            guard (existing?.count ?? 0) < 3 || stale else { continue }
             let scale = n == 0 ? 1.0 : 1.0 / Double(n + 2)
             let samples = curve.enumerated().map { i, raw in
                 let usd = raw * scale

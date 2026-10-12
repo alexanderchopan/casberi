@@ -260,7 +260,6 @@ extension FeedScreen {
                             .foregroundStyle(DS.textSecondary)
                             .fixedSize(horizontal: false, vertical: true)
                             .frame(maxWidth: .infinity, alignment: .leading)
-                        DSChevron()
                     }
                     .padding(.horizontal, DS.Space.s4)
                     .padding(.vertical, DS.Space.s2)

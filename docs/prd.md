@@ -66079,3 +66079,12 @@ User: "keep going".
 6. **Mainnet is measured, not built.** `aztec-mainnet.drpc.org` (node 5.2.0, ~3,850 sequencers) answers the same reads and its Rollup the same stake reads, in AZTEC. It is real stake, so it does not join Testnets (§1050), and no mainnet host is reached until a ruling gives it a place (the Wallet is the candidate).
 
 **Seen** (a private simulator, live v6): a followed sequencer reading "Attested 253 of 253 · proposed 3 · Validating · 200,000 STK staked · Proposes in 54 min" with a 48-epoch strip; an account's public Fee Juice (0) with the private line; Home's words. **Not seen:** the lag line (two passes read the same lag), a status change, a non-zero reward. Harness: `aztec-selftest.sh` grows Ethereum replies, v6 replies and Poseidon2 vectors (20 mutations).
+
+## §1272 — No chevrons, no icon discs, the last grey labels; Degen out of the demo for good (2026-10-11)
+
+User: "lets continue going through the list!"; of the demo's Degen token, "i hate that token".
+
+- **No row draws a chevron** (`DSPushRowTrail`; `DSChevron` deleted with its ten direct callers). A row is its own door, as a Feed row is; a door out of the app still names itself with `arrow.up.right`.
+- **No glyph sits on a disc or tile**: Settings' list tiles (`SettingsTile`), the Wallet's verb rows (`walletDoorLead`, the row disc in Coming up), the approvals card's review row, Remind me's rows and Sources' Start here. Kept, because they are not glyph backings: quote rails, picture placeholders, progress tracks, input wells, a "+N" count, the Safe's signature ring and the floating composer's controls.
+- **Comes from** (an empty kind in Sources) and **the rest of a thread** are the Feed's cards.
+- **Degen** (§1268's swap): a demo wallet's stored history is poured again while it still holds DEGEN, so the Holdings list reads LINK on a demo poured before the swap.
