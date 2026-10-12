@@ -66214,3 +66214,7 @@ UNVERIFIED: written on a machine with no Xcode; neither build nor screen was see
 4. **CoW order contents stay unbuilt, on purpose.** Showing an order's tokens and amounts means fetching it from CoW's API at signing time and checking it against the id's hash. The signer is built to reach Safe and nothing else (`SafeSigner`), so this waits for a ruling rather than adding a host to the one screen that signs.
 
 **Seen:** real mainnet calldata through `ClearSign` with `exactOut` flipped and an NFT bid (the vector Floorboard's own users made); the app builds. Harness: `clearsign-casberi-selftest.sh` (now 7 mutations, one on the matcher); `clearsign-selftest.sh`, `safetx-selftest.sh`, `safe-signer-selftest.sh` green.
+
+## §1284 — An open order's escrow stays out of the Wallet's total (user, 2026-10-12, of zFi's escrow: "for open order sit outside")
+
+An order's escrow is listed in Holdings' Positions in its own units (§1281) and is not added to the balance, the composition or any total. It is not a lock (it can be cancelled at any time) and not a deposit (what it pays depends on a fill nobody quoted). Positions states it; the total does not count it.
