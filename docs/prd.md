@@ -66009,3 +66009,13 @@ User, of Day's box reading "Indigenous Peoples' D…  Oct 12, 2026 at 12:00 AM":
 
 - Beside the next thing's title stands its day alone: "Today", "Tomorrow", else the month and day ("Oct 12"), no year and no clock. "now" and "in N min" went with the clock.
 - The line under the title carries the time: a timed event's span, else its start alone, then its place. An all-day event (its `.allDay` fact) draws no time, so nothing reads "12:00 AM".
+
+## §1265 — Sources' other kinds take the Feed's cards (2026-10-11)
+
+User, of Sources' categories ("people mail list etc"): mocked against today, "do it".
+
+- **Calendars:** one "Your calendars" card, Add a calendar its first row (a pink plus, the verb in the page's ink, no chevron), the calendars under it in the Feed's 46pt column.
+- **Cards:** one "Cards" card (its old label, "Cards Casberi can read", ran past one line); each row the card over "<app> · <state>", Add in the tint, no chevron.
+- **People:** the add reads "Follow someone" (it opens the same tray as the Wallet's: a name, an ENS or an address; it read "Follow a wallet" in People); Recent is the Feed's card; the letters are the Apps A–Z's (`heading20`, head ink).
+- **Wallets:** a "Your wallets" card led by Follow a wallet, then a "Wallet apps" card of the apps' Feed rows (§1253's `offerRow(card:)`).
+- Following, Mail lists and Subscriptions stay doors to the places that hold them (§1217).

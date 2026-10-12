@@ -120,17 +120,23 @@ struct SettingsHome: View {
                         switch scope {
                         case .apps:
                             appsList
+                        // EACH KIND IS THE FEED'S CARD (prd §1265): its act
+                        // first, then its rows in the Feed's anatomy.
                         case .calendars:
                             VStack(alignment: .leading, spacing: DS.Space.s4) {
-                                verbRow("calendar.badge.plus", String(localized: "Add a calendar")) { add(.calendars) }
-                                calendarsList
+                                kindCard(String(localized: "Your calendars"), glyph: ScopeTileGlyph.calendars) {
+                                    cardVerbRow("plus", String(localized: "Add a calendar")) { add(.calendars) }
+                                    calendarsList
+                                }
                                 if calendarsEmpty { comesFrom(Self.calendarApps) }
                             }
                         case .cards:
                             cardsList
                         case .people:
                             VStack(alignment: .leading, spacing: DS.Space.s4) {
-                                verbRow("eye", String(localized: "Follow a wallet")) { add(.people) }
+                                // The tray takes a name, an ENS or an address:
+                                // following someone, said as People says it.
+                                cardVerbRow("plus", String(localized: "Follow someone")) { add(.people) }
                                 if people == 0 { comesFrom(Self.peopleApps) } else { peopleList }
                             }
                         case .wallets:
@@ -693,9 +699,23 @@ struct SettingsHome: View {
                 .fill(DS.fillFaint))
     }
 
-    /// A kind's own act, first in its list, as Subscriptions' Track leads.
-    private func verbRow(_ glyph: String, _ title: String, action: @escaping () -> Void) -> some View {
-        DSDoorRow(icon: glyph, title: Text(title)) { action() }
+    /// A kind on the Feed's card (prd §1265), in the room's column as the
+    /// apps' cards stand (§1253).
+    private func kindCard<Content: View>(_ name: String, glyph: String,
+                                         @ViewBuilder _ content: () -> Content) -> some View {
+        SectionPanelCard(name: name, glyph: glyph,
+                         inset: DSRoomChassis.rowInset - DSRoomChassis.inset) { content() }
+    }
+
+    /// A kind's own act, first in its card (prd §1265): the pink glyph in
+    /// the Feed's column, the verb in the page's ink, no chevron.
+    private func cardVerbRow(_ glyph: String, _ title: String, action: @escaping () -> Void) -> some View {
+        DSPushRow(title: Text(title), opens: false, action: action) {
+            Image(systemName: glyph)
+                .dsGlyph(.body, weight: .medium)
+                .foregroundStyle(DS.brandInk)
+                .frame(width: DS.Face.seat, height: DS.Face.seat)
+        }
     }
 
     /// One catalogue app by name: yours wears its state and opens its page,
@@ -758,17 +778,20 @@ struct SettingsHome: View {
     /// The cards Casberi can read, by name, each saying the app that reads
     /// it; one you have wears its app's state.
     private var cardsList: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s2) {
-            Text("Cards Casberi can read").dsText(.heading17).foregroundStyle(DS.textSecondary)
+        // "Cards", not "Cards Casberi can read": the card's name is one line.
+        kindCard(String(localized: "Cards"), glyph: ScopeTileGlyph.cards) {
             ForEach(Self.cardApps.filter { c in BridgeCatalog.offers.contains { $0.name == c.app } }, id: \.app) { card in
                 let app = bridges.bridges.first { $0.name == card.app && $0.status != .paused }
-                DSPushRow(title: Text(verbatim: card.cards), subtitle: Text(verbatim: card.app),
-                          fact: Text(app.map { $0.statusLine } ?? String(localized: "Add")),
-                          factTone: app == nil ? DS.tint
-                                    : app?.status == .attention ? DS.attentionInk : DS.textTertiary) {
+                // The Feed's row (prd §1265): the card over its app and
+                // state, no chevron; Add in the tint.
+                DSPushRow(title: Text(verbatim: card.cards),
+                          subtitle: Text(verbatim: "\(card.app) · \(app.map { $0.statusLine } ?? String(localized: "Add"))"),
+                          subtitleTone: app == nil ? DS.tint
+                                        : app?.status == .attention ? DS.attentionInk : DS.textTertiary,
+                          opens: false) {
                     route.openSetup(forOffer: card.app)
                 } leading: {
-                    BridgeIcon(name: card.app, size: DS.Mark.notice)
+                    BridgeIcon(name: card.app, size: DS.Face.seat)
                 }
             }
         }
@@ -783,26 +806,27 @@ struct SettingsHome: View {
             .filter { BridgeCatalog.category(of: $0) == CategoryFold.walletRoom }
             .map(\.name)
             .sorted { $0.localizedStandardCompare($1) == .orderedAscending }
-        return VStack(alignment: .leading, spacing: DS.Space.s4) {
-            verbRow("eye", String(localized: "Follow a wallet")) { add(.wallets) }
-            if !watched.isEmpty {
-                VStack(alignment: .leading, spacing: DS.Space.s2) {
-                    ForEach(watched) { addr in
-                        DSPushRow(title: Text(verbatim: addr.label.isEmpty ? WalletStore.shortAddress(addr.address) : addr.label),
-                                  subtitle: addr.label.isEmpty ? nil : Text(verbatim: WalletStore.shortAddress(addr.address))) {
-                            route.openSetup(forOffer: CategoryFold.walletRoom)
-                        } leading: {
-                            // A face keeps its own ramp (face-ramp audit), centred in the
-                            // rows' 38pt icon column (prd §1170).
-                            WalletFace(address: addr.address, size: DS.Face.row, circular: true)
-                                .frame(width: DS.Mark.notice, height: DS.Mark.notice)
-                        }
+        return VStack(alignment: .leading, spacing: DS.Space.s6) {
+            kindCard(String(localized: "Your wallets"), glyph: "wallet.bifold") {
+                cardVerbRow("eye", String(localized: "Follow a wallet")) { add(.wallets) }
+                ForEach(watched) { addr in
+                    DSPushRow(title: Text(verbatim: addr.label.isEmpty ? WalletStore.shortAddress(addr.address) : addr.label),
+                              subtitle: addr.label.isEmpty ? nil : Text(verbatim: WalletStore.shortAddress(addr.address)),
+                              opens: false) {
+                        route.openSetup(forOffer: CategoryFold.walletRoom)
+                    } leading: {
+                        // A face keeps its own ramp (face-ramp audit), centred in the
+                        // Feed's 46pt column (prd §1170, §1265).
+                        WalletFace(address: addr.address, size: DS.Face.row, circular: true)
+                            .frame(width: DS.Face.seat, height: DS.Face.seat)
                     }
                 }
             }
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                Text("Wallet apps").dsText(.heading17).foregroundStyle(DS.textSecondary)
-                ForEach(walletApps.filter { hit($0) }, id: \.self) { offerRow($0) }
+            let apps = walletApps.filter { hit($0) }
+            if !apps.isEmpty {
+                kindCard(String(localized: "Wallet apps"), glyph: "square.grid.2x2") {
+                    ForEach(apps, id: \.self) { offerRow($0, card: true) }
+                }
             }
         }
     }
@@ -874,7 +898,7 @@ struct SettingsHome: View {
                                    opens: false) {
                         Circle().fill(cal.color)
                             .frame(width: 14, height: 14)
-                            .frame(width: DS.Mark.notice, height: DS.Mark.notice)
+                            .frame(width: DS.Face.seat, height: DS.Face.seat)
                     }
                 }
                 ForEach(subscribed) { calendarRow($0) }
@@ -889,8 +913,8 @@ struct SettingsHome: View {
         } leading: {
             Image(systemName: ScopeTileGlyph.calendars)
                 .dsGlyph(.body, weight: .regular)
-                .foregroundStyle(DS.textSecondary)
-                .frame(width: DS.Mark.notice, height: DS.Mark.notice)
+                .foregroundStyle(DS.brandInk)
+                .frame(width: DS.Face.seat, height: DS.Face.seat)
         }
     }
 

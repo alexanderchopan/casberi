@@ -509,21 +509,21 @@ struct AddressesSection: View {
                 }
             } else {
                 if !recent.isEmpty {
-                    Section {
-                        // Its OWN ids: a recent contact is filed under its
-                        // letter too, and one id twice in a lazy stack draws
-                        // the second as an empty row (the S group under a
-                        // recent Sam stood blank).
+                    // RECENT IS THE FEED'S CARD (prd §1265), the letters
+                    // under it. Its OWN ids: a recent contact is filed under
+                    // its letter too, and one id twice in a lazy stack draws
+                    // the second as an empty row (the S group under a recent
+                    // Sam stood blank).
+                    SectionPanelCard(name: String(localized: "Recent"), glyph: "clock", inset: DS.Space.s3) {
                         ForEach(recent, id: \.recentKey) { contact in row(contact) }
-                    } header: {
-                        LetterHead(text: Text("Recent"), tone: DS.headInk)
                     }
+                    .padding(.bottom, DS.Space.s4)
                 }
                 ForEach(Self.lettered(everyone), id: \.letter) { section in
                     Section {
                         ForEach(section.rows) { contact in row(contact) }
                     } header: {
-                        LetterHead(text: Self.title(for: section.letter), tone: DS.textTertiary)
+                        LetterHead(text: Self.title(for: section.letter), tone: DS.headInk)
                             .id(Self.letterID(section.letter))
                     }
                 }
@@ -752,8 +752,9 @@ private struct LetterHead: View {
     @State private var tracker = FeedSeam.Tracker()
 
     var body: some View {
+        // A letter at the Apps A–Z's rung (prd §1265), in the head ink.
         text
-            .dsText(.label12)
+            .dsText(.heading20)
             .foregroundStyle(tone)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.top, DS.Space.s4)
