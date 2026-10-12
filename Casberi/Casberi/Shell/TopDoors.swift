@@ -45,6 +45,9 @@ struct AvatarChip: View {
     /// tint ring while it is the way OUT, so the same mark reads as the
     /// closer without changing glyph.
     var lit: Bool = false
+    /// What the door is called aloud: the phone's seat is the Feed (prd
+    /// §1280); the rail's face, which opens the tray, keeps "Apps".
+    var name: String? = nil
     /// Taps bounce the door (Telegram grammar, same as the tab icons).
     @State private var avatarBounce = 0
     /// Last time the door actually opened — see `open()` below.
@@ -100,7 +103,7 @@ struct AvatarChip: View {
         // The ring and the spoken name, read where they are drawn (prd §670).
         // The name says what the ring says, because the ring is a visual cue
         // and half the people using this app will never see it.
-        .modifier(DoorAlarm(isBack: onBack != nil))
+        .modifier(DoorAlarm(isBack: onBack != nil, name: name))
         // See `SourceChips`' deleted catalogue door: a plain Button here
         // competes with the paged feed TabView's pan recognizer for the
         // first touch (Apple forums thread 725366) and can need several
@@ -254,6 +257,7 @@ private struct DoorAlarm: ViewModifier {
     /// The seat is the BACK door (prd §767) — it is not about your accounts
     /// then, so it carries neither the ring nor the accounts label.
     let isBack: Bool
+    var name: String? = nil
     @Environment(BridgeStore.self) private var bridges
     /// The ring still DRAWS under Reduce Motion — it is the fact, not the
     /// flourish; only its arrival and exit stop moving. `AppsDoor` gated its
@@ -265,8 +269,10 @@ private struct DoorAlarm: ViewModifier {
         let broken = !isBack && bridges.attentionCount > 0
         let spoken = isBack
             ? String(localized: "Back")
-            : (broken ? String(localized: "Apps, needs attention")
-                      : String(localized: "Apps"))
+            : name ?? (broken ? String(localized: "Apps, needs attention")
+                              : String(localized: "Apps"))
+        // A named door says the ring as its value: "Feed, needs attention".
+        let value = !isBack && name != nil && broken ? String(localized: "needs attention") : ""
         content
             .overlay {
                 if broken {
@@ -278,6 +284,7 @@ private struct DoorAlarm: ViewModifier {
             }
             .animation(reduceMotion ? nil : DS.Motion.press, value: broken)
             .accessibilityLabel(Text(spoken))
+            .accessibilityValue(Text(verbatim: value))
             .dsTooltip(spoken)
     }
 }

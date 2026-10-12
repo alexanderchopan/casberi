@@ -40,7 +40,8 @@ struct DockDoors: View {
                    pullTension: chrome.pullTension,
                    size: markSize,
                    onBack: onBack,
-                   lit: chrome.roomsTray && onBack == nil)
+                   lit: chrome.roomsTray && onBack == nil,
+                   name: String(localized: "Feed"))
             // The capture flight lands on THIS seat since prd §930 — the
             // door to Home, now that the "All" chip that used to publish the
             // target is a row of the tray. Same write the chip made.

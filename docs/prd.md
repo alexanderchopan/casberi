@@ -66172,3 +66172,13 @@ UNVERIFIED: written on a machine with no Xcode; neither build nor screen was see
 - **Holdings:** Positions drew under Tokens.
 
 **Not seen:** a stopped sequencer and an open vote. Neither exists on mainnet today, so the harness carries both. The rows below the first on a long Positions list were not scrolled to. Harness: `aztec-stake-selftest.sh` (mainnet replies, hostile words and offsets, 13 mutations). A review before commit found a trap on any reply word past 2^63, a vault dropped on one failed read, a row landed twice for a wallet listed twice, negative caches kept after a partial walk and a cursor with no margin; all are fixed and the first three guarded.
+
+## §1280 — The face goes to the Feed; the bar is the tray's door (amends §930, §1207 item 4 and §1209a on the phone) (user, 2026-10-12: "in the same wayt we are making the wallet button open wallet home w/ the actions sheet above it... should we make the octopus button such that when you tap it, it opens the feed page w/ the tray open", then "another option would be adding a feed button next to the face", "if we have for wallet we should have for feed, and user doesn't always want to touch the top title or know to swipe", "one other option we could have is that search bar opens the tray", and "ya" to option C of `design/mockups/band-feed-button.html`)
+
+1. **The band is three places: face · bar · Wallet.** The face goes to the Feed from anywhere (`ShellChrome.goToFeed`); on the Feed it returns to the top (`feedTop`); with the tray up it closes it. VoiceOver calls it Feed. The bar raises the tray; the Wallet button opens the Wallet (§1278).
+2. **The bar raises the tray with the keyboard down** (user: "don't open it with the keyboard already up or you won't see the tray contents"): Recent, the Wallet's apps and the categories are in view; a tap on the field brings the keyboard and types. `traySearchFocus` is deleted.
+3. **Unchanged:** the rail's face on iPad and Mac still opens the tray; the face is the way back on a pushed screen (§767); a swipe past either end still raises the tray.
+
+**Why.** If the Wallet has a button, the Feed should too: not everyone taps the title or knows to swipe. The face and the bar both opened the tray, so giving the face the Feed adds no control and squeezes nothing (options A, four buttons, and B, a Feed | Wallet switch, were drawn and passed over).
+
+**Note.** The first half of this change (RootShell, ShellChrome, RoomsTray, FeedScreen) was swept into 18b5f6b3 (§1279) by a peer's whole-file add, citing §1279; its comments are renumbered here.

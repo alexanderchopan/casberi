@@ -239,7 +239,7 @@ final class ShellChrome {
     var appSheet: AppSheet?
     /// A page composed from search words (prd §1209), risen as a sheet.
     var pivot: PivotQuery?
-    /// The face pressed on the Feed (prd §1279): the Feed returns to its top.
+    /// The face pressed on the Feed (prd §1280): the Feed returns to its top.
     var feedTop = 0
     struct AppSheet: Identifiable, Equatable {
         let source: String
@@ -1113,7 +1113,7 @@ final class ShellChrome {
         }
     }
 
-    /// The face on the phone (prd §1279): the Feed from anywhere, the tray
+    /// The face on the phone (prd §1280): the Feed from anywhere, the tray
     /// closed if it was up; on the Feed itself, back to its top.
     func goToFeed() {
         roomsTray = false

@@ -170,9 +170,9 @@ struct RoomsTray: View {
         }
         #endif
         .onChange(of: chrome.roomsTray) { _, up in
-            // The bar raises the tray with the keyboard DOWN (prd §1279,
+            // The bar raises the tray with the keyboard DOWN (prd §1280,
             // amends §1209a): the bar is the tray's only door on the phone, so
-            // Recent and the apps must be in view; a tap on the field types.
+            // its contents must be in view; a tap on the field types.
             // Deal the rows in once the card has landed; under Reduce Motion
             // they are simply there.
             dealt = up

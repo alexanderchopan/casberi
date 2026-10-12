@@ -2413,7 +2413,7 @@ struct RootShell: View {
                     // dead control — so it is not mounted at all.
                     if padShell.railInset == 0 || !sceneState.route.path.isEmpty {
                         DockDoors(onAccounts: {
-                                      // THE FACE GOES TO THE FEED (prd §1279,
+                                      // THE FACE GOES TO THE FEED (prd §1280,
                                       // amends §930 and §1207 item 4 on the
                                       // phone): the band is three places, the
                                       // Feed, the tray (the bar) and the
@@ -2442,10 +2442,10 @@ struct RootShell: View {
                                         // the Wallet fades.
                                         if !chrome.roomsTray {
                                             // The tray's one door on the phone
-                                            // (prd §1279): it rises with the
-                                            // keyboard down, so Recent and the
-                                            // apps are in view; a tap on its
-                                            // field types.
+                                            // (prd §1280): it rises with the
+                                            // keyboard down, so its contents
+                                            // are in view; a tap on its field
+                                            // types.
                                             BandSearchBar {
                                                 withAnimation(DS.Motion.standard) { chrome.roomsTray = true }
                                             }
