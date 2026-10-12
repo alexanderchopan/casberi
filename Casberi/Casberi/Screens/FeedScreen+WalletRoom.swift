@@ -985,13 +985,15 @@ extension FeedScreen {
     /// world's word, user: "call it positions"): lending first, closest to
     /// liquidation first, each borrow saying how far it can fall — the
     /// sentence the Risk tile carried — then perps, which state their own
-    /// distance, then liquidity. Nothing renders without a position.
+    /// distance, then liquidity, then AZTEC staked on Aztec (§1277). Nothing
+    /// renders without a position.
     @ViewBuilder
     var walletPositionsSections: some View {
         let lending = hasLendingCard
         let perps = !walletLive.hyperliquid.positions.isEmpty
         let liquidity = !walletLive.uniswap.isEmpty
-        if lending || perps || liquidity {
+        let staking = !walletLive.aztecStaking.isEmpty
+        if lending || perps || liquidity || staking {
             walletCard(String(localized: "Positions"), glyph: "building.columns") {
                 if lending {
                     WalletLendingCard(aave: walletLive.positions, morpho: walletLive.morpho,
@@ -1012,6 +1014,13 @@ extension FeedScreen {
                 if liquidity {
                     WalletLiquidityCard(book: walletLive.uniswap)
                         .modifier(rowEntrance(4))
+                        .feedRowBackground()
+                        .listRowSeparator(.hidden)
+                        .listRowInsets(WalletCardStyle.rowInsets)
+                }
+                if staking {
+                    WalletAztecStakingCard(book: walletLive.aztecStaking)
+                        .modifier(rowEntrance(5))
                         .feedRowBackground()
                         .listRowSeparator(.hidden)
                         .listRowInsets(WalletCardStyle.rowInsets)

@@ -1089,6 +1089,21 @@ enum WalletIngest {
         "0x30672ebb8d3c3b62c261a23b4a225712ff2cadbc": "World ID grants",
         "0xdaa7bbad496c4d4431423be64d878a769fbdebc8": "World ID grants",
         "0x14a028cc500108307947dca4a1aa35029fb66ce0": "WLD Vault",
+        // Aztec mainnet's contracts on Ethereum (prd §1277): the Rollup, GSE,
+        // Governance and Fee Juice portal as Aztec's own mainnet node lists
+        // them (`node_getNodeInfo`), the two earlier Rollups and the
+        // StakingRegistry off their events. MEASURED over 10,000 blocks of the
+        // AZTEC token's transfers: wallets send stake to the StakingRegistry
+        // (delegated staking) and the Rollup pays wallets back (rewards and
+        // withdrawn stake). Fee Juice goes into Aztec through its portal.
+        // All three Rollups are named because rewards are claimed on each.
+        "0x91ff8bbd8ebb07893010d50a48a1609e5ebd8e34": "Aztec",
+        "0x603bb2c05d474794ea97805e8de69bccfb3bca12": "Aztec",
+        "0xae2001f7e21d5ecabf6234e9fdd1e76f50f74962": "Aztec",
+        "0x042df8f42790d6943f41c25c2132400fd727f452": "Aztec staking",
+        "0xa92ecfd0e70c9cd5e5cd76c50af0f7da93567a4f": "Aztec staking",
+        "0x1102471eb3378fee427121c9efcea452e4b6b75e": "Aztec governance",
+        "0xaf73dd51d1eb8a079bb097f39c832cdd00ac691c": "Aztec bridge",
     ]
 
     /// Is this one of the Safes a World ID grant is paid from (prd §791)? Read

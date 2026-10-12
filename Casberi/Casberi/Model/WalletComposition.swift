@@ -172,7 +172,8 @@ struct WalletComposition: Equatable, Sendable {
                      aerodrome: AerodromeDeFi.Book,
                      worldApp: WorldAppDeFi.Book = WorldAppDeFi.Book(),
                      etherfiCash: EtherFiCash.Book = EtherFiCash.Book(),
-                     etherfiUnstake: EtherFiUnstake.Book = EtherFiUnstake.Book())
+                     etherfiUnstake: EtherFiUnstake.Book = EtherFiUnstake.Book(),
+                     aztecStaking: AztecStaking.Book = AztecStaking.Book())
     -> WalletComposition {
         var out = WalletComposition()
 
@@ -278,6 +279,20 @@ struct WalletComposition: Equatable, Sendable {
                                   amount: request.claimable ?? request.amount,
                                   power: nil,
                                   until: nil,
+                                  isPermanent: false))
+        }
+
+        // AZTEC staked on Aztec (prd §1277): out of the balance and holding
+        // an attester, or on its way out. In AZTEC, never priced (rule 2),
+        // ONE ENTRY PER ATTESTER; an exit's date is the lock's end, and a
+        // stake that is still validating has none (it never expires).
+        for stake in aztecStaking.stakes where stake.amount > 0 {
+            out.locks.append(Lock(id: "aztec:\(stake.attester)",
+                                  place: "Aztec",
+                                  symbol: "AZTEC",
+                                  amount: stake.amount,
+                                  power: nil,
+                                  until: stake.exitableAt,
                                   isPermanent: false))
         }
 

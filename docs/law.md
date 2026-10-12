@@ -136,6 +136,7 @@ Privacy and Reddit. Frames and Logos are the devnets that remain.
 - The rooms tray is the doors row and one entry per category (glyph and word, primary ink), which opens its room. A merged category draws no app marks; an unmerged one keeps its marks, each landing in that app's room, until it merges, keyed on `RoomAccounts.mergedRooms` (§1050e, §1050f, §1048c).
 - A folded app has no room: every door that names it lands in the Wallet scoped to it; Home lists every folded app's rows and its history screen reads the same sources; Home leads with what is pending and undated (queued Safe transactions, uncleared Privacy Pools deposits) under Needs you (§1048c, §1111). Peer's settling sales (due at the escrow's 6.5h deadline, removed when the outcome lands) are dated items there (§1048f); Rocket Money's repeating bills are Subscriptions' (§1105).
 - Markets is its own category; Testnets (Hegotá Frames, Logos, `flask`) is its own, never inside Wallet (§1050, §1050a).
+- Aztec mainnet is the Wallet's, never Testnets': its contracts are named, and AZTEC staked is a Positions row per sequencer, in AZTEC, never priced, found by its withdrawer in the Rollup's own events (§1277).
 - NFTs show only full rows of art, then one row per picked collection (§943).
 - Permissions: dollars in reach over the holders' marks, then Delegations and Approvals (§944). Positions: total at work over bars, then Lending, Liquidity and Perps (§945). Risk: Leveraged, then Worth a look. Safe signatures lead Permissions (§947).
 - Day's Subscriptions tile lists every mailing list that writes to you, found by `List-Id` or `List-Unsubscribe`, never a guess: one row per list, the most mail this month first, each with how often it writes and a way out that opens in the browser or Mail; the app never unsubscribes for you and shows no open counts (§1111). A sender with no list header joins it from its mail's sheet or Day's own tray, Track a subscription; every mail from that address files, and Stop tracking takes back only what the add filed (§1115, §1117). Both Subscriptions tiles are one tile with two measures: a statement with "a month", one line, the five-week calendar (the Wallet's ahead, Day's looking back), then Track a subscription, the category map and the rows, each row's figure trailing (cost a month, mails in thirty days) and the other room named in its line, never a price outside the Wallet (§1117). Day's tray searches every header-less sender kept, not only this month; its field says Search mail (§1134).
@@ -231,7 +232,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1419 of 1485 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1420 of 1486 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1652,6 +1653,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1274 — Sources' Subscriptions, Mail lists and Following open their page over Sources (amends §1217, §1265)
 - §1275 — Everything in Sources opens in Sources (amends §1217, §1274)
 - §1276 — Aztec: this phone signs for a TESTNET account
+- §1277 — Aztec mainnet in the Wallet: its contracts named, AZTEC staked shown in Positions
 
 ## Dead rulings → what replaced them (generated)
 

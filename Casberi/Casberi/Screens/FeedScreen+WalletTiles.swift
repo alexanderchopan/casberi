@@ -550,7 +550,8 @@ extension FeedScreen {
                                aerodrome: walletLive.aerodrome,
                                worldApp: walletLive.worldApp,
                                etherfiCash: walletLive.etherfiCash,
-                               etherfiUnstake: walletLive.etherfiUnstake)
+                               etherfiUnstake: walletLive.etherfiUnstake,
+                               aztecStaking: walletLive.aztecStaking)
     }
 
     /// The per-wallet split as chip entries (prd §212, 2026-07-25) — value

@@ -177,6 +177,9 @@ struct WalletLiveState: Equatable {
     /// books above, so stating them costs no extra request inside a pass.
     var etherfiCash: EtherFiCash.Book = EtherFiCash.Book()
     var etherfiUnstake: EtherFiUnstake.Book = EtherFiUnstake.Book()
+    /// AZTEC staked on Aztec mainnet (prd §1277), off the same mainnet host
+    /// pool and coalesced behind the same 60s TTL.
+    var aztecStaking: AztecStaking.Book = AztecStaking.Book()
     var warnings: [WalletWarning] = []
     /// The address-poisoning things behind the poisoning warning — carried so
     /// the Worth-a-look tray can list each flagged transfer as its own row
@@ -216,6 +219,7 @@ struct WalletLiveState: Equatable {
             && a.uniswap == b.uniswap
             && a.hyperliquid == b.hyperliquid
             && a.aerodrome == b.aerodrome
+            && a.aztecStaking == b.aztecStaking
             && a.positions.count == b.positions.count
             && zip(a.positions, b.positions).allSatisfy {
                 $0.address == $1.address && $0.network == $1.network
@@ -348,6 +352,7 @@ enum WalletWatch {
         async let worldAppBook = WorldAppDeFi.book(addresses: resolved)
         async let cashBook = EtherFiCash.book(addresses: resolved)
         async let unstakeBook = EtherFiUnstake.book(addresses: resolved)
+        async let aztecBook = AztecStaking.book(addresses: resolved)
         async let safe = SafeBridge.pendingCounts(addresses: resolved)
         async let delegs = WalletSafety.currentDelegations(addresses: resolved)
         // Joins the same concurrent fan-out rather than running after it: it
@@ -372,6 +377,7 @@ enum WalletWatch {
         // couldn't, the only shape that can't overstate.
         let etherfiCash = await cashBook ?? EtherFiCash.Book()
         let etherfiUnstake = await unstakeBook ?? EtherFiUnstake.Book()
+        let aztecStaking = await aztecBook ?? AztecStaking.Book()
         let safePending = await safe
         let delegations = await delegs
         let activeApprovals = await approvalsRead
@@ -416,6 +422,7 @@ enum WalletWatch {
             worldApp: worldApp,
             etherfiCash: etherfiCash,
             etherfiUnstake: etherfiUnstake,
+            aztecStaking: aztecStaking,
             warnings: warnings(positions: positions, morpho: morpho,
                                safePending: safePending,
                                delegations: delegations, poisoningCount: poisoningCount,

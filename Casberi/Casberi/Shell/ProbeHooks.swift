@@ -3563,6 +3563,14 @@ enum ProbeHooks {
         // split is the point: a count alone can't separate "nothing is
         // claimable yet" from "the finalized read didn't run". Pairs with
         // `-walletAddress`.
+        // `-aztecStakeProbe <0x wallet>` NSLogs one wallet's AZTEC stakes on
+        // Aztec mainnet (prd §1277), read without watching it: attester,
+        // status, amount and the row's state, then how far the walk went.
+        Hook(key: "aztecStakeProbe") { value, _ in
+            Task {
+                for line in await AztecStaking.probe(address: value) { NSLog("aztecStake| %@", line) }
+            }
+        },
         Hook(key: "etherfiUnstakeProbe") { _, context in
             Task { @MainActor in
                 let lines = await EtherFiUnstake.probe(context: context)

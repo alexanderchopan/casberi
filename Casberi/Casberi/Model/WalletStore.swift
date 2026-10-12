@@ -201,6 +201,7 @@ final class WalletStore {
                 // and walk floor leave with the watch, or a re-watch would
                 // trust ids it never re-verified.
                 EtherFiUnstake.clearState(address: old.address)
+                AztecStaking.clearState(address: old.address)
                 // The EIP-7702 delegation baseline leaves too (2026-07-20) —
                 // a re-watch should seed fresh, not compare against a
                 // delegate state from a prior, unrelated watch period.
