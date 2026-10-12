@@ -2397,6 +2397,10 @@ harness "Radicle pure-logic self-test" "radicle self-test" "scripts/radicle-self
 harness "Logos pure-logic self-test" "logos self-test" "scripts/logos-selftest.sh" "the Logos logic self-test failed — run scripts/logos-selftest.sh"
 harness "Aztec pure-logic self-test" "aztec self-test" "scripts/aztec-selftest.sh" "the Aztec logic self-test failed — run scripts/aztec-selftest.sh"
 harness "zk.money pure-logic self-test" "zkmoney self-test" "scripts/zkmoney-selftest.sh" "the zk.money logic self-test failed — run scripts/zkmoney-selftest.sh"
+# The Aztec testnet signer (prd §1276): the phone rebuilds the hash from the calls and
+# refuses anything not on an Aztec testnet, so a mainnet request or a blind hash never
+# reaches Face ID.
+harness "Aztec signing self-test" "aztec signing self-test" "scripts/aztec-sign-selftest.sh" "the Aztec signing self-test failed — run scripts/aztec-sign-selftest.sh"
 # Logos Observer v2 (2026-10-03). Runs the Observer's OWN interoperability vectors (HMAC,
 # SPKI pin, pairing QR) through the client: a wrong byte in any of them answers every
 # request 401 bad_signature, or pairs with nothing, and looks identical from the phone.

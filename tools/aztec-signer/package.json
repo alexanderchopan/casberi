@@ -1,0 +1,16 @@
+{
+  "name": "casberi-aztec-signer",
+  "private": true,
+  "type": "module",
+  "description": "Runs an Aztec TESTNET account whose only key is a Casberi phone's Secure Enclave key.",
+  "scripts": { "signer": "node signer.mjs" },
+  "dependencies": {
+    "@aztec/accounts": "5.2.0",
+    "@aztec/aztec.js": "5.2.0",
+    "@aztec/entrypoints": "5.2.0",
+    "@aztec/foundation": "5.2.0",
+    "@aztec/noir-contracts.js": "5.2.0",
+    "@aztec/stdlib": "5.2.0",
+    "@aztec/wallets": "5.2.0"
+  }
+}

@@ -25,6 +25,10 @@ struct AztecScreen: View {
     @State private var weekly: [String: (week: Int, new: Bool)] = [:]
     @State private var namingID: String?
     @State private var nameDraft = ""
+    /// A sign request pasted into the field (the Universal Clipboard path).
+    @State private var pastedSign: AztecSignAsk?
+    @State private var confirmRemoveKey = false
+    @State private var signerKey = AztecSignerKey.publicKeyHex()
 
     /// The roster row for the network itself.
     private static let networkRowID = "network"
@@ -57,6 +61,7 @@ struct AztecScreen: View {
             sheet: $sheet,
             act: { addBlock },
             more: {
+                signingRows
                 DSFootnote(prose: String(localized: "Test fees have no value, and the testnet is replaced when Aztec ships a major version."))
                     .padding(.vertical, DS.Space.s3)
                 DevnetExplorerRow(url: AztecIngest.network.explorer, plain: true)
@@ -73,6 +78,16 @@ struct AztecScreen: View {
             Button("Cancel", role: .cancel) { namingID = nil }
         } message: {
             Text("Blank shows the address instead.")
+        }
+        .sheet(item: $pastedSign) { ask in AztecSignTray(request: ask.request) }
+        .alert("Remove the signing key?", isPresented: $confirmRemoveKey) {
+            Button("Remove", role: .destructive) {
+                AztecSignerKey.delete()
+                signerKey = nil
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Its testnet account can never be used again.")
         }
         .onAppear {
             countWeek()
@@ -139,9 +154,11 @@ struct AztecScreen: View {
                         actionLabel: String(localized: "Follow"),
                         keyboard: .URL,
                         focus: $fieldFocused,
-                        isArmed: AztecWire.attester(field) != nil || AztecWire.account(field) != nil,
+                        isArmed: AztecWire.attester(field) != nil || AztecWire.account(field) != nil
+                            || AztecSignRequest.request(fromLink: field) != nil,
                         paste: { pasted in
                             field = pasted
+                            if AztecSignRequest.request(fromLink: pasted) != nil { return }
                             if AztecWire.attester(pasted) == nil && AztecWire.account(pasted) == nil {
                                 lastResult = .failed(Self.malformed)
                             }
@@ -162,7 +179,31 @@ struct AztecScreen: View {
 
     private static let malformed = String(localized: "That isn't a sequencer's attester address or an Aztec account.")
 
+    /// Signing for a testnet account (2026-10-11): this phone's key, which a
+    /// computer's tool builds Aztec's own account from. Testnet only.
+    @ViewBuilder private var signingRows: some View {
+        if let key = signerKey {
+            DSCopyRow(value: key, label: "Copy signing key", sensitive: false)
+            DSDoorRow(icon: "trash", label: "Remove signing key", role: .destructive) { confirmRemoveKey = true }
+        } else {
+            DSDoorRow(icon: "key", label: "Make a testnet signing key") {
+                do {
+                    try AztecSignerKey.create()
+                    signerKey = AztecSignerKey.publicKeyHex()
+                    lastResult = .says(String(localized: "Made. Copy the key into the signer on your computer."))
+                } catch {
+                    lastResult = .failed(String(localized: "Couldn't make a key: \(String(describing: error))"))
+                }
+            }
+        }
+    }
+
     private func follow() {
+        if let request = AztecSignRequest.request(fromLink: field) {
+            field = ""
+            pastedSign = AztecSignAsk(request: request)
+            return
+        }
         switch aztec.add(field) {
         case .invalid:
             lastResult = .failed(Self.malformed)

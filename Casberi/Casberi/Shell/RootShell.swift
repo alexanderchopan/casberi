@@ -33,7 +33,7 @@ struct RootShell: View {
     /// the type-checker's limit the day the note sheet joined them.
     private var modalUp: Bool {
         composerOpen || chrome.noteOpen || deepLinkThing != nil
-            || deepLinkPerson != nil || safeAsk != nil || observerOffer != nil || !onboarded
+            || deepLinkPerson != nil || safeAsk != nil || observerOffer != nil || aztecSign != nil || !onboarded
     }
     @State private var deepLinkThing: Thing?
     /// Open a thing by one of the shell's own doors — Spotlight,
@@ -59,6 +59,8 @@ struct RootShell: View {
     /// and once Logos was connected the link landed in its screen instead,
     /// where nothing raised the tray (2026-10-06).
     @State private var observerOffer: LogosObserverWire.Offer?
+    /// An Aztec testnet sign request a computer handed over (2026-10-11).
+    @State private var aztecSign: AztecSignAsk?
     @AppStorage("onboarded") private var onboarded = false
     /// Mirrors `DemoMode.isActive` so the standing demo mark appears and
     /// disappears with the mode — its layer is in `body`, beside the seat
@@ -1804,6 +1806,9 @@ struct RootShell: View {
         .sheet(item: $observerOffer) { offer in
             rootPresented(LogosObserverPairTray(offer: offer))
         }
+        .sheet(item: $aztecSign) { ask in
+            rootPresented(AztecSignTray(request: ask.request))
+        }
         // THE FIRST-LAUNCH COVER IS GONE (2026-09-05). It was a
         // `.fullScreenCover` on `!onboarded` presenting `HowItWorksSheet` with
         // two doors, and it pinned the demo pour to its `onDismiss`. The
@@ -2686,6 +2691,25 @@ struct RootShell: View {
         if url.scheme?.lowercased() == "logos-observer" {
             guard let offer = LogosObserverWire.offer(url.absoluteString) else { return }
             observerOffer = offer
+            return
+        }
+        // An Aztec testnet sign request (2026-10-11): the tray reads and
+        // checks it; nothing is signed until the person signs there.
+        if url.host()?.lowercased() == AztecSignRequest.host, url.path() == AztecSignRequest.path {
+            guard let request = AztecSignRequest.request(fromLink: url.absoluteString) else { return }
+            // The root sheet cannot rise over a route sheet: close that first
+            // (`openPage`'s rule), or the tray never shows and `aztecSign`
+            // holds the shell modal.
+            if sceneState.route.sheet != nil || deepLinkThing != nil {
+                sceneState.route.path = []
+                deepLinkThing = nil
+                Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(450))
+                    aztecSign = AztecSignAsk(request: request)
+                }
+            } else {
+                aztecSign = AztecSignAsk(request: request)
+            }
             return
         }
         // A deep link lands you AT a destination, not back in a store the route
@@ -4823,4 +4847,11 @@ private struct AppSheetHost: ViewModifier {
                 .presentationBackground(DS.themedPage)
         }
     }
+}
+
+
+/// An Aztec sign request as a sheet item.
+struct AztecSignAsk: Identifiable {
+    let id = UUID()
+    let request: AztecSignRequest.Request
 }

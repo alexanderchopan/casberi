@@ -1,0 +1,216 @@
+import CryptoKit
+import Foundation
+
+/// A request to sign for an Aztec TESTNET account, read and checked before
+/// anyone is asked (2026-10-11, user: "lets do as much as we can including
+/// even signing", then "we can't yet create an account that can move funds
+/// and i don't think we can create our own contract", then "Testnet only").
+/// Foundation + CryptoKit, pure, so `scripts/aztec-sign-selftest.sh`
+/// compiles it whole.
+///
+/// **Who does what.** A computer runs the account (Aztec's own
+/// `EcdsaRAccount`, never a contract of ours) and its PXE — the private
+/// execution, the proof, the send; Aztec has no Swift client. When the
+/// account must authorise a transaction, the computer hands this phone the
+/// REQUEST — the calls, the nonce, the chain, the account and the hash it
+/// wants signed — as `casberi://aztec/sign#<base64url JSON>`. The phone holds
+/// the only key the account accepts, in the Secure Enclave.
+///
+/// **No blind signing.** The phone rebuilds the hash from the calls itself
+/// (`AztecPoseidon2`, the recipe measured off aztec.js and a mined
+/// transaction) and refuses a request whose hash does not match: what the
+/// sheet shows is what the signature commits to. A function's NAME comes
+/// from the computer and is not covered by the hash, so the sheet says so;
+/// its target, selector and arguments are.
+///
+/// **Testnet only, enforced here.** A request on any chain but Sepolia, or on
+/// a rollup that is not one of Aztec's testnets, is refused before the sheet
+/// can offer Face ID. Test money has no value, Logos' Send precedent (prd
+/// §1084); nothing here can authorise real funds.
+enum AztecSignRequest {
+
+    struct Call: Codable, Equatable {
+        let name: String
+        let to: String
+        let selector: String
+        let type: String
+        let hideMsgSender: Bool
+        let isStatic: Bool
+        let args: [String]
+    }
+
+    struct Request: Codable, Equatable {
+        let account: String
+        let chainId: String
+        let version: String
+        let txNonce: String
+        let messageHash: String
+        let calls: [Call]
+    }
+
+    /// The only chains a request may name: Sepolia (11155111), and the
+    /// rollup versions of Aztec's testnets as their nodes report them —
+    /// v5 (the previous testnet, which aztec.js 5.2 reaches) and v6.
+    static let l1ChainID = 11_155_111
+    static let testnetRollups: [Int: String] = [1_821_665_230: "Aztec testnet (v5)",
+                                                2_914_217_885: "Aztec testnet (v6)"]
+
+    // MARK: - The link
+
+    static let scheme = "casberi"
+    static let host = "aztec"
+    static let path = "/sign"
+    /// What the phone hands back: the computer's tool waits for this prefix.
+    static let signaturePrefix = "casberi-aztec-sig:"
+
+    static func link(_ request: Request) -> String? {
+        guard let json = try? JSONEncoder().encode(request) else { return nil }
+        let b64 = json.base64EncodedString()
+            .replacingOccurrences(of: "+", with: "-").replacingOccurrences(of: "/", with: "_")
+            .replacingOccurrences(of: "=", with: "")
+        return "\(scheme)://\(host)\(path)#\(b64)"
+    }
+
+    static func request(fromLink raw: String) -> Request? {
+        guard let url = URL(string: raw.trimmingCharacters(in: .whitespacesAndNewlines)),
+              url.scheme?.lowercased() == scheme, url.host()?.lowercased() == host,
+              url.path() == path, let fragment = url.fragment, fragment.count <= 16_384 else { return nil }
+        var b64 = fragment.replacingOccurrences(of: "-", with: "+").replacingOccurrences(of: "_", with: "/")
+        while b64.count % 4 != 0 { b64 += "=" }
+        guard let data = Data(base64Encoded: b64) else { return nil }
+        return try? JSONDecoder().decode(Request.self, from: data)
+    }
+
+    // MARK: - The check
+
+    enum Verdict: Equatable {
+        case sign(network: String)
+        case refused(String)
+    }
+
+    /// Whether this request may be offered for signing: on an Aztec testnet,
+    /// at most five calls (the entrypoint's limit), and its hash rebuilt from
+    /// its own calls equals the hash it asks for.
+    static func check(_ r: Request) -> Verdict {
+        guard int(r.chainId) == l1ChainID else {
+            return .refused("This request is not for an Aztec testnet. Casberi signs for test money only.")
+        }
+        guard let version = int(r.version), let network = testnetRollups[version] else {
+            return .refused("This request names a rollup that is not one of Aztec's testnets.")
+        }
+        guard !r.calls.isEmpty, r.calls.count <= 5 else {
+            return .refused("A request carries one to five calls.")
+        }
+        let values = [r.account, r.chainId, r.version, r.txNonce] + r.calls.flatMap { [$0.to, $0.selector] + $0.args }
+        guard values.allSatisfy({ AztecPoseidon2.field($0).map(AztecPoseidon2.isCanonical) == true }) else {
+            return .refused("This request carries a value that is not a valid Aztec field. Nothing was signed.")
+        }
+        guard let rebuilt = outerHash(r), rebuilt == normalized(r.messageHash) else {
+            return .refused("The calls do not match the hash this request asks to sign. Nothing was signed.")
+        }
+        return .sign(network: network)
+    }
+
+    // MARK: - The hash, rebuilt
+
+    // DomainSeparator values (identical in v5.2.0 and v6.0.0-rc.1).
+    static let functionArgs: UInt32 = 3_576_554_347
+    static let publicCalldata: UInt32 = 2_760_353_947
+    static let signaturePayload: UInt32 = 463_525_807
+    static let authwitOuter: UInt32 = 3_283_595_782
+
+    /// `P(AUTHWIT_OUTER, account, chainId, version, P(SIGNATURE_PAYLOAD,
+    /// 5 × [argsHash, selector, to, isPublic, hideMsgSender, isStatic], nonce))`;
+    /// a private call's argsHash is `P(FUNCTION_ARGS, args)` (zero when it has
+    /// none), a public call's `P(PUBLIC_CALLDATA, selector, args)`; padding is
+    /// `FunctionCall.empty()`, a PUBLIC call to zero.
+    static func outerHash(_ r: Request) -> String? {
+        let zero = Data(count: 32)
+        let one = AztecPoseidon2.field("1")!
+        var payload: [Data] = []
+        for i in 0..<5 {
+            guard i < r.calls.count else {
+                payload += [AztecPoseidon2.hash([zero], separator: publicCalldata), zero, zero, one, zero, zero]
+                continue
+            }
+            let c = r.calls[i]
+            guard let selector = AztecPoseidon2.field(c.selector), let to = AztecPoseidon2.field(c.to) else { return nil }
+            var args: [Data] = []
+            for a in c.args {
+                guard let f = AztecPoseidon2.field(a) else { return nil }
+                args.append(f)
+            }
+            let isPublic = c.type == "public"
+            let argsHash = isPublic ? AztecPoseidon2.hash([selector] + args, separator: publicCalldata)
+                                    : (args.isEmpty ? zero : AztecPoseidon2.hash(args, separator: functionArgs))
+            payload += [argsHash, selector, to, isPublic ? one : zero,
+                        c.hideMsgSender ? one : zero, c.isStatic ? one : zero]
+        }
+        guard let nonce = AztecPoseidon2.field(r.txNonce), let account = AztecPoseidon2.field(r.account),
+              let chain = AztecPoseidon2.field(r.chainId), let version = AztecPoseidon2.field(r.version) else { return nil }
+        payload.append(nonce)
+        let inner = AztecPoseidon2.hash(payload, separator: signaturePayload)
+        return AztecPoseidon2.hex(AztecPoseidon2.hash([account, chain, version, inner], separator: authwitOuter))
+    }
+
+    /// What the account contract verifies: P-256 over `sha256(outer_hash)`.
+    static func digest(_ messageHash: String) -> [UInt8]? {
+        guard let bytes = AztecPoseidon2.field(messageHash) else { return nil }
+        return Array(SHA256.hash(data: bytes))
+    }
+
+    static func signatureLine(r: [UInt8], s: [UInt8]) -> String {
+        signaturePrefix + (r + s).map { String(format: "%02x", $0) }.joined()
+    }
+
+    // MARK: - Words
+
+    /// One call as the sheet draws it: the computer's name for it and every
+    /// argument WHOLE — an amount (anything below 2^128, Aztec's u128) in
+    /// decimal digits, anything wider in full hex. Nothing is shortened, so
+    /// one token and a million never read alike.
+    static func line(_ c: Call) -> String {
+        let args = c.args.map { a -> String in
+            guard let data = AztecPoseidon2.field(a) else { return a }
+            return decimal(data) ?? AztecPoseidon2.hex(data)
+        }
+        return "\(c.name.isEmpty ? "call" : c.name)(\(args.joined(separator: ", ")))"
+    }
+
+    /// 32 bytes as decimal digits when the value is below 2^128, else nil.
+    static func decimal(_ data: Data) -> String? {
+        let bytes = [UInt8](data)
+        guard bytes.count == 32, bytes.prefix(16).allSatisfy({ $0 == 0 }) else { return nil }
+        // Base-2^32 limbs, most significant first, divided by ten until zero.
+        var limbs: [UInt64] = stride(from: 16, to: 32, by: 4).map { i in
+            bytes[i..<(i + 4)].reduce(0) { $0 << 8 | UInt64($1) }
+        }
+        var digits: [Character] = []
+        repeat {
+            var rem: UInt64 = 0
+            for k in limbs.indices {
+                let cur = rem << 32 | limbs[k]
+                limbs[k] = cur / 10
+                rem = cur % 10
+            }
+            digits.append(Character(String(rem)))
+        } while limbs.contains { $0 != 0 }
+        return String(digits.reversed())
+    }
+
+    /// An address as written (leading zeros kept — they are part of it),
+    /// shortened to its ends: ten characters and eight, wide enough that a
+    /// look-alike address costs a real search.
+    static func short(_ hex: String) -> String {
+        let h = normalized(hex)
+        return h.count > 20 ? "\(h.prefix(10))…\(h.suffix(8))" : h
+    }
+
+    static func normalized(_ hex: String) -> String { hex.lowercased() }
+
+    static func int(_ hex: String) -> Int? {
+        let body = hex.lowercased().hasPrefix("0x") ? String(hex.dropFirst(2)) : hex
+        let digits = body.drop { $0 == "0" }
+        return digits.count > 15 ? nil : Int(digits.isEmpty ? "0" : String(digits), radix: 16)
+    }
+}

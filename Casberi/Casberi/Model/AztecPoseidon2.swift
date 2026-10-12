@@ -199,18 +199,26 @@ enum AztecPoseidon2 {
         return out
     }
 
+    /// Whether 32 bytes are a field element as written, below the modulus. A
+    /// value at or past it hashes as itself minus p, so it would show as one
+    /// number and sign as another.
+    static func isCanonical(_ data: Data) -> Bool { bytes(element(data)) == data }
+
     static func hex(_ data: Data) -> String { "0x" + data.map { String(format: "%02x", $0) }.joined() }
 
     /// A hex field ("0x…", any length up to 64 digits) as 32 bytes.
     static func field(_ hex: String) -> Data? {
         var s = hex.hasPrefix("0x") ? String(hex.dropFirst(2)) : hex
-        guard s.count <= 64, s.allSatisfy(\.isHexDigit) else { return nil }
+        // ASCII only: `isHexDigit` is also true of fullwidth digits ("１"),
+        // which `UInt8(_:radix:)` cannot read — a sign link is outside input.
+        guard s.count <= 64, s.allSatisfy({ $0.isASCII && $0.isHexDigit }) else { return nil }
         s = String(repeating: "0", count: 64 - s.count) + s
         var out = Data()
         var i = s.startIndex
         while i < s.endIndex {
             let j = s.index(i, offsetBy: 2)
-            out.append(UInt8(s[i..<j], radix: 16)!)
+            guard let byte = UInt8(s[i..<j], radix: 16) else { return nil }
+            out.append(byte)
             i = j
         }
         return out

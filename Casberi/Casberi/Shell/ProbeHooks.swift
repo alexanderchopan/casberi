@@ -2697,6 +2697,20 @@ enum ProbeHooks {
                 }
             }
         },
+        // `-aztecSignerKey make|show|remove` — this phone's Aztec TESTNET signing
+        // key (prd §1276), NSLogged as `aztecSignerKey: <x‖y hex>` for the
+        // computer's tool (`tools/aztec-signer`). On a simulator it is the
+        // DEBUG software stand-in; pair with `-aztecAutoSign YES` so a request
+        // link opened by `simctl openurl` signs without a tap.
+        Hook(key: "aztecSignerKey") { spec, _ in
+            Task { @MainActor in
+                if spec == "remove" { AztecSignerKey.delete(); NSLog("aztecSignerKey: removed"); return }
+                if spec == "make", AztecSignerKey.publicKeyHex() == nil {
+                    do { try AztecSignerKey.create() } catch { NSLog("aztecSignerKey: FAILED %@", "\(error)"); return }
+                }
+                NSLog("aztecSignerKey: %@", AztecSignerKey.publicKeyHex() ?? "NONE")
+            }
+        },
         // `-zkMoneyProbe "<tag.zk.money | zk.money link | deposit=<0x…> | portal>"`
         // — what the app reads about zk.money (2026-10-11), NSLogged as
         // `zkMoney:` lines: a tag's public record, a link as capture would
