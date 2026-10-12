@@ -1124,6 +1124,7 @@ final class ShellChrome {
     /// The band's Wallet button (prd §1278): the Wallet on Home, on All, from
     /// any page; on the Wallet itself it returns to Home.
     func openWallet() {
+        roomsTray = false
         walletScope = nil
         walletSection = .home
         sourceRequest = CategoryFold.walletRoom

@@ -66177,7 +66177,8 @@ UNVERIFIED: written on a machine with no Xcode; neither build nor screen was see
 
 1. **The band is three places: face · bar · Wallet.** The face goes to the Feed from anywhere (`ShellChrome.goToFeed`); on the Feed it returns to the top (`feedTop`); with the tray up it closes it. VoiceOver calls it Feed. The bar raises the tray; the Wallet button opens the Wallet (§1278).
 2. **The bar raises the tray with the keyboard down** (user: "don't open it with the keyboard already up or you won't see the tray contents"): Recent, the Wallet's apps and the categories are in view; a tap on the field brings the keyboard and types. `traySearchFocus` is deleted.
-3. **Unchanged:** the rail's face on iPad and Mac still opens the tray; the face is the way back on a pushed screen (§767); a swipe past either end still raises the tray.
+3. **The tray keeps the band's two places** (user: "when you tap the search bar, the face and the wallet button should be visible", and "could a cursor be active in search when you tap it?"): the Wallet button stays beside the tray's search, and pressing it closes the tray. The idle field draws a blinking cursor in the tint (`IdleCaret`, still under Reduce Motion): a picture of focus, since real focus would raise the keyboard over the contents.
+4. **Unchanged:** the rail's face on iPad and Mac still opens the tray; the face is the way back on a pushed screen (§767); a swipe past either end still raises the tray.
 
 **Why.** If the Wallet has a button, the Feed should too: not everyone taps the title or knows to swipe. The face and the bar both opened the tray, so giving the face the Feed adds no control and squeezes nothing (options A, four buttons, and B, a Feed | Wallet switch, were drawn and passed over).
 

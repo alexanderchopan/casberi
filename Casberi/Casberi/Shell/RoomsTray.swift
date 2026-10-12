@@ -631,7 +631,7 @@ struct RoomsTray: View {
         // band's bar's place — the Wallet button's room kept — and it widens as the keyboard
         // comes, so the field you tapped is the field you type in.
         let note = typing ? 0 : height + DS.Space.s2
-        return searchControl
+        return searchControl(caret: true)
             .padding(.horizontal, DS.Space.s4)
             .frame(width: max(DSRoomChassis.inset + width - beside - note, 1), height: height)
             .dsGlass(cornerRadius: height / 2)
@@ -642,7 +642,7 @@ struct RoomsTray: View {
 
     /// The field beside the rail: the card's first row, on a faint plate.
     private var searchField: some View {
-        searchControl
+        searchControl(caret: false)
             .padding(.horizontal, DS.Space.s3)
             .frame(height: Self.searchHeight)
             .background(DS.fillFaint, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
@@ -650,8 +650,11 @@ struct RoomsTray: View {
             .modifier(Dealt(on: dealt, index: 0, reduceMotion: reduceMotion))
     }
 
-    /// The glyph, the words and Clear — one field in either place.
-    private var searchControl: some View {
+    /// The glyph, the words and Clear — one field in either place. `caret`
+    /// draws a blinking cursor in the phone's idle field (prd §1280): the
+    /// tray rises with the keyboard down so its contents show, and the
+    /// cursor still says a tap types.
+    private func searchControl(caret: Bool) -> some View {
         HStack(spacing: DS.Space.s2) {
             Image(systemName: "magnifyingglass")
                 .dsGlyph(.body)
@@ -683,6 +686,11 @@ struct RoomsTray: View {
                 .autocorrectionDisabled()
                 .textInputAutocapitalization(.never)
                 .onSubmit { submit() }
+                .overlay(alignment: .leading) {
+                    if caret, !searching, query.isEmpty, tokens.isEmpty {
+                        IdleCaret().allowsHitTesting(false)
+                    }
+                }
             if !query.isEmpty || !tokens.isEmpty {
                 Button {
                     query = ""
@@ -1979,4 +1987,24 @@ enum TraySearchHistory {
     }
 
     static func clear() { DefaultsWrite.remove(key) }
+}
+
+/// The cursor drawn in the tray's idle field on the phone (prd §1280): the
+/// system's tint, its width and height, blinking at the system's pace. It is
+/// a picture of a cursor, not focus: the keyboard stays down until a tap.
+/// Under Reduce Motion it stands still.
+private struct IdleCaret: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        TimelineView(.periodic(from: .now, by: 0.53)) { context in
+            let on = reduceMotion
+                || Int(context.date.timeIntervalSinceReferenceDate / 0.53) % 2 == 0
+            RoundedRectangle(cornerRadius: 1)
+                .fill(DS.tint)
+                .frame(width: 2, height: 22)
+                .opacity(on ? 1 : 0)
+        }
+        .accessibilityHidden(true)
+    }
 }

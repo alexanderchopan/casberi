@@ -2450,8 +2450,16 @@ struct RootShell: View {
                                                 withAnimation(DS.Motion.standard) { chrome.roomsTray = true }
                                             }
                                             .transition(.identity)
-                                            WalletDoor { chrome.openWallet() }
-                                                .transition(.opacity)
+                                        } else {
+                                            // The tray's capsule holds the bar's
+                                            // place; the Wallet keeps its own.
+                                            Spacer(minLength: 0)
+                                        }
+                                        // The Wallet stays with the face while
+                                        // the tray is up (prd §1280): the band's
+                                        // two places never leave it.
+                                        WalletDoor {
+                                            withAnimation(DS.Motion.standard) { chrome.openWallet() }
                                         }
                                     }
                                     .padding(.leading, DSDock.agentSize(fold: chrome.fold) + DS.Space.s2)
