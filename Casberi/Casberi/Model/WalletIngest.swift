@@ -1114,7 +1114,7 @@ enum WalletIngest {
     /// wallet "Mom" would make Mom a contract. The connections card (prd §295)
     /// needs the narrow question.
     static func isKnownContract(_ address: String) -> Bool {
-        knownContracts[address.lowercased()] != nil
+        knownContracts[address.lowercased()] != nil || ZkMoney.knownName(for: address) != nil
     }
 
     /// A synchronously-known name for a counterparty address — the person's own
@@ -1125,6 +1125,7 @@ enum WalletIngest {
         return AddressBook.shared.name(for: a)
             ?? ContactIndexSources.contact(forKey: Identity.key(.wallet, a)).flatMap { $0.isUnnamed ? nil : $0.name }
             ?? knownContracts[a]
+            ?? ZkMoney.knownName(for: a)
     }
 
     /// The other side of a transfer, lowercased hex — who it came from when
@@ -1168,10 +1169,30 @@ enum WalletIngest {
                 names[a] = watched.label.isEmpty ? watched.short : watched.label
             } else if let known = knownContracts[a] {
                 names[a] = known
+            } else if let zk = ZkMoney.knownName(for: a) {
+                // A zk.money portal, or a deposit address already recognised.
+                names[a] = zk
             } else {
                 unknown.append(a)
             }
         }
+        // zk.money's DEPOSIT addresses (2026-10-11): single-use contracts a
+        // relayer sweeps into the portal, recognisable only by their code.
+        // Asked only for the unnamed recipients of stablecoins SENT on
+        // Ethereum — the one shape a deposit can have — and before ENS, so a
+        // deposit never spends a reverse-name lookup.
+        let stableSends = Set(transfers.compactMap { f -> String? in
+            guard !f.received, f.chain.network == "eth-mainnet",
+                  ["DAI", "USDC", "USDT"].contains(f.asset.uppercased()) else { return nil }
+            return counterparty(of: f.t, received: false)
+        })
+        for a in await ZkMoney.recognize(unknown.filter { stableSends.contains($0) }) {
+            names[a] = ZkMoney.name
+        }
+        unknown.removeAll { names[$0] != nil }
+        // The pool's size, once a pass that names a zk.money move: the
+        // row's dated note (`ZkMoney.note`).
+        if names.values.contains(ZkMoney.name) { ZkMoney.lastPortalTotal = await ZkMoney.portalTotal() }
         let resolved = await IngestSupport.boundedGather(Array(unknown.prefix(16)),
                                                          maxConcurrent: 4) { a in
             (a, await ENS.reverseName(for: a))
@@ -1653,6 +1674,15 @@ enum WalletIngest {
             // the localized title. Every existing reader gates on
             // `"sent"`/`"received"` explicitly, so none of them sees these.
             direction = received ? WalletActionMark.minted : WalletActionMark.burned
+        } else if let cp, names[cp] == ZkMoney.name, !amount.isEmpty {
+            // zk.money (2026-10-11): a move into or out of a private wallet,
+            // in the venue grammar `CounterpartyRetitle` already reads
+            // ("Deposited … into", "Withdrew … from").
+            title = received ? "Withdrew \(amount) \(asset) from \(ZkMoney.name)"
+                             : "Deposited \(amount) \(asset) into \(ZkMoney.name)"
+            counterpartyName = ZkMoney.name
+            direction = received ? "received" : "sent"
+            amountText = "\(amount) \(asset)"
         } else {
             let verb = received ? "Received" : "Sent"
             var t2 = amount.isEmpty ? "\(verb) \(asset)" : "\(verb) \(amount) \(asset)"
@@ -1683,6 +1713,8 @@ enum WalletIngest {
         // disc on every mint for a counterparty that can never mean anything
         // (honesty rule: no dead controls).
         thing.counterpartyAddress = WalletVerbs.isVoid(cp) ? nil : cp
+        // zk.money's dated note: what is public about the move, and the pool.
+        if counterpartyName == ZkMoney.name { thing.enrichedText = ZkMoney.note(portal: ZkMoney.lastPortalTotal) }
         thing.transferDirection = direction
         thing.transferAmount = amountText
         thing.transferCounterparty = counterpartyName

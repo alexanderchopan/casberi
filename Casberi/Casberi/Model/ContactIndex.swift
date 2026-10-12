@@ -23,6 +23,8 @@ struct Identity: Hashable, Codable {
     enum Kind: String, Codable, CaseIterable {
         case contact, email, github, wallet
         case ens, basename, linea, lens
+        /// A zk.money tag (2026-10-11): a public name for a PRIVATE wallet.
+        case zkMoney
         case bluesky, worldApp, feed
         /// A merchant that charges you on a schedule (prd §1106) — LAST, so a
         /// biller never leads a contact a card or an address also names.
@@ -33,7 +35,7 @@ struct Identity: Hashable, Codable {
         /// A name service — the kinds whose key IS a human-readable name.
         var isNameService: Bool {
             switch self {
-            case .ens, .basename, .linea, .lens: return true
+            case .ens, .basename, .linea, .lens, .zkMoney: return true
             default: return false
             }
         }
@@ -49,7 +51,7 @@ struct Identity: Hashable, Codable {
             case .worldApp:  return "world:"
             case .feed:      return "feed:"
             case .biller:    return "biller:"
-            case .wallet, .ens, .basename, .linea, .lens: return ""
+            case .wallet, .ens, .basename, .linea, .lens, .zkMoney: return ""
             }
         }
     }
@@ -112,7 +114,7 @@ struct Identity: Hashable, Codable {
         case .bluesky:                   return "@" + body
         case .email, .github, .contact,
              .worldApp, .feed, .biller,
-             .ens, .basename, .linea, .lens: return body
+             .ens, .basename, .linea, .lens, .zkMoney: return body
         }
     }
 }
@@ -131,6 +133,9 @@ extension Identity.Kind {
         if n.hasSuffix(".base.eth") { return .basename }
         if n.hasSuffix(".linea.eth") { return .linea }
         if n.hasSuffix(".lens") { return .lens }
+        // A zk.money tag is no ENS name a resolver here can read: its ENS
+        // record is an offchain gateway that pays, and says nothing.
+        if n.hasSuffix(".zk.money") { return .zkMoney }
         if n.contains(".") { return .ens }
         return .worldApp
     }

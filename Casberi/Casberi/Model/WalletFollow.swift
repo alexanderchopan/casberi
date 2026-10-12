@@ -44,6 +44,14 @@ enum WalletFollow {
                 return .missed(worldAppUnreachable(input))
             }
         }
+        if NameResolve.family(of: input) == .zkMoney, let tag = ZkMoneyWire.tag(input) {
+            // zk.money (2026-10-11): a tag names a PRIVATE wallet. Its public
+            // account holds nothing a follow could show, so say what is true
+            // rather than watch an empty address.
+            return .missed(await ZkMoney.resolve(tag: tag) == nil
+                ? String(localized: "No one has claimed \(ZkMoneyWire.display(tag)).")
+                : String(localized: "\(ZkMoneyWire.display(tag)) is a zk.money wallet: its balance and payments are private. Its deposits and withdrawals show on the wallets that make them."))
+        }
         if let family = NameResolve.family(of: input) {
             guard let address = await NameResolve.resolve(input) else {
                 // The advice differs by family because the fallback does: a

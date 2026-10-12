@@ -880,7 +880,7 @@ extension Contact {
         for identity in identities {
             let category: String
             switch identity.kind {
-            case .wallet, .ens, .basename, .linea, .lens, .worldApp: category = "Wallet"
+            case .wallet, .ens, .basename, .linea, .lens, .worldApp, .zkMoney: category = "Wallet"
             // A biller files where the app it bills for lives (prd §1106a).
             case .biller: category = BillersSource.category(ofMerchant: identity.body)
             case .bluesky:                                           category = "Social"
@@ -1476,7 +1476,7 @@ struct ContactSheet: View {
                     found[thing.id] = WithYouRow(id: thing.id, title: thing.title,
                                                  source: thing.source, when: thing.capturedAt)
                 }
-            case .contact, .ens, .basename, .linea, .lens, .worldApp, .feed:
+            case .contact, .ens, .basename, .linea, .lens, .zkMoney, .worldApp, .feed:
                 continue
             }
         }
@@ -1512,7 +1512,7 @@ struct ContactSheet: View {
             switch identity.kind {
             case .github:             out.append("@" + identity.body)
             case .bluesky:            out.append("@" + identity.body); out.append(identity.body)
-            case .ens, .basename, .linea, .lens: out.append(identity.body)
+            case .ens, .basename, .linea, .lens, .zkMoney: out.append(identity.body)
             default: continue
             }
         }
@@ -1580,7 +1580,8 @@ struct ContactSheet: View {
         case .email:
             guard let url = URL(string: "mailto:\(identity.body)") else { return nil }
             return { openURL(url) }
-        case .contact, .ens, .basename, .linea, .lens, .worldApp, .biller:
+        // A zk.money tag has no public page to open: its wallet is private.
+        case .contact, .ens, .basename, .linea, .lens, .zkMoney, .worldApp, .biller:
             return nil
         }
     }
@@ -1596,6 +1597,7 @@ struct ContactSheet: View {
         case .basename:  return String(localized: "Base")
         case .linea:     return String(localized: "Linea")
         case .lens:      return String(localized: "Lens")
+        case .zkMoney:   return String(localized: "zk.money")
         case .bluesky:   return String(localized: "Bluesky")
         case .worldApp:  return String(localized: "World App")
         case .feed:      return String(localized: "Feed")
@@ -1616,6 +1618,8 @@ struct ContactSheet: View {
         case .basename:  return "Wallet"
         case .linea:     return "Linea"
         case .lens:      return "Lens"
+        // zk.money has no seat of its own; it lives on Aztec (`brand-aztec`).
+        case .zkMoney:   return "Aztec"
         case .bluesky:   return "Bluesky"
         case .worldApp:  return "World App"
         case .feed:      return "RSS"

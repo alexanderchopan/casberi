@@ -28,6 +28,9 @@ enum NameResolve {
     enum Family: Equatable {
         case sns
         case wei(WeiNames.Registry)
+        /// A zk.money tag (2026-10-11), read off zk.money's NameRegistry —
+        /// never its ENS gateway, which hands out a payment address.
+        case zkMoney
         case ens
     }
 
@@ -41,6 +44,7 @@ enum NameResolve {
     static func family(of raw: String) -> Family? {
         if SNS.looksLikeName(raw) { return .sns }
         if let registry = WeiNames.registry(claiming: raw) { return .wei(registry) }
+        if ZkMoneyWire.tag(raw) != nil { return .zkMoney }
         if ENS.looksLikeName(raw) { return .ens }
         return nil
     }
@@ -88,6 +92,11 @@ enum NameResolve {
         switch family(of: raw) {
         case .sns:                 return await SNS.resolve(raw)
         case .wei:                 return await WeiNamesSource.resolve(raw)
+        // The tag's Ethereum ACCOUNT — the public half of its record. Its
+        // money is private, so a follow field says that instead of asking.
+        case .zkMoney:
+            guard let tag = ZkMoneyWire.tag(raw) else { return nil }
+            return await ZkMoney.resolve(tag: tag)?.account
         case .ens:                 return await ENS.resolve(raw)
         case nil:                  return nil
         }

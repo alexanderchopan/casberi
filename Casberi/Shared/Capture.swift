@@ -16,7 +16,12 @@ enum Capture {
         guard !text.isEmpty else { return nil }
 
         let thing: Thing
-        if let url = detectURL(in: text) {
+        if let url = detectURL(in: text), let zk = ZkMoneyLink.capture(url: url, text: text) {
+            // A zk.money link (2026-10-11): a payment link's claim secret is
+            // never kept, and a request link says what it asks for.
+            thing = Thing(kind: .link, title: zk.title, content: zk.content, source: source)
+            thing.enrichedText = zk.note
+        } else if let url = detectURL(in: text) {
             thing = Thing(
                 kind: .link,
                 title: linkTitle(url: url, text: text),

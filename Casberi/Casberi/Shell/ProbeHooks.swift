@@ -2697,6 +2697,37 @@ enum ProbeHooks {
                 }
             }
         },
+        // `-zkMoneyProbe "<tag.zk.money | zk.money link | deposit=<0x…> | portal>"`
+        // — what the app reads about zk.money (2026-10-11), NSLogged as
+        // `zkMoney:` lines: a tag's public record, a link as capture would
+        // keep it (a payment link's secret must be GONE), whether an address
+        // is a deposit address (`ZkMoney.recognize`, the Wallet's own read),
+        // and the portals' DAI. No Zerion, no Alchemy transfer read.
+        Hook(key: "zkMoneyProbe") { spec, _ in
+            Task { @MainActor in
+                if spec == "portal" {
+                    let total = await ZkMoney.portalTotal(); NSLog("zkMoney: portal | %@", total.map { "\($0) DAI" } ?? "UNREADABLE")
+                } else if spec.hasPrefix("deposit=") {
+                    let address = String(spec.dropFirst(8))
+                    let found = await ZkMoney.recognize([address])
+                    NSLog("zkMoney: deposit | %@ | %@ | knownName=%@", address,
+                          found.isEmpty ? "NOT a deposit address" : "deposit address",
+                          ZkMoney.knownName(for: address) ?? "-")
+                } else if let url = URL(string: spec), let kept = ZkMoneyLink.capture(url: url, text: spec) {
+                    NSLog("zkMoney: link | title=%@ | kept=%@ | secretGone=%@", kept.title, kept.content,
+                          kept.content.contains("#") && spec.contains("/link") ? "NO" : "YES")
+                } else if let tag = ZkMoneyWire.tag(spec) {
+                    let record = await ZkMoney.resolve(tag: tag)
+                    NSLog("zkMoney: tag | %@ | account=%@ | aztec=%@ | mainnet=%@", ZkMoneyWire.display(tag),
+                          record?.account ?? "UNCLAIMED", record?.aztec ?? "-",
+                          record.map { $0.onMainnet ? "YES" : "NO" } ?? "-")
+                    let follow = await WalletFollow.resolve(spec)
+                    if case .missed(let words)? = follow { NSLog("zkMoney: follow | %@", words) }
+                } else {
+                    NSLog("zkMoney: REFUSED %@", spec)
+                }
+            }
+        },
         // `-logosNode "<address>"|forget` — watch your own node (prd §989),
         // read it, and print the reading and what it landed. Run it twice to
         // see a transition: the first read lands nothing by design. The

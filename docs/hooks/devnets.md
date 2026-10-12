@@ -16,3 +16,7 @@ history. The one remaining testnet, **Logos**, is documented in `docs/hooks/brid
 ## Aztec (prd §1270, 2026-10-11)
 
 `-aztecWatch "network|<attester or account>[,…]|clear"` — follow the Aztec testnet (v6), sequencers by L1 attester address (20 bytes) and accounts (32 bytes), read once, and NSLog `aztecWatch:` lines: each add's result (`added`, `addedAccount`, `alreadyFollowing`, `invalid`), then `+N | proposed= | proven= | lag= | fee=`, then each sequencer's `duty | stake | schedule | epochs=` (or `UNSEEN`), then each account's `feeJuice=` (prd §1271). Run twice to see a transition: a first reading lands nothing by design. **The hook does not register the seat** (no page sync), so the Testnets room appears only after the Aztec page has synced once: `-deeplink casberi://account -connectTap Aztec` opens it, and its connect lands in the room. Then `-openRoom Testnets -openSection node` for the Node tile.
+
+## zk.money (prd §1273, 2026-10-11)
+
+`-zkMoneyProbe "<tag.zk.money | zk.money link | deposit=<0x…> | portal>"` — what the app reads about zk.money, NSLogged as `zkMoney:` lines: a tag's public record (`account=`, `aztec=`, `mainnet=`) and the follow field's words; a link as capture keeps it (`title=`, `kept=`, `secretGone=` — a payment link must read YES); whether an address is a deposit address (the Wallet's own `ZkMoney.recognize`, one `eth_getCode`); and the portals' DAI. No Zerion and no Alchemy transfer read, so it costs the shared budgets nothing. Known claimed tags to probe with: `zac`, `charlie`, `money`.

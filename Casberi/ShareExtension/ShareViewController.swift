@@ -122,6 +122,13 @@ final class ShareViewController: UIViewController {
     /// preprocessing script — nil `enrichedText` when it didn't (another
     /// app's share, or a non-web source), same as any other link.
     private func linkThing(for url: URL, home: ShareHome, item: NSExtensionItem, pageInfo: [String: Any]?) -> Thing {
+        // A zk.money link (2026-10-11): a payment link's claim secret never
+        // leaves this extension, and nothing of the page is kept beside it.
+        if let zk = ZkMoneyLink.capture(url: url, text: url.absoluteString) {
+            let thing = Thing(kind: .link, title: zk.title, content: zk.content, source: home.source)
+            thing.enrichedText = zk.note
+            return thing
+        }
         let selectedText = (item.attributedContentText?.string).flatMap { $0.isEmpty ? nil : $0 }
         let pageTitle = (pageInfo?["title"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines)
         let title = selectedText

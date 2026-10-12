@@ -92,6 +92,11 @@ enum LinkTitle {
         guard thing.isLive else { return }
         guard thing.kind == .link, let url = address(of: thing), looksUnnamed(thing, url: url)
         else { return }
+        // A zk.money link is titled at capture from the link itself
+        // (`ZkMoneyLink`), and its page is a wallet that runs only in a
+        // browser: there is nothing to fetch, and a fetch would only trade
+        // the request's own words for the app's page title.
+        if ZkMoneyLink.isZkMoneyHost(url.host) { return }
         // An allowlisted host answers what a link IS directly, keylessly, in
         // one request (`OEmbed`) — and it beats the page fetch below on
         // exactly the sites that don't serve a usable <head> to a non-browser
