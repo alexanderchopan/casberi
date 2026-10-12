@@ -66109,3 +66109,17 @@ User: "lets continue going through the list!"; of the demo's Degen token, "i hat
 3. `-settingsScope subscriptions|newsletters|feeds` opens the same page.
 
 UNVERIFIED: written on a machine with no Xcode; neither build nor screen was seen before commit.
+
+## §1275 — Everything in Sources opens in Sources (amends §1217, §1274) (user, 2026-10-12: "all of the items in sources should open there")
+
+§1274 kept the three counts in Sources. Three other doors still left it or reloaded it:
+
+1. **A biller that is a subscription** (People) closed Sources and landed on its plan in the Wallet (§1217 item 2). It now opens the Wallet's sheet for the plan over Sources (`SettingsSheet.plan`, `SubscriptionSheet`), the price included: it is the Wallet's page, as §1274's Subscriptions is.
+2. **A follow made from an app's Track tray** (RSS, Substack, YouTube, Podcasts, Pinterest) closed Sources and landed on the room's Following. It now opens Media's Following over Sources (§1274's page). A Work follow (npm, PyPI, Hugging Face, Radicle) stays in Sources: Work's Following has no page outside Work.
+3. **An app with no page of its own** (Calendar, Photos, Reminders, from Apps, Comes from, Cards or Add a calendar) went through `openSetup`'s fallback, which presented Sources again on Apps and dropped the kind you were on. Sources now runs that app's act in place (`SettingsHome.setup` → `openOffer`: its page if connected, else the system's ask).
+
+Already in place and unchanged: an app's page, a card's app, a wallet, a person, Casberi's own settings and every add tray push or rise inside Sources.
+
+Not covered: a door inside one of the opened pages (a plan's "Open <App>", a thing's own links) still goes where it went.
+
+UNVERIFIED: written on a machine with no Xcode; neither build nor screen was seen before commit.

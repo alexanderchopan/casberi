@@ -205,7 +205,7 @@ struct SettingsHome: View {
                 if let home = Self.home(of: s) { sheet = .home(home) } else { scope = s }
             }
             // `-connectTap "<Offer name>"` — the door an unconnected app's
-            // Add row in Sources › Apps takes (`offerRow`: `openSetup`), for
+            // Add row in Sources › Apps takes (`offerRow`: `setup`), for
             // verify-mac's connect gate. Never a direct push: a probe on a
             // route no person takes proves the screen, never the act
             // (8f4cb144, App Store 2.1(a), build 363). It says which door it
@@ -217,7 +217,7 @@ struct SettingsHome: View {
                     && route.sheet == nil
                 NSLog("[Casberi] connectTap| %@ connect form for %@",
                       raises ? "raising" : "pushing", name)
-                route.openSetup(forOffer: name)
+                setup(name)
             }
         }
         #endif
@@ -241,7 +241,7 @@ struct SettingsHome: View {
             CalendarSubscribeSheet().environment(\.dsInPane, true)
         }
         .confirmationDialog(Text("Add a calendar"), isPresented: $calendarChoice, titleVisibility: .visible) {
-            Button("Your phone’s calendars") { route.openSetup(forOffer: "Calendar") }
+            Button("Your phone’s calendars") { setup("Calendar") }
             Button("Subscribe by link") { calendarAdd = true }
         }
         .modifier(DSOneSheet(route: $sheet, pushes: { _ in route.sheet != nil },
@@ -376,13 +376,25 @@ struct SettingsHome: View {
         }
     }
 
-    /// A follow landed from the Track tray: leave for the room that lists it.
+    /// A follow landed from the Track tray: the list it joined opens here,
+    /// over Sources (prd §1275), once the tray has closed. Work's Following
+    /// has no page of its own outside Work, so Sources stays.
     private func landAfterTrack(_ room: Following.Room) {
+        guard room != .work else { return }
         Task { @MainActor in
             try? await Task.sleep(for: .milliseconds(450))
-            route.closeSheet()
-            route.path = []
-            chrome.landOnFollowing(room)
+            sheet = .home(.follows)
+        }
+    }
+
+    /// An app's own page, kept in Sources (prd §1275). An app with no page
+    /// (Calendar, Photos, Reminders) runs its row's act here: `openSetup`'s
+    /// fallback re-presented Sources on Apps, leaving the kind you were on.
+    private func setup(_ name: String) {
+        if BridgeRouter.destination(forOffer: name) == nil {
+            openOffer(name)
+        } else {
+            route.openSetup(forOffer: name)
         }
     }
 
@@ -498,6 +510,7 @@ struct SettingsHome: View {
         case .followAdd:            ReadingFindSheet()
         case .walletFollow:         WalletFollowSheet()
         case .home(let home):       ListHomePage(home: home)
+        case .plan(let id):         SubscriptionSheet(id: id)
         }
     }
 
@@ -736,13 +749,13 @@ struct SettingsHome: View {
         } else if card {
             DSPushRow(title: Text(verbatim: name), subtitle: Text("Add"),
                       subtitleTone: DS.tint, opens: false) {
-                route.openSetup(forOffer: name)
+                setup(name)
             } leading: {
                 BridgeIcon(name: name, size: DS.Face.seat)
             }
         } else {
             DSPushRow(title: Text(verbatim: name), fact: Text("Add"), factTone: DS.tint) {
-                route.openSetup(forOffer: name)
+                setup(name)
             } leading: {
                 BridgeIcon(name: name, size: DS.Mark.notice)
             }
@@ -797,7 +810,7 @@ struct SettingsHome: View {
                           subtitleTone: app == nil ? DS.tint
                                         : app?.status == .attention ? DS.attentionInk : DS.textTertiary,
                           opens: false) {
-                    route.openSetup(forOffer: card.app)
+                    setup(card.app)
                 } leading: {
                     BridgeIcon(name: card.app, size: DS.Face.seat)
                 }
@@ -867,9 +880,9 @@ struct SettingsHome: View {
     private var peopleList: some View {
         AddressesSection(query: query, scope: $peopleScope,
                          openPlan: { id in
-                             // A plan's one home is the Wallet (prd §1217).
-                             route.closeSheet()
-                             chrome.open(.plan(id))
+                             // The Wallet's sheet for the plan, over Sources
+                             // (prd §1275): its one home's page, not a copy.
+                             sheet = .plan(id)
                          },
                          onLetters: { peopleLetters = $0 })
     }
@@ -1055,6 +1068,8 @@ enum SettingsSheet: Identifiable, Hashable {
     case walletFollow
     /// A kind's home page, opened from its count (prd §1274).
     case home(ShellChrome.ListHome)
+    /// A biller's plan, the Wallet's sheet for it (prd §1275).
+    case plan(String)
 
     var id: String {
         switch self {
@@ -1063,6 +1078,7 @@ enum SettingsSheet: Identifiable, Hashable {
         case .followAdd:                  "followAdd"
         case .walletFollow:               "walletFollow"
         case .home(let home):             "home:\(home)"
+        case .plan(let id):               "plan:\(id)"
         }
     }
 }
