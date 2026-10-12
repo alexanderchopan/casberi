@@ -418,23 +418,23 @@ grep -q 'holder.accounts.map' "$ROWS" \
 grep -q 'modulesUnreadable' "$ROWS" \
   || fail "the unreadable-modules ceiling is no longer stated in the list"
 
-# THE PAIR, BOTH DIRECTIONS (2026-08-31). The two Permissions lists sit one
-# above the other and must never look alike: the acting list is inert by the
-# ruling above, so the approvals list — which opens each grant's sheet, and with
-# it the only revoke hand-off this app has — must SAY that it is a door. It did
-# not, and the scope read as a wall of dead rows. Guarded here rather than in
-# the card's own harness because the fact being protected is the DIFFERENCE
-# between the two files, and a guard living in one of them can only see half of
-# it.
+# THE PAIR, BOTH DIRECTIONS (2026-08-31, amended by prd §1272). The two
+# Permissions lists sit one above the other and must never behave alike: the
+# acting list is inert by the ruling above, so the approvals list — which opens
+# each grant's sheet, and with it the only revoke hand-off this app has — must
+# BE a door. Since §1272 no row draws a chevron ("a row is its own door, as a
+# Feed row is"), so the door is the row's press, not a glyph. Guarded here
+# rather than in the card's own harness because the fact being protected is
+# the DIFFERENCE between the two files, and a guard living in one of them can
+# only see half of it.
 GRANTS="Casberi/Casberi/Screens/WalletApprovalExposureCard.swift"
-# Read from a COMMENT-STRIPPED copy, and match the CALL: the note above
-# the chevron explains the rule by naming the component, so a raw grep
-# scored the prose as the code and deleting the row's chevron ran green
-# (the Obsidian/Cursor lesson, caught by mutation on this guard's first run).
-strip "$GRANTS" | grep -q 'DSChevron()' || fail "the approvals rows lost their chevron — they look exactly like the inert list above them"
-# ...and it must be the room's shared glyph, not a second grammar for the same
-# promise (`WalletRowChevron`'s own header: six spellings once, two survive).
-strip "$GRANTS" | grep -q 'Image(systemName: "chevron'   && fail "the approvals rows draw their own chevron instead of the room's one glyph"
+# Read from a COMMENT-STRIPPED copy, and match the CALL: a note naming the
+# component would otherwise score the prose as the code (the Obsidian/Cursor
+# lesson, caught by mutation on this guard's first run).
+strip "$GRANTS" | grep -q 'onOpen(grant)' || fail "the approvals rows stopped opening their grant — they are as inert as the list above them"
+strip "$GRANTS" | grep -q 'buttonStyle(RowPress())' || fail "the approvals rows stopped answering the hand (prd §965)"
+# ...and §1272: no chevron in any spelling, the deleted component included.
+strip "$GRANTS" | grep -qE 'DSChevron|Image\(systemName: "chevron' && fail "the approvals rows draw a chevron again — prd §1272: a row is its own door"
 # A tap that finds nothing must SAY so — a silent return is indistinguishable
 # from the door being broken, which is the report this pass answered.
 # Blank lines squeezed first — `strip` leaves a comment as an empty line, so a

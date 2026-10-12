@@ -117,8 +117,8 @@ struct WalletApprovalExposureCard: View {
     /// (the half-open-then-close lesson, 2026-07-28).
     /// **ONE ROW, THE WALLET LIST'S ANATOMY (prd §944).** Mark, name, one
     /// line — the grant's word, red only when it has no limit, then the token
-    /// — and the amount at stake trailing, before the chevron that says this
-    /// row is a door (the delegations above have none). An unpriced grant
+    /// — and the amount at stake trailing. The row is its own door (prd
+    /// §1272: no chevron); the delegations above have none. An unpriced grant
     /// states no amount at all; the note under the list says why it is not
     /// in the total.
     private func row(_ grant: WalletApprovalExposure.Grant) -> some View {
