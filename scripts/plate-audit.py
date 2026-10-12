@@ -93,7 +93,7 @@ WELL_ALLOWED = {
     "AgentChatView.swift": (1, "the agent room's entry field — the one thing §782 "
                                "leaves a well for, and the same shape the composer's "
                                "own draft field takes (prd §840)"),
-    "AddressBookViews.swift": (3, "the name entry field, the compact copy button's face, and an action tile's face"),
+    "AddressBookViews.swift": (2, "the name entry field and the compact copy button's face; the action tiles lost theirs (prd §1268)"),
     "ConnectWalletRow.swift": (1, "the pairing URI, a monospaced value with its copy button"),
     "SafeScreen.swift": (2, "two entry fields: a pairing link, a pasted signing request (prd §913)"),
     "SafeAskSheet.swift": (1, "the pasted statement, an entry field (prd §913)"),

@@ -1334,11 +1334,11 @@ struct AddressCard: View {
                         didCopy(line.clipboard)
                     } label: {
                         HStack(spacing: DS.Space.s3) {
+                            // Bare and pink (prd §1268): no disc behind it.
                             Image(systemName: line.glyph)
-                                .dsGlyph(.subhead)
-                                .foregroundStyle(DS.textSecondary)
+                                .dsGlyph(.body)
+                                .foregroundStyle(DS.brandInk)
                                 .frame(width: 38, height: 38)
-                                .background(DS.fillFaint, in: Circle())
                             VStack(alignment: .leading, spacing: 1) {
                                 Text(line.label)
                                     .dsText(.subhead12)
@@ -1544,21 +1544,21 @@ struct AddressCard: View {
         .dsHover()
     }
 
-    /// One tile's face, shared by the Button tiles and the More menu. The well
-    /// stays: this is a control's face, not a plate behind content.
+    /// One tile's face, shared by the Button tiles and the More menu: no
+    /// backing, the glyph pink and the word white, as every door's (prd
+    /// §1268, user: "no backing"; the well stood until then).
     private func actionTileFace(_ glyph: String, _ title: String) -> some View {
         VStack(spacing: DS.Space.s1 + 2) {
             Image(systemName: glyph)
-                .dsGlyph(.body, weight: .medium)
-                .foregroundStyle(DS.tint)
+                .dsGlyph(.title, weight: .regular)
+                .foregroundStyle(DS.brandInk)
             Text(title)
                 .dsText(.label12)
                 .foregroundStyle(DS.textPrimary)
                 .lineLimit(1)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, DS.Space.s3 + 2)
-        .dsWell(cornerRadius: DS.Radius.control + 2)
+        .padding(.vertical, DS.Space.s2)
         .contentShape(Rectangle())
     }
 
@@ -1915,10 +1915,15 @@ struct AddressCard: View {
             // ACTIVITY, named the way Wallet names it (prd §499) — the list
             // ran straight out of the note with no header, so two unlike
             // sections read as one run of rows.
-            HStack {
+            // The Feed's section name (prd §1268): its pink glyph first.
+            HStack(spacing: DS.Space.s2) {
+                Image(systemName: "clock")
+                    .dsGlyph(.body)
+                    .foregroundStyle(DS.brandInk)
+                    .accessibilityHidden(true)
                 Text("Activity")
                     .dsText(.heading24)
-                    .foregroundStyle(DS.textPrimary)
+                    .foregroundStyle(DS.headInk)
                 Spacer(minLength: 0)
             }
             .padding(.horizontal, DS.Space.s4)

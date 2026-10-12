@@ -101,7 +101,8 @@ struct DSCountTile: View {
                 // fills the well instead of floating in it.
                 .padding(.horizontal, DS.Space.s2)
                 .frame(maxWidth: .infinity, minHeight: cellHeight, alignment: .leading)
-                .background { shape.fill(isOn ? DS.tintDim : Color.clear) }
+                // No backing (prd §1268, user: "no backing"): the pick says
+                // itself in the tint of its figure and word.
                 .animation(DS.Motion.standard, value: isOn)
                 .contentShape(shape)
             } else {
@@ -110,24 +111,24 @@ struct DSCountTile: View {
                     Image(systemName: glyph)
                         .dsGlyph(.body, weight: .regular)
                         .frame(height: 20)
-                        .foregroundStyle(isOn ? Color.white : zero ? DS.textTertiary : DS.brandInk)
+                        .foregroundStyle(isOn ? DS.tint : zero ? DS.textTertiary : DS.brandInk)
                 }
                 if let count {
                     Text(count.formatted())
                         .dsText(glyph == nil ? .heading28 : .heading24)
                         .monospacedDigit()
-                        .foregroundStyle(isOn ? Color.white : zero ? DS.textTertiary : DS.textPrimary)
+                        .foregroundStyle(isOn ? DS.tint : zero ? DS.textTertiary : DS.textPrimary)
                 }
                 Text(label)
                     .dsText(.label12)
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
-                    .foregroundStyle(isOn ? Color.white : wants ? DS.attentionInk : DS.textSecondary)
+                    .foregroundStyle(isOn ? DS.tint : wants ? DS.attentionInk : DS.textSecondary)
             }
             .padding(.horizontal, glyph == nil ? DS.Space.s2 : 2)
             .padding(.vertical, DS.Space.s2)
             .frame(maxWidth: .infinity, alignment: glyph == nil ? .leading : .center)
-            .background { shape.fill(isOn ? DS.tint : Color.clear) }
+            // No backing (prd §1268): the pick's ink says it.
             .animation(DS.Motion.standard, value: isOn)
             .contentShape(shape)
             }

@@ -51,10 +51,15 @@ extension FeedScreen {
     /// the three chips on the account page became this).
     var marketsListHead: some View {
         Section {
-            HStack {
+            HStack(spacing: DS.Space.s2) {
+                // The Feed's section name (prd §1268): a pink glyph first.
+                Image(systemName: ScopeTileGlyph.watch)
+                    .dsGlyph(.body)
+                    .foregroundStyle(DS.brandInk)
+                    .accessibilityHidden(true)
                 Text("Following")
                     .dsText(.heading20)
-                    .foregroundStyle(DS.textPrimary)
+                    .foregroundStyle(DS.headInk)
                 Spacer(minLength: 0)
                 Menu {
                     ForEach(TokenWatchSortMode.allCases, id: \.self) { mode in
@@ -270,8 +275,12 @@ extension FeedScreen {
                 c.listing.ticker.map { !watched.contains($0.uppercased()) } ?? false
             }
             Section {
-                HStack {
-                    Text(title).dsText(.heading20).foregroundStyle(DS.textPrimary)
+                HStack(spacing: DS.Space.s2) {
+                    Image(systemName: "building.2")
+                        .dsGlyph(.body)
+                        .foregroundStyle(DS.brandInk)
+                        .accessibilityHidden(true)
+                    Text(title).dsText(.heading20).foregroundStyle(DS.headInk)
                     Spacer(minLength: 0)
                     if watchAll, unwatched.count > 1 {
                         Button {

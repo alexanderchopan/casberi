@@ -1132,19 +1132,17 @@ struct ContactSheet: View {
                         HStack(alignment: .top, spacing: DS.Space.s4 + 2) {
                             ForEach(dial, id: \.label) { disc in
                                 Button(action: disc.act) {
-                                    VStack(spacing: DS.Space.s2 - 2) {
-                                        Circle()
-                                            .fill(DS.fillLine)
-                                            .frame(width: 52, height: 52)
-                                            .overlay {
-                                                Image(systemName: copied == disc.label ? "checkmark" : disc.icon)
-                                                    .dsGlyph(.body, weight: .regular)
-                                                    .foregroundStyle(DS.textPrimary)
-                                                    .dsSymbolSwap(copied == disc.label ? "checkmark" : disc.icon)
-                                            }
+                                    // No backing (prd §1268): the glyph pink, the
+                                    // word white, as every door row's.
+                                    VStack(spacing: DS.Space.s1) {
+                                        Image(systemName: copied == disc.label ? "checkmark" : disc.icon)
+                                            .dsGlyph(.title, weight: .regular)
+                                            .foregroundStyle(DS.brandInk)
+                                            .dsSymbolSwap(copied == disc.label ? "checkmark" : disc.icon)
+                                            .frame(width: 52, height: 36)
                                         Text(disc.label)
                                             .dsText(.label12)
-                                            .foregroundStyle(DS.textTertiary)
+                                            .foregroundStyle(DS.textPrimary)
                                     }
                                 }
                                 .buttonStyle(PressSpring())
@@ -1171,16 +1169,14 @@ struct ContactSheet: View {
                         }
                     }
                     if !waiting.isEmpty {
-                        VStack(alignment: .leading, spacing: DS.Space.s2) {
-                            Text("Replied to you").dsText(.heading17).foregroundStyle(DS.textPrimary)
+                        SheetCard(name: String(localized: "Replied to you"), glyph: "arrowshape.turn.up.left") {
                             VStack(spacing: 0) {
                                 ForEach(waiting) { row in withYouRow(row) }
                             }
                         }
                     }
                     if !withYou.isEmpty {
-                        VStack(alignment: .leading, spacing: DS.Space.s2) {
-                            Text("With you").dsText(.heading17).foregroundStyle(DS.textPrimary)
+                        SheetCard(name: String(localized: "With you"), glyph: "person.2") {
                             VStack(spacing: 0) {
                                 ForEach(withYou) { row in withYouRow(row) }
                                 // The door the spec named and the first pass

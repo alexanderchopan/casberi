@@ -66034,3 +66034,13 @@ User, of keeping a backing on the rows that switch in place: "no backing".
 
 - **`DSScopeTiles` draws no fill at all**, picked or not, in every room. A row of doors (`bare`, §1252) draws every word white; a row that switches in place says its pick in the word — the pick white, the rest grey — and a verb's word stays white. Glyphs stay pink; an inert tile dims glyph and word and is disabled (the §83 answer without a plate).
 - **Notes' Folders is the Feed's card**: "Folders" with its pink glyph, each folder a row with its mark bare and pink in the 46pt column (the black circles are gone), Obsidian's vault folders under their app's mark, Recently deleted, then New folder in pink; counts trail, no chevrons.
+
+## §1268 — The rest of the old style: contact and address cards, subscription sheets, Markets, count picks (2026-10-11)
+
+User, going down the list of screens still in the old style: "yes"; of the backings left on them: "no backing".
+
+- **Contact card:** the reach buttons (Message, Mail, Copy) lose their discs: the glyph pink, the word white. Replied to you and With you are the Feed's cards (`SheetCard`).
+- **Address card:** Copy, Note and Explorer lose their wells (`plate-audit.py` allowance 3 → 2); the reach row's glyph loses its disc and turns pink; Activity takes a pink glyph before its name in the head ink.
+- **Subscription sheets** (`SubscriptionPage`): the facts are a Details card, the doors a More card; a mailing list's Recent is a card.
+- **Markets:** Following and the index's section names take a pink glyph in the head ink; a coin's or a company's Alerts is a card.
+- **A picked count tile has no fill** (Sources' and Markets' boxes): the pick says itself in the tint of its figure and word.

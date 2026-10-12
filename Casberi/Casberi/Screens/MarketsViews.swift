@@ -152,10 +152,8 @@ struct WatchAlertsSection: View {
     private var store: PriceAlertStore { .shared }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s2) {
-            Text("Alerts")
-                .dsText(.heading17)
-                .foregroundStyle(DS.textPrimary)
+        // The Feed's card (prd §1268).
+        SheetCard(name: String(localized: "Alerts"), glyph: "bell") {
             ForEach(store.alerts(for: ref)) { alert in
                 alertRow(alert)
             }

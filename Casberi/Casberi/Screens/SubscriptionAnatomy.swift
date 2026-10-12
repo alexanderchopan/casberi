@@ -78,8 +78,10 @@ struct SubscriptionPage<Tail: View>: View {
                     }
                 }
             }
+            // The Feed's cards (prd §1268): the facts as Details, the
+            // doors as More.
             if !facts.isEmpty {
-                VStack(spacing: 0) {
+                SheetCard(name: String(localized: "Details"), glyph: "list.bullet") {
                     ForEach(facts) { fact in
                         HStack(alignment: .firstTextBaseline, spacing: DS.Space.s3) {
                             Text(verbatim: fact.label).dsText(.body17).foregroundStyle(DS.textPrimary)
@@ -93,9 +95,11 @@ struct SubscriptionPage<Tail: View>: View {
                 }
             }
             if !doors.isEmpty {
-                VStack(spacing: 0) {
-                    ForEach(doors) { door in
-                        DSDoorRow(icon: door.icon, title: door.title, role: door.role, act: door.act)
+                SheetCard(name: String(localized: "More"), glyph: "ellipsis.circle") {
+                    VStack(spacing: 0) {
+                        ForEach(doors) { door in
+                            DSDoorRow(icon: door.icon, title: door.title, role: door.role, act: door.act)
+                        }
                     }
                 }
             }

@@ -170,10 +170,7 @@ struct MailSubscriptionSheet: View {
                          facts: facts(item),
                          doors: doors(item)) {
             if !recent.live.isEmpty {
-                VStack(alignment: .leading, spacing: 0) {
-                    Text("Recent")
-                        .dsText(.heading20).foregroundStyle(DS.textPrimary)
-                        .padding(.bottom, DS.Space.s1)
+                SheetCard(name: String(localized: "Recent"), glyph: "clock") {
                     ForEach(recent.keyed) { row in
                         if let thing = row.live { recentRow(thing, face: item.name) }
                     }
