@@ -1643,7 +1643,7 @@ struct FeedScreen: View {
         .scrollContentBackground(.hidden)
         .overlay(alignment: .top) { feedSectionPill(proxy) }
         // Markets' and Notes' tiles left the floating bar (prd §1209a): the
-        // band is face · bar · ✎ on every page, Notes' tiles stand under its
+        // band is face · bar · Wallet on every page (§1278), Notes' tiles stand under its
         // box as every page's do, and Markets' Watchlist and Alerts stand in
         // its box, adding a company from the bar's search.
         // Width buys COLUMNS in a picture room and LINE LENGTH everywhere else

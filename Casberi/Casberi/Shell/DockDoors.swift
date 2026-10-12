@@ -54,9 +54,12 @@ struct DockDoors: View {
     }
 }
 
-/// ✎ in the bottom band (prd §1207 item 6): writes a note from any page.
-/// The face's glass and size, so the band's two ends are one family.
-struct NoteDoor: View {
+/// The Wallet in the bottom band (prd §1278, was ✎ since §1207 item 6):
+/// opens the Wallet on Home from any page, the Wallet included. When your own
+/// account ships it opens the Wallet with the account sheet on top
+/// (`docs/safe-wallet-spec.md`). The face's glass and size, so the band's
+/// two ends are one family.
+struct WalletDoor: View {
     @Environment(ShellChrome.self) private var chrome
     let action: () -> Void
 
@@ -66,7 +69,7 @@ struct NoteDoor: View {
             DSHaptic.tap()
             action()
         } label: {
-            Image(systemName: "square.and.pencil")
+            Image(systemName: "wallet.bifold")
                 .dsGlyph(.body, weight: .semibold)
                 .foregroundStyle(DS.textPrimary)
                 .frame(width: size, height: size)
@@ -75,14 +78,14 @@ struct NoteDoor: View {
                 .dsHover()
         }
         .buttonStyle(PressSpring())
-        .accessibilityLabel(Text("New note"))
+        .accessibilityLabel(Text("Wallet"))
     }
 }
 
 /// THE BAR IN THE BAND (prd §1207 item 7, built §1209a): always there, full
 /// size, never shrinking while you read. A tap raises the tray with its
 /// search focused, where the words become a page (§1209). The face's glass
-/// and height, so the band reads as one row: face · bar · ✎.
+/// and height, so the band reads as one row: face · bar · Wallet.
 struct BandSearchBar: View {
     @Environment(ShellChrome.self) private var chrome
     let action: () -> Void

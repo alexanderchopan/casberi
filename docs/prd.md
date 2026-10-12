@@ -66146,3 +66146,11 @@ UNVERIFIED: written on a machine with no Xcode; neither build nor screen was see
 4. **Not built:** rewards owed (`getSequencerRewards` is keyed by the coinbase, not the wallet). Stakes held through an ATP (token-vesting) contract are not built either: the withdrawer is the ATP, not the person. Governance has nothing to show: all five proposals are executed, and voting power needs a deposit no watched wallet was seen to make. Nor a row that lands when an exit becomes withdrawable; the Positions line says it.
 
 **Seen** on a private simulator: `-aztecStakeProbe` for a delegator, three sequencers validating at 200,000 AZTEC each, the walk at the head. An exiting stake read "Ready to withdraw", its date passed. Watching the delegator, Holdings drew AZTEC in Tokens and the three sequencers in Positions. Harness: `aztec-stake-selftest.sh` (mainnet replies, 5 mutations).
+
+## §1278 — The band's ✎ becomes the Wallet (amends §1207 item 6) (user, 2026-10-12, planning the self-custody wallet: "so we will have wallet replace notes, that seems an ok tradeoff", then "in preparation of this then we can make the wallet notes button switch now for testflight. when we add the live wallet, i think we can make that button open wallet screen w/ the account sheet on top of it. that way it always take you to wallet even tho it is opening up actions", and of the button on the Wallet itself, "open home")
+
+1. **The band is face · bar · Wallet on every page** (`WalletDoor`, `wallet.bifold`, the face's glass and size). A press opens the Wallet on Home, on All accounts (`ShellChrome.openWallet`); on the Wallet itself it returns to Home. Notes and Markets keep their own tiles on the band as before (§1207a).
+2. **A note is written from Notes' New**, the Feed's Notes tile (§1231), the Quick Note control or `casberi://note`. `NoteDoor` is deleted.
+3. **Next, with your own account** (`docs/safe-wallet-spec.md`, waiting on Apple's organization enrollment, 3.1.5(i)): the same button opens the Wallet with the account sheet on top: Send · Swap · Receive · Add money as its tiles, then Recovery, Devices and Account. It always lands in the Wallet, so the button means one place.
+
+**Why.** The account sheet needs a door one tap from anywhere, and a fifth Wallet tile breaks §1107's four. Capture keeps a one-tap door on the Feed's Notes tile; the Wallet had none.

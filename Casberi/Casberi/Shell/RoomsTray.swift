@@ -242,7 +242,8 @@ struct RoomsTray: View {
                     // settings already has a place"): Recent alone leads
                     // (user: "it would only have recent"). Feed and Wallet
                     // are the walk's, Markets, Sources and Settings the Feed's
-                    // tiles (user: "markets stays in feed"), and a note is ✎.
+                    // tiles (user: "markets stays in feed"), and a note is the Feed's
+                    // Notes tile (§1231; the band's seat is the Wallet's, §1278).
                     if hasRecent {
                         card { recentRow(gap: gap) }
                     }
@@ -633,7 +634,7 @@ struct RoomsTray: View {
         let height = typing ? DSDock.agentSize(minimized: false) : DSDock.agentSize(fold: chrome.fold)
         let bottom = typing ? DSDock.agentBottomInset(minimized: false) : DSDock.agentBottomInset(fold: chrome.fold)
         // ONE BAR (prd §1208l): until you type it is the band's bar, in the
-        // band's bar's place — ✎'s room kept — and it widens as the keyboard
+        // band's bar's place — the Wallet button's room kept — and it widens as the keyboard
         // comes, so the field you tapped is the field you type in.
         let note = typing ? 0 : height + DS.Space.s2
         return searchControl

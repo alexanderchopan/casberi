@@ -2428,24 +2428,25 @@ struct RootShell: View {
                                   },
                                   onBack: seatBack)
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            // THE BAND IS FACE · BAR · ✎ (prd §1207 items 6
-                            // and 7, built §1209a): the bar is always there,
-                            // one tap from search, and ✎ writes a note from
-                            // anywhere, on every page; never over the tray,
-                            // whose own bar takes this place.
+                            // THE BAND IS FACE · BAR · WALLET (prd §1207 item
+                            // 7, built §1209a; the Wallet took ✎'s seat in
+                            // §1278): the bar is always there, one tap from
+                            // search, and the Wallet is one tap from any page;
+                            // never over the tray, whose own bar takes this
+                            // place.
                             .overlay(alignment: .trailing) {
                                 if padShell.railInset == 0, sceneState.route.path.isEmpty {
                                     HStack(spacing: DS.Space.s2) {
                                         // The tray's bar takes this one's place
                                         // exactly (prd §1208l): it leaves at once,
-                                        // ✎ fades.
+                                        // the Wallet fades.
                                         if !chrome.roomsTray {
                                             BandSearchBar {
                                                 chrome.traySearchFocus = true
                                                 withAnimation(DS.Motion.standard) { chrome.roomsTray = true }
                                             }
                                             .transition(.identity)
-                                            NoteDoor { chrome.newNote += 1 }
+                                            WalletDoor { chrome.openWallet() }
                                                 .transition(.opacity)
                                         }
                                     }

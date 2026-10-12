@@ -126,7 +126,8 @@ enum YouTile: String, CaseIterable, Identifiable, Hashable, Sendable {
     ///
     /// **Feed · Day · Notes · Sources (prd §1231).** Day — the calendar and
     /// to-dos — left the Feed's sections for a door of its own; Notes took
-    /// Settings' place (capture is half the core loop, and ✎ still writes);
+    /// Settings' place (capture is half the core loop; its New writes, since
+    /// the band's trailing seat became the Wallet's, §1278);
     /// Markets moved into the Wallet's tiles; Settings is Casberi's row at
     /// the top of Sources.
     case feed, day, notes, sources
