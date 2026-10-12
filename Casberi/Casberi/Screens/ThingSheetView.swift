@@ -56,7 +56,24 @@ struct ThingSheetView: View {
     @State private var confirmingVerb: Verb?
     /// The screenshot, opened full screen and zoomable (2026-08-02) — the Zoom
     /// disc, and a tap on the framed shot itself.
-    @State private var zoomingPhoto = false
+    /// Holds the picture's plain values, copied when the zoom is asked for,
+    /// so the cover never reads the model: a heal deleting this row under an
+    /// open viewer leaves the picture and its close disc on screen. It was a
+    /// Bool over `if thing.isLive { PhotoViewer }` — an EMPTY full-screen
+    /// cover with no way out (`way-back-audit.py`).
+    @State private var zoomingPhoto: PhotoZoom?
+    struct PhotoZoom: Identifiable {
+        let id = UUID()
+        let assetRef: String?
+        let stored: Data?
+        let title: String
+    }
+    private func zoomPhoto() {
+        guard thing.isLive else { return }
+        zoomingPhoto = PhotoZoom(assetRef: thing.sourceRef,
+                                 stored: thing.previewImageData,
+                                 title: thing.title)
+    }
     @State private var verbResult: String?
     /// A bridge's no must READ as a no — green success styling on a failure
     /// would claim a write that didn't happen (honesty rule).
@@ -612,7 +629,7 @@ struct ThingSheetView: View {
                         .padding(.top, onBack == nil ? DS.Space.s4 : DS.Space.s3)
                         .settleIn(delay: 0.04)
                     Button {
-                        if thing.sourceRef != nil || thing.previewImageData != nil { zoomingPhoto = true }
+                        if thing.sourceRef != nil || thing.previewImageData != nil { zoomPhoto() }
                     } label: {
                         PhotoWell(thing: thing, anchor: thing.kind == .screenshot ? .top : .center)
                             .overlay(alignment: .topTrailing) {
@@ -1422,15 +1439,14 @@ struct ThingSheetView: View {
         // `fullScreenCover` on the view, so it adds no fourth `.sheet` to the
         // three above it.
         //
-        // Reads the model's values HERE and hands the viewer plain ones, so a
+        // The model's values were copied at the tap (`zoomPhoto()`), so a
         // heal deleting this row while the viewer is open can't trap on a dead
-        // reference (`ThingRowKeying.swift`, corollary 5).
-        .fullScreenCover(isPresented: $zoomingPhoto) {
-            if thing.isLive {
-                PhotoViewer(assetRef: thing.sourceRef,
-                            stored: thing.previewImageData,
-                            title: thing.title)
-            }
+        // reference (`ThingRowKeying.swift`, corollary 5) — and the cover
+        // always draws the viewer, close disc included.
+        .fullScreenCover(item: $zoomingPhoto) { zoom in
+            PhotoViewer(assetRef: zoom.assetRef,
+                        stored: zoom.stored,
+                        title: zoom.title)
         }
         // Translate: the system sheet, over the thing's own words. Unavailable
         // on Mac Catalyst (no Translation UI presentation there).
@@ -1969,7 +1985,7 @@ struct ThingSheetView: View {
                 let split = Self.keptTitleLine(Self.entrySplit(body), kept: false)
                 DSRoomTitleRow(title: split.first ?? TitleSeam.name(thing.title))
                     .padding(.horizontal, DSRoomChassis.inset)
-                JournalEntryBox(thing: thing, sameDay: sameDayThings.count) { zoomingPhoto = true }
+                JournalEntryBox(thing: thing, sameDay: sameDayThings.count) { zoomPhoto() }
                     .dsRoomBox()
                     .padding(.top, DS.Space.s3)
                 noteDial
@@ -1983,7 +1999,7 @@ struct ThingSheetView: View {
                 // picture, the article's); an entry without one starts at its
                 // head. The dateline is gone: the day is the pink word.
                 if thing.previewImageData != nil {
-                    NoteEntryPhoto(thing: thing) { zoomingPhoto = true }
+                    NoteEntryPhoto(thing: thing) { zoomPhoto() }
                         .padding(.horizontal, DS.Space.s4)
                         .padding(.bottom, DS.Space.s6)
                 }

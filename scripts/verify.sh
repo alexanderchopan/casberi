@@ -664,6 +664,17 @@ step "Catalog mode audit"
 "$ROOT/scripts/catalog-mode-audit.py" || fail "a seat's catalogue verb and its setup screen's mode disagree — see the output above"
 print -P "%F{green}✓ catalog mode audit%f"
 
+# Every screen has a way back (way-back-audit.py). A full-screen cover cannot
+# be swiped away, so its view carries a close control on every branch — the
+# thing sheet's photo zoom drew an EMPTY cover once its row was deleted under
+# it. A sheet's swipe is never switched off unlisted, and a hidden back button
+# keeps its edge swipe (prd §767).
+step "Way-back audit"
+"$ROOT/scripts/way-back-audit.py" --self-test >/dev/null \
+  || fail "the way-back audit's own self-test failed — the check is broken, not the code"
+"$ROOT/scripts/way-back-audit.py" || fail "a screen has no way back — see the output above"
+print -P "%F{green}✓ way-back audit%f"
+
 # A control that calls a closure property nothing ever supplies (prd §669). The
 # no-op default (`var onRename: (String) -> Void = { _ in }`) compiles, renders
 # and does nothing for every call site there will ever be — §83's dead control

@@ -721,6 +721,26 @@ detached worktree at `08b98bc0`, both checks fire and name
 wrappers. Cannot see a script reached through a variable. Says nothing about
 whether a cited script WORKS — only that it is there to be run.
 
+## Way-back audit (`scripts/way-back-audit.py`, 2026-10-12)
+
+User: "make sure every screen has a way to get back to previous". On the phone
+nothing pushes (prd §1132), so every screen is a sheet and a swipe down goes
+back; a screen traps you only by switching that off. The audit checks the four
+ways to: a `.fullScreenCover` (its view must reach `dismiss()`,
+`.dsSheetDismiss` or an `onCancel`, and an `if` with no `else` around its
+content fails, because the false branch is an empty cover), an unlisted
+`.interactiveDismissDisabled`, `isModalInPresentation = true`, and a
+`.navigationBarBackButtonHidden(true)` with no `DSSwipeBack()` within three
+lines (the Mac's pushes, prd §767).
+
+It found one: the thing sheet's photo zoom drew `if thing.isLive { PhotoViewer }`,
+so a heal deleting the row under an open zoom left a black cover with no close.
+The cover now takes plain values copied at the tap (`PhotoZoom`). Run against the
+pre-fix file, the audit names that line.
+
+Not checked: that the dock's seat draws on a pushed screen, or that a close
+control is reachable on screen. Those are runtime facts, for the screen sweep.
+
 ## Dead-closure audit (`scripts/dead-closure-audit.py`, 2026-09-10) → prd §669
 
 **What it catches.** A SwiftUI view hands its verbs out as closure properties, and one of them is declared with a no-op default:
