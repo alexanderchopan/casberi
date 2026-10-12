@@ -617,6 +617,34 @@
         }
       }
     },
+    "%@ Fee Juice" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ Fee Juice"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ Fee Juice"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ Fee Juice"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ Fee Juice"
+          }
+        }
+      }
+    },
     "%@ acts on its own account — not the wallets you follow here." : {
       "localizations" : {
         "es" : {
@@ -925,6 +953,34 @@
         }
       }
     },
+    "%@ is a zk.money wallet: its balance and payments are private. Its deposits and withdrawals show on the wallets that make them." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ es una cartera de zk.money: su saldo y sus pagos son privados. Sus depósitos y retiros aparecen en las carteras que los hacen."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ は zk.money のウォレットです。残高と支払いは非公開です。入金と出金は、それを行ったウォレットに表示されます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@은(는) zk.money 지갑입니다. 잔액과 결제는 비공개입니다. 입금과 출금은 그것을 실행한 지갑에 표시됩니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 是 zk.money 钱包：其余额和付款是私密的。其存入和提取会显示在发起它们的钱包上。"
+          }
+        }
+      }
+    },
     "%@ is already followed." : {
       "localizations" : {
         "es" : {
@@ -1185,6 +1241,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "%2$@ 欠款 %1$@"
+          }
+        }
+      }
+    },
+    "%@ public Fee Juice" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ Fee Juice público"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "公開 Fee Juice %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "공개 Fee Juice %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 公开 Fee Juice"
           }
         }
       }
@@ -1751,6 +1835,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "%1$@%2$@"
+          }
+        }
+      }
+    },
+    "%@%@ staked" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@%2$@ en staking"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@%2$@ をステーキング"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@%2$@ 스테이킹"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已质押 %1$@%2$@"
           }
         }
       }
@@ -2343,6 +2455,34 @@
         }
       }
     },
+    "%lld not seen by this node" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld no vistos por este nodo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "このノードで未確認 %lld 件"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 노드에서 확인되지 않음 %lld개"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld 个未被此节点看到"
+          }
+        }
+      }
+    },
     "%lld notes aging" : {
       "localizations" : {
         "es" : {
@@ -2483,6 +2623,62 @@
         }
       }
     },
+    "%lld sequencers followed" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld secuenciadores seguidos"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "フォロー中のシーケンサー %lld 件"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "팔로우 중인 시퀀서 %lld개"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已关注 %lld 个排序器"
+          }
+        }
+      }
+    },
+    "%lld stopped attesting" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld dejaron de atestiguar"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld 件が証明を停止"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld개가 증명 중단"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld 个已停止证明"
+          }
+        }
+      }
+    },
     "%lld subscriptions in Media" : {
       "localizations" : {
         "es" : {
@@ -2619,6 +2815,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "今天 %lld 条"
+          }
+        }
+      }
+    },
+    "%lld transactions waiting" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld transacciones en espera"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "待機中の取引 %lld 件"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "대기 중인 거래 %lld건"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld 笔交易等待中"
           }
         }
       }
@@ -2931,6 +3155,34 @@
         }
       }
     },
+    "1 not seen by this node" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1 no visto por este nodo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "このノードで未確認 1 件"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 노드에서 확인되지 않음 1개"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1 个未被此节点看到"
+          }
+        }
+      }
+    },
     "1 note aging" : {
       "localizations" : {
         "es" : {
@@ -3095,6 +3347,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "1 个代币"
+          }
+        }
+      }
+    },
+    "1 transaction waiting" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1 transacción en espera"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "待機中の取引 1 件"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "대기 중인 거래 1건"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1 笔交易等待中"
           }
         }
       }
@@ -4421,6 +4701,34 @@
         }
       }
     },
+    "Attesting" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Atestiguando"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "証明中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "증명 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在证明"
+          }
+        }
+      }
+    },
     "Back to %@" : {
       "localizations" : {
         "es" : {
@@ -4641,6 +4949,90 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "比特币钱包"
+          }
+        }
+      }
+    },
+    "Blank shows the address instead." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Si lo dejas en blanco, se muestra la dirección."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "空欄の場合はアドレスを表示します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "비워 두면 주소가 표시됩니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "留空则显示地址。"
+          }
+        }
+      }
+    },
+    "Block %@ · %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Bloque %1$@ · %2$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ブロック %1$@ · %2$@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "블록 %1$@ · %2$@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "区块 %1$@ · %2$@"
+          }
+        }
+      }
+    },
+    "Blocks waiting for a proof · at block %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Bloques esperando una prueba · en el bloque %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "証明待ちのブロック · ブロック %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "증명을 기다리는 블록 · 블록 %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "等待证明的区块 · 位于区块 %@"
           }
         }
       }
@@ -5257,6 +5649,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "此刻无法连接 %@。你的地址仍在关注中 — 一旦读取到数据，房间就会填充。"
+          }
+        }
+      }
+    },
+    "Couldn't reach the Aztec testnet — check your connection." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se pudo conectar con la testnet de Aztec: revisa tu conexión."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztecテストネットに接続できませんでした。接続を確認してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec 테스트넷에 연결할 수 없습니다. 연결 상태를 확인하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "无法连接 Aztec 测试网——请检查网络连接。"
           }
         }
       }
@@ -7193,6 +7613,62 @@
         }
       }
     },
+    "Follow a sequencer" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Seguir un secuenciador"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "シーケンサーをフォロー"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "시퀀서 팔로우"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "关注排序器"
+          }
+        }
+      }
+    },
+    "Follow a sequencer's attester address on the Aztec page." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Sigue la dirección de atestiguador de un secuenciador en la página de Aztec."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec のページでシーケンサーの証明者アドレスをフォローしてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec 페이지에서 시퀀서의 증명자 주소를 팔로우하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 Aztec 页面关注排序器的证明者地址。"
+          }
+        }
+      }
+    },
     "Follow a site" : {
       "localizations" : {
         "es" : {
@@ -7245,6 +7721,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "关注一个钱包"
+          }
+        }
+      }
+    },
+    "Follow an Aztec account to see its public Fee Juice." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Sigue una cuenta de Aztec para ver su Fee Juice público."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec アカウントをフォローすると、公開 Fee Juice が表示されます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec 계정을 팔로우하면 공개 Fee Juice를 볼 수 있습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "关注一个 Aztec 账户以查看其公开 Fee Juice。"
           }
         }
       }
@@ -7445,6 +7949,34 @@
         }
       }
     },
+    "Follow the testnet" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Seguir la testnet"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "テストネットをフォロー"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "테스트넷 팔로우"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "关注测试网"
+          }
+        }
+      }
+    },
     "Follow the wallet apps you use" : {
       "localizations" : {
         "es" : {
@@ -7613,6 +8145,34 @@
         }
       }
     },
+    "Following its public Fee Juice. Its private balance stays private." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Siguiendo su Fee Juice público. Su saldo privado sigue siendo privado."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "公開 Fee Juice をフォロー中。非公開の残高は非公開のままです。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "공개 Fee Juice를 팔로우 중입니다. 비공개 잔액은 비공개로 유지됩니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在关注其公开 Fee Juice。其私密余额仍保持私密。"
+          }
+        }
+      }
+    },
     "GIF" : {
       "localizations" : {
         "es" : {
@@ -7725,6 +8285,62 @@
         }
       }
     },
+    "Held publicly by %lld accounts · test fees" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "En manos públicas de %lld cuentas · comisiones de prueba"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld 件のアカウントが公開で保有 · テスト手数料"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld개 계정이 공개 보유 · 테스트 수수료"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "由 %lld 个账户公开持有 · 测试手续费"
+          }
+        }
+      }
+    },
+    "Held publicly · test fees" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tenencia pública · comisiones de prueba"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "公開で保有 · テスト手数料"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "공개 보유 · 테스트 수수료"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "公开持有 · 测试手续费"
+          }
+        }
+      }
+    },
     "Its events show in Coming up and Day — nothing is added to your Calendar app." : {
       "localizations" : {
         "es" : {
@@ -7749,6 +8365,90 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "其中的日程会显示在“即将到来”和 Day 中 — 不会向你的日历 App 添加任何内容。"
+          }
+        }
+      }
+    },
+    "Its portals held %@ DAI on %@." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Sus portales tenían %1$@ DAI el %2$@."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%2$@ 時点で、そのポータルは %1$@ DAI を保有していました。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%2$@ 기준 포털에 %1$@ DAI가 있었습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "截至 %2$@，其门户持有 %1$@ DAI。"
+          }
+        }
+      }
+    },
+    "Last %lld epochs on the committee · %lld with a miss" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Últimas %1$lld épocas en el comité · %2$lld con un fallo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "委員会での直近 %1$lld エポック · 欠落あり %2$lld"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "위원회 최근 %1$lld 에포크 · 누락 %2$lld"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "委员会最近 %1$lld 个纪元 · %2$lld 个有遗漏"
+          }
+        }
+      }
+    },
+    "Last %lld epochs on the committee, %lld with a miss" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Últimas %1$lld épocas en el comité, %2$lld con un fallo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "委員会での直近 %1$lld エポック、欠落あり %2$lld"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "위원회 최근 %1$lld 에포크, 누락 %2$lld"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "委员会最近 %1$lld 个纪元，%2$lld 个有遗漏"
           }
         }
       }
@@ -7865,6 +8565,34 @@
         }
       }
     },
+    "Money entering and leaving zk.money is public on Ethereum; inside it, payments and balances are private." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "El dinero que entra y sale de zk.money es público en Ethereum; dentro, los pagos y saldos son privados."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "zk.money への入出金は Ethereum 上で公開されます。内部の支払いと残高は非公開です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "zk.money로 들어오고 나가는 돈은 이더리움에서 공개됩니다. 내부의 결제와 잔액은 비공개입니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "进出 zk.money 的资金在以太坊上是公开的；在其内部，付款和余额是私密的。"
+          }
+        }
+      }
+    },
     "Money in and out, loans, Safe signatures" : {
       "localizations" : {
         "es" : {
@@ -7945,6 +8673,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "一天内涨跌 %@"
+          }
+        }
+      }
+    },
+    "Name (e.g. My sequencer)" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Nombre (p. ej., Mi secuenciador)"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "名前(例: マイシーケンサー)"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이름(예: 내 시퀀서)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "名称(例如：我的排序器)"
+          }
+        }
+      }
+    },
+    "Name this sequencer" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Nombra este secuenciador"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "このシーケンサーに名前を付ける"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 시퀀서 이름 지정"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "为此排序器命名"
           }
         }
       }
@@ -8061,6 +8845,34 @@
         }
       }
     },
+    "No one has claimed %@." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Nadie ha reclamado %@."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ はまだ誰にも取得されていません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "아무도 %@을(를) 등록하지 않았습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "尚无人认领 %@。"
+          }
+        }
+      }
+    },
     "No price read for %@ yet" : {
       "localizations" : {
         "es" : {
@@ -8085,6 +8897,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "尚未读取 %@ 的价格"
+          }
+        }
+      }
+    },
+    "No public Fee Juice read" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se leyó Fee Juice público"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "公開 Fee Juice は読み取れません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "공개 Fee Juice를 읽지 못함"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "未读取到公开 Fee Juice"
+          }
+        }
+      }
+    },
+    "No sequencer" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ningún secuenciador"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "シーケンサーなし"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "시퀀서 없음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "没有排序器"
           }
         }
       }
@@ -8141,6 +9009,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "保留 %lld 天，之后消失。"
+          }
+        }
+      }
+    },
+    "Not on this epoch's committee" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No está en el comité de esta época"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "今回のエポックの委員会外"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이번 에포크 위원회에 없음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "不在本纪元的委员会中"
+          }
+        }
+      }
+    },
+    "Not seen by this node" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No visto por este nodo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "このノードで未確認"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 노드에서 확인되지 않음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "未被此节点看到"
           }
         }
       }
@@ -8285,6 +9209,62 @@
         }
       }
     },
+    "Nothing followed on Aztec yet" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aún no sigues nada en Aztec"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec でフォロー中のものはまだありません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "아직 Aztec에서 팔로우한 항목이 없습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "尚未在 Aztec 上关注任何内容"
+          }
+        }
+      }
+    },
+    "Nothing on your calendar" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Nada en tu calendario"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "カレンダーに予定はありません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "캘린더에 일정이 없습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "日历上没有安排"
+          }
+        }
+      }
+    },
     "Nothing reached yet this week" : {
       "localizations" : {
         "es" : {
@@ -8393,6 +9373,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "在 %@ 上,一次"
+          }
+        }
+      }
+    },
+    "On this epoch's committee" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "En el comité de esta época"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "今回のエポックの委員会に参加中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이번 에포크 위원회에 있음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在本纪元的委员会中"
           }
         }
       }
@@ -8537,6 +9545,230 @@
         }
       }
     },
+    "Private balances stay private to their owner." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Los saldos privados solo los ve su dueño."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "非公開の残高は所有者だけのものです。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "비공개 잔액은 소유자만 볼 수 있습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "私密余额仅对其所有者可见。"
+          }
+        }
+      }
+    },
+    "Proposes in %lld h" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Propone en %lld h"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld 時間後に提案"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld시간 후 제안"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld 小时后提议"
+          }
+        }
+      }
+    },
+    "Proposes in %lld min" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Propone en %lld min"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld 分後に提案"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld분 후 제안"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld 分钟后提议"
+          }
+        }
+      }
+    },
+    "Proven %@ blocks behind" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Probado %@ bloques por detrás"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "証明は %@ ブロック遅れ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "증명 %@블록 뒤처짐"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "证明落后 %@ 个区块"
+          }
+        }
+      }
+    },
+    "Proven 1 block behind" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Probado 1 bloque por detrás"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "証明は 1 ブロック遅れ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "증명 1블록 뒤처짐"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "证明落后 1 个区块"
+          }
+        }
+      }
+    },
+    "Proven to the tip" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Probado hasta la punta"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "最新ブロックまで証明済み"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "최신 블록까지 증명됨"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已证明至最新区块"
+          }
+        }
+      }
+    },
+    "Proving not reported" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Prueba no informada"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "証明は未報告"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "증명 보고 없음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "未报告证明"
+          }
+        }
+      }
+    },
+    "Public Fee Juice" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Fee Juice público"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "公開 Fee Juice"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "공개 Fee Juice"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "公开 Fee Juice"
+          }
+        }
+      }
+    },
     "Read your messages" : {
       "localizations" : {
         "es" : {
@@ -8589,6 +9821,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "只读 — 绝不会要求 Acorns 转账。"
+          }
+        }
+      }
+    },
+    "Reading your sequencer…" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Leyendo tu secuenciador…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "シーケンサーを読み取り中…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "시퀀서를 읽는 중…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在读取你的排序器…"
           }
         }
       }
@@ -8789,6 +10049,34 @@
         }
       }
     },
+    "Sequencer or account address (0x…)" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Dirección de secuenciador o de cuenta (0x…)"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "シーケンサーまたはアカウントのアドレス(0x…)"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "시퀀서 또는 계정 주소(0x…)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "排序器或账户地址(0x…)"
+          }
+        }
+      }
+    },
     "Settings, data and notifications" : {
       "localizations" : {
         "es" : {
@@ -8901,6 +10189,34 @@
         }
       }
     },
+    "Shows everything in %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Muestra todo en %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ のすべてを表示"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@의 모든 항목 표시"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "显示 %@ 中的所有内容"
+          }
+        }
+      }
+    },
     "Simulated as the Safe's call, before signatures and gas." : {
       "localizations" : {
         "es" : {
@@ -8957,6 +10273,62 @@
         }
       }
     },
+    "Stopped attesting" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Dejó de atestiguar"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "証明を停止"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "증명 중단"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已停止证明"
+          }
+        }
+      }
+    },
+    "Stopped following the testnet." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Dejaste de seguir la testnet."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "テストネットのフォローを解除しました。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "테스트넷 팔로우를 중단했습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已停止关注测试网。"
+          }
+        }
+      }
+    },
     "Stops %@ from moving funds without a signature." : {
       "localizations" : {
         "es" : {
@@ -8981,6 +10353,174 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "阻止 %@ 在没有签名的情况下转移资金。"
+          }
+        }
+      }
+    },
+    "Test fees have no value, and the testnet is replaced when Aztec ships a major version." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Las comisiones de prueba no tienen valor, y la testnet se reemplaza cuando Aztec lanza una versión mayor."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "テスト手数料に価値はなく、Aztec がメジャーバージョンを出すとテストネットは置き換えられます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "테스트 수수료는 가치가 없으며, Aztec이 메이저 버전을 출시하면 테스트넷이 교체됩니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "测试手续费没有价值，Aztec 发布主要版本时测试网会被替换。"
+          }
+        }
+      }
+    },
+    "That isn't a sequencer's attester address or an Aztec account." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No es la dirección de atestiguador de un secuenciador ni una cuenta de Aztec."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "シーケンサーの証明者アドレスでも Aztec アカウントでもありません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "시퀀서의 증명자 주소나 Aztec 계정이 아닙니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "这不是排序器的证明者地址，也不是 Aztec 账户。"
+          }
+        }
+      }
+    },
+    "The Aztec testnet" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "La testnet de Aztec"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec テストネット"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec 테스트넷"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec 测试网"
+          }
+        }
+      }
+    },
+    "The Aztec testnet was replaced by a new one. The sequencers you follow are read again from its first block." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "La testnet de Aztec se reemplazó por una nueva. Los secuenciadores que sigues se leen de nuevo desde su primer bloque."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec テストネットが新しいものに置き換えられました。フォロー中のシーケンサーは最初のブロックから読み直されます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec 테스트넷이 새것으로 교체되었습니다. 팔로우하는 시퀀서는 첫 블록부터 다시 읽습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec 测试网已被新的测试网替换。你关注的排序器将从其第一个区块重新读取。"
+          }
+        }
+      }
+    },
+    "The Aztec testnet's blocks, proving and fees" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Los bloques, las pruebas y las comisiones de la testnet de Aztec"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec テストネットのブロック、証明、手数料"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec 테스트넷의 블록, 증명, 수수료"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec 测试网的区块、证明和手续费"
+          }
+        }
+      }
+    },
+    "The Fee Juice your accounts hold publicly" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "El Fee Juice que tus cuentas tienen públicamente"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "あなたのアカウントが公開で保有する Fee Juice"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "내 계정이 공개적으로 보유한 Fee Juice"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的账户公开持有的 Fee Juice"
           }
         }
       }
@@ -9065,6 +10605,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "保存过两次的网站会显示在这里。"
+          }
+        }
+      }
+    },
+    "The sequencers you follow: duty, stake and schedule" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Los secuenciadores que sigues: tarea, stake y calendario"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "フォロー中のシーケンサー: 役割、ステーク、スケジュール"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "팔로우하는 시퀀서: 임무, 스테이크, 일정"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你关注的排序器：职责、质押和日程"
           }
         }
       }
@@ -9569,6 +11137,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "新的交易守卫(%@)"
+          }
+        }
+      }
+    },
+    "earned %@%@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ganó %1$@%2$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@%2$@ を獲得"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@%2$@ 획득"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "赚得 %1$@%2$@"
           }
         }
       }
@@ -187059,6 +188655,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "yourteam.atlassian.net"
+          }
+        }
+      }
+    },
+    "zk.money" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "zk.money"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "zk.money"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "zk.money"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "zk.money"
           }
         }
       }
