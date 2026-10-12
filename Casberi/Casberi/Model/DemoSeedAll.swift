@@ -299,6 +299,10 @@ enum DemoSeedAll {
                               // Logos (prd §988): the real `logos:lez:<id>:<hash>`
                               // shape with a demo account id inside it.
                               "logos:lez:DEMO",
+                              // Aztec (2026-10-11): the real
+                              // `aztec:seq:<address>:<kind>:<slot>` shape with
+                              // the demo sequencer's address inside it.
+                              "aztec:seq:\(demoAztecSequencer)",
                               // Walletbeat (prd §419) carries the REAL ref
                               // shapes for the same reason as Radicle above —
                               // the room head joins a watch to its stored card
@@ -793,6 +797,7 @@ enum DemoSeedAll {
         CloudflareEstateStore.clear()
 
         LogosStore.shared.remove(demoLogosAccount)
+        AztecStore.shared.remove(demoAztecSequencer)
 
         // Apple Wallet's own bespoke connected flag, and App Store Connect's
         // planted standing — same accepted risk as Cloudflare above: a real
@@ -4304,6 +4309,21 @@ enum DemoSeedAll {
                 t.tags = r.1
             }
         }
+        // Aztec (2026-10-11) — the rows a followed sequencer lands, in the
+        // wire's own words (`AztecWire.events`).
+        let aztec: [(String, String, Int, [String], Double)] = [
+            ("Proposed a checkpoint — slot 110,953", "proposed", 110_953, ["Node", "Proposed"], 0.3),
+            ("Attesting again — after 4 missed", "resumed", 110_412, ["Node"], 1.5),
+            ("Stopped attesting — 4 missed in a row", "stopped", 110_408, ["Node", "Offline"], 1.6),
+        ]
+        out += aztec.map { r in
+            row(.note, r.0, source: "Aztec", ref: "aztec:seq:\(demoAztecSequencer):\(r.1):\(r.2)",
+                days: r.4, hour: 9,
+                content: "https://testnet.aztecscan.xyz/validators/\(demoAztecSequencer)") { t in
+                t.authorHandle = AztecWire.short(demoAztecSequencer)
+                t.tags = r.3
+            }
+        }
         let posthog: [(String, Double)] = [
             ("signed_up crossed 1,000", 3), ("Annotation · shipped the onboarding", 5),
             ("doc_exported has gone quiet", 8),
@@ -5015,6 +5035,10 @@ enum DemoSeedAll {
     /// id, the one `logos-selftest.sh` parses.
     static let demoLogosAccount = "CbgR6tj5kWx5oziiFptM7jMvrQeYY3Mzaao6ciuhSr2r"
 
+    /// The sequencer the demo follows on Aztec — an attester-shaped address
+    /// that no node has seen, so a real read of it answers nothing.
+    static let demoAztecSequencer = "0xd3e0aa5e9c1f0b7a4e2c6d8f1a3b5c7d9e0f1a2b"
+
     /// Every wallet the demo watches, in shelf order. The FIRST is
     /// `demoWallet` — the one every seeded row, the balance curve, the Safe
     /// snapshot and the approvals all key on, so it must stay first and must
@@ -5246,6 +5270,16 @@ enum DemoSeedAll {
         // never a read.
         LogosStore.shared.add(demoLogosAccount)
         LogosStore.shared.rememberBalances([demoLogosAccount: 110], at: .now)
+        // 5c'' · Aztec's followed sequencer: a fixture reading, never a read,
+        // so the Node box draws the duty line its rows describe.
+        AztecStore.shared.add(demoAztecSequencer)
+        AztecStore.shared.remember(AztecWire.Sequencer(
+            address: demoAztecSequencer, totalSlots: 768,
+            proposals: .init(streak: 0, count: 0, total: 16),
+            attestations: .init(streak: 0, count: 4, total: 752),
+            lastProposal: .init(slot: 110_953, date: .now.addingTimeInterval(-7_200)),
+            lastAttestation: .init(slot: 111_003, date: .now.addingTimeInterval(-120)),
+            history: [], epochs: 412, epochsMissed: 1, lastProcessedSlot: 111_003, slotWindow: 768))
         // 5b · The anonymity sets behind the Privacy Pools deposits seeded in
         // `wallet()` (prd §397). Two numbers, and the pair is the point: the
         // CURRENT set, plus the set at the moment the oldest deposit in each
@@ -5528,6 +5562,7 @@ enum DemoSeedAll {
         ("Trello", "Synced 40m ago", "Reads cards assigned to you."),
         ("Radicle", "1 repo", "Reads patches and issues, keyless."),
         ("Logos", "1 account", "Reads a public testnet account, keyless."),
+        ("Aztec", "1 sequencer", "Reads a testnet sequencer's duty, keyless."),
         ("Walletbeat", "3 wallets", "Reads public wallet reviews, keyless."),
         ("ENS", "3 names followed", "Reads when a followed name expires, keyless."),
         ("L2BEAT", "3 chains", "Reads public layer-2 risk reviews, keyless."),

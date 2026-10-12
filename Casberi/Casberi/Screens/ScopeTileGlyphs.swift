@@ -231,6 +231,18 @@ extension LogosSection: DSTileScope {
     }
 }
 
+/// Aztec's scopes (2026-10-11): the family's Home and Holdings glyphs, and
+/// Logos' rack for the node you run — here, the sequencers you follow.
+extension AztecSection: DSTileScope {
+    var glyph: String {
+        switch self {
+        case .home:     return ScopeTileGlyph.home
+        case .holdings: return ScopeTileGlyph.holdings
+        case .node:     return ScopeTileGlyph.node
+        }
+    }
+}
+
 /// You's four places as tiles (prd §1136). Markets wears the dock's own
 /// category glyph, the one its door has always worn.
 extension YouTile: DSTileScope {

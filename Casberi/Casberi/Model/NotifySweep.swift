@@ -239,6 +239,11 @@ enum NotifySweep {
         //   Every other Logos row stays quiet: test coins are not news (§522).
         if ref.hasPrefix("logos:node:offline:") { return .nodeDown }
 
+        // — Aztec: a sequencer you follow stopped attesting (2026-10-11,
+        //   `AztecWire.events`, `aztec:seq:<address>:stopped:<slot>`). A
+        //   missed proposal, a recovery and every proposal stay rows.
+        if ref.hasPrefix("aztec:seq:"), ref.contains(":stopped:") { return .nodeDown }
+
         // — Wallet: something gained the power to move funds.
         //   `wallet:sol-approval:` is the same grant on Solana (an SPL
         //   delegate, `SolanaActivity.Grant`).

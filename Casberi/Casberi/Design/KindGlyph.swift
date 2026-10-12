@@ -391,6 +391,8 @@ enum BridgeGlyph {
         // neutral-letterform shape (the App Store Connect precedent) rather
         // than an invented theme icon.
         case "logos":     return "character"
+        // Aztec bundles its mark (`brand-aztec`); defensive, as Logos.
+        case "aztec":     return "character"
         default:          return "app"
         }
     }

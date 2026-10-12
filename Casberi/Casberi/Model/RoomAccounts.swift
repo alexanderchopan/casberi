@@ -255,6 +255,10 @@ enum RoomAccounts {
     private static let testnets: [Seat] = [
         Seat(name: LogosRoom.source, source: LogosRoom.source,
              holder: nil, group: networks, mark: LogosRoom.source, ownScreen: true),
+        // Aztec (2026-10-11) second, so a room that already showed Logos
+        // keeps opening on it; the account menu crosses to Aztec.
+        Seat(name: AztecRoom.source, source: AztecRoom.source,
+             holder: nil, group: networks, mark: AztecRoom.source, ownScreen: true),
     ]
 
     /// The Wallet's (prd §1048; Bitrefill since §1051a). L2BEAT and Walletbeat

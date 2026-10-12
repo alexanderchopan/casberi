@@ -2661,6 +2661,42 @@ enum ProbeHooks {
                 NSLog("logosWatch: %@", outcome.map { "+\($0.added) skipped=\($0.skipped)" } ?? "FAILED")
             }
         },
+        // `-aztecWatch "network|<attester>[,…]|clear"` — follow the Aztec
+        // testnet and sequencers, read once, and print what the room holds:
+        // the heads, then each sequencer's line, or UNSEEN when the node has
+        // never seen it. Run twice to see a transition: a first reading lands
+        // nothing by design. An Aztec ACCOUNT address prints `account`.
+        Hook(key: "aztecWatch") { spec, context in
+            Task { @MainActor in
+                let store = AztecStore.shared
+                if spec == "clear" { store.disconnect(); NSLog("aztecWatch: cleared"); return }
+                for raw in spec.split(separator: ",") {
+                    let one = String(raw).trimmingCharacters(in: .whitespaces)
+                    if one == "network" { store.follow(network: true); continue }
+                    let result = store.add(one)
+                    NSLog("aztecWatch: %@ | %@", one, "\(result)")
+                    if result == .added || result == .addedAccount { store.follow(network: true) }
+                }
+                let outcome = await AztecIngest.refresh(context: context)
+                let tips = store.network?.tips
+                NSLog("aztecWatch: %@ | proposed=%@ | proven=%@ | lag=%@ | fee=%@",
+                      outcome.map { "+\($0.added)" } ?? "FAILED",
+                      tips.map { String($0.proposed) } ?? "-", tips?.proven.map(String.init) ?? "-",
+                      tips?.provenLag.map(String.init) ?? "-",
+                      store.network?.minL2Fee.map { "\($0)" } ?? "-")
+                for address in store.sequencers {
+                    NSLog("aztecWatch: %@ | %@ | %@ | %@ | epochs=%@", address,
+                          store.reading(for: address).map(AztecWire.line) ?? "UNSEEN",
+                          AztecRoomFigure.stakeLine(store.stake(for: address), symbol: store.stakeSymbol) ?? "-",
+                          AztecRoomFigure.dutyLine(store.duty(for: address)) ?? "-",
+                          store.reading(for: address).map { $0.recentEpochs.map(String.init).joined(separator: ",") } ?? "-")
+                }
+                for account in store.accounts {
+                    NSLog("aztecWatch: %@ | feeJuice=%@", account,
+                          store.publicFeeJuice(for: account).map { "\($0)" } ?? "-")
+                }
+            }
+        },
         // `-logosNode "<address>"|forget` — watch your own node (prd §989),
         // read it, and print the reading and what it landed. Run it twice to
         // see a transition: the first read lands nothing by design. The

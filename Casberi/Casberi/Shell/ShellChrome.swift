@@ -479,6 +479,12 @@ final class ShellChrome {
     var logosSections: [LogosSection] = []
     var logosScope: String?
 
+    /// The Aztec room's trio (2026-10-11), Logos' one room over and for the
+    /// same reason: its own enum, its own clear-on-exit.
+    var aztecSection: AztecSection?
+    var aztecSections: [AztecSection] = []
+    var aztecScope: String?
+
 
     /// Which half of an AGENT room is standing (prd §840) — the conversations
     /// you have had, or the one you are having.

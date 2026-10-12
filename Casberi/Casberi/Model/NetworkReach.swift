@@ -409,6 +409,12 @@ enum NetworkReach {
                  // §289 case: every node request names this service to
                  // `NetworkLedger`, so a self-chosen address is attributed.
                  hosts: ["testnet.lez.logos.co", "the node address you give it"]),
+        // Aztec (2026-10-11) — the testnet's public node, keyless JSON-RPC.
+        // The explorer is a link a row opens, never fetched.
+        Endpoint(service: "Aztec",
+                 reach: .whenConnected(bridge: "Aztec"),
+                 purpose: "Reads the Aztec testnet's block heights, proving and minimum fee, the attestation and proposal record of the sequencers you follow and the public Fee Juice of the accounts you follow, from dRPC's public Aztec testnet node; and those sequencers' stake, rewards, committee seat and proposal schedule from the Aztec Rollup contract, through a public Sepolia node. Carries the addresses you asked about and nothing else about you.",
+                 hosts: ["aztec-testnet.drpc.org", "ethereum-sepolia-rpc.publicnode.com"]),
         Endpoint(service: "0xBow Privacy Pools",
                  reach: .whenConnected(bridge: "0xBow Privacy Pools"),
                  purpose: "Reads your Privacy Pools deposits from the public chain and their review status from 0xBow's public API, for the wallets you follow.",

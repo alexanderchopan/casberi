@@ -158,6 +158,7 @@ Privacy and Reddit. Frames and Logos are the devnets that remain.
 - Accounts split into On this phone, Watching, then Tied to yours (§964). Every Frames page offers New account in the Accounts menu, Logos' while the phone holds no key; Frames' own pages lead Holdings with Send and Top up, Logos' with Send (§774, §1108). No suggested addresses (§990).
 - Frames runs on ethpandaops' frames-devnet-0. `FramesNetwork.current` is the one value that names the chain (§962).
 - Logos: watch a public LEZ account, keyless, forward from the watch. Never in the wallet total (§988). Your own node is read at the address you give, through GETs only (§989). The room is Home · Node · Rewards, then Explorer, a verb tile (§991, §1016, §1039). Tickets are a count, and the phone never mines (§1016). A pasted public key resolves to its account (§1034). A reset is detected by block 1's hash and stated once (§1035).
+- Aztec is Testnets' second network, on the CURRENT testnet (v6): Home (the network and its proving-lag line), Holdings (a followed account's PUBLIC Fee Juice only) and Node (sequencers by attester: duty, stake and rewards and schedule off the Rollup on Ethereum, a 48-epoch strip), keyless. Rows on a final proposal, a missed one, a stake status change, or a missed streak of three ("Stopped attesting", `nodeDown`); a new rollup is a reset. Mainnet is measured but has no place yet (§1270, §1271).
 
 ### 13. Notes and voice
 - Notes is a place in Home, reached through the tray's You row and its folder, always drawn (§1127, §1133). Membership is a pin or a note of yours. It is the app's one capture path for writing (§969). The room's sentinel is "Your notes", never the drawn word (§975).
@@ -227,7 +228,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1412 of 1478 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1414 of 1480 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1641,6 +1642,8 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1267 — No tile has a backing; Notes' folders are a Feed card
 - §1268 — The rest of the old style: contact and address cards, subscription sheets, Markets, count picks
 - §1269 — The last of the old style: Data, Notifications, and the rows still wearing chevrons or plates
+- §1270 — Aztec joins Testnets: the network and its sequencers, watched keylessly (amended by §1271)
+- §1271 — Aztec, round two: the current testnet, stake and schedule, the epoch strip, the proving line, public Fee Juice
 
 ## Dead rulings → what replaced them (generated)
 

@@ -119,6 +119,8 @@ enum HomeComposition {
             "Private", "Program",
             // prd §989: a token row's kind, and your node's states.
             "Token", "Node", "Offline", "Synced", "Behind", "Voucher",
+            // Aztec (2026-10-11): a sequencer's proposal that never landed.
+            "Missed",
             // Radicle (prd §400). All five are STATE, not subject: they say
             // what happened to a patch or an issue, never what it is about.
             // Deliberately not facets either — `Issue` above is already

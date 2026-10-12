@@ -209,6 +209,8 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
    no-hotlink rule), on AWS's own dark navy ("Squid Ink") ground. */
 .ai-aws { background: #232f3e; }
 /* Logos ships its λ on its own light-grey field — full-bleed, as Radicle. */
+.ai-aztec { background: #2e0805; }
+.ai-aztec img { width: 100%; height: 100%; border-radius: inherit; }
 .ai-logos { background: #dcdcd9; }
 .ai-logos img { width: 100%; height: 100%; border-radius: inherit; }
 .ai-sentry    { background: #fff; }

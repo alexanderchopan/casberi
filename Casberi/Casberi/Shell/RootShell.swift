@@ -216,6 +216,7 @@ struct RootShell: View {
                 // has none since §1107 and §1108.
                 if let s = WalletSection(rawValue: raw) { chrome.walletSection = s }
                 if let s = LogosSection(rawValue: raw) { chrome.logosSection = s }
+                if let s = AztecSection(rawValue: raw) { chrome.aztecSection = s }
                 // And a Tokens company pack, by its category name ("Work").
                 if let s = TokensScope.all.first(where: { $0.category == raw }) { chrome.tokensScope = s }
                 // Work's Coming up (prd §1057), for the room sweep.

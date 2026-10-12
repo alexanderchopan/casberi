@@ -468,6 +468,12 @@ enum BridgeCatalog {
         // anyone), so it is a no-account seat in the Radicle grade.
         Offer(name: "Logos", tagline: "Accounts on the Logos testnet", group: "Testnets", connectable: true,
               needsSetup: true, added: day(2026, 9, 29)),
+        // Aztec (2026-10-11) — the privacy L2's testnet, Logos' grade: keyless
+        // (the node answers anyone), no-account, and what it follows is the
+        // network and its SEQUENCERS, because an Aztec account's state is
+        // private to its owner and no public read can see it.
+        Offer(name: "Aztec", tagline: "Sequencers on the Aztec testnet", group: "Testnets", connectable: true,
+              needsSetup: true, added: day(2026, 10, 11)),
         Offer(name: "Linear",      tagline: "",             group: "Work",      connectable: true,
               needsSetup: true),
         Offer(name: "Notion",      tagline: "",                group: "Work",      connectable: true,
@@ -1058,7 +1064,7 @@ enum BridgeSetupMode {
         "RSS", "Substack", "Podcasts", "Pinterest", "Bluesky",
         "Telegram", "Hugging Face", "Radicle",
         "npm", "PyPI", "Walletbeat", "L2BEAT", "ENS",
-        "ETH Validators", "NerdWallet", "Logos",
+        "ETH Validators", "NerdWallet", "Logos", "Aztec",
         // No key and no account — Apple's model, turned on (prd §833).
         "Apple Intelligence"]
 }

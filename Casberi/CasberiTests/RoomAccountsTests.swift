@@ -173,6 +173,9 @@ struct RoomAccountsTests {
         #expect(RoomAccounts.host(ofSource: LogosRoom.source)?.room == RoomAccounts.testnetsRoom)
         #expect(!RoomAccounts.rides(room: CategoryFold.walletRoom, source: LogosRoom.source))
         #expect(RoomAccounts.seats(for: CategoryFold.walletRoom).allSatisfy { !$0.ownScreen })
+        // Aztec joins the same room (2026-10-11), never the Wallet.
+        #expect(RoomAccounts.host(ofSource: AztecRoom.source)?.room == RoomAccounts.testnetsRoom)
+        #expect(!RoomAccounts.rides(room: CategoryFold.walletRoom, source: AztecRoom.source))
         // A deleted network is no seat in the room (prd §1206, §723).
         #expect(RoomAccounts.host(ofSource: "Hegot\u{00e1} Frames") == nil)
     }
@@ -198,6 +201,11 @@ struct RoomAccountsTests {
         // A pick of a network that is not connected shows nothing, never it.
         #expect(RoomAccounts.shownSource(room: room, scope: "seat:Logos", names: []) == nil)
         #expect(RoomAccounts.shownSource(room: room, scope: nil, names: []) == nil)
+        // Both connected: Logos stays the room's first screen, and a pick of
+        // Aztec shows Aztec (2026-10-11).
+        let both: Set = [LogosRoom.source, AztecRoom.source]
+        #expect(RoomAccounts.shownSource(room: room, scope: nil, names: both) == LogosRoom.source)
+        #expect(RoomAccounts.shownSource(room: room, scope: "seat:Aztec", names: both) == AztecRoom.source)
         #expect(RoomAccounts.shownSource(room: CategoryFold.walletRoom, scope: "seat:Safe",
                                          names: ["Safe"]) == nil)
     }

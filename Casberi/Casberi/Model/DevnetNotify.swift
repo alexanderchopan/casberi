@@ -40,8 +40,11 @@ enum DevnetNotify {
     /// feature nothing else in this repo can exercise.
     static func census() -> [String] {
         let lReset = LogosStore.shared.resetSeen
+        let aReset = AztecStore.shared.resetSeen
         return ["logos watching=\(LogosStore.shared.accounts.count) reset=" +
-                (lReset.map { "\($0.key) observed \($0.at)" } ?? "none observed")]
+                (lReset.map { "\($0.key) observed \($0.at)" } ?? "none observed"),
+                "aztec watching=\(AztecStore.shared.sequencers.count) reset=" +
+                (aReset.map { "\($0.key) observed \($0.at)" } ?? "none observed")]
     }
 
     // MARK: - What was reset
@@ -53,6 +56,12 @@ enum DevnetNotify {
         if let seen = LogosStore.shared.resetSeen {
             out.append(.init(seat: .logos, key: seen.key, observedAt: seen.at,
                              watching: LogosStore.shared.accounts.count))
+        }
+        // Aztec: the sequencers followed. Following the network alone is no
+        // stake in the old chain, so it counts as nobody watching.
+        if let seen = AztecStore.shared.resetSeen {
+            out.append(.init(seat: .aztec, key: seen.key, observedAt: seen.at,
+                             watching: AztecStore.shared.sequencers.count))
         }
         return out
     }

@@ -53,6 +53,7 @@ enum AppHomepages {
         "Hugging Face": "huggingface.co",
         "Radicle": "radicle.xyz",
         "Logos": "logos.co",
+        "Aztec": "aztec.network",
         "Linear": "linear.app",
         "Notion": "notion.so",
         "PostHog": "posthog.com",

@@ -69,6 +69,10 @@ KNOWN_NON_REACH=(
   # NEVER fetched: the bridge reads the sequencer, which IS disclosed in
   # NetworkReach (the "Logos" entry).
   explorer.testnet.lez.logos.co
+  # The Aztec testnet explorer (2026-10-11) — where an Aztec sequencer row
+  # opens on tap. NEVER fetched: the bridge reads the testnet node, which IS
+  # disclosed in NetworkReach (the "Aztec" entry).
+  testnet.aztecscan.xyz
   # ether.fi's own app — where an unstake row's "claim" and a Cash row open on
   # tap. Never fetched: the reads are public RPC hosts, and those ARE disclosed
   # in NetworkReach (the "ether.fi" and "ether.fi Cash" entries).

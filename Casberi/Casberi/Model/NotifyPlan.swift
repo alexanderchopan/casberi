@@ -668,6 +668,9 @@ enum NotifyDevnet {
         /// The Logos testnet (prd §1084), once it recorded the reset it
         /// observes (`LogosStore.resetSeen`, block 1's hash changing, §1035).
         case logos
+        /// The Aztec testnet (2026-10-11), once it recorded a new rollup
+        /// (`AztecStore.resetSeen`, the chain's key changing).
+        case aztec
 
         /// **MUST equal the seat's source.** It routes the deep link and
         /// picks the brand mark for the right-hand slot, and a wrong string
@@ -678,6 +681,8 @@ enum NotifyDevnet {
             switch self {
             // MUST equal `LogosRoom.source` (`notify-selftest.sh`).
             case .logos:   return "Logos"
+            // MUST equal `AztecRoom.source`.
+            case .aztec:   return "Aztec"
             }
         }
 
@@ -725,6 +730,8 @@ enum NotifyDevnet {
         switch r.seat {
         case .logos:
             body = String(localized: "The Logos testnet was reset, so every account on it starts empty. Your key and the accounts you follow are still yours.")
+        case .aztec:
+            body = String(localized: "The Aztec testnet was replaced by a new one. The sequencers you follow are read again from its first block.")
         }
         return NotifyPlan(id: "devnet:reset:\(r.seat.rawValue):\(r.key)",
                           kind: .chainReset,

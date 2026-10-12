@@ -2384,6 +2384,7 @@ harness "Radicle pure-logic self-test" "radicle self-test" "scripts/radicle-self
 # failures that render as a clean row — a u128 read backwards, a timestamp read as
 # seconds, a hash that opens nothing, the per-block clock landing a row a minute.
 harness "Logos pure-logic self-test" "logos self-test" "scripts/logos-selftest.sh" "the Logos logic self-test failed — run scripts/logos-selftest.sh"
+harness "Aztec pure-logic self-test" "aztec self-test" "scripts/aztec-selftest.sh" "the Aztec logic self-test failed — run scripts/aztec-selftest.sh"
 # Logos Observer v2 (2026-10-03). Runs the Observer's OWN interoperability vectors (HMAC,
 # SPKI pin, pairing QR) through the client: a wrong byte in any of them answers every
 # request 401 bad_signature, or pairs with nothing, and looks identical from the phone.

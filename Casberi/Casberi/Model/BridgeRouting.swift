@@ -55,6 +55,9 @@ enum BridgeRouter {
         /// destination for L2BEAT's reason: riding `.token` would dismiss the
         /// raised sheet the moment the first watched account registered it.
         case logos
+        /// Aztec (2026-10-11) — Logos' reason: a follow list, so riding
+        /// `.token` would dismiss the sheet on the first registration.
+        case aztec
         case icloudMail
         case gmail
         case rss
@@ -308,6 +311,7 @@ enum BridgeRouter {
             case .huggingFace:    "huggingface"
             case .radicle:        "radicle"
             case .logos:          "logos"
+            case .aztec:          "aztec"
             case .icloudMail:     "icloudmail"
             case .gmail:          "gmail"
             case .rss:            "rss"
@@ -429,6 +433,7 @@ enum BridgeRouter {
         Row(offer: "Hugging Face", id: "huggingface", destination: .huggingFace),
         Row(offer: "Radicle",    id: "radicle",    destination: .radicle),
         Row(offer: "Logos",      id: "logos",      destination: .logos),
+        Row(offer: "Aztec",      id: "aztec",      destination: .aztec),
         Row(offer: "iCloud Mail", id: "icloudmail",  destination: .icloudMail),
         Row(offer: "Gmail",       id: "gmail",       destination: .gmail),
         Row(offer: "RSS",       id: "rss",    destination: .rss),
@@ -617,6 +622,7 @@ struct BridgeDestinationView: View {
         case .huggingFace:    HuggingFaceScreen()
         case .radicle:        RadicleScreen()
         case .logos:          LogosScreen()
+        case .aztec:          AztecScreen()
         case .icloudMail:     MailScreen(provider: .icloud)
         case .gmail:          MailScreen(provider: .gmail)
         case .rss:            RSSScreen()

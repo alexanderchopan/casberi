@@ -723,6 +723,14 @@ enum BridgeRefresh {
                 _ = await LogosIngest.refresh(context: context)
             }
         }
+        // Aztec (2026-10-11). A pass is four small network reads and one
+        // validator read per followed sequencer.
+        if AztecStore.shared.connected {
+            let s = slot(); BridgeRefresh.landingTask { @MainActor in
+                await BridgeRefresh.stagger(s)
+                _ = await AztecIngest.refresh(context: context)
+            }
+        }
         // npm and PyPI are keyless watch lists, so — like Hugging Face
         // above — they need their own line here rather than
         // riding `TokenBridge.allCases`. One slot each: they are separate

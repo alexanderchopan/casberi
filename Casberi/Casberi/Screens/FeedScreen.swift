@@ -1050,6 +1050,14 @@ struct FeedScreen: View {
             .onDisappear {
                 if source == LogosRoom.source { chrome.logosSections = [] }
             }
+            // Aztec's half (2026-10-11), Logos' contract exactly.
+            .onChange(of: aztecSectionPublication, initial: true) { _, now in
+                guard isActive, !inSheet || source == AztecRoom.source else { return }
+                chrome.aztecSections = now
+            }
+            .onDisappear {
+                if source == AztecRoom.source { chrome.aztecSections = [] }
+            }
     }
 
     /// A source room's COMPOSE action — "New event", "New email", "New task" —
@@ -1210,6 +1218,20 @@ struct FeedScreen: View {
                 logosHoldingsSection
             } else {
                 let days = chronoGroups(logosRows(rows, section: logosSection))
+                groupedSections(days, nextEventID: nil, boundary: boundaryThingID(in: days))
+            }
+        } else if source == AztecRoom.source {
+            // **THE AZTEC ROOM (2026-10-11)** — Logos' arm: the chrome draws
+            // the box, tiles and sequencer menu; the scope's rows follow.
+            let aztecSection = AztecSection.resolve(chrome.aztecSection,
+                                                    present: chrome.aztecSections)
+            aztecScopeChromeSection(aztecSection)
+            if aztecSection == .node {
+                aztecRosterSection
+            } else if aztecSection == .holdings {
+                aztecHoldingsSection
+            } else {
+                let days = chronoGroups(aztecRows(rows))
                 groupedSections(days, nextEventID: nil, boundary: boundaryThingID(in: days))
             }
         // **`|| roomAgent != nil` OR THIS CHAIN FALLS THROUGH BOTH ARMS AND
