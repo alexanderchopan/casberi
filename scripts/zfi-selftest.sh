@@ -32,9 +32,16 @@ for f in "$WIRE" "$TACIT" "$APP" "$FIX"/swapboard-orders.json "$FIX"/swapboard-v
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 # The app half: keyless, through the Wallet's own mainnet pool only.
-if grep -nE 'https?://' "$APP" | grep -v '^\s*[0-9]*:\s*///' | grep -q .; then
+# The one URL is a door the person opens (an order's receipt), never fetched.
+if grep -nE 'https?://' "$APP" | grep -v '^\s*[0-9]*:\s*///' | grep -v 'content: "https://etherscan.io/nft/' | grep -q .; then
   echo "✗ ZFiOrders.swift names a host; it reads through WalletApprovals' mainnet pool only"; exit 1
 fi
+grep -q 'if ref.hasPrefix(ZFiOrders.reclaimPrefix) { return ZFiOrders.stillWaiting(ref: ref, in: walletLive.zfiOrders) }' \
+  Casberi/Casberi/Screens/FeedScreen+WalletRoom.swift || { echo "✗ a waiting zFi escrow no longer leads Needs you"; exit 1; }
+grep -q 'if ref.hasPrefix("zfi:reclaim:") { return .poolCleared }' Casberi/Casberi/Model/NotifySweep.swift \
+  || { echo "✗ a waiting zFi escrow no longer notifies"; exit 1; }
+grep -q 'await ZFiOrders.syncEvents(context: context, addresses: evmAddresses, existing: existing)' \
+  Casberi/Casberi/Model/WalletIngest.swift || { echo "✗ the Wallet sweep no longer lands zFi's waiting escrow"; exit 1; }
 grep -q 'WalletApprovals.rpcRead(network: network' "$APP" \
   || { echo "✗ ZFiOrders no longer reads through the Wallet's mainnet pool"; exit 1; }
 grep -q 'async let zfiBook = ZFiOrders.book(addresses: resolved)' Casberi/Casberi/Model/WalletWarnings.swift \
@@ -93,6 +100,7 @@ check(ten.map { ZFiWire.needsYou($0, now: Date(timeIntervalSince1970: 1_787_771_
 check(ten.map { ZFiWire.state($0, tokens, now: Date(timeIntervalSince1970: 1_787_771_000)) } == "Open · asks 0.3 WETH",
       "…asking its price")
 check(ten.map { ZFiWire.title($0, tokens) } == "Sell Z for WETH", "titled by its pair")
+check(ten.map { ZFiWire.reclaimTitle($0, tokens) } == "Your 1,000 Z can be taken back from zFi", "Needs you says what waits")
 let v1 = ZFiWire.swapOrdersV1(reply: reply("swapboard-v1-orders.json"), firstID: 0, holders: [v1maker])
 check(v1?.map(\.id) == [7, 142, 143], "v1's closed book: a maker's three open orders still hold escrow")
 check(v1?.allSatisfy { $0.board == ZFiWire.swapboardV1 && $0.expiry == nil } == true, "v1 orders never expire")
@@ -119,6 +127,7 @@ let bid = bids?.first
 check(bid.flatMap { ZFiWire.phrase($0.escrowRaw, $0.escrowToken, tokens) } == "0.05984 WETH", "escrow is `locked`, in WETH")
 check(bid.map { ZFiWire.title($0, tokens) } == "Bid for 10,770.56 Z", "titled by what it buys")
 check(bid.map { ZFiWire.state($0, tokens, now: now) } == "Closed · cancel to reclaim", "its window closed: escrow waits")
+check(bid.map { ZFiWire.reclaimTitle($0, tokens) } == "Your 0.05984 WETH can be taken back from zFi", "…a bid's escrow is its quote")
 let nft = ZFiWire.bids(reply: reply("floorboard-bids.json"), holders: [zorz])?.first
 check(nft?.otherIsNFT == true && nft.map { ZFiWire.title($0, tokens) } == "Bid for 1 zzz", "an NFT bid counts pieces")
 check(ZFiWire.bids(reply: reply("floorboard-bids.json"), holders: [ZFiWire.ether])?.isEmpty == true, "closed bids belong to nobody")

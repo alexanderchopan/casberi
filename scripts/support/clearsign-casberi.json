@@ -1,0 +1,1200 @@
+{
+ "_about": "Casberi-written ERC-7730 calldata descriptors (prd \u00a71282), merged into Resources/ClearSignRegistry.json by scripts/clearsign-casberi.py. Each is read off the contract's own published source; none is the protocol's own, so every one says owner Casberi and the sign block reads 'Described by Casberi'. Upstream (ethereum/clear-signing-erc7730-registry) wins any address it also describes.",
+ "descriptors": [
+  {
+   "owner": "Casberi",
+   "name": "zRouter (zFi)",
+   "source": "github.com/z-fi/zFi src/zRouter.sol",
+   "deployments": {
+    "1": [
+     "0x000000000000fb114709235f1ccbffb925f600e4"
+    ],
+    "8453": [
+     "0x000000000000fb114709235f1ccbffb925f600e4"
+    ]
+   },
+   "formats": [
+    {
+     "key": "swapV2(address to, bool exactOut, address tokenIn, address tokenOut, uint256 swapAmount, uint256 amountLimit, uint256 deadline)",
+     "intent": "Swap",
+     "interpolatedIntent": "Swap {swapAmount} for at least {amountLimit}",
+     "fields": [
+      {
+       "path": "exactOut",
+       "label": "Exact output",
+       "format": "raw",
+       "visible": {
+        "mustMatch": [
+         "false"
+        ]
+       }
+      },
+      {
+       "path": "swapAmount",
+       "label": "Sell",
+       "format": "tokenAmount",
+       "visible": {
+        "ifNotIn": [
+         "0"
+        ]
+       },
+       "params": {
+        "tokenPath": "tokenIn",
+        "nativeCurrencyAddress": [
+         "0x0000000000000000000000000000000000000000"
+        ]
+       }
+      },
+      {
+       "path": "amountLimit",
+       "label": "Receive at least",
+       "format": "tokenAmount",
+       "visible": "always",
+       "params": {
+        "tokenPath": "tokenOut",
+        "nativeCurrencyAddress": [
+         "0x0000000000000000000000000000000000000000"
+        ]
+       }
+      },
+      {
+       "path": "to",
+       "label": "Recipient",
+       "format": "addressName",
+       "visible": "always",
+       "params": {
+        "sources": [
+         "local",
+         "ens"
+        ],
+        "types": [
+         "eoa",
+         "contract"
+        ]
+       }
+      },
+      {
+       "path": "deadline",
+       "label": "Deadline",
+       "format": "date",
+       "visible": "always"
+      }
+     ]
+    },
+    {
+     "key": "swapV3(address to, bool exactOut, uint24 swapFee, address tokenIn, address tokenOut, uint256 swapAmount, uint256 amountLimit, uint256 deadline)",
+     "intent": "Swap",
+     "interpolatedIntent": "Swap {swapAmount} for at least {amountLimit}",
+     "fields": [
+      {
+       "path": "exactOut",
+       "label": "Exact output",
+       "format": "raw",
+       "visible": {
+        "mustMatch": [
+         "false"
+        ]
+       }
+      },
+      {
+       "path": "swapAmount",
+       "label": "Sell",
+       "format": "tokenAmount",
+       "visible": {
+        "ifNotIn": [
+         "0"
+        ]
+       },
+       "params": {
+        "tokenPath": "tokenIn",
+        "nativeCurrencyAddress": [
+         "0x0000000000000000000000000000000000000000"
+        ]
+       }
+      },
+      {
+       "path": "amountLimit",
+       "label": "Receive at least",
+       "format": "tokenAmount",
+       "visible": "always",
+       "params": {
+        "tokenPath": "tokenOut",
+        "nativeCurrencyAddress": [
+         "0x0000000000000000000000000000000000000000"
+        ]
+       }
+      },
+      {
+       "path": "to",
+       "label": "Recipient",
+       "format": "addressName",
+       "visible": "always",
+       "params": {
+        "sources": [
+         "local",
+         "ens"
+        ],
+        "types": [
+         "eoa",
+         "contract"
+        ]
+       }
+      },
+      {
+       "path": "deadline",
+       "label": "Deadline",
+       "format": "date",
+       "visible": "always"
+      }
+     ]
+    },
+    {
+     "key": "swapV4(address to, bool exactOut, uint24 swapFee, int24 tickSpace, address tokenIn, address tokenOut, uint256 swapAmount, uint256 amountLimit, uint256 deadline)",
+     "intent": "Swap",
+     "interpolatedIntent": "Swap {swapAmount} for at least {amountLimit}",
+     "fields": [
+      {
+       "path": "exactOut",
+       "label": "Exact output",
+       "format": "raw",
+       "visible": {
+        "mustMatch": [
+         "false"
+        ]
+       }
+      },
+      {
+       "path": "swapAmount",
+       "label": "Sell",
+       "format": "tokenAmount",
+       "visible": {
+        "ifNotIn": [
+         "0"
+        ]
+       },
+       "params": {
+        "tokenPath": "tokenIn",
+        "nativeCurrencyAddress": [
+         "0x0000000000000000000000000000000000000000"
+        ]
+       }
+      },
+      {
+       "path": "amountLimit",
+       "label": "Receive at least",
+       "format": "tokenAmount",
+       "visible": "always",
+       "params": {
+        "tokenPath": "tokenOut",
+        "nativeCurrencyAddress": [
+         "0x0000000000000000000000000000000000000000"
+        ]
+       }
+      },
+      {
+       "path": "to",
+       "label": "Recipient",
+       "format": "addressName",
+       "visible": "always",
+       "params": {
+        "sources": [
+         "local",
+         "ens"
+        ],
+        "types": [
+         "eoa",
+         "contract"
+        ]
+       }
+      },
+      {
+       "path": "deadline",
+       "label": "Deadline",
+       "format": "date",
+       "visible": "always"
+      }
+     ]
+    },
+    {
+     "key": "snwap(address tokenIn, uint256 amountIn, address recipient, address tokenOut, uint256 amountOutMin, address executor, bytes executorData)",
+     "intent": "Swap",
+     "interpolatedIntent": "Swap {amountIn} for at least {amountOutMin}",
+     "fields": [
+      {
+       "path": "amountIn",
+       "label": "Sell",
+       "format": "tokenAmount",
+       "visible": {
+        "ifNotIn": [
+         "0"
+        ]
+       },
+       "params": {
+        "tokenPath": "tokenIn",
+        "nativeCurrencyAddress": [
+         "0x0000000000000000000000000000000000000000"
+        ]
+       }
+      },
+      {
+       "path": "amountOutMin",
+       "label": "Receive at least",
+       "format": "tokenAmount",
+       "visible": "always",
+       "params": {
+        "tokenPath": "tokenOut",
+        "nativeCurrencyAddress": [
+         "0x0000000000000000000000000000000000000000"
+        ]
+       }
+      },
+      {
+       "path": "recipient",
+       "label": "Recipient",
+       "format": "addressName",
+       "visible": "always",
+       "params": {
+        "sources": [
+         "local",
+         "ens"
+        ],
+        "types": [
+         "eoa",
+         "contract"
+        ]
+       }
+      },
+      {
+       "path": "executor",
+       "label": "Route runs through",
+       "format": "addressName",
+       "visible": "always",
+       "params": {
+        "sources": [
+         "local",
+         "ens"
+        ],
+        "types": [
+         "eoa",
+         "contract"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "key": "multicall(bytes[] data)",
+     "intent": "Several zFi steps",
+     "fields": [
+      {
+       "path": "data.[]",
+       "label": "Step",
+       "format": "calldata",
+       "visible": "always",
+       "params": {
+        "calleePath": "@.to",
+        "amountPath": "@.value"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "owner": "Casberi",
+   "name": "Swapboard (zFi)",
+   "source": "github.com/z-fi/zFi src/Swapboard.sol",
+   "deployments": {
+    "1": [
+     "0x000000da7bb4b2a9e3e80e9a4d4157e26ca6189b"
+    ]
+   },
+   "formats": [
+    {
+     "key": "createOrder(address tokenA, uint256 amountA, address tokenB, uint256 amountB, bool partialFill, uint64 expiry, bool nftA, bool nftB, address counterparty)",
+     "intent": "Place an order",
+     "interpolatedIntent": "Sell {amountA} for {amountB}",
+     "fields": [
+      {
+       "path": "nftA",
+       "label": "NFT",
+       "format": "raw",
+       "visible": {
+        "mustMatch": [
+         "false"
+        ]
+       }
+      },
+      {
+       "path": "nftB",
+       "label": "NFT",
+       "format": "raw",
+       "visible": {
+        "mustMatch": [
+         "false"
+        ]
+       }
+      },
+      {
+       "path": "amountA",
+       "label": "Sell",
+       "format": "tokenAmount",
+       "visible": "always",
+       "params": {
+        "tokenPath": "tokenA",
+        "nativeCurrencyAddress": [
+         "0x0000000000000000000000000000000000000000"
+        ]
+       }
+      },
+      {
+       "path": "amountB",
+       "label": "For",
+       "format": "tokenAmount",
+       "visible": "always",
+       "params": {
+        "tokenPath": "tokenB",
+        "nativeCurrencyAddress": [
+         "0x0000000000000000000000000000000000000000"
+        ]
+       }
+      },
+      {
+       "path": "partialFill",
+       "label": "Fills",
+       "format": "enum",
+       "visible": "always",
+       "params": {
+        "enum": {
+         "true": "In parts",
+         "false": "All at once"
+        }
+       }
+      },
+      {
+       "path": "expiry",
+       "label": "Expires",
+       "format": "date",
+       "visible": {
+        "ifNotIn": [
+         "0"
+        ]
+       }
+      },
+      {
+       "path": "counterparty",
+       "label": "Only for",
+       "format": "addressName",
+       "visible": {
+        "ifNotIn": [
+         "0x0000000000000000000000000000000000000000"
+        ]
+       },
+       "params": {
+        "sources": [
+         "local",
+         "ens"
+        ],
+        "types": [
+         "eoa",
+         "contract"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "key": "createOrderWithEth(address tokenB, uint256 amountB, bool partialFill, uint64 expiry, bool nftB, address counterparty)",
+     "intent": "Place an order",
+     "interpolatedIntent": "Sell {@.value} for {amountB}",
+     "fields": [
+      {
+       "path": "nftB",
+       "label": "NFT",
+       "format": "raw",
+       "visible": {
+        "mustMatch": [
+         "false"
+        ]
+       }
+      },
+      {
+       "path": "@.value",
+       "label": "Sell",
+       "format": "amount",
+       "visible": "always"
+      },
+      {
+       "path": "amountB",
+       "label": "For",
+       "format": "tokenAmount",
+       "visible": "always",
+       "params": {
+        "tokenPath": "tokenB",
+        "nativeCurrencyAddress": [
+         "0x0000000000000000000000000000000000000000"
+        ]
+       }
+      },
+      {
+       "path": "partialFill",
+       "label": "Fills",
+       "format": "enum",
+       "visible": "always",
+       "params": {
+        "enum": {
+         "true": "In parts",
+         "false": "All at once"
+        }
+       }
+      },
+      {
+       "path": "expiry",
+       "label": "Expires",
+       "format": "date",
+       "visible": {
+        "ifNotIn": [
+         "0"
+        ]
+       }
+      },
+      {
+       "path": "counterparty",
+       "label": "Only for",
+       "format": "addressName",
+       "visible": {
+        "ifNotIn": [
+         "0x0000000000000000000000000000000000000000"
+        ]
+       },
+       "params": {
+        "sources": [
+         "local",
+         "ens"
+        ],
+        "types": [
+         "eoa",
+         "contract"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "key": "fillOrder(uint256 orderId, uint256 deadline, uint256 fillAmountB, uint256 minAmountA, address recipient)",
+     "intent": "Fill an order",
+     "fields": [
+      {
+       "path": "orderId",
+       "label": "Order",
+       "format": "raw",
+       "visible": "always"
+      },
+      {
+       "path": "recipient",
+       "label": "Recipient",
+       "format": "addressName",
+       "visible": "always",
+       "params": {
+        "sources": [
+         "local",
+         "ens"
+        ],
+        "types": [
+         "eoa",
+         "contract"
+        ]
+       }
+      },
+      {
+       "path": "deadline",
+       "label": "Deadline",
+       "format": "date",
+       "visible": "always"
+      }
+     ]
+    },
+    {
+     "key": "cancelOrder(uint256 orderId)",
+     "intent": "Cancel an order",
+     "fields": [
+      {
+       "path": "orderId",
+       "label": "Order",
+       "format": "raw",
+       "visible": "always"
+      }
+     ]
+    },
+    {
+     "key": "cancelOrderUnwrap(uint256 orderId)",
+     "intent": "Cancel an order",
+     "fields": [
+      {
+       "path": "orderId",
+       "label": "Order",
+       "format": "raw",
+       "visible": "always"
+      }
+     ]
+    },
+    {
+     "key": "cancelOrders(uint256[] orderIds)",
+     "intent": "Cancel orders",
+     "fields": [
+      {
+       "path": "orderIds.[]",
+       "label": "Order",
+       "format": "raw",
+       "visible": "always"
+      }
+     ]
+    },
+    {
+     "key": "cancelExpired(uint256[] orderIds)",
+     "intent": "Take back expired orders",
+     "fields": [
+      {
+       "path": "orderIds.[]",
+       "label": "Order",
+       "format": "raw",
+       "visible": "always"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "owner": "Casberi",
+   "name": "Dutchboard (zFi)",
+   "source": "github.com/z-fi/zFi src/Dutchboard.sol",
+   "deployments": {
+    "1": [
+     "0x000000a213b430d14bae6062c176289b05e04489"
+    ]
+   },
+   "formats": [
+    {
+     "key": "listERC20(address token, address quote, uint128 amount, uint256 startPrice, uint256 endPrice, uint40 startTime, uint40 duration, uint40 expiry)",
+     "intent": "Auction tokens",
+     "interpolatedIntent": "Auction {amount}, from {startPrice} down to {endPrice}",
+     "fields": [
+      {
+       "path": "amount",
+       "label": "Sell",
+       "format": "tokenAmount",
+       "visible": "always",
+       "params": {
+        "tokenPath": "token",
+        "nativeCurrencyAddress": [
+         "0x0000000000000000000000000000000000000000"
+        ]
+       }
+      },
+      {
+       "path": "startPrice",
+       "label": "Starting price",
+       "format": "tokenAmount",
+       "visible": "always",
+       "params": {
+        "tokenPath": "quote",
+        "nativeCurrencyAddress": [
+         "0x0000000000000000000000000000000000000000"
+        ]
+       }
+      },
+      {
+       "path": "endPrice",
+       "label": "Floor price",
+       "format": "tokenAmount",
+       "visible": "always",
+       "params": {
+        "tokenPath": "quote",
+        "nativeCurrencyAddress": [
+         "0x0000000000000000000000000000000000000000"
+        ]
+       }
+      },
+      {
+       "path": "startTime",
+       "label": "Starts",
+       "format": "date",
+       "visible": {
+        "ifNotIn": [
+         "0"
+        ]
+       }
+      },
+      {
+       "path": "duration",
+       "label": "Falls over",
+       "format": "duration",
+       "visible": "always"
+      },
+      {
+       "path": "expiry",
+       "label": "Expires",
+       "format": "date",
+       "visible": {
+        "ifNotIn": [
+         "0"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "key": "listETH(address quote, uint256 startPrice, uint256 endPrice, uint40 startTime, uint40 duration, uint40 expiry)",
+     "intent": "Auction ETH",
+     "interpolatedIntent": "Auction {@.value}, from {startPrice} down to {endPrice}",
+     "fields": [
+      {
+       "path": "@.value",
+       "label": "Sell",
+       "format": "amount",
+       "visible": "always"
+      },
+      {
+       "path": "startPrice",
+       "label": "Starting price",
+       "format": "tokenAmount",
+       "visible": "always",
+       "params": {
+        "tokenPath": "quote",
+        "nativeCurrencyAddress": [
+         "0x0000000000000000000000000000000000000000"
+        ]
+       }
+      },
+      {
+       "path": "endPrice",
+       "label": "Floor price",
+       "format": "tokenAmount",
+       "visible": "always",
+       "params": {
+        "tokenPath": "quote",
+        "nativeCurrencyAddress": [
+         "0x0000000000000000000000000000000000000000"
+        ]
+       }
+      },
+      {
+       "path": "startTime",
+       "label": "Starts",
+       "format": "date",
+       "visible": {
+        "ifNotIn": [
+         "0"
+        ]
+       }
+      },
+      {
+       "path": "duration",
+       "label": "Falls over",
+       "format": "duration",
+       "visible": "always"
+      },
+      {
+       "path": "expiry",
+       "label": "Expires",
+       "format": "date",
+       "visible": {
+        "ifNotIn": [
+         "0"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "key": "fill(uint256 id, uint128 take, address to, uint256 maxCost)",
+     "intent": "Buy from an auction",
+     "fields": [
+      {
+       "path": "id",
+       "label": "Lot",
+       "format": "raw",
+       "visible": "always"
+      },
+      {
+       "path": "to",
+       "label": "Recipient",
+       "format": "addressName",
+       "visible": "always",
+       "params": {
+        "sources": [
+         "local",
+         "ens"
+        ],
+        "types": [
+         "eoa",
+         "contract"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "key": "cancel(uint256 id)",
+     "intent": "Cancel an auction",
+     "fields": [
+      {
+       "path": "id",
+       "label": "Lot",
+       "format": "raw",
+       "visible": "always"
+      }
+     ]
+    },
+    {
+     "key": "cancelUnwrap(uint256 id)",
+     "intent": "Cancel an auction",
+     "fields": [
+      {
+       "path": "id",
+       "label": "Lot",
+       "format": "raw",
+       "visible": "always"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "owner": "Casberi",
+   "name": "Floorboard (zFi)",
+   "source": "github.com/z-fi/zFi src/Floorboard.sol",
+   "deployments": {
+    "1": [
+     "0x00000080198137f790da4c52bb902cf87c276748"
+    ]
+   },
+   "formats": [
+    {
+     "key": "bid((address token, address quote, uint128 want, uint256 startPrice, uint256 endPrice, uint40 startTime, uint40 duration, bool isNFT, uint256[] ids) terms)",
+     "intent": "Place a bid",
+     "interpolatedIntent": "Bid for {terms.want}, from {terms.startPrice} up to {terms.endPrice}",
+     "fields": [
+      {
+       "path": "terms.isNFT",
+       "label": "NFT",
+       "format": "raw",
+       "visible": {
+        "mustMatch": [
+         "false"
+        ]
+       }
+      },
+      {
+       "path": "terms.want",
+       "label": "Buy",
+       "format": "tokenAmount",
+       "visible": "always",
+       "params": {
+        "tokenPath": "terms.token",
+        "nativeCurrencyAddress": [
+         "0x0000000000000000000000000000000000000000"
+        ]
+       }
+      },
+      {
+       "path": "terms.startPrice",
+       "label": "Opening bid",
+       "format": "tokenAmount",
+       "visible": "always",
+       "params": {
+        "tokenPath": "terms.quote",
+        "nativeCurrencyAddress": [
+         "0x0000000000000000000000000000000000000000"
+        ]
+       }
+      },
+      {
+       "path": "terms.endPrice",
+       "label": "Up to",
+       "format": "tokenAmount",
+       "visible": "always",
+       "params": {
+        "tokenPath": "terms.quote",
+        "nativeCurrencyAddress": [
+         "0x0000000000000000000000000000000000000000"
+        ]
+       }
+      },
+      {
+       "path": "terms.startTime",
+       "label": "Starts",
+       "format": "date",
+       "visible": {
+        "ifNotIn": [
+         "0"
+        ]
+       }
+      },
+      {
+       "path": "terms.duration",
+       "label": "Rises over",
+       "format": "duration",
+       "visible": "always"
+      }
+     ]
+    },
+    {
+     "key": "hit(uint256 id, uint128 give, uint256 minProceeds, bool unwrap)",
+     "intent": "Sell into a bid",
+     "fields": [
+      {
+       "path": "id",
+       "label": "Bid",
+       "format": "raw",
+       "visible": "always"
+      }
+     ]
+    },
+    {
+     "key": "cancel(uint256 id)",
+     "intent": "Cancel a bid",
+     "fields": [
+      {
+       "path": "id",
+       "label": "Bid",
+       "format": "raw",
+       "visible": "always"
+      }
+     ]
+    },
+    {
+     "key": "cancelUnwrap(uint256 id)",
+     "intent": "Cancel a bid",
+     "fields": [
+      {
+       "path": "id",
+       "label": "Bid",
+       "format": "raw",
+       "visible": "always"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "owner": "Casberi",
+   "name": "TacitEvmPool (Tacit)",
+   "source": "github.com/z0r0z/tacit contracts/src/TacitEvmPool.sol",
+   "deployments": {
+    "1": [
+     "0x000000c2a20657ce25f2ba99737933d031afbee9"
+    ],
+    "8453": [
+     "0x000000c2a20657ce25f2ba99737933d031afbee9"
+    ]
+   },
+   "formats": [
+    {
+     "key": "transact(uint256[2] pA, uint256[2][2] pB, uint256[2] pC, uint256[11] publicInputs, address recipient, int256 extAmount, address relayer, uint256 fee, bytes memo0, bytes memo1)",
+     "intent": "Move ETH through Tacit's private pool",
+     "fields": [
+      {
+       "path": "@.value",
+       "label": "Deposit",
+       "format": "amount",
+       "visible": {
+        "ifNotIn": [
+         "0"
+        ]
+       }
+      },
+      {
+       "path": "recipient",
+       "label": "Withdraws to",
+       "format": "addressName",
+       "visible": {
+        "ifNotIn": [
+         "0x0000000000000000000000000000000000000000"
+        ]
+       },
+       "params": {
+        "sources": [
+         "local",
+         "ens"
+        ],
+        "types": [
+         "eoa",
+         "contract"
+        ]
+       }
+      },
+      {
+       "path": "relayer",
+       "label": "Relayer",
+       "format": "addressName",
+       "visible": {
+        "ifNotIn": [
+         "0x0000000000000000000000000000000000000000"
+        ]
+       },
+       "params": {
+        "sources": [
+         "local",
+         "ens"
+        ],
+        "types": [
+         "eoa",
+         "contract"
+        ]
+       }
+      },
+      {
+       "path": "fee",
+       "label": "Relayer fee",
+       "format": "amount",
+       "visible": {
+        "ifNotIn": [
+         "0"
+        ]
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "owner": "Casberi",
+   "name": "TacitEvmPoolRouter (Tacit)",
+   "source": "github.com/z0r0z/tacit contracts/src/TacitEvmPoolRouter.sol",
+   "deployments": {
+    "1": [
+     "0x0000006c96afa6f1cd4df8fe19bc0d8b6a6cd7b5"
+    ],
+    "8453": [
+     "0x0000006c96afa6f1cd4df8fe19bc0d8b6a6cd7b5"
+    ]
+   },
+   "formats": [
+    {
+     "key": "zapETHToDeposit((uint256[2] pA, uint256[2][2] pB, uint256[2] pC, uint256[11] publicInputs, address recipient, int256 extAmount, address relayer, uint256 fee, bytes memo0, bytes memo1) t, bytes zrSwapData)",
+     "intent": "Deposit into Tacit's private pool",
+     "fields": [
+      {
+       "path": "@.value",
+       "label": "Deposit",
+       "format": "amount",
+       "visible": "always"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "owner": "Casberi",
+   "name": "TacitEvmPoolZap (Tacit)",
+   "source": "github.com/z0r0z/tacit contracts/src/TacitEvmPoolZap.sol",
+   "deployments": {
+    "1": [
+     "0x0000008ebbf2323f95c4fbc18254f3d65c53998c"
+    ],
+    "8453": [
+     "0x0000008ebbf2323f95c4fbc18254f3d65c53998c"
+    ]
+   },
+   "formats": [
+    {
+     "key": "zapToken((uint256[2] pA, uint256[2][2] pB, uint256[2] pC, uint256[11] publicInputs, address recipient, int256 extAmount, address relayer, uint256 fee, bytes memo0, bytes memo1) t, address tokenIn, uint256 amountIn, bytes swap)",
+     "intent": "Deposit into Tacit's private pool",
+     "interpolatedIntent": "Deposit {amountIn} into Tacit",
+     "fields": [
+      {
+       "path": "amountIn",
+       "label": "Deposit",
+       "format": "tokenAmount",
+       "visible": "always",
+       "params": {
+        "tokenPath": "tokenIn",
+        "nativeCurrencyAddress": [
+         "0x0000000000000000000000000000000000000000"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "key": "zapTokenWithPermit((uint256[2] pA, uint256[2][2] pB, uint256[2] pC, uint256[11] publicInputs, address recipient, int256 extAmount, address relayer, uint256 fee, bytes memo0, bytes memo1) t, address tokenIn, uint256 amountIn, uint256 deadline, uint8 v, bytes32 r, bytes32 s, bytes swap)",
+     "intent": "Deposit into Tacit's private pool",
+     "interpolatedIntent": "Deposit {amountIn} into Tacit",
+     "fields": [
+      {
+       "path": "amountIn",
+       "label": "Deposit",
+       "format": "tokenAmount",
+       "visible": "always",
+       "params": {
+        "tokenPath": "tokenIn",
+        "nativeCurrencyAddress": [
+         "0x0000000000000000000000000000000000000000"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "key": "zapTokenWithPermit2((uint256[2] pA, uint256[2][2] pB, uint256[2] pC, uint256[11] publicInputs, address recipient, int256 extAmount, address relayer, uint256 fee, bytes memo0, bytes memo1) t, address tokenIn, uint256 amountIn, uint256 nonce, uint256 deadline, bytes signature, bytes swap)",
+     "intent": "Deposit into Tacit's private pool",
+     "interpolatedIntent": "Deposit {amountIn} into Tacit",
+     "fields": [
+      {
+       "path": "amountIn",
+       "label": "Deposit",
+       "format": "tokenAmount",
+       "visible": "always",
+       "params": {
+        "tokenPath": "tokenIn",
+        "nativeCurrencyAddress": [
+         "0x0000000000000000000000000000000000000000"
+        ]
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "owner": "Casberi",
+   "name": "WrapTipForwarder (Tacit)",
+   "source": "github.com/z0r0z/tacit contracts/src/WrapTipForwarder.sol",
+   "deployments": {
+    "1": [
+     "0x000000d218b03db5837943b0b05dea2965ae956e"
+    ]
+   },
+   "formats": [
+    {
+     "key": "wrapWithTip(bytes32 commit, uint256 amount, address tipRecipient)",
+     "intent": "Deposit into Tacit's private pool",
+     "interpolatedIntent": "Deposit {amount} into Tacit",
+     "fields": [
+      {
+       "path": "amount",
+       "label": "Deposit",
+       "format": "amount",
+       "visible": "always"
+      },
+      {
+       "path": "@.value",
+       "label": "Sent in total",
+       "format": "amount",
+       "visible": "always"
+      },
+      {
+       "path": "tipRecipient",
+       "label": "Tip to",
+       "format": "addressName",
+       "visible": "always",
+       "params": {
+        "sources": [
+         "local",
+         "ens"
+        ],
+        "types": [
+         "eoa",
+         "contract"
+        ]
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "owner": "Casberi",
+   "name": "GPv2Settlement (CoW Protocol)",
+   "source": "github.com/cowprotocol/contracts src/contracts/GPv2Settlement.sol, mixins/GPv2Signing.sol",
+   "deployments": {
+    "1": [
+     "0x9008d19f58aabd9ed0d60971565aa8510560ab41"
+    ],
+    "100": [
+     "0x9008d19f58aabd9ed0d60971565aa8510560ab41"
+    ],
+    "137": [
+     "0x9008d19f58aabd9ed0d60971565aa8510560ab41"
+    ],
+    "8453": [
+     "0x9008d19f58aabd9ed0d60971565aa8510560ab41"
+    ],
+    "42161": [
+     "0x9008d19f58aabd9ed0d60971565aa8510560ab41"
+    ]
+   },
+   "formats": [
+    {
+     "key": "setPreSignature(bytes orderUid, bool signed)",
+     "intent": "Sign a CoW Protocol order",
+     "fields": [
+      {
+       "path": "signed",
+       "label": "Approval",
+       "format": "enum",
+       "visible": "always",
+       "params": {
+        "enum": {
+         "true": "Approve the order",
+         "false": "Withdraw approval"
+        }
+       }
+      },
+      {
+       "path": "orderUid.[32:52]",
+       "label": "Order owner",
+       "format": "addressName",
+       "visible": "always",
+       "params": {
+        "sources": [
+         "local",
+         "ens"
+        ],
+        "types": [
+         "eoa",
+         "contract"
+        ]
+       }
+      },
+      {
+       "path": "orderUid.[52:56]",
+       "label": "Valid until",
+       "format": "date",
+       "visible": "always"
+      }
+     ]
+    },
+    {
+     "key": "invalidateOrder(bytes orderUid)",
+     "intent": "Cancel a CoW Protocol order",
+     "fields": [
+      {
+       "path": "orderUid.[32:52]",
+       "label": "Order owner",
+       "format": "addressName",
+       "visible": "always",
+       "params": {
+        "sources": [
+         "local",
+         "ens"
+        ],
+        "types": [
+         "eoa",
+         "contract"
+        ]
+       }
+      },
+      {
+       "path": "orderUid.[52:56]",
+       "label": "Valid until",
+       "format": "date",
+       "visible": "always"
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

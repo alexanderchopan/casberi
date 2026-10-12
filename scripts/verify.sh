@@ -2405,6 +2405,9 @@ harness "Aztec staking self-test" "aztec staking self-test" "scripts/aztec-stake
 # zFi's order boards and Tacit's pools (prd §1281): a stranger's or a closed order drawn
 # as yours, an expired one read as open, a router's leg titled as a pool move.
 harness "zFi + Tacit self-test" "zfi + tacit self-test" "scripts/zfi-selftest.sh" "the zFi + Tacit self-test failed — run scripts/zfi-selftest.sh"
+# Casberi's own clear-signing descriptors (prd §1282): zRouter, zFi's boards, Tacit and CoW
+# read through ClearSign on real mainnet calldata; an exact-out swap or an NFT bid refused.
+harness "Casberi clear-signing descriptors self-test" "casberi clear-signing descriptors self-test" "scripts/clearsign-casberi-selftest.sh" "Casberi's clear-signing descriptors failed — run scripts/clearsign-casberi-selftest.sh"
 # Logos Observer v2 (2026-10-03). Runs the Observer's OWN interoperability vectors (HMAC,
 # SPKI pin, pairing QR) through the client: a wrong byte in any of them answers every
 # request 401 bad_signature, or pairs with nothing, and looks identical from the phone.

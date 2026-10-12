@@ -1109,6 +1109,9 @@ extension FeedScreen {
             // subscription that went up, until the next charge at the new
             // price would land — the decision is keep it or cancel first.
             if thing.source == WiseShape.source { return WiseShape.isStuck(tags: thing.tags) }
+            // A zFi order whose escrow waits on the board (prd §1282), while
+            // the live book still says so.
+            if ref.hasPrefix(ZFiOrders.reclaimPrefix) { return ZFiOrders.stillWaiting(ref: ref, in: walletLive.zfiOrders) }
             if thing.source == AppleWalletBridge.sourceName, thing.tags.contains("Price rise") {
                 return now.timeIntervalSince(thing.capturedAt) < Self.priceRiseWindow
             }

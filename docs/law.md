@@ -232,7 +232,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1424 of 1490 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1425 of 1491 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1658,6 +1658,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1279 — Aztec staking, round two: stakes read where they live, token-sale vaults, rewards, sequencer health, votes (amends §1…
 - §1280 — The face goes to the Feed; the bar is the tray's door (amends §930, §1207 item 4 and §1209a on the phone)
 - §1281 — zFi and Tacit in the Wallet: their moves named, zFi's orders in Positions
+- §1282 — zFi's waiting escrow leads Needs you; the Safe sign block reads zFi, Tacit and CoW (amends §1281, §834)
 
 ## Dead rulings → what replaced them (generated)
 

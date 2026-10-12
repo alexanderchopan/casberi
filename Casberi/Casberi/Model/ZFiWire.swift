@@ -348,6 +348,13 @@ enum ZFiWire {
         }
     }
 
+    /// The Needs you row: "Your 1,000 Z can be taken back from zFi".
+    static func reclaimTitle(_ o: Order, _ tokens: [String: Token]) -> String {
+        let what = o.escrowIsNFT ? "\(symbol(o.escrowToken, tokens)) #\(o.id)"
+            : phrase(o.escrowRaw, o.escrowToken, tokens) ?? symbol(o.escrowToken, tokens)
+        return String(localized: "Your \(what) can be taken back from zFi")
+    }
+
     /// Whether the order has stopped filling with its escrow still on the
     /// board — money waiting for the holder to take it back.
     static func needsYou(_ o: Order, now: Date = .now) -> Bool {

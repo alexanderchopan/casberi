@@ -250,6 +250,9 @@ enum NotifySweep {
         //   vote (`aztec:vote:`) stays a row.
         if ref.hasPrefix("aztec:stake:"), ref.contains(":stopped:") { return .nodeDown }
         if ref.hasPrefix("aztec:exit:") { return .poolCleared }
+        //   A zFi order whose escrow can be taken back (prd §1282): money
+        //   ready for you, act whenever.
+        if ref.hasPrefix("zfi:reclaim:") { return .poolCleared }
 
         // — Wallet: something gained the power to move funds.
         //   `wallet:sol-approval:` is the same grant on Solana (an SPL

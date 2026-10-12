@@ -647,7 +647,11 @@ struct SafeSignBlock: View {
         case .erc20Transfer(let recipient, let amount):
             return String(localized: "Transfers \(amount) base units of \(WalletStore.shortAddress(to)) to \(WalletStore.shortAddress(recipient)).")
         case .erc20Approve(let spender, let amount):
-            return String(localized: "Lets \(WalletStore.shortAddress(spender)) spend up to \(amount) base units of \(WalletStore.shortAddress(to)).")
+            // A canonical spender is named (prd §1282): every CoW swap opens
+            // with an approval to its relayer.
+            let who = WalletIngest.canonicalName(for: spender).map { "\($0) (\(WalletStore.shortAddress(spender)))" }
+                ?? WalletStore.shortAddress(spender)
+            return String(localized: "Lets \(who) spend up to \(amount) base units of \(WalletStore.shortAddress(to)).")
         case .erc20TransferFrom(let from, let recipient, _):
             return String(localized: "Moves tokens from \(WalletStore.shortAddress(from)) to \(WalletStore.shortAddress(recipient)).")
         case .addOwner(let owner, let threshold):

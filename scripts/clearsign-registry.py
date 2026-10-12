@@ -323,6 +323,8 @@ def main():
     with open(VECTORS, "w") as f:
         json.dump({"source": bundle["source"], "vectors": vectors}, f, indent=1, sort_keys=True)
         f.write("\n")
+    # Casberi's own descriptors go after the snapshot (prd §1282), every time.
+    subprocess.run([sys.executable, os.path.join(ROOT, "scripts/clearsign-casberi.py")], check=True)
     print(f"clearsign-registry: {commit[0][:10]} ({commit[1]}) — {len(descriptors)} descriptors, "
           f"{len(contracts)} deployments, {len(tokens)} tokens, {len(vectors)} vectors, "
           f"{os.path.getsize(OUT) // 1024} KB bundled")

@@ -814,6 +814,10 @@ enum WalletIngest {
         let aztecAdded = await AztecStaking.syncEvents(context: context, addresses: evmAddresses,
                                                        existing: existing)
         added += aztecAdded ?? 0
+        // …and zFi orders whose escrow is waiting to be taken back (prd §1282),
+        // off the same five-minute book Positions reads.
+        let zfiAdded = await ZFiOrders.syncEvents(context: context, addresses: evmAddresses, existing: existing)
+        added += zfiAdded ?? 0
         // The seats have all run, so any generic row written earlier THIS pass
         // for a transaction one of them just claimed can now go (prd §271).
         // Must run here, after them: the wallet sweep lands first, so on the
@@ -1133,6 +1137,11 @@ enum WalletIngest {
         "0x000000f2303c64ad38956b38917ade68b7a604fe": "zFi",   // Fwabol (superseded)
         "0x0000003b59007e8aa43b0e508aff8a304438333b": "zFi",   // Cowol
         "0x000000dfb53fa7f1c486470034741d5bcbe14be9": "zFi",   // V4Port
+        // CoW Protocol (prd §1282): the settlement contract, and the relayer
+        // it names as `vaultRelayer()` on Ethereum, Gnosis, Polygon, Base and
+        // Arbitrum (read 2026-10-12). Every CoW swap first approves the relayer.
+        "0x9008d19f58aabd9ed0d60971565aa8510560ab41": "CoW Protocol",
+        "0xc92e8bdf79f0507f65a392b0ab4667716bfe0110": "CoW Protocol",
     ]
 
     /// Is this one of the Safes a World ID grant is paid from (prd §791)? Read
@@ -1157,9 +1166,14 @@ enum WalletIngest {
     /// PERSON named — so it can't be used to ask "is this machinery": naming a
     /// wallet "Mom" would make Mom a contract. The connections card (prd §295)
     /// needs the narrow question.
+    /// A canonical contract's name, and only that — never a name the person
+    /// gave an address, which is theirs to trust, not the sign block's.
+    static func canonicalName(for address: String) -> String? {
+        knownContracts[address.lowercased()] ?? ZkMoney.knownName(for: address) ?? Tacit.knownName(for: address)
+    }
+
     static func isKnownContract(_ address: String) -> Bool {
-        knownContracts[address.lowercased()] != nil || ZkMoney.knownName(for: address) != nil
-            || Tacit.knownName(for: address) != nil
+        canonicalName(for: address) != nil
     }
 
     /// A synchronously-known name for a counterparty address — the person's own

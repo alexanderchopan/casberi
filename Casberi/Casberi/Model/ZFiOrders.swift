@@ -1,4 +1,5 @@
 import Foundation
+import SwiftData
 
 /// The orders a watched wallet holds on zFi's boards (2026-10-12, prd §1281):
 /// the app half of `ZFiWire`. Rides the watched wallets like Aztec's stakes:
@@ -61,6 +62,47 @@ enum ZFiOrders {
         book.tokens = await tokens(wanted)
         if book.tokens.count < wanted.count { book.complete = false }
         return book
+    }
+
+    // MARK: - Needs you (prd §1282)
+
+    /// `zfi:reclaim:<board>:<id>` — an order that stopped filling with its
+    /// escrow still on the board. The row stays as history once taken back;
+    /// Needs you lists it only while the live book still says so.
+    static let reclaimPrefix = "zfi:reclaim:"
+
+    static func reclaimRef(_ o: ZFiWire.Order) -> String { reclaimPrefix + o.key }
+
+    /// Whether the row behind `ref` is still waiting, by the live book. An
+    /// order the book does not list has been taken back or filled — unless
+    /// the book is incomplete, when it may simply not have been read.
+    static func stillWaiting(ref: String, in book: Book) -> Bool {
+        guard ref.hasPrefix(reclaimPrefix) else { return false }
+        let key = String(ref.dropFirst(reclaimPrefix.count))
+        if let order = book.orders.first(where: { $0.key == key }) { return ZFiWire.needsYou(order) }
+        return !book.complete
+    }
+
+    /// Lands one row per order waiting to be taken back; its door is the
+    /// order's receipt on Etherscan.
+    @MainActor
+    static func syncEvents(context: ModelContext, addresses: [String], existing: Set<String>) async -> Int? {
+        guard !addresses.isEmpty else { return 0 }
+        guard let book = await book(addresses: addresses) else { return nil }
+        var added = 0
+        for order in book.orders where ZFiWire.needsYou(order) {
+            let ref = reclaimRef(order)
+            guard !existing.contains(ref) else { continue }
+            let thing = Thing(kind: .link, title: ZFiWire.reclaimTitle(order, book.tokens),
+                              content: "https://etherscan.io/nft/\(order.board)/\(order.id)",
+                              source: "Wallet", capturedAt: .now, sourceRef: ref)
+            thing.walletAddress = order.holder
+            context.insert(thing)
+            SpotlightIndex.index([thing])
+            added += 1
+        }
+        if added > 0 { _ = context.saveHonestly() }
+        return added
     }
 
     private static let tokensKey = "zfi.tokens.v1"
