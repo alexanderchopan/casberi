@@ -220,6 +220,9 @@ KNOWN_PHRASES: tuple[str, ...] = (
 )
 
 KNOWN_PROPER: set[str] = {
+    # Aztec's fee token (prd §1270, §1271): "Fee Juice" is the name Aztec
+    # gives it, as "Optic ID" is Apple's.
+    "Fee", "Juice",
     # Spotify's own names for its library collections (prd §1158): "Liked
     # Songs" and "Your Episodes" are what Spotify calls them, and a row of
     # what you played from them wears the name Spotify gave.
