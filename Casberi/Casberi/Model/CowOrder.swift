@@ -213,6 +213,32 @@ enum CowOrder {
         return out
     }
 
+    /// A Safe queue row's phrase (prd §1285): "“Sell 166 USDT for at least
+    /// 1.004 AAVE”" for a transaction that pre-signs ONE proven order, with
+    /// "and N more actions" when its batch does more than approve tokens for
+    /// it. nil when there is no such order, `order` does not hold it proven,
+    /// or an amount could not be stated.
+    static func queueTitle(to: String, data: String, value: String, operation: Int,
+                           order: ([UInt8]) -> Order?, token: (String) -> ClearSign.Token?) -> String? {
+        let read = SafeCalldata.read(data: data, to: to, value: value, safe: "", operation: operation)
+        let calls = preSignatures(to: to, data: data, reading: read)
+        guard calls.count == 1, calls[0].signed, let o = order(calls[0].uid),
+              let sentence = reading(o, uid: calls[0].uid, signed: true, safe: "", token: token,
+                                     address: { $0 }, date: { _ in "" })?.sentence else { return nil }
+        var others = 0
+        if case .batch(let batch) = read {
+            others = batch.filter { call in
+                if case .erc20Approve = call.reading { return false }
+                return preSignature(SafeABI.hexBytes(call.data) ?? []) == nil
+            }.count
+        }
+        switch others {
+        case 0: return "“\(sentence)”"
+        case 1: return String(localized: "“\(sentence)” and 1 more action")
+        default: return String(localized: "“\(sentence)” and \(others) more actions")
+        }
+    }
+
     /// The reading with each verified pre-signature stated in full. A call
     /// whose order did not verify keeps the reading it had.
     static func enrich(_ reading: SafeCalldata, to: String, data: String, safe: String,

@@ -712,6 +712,9 @@ enum SafeBridge {
             contracts.formUnion(neededContracts(tx))
             contracts.formUnion(clearSignTokens(tx, chain: chain))
         }
+        // A CoW order a transaction pre-signs (prd §1285), proven against its
+        // id before its tokens join the read.
+        contracts.formUnion(await CowOrders.prefetch(txs, chainId: chain.chainId))
         guard !contracts.isEmpty else { return [:] }
         var out: TokenFacts = [:]
         for contract in contracts.prefix(12) {
@@ -779,6 +782,15 @@ enum SafeBridge {
         if SafeGatewayShape.int(tx["operation"]) == 1, let to = tx["to"] as? String,
            !SafeCalldata.isKnownMultiSend(to) {
             return String(localized: "a call that runs another contract's code as the Safe")
+        }
+        // A CoW order proven against the id it pre-signs (prd §1285) names
+        // the row by what it trades, as the sign block will.
+        if let cow = CowOrders.title(tx, chainId: chain.chainId, token: { address in
+            if address == CowOrders.native { return ClearSign.Token(ticker: nativeSymbol(chain), decimals: 18) }
+            guard let fact = facts[address.lowercased()], let s = fact.symbol, let d = fact.decimals else { return nil }
+            return ClearSign.Token(ticker: s, decimals: d)
+        }) {
+            return cow
         }
         // An executed batch read off the history LIST (prd §1249), which
         // carries the gateway's own count and no decoded calls.

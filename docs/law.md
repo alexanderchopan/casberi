@@ -232,7 +232,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1428 of 1494 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1429 of 1495 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1662,6 +1662,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1283 — The sign block reads exact-output swaps and NFT bids: Casberi's one ERC-7730 extension, `when` (amends §1282, §834)
 - §1284 — An open order's escrow stays out of the Wallet's total
 - §1285 — The Safe sign block states a CoW order in full, only when it hashes to the id being signed (amends §1282, §1283, §913)
+- §1286 — The Safe queue names a CoW swap by what it trades (amends §1285 item 5)
 
 ## Dead rulings → what replaced them (generated)
 

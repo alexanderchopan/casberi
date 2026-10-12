@@ -8,11 +8,74 @@ import Foundation
 /// expiry), never a guess.
 enum CowOrders {
     /// The native-coin placeholder CoW uses for a buy token paid out in ETH.
-    private static let native = "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+    static let native = "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
 
     /// At most this many orders are fetched for one transaction; a batch
     /// pre-signing more keeps §1282's reading for the rest.
     private static let maxOrders = 4
+
+    // MARK: - Verified orders, kept for the session
+
+    /// Orders already proven against their ids, by id. An order's terms never
+    /// change once signed, so a verified one is kept for the session and the
+    /// queue's titles and the sign block share one fetch. Read from the
+    /// sweep and the signer, so it sits behind a lock; nothing is persisted.
+    private static let lock = NSLock()
+    nonisolated(unsafe) private static var proven: [String: (chainId: Int, order: CowOrder.Order)] = [:]
+
+    static func cached(_ uid: [UInt8], chainId: Int) -> CowOrder.Order? {
+        lock.lock(); defer { lock.unlock() }
+        guard let hit = proven[SafeABI.hex(uid)], hit.chainId == chainId else { return nil }
+        return hit.order
+    }
+
+    /// The order behind `uid`, proven, fetching it once if it is not kept.
+    static func verified(_ uid: [UInt8], chainId: Int) async -> CowOrder.Order? {
+        if let hit = cached(uid, chainId: chainId) { return hit }
+        guard let url = CowOrder.url(chainId: chainId, uid: uid),
+              let json = await IngestSupport.getJSON(url, service: "Wallet DeFi & Safe") as? [String: Any],
+              let order = CowOrder.verify(json: json, uid: uid, chainId: chainId)
+        else { return nil }
+        lock.lock(); proven[SafeABI.hex(uid)] = (chainId, order); lock.unlock()
+        return order
+    }
+
+    /// The pre-signatures in a transaction as Safe's gateway lists it.
+    static func preSignatures(in tx: [String: Any]) -> [(uid: [UInt8], signed: Bool)] {
+        guard let to = tx["to"] as? String, let data = tx["data"] as? String, data.count > 10 else { return [] }
+        let reading = SafeCalldata.read(data: data, to: to, value: (tx["value"] as? String) ?? "0", safe: "",
+                                        operation: SafeGatewayShape.int(tx["operation"]) ?? 0)
+        return CowOrder.preSignatures(to: to, data: data, reading: reading)
+    }
+
+    /// For the queue's sweep (prd §1285): proves the orders a pass's
+    /// transactions pre-sign, at most `maxOrders` new fetches a pass, and
+    /// returns their tokens so the pass reads their decimals with the rest.
+    static func prefetch(_ txs: [[String: Any]], chainId: Int) async -> Set<String> {
+        var tokens = Set<String>()
+        var fetched = 0
+        for call in txs.flatMap(preSignatures(in:)) {
+            if cached(call.uid, chainId: chainId) == nil {
+                guard fetched < maxOrders else { continue }
+                fetched += 1
+            }
+            if let order = await verified(call.uid, chainId: chainId) {
+                tokens.formUnion([order.sellToken, order.buyToken].filter { $0 != native })
+            }
+        }
+        return tokens
+    }
+
+    /// A queue row's phrase for a transaction that pre-signs one proven
+    /// order (`CowOrder.queueTitle`), or nil.
+    static func title(_ tx: [String: Any], chainId: Int, token: (String) -> ClearSign.Token?) -> String? {
+        guard let to = tx["to"] as? String, let data = tx["data"] as? String else { return nil }
+        return CowOrder.queueTitle(to: to, data: data, value: (tx["value"] as? String) ?? "0",
+                                   operation: SafeGatewayShape.int(tx["operation"]) ?? 0,
+                                   order: { cached($0, chainId: chainId) }, token: token)
+    }
+
+    // MARK: - The sign block
 
     static func enrich(_ reading: SafeCalldata, to: String, data: String, safe: String,
                        chainId: Int, network: String?, nativeSymbol: String) async -> SafeCalldata {
@@ -20,10 +83,7 @@ enum CowOrders {
         guard !calls.isEmpty else { return reading }
         var verified: [String: CowOrder.Order] = [:]
         for call in calls.prefix(maxOrders) {
-            guard let url = CowOrder.url(chainId: chainId, uid: call.uid),
-                  let json = await IngestSupport.getJSON(url, service: "Wallet DeFi & Safe") as? [String: Any],
-                  let order = CowOrder.verify(json: json, uid: call.uid, chainId: chainId)
-            else { continue }
+            guard let order = await self.verified(call.uid, chainId: chainId) else { continue }
             verified[SafeABI.hex(call.uid)] = order
         }
         guard !verified.isEmpty else { return reading }

@@ -28,7 +28,9 @@ done
 grep -q '"api.cow.fi"' Casberi/Casberi/Model/NetworkReach.swift || { echo "✗ api.cow.fi is not declared in NetworkReach"; exit 1; }
 grep -q 'let reading = await CowOrders.enrich(read, to: tx.to, data: tx.data, safe: safeAddress,' Casberi/Casberi/Model/SafeSigner.swift \
   || { echo "✗ the signer no longer states a verified CoW order"; exit 1; }
-grep -q 'let order = CowOrder.verify(json: json, uid: call.uid, chainId: chainId)' Casberi/Casberi/Model/CowOrders.swift \
+grep -q 'contracts.formUnion(await CowOrders.prefetch(txs, chainId: chain.chainId))' Casberi/Casberi/Model/SafeBridge.swift \
+  || { echo "✗ the Safe queue no longer proves CoW orders before titling them"; exit 1; }
+grep -q 'let order = CowOrder.verify(json: json, uid: uid, chainId: chainId)' Casberi/Casberi/Model/CowOrders.swift \
   || { echo "✗ CowOrders draws an API answer it did not verify"; exit 1; }
 
 TMP="$(mktemp -d)"
@@ -111,6 +113,35 @@ if case .batch(let calls) = out {
     else { check(false, "the unverified one keeps its reading") }
 } else { check(false, "the batch stays a batch") }
 
+print("the queue's title")
+func multiSend(_ calls: [(to: String, data: [UInt8])]) -> String {
+    var packed: [UInt8] = []
+    for c in calls {
+        packed += [0] + SafeABI.hexBytes(c.to)! + Array(repeating: 0, count: 32)
+        packed += Array(repeating: 0, count: 24) + withUnsafeBytes(of: UInt64(c.data.count).bigEndian, Array.init) + c.data
+    }
+    func w(_ n: Int) -> [UInt8] { Array(repeating: 0, count: 24) + withUnsafeBytes(of: UInt64(n).bigEndian, Array.init) }
+    let sel = Array(Keccak256.hash(Array("multiSend(bytes)".utf8)).prefix(4))
+    return SafeABI.hex(sel + w(32) + w(packed.count) + packed + Array(repeating: 0, count: (32 - packed.count % 32) % 32))
+}
+let usdt = "0xdac17f958d2ee523a2206206994597c13d831ec7"
+let approve = Array(Keccak256.hash(Array("approve(address,uint256)".utf8)).prefix(4))
+    + SafeABI.word(address: "0xc92e8bdf79f0507f65a392b0ab4667716bfe0110")! + SafeABI.word(uint256: "166000000")!
+let transfer = Array(Keccak256.hash(Array("transfer(address,uint256)".utf8)).prefix(4))
+    + SafeABI.word(address: owner)! + SafeABI.word(uint256: "1")!
+let multi = "0x38869bf66a61cf6bdb996a6ae40d5853fd43b526"
+let proven: ([UInt8]) -> CowOrder.Order? = { $0 == uid(o0) ? signed : nil }
+check(CowOrder.queueTitle(to: multi, data: multiSend([(usdt, approve), (settlement, preSign(uid(o0), true))]), value: "0",
+                          operation: 1, order: proven, token: { tokens[$0] })
+      == "“Sell 166 USDT for at least 1.004078716069741972 AAVE”", "approve + pre-sign: the order is the row")
+check(CowOrder.queueTitle(to: multi, data: multiSend([(usdt, approve), (settlement, preSign(uid(o0), true)), (usdt, transfer)]),
+                          value: "0", operation: 1, order: proven, token: { tokens[$0] })?.hasSuffix("and 1 more action") == true,
+      "…and a transfer besides: one more action, said")
+check(CowOrder.queueTitle(to: multi, data: multiSend([(settlement, preSign(uid(o0), true))]), value: "0",
+                          operation: 1, order: { _ in nil }, token: { tokens[$0] }) == nil, "an order not proven: no title")
+check(CowOrder.queueTitle(to: settlement, data: SafeABI.hex(preSign(uid(o0), false)), value: "0",
+                          operation: 0, order: proven, token: { tokens[$0] }) == nil, "a withdrawal keeps the old wording")
+
 if failures > 0 { print("✗ \(failures) failed"); exit(1) }
 SWIFT
 
@@ -148,4 +179,6 @@ mutate "an unverified call given a verified reading" \
   'let p = preSignature(bytes), let order = verified[SafeABI.hex(p.uid)],' 'let p = preSignature(bytes), let order = verified.values.first,'
 mutate "sell and buy swapped in the sentence" \
   '? (isSell ? "Sell \(sell.text) for at least \(buy.text)"' '? (isSell ? "Sell \(buy.text) for at least \(sell.text)"'
+mutate "the approval counted as another action" \
+  'if case .erc20Approve = call.reading { return false }' 'if case .erc20Approve = call.reading { return true }'
 echo "✓ CoW order self-test passed"
