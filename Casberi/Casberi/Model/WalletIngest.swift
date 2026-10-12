@@ -1110,6 +1110,29 @@ enum WalletIngest {
         "0xa92ecfd0e70c9cd5e5cd76c50af0f7da93567a4f": "Aztec staking",
         "0x1102471eb3378fee427121c9efcea452e4b6b75e": "Aztec governance",
         "0xaf73dd51d1eb8a079bb097f39c832cdd00ac691c": "Aztec bridge",
+        // zFi (prd §1281), every address from zFi's own README with its code
+        // read on 2026-10-12. zRouter sits at one address on Ethereum, Base
+        // and Robinhood Chain (a lighter build on each L2), so a swap through
+        // it reads "on zFi" on all three. The order boards hold escrow (their
+        // orders are drawn in Positions, `ZFiOrders`); the forwarders route
+        // zRouter's fills into them, CoW Protocol and V4 pools. Superseded
+        // forwarders keep their name: a past row met them.
+        "0x000000000000fb114709235f1ccbffb925f600e4": "zFi",   // zRouter
+        "0x000000da7bb4b2a9e3e80e9a4d4157e26ca6189b": "zFi",   // Swapboard
+        "0x000000ff3d7a2d373615141d7489ca66683dbecf": "zFi",   // Swapboard v1
+        "0x000000a213b430d14bae6062c176289b05e04489": "zFi",   // Dutchboard
+        "0x00000080198137f790da4c52bb902cf87c276748": "zFi",   // Floorboard
+        "0x000000e6c7a12c80525ee74e7434aab919447d95": "zFi",   // Orderbol
+        "0x000000c1051acd54a03e967b647112fde17f518c": "zFi",   // Orderbol (superseded)
+        "0x000000fada565c5608570a4f66fb5e0bd08ef91b": "zFi",   // Orderbol (superseded)
+        "0x00000087a6dc5071779ed1f8274a39230768b976": "zFi",   // Swapbol
+        "0x0000003069053df109f47acac630e03c77804ad8": "zFi",   // Swapbol (superseded)
+        "0x000000fbde0567d1966fca91ef2a1ddccd1fedbd": "zFi",   // Swapbatch
+        "0x0000005471eef58dd16aeccda21c37758e36a0b6": "zFi",   // Swapbatch (superseded)
+        "0x000000798397834de6a60d9ccbfde0536a2699d9": "zFi",   // Fwabol
+        "0x000000f2303c64ad38956b38917ade68b7a604fe": "zFi",   // Fwabol (superseded)
+        "0x0000003b59007e8aa43b0e508aff8a304438333b": "zFi",   // Cowol
+        "0x000000dfb53fa7f1c486470034741d5bcbe14be9": "zFi",   // V4Port
     ]
 
     /// Is this one of the Safes a World ID grant is paid from (prd §791)? Read
@@ -1136,6 +1159,7 @@ enum WalletIngest {
     /// needs the narrow question.
     static func isKnownContract(_ address: String) -> Bool {
         knownContracts[address.lowercased()] != nil || ZkMoney.knownName(for: address) != nil
+            || Tacit.knownName(for: address) != nil
     }
 
     /// A synchronously-known name for a counterparty address — the person's own
@@ -1147,6 +1171,7 @@ enum WalletIngest {
             ?? ContactIndexSources.contact(forKey: Identity.key(.wallet, a)).flatMap { $0.isUnnamed ? nil : $0.name }
             ?? knownContracts[a]
             ?? ZkMoney.knownName(for: a)
+            ?? Tacit.knownName(for: a)
     }
 
     /// The other side of a transfer, lowercased hex — who it came from when
@@ -1193,6 +1218,8 @@ enum WalletIngest {
             } else if let zk = ZkMoney.knownName(for: a) {
                 // A zk.money portal, or a deposit address already recognised.
                 names[a] = zk
+            } else if let tacit = Tacit.knownName(for: a) {
+                names[a] = tacit
             } else {
                 unknown.append(a)
             }
@@ -1704,6 +1731,16 @@ enum WalletIngest {
             counterpartyName = ZkMoney.name
             direction = received ? "received" : "sent"
             amountText = "\(amount) \(asset)"
+        } else if let cp, names[cp] == Tacit.name, !amount.isEmpty,
+                  let verb = Tacit.verb(counterparty: cp, received: received) {
+            // Tacit (prd §1281): into or out of a shielded pool, in the same
+            // venue grammar. Keyed on the ADDRESS as well as the name, so a
+            // router's leg stays "Sent … to Tacit" and a name the person gave
+            // the address wins.
+            title = Tacit.title(verb, amount: amount, asset: asset)
+            counterpartyName = Tacit.name
+            direction = received ? "received" : "sent"
+            amountText = "\(amount) \(asset)"
         } else {
             let verb = received ? "Received" : "Sent"
             var t2 = amount.isEmpty ? "\(verb) \(asset)" : "\(verb) \(amount) \(asset)"
@@ -1736,6 +1773,8 @@ enum WalletIngest {
         thing.counterpartyAddress = WalletVerbs.isVoid(cp) ? nil : cp
         // zk.money's dated note: what is public about the move, and the pool.
         if counterpartyName == ZkMoney.name { thing.enrichedText = ZkMoney.note(portal: ZkMoney.lastPortalTotal) }
+        // Tacit's: what is public about the move (prd §1281).
+        if counterpartyName == Tacit.name { thing.enrichedText = Tacit.note }
         thing.transferDirection = direction
         thing.transferAmount = amountText
         thing.transferCounterparty = counterpartyName

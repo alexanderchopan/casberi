@@ -3566,6 +3566,13 @@ enum ProbeHooks {
         // `-aztecStakeProbe <0x wallet>` NSLogs one wallet's AZTEC stakes on
         // Aztec mainnet (prd §1277), read without watching it: attester,
         // status, amount and the row's state, then how far the walk went.
+        // `-zfiOrdersProbe <0x wallet>` NSLogs one wallet's orders on zFi's
+        // boards (prd §1281), read without watching it.
+        Hook(key: "zfiOrdersProbe") { value, _ in
+            Task {
+                for line in await ZFiOrders.probe(address: value) { NSLog("zfiOrders| %@", line) }
+            }
+        },
         Hook(key: "aztecStakeProbe") { value, _ in
             Task {
                 for line in await AztecStaking.probe(address: value) { NSLog("aztecStake| %@", line) }

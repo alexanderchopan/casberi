@@ -2402,6 +2402,9 @@ harness "zk.money pure-logic self-test" "zkmoney self-test" "scripts/zkmoney-sel
 # reaches Face ID.
 harness "Aztec signing self-test" "aztec signing self-test" "scripts/aztec-sign-selftest.sh" "the Aztec signing self-test failed — run scripts/aztec-sign-selftest.sh"
 harness "Aztec staking self-test" "aztec staking self-test" "scripts/aztec-stake-selftest.sh" "the Aztec staking self-test failed — run scripts/aztec-stake-selftest.sh"
+# zFi's order boards and Tacit's pools (prd §1281): a stranger's or a closed order drawn
+# as yours, an expired one read as open, a router's leg titled as a pool move.
+harness "zFi + Tacit self-test" "zfi + tacit self-test" "scripts/zfi-selftest.sh" "the zFi + Tacit self-test failed — run scripts/zfi-selftest.sh"
 # Logos Observer v2 (2026-10-03). Runs the Observer's OWN interoperability vectors (HMAC,
 # SPKI pin, pairing QR) through the client: a wrong byte in any of them answers every
 # request 401 bad_signature, or pairs with nothing, and looks identical from the phone.
