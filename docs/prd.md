@@ -66027,3 +66027,10 @@ User, of the screens still in the old style: "ok do 1 and 2 first"; mocked, "yes
 - **Every find/add tray** (Track a subscription, Track a mailing list, Follow a site, Follow a person, Follow a company) draws each group as `DSTrayGroup`: the panel's fill, a pink glyph and the group's name in the head ink at `heading20`, an optional control trailing (Tokens' chain filter), the rows inside. `DSTrayHead` (a grey `label12` over loose rows) is deleted. The rows and their blue + stay; the + is the act.
 - **Recent** rows in the trays wear the clock in pink.
 - **Glyphs are pink wherever a control wears one** (§1252): `DSDoorRow`'s glyph (Sources' back row in Settings, the pivot doors, Read on …) and `DSCountTile`'s (Settings' box, Markets' categories, Sources' counts with a glyph). Settings' box needs nothing else: it is already a box.
+
+## §1267 — No tile has a backing; Notes' folders are a Feed card (2026-10-11)
+
+User, of keeping a backing on the rows that switch in place: "no backing".
+
+- **`DSScopeTiles` draws no fill at all**, picked or not, in every room. A row of doors (`bare`, §1252) draws every word white; a row that switches in place says its pick in the word — the pick white, the rest grey — and a verb's word stays white. Glyphs stay pink; an inert tile dims glyph and word and is disabled (the §83 answer without a plate).
+- **Notes' Folders is the Feed's card**: "Folders" with its pink glyph, each folder a row with its mark bare and pink in the 46pt column (the black circles are gone), Obsidian's vault folders under their app's mark, Recently deleted, then New folder in pink; counts trail, no chevrons.

@@ -284,22 +284,21 @@ struct DSScopeTiles<Scope: DSTileScope>: View {
                     .dsText(.dockCaption10)
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
-                    .foregroundStyle(isOn ? Self.pickInk : isInert ? DS.textTertiary : wants ? DS.attentionInk : DS.textPrimary)
+                    // NO TILE HAS A BACKING (prd §1267, user: "no backing"): a
+                    // row of doors draws every word white; a row that switches
+                    // in place says its pick in the word — white, the rest
+                    // grey — and a verb's word stays white.
+                    .foregroundStyle(isOn ? Self.pickInk
+                                     : isInert ? DS.textTertiary.opacity(0.6)
+                                     : wants ? DS.attentionInk
+                                     : (bare || isVerb) ? DS.textPrimary : DS.textTertiary)
             }
-            .foregroundStyle(isInert ? DS.textTertiary : Self.glyphInk)
+            .foregroundStyle(isInert ? DS.textTertiary.opacity(0.6) : Self.glyphInk)
             .frame(maxWidth: .infinity, minHeight: Self.tileHeight)
             // A disabled tile swaps its fill (§83), never only its ink.
-            .background {
-                if bare {
-                    Color.clear
-                } else if isOn {
-                    // One grey brighter than an unpicked tile: the raised
-                    // fill under the strong wash, tokens only.
-                    shape.fill(DS.surfaceRaised).overlay(shape.fill(DS.fillStrong))
-                } else {
-                    shape.fill(strip ? Color.clear : DS.surfaceRaised.opacity(isInert ? 0.45 : 1))
-                }
-            }
+            // No fill, picked or not (prd §1267): an inert tile is dimmed
+            // glyph and word and disabled, which is the §83 answer without
+            // a plate.
             // **BECOMING THE PICK IS A CROSSFADE (prd §966).** The fill and the
             // ink ride the template's own clock, so a room whose pick handler
             // forgets `withAnimation` still slides the tint in under the

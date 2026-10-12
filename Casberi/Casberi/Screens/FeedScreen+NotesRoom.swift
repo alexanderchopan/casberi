@@ -161,18 +161,21 @@ extension FeedScreen {
     private func noteFolderRows(_ filed: [Thing]) -> some View {
         let names = NoteFolderStore.shared.list(with: filed)
         let counts = NoteFolderName.counts(filed: filed.map { $0.isLive ? $0.folder : nil })
-        Section {
+        // THE FOLDERS ARE THE FEED'S CARD (prd §1267): its name and pink
+        // glyph on top, each folder a Feed row — the mark bare in the 46pt
+        // column, its count trailing, no chevron.
+        SectionPanelGroup {
+            SectionPanelName(name: String(localized: "Folders"), glyph: ScopeTileGlyph.folders)
+        } rows: {
             ForEach(names, id: \.self) { name in
                 DSPushRow(title: Text(verbatim: name),
                           fact: Text(verbatim: "\(counts[NoteFolderName.key(name)] ?? 0)"),
+                          opens: false,
                           action: { openFolder(name) }) {
-                    // The note's own mark (prd §983, §976a): a black
-                    // circle, the glyph in the brand pink.
                     Image(systemName: ScopeTileGlyph.folders)
-                        .font(.system(size: DS.Mark.row * 0.54, weight: .semibold))
-                        .foregroundStyle(DS.brand)
-                        .frame(width: DS.Mark.row, height: DS.Mark.row)
-                        .background(Color.black, in: Circle())
+                        .dsGlyph(.body, weight: .medium)
+                        .foregroundStyle(DS.brandInk)
+                        .frame(width: DS.Face.seat, height: DS.Face.seat)
                         .accessibilityHidden(true)
                 }
                 .frame(minHeight: DS.Hit.min)
@@ -206,9 +209,10 @@ extension FeedScreen {
                     id: \.self) { name in
                 DSPushRow(title: Text(verbatim: name),
                           fact: Text(verbatim: "\(vaults[name] ?? 0)"),
+                          opens: false,
                           action: { openFolder(Pinboard.vaultPrefix + name) }) {
-                    BridgeIcon(name: "Obsidian", size: DS.Mark.row)
-                        .frame(width: DS.Mark.row, height: DS.Mark.row)
+                    BridgeIcon(name: "Obsidian", size: DS.Face.seat)
+                        .frame(width: DS.Face.seat, height: DS.Face.seat)
                         .accessibilityHidden(true)
                 }
                 .frame(minHeight: DS.Hit.min)
@@ -221,12 +225,12 @@ extension FeedScreen {
             if trashed > 0 {
                 DSPushRow(title: Text("Recently deleted"),
                           fact: Text(verbatim: "\(trashed)"),
+                          opens: false,
                           action: { trashOpen = true }) {
                     Image(systemName: "trash")
-                        .font(.system(size: DS.Mark.row * 0.54, weight: .semibold))
-                        .foregroundStyle(DS.brand)
-                        .frame(width: DS.Mark.row, height: DS.Mark.row)
-                        .background(Color.black, in: Circle())
+                        .dsGlyph(.body, weight: .medium)
+                        .foregroundStyle(DS.brandInk)
+                        .frame(width: DS.Face.seat, height: DS.Face.seat)
                         .accessibilityHidden(true)
                 }
                 .frame(minHeight: DS.Hit.min)
@@ -241,9 +245,9 @@ extension FeedScreen {
             DSPushRow(title: Text("New folder"), opens: false,
                       action: { folderPrompt = .make(filing: nil) }) {
                 Image(systemName: "folder.badge.plus")
-                    .font(.system(size: DS.Mark.row * 0.54, weight: .regular))
-                    .foregroundStyle(DS.textSecondary)
-                    .frame(width: DS.Mark.row, height: DS.Mark.row)
+                    .dsGlyph(.body, weight: .medium)
+                    .foregroundStyle(DS.brandInk)
+                    .frame(width: DS.Face.seat, height: DS.Face.seat)
                     .accessibilityHidden(true)
             }
             .frame(minHeight: DS.Hit.min)
@@ -364,10 +368,21 @@ extension FeedScreen {
 extension View {
     /// A folder row in the Notes room's list: in the rows' column, on
     /// nothing, like every row (prd §749).
+    /// In the Folders card (prd §1267) a row stands on the card's middle,
+    /// in the Feed's row column.
     func noteFolderRowChrome() -> some View {
-        listRowBackground(Color.clear)
+        modifier(NoteFolderRowChrome())
+    }
+}
+
+private struct NoteFolderRowChrome: ViewModifier {
+    @Environment(\.feedSectionPanel) private var panel
+
+    func body(content: Content) -> some View {
+        let inset = panel ? DSRoomChassis.rowInset : DSRoomChassis.inset
+        return content
+            .listRowBackground(panel ? AnyView(SectionPanel(part: .middle)) : AnyView(Color.clear))
             .listRowSeparator(.hidden)
-            .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
-                                      bottom: 0, trailing: DSRoomChassis.inset))
+            .listRowInsets(EdgeInsets(top: 0, leading: inset, bottom: 0, trailing: inset))
     }
 }
