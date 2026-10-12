@@ -66,7 +66,7 @@ enum HoldingMoves {
 
     /// The demo reaches nothing (§483): its four holdings move by fixed,
     /// plausible amounts, so the box draws as the real one does.
-    static let demo: [String: Double] = ["ETH": 0.021, "USDC": 0.0, "DEGEN": -0.064, "SOL": 0.038]
+    static let demo: [String: Double] = ["ETH": 0.021, "USDC": 0.0, "LINK": -0.064, "SOL": 0.038]
 
     /// The moves to draw: every wallet's FRESH note merged, so a read of one
     /// wallet (an approvals pass, a single-wallet refresh) never wipes what

@@ -59,7 +59,7 @@ enum DemoSeedAll {
     /// double-seeds a dev install rather than failing loudly. The honest
     /// version of "make it mechanical" here is a check that the stamp moved
     /// when the table did, not a stamp that moves itself.
-    static let version = 14
+    static let version = 15
     private static let versionKey = "demo.fullSeed.version"
 
     /// The three demo-watched tokens — (symbol, name, price, ref index),
@@ -74,7 +74,9 @@ enum DemoSeedAll {
                              marketCap: Double, dayOffset: Double)] = [
         ("ETH", "Ethereum", 3_180, 383_000_000_000, 1),
         ("SOL", "Solana", 176, 83_100_000_000, 2),
-        ("DEGEN", "Degen", 0.0071, 71_400_000, 5),
+        // Chainlink, not Degen (user, 2026-10-11: "can we remove degen from
+        // our demo and replace it with another token? i hate that token").
+        ("LINK", "Chainlink", 17.9, 11_600_000_000, 5),
     ]
 
     /// The `sourceRef` namespaces this seeder owns — what `clear` deletes.
@@ -636,6 +638,10 @@ enum DemoSeedAll {
             take(\.postAuthor)
             take(\.quote)
             take(\.parent)
+            // A watch's anchor is drawn too ("+8.4% since you followed"): a
+            // token swapped in the table (Degen → Chainlink) kept the old
+            // one's price and read +252,012%.
+            take(\.watchPriceUsd)
             if changed { moved += 1 }
         }
         if moved > 0 { context.saveHonestly() }
@@ -5132,7 +5138,7 @@ enum DemoSeedAll {
                 return WalletStore.ValueSample(
                     at: newest.addingTimeInterval(Double(i - (curve.count - 1)) * 4 * 3600),
                     usd: usd,
-                    holdings: ["ETH": usd * 0.62, "USDC": usd * 0.28, "DEGEN": usd * 0.10])
+                    holdings: ["ETH": usd * 0.62, "USDC": usd * 0.28, "LINK": usd * 0.10])
             }
             if let data = try? JSONEncoder().encode(samples) {
                 UserDefaults.standard.set(data, forKey: key)

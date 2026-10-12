@@ -17,7 +17,7 @@ struct TokenWatchScreen: View {
     @FocusState private var fieldFocused: Bool
 
     /// Tokens matching what's typed so far (2026-07-11), most liquid first,
-    /// UNFILTERED — the field doubles as a finder, so "degen" shows its
+    /// UNFILTERED — the field doubles as a finder, so "link" shows its
     /// candidates instead of silently watching whichever is most liquid.
     /// Kept unfiltered (not just the not-yet-watched ones) so the Watch
     /// button can reuse `hits.first` as the exact answer a fresh resolve()
@@ -404,7 +404,7 @@ struct TokenWatchScreen: View {
     /// Which of the two searches a typed watch means, in order: a stock whose
     /// TICKER is exactly what was typed ("NET", "AAPL" — a DEX always has
     /// some token squatting on a famous ticker); a token whose SYMBOL is
-    /// ("DEGEN"); a stock whose company name starts with it ("Cloudflare",
+    /// ("LINK"); a stock whose company name starts with it ("Cloudflare",
     /// "apple"); then the top token, as before stocks joined; then the top
     /// stock.
     private static func pick(_ raw: String, stocks: [StockWatch.Resolved],

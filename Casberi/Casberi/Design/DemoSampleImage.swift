@@ -28,7 +28,7 @@ extension UIImage {
         // `previewImageURL` with the logo Dexscreener served, which both the
         // feed row and the watchlist roster draw as a circular face; a demo
         // without them falls to `BridgeIcon(name: "Tokens")`, so ETH, SOL and
-        // DEGEN all wore the SAME green source glyph. These resolve to the
+        // LINK all wore the SAME green source glyph. These resolve to the
         // app's own shipped `brand-*` marks rather than generated art — the
         // real logos, so the room is indistinguishable from a connected one.
         if ref.hasPrefix("sample:token-") {
