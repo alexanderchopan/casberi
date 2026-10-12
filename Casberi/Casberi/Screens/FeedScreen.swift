@@ -62,6 +62,7 @@ extension FeedScreen: Equatable {
             // stop at the bound with nothing on screen able to say why.
             && a.rowBudget == b.rowBudget
             && a.hostRoom == b.hostRoom
+            && a.pinnedSubscriptions == b.pinnedSubscriptions
     }
 }
 
@@ -101,6 +102,10 @@ struct FeedScreen: View {
     /// A Wallet tile's page risen as a sheet (prd §1220): this one section,
     /// its box, no tiles, and nothing published to the shell.
     let pinnedWalletSection: WalletSection?
+    /// Life's Subscriptions or Media's Following opened from Sources' count
+    /// (prd §1274): that one tile, its box, no tiles, the rooms' own picks
+    /// untouched.
+    let pinnedSubscriptions: Bool
 
     /// Latches true the first time this page is active/near, so a page already
     /// assembled once stays assembled — the built set only ever grows, spread
@@ -177,10 +182,12 @@ struct FeedScreen: View {
     @Environment(\.horizontalSizeClass) var roomSizeClass
 
     init(source: String, hostRoom: String? = nil, isActive: Bool, nearActive: Bool = true,
-         rowBudget: Int? = nil, inSheet: Bool = false, pinnedWalletSection: WalletSection? = nil) {
+         rowBudget: Int? = nil, inSheet: Bool = false, pinnedWalletSection: WalletSection? = nil,
+         pinnedSubscriptions: Bool = false) {
         self.source = source
         self.inSheet = inSheet
         self.pinnedWalletSection = pinnedWalletSection
+        self.pinnedSubscriptions = pinnedSubscriptions
         self.hostRoom = hostRoom
         self.rowBudget = rowBudget
         // The mark the trace was missing (PERF 2026-09-01). `mount` fires from
@@ -1552,6 +1559,9 @@ struct FeedScreen: View {
     /// pill beside it names the place.
     var roomName: String {
         if let pinnedWalletSection { return pinnedWalletSection.label }
+        if pinnedSubscriptions {
+            return source == RoomAccounts.lifeRoom ? LifeScope.subscriptions.label : MediaScope.subscriptions.label
+        }
         if HomeScope.contains(source) { return youPlaceName }
         return BridgeCatalog.seatName(forSource: hostRoom ?? source)
     }

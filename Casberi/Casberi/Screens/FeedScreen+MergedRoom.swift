@@ -183,13 +183,15 @@ extension FeedScreen {
     /// until prd §1231).
     @ViewBuilder
     func lifeRoomSections(_ visible: [Thing], nextEventID: UUID?) -> some View {
-        let lists = chrome.lifeScope == .subscriptions
+        // Opened from Sources' count (prd §1274), the page is this tile
+        // alone and leaves the room's own pick as it was.
+        let lists = pinnedSubscriptions || chrome.lifeScope == .subscriptions
         if lists {
             Section { mailSubscriptionsBox }
         }
         // In the Feed's scroll the header names these choices (prd §1251);
         // the tiles stand on the category's own screen.
-        if Self.sectionCapNow == nil {
+        if Self.sectionCapNow == nil, !pinnedSubscriptions {
         Section {
             DSScopeTiles(sections: LifeScope.allCases, active: chrome.lifeScope) { picked in
                 withAnimation(DS.Motion.standard) { chrome.lifeScope = picked }

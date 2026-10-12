@@ -19,6 +19,10 @@ struct SettingsHome: View {
     @Environment(ShellChrome.self) private var chrome
     @Environment(HomeRoute.self) private var route
     @Environment(\.modelContext) private var context
+    /// Handed on to a kind's home page (prd §1274), which a Catalyst sheet
+    /// does not inherit (prd §872). Optional: not every host injects them.
+    @Environment(FeedFilter.self) private var filter: FeedFilter?
+    @Environment(PadDetailSelection.self) private var detail: PadDetailSelection?
 
     #if DEBUG
     /// `-connectTap` fires once a launch, not at every mount.
@@ -142,8 +146,9 @@ struct SettingsHome: View {
                         case .wallets:
                             walletsList
                         // ONE PLACE EACH (prd §1217): a subscription lives in
-                        // the Wallet, a mail list in Day, a feed in Media; these
-                        // counts are doors to them, never lists of their own.
+                        // the Wallet, a mail list in Life, a feed in Media; these
+                        // counts open that page over Sources (prd §1274), never
+                        // lists of their own.
                         case .feeds, .newsletters, .subscriptions:
                             EmptyView()
                         }
@@ -197,7 +202,7 @@ struct SettingsHome: View {
             // §1138) with no tap, for the store captures the Mac cannot tap.
             if let raw = UserDefaults.standard.string(forKey: "settingsScope"),
                let s = SettingsScope(rawValue: raw) {
-                if let home = Self.home(of: s) { route.closeSheet(); chrome.openHome(home) } else { scope = s }
+                if let home = Self.home(of: s) { sheet = .home(home) } else { scope = s }
             }
             // `-connectTap "<Offer name>"` — the door an unconnected app's
             // Add row in Sources › Apps takes (`offerRow`: `openSetup`), for
@@ -314,6 +319,8 @@ struct SettingsHome: View {
             .environment(chrome)
             .environment(bridges)
             .environment(route)
+            .environment(filter)
+            .environment(detail)
             .environment(\.modelContext, context)
     }
 
@@ -457,10 +464,11 @@ struct SettingsHome: View {
             ForEach(counts, id: \.0) { kind, n, label in
                 DSCountTile(count: n, label: label, isOn: kind == scope && !casberiOpen,
                             wants: troubled.contains(kind), inline: true, widest: widest) {
+                    // A kind that lives in a room opens that room's page here
+                    // (prd §1274): Back is Sources, the room's own pick stays.
                     if let home = Self.home(of: kind) {
                         DSHaptic.selection()
-                        route.closeSheet()
-                        chrome.openHome(home)
+                        sheet = .home(home)
                         return
                     }
                     if casberiOpen { casberiOpen = false }
@@ -489,6 +497,7 @@ struct SettingsHome: View {
         case .mailAdd:              MailSubscriptionAddTray()
         case .followAdd:            ReadingFindSheet()
         case .walletFollow:         WalletFollowSheet()
+        case .home(let home):       ListHomePage(home: home)
         }
     }
 
@@ -1023,7 +1032,7 @@ struct CalendarSubscribeSheet: View {
 /// with their name in the field, a kind's list, or a row's own sheet.
 extension SettingsHome {
     /// The one home of a kind that lives in a room (prd §1217): Sources'
-    /// count for it is a door there.
+    /// count for it opens that page (prd §1274).
     static func home(of kind: SettingsScope) -> ShellChrome.ListHome? {
         switch kind {
         case .subscriptions: .plans
@@ -1044,6 +1053,8 @@ enum SettingsLanding: Hashable {
 enum SettingsSheet: Identifiable, Hashable {
     case subscriptionAdd, mailAdd, followAdd
     case walletFollow
+    /// A kind's home page, opened from its count (prd §1274).
+    case home(ShellChrome.ListHome)
 
     var id: String {
         switch self {
@@ -1051,6 +1062,45 @@ enum SettingsSheet: Identifiable, Hashable {
         case .mailAdd:                    "mailAdd"
         case .followAdd:                  "followAdd"
         case .walletFollow:               "walletFollow"
+        case .home(let home):             "home:\(home)"
+        }
+    }
+}
+
+/// **A KIND'S HOME, OPENED FROM SOURCES (prd §1274, amends §1217 item 2).**
+/// The Wallet's Subscriptions, Life's Subscriptions or Media's Following:
+/// the room's own page pinned to that tile, pushed inside Sources' sheet so
+/// Back is Sources, or risen with its own stack where Sources stands alone.
+/// The list still lives in its room; this is that page, not a copy.
+private struct ListHomePage: View {
+    let home: ShellChrome.ListHome
+    @Environment(\.dsInPane) private var inPane
+
+    var body: some View {
+        if inPane {
+            page
+        } else {
+            NavigationStack {
+                page.toolbar(.hidden, for: .navigationBar)
+            }
+            .environment(\.dsInSheetStack, true)
+            .presentationDragIndicator(.visible)
+            .presentationBackground(DS.themedPage)
+        }
+    }
+
+    @ViewBuilder
+    private var page: some View {
+        switch home {
+        case .plans:
+            FeedScreen(source: CategoryFold.walletRoom, isActive: true, inSheet: true,
+                       pinnedWalletSection: .subscriptions)
+        case .lists:
+            FeedScreen(source: RoomAccounts.lifeRoom, isActive: true, inSheet: true,
+                       pinnedSubscriptions: true)
+        case .follows:
+            FeedScreen(source: RoomAccounts.mediaRoom, isActive: true, inSheet: true,
+                       pinnedSubscriptions: true)
         }
     }
 }

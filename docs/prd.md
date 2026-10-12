@@ -66099,3 +66099,13 @@ User: "lets continue going through the list!"; of the demo's Degen token, "i hat
 5. **Not built:** following a tag (nothing public to show), the portal total as its own figure (it rides the note), tags discovered from the registry (names are stored hashed).
 
 **Seen** (a private simulator): `-zkMoneyProbe` resolving `zac.zk.money` to its account and Aztec address on mainnet's rollup and refusing to follow it; an unclaimed tag; a real deposit address recognised and a person's wallet not; the portals' 25,565 DAI; a payment link saved with its secret gone and the reason drawn. **Not seen:** a deposit or withdrawal titled in a live Wallet ingest (no watched wallet has used zk.money; the Zerion budget is shared). Harness: `zkmoney-selftest.sh` (mainnet replies, a cbor-x vector, 8 mutations).
+
+## §1274 — Sources' Subscriptions, Mail lists and Following open their page over Sources (amends §1217, §1265) (user, 2026-10-12: "clicking subscriptions on sources takes u to wallet", then "what do you think it should do", "yes")
+
+§1217 item 2 made these three counts doors that closed Sources and landed in the room: the person left the screen they were on and had no way back to it (§1143's complaint, again).
+
+1. **The count opens the room's own page, over Sources.** Subscriptions is the Wallet's Subscriptions (`pinnedWalletSection: .subscriptions`, §1220's sheet), Mail lists is Life's Subscriptions and Following is Media's Following (`FeedScreen(pinnedSubscriptions:)`: that tile's box and list, no tiles). Inside Sources' sheet it pushes, so Back is Sources; where Sources stands alone it rises with its own stack (`ListHomePage`, a `SettingsSheet.home` case through `DSOneSheet`).
+2. **One home still.** The page is the room's, not a copy: nothing is listed in Sources, and the room's own pick (`lifeScope`, `mediaScope`, `walletSection`) is untouched by opening it. `ShellChrome.openHome` is deleted with the door that used it (§723).
+3. `-settingsScope subscriptions|newsletters|feeds` opens the same page.
+
+UNVERIFIED: written on a machine with no Xcode; neither build nor screen was seen before commit.

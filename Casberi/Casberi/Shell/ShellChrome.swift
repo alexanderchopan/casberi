@@ -1080,28 +1080,9 @@ final class ShellChrome {
     }
 
     /// Where each kind that keeps coming lives (prd §1217): a subscription
-    /// in the Wallet, a mail list in Day, a feed in Media. Every other
-    /// place that names one is a door here.
+    /// in the Wallet, a mail list in Life, a feed in Media. Sources' count
+    /// for each opens that page over Sources (prd §1274, `ListHomePage`).
     enum ListHome { case plans, lists, follows }
-
-    /// Land on a kind's home tile, on All, after the caller's sheet closes.
-    func openHome(_ home: ListHome) {
-        Task { @MainActor in
-            try? await Task.sleep(for: .milliseconds(450))
-            switch home {
-            case .plans:
-                walletScope = nil
-                walletSection = .subscriptions
-                sourceRequest = CategoryFold.walletRoom
-            case .lists:
-                mergedScope[RoomAccounts.lifeRoom] = nil
-                lifeScope = .subscriptions
-                sourceRequest = RoomAccounts.lifeRoom
-            case .follows:
-                landOnFollowing(.media)
-            }
-        }
-    }
 
     /// Land on a room's list of what you follow, on All (prd §1118). A room
     /// change resets these rooms' tiles to All (`MainSurface`), so the pick
