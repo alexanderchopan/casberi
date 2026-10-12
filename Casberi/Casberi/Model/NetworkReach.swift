@@ -324,7 +324,7 @@ enum NetworkReach {
                  // false the day a second write ships — which is exactly the
                  // sweep this line was found in. What is said now is a fact
                  // about THIS send and holds however many others exist.
-                 purpose: "Reads your Aave, Spark and Morpho lending positions, Hyperliquid perps/spot/staked HYPE, veAERO locks on Aerodrome, and any Safe signatures awaiting you, for the wallets you follow — keyless, public data. Also reads Aave's public rate to compare against a vault you hold. If you make this phone a Safe signer and tap Sign, one 65-byte signature is sent to Safe's own service (its gateway first, its transaction service only if the gateway does not take it) — a signature, never a transaction: it can never execute anything on its own. A statement your Safe signs (a sign-in, a Snapshot vote) is read back from Safe's service by its hash and the signature is sent the same way; a paired Safe app gets its signature over the WalletConnect relay instead. Before an Enclave key signs, Safe's passkey factory on the chain is asked to verify the exact bytes.",
+                 purpose: "Reads your Aave, Spark and Morpho lending positions, Hyperliquid perps/spot/staked HYPE, veAERO locks on Aerodrome, and any Safe signatures awaiting you, for the wallets you follow — keyless, public data. Also reads Aave's public rate to compare against a vault you hold. If you make this phone a Safe signer and tap Sign, one 65-byte signature is sent to Safe's own service (its gateway first, its transaction service only if the gateway does not take it) — a signature, never a transaction: it can never execute anything on its own. A statement your Safe signs (a sign-in, a Snapshot vote) is read back from Safe's service by its hash and the signature is sent the same way; a paired Safe app gets its signature over the WalletConnect relay instead. Before an Enclave key signs, Safe's passkey factory on the chain is asked to verify the exact bytes. When a Safe transaction you are asked to sign approves a CoW Protocol order, the order is read from CoW's public API by its id and shown only if it matches that id.",
                  hosts: ["blue-api.morpho.org", "app.morpho.org", "app.aave.com", "app.spark.fi",
                          // Safe is TWO hosts since 2026-09-17 (prd §789b): the
                          // Client Gateway answers every READ — what your Safes
@@ -333,7 +333,10 @@ enum NetworkReach {
                          // first; the transaction service takes it only when
                          // the gateway does not. Both are Safe's own.
                          "safe-client.safe.global", "api.safe.global",
-                         "api.hyperliquid.xyz"]),
+                         "api.hyperliquid.xyz",
+                         // A CoW order a Safe transaction pre-signs (prd §1285):
+                         // read by its id, drawn only if it hashes to that id.
+                         "api.cow.fi"]),
         // Markets (2026-09-29) is the Tokens seat with Stocktwits' watched
         // stocks folded in, so it carries both seats' hosts. Yahoo's two chart
         // hosts are built at runtime (`StockChart` tries

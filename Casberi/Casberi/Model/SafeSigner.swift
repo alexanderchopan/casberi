@@ -551,19 +551,29 @@ enum SafeSigner {
 
         let confirmations = (row["confirmations"] as? [[String: Any]]) ?? []
         let required = (row["confirmationsRequired"] as? Int) ?? threshold
+        // The chain opens the clear-signing registry for a call the reader
+        // cannot name (prd §834). The OPERATION reads first (prd §1249): a
+        // DELEGATECALL outside a known MultiSend is named for what it is.
+        let read = SafeCalldata.read(data: tx.data, to: tx.to, value: tx.value, safe: safeAddress,
+                                     operation: tx.operation,
+                                     chainId: rail.chainId, style: .casberi())
+        // The one host past Safe's (prd §1285): a CoW order this transaction
+        // pre-signs is fetched from CoW's API by its id and stated only if it
+        // hashes to that id; its tokens' decimals come off the same chain the
+        // hash above was read from. Anything else, or any failure, leaves the
+        // reading as it was. Everything else on this screen still reaches
+        // Safe and the chain only.
+        let reading = await CowOrders.enrich(read, to: tx.to, data: tx.data, safe: safeAddress,
+                                             chainId: rail.chainId, network: rail.network,
+                                             nativeSymbol: rail.network.flatMap(WalletIngest.nativeSymbol(forNetwork:)) ?? "xDAI")
         return .success(Ready(
             seg: rail.seg, chainId: rail.chainId, safeAddress: safeAddress,
             safeTxHash: local, tx: tx,
-            // The chain opens the clear-signing registry for a call the
-            // reader cannot name (prd §834). No token read here: this file
-            // reaches Safe and nothing else, and the sign block states an
-            // amount in base units unless the descriptor itself names the
-            // token — the same rule it keeps for a plain `transfer`.
-            // The OPERATION reads first (prd §1249): a DELEGATECALL outside a
-            // known MultiSend is named for what it is, never summarised.
-            reading: SafeCalldata.read(data: tx.data, to: tx.to, value: tx.value, safe: safeAddress,
-                                       operation: tx.operation,
-                                       chainId: rail.chainId, style: .casberi()),
+            // No other token read here: the sign block states an amount in
+            // base units unless the descriptor names the token, the same rule
+            // it keeps for a plain `transfer` — a verified CoW order is the
+            // one exception (above).
+            reading: reading,
             have: confirmations.count, required: required,
             standing: Standing(safeAddress: safeAddress, seg: rail.seg,
                                ownerCount: owners.count, threshold: threshold),
