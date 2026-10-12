@@ -80,29 +80,31 @@ struct ReadingFindSheet: View {
 
     @ViewBuilder private var before: some View {
         if !suggestions.isEmpty {
-            DSTrayHead(String(localized: "Sites you save from"))
-            ForEach(suggestions, id: \.host) { s in
-                siteRow(s.host, line: String(localized: "You saved \(s.count) lately"))
+            DSTrayGroup(String(localized: "Sites you save from"), glyph: "globe") {
+                ForEach(suggestions, id: \.host) { s in
+                    siteRow(s.host, line: String(localized: "You saved \(s.count) lately"))
+                }
             }
         }
         if !recents.isEmpty {
-            DSTrayHead(String(localized: "Recent"))
-            ForEach(recents, id: \.self) { recent in
-                Button {
-                    query = recent
-                } label: {
-                    HStack(spacing: DS.Space.s3) {
-                        Image(systemName: "clock.arrow.circlepath")
-                            .dsGlyph(.subhead).foregroundStyle(DS.textTertiary)
-                            .frame(width: DS.Face.rowCircle)
-                        Text(verbatim: recent).dsText(.body17).foregroundStyle(DS.textPrimary)
-                        Spacer(minLength: 0)
+            DSTrayGroup(String(localized: "Recent"), glyph: "clock") {
+                ForEach(recents, id: \.self) { recent in
+                    Button {
+                        query = recent
+                    } label: {
+                        HStack(spacing: DS.Space.s3) {
+                            Image(systemName: "clock.arrow.circlepath")
+                                .dsGlyph(.subhead).foregroundStyle(DS.brandInk)
+                                .frame(width: DS.Face.rowCircle)
+                            Text(verbatim: recent).dsText(.body17).foregroundStyle(DS.textPrimary)
+                            Spacer(minLength: 0)
+                        }
+                        .frame(minHeight: 48)
+                        .contentShape(Rectangle())
                     }
-                    .frame(minHeight: 48)
-                    .contentShape(Rectangle())
+                    .buttonStyle(RowPress())
+                    .padding(.horizontal, DS.Space.s4)
                 }
-                .buttonStyle(RowPress())
-                .padding(.horizontal, DS.Space.s4)
             }
         }
         if suggestions.isEmpty && recents.isEmpty {
@@ -120,8 +122,9 @@ struct ReadingFindSheet: View {
 
     @ViewBuilder private var results: some View {
         if let site = ReadingRoom.site(in: trimmed) {
-            DSTrayHead(String(localized: "Follow"))
-            siteRow(site, line: String(localized: "Its feed lands in Media"))
+            DSTrayGroup(String(localized: "Follow"), glyph: "plus") {
+                siteRow(site, line: String(localized: "Its feed lands in Media"))
+            }
         }
         if ReadingRoom.site(in: trimmed) == nil {
             footnote

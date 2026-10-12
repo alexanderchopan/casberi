@@ -284,22 +284,23 @@ struct MailSubscriptionAddTray: View {
                                      scale: .list(rows: 3))
                             .padding(.horizontal, DS.Space.s4)
                     } else {
-                        DSTrayHead(searching ? String(localized: "From your mail")
-                                             : String(localized: "Writes to you most"))
-                        ForEach(candidates) { candidate in
-                            Button { track(candidate) } label: {
-                                SubscriptionRow(name: candidate.name,
-                                                line: Text(verbatim: Self.line(candidate, searching: searching))) {
-                                    Image(systemName: "plus")
-                                        .dsGlyph(.body)
-                                        .foregroundStyle(DS.tint)
+                        DSTrayGroup(searching ? String(localized: "From your mail")
+                                              : String(localized: "Writes to you most"), glyph: "envelope") {
+                            ForEach(candidates) { candidate in
+                                Button { track(candidate) } label: {
+                                    SubscriptionRow(name: candidate.name,
+                                                    line: Text(verbatim: Self.line(candidate, searching: searching))) {
+                                        Image(systemName: "plus")
+                                            .dsGlyph(.body)
+                                            .foregroundStyle(DS.tint)
+                                    }
+                                    .contentShape(Rectangle())
                                 }
-                                .contentShape(Rectangle())
+                                .buttonStyle(RowPress())
+                                .dsHover()
+                                .padding(.horizontal, DS.Space.s4)
+                                .accessibilityLabel(Text("Track \(candidate.name)"))
                             }
-                            .buttonStyle(RowPress())
-                            .dsHover()
-                            .padding(.horizontal, DS.Space.s4)
-                            .accessibilityLabel(Text("Track \(candidate.name)"))
                         }
                     }
                 }

@@ -66019,3 +66019,11 @@ User, of Sources' categories ("people mail list etc"): mocked against today, "do
 - **People:** the add reads "Follow someone" (it opens the same tray as the Wallet's: a name, an ENS or an address; it read "Follow a wallet" in People); Recent is the Feed's card; the letters are the Apps A–Z's (`heading20`, head ink).
 - **Wallets:** a "Your wallets" card led by Follow a wallet, then a "Wallet apps" card of the apps' Feed rows (§1253's `offerRow(card:)`).
 - Following, Mail lists and Subscriptions stay doors to the places that hold them (§1217).
+
+## §1266 — The add trays' groups are the Feed's cards; Settings' glyphs are pink (2026-10-11)
+
+User, of the screens still in the old style: "ok do 1 and 2 first"; mocked, "yes do it".
+
+- **Every find/add tray** (Track a subscription, Track a mailing list, Follow a site, Follow a person, Follow a company) draws each group as `DSTrayGroup`: the panel's fill, a pink glyph and the group's name in the head ink at `heading20`, an optional control trailing (Tokens' chain filter), the rows inside. `DSTrayHead` (a grey `label12` over loose rows) is deleted. The rows and their blue + stay; the + is the act.
+- **Recent** rows in the trays wear the clock in pink.
+- **Glyphs are pink wherever a control wears one** (§1252): `DSDoorRow`'s glyph (Sources' back row in Settings, the pivot doors, Read on …) and `DSCountTile`'s (Settings' box, Markets' categories, Sources' counts with a glyph). Settings' box needs nothing else: it is already a box.

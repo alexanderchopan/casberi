@@ -70,51 +70,54 @@ struct WatchAddSheet: View {
     @ViewBuilder private var suggestions: some View {
         let wallet = fromWallet.filter { !watched.contains(ref(of: $0)) }
         if !wallet.isEmpty {
-            DSTrayHead(String(localized: "From your Wallet"))
-            ForEach(wallet) { token in tokenRow(token) }
+            DSTrayGroup(String(localized: "From your Wallet"), glyph: "wallet.bifold") {
+                ForEach(wallet) { token in tokenRow(token) }
+            }
         }
         if !mentioned.isEmpty {
-            DSTrayHead(String(localized: "In your feed"))
-            ForEach(mentioned, id: \.symbol) { item in
-                Button {
-                    query = item.symbol
-                } label: {
-                    HStack(spacing: DS.Space.s3) {
-                        WatchFace(url: nil, lettered: item.symbol)
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text(verbatim: "$\(item.symbol)").dsText(.body17).foregroundStyle(DS.textPrimary)
-                            Text(item.count == 1 ? String(localized: "In 1 post this week")
-                                                 : String(localized: "In \(item.count) posts this week"))
-                                .dsText(.subhead12).foregroundStyle(DS.textTertiary)
+            DSTrayGroup(String(localized: "In your feed"), glyph: "tray") {
+                ForEach(mentioned, id: \.symbol) { item in
+                    Button {
+                        query = item.symbol
+                    } label: {
+                        HStack(spacing: DS.Space.s3) {
+                            WatchFace(url: nil, lettered: item.symbol)
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text(verbatim: "$\(item.symbol)").dsText(.body17).foregroundStyle(DS.textPrimary)
+                                Text(item.count == 1 ? String(localized: "In 1 post this week")
+                                                     : String(localized: "In \(item.count) posts this week"))
+                                    .dsText(.subhead12).foregroundStyle(DS.textTertiary)
+                            }
+                            Spacer(minLength: 0)
+                            Image(systemName: "magnifyingglass").dsGlyph(.subhead).foregroundStyle(DS.tint)
                         }
-                        Spacer(minLength: 0)
-                        Image(systemName: "magnifyingglass").dsGlyph(.subhead).foregroundStyle(DS.tint)
+                        .frame(minHeight: 60)
+                        .contentShape(Rectangle())
                     }
-                    .frame(minHeight: 60)
-                    .contentShape(Rectangle())
+                    .buttonStyle(RowPress())
+                    .padding(.horizontal, DS.Space.s4)
                 }
-                .buttonStyle(RowPress())
-                .padding(.horizontal, DS.Space.s4)
             }
         }
         if !recents.isEmpty {
-            DSTrayHead(String(localized: "Recent"))
-            ForEach(recents, id: \.self) { recent in
-                Button {
-                    query = recent
-                } label: {
-                    HStack(spacing: DS.Space.s3) {
-                        Image(systemName: "clock.arrow.circlepath")
-                            .dsGlyph(.subhead).foregroundStyle(DS.textTertiary)
-                            .frame(width: DS.Face.rowCircle)
-                        Text(verbatim: recent).dsText(.body17).foregroundStyle(DS.textPrimary)
-                        Spacer(minLength: 0)
+            DSTrayGroup(String(localized: "Recent"), glyph: "clock") {
+                ForEach(recents, id: \.self) { recent in
+                    Button {
+                        query = recent
+                    } label: {
+                        HStack(spacing: DS.Space.s3) {
+                            Image(systemName: "clock.arrow.circlepath")
+                                .dsGlyph(.subhead).foregroundStyle(DS.brandInk)
+                                .frame(width: DS.Face.rowCircle)
+                            Text(verbatim: recent).dsText(.body17).foregroundStyle(DS.textPrimary)
+                            Spacer(minLength: 0)
+                        }
+                        .frame(minHeight: 48)
+                        .contentShape(Rectangle())
                     }
-                    .frame(minHeight: 48)
-                    .contentShape(Rectangle())
+                    .buttonStyle(RowPress())
+                    .padding(.horizontal, DS.Space.s4)
                 }
-                .buttonStyle(RowPress())
-                .padding(.horizontal, DS.Space.s4)
             }
         }
         if wallet.isEmpty && mentioned.isEmpty && recents.isEmpty {
@@ -146,32 +149,30 @@ struct WatchAddSheet: View {
         let byName = Dictionary(TokensScope.everyCompany.map { ($0.name, $0) }, uniquingKeysWith: { a, _ in a })
         let companies = indexHits.compactMap { byName[$0.name] }
         if !companies.isEmpty {
-            DSTrayHead(String(localized: "Behind your apps"))
-            ForEach(companies) { company in
-                let on = company.listing.ticker.map { watchedSymbols.contains($0.uppercased()) } ?? false
-                IndexRow(company: company, apps: company.seats,
-                         quote: CompanyQuotes.shared.quote(company.listing), watched: on,
-                         star: company.listing == .unlisted ? nil : { toggle(company: company, on: on) })
-                    .padding(.horizontal, DS.Space.s4)
+            DSTrayGroup(String(localized: "Behind your apps"), glyph: "square.grid.2x2") {
+                ForEach(companies) { company in
+                    let on = company.listing.ticker.map { watchedSymbols.contains($0.uppercased()) } ?? false
+                    IndexRow(company: company, apps: company.seats,
+                             quote: CompanyQuotes.shared.quote(company.listing), watched: on,
+                             star: company.listing == .unlisted ? nil : { toggle(company: company, on: on) })
+                        .padding(.horizontal, DS.Space.s4)
+                }
             }
         }
         let chains = Array(Set(tokens.map(\.chain))).sorted()
         let shownTokens = stocksOnly ? [] : tokens.filter { chain == nil || $0.chain == chain }
         let shownStocks = chain == nil ? stocks : []
         if !shownTokens.isEmpty || chains.count > 1 {
-            HStack {
-                DSTrayHead(String(localized: "Tokens"))
-                Spacer(minLength: 0)
-                if chains.count > 1 || !stocks.isEmpty {
-                    filterMenu(chains)
-                        .padding(.trailing, DS.Space.s4)
-                }
+            DSTrayGroup(String(localized: "Tokens"), glyph: "bitcoinsign.circle") {
+                ForEach(shownTokens) { token in tokenRow(token) }
+            } trailing: {
+                if chains.count > 1 || !stocks.isEmpty { filterMenu(chains) }
             }
-            ForEach(shownTokens) { token in tokenRow(token) }
         }
         if !shownStocks.isEmpty {
-            DSTrayHead(String(localized: "Stocks"))
-            ForEach(shownStocks) { stock in stockRow(stock) }
+            DSTrayGroup(String(localized: "Stocks"), glyph: "chart.line.uptrend.xyaxis") {
+                ForEach(shownStocks) { stock in stockRow(stock) }
+            }
         }
         if DemoMode.isActive || (!searching && tokens.isEmpty && stocks.isEmpty && companies.isEmpty) {
             footnote

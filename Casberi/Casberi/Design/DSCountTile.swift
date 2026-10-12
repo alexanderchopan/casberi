@@ -80,7 +80,8 @@ struct DSCountTile: View {
                             // Markets' tiles: a glyph where Settings' figure stands.
                             Image(systemName: glyph)
                                 .dsGlyph(.body, weight: .regular)
-                                .foregroundStyle(isOn ? Self.pickInk : DS.textSecondary)
+                                // Pink, as every glyph is (prd §1252, §1266).
+                                .foregroundStyle(isOn ? Self.pickInk : DS.brandInk)
                         } else {
                             Text((count ?? 0).formatted())
                                 .dsText(.heading24)
@@ -109,7 +110,7 @@ struct DSCountTile: View {
                     Image(systemName: glyph)
                         .dsGlyph(.body, weight: .regular)
                         .frame(height: 20)
-                        .foregroundStyle(isOn ? Color.white : zero ? DS.textTertiary : DS.textSecondary)
+                        .foregroundStyle(isOn ? Color.white : zero ? DS.textTertiary : DS.brandInk)
                 }
                 if let count {
                     Text(count.formatted())

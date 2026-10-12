@@ -74,7 +74,8 @@ struct DSDoorRowLabel: View {
         HStack(spacing: DS.Space.s2) {
             Image(systemName: icon)
                 .dsGlyph(.caption, weight: .regular)
-                .foregroundStyle(role == .destructive ? DS.destructive : DS.textSecondary)
+                // Pink, as every glyph is since prd §1252 (§1266).
+                .foregroundStyle(role == .destructive ? DS.destructive : DS.brandInk)
                 // The column, not the glyph's own width: SF Symbols are
                 // not uniform, so without it a stack of doors staircases.
                 .frame(width: 18, alignment: .center)

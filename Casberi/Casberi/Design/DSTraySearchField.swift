@@ -68,18 +68,55 @@ extension DSTraySearchField where Idle == EmptyView {
     }
 }
 
-/// A find tray's group name ("Near you", "From your Wallet"): a quiet label
-/// over its rows, never a day (§740).
-struct DSTrayHead: View {
+/// **A FIND TRAY'S GROUP IS THE FEED'S CARD (prd §1266, user: "yes do
+/// it").** The panel's fill, a pink glyph and the group's name in the head
+/// ink ("From your cards", "Recent"), an optional control trailing, the rows
+/// inside — which bring their own column. It was a grey `label12` over loose
+/// rows (`DSTrayHead`, deleted with it).
+struct DSTrayGroup<Content: View, Trailing: View>: View {
     let title: String
-    init(_ title: String) { self.title = title }
+    let glyph: String
+    @ViewBuilder let content: Content
+    @ViewBuilder let trailing: Trailing
+
+    init(_ title: String, glyph: String, @ViewBuilder content: () -> Content,
+         @ViewBuilder trailing: () -> Trailing) {
+        self.title = title
+        self.glyph = glyph
+        self.content = content()
+        self.trailing = trailing()
+    }
 
     var body: some View {
-        Text(title)
-            .dsText(.label12)
-            .foregroundStyle(DS.textTertiary)
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                Image(systemName: glyph)
+                    .dsGlyph(.body)
+                    .foregroundStyle(DS.brandInk)
+                    .accessibilityHidden(true)
+                Text(verbatim: title)
+                    .dsText(.heading20)
+                    .foregroundStyle(DS.headInk)
+                    .lineLimit(1)
+                    .accessibilityAddTraits(.isHeader)
+                Spacer(minLength: DS.Space.s2)
+                trailing
+            }
             .padding(.horizontal, DS.Space.s4)
-            .padding(.top, DS.Space.s4)
+            .padding(.top, DS.Space.s3)
             .padding(.bottom, DS.Space.s1)
+            content
+        }
+        .padding(.bottom, DS.Space.s2)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(SectionPanel.fill, in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+        .padding(.horizontal, DS.Space.s3)
+        .padding(.top, DS.Space.s3)
+    }
+}
+
+extension DSTrayGroup where Trailing == EmptyView {
+    init(_ title: String, glyph: String, @ViewBuilder content: () -> Content) {
+        self.init(title, glyph: glyph, content: content) { EmptyView() }
     }
 }

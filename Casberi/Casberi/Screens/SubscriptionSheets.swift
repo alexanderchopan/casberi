@@ -290,24 +290,27 @@ struct SubscriptionAddTray: View {
                     }
                 }
                 if !suggestions.isEmpty {
-                    DSTrayHead(String(localized: "From your cards"))
-                    ForEach(suggestions) { suggestionRow($0) }
+                    DSTrayGroup(String(localized: "From your cards"), glyph: "creditcard") {
+                        ForEach(suggestions) { suggestionRow($0) }
+                    }
                 }
                 if !mine.isEmpty {
-                    DSTrayHead(String(localized: "Your apps"))
-                    ForEach(mine, id: \.self) { name in
-                        let site = Self.siteByOffer[name]
-                        pickRow(name, line: Text(verbatim: site ?? BridgeCatalog.category(forSource: name) ?? "")) {
-                            choose(Pick(name: name, site: site))
+                    DSTrayGroup(String(localized: "Your apps"), glyph: "square.grid.2x2") {
+                        ForEach(mine, id: \.self) { name in
+                            let site = Self.siteByOffer[name]
+                            pickRow(name, line: Text(verbatim: site ?? BridgeCatalog.category(forSource: name) ?? "")) {
+                                choose(Pick(name: name, site: site))
+                            }
                         }
                     }
                 }
                 if !apps.isEmpty {
-                    DSTrayHead(typed.isEmpty ? String(localized: "Popular") : String(localized: "Apps"))
-                    ForEach(apps, id: \.name) { app in
-                        pickRow(app.name, line: Text(verbatim: app.line),
-                                tracked: SubscriptionPlans.isTracked(app.name, among: tracked)) {
-                            choose(Pick(name: app.name, site: app.site))
+                    DSTrayGroup(typed.isEmpty ? String(localized: "Popular") : String(localized: "Apps"), glyph: "star") {
+                        ForEach(apps, id: \.name) { app in
+                            pickRow(app.name, line: Text(verbatim: app.line),
+                                    tracked: SubscriptionPlans.isTracked(app.name, among: tracked)) {
+                                choose(Pick(name: app.name, site: app.site))
+                            }
                         }
                     }
                 }

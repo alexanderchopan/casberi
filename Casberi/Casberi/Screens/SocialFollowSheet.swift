@@ -74,8 +74,9 @@ struct SocialFollowSheet: View {
         if near.isEmpty {
             footnote
         } else {
-            DSTrayHead(String(localized: "Near you"))
-            ForEach(near) { person in row(person) }
+            DSTrayGroup(String(localized: "Near you"), glyph: "person.2") {
+                ForEach(near) { person in row(person) }
+            }
         }
     }
 
@@ -84,14 +85,16 @@ struct SocialFollowSheet: View {
             ForEach(["Bluesky"], id: \.self) { network in
                 let people = found.filter { $0.source == network }
                 if !people.isEmpty {
-                    DSTrayHead(network)
-                    ForEach(people) { person in row(person) }
+                    DSTrayGroup(network, glyph: "at") {
+                        ForEach(people) { person in row(person) }
+                    }
                 }
             }
         }
         if let channel = Self.channel(in: trimmed) {
-            DSTrayHead("Telegram")
-            channelRow(channel)
+            DSTrayGroup("Telegram", glyph: "paperplane") {
+                channelRow(channel)
+            }
         }
         if DemoMode.isActive || (!searching && found.isEmpty && Self.channel(in: trimmed) == nil) { footnote }
     }
