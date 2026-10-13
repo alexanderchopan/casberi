@@ -220,8 +220,12 @@ extension LogosWire {
 
     static func block(_ data: Data) -> Block? {
         var r = Reader(Array(data))
+        // The 10-12 reset dropped the producer's key and signature (96
+        // bytes) from the header: id, previous hash, hash, then the time and
+        // straight into the transactions (prd §1287, measured on blocks
+        // 1–40 and 1975–2010 of the new chain).
         guard let id = r.u64(), r.skip(64),
-              let ms = r.u64(), r.skip(32 + 64),                  // producer, signature
+              let ms = r.u64(),
               let count = r.u32(), count < 100_000
         else { return nil }
         var txs: [Transaction] = []

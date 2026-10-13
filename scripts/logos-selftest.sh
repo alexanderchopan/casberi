@@ -34,7 +34,7 @@
 #     explorer has never heard of;
 #   • sender and recipient swapped — you "received" what you sent;
 #   • the node's own per-block transactions not skipped — a row a block, forever;
-#   • the producer's key not skipped — every v0.3 block refused;
+#   • the producer's key still skipped — every block since the 10-12 reset refused;
 #   • a trailing byte tolerated — a drifted layout read as garbage amounts;
 #   • a Private/ id watched — the sequencer answers it as an empty PUBLIC
 #     account, drawn as a confident zero.
@@ -205,19 +205,19 @@ check(LogosWire.balance(["nonce": 0, "data": ["shards": [:]]] as [String: Any]) 
 check(LogosWire.decimal("340282366920938463463374607431768211455")?.description == "340282366920938463463374607431768211455", "u128::MAX survives as a string")
 check(LogosWire.result(["jsonrpc": "2.0", "error": ["code": -32602]] as [String: Any]) == nil, "an error reply has no result")
 
-print("block 2 — the v0.3 testnet, live (2026-09-30)")
-let B2 = "AgAAAAAAAAA4uwzzSJPklA8P971eY2jZRvRoXYiE/R6z9nTJwVp3Cm0uosxtzORJF4kAcRVBZ2JCYL23Y6JDcP7s8GMQ8AkWdwvM8qABAAAsS7XK+hFm8Wd4NJK5r0htkxeEuo0B8vO91+o5waxd8Sv2daKtZu0lV2LmDTMemRsCDOcz3WrcpMy+/geFW7DZzGE60Go9Rd1bNaFPxh3/REgg/1UU2QZnaQtb/9OGahsCAAAAABW9oLWl1jKV9JM0dmo9GnrN6Ke2Gs7SrX4zTFVzRD3yBAAAAFhiQRCrAUaxIeOhkkuWtUBSNVbiS9XHwH5Sq/pf66+LFb2gtaXWMpX0kzR2aj0aes3op7YaztKtfjNMVXNEPfJ/Gl6dyYFrnVVFr9xtSHsT1KLGj+K6Ox0VNgCzlaW4xAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAciTqtuAvizfYQbFjvriwFHCkLnOHXszPzXIYK+GxO1wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB+xkEVTgqEdIUHwDA6JP3Zaeok41C2GZ2lyzEWVvHukAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGVig/GIyp8fm3q4azY1sQqMsvgATFdUcGC/uReCwMpwDAAAAL0xFWi9DbG9ja1Byb2dyYW1BY2NvdW50LzAwMDAwMDEZWKD8YjKnx+berhrNjWxCoyy+ABMV1RwYL+5F4LAynC9MRVovQ2xvY2tQcm9ncmFtQWNjb3VudC8wMDAwMDEwGVig/GIyp8fm3q4azY1sQqMsvgATFdUcGC/uReCwMpwvTEVaL0Nsb2NrUHJvZ3JhbUFjY291bnQvMDAwMDA1MBlYoPxiMqfH5t6uGs2NbEKjLL4AExXVHBgv7kXgsDKcAAAAABAAAAB3C8zyoAEAAAIAAAAAAAAAAAAAAAAC"
+print("block 2 — the testnet after the 10-12 reset, live (2026-10-12)")
+let B2 = "AgAAAAAAAAChtgNVoiHb/NdxI2ClgB+lK0V4WGN9soniOpXe2g3SXcApVz7wkCWW8QhW6YJi/6/8IKR0U+Y3PBuGIQsZpZXwZpT2MaEBAAACAAAAABW9oLWl1jKV9JM0dmo9GnrN6Ke2Gs7SrX4zTFVzRD3yBAAAAFhiQRCrAUaxIeOhkkuWtUBSNVbiS9XHwH5Sq/pf66+LFb2gtaXWMpX0kzR2aj0aes3op7YaztKtfjNMVXNEPfJ/Gl6dyYFrnVVFr9xtSHsT1KLGj+K6Ox0VNgCzlaW4xAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAciTqtuAvizfYQbFjvriwFHCkLnOHXszPzXIYK+GxO1wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGkOvAFks0q5XB0Pce7iN5Ib4+/YpQSIPUlmvBc09jUNAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGVig/GIyp8fm3q4azY1sQqMsvgATFdUcGC/uReCwMpwDAAAAL0xFWi9DbG9ja1Byb2dyYW1BY2NvdW50LzAwMDAwMDEZWKD8YjKnx+berhrNjWxCoyy+ABMV1RwYL+5F4LAynC9MRVovQ2xvY2tQcm9ncmFtQWNjb3VudC8wMDAwMDEwGVig/GIyp8fm3q4azY1sQqMsvgATFdUcGC/uReCwMpwvTEVaL0Nsb2NrUHJvZ3JhbUFjY291bnQvMDAwMDA1MBlYoPxiMqfH5t6uGs2NbEKjLL4AExXVHBgv7kXgsDKcAAAAABAAAABmlPYxoQEAAAIAAAAAAAAAAAAAAAAA"
 let b2 = block(B2)
 check(b2?.id == 2, "the block id")
-check(b2?.timestamp.timeIntervalSince1970 == 1790779853.687, "the millisecond timestamp, as seconds")
+check(b2?.timestamp.timeIntervalSince1970 == 1791839605.862, "the millisecond timestamp, as seconds")
 check(b2?.transactions.count == 2, "the node's two per-block transactions")
-check(b2?.transactions.last?.hashHex == "f50ad68c6a4d2434415837e05246bb03258ec566900e7f0f36668a3802cd1411", "the hash matches the chain's (getTransaction)")
+check(b2?.transactions.last?.hashHex == "20f65adaac3c2ee04a67da58517e1678c7b2b5bf06138cbcd598ff555c86d8e1", "the hash matches the chain's (getTransaction)")
 let system = b2?.transactions ?? []
 check(system.allSatisfy { $0.signers == 0 && !$0.paysFee }, "both are unsigned and fee-exempt")
 check(system.allSatisfy(LogosWire.isSystem), "both read as the network's own (isSystem)")
 let head2 = LogosWire.header(Data(base64Encoded: B2)!)
-check(head2?.id == 2 && head2?.timestamp.timeIntervalSince1970 == 1790779853.687, "the header alone reads id and time")
-check(head2?.hashHex == "6d2ea2cc6dcce44917890071154167624260bdb763a24370feecf06310f00916", "the header's own hash, bytes 40–72")
+check(head2?.id == 2 && head2?.timestamp.timeIntervalSince1970 == 1791839605.862, "the header alone reads id and time")
+check(head2?.hashHex == "c029573ef0902596f10856e98262ffaffc20a47453e6373c1b86210b19a595f0", "the header's own hash, bytes 40–72")
 check(LogosWire.header(Data([1, 2, 3])) == nil, "a stub is no header")
 check(system.allSatisfy { LogosWire.events($0, watched: Set($0.accounts.map { Data($0) })).isEmpty },
       "the node's own transactions land nothing even when their accounts are watched")
@@ -228,8 +228,7 @@ func le64(_ v: UInt64) -> [UInt8] { withUnsafeBytes(of: v.littleEndian, Array.in
 func u128(_ v: UInt64) -> [UInt8] { le64(v) + le64(0) }
 func wrap(_ tx: [UInt8]) -> Data {
     Data(le64(7) + [UInt8](repeating: 1, count: 64) + le64(1_790_000_000_000)
-         + [UInt8](repeating: 3, count: 32)                              // producer
-         + [UInt8](repeating: 2, count: 64) + le32(1) + tx + [0])
+         + le32(1) + tx + [0])                                           // no producer since the 10-12 reset
 }
 let native = [UInt8](repeating: 0, count: 32)
 let from = LogosWire.base58Decode(CBGR)!, to = LogosWire.base58Decode(DUMJ)!
@@ -279,7 +278,8 @@ check(p.map { LogosWire.events($0, watched: watched(CBGR)).map(\.title) } == ["P
 check(LogosWire.block(wrap([2] + le32(3) + [9, 9, 9])) == nil, "v0.2's deployment variant is refused, not guessed at")
 
 print("exact length")
-var raw = Data(base64Encoded: "AgAAAAAAAAA4uwzzSJPklA8P971eY2jZRvRoXYiE/R6z9nTJwVp3Cm0uosxtzORJF4kAcRVBZ2JCYL23Y6JDcP7s8GMQ8AkWdwvM8qABAAAsS7XK+hFm8Wd4NJK5r0htkxeEuo0B8vO91+o5waxd8Sv2daKtZu0lV2LmDTMemRsCDOcz3WrcpMy+/geFW7DZzGE60Go9Rd1bNaFPxh3/REgg/1UU2QZnaQtb/9OGahsCAAAAABW9oLWl1jKV9JM0dmo9GnrN6Ke2Gs7SrX4zTFVzRD3yBAAAAFhiQRCrAUaxIeOhkkuWtUBSNVbiS9XHwH5Sq/pf66+LFb2gtaXWMpX0kzR2aj0aes3op7YaztKtfjNMVXNEPfJ/Gl6dyYFrnVVFr9xtSHsT1KLGj+K6Ox0VNgCzlaW4xAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAciTqtuAvizfYQbFjvriwFHCkLnOHXszPzXIYK+GxO1wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB+xkEVTgqEdIUHwDA6JP3Zaeok41C2GZ2lyzEWVvHukAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGVig/GIyp8fm3q4azY1sQqMsvgATFdUcGC/uReCwMpwDAAAAL0xFWi9DbG9ja1Byb2dyYW1BY2NvdW50LzAwMDAwMDEZWKD8YjKnx+berhrNjWxCoyy+ABMV1RwYL+5F4LAynC9MRVovQ2xvY2tQcm9ncmFtQWNjb3VudC8wMDAwMDEwGVig/GIyp8fm3q4azY1sQqMsvgATFdUcGC/uReCwMpwvTEVaL0Nsb2NrUHJvZ3JhbUFjY291bnQvMDAwMDA1MBlYoPxiMqfH5t6uGs2NbEKjLL4AExXVHBgv7kXgsDKcAAAAABAAAAB3C8zyoAEAAAIAAAAAAAAAAAAAAAAC")!
+var raw = Data(base64Encoded: B2)!
+check(LogosWire.block(raw) != nil, "the untouched block decodes, so the two refusals below are about length")
 check(LogosWire.block(raw.dropLast(1)) == nil, "a truncated block is refused")
 raw.append(0)
 check(LogosWire.block(raw) == nil, "a block with a trailing byte is refused")
@@ -537,9 +537,11 @@ mutate "a trailing byte tolerated" \
 mutate "the node's own transactions not skipped" \
   'if isSystem(tx) { return [] }' \
   'if tx.signers < 0 { return [] }'
-mutate "the producer's key not skipped" \
-  'let ms = r.u64(), r.skip(32 + 64),' \
-  'let ms = r.u64(), r.skip(64),'
+mutate "the producer's key still skipped" \
+  'let ms = r.u64(),
+              let count' \
+  'let ms = r.u64(), r.skip(32 + 64),
+              let count'
 mutate "any program read as the native token" \
   'if tx.program == nativeProgram, tx.accounts.count == 2,' \
   'if tx.accounts.count == 2,'
