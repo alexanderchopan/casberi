@@ -199,6 +199,8 @@ Trays are `DSTray`; verbs are rows (`DSDoorRow`); nothing at the top of a screen
 
 No balance and **no Activity module** (user: "we have that in the wallet already"). **Needs you stays on the Wallet** as the one list of what waits across every app; your account's items appear there and open this sheet at Security.
 
+**Direction set** (user, 2026-10-13: "directionally this is what we want"): the dark design canvas, https://claude.ai/artifact/8gcCuMvJHWVk4eq4Zob5Qv (private to the owner). No backings on buttons or row glyphs; the coloured circles are avatars.
+
 **Open:**
 1. ~~Module order~~ **Decided: fixed** (user, 2026-10-13): Send · Swap, Add · Receive, Security. Something waiting shows inside its module, never by moving it.
 2. Typing: the card you type in expands to fill the sheet while the keyboard is up, then settles back (proposed).
