@@ -118,11 +118,7 @@ struct LogosRoomFigure: View {
                         .compactMap { $0 }.joined(separator: " · "))
                 if let line = Self.stake(snap) { note(line) }
                 if let line = Self.earnings(snap) { note(line) }
-                if let v = snap.vouchers, v > 0, let worth = snap.claimable {
-                    note(v == 1
-                         ? String(localized: "1 reward voucher · \(LogosWire.amount(worth)) claimable")
-                         : String(localized: "\(v) reward vouchers · \(LogosWire.amount(worth)) claimable"))
-                }
+                if let line = Self.vouchers(snap) { note(line) }
             } else {
                 unread
             }
@@ -149,6 +145,21 @@ struct LogosRoomFigure: View {
     /// zone's whole coins, so it keeps two places rather than rounding up.
     static func tokens(_ value: Decimal) -> String {
         value.formatted(.number.precision(.fractionLength(0...2)).locale(Locale(identifier: "en_US")))
+    }
+
+    /// The leader-reward vouchers (prd §1288): a count the node read is said
+    /// even at zero — "0 reward vouchers" after a claim — so an empty wallet
+    /// and a failed read never look alike (the Observer dev's note,
+    /// 2026-10-13: the row vanished at zero). Nil only when nothing was read.
+    static func vouchers(_ snap: LogosWire.NodeSnapshot) -> String? {
+        guard let v = snap.vouchers else { return nil }
+        guard v > 0 else { return String(localized: "0 reward vouchers") }
+        guard let worth = snap.claimable else {
+            return v == 1 ? String(localized: "1 reward voucher") : String(localized: "\(v) reward vouchers")
+        }
+        return v == 1
+            ? String(localized: "1 reward voucher · \(LogosWire.amount(worth)) claimable")
+            : String(localized: "\(v) reward vouchers · \(LogosWire.amount(worth)) claimable")
     }
 
     /// "Mining · 3 tickets ready", or nil when the node reports no mining.

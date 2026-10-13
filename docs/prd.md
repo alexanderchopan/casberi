@@ -66241,3 +66241,8 @@ The queue's sweep proves the CoW orders its pending transactions pre-sign (at mo
 2. **What changed:** the block header lost the producer's key and signature (96 bytes). A block is now id, previous hash, hash, millisecond time, then straight into the transactions; the transaction layout is unchanged. One change in `LogosWire.block` decodes blocks 1–40 and 1975–2010 of the new chain whole, and the decoded hash of block 2's clock transaction is answered by `getTransaction`.
 3. `logos-selftest.sh` carries the new chain's block 2 as its live fixture; the length checks now run on it (they had been passing vacuously on the old chain's block, which no longer decoded for another reason), and the producer mutation now asserts the bytes are NOT skipped.
 4. The old chain is gone, so the reader keeps one layout, never two. Watched accounts and this phone's key read empty on the new chain until funded; the §1035 reset note says so.
+
+## §1288 — Zero reward vouchers is said, not dropped (the Observer dev, 2026-10-13, after claiming all 54 on his node: "the voucher row disappears at zero. I'd prefer an explicit Leader vouchers: 0 to distinguish zero from unavailable data"; the user forwarded it)
+
+1. The Node box's voucher line (`LogosRoomFigure.vouchers`) says "0 reward vouchers" when the node read a count of zero, the count with its claimable worth when it has some, and the count alone if the worth was not read. Only an unread count (nil) draws nothing — so an emptied wallet after a claim and a failed read never look alike (§83).
+2. Measured live by the Observer dev on his NUC (logos-observer 874b746): the count tracked 54 down to 0 as he claimed.
