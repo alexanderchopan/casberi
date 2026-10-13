@@ -180,11 +180,36 @@ It is the Pro tier's "writing wallet" in the business model.
 
 Trays are `DSTray`; verbs are rows (`DSDoorRow`); nothing at the top of a screen (§752).
 
+## 2a. The account sheet: a page of live modules
+
+**The sheet the Wallet button raises IS the account** (user, 2026-10-13). It is not a menu of tiles that open trays: it is a stack of **modules you act in directly**, so sending is typing into Move, not tapping Send first ("if the tray or sheet has a send and swap module already there … that is easier. same for signing, rotating keys"). The same idea as the tray's page of modules (§1207 item 5).
+
+- **No balance** (user: "we already have that on the wallet"): the Wallet behind the sheet shows it.
+- **The account is one line, not a module** (user, 2026-10-13: "it needs to be one line"): a disc, the name, a pink ⌄ and the short address, **+ New** on the right. Tapped, it opens in place: the accounts (pick one, a check on the current), then **Addresses** with **+ New address**: your address and every fresh address with what it holds. Fresh addresses live here, under the account, not under Receive (user: "those would be under my account … a selection there").
+
+**Every module stays expanded; none collapses** (user, 2026-10-13: "if we can do all these not collapsed that would be amazing"). To keep the sheet manageable, only **Send · Swap** is a full card; the other two are short rows, each a summary that opens its list, never a verb per item (user: "someone may have 20 tokens to revoke. it could be one line summary"). The sheet is the account line and about 1.2 screens below it. **Level 1 first:** the lists the rows open are designed after these three.
+
+| Module | User goal | Level 1 |
+|---|---|---|
+| **Send · Swap** | Pay someone, or change what I hold | The header's two words are the toggle (the picked one white, the other grey, no pill); **+ Add** puts this move in one transaction with the next. A card: an amount and token, then **to** (Send) or **for ≈** (Swap), and the result in pink as the button ("Send 100 USDC to Ana", "Swap to 0.0408 ETH", "Sign 3 in one transaction"); the batch listed under it, "In this transaction" |
+| **Add · Receive** | Put money in, or get paid | Two rows. **Add** — "From an exchange, a card or a bank" (where it comes from is unruled: no from row until we know the vendor, user: "we don't yet know what we will use"); its button reads "Add 250 USDC", never "Deposit". **Receive** — the address picked on the account line, "· Base · Ethereum"; the QR, Copy and Share are one level down |
+| **Security** | Control what I allow and keep my keys | One header, "1 waiting" in amber when something is. Rows: **Sign** (what waits, the newest named, the count in amber), **Revoke** (apps that can spend your tokens, the count), **Signers** (who can sign and how many must, **Add**), **Rotate** (a new key every transaction, the key number, devices), **Recover** (the recovery key, guardians, "add a guardian" when none) |
+
+**Signers are not guardians** (user, 2026-10-13: "guardians is just recover, but not same as multi sig"). A signer is a Safe owner and counts toward the signatures a transaction needs; with one needed, any signer spends alone. A guardian can only start a key change, which waits out a delay you can cancel from your phone (a Safe recovery module, e.g. Candide's); a guardian never signs a payment. The recovery key is a SIGNER (§6: a second owner, no delay), so holding the 12 words is holding the money. Adding a signer asks how many must sign: two makes it a joint account ("Joint with Sam"), and a joint account is a different hot/cold trade from this one.
+
+No balance and **no Activity module** (user: "we have that in the wallet already"). **Needs you stays on the Wallet** as the one list of what waits across every app; your account's items appear there and open this sheet at Security.
+
+**Open:**
+1. ~~Module order~~ **Decided: fixed** (user, 2026-10-13): Send · Swap, Add · Receive, Security. Something waiting shows inside its module, never by moving it.
+2. Typing: the card you type in expands to fill the sheet while the keyboard is up, then settles back (proposed).
+3. §1178 caps a sheet at four tiles; modules are a different shape, so this sheet is a new pattern to record as a ruling.
+4. Guardians' delay length, and whether adding a second required signer is offered here or only as a new joint account.
+
 ## 3. Features and their buttons
 
 ### v1 — the first release
 
-**The Actions screen.** Send, Swap, Receive and Add money live together on one sheet of their own, not as rows in Holdings (user, 2026-10-12).
+**The Actions screen** (the tiles below are superseded by §2a's modules, 2026-10-13; the door stands). Send, Swap, Receive and Add money live together on one sheet of their own, not as rows in Holdings (user, 2026-10-12).
 - **Its door: the Wallet button**, the band's trailing seat on every page (face · Search · Wallet, §1278, §1280, shipped in 3.0.4). Today it opens the Wallet on Home. Once you have an account of your own it opens the Wallet **with the account sheet on top**, so it always lands in the Wallet. After a key change you didn't make it carries the attention dot.
 - **The sheet:** the Holdings sheet's anatomy. Your account's box, then **four tiles: Send · Swap · Receive · Add money** (a sheet's acts are tiles, four at most, §1178), then sections: **Recovery** (recovery key, Show recovery phrase, New recovery phrase), **Devices** (each owner, Add a device), **Account** (address, name, notifications, activity) and one footnote on who holds the keys.
 - Mockup: `design/mockups/wallet-account-button.html`. Frames 1 and 7 predate §1278 (the button there is Wallet-only) and frames 6 and 7 draw the 3-day recovery the no-delay ruling removed; the sheet, Send, Review and Swap frames stand.
