@@ -160,6 +160,16 @@ check(!seven.fires(price: 1, change24h: 0.069, now: now, calendar: cal), "a cust
 check(seven.fires(price: 1, change24h: -0.07, now: now, calendar: cal), "a custom 7% move: a 7% fall fires")
 check(seven.afterFiring(at: now).on, "a custom move stays on")
 
+// ── A typed price (prd §1289) ────────────────────────────────────────
+check(PriceAlert.price("$0.00015") == 0.00015, "a typed price drops its dollar sign")
+check(PriceAlert.price("1,250.50") == 1250.5, "a grouping comma is read as grouping")
+check(PriceAlert.price("1,250") == 1250, "three digits after a whole number's comma are a thousand")
+check(PriceAlert.price("0,5") == 0.5, "a decimal comma on a comma keypad is a decimal")
+check(PriceAlert.price("0,00015") == 0.00015, "a small price typed with a decimal comma")
+check(PriceAlert.price("12,5") == 12.5, "a comma with one digit after is a decimal")
+check(PriceAlert.price("") == nil && PriceAlert.price("0") == nil && PriceAlert.price("abc") == nil,
+      "nothing, zero or words make no level")
+
 check(PriceAlert.dollars("$5M") == 5_000_000, "5M is five million")
 check(PriceAlert.dollars("250k") == 250_000, "250k")
 check(PriceAlert.dollars("1,200,000") == 1_200_000, "commas are read")

@@ -142,6 +142,27 @@ struct PriceAlert: Codable, Identifiable, Equatable {
         return fraction
     }
 
+    /// A typed price for a level (prd §1289): "$0.00015", "1,250.50", and a
+    /// comma typed as the decimal on a keypad that offers one ("0,5",
+    /// "0,00015") — a lone comma is a decimal unless three digits follow it
+    /// after a whole number ("1,250" is a thousand and more). nil for
+    /// nothing, zero, or not a number.
+    static func price(_ typed: String) -> Double? {
+        var cleaned = typed.replacingOccurrences(of: "$", with: "")
+            .trimmingCharacters(in: .whitespaces)
+        let commas = cleaned.filter { $0 == "," }.count
+        if !cleaned.contains("."), commas == 1, let comma = cleaned.firstIndex(of: ",") {
+            let whole = cleaned[..<comma]
+            let after = cleaned[cleaned.index(after: comma)...]
+            if after.count != 3 || whole.isEmpty || whole == "0" {
+                cleaned.replaceSubrange(comma...comma, with: ".")
+            }
+        }
+        cleaned = cleaned.replacingOccurrences(of: ",", with: "")
+        guard let value = Double(cleaned), value > 0, value.isFinite else { return nil }
+        return value
+    }
+
     /// A typed dollar amount ("$5M", "250k", "1,200,000") for the volume
     /// alert, or nil.
     static func dollars(_ typed: String) -> Double? {

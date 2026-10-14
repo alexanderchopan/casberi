@@ -132,11 +132,12 @@ struct WatchFace: View {
 // MARK: - A watched row's alerts, on its page
 
 /// The alerts a watched token or stock carries, on its page: each one you
-/// set with its switch, then one menu to add another (prd §1081). The
-/// choices are levels computed from the price now; Custom asks for a price
-/// or a day's move in percent (prd §1250), and a token's menu asks for a day
-/// volume too — Dexscreener's pair states a token's, nothing states a coin's
-/// or a stock's here.
+/// set with its switch, then Add an alert (prd §1081). A row and Add both
+/// open `WatchAlertTray`: one field under a Price · Day move · Volume choice,
+/// and, on an alert you set, Delete (prd §1289 replaced the menu and the
+/// two-field dialog, user: "unable to delete old alerts in markets. and the
+/// custom menu is confusing"). Volume is a DEX token's only — Dexscreener's
+/// pair states a token's, nothing states a coin's or a stock's here.
 struct WatchAlertsSection: View {
     let ref: String
     let name: String
@@ -144,11 +145,7 @@ struct WatchAlertsSection: View {
     /// Whether a volume alert can be read for this row (a DEX token).
     var volume = false
 
-    @State private var customOpen = false
-    @State private var customText = ""
-    @State private var customPercent = ""
-    @State private var volumeOpen = false
-    @State private var volumeText = ""
+    @State private var tray: WatchAlertTray.Route?
     private var store: PriceAlertStore { .shared }
 
     var body: some View {
@@ -157,38 +154,32 @@ struct WatchAlertsSection: View {
             ForEach(store.alerts(for: ref)) { alert in
                 alertRow(alert)
             }
-            addMenu
+            addRow
         }
-        .alert(Text("Alert at a price or a move"), isPresented: $customOpen) {
-            TextField(String(localized: "Price in dollars"), text: $customText)
-                .keyboardType(.decimalPad)
-            TextField(String(localized: "Or a move in a day, in %"), text: $customPercent)
-                .keyboardType(.numbersAndPunctuation)
-            Button(String(localized: "Set")) { setCustom() }
-            Button(String(localized: "Cancel"), role: .cancel) { customText = ""; customPercent = "" }
-        } message: {
-            if let price { Text("Now \(TokenChartStyle.priceText(price)). A move listens up and down.") }
-        }
-        .alert(Text("Alert on a day's volume"), isPresented: $volumeOpen) {
-            TextField(String(localized: "Dollars, like 5M"), text: $volumeText)
-                .keyboardType(.numbersAndPunctuation)
-            Button(String(localized: "Set")) { setVolume() }
-            Button(String(localized: "Cancel"), role: .cancel) { volumeText = "" }
-        } message: {
-            Text("When the last 24 hours trade more than this, once a day at most.")
+        // The tray reads no Observable environment, so the thing sheet's Mac
+        // presentation cannot trap on it (prd §872's two halves).
+        .sheet(item: $tray) { route in
+            WatchAlertTray(route: route, ref: ref, name: name, price: price, volume: volume)
         }
     }
 
     private func alertRow(_ alert: PriceAlert) -> some View {
         HStack(spacing: DS.Space.s3) {
-            VStack(alignment: .leading, spacing: 1) {
-                Text(Self.title(alert))
-                    .dsText(.body17).foregroundStyle(DS.textPrimary)
-                if let sub = Self.subtitle(alert, price: price) {
-                    Text(sub).dsText(.subhead12).foregroundStyle(DS.textTertiary)
+            Button {
+                tray = .edit(alert)
+            } label: {
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(Self.title(alert))
+                        .dsText(.body17).foregroundStyle(DS.textPrimary)
+                    if let sub = Self.subtitle(alert, price: price) {
+                        Text(sub).dsText(.subhead12).foregroundStyle(DS.textTertiary)
+                    }
                 }
+                .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                .contentShape(Rectangle())
             }
-            Spacer(minLength: 0)
+            .buttonStyle(RowPress())
+            .accessibilityHint(Text("Edit or delete"))
             Toggle(isOn: Binding(get: { alert.on },
                                  set: { store.set(alert.id, on: $0); DSHaptic.selection() })) {
                 Text(Self.title(alert))
@@ -205,29 +196,11 @@ struct WatchAlertsSection: View {
         }
     }
 
-    @ViewBuilder private var addMenu: some View {
-        if let price {
-            Menu {
-                ForEach(PriceAlert.choices(ref: ref, name: name, price: price)) { choice in
-                    Button {
-                        store.add(choice)
-                        DSHaptic.success()
-                    } label: {
-                        Text(Self.choiceLabel(choice, price: price))
-                    }
-                }
-                Button {
-                    customOpen = true
-                } label: {
-                    Text("Custom price or move…")
-                }
-                if volume {
-                    Button {
-                        volumeOpen = true
-                    } label: {
-                        Text("Day volume above…")
-                    }
-                }
+    /// A price is what every level is measured from, so Add waits for one.
+    @ViewBuilder private var addRow: some View {
+        if price != nil {
+            Button {
+                tray = .new
             } label: {
                 HStack(spacing: DS.Space.s2) {
                     Image(systemName: ScopeTileGlyph.alerts)
@@ -235,38 +208,11 @@ struct WatchAlertsSection: View {
                     Text("Add an alert").dsText(.body17)
                 }
                 .foregroundStyle(DS.tint)
-                .frame(minHeight: 44)
+                .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
                 .contentShape(Rectangle())
             }
+            .buttonStyle(RowPress())
         }
-    }
-
-    private func setCustom() {
-        let cleaned = customText.replacingOccurrences(of: "$", with: "")
-            .replacingOccurrences(of: ",", with: "")
-            .trimmingCharacters(in: .whitespaces)
-        let typedPercent = customPercent
-        customText = ""
-        customPercent = ""
-        var added = false
-        if let target = Double(cleaned), target > 0, let price {
-            store.add(PriceAlert(ref: ref, name: name, kind: target >= price ? .above : .below,
-                                 target: target))
-            added = true
-        }
-        if let move = PriceAlert.movePercent(typedPercent) {
-            store.add(PriceAlert(ref: ref, name: name, kind: .move, target: move))
-            added = true
-        }
-        if added { DSHaptic.success() }
-    }
-
-    private func setVolume() {
-        let typed = volumeText
-        volumeText = ""
-        guard volume, let target = PriceAlert.dollars(typed) else { return }
-        store.add(PriceAlert(ref: ref, name: name, kind: .volume, target: target))
-        DSHaptic.success()
     }
 
     static func title(_ alert: PriceAlert) -> String {
@@ -301,13 +247,228 @@ struct WatchAlertsSection: View {
         }
     }
 
-    static func choiceLabel(_ choice: PriceAlert, price: Double) -> String {
-        switch choice.kind {
-        case .above, .below:
-            let pct = Int(((choice.distance(from: price) ?? 0) * 100).rounded())
-            return String(localized: "\(title(choice)) (\(pct > 0 ? "+" : "")\(pct)%)")
-        case .move, .volume, .gasBelow:
-            return title(choice)
+}
+
+// MARK: - One alert's tray (prd §1289)
+
+/// Add an alert, or change or delete one you set: what it measures (Price ·
+/// Day move · Volume), ONE field for it, the sentence the field makes, and
+/// quick levels from the price now. A price above now rises to it, below
+/// falls to it, so there is no direction to pick. It reads no Observable
+/// environment and presents nothing, so it is safe raised from the thing
+/// sheet on the Mac (prd §872).
+struct WatchAlertTray: View {
+    enum Route: Identifiable {
+        case new
+        case edit(PriceAlert)
+        var id: String {
+            switch self {
+            case .new: "new"
+            case .edit(let alert): alert.id.uuidString
+            }
+        }
+    }
+
+    enum Measure: Hashable {
+        case price, move, volume
+
+        var word: String {
+            switch self {
+            case .price:  String(localized: "Price")
+            case .move:   String(localized: "Day move")
+            case .volume: String(localized: "Volume")
+            }
+        }
+    }
+
+    let route: Route
+    let ref: String
+    let name: String
+    let price: Double?
+    let volume: Bool
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var measure: Measure
+    @State private var text: String
+    @FocusState private var focused: Bool
+    private var store: PriceAlertStore { .shared }
+
+    init(route: Route, ref: String, name: String, price: Double?, volume: Bool) {
+        self.route = route
+        self.ref = ref
+        self.name = name
+        self.price = price
+        self.volume = volume
+        switch route {
+        case .new:
+            _measure = State(initialValue: .price)
+            _text = State(initialValue: "")
+        case .edit(let alert):
+            // A gas alert watches a chain and is never on a row's page.
+            let measure: Measure = switch alert.kind {
+            case .above, .below, .gasBelow: .price
+            case .move: .move
+            case .volume: .volume
+            }
+            _measure = State(initialValue: measure)
+            _text = State(initialValue: Self.fieldText(alert.target, measure: measure))
+        }
+    }
+
+    private var editing: PriceAlert? {
+        if case .edit(let alert) = route { return alert }
+        return nil
+    }
+
+    private var measures: [Measure] { volume ? [.price, .move, .volume] : [.price, .move] }
+
+    /// The alert the field makes, or nil while it makes none.
+    private var made: PriceAlert? {
+        switch measure {
+        case .price:
+            guard let target = PriceAlert.price(text), let price else { return nil }
+            return PriceAlert(ref: ref, name: name, kind: target >= price ? .above : .below, target: target)
+        case .move:
+            guard let move = PriceAlert.movePercent(text) else { return nil }
+            return PriceAlert(ref: ref, name: name, kind: .move, target: move)
+        case .volume:
+            guard let dollars = PriceAlert.dollars(text) else { return nil }
+            return PriceAlert(ref: ref, name: name, kind: .volume, target: dollars)
+        }
+    }
+
+    var body: some View {
+        DSTray(title: editing == nil ? String(localized: "New alert") : String(localized: "Edit alert"),
+               height: 640, detents: [.large]) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: DS.Space.s4) {
+                    if let price {
+                        Text("\(name) is \(TokenChartStyle.priceText(price)) now")
+                            .dsText(.body17).foregroundStyle(DS.textSecondary)
+                    }
+                    HStack(spacing: DS.Space.s2) {
+                        ForEach(measures, id: \.self) { each in
+                            Button { pick(each) } label: {
+                                Chip(text: each.word, selected: measure == each)
+                            }
+                            .buttonStyle(PressSpring())
+                        }
+                    }
+                    field
+                    Text(verbatim: sentence)
+                        .dsText(.body17)
+                        .foregroundStyle(made == nil ? DS.textTertiary : DS.textPrimary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    HStack(spacing: DS.Space.s2) {
+                        ForEach(quick, id: \.self) { level in
+                            Button {
+                                DSHaptic.selection()
+                                text = level.text
+                            } label: {
+                                Chip(text: level.word, selected: text == level.text)
+                            }
+                            .buttonStyle(PressSpring())
+                        }
+                    }
+                    DSSlabButton(title: editing == nil ? String(localized: "Set alert") : String(localized: "Save"),
+                                 enabled: made != nil) { commit() }
+                    if let editing {
+                        DSDoorRow(icon: "trash", label: "Delete alert", role: .destructive) {
+                            store.remove(editing.id)
+                            DSHaptic.selection()
+                            dismiss()
+                        }
+                    }
+                }
+                .padding(.bottom, DS.Space.s6)
+            }
+            .scrollDismissesKeyboard(.interactively)
+        }
+        .onAppear { if editing == nil { focused = true } }
+    }
+
+    private var field: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 0) {
+            if measure != .move {
+                Text(verbatim: "$").dsText(.price40).foregroundStyle(DS.textPrimary)
+            }
+            TextField(String(localized: "0"), text: $text)
+                // Volume takes "5M", so its keypad has letters.
+                .keyboardType(measure == .volume ? .numbersAndPunctuation : .decimalPad)
+                .dsText(.price40).monospacedDigit()
+                .foregroundStyle(DS.textPrimary)
+                .focused($focused)
+                .fixedSize()
+            if measure == .move {
+                Text(verbatim: "%").dsText(.price40).foregroundStyle(DS.textPrimary)
+            }
+            Spacer(minLength: 0)
+        }
+        .frame(minHeight: DS.Hit.min)
+    }
+
+    /// What the alert will do, in the row's own words; before the field
+    /// makes one, what this measure listens for.
+    private var sentence: String {
+        if let made {
+            let title = WatchAlertsSection.title(made)
+            guard let sub = WatchAlertsSection.subtitle(made, price: price) else { return title }
+            return "\(title) · \(sub)"
+        }
+        switch measure {
+        case .price:  return String(localized: "Higher than now alerts on the way up, lower on the way down. Once.")
+        case .move:   return String(localized: "Up or down, once a day at most")
+        case .volume: return String(localized: "When the last 24 hours trade more than this, once a day at most.")
+        }
+    }
+
+    /// A level one tap away: its chip's word, and the field as it reads it.
+    struct Level: Hashable {
+        let word: String
+        let text: String
+    }
+
+    private var quick: [Level] {
+        switch measure {
+        case .price:
+            guard let price else { return [] }
+            return [(0.10, "+10%"), (0.25, "+25%"), (-0.10, "−10%"), (-0.25, "−25%")].map { step, word in
+                Level(word: word, text: Self.fieldText(price * (1 + step), measure: .price))
+            }
+        case .move:
+            return [0.05, 0.10, 0.20].map {
+                Level(word: WatchAlertsSection.movePercentText($0), text: Self.fieldText($0, measure: .move))
+            }
+        case .volume:
+            return ["1M", "5M", "10M"].map { Level(word: $0, text: $0) }
+        }
+    }
+
+    private func pick(_ next: Measure) {
+        guard next != measure else { return }
+        DSHaptic.selection()
+        measure = next
+        text = ""
+        focused = true
+    }
+
+    private func commit() {
+        guard let made else { return }
+        if let editing { store.remove(editing.id) }
+        store.add(made)
+        DSHaptic.success()
+        dismiss()
+    }
+
+    /// A target as the field types it: no "$", no "%", no grouping.
+    static func fieldText(_ target: Double, measure: Measure) -> String {
+        switch measure {
+        case .price:
+            return TokenChartStyle.priceText(target).replacingOccurrences(of: "$", with: "")
+        case .move:
+            return WatchAlertsSection.movePercentText(target).replacingOccurrences(of: "%", with: "")
+        case .volume:
+            return TokenStats.compact(target).replacingOccurrences(of: "$", with: "")
         }
     }
 }

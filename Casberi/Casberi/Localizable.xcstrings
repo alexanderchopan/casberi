@@ -925,6 +925,34 @@
         }
       }
     },
+    "%@ is %@ now" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ está a %2$@ ahora"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ は現在 %2$@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ 현재 %2$@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ 现在为 %2$@"
+          }
+        }
+      }
+    },
     "%@ is %@ now." : {
       "localizations" : {
         "es" : {
@@ -5933,6 +5961,34 @@
         }
       }
     },
+    "Day move" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Movimiento del día"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1日の変動"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "하루 변동"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "日内波动"
+          }
+        }
+      }
+    },
     "Day volume above…" : {
       "localizations" : {
         "es" : {
@@ -6321,6 +6377,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "每项服务都会看到你的 IP；iCloud 专用代理只保护 Safari，不保护应用。"
+          }
+        }
+      }
+    },
+    "Edit alert" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Editar alerta"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アラートを編集"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "알림 편집"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "编辑提醒"
+          }
+        }
+      }
+    },
+    "Edit or delete" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Editar o eliminar"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "編集または削除"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "편집 또는 삭제"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "编辑或删除"
           }
         }
       }
@@ -8341,6 +8453,34 @@
         }
       }
     },
+    "Higher than now alerts on the way up, lower on the way down. Once." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Por encima de ahora avisa al subir, por debajo al bajar. Una vez."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "現在より上なら上昇時、下なら下落時に通知します。1回のみ。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "현재보다 높으면 오를 때, 낮으면 내릴 때 알립니다. 한 번만."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "高于现价时在上涨时提醒，低于现价时在下跌时提醒。仅一次。"
+          }
+        }
+      }
+    },
     "Its events show in Coming up and Day — nothing is added to your Calendar app." : {
       "localizations" : {
         "es" : {
@@ -8813,6 +8953,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "在 Safe 应用中通过 WalletConnect 连接，并把链接粘贴到这里。它只能请求 Safe 交易、声明和恢复。"
+          }
+        }
+      }
+    },
+    "New alert" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Nueva alerta"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "新しいアラート"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "새 알림"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "新提醒"
           }
         }
       }
@@ -10077,6 +10245,34 @@
         }
       }
     },
+    "Set alert" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Crear alerta"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アラートを設定"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "알림 설정"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "设置提醒"
+          }
+        }
+      }
+    },
     "Settings, data and notifications" : {
       "localizations" : {
         "es" : {
@@ -10857,6 +11053,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "语音消息"
+          }
+        }
+      }
+    },
+    "Volume" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Volumen"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "出来高"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "거래량"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "成交量"
           }
         }
       }
