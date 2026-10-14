@@ -1,0 +1,139 @@
+#!/usr/bin/env python3
+"""Read one journeys run, compare it with the last good run of each journey,
+append it to the history, and print the report. Called by scripts/journeys.sh.
+
+WHY THIS EXISTS (2026-10-14). The passes measure whether the app breaks, and
+`perf.sh` how fast it launches; nothing measured how much a person has to DO
+to get a job done. A journey (`CasberiUITests/JourneyTests.swift`) is one job
+walked with real taps from where a person starts. This turns each walk into
+numbers that trend: taps, characters typed, seconds.
+
+WHAT EACH NUMBER IS.
+  taps     — every tap the walk makes, field focus included. The headline: it
+             does not move with a slow machine.
+  typed    — characters typed.
+  seconds  — wall clock from launch-landed to the last step. Includes waits for
+             animations and the test runner's own queries (~0.3–0.5s a step), so
+             it moves with the machine; only a large move is flagged.
+
+FLAGS, each against the LAST OK RUN of the same journey (a broken run never
+becomes the baseline):
+  broken        — a step was not found; the journey failed where it says.
+  more taps     — taps went up. A design change that costs the person a tap.
+  fewer taps    — taps went down. Said, so a good change is on the record.
+  more typing   — typed went up.
+  slower        — seconds rose by more than SLOW_RATIO and by SLOW_FLOOR_S.
+It REPORTS and never gates, like perf.sh: exit 0 unless its input is missing.
+
+Input  results.tsv: journey \\t ok|broken \\t taps \\t typed \\t seconds \\t note
+History CSV: ts,sha,journey,status,taps,typed,seconds,note
+Usage: journeys-report.py <results.tsv> <history.csv> <sha>
+"""
+
+import csv
+import datetime
+import pathlib
+import sys
+
+SLOW_RATIO = 1.5
+SLOW_FLOOR_S = 3.0
+FIELDS = ["ts", "sha", "journey", "status", "taps", "typed", "seconds", "note"]
+
+
+def read_results(path):
+    rows = []
+    for line in pathlib.Path(path).read_text().splitlines():
+        parts = line.split("\t")
+        if len(parts) < 5 or not parts[0].strip():
+            continue
+        note = parts[5] if len(parts) > 5 else ""
+        rows.append(dict(journey=parts[0], status=parts[1], taps=int(parts[2]),
+                         typed=int(parts[3]), seconds=float(parts[4]), note=note))
+    return rows
+
+
+def read_history(path):
+    p = pathlib.Path(path)
+    if not p.exists():
+        return []
+    with p.open() as f:
+        return list(csv.DictReader(f))
+
+
+def baselines(history):
+    """The last OK row of each journey."""
+    base = {}
+    for r in history:
+        if r.get("status") == "ok":
+            base[r["journey"]] = r
+    return base
+
+
+def flags(row, base):
+    out = []
+    if row["status"] != "ok":
+        out.append(f"broken: {row['note'] or 'a step was not found'}")
+        return out
+    if base is None:
+        out.append("first run: this is the baseline")
+        return out
+    bt, by, bs = int(base["taps"]), int(base["typed"]), float(base["seconds"])
+    if row["taps"] > bt:
+        out.append(f"more taps: {bt} → {row['taps']}")
+    elif row["taps"] < bt:
+        out.append(f"fewer taps: {bt} → {row['taps']}")
+    if row["typed"] > by:
+        out.append(f"more typing: {by} → {row['typed']} characters")
+    if row["seconds"] > bs * SLOW_RATIO and row["seconds"] - bs > SLOW_FLOOR_S:
+        out.append(f"slower: {bs:.1f}s → {row['seconds']:.1f}s")
+    return out
+
+
+def report(results, history, sha, ts):
+    base = baselines(history)
+    lines, new_rows = [], []
+    for r in results:
+        b = base.get(r["journey"])
+        f = flags(r, b)
+        mark = "✗" if r["status"] != "ok" else ("⚠" if any(x.startswith(("more", "slower")) for x in f) else "✓")
+        lines.append(f"{mark} {r['journey']:<20} taps={r['taps']:<3} typed={r['typed']:<3} "
+                     f"{r['seconds']:6.1f}s" + (f"   {'; '.join(f)}" if f else ""))
+        new_rows.append(dict(ts=ts, sha=sha, journey=r["journey"], status=r["status"],
+                             taps=r["taps"], typed=r["typed"], seconds=f"{r['seconds']:.1f}",
+                             note=r["note"]))
+    return lines, new_rows
+
+
+def append(history_path, rows):
+    p = pathlib.Path(history_path)
+    new = not p.exists()
+    p.parent.mkdir(parents=True, exist_ok=True)
+    with p.open("a", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=FIELDS)
+        if new:
+            w.writeheader()
+        for r in rows:
+            w.writerow(r)
+
+
+def main(argv):
+    if len(argv) != 3:
+        print(__doc__.strip().splitlines()[-1])
+        return 2
+    results_path, history_path, sha = argv
+    if not pathlib.Path(results_path).exists():
+        print(f"✗ no results at {results_path} — the test run wrote nothing; read its xcodebuild.log")
+        return 1
+    results = read_results(results_path)
+    if not results:
+        print("✗ the results file is empty — no journey reached its end or its first step")
+        return 1
+    ts = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+    lines, rows = report(results, read_history(history_path), sha, ts)
+    print("\n".join(lines))
+    append(history_path, rows)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

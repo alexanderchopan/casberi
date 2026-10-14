@@ -1378,6 +1378,13 @@ step "File-findings self-test"
 "$ROOT/scripts/file-findings-selftest.py" || fail "the findings filer changed behaviour — see the output above"
 print -P "%F{green}✓ file-findings self-test%f"
 
+# The journeys report (2026-10-14) — what `scripts/journeys.sh` flags when a
+# job takes more taps, more typing or more time than its last good run. A
+# broken run must never become the baseline the next run is compared with.
+step "Journeys report self-test"
+"$ROOT/scripts/journeys-selftest.py" || fail "the journeys report changed behaviour — see the output above"
+print -P "%F{green}✓ journeys report self-test%f"
+
 # The recurring "reads a dead Thing" crash class (builds 137/138/139/142/150 —
 # five TestFlight-found crashes, one defect). The rule was written down and
 # re-broken twice because memory was enforcing it; this makes it mechanical.
