@@ -103,6 +103,31 @@ fi
 
 print -r -- "$TS  $SHA  $VERDICT  $PERF  ${RUN_DIR:-no-output-dir}" >> "$LEDGER"
 
+# File the night as a `claude` issue (scripts/file-findings.py, 2026-10-14).
+# verify-mac.sh stops at its first ✗, so a FAIL names one step and says nothing
+# about the steps after it: it files that step and closes nothing. Only a PASS
+# ran every step, so only a PASS closes (every open nightly-mac issue, since it
+# reports none). The key is the step with digits as N: "cold-launch cycle 7"
+# and "cycle 3" are one issue. Perf flags are not filed — the run raises them
+# by design and never gates on them.
+if (( STATUS == 0 )); then
+  python3 "$ROOT/scripts/file-findings.py" --source nightly-mac --sha "$SHA" --complete
+else
+  STEP=${VERDICT#FAIL: }
+  KEY=$(print -r -- "$STEP" | sed -E 's/[0-9]+/N/g' | cut -c1-90)
+  TAIL=$(sed $'s/\033\\[[0-9;]*m//g' /tmp/nightly-mac-run.log | tail -40)
+  python3 "$ROOT/scripts/file-findings.py" --source nightly-mac --sha "$SHA" \
+    --finding "$KEY" "Mac nightly: $STEP" "The Mac nightly failed at $TS on \`$SHA\`.
+
+Last 40 lines of the run:
+
+\`\`\`
+$TAIL
+\`\`\`
+
+Run dir on the Mac: \`${RUN_DIR:-none}\`. Re-run with \`scripts/verify-mac.sh\`."
+fi
+
 # Prune: keep the most recent $KEEP mac-* dirs, drop the rest.
 print -l -- "$ROOT"/scripts/output/mac-*(/om) 2>/dev/null | tail -n +$((KEEP + 1)) | while read -r old; do
   rm -rf "$old"

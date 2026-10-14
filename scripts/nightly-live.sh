@@ -88,6 +88,26 @@ if (( COUNT > 0 )); then
   (( COUNT > 12 )) && print -r -- "    … $((COUNT - 12)) more in $TABLE" >> "$LEDGER"
 fi
 
+# File each ✗ row as a `claude` issue (scripts/file-findings.py, 2026-10-14),
+# so a red night becomes work a session picks up without being told. Red rows
+# only: a ⚠ is a soft flag (a 503, a quiet hour) and stays in the ledger. The
+# key is the row up to its first `:` with digits as N, so a row whose tail
+# carries a status code or a count stays one issue across nights. Complete
+# only when the table reached its closing line: a table that died midway must
+# not close the rows it never printed.
+typeset -a FINDINGS
+print -r -- "$FLAGGED" | grep '^✗' | while IFS= read -r row; do
+  text=${row#✗ }
+  key=$(print -r -- "${text%%:*}" | sed -E 's/[0-9]+/N/g' | cut -c1-90)
+  FINDINGS+=(--finding "$key" "$text" "Nightly live-integrations row, $TS:
+
+    $row
+
+Full table on the Mac: \`${TABLE#$ROOT/}\`. Re-run with \`scripts/live-integrations.sh\`.")
+done
+COMPLETE=(); [[ "$RED" != "?" ]] && COMPLETE=(--complete)
+python3 "$ROOT/scripts/file-findings.py" --source nightly-live --sha "$SHA" $COMPLETE "${FINDINGS[@]}"
+
 # Prune: keep the most recent $KEEP tables.
 print -l -- "$OUT"/live-*.log(.om) 2>/dev/null | tail -n +$((KEEP + 1)) | while read -r old; do
   rm -f "$old"

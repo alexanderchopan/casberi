@@ -45,6 +45,12 @@ Recurring sweep that catches regressions between working sessions. Everything ru
 
 6. **Report**: a short findings list ordered by severity — regressions first, then honesty violations, then polish. Always include the perf pass's three numbers (launch / memory / answer) so the trend is on the record even when nothing flags. Each finding names the screenshot file and the doc/ruling it violates. No findings = say so plainly. Do NOT fix anything during an audit run unless asked; findings go to the user (or the session report) for triage.
 
+7. **File the findings as issues** (`scripts/file-findings.py`, 2026-10-14). Every regression, honesty violation and polish finding from step 6 becomes one GitHub issue labelled `claude` and `source:screen-audit`, so the next working session picks it up without being told. Environment-obscured screens, WIP-in-flight screens and perf numbers that did not flag are NOT findings and are not filed.
+   - **Reuse keys first.** Run `scripts/file-findings.py --list --source screen-audit`. It prints each open issue as `#N  key  title`. A finding that is the same defect as an open issue takes THAT key exactly — a key is the identity, and a new spelling files a duplicate. A new finding gets a key `<screen>-<defect>` in lowercase words joined by `-` (`settings-tray-hairline`, `home-lede-clipped`).
+   - **Write `scripts/output/<ts>/findings.json`:** `{"source": "screen-audit", "findings": [{"key", "title", "body"}], "resolved": [keys]}`. The title is the defect in one sentence. The body names the screenshot file (relative to the repo), the ruling or doc line it breaks (`prd §N`, `build-brief.md §8`), and the hook that reproduces it. `resolved` lists each open key whose screen you shot clean this run. A key whose screen you did not reach stays out of both lists.
+   - **Never set `"complete": true`** — a screen-audit's keys are chosen per run, so closing by absence would close what a run merely spelled differently. Close only through `resolved`.
+   - Run `scripts/file-findings.py --json scripts/output/<ts>/findings.json` and put its `findings:` line in the report. The repo is PUBLIC: no screenshot is attached, no corpus content (titles of things, names, addresses, amounts) is quoted — describe the defect, not the data. The filer withholds a credential-shaped field; it cannot see a person's data.
+
 ## Notes
 
 - Screenshots land in `scripts/output/<timestamp>/` (gitignored).

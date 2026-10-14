@@ -1370,6 +1370,14 @@ step "Secret-scan self-test"
 "$ROOT/scripts/secret-scan-selftest.py" || fail "the credential tripwire changed behaviour — see the output above"
 print -P "%F{green}✓ secret-scan self-test%f"
 
+# The findings filer (2026-10-14) — the nightlies and the screen audit file
+# what they find as `claude` issues through it, unattended, into a PUBLIC repo.
+# Against a stub `gh`: one issue per finding, a return reopens, only a
+# complete run closes by absence, a credential-shaped field files nothing.
+step "File-findings self-test"
+"$ROOT/scripts/file-findings-selftest.py" || fail "the findings filer changed behaviour — see the output above"
+print -P "%F{green}✓ file-findings self-test%f"
+
 # The recurring "reads a dead Thing" crash class (builds 137/138/139/142/150 —
 # five TestFlight-found crashes, one defect). The rule was written down and
 # re-broken twice because memory was enforcing it; this makes it mechanical.
