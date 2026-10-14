@@ -50,9 +50,12 @@ xcrun simctl uninstall "$DEVICE_ID" "$BUNDLE" 2>/dev/null
 # The demo pour asks for these on a fresh install, and an unanswered system
 # sheet blocks every tap (CLAUDE.md, simulator gotchas). Granted up front; the
 # walk also dismisses any alert that still shows, and does not count it.
-for svc in photos calendar reminders contacts; do
+# Calendar is RESET, never granted: `connect` walks iOS's calendar ask as
+# its own step, and a grant would skip it.
+for svc in photos reminders contacts; do
   xcrun simctl privacy "$DEVICE_ID" grant "$svc" "$BUNDLE" 2>/dev/null
 done
+xcrun simctl privacy "$DEVICE_ID" reset calendar "$BUNDLE" 2>/dev/null
 
 print -P "%F{cyan}▶ journeys on $DEVICE_ID at $SHA → $OUT%f"
 TEST_RUNNER_JOURNEYS_OUT="$OUT" "$ROOT/scripts/xcb.sh" \

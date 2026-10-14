@@ -26,12 +26,13 @@ final class JourneyTests: XCTestCase {
 
     // MARK: - The journeys
 
-    /// A new install, to the first app connected. NerdWallet is the one app
-    /// that connects with no typing, no key and no iOS permission ask
-    /// (`BridgeCatalog` `noAccountSeats`); it needs the network to register.
-    /// Starts from a NEVER-LAUNCHED install, so it passes no arguments, and
-    /// `journeys.sh` uninstalls before every run. XCTest runs methods A–Z, so
-    /// this one runs first.
+    /// A new install, to the first app connected, through Sources' Start
+    /// here (prd §1166): Add a calendar › Your phone's calendars, which has no
+    /// page and fires iOS's ask on the spot (`SettingsHome.openOffer`). The
+    /// ask is the person's step and is counted. Starts from a NEVER-LAUNCHED
+    /// install, so it passes no arguments; `journeys.sh` uninstalls and resets
+    /// calendar access before every run. XCTest runs methods A–Z, so this one
+    /// runs first.
     @MainActor func testConnect() {
         let w = Walk("connect", launch: [], test: self)
         // The intro cover is one button and lifts by itself after the demo
@@ -39,14 +40,12 @@ final class JourneyTests: XCTestCase {
         w.tap(w.el(.button, "label BEGINSWITH %@", "One inbox for all your apps"), "intro cover")
         w.tap(w.el(.button, "label CONTAINS %@", "Exit"), "demo pill, Exit")
         w.see(w.el(.staticText, "label == %@", "Start here"), "Sources, Start here")
-        w.tap(w.el(.textField, "label == %@ OR placeholderValue == %@", "Search", "Search"), "Sources search")
-        w.type("Nerd", "type Nerd")
-        w.tap(w.el(.button, "label BEGINSWITH %@", "NerdWallet"), "NerdWallet row")
-        w.tap(w.el(.button, "label == %@", "Follow NerdWallet"), "Follow NerdWallet")
-        w.refuse(w.el(.staticText, "label BEGINSWITH %@", "Couldn't reach NerdWallet"), within: 2, "network")
-        // Connected once the seat registers: the page reads, then closes its
-        // sheet and lands in the room, so the Follow control is gone.
-        w.gone(w.el(.button, "label == %@", "Follow NerdWallet"), within: 30, "seat registered")
+        w.tap(w.el(.button, "label BEGINSWITH %@", "Add a calendar"), "Add a calendar")
+        w.tap(w.el(.button, "label BEGINSWITH %@", "Your phone"), "Your phone's calendars")
+        w.allow("Full Access", "iOS calendar ask")
+        // Connected once the step stands down: each Start here step stays
+        // until its own act is done.
+        w.gone(w.el(.button, "label BEGINSWITH %@", "Add a calendar"), within: 15, "Calendar connected")
         w.finish()
     }
 
@@ -163,6 +162,19 @@ final class JourneyTests: XCTestCase {
                 taps += 1
                 shoot(what)
             }
+        }
+
+        /// A system permission ask that IS the journey's step: answered with
+        /// the button containing `button`, and counted as a tap.
+        func allow(_ button: String, _ what: String) {
+            guard broken == nil else { return }
+            let alert = springboard.alerts.firstMatch
+            guard alert.waitForExistence(timeout: 10) else { return fail(what, "no system alert") }
+            let b = alert.buttons.matching(NSPredicate(format: "label CONTAINS %@", button)).firstMatch
+            guard b.exists else { return fail(what, "no \"\(button)\" button on the alert") }
+            b.tap()
+            taps += 1
+            shoot(what)
         }
 
         /// Into the focused field: a tap to focus is counted by `tap`.
