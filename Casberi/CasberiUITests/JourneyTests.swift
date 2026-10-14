@@ -109,7 +109,10 @@ final class JourneyTests: XCTestCase {
         w.focus(w.el(.textField, "placeholderValue == %@", "0"), "price field")
         w.type("15.99", "type price")
         w.tap(w.el(.button, "label == %@", "Track Hulu"), "Track Hulu")
-        w.see(w.el(.button, "label BEGINSWITH %@", "Tracking Hulu"), "Hulu tracked")
+        // The notice "Tracking Hulu" flashes on the tap; the ticked row says
+        // the same but is disabled and may sit in Popular below the fold,
+        // where a lazy list has not drawn it (measured 2026-10-14: not found).
+        w.see(w.el(.any, "label == %@", "Tracking Hulu"), "Hulu tracked")
         w.finish()
     }
 
@@ -185,8 +188,11 @@ final class JourneyTests: XCTestCase {
             shoot(what)
         }
 
+        /// Proof a step landed: on screen is enough. A proof is often a
+        /// disabled row or a notice, which is never hittable (measured
+        /// 2026-10-14: "note in Notes" was found and failed as not hittable).
         func see(_ e: XCUIElement, _ what: String) {
-            guard ready(e, what) else { return }
+            guard ready(e, what, hittable: false) else { return }
             shoot(what)
         }
 
@@ -216,13 +222,14 @@ final class JourneyTests: XCTestCase {
             if let broken { XCTFail("journey \(name) broke: \(broken)") }
         }
 
-        private func ready(_ e: XCUIElement, _ what: String) -> Bool {
+        private func ready(_ e: XCUIElement, _ what: String, hittable needsHit: Bool = true) -> Bool {
             guard broken == nil else { return false }
             dismissAlerts()
             guard e.waitForExistence(timeout: 12) else {
                 fail(what, "not found")
                 return false
             }
+            guard needsHit else { return true }
             let hittable = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isHittable == true"), object: e)
             if XCTWaiter().wait(for: [hittable], timeout: 4) != .completed {
                 fail(what, "found but not hittable")
