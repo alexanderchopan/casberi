@@ -9,11 +9,10 @@ The session that started it is summarized in `docs/growth-handoff.md`.
   Casberi Public Beta group.
 - The app has no telemetry, by rule. App Store Connect is the only place install, source and
   retention numbers come from.
-- The live store description and promotional text sell the built-in ask, which §697b turned
-  off. What the app offers now: bring your own agent (the keyed seats, §871) and the Apple
-  Intelligence seat (§833, dark until Apple grants the managed entitlement). The replacement copy in
-  `docs/store-copy.md` predates this framing and is not applied. The live subtitle is not
-  recorded in the repo.
+- The store copy no longer sells the built-in ask (the user changed it; 2026-10-14). The last
+  read of the live pages is `docs/store-live.json`, taken 2026-10-05: the iOS description there is
+  the new copy, and the Mac description still the older one ("reads them back to you", "Over 90
+  apps"). Re-read it before trusting either. The live subtitle is not recorded in the repo.
 - MCP: the Mac listener is built, `MCPPairing.transportReady` is `false`, and it has never been
   run against a real client. The store page cannot claim it until it has.
 - Drafted, not sent: `docs/hn-launch-post.md`, `docs/launch-thread.md` (lists 34 apps; the
