@@ -1,0 +1,38 @@
+#!/bin/sh
+# Gate a WORKER's commit (2026-10-14, docs/workers.md).
+#
+# TRACKED COPY; install with `scripts/install-hooks.sh`.
+#
+# A worker's commit lands on public `main` the moment post-commit pushes it,
+# so it is gated here, before it exists. A commit is a worker's when its
+# message carries a `Claude-Worker:` trailer, or when it is made with
+# CLAUDE_WORKER=1 in the environment (a worker's launcher sets it; then the
+# trailer is required, so the commit is counted against the daily cap).
+#
+#   an exact revert of a worker commit  → `worker-gate.py revert-ok` only:
+#                                          undoing is allowed even while a
+#                                          suspect stops everything else;
+#   anything else                       → `check` (the switch, a stop issue,
+#                                          the cap, an unreverted suspect) and
+#                                          `diff-check --staged` (the deny
+#                                          list, no deletions, the size caps).
+#
+# Every other commit, yours, passes through untouched.
+trailer=0; grep -q '^Claude-Worker:' "$1" && trailer=1
+[ "$trailer" = 1 ] || [ "${CLAUDE_WORKER-}" = 1 ] || exit 0
+
+ROOT="$(git rev-parse --show-toplevel)"
+GATE="$ROOT/scripts/worker-gate.py"
+
+if grep -q '^This reverts commit [0-9a-f]\{40\}' "$1"; then
+  python3 "$GATE" revert-ok "$1" && exit 0
+  echo "commit refused: not an exact revert of a worker commit (above)." >&2; exit 1
+fi
+if [ "$trailer" = 0 ]; then
+  echo "commit refused: a worker's commit carries 'Claude-Worker: #<issue>' (docs/workers.md)." >&2; exit 1
+fi
+python3 "$GATE" check || {
+  echo "commit refused: workers may not run now (above)." >&2; exit 1; }
+python3 "$GATE" diff-check --staged || {
+  echo "commit refused: this diff is not a worker's to make (above). Label the issue claude-needs-you instead." >&2; exit 1; }
+exit 0

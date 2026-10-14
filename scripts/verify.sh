@@ -1385,6 +1385,15 @@ step "Journeys report self-test"
 "$ROOT/scripts/journeys-selftest.py" || fail "the journeys report changed behaviour — see the output above"
 print -P "%F{green}✓ journeys report self-test%f"
 
+# The worker gate (2026-10-14, docs/workers.md) — what lets a Claude worker run
+# and commit to public `main` with no review: the switch, the owner's stop
+# issue, the daily cap, a suspect a red nightly descends from, the issues it
+# may take, the paths and sizes it may commit, and exact reverts. In a scratch
+# repo against a stub `gh`; each rule is broken in a copy and must be caught.
+step "Worker-gate self-test"
+"$ROOT/scripts/worker-gate-selftest.py" || fail "the worker gate changed behaviour — see the output above"
+print -P "%F{green}✓ worker-gate self-test%f"
+
 # The recurring "reads a dead Thing" crash class (builds 137/138/139/142/150 —
 # five TestFlight-found crashes, one defect). The rule was written down and
 # re-broken twice because memory was enforcing it; this makes it mechanical.
