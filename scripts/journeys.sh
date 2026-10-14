@@ -57,7 +57,8 @@ done
 print -P "%F{cyan}▶ journeys on $DEVICE_ID at $SHA → $OUT%f"
 TEST_RUNNER_JOURNEYS_OUT="$OUT" "$ROOT/scripts/xcb.sh" \
   -project "$ROOT/Casberi/Casberi.xcodeproj" -scheme Casberi \
-  -destination "id=$DEVICE_ID" "${ONLY[@]}" test > "$OUT/xcodebuild.log" 2>&1
+  -destination "id=$DEVICE_ID" -derivedDataPath "$HOME/Library/Developer/CasberiDD" \
+  "${ONLY[@]}" test > "$OUT/xcodebuild.log" 2>&1
 TEST_STATUS=$?
 (( TEST_STATUS != 0 )) && print -P "%F{yellow}⚠ xcodebuild exited $TEST_STATUS — a broken journey does that; the report says which%f"
 
