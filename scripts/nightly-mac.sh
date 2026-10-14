@@ -8,6 +8,9 @@
 #   2. Pruning, so nightly screenshots don't grow without bound.
 #   3. A non-zero exit that is actually recorded somewhere a human will look.
 #
+# Then the iOS journeys (scripts/journeys.sh), reported apart from the verdict;
+# see the block above the prune.
+#
 # Install (once):
 #   cp scripts/com.casberi.nightly-mac.plist ~/Library/LaunchAgents/
 #   launchctl bootstrap gui/$UID ~/Library/LaunchAgents/com.casberi.nightly-mac.plist
@@ -128,8 +131,57 @@ $TAIL
 Run dir on the Mac: \`${RUN_DIR:-none}\`. Re-run with \`scripts/verify-mac.sh\`."
 fi
 
-# Prune: keep the most recent $KEEP mac-* dirs, drop the rest.
+# Journeys (2026-10-14): how many taps, characters and seconds each job takes
+# a person, walked on the iOS simulator (scripts/journeys.sh). They run after
+# the Mac pass and whatever it said, and never change $STATUS or the ledger row
+# above: a job that got longer is a product question for the weekly review, and
+# `journeys-history.csv` is its trend. A journey that BROKE (a step not found)
+# is work, so it files as a `claude` issue keyed by the journey's name, the
+# step it broke at in the body. Complete only when every journey reported,
+# so a run that died partway closes nothing; the count is read off the test
+# file, so a journey added there is expected here the same night. A run that
+# reported nothing (the UI-test target failed to build, say) files too, as
+# `journeys-run`, since no Mac check builds the iOS test target.
+JOURNEYS_TOTAL=$(grep -cE '^ *@MainActor func test[A-Z]' "$ROOT/Casberi/CasberiUITests/JourneyTests.swift")
+"$ROOT/scripts/journeys.sh" > /tmp/nightly-journeys.log 2>&1
+JOURNEYS_DIR=$(print -l -- "$ROOT"/scripts/output/journeys-*(/om[1]N) 2>/dev/null)
+if [[ -n "$JOURNEYS_DIR" && -f "$JOURNEYS_DIR/results.tsv" ]]; then
+  cp /tmp/nightly-journeys.log "$JOURNEYS_DIR/console.log" 2>/dev/null
+  [[ -f "$JOURNEYS_DIR/report.txt" ]] && print -r -- "journeys:" && sed 's/^/  /' "$JOURNEYS_DIR/report.txt"
+  typeset -a JFIND
+  JSEEN=0
+  while IFS=$'\t' read -r jname jstatus jtaps jtyped jsec jnote; do
+    [[ -z "$jname" ]] && continue
+    (( JSEEN++ ))
+    [[ "$jstatus" == ok ]] && continue
+    JFIND+=(--finding "journey-$jname" "Journey \"$jname\" broke: $jnote" "The \`$jname\` journey broke on the Mac nightly at $TS on \`$SHA\`: $jnote
+
+A renamed control breaks a journey the same way the app would. Read the step's screenshot before deciding which: \`${JOURNEYS_DIR#$ROOT/}/$jname-*.png\` (the BROKEN shot is the last). Re-run with \`scripts/journeys.sh $jname\`.")
+  done < "$JOURNEYS_DIR/results.tsv"
+  JCOMPLETE=(); (( JSEEN == JOURNEYS_TOTAL )) && JCOMPLETE=(--complete)
+  python3 "$ROOT/scripts/file-findings.py" --source journeys --sha "$SHA" $JCOMPLETE \
+    --resolve journeys-run "${JFIND[@]}"
+else
+  print -r -- "journeys: no results — read /tmp/nightly-journeys.log"
+  JTAIL=$(sed $'s/\033\\[[0-9;]*m//g' /tmp/nightly-journeys.log | tail -40)
+  python3 "$ROOT/scripts/file-findings.py" --source journeys --sha "$SHA" \
+    --finding journeys-run "Journeys reported nothing on the Mac nightly" "The journeys ran at $TS on \`$SHA\` and wrote no results: no journey reached its first step, or the UI-test target did not build.
+
+Last 40 lines:
+
+\`\`\`
+$JTAIL
+\`\`\`
+
+Re-run with \`scripts/journeys.sh\`."
+fi
+
+# Prune: keep the most recent $KEEP mac-* dirs, drop the rest. Journeys keep
+# as many nights: each holds a screenshot per step.
 print -l -- "$ROOT"/scripts/output/mac-*(/om) 2>/dev/null | tail -n +$((KEEP + 1)) | while read -r old; do
+  rm -rf "$old"
+done
+print -l -- "$ROOT"/scripts/output/journeys-*(/omN) 2>/dev/null | tail -n +$((KEEP + 1)) | while read -r old; do
   rm -rf "$old"
 done
 
