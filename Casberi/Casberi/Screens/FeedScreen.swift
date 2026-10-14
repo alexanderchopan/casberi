@@ -1626,8 +1626,10 @@ struct FeedScreen: View {
                 // The demo's pill RESERVES its band above the title (prd
                 // §1005, closing §946's "found, not fixed"): the well absorbed
                 // it under §919, but §930 put the title first, so the pill sat
-                // on the room's name and over the well's top edge.
-                .dsRoomTitleListRow(inSheet: inSheet)
+                // on the room's name and over the well's top edge. The band is
+                // the List's top margin since prd §1297, not this row's inset,
+                // so a jump to a section lands under the pill (see below).
+                .dsRoomTitleListRow(inSheet: true)
             roomHead
                 .id(Self.roomTopAnchor)
             roomBody(rows)
@@ -1637,6 +1639,13 @@ struct FeedScreen: View {
                 .feedRowBackground()
                 .listRowSeparator(.hidden)
         }
+        // THE DEMO'S BAND IS THE LIST'S TOP MARGIN (prd §1297): at rest the
+        // page stands where the title row's inset put it, and a jump to a
+        // section (`.top`, which a safe-area inset moves and a row's inset does not)
+        // lands under the demo's pill and the section pill below it, so the
+        // floating title no longer covers the section's first row (user:
+        // "3 yes fix", of the Wallet's Subscriptions and Track a subscription).
+        .safeAreaPadding(.top, inSheet ? 0 : DSDemoMark.screenClearance)
         .listStyle(.plain)
         // Markets' reorder (prd §1250): the list's own drag handles, never a
         // drag gesture in scroll content. nil leaves every other room as it was.

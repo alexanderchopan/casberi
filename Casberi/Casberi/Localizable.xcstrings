@@ -40776,28 +40776,76 @@
     },
     "%lld subscriptions" : {
       "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "1 subscription"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld subscriptions"
+                }
+              }
+            }
+          }
+        },
         "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%lld suscripciones"
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "needs_review",
+                  "value" : "1 suscripción"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "needs_review",
+                  "value" : "%lld suscripciones"
+                }
+              }
+            }
           }
         },
         "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%lld件のサブスクリプション"
+          "variations" : {
+            "plural" : {
+              "other" : {
+                "stringUnit" : {
+                  "state" : "needs_review",
+                  "value" : "%lld件のサブスクリプション"
+                }
+              }
+            }
           }
         },
         "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "구독 %lld개"
+          "variations" : {
+            "plural" : {
+              "other" : {
+                "stringUnit" : {
+                  "state" : "needs_review",
+                  "value" : "구독 %lld개"
+                }
+              }
+            }
           }
         },
         "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%lld 项订阅"
+          "variations" : {
+            "plural" : {
+              "other" : {
+                "stringUnit" : {
+                  "state" : "needs_review",
+                  "value" : "%lld 项订阅"
+                }
+              }
+            }
           }
         }
       }

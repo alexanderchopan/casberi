@@ -762,6 +762,15 @@ enum DemoSeedAll {
                 .firstIndex(where: { $0.address.lowercased() == wallet.address.lowercased() }) {
                 WalletStore.shared.remove(at: IndexSet(integer: index))
             }
+            // ITS NAME GOES WITH IT (user, 2026-10-14: "6 yes please fix"):
+            // `add(label:)` wrote "Everyday", "Savings" and "Hardware" into
+            // the book, which outlived the watch, so Sources counted them as
+            // People after Exit and Start here lost steps a new person should
+            // see (§1166's "not looked into"). Only while the name is still
+            // the demo's, so a real name on the same address stays.
+            if AddressBook.shared.entry(for: wallet.address)?.name == wallet.label {
+                AddressBook.shared.remove(wallet.address)
+            }
         }
 
         for event in demoMetrics + retiredDemoMetrics { PostHogState.forget(event) }

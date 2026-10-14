@@ -154,9 +154,9 @@ extension FeedScreen {
         // THE HANDOFF (prd §1208l): tied to where the name stands, never a
         // timer — between a little under the line and the line it shrinks
         // toward the pill and fades; under Reduce Motion it only fades.
-        .visualEffect { content, proxy in
+        .visualEffect { [line = Self.whereLine] content, proxy in
             let y = proxy.frame(in: .global).minY
-            let t = min(max((Self.whereLine + Self.handoffSpan - y) / Self.handoffSpan, 0), 1)
+            let t = min(max((line + Self.handoffSpan - y) / Self.handoffSpan, 0), 1)
             return content
                 .scaleEffect(calm ? 1 : 1 - 0.25 * t, anchor: .leading)
                 .opacity(1 - t)
@@ -174,7 +174,10 @@ extension FeedScreen {
     static let handoffSpan: CGFloat = 56
 
     /// The line a section's name passes to become "where you are".
-    static let whereLine: CGFloat = 150
+    /// The demo's band moves the pill down (`feedSectionPill`'s top), so the
+    /// line moves with it (prd §1297): a landed name hands off where the
+    /// pill is, in the demo as out of it.
+    static var whereLine: CGFloat { 150 + DSDemoMark.screenClearance }
 
     /// A name moved: the section you are in is the last whose name has
     /// passed the line. Written only when it changes, so a scroll costs one
