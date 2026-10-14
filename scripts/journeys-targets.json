@@ -1,0 +1,5 @@
+{
+  "why": "The most taps a job should take. Set by the owner, 2026-10-14: every journey, 3 taps. A journey over its target is flagged in every report and is the daily proposals' input. Field focus and an iOS permission ask count as taps; typing is counted apart.",
+  "default_taps": 3,
+  "taps": {}
+}

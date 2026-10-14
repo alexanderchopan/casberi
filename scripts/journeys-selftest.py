@@ -72,6 +72,16 @@ def fixture(m):
         run([row("note", taps=3, seconds=2.0)])
         out = run([row("note", taps=3, seconds=4.0)])
         check("a short journey's small slowdown is under the floor", "slower" not in out)
+
+        targets = {"default_taps": 3, "taps": {"spending": 2}}
+        lines, _ = m.report([row("connect", taps=5), row("note", taps=3), row("spending", taps=3),
+                             row("find", status="broken", taps=9)], [], "sha", "ts", targets)
+        out = "\n".join(lines)
+        check("over target is flagged", "over target: 5 taps (target 3)" in out)
+        check("at target is not", "note" in out and "over target" not in lines[1])
+        check("a journey's own target wins over the default", "over target: 3 taps (target 2)" in lines[2])
+        check("over target marks the line", lines[0].startswith("⚠"))
+        check("a broken run is not judged against its target", "over target" not in lines[3])
     return bad
 
 
@@ -81,6 +91,8 @@ MUTATIONS = [
     ("fewer taps silent", 'out.append(f"fewer taps: {bt} → {row[\'taps\']}")', "pass"),
     ("typing silent", 'if row["typed"] > by:', "if False:"),
     ("no slow floor", 'and row["seconds"] - bs > SLOW_FLOOR_S', ""),
+    ("no target", 'if target is not None and row["taps"] > int(target):', "if False:"),
+    ("default only", '(targets.get("taps") or {}).get(journey, targets.get("default_taps"))', 'targets.get("default_taps")'),
     ("history overwritten", 'with p.open("a", newline="") as f:', 'with p.open("w", newline="") as f:\n        new = True'),
 ]
 

@@ -23,11 +23,14 @@ becomes the baseline):
   fewer taps    — taps went down. Said, so a good change is on the record.
   more typing   — typed went up.
   slower        — seconds rose by more than SLOW_RATIO and by SLOW_FLOOR_S.
+  over target   — taps above the owner's target (`journeys-targets.json`,
+                  3 for every journey since 2026-10-14). Said EVERY run, not
+                  only when it changes: the gap is the work.
 It REPORTS and never gates, like perf.sh: exit 0 unless its input is missing.
 
 Input  results.tsv: journey \\t ok|broken \\t taps \\t typed \\t seconds \\t note
 History CSV: ts,sha,journey,status,taps,typed,seconds,note
-Usage: journeys-report.py <results.tsv> <history.csv> <sha>
+Usage: journeys-report.py <results.tsv> <history.csv> <sha> [targets.json]
 """
 
 import csv
@@ -69,11 +72,19 @@ def baselines(history):
     return base
 
 
-def flags(row, base):
+def target_of(targets, journey):
+    if not targets:
+        return None
+    return (targets.get("taps") or {}).get(journey, targets.get("default_taps"))
+
+
+def flags(row, base, target=None):
     out = []
     if row["status"] != "ok":
         out.append(f"broken: {row['note'] or 'a step was not found'}")
         return out
+    if target is not None and row["taps"] > int(target):
+        out.append(f"over target: {row['taps']} taps (target {target})")
     if base is None:
         out.append("first run: this is the baseline")
         return out
@@ -89,13 +100,13 @@ def flags(row, base):
     return out
 
 
-def report(results, history, sha, ts):
+def report(results, history, sha, ts, targets=None):
     base = baselines(history)
     lines, new_rows = [], []
     for r in results:
         b = base.get(r["journey"])
-        f = flags(r, b)
-        mark = "✗" if r["status"] != "ok" else ("⚠" if any(x.startswith(("more", "slower")) for x in f) else "✓")
+        f = flags(r, b, target_of(targets, r["journey"]))
+        mark = "✗" if r["status"] != "ok" else ("⚠" if any(x.startswith(("more", "slower", "over")) for x in f) else "✓")
         lines.append(f"{mark} {r['journey']:<20} taps={r['taps']:<3} typed={r['typed']:<3} "
                      f"{r['seconds']:6.1f}s" + (f"   {'; '.join(f)}" if f else ""))
         new_rows.append(dict(ts=ts, sha=sha, journey=r["journey"], status=r["status"],
@@ -117,10 +128,14 @@ def append(history_path, rows):
 
 
 def main(argv):
-    if len(argv) != 3:
+    if len(argv) not in (3, 4):
         print(__doc__.strip().splitlines()[-1])
         return 2
-    results_path, history_path, sha = argv
+    results_path, history_path, sha = argv[:3]
+    targets = None
+    if len(argv) == 4 and pathlib.Path(argv[3]).exists():
+        import json
+        targets = json.loads(pathlib.Path(argv[3]).read_text())
     if not pathlib.Path(results_path).exists():
         print(f"✗ no results at {results_path} — the test run wrote nothing; read its xcodebuild.log")
         return 1
@@ -129,7 +144,7 @@ def main(argv):
         print("✗ the results file is empty — no journey reached its end or its first step")
         return 1
     ts = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
-    lines, rows = report(results, read_history(history_path), sha, ts)
+    lines, rows = report(results, read_history(history_path), sha, ts, targets)
     print("\n".join(lines))
     append(history_path, rows)
     return 0

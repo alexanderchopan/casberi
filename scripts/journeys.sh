@@ -65,7 +65,8 @@ TEST_RUNNER_JOURNEYS_OUT="$OUT" "$ROOT/scripts/xcb.sh" \
 TEST_STATUS=$?
 (( TEST_STATUS != 0 )) && print -P "%F{yellow}⚠ xcodebuild exited $TEST_STATUS — a broken journey does that; the report says which%f"
 
-python3 "$ROOT/scripts/journeys-report.py" "$OUT/results.tsv" "$HIST" "$SHA" | tee "$OUT/report.txt"
+python3 "$ROOT/scripts/journeys-report.py" "$OUT/results.tsv" "$HIST" "$SHA" \
+  "$ROOT/scripts/journeys-targets.json" | tee "$OUT/report.txt"
 REPORT_STATUS=${pipestatus[1]}
 if (( REPORT_STATUS != 0 )); then
   print -P "%F{red}✗ no journey reported — read $OUT/xcodebuild.log (a build failure lands there)%f"
