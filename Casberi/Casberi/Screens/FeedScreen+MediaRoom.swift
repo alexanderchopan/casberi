@@ -18,8 +18,11 @@ extension FeedScreen {
     /// note of yours (§1020), so Notes holds it.
     @ViewBuilder
     func mediaRoomSections(_ visible: [Thing], nextEventID: UUID?, heroShown: Bool) -> some View {
-        // Opened from Sources' count (prd §1274): Following alone.
-        let scope = pinnedSubscriptions ? MediaScope.subscriptions : chrome.mediaScope
+        // Opened from Sources' count (prd §1274): Following alone. In the
+        // Feed the header names no Following (prd §1293), so a pick made on
+        // Media's own screen is never read there.
+        let picked = Self.sectionCapNow != nil && chrome.mediaScope == .subscriptions ? MediaScope.all : chrome.mediaScope
+        let scope = pinnedSubscriptions ? MediaScope.subscriptions : picked
         let subscriptions = scope == .subscriptions
         let read = RoomAccounts.readSources
         let rows: [Thing] = switch scope {

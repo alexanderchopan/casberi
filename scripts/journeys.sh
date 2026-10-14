@@ -13,7 +13,7 @@
 #
 # Usage: scripts/journeys.sh [journey ...]     e.g. scripts/journeys.sh find note
 #   No names: every journey. A name is a test method without `test`, lowercased:
-#   connect, note, find, spending, subscription.
+#   connect, find, maillist, note, site, spending, subscription, wallet.
 # Output: scripts/output/journeys-<ts>/ — results.tsv, xcodebuild.log, and one
 #   screenshot per step (<journey>-<n>-<step>.png), the before shots a proposal
 #   is drawn against.
@@ -30,7 +30,8 @@ DEVICE_ID="$(python3 "$ROOT/scripts/sim-device.py" "iPhone 17 Pro")" || {
 SHA=$(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null || echo unknown)
 
 typeset -A METHOD=(connect testConnect note testNote find testFind
-                   spending testSpending subscription testSubscription)
+                   spending testSpending subscription testSubscription
+                   maillist testMailList site testSite wallet testWallet)
 typeset -a ONLY
 if (( $# == 0 )); then
   ONLY=(-only-testing:CasberiUITests/JourneyTests)
@@ -46,7 +47,12 @@ fi
 # test target reinstalls the app; each journey launches with its own state.
 xcrun simctl boot "$DEVICE_ID" 2>/dev/null
 xcrun simctl bootstatus "$DEVICE_ID" -b >/dev/null 2>&1
+# The app group outlives an uninstall (its SwiftData store, the followed
+# wallets and feeds), so a wallet or site followed last run would still be
+# followed: removed with the app, so every run starts truly clean.
+GROUP="$(xcrun simctl get_app_container "$DEVICE_ID" "$BUNDLE" group.com.casberi.app 2>/dev/null)"
 xcrun simctl uninstall "$DEVICE_ID" "$BUNDLE" 2>/dev/null
+[[ -n "$GROUP" && "$GROUP" == */AppGroup/* ]] && rm -rf "$GROUP"
 # The demo pour asks for these on a fresh install, and an unanswered system
 # sheet blocks every tap (CLAUDE.md, simulator gotchas). Granted up front; the
 # walk also dismisses any alert that still shows, and does not count it.

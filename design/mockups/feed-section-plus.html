@@ -1,0 +1,84 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Feed section plus</title>
+<style>
+:root{color-scheme:light dark;--ground:#f2f1f5;--ink:#15141a;--ink2:#56535f;--rounded:ui-rounded,"SF Pro Rounded",-apple-system,sans-serif}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--ground:#0b0b0f;--ink:#eeecf3;--ink2:#a29ead}}
+:root[data-theme="dark"]{--ground:#0b0b0f;--ink:#eeecf3;--ink2:#a29ead}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;-webkit-font-smoothing:antialiased;padding:16px 16px 24px}
+header{max-width:1100px;margin:0 auto 12px}
+h1{font:700 22px/28px var(--rounded)}
+p.desc{font-size:13px;line-height:18px;color:var(--ink2);max-width:900px;margin-top:4px}
+.stage{display:flex;gap:20px;justify-content:center;flex-wrap:wrap}
+figure{width:300px;flex:none}
+figcaption{font-size:12px;line-height:16px;color:var(--ink2);margin:8px 2px 0}
+figcaption b{color:var(--ink)}
+.phone{--sheet:#000;--card:#1c1c1e;--text:#fff;--text2:#ebebf599;--text3:#ebebf566;--tint:#0a84ff;--brand:#ff3b5c;
+  zoom:.72;width:402px;background:var(--sheet);color:var(--text);border-radius:44px;box-shadow:0 24px 70px #00000055;height:1000px;overflow:hidden;padding:52px 12px 0}
+.panel{background:var(--card);border-radius:22px;padding:14px 16px 10px;margin-bottom:14px}
+.head{display:flex;align-items:baseline;gap:10px;margin-bottom:6px}
+.head .g{color:var(--brand);font-size:18px}
+.head .n{font:700 28px/34px var(--rounded);color:var(--brand)}
+.head .c{font:700 28px/34px var(--rounded);color:var(--text3)}
+.head .sp{flex:1}
+.plus{align-self:center;color:var(--brand);font:400 30px/1 var(--rounded);width:44px;text-align:center}
+.hl{outline:2px dashed #ffd60a;outline-offset:3px;border-radius:12px}
+.row{display:flex;align-items:center;gap:12px;min-height:50px}
+.m{width:34px;height:34px;border-radius:9px;flex:none;display:grid;place-items:center;font:700 14px var(--rounded);color:#fff}
+.t{font-size:16px;line-height:21px}.s{font-size:12px;color:var(--text2)}
+.sub{font:700 19px var(--rounded);margin:10px 0 2px}
+.more{color:var(--tint);text-align:center;font-size:15px;padding:6px 0}
+.strike{text-decoration:line-through;color:#ff453a99}
+</style>
+<header>
+  <h1>Feed: one shape for every category</h1>
+  <p class="desc">Each section's header ends in a + that runs its category's add: the same act as the plus on its Sources count. Following and Subscriptions leave the header and stand on the card, under the rows, as their own short list. Filters that only narrow the rows (Play, Read, To you, Coming up) stay in the header. Dashed yellow is new.</p>
+</header>
+<div class="stage">
+
+<figure><div class="phone">
+  <div class="panel">
+    <div class="head"><span class="g">◎</span><span class="n">Social</span><span class="c">To you</span><span class="sp"></span></div>
+    <div class="row"><div class="m" style="background:#111">X</div><div><div class="t">Zephyr liked your repost</div></div></div>
+    <div class="row"><div class="m" style="background:#111">X</div><div><div class="t">Thierry Edde followed you</div></div></div>
+  </div>
+  <div class="panel">
+    <div class="head"><span class="g">☺</span><span class="n">Life</span><span class="c">Subscriptions</span></div>
+  </div>
+  <div class="panel">
+    <div class="head"><span class="g">▶</span><span class="c">Media</span><span class="c">Play</span><span class="n">Read</span><span class="c">Following</span></div>
+    <div class="row"><div class="m" style="background:#f60">◉</div><div><div class="t">L1-zkEVM breakout #09</div><div class="s">@system</div></div></div>
+    <div class="row"><div class="m" style="background:#f60">◉</div><div><div class="t">ERC-8436: Agent Collective</div><div class="s">@garyyang</div></div></div>
+  </div>
+</div><figcaption><b>Today.</b> Subscriptions and Following are header words that swap the whole card; Life's card is empty under its name. No section has a way to add.</figcaption></figure>
+
+<figure><div class="phone">
+  <div class="panel">
+    <div class="head"><span class="g">◎</span><span class="n">Social</span><span class="c">To you</span><span class="sp"></span><span class="plus hl">+</span></div>
+    <div class="row"><div class="m" style="background:#111">X</div><div><div class="t">Zephyr liked your repost</div></div></div>
+    <div class="row"><div class="m" style="background:#111">X</div><div><div class="t">Thierry Edde followed you</div></div></div>
+  </div>
+  <div class="panel">
+    <div class="head"><span class="g">☺</span><span class="n">Life</span><span class="sp"></span><span class="plus hl">+</span></div>
+    <div class="hl" style="padding:2px 0">
+    <div class="sub">Subscriptions</div>
+    <div class="row"><div class="m" style="background:#111">S</div><div><div class="t">Stratechery</div><div class="s">Weekly · Last Oct 13</div></div></div>
+    <div class="row"><div class="m" style="background:#4a90e2">M</div><div><div class="t">Morning Brew</div><div class="s">Daily · Last Oct 14</div></div></div>
+    <div class="row"><div class="m" style="background:#666">L</div><div><div class="t">Lenny's Newsletter</div><div class="s">Weekly · Last Oct 9</div></div></div>
+    <div class="more">See all 5</div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="head"><span class="g">▶</span><span class="c">Media</span><span class="c">Play</span><span class="n">Read</span><span class="sp"></span><span class="plus hl">+</span></div>
+    <div class="row"><div class="m" style="background:#f60">◉</div><div><div class="t">L1-zkEVM breakout #09</div><div class="s">@system</div></div></div>
+    <div class="hl" style="padding:2px 0">
+    <div class="sub">Following</div>
+    <div class="row"><div class="m" style="background:#e00">▶</div><div><div class="t">Veritasium</div><div class="s">YouTube · 2 new</div></div></div>
+    <div class="more">See all 13</div>
+    </div>
+  </div>
+</div><figcaption><b>Proposed.</b> Every header: name, its filters, and a + at the end. The + is the category's verb: Social Follow someone, Life Track a subscription, Media Follow a site or a channel, Work Follow something. What you follow or track is a short list on the card, three rows and See all.</figcaption></figure>
+
+</div>

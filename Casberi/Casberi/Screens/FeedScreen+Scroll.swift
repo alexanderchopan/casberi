@@ -136,7 +136,8 @@ extension FeedScreen {
             things.filter { $0.isLive && $0.capturedAt > since && !seen.contains($0.id) }.count
         } ?? 0
         let calm = reduceMotion
-        return SectionPanelName(name: category, glyph: glyph, choices: choices) {
+        return SectionPanelName(name: category, glyph: glyph, choices: choices,
+                                adds: sectionAdds(category)) {
             if fresh > 0 {
                 HStack(spacing: DS.Space.s1) {
                     Circle().fill(DS.tint).frame(width: 7, height: 7)
@@ -540,6 +541,10 @@ struct SectionPanelName<Trailing: View>: View {
     /// others grey ("Life Subscriptions"); a tap on a grey word switches.
     /// Empty: the plain name, as before.
     var choices: [SectionChoice] = []
+    /// **EVERY SECTION ADDS FROM ITS HEADER (prd §1293).** A + at the end
+    /// runs the category's own add, the act of its Sources count's plus
+    /// (prd §1292); two acts open a menu of both. Empty: no +.
+    var adds: [SectionAdd] = []
     var inset: CGFloat = DSRoomChassis.rowInset
     @ViewBuilder var trailing: Trailing
 
@@ -573,14 +578,48 @@ struct SectionPanelName<Trailing: View>: View {
             }
             trailing
             Spacer(minLength: 0)
+            if let only = adds.first, adds.count == 1 {
+                Button {
+                    DSHaptic.selection()
+                    only.act()
+                } label: { plus }
+                .buttonStyle(PressSpring())
+                .accessibilityLabel(Text(verbatim: only.label))
+            } else if !adds.isEmpty {
+                Menu {
+                    ForEach(adds) { add in
+                        Button(add.label) { add.act() }
+                    }
+                } label: { plus }
+                .accessibilityLabel(Text("Add to \(name)"))
+            }
         }
-        .accessibilityElement(children: choices.isEmpty ? .combine : .contain)
+        .accessibilityElement(children: choices.isEmpty && adds.isEmpty ? .combine : .contain)
         .accessibilityAddTraits(.isHeader)
         .padding(.leading, inset)
         .padding(.trailing, inset)
         .padding(.top, DS.Space.s4)
         .padding(.bottom, DS.Space.s2)
     }
+}
+
+extension SectionPanelName {
+    /// The header's +, pink as every verb's plus, a full target tall and
+    /// wide, on the name's baseline row.
+    fileprivate var plus: some View {
+        Image(systemName: "plus")
+            .dsGlyph(.body, weight: .regular)
+            .foregroundStyle(DS.brandInk)
+            .frame(width: DS.Hit.min, height: DS.Hit.min)
+            .contentShape(Rectangle())
+    }
+}
+
+/// One add a section header offers (prd §1293): its verb and its act.
+struct SectionAdd: Identifiable {
+    var id: String { label }
+    let label: String
+    let act: () -> Void
 }
 
 /// One choice a section header names (prd §1251).
@@ -597,18 +636,19 @@ extension FeedScreen {
     /// verbs (Social's Follow stays on Social's own screen).
     func sectionChoices(_ category: String) -> [SectionChoice] {
         switch category {
-        case RoomAccounts.lifeRoom:
-            return LifeScope.allCases.map { s in
-                SectionChoice(id: s.rawValue, label: s == .all ? category : s.label,
-                              on: chrome.lifeScope == s, pick: { chrome.lifeScope = s })
-            }
+        // Life's one other choice was Subscriptions; its lists stand on the
+        // card instead (prd §1293), so the header is the name alone.
+        // Nor Following, in Media or Work: every row the section holds comes
+        // from what you follow, so the word names nothing (user, 2026-10-14:
+        // "the entire section is 'following'"). The list is on the
+        // category's own screen and in Sources; the header's + adds to it.
         case RoomAccounts.workRoom:
-            return WorkScope.allCases.map { s in
+            return WorkScope.allCases.filter { $0 != .watch }.map { s in
                 SectionChoice(id: s.rawValue, label: s == .all ? category : s.label,
                               on: chrome.workScope == s, pick: { chrome.workScope = s })
             }
         case RoomAccounts.mediaRoom:
-            return MediaScope.allCases.map { s in
+            return MediaScope.allCases.filter { $0 != .subscriptions }.map { s in
                 SectionChoice(id: s.rawValue, label: s == .all ? category : s.label,
                               on: chrome.mediaScope == s, pick: { chrome.mediaScope = s })
             }
@@ -617,6 +657,32 @@ extension FeedScreen {
                 SectionChoice(id: s.rawValue, label: s == .all ? category : s.label,
                               on: chrome.socialScope == s, pick: { chrome.socialScope = s })
             }
+        default:
+            return []
+        }
+    }
+}
+
+extension FeedScreen {
+    /// What a Feed section's + adds (prd §1293), each the act its category's
+    /// own screen and its Sources count run: a mail list in Life (once a mail
+    /// app reads mail, as the Sources plus), a site or a channel in Media,
+    /// something in Work, someone in Social. A category with no add draws
+    /// no +.
+    func sectionAdds(_ category: String) -> [SectionAdd] {
+        switch category {
+        case RoomAccounts.lifeRoom:
+            let hasMail = bridges.bridges.contains {
+                SettingsHome.mailApps.contains($0.name) && $0.status != .paused
+            }
+            return hasMail ? [SectionAdd(label: SubscriptionWords.track) { feedSheet = .mailSubscriptionAdd }] : []
+        case RoomAccounts.mediaRoom:
+            return [SectionAdd(label: Following.Room.reading.verb) { feedSheet = .followingAdd(.reading) },
+                    SectionAdd(label: Following.Room.media.verb) { feedSheet = .followingAdd(.media) }]
+        case RoomAccounts.workRoom:
+            return [SectionAdd(label: Following.Room.work.verb) { feedSheet = .followingAdd(.work) }]
+        case RoomAccounts.socialRoom:
+            return [SectionAdd(label: String(localized: "Follow someone")) { feedSheet = .socialFollow }]
         default:
             return []
         }

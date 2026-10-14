@@ -184,8 +184,11 @@ extension FeedScreen {
     @ViewBuilder
     func lifeRoomSections(_ visible: [Thing], nextEventID: UUID?) -> some View {
         // Opened from Sources' count (prd §1274), the page is this tile
-        // alone and leaves the room's own pick as it was.
-        let lists = pinnedSubscriptions || chrome.lifeScope == .subscriptions
+        // alone and leaves the room's own pick as it was. In the Feed the
+        // header names no Subscriptions (prd §1293), so a pick made on Life's
+        // own screen is never read there: the card is Life's rows.
+        let inFeed = Self.sectionCapNow != nil
+        let lists = pinnedSubscriptions || (!inFeed && chrome.lifeScope == .subscriptions)
         if lists {
             Section { mailSubscriptionsBox }
         }
@@ -548,7 +551,8 @@ extension FeedScreen {
     func workRoomSections(_ allVisible: [Thing], nextEventID: UUID?, heroShown: Bool) -> some View {
         let visible = objectFolded(allVisible)
         let comingUp = chrome.workScope == .comingUp
-        let watching = chrome.workScope == .watch
+        // In the Feed the header names no Following (prd §1293).
+        let watching = chrome.workScope == .watch && Self.sectionCapNow == nil
         // What needs you now leads Coming up, then what is due (prd §1080);
         // a row that is both stands once, under the asks.
         let asks = comingUp ? workAsks(visible) : []

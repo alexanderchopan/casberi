@@ -66291,3 +66291,15 @@ The box stays as §1171b and §1209a left it. Below it:
 **Declined with it.** One tray for plans and mail lists, a "Follow <site>" row in the Track tray, the keyboard's Done tracking (the price keypad has no Return key, so a Done would be a tap of its own), and tracking on the pick with the price after.
 
 **Seen** on the iPhone 17 Pro simulator, dark, over the demo: the box with six pluses, the Track tray from the plus with its field at the bottom, Hulu tracked, and the Subscriptions page from the count with no Track row. **Not seen:** light, the Mac, a fresh install with no mail connected (Mail lists' plus absent), the Following, People and Wallets pluses tapped.
+
+## §1293 — Every Feed section adds from its header, and Following leaves it (amends §1251, §1292) (user, 2026-10-14: of Life's header "this is confusing, the 'life' category has a 'subscriptions' title, but it should just be on the card like it is for the others", "whatever you do should be the same for all categories", "so each of the sections should likely have a 'add/'track' button or something", "maybe it's just a plus button", "go", then of the mock's short lists "why do we need to say that. the entire section is 'following'"; mockup `design/mockups/feed-section-plus.html`)
+
+1. **A + ends every Feed section's header** (`SectionPanelName(adds:)`, `FeedScreen.sectionAdds`), the category's own add, the act of its Sources count's plus (§1292): Social Follow someone, Media Follow a site or a channel or show (two acts, so a menu), Work Follow something, Life Track a subscription (a mail list, drawn once a mail app reads mail, as the Sources plus). A category with no add (Agents) draws none. The + is pink, a 44pt target.
+2. **Following and Subscriptions leave the header.** Every row a section holds comes from what you follow, so the word names nothing: Media's and Work's headers drop Following, Life's drops Subscriptions and is its name alone (§1251's choices keep the filters that narrow rows: Play, Read, To you, Coming up). The lists stay on each category's own screen and in Sources; nothing replaces them on the card (the mock's short lists were declined).
+3. **A pick made on a category's own screen is not read in the Feed.** Media on Following, Work on Following or Life on Subscriptions would have turned the Feed's card into that list with no header word left to undo it, so in the Feed those picks read as the category's rows.
+
+**Seen** on the iPhone 17 Pro simulator, dark, over the demo: Social, Work and Life with their + (Life's header "Life" over its rows), and Life's + raising Track a subscription's sender tray. **Not seen:** light, the Mac, Media's menu opened, Social's and Work's trays from the +.
+
+### §1292a — Sources' Subscriptions page with no wallet followed (user, 2026-10-14: "i hit subscriptions and it goes here?", "this screen no longer exists")
+
+With no wallet followed and nothing landed, both empty arms of `roomBody` replaced a page opened from a Sources count with the old "One inbox for all your apps" and Browse apps. A pinned page now always keeps its box and list (`pinnedPage`, commit 702a7602).

@@ -232,7 +232,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1435 of 1501 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1436 of 1502 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1669,6 +1669,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1290 — Following's rows, tightened: the line under its name, a line on every row, one coloured figure (amends §1081, §1230 i…
 - §1291 — Track keeps your search: a row you tracked from a search stays in view, ticked (amends §1164)
 - §1292 — Add from where you land: a plus on Sources' counts (amends §1164 item 5, §1166 item 6, §1265, §1274)
+- §1293 — Every Feed section adds from its header, and Following leaves it (amends §1251, §1292) [+1 sub-entries]
 
 ## Dead rulings → what replaced them (generated)
 

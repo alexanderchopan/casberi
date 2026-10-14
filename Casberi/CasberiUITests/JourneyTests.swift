@@ -37,16 +37,7 @@ final class JourneyTests: XCTestCase {
     /// runs first.
     @MainActor func testConnect() {
         let w = Walk("connect", launch: [], test: self)
-        // The intro cover is one button and lifts by itself after the demo
-        // pour; a person who taps it skips the wait.
-        w.tap(w.el(.button, "label BEGINSWITH %@", "One inbox for all your apps"), "intro cover")
-        w.tap(w.el(.button, "label CONTAINS %@", "Exit"), "demo pill, Exit")
-        w.see(w.el(.staticText, "label == %@", "Start here"), "Sources, Start here")
-        // The demo is not counted (owner, 2026-10-14: "i know the demo adds
-        // steps but i don't want you to count it. we need the demo for a user
-        // to see everything"). The walk above still runs, since a new user
-        // must; the meter and the clock start here, on Sources.
-        w.begin()
+        leaveDemo(w)
         // Start here's row, by its joined label: the Calendars count's plus
         // says "Add a calendar" too and never stands down (prd §1292).
         w.tap(w.el(.button, "label BEGINSWITH %@", "Add a calendar, "), "Add a calendar")
@@ -126,6 +117,74 @@ final class JourneyTests: XCTestCase {
         w.finish()
     }
 
+    /// Follow a wallet from Sources' Wallets plus (§1292), by typing its
+    /// address (a person would paste; the 42 characters are counted as
+    /// typed). Following is refused inside the demo, so this starts where
+    /// `connect` does, on Sources after Exit. Done when the row says
+    /// "Following".
+    @MainActor func testWallet() {
+        let w = Walk("wallet", launch: [], test: self)
+        leaveDemo(w)
+        // The plus, by its exact label: Start here's row reads "Follow a
+        // wallet, Any address…".
+        w.tap(w.el(.button, "label == %@", "Follow a wallet"), "Wallets plus")
+        w.focus(w.el(.textField, "placeholderValue == %@", "An address or a name"), "address field")
+        w.type("0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045", "type an address")
+        // The row names the address short ("…6045").
+        w.tap(w.el(.button, "label BEGINSWITH %@ AND label ENDSWITH %@", "Follow ", "6045"), "Follow")
+        w.see(w.el(.button, "label BEGINSWITH %@ AND label ENDSWITH %@", "Following ", "6045"), "wallet followed")
+        w.finish()
+    }
+
+    /// Follow a site from Sources' Following plus (§1292): its address typed,
+    /// Follow pressed, the feed read once. Refused in the demo, so it starts
+    /// on Sources after Exit. Needs the network: a site with no reachable feed
+    /// breaks the last step ("doesn't publish a feed").
+    @MainActor func testSite() {
+        let w = Walk("site", launch: [], test: self)
+        leaveDemo(w)
+        w.tap(w.el(.button, "label == %@", "Follow a site"), "Following plus")
+        w.focus(w.el(.textField, "placeholderValue == %@", "A site's address"), "site field")
+        w.type("xkcd.com", "type a site")
+        w.tap(w.el(.button, "label == %@", "Follow xkcd.com"), "Follow")
+        w.see(w.el(.any, "label == %@", "Following xkcd.com"), "site followed")
+        w.finish()
+    }
+
+    /// Track a mail list from Sources' Mail lists plus (§1292): the tray
+    /// offers this month's senders with no list header, most mail first, and
+    /// a tap tracks one. The demo's Gmail is the mail, so the plus draws.
+    @MainActor func testMailList() {
+        let w = Walk("maillist", launch: Walk.demo, test: self)
+        w.tap(w.el(.button, "label BEGINSWITH %@", "Sources"), "Sources tile")
+        w.tap(w.el(.button, "label == %@", "Track a mail list"), "Mail lists plus")
+        // The demo's loudest sender with no list header.
+        w.tap(w.el(.staticText, "label == %@", "Uma Patel"), "a sender who writes")
+        w.see(w.el(.any, "label BEGINSWITH %@", "Tracking "), "sender tracked")
+        w.finish()
+    }
+
+    /// The demo's cover and its Exit, walked but never counted (owner,
+    /// 2026-10-14: "i know the demo adds steps but i don't want you to count
+    /// it. we need the demo for a user to see everything"). The meter and the
+    /// clock start on Sources, where Exit lands.
+    /// Journeys run A–Z on one install, so only the first meets the intro
+    /// cover, and a later one may find the demo already left; each part is
+    /// walked when it is there.
+    @MainActor private func leaveDemo(_ w: Walk) {
+        // The intro cover is one button and lifts by itself after the demo
+        // pour; a person who taps it skips the wait.
+        w.maybe(w.el(.button, "label BEGINSWITH %@", "One inbox for all your apps"), within: 8, "intro cover")
+        w.maybe(w.el(.button, "label CONTAINS %@", "Exit"), within: 8, "demo pill, Exit")
+        // On Sources already when Exit landed there; the Feed's own tile
+        // says "Sources" too, so Start here is the test.
+        if !w.el(.staticText, "label == %@", "Start here").waitForExistence(timeout: 5) {
+            w.tap(w.el(.button, "label BEGINSWITH %@", "Sources"), "Sources tile")
+        }
+        w.see(w.el(.staticText, "label == %@", "Start here"), "Sources, Start here")
+        w.begin()
+    }
+
     // MARK: - The meter
 
     /// One journey's walk: finds, taps, types, shoots and counts. After the
@@ -163,6 +222,15 @@ final class JourneyTests: XCTestCase {
 
         func tap(_ e: XCUIElement, _ what: String) {
             guard ready(e, what) else { return }
+            e.tap()
+            taps += 1
+            shoot(what)
+        }
+
+        /// A tap on something that may not be there (a cover a later journey
+        /// never meets): tapped and counted when it shows, skipped when not.
+        func maybe(_ e: XCUIElement, within s: TimeInterval, _ what: String) {
+            guard broken == nil, e.waitForExistence(timeout: s), hittable(e, within: 3) else { return }
             e.tap()
             taps += 1
             shoot(what)
