@@ -1391,6 +1391,34 @@
         }
       }
     },
+    "%@ since followed" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ desde que lo sigues"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "フォロー開始から%@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "팔로우 후 %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "关注以来 %@"
+          }
+        }
+      }
+    },
     "%@ since you followed" : {
       "localizations" : {
         "es" : {
@@ -2651,6 +2679,34 @@
         }
       }
     },
+    "%lld reward vouchers" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld vales de recompensa"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "報酬バウチャー %lld 件"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "보상 바우처 %lld개"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld 张奖励券"
+          }
+        }
+      }
+    },
     "%lld sequencers followed" : {
       "localizations" : {
         "es" : {
@@ -2983,6 +3039,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "正在关注 %lld 个验证者"
+          }
+        }
+      }
+    },
+    "0 reward vouchers" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "0 vales de recompensa"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "報酬バウチャー 0 件"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "보상 바우처 0개"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "0 张奖励券"
           }
         }
       }
@@ -3347,6 +3431,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "在你开始关注之前已取回 1 笔"
+          }
+        }
+      }
+    },
+    "1 reward voucher" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1 vale de recompensa"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "報酬バウチャー 1 件"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "보상 바우처 1개"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1 张奖励券"
           }
         }
       }
