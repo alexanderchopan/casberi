@@ -65,7 +65,7 @@ enum PrivacyPoolsBridge {
     /// (0x44192215…d15E) and Base is delisted in 0xBow's own config; add L2s
     /// only after measuring their hosts the way mainnet was.
     private static let rpcs = ["https://rpc.mevblocker.io",
-                               "https://eth.api.onfinality.io/public"]
+                               "https://gateway.tenderly.co/public/mainnet"]
     private static let maxRange = 900_000
     private static let maxChunks = 16
 

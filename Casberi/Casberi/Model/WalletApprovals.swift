@@ -60,22 +60,38 @@ enum WalletApprovals {
         let chainId: Int           // Revoke.cash / EVM chain id
         let rpcs: [String]         // keyless hosts, first that answers wins
         let maxRange: Int          // widest getLogs block range the host takes
+        /// Chunks one pass may scan. Base's 1,000-block cap needs more to
+        /// reach the day the other small-range chains cover in 16.
+        var maxChunks = WalletApprovals.maxChunks
         /// Where this chain's LOGS come from when its RPCs cannot serve them
         /// (prd §797) — World Chain's Blockscout. nil = `eth_getLogs` on `rpcs`.
         var logsViaBlockscout = false
     }
     private static let allChains: [Chain] = [
         Chain(network: "eth-mainnet", chainId: 1,
-              rpcs: ["https://rpc.mevblocker.io", "https://eth.api.onfinality.io/public"],
+              rpcs: ["https://rpc.mevblocker.io", "https://gateway.tenderly.co/public/mainnet"],
               maxRange: 900_000),
+        // Base (measured 2026-10-14): `mainnet.base.org` refuses every
+        // getLogs ("request limit reached", after shrinking 2,000 → 500 over
+        // September) but still answers eth_call, fees and receipts, so it
+        // leads for the prepare and DeFi reads and a log read falls through.
+        // publicnode keeps ~10k blocks and wants an address (Permit2's read);
+        // Tenderly keeps full history and takes the owner-only Approval read,
+        // but errors past 1,000 blocks.
         Chain(network: "base-mainnet", chainId: 8453,
-              rpcs: ["https://mainnet.base.org"], maxRange: 9_000),
+              rpcs: ["https://mainnet.base.org", "https://base-rpc.publicnode.com",
+                     "https://gateway.tenderly.co/public/base"],
+              maxRange: 1_000, maxChunks: 44),
         Chain(network: "arb-mainnet", chainId: 42161,
               rpcs: ["https://arb1.arbitrum.io/rpc"], maxRange: 450_000),
         Chain(network: "opt-mainnet", chainId: 10,
               rpcs: ["https://mainnet.optimism.io"], maxRange: 9_000),
         Chain(network: "matic-mainnet", chainId: 137,
-              rpcs: ["https://polygon.api.onfinality.io/public"], maxRange: 90_000),
+              // OnFinality's keyless endpoint answers "Too Many Requests,
+              // apply an API key" to most calls (2026-10-14). Tenderly served
+              // 90k blocks; past ~10k RESULTS it truncates SILENTLY, which an
+              // owner-filtered read never reaches.
+              rpcs: ["https://gateway.tenderly.co/public/polygon"], maxRange: 90_000),
         // World Chain (prd §797). MEASURED: its public RPCs cap eth_getLogs at
         // 100 blocks and the app's Alchemy key at 10, so the owner-filtered
         // log reads ride Blockscout (whole-chain ranges, one request) while
@@ -284,7 +300,7 @@ enum WalletApprovals {
                 }
                 guard latest > cursor else { continue }
                 var from = cursor + 1
-                let budget = chain.maxRange * maxChunks
+                let budget = chain.maxRange * chain.maxChunks
                 if latest - from >= budget { from = latest - budget + 1 }   // hole accepted
                 // Chunked forward scan — a mid-scan failure keeps the cursor
                 // at the last DURABLE point so the remainder retries next

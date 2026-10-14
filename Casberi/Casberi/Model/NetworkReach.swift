@@ -251,7 +251,12 @@ enum NetworkReach {
                          // contract, never your address.
                          "api.geckoterminal.com",
                          "rpc.mevblocker.io", "mainnet.base.org", "mainnet.optimism.io",
-                         "arb1.arbitrum.io", "eth.api.onfinality.io", "polygon.api.onfinality.io"]),
+                         "arb1.arbitrum.io",
+                         // The keyless fallbacks since OnFinality went to
+                         // "apply an API key" (2026-10-14): Tenderly's public
+                         // gateway for Ethereum, Polygon and Base, publicnode
+                         // for Base's recent logs.
+                         "gateway.tenderly.co", "base-rpc.publicnode.com"]),
         // World ID (2026-09-16, prd §785). ITS OWN HOST, and that is a fix
         // rather than a preference (`/code-review`, same day). This read
         // happens whether or not you watch a wallet — opening an address card
@@ -355,7 +360,7 @@ enum NetworkReach {
                          "financialmodelingprep.com",
                          // Gas (prd §1250): `eth_gasPrice` on the keyless nodes
                          // the Wallet's send preview reads (`WalletApprovals`).
-                         "rpc.mevblocker.io", "eth.api.onfinality.io", "mainnet.base.org"]),
+                         "rpc.mevblocker.io", "gateway.tenderly.co", "mainnet.base.org"]),
         // The thumbnail CDN is listed beside the API because a Daily Paper row
         // draws its cover image, and an image loaded into a row is a real
         // reach even though `NetworkLedger` doesn't record it (its own stated
@@ -429,7 +434,7 @@ enum NetworkReach {
         Endpoint(service: "0xBow Privacy Pools",
                  reach: .whenConnected(bridge: "0xBow Privacy Pools"),
                  purpose: "Reads your Privacy Pools deposits from the public chain and their review status from 0xBow's public API, for the wallets you follow.",
-                 hosts: ["api.0xbow.io", "rpc.mevblocker.io"]),
+                 hosts: ["api.0xbow.io", "rpc.mevblocker.io", "gateway.tenderly.co"]),
         // Reach is WALLET, not "Railgun" — Gnosis Pay's reason below: the seat
         // appears only once a shield has been seen, but the read that
         // discovers one runs for every watched wallet, so declaring it under
@@ -438,11 +443,11 @@ enum NetworkReach {
         Endpoint(service: "Railgun",
                  reach: .whenConnected(bridge: "Wallet"),
                  purpose: "Reads what you shield into Railgun and what comes back out, off Ethereum's public chain, for the wallets you follow — the two public doors, never anything inside the pool.",
-                 hosts: ["rpc.mevblocker.io", "eth.api.onfinality.io"]),
+                 hosts: ["rpc.mevblocker.io", "gateway.tenderly.co"]),
         Endpoint(service: "Peer",
                  reach: .whenConnected(bridge: "Peer"),
                  purpose: "Reads your settled Peer trades off Base's public chain, for the wallets you follow.",
-                 hosts: ["mainnet.base.org"]),
+                 hosts: ["mainnet.base.org", "base-rpc.publicnode.com", "gateway.tenderly.co"]),
         // Reach is WALLET, not "Gnosis Pay" — the seat only appears once a
         // card spend has been seen, but the read that discovers one runs for
         // every watched wallet. Declaring it under its own seat would say
@@ -459,10 +464,10 @@ enum NetworkReach {
                  reach: .whenConnected(bridge: "Wallet"),
                  purpose: "Reads your MetaMask Card spending off the public chains it settles on — Linea, Base and Monad — for the wallets you follow. Monad is read through Alchemy's index, the same host the Wallet's own reads use. The amount, the token and the moment, which is all the chain carries; the merchant is never on the chain, so it is never read. Read-only: nothing here spends, tops up, or changes a card's spending cap.",
                  hosts: ["rpc.linea.build", "linea.gateway.tenderly.co",
-                         // Base's pair. `mainnet.base.org` is the only free
-                         // host that answered a filtered read; Tenderly is the
-                         // fallback for the calls it can serve.
-                         "mainnet.base.org", "base.gateway.tenderly.co"]),
+                         // Base's three: `mainnet.base.org` for the block
+                         // number, publicnode and Tenderly for the logs it
+                         // stopped serving (2026-10-14).
+                         "mainnet.base.org", "base-rpc.publicnode.com", "gateway.tenderly.co"]),
         // Both ether.fi entries reach under WALLET, not their own seats, for
         // Gnosis Pay's reason above: each seat appears only once there's
         // evidence (an unstake request / a Cash account), but the read that
@@ -470,7 +475,7 @@ enum NetworkReach {
         Endpoint(service: "ether.fi",
                  reach: .whenConnected(bridge: "Wallet"),
                  purpose: "Reads your ether.fi unstake requests off Ethereum's public chain, for the wallets you follow — how much is queued, and when it becomes claimable. Read-only: claiming happens in ether.fi's own app.",
-                 hosts: ["rpc.mevblocker.io", "eth.api.onfinality.io"]),
+                 hosts: ["rpc.mevblocker.io", "gateway.tenderly.co"]),
         Endpoint(service: "ether.fi Cash",
                  reach: .whenConnected(bridge: "Wallet"),
                  purpose: "Reads your ether.fi Cash card spending and credit position off Optimism's public chain, for the wallets you follow — the amount and the moment, which is all the chain carries.",

@@ -194,28 +194,28 @@ enum MetaMaskCardBridge {
                 Spendable(symbol: "WETH", decimals: 18, currency: nil),
         ])
 
-    /// BASE — the same card, five times less history per request, and the
-    /// window is sized DOWN to match rather than the request count sized up.
+    /// BASE — the same card, less history per request, and the window is
+    /// sized DOWN to match rather than the request count sized up.
     ///
-    /// Measured 2026-09-20: `mainnet.base.org` is the ONLY free host that
-    /// answered a filtered read at all, and it caps at 2,000 blocks;
-    /// `base.gateway.tenderly.co` answers 100 but errors at 2,000, and
-    /// publicnode, 1rpc and drpc refused every window tried. Blocks are
-    /// exactly 2.0s, so 2,000 blocks is ~67 minutes.
+    /// Re-measured 2026-10-14: `mainnet.base.org` (the only free host that
+    /// answered a filtered read on 2026-09-20, at 2,000 blocks) now refuses
+    /// every getLogs, "request limit reached", though it still answers the
+    /// block number. publicnode serves logs ~10k blocks back when the read
+    /// names an address (this one names the tokens); Tenderly serves the
+    /// whole history but errors past 1,000 blocks. Blocks are exactly 2.0s.
     ///
     /// **Hence a 1-day backfill, not Linea's 6.** 43,200 blocks is one day and
-    /// costs 22 requests at first sight; six days would cost 130, which is not
+    /// costs 44 requests at first sight; six days would cost 260, which is not
     /// a thing to do on a phone over a public endpoint for a card almost
     /// nobody watching a wallet holds. After first sight a sweep covers only
-    /// the time since the cursor — an hour is 1,800 blocks, so ONE request —
-    /// which is the cost that actually recurs. Tenderly stays listed second:
-    /// it cannot serve 2,000, so it is reached only if `fetchSpends` is ever
-    /// called with a smaller window, and `blockNumber` uses whichever answers.
+    /// the time since the cursor — an hour is 1,800 blocks, so TWO requests —
+    /// which is the cost that actually recurs.
     static let base = Chain(
         name: "Base",
         explorer: "https://basescan.org/tx/",
-        rpcs: ["https://mainnet.base.org", "https://base.gateway.tenderly.co"],
-        maxRange: 2_000, maxChunks: 22, backfillBlocks: 43_200,
+        rpcs: ["https://mainnet.base.org", "https://base-rpc.publicnode.com",
+               "https://gateway.tenderly.co/public/base"],
+        maxRange: 1_000, maxChunks: 44, backfillBlocks: 43_200,
         spendable: [
             // All four verified against `decimals()` on Base.
             "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913":

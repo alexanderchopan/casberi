@@ -11,7 +11,7 @@ import SwiftData
 /// USDC from 0x77…".
 ///
 /// The read is the WalletApprovals shape (cursors, running guard, fail-closed,
-/// land-before-advance) against Peer's two orchestrators on Base — V3 is the
+/// land-before-advance) against Peer's three orchestrators on Base — V3 is the
 /// production protocol and Base is its home chain; other chains arrive via
 /// bridge hooks and still settle the Base leg through these contracts. A
 /// fulfilled intent emits `IntentFulfilled(intentHash, fundsTransferredTo,
@@ -81,20 +81,27 @@ enum PeerBridge {
     static let sourceName = "Peer"
 
     /// Peer's home chain. The RPC hosts and range cap are the Wallet bridge's
-    /// measured Base values (WalletApprovals, 2026-07-16) — same public host,
-    /// same 9k-block getLogs ceiling; don't raise without re-measuring.
-    private static let rpcs = ["https://mainnet.base.org"]
-    private static let maxRange = 9_000
-    private static let maxChunks = 16
+    /// measured Base values (WalletApprovals, re-measured 2026-10-14):
+    /// `mainnet.base.org` refuses every getLogs now but still answers the
+    /// token `eth_call`s, publicnode serves logs ~10k blocks back, Tenderly
+    /// the whole history at 1,000 blocks a call. 44 chunks reach a day back;
+    /// as before, a longer gap scans the newest window and accepts the hole.
+    private static let rpcs = ["https://mainnet.base.org", "https://base-rpc.publicnode.com",
+                               "https://gateway.tenderly.co/public/base"]
+    private static let maxRange = 1_000
+    private static let maxChunks = 44
     static let network = "base-mainnet"
 
-    /// Both live orchestrators (V3 shipped a second generation beside the
-    /// first; fills flow through whichever the maker's escrow is registered
-    /// with, so the sweep watches both — one getLogs takes an address ARRAY,
-    /// so watching two costs nothing extra).
+    /// Every orchestrator Peer deployed on Base; fills flow through whichever
+    /// the maker's escrow is registered with, so the sweep watches all — one
+    /// getLogs takes an address ARRAY, so each costs nothing extra.
+    /// OrchestratorV3 (Peer's `deployments/base`, 2026-08-03) carried every
+    /// fill in a 9k-block window on 2026-10-14 (76, against none on the other
+    /// two), and settles against the same escrow below (137 of 137 signals).
     static let orchestrators = [
         "0x88888883ed048ff0a415271b28b2f52d431810d0",   // Orchestrator
         "0x888888359e981b5225ca48fbcdceff702fc3b888",   // OrchestratorV2
+        "0x014025fde093f8701d86e9f38e2c3a9b779cb5c7",   // OrchestratorV3
     ]
 
     /// `IntentFulfilled(bytes32 indexed intentHash, address indexed
@@ -435,7 +442,7 @@ enum PeerBridge {
     /// Turns one wallet's fulfill logs into things — newest 10 only (a busy
     /// gap folds to its recent tail), deduped against the corpus and within
     /// the pass on the intent hash: one intent settles exactly once, so the
-    /// hash is the natural sourceRef even across the two orchestrators.
+    /// hash is the natural sourceRef across every orchestrator.
     @MainActor
     private static func things(from logs: [[String: Any]], wallet: String,
                                existing: Set<String>) async -> [Thing] {
@@ -1035,7 +1042,7 @@ enum PeerBridge {
     /// off the token contract via keyless `eth_call` (2026-07-19, replacing
     /// `alchemy_getTokenMetadata`) — the same `symbol()`-falling-back-to-
     /// `name()` decode `WalletApprovals.tokenMetadata` uses, on the same
-    /// `mainnet.base.org` host every other Peer read already rides. In
+    /// Base hosts every other Peer read already rides. In
     /// practice this is USDC nearly always — but read, never assumed.
     private static func depositToken(escrow: String, depositId: String)
         async -> (address: String, symbol: String?, decimals: Int?)? {

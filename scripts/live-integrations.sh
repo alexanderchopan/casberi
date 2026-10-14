@@ -74,26 +74,29 @@ print -P "%F{cyan}Casberi live-integrations heartbeat%f  ($(date '+%Y-%m-%d %H:%
 hr
 print -P "%BPrepare / approval RPC hosts%b  (fee + receipt methods)"
 check_rpc_host "eth-mainnet · mevblocker"  "https://rpc.mevblocker.io"
-check_rpc_host "eth-mainnet · onfinality"  "https://eth.api.onfinality.io/public"
+check_rpc_host "eth-mainnet · tenderly"    "https://gateway.tenderly.co/public/mainnet"
 check_rpc_host "base-mainnet"              "https://mainnet.base.org"
 check_rpc_host "arb-mainnet"               "https://arb1.arbitrum.io/rpc"
 check_rpc_host "opt-mainnet"               "https://mainnet.optimism.io"
-check_rpc_host "matic-mainnet · onfinality" "https://polygon.api.onfinality.io/public"
+check_rpc_host "matic-mainnet · tenderly"  "https://gateway.tenderly.co/public/polygon"
 
 hr
 print -P "%BPeer%b  (IntentFulfilled fills still emitting on Base)"
 # Orchestrators + topic from PeerBridge — if these drift, the whole seat goes silent.
-BASE="https://mainnet.base.org"
+# Logs come off publicnode (~10k blocks back): `mainnet.base.org` refuses every
+# getLogs since October 2026, and Tenderly caps a call at 1,000 blocks.
+BASE="https://base-rpc.publicnode.com"
 FTOPIC="0xd50b3b21bc45b85ddfaec58dbf56fe9b88754d08f47dcf5143b63258a57ad944"
 O1="0x88888883ed048ff0a415271b28b2f52d431810d0"
 O2="0x888888359e981b5225ca48fbcdceff702fc3b888"
+O3="0x014025fde093f8701d86e9f38e2c3a9b779cb5c7"
 headhex=$(raw "$BASE" '{"jsonrpc":"2.0","id":1,"method":"eth_blockNumber","params":[]}' \
             | sed -E 's/.*"result":"([^"]*)".*/\1/')
 if [[ -z "$headhex" || "$headhex" != 0x* ]]; then
   fail "Peer — Base head unreadable (host down?)"
 else
   fromhex=$(printf '0x%x' $(( $((headhex)) - 9000 )))   # ~5h window
-  resp=$(raw "$BASE" "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"eth_getLogs\",\"params\":[{\"fromBlock\":\"$fromhex\",\"toBlock\":\"$headhex\",\"address\":[\"$O1\",\"$O2\"],\"topics\":[\"$FTOPIC\"]}]}")
+  resp=$(raw "$BASE" "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"eth_getLogs\",\"params\":[{\"fromBlock\":\"$fromhex\",\"toBlock\":\"$headhex\",\"address\":[\"$O1\",\"$O2\",\"$O3\"],\"topics\":[\"$FTOPIC\"]}]}")
   if [[ "$resp" == *'"error"'* ]]; then
     fail "Peer — getLogs rejected: $(print -r -- "$resp" | sed -E 's/.*"message":"([^"]*)".*/\1/' | cut -c1-48)"
   else
@@ -576,7 +579,7 @@ hr
 print -P "%BWei / Gwei name registries%b  (keyless eth_call, Ethereum mainnet)"
 WNS_C='0x0000000000696760E15f265e828DB644A0c242EB'
 GNS_C='0x9D51D507BC7264d4fE8Ad1cf7Fe191933A0a81d6'
-ETH_RPC='https://eth.api.onfinality.io/public'
+ETH_RPC='https://gateway.tenderly.co/public/mainnet'
 # computeId("vitalik.wei") and computeId("donnoh.gwei"), byte for byte what the
 # app builds — see the harness's pinned fixtures.
 name_check() {   # $1 label  $2 contract  $3 computeId-calldata  $4 expected 0x address

@@ -93,19 +93,22 @@ enum RailgunBridge {
     /// range, which is exactly the read `publicnode` token-walls and `drpc`
     /// caps at 10k blocks.
     private static let rpcs = ["https://rpc.mevblocker.io",
-                               "https://eth.api.onfinality.io/public"]
+                               "https://gateway.tenderly.co/public/mainnet"]
 
     /// Blocks per `eth_getLogs` call.
     ///
     /// **The Gnosis Pay silent-truncation trap is ABSENT here, measured, and
     /// that is why this is 500k rather than that bridge's cautious 250k.**
     /// Gnosis Chain's hosts answer an over-large range with `[]`, which reads
-    /// identically to "this wallet never used the product". These two do not:
-    /// the limit is 10,000 RESULTS, not a block count, and crossing it is a
-    /// loud JSON-RPC error (mevblocker `-32005`, which even names the
-    /// sub-range to retry; onfinality `-32002` timeout). An error returns nil
-    /// from `fetchTransfers`, which breaks the chunk loop and LEAVES THE
-    /// CURSOR, so the range is retried rather than skipped.
+    /// identically to "this wallet never used the product". mevblocker does
+    /// not: the limit is 10,000 RESULTS, not a block count, and crossing it is
+    /// a loud JSON-RPC error (`-32005`, which even names the sub-range to
+    /// retry). An error returns nil from `fetchTransfers`, which breaks the
+    /// chunk loop and LEAVES THE CURSOR, so the range is retried rather than
+    /// skipped. The fallback, Tenderly (OnFinality's keyless endpoint went to
+    /// "Too Many Requests" in October 2026), DOES truncate silently past
+    /// ~10,000 results (measured 2026-10-14: 285 logs for a window holding
+    /// over 10,000), so it is safe here only because of the next paragraph.
     ///
     /// The result cap also can't bind on the reads this file actually issues:
     /// it was hit only by an UNSCOPED survey (6,306 logs / 500k blocks), while
