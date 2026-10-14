@@ -66318,6 +66318,6 @@ The band is **[ face · Search ]** at the leading end, one glass (`glassEffectUn
 
 ## §1296 — In the Feed, Social has no To you and Work no Coming up (amends §1251, §1293) (user, 2026-10-14: "in the feed, we have a section on social called 'to you'. we don't need that. also in the work category we have one for 'coming up' but do we really need that? i don't think so", "that way all the categories would be simpler", "if you agree make those changes before shipping too")
 
-Social's and Work's Feed headers are their names and their + (§1293), no choices: Social's card no longer leads with a To you group, so a reply or a like stands in its day with every other row, and Work's card is its rows. A To you or Coming up pick made on the category's own screen is not read in the Feed (`sectionCapNow`), and those screens keep their tiles. Media's Play and Read are the only header choices left (asked, not ruled).
+Social's and Work's Feed headers are their names and their + (§1293), no choices: Social's card no longer leads with a To you group, so a reply or a like stands in its day with every other row, and Work's card is its rows. A To you or Coming up pick made on the category's own screen is not read in the Feed (`sectionCapNow`), and those screens keep their tiles. Media keeps Play and Read, the only header choices left (user, 2026-10-14: "we want to keep media as it is").
 
 **Seen** on the iPhone 17 Pro simulator, dark, over the demo: "Social +" over Today's rows (replies and likes among them), "Work +". **Not seen:** light, the Mac.
