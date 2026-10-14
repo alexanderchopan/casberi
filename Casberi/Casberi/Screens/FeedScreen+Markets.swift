@@ -99,8 +99,9 @@ extension FeedScreen {
         marketsTilesSection
         // The Feed's tiles left Markets (prd §1231): it is a Wallet tile now.
         tokensInlineTiles
+        if watches.count > 1 { marketsListHead }
         // THE VERB LEADS THE LIST (prd §1230), as every Following and
-        // Subscriptions list's does.
+        // Subscriptions list's does: under the list's head, not above it.
         Section {
             DSDoorRow(icon: "plus", title: Text("Follow a company")) {
                 feedSheet = .watchAdd
@@ -120,7 +121,6 @@ extension FeedScreen {
                 .listRowSeparator(.hidden)
         }
         .task { await MarketsGas.shared.load() }
-        if watches.count > 1 { marketsListHead }
         // An empty list says so in the one wording every Follow list uses
         // (prd §1230); the verb above starts it.
         if watches.isEmpty {

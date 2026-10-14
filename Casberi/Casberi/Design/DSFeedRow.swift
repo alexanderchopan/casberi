@@ -59,6 +59,11 @@ struct DSFeedRow<Lead: View, Trailing: View, Below: View>: View {
     /// thumbnail on the right AND the liker's face. Ignored in a room, where
     /// the row's own lead says who.
     var face: String? = nil
+    /// The trailing slot stands beside the name AND its line, centred, not on
+    /// the name's line alone. For a trailing taller than one line of text (a
+    /// watched row's price over its move): on the name's line it pushed the
+    /// line a whole figure below its name.
+    var trailingBesideLine = false
     @ViewBuilder var lead: Lead
     @ViewBuilder var trailing: Trailing
     @ViewBuilder var below: Below
@@ -98,37 +103,32 @@ struct DSFeedRow<Lead: View, Trailing: View, Below: View>: View {
                     lead
                         .frame(width: Self.leadSize, height: Self.leadSize)
                 }
-                VStack(alignment: .leading, spacing: 2) {
-                    HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                        // ONE LINE, always (prd §902 — user: "don't wrap
-                        // them"). A title that runs on is cut at its tail;
-                        // the line beneath says who and where, and the sheet
-                        // has the rest.
-                        HStack(alignment: .center, spacing: DS.Space.s2) {
-                            if let groupedSource, let face {
-                                RemoteThumb(urlString: face, size: DS.Face.badge,
-                                            fallback: groupedSource, circular: true)
+                if trailingBesideLine {
+                    HStack(alignment: .center, spacing: DS.Space.s2) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            title
+                            if let line {
+                                styledLine(line)
                             }
-                            Text(name)
-                                .dsText(.body17)
-                                .fontWeight(emphasized ? .medium : .regular)
-                                .foregroundStyle(done ? DS.textTertiary : DS.textPrimary)
-                                .strikethrough(done, color: DS.textTertiary)
-                                .lineLimit(1)
-                                .contentTransition(.opacity)
-                                .animation(DS.Motion.standard.delay(Double(ripple % 8) * 0.045),
-                                           value: name)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        // ONE fact, or none (prd §902): money, a clock still
-                        // ahead of you, or Live. A row's age went — the day
-                        // header already says when — and so did a fold's
-                        // count (§902) and then the fold's stacked plate
-                        // (§903): a fold looks like any row.
                         trailing
                     }
-                    if let line {
-                        styledLine(line)
+                } else {
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                            title
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            // ONE fact, or none (prd §902): money, a clock still
+                            // ahead of you, or Live. A row's age went — the day
+                            // header already says when — and so did a fold's
+                            // count (§902) and then the fold's stacked plate
+                            // (§903): a fold looks like any row.
+                            trailing
+                        }
+                        if let line {
+                            styledLine(line)
+                        }
                     }
                 }
                 if groupedSource != nil, leadIsPicture {
@@ -145,6 +145,27 @@ struct DSFeedRow<Lead: View, Trailing: View, Below: View>: View {
                    alignment: groupedSource == nil ? .center : .top)
             below
                 .padding(.leading, groupedSource == nil ? Self.leadSize + DS.Space.s3 : 0)
+        }
+    }
+
+    /// ONE LINE, always (prd §902 — user: "don't wrap them"). A title that
+    /// runs on is cut at its tail; the line beneath says who and where, and
+    /// the sheet has the rest.
+    private var title: some View {
+        HStack(alignment: .center, spacing: DS.Space.s2) {
+            if let groupedSource, let face {
+                RemoteThumb(urlString: face, size: DS.Face.badge,
+                            fallback: groupedSource, circular: true)
+            }
+            Text(name)
+                .dsText(.body17)
+                .fontWeight(emphasized ? .medium : .regular)
+                .foregroundStyle(done ? DS.textTertiary : DS.textPrimary)
+                .strikethrough(done, color: DS.textTertiary)
+                .lineLimit(1)
+                .contentTransition(.opacity)
+                .animation(DS.Motion.standard.delay(Double(ripple % 8) * 0.045),
+                           value: name)
         }
     }
 
@@ -209,11 +230,12 @@ extension DSFeedRow where Below == EmptyView {
          line: Text? = nil, lineLines: Int = 1,
          leadIsPicture: Bool = false,
          face: String? = nil,
+         trailingBesideLine: Bool = false,
          @ViewBuilder lead: () -> Lead,
          @ViewBuilder trailing: () -> Trailing) {
         self.init(name: name, emphasized: emphasized,
                   done: done, ripple: ripple, line: line, lineLines: lineLines,
-                  leadIsPicture: leadIsPicture, face: face,
+                  leadIsPicture: leadIsPicture, face: face, trailingBesideLine: trailingBesideLine,
                   lead: lead, trailing: trailing, below: { EmptyView() })
     }
 }

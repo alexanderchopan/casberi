@@ -66255,3 +66255,15 @@ The queue's sweep proves the CoW orders its pending transactions pre-sign (at mo
 4. **A typed price (`PriceAlert.price`)** reads a decimal comma on a keypad that offers one ("0,5", "0,00015"), which the old field read as grouping and turned 0,5 into 5; a lone comma followed by exactly three digits after a whole number stays grouping ("1,250"). `markets-selftest.sh` holds it.
 5. **Not changed.** Markets' Alerts tile keeps its rows' tap to the watched page (where the tray now is) and its long-press Delete; a gas alert, which has no page, still deletes from that long press only. The gas line's own menu (§1250) is untouched.
 6. **Unverified here.** Written in a cloud session with no Swift toolchain: not compiled, not run on a simulator. `scripts/verify.sh` on the Mac is the gate before it ships.
+
+## §1290 — Following's rows, tightened: the line under its name, a line on every row, one coloured figure (amends §1081, §1230 item 4) (user, 2026-10-13: "we aren't changing the top card that is the selector and i am concerned with what the watchlist experience is below the card", then "A", of `Watchlist, below the card` on the canvas)
+
+The box stays as §1171b and §1209a left it. Below it:
+
+1. **The line sits under its name.** A watched row's price over its move was the trailing slot on the name's line, so the line fell a whole figure below the name (a 73pt row reading as two). `DSFeedRow(trailingBesideLine:)` stands the trailing beside the name AND its line, centred; `WatchRow` alone passes it.
+2. **Every row draws its day line, in one column.** The prices stand in an 84pt minimum column, and a row whose line is not read yet keeps the line's width empty, so the lines align. The demo's stocks draw a line anchored on their seeded quote (`TokenPulse.demoCloses`, the demo tokens' own curve), never a network read.
+3. **One coloured figure per row:** today's move. "+18% since followed" is grey, as every row's line is; "you" went so the line fits beside the price column (user: "you could remove 'you'").
+4. **The verb under the head:** Following and its order menu, then Follow a company, then gas and the rows. With one row or none there is no head, as before.
+5. **Prices are grouped:** `$3,180.00`, cents kept (`TokenChartStyle.grouped`; `PriceCommentary.money` follows, as `price-chart-selftest.sh` requires the two ramps to agree).
+
+**Seen** on the simulator over the demo: the line under each name, six lines in one column, `$3,180.00`. **Not seen:** a live stock's Yahoo line, and a price wider than the column.

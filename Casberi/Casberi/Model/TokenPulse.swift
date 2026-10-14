@@ -65,7 +65,18 @@ final class TokenPulse {
     /// Reads one stock's day line when the row stands (its `.task`), held
     /// fifteen minutes. Never in the demo, which reaches nothing (§217).
     func loadStockLine(ref: String, symbol: String) async {
-        guard !DemoMode.isActive else { return }
+        // The demo reaches nothing: its stock draws a line anchored on its
+        // seeded quote, as a demo token's does (`seedDemo`), so every row in
+        // the demo's Following draws one.
+        guard !DemoMode.isActive else {
+            guard stockLines[ref] == nil,
+                  let quote = CompanyQuotes.shared.quote(.stock(symbol)),
+                  let change = quote.change else { return }
+            let phase = Double(symbol.unicodeScalars.reduce(0) { $0 + Int($1.value) } % 7)
+            stockLines[ref] = (closes: Self.demoCloses(price: quote.price, change24h: change, phase: phase),
+                               fetchedAt: .now)
+            return
+        }
         if let line = stockLines[ref], line.fetchedAt.timeIntervalSinceNow > -900 { return }
         if let tried = lastTried[ref], tried.timeIntervalSinceNow > -900 { return }
         lastTried[ref] = .now
@@ -107,12 +118,7 @@ final class TokenPulse {
                               marketCap: Double?, phase: Double)]) {
         var seeded: [String: Pulse] = [:]
         for t in tokens {
-            let start = t.price / (1 + t.change24h)
-            let closes = (0..<24).map { i -> Double in
-                let trend = start + (t.price - start) * (Double(i) / 23.0)
-                guard i > 0, i < 23 else { return trend }
-                return trend * (1 + 0.01 * sin(Double(i) * 0.9 + t.phase))
-            }
+            let closes = Self.demoCloses(price: t.price, change24h: t.change24h, phase: t.phase)
             seeded[t.ref] = Pulse(closes: closes, change24h: t.change24h, price: t.price,
                                   marketCap: t.marketCap, fdv: nil, fetchedAt: .now)
         }
@@ -132,6 +138,17 @@ final class TokenPulse {
     }
 
     func seedDemo() { seedDemo(Self.demoTokens()) }
+
+    /// A demo day's 24 closes: anchored on the day's open and `price`, a
+    /// deterministic wiggle between (see `seedDemo` for why both).
+    nonisolated static func demoCloses(price: Double, change24h: Double, phase: Double) -> [Double] {
+        let start = price / (1 + change24h)
+        return (0..<24).map { i -> Double in
+            let trend = start + (price - start) * (Double(i) / 23.0)
+            guard i > 0, i < 23 else { return trend }
+            return trend * (1 + 0.01 * sin(Double(i) * 0.9 + phase))
+        }
+    }
 
     /// Re-seeds if the process just (re)started with demo mode already
     /// active — `pulses` is in-memory only (real prices are perishable, this

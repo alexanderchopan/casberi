@@ -256,7 +256,7 @@ enum PriceCommentary {
     /// the sentence and the curve must never print one number three ways, and
     /// the harness pins the pair.
     static func money(_ p: Double) -> String {
-        if p >= 1 { return String(format: "$%.2f", p) }
+        if p >= 1 { return "$" + TokenChartStyle.grouped(String(format: "%.2f", p)) }
         if p >= 0.01 { return String(format: "$%.4f", p) }
         return String(format: "$%.8f", p)
     }

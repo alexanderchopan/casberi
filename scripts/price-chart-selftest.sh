@@ -145,7 +145,7 @@ import re, sys
 src = open(sys.argv[1]).read()
 out = ["import Foundation\n"]
 # TokenChartStyle's pure half — everything that does not touch Color.
-for name in ["isFlat", "readsAsWipeout", "isFresh", "readLine", "priceText", "changeText"]:
+for name in ["isFlat", "readsAsWipeout", "isFresh", "readLine", "priceText", "grouped", "changeText"]:
     m = re.search(r"\n    static (?:let|func) " + name + r"\b", src)
     if not m:
         sys.stderr.write("could not extract %s\n" % name)
@@ -247,6 +247,9 @@ check(!TokenChartStyle.readsAsWipeout(0), "no move is not a wipeout")
 // MARK: price precision by magnitude
 
 check(TokenChartStyle.priceText(12.3456) == "$12.35", "dollars get cents")
+check(TokenChartStyle.priceText(3180) == "$3,180.00", "thousands are separated, cents kept")
+check(TokenChartStyle.priceText(117840.5) == "$117,840.50", "every thousand is separated")
+check(TokenChartStyle.priceText(999.99) == "$999.99", "under a thousand, no separator")
 check(TokenChartStyle.priceText(0.031234) == "$0.0312", "sub-dollar gets four places")
 check(TokenChartStyle.priceText(0.00000123) == "$0.00000123",
       "a micro-cap keeps eight, rather than rounding to $0.00")

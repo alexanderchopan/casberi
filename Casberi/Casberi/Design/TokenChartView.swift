@@ -89,9 +89,19 @@ enum TokenChartStyle {
     }
 
     static func priceText(_ p: Double) -> String {
-        if p >= 1 { return String(format: "$%.2f", p) }
+        if p >= 1 { return "$" + grouped(String(format: "%.2f", p)) }
         if p >= 0.01 { return String(format: "$%.4f", p) }
         return String(format: "$%.8f", p)
+    }
+
+    /// Thousands separated, cents kept: "3180.00" reads "3,180.00", as every
+    /// other money figure in the app does.
+    static func grouped(_ fixed: String) -> String {
+        let parts = fixed.split(separator: ".", maxSplits: 1)
+        var whole = Array(parts.first.map(String.init) ?? fixed)
+        var i = whole.count - 3
+        while i > 0 { whole.insert(",", at: i); i -= 3 }
+        return String(whole) + (parts.count > 1 ? "." + parts[1] : "")
     }
 
     static func changeText(_ c: Double) -> String {

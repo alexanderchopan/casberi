@@ -27,13 +27,17 @@ struct WatchRow: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        DSFeedRow(name: name, line: lineText) {
+        DSFeedRow(name: name, line: lineText, trailingBesideLine: true) {
             WatchFace(url: logo, lettered: lettered, onWhite: isStock && (logo != nil || glyph != nil),
                       symbol: glyph)
         } trailing: {
             HStack(spacing: DS.Space.s3) {
+                // Every row keeps the line's column, so the prices stand in
+                // one column whether or not a line has been read yet.
                 if closes.count >= 2, let change {
                     Sparkline(closes: closes, up: change >= 0)
+                } else {
+                    Color.clear.frame(width: 46, height: 14)
                 }
                 VStack(alignment: .trailing, spacing: 1) {
                     if let price {
@@ -56,6 +60,9 @@ struct WatchRow: View {
                             .contentTransition(.numericText(value: change))
                     }
                 }
+                // One price column (wide enough for "$3,180.00"), so every
+                // row's line stands at the same x; a wider price still widens it.
+                .frame(minWidth: 84, alignment: .trailing)
                 .animation(reduceMotion ? nil : DS.Motion.standard, value: price == nil)
             }
         }
@@ -70,8 +77,9 @@ struct WatchRow: View {
         case .holding(let value):
             return Text("You hold \(value)")
         case .sinceWatched(let move):
-            return Text("\(TokenChartStyle.changeText(move)) since you followed")
-                .foregroundStyle(move > 0 ? DS.confirmInk : DS.destructiveInk)
+            // Grey, as every line is: the row's one coloured figure is
+            // today's move, beside the price.
+            return Text("\(TokenChartStyle.changeText(move)) since followed")
         case .facts(let facts):
             return Text(verbatim: facts)
         case nil:
