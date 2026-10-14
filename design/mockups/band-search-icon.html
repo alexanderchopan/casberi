@@ -1,0 +1,72 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Band search icon</title>
+<style>
+:root{color-scheme:light dark;--ground:#f2f1f5;--ink:#15141a;--ink2:#56535f;--rounded:ui-rounded,"SF Pro Rounded",-apple-system,sans-serif}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--ground:#0b0b0f;--ink:#eeecf3;--ink2:#a29ead}}
+:root[data-theme="dark"]{--ground:#0b0b0f;--ink:#eeecf3;--ink2:#a29ead}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;-webkit-font-smoothing:antialiased;padding:16px}
+header{max-width:1200px;margin:0 auto 12px}
+h1{font:700 22px/28px var(--rounded)}
+p.desc{font-size:13px;line-height:18px;color:var(--ink2);max-width:900px;margin-top:4px}
+.stage{display:flex;gap:16px;justify-content:center;flex-wrap:wrap}
+figure{width:230px;flex:none}
+figcaption{font-size:12px;line-height:16px;color:var(--ink2);margin:8px 2px 0}
+figcaption b{color:var(--ink)}
+.phone{--sheet:#000;--card:#1c1c1e;--text:#fff;--text2:#ebebf599;--glass:#2c2c2ecc;--brand:#ff3b5c;
+  zoom:.57;width:402px;height:874px;position:relative;background:var(--sheet);color:var(--text);border-radius:44px;box-shadow:0 24px 70px #00000055;overflow:hidden;padding:56px 14px 0}
+.title{font:700 36px var(--rounded);margin-bottom:14px}.title span{color:#8e8e93}
+.row{display:flex;gap:12px;align-items:center;min-height:62px}
+.lead{width:46px;height:46px;border-radius:12px;background:var(--card);flex:none}
+.l1{height:12px;width:70px;background:#3a3a3c;border-radius:6px;margin-bottom:8px}
+.l2{height:16px;width:220px;background:#48484a;border-radius:8px}
+.band{position:absolute;left:0;right:0;bottom:24px;height:72px;display:flex;align-items:center;gap:12px;padding:0 20px}
+.disc{width:60px;height:60px;border-radius:50%;background:var(--glass);backdrop-filter:blur(10px);display:grid;place-items:center;font-size:26px;flex:none;border:1px solid #ffffff14}
+.face{font-size:30px}
+.bar{flex:1;height:60px;border-radius:30px;background:var(--glass);display:flex;align-items:center;gap:10px;padding:0 20px;color:var(--text2);font-size:20px;border:1px solid #ffffff14}
+.pill{height:60px;border-radius:30px;background:var(--glass);display:flex;align-items:center;border:1px solid #ffffff14}
+.pill .disc{background:none;border:none}
+.sp{flex:1}
+.hl{outline:3px dashed #ffd60a;outline-offset:3px}
+</style>
+<header>
+  <h1>The band with search as an icon</h1>
+  <p class="desc">Search keeps what it does today (opens the tray with its field focused); only its drawing shrinks to a disc the face's size. What is freed is the middle of the band, so more of the feed shows. Dashed yellow is what changed.</p>
+</header>
+<div class="stage">
+
+<figure><div class="phone">
+  <div class="title">Feed <span>Wallet</span></div>
+  <div class="row"><div class="lead"></div><div><div class="l1"></div><div class="l2"></div></div></div>
+  <div class="row"><div class="lead"></div><div><div class="l1"></div><div class="l2"></div></div></div>
+  <div class="row"><div class="lead"></div><div><div class="l1"></div><div class="l2"></div></div></div>
+  <div class="band"><div class="disc face">🐙</div><div class="bar"><span style="font-size:22px">⌕</span> Search</div><div class="disc"><svg width="28" height="24" viewBox="0 0 28 24" fill="none" stroke="#fff" stroke-width="2.2"><rect x="2" y="5" width="24" height="16" rx="4"/><path d="M5 5V4a3 3 0 0 1 3-3h12"/><rect x="16" y="10" width="10" height="6" rx="2"/></svg></div></div>
+</div><figcaption><b>Today.</b> Face · Search bar · Wallet (§1209a, §1278). The bar covers the middle of every page.</figcaption></figure>
+
+<figure><div class="phone">
+  <div class="title">Feed <span>Wallet</span></div>
+  <div class="row"><div class="lead"></div><div><div class="l1"></div><div class="l2"></div></div></div>
+  <div class="row"><div class="lead"></div><div><div class="l1"></div><div class="l2"></div></div></div>
+  <div class="row"><div class="lead"></div><div><div class="l1"></div><div class="l2"></div></div></div>
+  <div class="band"><div class="disc face">🐙</div><div class="sp"></div><div class="disc hl">⌕</div><div class="disc"><svg width="28" height="24" viewBox="0 0 28 24" fill="none" stroke="#fff" stroke-width="2.2"><rect x="2" y="5" width="24" height="16" rx="4"/><path d="M5 5V4a3 3 0 0 1 3-3h12"/><rect x="16" y="10" width="10" height="6" rx="2"/></svg></div></div>
+</div><figcaption><b>A. Face left, Search and Wallet right.</b> Two discs side by side at the trailing edge, where the thumb rests. Apple's own pattern in iOS 26 (Music, Photos: search as a disc beside the tabs).</figcaption></figure>
+
+<figure><div class="phone">
+  <div class="title">Feed <span>Wallet</span></div>
+  <div class="row"><div class="lead"></div><div><div class="l1"></div><div class="l2"></div></div></div>
+  <div class="row"><div class="lead"></div><div><div class="l1"></div><div class="l2"></div></div></div>
+  <div class="row"><div class="lead"></div><div><div class="l1"></div><div class="l2"></div></div></div>
+  <div class="band"><div class="disc face">🐙</div><div class="sp"></div><div class="pill hl"><div class="disc">⌕</div><div class="disc"><svg width="28" height="24" viewBox="0 0 28 24" fill="none" stroke="#fff" stroke-width="2.2"><rect x="2" y="5" width="24" height="16" rx="4"/><path d="M5 5V4a3 3 0 0 1 3-3h12"/><rect x="16" y="10" width="10" height="6" rx="2"/></svg></div></div></div>
+</div><figcaption><b>B. One glass pill for Search and Wallet.</b> The same two, sharing one capsule, so the band reads as two things: where you are (face) and what you do.</figcaption></figure>
+
+<figure><div class="phone">
+  <div class="title">Feed <span>Wallet</span></div>
+  <div class="row"><div class="lead"></div><div><div class="l1"></div><div class="l2"></div></div></div>
+  <div class="row"><div class="lead"></div><div><div class="l1"></div><div class="l2"></div></div></div>
+  <div class="row"><div class="lead"></div><div><div class="l1"></div><div class="l2"></div></div></div>
+  <div class="band"><div class="disc face">🐙</div><div class="sp"></div><div class="disc hl">⌕</div><div class="sp"></div><div class="disc"><svg width="28" height="24" viewBox="0 0 28 24" fill="none" stroke="#fff" stroke-width="2.2"><rect x="2" y="5" width="24" height="16" rx="4"/><path d="M5 5V4a3 3 0 0 1 3-3h12"/><rect x="16" y="10" width="10" height="6" rx="2"/></svg></div></div>
+</div><figcaption><b>C. Three discs, spread.</b> Face, Search in the middle, Wallet. Even, but the middle disc sits over the content's centre, where the bar was.</figcaption></figure>
+
+</div>

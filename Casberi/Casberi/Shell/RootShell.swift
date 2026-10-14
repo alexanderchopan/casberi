@@ -2428,7 +2428,7 @@ struct RootShell: View {
                                   },
                                   onBack: seatBack)
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            // THE BAND IS FACE · BAR · WALLET (prd §1207 item
+                            // THE BAND IS FACE · SEARCH · WALLET (prd §1207 item
                             // 7, built §1209a; the Wallet took ✎'s seat in
                             // §1278): the bar is always there, one tap from
                             // search, and the Wallet is one tap from any page;
@@ -2445,7 +2445,10 @@ struct RootShell: View {
                                             // (prd §1280): it rises with the
                                             // keyboard down, so its contents
                                             // are in view; a tap on its field
-                                            // types.
+                                            // types. A disc beside the Wallet
+                                            // since prd §1294, the middle of
+                                            // the band left to the page.
+                                            Spacer(minLength: 0)
                                             BandSearchBar {
                                                 withAnimation(DS.Motion.standard) { chrome.roomsTray = true }
                                             }

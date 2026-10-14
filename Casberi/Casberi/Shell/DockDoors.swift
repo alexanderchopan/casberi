@@ -83,10 +83,13 @@ struct WalletDoor: View {
     }
 }
 
-/// THE BAR IN THE BAND (prd §1207 item 7, built §1209a): always there, full
-/// size, never shrinking while you read. A tap raises the tray with its
-/// search focused, where the words become a page (§1209). The face's glass
-/// and height, so the band reads as one row: face · bar · Wallet.
+/// SEARCH IN THE BAND (prd §1207 item 7, built §1209a; a disc since prd
+/// §1294, user: "i'm wondering if the search bar should just be a search
+/// icon, still behave the same way but take up less real estate", then "do
+/// A"): always there, the face's glass and size, beside the Wallet at the
+/// band's trailing end, as iOS 26 stands search beside its tabs. A tap raises
+/// the tray with its search, as the bar did; the middle of the band is the
+/// page's again.
 struct BandSearchBar: View {
     @Environment(ShellChrome.self) private var chrome
     let action: () -> Void
@@ -97,21 +100,13 @@ struct BandSearchBar: View {
             DSHaptic.tap()
             action()
         } label: {
-            HStack(spacing: DS.Space.s2) {
-                Image(systemName: "magnifyingglass")
-                    .dsGlyph(.body)
-                    .foregroundStyle(DS.textSecondary)
-                Text("Search")
-                    .dsText(.body17)
-                    .foregroundStyle(DS.textTertiary)
-                    .lineLimit(1)
-                Spacer(minLength: 0)
-            }
-            .padding(.horizontal, DS.Space.s4)
-            .frame(maxWidth: .infinity, minHeight: size, maxHeight: size)
-            .dsGlass(cornerRadius: size / 2)
-            .dsTapTarget(Capsule())
-            .dsHover()
+            Image(systemName: "magnifyingglass")
+                .dsGlyph(.body, weight: .semibold)
+                .foregroundStyle(DS.textPrimary)
+                .frame(width: size, height: size)
+                .dsGlassDoor(nil)
+                .dsTapTarget(Circle())
+                .dsHover()
         }
         .buttonStyle(PressSpring())
         .accessibilityLabel(Text("Search"))

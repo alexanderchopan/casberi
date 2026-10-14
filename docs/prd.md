@@ -66303,3 +66303,9 @@ The box stays as §1171b and §1209a left it. Below it:
 ### §1292a — Sources' Subscriptions page with no wallet followed (user, 2026-10-14: "i hit subscriptions and it goes here?", "this screen no longer exists")
 
 With no wallet followed and nothing landed, both empty arms of `roomBody` replaced a page opened from a Sources count with the old "One inbox for all your apps" and Browse apps. A pinned page now always keeps its box and list (`pinnedPage`, commit 702a7602).
+
+## §1294 — Search in the band is a disc beside the Wallet (amends §1209a item 1, §1280) (user, 2026-10-14: "i'm wondering if the search bar should just be a search icon, still behave the same way but take up less relestate. and if so then how do we organize face wallet and search icons", then of four layouts "so far i like A the best b/c i agree it matches appel", "ok, do A"; one bar holding all three was declined: a tab bar, §100, and the width it frees comes back; mockup `design/mockups/band-search-icon.html`)
+
+The band is face · Search · Wallet with the face at the leading end and Search and the Wallet as two discs at the trailing end, each the face's glass and size (`BandSearchBar` draws `magnifyingglass` on `dsGlassDoor`, as `WalletDoor`). A tap raises the tray with its search, as the bar did; with the tray up its own capsule stands between the face and the Wallet, as before. The middle of the band is the page's.
+
+**Seen** on the iPhone 17 Pro simulator, dark, over the demo: the band's three discs, and Search raising the tray. **Not seen:** light, iPad and Mac (the rail stands there; the band's overlay is phone-only).
