@@ -40,6 +40,11 @@ final class JourneyTests: XCTestCase {
         w.tap(w.el(.button, "label BEGINSWITH %@", "One inbox for all your apps"), "intro cover")
         w.tap(w.el(.button, "label CONTAINS %@", "Exit"), "demo pill, Exit")
         w.see(w.el(.staticText, "label == %@", "Start here"), "Sources, Start here")
+        // The demo is not counted (owner, 2026-10-14: "i know the demo adds
+        // steps but i don't want you to count it. we need the demo for a user
+        // to see everything"). The walk above still runs, since a new user
+        // must; the meter and the clock start here, on Sources.
+        w.begin()
         w.tap(w.el(.button, "label BEGINSWITH %@", "Add a calendar"), "Add a calendar")
         w.tap(w.el(.button, "label BEGINSWITH %@", "Your phone"), "Your phone's calendars")
         w.allow("Full Access", "iOS calendar ask")
@@ -152,6 +157,15 @@ final class JourneyTests: XCTestCase {
             e.tap()
             taps += 1
             shoot(what)
+        }
+
+        /// Start the meter here: taps, typing and the clock before this call
+        /// are the walk's setup, not the job (the demo, for `connect`).
+        func begin() {
+            guard broken == nil else { return }
+            taps = 0
+            typed = 0
+            start = Date()
         }
 
         /// A field the app may focus on its own: tapped, and counted, only

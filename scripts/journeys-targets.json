@@ -1,5 +1,5 @@
 {
-  "why": "The most taps a job should take. Set by the owner, 2026-10-14: every journey, 3 taps. A journey over its target is flagged in every report and is the daily proposals' input. Field focus and an iOS permission ask count as taps; typing is counted apart.",
+  "why": "The most taps a job should take. Set by the owner, 2026-10-14: every journey, 3 taps. A journey over its target is flagged in every report and is the daily proposals' input. Field focus and an iOS permission ask count as taps; typing is counted apart. The demo's steps are never counted (owner, 2026-10-14: the demo stays, so a user sees everything); a journey starts its meter after them.",
   "default_taps": 3,
   "taps": {}
 }
