@@ -12,7 +12,7 @@ import Foundation
 
 enum WalletbeatDirectory {
 	/// The day this snapshot was taken from beta.walletbeat.eth.limo.
-	static let generated = "2026-08-20"
+	static let generated = "2026-10-14"
 
 	static let wallets: [WalletbeatEntry] = [
 		WalletbeatEntry(
@@ -28,10 +28,10 @@ enum WalletbeatDirectory {
 			id: "base-app",
 			name: "Base App",
 			hardware: false,
-			variants: ["mobile"],
+			variants: ["mobile", "browser"],
 			stage: "QUALIFIED_FOR_NO_STAGES",
-			updated: "2026-03-19",
-			counts: [.security: WalletbeatCounts(pass: 0, partial: 1, fail: 3, unrated: 4, exempt: 0), .privacy: WalletbeatCounts(pass: 0, partial: 0, fail: 1, unrated: 4, exempt: 0), .selfSovereignty: WalletbeatCounts(pass: 0, partial: 0, fail: 4, unrated: 1, exempt: 0), .transparency: WalletbeatCounts(pass: 1, partial: 0, fail: 1, unrated: 3, exempt: 0), .ecosystem: WalletbeatCounts(pass: 2, partial: 2, fail: 0, unrated: 0, exempt: 0)]
+			updated: "2026-10-09",
+			counts: [.security: WalletbeatCounts(pass: 0, partial: 0, fail: 4, unrated: 4, exempt: 0), .privacy: WalletbeatCounts(pass: 0, partial: 0, fail: 0, unrated: 5, exempt: 0), .selfSovereignty: WalletbeatCounts(pass: 0, partial: 0, fail: 1, unrated: 4, exempt: 0), .transparency: WalletbeatCounts(pass: 1, partial: 0, fail: 1, unrated: 3, exempt: 0), .ecosystem: WalletbeatCounts(pass: 2, partial: 0, fail: 0, unrated: 4, exempt: 0)]
 		),
 		WalletbeatEntry(
 			id: "bitbox",
@@ -48,8 +48,8 @@ enum WalletbeatDirectory {
 			hardware: false,
 			variants: ["mobile", "browser"],
 			stage: "QUALIFIED_FOR_NO_STAGES",
-			updated: "2026-01-17",
-			counts: [.security: WalletbeatCounts(pass: 0, partial: 0, fail: 1, unrated: 7, exempt: 0), .privacy: WalletbeatCounts(pass: 0, partial: 0, fail: 1, unrated: 4, exempt: 0), .selfSovereignty: WalletbeatCounts(pass: 2, partial: 0, fail: 1, unrated: 2, exempt: 0), .transparency: WalletbeatCounts(pass: 0, partial: 1, fail: 1, unrated: 3, exempt: 0), .ecosystem: WalletbeatCounts(pass: 1, partial: 1, fail: 2, unrated: 2, exempt: 0)]
+			updated: "2026-10-08",
+			counts: [.security: WalletbeatCounts(pass: 0, partial: 0, fail: 2, unrated: 6, exempt: 0), .privacy: WalletbeatCounts(pass: 0, partial: 0, fail: 1, unrated: 4, exempt: 0), .selfSovereignty: WalletbeatCounts(pass: 2, partial: 0, fail: 1, unrated: 2, exempt: 0), .transparency: WalletbeatCounts(pass: 0, partial: 1, fail: 1, unrated: 3, exempt: 0), .ecosystem: WalletbeatCounts(pass: 1, partial: 1, fail: 2, unrated: 2, exempt: 0)]
 		),
 		WalletbeatEntry(
 			id: "mtpelerin",
@@ -83,7 +83,7 @@ enum WalletbeatDirectory {
 			name: "Elytro",
 			hardware: false,
 			variants: ["mobile", "browser"],
-			stage: "QUALIFIED_FOR_NO_STAGES",
+			stage: "UNRATED",
 			updated: "2025-03-12",
 			counts: [.security: WalletbeatCounts(pass: 0, partial: 0, fail: 1, unrated: 7, exempt: 0), .privacy: WalletbeatCounts(pass: 0, partial: 0, fail: 1, unrated: 4, exempt: 0), .selfSovereignty: WalletbeatCounts(pass: 1, partial: 0, fail: 0, unrated: 4, exempt: 0), .transparency: WalletbeatCounts(pass: 0, partial: 0, fail: 0, unrated: 5, exempt: 0), .ecosystem: WalletbeatCounts(pass: 1, partial: 0, fail: 0, unrated: 4, exempt: 0)]
 		),
@@ -92,7 +92,7 @@ enum WalletbeatDirectory {
 			name: "Family",
 			hardware: false,
 			variants: ["mobile"],
-			stage: "QUALIFIED_FOR_NO_STAGES",
+			stage: "UNRATED",
 			updated: "2025-04-22",
 			counts: [.security: WalletbeatCounts(pass: 0, partial: 0, fail: 1, unrated: 7, exempt: 0), .privacy: WalletbeatCounts(pass: 0, partial: 0, fail: 1, unrated: 4, exempt: 0), .selfSovereignty: WalletbeatCounts(pass: 1, partial: 0, fail: 0, unrated: 4, exempt: 0), .transparency: WalletbeatCounts(pass: 0, partial: 0, fail: 0, unrated: 5, exempt: 0), .ecosystem: WalletbeatCounts(pass: 0, partial: 0, fail: 1, unrated: 3, exempt: 0)]
 		),
@@ -110,7 +110,7 @@ enum WalletbeatDirectory {
 			name: "Frame",
 			hardware: false,
 			variants: ["desktop", "browser"],
-			stage: "QUALIFIED_FOR_NO_STAGES",
+			stage: "UNRATED",
 			updated: "2025-03-13",
 			counts: [.security: WalletbeatCounts(pass: 1, partial: 0, fail: 0, unrated: 6, exempt: 0), .privacy: WalletbeatCounts(pass: 0, partial: 0, fail: 1, unrated: 4, exempt: 0), .selfSovereignty: WalletbeatCounts(pass: 1, partial: 0, fail: 0, unrated: 4, exempt: 0), .transparency: WalletbeatCounts(pass: 0, partial: 0, fail: 0, unrated: 5, exempt: 0), .ecosystem: WalletbeatCounts(pass: 1, partial: 0, fail: 1, unrated: 4, exempt: 0)]
 		),
@@ -120,8 +120,8 @@ enum WalletbeatDirectory {
 			hardware: false,
 			variants: ["mobile"],
 			stage: "Stage 0",
-			updated: "2025-10-14",
-			counts: [.security: WalletbeatCounts(pass: 0, partial: 0, fail: 1, unrated: 7, exempt: 0), .privacy: WalletbeatCounts(pass: 0, partial: 0, fail: 1, unrated: 4, exempt: 0), .selfSovereignty: WalletbeatCounts(pass: 1, partial: 0, fail: 0, unrated: 4, exempt: 0), .transparency: WalletbeatCounts(pass: 2, partial: 0, fail: 0, unrated: 3, exempt: 0), .ecosystem: WalletbeatCounts(pass: 0, partial: 1, fail: 1, unrated: 3, exempt: 0)]
+			updated: "2026-10-09",
+			counts: [.security: WalletbeatCounts(pass: 1, partial: 2, fail: 4, unrated: 1, exempt: 0), .privacy: WalletbeatCounts(pass: 0, partial: 0, fail: 1, unrated: 3, exempt: 0), .selfSovereignty: WalletbeatCounts(pass: 2, partial: 0, fail: 2, unrated: 1, exempt: 0), .transparency: WalletbeatCounts(pass: 2, partial: 1, fail: 0, unrated: 2, exempt: 0), .ecosystem: WalletbeatCounts(pass: 0, partial: 1, fail: 2, unrated: 1, exempt: 0)]
 		),
 		WalletbeatEntry(
 			id: "gridplus",
@@ -147,8 +147,8 @@ enum WalletbeatDirectory {
 			hardware: false,
 			variants: ["mobile"],
 			stage: "QUALIFIED_FOR_NO_STAGES",
-			updated: "2025-10-28",
-			counts: [.security: WalletbeatCounts(pass: 1, partial: 1, fail: 1, unrated: 5, exempt: 0), .privacy: WalletbeatCounts(pass: 0, partial: 0, fail: 1, unrated: 4, exempt: 0), .selfSovereignty: WalletbeatCounts(pass: 1, partial: 0, fail: 0, unrated: 4, exempt: 0), .transparency: WalletbeatCounts(pass: 1, partial: 0, fail: 1, unrated: 3, exempt: 0), .ecosystem: WalletbeatCounts(pass: 0, partial: 2, fail: 2, unrated: 1, exempt: 0)]
+			updated: "2026-10-08",
+			counts: [.security: WalletbeatCounts(pass: 1, partial: 1, fail: 1, unrated: 5, exempt: 0), .privacy: WalletbeatCounts(pass: 0, partial: 0, fail: 1, unrated: 4, exempt: 0), .selfSovereignty: WalletbeatCounts(pass: 2, partial: 0, fail: 0, unrated: 3, exempt: 0), .transparency: WalletbeatCounts(pass: 1, partial: 0, fail: 1, unrated: 3, exempt: 0), .ecosystem: WalletbeatCounts(pass: 0, partial: 2, fail: 2, unrated: 1, exempt: 0)]
 		),
 		WalletbeatEntry(
 			id: "keycard-shell",
@@ -183,7 +183,7 @@ enum WalletbeatDirectory {
 			hardware: false,
 			variants: ["mobile", "browser"],
 			stage: "Stage 0",
-			updated: "2026-05-06",
+			updated: "2026-08-31",
 			counts: [.security: WalletbeatCounts(pass: 1, partial: 4, fail: 3, unrated: 0, exempt: 0), .privacy: WalletbeatCounts(pass: 0, partial: 0, fail: 2, unrated: 3, exempt: 0), .selfSovereignty: WalletbeatCounts(pass: 2, partial: 1, fail: 2, unrated: 0, exempt: 0), .transparency: WalletbeatCounts(pass: 2, partial: 1, fail: 1, unrated: 1, exempt: 0), .ecosystem: WalletbeatCounts(pass: 4, partial: 2, fail: 0, unrated: 0, exempt: 0)]
 		),
 		WalletbeatEntry(
@@ -211,7 +211,7 @@ enum WalletbeatDirectory {
 			variants: ["mobile", "browser"],
 			stage: "QUALIFIED_FOR_NO_STAGES",
 			updated: "2026-01-28",
-			counts: [.security: WalletbeatCounts(pass: 0, partial: 0, fail: 0, unrated: 8, exempt: 0), .privacy: WalletbeatCounts(pass: 0, partial: 0, fail: 1, unrated: 4, exempt: 0), .selfSovereignty: WalletbeatCounts(pass: 1, partial: 0, fail: 1, unrated: 3, exempt: 0), .transparency: WalletbeatCounts(pass: 0, partial: 0, fail: 1, unrated: 4, exempt: 0), .ecosystem: WalletbeatCounts(pass: 3, partial: 0, fail: 1, unrated: 2, exempt: 0)]
+			counts: [.security: WalletbeatCounts(pass: 0, partial: 0, fail: 0, unrated: 8, exempt: 0), .privacy: WalletbeatCounts(pass: 0, partial: 0, fail: 1, unrated: 4, exempt: 0), .selfSovereignty: WalletbeatCounts(pass: 1, partial: 0, fail: 2, unrated: 2, exempt: 0), .transparency: WalletbeatCounts(pass: 0, partial: 0, fail: 1, unrated: 4, exempt: 0), .ecosystem: WalletbeatCounts(pass: 3, partial: 0, fail: 1, unrated: 2, exempt: 0)]
 		),
 		WalletbeatEntry(
 			id: "onekey",
@@ -228,8 +228,8 @@ enum WalletbeatDirectory {
 			hardware: false,
 			variants: ["mobile", "browser"],
 			stage: "QUALIFIED_FOR_NO_STAGES",
-			updated: "2025-02-08",
-			counts: [.security: WalletbeatCounts(pass: 1, partial: 0, fail: 0, unrated: 7, exempt: 0), .privacy: WalletbeatCounts(pass: 0, partial: 0, fail: 1, unrated: 4, exempt: 0), .selfSovereignty: WalletbeatCounts(pass: 1, partial: 0, fail: 0, unrated: 4, exempt: 0), .transparency: WalletbeatCounts(pass: 0, partial: 0, fail: 1, unrated: 4, exempt: 0), .ecosystem: WalletbeatCounts(pass: 0, partial: 0, fail: 2, unrated: 4, exempt: 0)]
+			updated: "2026-10-09",
+			counts: [.security: WalletbeatCounts(pass: 1, partial: 1, fail: 4, unrated: 2, exempt: 0), .privacy: WalletbeatCounts(pass: 0, partial: 0, fail: 1, unrated: 4, exempt: 0), .selfSovereignty: WalletbeatCounts(pass: 2, partial: 0, fail: 3, unrated: 0, exempt: 0), .transparency: WalletbeatCounts(pass: 1, partial: 0, fail: 1, unrated: 3, exempt: 0), .ecosystem: WalletbeatCounts(pass: 1, partial: 1, fail: 4, unrated: 0, exempt: 0)]
 		),
 		WalletbeatEntry(
 			id: "pillarx",
@@ -246,8 +246,8 @@ enum WalletbeatDirectory {
 			hardware: false,
 			variants: ["mobile", "browser"],
 			stage: "Stage 0",
-			updated: "2026-07-20",
-			counts: [.security: WalletbeatCounts(pass: 1, partial: 2, fail: 5, unrated: 0, exempt: 0), .privacy: WalletbeatCounts(pass: 0, partial: 0, fail: 2, unrated: 3, exempt: 0), .selfSovereignty: WalletbeatCounts(pass: 2, partial: 0, fail: 3, unrated: 0, exempt: 0), .transparency: WalletbeatCounts(pass: 1, partial: 1, fail: 2, unrated: 1, exempt: 0), .ecosystem: WalletbeatCounts(pass: 1, partial: 2, fail: 3, unrated: 0, exempt: 0)]
+			updated: "2026-10-08",
+			counts: [.security: WalletbeatCounts(pass: 1, partial: 2, fail: 5, unrated: 0, exempt: 0), .privacy: WalletbeatCounts(pass: 0, partial: 0, fail: 2, unrated: 3, exempt: 0), .selfSovereignty: WalletbeatCounts(pass: 2, partial: 0, fail: 3, unrated: 0, exempt: 0), .transparency: WalletbeatCounts(pass: 1, partial: 1, fail: 2, unrated: 1, exempt: 0), .ecosystem: WalletbeatCounts(pass: 1, partial: 3, fail: 2, unrated: 0, exempt: 0)]
 		),
 		WalletbeatEntry(
 			id: "rainbow",
@@ -255,15 +255,15 @@ enum WalletbeatDirectory {
 			hardware: false,
 			variants: ["mobile", "browser"],
 			stage: "Stage 0",
-			updated: "2026-08-02",
-			counts: [.security: WalletbeatCounts(pass: 1, partial: 1, fail: 6, unrated: 0, exempt: 0), .privacy: WalletbeatCounts(pass: 0, partial: 0, fail: 2, unrated: 3, exempt: 0), .selfSovereignty: WalletbeatCounts(pass: 2, partial: 1, fail: 2, unrated: 0, exempt: 0), .transparency: WalletbeatCounts(pass: 3, partial: 1, fail: 0, unrated: 1, exempt: 0), .ecosystem: WalletbeatCounts(pass: 2, partial: 3, fail: 1, unrated: 0, exempt: 0)]
+			updated: "2026-09-03",
+			counts: [.security: WalletbeatCounts(pass: 1, partial: 0, fail: 7, unrated: 0, exempt: 0), .privacy: WalletbeatCounts(pass: 0, partial: 0, fail: 2, unrated: 3, exempt: 0), .selfSovereignty: WalletbeatCounts(pass: 2, partial: 0, fail: 3, unrated: 0, exempt: 0), .transparency: WalletbeatCounts(pass: 3, partial: 1, fail: 0, unrated: 1, exempt: 0), .ecosystem: WalletbeatCounts(pass: 2, partial: 2, fail: 2, unrated: 0, exempt: 0)]
 		),
 		WalletbeatEntry(
 			id: "safe",
 			name: "Safe",
 			hardware: false,
 			variants: ["mobile", "browser"],
-			stage: "Stage 0",
+			stage: "UNRATED",
 			updated: "2025-03-12",
 			counts: [.security: WalletbeatCounts(pass: 1, partial: 0, fail: 0, unrated: 7, exempt: 0), .privacy: WalletbeatCounts(pass: 0, partial: 0, fail: 1, unrated: 4, exempt: 0), .selfSovereignty: WalletbeatCounts(pass: 2, partial: 0, fail: 1, unrated: 2, exempt: 0), .transparency: WalletbeatCounts(pass: 2, partial: 0, fail: 0, unrated: 3, exempt: 0), .ecosystem: WalletbeatCounts(pass: 2, partial: 1, fail: 0, unrated: 3, exempt: 0)]
 		),
@@ -282,24 +282,24 @@ enum WalletbeatDirectory {
 			hardware: false,
 			variants: ["mobile", "browser"],
 			stage: "Stage 0",
-			updated: "2026-04-04",
-			counts: [.security: WalletbeatCounts(pass: 0, partial: 0, fail: 0, unrated: 8, exempt: 0), .privacy: WalletbeatCounts(pass: 0, partial: 0, fail: 0, unrated: 5, exempt: 0), .selfSovereignty: WalletbeatCounts(pass: 0, partial: 0, fail: 0, unrated: 5, exempt: 0), .transparency: WalletbeatCounts(pass: 1, partial: 0, fail: 0, unrated: 4, exempt: 0), .ecosystem: WalletbeatCounts(pass: 0, partial: 0, fail: 0, unrated: 6, exempt: 0)]
+			updated: "2026-10-08",
+			counts: [.security: WalletbeatCounts(pass: 0, partial: 1, fail: 7, unrated: 0, exempt: 0), .privacy: WalletbeatCounts(pass: 0, partial: 0, fail: 2, unrated: 3, exempt: 0), .selfSovereignty: WalletbeatCounts(pass: 2, partial: 0, fail: 3, unrated: 0, exempt: 0), .transparency: WalletbeatCounts(pass: 3, partial: 1, fail: 0, unrated: 1, exempt: 0), .ecosystem: WalletbeatCounts(pass: 2, partial: 3, fail: 0, unrated: 0, exempt: 0)]
 		),
 		WalletbeatEntry(
 			id: "zerion",
 			name: "Zerion",
 			hardware: false,
 			variants: ["mobile", "browser"],
-			stage: "Stage 0",
-			updated: "2026-08-10",
-			counts: [.security: WalletbeatCounts(pass: 1, partial: 2, fail: 5, unrated: 0, exempt: 0), .privacy: WalletbeatCounts(pass: 0, partial: 0, fail: 1, unrated: 4, exempt: 0), .selfSovereignty: WalletbeatCounts(pass: 2, partial: 0, fail: 3, unrated: 0, exempt: 0), .transparency: WalletbeatCounts(pass: 3, partial: 1, fail: 0, unrated: 1, exempt: 0), .ecosystem: WalletbeatCounts(pass: 1, partial: 2, fail: 3, unrated: 0, exempt: 0)]
+			stage: "QUALIFIED_FOR_NO_STAGES",
+			updated: "2026-10-08",
+			counts: [.security: WalletbeatCounts(pass: 1, partial: 2, fail: 5, unrated: 0, exempt: 0), .privacy: WalletbeatCounts(pass: 0, partial: 0, fail: 2, unrated: 3, exempt: 0), .selfSovereignty: WalletbeatCounts(pass: 2, partial: 0, fail: 3, unrated: 0, exempt: 0), .transparency: WalletbeatCounts(pass: 2, partial: 1, fail: 1, unrated: 1, exempt: 0), .ecosystem: WalletbeatCounts(pass: 1, partial: 2, fail: 3, unrated: 0, exempt: 0)]
 		),
 		WalletbeatEntry(
 			id: "zeus",
 			name: "Zeus",
 			hardware: false,
 			variants: ["desktop"],
-			stage: "Stage 0",
+			stage: "UNRATED",
 			updated: "2026-01-12",
 			counts: [.security: WalletbeatCounts(pass: 0, partial: 0, fail: 1, unrated: 6, exempt: 0), .privacy: WalletbeatCounts(pass: 0, partial: 0, fail: 2, unrated: 3, exempt: 0), .selfSovereignty: WalletbeatCounts(pass: 2, partial: 1, fail: 1, unrated: 1, exempt: 0), .transparency: WalletbeatCounts(pass: 2, partial: 1, fail: 0, unrated: 2, exempt: 0), .ecosystem: WalletbeatCounts(pass: 0, partial: 1, fail: 1, unrated: 3, exempt: 0)]
 		),
@@ -331,7 +331,7 @@ enum WalletbeatDirectory {
 			WalletbeatAttribute(id: "reputation", dimension: .transparency, name: "Reputation", question: "Does Ledger Wallet have a strong reputation for reliability and transparency?", verdict: .unrated, explanation: "Walletbeat lacks the information needed to determine this."),
 			WalletbeatAttribute(id: "accountAbstraction", dimension: .ecosystem, name: "Account abstraction", question: "Is the wallet Account Abstraction ready?", verdict: .unrated, explanation: "Walletbeat lacks the information needed to determine this."),
 			WalletbeatAttribute(id: "addressResolution", dimension: .ecosystem, name: "Address resolution", question: "Can you send funds to human-readable Ethereum addresses?", verdict: .unrated, explanation: "Walletbeat lacks the information needed to determine this."),
-			WalletbeatAttribute(id: "appConnectionSupport", dimension: .ecosystem, name: "app Connection Support", question: "Can the hardware wallet connect to web3 applications?", verdict: .partial, explanation: "Ledger Wallet can connect to some apps using verifiable code or open standards, but with limitations."),
+			WalletbeatAttribute(id: "appConnectionSupport", dimension: .ecosystem, name: "App connection support", question: "Can the hardware wallet connect to web3 applications?", verdict: .partial, explanation: "Ledger Wallet can connect to some apps using verifiable code or open standards, but with limitations."),
 			WalletbeatAttribute(id: "interoperability", dimension: .ecosystem, name: "Interoperability", question: "Does Ledger Wallet work well with independent wallets and avoid supplier linkage?", verdict: .unrated, explanation: "Walletbeat lacks the information needed to determine this."),
 			WalletbeatAttribute(id: "maintenance", dimension: .maintenance, name: "Maintenance", question: "Does Ledger Wallet have good maintenance practices?", verdict: .unrated, explanation: "Walletbeat lacks the information needed to determine this."),
 		],
@@ -352,7 +352,7 @@ enum WalletbeatDirectory {
 			WalletbeatAttribute(id: "accountPortability", dimension: .selfSovereignty, name: "Account portability", question: "Are you locked into this wallet? Or can you permissionlessly import your Ethereum account into another wallet?", verdict: .pass, explanation: "MetaMask follows EOA key derivation standards."),
 			WalletbeatAttribute(id: "accountUnruggability", dimension: .selfSovereignty, name: "Account unruggability", question: "Can the wallet developer take over your account without your consent?", verdict: .pass, explanation: "MetaMask does not allow any external service to take over your account."),
 			WalletbeatAttribute(id: "l1ProviderIndependence", dimension: .selfSovereignty, name: "L1 provider independence", question: "Can you use the wallet without relying on its default provider for interacting with the L1 chain?", verdict: .partial, explanation: "MetaMask contacts its default L1 RPC endpoint before letting you configure a self-hosted node."),
-			WalletbeatAttribute(id: "permissionsManagement", dimension: .selfSovereignty, name: "Permissions management", question: "Does MetaMask let you inspect and manage the permissions you've granted to other contracts and apps?", verdict: .fail, explanation: "MetaMask does not support token approval management."),
+			WalletbeatAttribute(id: "permissionsManagement", dimension: .selfSovereignty, name: "Permissions management", question: "Does MetaMask let you inspect and manage the permissions you've granted to other contracts and apps?", verdict: .fail, explanation: "MetaMask does not let you inspect or revoke token approvals."),
 			WalletbeatAttribute(id: "transactionInclusion", dimension: .selfSovereignty, name: "Transaction inclusion", question: "Can the wallet withdraw L2 funds to Ethereum L1 without relying on intermediaries?", verdict: .fail, explanation: "MetaMask requires trusting intermediaries in order to withdraw funds from L2s."),
 			WalletbeatAttribute(id: "feeTransparency", dimension: .transparency, name: "Fee transparency", question: "Does the wallet clearly display all transaction fees and their purpose?", verdict: .pass, explanation: "MetaMask breaks down all transaction fees."),
 			WalletbeatAttribute(id: "funding", dimension: .transparency, name: "Funding", question: "How is the wallet's development team funded?", verdict: .pass, explanation: "MetaMask is transparently funded."),
@@ -373,7 +373,7 @@ enum WalletbeatDirectory {
 			WalletbeatAttribute(id: "hardwareWalletSupport", dimension: .security, name: "Hardware wallet support", question: "Does the wallet support connecting to hardware wallets?", verdict: .pass, explanation: "Rabby supports hardware wallets."),
 			WalletbeatAttribute(id: "scamPrevention", dimension: .security, name: "Scam prevention", question: "Does the wallet warn the user about potential scams?", verdict: .fail, explanation: "Rabby warns you about potential scams, but leaks your browsed websites in the process."),
 			WalletbeatAttribute(id: "securityAuditsAndBounties", dimension: .security, name: "Security Audits & Bounties", question: "Has the wallet's source code been reviewed by security auditors, and does the wallet maintain an active bug bounty program?", verdict: .fail, explanation: "The most recent security audit for Rabby is over a year old and some security flaws remain."),
-			WalletbeatAttribute(id: "securityBestPractices", dimension: .security, name: "Security best practices", question: "Does Rabby follow security best practices for key storage, random number generation, deployment hardening, and passkey verification?", verdict: .fail, explanation: "Rabby requests overbroad permissions and does not restrict web-accessible resources."),
+			WalletbeatAttribute(id: "securityBestPractices", dimension: .security, name: "Security best practices", question: "Does Rabby follow security best practices for key storage, random number generation, deployment hardening, and passkey verification?", verdict: .fail, explanation: "Rabby requests high-risk OS permissions that are not necessary for a wallet."),
 			WalletbeatAttribute(id: "transactionLegibility", dimension: .security, name: "Transaction legibility", question: "When signing a transaction, does the wallet show transaction details clearly?", verdict: .partial, explanation: "Rabby supports partial transaction legibility."),
 			WalletbeatAttribute(id: "addressCorrelation", dimension: .privacy, name: "Wallet address privacy", question: "Is your wallet address linkable to other information about yourself?", verdict: .unrated, explanation: "Walletbeat lacks the information needed to determine this."),
 			WalletbeatAttribute(id: "appIsolation", dimension: .privacy, name: "App isolation", question: "If you connect to an app, will it be able to learn your past activity from other apps by default?", verdict: .fail, explanation: "Rabby does not have an option to create a new account as part of the app connection flow."),
@@ -382,7 +382,7 @@ enum WalletbeatDirectory {
 			WalletbeatAttribute(id: "privateTransfers", dimension: .privacy, name: "Private token transfers", question: "Can you send and receive tokens without revealing your transaction history to others?", verdict: .fail, explanation: "Rabby does not support private token transfers."),
 			WalletbeatAttribute(id: "accountPortability", dimension: .selfSovereignty, name: "Account portability", question: "Are you locked into this wallet? Or can you permissionlessly import your Ethereum account into another wallet?", verdict: .pass, explanation: "Rabby follows EOA key derivation standards."),
 			WalletbeatAttribute(id: "accountUnruggability", dimension: .selfSovereignty, name: "Account unruggability", question: "Can the wallet developer take over your account without your consent?", verdict: .pass, explanation: "Private key material never leaves Rabby, so no external entity may take over your account."),
-			WalletbeatAttribute(id: "l1ProviderIndependence", dimension: .selfSovereignty, name: "L1 provider independence", question: "Can you use the wallet without relying on its default provider for interacting with the L1 chain?", verdict: .fail, explanation: "Even with your self-hosted node, Rabby depends on external services to perform basic tasks on Ethereum mainnet."),
+			WalletbeatAttribute(id: "l1ProviderIndependence", dimension: .selfSovereignty, name: "L1 provider independence", question: "Can you use the wallet without relying on its default provider for interacting with the L1 chain?", verdict: .fail, explanation: "Rabby does not let you use your own self-hosted node to interact with Ethereum mainnet."),
 			WalletbeatAttribute(id: "permissionsManagement", dimension: .selfSovereignty, name: "Permissions management", question: "Does Rabby let you inspect and manage the permissions you've granted to other contracts and apps?", verdict: .fail, explanation: "Rabby does not let you inspect or revoke token approvals."),
 			WalletbeatAttribute(id: "transactionInclusion", dimension: .selfSovereignty, name: "Transaction inclusion", question: "Can the wallet withdraw L2 funds to Ethereum L1 without relying on intermediaries?", verdict: .fail, explanation: "Rabby requires trusting intermediaries in order to withdraw funds from L2s."),
 			WalletbeatAttribute(id: "feeTransparency", dimension: .transparency, name: "Fee transparency", question: "Does the wallet clearly display all transaction fees and their purpose?", verdict: .fail, explanation: "Rabby hides some transaction fees."),
@@ -391,7 +391,7 @@ enum WalletbeatDirectory {
 			WalletbeatAttribute(id: "orderflowTransparency", dimension: .transparency, name: "Orderflow transparency", question: "Does the wallet transparently disclose how it monetizes your transaction data?", verdict: .unrated, explanation: "Walletbeat lacks the information needed to determine this."),
 			WalletbeatAttribute(id: "releaseProcess", dimension: .transparency, name: "Release process", question: "Can users trust that Rabby's releases are built and distributed safely?", verdict: .partial, explanation: "Rabby meets basic release-process signals but lacks advanced-group coverage."),
 			WalletbeatAttribute(id: "accountAbstraction", dimension: .ecosystem, name: "Account abstraction", question: "Is the wallet Account Abstraction ready?", verdict: .fail, explanation: "Rabby supports EOAs only, with no Account Abstraction support."),
-			WalletbeatAttribute(id: "addressResolution", dimension: .ecosystem, name: "Address resolution", question: "Can you send funds to human-readable Ethereum addresses?", verdict: .fail, explanation: "Rabby does not resolve human-readable addresses such as ENS names."),
+			WalletbeatAttribute(id: "addressResolution", dimension: .ecosystem, name: "Address resolution", question: "Can you send funds to human-readable Ethereum addresses?", verdict: .partial, explanation: "Rabby supports sending to plain ENS addresses but not chain-specific human-readable addresses."),
 			WalletbeatAttribute(id: "browserIntegration", dimension: .ecosystem, name: "Browser integration", question: "Does the wallet comply with web browser integration standards?", verdict: .pass, explanation: "Rabby supports all the prominent standards for web browser integration."),
 			WalletbeatAttribute(id: "chainAbstraction", dimension: .ecosystem, name: "Chain abstraction", question: "Does the wallet smooth out the complexities of dealing with multiple chains?", verdict: .partial, explanation: "Rabby does not add up token balances across chains."),
 			WalletbeatAttribute(id: "hardwareWalletInteroperability", dimension: .ecosystem, name: "Hardware wallet interoperability", question: "Does the wallet support directly connecting to hardware wallets from a plurality of manufacturers?", verdict: .partial, explanation: "Rabby supports a limited selection of hardware wallets."),
