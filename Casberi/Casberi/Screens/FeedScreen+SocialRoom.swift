@@ -27,9 +27,14 @@ extension FeedScreen {
     @ViewBuilder
     func socialRoomSections(_ visible: [Thing], nextEventID: UUID?, heroShown: Bool) -> some View {
         let mine = socialMyHandles
-        let you = chrome.socialScope == .toYou
+        // In the Feed there is no To you (prd §1296, user: "we have a section
+        // on social called 'to you'. we don't need that"): no leading group,
+        // no header word, and a pick of it on Social's own screen is not read
+        // here. Every row stands in its day.
+        let inFeed = Self.sectionCapNow != nil
+        let you = !inFeed && chrome.socialScope == .toYou
         let live = visible.live
-        let toYou: [Thing] = you
+        let toYou: [Thing] = inFeed ? [] : you
             ? live.filter { SocialToYou.isToYou(Self.toYouRow($0), myHandles: mine) }
             : SocialToYou.leading(live.map { (Self.toYouRow($0), $0.capturedAt) },
                                   myHandles: mine, now: .now).map { live[$0] }

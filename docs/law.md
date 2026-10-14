@@ -232,7 +232,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1437 of 1503 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1439 of 1505 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1671,6 +1671,8 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1292 — Add from where you land: a plus on Sources' counts (amends §1164 item 5, §1166 item 6, §1265, §1274)
 - §1293 — Every Feed section adds from its header, and Following leaves it (amends §1251, §1292) [+1 sub-entries]
 - §1294 — Search in the band is a disc beside the Wallet (amends §1209a item 1, §1280)
+- §1295 — Search sits with the face in one glass pill (amends §1294)
+- §1296 — In the Feed, Social has no To you and Work no Coming up (amends §1251, §1293)
 
 ## Dead rulings → what replaced them (generated)
 

@@ -550,8 +550,9 @@ extension FeedScreen {
     @ViewBuilder
     func workRoomSections(_ allVisible: [Thing], nextEventID: UUID?, heroShown: Bool) -> some View {
         let visible = objectFolded(allVisible)
-        let comingUp = chrome.workScope == .comingUp
-        // In the Feed the header names no Following (prd §1293).
+        // In the Feed the header names no Coming up (prd §1296) and no
+        // Following (prd §1293): the card is Work's rows.
+        let comingUp = chrome.workScope == .comingUp && Self.sectionCapNow == nil
         let watching = chrome.workScope == .watch && Self.sectionCapNow == nil
         // What needs you now leads Coming up, then what is due (prd §1080);
         // a row that is both stands once, under the asks.

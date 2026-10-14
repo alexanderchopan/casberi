@@ -175,6 +175,8 @@ struct RootShell: View {
     /// `Composer`'s `glassNamespace`, both keying `matchedGeometryEffect` to
     /// the same `"agentMorph"` id.
     @Namespace private var agentMorph
+    /// The band's left pill (prd §1295): the face and Search, one glass.
+    @Namespace private var bandGlass
 
 
     /// `-openRoom "<Source>"` scopes the feed to one source's room.
@@ -2426,7 +2428,11 @@ struct RootShell: View {
                                           chrome.goToFeed()
                                       }
                                   },
-                                  onBack: seatBack)
+                                  onBack: seatBack,
+                                  // One glass with Search beside it (prd §1295),
+                                  // only where Search stands: not on a push.
+                                  union: padShell.railInset == 0 && sceneState.route.path.isEmpty && !chrome.roomsTray
+                                      ? DSGlassUnion(id: "band.left", namespace: bandGlass) : nil)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             // THE BAND IS FACE · SEARCH · WALLET (prd §1207 item
                             // 7, built §1209a; the Wallet took ✎'s seat in
@@ -2445,14 +2451,14 @@ struct RootShell: View {
                                             // (prd §1280): it rises with the
                                             // keyboard down, so its contents
                                             // are in view; a tap on its field
-                                            // types. A disc beside the Wallet
-                                            // since prd §1294, the middle of
-                                            // the band left to the page.
-                                            Spacer(minLength: 0)
-                                            BandSearchBar {
+                                            // types. Beside the face, one pill with it
+                                            // (prd §1295): the tray grows out of
+                                            // this corner and closes back into it.
+                                            BandSearchBar(union: DSGlassUnion(id: "band.left", namespace: bandGlass)) {
                                                 withAnimation(DS.Motion.standard) { chrome.roomsTray = true }
                                             }
                                             .transition(.identity)
+                                            Spacer(minLength: 0)
                                         } else {
                                             // The tray's capsule holds the bar's
                                             // place; the Wallet keeps its own.
@@ -2465,7 +2471,7 @@ struct RootShell: View {
                                             withAnimation(DS.Motion.standard) { chrome.openWallet() }
                                         }
                                     }
-                                    .padding(.leading, DSDock.agentSize(fold: chrome.fold) + DS.Space.s2)
+                                    .padding(.leading, DSDock.agentSize(fold: chrome.fold) + DS.Space.s1)
                                 }
                             }
                     }

@@ -66309,3 +66309,15 @@ With no wallet followed and nothing landed, both empty arms of `roomBody` replac
 The band is face · Search · Wallet with the face at the leading end and Search and the Wallet as two discs at the trailing end, each the face's glass and size (`BandSearchBar` draws `magnifyingglass` on `dsGlassDoor`, as `WalletDoor`). A tap raises the tray with its search, as the bar did; with the tray up its own capsule stands between the face and the Wallet, as before. The middle of the band is the page's.
 
 **Seen** on the iPhone 17 Pro simulator, dark, over the demo: the band's three discs, and Search raising the tray. **Not seen:** light, iPad and Mac (the rail stands there; the band's overlay is phone-only).
+
+## §1295 — Search sits with the face in one glass pill (amends §1294) (user, 2026-10-14: of §1294's disc, "you tap it and it expands but when you close it it closes into the face. shoudl it?", "perhaps we put the search on the left w/ the feed / face button instead of on righ tw/ wallet", "on ios photos the two buttons on the left are in a glass bar. should ours be?", then "do it")
+
+The band is **[ face · Search ]** at the leading end, one glass (`glassEffectUnion` through `DSGlassUnion("band.left")`, worn by `AvatarChip` and `BandSearchBar`), and the Wallet's disc alone at the trailing end. The two ways around the app are one object, as iOS 26 groups its tabs; the Wallet is the one place with money. The tray grows out of the bottom-leading corner and closes back into it, so it now leaves and returns through the control that raised it; with the tray up its own capsule stands where Search was. Below iOS 26 and under Reduce Transparency the union does nothing and the two discs stand side by side. Not a tab bar (§100): two doors, one of them your face.
+
+**Seen** on the iPhone 17 Pro simulator, dark, over the demo: the pill, and Search raising the tray with its capsule beside the face. **Not seen:** light, iOS 18, the close animation frame by frame.
+
+## §1296 — In the Feed, Social has no To you and Work no Coming up (amends §1251, §1293) (user, 2026-10-14: "in the feed, we have a section on social called 'to you'. we don't need that. also in the work category we have one for 'coming up' but do we really need that? i don't think so", "that way all the categories would be simpler", "if you agree make those changes before shipping too")
+
+Social's and Work's Feed headers are their names and their + (§1293), no choices: Social's card no longer leads with a To you group, so a reply or a like stands in its day with every other row, and Work's card is its rows. A To you or Coming up pick made on the category's own screen is not read in the Feed (`sectionCapNow`), and those screens keep their tiles. Media's Play and Read are the only header choices left (asked, not ruled).
+
+**Seen** on the iPhone 17 Pro simulator, dark, over the demo: "Social +" over Today's rows (replies and likes among them), "Work +". **Not seen:** light, the Mac.

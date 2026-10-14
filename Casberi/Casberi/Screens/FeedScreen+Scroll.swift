@@ -636,26 +636,16 @@ extension FeedScreen {
     /// verbs (Social's Follow stays on Social's own screen).
     func sectionChoices(_ category: String) -> [SectionChoice] {
         switch category {
-        // Life's one other choice was Subscriptions; its lists stand on the
-        // card instead (prd §1293), so the header is the name alone.
-        // Nor Following, in Media or Work: every row the section holds comes
-        // from what you follow, so the word names nothing (user, 2026-10-14:
-        // "the entire section is 'following'"). The list is on the
-        // category's own screen and in Sources; the header's + adds to it.
-        case RoomAccounts.workRoom:
-            return WorkScope.allCases.filter { $0 != .watch }.map { s in
-                SectionChoice(id: s.rawValue, label: s == .all ? category : s.label,
-                              on: chrome.workScope == s, pick: { chrome.workScope = s })
-            }
+        // Life's one other choice was Subscriptions (prd §1293): its header
+        // is the name alone. Nor Following (prd §1293), nor Work's Coming up or Social's To you
+        // (prd §1296, user: "that way all the categories would be simpler"):
+        // every row a section holds comes from what you follow, and the
+        // header's + is its one act. Work and Social are their names alone;
+        // their own screens keep the tiles.
         case RoomAccounts.mediaRoom:
             return MediaScope.allCases.filter { $0 != .subscriptions }.map { s in
                 SectionChoice(id: s.rawValue, label: s == .all ? category : s.label,
                               on: chrome.mediaScope == s, pick: { chrome.mediaScope = s })
-            }
-        case RoomAccounts.socialRoom:
-            return SocialScope.allCases.filter { !$0.isVerb }.map { s in
-                SectionChoice(id: s.rawValue, label: s == .all ? category : s.label,
-                              on: chrome.socialScope == s, pick: { chrome.socialScope = s })
             }
         default:
             return []

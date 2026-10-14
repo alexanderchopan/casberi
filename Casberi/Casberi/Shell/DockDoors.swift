@@ -31,6 +31,8 @@ struct DockDoors: View {
     var onAccounts: () -> Void
     /// Pops one frame; set while anything is pushed (prd §767).
     var onBack: (() -> Void)? = nil
+    /// The band's left pill (prd §1295): the face and Search, one glass.
+    var union: DSGlassUnion? = nil
 
     private var markSize: CGFloat { DSDock.agentSize(fold: chrome.fold) }
 
@@ -38,6 +40,7 @@ struct DockDoors: View {
         AvatarChip(onAccounts: onAccounts,
                    refreshSpin: chrome.refreshPulse,
                    pullTension: chrome.pullTension,
+                   doorUnion: union,
                    size: markSize,
                    onBack: onBack,
                    lit: chrome.roomsTray && onBack == nil,
@@ -84,7 +87,7 @@ struct WalletDoor: View {
 }
 
 /// SEARCH IN THE BAND (prd §1207 item 7, built §1209a; a disc since prd
-/// §1294, user: "i'm wondering if the search bar should just be a search
+/// §1294, beside the face in one glass pill since §1295, user: "i'm wondering if the search bar should just be a search
 /// icon, still behave the same way but take up less real estate", then "do
 /// A"): always there, the face's glass and size, beside the Wallet at the
 /// band's trailing end, as iOS 26 stands search beside its tabs. A tap raises
@@ -92,6 +95,9 @@ struct WalletDoor: View {
 /// page's again.
 struct BandSearchBar: View {
     @Environment(ShellChrome.self) private var chrome
+    /// One glass with the face (prd §1295): the two ways around the app are
+    /// one pill at the band's leading end, as iOS 26 groups its tabs.
+    var union: DSGlassUnion? = nil
     let action: () -> Void
 
     var body: some View {
@@ -104,7 +110,7 @@ struct BandSearchBar: View {
                 .dsGlyph(.body, weight: .semibold)
                 .foregroundStyle(DS.textPrimary)
                 .frame(width: size, height: size)
-                .dsGlassDoor(nil)
+                .dsGlassDoor(union)
                 .dsTapTarget(Circle())
                 .dsHover()
         }
