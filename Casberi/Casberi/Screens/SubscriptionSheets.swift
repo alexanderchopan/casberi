@@ -284,8 +284,9 @@ struct SubscriptionAddTray: View {
                 // leads, so a name no list holds is the first row, not the
                 // last under five apps.
                 if !typed.isEmpty, !apps.contains(where: { $0.name.caseInsensitiveCompare(typed) == .orderedSame }) {
-                    pickRow(typed, title: String(localized: "Track \u{201C}\(typed)\u{201D}"),
-                            line: Text("Any other name")) {
+                    let done = SubscriptionPlans.isTracked(typed, among: tracked)
+                    pickRow(typed, title: done ? nil : String(localized: "Track \u{201C}\(typed)\u{201D}"),
+                            line: Text("Any other name"), tracked: done) {
                         choose(Pick(name: typed, site: nil))
                     }
                 }
@@ -512,11 +513,12 @@ struct SubscriptionAddTray: View {
         chrome.flash(String(localized: "Tracking \(name)"))
         // One app's tray is done; a list goes back to the list, ticked.
         guard prefill == nil else { dismiss(); return }
+        // The search stays as typed, so the row you just ticked is still in
+        // view; clearing it dropped you at the top with the tick below the fold.
         withAnimation(DS.Motion.standard) {
             trackedHere.append(name)
             picked = nil
         }
-        self.query = ""
         self.price = ""
         self.yearly = false
         self.renews = Self.firstRenewal(yearly: false)

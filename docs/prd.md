@@ -66267,3 +66267,12 @@ The box stays as §1171b and §1209a left it. Below it:
 5. **Prices are grouped:** `$3,180.00`, cents kept (`TokenChartStyle.grouped`; `PriceCommentary.money` follows, as `price-chart-selftest.sh` requires the two ramps to agree).
 
 **Seen** on the simulator over the demo: the line under each name, six lines in one column, `$3,180.00`. **Not seen:** a live stock's Yahoo line, and a price wider than the column.
+
+## §1291 — Track keeps your search: a row you tracked from a search stays in view, ticked (amends §1164) (user, 2026-10-14, choosing "Keep the search" after the subscription journey broke: tracking Hulu from a search cleared the field and dropped the tray at the top, with the tick far below the fold in Popular)
+
+§1164's tray stays open with rows ticked, but it also cleared the search after each track, so a person who searched saw the full list jump back with no tick in sight (the "Tracking Hulu" toast stands behind the tray). Now:
+
+1. **The search stays as typed** after a track (`SubscriptionAddTray.add`), so the matched row stays where it was, ticked. Clear the field for the whole list.
+2. **A name typed by hand ticks too**: the leading "Track “…”" row becomes the plain name with a tick once tracked, so it never offers the same name twice.
+
+**Seen** on the simulator over the demo: the `subscription` journey types Hulu, tracks it, and ends on one Apps row, Hulu, ticked, with "Hulu" still in the field.
