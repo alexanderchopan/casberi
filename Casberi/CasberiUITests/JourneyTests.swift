@@ -5,7 +5,9 @@ import XCTest
 /// Each test walks one job from where a person starts, through the UI only:
 /// no hook skips a step (`-demoEnter` sets the starting corpus, nothing more).
 /// Every tap is counted, field focus included; every character typed is
-/// counted; the clock runs from launch to the step that proves the job done.
+/// counted; every swipe to bring a target on screen and every Back or close
+/// are counted apart; the clock runs from launch to the step that proves the
+/// job done.
 /// `scripts/journeys.sh` runs these on a clean install and
 /// `scripts/journeys-report.py` trends them against the last good run.
 ///
@@ -45,12 +47,14 @@ final class JourneyTests: XCTestCase {
         // to see everything"). The walk above still runs, since a new user
         // must; the meter and the clock start here, on Sources.
         w.begin()
-        w.tap(w.el(.button, "label BEGINSWITH %@", "Add a calendar"), "Add a calendar")
+        // Start here's row, by its joined label: the Calendars count's plus
+        // says "Add a calendar" too and never stands down (prd §1292).
+        w.tap(w.el(.button, "label BEGINSWITH %@", "Add a calendar, "), "Add a calendar")
         w.tap(w.el(.button, "label BEGINSWITH %@", "Your phone"), "Your phone's calendars")
         w.allow("Full Access", "iOS calendar ask")
         // Connected once the step stands down: each Start here step stays
         // until its own act is done.
-        w.gone(w.el(.button, "label BEGINSWITH %@", "Add a calendar"), within: 15, "Calendar connected")
+        w.gone(w.el(.button, "label BEGINSWITH %@", "Add a calendar, "), within: 15, "Calendar connected")
         w.finish()
     }
 
@@ -136,6 +140,10 @@ final class JourneyTests: XCTestCase {
         let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
         weak var test: XCTestCase?
         var taps = 0, typed = 0, step = 0, alerts = 0
+        /// Swipes the walk needed to bring a step's target on screen, and the
+        /// Back or close taps it took (a subset of `taps`): two costs a tap
+        /// count does not see (owner, 2026-10-14).
+        var scrolls = 0, backs = 0
         var broken: String?
         var start = Date()
 
@@ -160,12 +168,23 @@ final class JourneyTests: XCTestCase {
             shoot(what)
         }
 
+        /// A Back or close the job makes the person take: a tap, and a back.
+        func back(_ e: XCUIElement, _ what: String) {
+            guard ready(e, what) else { return }
+            e.tap()
+            taps += 1
+            backs += 1
+            shoot(what)
+        }
+
         /// Start the meter here: taps, typing and the clock before this call
         /// are the walk's setup, not the job (the demo, for `connect`).
         func begin() {
             guard broken == nil else { return }
             taps = 0
             typed = 0
+            scrolls = 0
+            backs = 0
             start = Date()
         }
 
@@ -231,8 +250,8 @@ final class JourneyTests: XCTestCase {
             let seconds = Date().timeIntervalSince(start)
             let status = broken == nil ? "ok" : "broken"
             let note = broken ?? (alerts > 0 ? "\(alerts) system alert(s) dismissed, not counted" : "")
-            append("results.tsv", "\(name)\t\(status)\t\(taps)\t\(typed)\t\(String(format: "%.1f", seconds))\t\(note)\n")
-            print("journey|\(name)|\(status)|taps=\(taps)|typed=\(typed)|\(String(format: "%.1f", seconds))s|\(note)")
+            append("results.tsv", "\(name)\t\(status)\t\(taps)\t\(typed)\t\(String(format: "%.1f", seconds))\t\(scrolls)\t\(backs)\t\(note)\n")
+            print("journey|\(name)|\(status)|taps=\(taps)|typed=\(typed)|scrolls=\(scrolls)|backs=\(backs)|\(String(format: "%.1f", seconds))s|\(note)")
             app.terminate()
             if let broken { XCTFail("journey \(name) broke: \(broken)") }
         }
@@ -245,12 +264,30 @@ final class JourneyTests: XCTestCase {
                 return false
             }
             guard needsHit else { return true }
-            let hittable = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isHittable == true"), object: e)
-            if XCTWaiter().wait(for: [hittable], timeout: 4) != .completed {
-                fail(what, "found but not hittable")
-                return false
+            if hittable(e, within: 3) { return true }
+            // Off screen: swipe toward it, as a person would, and count each
+            // swipe. A target still not reachable after `maxScrolls` is a
+            // broken step, as before.
+            for _ in 0..<Self.maxScrolls {
+                let window = app.windows.firstMatch.frame
+                if e.frame.midY < window.minY + window.height * 0.25 {
+                    app.swipeDown(velocity: .slow)
+                } else {
+                    app.swipeUp(velocity: .slow)
+                }
+                scrolls += 1
+                if hittable(e, within: 1.5) { return true }
             }
-            return true
+            fail(what, "found but not hittable")
+            return false
+        }
+
+        /// Swipes a step may take to reach its target before it is broken.
+        static let maxScrolls = 6
+
+        private func hittable(_ e: XCUIElement, within s: TimeInterval) -> Bool {
+            let p = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isHittable == true"), object: e)
+            return XCTWaiter().wait(for: [p], timeout: s) == .completed
         }
 
         /// The demo pour can raise a permission ask the runner could not

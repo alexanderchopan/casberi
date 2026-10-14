@@ -6,12 +6,17 @@ WHY THIS EXISTS (2026-10-14). The passes measure whether the app breaks, and
 `perf.sh` how fast it launches; nothing measured how much a person has to DO
 to get a job done. A journey (`CasberiUITests/JourneyTests.swift`) is one job
 walked with real taps from where a person starts. This turns each walk into
-numbers that trend: taps, characters typed, seconds.
+numbers that trend: taps, characters typed, swipes, Backs, seconds.
 
 WHAT EACH NUMBER IS.
   taps     — every tap the walk makes, field focus included. The headline: it
              does not move with a slow machine.
   typed    — characters typed.
+  scrolls  — swipes the walk took to bring a step's target on screen. A tap
+             count misses a target buried under a long list (owner,
+             2026-10-14: "lets do the scroll and back counts next").
+  backs    — Back or close taps the job makes the person take (a subset of
+             taps): a wrong turn the design forces.
   seconds  — wall clock from launch-landed to the last step. Includes waits for
              animations and the test runner's own queries (~0.3–0.5s a step), so
              it moves with the machine; only a large move is flagged.
@@ -22,14 +27,20 @@ becomes the baseline):
   more taps     — taps went up. A design change that costs the person a tap.
   fewer taps    — taps went down. Said, so a good change is on the record.
   more typing   — typed went up.
+  more scrolls  — scrolls went up; fewer is said.
+  more backs    — backs went up; fewer is said.
+                  A baseline from before these were counted (a history row
+                  with them blank) flags neither.
   slower        — seconds rose by more than SLOW_RATIO and by SLOW_FLOOR_S.
   over target   — taps above the owner's target (`journeys-targets.json`,
                   3 for every journey since 2026-10-14). Said EVERY run, not
                   only when it changes: the gap is the work.
 It REPORTS and never gates, like perf.sh: exit 0 unless its input is missing.
 
-Input  results.tsv: journey \\t ok|broken \\t taps \\t typed \\t seconds \\t note
-History CSV: ts,sha,journey,status,taps,typed,seconds,note
+Input  results.tsv: journey \\t ok|broken \\t taps \\t typed \\t seconds \\t scrolls \\t backs \\t note
+       (the older six-column form, without scrolls and backs, still reads)
+History CSV: ts,sha,journey,status,taps,typed,scrolls,backs,seconds,note
+       (an older history without scrolls and backs is rewritten with them blank)
 Usage: journeys-report.py <results.tsv> <history.csv> <sha> [targets.json]
 """
 
@@ -40,7 +51,7 @@ import sys
 
 SLOW_RATIO = 1.5
 SLOW_FLOOR_S = 3.0
-FIELDS = ["ts", "sha", "journey", "status", "taps", "typed", "seconds", "note"]
+FIELDS = ["ts", "sha", "journey", "status", "taps", "typed", "scrolls", "backs", "seconds", "note"]
 
 
 def read_results(path):
@@ -49,9 +60,14 @@ def read_results(path):
         parts = line.split("\t")
         if len(parts) < 5 or not parts[0].strip():
             continue
-        note = parts[5] if len(parts) > 5 else ""
+        # Eight columns since scrolls and backs were counted; six before.
+        counted = len(parts) >= 7 and parts[5].strip().isdigit() and parts[6].strip().isdigit()
+        scrolls, backs = (int(parts[5]), int(parts[6])) if counted else (None, None)
+        rest = parts[7:] if counted else parts[5:]
+        note = rest[0] if rest else ""
         rows.append(dict(journey=parts[0], status=parts[1], taps=int(parts[2]),
-                         typed=int(parts[3]), seconds=float(parts[4]), note=note))
+                         typed=int(parts[3]), seconds=float(parts[4]),
+                         scrolls=scrolls, backs=backs, note=note))
     return rows
 
 
@@ -95,9 +111,24 @@ def flags(row, base, target=None):
         out.append(f"fewer taps: {bt} → {row['taps']}")
     if row["typed"] > by:
         out.append(f"more typing: {by} → {row['typed']} characters")
+    for key, word in (("scrolls", "scrolls"), ("backs", "backs")):
+        now, was = row.get(key), measured(base.get(key))
+        if now is None or was is None:
+            continue
+        if now > was:
+            out.append(f"more {word}: {was} → {now}")
+        elif now < was:
+            out.append(f"fewer {word}: {was} → {now}")
     if row["seconds"] > bs * SLOW_RATIO and row["seconds"] - bs > SLOW_FLOOR_S:
         out.append(f"slower: {bs:.1f}s → {row['seconds']:.1f}s")
     return out
+
+
+def measured(value):
+    """A history cell as a count, or None when the run predates counting it."""
+    if value is None or str(value).strip() == "":
+        return None
+    return int(value)
 
 
 def report(results, history, sha, ts, targets=None):
@@ -107,10 +138,13 @@ def report(results, history, sha, ts, targets=None):
         b = base.get(r["journey"])
         f = flags(r, b, target_of(targets, r["journey"]))
         mark = "✗" if r["status"] != "ok" else ("⚠" if any(x.startswith(("more", "slower", "over")) for x in f) else "✓")
-        lines.append(f"{mark} {r['journey']:<20} taps={r['taps']:<3} typed={r['typed']:<3} "
+        counts = "" if r.get("scrolls") is None else f"scrolls={r['scrolls']:<2} backs={r.get('backs') or 0:<2} "
+        lines.append(f"{mark} {r['journey']:<20} taps={r['taps']:<3} typed={r['typed']:<3} {counts}"
                      f"{r['seconds']:6.1f}s" + (f"   {'; '.join(f)}" if f else ""))
+        blank = lambda v: "" if v is None else v
         new_rows.append(dict(ts=ts, sha=sha, journey=r["journey"], status=r["status"],
-                             taps=r["taps"], typed=r["typed"], seconds=f"{r['seconds']:.1f}",
+                             taps=r["taps"], typed=r["typed"], scrolls=blank(r.get("scrolls")),
+                             backs=blank(r.get("backs")), seconds=f"{r['seconds']:.1f}",
                              note=r["note"]))
     return lines, new_rows
 
@@ -119,6 +153,18 @@ def append(history_path, rows):
     p = pathlib.Path(history_path)
     new = not p.exists()
     p.parent.mkdir(parents=True, exist_ok=True)
+    # A history written before scrolls and backs were counted has the old
+    # header: rewrite it once with the new columns, its rows kept, blank there.
+    if not new:
+        with p.open() as f:
+            header = next(csv.reader(f), [])
+        if header != FIELDS:
+            old = read_history(p)
+            with p.open("w", newline="") as f:
+                w = csv.DictWriter(f, fieldnames=FIELDS, extrasaction="ignore", restval="")
+                w.writeheader()
+                for r in old:
+                    w.writerow(r)
     with p.open("a", newline="") as f:
         w = csv.DictWriter(f, fieldnames=FIELDS)
         if new:

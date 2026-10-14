@@ -3,7 +3,10 @@
 
 Proves: a first run is the baseline; more taps, more typing and a large slowdown
 flag; fewer taps is said; a small slowdown is not; a broken run flags and never
-becomes the baseline the next run is compared with; the history keeps every run.
+becomes the baseline the next run is compared with; the history keeps every run;
+more scrolls and more backs flag, fewer is said, a baseline from before they were
+counted flags neither; an old history is rewritten with the new columns, its
+rows kept; both results formats read.
 Then each rule is broken in a copy of the report, and the fixture must fail.
 
 Usage: scripts/journeys-selftest.py [--verbose]
@@ -26,8 +29,9 @@ def load(path):
     return m
 
 
-def row(journey, status="ok", taps=5, typed=0, seconds=10.0, note=""):
-    return dict(journey=journey, status=status, taps=taps, typed=typed, seconds=seconds, note=note)
+def row(journey, status="ok", taps=5, typed=0, seconds=10.0, note="", scrolls=0, backs=0):
+    return dict(journey=journey, status=status, taps=taps, typed=typed, seconds=seconds, note=note,
+                scrolls=scrolls, backs=backs)
 
 
 def fixture(m):
@@ -82,6 +86,42 @@ def fixture(m):
         check("a journey's own target wins over the default", "over target: 3 taps (target 2)" in lines[2])
         check("over target marks the line", lines[0].startswith("⚠"))
         check("a broken run is not judged against its target", "over target" not in lines[3])
+
+        # Scrolls and backs, against the last good run.
+        run([row("sub", taps=4, scrolls=0, backs=0)])
+        out = run([row("sub", taps=4, scrolls=2, backs=1)])
+        check("more scrolls flags", "more scrolls: 0 → 2" in out and out.startswith("⚠"))
+        check("more backs flags", "more backs: 0 → 1" in out)
+        out = run([row("sub", taps=4, scrolls=1, backs=0)])
+        check("fewer scrolls is said", "fewer scrolls: 2 → 1" in out)
+        check("fewer backs is said", "fewer backs: 1 → 0" in out)
+
+        # A history from before scrolls and backs were counted.
+        old = pathlib.Path(tmp) / "old.csv"
+        old.write_text("ts,sha,journey,status,taps,typed,seconds,note\n"
+                       "t0,s0,sub,ok,5,10,21.0,\n")
+        lines, rows = m.report([row("sub", taps=4, scrolls=3, backs=1)], m.read_history(old), "s1", "t1")
+        out = "\n".join(lines)
+        check("an unmeasured baseline flags no scrolls", "scrolls:" not in out and "backs:" not in out)
+        check("taps still compare over an old baseline", "fewer taps: 5 → 4" in out)
+        m.append(old, rows)
+        kept = m.read_history(old)
+        check("an old history gains the new columns", old.read_text().splitlines()[0] == ",".join(m.FIELDS))
+        check("an old history keeps its rows", len(kept) == 2 and kept[0]["taps"] == "5")
+        check("a new row carries its counts", kept[1]["scrolls"] == "3" and kept[1]["backs"] == "1")
+
+        # The same history once rewritten: its old row's cells are blank.
+        blank = pathlib.Path(tmp) / "blank.csv"
+        blank.write_text(",".join(m.FIELDS) + "\n" + "t0,s0,sub,ok,5,10,,,21.0,\n")
+        lines, _ = m.report([row("sub", taps=5, scrolls=3, backs=1)], m.read_history(blank), "s1", "t1")
+        check("a blank baseline cell flags nothing", "scrolls:" not in lines[0] and "backs:" not in lines[0])
+
+        res = pathlib.Path(tmp) / "r.tsv"
+        res.write_text("a\tok\t3\t0\t9.0\t2\t1\tnote here\nb\tok\t3\t0\t9.0\told note\n")
+        got = m.read_results(res)
+        check("eight columns read scrolls and backs", got[0]["scrolls"] == 2 and got[0]["backs"] == 1
+              and got[0]["note"] == "note here")
+        check("six columns still read", got[1]["scrolls"] is None and got[1]["note"] == "old note")
     return bad
 
 
@@ -93,6 +133,13 @@ MUTATIONS = [
     ("no slow floor", 'and row["seconds"] - bs > SLOW_FLOOR_S', ""),
     ("no target", 'if target is not None and row["taps"] > int(target):', "if False:"),
     ("default only", '(targets.get("taps") or {}).get(journey, targets.get("default_taps"))', 'targets.get("default_taps")'),
+    ("scrolls and backs silent", 'out.append(f"more {word}: {was} → {now}")', "pass"),
+    ("fewer silent", 'out.append(f"fewer {word}: {was} → {now}")', "pass"),
+    ("backs not compared", '(("scrolls", "scrolls"), ("backs", "backs"))', '(("scrolls", "scrolls"),)'),
+    ("blank baseline counted as zero", 'if value is None or str(value).strip() == "":', 'if value is None:'),
+    ("old header kept", "if header != FIELDS:", "if False:"),
+    ("old rows dropped", "                for r in old:\n                    w.writerow(r)", "                pass"),
+    ("new columns unread", "counted = len(parts) >= 7 and", "counted = False and"),
     ("history overwritten", 'with p.open("a", newline="") as f:', 'with p.open("w", newline="") as f:\n        new = True'),
 ]
 
@@ -113,7 +160,13 @@ def main():
                 continue
             path = pathlib.Path(tmp) / f"m{len(name)}.py"
             path.write_text(src.replace(old, new, 1))
-            if fixture(load(path)):
+            # A mutation that crashes the fixture is caught as surely as one
+            # that fails a check.
+            try:
+                caught = bool(fixture(load(path)))
+            except Exception:
+                caught = True
+            if caught:
                 if VERBOSE:
                     print(f"  ok   mutation '{name}' is caught")
             else:
