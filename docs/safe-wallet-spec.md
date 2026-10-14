@@ -32,7 +32,7 @@ Each goal: how every option does it **today**, the problem with that, and our an
 | Bermuda | Each owner registers its own Bermuda key; rotation not documented |
 
 **Problem:** where rotation exists, nobody does it routinely, and a key that leaked works until someone notices.
-**Our answer (v1):** a **new Secure Enclave key for every transaction**, batched atomically with the transaction itself; the old key never works again (§3b).
+**Our answer (v1):** a **new Secure Enclave key for every transaction**, batched atomically with the transaction itself; the old key never works again (section 3b).
 
 #### 2. Rotate keys, keep the same address
 
@@ -46,7 +46,7 @@ Each goal: how every option does it **today**, the problem with that, and our an
 | Bermuda | The shielded address is built from its keys: new keys, new address |
 
 **Problem:** without a fixed address, rotating keys means re-telling everyone where to pay you.
-**Our answer (v1):** Safe; with the shared passkey signer the rotation is a storage write, not even an owner swap (§3b).
+**Our answer (v1):** Safe; with the shared passkey signer the rotation is a storage write, not even an owner swap (section 3b).
 
 #### 3. Sign with the iPhone's Secure Enclave (passkeys)
 
@@ -74,7 +74,7 @@ Each goal: how every option does it **today**, the problem with that, and our an
 | Bermuda | Its key can derive from any seed (supported, not in their UI yet) |
 
 **Problem:** the phrase is either lost or stored somewhere unsafe, and recovery is slow when you need money now.
-**Our answer (v1):** the 12-word recovery key in iCloud Keychain is a **second owner with no delay**: Recover, Face ID, done. Hot-wallet tradeoff: whoever gets into your iCloud can spend (§1).
+**Our answer (v1):** the 12-word recovery key in iCloud Keychain is a **second owner with no delay**: Recover, Face ID, done. Hot-wallet tradeoff: whoever gets into your iCloud can spend (section 1).
 
 #### 5. Gas
 
@@ -101,7 +101,7 @@ Each goal: how every option does it **today**, the problem with that, and our an
 | Bermuda | A fresh address that **shields on arrival** in one gasless transaction (mainnet Q4) |
 
 **Problem:** one public address is a public bank statement.
-**Our answer (v1):** fresh addresses derived from your phrase, one per payer; **sweep** into the account when you spend, and the app says that sweeping links that address (§3a). v2: Bermuda's shield on arrival.
+**Our answer (v1):** fresh addresses derived from your phrase, one per payer; **sweep** into the account when you spend, and the app says that sweeping links that address (section 3a). v2: Bermuda's shield on arrival.
 
 #### 7. Private balance and spending
 
@@ -114,7 +114,7 @@ Each goal: how every option does it **today**, the problem with that, and our an
 | Bermuda | A shielded pool on Base and Ethereum with one-time accounts for normal DeFi; mainnet Q4; iPhone proving unmeasured |
 
 **Problem:** today's options are too slow, too costly, or too far from where your money and apps are.
-**Our answer (v2):** Bermuda once on mainnet and measured on an iPhone; Railgun is the live comparison for that measurement (§3a).
+**Our answer (v2):** Bermuda once on mainnet and measured on an iPhone; Railgun is the live comparison for that measurement (section 3a).
 
 #### 8. Multi-sign
 
@@ -195,7 +195,7 @@ Trays are `DSTray`; verbs are rows (`DSDoorRow`); nothing at the top of a screen
 | **Add · Receive** | Put money in, or get paid | Two rows. **Add** — "From an exchange, a card or a bank" (where it comes from is unruled: no from row until we know the vendor, user: "we don't yet know what we will use"); its button reads "Add 250 USDC", never "Deposit". **Receive** — the address picked on the account line, "· Base · Ethereum", and a pink **Copy** on the row (user, 2026-10-13), as Signers carries **Add**; the QR and Share are one level down |
 | **Security** | Control what I allow and keep my keys | One header, "1 waiting" in amber when something is. Rows: **Sign** (what waits, the newest named, the count in amber), **Revoke** (apps that can spend your tokens, the count), **Signers** (who can sign and how many must, **Add**), **Rotate** (a new key every transaction, the key number, devices), **Recover** (the recovery key, guardians, "add a guardian" when none) |
 
-**Signers are not guardians** (user, 2026-10-13: "guardians is just recover, but not same as multi sig"). A signer is a Safe owner and counts toward the signatures a transaction needs; with one needed, any signer spends alone. A guardian can only start a key change, which waits out a delay you can cancel from your phone (a Safe recovery module, e.g. Candide's); a guardian never signs a payment. The recovery key is a SIGNER (§6: a second owner, no delay), so holding the 12 words is holding the money. Adding a signer asks how many must sign: two makes it a joint account ("Joint with Sam"), and a joint account is a different hot/cold trade from this one.
+**Signers are not guardians** (user, 2026-10-13: "guardians is just recover, but not same as multi sig"). A signer is a Safe owner and counts toward the signatures a transaction needs; with one needed, any signer spends alone. A guardian can only start a key change, which waits out a delay you can cancel from your phone (a Safe recovery module, e.g. Candide's); a guardian never signs a payment. The recovery key is a SIGNER (section 6: a second owner, no delay), so holding the 12 words is holding the money. Adding a signer asks how many must sign: two makes it a joint account ("Joint with Sam"), and a joint account is a different hot/cold trade from this one.
 
 No balance and **no Activity module** (user: "we have that in the wallet already"). **Needs you stays on the Wallet** as the one list of what waits across every app; your account's items appear there and open this sheet at Security.
 
@@ -211,7 +211,7 @@ No balance and **no Activity module** (user: "we have that in the wallet already
 
 ### v1 — the first release
 
-**The Actions screen** (the tiles below are superseded by §2a's modules, 2026-10-13; the door stands). Send, Swap, Receive and Add money live together on one sheet of their own, not as rows in Holdings (user, 2026-10-12).
+**The Actions screen** (the tiles below are superseded by section 2a's modules, 2026-10-13; the door stands). Send, Swap, Receive and Add money live together on one sheet of their own, not as rows in Holdings (user, 2026-10-12).
 - **Its door: the Wallet button**, the band's trailing seat on every page (face · Search · Wallet, §1278, §1280, shipped in 3.0.4). Today it opens the Wallet on Home. Once you have an account of your own it opens the Wallet **with the account sheet on top**, so it always lands in the Wallet. After a key change you didn't make it carries the attention dot.
 - **The sheet:** the Holdings sheet's anatomy. Your account's box, then **four tiles: Send · Swap · Receive · Add money** (a sheet's acts are tiles, four at most, §1178), then sections: **Recovery** (recovery key, Show recovery phrase, New recovery phrase), **Devices** (each owner, Add a device), **Account** (address, name, notifications, activity) and one footnote on who holds the keys.
 - Mockup: `design/mockups/wallet-account-button.html`. Frames 1 and 7 predate §1278 (the button there is Wallet-only) and frames 6 and 7 draw the 3-day recovery the no-delay ruling removed; the sheet, Send, Review and Swap frames stand.
@@ -229,7 +229,7 @@ No balance and **no Activity module** (user: "we have that in the wallet already
   - Address, large, with a QR code
   - The chains it works on, as a line of icons ("Base · Ethereum")
   - **Copy** · **Share**
-  - **New address**: a fresh, unlinked address for one payer (§3a), with an optional "For" name
+  - **New address**: a fresh, unlinked address for one payer (section 3a), with an optional "For" name
   - One footnote: send only on the chains listed
 
 **3. Add money**
@@ -288,7 +288,7 @@ No balance and **no Activity module** (user: "we have that in the wallet already
 
 - **Bridge**: move a token between chains (LI.FI or Across), a second kind of swap
 - **Connect to apps**: Casberi as a wallet for websites (WalletConnect as the wallet side); this amends §112's "signatures happen elsewhere"
-- **Pay fees in USDC from your main account too**: the paymaster v1 brings for fresh addresses (§3a) could pay any transaction's gas
+- **Pay fees in USDC from your main account too**: the paymaster v1 brings for fresh addresses (section 3a) could pay any transaction's gas
 - **A savings account**: a second Safe for larger balances, with a recovery delay or two keys required
 
 ## 3a. Fresh addresses (stealth): receiving in v1, private spending in v2
@@ -348,7 +348,7 @@ Bermuda fits your account (same chains, Safe, normal DeFi through one-time accou
 
 **Buttons** (the account sheet).
 - Devices › a device's row › **Replace this key** (Face ID): a new Enclave key on this device, `swapOwner` old → new, one transaction.
-- Recovery › **New recovery phrase** (Face ID): a new 12-word key replaces the old one as owner (`swapOwner`), the old phrase stops working on chain, and the new words show once. Fresh addresses derived from the old phrase keep their owners (§3a), so this asks first: keep the old phrase for them, or move each one's funds (which links them).
+- Recovery › **New recovery phrase** (Face ID): a new 12-word key replaces the old one as owner (`swapOwner`), the old phrase stops working on chain, and the new words show once. Fresh addresses derived from the old phrase keep their owners (section 3a), so this asks first: keep the old phrase for them, or move each one's funds (which links them).
 - History: each rotation is a row on Home, "Replaced this iPhone's key", dated.
 
 **A new key for every transaction (user, 2026-10-12: "everywhere. rotate at will. user should see it").**
