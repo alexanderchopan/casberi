@@ -1206,7 +1206,7 @@ struct FeedScreen: View {
         // told a first-time writer to open the catalog instead.
         if !roomHasContent && !LiveRoomSources.has(source) && !agentRoomShown
             && !Pinboard.isPinnedRoom(source) && !walletKeepsChrome && source != "All"
-            && !HomeScope.isMarkets(source) && source != RoomAccounts.dayRoom {
+            && !HomeScope.isMarkets(source) && source != RoomAccounts.dayRoom && !pinnedPage {
             // An empty Home still names what stopped (prd §1162): an app
             // that broke before anything landed is the likeliest reason the
             // feed is empty at all.
@@ -1256,7 +1256,7 @@ struct FeedScreen: View {
         // rather than a flag.
         } else if roomHasContent || agentRoomShown || Pinboard.isPinnedRoom(source)
                     || walletKeepsChrome || source == "All" || HomeScope.isMarkets(source)
-                    || source == RoomAccounts.dayRoom {
+                    || source == RoomAccounts.dayRoom || pinnedPage {
             // Derived ONCE per render and threaded into everything below
             // — the day groups, ledes, and per-row hint/next-event ids
             // all share this one filter pass instead of each re-deriving
@@ -1346,6 +1346,17 @@ struct FeedScreen: View {
             // 2026-10-10, on device). Its box is the calendar, drawn empty,
             // and its first row connects a calendar (prd §1233).
             || source == RoomAccounts.dayRoom
+            || pinnedPage
+    }
+
+    /// **A PAGE OPENED FROM A SOURCES COUNT IS NEVER REPLACED** (prd §1274,
+    /// §1292): Subscriptions, Mail lists and Following are their tile's box
+    /// and list, and an empty one leads with its Track or Follow row. With no
+    /// wallet followed and nothing landed, both empty arms of `roomBody` drew
+    /// "One inbox for all your apps" and Browse apps in its place (user,
+    /// 2026-10-14: "i hit subscriptions and it goes here?").
+    private var pinnedPage: Bool {
+        pinnedWalletSection != nil || pinnedSubscriptions
     }
 
     /// **THE WALLET IS NEVER REPLACED WHILE IT WATCHES AN ADDRESS** (2026-10-03,
