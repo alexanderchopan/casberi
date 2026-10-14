@@ -241,7 +241,7 @@ struct SubscriptionAddTray: View {
 
     var body: some View {
         DSTray(title: editing == nil ? SubscriptionWords.track : String(localized: "Edit"),
-               height: 640, detents: [.large]) {
+               height: 640, detents: [.large], scrollsItself: true) {
             if let picked { form(picked) } else { list }
         }
         .task {

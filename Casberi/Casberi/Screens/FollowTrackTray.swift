@@ -83,7 +83,7 @@ struct FollowTrackTray: View {
     }
 
     var body: some View {
-        DSTray(title: room.verb, height: 520, detents: [.large]) {
+        DSTray(title: room.verb, height: 520, detents: [.large], scrollsItself: true) {
             ScrollView {
                 VStack(alignment: .leading, spacing: DS.Space.s3) {
                     picker

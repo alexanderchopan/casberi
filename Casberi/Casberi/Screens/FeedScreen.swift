@@ -106,6 +106,9 @@ struct FeedScreen: View {
     /// (prd §1274): that one tile, its box, no tiles, the rooms' own picks
     /// untouched.
     let pinnedSubscriptions: Bool
+    /// Opened from a Sources count, whose plus already adds (prd §1292): the
+    /// page's own Track or Follow row is not drawn twice.
+    @Environment(\.dsAddOnCount) var addOnCount
 
     /// Latches true the first time this page is active/near, so a page already
     /// assembled once stays assembled — the built set only ever grows, spread

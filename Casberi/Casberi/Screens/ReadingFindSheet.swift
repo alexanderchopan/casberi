@@ -37,7 +37,7 @@ struct ReadingFindSheet: View {
 
     var body: some View {
         DSTray(title: Following.Room.reading.verb,
-               height: 640, detents: [.large]) {
+               height: 640, detents: [.large], scrollsItself: true) {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 0) {
                     if trimmed.isEmpty { before } else { results }

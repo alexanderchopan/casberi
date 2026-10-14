@@ -310,6 +310,9 @@ extension FeedScreen {
         let writing = items.filter { !$0.stopped }
         let stopped = items.filter(\.stopped)
         Section {
+            // Over a list with rows, the Sources count's plus is the verb
+            // (prd §1292); an empty page still leads with it.
+            if !(addOnCount && !items.isEmpty) {
             DSDoorRow(icon: "plus", title: Text(SubscriptionWords.track)) {
                 feedSheet = .mailSubscriptionAdd
             }
@@ -317,6 +320,7 @@ extension FeedScreen {
                                       bottom: 0, trailing: DSRoomChassis.rowInset))
             .feedRowBackground()
             .listRowSeparator(.hidden)
+            }
             if reading.counted > 0 {
                 SubscriptionsSummary(reading: reading, tiles: tiles, pick: pick, mails: true) { tile in
                     mailSubscriptionsPick = tile.map { SubscriptionsPick(tile: $0, over: signature) }

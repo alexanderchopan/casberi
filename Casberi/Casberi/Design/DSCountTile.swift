@@ -26,7 +26,18 @@ struct DSCountTile: View {
     /// column that wide, right-aligned, so every word starts at one edge
     /// (user: "need to make indentation even", of "13 Apps" over "0 Cards").
     var widest: Int? = nil
+    /// ADD FROM WHERE YOU LAND (prd §1292): a plus at the count's trailing
+    /// edge runs that kind's own add, so the page behind the count is not a
+    /// step on the way to it. Inline only; nil draws none. `addLabel` is the
+    /// kind's verb ("Track a subscription"), said to VoiceOver and the tests.
+    var add: (() -> Void)? = nil
+    var addLabel: String? = nil
     let action: () -> Void
+
+    /// How far the plus's 44pt target reaches over the tile (prd §1292):
+    /// the plus takes a 36pt column, so "Subscriptions" stands beside it on
+    /// the phone, and its target stays `DS.Hit.min` wide.
+    static let plusOverlap: CGFloat = 8
 
     /// The lead column's floor, inline: a two-digit figure's width.
     static let leadFigure = 99
@@ -58,6 +69,31 @@ struct DSCountTile: View {
     @Environment(\.dsCountCellHeight) private var cellHeight
 
     var body: some View {
+        if inline, let add {
+            // Two buttons side by side, never one inside the other: the
+            // word opens the list, the plus adds to it.
+            // The plus is a full 44pt target that overlaps the tile's last
+            // `plusOverlap` points, where the glyph's own side margin is, so
+            // the word keeps its room (prd §1292).
+            HStack(spacing: -Self.plusOverlap) {
+                tile
+                Button(action: add) {
+                    Image(systemName: "plus")
+                        .dsGlyph(.body, weight: .regular)
+                        // Pink, as every verb row's plus is (prd §1265).
+                        .foregroundStyle(DS.brandInk)
+                        .frame(width: DS.Hit.min, height: max(cellHeight ?? DS.Hit.min, DS.Hit.min))
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(PressSpring())
+                .accessibilityLabel(Text(addLabel ?? label))
+            }
+        } else {
+            tile
+        }
+    }
+
+    @ViewBuilder private var tile: some View {
         let zero = count == 0 && !isOn
         Button {
             DSHaptic.selection()
@@ -99,7 +135,10 @@ struct DSCountTile: View {
                 // stand whole beside a two-digit count. The row is the box's
                 // share of the well (§1198), so a pick is ≥44pt and the grid
                 // fills the well instead of floating in it.
-                .padding(.horizontal, DS.Space.s2)
+                // With a plus beside it the plus's own width is the gap, so
+                // "Subscriptions" keeps its room (prd §1292).
+                .padding(.leading, DS.Space.s2)
+                .padding(.trailing, add == nil ? DS.Space.s2 : 0)
                 .frame(maxWidth: .infinity, minHeight: cellHeight, alignment: .leading)
                 // No backing (prd §1268, user: "no backing"): the pick says
                 // itself in the tint of its figure and word.
@@ -176,4 +215,7 @@ struct DSCountGrid<Content: View>: View {
 extension EnvironmentValues {
     /// The inline count's row height, set by `DSCountGrid` (prd §1198).
     @Entry var dsCountCellHeight: CGFloat? = nil
+    /// A page opened from a count that carries its plus (prd §1292): its
+    /// own verb row is drawn by the count instead.
+    @Entry var dsAddOnCount: Bool = false
 }

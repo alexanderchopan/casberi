@@ -29,6 +29,12 @@ struct DSTray<Content: View>: View {
     /// The title in the brand pink, as a place's title row wears it (prd
     /// §1227: Data, opened from Settings, reads like Settings).
     var brandTitle: Bool = false
+    /// The body is its own `ScrollView` with a field pinned under it (the
+    /// find trays' shape). Pushed in a pane it must NOT be wrapped in a second
+    /// scroller: the inner one then grows to its whole list and the field
+    /// lands under the last row, off screen (prd §1292, the Track tray
+    /// opened inside Sources).
+    var scrollsItself: Bool = false
     @ViewBuilder var content: () -> Content
 
     /// **THE MAC'S WAY OUT (2026-09-22, user: "when i click language in
@@ -227,7 +233,11 @@ struct DSTray<Content: View>: View {
                                      scrolls: detents != nil))
         .dsSensoryFeedback()
 
-        if inPane {
+        if inPane && scrollsItself {
+            tray
+                .background(DS.surfaceSheet.ignoresSafeArea())
+                .dsColorScheme()
+        } else if inPane {
             // A PAGE, not a sheet (prd §876): the Accounts pane gives the
             // tray a column of its own, so its height is the column's and
             // the body scrolls there. The presentation modifiers above are

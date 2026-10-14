@@ -129,7 +129,6 @@ struct SettingsHome: View {
                         case .calendars:
                             VStack(alignment: .leading, spacing: DS.Space.s4) {
                                 kindCard(String(localized: "Your calendars"), glyph: ScopeTileGlyph.calendars) {
-                                    cardVerbRow("plus", String(localized: "Add a calendar")) { add(.calendars) }
                                     calendarsList
                                 }
                                 if calendarsEmpty { comesFrom(Self.calendarApps) }
@@ -138,9 +137,6 @@ struct SettingsHome: View {
                             cardsList
                         case .people:
                             VStack(alignment: .leading, spacing: DS.Space.s4) {
-                                // The tray takes a name, an ENS or an address:
-                                // following someone, said as People says it.
-                                cardVerbRow("plus", String(localized: "Follow someone")) { add(.people) }
                                 if people == 0 { comesFrom(Self.peopleApps) } else { peopleList }
                             }
                         case .wallets:
@@ -418,6 +414,24 @@ struct SettingsHome: View {
         }
     }
 
+    /// The plus on a count (prd §1292): the verb its own page leads with,
+    /// run from the box. Apps are added from the list under it and a card
+    /// arrives through its app, so neither draws one; mail lists draw it
+    /// once a mail app is connected, since the tray reads that mail.
+    private func addVerb(_ kind: SettingsScope) -> String? {
+        switch kind {
+        case .apps, .cards:  nil
+        case .calendars:     String(localized: "Add a calendar")
+        case .feeds:         Following.Room.reading.verb
+        case .newsletters:
+            connectedApps.contains { Self.mailApps.contains($0.name) }
+                ? String(localized: "Track a mail list") : nil
+        case .people:        String(localized: "Follow someone")
+        case .subscriptions: SubscriptionWords.track
+        case .wallets:       String(localized: "Follow a wallet")
+        }
+    }
+
     private func read() async {
         phoneCalendars = PhoneCalendar.readable(context)
         await SubscriptionsReading.shared.refresh(context)
@@ -474,8 +488,10 @@ struct SettingsHome: View {
         let widest = counts.map(\.1).max()
         return DSCountGrid(items: counts.count) {
             ForEach(counts, id: \.0) { kind, n, label in
+                let verb = addVerb(kind)
                 DSCountTile(count: n, label: label, isOn: kind == scope && !casberiOpen,
-                            wants: troubled.contains(kind), inline: true, widest: widest) {
+                            wants: troubled.contains(kind), inline: true, widest: widest,
+                            add: verb == nil ? nil : { add(kind) }, addLabel: verb) {
                     // A kind that lives in a room opens that room's page here
                     // (prd §1274): Back is Sources, the room's own pick stays.
                     if let home = Self.home(of: kind) {
@@ -828,8 +844,10 @@ struct SettingsHome: View {
             .map(\.name)
             .sorted { $0.localizedStandardCompare($1) == .orderedAscending }
         return VStack(alignment: .leading, spacing: DS.Space.s6) {
+            // The verb is the plus on the count (prd §1292), so a card with
+            // no wallets is not drawn at all.
+            if !watched.isEmpty {
             kindCard(String(localized: "Your wallets"), glyph: "wallet.bifold") {
-                cardVerbRow("eye", String(localized: "Follow a wallet")) { add(.wallets) }
                 ForEach(watched) { addr in
                     DSPushRow(title: Text(verbatim: addr.label.isEmpty ? WalletStore.shortAddress(addr.address) : addr.label),
                               subtitle: addr.label.isEmpty ? nil : Text(verbatim: WalletStore.shortAddress(addr.address)),
@@ -842,6 +860,7 @@ struct SettingsHome: View {
                             .frame(width: DS.Face.seat, height: DS.Face.seat)
                     }
                 }
+            }
             }
             let apps = walletApps.filter { hit($0) }
             if !apps.isEmpty {
@@ -1093,11 +1112,13 @@ private struct ListHomePage: View {
     @Environment(\.dsInPane) private var inPane
 
     var body: some View {
+        // The count it opened from carries the verb (prd §1292).
         if inPane {
-            page
+            page.environment(\.dsAddOnCount, true)
         } else {
             NavigationStack {
                 page.toolbar(.hidden, for: .navigationBar)
+                    .environment(\.dsAddOnCount, true)
             }
             .environment(\.dsInSheetStack, true)
             .presentationDragIndicator(.visible)

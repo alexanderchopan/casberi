@@ -270,7 +270,7 @@ struct MailSubscriptionAddTray: View {
         let candidates = searching ? Self.matching(reading.senders, query: query) : reading.candidates
         // The find tray's shape (`DSTraySearchField`): the rows, and the
         // field at the bottom on glass.
-        DSTray(title: SubscriptionWords.track, height: 640, detents: [.large]) {
+        DSTray(title: SubscriptionWords.track, height: 640, detents: [.large], scrollsItself: true) {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 0) {
                     if candidates.isEmpty {

@@ -32,7 +32,7 @@ struct WalletFollowSheet: View {
     private var wallet: WalletStore { WalletStore.shared }
 
     var body: some View {
-        DSTray(title: String(localized: "Follow a wallet"), height: 640, detents: [.large]) {
+        DSTray(title: String(localized: "Follow a wallet"), height: 640, detents: [.large], scrollsItself: true) {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 0) {
                     if trimmed.isEmpty { before } else { typed }

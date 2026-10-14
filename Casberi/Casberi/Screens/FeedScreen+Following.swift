@@ -60,6 +60,10 @@ extension FeedScreen {
     func followingSections(_ room: Following.Room, verb: String? = nil) -> some View {
         let items = FollowingReading.shared.items(for: room)
         Section {
+            // From Sources the count's plus is Follow a site (prd §1292), so
+            // only that row goes, and only over a list that has rows: an
+            // empty page still leads with its act.
+            if !(addOnCount && room == .reading && !items.isEmpty) {
             DSDoorRow(icon: "plus", title: Text(verbatim: verb ?? room.verb)) {
                 feedSheet = .followingAdd(room)
             }
@@ -67,6 +71,7 @@ extension FeedScreen {
                                       bottom: 0, trailing: DSRoomChassis.rowInset))
             .feedRowBackground()
             .listRowSeparator(.hidden)
+            }
             ForEach(items) { item in
                 Button {
                     feedSheet = .following(item.id, room)

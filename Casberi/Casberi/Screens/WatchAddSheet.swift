@@ -35,7 +35,7 @@ struct WatchAddSheet: View {
     private static let recentsKey = "markets.add.recents"
 
     var body: some View {
-        DSTray(title: String(localized: "Follow a company"), height: 640, detents: [.large]) {
+        DSTray(title: String(localized: "Follow a company"), height: 640, detents: [.large], scrollsItself: true) {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 0) {
                     if query.trimmingCharacters(in: .whitespaces).isEmpty {

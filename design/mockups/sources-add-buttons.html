@@ -1,0 +1,162 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sources add buttons</title>
+<style>
+:root{color-scheme:light dark;--ground:#f2f1f5;--ink:#15141a;--ink2:#56535f;--note:#fff;
+  --rounded:ui-rounded,"SF Pro Rounded",-apple-system,sans-serif}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--ground:#0b0b0f;--ink:#eeecf3;--ink2:#a29ead;--note:#1c1c1e}}
+:root[data-theme="dark"]{--ground:#0b0b0f;--ink:#eeecf3;--ink2:#a29ead;--note:#1c1c1e}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;-webkit-font-smoothing:antialiased;padding:32px 16px 64px}
+header{max-width:1240px;margin:0 auto 24px}
+h1{font:700 28px/34px var(--rounded)}
+p.desc{font-size:15px;line-height:22px;color:var(--ink2);max-width:760px;margin-top:6px}
+.stage{display:flex;gap:32px;flex-wrap:wrap;max-width:1240px;margin:0 auto}
+figure{width:390px;max-width:100%}
+figcaption{font-size:14px;line-height:20px;color:var(--ink2);margin:14px 6px 0}
+figcaption b{color:var(--ink)}
+.path{margin-top:8px;font-size:13px;line-height:19px}
+.path div{display:flex;justify-content:space-between;gap:8px}
+.path span:last-child{font-weight:600;color:var(--ink);white-space:nowrap}
+
+/* the phone is the app's dark Sources, as on the simulator */
+.phone{--sheet:#000;--card:#1c1c1e;--text:#fff;--text2:#ebebf599;--text3:#ebebf570;--tint:#0a84ff;--brand:#ff3b5c;
+  background:var(--sheet);color:var(--text);border-radius:44px;box-shadow:0 24px 70px #00000055;height:820px;overflow:hidden;position:relative;padding:58px 18px 0}
+.title{font:700 34px/41px var(--rounded);margin-bottom:12px}
+.box{background:var(--card);border-radius:22px;padding:14px 18px;display:grid;grid-template-columns:1fr 1fr;gap:4px 10px}
+.count{display:flex;align-items:center;gap:8px;min-height:50px}
+.count .num{font:600 24px var(--rounded);min-width:30px;text-align:right}
+.count .word{font-size:17px;flex:1}
+.count.on .num,.count.on .word{color:var(--tint)}
+.plus{width:30px;height:30px;border-radius:50%;background:#ff3b5c26;color:var(--brand);display:grid;place-items:center;font:500 20px/1 var(--rounded);flex:none}
+.hl{outline:2px dashed #ffd60a;outline-offset:4px;border-radius:14px}
+.search{margin-top:16px;height:50px;border-radius:25px;background:var(--card);display:flex;align-items:center;gap:10px;padding:0 18px;color:var(--text3);font-size:17px}
+.verbs{margin-top:10px}
+.verb{display:flex;align-items:center;gap:14px;min-height:46px;font-size:17px}
+.verb i{font-style:normal;color:var(--brand);font-size:24px;width:22px;text-align:center}
+.seg{font:700 19px var(--rounded);margin:18px 0 6px}
+.seg span{color:var(--text3);margin-left:14px}
+.row{display:flex;align-items:center;gap:16px;min-height:56px}
+.row .m{width:30px;text-align:center;font-size:22px}
+.row .n{font-size:17px}
+.row .s{font-size:13px;color:var(--text2)}
+.sec{font:700 19px var(--rounded);margin:10px 0 2px}
+.cardstub{background:var(--card);border-radius:22px;height:160px;margin-top:12px;padding:18px;font:700 26px var(--rounded)}
+.gone{color:var(--text3);text-decoration:line-through}
+/* one screen: three phones across, scaled down */
+body{padding:16px 16px 24px}
+header{margin-bottom:12px}
+h1{font-size:22px;line-height:28px}
+p.desc{font-size:13px;line-height:18px;max-width:1000px}
+.stage{gap:20px;flex-wrap:nowrap;justify-content:center}
+figure{width:240px;flex:none}
+.phone{zoom:.55}
+figcaption{font-size:12px;line-height:16px;margin:8px 2px 0}
+.path{font-size:11.5px;line-height:16px;margin-top:6px}
+@media (max-width:820px){.stage{flex-wrap:wrap}}
+</style>
+
+<header>
+  <h1>Sources: add from where you land</h1>
+  <p class="desc">Today every add button lives one page deep, behind its count. Both options put it on Sources itself, which saves one tap for every kind. Nothing else changes: the same trays, the price still asked, and each thing still lives in its own home. Dashed yellow marks what is new.</p>
+</header>
+
+<div class="stage">
+
+<figure>
+  <div class="phone">
+    <div class="title">Sources</div>
+    <div class="box">
+      <div class="count on"><span class="num">0</span><span class="word">Apps</span></div>
+      <div class="count"><span class="num">3</span><span class="word">Calendars</span></div>
+      <div class="count"><span class="num">0</span><span class="word">Cards</span></div>
+      <div class="count"><span class="num">0</span><span class="word">Following</span></div>
+      <div class="count"><span class="num">0</span><span class="word">Mail lists</span></div>
+      <div class="count"><span class="num">7</span><span class="word">People</span></div>
+      <div class="count"><span class="num">0</span><span class="word">Subscriptions</span></div>
+      <div class="count"><span class="num">1</span><span class="word">Wallets</span></div>
+    </div>
+    <div class="search">⌕ Search</div>
+    <div class="seg">By category<span>A–Z</span></div>
+    <div class="row"><span class="m">🐙</span><div><div class="n">Casberi</div><div class="s">Settings, data and notifications</div></div></div>
+    <div class="sec">Start here</div>
+    <div class="row"><span class="m">🐙</span><div class="n">Add name, photo, preferences</div></div>
+    <div class="row"><span class="m" style="color:#ff3b5c">⟳</span><div><div class="n">Track a subscription</div><div class="s">Netflix, iCloud+, free ones too</div></div></div>
+    <div class="cardstub">Agents</div>
+  </div>
+  <figcaption><b>Today.</b> To add, tap a count, then the add button on that page. Start here's Track row disappears once you track one.
+    <div class="path">
+      <div><span>Subscription: Sources › Subscriptions › Track › Hulu › price › Track</span><span>5</span></div>
+      <div><span>Mail list: Sources › Mail lists › Track › sender</span><span>4</span></div>
+      <div><span>Wallet: Sources › Wallets › Follow a wallet › address › Follow</span><span>4</span></div>
+    </div>
+  </figcaption>
+</figure>
+
+<figure>
+  <div class="phone">
+    <div class="title">Sources</div>
+    <div class="box">
+      <div class="count on"><span class="num">0</span><span class="word">Apps</span></div>
+      <div class="count"><span class="num">3</span><span class="word">Calendars</span></div>
+      <div class="count"><span class="num">0</span><span class="word">Cards</span></div>
+      <div class="count"><span class="num">0</span><span class="word">Following</span></div>
+      <div class="count"><span class="num">0</span><span class="word">Mail lists</span></div>
+      <div class="count"><span class="num">7</span><span class="word">People</span></div>
+      <div class="count"><span class="num">0</span><span class="word">Subscriptions</span></div>
+      <div class="count"><span class="num">1</span><span class="word">Wallets</span></div>
+    </div>
+    <div class="verbs hl">
+      <div class="verb"><i>+</i>Add a calendar</div>
+      <div class="verb"><i>+</i>Follow a site</div>
+      <div class="verb"><i>+</i>Follow a wallet</div>
+      <div class="verb"><i>+</i>Follow someone</div>
+      <div class="verb"><i>+</i>Track a mail list</div>
+      <div class="verb"><i>+</i>Track a subscription</div>
+    </div>
+    <div class="search">⌕ Search</div>
+    <div class="seg">By category<span>A–Z</span></div>
+    <div class="row"><span class="m">🐙</span><div><div class="n">Casberi</div><div class="s">Settings, data and notifications</div></div></div>
+    <div class="sec">Start here</div>
+    <div class="row"><span class="m">🐙</span><div class="n">Add name, photo, preferences</div></div>
+  </div>
+  <figcaption><b>A. Six add rows under the box.</b> They are always there, and each opens the tray it opens today. Start here keeps only your name, since the other steps now live above it. The apps move down by six rows.
+    <div class="path">
+      <div><span>Subscription: Sources › Track a subscription › Hulu › price › Track</span><span>4</span></div>
+      <div><span>Mail list: Sources › Track a mail list › sender</span><span>3</span></div>
+      <div><span>Wallet: Sources › Follow a wallet › address › Follow</span><span>3</span></div>
+    </div>
+  </figcaption>
+</figure>
+
+<figure>
+  <div class="phone">
+    <div class="title">Sources</div>
+    <div class="box">
+      <div class="count on"><span class="num">0</span><span class="word">Apps</span></div>
+      <div class="count"><span class="num">3</span><span class="word">Calendars</span><span class="plus hl">+</span></div>
+      <div class="count"><span class="num">0</span><span class="word">Cards</span></div>
+      <div class="count"><span class="num">0</span><span class="word">Following</span><span class="plus hl">+</span></div>
+      <div class="count"><span class="num">0</span><span class="word">Mail lists</span><span class="plus hl">+</span></div>
+      <div class="count"><span class="num">7</span><span class="word">People</span><span class="plus hl">+</span></div>
+      <div class="count"><span class="num">0</span><span class="word">Subscriptions</span><span class="plus hl">+</span></div>
+      <div class="count"><span class="num">1</span><span class="word">Wallets</span><span class="plus hl">+</span></div>
+    </div>
+    <div class="search">⌕ Search</div>
+    <div class="seg">By category<span>A–Z</span></div>
+    <div class="row"><span class="m">🐙</span><div><div class="n">Casberi</div><div class="s">Settings, data and notifications</div></div></div>
+    <div class="sec">Start here</div>
+    <div class="row"><span class="m">🐙</span><div class="n">Add name, photo, preferences</div></div>
+    <div class="cardstub">Agents</div>
+  </div>
+  <figcaption><b>B. A plus on each count.</b> Tap the word to see the list, or tap + to add one. Nothing moves down. Apps and Cards get no plus, because apps are added from the list below and cards come from apps. The plus is small and has to stay at least 44pt to tap.
+    <div class="path">
+      <div><span>Subscription: Sources › + › Hulu › price › Track</span><span>4</span></div>
+      <div><span>Mail list: Sources › + › sender</span><span>3</span></div>
+      <div><span>Wallet: Sources › + › address › Follow</span><span>3</span></div>
+    </div>
+  </figcaption>
+</figure>
+
+</div>

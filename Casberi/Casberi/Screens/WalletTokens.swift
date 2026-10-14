@@ -150,7 +150,7 @@ struct WalletTokensSheet: View {
     private var trimmed: String { query.trimmingCharacters(in: .whitespacesAndNewlines) }
 
     var body: some View {
-        DSTray(title: String(localized: "\(positions.count) tokens"), height: 640, detents: [.large]) {
+        DSTray(title: String(localized: "\(positions.count) tokens"), height: 640, detents: [.large], scrollsItself: true) {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 0) {
                     if trimmed.isEmpty {

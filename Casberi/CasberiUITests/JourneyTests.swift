@@ -97,7 +97,8 @@ final class JourneyTests: XCTestCase {
         w.finish()
     }
 
-    /// Track a subscription by hand, from the Feed (§1161, §1164). Hulu is in
+    /// Track a subscription by hand, from the Feed's Sources tile and the
+    /// plus on Sources' Subscriptions count (§1161, §1164, §1292). Hulu is in
     /// the catalogue's Popular group and nowhere in the demo, so it is not
     /// already tracked. Return in the tray's search picks the exact catalogue
     /// match; the price field may or may not take focus on its own, and is
@@ -105,10 +106,10 @@ final class JourneyTests: XCTestCase {
     /// reads "Tracking Hulu".
     @MainActor func testSubscription() {
         let w = Walk("subscription", launch: Walk.demo, test: self)
-        w.tap(w.el(.button, "label == %@", "Wallet"), "band Wallet")
-        // The Subscriptions panel sits under the fold; Overview's row scrolls to it.
-        w.tap(w.el(.button, "label BEGINSWITH %@", "Subscriptions."), "Subscriptions row")
-        w.tap(w.el(.button, "label == %@", "Track a subscription"), "Track a subscription")
+        w.tap(w.el(.button, "label BEGINSWITH %@", "Sources"), "Sources tile")
+        // The plus on the count, not Start here's row of the same verb (the
+        // demo has tracked plans, so that row is gone) and not the count.
+        w.tap(w.el(.button, "label == %@", "Track a subscription"), "Subscriptions plus")
         w.tap(w.el(.textField, "placeholderValue == %@", "Search, or type any name"), "tray search field")
         w.type("Hulu\n", "type Hulu, Return")
         w.focus(w.el(.textField, "placeholderValue == %@", "0"), "price field")

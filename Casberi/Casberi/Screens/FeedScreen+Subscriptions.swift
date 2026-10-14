@@ -115,6 +115,9 @@ extension FeedScreen {
         Section {
             // The tile names the list (prd §1111), so no group header; Add
             // leads, because the list is the person's to build up.
+            // Over a list with plans, the Sources count's plus is the verb
+            // (prd §1292); an empty page still leads with it.
+            if !(addOnCount && !all.isEmpty) {
             DSDoorRow(icon: "plus", title: Text(SubscriptionWords.track)) {
                 feedSheet = .subscriptionAdd
             }
@@ -122,6 +125,7 @@ extension FeedScreen {
                                       bottom: 0, trailing: DSRoomChassis.rowInset))
             .feedRowBackground()
             .listRowSeparator(.hidden)
+            }
             // Only what has a monthly cost is totalled (§83): with none, the
             // list is Add and its rows, as before.
             if reading.counted > 0 {
