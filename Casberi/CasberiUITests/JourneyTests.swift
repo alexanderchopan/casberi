@@ -563,7 +563,7 @@ final class JourneyTests: XCTestCase {
             if let broken { XCTFail("journey \(name) broke: \(broken)") }
         }
 
-        private func ready(_ e: XCUIElement, _ what: String, hittable needsHit: Bool = true) -> Bool {
+        func ready(_ e: XCUIElement, _ what: String, hittable needsHit: Bool = true) -> Bool {
             guard broken == nil else { return false }
             dismissAlerts()
             guard e.waitForExistence(timeout: 12) else {
@@ -602,7 +602,7 @@ final class JourneyTests: XCTestCase {
         /// Swipes a step may take to reach its target before it is broken.
         static let maxScrolls = 6
 
-        private func hittable(_ e: XCUIElement, within s: TimeInterval) -> Bool {
+        func hittable(_ e: XCUIElement, within s: TimeInterval) -> Bool {
             let p = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isHittable == true"), object: e)
             return XCTWaiter().wait(for: [p], timeout: s) == .completed
         }
@@ -610,7 +610,7 @@ final class JourneyTests: XCTestCase {
         /// The demo pour can raise a permission ask the runner could not
         /// pre-grant. It is the simulator's, not the journey's: dismissed,
         /// counted apart, never as a tap.
-        private func dismissAlerts() {
+        func dismissAlerts() {
             let alert = springboard.alerts.firstMatch
             guard alert.exists else { return }
             let deny = alert.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", "Allow")).firstMatch
@@ -618,7 +618,7 @@ final class JourneyTests: XCTestCase {
             alerts += 1
         }
 
-        private func fail(_ what: String, _ why: String) {
+        func fail(_ what: String, _ why: String) {
             broken = "step \(step + 1) (\(what)): \(why)"
             // The screen's tree beside its picture, so a wrong label is read,
             // not guessed (a row can be a cell, a button or a static text).
@@ -626,7 +626,7 @@ final class JourneyTests: XCTestCase {
             shoot("BROKEN-\(what)")
         }
 
-        private func shoot(_ what: String) {
+        func shoot(_ what: String) {
             step += 1
             // A sweep keeps its pictures to what it found and what broke.
             if quiet, !what.hasPrefix("ask"), !what.hasPrefix("BROKEN") { return }
@@ -644,13 +644,13 @@ final class JourneyTests: XCTestCase {
             ProcessInfo.processInfo.environment["JOURNEYS_OUT"].map { URL(fileURLWithPath: $0) }
         }
 
-        private func write(_ file: String, _ data: Data) {
+        func write(_ file: String, _ data: Data) {
             guard let dir = outDir else { return }
             try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
             try? data.write(to: dir.appendingPathComponent(file))
         }
 
-        private func append(_ file: String, _ line: String) {
+        func append(_ file: String, _ line: String) {
             guard let dir = outDir else { return }
             try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
             let url = dir.appendingPathComponent(file)

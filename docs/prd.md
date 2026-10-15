@@ -66417,3 +66417,11 @@ The share tray (docs/social-spec.md section 3) gains **Post on X**, a row beside
 ## §1307 — Casberi leads Apps only (2026-10-14, user: "when you go to cards it shows casberi again, it shouldn't show there")
 
 Amends §1231. The pinned Casberi row (Settings, data and notifications) stands at the top of Sources › Apps only. Casberi is an app, so it leads the apps; it never stands above another kind's list. Following, Mail lists and Subscriptions open their own pages (§1274) and never showed it; Cards, Calendars, People and Wallets are drawn inside Sources and all did. `SettingsHome` now draws the row inside the `.apps` arm.
+
+## §1308 — The sheet sweep: every sheet opens and closes (2026-10-14, user: "is there a way for you to test all sheets and trays to make sure they open and close properly", then "yes please add it")
+
+Every sheet, tray and cover in the app is opened on the simulator the way a person opens it and closed the two ways a person closes it, a pull down and its own control, every night (`journeys.sh sheets` from `nightly-mac.sh`). "Closed" means the sheet is gone, the app still runs and the screen under it takes a touch. A step pushed inside a sheet (§1238) closes the whole sheet on a pull and goes back one page on Back; both are checked.
+
+What counts as a sheet is read off the code, not remembered: `scripts/sheet-sweep-audit.py` lists every presentation site and every case of a router enum, and fails verify when one has no entry in `scripts/sheet-sweep.json` and no exempt row saying why it cannot be walked. A sheet that will not open or close files an issue (`sheet-<id>`); one that comes back clean closes it.
+
+Exempt rows name a reason a reader can check: off the phone, no simulator path (composers, the camera, a peer's pairing), dead code, or the demo not carrying what raises it. Four say NOT WALKED YET, and stay open until walked.

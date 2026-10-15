@@ -190,6 +190,33 @@ else
   print -r -- "catalogue: no report — read /tmp/nightly-catalog.log"
 fi
 
+# THE SHEET SWEEP (prd §1308): every sheet, tray and cover in
+# `scripts/sheet-sweep.json` opened, pulled down, and closed by its own
+# control. A sheet that will not open or will not close is a bug a person
+# meets, so it FILES, keyed `sheet-<id>`, the row's note as its body; a row
+# that comes back clean closes its issue. Complete only when every entry
+# reported, so a run a crash cut short closes nothing.
+"$ROOT/scripts/journeys.sh" sheets > /tmp/nightly-sheets.log 2>&1
+SHEETS_DIR=$(print -l -- "$ROOT"/scripts/output/journeys-*(/om[1]N) 2>/dev/null)
+if [[ -n "$SHEETS_DIR" && -f "$SHEETS_DIR/sheets.tsv" ]]; then
+  [[ -f "$SHEETS_DIR/sheets-report.txt" ]] && print -r -- "sheets:" && sed 's/^/  /' "$SHEETS_DIR/sheets-report.txt"
+  typeset -a SFIND
+  SSEEN=0
+  SHEETS_TOTAL=$(python3 -c 'import json,sys; print(len(json.load(open(sys.argv[1]))["entries"]))' "$ROOT/scripts/sheet-sweep.json")
+  while IFS=$'\t' read -r sid sopen sswipe scontrol ssec snote; do
+    [[ -z "$sid" ]] && continue
+    (( SSEEN++ ))
+    [[ "$sopen" != fail && "$sswipe" != fail && "$scontrol" != fail ]] && continue
+    SFIND+=(--finding "sheet-$sid" "Sheet \"$sid\" did not open or close: $snote" "The sheet sweep met \`$sid\` on the Mac nightly at $TS on \`$SHA\`: opened=$sopen, pull down=$sswipe, control=$scontrol. $snote
+
+Its screenshots and the tree as it opened: \`${SHEETS_DIR#$ROOT/}/sheet-$sid-*\`. A renamed anchor breaks an entry the same way a stuck sheet would; read the picture first. Re-run with \`JOURNEYS_SHEETS=$sid scripts/journeys.sh sheets\`.")
+  done < "$SHEETS_DIR/sheets.tsv"
+  SCOMPLETE=(); (( SSEEN == SHEETS_TOTAL )) && SCOMPLETE=(--complete)
+  python3 "$ROOT/scripts/file-findings.py" --source sheets --sha "$SHA" $SCOMPLETE "${SFIND[@]}"
+else
+  print -r -- "sheets: no results — read /tmp/nightly-sheets.log"
+fi
+
 # Prune: keep the most recent $KEEP mac-* dirs, drop the rest. Journeys keep
 # as many nights: each holds a screenshot per step.
 print -l -- "$ROOT"/scripts/output/mac-*(/om) 2>/dev/null | tail -n +$((KEEP + 1)) | while read -r old; do

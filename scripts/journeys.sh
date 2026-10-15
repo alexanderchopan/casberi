@@ -14,7 +14,10 @@
 # Usage: scripts/journeys.sh [journey ...]     e.g. scripts/journeys.sh find note
 #   No names: every journey. A name is a test method without `test`, lowercased:
 #   bluesky, connect, find, github, maillist, note, share, site, spending,
-#   stoptracking, stripe, subscription, wallet, x.
+#   stoptracking, stripe, subscription, wallet, x. Two sweeps are opt-in:
+#   `catalog` (every app's first step, prd §1306) and `sheets` (every sheet,
+#   tray and cover opened and closed, prd §1308; JOURNEYS_SHEETS="id,id"
+#   narrows it to those entries of scripts/sheet-sweep.json).
 # Output: scripts/output/journeys-<ts>/ — results.tsv, xcodebuild.log, and one
 #   screenshot per step (<journey>-<n>-<step>.png), the before shots a proposal
 #   is drawn against.
@@ -42,7 +45,12 @@ if (( $# == 0 )); then
   ONLY=(-only-testing:CasberiUITests/JourneyTests -skip-testing:CasberiUITests/JourneyTests/testCatalog)
 else
   for j in "$@"; do
-    [[ -n "${METHOD[$j]-}" ]] || { print -P "%F{red}✗ no journey \"$j\" (${(k)METHOD})%f"; exit 2; }
+    # The sheet sweep is its own test class (`SheetSweepTests`).
+    if [[ "$j" == sheets ]]; then
+      ONLY+=(-only-testing:CasberiUITests/SheetSweepTests/testSheets)
+      continue
+    fi
+    [[ -n "${METHOD[$j]-}" ]] || { print -P "%F{red}✗ no journey \"$j\" (${(k)METHOD} sheets)%f"; exit 2; }
     ONLY+=(-only-testing:CasberiUITests/JourneyTests/${METHOD[$j]})
   done
 fi
@@ -80,12 +88,22 @@ if [[ -n "${JOURNEYS_APPS:-}" ]]; then
   print -l -- ${(s:,:)JOURNEYS_APPS} > "$CATALOG"
 fi
 
-TEST_RUNNER_JOURNEYS_OUT="$OUT" TEST_RUNNER_JOURNEYS_CATALOG="$CATALOG" "$ROOT/scripts/xcb.sh" \
+TEST_RUNNER_JOURNEYS_OUT="$OUT" TEST_RUNNER_JOURNEYS_CATALOG="$CATALOG" \
+TEST_RUNNER_JOURNEYS_SHEETS="$ROOT/scripts/sheet-sweep.json" TEST_RUNNER_JOURNEYS_SHEET_IDS="${JOURNEYS_SHEETS:-}" \
+"$ROOT/scripts/xcb.sh" \
   -project "$ROOT/Casberi/Casberi.xcodeproj" -scheme Casberi \
   -destination "id=$DEVICE_ID" -derivedDataPath "$HOME/Library/Developer/CasberiDD" \
   "${ONLY[@]}" test > "$OUT/xcodebuild.log" 2>&1
 TEST_STATUS=$?
 (( TEST_STATUS != 0 )) && print -P "%F{yellow}⚠ xcodebuild exited $TEST_STATUS — a broken journey does that; the report says which%f"
+
+# The sheet sweep reports apart: one row per sheet, ✗ for one that did not
+# open or did not close (prd §1308).
+if [[ -f "$OUT/sheets.tsv" ]]; then
+  python3 "$ROOT/scripts/sheet-sweep-report.py" "$OUT/sheets.tsv" "$ROOT/scripts/sheet-sweep.json" \
+    "${JOURNEYS_SHEETS:-}" | tee "$OUT/sheets-report.txt"
+  [[ -f "$OUT/results.tsv" || -f "$OUT/catalog.tsv" ]] || { print -P "%F{green}✓ sheet report: $OUT/sheets-report.txt%f"; exit 0; }
+fi
 
 # The sweep reports apart: one row per app, flagged over the target or with
 # no first step found (prd §1306).

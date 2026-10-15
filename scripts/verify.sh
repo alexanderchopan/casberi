@@ -674,6 +674,17 @@ step "Ask-and-remove audit"
 "$ROOT/scripts/ask-and-remove-audit.py" || fail "a connect page no longer focuses its ask, or an added row lost its hold menu — see the output above"
 print -P "%F{green}✓ ask-and-remove audit%f"
 
+# Sheet-sweep audit (prd §1308): every `.sheet`, `.fullScreenCover`,
+# `.dsOneSheet` and router case in the code has an entry in
+# `scripts/sheet-sweep.json` (which the nightly's sheet sweep opens and
+# closes on the simulator) or an exempt row saying why, and the manifest names
+# no sheet that has moved. A sheet added with neither is never swept.
+step "Sheet-sweep audit"
+"$ROOT/scripts/sheet-sweep-audit.py" --self-test >/dev/null \
+  || fail "the sheet-sweep audit's own self-test failed — the check is broken, not the code"
+"$ROOT/scripts/sheet-sweep-audit.py" || fail "a sheet is missing from the sheet sweep, or the sweep names one that moved — see the output above"
+print -P "%F{green}✓ sheet-sweep audit%f"
+
 # Every screen has a way back (way-back-audit.py). A full-screen cover cannot
 # be swiped away, so its view carries a close control on every branch — the
 # thing sheet's photo zoom drew an EMPTY cover once its row was deleted under

@@ -75,9 +75,9 @@ deliberately does not check are in `docs/verify.md`.
 - **verify.sh runs verify-mac.sh IN PARALLEL and gates on it (user rule, 2026-08-21 — the split was discovered, not chosen)** → docs/verify.md
 - **Mac parity audit (scripts/mac-parity-audit.py)** → docs/verify.md
 - **Account-detail sheet gate (verify-mac.sh step 2d, 2026-09-21) — a Catalyst sheet does NOT inherit the presenter's environment, and the shipped Mac build died on every Accounts → Settings row that raises one** → docs/verify.md · prd §872
-- **The two verify scripts each ran checks the other didn't, and both are now provably complete** → docs/verify.md
+- **Both verify scripts are provably complete** → docs/verify.md
 - **The pure-logic harnesses run at once, and an unchanged one is not re-run (PERF, 2026-08-19). Full green passes: 32.8min → 15.2min → 3.6min** → docs/verify.md
-- **The pass ran every harness TWICE for eleven days (PERF, 2026-09-01). Measured 08-31: 38–57min green, 154 and 161min for two overlapping sessions, against the 3.6min above** → docs/verify.md
+- **The pass ran every harness TWICE for eleven days (PERF, 2026-09-01)** → docs/verify.md
 
 - **The pass was mostly IDLE CORES — time every step before optimising it (PERF)** → docs/verify.md · prd §612
 
@@ -92,6 +92,7 @@ deliberately does not check are in `docs/verify.md`.
 - **One chain may not empty every wallet's balances, and a wallet we could not reach stands on its LAST READING, stamped (prd §825) — the room showed a Privy app wallet's stored figure and none of the person's own.** → docs/hooks/wallet.md · prd §825
 - **The address book's delight pass** → docs/hooks/wallet.md · prd §441
 - **Address-book shape self-test (scripts/address-book-selftest.sh)** → docs/verify.md · prd §440
+- **Sheet sweep (`journeys.sh sheets`, nightly): every sheet opened and closed; `sheet-sweep-audit.py` fails one missing from `sheet-sweep.json`** → docs/verify.md · prd §1308
 - **SwiftData liveness audit (scripts/swiftdata-liveness-audit.py)** → docs/verify.md
 - **Info.plist strings audit (scripts/infoplist-strings-audit.py, ITMS-90738)** → docs/verify.md
 - **Keychain policy audit (scripts/keychain-audit.py)** → docs/verify.md · prd §277
