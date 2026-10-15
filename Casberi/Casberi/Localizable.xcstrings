@@ -617,6 +617,34 @@
         }
       }
     },
+    "%@ and remove what it brought in" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ y quitar lo que trajo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@、取り込んだものも削除"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 및 가져온 항목 삭제"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@并移除带来的内容"
+          }
+        }
+      }
+    },
     "%@ Fee Juice" : {
       "localizations" : {
         "es" : {

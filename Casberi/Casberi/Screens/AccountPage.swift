@@ -206,6 +206,15 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
             // gives it somewhere to go.
     }
 
+    /// One ask per opening of the page (prd §1302).
+    @State private var askFocus = DSAskFocus()
+
+    /// The act asks for something typed: a key, or a name with no account.
+    private var asksForField: Bool {
+        guard !state.connected || state.needsReconnecting else { return false }
+        return mode == .pasteKey || mode == .noAccount
+    }
+
     private var doorUp: Bool {
         if case .web = sheet { return true }
         return false
@@ -505,6 +514,9 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
         VStack(alignment: .leading, spacing: 0) {
             act()
         }
+        // THE PAGE'S ONE ASK TAKES THE KEYBOARD (prd §1302): not connected,
+        // and a key or a name is what it asks for.
+        .environment(\.dsAskFocus, asksForField ? askFocus : nil)
         // EVERY DOOR IN THE ACT OPENS BESIDE THE PAGE (prd §653). A slab that
         // carries its `url:` opens it through this environment, so a "Get
         // your API key" lands as the in-app Safari sheet — half or full

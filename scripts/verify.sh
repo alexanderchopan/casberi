@@ -664,6 +664,16 @@ step "Catalog mode audit"
 "$ROOT/scripts/catalog-mode-audit.py" || fail "a seat's catalogue verb and its setup screen's mode disagree — see the output above"
 print -P "%F{green}✓ catalog mode audit%f"
 
+# Ask-and-remove audit (prd §1302): a connect page's one ask (a key, a name)
+# takes the keyboard as the page opens, through `AccountPage` and
+# `DSSlabField` (never on a Sign in page), and every subscription, mail list
+# and followed row in the Feed's and Wallet's lists removes from a hold.
+step "Ask-and-remove audit"
+"$ROOT/scripts/ask-and-remove-audit.py" --self-test >/dev/null \
+  || fail "the ask-and-remove audit's own self-test failed — the check is broken, not the code"
+"$ROOT/scripts/ask-and-remove-audit.py" || fail "a connect page no longer focuses its ask, or an added row lost its hold menu — see the output above"
+print -P "%F{green}✓ ask-and-remove audit%f"
+
 # Every screen has a way back (way-back-audit.py). A full-screen cover cannot
 # be swiped away, so its view carries a close control on every branch — the
 # thing sheet's photo zoom drew an EMPTY cover once its row was deleted under

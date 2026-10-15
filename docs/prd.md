@@ -66365,3 +66365,11 @@ The share tray (docs/social-spec.md section 3) gains **Post on X**, a row beside
 **Measured** (journeys, from a clean copy of main plus these files): stripe 4 taps → 2, bluesky 4 → 2, stoptracking 5 → 4 (Sources › Subscriptions › hold › Stop tracking; reaching the list from Sources is two). The walk gains `hold` (a press, counted as a tap).
 
 **Amends** design law's "writes live in the sheet, with consent" for this one write: a menu chosen from a hold is the consent, as Notes' delete is (§983).
+
+## §1302 — Two rules from the journeys: a connect page's one ask takes the keyboard, and what you added goes from a hold on its row (amends §1301) (user, 2026-10-14: "so what did we do here today? chose journeys and got the number of steps down? but only specific ones, not sort of a rule or remplate for others?", then "yes" to making them rules)
+
+1. **A connect page's one ask takes the keyboard.** `AccountPage` hands a `DSAskFocus` to its act while the app is not connected (or needs reconnecting) and its mode is `.pasteKey` or `.noAccount`; the first `DSSlabField` to appear claims it and focuses. Never on `.signIn` (GitHub with its code flow, X), where a keyboard would hide the Sign in tile. Return submits every slab field already, so the keyboard's Go is the field's button. 32 pages take it from the template; §1301's two per-screen versions (Stripe, the handle pages) are deleted for it.
+2. **What you added to a list goes from a hold on its row**: a plan tracked by hand and a mail list you added (§1301), and now what you follow (`stopFollowingMenu` on Following's rows). Where stopping also removes what it brought in (`FollowingReading.prunes`), the menu asks once more inside itself, since that cannot be taken back. Not yet: the wallets list in Sources (another change was in that file).
+3. **Guarded** by `scripts/ask-and-remove-audit.py` (in `verify.sh`, 8 mutations): the field claims the ask, the page hands it only to the two modes, and every `WalletSubscriptionRow`, `MailSubscriptionRow` and `FollowingRow` in a `FeedScreen*.swift` carries its hold menu.
+
+**Measured** from a clean copy of main plus these files: stripe 2 taps (1 swipe, was 2), bluesky 2, github 3 and x 3 with no keyboard over Sign in. The first journey after a fresh install can miss a row that is on screen (seen once on bluesky, passing on a rerun).

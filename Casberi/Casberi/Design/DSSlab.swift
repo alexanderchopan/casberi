@@ -249,6 +249,9 @@ struct DSSlabField: View {
     /// placeholder's second line sits below the field's one, and a tap there
     /// still has to put the caret in (prd §1027).
     @FocusState private var ownFocus: Bool
+    /// The page's one ask (prd §1302): the first field to appear under it
+    /// takes the keyboard.
+    @Environment(\.dsAskFocus) private var askFocus
 
     private var armed: Bool {
         if let isArmed { return isArmed }
@@ -258,7 +261,10 @@ struct DSSlabField: View {
     private var hasText: Bool { !text.isEmpty }
 
     var body: some View {
-        if accountAct { actRow } else { slab }
+        Group {
+            if accountAct { actRow } else { slab }
+        }
+        .onAppear(perform: claimAsk)
     }
 
     /// THE ENTRY ROW (prd §640) — the field itself, keeping its placeholder,
@@ -411,6 +417,14 @@ struct DSSlabField: View {
         if let focus { focus.wrappedValue = true } else { ownFocus = true }
     }
 
+    /// Claims the page's ask once, on the first field to appear (prd §1302).
+    /// A beat later, so the page has settled and the focus holds.
+    private func claimAsk() {
+        guard let askFocus, !askFocus.claimed else { return }
+        askFocus.claimed = true
+        DispatchQueue.main.async { focusField() }
+    }
+
     private func pasteButton(_ paste: @escaping (String) -> Void) -> some View {
         PasteButton(payloadType: String.self) { strings in
             guard let pasted = strings.first?
@@ -449,13 +463,9 @@ struct DSSlabField: View {
                     .foregroundStyle(DS.textTertiary)
                     .accessibilityHidden(true)
             }
-            Group {
-                if let focus {
-                    field().focused(focus)
-                } else {
-                    field()
-                }
-            }
+            // Its own focus when none is passed, so the page's ask can reach
+            // it (prd §1302).
+            withFocus(field())
             if busy { ProgressView().controlSize(.small) }
             if let paste, !hasText { pasteButton(paste) }
             if clearable, hasText { clearButton }

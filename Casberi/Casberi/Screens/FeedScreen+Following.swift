@@ -80,6 +80,7 @@ extension FeedScreen {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(RowPress())
+                .contextMenu { stopFollowingMenu(item, room) }
                 .dsHover()
                 .listRowInsets(EdgeInsets(top: Self.rowAir, leading: DSRoomChassis.rowInset,
                                           bottom: Self.rowAir, trailing: DSRoomChassis.rowInset))
@@ -127,5 +128,38 @@ extension FeedScreen {
             feedSheet = .following(item.id, room)
         }
         #endif
+    }
+}
+
+// MARK: - Stop following from the row (prd §1302)
+
+extension FeedScreen {
+    /// What you follow stops from its row's hold, as a plan you track does
+    /// (§1301): one choice in the menu. Where stopping also takes what it
+    /// brought in (`FollowingReading.prunes`), the menu asks once more inside
+    /// itself, since that removal cannot be taken back.
+    @ViewBuilder
+    func stopFollowingMenu(_ item: Following.Item, _ room: Following.Room) -> some View {
+        if item.removable {
+            if FollowingReading.prunes(item.seat) {
+                Menu {
+                    Button(role: .destructive) { stopFollowing(item, room) } label: {
+                        Text("\(room.stopWord) and remove what it brought in")
+                    }
+                } label: {
+                    Label(room.stopWord, systemImage: "trash")
+                }
+            } else {
+                Button(role: .destructive) { stopFollowing(item, room) } label: {
+                    Label(room.stopWord, systemImage: "trash")
+                }
+            }
+        }
+    }
+
+    private func stopFollowing(_ item: Following.Item, _ room: Following.Room) {
+        FollowingReading.shared.stop(item, context: modelContext)
+        FollowingReading.shared.refresh(room, context: modelContext)
+        chrome.flash(String(localized: "Stopped following \(item.name)"))
     }
 }
