@@ -70,10 +70,10 @@ struct SocialFollowSheet: View {
                           text: $query, focus: $fieldFocused, searching: searching)
     }
 
+    /// Before you type: the people near you, or nothing (user, 2026-10-14:
+    /// "remove the bluesky thing" — the line naming Bluesky's replies).
     @ViewBuilder private var before: some View {
-        if near.isEmpty {
-            footnote
-        } else {
+        if !near.isEmpty {
             DSTrayGroup(String(localized: "Near you"), glyph: "person.2") {
                 ForEach(near) { person in row(person) }
             }
@@ -162,10 +162,8 @@ struct SocialFollowSheet: View {
     }
 
     private var footnote: some View {
-        let text: Text = if DemoMode.isActive && !trimmed.isEmpty {
+        let text: Text = if DemoMode.isActive {
             Text("Search works once you leave the demo.")
-        } else if trimmed.isEmpty {
-            Text("People who reply to you on Bluesky show here.")
         } else {
             Text("Nobody by that name on Bluesky.")
         }

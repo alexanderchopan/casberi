@@ -93,14 +93,14 @@ extension FeedScreen {
     /// The tray a room's verb raises. Reading's is its Follow tray, which
     /// lands the person back on the list it added to.
     @ViewBuilder
-    func followingAddTray(_ room: Following.Room) -> some View {
+    func followingAddTray(_ room: Following.Room, seat: String? = nil) -> some View {
         switch room {
         case .reading:
             ReadingFindSheet()
         case .media:
-            FollowTrackTray(room: .media)
+            FollowTrackTray(room: .media, seat: seat)
         case .work:
-            FollowTrackTray(room: .work) {
+            FollowTrackTray(room: .work, seat: seat) {
                 // GitHub keeps its own tray (§1030): one sheet at a time.
                 Task { @MainActor in
                     try? await Task.sleep(for: .milliseconds(450))

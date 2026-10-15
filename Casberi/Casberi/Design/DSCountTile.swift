@@ -32,6 +32,9 @@ struct DSCountTile: View {
     /// kind's verb ("Track a subscription"), said to VoiceOver and the tests.
     var add: (() -> Void)? = nil
     var addLabel: String? = nil
+    /// A plus that lists its kind's apps (prd §1300), as a Feed section's
+    /// does: a menu of rows, each its app over what it follows.
+    var addMenu: [SectionAdd] = []
     let action: () -> Void
 
     /// How far the plus's 44pt target reaches over the tile (prd §1292):
@@ -69,7 +72,7 @@ struct DSCountTile: View {
     @Environment(\.dsCountCellHeight) private var cellHeight
 
     var body: some View {
-        if inline, let add {
+        if inline, add != nil || !addMenu.isEmpty {
             // Two buttons side by side, never one inside the other: the
             // word opens the list, the plus adds to it.
             // The plus is a full 44pt target that overlaps the tile's last
@@ -77,20 +80,35 @@ struct DSCountTile: View {
             // the word keeps its room (prd §1292).
             HStack(spacing: -Self.plusOverlap) {
                 tile
-                Button(action: add) {
-                    Image(systemName: "plus")
-                        .dsGlyph(.body, weight: .regular)
-                        // Pink, as every verb row's plus is (prd §1265).
-                        .foregroundStyle(DS.brandInk)
-                        .frame(width: DS.Hit.min, height: max(cellHeight ?? DS.Hit.min, DS.Hit.min))
-                        .contentShape(Rectangle())
+                if addMenu.isEmpty, let add {
+                    Button(action: add) { plus }
+                        .buttonStyle(PressSpring())
+                        .accessibilityLabel(Text(addLabel ?? label))
+                } else {
+                    Menu {
+                        ForEach(addMenu) { add in
+                            if add.apart { Divider() }
+                            Button { add.act() } label: {
+                                Text(verbatim: add.label)
+                                if let detail = add.detail { Text(verbatim: detail) }
+                            }
+                        }
+                    } label: { plus }
+                    .accessibilityLabel(Text(addLabel ?? label))
                 }
-                .buttonStyle(PressSpring())
-                .accessibilityLabel(Text(addLabel ?? label))
             }
         } else {
             tile
         }
+    }
+
+    private var plus: some View {
+        Image(systemName: "plus")
+            .dsGlyph(.body, weight: .regular)
+            // Pink, as every verb row's plus is (prd §1265).
+            .foregroundStyle(DS.brandInk)
+            .frame(width: DS.Hit.min, height: max(cellHeight ?? DS.Hit.min, DS.Hit.min))
+            .contentShape(Rectangle())
     }
 
     @ViewBuilder private var tile: some View {

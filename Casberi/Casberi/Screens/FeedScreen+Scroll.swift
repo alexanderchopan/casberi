@@ -591,7 +591,11 @@ struct SectionPanelName<Trailing: View>: View {
             } else if !adds.isEmpty {
                 Menu {
                     ForEach(adds) { add in
-                        Button(add.label) { add.act() }
+                        if add.apart { Divider() }
+                        Button { add.act() } label: {
+                            Text(verbatim: add.label)
+                            if let detail = add.detail { Text(verbatim: detail) }
+                        }
                     }
                 } label: { plus }
                 .accessibilityLabel(Text("Add to \(name)"))
@@ -622,6 +626,10 @@ extension SectionPanelName {
 struct SectionAdd: Identifiable {
     var id: String { label }
     let label: String
+    /// What the row follows, under its name in the menu (prd §1300).
+    var detail: String? = nil
+    /// Set apart from the rows above it by a divider.
+    var apart = false
     let act: () -> Void
 }
 
@@ -657,29 +665,71 @@ extension FeedScreen {
 }
 
 extension FeedScreen {
-    /// What a Feed section's + adds (prd §1293), each the act its category's
-    /// own screen and its Sources count run: a mail list in Life (once a mail
-    /// app reads mail, as the Sources plus), a site or a channel in Media,
-    /// something in Work, someone in Social. A category with no add draws
-    /// no +.
+    /// What a Feed section's + adds (prd §1293): since prd §1300 every
+    /// catalogue app in the category that follows something by name
+    /// (`FollowByName`), A–Z, connected or not; Social ends with the rest of
+    /// its apps. A category with no such app draws no +.
     func sectionAdds(_ category: String) -> [SectionAdd] {
-        switch category {
-        case RoomAccounts.lifeRoom:
-            let hasMail = bridges.bridges.contains {
-                SettingsHome.mailApps.contains($0.name) && $0.status != .paused
-            }
-            return hasMail ? [SectionAdd(label: SubscriptionWords.track) { feedSheet = .mailSubscriptionAdd }] : []
-        case RoomAccounts.mediaRoom:
-            return [SectionAdd(label: Following.Room.reading.verb) { feedSheet = .followingAdd(.reading) },
-                    SectionAdd(label: Following.Room.media.verb) { feedSheet = .followingAdd(.media) }]
-        case RoomAccounts.workRoom:
-            return [SectionAdd(label: Following.Room.work.verb) { feedSheet = .followingAdd(.work) }]
-        case RoomAccounts.socialRoom:
-            return [SectionAdd(label: String(localized: "Follow someone")) { feedSheet = .socialFollow }]
-        default:
-            return []
+        var adds = FollowByName.doors(in: category).map { door in
+            SectionAdd(label: door.app, detail: door.what) { followByName(door.app) }
+        }
+        // MORE SOCIAL APPS (prd §1300, user: "we don't or ever will have that
+        // many bluesky users"): X, Instagram and TikTok follow nobody by
+        // name, so the + ends on Sources' Social card, where they connect.
+        if category == RoomAccounts.socialRoom {
+            adds.append(SectionAdd(label: String(localized: "More social apps"), apart: true) {
+                route.openCategory = RoomAccounts.socialRoom
+                route.present(.apps)
+            })
+        }
+        return adds
+    }
+
+    /// What one of the + rows opens (prd §1300): the tray that app's follow
+    /// already runs, on that app; an app that needs an account it doesn't
+    /// have yet, or whose follow lives on its own page, opens its page.
+    func followByName(_ app: String) {
+        let connected = connectedSeatNames.contains(app)
+        switch FollowByName.landing(for: app) {
+        case .socialFollow:    feedSheet = .socialFollow
+        case .reading:         feedSheet = .followingAdd(.reading)
+        case .calendar:        feedSheet = .calendarSubscribe
+        case .track(let room): feedSheet = .followingAdd(room, seat: app)
+        case .github:
+            if connected { feedSheet = .followingAdd(.work, seat: app) } else { watchOnGitHub() }
+        case .mail:
+            if connected { feedSheet = .mailSubscriptionAdd } else { openAppPage(app) }
+        case .page:            openAppPage(app)
         }
     }
+
+    private func openAppPage(_ app: String) {
+        if let destination = BridgeRouter.destination(forOffer: app) { route.openAccount(destination) }
+    }
+
+    #if DEBUG
+    /// `-sectionAdd "<Category>[|<App>]"` — log what every Feed section's +
+    /// lists (`sectionAdd| <Category> | <App> — <what>, …`), then take the
+    /// named row of that category's +, because a moving list eats a
+    /// simulator tap (prd §1300). Once per launch.
+    func sectionAddProbe() {
+        guard source == "All", !Self.sectionAddProbed,
+              let raw = UserDefaults.standard.string(forKey: "sectionAdd") else { return }
+        Self.sectionAddProbed = true
+        for category in CategoryOrder.current {
+            let adds = sectionAdds(category)
+            NSLog("[Casberi] sectionAdd| %@ | %@", category,
+                  adds.map { $0.label + ($0.detail.map { " — " + $0 } ?? "") }.joined(separator: ", "))
+        }
+        let parts = raw.split(separator: "|", maxSplits: 1).map(String.init)
+        guard parts.count == 2, let add = sectionAdds(parts[0]).first(where: { $0.label == parts[1] }) else { return }
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(2))
+            NSLog("[Casberi] sectionAdd: %@ → %@", parts[0], parts[1])
+            add.act()
+        }
+    }
+    #endif
 }
 
 extension SectionPanelName where Trailing == EmptyView {

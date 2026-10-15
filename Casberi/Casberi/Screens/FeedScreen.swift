@@ -934,6 +934,7 @@ struct FeedScreen: View {
     @MainActor static var marketsProbed = false
     @MainActor static var notesProbed = false
     @MainActor static var socialProbed = false
+    @MainActor static var sectionAddProbed = false
     @MainActor static var walletFollowProbed = false
     @MainActor static var subscriptionsProbed = false
     @MainActor static var mailSubscriptionProbed = false
@@ -1555,7 +1556,12 @@ struct FeedScreen: View {
             .onChange(of: chrome.walletScope) { _, _ in returnToRoomTop(proxy) }
             // THE TRAY JUMPS (prd §1208 item 6): a category asked for scrolls
             // the Feed to its section, opened if it was folded.
-            .onAppear { settleFeedJump(proxy) }
+            .onAppear {
+                settleFeedJump(proxy)
+                #if DEBUG
+                sectionAddProbe()
+                #endif
+            }
             .onChange(of: chrome.feedJump) { _, _ in settleFeedJump(proxy) }
             // The face pressed on the Feed (prd §1280): back to its top.
             .onChange(of: chrome.feedTop) { _, _ in

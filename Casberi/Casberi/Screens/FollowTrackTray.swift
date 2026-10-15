@@ -6,8 +6,9 @@ import SwiftData
 /// it joins the list the tray closes onto. Each app follows through the add
 /// and the read its own page already has (`HandleBridge`, `PackageStore`,
 /// `HuggingFaceStore`, `RadicleStore`), so the page and the tray never
-/// disagree about what a follow is. GitHub keeps its own tray (§1030),
-/// which can resolve a repo with the account's token.
+/// disagree about what a follow is. GitHub follows a person or a repo here
+/// too once it is connected (`GitHubWatchAdd`, prd §1300), the same verb its
+/// own tray (§1030) runs; before that its chip opens GitHub's page.
 ///
 /// The field sits at the bottom on glass, where the thumb is (prd §752).
 /// Optional environment only (prd §872).
@@ -40,7 +41,7 @@ struct FollowTrackTray: View {
             case .youtube:     String(localized: "@handle or channel link")
             case .podcasts:    String(localized: "Search a show")
             case .pinterest:   String(localized: "A username or board link")
-            case .github:      String(localized: "owner/repo or a person")
+            case .github:      String(localized: "A person or owner/repo")
             case .npm:         String(localized: "A package on npm")
             case .pypi:        String(localized: "A package on PyPI")
             case .huggingFace: String(localized: "An author on Hugging Face")
@@ -50,7 +51,8 @@ struct FollowTrackTray: View {
     }
 
     let room: Following.Room
-    /// GitHub's own tray, raised by the room once this one has closed.
+    /// GitHub's connect, raised by the room once this one has closed, while
+    /// GitHub is not connected.
     var onGitHub: (() -> Void)? = nil
     /// After a follow landed and the tray closed: Apps takes the person to
     /// the room that now lists it (prd §1119); a room is already there.
@@ -62,6 +64,8 @@ struct FollowTrackTray: View {
     @Environment(BridgeStore.self) private var store: BridgeStore?
 
     @State private var target: Target
+    /// Whether a door picked the app; otherwise a connected GitHub leads.
+    private let seatPicked: Bool
     @State private var query = ""
     @State private var hits: [UserSearch.Hit] = []
     @State private var busy = false
@@ -79,6 +83,7 @@ struct FollowTrackTray: View {
         self.onGitHub = onGitHub
         self.onTracked = onTracked
         let picked = seat.flatMap(Target.init(rawValue:)).flatMap { Target.of(room).contains($0) ? $0 : nil }
+        self.seatPicked = picked != nil
         _target = State(initialValue: picked ?? Target.of(room).first(where: { $0 != .github }) ?? .youtube)
     }
 
@@ -107,6 +112,7 @@ struct FollowTrackTray: View {
         }
         .onAppear {
             if let initialQuery, query.isEmpty { query = initialQuery }
+            if !seatPicked, githubConnected, Target.of(room).contains(.github) { target = .github }
             fieldFocused = true
         }
         .task(id: target == .podcasts ? query : "") {
@@ -123,11 +129,12 @@ struct FollowTrackTray: View {
     private var picker: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: DS.Space.s2) {
-                // GitHub's chip only where GitHub's own tray can be raised:
-                // from Apps there is none, and the chip did nothing.
-                ForEach(Target.of(room).filter { $0 != .github || onGitHub != nil }) { t in
+                // GitHub follows here once connected (prd §1300); before
+                // that its chip opens GitHub's page, and where the room can't
+                // raise it (Apps) the chip is not drawn, as it would do nothing.
+                ForEach(Target.of(room).filter { $0 != .github || githubConnected || onGitHub != nil }) { t in
                     Button {
-                        if t == .github, let onGitHub {
+                        if t == .github, !githubConnected, let onGitHub {
                             dismiss()
                             onGitHub()
                             return
@@ -163,6 +170,12 @@ struct FollowTrackTray: View {
         }
         .frame(minHeight: 60)
         .padding(.horizontal, DS.Space.s4)
+    }
+
+    /// GitHub follows with the account's key, so its chip follows here only
+    /// once GitHub is connected.
+    private var githubConnected: Bool {
+        store?.bridges.contains { $0.name == "GitHub" && $0.status != .paused } ?? false
     }
 
     // MARK: - Tracking
@@ -217,6 +230,19 @@ struct FollowTrackTray: View {
             store?.registerConnected(id: "huggingface", name: "Hugging Face", proof: String(localized: "Synced just now"),
                                      can: ["Reads new models, datasets and Spaces from the authors you follow.",
                                            "Read-only — never publishes, stars, or downloads weights."])
+        } else if target == .github {
+            // The verb GitHub's own tray runs (§1030): a person, or a repo.
+            guard let outcome = await GitHubWatchAdd.watch(raw, context: modelContext) else {
+                failure = String(localized: "Connect GitHub first.")
+                return
+            }
+            guard outcome.added else {
+                if case .failed(let words) = outcome.proof { failure = words }
+                return
+            }
+            name = outcome.name ?? raw
+            GitHubWatchStore.shared.refresh(context: modelContext)
+            added = await TokenIngest.refresh(.github, context: modelContext)
         } else if target == .radicle {
             guard let rid = RadicleWire.normalizeRID(raw) else {
                 failure = String(localized: "That isn't a Radicle repo id.")

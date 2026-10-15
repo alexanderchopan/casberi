@@ -67,7 +67,7 @@ extension FeedScreen {
         case following(String, Following.Room)
         /// A room's verb for what you follow: Reading's Follow tray, Media's
         /// track tray, Work's watch tray (prd §1118).
-        case followingAdd(Following.Room)
+        case followingAdd(Following.Room, seat: String? = nil)
         /// Subscribe to a calendar, from an empty Coming up (prd §1137).
         case calendarSubscribe
         /// Social's Follow (prd §1086).
@@ -104,7 +104,7 @@ extension FeedScreen {
             case .socialFaces: "socialFaces"
             case .watchAdd: "watchAdd"
             case .following(let id, let room): "following:\(room.rawValue):\(id)"
-            case .followingAdd(let room): "followingAdd:\(room.rawValue)"
+            case .followingAdd(let room, let seat): "followingAdd:\(room.rawValue):\(seat ?? "")"
             case .calendarSubscribe: "calendarSubscribe"
             case .socialFollow: "socialFollow"
             case .walletFollow: "walletFollow"
@@ -331,8 +331,8 @@ extension FeedScreen {
             }
         case .following(let id, let room):
             FollowingSheet(id: id, room: room)
-        case .followingAdd(let room):
-            followingAddTray(room)
+        case .followingAdd(let room, let seat):
+            followingAddTray(room, seat: seat)
         case .calendarSubscribe:
             CalendarSubscribeSheet()
         case .company(let company):

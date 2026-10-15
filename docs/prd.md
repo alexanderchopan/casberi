@@ -66335,3 +66335,23 @@ Social's and Work's Feed headers are their names and their + (§1293), no choice
 The share tray (docs/social-spec.md section 3) gains **Post on X**, a row beside Send in Messages, Send in Mail and Share…: it opens X's own public post link (`https://x.com/intent/post`, `XPostIntent`), which raises X's composer in the X app when it is installed and on x.com when not, with the card's words and its link filled in. The person presses Post there. Casberi never posts and never uses a session (the X seat stays read-only); x.com is already a declared host. The link carries words and a URL only, never a picture, so the card itself still goes through Share…. Words are cut at a word with an ellipsis so the composer never opens over 280 (a link counts 23). Guards: `CasberiTests/XPostIntentTests` (the link's parts, the cut, the whole limit without a link, nothing to say is no link); the `share` journey ends on the tray with the row in it.
 
 **Not seen:** X's composer opened (the simulator has no X app; the link opens Safari), the Mac.
+
+## §1300 — Every + lists what its apps follow by name; People adds a person (amends §1292, §1293) (user, 2026-10-14: of Social's +, "that only is for bluesky and we don't or ever will have that many bluesky users", of Work's, "it should give the person option to follow someone on github", of Media's, "a uers should be able to follow RSS, Twitch and all the other apps", "i think we need to look at each feed category plus button and make sure it does the job it is supposed to do", "should it be the list of apps a user has connected, or the ones from the catalogue that allow follows like RSS? it seems we don't have any logic for this", then "Yes, build the rule … with Social keeping Bluesky and Telegram plus More social apps"; of Sources, "rn if you click on the plus for people it opens wallet", "people is also contacts", "it should be a master contacts list somehow", "people's i guess should add contacts and a contact entry if they don't want to import"; of the follow sheet's line, "remove the bluesky thing")
+
+**The rule.** A Feed section's + lists every catalogue app in its category that follows something you name, connected or not, A–Z, each row the app over what it follows (`Model/FollowByName.swift`). A row opens the tray that app's follow already runs, on that app (`FollowByName.landing`, shared by the Feed and Sources); an app that needs an account first (GitHub, Gmail, iCloud Mail) opens its page until it is connected; an app whose follow lives on its own page (PostHog, L2BEAT, Walletbeat) opens that page. An app joins a + by one row in `FollowByName.whats`; an app that only reads your own account (X, Instagram, TikTok, Threads, Snapchat, Twitch's follows) has none.
+
+| Feed section | Its + |
+|---|---|
+| Social | Bluesky (a person), Telegram (a public channel), then More social apps → Sources › Apps landed on the Social card |
+| Work | GitHub (a person or a repo — in the tray itself once connected, §1030's verb), Hugging Face, npm, PostHog, PyPI, Radicle |
+| Media | L2BEAT, Pinterest, Podcasts, RSS, Substack, Walletbeat, YouTube |
+| Life | Calendar (by link), Gmail, iCloud Mail (a sender) |
+| Agents | none |
+
+**Sources' counts.** Each plus adds one of what it counts (§1292): Calendars, Mail lists, Subscriptions and Wallets keep theirs; Following lists Media's apps; **People is the master list** (contacts, the people behind your accounts, the wallet book) and its plus is Contacts (import) and **New contact**: a name and an email, a wallet address or a name like `vitalik.eth`, kept in `ContactBook` (an address in the wallet book, never watched), never written to the phone's Contacts (`Model/NewContact.swift`, `Screens/NewContactSheet.swift`). It opened the Wallet's Follow a wallet tray before.
+
+**Also.** A door that names a category (`route.openCategory`: Social's More social apps, the agent's empty chat) lands Sources on that card, opened, where Sources used to drop it; the category cards are list rows so the landing can reach one. The follow sheet's "People who reply to you on Bluesky show here" is deleted. `-sectionAdd "<Category>[|<App>]"` logs every section's + (`sectionAdd|`) and takes a row (DEBUG).
+
+**Guards.** `CasberiTests/FollowByNameTests`: every row is a catalogue app, stands in a Feed section and has somewhere to land; Social is Bluesky and Telegram; rows read A–Z; what New contact takes.
+
+**Seen** on the simulator: every section's + logged as the table; Work's tray on GitHub; More social apps landing on Social; People's menu and New contact's sheet. **Not seen:** New contact saving (the simulator was in the demo, which refuses), GitHub's follow with a real key, the Mac.

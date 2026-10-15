@@ -20,6 +20,8 @@ enum GitHubWatchAdd {
         var faces: [String] = []
         /// Whether a watch row was written; a failure or a repeat writes none.
         var added = false
+        /// What is followed now, in its own words (Work's tray says it).
+        var name: String? = nil
     }
 
     /// Nil when there is nothing to do: an empty paste, or no GitHub key on
@@ -34,7 +36,8 @@ enum GitHubWatchAdd {
             guard let thing = GitHubRepoWatch.add(resolved, context: context) else {
                 return Outcome(proof: .failed(String(localized: "\(resolved.fullName) is already followed.")))
             }
-            return Outcome(proof: .says(String(localized: "Following \(thing.title)")), added: true)
+            return Outcome(proof: .says(String(localized: "Following \(thing.title)")), added: true,
+                           name: thing.title)
         }
         guard let resolved = await GitHubPersonWatch.resolve(q, token: token) else {
             return Outcome(proof: .failed(String(localized: "No such account on GitHub — a username, or a link to a profile.")))
@@ -43,7 +46,7 @@ enum GitHubWatchAdd {
             return Outcome(proof: .failed(String(localized: "\(resolved.login) is already followed.")))
         }
         return Outcome(proof: .says(String(localized: "Following \(thing.title)")),
-                       faces: [resolved.avatarURL].compactMap { $0 }, added: true)
+                       faces: [resolved.avatarURL].compactMap { $0 }, added: true, name: thing.title)
     }
 }
 

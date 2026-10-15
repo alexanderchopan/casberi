@@ -62,6 +62,11 @@ struct SettingsHome: View {
     /// The apps by category (the cards) or A–Z (one list under letters),
     /// remembered on this phone (prd §1253).
     @AppStorage("sources.appsAZ") private var appsAZ = false
+    /// The category a door named (`route.openCategory`, prd §1300): the
+    /// list scrolls to its card once, then lets go.
+    @State private var landCategory: String?
+    /// Bumped when a person is kept by hand, so People's list reads again.
+    @State private var peopleRevision = 0
 
 
     var body: some View {
@@ -154,6 +159,9 @@ struct SettingsHome: View {
                                      bottom: DS.Space.s4, trailing: DS.Space.s4))
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
+                // The cards are rows of this section, so they keep the air
+                // they had inside it (prd §1253) and a landing can reach one.
+                if !casberiOpen, scope == .apps, !appsAZ { appsByCategory }
             }
             if !casberiOpen, scope == .apps, appsAZ { appsByLetter }
             // Room for the floating bar, as every room leaves it.
@@ -162,6 +170,24 @@ struct SettingsHome: View {
                 .listRowSeparator(.hidden)
         }
         .dsRoomList()
+        .onChange(of: landCategory) { _, category in
+            guard let category else { return }
+            #if DEBUG
+            NSLog("[Casberi] sourcesCategory: %@", category)
+            #endif
+            Task { @MainActor in
+                var instant = Transaction()
+                instant.disablesAnimations = true
+                // After the sheet has risen (a scroll during its rise is
+                // dropped), then a few passes settle the list's estimate
+                // (the Feed's section jump, `FeedScreen.landingPasses`).
+                for pass in 0..<4 {
+                    try? await Task.sleep(for: .milliseconds(pass == 0 ? 550 : 70))
+                    withTransaction(instant) { proxy.scrollTo(Self.categoryID(category), anchor: .top) }
+                }
+                landCategory = nil
+            }
+        }
         // PEOPLE'S A–Z STRIP (prd §1153): Contacts' index on the trailing
         // edge, a letter tapped or slid to jumps the list to its header.
         // Above the floating bar, under the box: the list's own column.
@@ -250,6 +276,9 @@ struct SettingsHome: View {
         // Sources, on Apps, and an app it named runs as its row would.
         .onChange(of: route.openSources, initial: true) { _, wanted in
             guard wanted else { return }
+            // A door that named a category (Social's +, the agent's empty
+            // chat) lands on its card, every app in it shown (prd §1300).
+            let category = route.openCategory
             route.openSources = false
             route.openCategory = nil
             route.openConnect = false
@@ -257,7 +286,12 @@ struct SettingsHome: View {
                 casberiOpen = false
                 scope = .apps
                 query = ""
+                if let category {
+                    appsAZ = false
+                    openCategories.insert(category)
+                }
             }
+            landCategory = category
         }
         .onChange(of: route.openOffer, initial: true) { _, name in
             guard let name else { return }
@@ -407,10 +441,62 @@ struct SettingsHome: View {
         case .cards:
             withAnimation(DS.Motion.standard) { scope = .apps; query = "" }
         // Each kind's own add tray, over Settings (prd §1143).
-        case .feeds:         sheet = .followAdd
+        // Following and People list their apps (`addMenu`), as the Feed's
+        // Media and Social do (prd §1300); People opened the Wallet's tray.
+        case .feeds, .people: break
         case .newsletters:   sheet = .mailAdd
-        case .people, .wallets: sheet = .walletFollow
+        case .wallets:       sheet = .walletFollow
         case .subscriptions: sheet = .subscriptionAdd
+        }
+    }
+
+    /// THE SAME PLUS AS THE FEED'S (prd §1300, user: "lets also make sure we
+    /// are consistent in the plus menus on the sources page … rn if you click
+    /// on the plus for people it opens wallet"): Following lists Media's
+    /// follow-by-name apps, as Media's + does. People is the one list of
+    /// everyone (user: "people is also contacts", "it should be a master
+    /// contacts list"), so its plus adds a person: Contacts, or New contact.
+    private func addMenu(_ kind: SettingsScope) -> [SectionAdd] {
+        switch kind {
+        case .feeds:
+            return FollowByName.doors(in: RoomAccounts.mediaRoom).map { door in
+                SectionAdd(label: door.app, detail: door.what) { followByName(door.app) }
+            }
+        case .people:
+            // A MASTER LIST (user: "people's i guess should add contacts and
+            // a contact entry if they don't want to import"): import the
+            // address book, or keep one person by hand.
+            return [
+                SectionAdd(label: "Contacts", detail: String(localized: "Import your address book")) {
+                    DSHaptic.selection()
+                    setup("Contacts")
+                },
+                SectionAdd(label: String(localized: "New contact"),
+                           detail: String(localized: "A name and an email or address")) {
+                    DSHaptic.selection()
+                    sheet = .newContact
+                },
+            ]
+        default:
+            return []
+        }
+    }
+
+    /// One row of a count's plus (prd §1300): `FollowByName.landing`, the
+    /// Feed's own rule, through the trays Sources raises.
+    private func followByName(_ app: String) {
+        DSHaptic.selection()
+        let connected = connectedApps.contains { $0.name == app }
+        switch FollowByName.landing(for: app) {
+        case .socialFollow:    sheet = .socialFollow
+        case .reading:         trackPick = TrackPick(room: .reading, seat: app)
+        case .calendar:        calendarAdd = true
+        case .track(let room): trackPick = TrackPick(room: room, seat: app)
+        case .github:
+            if connected { trackPick = TrackPick(room: .work, seat: app) } else { setup(app) }
+        case .mail:
+            if connected { sheet = .mailAdd } else { setup(app) }
+        case .page:            setup(app)
         }
     }
 
@@ -422,11 +508,11 @@ struct SettingsHome: View {
         switch kind {
         case .apps, .cards:  nil
         case .calendars:     String(localized: "Add a calendar")
-        case .feeds:         Following.Room.reading.verb
+        case .feeds:         String(localized: "Follow something")
         case .newsletters:
             connectedApps.contains { Self.mailApps.contains($0.name) }
                 ? String(localized: "Track a mail list") : nil
-        case .people:        String(localized: "Follow someone")
+        case .people:        String(localized: "Add someone")
         case .subscriptions: SubscriptionWords.track
         case .wallets:       String(localized: "Follow a wallet")
         }
@@ -491,7 +577,8 @@ struct SettingsHome: View {
                 let verb = addVerb(kind)
                 DSCountTile(count: n, label: label, isOn: kind == scope && !casberiOpen,
                             wants: troubled.contains(kind), inline: true, widest: widest,
-                            add: verb == nil ? nil : { add(kind) }, addLabel: verb) {
+                            add: verb == nil ? nil : { add(kind) }, addLabel: verb,
+                            addMenu: addMenu(kind)) {
                     // A kind that lives in a room opens that room's page here
                     // (prd §1274): Back is Sources, the room's own pick stays.
                     if let home = Self.home(of: kind) {
@@ -525,6 +612,14 @@ struct SettingsHome: View {
         case .mailAdd:              MailSubscriptionAddTray()
         case .followAdd:            ReadingFindSheet()
         case .walletFollow:         WalletFollowSheet()
+        case .socialFollow:         SocialFollowSheet()
+        case .newContact:
+            // The list re-reads, and People is what shows, so the person
+            // just kept is on screen.
+            NewContactSheet {
+                withAnimation(DS.Motion.standard) { scope = .people; query = "" }
+                peopleRevision += 1
+            }
         case .home(let home):       ListHomePage(home: home)
         case .plan(let id):         SubscriptionSheet(id: id)
         }
@@ -538,66 +633,88 @@ struct SettingsHome: View {
     /// its category (categories A–Z, Other last; apps A–Z), yours wearing
     /// their state and the rest Add. Supersedes §1145's "only yours": this is
     /// where a first run sets up, so what you could add stands here too.
+    /// Nothing at all when there is nothing to say, so the stack it stands
+    /// in adds no air for it: the cards follow as rows of their own.
     @ViewBuilder
     private var appsList: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s6) {
-            if query.isEmpty {
-                if !startHere.isEmpty {
-                    VStack(alignment: .leading, spacing: DS.Space.s2) {
-                        Text("Start here").dsText(.heading20).foregroundStyle(DS.headInk)
-                        ForEach(startHere) { step in startRow(step) }
-                    }
-                }
+        if query.isEmpty, !startHere.isEmpty {
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                Text("Start here").dsText(.heading20).foregroundStyle(DS.headInk)
+                ForEach(startHere) { step in startRow(step) }
             }
-            let offers = BridgeCatalog.offers.filter {
-                BridgeCatalog.category(of: $0) != HomeScope.markets && hit($0.name)
+        }
+        if appCategories.isEmpty {
+            DSEmptyState(headline: DSProse.text("No apps"), words: Text("Nothing matches."),
+                         scale: .list(rows: 3))
+        }
+    }
+
+    /// Every app the search admits, under its category: categories A–Z,
+    /// Other last; apps A–Z.
+    private var appCategories: [(category: String, apps: [BridgeCatalog.Offer])] {
+        let offers = BridgeCatalog.offers.filter {
+            BridgeCatalog.category(of: $0) != HomeScope.markets && hit($0.name)
+        }
+        let other = String(localized: "Other")
+        let byCategory = Dictionary(grouping: offers) { BridgeCatalog.category(of: $0) }
+        return byCategory.keys
+            .sorted {
+                if ($0 == other) != ($1 == other) { return $1 == other }
+                return $0.localizedStandardCompare($1) == .orderedAscending
             }
-            if offers.isEmpty {
-                DSEmptyState(headline: DSProse.text("No apps"), words: Text("Nothing matches."),
-                             scale: .list(rows: 3))
-            } else if !appsAZ {
-                let other = String(localized: "Other")
-                let byCategory = Dictionary(grouping: offers) { BridgeCatalog.category(of: $0) }
-                let categories = byCategory.keys.sorted {
-                    if ($0 == other) != ($1 == other) { return $1 == other }
-                    return $0.localizedStandardCompare($1) == .orderedAscending
-                }
-                // **EACH CATEGORY IS A CARD, AS THE FEED'S SECTIONS ARE (prd
-                // §1253, user: "the section headers are too close to the list
-                // ending above them"):** the Feed's panel and name (a pink
-                // glyph, the name in the head ink), its row (the app over its
-                // state, no chevron) and its More, which opens the rest in
-                // place. "All apps" went: the cards say it. A search lists
-                // every match.
-                VStack(alignment: .leading, spacing: DS.Space.s6) {
-                    ForEach(categories, id: \.self) { category in
-                        let apps = (byCategory[category] ?? []).sorted {
-                            $0.name.localizedStandardCompare($1.name) == .orderedAscending
+            .map { category in
+                (category, (byCategory[category] ?? []).sorted {
+                    $0.name.localizedStandardCompare($1.name) == .orderedAscending
+                })
+            }
+    }
+
+    static func categoryID(_ category: String) -> String { "apps-category-\(category)" }
+
+    /// **EACH CATEGORY IS A CARD, AS THE FEED'S SECTIONS ARE (prd §1253,
+    /// user: "the section headers are too close to the list ending above
+    /// them"):** the Feed's panel and name (a pink glyph, the name in the
+    /// head ink), its row (the app over its state, no chevron) and its More,
+    /// which opens the rest in place. "All apps" went: the cards say it. A
+    /// search lists every match. Each card is its own list row, so a door
+    /// that names a category can scroll to it (prd §1300).
+    @ViewBuilder
+    private var appsByCategory: some View {
+        // Keyed by `categoryID`, the id a landing scrolls to: a `List` jumps
+        // to its `ForEach`'s identity (the Feed's sections do the same).
+        let groups = Dictionary(uniqueKeysWithValues: appCategories.map { (Self.categoryID($0.category), $0) })
+        let firstID = appCategories.first.map { Self.categoryID($0.category) }
+        ForEach(appCategories.map { Self.categoryID($0.category) }, id: \.self) { id in
+            let group = groups[id] ?? (category: "", apps: [])
+            let category = group.category
+            let capped = query.isEmpty && !openCategories.contains(category)
+            let shown = capped ? Array(group.apps.prefix(Self.categoryFirstRows)) : group.apps
+            // The list row already stands in the room's column, so the card
+            // takes the rest of `rowInset`: rows land where the Feed's do.
+            SectionPanelCard(name: category, glyph: CategoryFold.glyph(for: category),
+                             inset: DSRoomChassis.rowInset - DSRoomChassis.inset) {
+                ForEach(shown, id: \.name) { offerRow($0.name, card: true) }
+                if shown.count < group.apps.count {
+                    Button {
+                        DSHaptic.tap()
+                        withAnimation(DS.Motion.standard) { _ = openCategories.insert(category) }
+                    } label: {
+                        DSPushRowLabel(title: Text("More from \(category)"), fact: nil,
+                                       tint: DS.tint, opens: false) {
+                            DSGlyphLead(glyph: "arrow.down", tint: DS.tint)
                         }
-                        let capped = query.isEmpty && !openCategories.contains(category)
-                        let shown = capped ? Array(apps.prefix(Self.categoryFirstRows)) : apps
-                        // The list row already stands in the room's column, so the card
-                        // takes the rest of `rowInset`: rows land where the Feed's do.
-                        SectionPanelCard(name: category, glyph: CategoryFold.glyph(for: category),
-                                         inset: DSRoomChassis.rowInset - DSRoomChassis.inset) {
-                            ForEach(shown, id: \.name) { offerRow($0.name, card: true) }
-                            if shown.count < apps.count {
-                                Button {
-                                    DSHaptic.tap()
-                                    withAnimation(DS.Motion.standard) { _ = openCategories.insert(category) }
-                                } label: {
-                                    DSPushRowLabel(title: Text("More from \(category)"), fact: nil,
-                                                   tint: DS.tint, opens: false) {
-                                        DSGlyphLead(glyph: "arrow.down", tint: DS.tint)
-                                    }
-                                    .frame(minHeight: DS.Hit.min)
-                                }
-                                .buttonStyle(RowPress())
-                            }
-                        }
+                        .frame(minHeight: DS.Hit.min)
                     }
+                    .buttonStyle(RowPress())
                 }
             }
+            // The first card keeps the s6 it stood at inside the section's
+            // stack: the row above ends on s4.
+            .listRowInsets(.init(top: id == firstID ? DS.Space.s6 - DS.Space.s4 : 0,
+                                 leading: DS.Space.s4,
+                                 bottom: DS.Space.s6, trailing: DS.Space.s4))
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
         }
     }
 
@@ -906,6 +1023,7 @@ struct SettingsHome: View {
                              sheet = .plan(id)
                          },
                          onLetters: { peopleLetters = $0 })
+        .id(peopleRevision)
     }
 
     private var showsLetterIndex: Bool {
@@ -1087,6 +1205,10 @@ enum SettingsLanding: Hashable {
 enum SettingsSheet: Identifiable, Hashable {
     case subscriptionAdd, mailAdd, followAdd
     case walletFollow
+    /// Follow a person or a channel (prd §1300).
+    case socialFollow
+    /// Keep a person by hand (prd §1300), People's plus.
+    case newContact
     /// A kind's home page, opened from its count (prd §1274).
     case home(ShellChrome.ListHome)
     /// A biller's plan, the Wallet's sheet for it (prd §1275).
@@ -1098,6 +1220,8 @@ enum SettingsSheet: Identifiable, Hashable {
         case .mailAdd:                    "mailAdd"
         case .followAdd:                  "followAdd"
         case .walletFollow:               "walletFollow"
+        case .socialFollow:               "socialFollow"
+        case .newContact:                 "newContact"
         case .home(let home):             "home:\(home)"
         case .plan(let id):               "plan:\(id)"
         }
