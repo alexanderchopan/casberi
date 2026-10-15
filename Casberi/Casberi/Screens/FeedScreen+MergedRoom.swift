@@ -183,18 +183,17 @@ extension FeedScreen {
     /// until prd §1231).
     @ViewBuilder
     func lifeRoomSections(_ visible: [Thing], nextEventID: UUID?) -> some View {
-        // Opened from Sources' count (prd §1274), the page is this tile
-        // alone and leaves the room's own pick as it was. In the Feed the
-        // header names no Subscriptions (prd §1293), so a pick made on Life's
-        // own screen is never read there: the card is Life's rows.
+        // In the Feed the header names no Subscriptions (prd §1293), so a
+        // pick made on Life's own screen is never read there: the card is
+        // Life's rows.
         let inFeed = Self.sectionCapNow != nil
-        let lists = pinnedSubscriptions || (!inFeed && chrome.lifeScope == .subscriptions)
+        let lists = !inFeed && chrome.lifeScope == .subscriptions
         if lists {
             Section { mailSubscriptionsBox }
         }
         // In the Feed's scroll the header names these choices (prd §1251);
         // the tiles stand on the category's own screen.
-        if Self.sectionCapNow == nil, !pinnedSubscriptions {
+        if Self.sectionCapNow == nil {
         Section {
             DSScopeTiles(sections: LifeScope.allCases, active: chrome.lifeScope) { picked in
                 withAnimation(DS.Motion.standard) { chrome.lifeScope = picked }
@@ -313,9 +312,6 @@ extension FeedScreen {
         let writing = items.filter { !$0.stopped }
         let stopped = items.filter(\.stopped)
         Section {
-            // Over a list with rows, the Sources count's plus is the verb
-            // (prd §1292); an empty page still leads with it.
-            if !(addOnCount && !items.isEmpty) {
             DSDoorRow(icon: "plus", title: Text(SubscriptionWords.track)) {
                 feedSheet = .mailSubscriptionAdd
             }
@@ -323,7 +319,6 @@ extension FeedScreen {
                                       bottom: 0, trailing: DSRoomChassis.rowInset))
             .feedRowBackground()
             .listRowSeparator(.hidden)
-            }
             if reading.counted > 0 {
                 SubscriptionsSummary(reading: reading, tiles: tiles, pick: pick, mails: true) { tile in
                     mailSubscriptionsPick = tile.map { SubscriptionsPick(tile: $0, over: signature) }
@@ -359,7 +354,7 @@ extension FeedScreen {
         Button {
             feedSheet = .mailSubscription(item.id)
         } label: {
-            MailSubscriptionRow(item: item, paid: mailSubscriptionIsPaid(item))
+            MailSubscriptionRow(item: item, paid: Self.mailSubscriptionIsPaid(item))
                 .contentShape(Rectangle())
         }
         .buttonStyle(RowPress())
@@ -389,7 +384,7 @@ extension FeedScreen {
     }
 
     /// The service also has a plan in the Wallet (§1113), so its row says so.
-    func mailSubscriptionIsPaid(_ item: MailSubscriptions.Item) -> Bool {
+    static func mailSubscriptionIsPaid(_ item: MailSubscriptions.Item) -> Bool {
         guard let planID = ServiceLinks.shared.byList[item.id]?.planID else { return false }
         return SubscriptionsReading.shared.items.contains { $0.id == planID }
     }

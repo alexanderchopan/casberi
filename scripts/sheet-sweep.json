@@ -104,87 +104,6 @@
    "afterControl": "button:~, Wallets"
   },
   {
-   "id": "sources-subscriptions",
-   "covers": [
-    "Screens/SettingsHome.swift:sheet#home.plans"
-   ],
-   "launch": [
-    "demo"
-   ],
-   "steps": [
-    {
-     "wait": 2
-    },
-    {
-     "swipeDown": 2
-    },
-    {
-     "tap": "button:^Sources, Everything"
-    },
-    {
-     "tap": "button:~, Subscriptions"
-    }
-   ],
-   "anchor": "button:^Netflix, $12.99",
-   "afterSwipe": "button:^Sources, Everything",
-   "control": "button:=Back",
-   "afterControl": "button:~, Subscriptions"
-  },
-  {
-   "id": "sources-mail-lists",
-   "covers": [
-    "Screens/SettingsHome.swift:sheet#home.lists"
-   ],
-   "launch": [
-    "demo"
-   ],
-   "steps": [
-    {
-     "wait": 2
-    },
-    {
-     "swipeDown": 2
-    },
-    {
-     "tap": "button:^Sources, Everything"
-    },
-    {
-     "tap": "button:~, Mail lists"
-    }
-   ],
-   "anchor": "button:^The Sunday Loaf, ",
-   "afterSwipe": "button:^Sources, Everything",
-   "control": "button:=Back",
-   "afterControl": "button:~, Mail lists"
-  },
-  {
-   "id": "sources-following",
-   "covers": [
-    "Screens/SettingsHome.swift:sheet#home.follows"
-   ],
-   "launch": [
-    "demo"
-   ],
-   "steps": [
-    {
-     "wait": 2
-    },
-    {
-     "swipeDown": 2
-    },
-    {
-     "tap": "button:^Sources, Everything"
-    },
-    {
-     "tap": "button:~, Following"
-    }
-   ],
-   "anchor": "button:^Computerphile, ",
-   "afterSwipe": "button:^Sources, Everything",
-   "control": "button:=Back",
-   "afterControl": "button:~, Following"
-  },
-  {
    "id": "sources-new-contact",
    "covers": [
     "Screens/SettingsHome.swift:sheet#newContact"
@@ -262,7 +181,7 @@
      "tap": "button:~, People"
     },
     {
-     "tap": "button:^iCloud+, iCloud+"
+     "tap": "button:^iCloud+, Monthly"
     }
    ],
    "anchor": "button:=Back",
@@ -1138,7 +1057,7 @@
   {
    "id": "sources-mail-list",
    "covers": [
-    "Screens/FeedScreen+Sheets.swift:feedSheet#mailSubscription"
+    "Screens/SettingsHome.swift:sheet#list"
    ],
    "launch": [
     "demo"
@@ -1168,7 +1087,7 @@
   {
    "id": "sources-followed",
    "covers": [
-    "Screens/FeedScreen+Sheets.swift:feedSheet#following"
+    "Screens/SettingsHome.swift:sheet#follow"
    ],
    "launch": [
     "demo"
@@ -1870,6 +1789,13 @@
   }
  ],
  "exempt": [
+  {
+   "covers": [
+    "Screens/FeedScreen+Sheets.swift:feedSheet#mailSubscription",
+    "Screens/FeedScreen+Sheets.swift:feedSheet#following"
+   ],
+   "why": "on the phone Life and Media are Feed sections, so these rise only through a service door (ShellChrome.open, a sheet's Writes/Following row) by an item's id; the same sheets are swept from Sources' rows (sources-mail-list, sources-followed, prd §1317)"
+  },
   {
    "covers": [
     "Screens/AccountScreen.swift:detail#data",

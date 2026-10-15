@@ -18,11 +18,9 @@ extension FeedScreen {
     /// note of yours (§1020), so Notes holds it.
     @ViewBuilder
     func mediaRoomSections(_ visible: [Thing], nextEventID: UUID?, heroShown: Bool) -> some View {
-        // Opened from Sources' count (prd §1274): Following alone. In the
-        // Feed the header names no Following (prd §1293), so a pick made on
-        // Media's own screen is never read there.
-        let picked = Self.sectionCapNow != nil && chrome.mediaScope == .subscriptions ? MediaScope.all : chrome.mediaScope
-        let scope = pinnedSubscriptions ? MediaScope.subscriptions : picked
+        // In the Feed the header names no Following (prd §1293), so a pick
+        // made on Media's own screen is never read there.
+        let scope = Self.sectionCapNow != nil && chrome.mediaScope == .subscriptions ? MediaScope.all : chrome.mediaScope
         let subscriptions = scope == .subscriptions
         let read = RoomAccounts.readSources
         let rows: [Thing] = switch scope {
@@ -64,7 +62,7 @@ extension FeedScreen {
         }
         // In the Feed's scroll the header names these choices (prd §1251);
         // the tiles stand on the category's own screen.
-        if Self.sectionCapNow == nil, !pinnedSubscriptions {
+        if Self.sectionCapNow == nil {
         Section {
             DSScopeTiles(sections: MediaScope.allCases, active: chrome.mediaScope,
                          attention: [], verbs: []) { picked in

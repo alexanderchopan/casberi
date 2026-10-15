@@ -156,11 +156,15 @@ struct SettingsHome: View {
                         case .wallets:
                             walletsList
                         // ONE PLACE EACH (prd §1217): a subscription lives in
-                        // the Wallet, a mail list in Life, a feed in Media; these
-                        // counts open that page over Sources (prd §1274), never
-                        // lists of their own.
-                        case .feeds, .newsletters, .subscriptions:
-                            EmptyView()
+                        // the Wallet, a mail list in Life, a feed in Media. Under
+                        // the box is the same list drawn again, its rows and
+                        // their sheets, never a copy of what it holds (§1317).
+                        case .feeds:
+                            followsList
+                        case .newsletters:
+                            listsList
+                        case .subscriptions:
+                            plansList
                         }
                     }
                 }
@@ -234,7 +238,7 @@ struct SettingsHome: View {
             // §1138) with no tap, for the store captures the Mac cannot tap.
             if let raw = UserDefaults.standard.string(forKey: "settingsScope"),
                let s = SettingsScope(rawValue: raw) {
-                if let home = Self.home(of: s) { sheet = .home(home) } else { scope = s }
+                scope = s
             }
             // `-connectTap "<Offer name>"` — the door an unconnected app's
             // Add row in Sources › Apps takes (`offerRow`: `setup`), for
@@ -419,7 +423,7 @@ struct SettingsHome: View {
         guard room != .work else { return }
         Task { @MainActor in
             try? await Task.sleep(for: .milliseconds(450))
-            sheet = .home(.follows)
+            withAnimation(DS.Motion.standard) { scope = .feeds; query = "" }
         }
     }
 
@@ -588,13 +592,9 @@ struct SettingsHome: View {
                             wants: troubled.contains(kind), inline: true, widest: widest,
                             add: verb == nil ? nil : { add(kind) }, addLabel: verb,
                             addMenu: addMenu(kind)) {
-                    // A kind that lives in a room opens that room's page here
-                    // (prd §1274): Back is Sources, the room's own pick stays.
-                    if let home = Self.home(of: kind) {
-                        DSHaptic.selection()
-                        sheet = .home(home)
-                        return
-                    }
+                    // EVERY COUNT PICKS WHAT STANDS UNDER THE BOX (prd §1317,
+                    // user: "why doesn't it open in the screen below like cards
+                    // and apps do"): no count opens a page over Sources.
                     if casberiOpen { casberiOpen = false }
                     pick(kind)
                 }
@@ -627,7 +627,8 @@ struct SettingsHome: View {
                 withAnimation(DS.Motion.standard) { scope = .people; query = "" }
                 peopleRevision += 1
             }
-        case .home(let home):       ListHomePage(home: home)
+        case .follow(let id, let room): FollowingSheet(id: id, room: room)
+        case .list(let id):         MailSubscriptionSheet(id: id)
         case .plan(let id):         SubscriptionSheet(id: id)
         }
     }
@@ -1046,6 +1047,93 @@ struct SettingsHome: View {
         }
     }
 
+    // MARK: - Following, mail lists, subscriptions (prd §1317)
+
+    /// What you follow on the web and in Media, its room's rows (§1118).
+    @ViewBuilder
+    private var followsList: some View {
+        let rooms: [Following.Room] = [.reading, .media]
+        let items = rooms.flatMap { room in
+            FollowingReading.shared.items(for: room).filter { hit($0.name) }.map { (room, $0) }
+        }
+        kindCard(SettingsScope.feeds.label, glyph: ScopeTileGlyph.feeds) {
+            if items.isEmpty {
+                empty(query.isEmpty ? "Follow a site, a channel or a show with the plus." : "Nothing matches.")
+            } else {
+                VStack(alignment: .leading, spacing: DS.Space.s2) {
+                    ForEach(items, id: \.1.id) { room, item in
+                        kindRow({ sheet = .follow(item.id, room) }) {
+                            FollowingRow(room: room, item: item)
+                        } menu: {
+                            StopMenus.follow(item, room, context: context, chrome: chrome)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /// The mailing lists that write to you, Life's rows (§1115).
+    @ViewBuilder
+    private var listsList: some View {
+        let items = MailSubscriptionsReading.shared.items.filter { hit($0.name) }
+        kindCard(SettingsScope.newsletters.label, glyph: ScopeTileGlyph.newsletters) {
+            if items.isEmpty {
+                empty(query.isEmpty ? "Lists that write to your mail show here." : "Nothing matches.")
+            } else {
+                VStack(alignment: .leading, spacing: DS.Space.s2) {
+                    ForEach(items) { item in
+                        kindRow({ sheet = .list(item.id) }) {
+                            MailSubscriptionRow(item: item, paid: FeedScreen.mailSubscriptionIsPaid(item))
+                        } menu: {
+                            StopMenus.list(item, context: context, chrome: chrome)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /// What you pay for, the Wallet's rows (§1105).
+    @ViewBuilder
+    private var plansList: some View {
+        let items = SubscriptionsReading.shared.items.filter { hit($0.name) }
+        kindCard(SettingsScope.subscriptions.label, glyph: ScopeTileGlyph.subscriptions) {
+            if items.isEmpty {
+                empty(query.isEmpty ? "Track one with the plus." : "Nothing matches.")
+            } else {
+                VStack(alignment: .leading, spacing: DS.Space.s2) {
+                    ForEach(items) { item in
+                        kindRow({ sheet = .plan(item.id) }) {
+                            WalletSubscriptionRow(item: item, writes: FeedScreen.walletSubscriptionWrites(item))
+                        } menu: {
+                            StopMenus.plan(item, context: context, chrome: chrome)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /// One row of a kind's list: the row opens its sheet over Sources, and
+    /// a hold offers what its room's hold does.
+    private func kindRow<Row: View, Menu: View>(_ open: @escaping () -> Void,
+                                                @ViewBuilder row: () -> Row,
+                                                @ViewBuilder menu: () -> Menu) -> some View {
+        // A tap and a hold on one view, not a Button: several rows share one
+        // list cell here, and a Button there took the hold as a tap, so the
+        // menu never rose (measured 2026-10-15).
+        row()
+            .contentShape(Rectangle())
+            .onTapGesture {
+                DSHaptic.selection()
+                open()
+            }
+            .contextMenu { menu() }
+            .accessibilityAddTraits(.isButton)
+            .dsHover()
+    }
+
     private func calendarRow(_ entry: CalendarSubscriptionStore.Entry) -> some View {
         DSPushRow(title: Text(verbatim: entry.displayName),
                   subtitle: Text(calendarLine(entry)), opens: false) {
@@ -1162,19 +1250,6 @@ struct CalendarSubscribeSheet: View {
 
 /// Where the tray's search lands in Settings (prd §1171): a person on People
 /// with their name in the field, a kind's list, or a row's own sheet.
-extension SettingsHome {
-    /// The one home of a kind that lives in a room (prd §1217): Sources'
-    /// count for it opens that page (prd §1274).
-    static func home(of kind: SettingsScope) -> ShellChrome.ListHome? {
-        switch kind {
-        case .subscriptions: .plans
-        case .newsletters:   .lists
-        case .feeds:         .follows
-        default:             nil
-        }
-    }
-}
-
 enum SettingsLanding: Hashable {
     case person(String)
     case kind(SettingsScope)
@@ -1187,8 +1262,10 @@ enum SettingsSheet: Identifiable, Hashable {
     case walletFollow
     /// Keep a person by hand (prd §1300), People's plus.
     case newContact
-    /// A kind's home page, opened from its count (prd §1274).
-    case home(ShellChrome.ListHome)
+    /// What you follow, its sheet (prd §1317).
+    case follow(String, Following.Room)
+    /// A mailing list, its sheet (prd §1317).
+    case list(String)
     /// A biller's plan, the Wallet's sheet for it (prd §1275).
     case plan(String)
 
@@ -1198,48 +1275,9 @@ enum SettingsSheet: Identifiable, Hashable {
         case .mailAdd:                    "mailAdd"
         case .walletFollow:               "walletFollow"
         case .newContact:                 "newContact"
-        case .home(let home):             "home:\(home)"
+        case .follow(let id, let room):   "follow:\(room):\(id)"
+        case .list(let id):               "list:\(id)"
         case .plan(let id):               "plan:\(id)"
-        }
-    }
-}
-
-/// **A KIND'S HOME, OPENED FROM SOURCES (prd §1274, amends §1217 item 2).**
-/// The Wallet's Subscriptions, Life's Subscriptions or Media's Following:
-/// the room's own page pinned to that tile, pushed inside Sources' sheet so
-/// Back is Sources, or risen with its own stack where Sources stands alone.
-/// The list still lives in its room; this is that page, not a copy.
-private struct ListHomePage: View {
-    let home: ShellChrome.ListHome
-    @Environment(\.dsInPane) private var inPane
-
-    var body: some View {
-        // The count it opened from carries the verb (prd §1292).
-        if inPane {
-            page.environment(\.dsAddOnCount, true)
-        } else {
-            NavigationStack {
-                page.toolbar(.hidden, for: .navigationBar)
-                    .environment(\.dsAddOnCount, true)
-            }
-            .environment(\.dsInSheetStack, true)
-            .presentationDragIndicator(.visible)
-            .presentationBackground(DS.themedPage)
-        }
-    }
-
-    @ViewBuilder
-    private var page: some View {
-        switch home {
-        case .plans:
-            FeedScreen(source: CategoryFold.walletRoom, isActive: true, inSheet: true,
-                       pinnedWalletSection: .subscriptions)
-        case .lists:
-            FeedScreen(source: RoomAccounts.lifeRoom, isActive: true, inSheet: true,
-                       pinnedSubscriptions: true)
-        case .follows:
-            FeedScreen(source: RoomAccounts.mediaRoom, isActive: true, inSheet: true,
-                       pinnedSubscriptions: true)
         }
     }
 }

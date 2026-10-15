@@ -66490,3 +66490,10 @@ The in-content back rows become the title's first word. Casberi's settings, open
 4. **The search field stays**: on the phone Sources rises as a sheet over the band's search (§1245), and the App Library keeps its own for the same reason. Focused or holding words, it lists every app A–Z under letters (§1253's A–Z list, now the search's).
 5. **Not in the library:** Markets (automatic, §1167) and the Wallet seat (the wallets you follow, added by the Wallets count's plus; user: "wallet should no longer be a tile in the wallet folder").
 6. The category glyph stands in the open folder's title, as the Feed's sections wear it; not under the closed folders (user: "ok that's fine then leave as you have it").
+
+## §1317 — Every count in Sources picks what stands under the box (supersedes §1274; amends §1217 item 2, §1292) (user, 2026-10-15: "the thing about tapping any of the sources buttons like calendar etc is why doesn't it open in the screen below like cards and apps do. isn't that what a user would expect?", then "yes")
+
+1. **No count opens a page over Sources.** Following, Mail lists and Subscriptions list their rows under the box, as Apps, Calendars, Cards, People and Wallets already did: the same rows their rooms draw (`FollowingRow`, `MailSubscriptionRow`, `WalletSubscriptionRow`) in the kind's card. Each list still lives in its room (§1217); this is that list drawn again, never a copy of what it holds.
+2. **A row opens its own sheet over Sources** (pushing inside Sources' sheet, §1238, §1315), and its hold offers what its room's hold does: Stop tracking, Stop following. The menus are one code path for both places (`StopMenus`).
+3. `ListHomePage`, `SettingsSheet.home` and `ShellChrome.ListHome` are deleted (§723). A follow kept from the Track tray lands on Following under the box.
+4. **"Subscriptions" stands whole in the box** (user: "we've debated if we should say 'Subs' for subscriptions but i'm not sure"; §1166's "no 'Subs'" stands): the count's plus reaches over the tile up to its glyph's margin (`plusOverlap` 13) and the tile's lead inset is s1, so every word in the box is one size.

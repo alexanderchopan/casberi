@@ -277,9 +277,10 @@ final class JourneyTests: XCTestCase {
         let w = Walk("stoptracking", launch: Walk.demo + ["-subscriptionTrack", "Hulu:15.99"], test: self)
         w.tap(w.el(.button, "label BEGINSWITH %@", "Sources"), "Sources tile")
         w.tap(w.visible(.button, "label CONTAINS %@", "Subscriptions"), "Subscriptions count")
-        w.hold(w.visible(.staticText, "label == %@", "Hulu"), "hold Hulu")
+        // The row under the box is one element named for the plan (prd §1317).
+        w.hold(w.visible(.any, "label == %@", "Hulu"), "hold Hulu")
         w.tap(w.visible(.button, "label == %@", "Stop tracking"), "Stop tracking")
-        w.gone(w.el(.staticText, "label == %@", "Hulu"), within: 8, "Hulu gone")
+        w.gone(w.visible(.any, "label == %@", "Hulu"), within: 8, "Hulu gone")
         w.finish()
     }
 

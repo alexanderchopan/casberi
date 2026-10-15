@@ -1078,11 +1078,6 @@ final class ShellChrome {
         }
     }
 
-    /// Where each kind that keeps coming lives (prd §1217): a subscription
-    /// in the Wallet, a mail list in Life, a feed in Media. Sources' count
-    /// for each opens that page over Sources (prd §1274, `ListHomePage`).
-    enum ListHome { case plans, lists, follows }
-
     /// Land on a room's list of what you follow, on All (prd §1118). A room
     /// change resets these rooms' tiles to All (`MainSurface`), so the pick
     /// waits there as `landingFollowing` and is applied after the reset.

@@ -223,7 +223,7 @@ extension FeedScreen {
                     Button {
                         feedSheet = .subscription(item.id)
                     } label: {
-                        WalletSubscriptionRow(item: item, writes: walletSubscriptionWrites(item))
+                        WalletSubscriptionRow(item: item, writes: Self.walletSubscriptionWrites(item))
                             .contentShape(Rectangle())
                             .arrivalWash(SubscriptionStore.shared.justTracked(item.id), hue: DS.brand)
                     }

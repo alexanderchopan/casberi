@@ -115,9 +115,6 @@ extension FeedScreen {
         Section {
             // The tile names the list (prd §1111), so no group header; Add
             // leads, because the list is the person's to build up.
-            // Over a list with plans, the Sources count's plus is the verb
-            // (prd §1292); an empty page still leads with it.
-            if !(addOnCount && !all.isEmpty) {
             DSDoorRow(icon: "plus", title: Text(SubscriptionWords.track)) {
                 feedSheet = .subscriptionAdd
             }
@@ -125,7 +122,6 @@ extension FeedScreen {
                                       bottom: 0, trailing: DSRoomChassis.rowInset))
             .feedRowBackground()
             .listRowSeparator(.hidden)
-            }
             // Only what has a monthly cost is totalled (§83): with none, the
             // list is Add and its rows, as before.
             if reading.counted > 0 {
@@ -148,7 +144,7 @@ extension FeedScreen {
                 Button {
                     feedSheet = .subscription(item.id)
                 } label: {
-                    WalletSubscriptionRow(item: item, writes: walletSubscriptionWrites(item))
+                    WalletSubscriptionRow(item: item, writes: Self.walletSubscriptionWrites(item))
                         .contentShape(Rectangle())
                         // Just tracked: one pink pass as it lands (prd §1199).
                         .arrivalWash(SubscriptionStore.shared.justTracked(item.id), hue: DS.brand)
@@ -181,7 +177,7 @@ extension FeedScreen {
 
     /// The list this plan's service mails you from, as its row says it
     /// (§1113's join, read by `ServiceLinks` from the tile's `.task`).
-    func walletSubscriptionWrites(_ item: Subscriptions.Item) -> String? {
+    static func walletSubscriptionWrites(_ item: Subscriptions.Item) -> String? {
         guard let listID = ServiceLinks.shared.byPlan[item.id]?.listID,
               let list = MailSubscriptionsReading.shared.items.first(where: { $0.id == listID })
         else { return nil }
@@ -419,11 +415,29 @@ extension FeedScreen {
     /// what a card shows stays (the sheet's own rule).
     @ViewBuilder
     func stopTrackingMenu(_ item: Subscriptions.Item) -> some View {
+        StopMenus.plan(item, context: modelContext, chrome: chrome)
+    }
+
+    /// A mail list you added (prd §1115), the same way.
+    @ViewBuilder
+    func stopTrackingMenu(_ item: MailSubscriptions.Item) -> some View {
+        StopMenus.list(item, context: modelContext, chrome: chrome)
+    }
+}
+
+/// **A ROW'S HOLD STOPS IT, WHEREVER THE ROW STANDS (prd §1301, §1317)**:
+/// its room's list and Sources' list under the box draw the same menu, so a
+/// change to what stopping does reaches both.
+@MainActor
+enum StopMenus {
+    /// A plan you track by hand; a card's plan draws no menu.
+    @ViewBuilder
+    static func plan(_ item: Subscriptions.Item, context: ModelContext, chrome: ShellChrome) -> some View {
         if let manualID = item.manualID {
             Button(role: .destructive) {
                 SubscriptionStore.shared.remove(manualID)
                 // The list reads its own fetch, so it is read again now.
-                Task { await SubscriptionsReading.shared.refresh(modelContext) }
+                Task { await SubscriptionsReading.shared.refresh(context) }
                 chrome.flash(String(localized: "Stopped tracking \(item.name)"))
             } label: {
                 Label(String(localized: "Stop tracking"), systemImage: "trash")
@@ -433,14 +447,42 @@ extension FeedScreen {
 
     /// A mail list you added (prd §1115), the same way.
     @ViewBuilder
-    func stopTrackingMenu(_ item: MailSubscriptions.Item) -> some View {
+    static func list(_ item: MailSubscriptions.Item, context: ModelContext, chrome: ShellChrome) -> some View {
         if item.byYou, let address = item.address {
             Button(role: .destructive) {
                 MailSubscriptionStore.shared.remove(address: address)
-                MailSubscriptionsReading.shared.refresh(modelContext)
+                MailSubscriptionsReading.shared.refresh(context)
                 chrome.flash(String(localized: "Stopped tracking \(item.name)"))
             } label: {
                 Label(String(localized: "Stop tracking"), systemImage: "trash")
+            }
+        }
+    }
+
+    /// What you follow (§1301). Where stopping also takes what it brought in
+    /// (`FollowingReading.prunes`), the menu asks once more inside itself,
+    /// since that removal cannot be taken back.
+    @ViewBuilder
+    static func follow(_ item: Following.Item, _ room: Following.Room,
+                       context: ModelContext, chrome: ShellChrome) -> some View {
+        let stop = {
+            FollowingReading.shared.stop(item, context: context)
+            FollowingReading.shared.refresh(room, context: context)
+            chrome.flash(String(localized: "Stopped following \(item.name)"))
+        }
+        if item.removable {
+            if FollowingReading.prunes(item.seat) {
+                Menu {
+                    Button(role: .destructive, action: stop) {
+                        Text("\(room.stopWord) and remove what it brought in")
+                    }
+                } label: {
+                    Label(room.stopWord, systemImage: "trash")
+                }
+            } else {
+                Button(role: .destructive, action: stop) {
+                    Label(room.stopWord, systemImage: "trash")
+                }
             }
         }
     }

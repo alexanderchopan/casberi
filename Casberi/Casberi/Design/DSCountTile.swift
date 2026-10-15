@@ -38,9 +38,11 @@ struct DSCountTile: View {
     let action: () -> Void
 
     /// How far the plus's 44pt target reaches over the tile (prd §1292):
-    /// the plus takes a 36pt column, so "Subscriptions" stands beside it on
-    /// the phone, and its target stays `DS.Hit.min` wide.
-    static let plusOverlap: CGFloat = 8
+    /// up to the glyph's own side margin, so the plus takes a 31pt column,
+    /// its target stays `DS.Hit.min` wide, and "Subscriptions" stands whole
+    /// beside it on the phone (measured shrunk at 8, 2026-10-15; user: "we've
+    /// debated if we should say 'Subs' … i'm not sure").
+    static let plusOverlap: CGFloat = 13
 
     /// The lead column's floor, inline: a two-digit figure's width.
     static let leadFigure = 99
@@ -149,7 +151,7 @@ struct DSCountTile: View {
                 // fills the well instead of floating in it.
                 // With a plus beside it the plus's own width is the gap, so
                 // "Subscriptions" keeps its room (prd §1292).
-                .padding(.leading, DS.Space.s2)
+                .padding(.leading, DS.Space.s1)
                 .padding(.trailing, add == nil ? DS.Space.s2 : 0)
                 .frame(maxWidth: .infinity, minHeight: cellHeight, alignment: .leading)
                 // No backing (prd §1268, user: "no backing"): the pick says
@@ -227,7 +229,4 @@ struct DSCountGrid<Content: View>: View {
 extension EnvironmentValues {
     /// The inline count's row height, set by `DSCountGrid` (prd §1198).
     @Entry var dsCountCellHeight: CGFloat? = nil
-    /// A page opened from a count that carries its plus (prd §1292): its
-    /// own verb row is drawn by the count instead.
-    @Entry var dsAddOnCount: Bool = false
 }

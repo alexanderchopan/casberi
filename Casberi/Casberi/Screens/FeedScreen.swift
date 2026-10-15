@@ -62,7 +62,6 @@ extension FeedScreen: Equatable {
             // stop at the bound with nothing on screen able to say why.
             && a.rowBudget == b.rowBudget
             && a.hostRoom == b.hostRoom
-            && a.pinnedSubscriptions == b.pinnedSubscriptions
     }
 }
 
@@ -102,13 +101,6 @@ struct FeedScreen: View {
     /// A Wallet tile's page risen as a sheet (prd §1220): this one section,
     /// its box, no tiles, and nothing published to the shell.
     let pinnedWalletSection: WalletSection?
-    /// Life's Subscriptions or Media's Following opened from Sources' count
-    /// (prd §1274): that one tile, its box, no tiles, the rooms' own picks
-    /// untouched.
-    let pinnedSubscriptions: Bool
-    /// Opened from a Sources count, whose plus already adds (prd §1292): the
-    /// page's own Track or Follow row is not drawn twice.
-    @Environment(\.dsAddOnCount) var addOnCount
     /// In a sheet a push draws the seat's back door and its clearance (prd §1304).
     @Environment(\.dsInSheet) var inPresentedSheet
 
@@ -187,12 +179,10 @@ struct FeedScreen: View {
     @Environment(\.horizontalSizeClass) var roomSizeClass
 
     init(source: String, hostRoom: String? = nil, isActive: Bool, nearActive: Bool = true,
-         rowBudget: Int? = nil, inSheet: Bool = false, pinnedWalletSection: WalletSection? = nil,
-         pinnedSubscriptions: Bool = false) {
+         rowBudget: Int? = nil, inSheet: Bool = false, pinnedWalletSection: WalletSection? = nil) {
         self.source = source
         self.inSheet = inSheet
         self.pinnedWalletSection = pinnedWalletSection
-        self.pinnedSubscriptions = pinnedSubscriptions
         self.hostRoom = hostRoom
         self.rowBudget = rowBudget
         // The mark the trace was missing (PERF 2026-09-01). `mount` fires from
@@ -1318,15 +1308,12 @@ struct FeedScreen: View {
             || pinnedPage
     }
 
-    /// **A PAGE OPENED FROM A SOURCES COUNT IS NEVER REPLACED** (prd §1274,
-    /// §1292): Subscriptions, Mail lists and Following are their tile's box
-    /// and list, and an empty one leads with its Track or Follow row. With no
-    /// wallet followed and nothing landed, both empty arms of `roomBody` drew
-    /// "One inbox for all your apps" and Browse apps in its place (user,
-    /// 2026-10-14: "i hit subscriptions and it goes here?").
-    private var pinnedPage: Bool {
-        pinnedWalletSection != nil || pinnedSubscriptions
-    }
+    /// **A WALLET TILE'S PAGE IS NEVER REPLACED** (prd §1220, §1292): it is
+    /// its tile's box and list, and an empty one leads with its Track row.
+    /// With no wallet followed and nothing landed, both empty arms of
+    /// `roomBody` drew "One inbox for all your apps" and Browse apps in its
+    /// place (user, 2026-10-14: "i hit subscriptions and it goes here?").
+    private var pinnedPage: Bool { pinnedWalletSection != nil }
 
     /// **THE WALLET IS NEVER REPLACED WHILE IT WATCHES AN ADDRESS** (2026-10-03,
     /// user: "if you add an address to follow that isn't detected it takes you
@@ -1530,9 +1517,6 @@ struct FeedScreen: View {
     /// pill beside it names the place.
     var roomName: String {
         if let pinnedWalletSection { return pinnedWalletSection.label }
-        if pinnedSubscriptions {
-            return source == RoomAccounts.lifeRoom ? LifeScope.subscriptions.label : MediaScope.subscriptions.label
-        }
         if HomeScope.contains(source) { return youPlaceName }
         return BridgeCatalog.seatName(forSource: hostRoom ?? source)
     }
