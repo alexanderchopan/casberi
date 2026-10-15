@@ -177,6 +177,14 @@ enum DemoSeedAll {
                               // the casts a demo poured before the Farcaster
                               // seat was retired (prd §1110).
                               "fc:demo:", "bsky:demo:",
+                              // The live doors' demo notices (Instagram,
+                              // TikTok, Threads) wear their real seats' refs so
+                              // Social's rows and faces read them; the `demo-`
+                              // infix keeps teardown off a real notice. Missing
+                              // until 2026-10-15, so they outlived Exit on a
+                              // new person's Feed (found walking a first run).
+                              "ig-live:notif:demo-", "tiktok:live:notif:demo-",
+                              "threads-live:notif:demo-",
                               "import:receipt:", "cloudflare:cert:demo",
                               // The agent rooms' demo conversations (2026-09-20)
                               // carry the REAL `agentchat:` prefix, because
