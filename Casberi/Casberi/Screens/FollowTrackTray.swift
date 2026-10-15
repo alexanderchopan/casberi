@@ -107,7 +107,7 @@ struct FollowTrackTray: View {
                 .padding(.bottom, 96)
             }
             .scrollDismissesKeyboard(.interactively)
-            .safeAreaInset(edge: .bottom) {
+            .dsFindField {
                 DSTraySearchField(placeholder: target.placeholder, text: $query, focus: $fieldFocused,
                                   searching: busy, keyboard: target == .podcasts ? .default : .URL,
                                   submitLabel: target == .podcasts ? .search : .go,

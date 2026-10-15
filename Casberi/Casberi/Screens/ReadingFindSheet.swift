@@ -45,7 +45,7 @@ struct ReadingFindSheet: View {
                 .padding(.bottom, 96)
             }
             .scrollDismissesKeyboard(.interactively)
-            .safeAreaInset(edge: .bottom) { field }
+            .dsFindField { field }
         }
         .task { load() }
         .onAppear {

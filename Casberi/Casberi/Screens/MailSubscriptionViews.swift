@@ -304,7 +304,7 @@ struct MailSubscriptionAddTray: View {
                 .padding(.bottom, 96)
             }
             .scrollDismissesKeyboard(.interactively)
-            .safeAreaInset(edge: .bottom) {
+            .dsFindField {
                 DSTraySearchField(placeholder: String(localized: "Search mail"),
                                   text: $query, focus: $fieldFocused) { EmptyView() }
             }

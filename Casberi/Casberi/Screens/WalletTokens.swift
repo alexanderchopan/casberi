@@ -171,7 +171,7 @@ struct WalletTokensSheet: View {
                 .padding(.bottom, positions.count > Self.searchFrom ? 96 : DS.Space.s4)
             }
             .scrollDismissesKeyboard(.interactively)
-            .safeAreaInset(edge: .bottom) {
+            .dsFindField {
                 if positions.count > Self.searchFrom {
                     DSTraySearchField(placeholder: String(localized: "Search \(positions.count) tokens"),
                                       text: $query, focus: $fieldFocused) { EmptyView() }

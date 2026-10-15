@@ -108,6 +108,12 @@ struct DSTray<Content: View>: View {
         return max(0, drawn - titleLine)
     }
 
+    /// A presented find tray on the phone: its field sits on the keyboard
+    /// (`DSKeyboardLift`). The pane and a Mac or iPad box keep the system's.
+    private var liftsField: Bool {
+        scrollsItself && !inPane && !DSSheetSize.sizesSheets
+    }
+
     var body: some View {
         let tray = VStack(alignment: .leading, spacing: DS.Space.s4) {
             // The title doubles as its own catalog key — a title that isn't a
@@ -177,7 +183,10 @@ struct DSTray<Content: View>: View {
         // The title clears the grabber — this is the fix for titles crowding
         // the top edge; every tray inherits it.
         .padding(.top, DS.Space.s6)
-        .padding(.bottom, DS.Space.s6)
+        // A find tray's field is the bottom edge: it brings its own air, and
+        // 24pt more under it stood the field off the keyboard (below).
+        .padding(.bottom, liftsField ? 0 : DS.Space.s6)
+        .modifier(DSKeyboardLift(active: liftsField))
         // The overflow is paid ONLY where this component owns the number.
         // A caller that passes its own set has already put `.large` in it —
         // every one of the eight does — so a second line there costs a shorter
@@ -273,6 +282,61 @@ private struct DSTrayPresentation: ViewModifier {
         } else {
             content
         }
+    }
+}
+
+/// **A FIND TRAY'S FIELD SITS ON THE KEYBOARD (user: "glitches here how the
+/// search bar shows", Track a subscription and Follow a wallet).**
+///
+/// The field rides the list's bottom edge (`dsFindField`), so it stands
+/// wherever the list ends. Under the keyboard SwiftUI ended it ~100pt above
+/// the keys: the tray's 24pt bottom padding plus a keyboard inset the sheet
+/// over-reports. The field floated mid-screen, the list was cut square under
+/// it, and the band between showed bare sheet.
+///
+/// So the tray takes no keyboard inset from the system and lifts itself by
+/// what the keyboard actually covers of it: the keyboard's frame against the
+/// tray's own, both in window points. Hidden, the keyboard covers nothing and
+/// the field sits on the home indicator's line.
+struct DSKeyboardLift: ViewModifier {
+    let active: Bool
+    @State private var trayBottom: CGFloat = 0
+    @State private var keyboardTop: CGFloat? = nil
+
+    func body(content: Content) -> some View {
+        if active {
+            content
+                .padding(.bottom, lift)
+                .ignoresSafeArea(.keyboard, edges: .bottom)
+                .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).maxY } action: {
+                    trayBottom = $0
+                }
+                .onReceive(NotificationCenter.default.publisher(
+                    for: UIResponder.keyboardWillChangeFrameNotification)) { note in
+                    guard let frame = note.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect
+                    else { return }
+                    let duration = note.userInfo?[UIResponder.keyboardAnimationDurationUserInfoKey]
+                        as? Double ?? 0.25
+                    withAnimation(.smooth(duration: max(duration, 0.1))) {
+                        keyboardTop = frame.height > 0 ? frame.minY : nil
+                    }
+                }
+                .onReceive(NotificationCenter.default.publisher(
+                    for: UIResponder.keyboardWillHideNotification)) { note in
+                    let duration = note.userInfo?[UIResponder.keyboardAnimationDurationUserInfoKey]
+                        as? Double ?? 0.25
+                    withAnimation(.smooth(duration: max(duration, 0.1))) { keyboardTop = nil }
+                }
+        } else {
+            content
+        }
+    }
+
+    /// What the keyboard covers of the tray; none when it is gone or off
+    /// the bottom edge.
+    private var lift: CGFloat {
+        guard let keyboardTop, trayBottom > 0 else { return 0 }
+        return max(0, trayBottom - keyboardTop)
     }
 }
 

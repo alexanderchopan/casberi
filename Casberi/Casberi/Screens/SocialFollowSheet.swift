@@ -49,7 +49,7 @@ struct SocialFollowSheet: View {
                 .padding(.bottom, 96)
             }
             .scrollDismissesKeyboard(.interactively)
-            .safeAreaInset(edge: .bottom) { field }
+            .dsFindField { field }
         }
         .task { load() }
         .task(id: query) { await search() }

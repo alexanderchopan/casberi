@@ -319,7 +319,7 @@ struct SubscriptionAddTray: View {
             .padding(.bottom, 96)
         }
         .scrollDismissesKeyboard(.interactively)
-        .safeAreaInset(edge: .bottom) {
+        .dsFindField {
             DSTraySearchField(placeholder: String(localized: "Search, or type any name"), text: $query,
                               focus: $searchFocused, capitalization: .words, submitLabel: .next,
                               onSubmit: {

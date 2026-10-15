@@ -47,7 +47,7 @@ struct WatchAddSheet: View {
                 .padding(.bottom, 96)
             }
             .scrollDismissesKeyboard(.interactively)
-            .safeAreaInset(edge: .bottom) { field }
+            .dsFindField { field }
         }
         .task { await loadSuggestions() }
         .task(id: query) { await search() }

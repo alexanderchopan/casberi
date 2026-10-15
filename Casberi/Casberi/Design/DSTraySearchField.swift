@@ -58,6 +58,23 @@ struct DSTraySearchField<Idle: View>: View {
     }
 }
 
+extension View {
+    /// Pins a find tray's field under its list. On iOS 26 it is a bar, so the
+    /// rows passing under the glass dissolve (the soft edge) instead of
+    /// reading through it as ghost words (user: "glitches here how the search
+    /// bar shows"); below 26, the inset it always was.
+    @ViewBuilder
+    func dsFindField<Field: View>(@ViewBuilder _ field: () -> Field) -> some View {
+        if #available(iOS 26.0, *) {
+            safeAreaBar(edge: .bottom, content: field)
+                .scrollEdgeEffectHidden(false, for: .bottom)
+                .scrollEdgeEffectStyle(.soft, for: .bottom)
+        } else {
+            safeAreaInset(edge: .bottom, content: field)
+        }
+    }
+}
+
 extension DSTraySearchField where Idle == EmptyView {
     init(placeholder: String, text: Binding<String>, focus: FocusState<Bool>.Binding,
          searching: Bool = false, keyboard: UIKeyboardType = .default,
