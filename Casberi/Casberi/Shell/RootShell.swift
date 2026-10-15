@@ -1797,7 +1797,7 @@ struct RootShell: View {
             rootPresented(ThingSheetView(thing: thing))
         }
         .sheet(item: $deepLinkPerson) { person in
-            rootPresented(SocialProfileCard(profile: person))
+            rootPresented(SocialProfileCard(profile: person).dsRaisedStack())
         }
         // AN APP PICKED FROM THE FACE RISES AS A SHEET (prd §1208a).
         .modifier(AppSheetHost(chrome: chrome, sceneState: sceneState,
@@ -4821,6 +4821,7 @@ private struct AppSheetHost: ViewModifier {
         // rises here, with the same environment as an app's sheet.
         .sheet(item: Binding(get: { chrome.pivot }, set: { chrome.pivot = $0 })) { query in
             PivotPage(start: query)
+                .dsRaisedStack()
                 .environment(sceneState.route)
                 .environment(sceneState.filter)
                 .environment(sceneState.detail)

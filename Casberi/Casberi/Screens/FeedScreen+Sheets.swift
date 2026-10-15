@@ -357,6 +357,10 @@ extension FeedScreen {
                     // pushed room, where it exits nothing.
                     .dsSheetDismiss { feedSheet = nil }
             }
+            // Its own stack: a thing opened in it pushes (prd §1315). On the
+            // stack, so a pushed page reads it too.
+            .environment(\.dsInSheetStack, true)
+            .environment(\.dsInSheet, true)
             .dsNavSheet()
             // A sheet covers `RootShell`'s haptic listener, and this room is
             // not a `DSTray` (which carries its own) — so its `DSHaptic` calls

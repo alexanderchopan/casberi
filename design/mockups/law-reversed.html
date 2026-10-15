@@ -1,0 +1,352 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Law, reversed</title>
+<style>
+:root{color-scheme:light dark;--ground:#f2f1f5;--surface:#ffffff;--ink:#15141a;--ink2:#56535f;--ink3:#8a8794;--line:#e4e2ea;--keep:#6b6875;--keepbg:#ecebf0;--bend:#9a5b00;--bendbg:#fff1d6;--test:#c2183f;--testbg:#ffe3ea;--rounded:ui-rounded,"SF Pro Rounded",-apple-system,sans-serif}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--ground:#0b0b0f;--surface:#16161b;--ink:#eeecf3;--ink2:#a29ead;--ink3:#77737f;--line:#26252c;--keep:#b9b5c2;--keepbg:#24232a;--bend:#ffc76a;--bendbg:#3a2a0e;--test:#ff6b88;--testbg:#3d1520}}
+:root[data-theme="dark"]{--ground:#0b0b0f;--surface:#16161b;--ink:#eeecf3;--ink2:#a29ead;--ink3:#77737f;--line:#26252c;--keep:#b9b5c2;--keepbg:#24232a;--bend:#ffc76a;--bendbg:#3a2a0e;--test:#ff6b88;--testbg:#3d1520}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;-webkit-font-smoothing:antialiased;padding:24px 16px 48px}
+main{max-width:1040px;margin:0 auto}
+h1{font:700 28px/34px var(--rounded)}
+h2{font:700 21px/27px var(--rounded)}
+p.desc{font-size:15px;line-height:22px;color:var(--ink2);max-width:820px;margin-top:6px}
+code{font:12.5px ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--ink2)}
+.summary{background:var(--surface);border-radius:22px;padding:18px 20px;margin:20px 0 28px}
+.summary h2{margin-bottom:10px}
+.summary ol{padding-left:20px;font-size:15px;line-height:22px}
+.summary li{margin-bottom:8px}
+.summary li b{font-weight:600}
+.tally{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.card{background:var(--surface);border-radius:22px;padding:18px 20px 20px;margin-bottom:18px}
+.top{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.num{font:700 21px/27px var(--rounded);color:var(--ink3)}
+.cite{font-size:13px;color:var(--ink3)}
+.badge{font:600 13px/1 var(--rounded);padding:5px 10px;border-radius:999px;margin-left:auto}
+.badge.keep{color:var(--keep);background:var(--keepbg)}
+.badge.bend{color:var(--bend);background:var(--bendbg)}
+.badge.test{color:var(--test);background:var(--testbg)}
+.reach{font-size:13px;line-height:19px;color:var(--ink3);margin-top:4px}
+dl{display:grid;grid-template-columns:132px 1fr;gap:8px 16px;margin-top:14px;font-size:15px;line-height:22px}
+dt{font-weight:600;color:var(--ink2)}
+dd q{color:var(--ink)}
+dd .w{color:var(--ink2)}
+@media (max-width:620px){dl{grid-template-columns:1fr;gap:2px}dt{margin-top:10px}}
+.stage{display:flex;gap:18px;flex-wrap:wrap;justify-content:center;margin-top:18px}
+figure{width:232px;flex:none}
+figcaption{font-size:12.5px;line-height:17px;color:var(--ink2);margin:8px 2px 0}
+figcaption b{color:var(--ink)}
+/* the app, always dark */
+.phone{--sheet:#000;--panel:#111113;--well:#1c1c1e;--text:#fff;--text2:#ebebf599;--text3:#ebebf566;--tint:#0a84ff;--brand:#fa2d48;
+  zoom:.57;width:402px;height:874px;background:var(--sheet);color:var(--text);border-radius:52px;box-shadow:0 24px 70px #00000055;overflow:hidden;position:relative;padding:58px 16px 0;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif}
+.phone.sheet{padding-top:0;background:#2a2a2e}
+.phone.sheet .inner{position:absolute;top:44px;left:0;right:0;bottom:0;background:#000;border-radius:38px 38px 0 0;padding:26px 16px 0;overflow:hidden}
+.grab{width:40px;height:5px;border-radius:3px;background:#ffffff44;margin:-14px auto 12px}
+.title{font:700 34px/41px var(--rounded);color:var(--brand);margin:6px 4px 12px}
+.title .p{color:var(--text)}
+.title .tap{color:var(--brand)}
+.field{background:var(--well);border-radius:14px;height:46px;display:flex;align-items:center;gap:10px;padding:0 14px;font-size:17px;color:var(--text3)}
+.field .paste{margin-left:auto;font-size:15px;color:var(--text);background:#3a3a3c;border-radius:10px;padding:5px 10px}
+.field .caret{width:2px;height:22px;background:var(--tint);margin-right:-6px}
+.order{font:700 20px var(--rounded);display:flex;gap:16px;margin:14px 4px 6px}
+.order .off{color:var(--text3)}
+.panel{background:var(--panel);border-radius:22px;padding:12px 14px 6px;margin-top:14px}
+.ph{display:flex;align-items:center;gap:8px;font:700 20px var(--rounded);margin:2px 0 6px}
+.ph .g{color:var(--brand);font-size:18px}
+.row{display:flex;align-items:center;gap:12px;min-height:56px}
+.m{width:46px;height:46px;border-radius:50%;flex:none;display:grid;place-items:center;font:700 17px var(--rounded);color:#fff}
+.t{font-size:17px;line-height:22px}
+.s{font-size:14px;line-height:18px;color:var(--text2)}
+.s.add{color:var(--tint)}
+.more{display:flex;align-items:center;gap:12px;min-height:48px;color:var(--tint);font-size:17px}
+.more i{width:46px;text-align:center;font-style:normal}
+.box{background:var(--well);border-radius:22px;height:236px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}
+.box .hero{width:60px;height:60px;border-radius:50%;display:grid;place-items:center;font:700 24px var(--rounded);margin-bottom:6px}
+.box .nm{font:700 28px var(--rounded)}
+.box .st{font-size:12px;font-weight:500;color:var(--text3)}
+.box .dt{font-size:12px;color:var(--text3)}
+.tiles{display:flex;gap:6px;margin:12px 0 4px}
+.tile{flex:0 0 25%;max-width:90px;display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 0;font-size:12px}
+.tile svg{width:22px;height:22px;stroke:var(--brand);fill:none;stroke-width:1.8}
+.kb{position:absolute;left:0;right:0;bottom:0;height:336px;background:#2c2c2e;border-top:1px solid #ffffff10;display:grid;place-items:center;color:#ffffff40;font:600 18px var(--rounded)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;padding:14px}
+.grid2 div{display:flex;align-items:center;gap:8px;font-size:15px;min-height:40px}
+.grid2 i{color:var(--brand);font-style:normal;width:22px;text-align:center}
+.backrow{display:flex;align-items:center;gap:12px;min-height:52px;font-size:17px;margin-top:10px}
+.backrow i{color:var(--brand);font-style:normal;width:46px;text-align:center;font-size:22px}
+.hl{outline:2px dashed #ffd60a;outline-offset:3px;border-radius:12px}
+.gone{outline:2px dashed #ff453a;outline-offset:3px;border-radius:12px;opacity:.55}
+.note{font-size:12px;color:#ffd60a;margin:6px 4px 0}
+.cut{position:absolute;left:16px;right:16px;font-size:12px;color:#ff453a}
+footer{font-size:13px;line-height:20px;color:var(--ink2);margin-top:28px;max-width:820px}
+footer p{margin-top:8px}
+</style>
+<main>
+<header>
+  <h1>Law, reversed</h1>
+  <p class="desc">The ten rulings that shape the most screens, each turned inside out. For every one: what it buys today, what the app would look like the other way, and whether anything better falls out. Reach is counted in the Swift sources (920 files). The point is to test the assumptions, not to start a rewrite: seven of the ten are worth keeping as they are.</p>
+</header>
+
+<section class="summary">
+  <h2>Worth trying</h2>
+  <ol>
+    <li><b>Sources › Apps in Feed order, yours first (bend, ruling 8).</b> The catalogue is the one list of categories that runs A–Z while the Feed and the tray run Feed order, so it opens on Agents. Inside each card the six shown are A–Z, which hides the category's own core app ("Wallet" is 24th of 25, YouTube 17th of 17) and can hide an app you connected behind "More from Work". Two sort keys change; no new parts.</li>
+    <li><b>A connect page that is asking for a key is a form (test, ruling 3).</b> On the 32 pages where the field takes the keyboard (§1302), drop the 236pt box while not connected: one head row, the tiles, the field, all above the keyboard. It runs against the fixed-box rule, so it needs a mockup on the phone before anyone agrees to it.</li>
+    <li><b>Only the title presses at the top (bend, ruling 5).</b> The top already holds four presses; four in-content back rows exist only to keep it clear. Say the rule as it now stands, then let "‹ Sources" become the title's first word: "Sources · Settings", as "Wallet · Privy" already works (§1262).</li>
+  </ol>
+  <div class="tally"><span class="badge keep" style="margin:0">Keep · 7</span><span class="badge bend" style="margin:0">Bend · 2</span><span class="badge test" style="margin:0">Test · 1</span></div>
+</section>
+
+<!-- 1 -->
+<section class="card">
+  <div class="top"><span class="num">1</span><h2>Two places: the Feed and the Wallet</h2><span class="cite">§1203 · §1208 · §1208m</span><span class="badge keep">Keep</span></div>
+  <p class="reach">Reach: the phone's whole shell (<code>MainSurface</code>, <code>RootShell</code>, <code>HomeRoute.risesAsSheet</code>) and how every category, app, Sources, Settings, Notes and Markets is presented.</p>
+  <dl>
+    <dt>The ruling</dt><dd>On the phone only the Feed and the Wallet are pages, one swipe apart; everything else rises on top of them as a sheet.</dd>
+    <dt>What it buys</dt><dd>A map a hand can hold: feeds are a flow, the Wallet is a stock. <q>i feel like there are two poles</q>; of the one-scroll Feed, <q>i think this idea beats the horizontal walk</q>.</dd>
+    <dt>Reversed</dt><dd>Every category is a page side by side again (the walk of §663 and §1207): Feed, Social, Work, Wallet, Media, Life, Agents, with a title naming the neighbours. The Feed goes back to being a page of entrances, and Social or Work open full height in place instead of as a sheet.</dd>
+    <dt>Better</dt><dd>Work is one swipe away, and a category keeps its scroll position because nothing dismisses it.</dd>
+    <dt>Worse</dt><dd>The walk was built twice and retired twice: getting anywhere became a count of swipes, and the Feed's single scroll, the part that works best, exists only because the walk left.</dd>
+    <dt>Verdict</dt><dd>Keep. The reversal has already been tried and measured against.</dd>
+  </dl>
+</section>
+
+<!-- 2 -->
+<section class="card">
+  <div class="top"><span class="num">2</span><h2>The band and the tray: face · Search · Wallet</h2><span class="cite">§930 · §1133 · §1280 · §1295</span><span class="badge keep">Keep</span></div>
+  <p class="reach">Reach: every phone screen (<code>AvatarChip</code>, <code>BandSearchBar</code>, <code>DSGlassUnion</code>), and the tray as the one way to any app or category (<code>RoomsTray</code>).</p>
+  <dl>
+    <dt>The ruling</dt><dd>The bottom band is the face and Search in one glass pill, and the Wallet's disc; Search raises the tray, which reaches every category and app.</dd>
+    <dt>What it buys</dt><dd>One reachable control instead of a scrolling dock: <q>it's only one button that a person has to press in the nav</q>. The Feed got its own door because <q>user doesn't always want to touch the top title or know to swipe</q>.</dd>
+    <dt>Reversed</dt><dd>An ordinary tab bar with words: Feed · Wallet · Search, perhaps with Sources as a fourth tab.</dd>
+    <dt>Better</dt><dd>Words under the icons teach a first run what each door does, and a Sources tab would put the catalogue one tap from anywhere.</dd>
+    <dt>Worse</dt><dd>The band already is a three-door tab bar without the words; words cost height on every screen; the face, which is both the signature and your identity, turns into a generic glyph; and Sources is a setup place people visit rarely, so a permanent tab overpays for it.</dd>
+    <dt>Verdict</dt><dd>Keep.</dd>
+  </dl>
+</section>
+
+<!-- 3 -->
+<section class="card">
+  <div class="top"><span class="num">3</span><h2>Every page is the same frame: title, one box, tiles, list</h2><span class="cite">§906 · §1102 · §1179 · §1196 · §1254</span><span class="badge test">Test</span></div>
+  <p class="reach">Reach: <code>DSRoomChassis</code> 462 references in 83 files; <code>dsRoomBox</code> in 8; every thing sheet (§1179–§1192) and all 61 account pages (<code>AccountPage</code>, 62 files).</p>
+  <dl>
+    <dt>The ruling</dt><dd>Every page, a feed, a thing's sheet or an app's account page, draws its title, one 236pt box, a row of tiles at one height, then the rest.</dd>
+    <dt>What it buys</dt><dd>One template, so nothing is hand-rolled and the tiles never move under a finger: <q>i want wallet to be the north star</q>, <q>same card size too so we are never hand rolling</q>.</dd>
+    <dt>Reversed</dt><dd>Each page sizes its head to what it has: a post leads with its words, the Wallet with its figure, a setup page with its field.</dd>
+    <dt>Better</dt><dd>Setup. Since §1302 a connect page's field takes the keyboard. With the keyboard up, roughly 480pt is left above it on an iPhone 17 Pro. The 236pt box takes half of that and the field lands at the keyboard's edge, so the list scrolls the title away to show it (worked out from the sizes, not measured on a device). The box there holds the mark, the name, "Not connected" and "Paste a key": two facts the field already says.</dd>
+    <dt>Worse</dt><dd>Everywhere else, tiles that move. You stopped a content-sized box at once (<q>your buttons move positions they should not be doing that</q>), and <q>i hate when there is empty space</q> was answered by a smaller box, not none.</dd>
+    <dt>Verdict</dt><dd>Test, narrowly: only on a page that is asking for a key (not connected, paste-a-key or no-account mode), and only until it connects. The tiles do not move under a finger, because the page changes shape once, on connect, and a connect takes you to its things (§1029). This runs against an emphatic rule, so it needs a look on the phone before it is agreed.</dd>
+  </dl>
+  <div class="stage">
+    <figure><div class="phone sheet"><div class="inner">
+      <div class="grab"></div>
+      <div class="box">
+        <div class="hero" style="background:#5e6ad2">L</div>
+        <div class="nm">Linear</div><div class="st">Not connected</div><div class="dt">Paste a key</div>
+      </div>
+      <div class="tiles">
+        <div class="tile"><svg viewBox="0 0 24 24"><circle cx="8" cy="12" r="4"/><path d="M12 12h9M18 12v3M21 12v2"/></svg>Get key</div>
+        <div class="tile"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></svg>Website</div>
+      </div>
+      <div class="panel">
+        <div class="ph">Connect</div>
+        <div class="field" style="margin-bottom:10px"><span class="caret"></span>lin_api_…<span class="paste">Paste</span></div>
+      </div>
+      <div class="kb">keyboard</div>
+      <div class="cut" style="top:2px">the title scrolled away</div>
+    </div></div><figcaption><b>Today, keyboard up.</b> Linear's page over the Feed. The field lands at the keyboard's edge, so the list scrolls the title away; the box keeps half the space left, for two facts the field already says.</figcaption></figure>
+
+    <figure><div class="phone sheet"><div class="inner">
+      <div class="grab"></div>
+      <div class="title">Sources</div>
+      <div class="row hl"><div class="m" style="background:#5e6ad2">L</div><div><div class="t">Linear</div><div class="s">Not connected</div></div></div>
+      <div class="tiles">
+        <div class="tile"><svg viewBox="0 0 24 24"><circle cx="8" cy="12" r="4"/><path d="M12 12h9M18 12v3M21 12v2"/></svg>Get key</div>
+        <div class="tile"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></svg>Website</div>
+      </div>
+      <div class="panel">
+        <div class="ph">Connect</div>
+        <div class="field" style="margin-bottom:10px"><span class="caret"></span>lin_api_…<span class="paste">Paste</span></div>
+      </div>
+      <div class="kb">keyboard</div>
+    </div></div><figcaption><b>Tested.</b> While it asks, the head is one row in the Feed's anatomy; the title, Get key, Website and the field all stand above the keyboard. Once connected, the page has its box again.</figcaption></figure>
+  </div>
+</section>
+
+<!-- 4 -->
+<section class="card">
+  <div class="top"><span class="num">4</span><h2>One sheet at a time</h2><span class="cite">§1132 · §1238 · §1240 · §1247 · §1304</span><span class="badge keep">Keep</span></div>
+  <p class="reach">Reach: every presentation on the phone; <code>dsInSheet</code> in 22 files, <code>dsSheetStep</code> in 12, held by the way-back audit's check E.</p>
+  <dl>
+    <dt>The ruling</dt><dd>What you open rises as one sheet; a step inside it pushes, with its Back at the foot where the band's seat sits.</dd>
+    <dt>What it buys</dt><dd>One layer to dismiss, and the way back always under the thumb: <q>a sheet opens on top of a sheet like in adding sources. isn't that weird?</q>; of the Back, <q>it's quicker for user to reach</q>.</dd>
+    <dt>Reversed</dt><dd>Sheets stack on sheets (Sources, then its add tray over it, then a picker), or the phone pushes full screens with a system Back at the top.</dd>
+    <dt>Better</dt><dd>A stacked sheet keeps what is under it in view, a little context for free.</dd>
+    <dt>Worse</dt><dd>Stacked sheets are the thing you called weird; full pushes bring the Back to the top of the screen and give the face two meanings again, the problem §1132 closed.</dd>
+    <dt>Verdict</dt><dd>Keep.</dd>
+  </dl>
+</section>
+
+<!-- 5 -->
+<section class="card">
+  <div class="top"><span class="num">5</span><h2>No controls at the top of the screen</h2><span class="cite">§752 · with §1203 · §1208d · §1262</span><span class="badge bend">Bend</span></div>
+  <p class="reach">Reach: every screen; the system bar is hidden throughout, and four in-content back rows exist to keep the top clear (§1304 item 4: Sources' "‹ Sources", a Notes folder, the starter-pack import, the Logos console).</p>
+  <dl>
+    <dt>The ruling</dt><dd>Nothing that picks, scopes or goes back sits at the top; those live in the content or in the band.</dd>
+    <dt>What it buys</dt><dd>Everything is where the thumb is: <q>i don't want the app to have controls at the top of the screen anywhere</q>.</dd>
+    <dt>Reversed</dt><dd>The standard iOS bar: a back chevron top left, a + or Done top right, a large title that shrinks.</dd>
+    <dt>Better</dt><dd>Convention: people know where Back is.</dd>
+    <dt>Worse</dt><dd>Thumb distance on every screen, and a second band of chrome above the one that works.</dd>
+    <dt>What is true now</dt><dd>The top already presses in four places: the grey word in "Feed Wallet" (§1203), the category's word that clears a pick (§1262), the Feed's section pill that scrolls to the top (§1212), and a sheet's Done. Every one is the title or sits in the title's line. Meanwhile "‹ Sources" stands in Settings' content as a row, because the rule as written forbids the title doing that job.</dd>
+    <dt>Verdict</dt><dd>Bend: write the rule as it now stands, "the top holds the title, and only the title presses". Then the in-content back rows become the title's first word: Settings inside Sources reads "Sources · Settings", and Sources takes you back, as "Wallet · Privy" does today. The same for a Notes folder.</dd>
+  </dl>
+  <div class="stage">
+    <figure><div class="phone sheet"><div class="inner">
+      <div class="grab"></div>
+      <div class="title">Settings</div>
+      <div class="box" style="height:auto;display:block;padding:0">
+        <div class="grid2">
+          <div><i>◉</i>Avatar</div><div><i>A</i>Name</div>
+          <div><i>▤</i>Data</div><div><i>⇅</i>Feed order</div>
+          <div><i>◐</i>Theme</div><div><i>◔</i>Notifications</div>
+          <div><i>文</i>Language</div><div><i>?</i>Support</div>
+        </div>
+      </div>
+      <div class="backrow"><i>‹</i>Sources</div>
+    </div></div><figcaption><b>Today.</b> Casberi's settings, opened from the top of Sources. The way back is a row in the content, under the box.</figcaption></figure>
+
+    <figure><div class="phone sheet"><div class="inner">
+      <div class="grab"></div>
+      <div class="title"><span class="tap hl">Sources</span><span class="p"> · Settings</span></div>
+      <div class="box" style="height:auto;display:block;padding:0">
+        <div class="grid2">
+          <div><i>◉</i>Avatar</div><div><i>A</i>Name</div>
+          <div><i>▤</i>Data</div><div><i>⇅</i>Feed order</div>
+          <div><i>◐</i>Theme</div><div><i>◔</i>Notifications</div>
+          <div><i>文</i>Language</div><div><i>?</i>Support</div>
+        </div>
+      </div>
+      <div class="note">no back row</div>
+    </div></div><figcaption><b>Bent.</b> The title says where you are and how you came: "Sources" presses back, as the category's word does elsewhere. One way back fewer to learn, one row less.</figcaption></figure>
+  </div>
+</section>
+
+<!-- 6 -->
+<section class="card">
+  <div class="top"><span class="num">6</span><h2>One row shape, standing bare</h2><span class="cite">§744 · §902 · §1017 · §1103a</span><span class="badge keep">Keep</span></div>
+  <p class="reach">Reach: <code>DSFeedRow</code> at 30 call sites in 16 files, composed by some eighteen row kinds; every list, including Sources' catalogue (§1253) and the Wallet's lists.</p>
+  <dl>
+    <dt>The ruling</dt><dd>Every row is one anatomy: a 46pt lead centred in a 60pt head, a one-line title, money or a time still ahead on the right, nothing else trailing.</dd>
+    <dt>What it buys</dt><dd><q>what parts of the app make it feel vibecoded?</q>, answered with one shape for every row, then <q>do we even need the time stamps?</q>.</dd>
+    <dt>Reversed</dt><dd>Each kind draws its native shape: a post as a card with its actions, a song as album art, a transfer as a bank line with a sign, a pull request with a status pill.</dd>
+    <dt>Better</dt><dd>You could tell a post from a song from a payment at a glance, without reading.</dd>
+    <dt>Worse</dt><dd>That is the measured starting point: leads at 26, 36, 38, 44 and 56pt and names at three sizes across eighteen kinds. The kind already shows where it helps: the picture on the right (§1103b), the person's face before a post (§1103c).</dd>
+    <dt>Verdict</dt><dd>Keep. This is much of why the Feed reads as well as it does.</dd>
+  </dl>
+</section>
+
+<!-- 7 -->
+<section class="card">
+  <div class="top"><span class="num">7</span><h2>No plates, no lines, no chevrons</h2><span class="cite">§782 · §478 · §1267 · §1272 · bent by §1208d</span><span class="badge keep">Keep</span></div>
+  <p class="reach">Reach: every surface; separators hidden in 44 files; <code>DSChevron</code> deleted with its ten callers.</p>
+  <dl>
+    <dt>The ruling</dt><dd>Air separates blocks: no backing under a row or tile, no hairline, no chevron. The one surface allowed is the Feed's card, which groups a section.</dd>
+    <dt>What it buys</dt><dd><q>these plates</q>, and before it, <q>i made a mistake by adding cards to rows</q>. Then the one bend, made knowingly: <q>i hated cards before but now think it is necessary</q>.</dd>
+    <dt>Reversed</dt><dd>iOS inset-grouped lists: rows on plates, hairlines between them, a chevron on every row that opens.</dd>
+    <dt>Better</dt><dd>A long dense list, like the catalogue's 101 apps, scans a little faster with dividers, and a chevron says "this opens".</dd>
+    <dt>Worse</dt><dd>It is the look you removed twice. The 46pt marks already give each row its rhythm, and the Feed's card now groups the Feed, the Wallet (§1225), Sources (§1253) and the setup pages (§1254).</dd>
+    <dt>Verdict</dt><dd>Keep. The exception has been found and is used well; the digest should now say "one surface, the Feed's card" instead of "no plates under any spelling".</dd>
+  </dl>
+</section>
+
+<!-- 8 -->
+<section class="card">
+  <div class="top"><span class="num">8</span><h2>A–Z, All first, verbs last</h2><span class="cite">§995 · §1039 · §1219 · and for the catalogue §1166 · §1253</span><span class="badge bend">Bend</span></div>
+  <p class="reach">Reach: <code>DSScopeTiles</code> 40 references in 24 files (every page's tiles, every sheet's, every account page's); the catalogue's 101 apps in seven cards.</p>
+  <dl>
+    <dt>The ruling</dt><dd>A page's tiles read A–Z with All or Home first and the verbs last, four at most; the catalogue lists its categories A–Z and each card's apps A–Z, six then "More from …".</dd>
+    <dt>What it buys</dt><dd>An order you can predict that never moves: <q>all tiles need to be alphabetical</q>, and more than four tiles <q>made it look vibe coded</q>.</dd>
+    <dt>Reversed</dt><dd>Things in the order you use them, or in an order of importance.</dd>
+    <dt>For tiles</dt><dd>Worse. Four short words need no ranking, and an order that follows use moves the targets.</dd>
+    <dt>For the catalogue</dt><dd>Better. Sources › Apps is the only place categories run A–Z: the Feed and the tray run Feed order, and you objected to exactly this mismatch once already (<q>the tiles aren't in same order as feed tho</q>). A–Z opens the catalogue on Agents, its narrowest card. Inside a card the six shown are A–Z by name only, so the Wallet card shows 0xBow Privacy Pools, Acorns, Apple Wallet, Binance, Bitrefill and CardPointers while Wallet itself, the core of the card, is 24th of 25; YouTube is Media's 17th of 17, after L2BEAT and NerdWallet; and an app you connected can sit behind "More from Work".</dd>
+    <dt>Verdict</dt><dd>Bend, in Sources › Apps only: categories in Feed order, and inside a card your apps first, then the rest A–Z. The A–Z view stays A–Z, and every row of tiles keeps its rule. (A further step, the category's own core app next, has its data already: the catalogue names one per category.)</dd>
+  </dl>
+  <div class="stage">
+    <figure><div class="phone sheet"><div class="inner">
+      <div class="grab"></div>
+      <div class="title">Sources</div>
+      <div class="field">⌕ Search</div>
+      <div class="order"><span>By category</span><span class="off">A–Z</span></div>
+      <div class="panel">
+        <div class="ph"><span class="g">✦</span>Agents</div>
+        <div class="row"><div class="m" style="background:#333">A</div><div><div class="t">Apple Intelligence</div><div class="s add">Add</div></div></div>
+        <div class="row"><div class="m" style="background:#1d4ed8">B</div><div><div class="t">Bankr</div><div class="s add">Add</div></div></div>
+        <div class="row"><div class="m" style="background:#10a37f">C</div><div><div class="t">ChatGPT</div><div class="s add">Add</div></div></div>
+        <div class="row"><div class="m" style="background:#d97757">C</div><div><div class="t">Claude</div><div class="s add">Add</div></div></div>
+        <div class="row"><div class="m" style="background:#d97757">C</div><div><div class="t">Claude Code</div><div class="s add">Add</div></div></div>
+        <div class="row"><div class="m" style="background:#4285f4">G</div><div><div class="t">Gemini</div><div class="s add">Add</div></div></div>
+        <div class="more"><i>↓</i>More from Agents</div>
+      </div>
+      <div class="panel">
+        <div class="ph"><span class="g">✿</span>Life</div>
+        <div class="row"><div class="m" style="background:#ff2d55">H</div><div><div class="t">Apple Health</div><div class="s add">Add</div></div></div>
+      </div>
+    </div></div><figcaption><b>Today.</b> Casberi's row and Start here, which stand above the cards, are left out of both sketches. The first card is Agents, because categories run A–Z.</figcaption></figure>
+
+    <figure><div class="phone sheet"><div class="inner">
+      <div class="grab"></div>
+      <div class="title">Sources</div>
+      <div class="field">⌕ Search</div>
+      <div class="order"><span>By category</span><span class="off">A–Z</span></div>
+      <div class="panel hl">
+        <div class="ph"><span class="g">◎</span>Social</div>
+        <div class="row"><div class="m" style="background:#0085ff">B</div><div><div class="t">Bluesky</div><div class="s">Synced 1h ago</div></div></div>
+        <div class="row"><div class="m" style="background:#111;border:1px solid #333">X</div><div><div class="t">X</div><div class="s">Synced 1h ago</div></div></div>
+        <div class="row"><div class="m" style="background:#c13584">I</div><div><div class="t">Instagram</div><div class="s add">Add</div></div></div>
+        <div class="row"><div class="m" style="background:#e6c200">S</div><div><div class="t">Snapchat</div><div class="s add">Add</div></div></div>
+        <div class="row"><div class="m" style="background:#229ed9">T</div><div><div class="t">Telegram</div><div class="s add">Add</div></div></div>
+        <div class="row"><div class="m" style="background:#222">T</div><div><div class="t">Threads</div><div class="s add">Add</div></div></div>
+        <div class="more"><i>↓</i>More from Social</div>
+      </div>
+      <div class="panel">
+        <div class="ph"><span class="g">▣</span>Work</div>
+        <div class="row hl"><div class="m" style="background:#5e6ad2">L</div><div><div class="t">Linear</div><div class="s">Synced 12m ago</div></div></div>
+      </div>
+    </div></div><figcaption><b>Bent.</b> Cards in Feed order (Social, Work, Wallet, Media, Life, Agents, Testnets by default, yours if you reordered). Yours lead each card, the rest A–Z; Linear no longer waits behind "More from Work".</figcaption></figure>
+  </div>
+</section>
+
+<!-- 9 -->
+<section class="card">
+  <div class="top"><span class="num">9</span><h2>One explaining sentence per screen</h2><span class="cite">§748 · §729 · §1003</span><span class="badge keep">Keep</span></div>
+  <p class="reach">Reach: <code>DSFootnote</code> at 55 call sites in 40 files, <code>DSSlabNote</code> in 51; counted by the footnote audit and the setup-copy audit.</p>
+  <dl>
+    <dt>The ruling</dt><dd>A screen draws at most one explaining sentence, through one view, and only if the controls cannot say it; honesty, money, signing, privacy and fix-it lines stay.</dd>
+    <dt>What it buys</dt><dd><q>one explaining sentence per screen at most, and only if it says something the controls don't</q>, aimed at copy that explained itself everywhere.</dd>
+    <dt>Reversed</dt><dd>Explain freely: a line under every control, setup pages that walk you step by step, and each catalogue row saying what the app brings in place of "Add".</dd>
+    <dt>Better</dt><dd>Someone new to the catalogue would know what each of 101 apps would give them before tapping it.</dd>
+    <dt>Worse</dt><dd>That copy is what read as vibecoded, and the catalogue line has nothing to draw anyway: 72 of the 101 apps have no tagline.</dd>
+    <dt>Verdict</dt><dd>Keep.</dd>
+  </dl>
+</section>
+
+<!-- 10 -->
+<section class="card">
+  <div class="top"><span class="num">10</span><h2>The category is the unit</h2><span class="cite">§1049 · §1152 · §977 · §1048 · §1235</span><span class="badge keep">Keep</span></div>
+  <p class="reach">Reach: <code>CategoryFold</code> 134 references in 33 files, <code>BridgeCatalog</code> 146 in 58, <code>CategoryOrder</code> 33 in 17: the Feed's sections, the tray, Sources, search, notifications.</p>
+  <dl>
+    <dt>The ruling</dt><dd>Every app files under one of seven categories, Social, Work, Wallet, Media, Life, Agents and Testnets, in one order you set (Feed order); the Feed is by category, the tray shows a category only while it holds a connected app, and the money apps fold into one Wallet.</dd>
+    <dt>What it buys</dt><dd><q>simpler is better, what woudl apple do?</q>; <q>we don't want to have tiles that just become mini categories themselves</q>; and of the Feed, <q>i think it looks smarter to be by category and also helps them understand the app. and their day</q>.</dd>
+    <dt>Reversed</dt><dd>The app is the unit: the Feed groups by app (§1103 tried this), the tray lists your apps, and there is no taxonomy to maintain.</dd>
+    <dt>Better</dt><dd>No refiling. In ten days Reading folded into Media (§1204), mail moved to Life (§1231), Day filed under Life (§1239), the note apps moved to Notes (§1235) and Markets became a Wallet tile (§1232). Apps that straddle, like L2BEAT and NerdWallet under Media, would stop looking misfiled.</dd>
+    <dt>Worse</dt><dd>A section per connected app in the Feed instead of five; the one Wallet, which is a category idea, comes apart; and you have said of the categories, <q>i don't want to be messing with that</q>.</dd>
+    <dt>Verdict</dt><dd>Keep. The churn is the cost of a taxonomy, and it is settling.</dd>
+  </dl>
+</section>
+
+<footer>
+  <p><b>How the ten were picked.</b> By how many screens or shared parts each ruling governs, counted as references in <code>Casberi/Casberi/**/*.swift</code>, and preferring structure (navigation, anatomy, presentation, ordering, copy) over cosmetics. The verdicts lean towards keeping on purpose: a reversal that only sounds clever is a keep.</p>
+  <p><b>One note on the digest.</b> The hand-written half of <code>docs/law.md</code> predates §1203–§1304. Its shell section still says the face is the phone's one navigation button and that the walk is You then the categories, and its design section still says "no plates under any spelling". This page reads the ledger (<code>docs/prd.md</code>) for those rulings.</p>
+</footer>
+</main>

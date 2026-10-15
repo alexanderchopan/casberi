@@ -91,7 +91,9 @@ struct SettingsHome: View {
                 // Under the Settings tile the box is Casberi's own settings
                 // (prd §1208c); under Sources, the kinds you connected.
                 Group {
-                    if casberiOpen { SettingsRows(style: .box) } else { countsBox }
+                    if casberiOpen { SettingsRows(style: .box) }
+                    else if startsInBox { startBox }
+                    else { countsBox }
                 }
                 .dsRoomLeadListRow()
             }
@@ -636,8 +638,8 @@ struct SettingsHome: View {
     // MARK: - Apps
 
     /// APPS, THE FIRST LANDING (prd §1166, user: "it shouldn't just be
-    /// start here, it should be all the apps"): Start here's steps while any
-    /// is left, Casberi's own row once your name is in, then EVERY app under
+    /// start here, it should be all the apps"): Casberi's own row, then EVERY
+    /// app under
     /// its category (categories A–Z, Other last; apps A–Z), yours wearing
     /// their state and the rest Add. Supersedes §1145's "only yours": this is
     /// where a first run sets up, so what you could add stands here too.
@@ -645,12 +647,6 @@ struct SettingsHome: View {
     /// in adds no air for it: the cards follow as rows of their own.
     @ViewBuilder
     private var appsList: some View {
-        if query.isEmpty, !startHere.isEmpty {
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
-                Text("Start here").dsText(.heading20).foregroundStyle(DS.headInk)
-                ForEach(startHere) { step in startRow(step) }
-            }
-        }
         if appCategories.isEmpty {
             DSEmptyState(headline: DSProse.text("No apps"), words: Text("Nothing matches."),
                          scale: .list(rows: 3))
@@ -796,69 +792,83 @@ struct SettingsHome: View {
         }
     }
 
-    // MARK: - Start here (prd §1166)
+    // MARK: - The first box (prd §1314)
 
-    /// The four first steps. Each stands until its own act is done, never
-    /// dismissed and never on a timer (user: "i like the idea of leaving it
-    /// there until a user adds it"), and doing one never takes another.
-    enum StartStep: String, Identifiable { case name, calendar, wallet, subscription; var id: String { rawValue } }
+    /// THE FIRST BOX: "START WITH ANY OF THESE" (prd §1314, user: "start here
+    /// in the box: LOVE IT", "if they do one let it clear and not be below
+    /// the box", "the user may think it is a checklist … like 'start with
+    /// any of these'"). Eight zeros read as a report card on day one. Until
+    /// anything arrives the box offers four ways in as Settings' rows (user,
+    /// of three layouts: "C is more purposefully designed. what would apple
+    /// do"): glyph, name, a grey value, the plus, A–Z so none is first; the
+    /// first one done turns it into the counts. Nothing stands under the box (the
+    /// step-by-step Start here of §1166 is deleted), and your name is not a
+    /// way in: it lives in Casberi's own settings.
+    private var startsInBox: Bool {
+        connectedApps.isEmpty && calendarsEmpty && connectedCards.isEmpty && feeds.isEmpty
+            && MailSubscriptionsReading.shared.items.isEmpty && people == 0
+            && SubscriptionsReading.shared.items.isEmpty && WalletStore.shared.addresses.isEmpty
+    }
 
-    private var hasName: Bool { !(ProfileStore.shared.name ?? "").isEmpty }
+    private var startBox: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s1) {
+            Text("Start with any of these").dsText(.heading20).foregroundStyle(DS.textPrimary)
+                .padding([.top, .horizontal], DS.Space.s2)
+            // Settings' row grammar (user: "what would apple do"): a glyph in
+            // one column, the name, a grey value, the plus. A–Z, as every
+            // room's tiles read, so no row is the first step. The rows share
+            // the box evenly; it keeps its one size.
+            VStack(spacing: 0) {
+                firstRow(String(localized: "App"), glyph: "square.grid.2x2",
+                         value: String(localized: "Your apps"),
+                         verb: String(localized: "Add an app")) { searchFocused = true }
+                firstRow(String(localized: "Calendar"), glyph: "calendar",
+                         value: String(localized: "Your events"),
+                         verb: String(localized: "Add a calendar")) { add(.calendars) }
+                firstRow(String(localized: "Subscription"), glyph: SubscriptionWords.planGlyph,
+                         value: String(localized: "What you pay"),
+                         verb: SubscriptionWords.track) { add(.subscriptions) }
+                firstRow(String(localized: "Wallet"), glyph: "wallet.bifold",
+                         value: String(localized: "Any address"),
+                         verb: String(localized: "Follow a wallet")) { add(.wallets) }
+            }
+            .frame(maxHeight: .infinity)
+        }
+        // The counts' own well and one size: the box is the box, whatever
+        // it holds (top-card-fixed-size rule).
+        .padding(DS.Space.s2)
+        .frame(maxWidth: .infinity, minHeight: DSRoomChassis.leadHeight,
+               maxHeight: DSRoomChassis.leadHeight, alignment: .topLeading)
+        .dsWell(cornerRadius: DS.Radius.widget)
+    }
+
+    /// One way in, the whole row one button: the plus says what it does,
+    /// as it will on the count this becomes.
+    private func firstRow(_ label: String, glyph: String, value: String, verb: String,
+                          action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: DS.Space.s3) {
+                Image(systemName: glyph)
+                    .dsGlyph(.body, weight: .regular)
+                    .foregroundStyle(DS.brandInk)
+                    .frame(width: DS.Hit.min / 1.5)
+                Text(label).dsText(.body17).foregroundStyle(DS.textPrimary).lineLimit(1)
+                Spacer(minLength: DS.Space.s2)
+                Text(value).dsText(.body17).foregroundStyle(DS.textSecondary).lineLimit(1)
+                Image(systemName: "plus")
+                    .dsGlyph(.body, weight: .regular)
+                    .foregroundStyle(DS.brandInk)
+            }
+            .padding(.horizontal, DS.Space.s2)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(RowPress())
+        .accessibilityLabel(Text(verb))
+    }
 
     private var calendarsEmpty: Bool {
         phoneCalendars.isEmpty && CalendarSubscriptionStore.shared.calendars.isEmpty
-    }
-
-    private var startHere: [StartStep] {
-        var steps: [StartStep] = []
-        // The demo is someone else's life: asking for YOUR name there reads
-        // as a step of theirs left undone.
-        if !hasName && !DemoMode.isActive { steps.append(.name) }
-        if calendarsEmpty && !bridges.bridges.contains(where: { $0.name == "Calendar" && $0.status != .paused }) {
-            steps.append(.calendar)
-        }
-        if WalletStore.shared.addresses.isEmpty { steps.append(.wallet) }
-        if SubscriptionStore.shared.all.isEmpty && SubscriptionsReading.shared.items.isEmpty {
-            steps.append(.subscription)
-        }
-        return steps
-    }
-
-    @ViewBuilder
-    private func startRow(_ step: StartStep) -> some View {
-        switch step {
-        case .name:
-            // Casberi's own page, under its mark: your name, your photo and
-            // what the app reaches (user: "that should be the casberi icon").
-            DSPushRow(title: Text("Add name, photo, preferences")) {
-                withAnimation(DS.Motion.standard) { casberiOpen = true }
-            } leading: {
-                // On a tile like every icon beside it (user: "the app tiles
-                // and rows are too small"), Today's 38pt (prd §1170).
-                CasberiMark(size: DS.Mark.notice * 0.7)
-                    .frame(width: DS.Mark.notice, height: DS.Mark.notice)
-            }
-        case .calendar:
-            DSPushRow(title: Text("Add a calendar"), subtitle: Text("Your phone’s, or any by link")) {
-                add(.calendars)
-            } leading: { BridgeIcon(name: "Calendar", size: DS.Mark.notice) }
-        case .wallet:
-            DSPushRow(title: Text("Follow a wallet"), subtitle: Text("Any address or name, no keys")) {
-                add(.wallets)
-            } leading: { BridgeIcon(name: "Wallet", size: DS.Mark.notice) }
-        case .subscription:
-            DSPushRow(title: Text(SubscriptionWords.track), subtitle: Text("Netflix, iCloud+, free ones too")) {
-                add(.subscriptions)
-            } leading: { glyphLead(SubscriptionWords.planGlyph) }
-        }
-    }
-
-    private func glyphLead(_ glyph: String) -> some View {
-        // Bare and pink (prd §1272).
-        Image(systemName: glyph)
-            .dsGlyph(.body, weight: .regular)
-            .foregroundStyle(DS.brandInk)
-            .frame(width: DS.Mark.notice, height: DS.Mark.notice)
     }
 
     /// A kind on the Feed's card (prd §1265), in the room's column as the

@@ -1,0 +1,211 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>First run fixes</title>
+<style>
+:root{color-scheme:light dark;--ground:#f2f1f5;--ink:#15141a;--ink2:#56535f;--rounded:ui-rounded,"SF Pro Rounded",-apple-system,sans-serif}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--ground:#0b0b0f;--ink:#eeecf3;--ink2:#a29ead}}
+:root[data-theme="dark"]{--ground:#0b0b0f;--ink:#eeecf3;--ink2:#a29ead}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;-webkit-font-smoothing:antialiased;padding:16px 16px 40px}
+main{max-width:1180px;margin:0 auto}
+h1{font:700 26px/32px var(--rounded)}
+h2{font:700 21px/28px var(--rounded);margin:34px 0 4px}
+p.desc{font-size:14px;line-height:20px;color:var(--ink2);max-width:900px;margin-top:4px}
+.stage{display:flex;gap:18px;flex-wrap:wrap;margin-top:12px}
+figure{width:232px;flex:none}
+figcaption{font-size:12px;line-height:16px;color:var(--ink2);margin:8px 2px 0}
+figcaption b{color:var(--ink)}
+.phone{--sheet:#000;--card:#1c1c1e;--card2:#2c2c2e;--text:#fff;--text2:#ebebf599;--text3:#ebebf55c;--brand:#ff3b5c;--tint:#0a84ff;--glass:#2c2c2ecc;
+  zoom:.575;width:402px;height:874px;position:relative;background:var(--sheet);color:var(--text);border-radius:44px;box-shadow:0 24px 70px #00000055;overflow:hidden;padding:56px 18px 0}
+.sheet{position:absolute;inset:44px 0 0;background:#0c0c0e;border-radius:32px 32px 0 0;padding:16px 18px}
+.grab{width:40px;height:5px;border-radius:3px;background:#555;margin:0 auto 14px}
+.title{font:700 34px/40px var(--rounded);margin-bottom:12px;white-space:nowrap}.title .g{color:#8e8e93}.title .b{color:var(--brand)}
+.box{background:var(--card);border-radius:24px;padding:18px;min-height:236px;margin-bottom:14px}
+.tiles{display:flex;justify-content:space-around;margin:4px 0 16px;font-size:13px;color:var(--text2);text-align:center}
+.tiles i{display:block;font-style:normal;font-size:22px;color:var(--brand)}
+.row{display:flex;gap:12px;align-items:center;min-height:56px}
+.lead{width:44px;height:44px;border-radius:12px;flex:none;display:grid;place-items:center;font:700 16px var(--rounded);color:#fff}
+.t{font-size:17px}.s{font-size:13px;color:var(--text2)}
+.door{display:flex;align-items:center;gap:10px;color:var(--brand);font-size:17px;min-height:48px}
+.band{position:absolute;left:18px;right:18px;bottom:22px;display:flex;justify-content:space-between;align-items:center}
+.pill{height:60px;border-radius:30px;background:var(--glass);display:flex;align-items:center;gap:22px;padding:0 20px;font-size:26px}
+.disc{width:60px;height:60px;border-radius:50%;background:var(--glass);display:grid;place-items:center;font-size:24px}
+.hl{outline:3px dashed #ffd60a;outline-offset:3px;border-radius:14px}
+.count{display:flex;justify-content:space-between;align-items:center;min-height:52px;font-size:17px}
+.count b{font:700 26px var(--rounded);margin-right:10px}
+.plus{color:var(--brand);font-size:26px}
+.field{height:52px;border-radius:26px;background:var(--card);display:flex;align-items:center;gap:10px;padding:0 18px;color:var(--text2);font-size:17px;margin-bottom:12px}
+.demoBlue{background:#1e6ff0;color:#fff;border-radius:22px;height:46px;display:flex;align-items:center;gap:14px;padding:0 18px;font-size:17px}
+.ring{box-shadow:0 0 0 3px #1e6ff0}
+.chip{display:inline-block;font-size:12px;font-weight:600;border-radius:8px;padding:2px 8px;color:#fff}
+.sec{font:700 15px var(--rounded);color:var(--text2);margin:8px 0 2px}
+.keys{position:absolute;left:0;right:0;bottom:0;height:300px;background:#2a2a2c;border-radius:28px 28px 0 0}
+</style>
+<main>
+<h1>First run fixes</h1>
+<p class="desc">Your notes on the first run, as options. Dashed yellow is what changes. Built after you pick: nothing here is in the app yet. Being built meanwhile, no choice needed: Start here in Sources' box while every count is zero, and no sheet rising on a sheet.</p>
+
+<h2>1. The empty Feed: one nudge, not a pitch</h2>
+<p class="desc">Today: "One inbox for all your apps", Browse apps, and a pile of twelve icons, each a door. You want one thing to do, and it should lead to the catalogue.</p>
+<div class="stage">
+<figure><div class="phone">
+  <div class="title">Feed <span class="g">Wallet</span></div>
+  <div class="box" style="display:flex;flex-direction:column;justify-content:flex-end"><div style="font:700 30px/36px var(--rounded)">One inbox for all your apps.</div></div>
+  <div class="row" style="background:#1e6ff0;border-radius:22px;padding:0 16px;min-height:80px;font:700 26px var(--rounded)">Browse apps</div>
+  <div style="margin-top:60px;color:var(--text2);text-align:right;font-size:14px">Tap any app to add it</div>
+  <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+    <span class="lead" style="background:#fff;color:#d33">M</span><span class="lead" style="background:#111">G</span><span class="lead" style="background:#2aa">T</span><span class="lead" style="background:#0a84ff">B</span><span class="lead" style="background:#f60">S</span><span class="lead" style="background:#444">N</span></div>
+  <div class="band"><div class="pill">🐙 ⌕</div><div class="disc">👛</div></div>
+</div><figcaption><b>Today.</b> Fourteen doors on a screen with nothing in it.</figcaption></figure>
+
+<figure><div class="phone">
+  <div class="title">Feed <span class="g">Wallet</span></div>
+  <div class="box hl"><div class="sec">Start here</div>
+    <div class="row"><span class="lead" style="background:#ff3b30">▦</span><div><div class="t">Add a calendar</div><div class="s">Your phone's, or any by link</div></div></div>
+    <div class="row"><span class="lead" style="background:#0a84ff">◎</span><div><div class="t">Follow a wallet</div><div class="s">Any address or name</div></div></div>
+    <div class="row"><span class="lead" style="background:#333">⊞</span><div><div class="t">Add your apps</div><div class="s">Mail, Bluesky, GitHub and 97 more</div></div></div>
+  </div>
+  <div class="tiles"><div><i>▭</i>Feed</div><div><i>☰</i>Day</div><div><i>✎</i>Notes</div><div><i>⊞</i>Sources</div></div>
+  <div class="band"><div class="pill">🐙 ⌕</div><div class="disc">👛</div></div>
+</div><figcaption><b>A. Start here, in the Feed's box.</b> The same three steps Sources leads with; the last one opens Sources › Apps. Nothing under it. Gone at the first connect.</figcaption></figure>
+
+<figure><div class="phone">
+  <div class="title">Feed <span class="g">Wallet</span></div>
+  <div class="box hl" style="display:flex;flex-direction:column;justify-content:space-between">
+    <div style="font:700 26px/32px var(--rounded)">Nothing here yet.</div>
+    <div class="door" style="font-size:20px">⊞&nbsp; Add your apps ›</div></div>
+  <div class="tiles"><div><i>▭</i>Feed</div><div><i>☰</i>Day</div><div><i>✎</i>Notes</div><div><i>⊞</i>Sources</div></div>
+  <div class="band"><div class="pill">🐙 ⌕</div><div class="disc">👛</div></div>
+</div><figcaption><b>B. One door.</b> The box says it is empty and holds one door to Sources › Apps. The quietest; the same shape as Notes' "Nothing here yet".</figcaption></figure>
+</div>
+
+<h2>2. The empty Wallet: a page, not a dead button</h2>
+<p class="desc">Fix, whichever you pick above: with nothing followed the Wallet stays in the pager, the button lands on it, and the swipe settles.</p>
+<div class="stage">
+<figure><div class="phone">
+  <div class="title"><span class="g">Feed</span> Wallet</div>
+  <div class="box hl"><div class="sec">Start here</div>
+    <div class="row"><span class="lead" style="background:#0a84ff">◎</span><div><div class="t">Follow a wallet</div><div class="s">Any address or name, no keys</div></div></div>
+    <div class="row"><span class="lead" style="background:#111">⌁</span><div><div class="t">Track a subscription</div><div class="s">Netflix, iCloud+, free ones too</div></div></div>
+    <div class="row"><span class="lead" style="background:#333">⊞</span><div><div class="t">Add a money app</div><div class="s">Coinbase, Apple Wallet, Wise and 20 more</div></div></div>
+  </div>
+  <div class="tiles"><div><i>▮▮</i>Home</div><div><i>◔</i>Holdings</div><div><i>↗</i>Markets</div><div><i>⛨</i>Security</div></div>
+  <div class="band"><div class="pill">🐙 ⌕</div><div class="disc ring">👛</div></div>
+</div><figcaption><b>The Wallet's own Start here.</b> Same anatomy as 1A, money's steps; the last opens Sources › Apps on the Wallet category. Markets still works empty (§1167).</figcaption></figure>
+</div>
+
+<h2>3. Searching for an app</h2>
+<p class="desc">Today Sources' field types into a list that is under the keyboard, below eight counts. Sources rises over the band, so the band's Search is covered there.</p>
+<div class="stage">
+<figure><div class="phone"><div class="sheet"><div class="grab"></div>
+  <div class="title">Sources</div>
+  <div class="box hl">
+    <div class="field" style="background:#2c2c2e">⌕&nbsp; blue|</div>
+    <div class="row"><span class="lead" style="background:#0a84ff">🦋</span><div><div class="t">Bluesky</div><div class="s">Social · Add</div></div></div>
+    <div class="row"><span class="lead" style="background:#1da1f2">B</span><div><div class="t">Blue Sky Labs</div><div class="s">Work · Add</div></div></div>
+  </div>
+  <div class="keys"></div></div>
+</div><figcaption><b>A. Results in the box.</b> The field moves into the box, and while it has words the counts give way to the results, which sit above the keyboard. Clear the words and the counts return. One field, no tap more than today.</figcaption></figure>
+
+<figure><div class="phone">
+  <div class="title">Feed <span class="g">Wallet</span></div>
+  <div class="box" style="opacity:.25"></div>
+  <div style="position:absolute;left:18px;right:18px;bottom:330px;background:#1c1c1e;border-radius:24px;padding:14px 16px" class="hl">
+    <div class="sec">Add an app</div>
+    <div class="row"><span class="lead" style="background:#0a84ff">🦋</span><div><div class="t">Bluesky</div><div class="s">Social</div></div></div>
+    <div class="sec" style="margin-top:6px">In your Feed</div>
+    <div class="row"><span class="lead" style="background:#333">✎</span><div><div class="t">Blue paint samples</div><div class="s">Note · Oct 3</div></div></div></div>
+  <div class="keys"></div>
+</div><figcaption><b>B. The band's Search finds apps too.</b> The tray's search lists "Add an app" above what you have; Sources keeps its field for when you are already inside it. Search becomes the one door for "find anything", apps included.</figcaption></figure>
+
+<figure><div class="phone"><div class="sheet"><div class="grab"></div>
+  <div class="title">Sources</div>
+  <div class="box"><div class="count"><span><b>0</b>Apps</span></div><div class="count"><span><b>0</b>Calendars</span><span class="plus">+</span></div><div class="count"><span><b>0</b>Wallets</span><span class="plus">+</span></div></div>
+  <div class="row hl" style="color:var(--text2)">⌕&nbsp; The field stands under the box, scrolls to the top when tapped</div>
+  <div class="keys"></div></div>
+</div><figcaption><b>C. The field jumps to the top on focus.</b> The list scrolls so the field sits under the title and the results fill the space above the keyboard. Smallest change; still two areas fighting for the screen.</figcaption></figure>
+</div>
+<p class="desc">My pick: A, and B later. A fixes the screen you are on; B is a bigger idea about Search, worth its own pass.</p>
+
+<h2>4. Needs you, when it holds sixteen</h2>
+<p class="desc">Everything in it matters, to different people for different reasons: a Safe waiting on your signature, a stuck transfer, a price rise, a loan near liquidation. Today it is one count and a list.</p>
+<div class="stage">
+<figure><div class="phone"><div class="sheet"><div class="grab"></div>
+  <div class="title">Wallet · Needs you</div>
+  <div class="row"><span class="lead" style="background:#9be15d;color:#111">W</span><div><div class="t">Needs attention · £200 → €235</div></div></div>
+  <div class="row"><span class="lead" style="background:#555">◆</span><div><div class="t">Put 0.0700 ETH into Privacy Pools</div></div></div>
+  <div class="row"><span class="lead" style="background:#12ff80;color:#111">S</span><div><div class="t">Fully signed</div><div class="s">ready to execute</div></div></div>
+  <div class="row"><span class="lead" style="background:#12ff80;color:#111">S</span><div><div class="t">2 of 3 signatures</div><div class="s">your signature is needed</div></div></div>
+  <div class="door" style="justify-content:center">See all 16 ›</div></div>
+</div><figcaption><b>Today.</b> One list, newest first; a signature and a deposit read alike.</figcaption></figure>
+
+<figure><div class="phone"><div class="sheet"><div class="grab"></div>
+  <div class="title">Wallet · Needs you</div>
+  <div class="box hl" style="min-height:0">
+    <div class="count"><span><b>3</b>Sign</span><span class="s">Safe · Everyday</span></div>
+    <div class="count"><span><b>2</b>Stuck</span><span class="s">Wise · a deposit</span></div>
+    <div class="count"><span><b>1</b>At risk</span><span class="s">Morpho · can fall 24%</span></div>
+    <div class="count"><span><b>10</b>To review</span><span class="s">prices, approvals</span></div></div>
+  <div class="sec">Sign</div>
+  <div class="row"><span class="lead" style="background:#12ff80;color:#111">S</span><div><div class="t">2 of 3 signatures · your turn</div></div></div></div>
+</div><figcaption><b>A. By what it asks of you.</b> Four kinds, each a count and a door: Sign, Stuck, At risk, To review. The box is the triage; each kind is its own short list. Every item still there.</figcaption></figure>
+
+<figure><div class="phone"><div class="sheet"><div class="grab"></div>
+  <div class="title">Wallet · Needs you</div>
+  <div class="sec hl">Today</div>
+  <div class="row"><span class="lead" style="background:#12ff80;color:#111">S</span><div><div class="t">2 of 3 signatures · your turn</div><div class="s">Safe · Everyday</div></div></div>
+  <div class="row"><span class="lead" style="background:#9be15d;color:#111">W</span><div><div class="t">£200 → €235 stuck 2 days</div><div class="s">Wise</div></div></div>
+  <div class="sec hl" style="margin-top:8px">This week</div>
+  <div class="row"><span class="lead" style="background:#36f">M</span><div><div class="t">Morpho can fall 24%</div></div></div>
+  <div class="sec hl" style="margin-top:8px">When you have a minute · 10</div>
+  <div class="row" style="opacity:.6"><span class="lead" style="background:#333">N</span><div><div class="t">Notion price rise</div></div></div></div>
+</div><figcaption><b>B. By when.</b> Today, This week, When you have a minute (folded). What has a clock leads; the rest waits underneath with its count.</figcaption></figure>
+
+<figure><div class="phone"><div class="sheet"><div class="grab"></div>
+  <div class="title">Wallet · Needs you</div>
+  <div class="row"><span class="lead" style="background:#12ff80;color:#111">S</span><div style="flex:1"><div class="t">Safe · Everyday</div><div class="s">3 waiting · 1 is your turn</div></div><span class="chip" style="background:#ff9f0a">3</span></div>
+  <div class="row"><span class="lead" style="background:#9be15d;color:#111">W</span><div style="flex:1"><div class="t">Wise</div><div class="s">£200 → €235 stuck · 1 sending</div></div><span class="chip" style="background:#ff9f0a">2</span></div>
+  <div class="row"><span class="lead" style="background:#36f">M</span><div style="flex:1"><div class="t">Morpho</div><div class="s">can fall 24%</div></div><span class="chip" style="background:#ff453a">1</span></div>
+  <div class="row"><span class="lead" style="background:#333">⌁</span><div style="flex:1"><div class="t">Subscriptions</div><div class="s">2 price rises</div></div><span class="chip" style="background:#8e8e93">2</span></div></div>
+</div><figcaption><b>C. By app.</b> One row per app, its asks counted, the Feed's own grouping (§1103). Sixteen becomes six rows; the row opens that app's asks.</figcaption></figure>
+</div>
+
+<h2>5. The demo without the pill</h2>
+<p class="desc">Today the blue pill floats over the top of every screen and sheet, pushes everything down, and covers where you pull a sheet closed. The demo should look like the real app.</p>
+<div class="stage">
+<figure><div class="phone">
+  <div class="demoBlue" style="margin:-6px 0 14px;width:290px">Demo · Not your things &nbsp;<b>Exit</b></div>
+  <div class="title">Feed <span class="g">Wallet</span></div>
+  <div class="box"></div>
+  <div class="band"><div class="pill">🐙 ⌕</div><div class="disc">👛</div></div>
+</div><figcaption><b>Today.</b> On every screen, over every sheet.</figcaption></figure>
+
+<figure><div class="phone">
+  <div class="title">Feed <span class="g">Wallet</span></div>
+  <div class="box"></div>
+  <div class="tiles"><div><i>▭</i>Feed</div><div><i>☰</i>Day</div><div><i>✎</i>Notes</div><div><i>⊞</i>Sources</div></div>
+  <div class="band"><div class="pill"><span class="ring hl" style="border-radius:50%">🐙</span> ⌕</div><div class="demoBlue hl" style="height:60px;border-radius:30px">Exit demo</div></div>
+</div><figcaption><b>A. Exit in the band.</b> While in the demo, the Wallet disc becomes an "Exit demo" capsule and the face wears a blue ring. Nothing at the top; every screen sits where it does for real. The Wallet is still a swipe or the title away.</figcaption></figure>
+
+<figure><div class="phone">
+  <div class="title">Feed <span class="g">Wallet</span></div>
+  <div class="box"></div>
+  <div class="tiles"><div><i>▭</i>Feed</div><div><i>☰</i>Day</div><div><i>✎</i>Notes</div><div><i>⊞</i>Sources</div></div>
+  <div class="row hl" style="background:#1e6ff0;border-radius:18px;padding:0 16px"><div style="flex:1"><div class="t">This is the demo</div><div class="s" style="color:#ffffffbb">Someone else's things, to try it out</div></div><b>Exit</b></div>
+  <div class="band"><div class="pill">🐙 ⌕</div><div class="disc">👛</div></div>
+</div><figcaption><b>B. A row in the Feed.</b> The first row under the tiles, scrolls away with the list. Only on the Feed; sheets are untouched. Quiet, but easy to lose.</figcaption></figure>
+
+<figure><div class="phone">
+  <div class="title">Feed <span class="g">Wallet</span></div>
+  <div class="box"></div>
+  <div class="tiles"><div><i>▭</i>Feed</div><div><i>☰</i>Day</div><div><i>✎</i>Notes</div><div><i>⊞</i>Sources</div></div>
+  <div class="band"><div class="pill">🐙 ⌕</div><div class="disc">👛</div></div>
+  <div class="hl" style="position:absolute;left:150px;bottom:34px;background:#1e6ff0;color:#fff;font-size:15px;font-weight:600;border-radius:14px;padding:8px 14px">Demo · Exit</div>
+</div><figcaption><b>C. A small tag between the band's ends.</b> Rides the band, never the top; tapped, it asks "Leave the demo?". The band keeps both of its buttons.</figcaption></figure>
+</div>
+<p class="desc">My pick: C. It keeps the band's two doors as they are for real, it never covers a sheet, and it is always one tap from leaving. A changes the Wallet button, which is the thing the demo should be showing off.</p>
+
+<h2>6. Bluesky's page</h2>
+<p class="desc">"Not connected · No account" means no sign-in is needed, and reads as an error. Copy fix (all ten no-sign-in seats): "No sign-in". Your other point, signing in for your own notifications, does not exist today: Bluesky is handle-only. Adding an app-password sign-in that reads your notifications is a feature for your go, not built here.</p>
+</main>

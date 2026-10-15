@@ -18,6 +18,8 @@ struct PivotPage: View {
     @State private var tile = PivotTile(name: nil)
     @State private var shown = Self.firstRows
     @State private var opened: Thing?
+    /// Inside its own stack a thing pushes (prd §1315).
+    @Environment(\.dsInSheetStack) private var inSheetStack
     @State private var related: [Related] = []
 
     static let firstRows = 20
@@ -71,7 +73,8 @@ struct PivotPage: View {
         .dsRoomList()
         .dsPageBackground()
         .task(id: query.id) { compose() }
-        .sheet(item: $opened) { thing in
+        // Pushes inside the page's own stack (prd §1315).
+        .dsOneSheet(item: $opened, pushes: { _ in inSheetStack }) { thing in
             ThingSheetView(thing: thing)
         }
     }

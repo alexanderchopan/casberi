@@ -361,7 +361,44 @@ struct ThingSheetView: View {
     }
 
     @ViewBuilder
+    /// ONE SHEET AT A TIME, FROM THE THING SHEET TOO (prd §1315, user: "i
+    /// hate that … i'd rather get rid of that behavior b/c it is confusing to
+    /// users"). Risen on its own, the thing sheet hosts its own stack, so what
+    /// it opens (a quoted post, Follow, Track, Share, an alert) pushes inside
+    /// it with the seat's Back at the foot (§1304) instead of rising over it.
+    /// Pushed inside another sheet's stack, in the Mac's pane, or drawn in
+    /// place, it adds nothing. The Mac keeps its own presentations.
+    private var standsAlone: Bool {
+        #if targetEnvironment(macCatalyst)
+        false
+        #else
+        !inSheetStack && onBack == nil && !inlineRest
+        #endif
+    }
+
+    /// Whether a step this sheet opens pushes (prd §1238, §1315).
+    private var pushesHere: Bool { inSheetStack || standsAlone }
+
     var body: some View {
+        if standsAlone {
+            NavigationStack {
+                sheetBody
+                    .toolbar(.hidden, for: .navigationBar)
+            }
+            // On the stack, not its root: a pushed page takes the stack's
+            // environment, and one that missed this built a second stack and
+            // never showed (a quoted post, measured by the sheet sweep).
+            .environment(\.dsInSheetStack, true)
+            // A sheet, so a pushed step's way back is the seat at the foot
+            // (§1304), never the system's at the top.
+            .environment(\.dsInSheet, true)
+        } else {
+            sheetBody
+        }
+    }
+
+    @ViewBuilder
+    private var sheetBody: some View {
         // Mirrors the `init` guard above: a delete that lands between the
         // sheet's construction and this render (both on the main actor, but
         // not the same instant) would otherwise crash here instead — every
@@ -1389,12 +1426,12 @@ struct ThingSheetView: View {
         // Walking the thread in-app (2026-07-16) — the parent this post
         // answers, or a reply under it. A read: no consent gate, the standing
         // rule for the thread section it grew out of.
-        .dsOneSheet(item: $walkingTo, pushes: { _ in inSheetStack }) { card in
+        .dsOneSheet(item: $walkingTo, pushes: { _ in pushesHere }) { card in
             SocialPostSheet(post: card, source: thing.source)
         }
         // Whoever is behind a tapped face — a person theirs to watch from
         // here, or the address card for a wallet (prd §369 amendment).
-        .dsOneSheet(item: $faceTarget, pushes: { _ in inSheetStack }) { target in
+        .dsOneSheet(item: $faceTarget, pushes: { _ in pushesHere }) { target in
             switch target {
             case .person(let profile): SocialProfileCard(profile: profile)
             case .address(let entry):  AddressCard(entry: entry)
@@ -1421,7 +1458,7 @@ struct ThingSheetView: View {
         }
         // Walking a vault's own wikilink graph (2026-07-28) — a plain
         // re-presentation of this same sheet over the linked note.
-        .dsOneSheet(item: $walkingToNote, pushes: { _ in inSheetStack }) { note in
+        .dsOneSheet(item: $walkingToNote, pushes: { _ in pushesHere }) { note in
             // `walkingToScope` rather than `walk`: the neighbour doors set it
             // to this sheet's own scope so a walk keeps following the list two
             // doors in, and every OTHER walk in this file (a quote, a parent,
@@ -2219,7 +2256,7 @@ struct ThingSheetView: View {
                     }
                     .buttonStyle(PressSpring())
                     .accessibilityLabel(Text("Share the highlight"))
-                    .sheet(isPresented: $sharingHighlight) { ShareTray(thing: thing) }
+                    .dsOneSheet(isPresented: $sharingHighlight, pushes: pushesHere) { ShareTray(thing: thing) }
                 } else {
                     ThingShareLink(thing: thing) {
                         bandDisc("square.and.arrow.up")

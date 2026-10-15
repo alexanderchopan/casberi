@@ -51,6 +51,23 @@ extension View {
     }
 }
 
+extension View {
+    /// A page that RISES ON ITS OWN hosts a stack, so what it opens pushes
+    /// inside it instead of rising over it (prd §1315, user: "i hate that …
+    /// i'd rather get rid of that behavior"). The system bar is hidden and
+    /// a pushed step's way back is the seat at the foot (`dsInSheet`, §1304).
+    /// Inside another sheet's stack it adds nothing; the Mac keeps its own
+    /// presentations.
+    @ViewBuilder func dsRaisedStack() -> some View {
+        #if targetEnvironment(macCatalyst)
+        self
+        #else
+        DSSheetStack { self.toolbar(.hidden, for: .navigationBar) }
+            .environment(\.dsInSheet, true)
+        #endif
+    }
+}
+
 /// **A STACK ONLY WHEN STANDING ALONE (prd §1247).** A view that wraps
 /// itself in a `NavigationStack` for its own pushes would nest a stack when
 /// it is itself pushed inside a sheet's; this adds the stack only when the

@@ -134,6 +134,8 @@ struct VerbDial: View {
     @State private var copied: Verb.ID?
     /// The share tray, raised by the Share disc.
     @State private var sharing = false
+    /// Inside the thing sheet's stack, Share pushes (prd §1315).
+    @Environment(\.dsInSheetStack) private var inSheetStack
 
 
     /// Liveness guard (build 188 — see `ThingRowKeying.swift`). SwiftUI
@@ -153,7 +155,8 @@ struct VerbDial: View {
             // centred and needed no inset; a grid does.
             .padding(.horizontal, DSRoomChassis.inset)
             .frame(maxWidth: .infinity)
-            .sheet(isPresented: $sharing) { ShareTray(thing: thing) }
+            // Pushes inside the thing sheet's stack (prd §1315).
+            .dsOneSheet(isPresented: $sharing, pushes: inSheetStack) { ShareTray(thing: thing) }
             // Bound to `copied`, so SwiftUI cancels it when the sheet goes and
             // restarts it when a second copy lands before the first has cleared.
             .task(id: copied) {

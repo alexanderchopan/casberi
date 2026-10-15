@@ -154,6 +154,8 @@ struct WatchAlertsSection: View {
     var volume = false
 
     @State private var tray: WatchAlertTray.Route?
+    /// Inside the thing sheet's stack, the alert tray pushes (prd §1315).
+    @Environment(\.dsInSheetStack) private var inSheetStack
     private var store: PriceAlertStore { .shared }
 
     var body: some View {
@@ -166,7 +168,8 @@ struct WatchAlertsSection: View {
         }
         // The tray reads no Observable environment, so the thing sheet's Mac
         // presentation cannot trap on it (prd §872's two halves).
-        .sheet(item: $tray) { route in
+        // Pushes inside the thing sheet's stack (prd §1315).
+        .dsOneSheet(item: $tray, pushes: { _ in inSheetStack }) { route in
             WatchAlertTray(route: route, ref: ref, name: name, price: price, volume: volume)
         }
     }

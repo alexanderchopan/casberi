@@ -38,14 +38,14 @@ final class JourneyTests: XCTestCase {
     @MainActor func testConnect() {
         let w = Walk("connect", launch: [], test: self)
         leaveDemo(w)
-        // Start here's row, by its joined label: the Calendars count's plus
-        // says "Add a calendar" too and never stands down (prd §1292).
-        w.tap(w.el(.button, "label BEGINSWITH %@", "Add a calendar, "), "Add a calendar")
+        // The first box's row (prd §1314): while every count is zero
+        // the box holds the four ways in, so this is the only "Add a calendar".
+        w.tap(w.visible(.button, "label BEGINSWITH %@", "Add a calendar"), "Add a calendar")
         w.tap(w.el(.button, "label BEGINSWITH %@", "Your phone"), "Your phone's calendars")
         w.allow("Full Access", "iOS calendar ask")
-        // Connected once the step stands down: each Start here step stays
-        // until its own act is done.
-        w.gone(w.el(.button, "label BEGINSWITH %@", "Add a calendar, "), within: 15, "Calendar connected")
+        // Connected once the first box clears: any one way in done clears it
+        // all, and the box shows the counts (prd §1314).
+        w.gone(w.el(.staticText, "label == %@", "Start with any of these"), within: 15, "Calendar connected")
         w.finish()
     }
 
@@ -125,9 +125,9 @@ final class JourneyTests: XCTestCase {
     @MainActor func testWallet() {
         let w = Walk("wallet", launch: [], test: self)
         leaveDemo(w)
-        // The plus, by its exact label: Start here's row reads "Follow a
-        // wallet, Any address…".
-        w.tap(w.el(.button, "label == %@", "Follow a wallet"), "Wallets plus")
+        // "Follow a wallet": the Wallets count's plus, or the first box's row in
+        // the box while every count is zero (prd §1314). Both raise the tray.
+        w.tap(w.visible(.button, "label == %@", "Follow a wallet"), "Follow a wallet")
         w.focus(w.el(.textField, "placeholderValue == %@", "An address or a name"), "address field")
         w.type("0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045", "type an address")
         // The row names the address short ("…6045").
@@ -304,12 +304,14 @@ final class JourneyTests: XCTestCase {
         // pour; a person who taps it skips the wait.
         w.maybe(w.el(.button, "label BEGINSWITH %@", "One inbox for all your apps"), within: 8, "intro cover")
         w.maybe(w.el(.button, "label CONTAINS %@", "Exit"), within: 8, "demo pill, Exit")
-        // On Sources already when Exit landed there; the Feed's own tile
-        // says "Sources" too, so Start here is the test.
-        if !w.el(.staticText, "label == %@", "Start here").waitForExistence(timeout: 5) {
+        // On Sources already when Exit landed there. Sources' own search
+        // field is the test: the Feed's tile says "Sources" too, and Start
+        // here clears for good once an earlier journey connected something.
+        let sourcesField = w.el(.textField, "placeholderValue == %@", "Search")
+        if !sourcesField.waitForExistence(timeout: 5) {
             w.tap(w.el(.button, "label BEGINSWITH %@", "Sources"), "Sources tile")
         }
-        w.see(w.el(.staticText, "label == %@", "Start here"), "Sources, Start here")
+        w.see(sourcesField, "Sources")
         w.begin()
     }
 

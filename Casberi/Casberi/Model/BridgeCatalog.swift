@@ -1023,7 +1023,7 @@ enum BridgeSetupMode {
     var label: String {
         switch self {
         case .oneTimeImport:  return String(localized: "One-time import")
-        case .noAccount:      return String(localized: "No account")
+        case .noAccount:      return String(localized: "No sign-in")
         case .signIn:         return String(localized: "Sign in on their site")
         case .pasteKey:       return String(localized: "Paste a key")
         case .watchedWallets: return String(localized: "Reads your wallets")

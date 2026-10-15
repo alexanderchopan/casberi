@@ -1,0 +1,78 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sources first box</title>
+<style>
+:root{color-scheme:light dark;--ground:#f2f1f5;--ink:#15141a;--ink2:#56535f;--rounded:ui-rounded,"SF Pro Rounded",-apple-system,sans-serif}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--ground:#0b0b0f;--ink:#eeecf3;--ink2:#a29ead}}
+:root[data-theme="dark"]{--ground:#0b0b0f;--ink:#eeecf3;--ink2:#a29ead}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;-webkit-font-smoothing:antialiased;padding:16px 16px 40px}
+main{max-width:1100px;margin:0 auto}
+h1{font:700 24px/30px var(--rounded)}
+p.desc{font-size:14px;line-height:20px;color:var(--ink2);max-width:860px;margin-top:4px}
+.stage{display:flex;gap:20px;flex-wrap:wrap;margin-top:14px}
+figure{width:300px;flex:none}
+figcaption{font-size:12px;line-height:16px;color:var(--ink2);margin:8px 2px 0}
+figcaption b{color:var(--ink)}
+.phone{--brand:#ff3b5c;--text:#fff;--text2:#ebebf599;--text3:#ebebf55c;zoom:.72;width:402px;background:#000;color:var(--text);border-radius:40px;padding:40px 22px 26px;box-shadow:0 24px 70px #00000055}
+.title{font:700 38px/44px var(--rounded);margin-bottom:14px}
+.box{background:#1c1c1e;border-radius:26px;height:250px;padding:20px 22px}
+.lede{font:700 22px/28px var(--rounded)}
+.sub{font-size:15px;color:var(--text2);margin-top:4px}
+.grid{display:grid;grid-template-columns:1fr 1fr;row-gap:6px;column-gap:14px}
+.tile{display:flex;align-items:center;gap:12px;height:44px;font-size:18px}
+.tile .g{color:var(--brand);font-size:22px;width:26px;text-align:center}
+.tile .p{margin-left:auto;color:var(--brand);font-size:26px;font-weight:300}
+.tile .n{font:700 24px var(--rounded);width:26px;text-align:right;color:var(--text3)}
+.below{margin-top:16px;height:52px;border-radius:26px;background:#1c1c1e;display:flex;align-items:center;padding:0 18px;color:var(--text2);font-size:17px}
+.big{display:flex;gap:12px;margin-top:18px}
+.big div{flex:1;height:110px;border-radius:20px;background:#2c2c2e;display:flex;flex-direction:column;justify-content:space-between;padding:14px;font-size:16px}
+.big i{font-style:normal;color:var(--brand);font-size:26px}
+</style>
+<main>
+<h1>Sources, before anything is added</h1>
+<p class="desc">The box has to say: these are ways in, any one will do, and the box changes once you have done it. Not a list to work down. Every option keeps the box's one size and the counts box's grammar (pink glyph, word, plus), so the box looks the same before and after, only fuller.</p>
+<div class="stage">
+
+<figure><div class="phone"><div class="title">Sources</div>
+  <div class="box">
+    <div class="lede">Add your first source</div><div class="sub">Any one starts your Feed.</div>
+    <div class="grid" style="margin-top:14px">
+      <div class="tile"><span class="g">▦</span>Calendar<span class="p">+</span></div>
+      <div class="tile"><span class="g">◎</span>Wallet<span class="p">+</span></div>
+      <div class="tile"><span class="g">⊞</span>App<span class="p">+</span></div>
+      <div class="tile"><span class="g">⟳</span>Subscription<span class="p">+</span></div>
+    </div></div>
+  <div class="below">⌕&nbsp; Search</div>
+</div><figcaption><b>A. A sentence and four ways in.</b> "Add your first source · Any one starts your Feed." Four tiles in the counts' grammar, side by side, so there is no first one. App opens the catalogue under the box.</figcaption></figure>
+
+<figure><div class="phone"><div class="title">Sources</div>
+  <div class="box">
+    <div class="grid">
+      <div class="tile"><span class="n"></span>Apps<span class="p">+</span></div>
+      <div class="tile"><span class="n"></span>Calendars<span class="p">+</span></div>
+      <div class="tile"><span class="n"></span>Cards<span class="p">+</span></div>
+      <div class="tile"><span class="n"></span>Following<span class="p">+</span></div>
+      <div class="tile"><span class="n"></span>Mail lists<span class="p">+</span></div>
+      <div class="tile"><span class="n"></span>People<span class="p">+</span></div>
+      <div class="tile"><span class="n"></span>Subscriptions<span class="p">+</span></div>
+      <div class="tile"><span class="n"></span>Wallets<span class="p">+</span></div>
+    </div></div>
+  <div class="below">⌕&nbsp; Search</div>
+</div><figcaption><b>B. The counts, without the zeros.</b> The same eight kinds and their pluses, no numbers until there is one. Nothing new to learn: it is the box you will have. Quietest; says least about where to begin.</figcaption></figure>
+
+<figure><div class="phone"><div class="title">Sources</div>
+  <div class="box">
+    <div class="lede">What should your Feed show?</div>
+    <div class="big">
+      <div><i>⊞</i>Your apps</div>
+      <div><i>▦</i>Your calendar</div>
+      <div><i>◎</i>A wallet</div>
+    </div></div>
+  <div class="below">⌕&nbsp; Search</div>
+</div><figcaption><b>C. A question and three big doors.</b> One question, three equal tiles across: apps, calendar, wallet. Reads as a choice, not a list. Subscriptions wait for the counts box.</figcaption></figure>
+
+</div>
+<p class="desc">My pick: A. It names the goal ("your first source"), the side-by-side tiles have no first item, and once one is done the box turns into the counts with the same glyphs and pluses. Your name and photo leave the box: it is not a source, and doing it would not end the empty state.</p>
+</main>

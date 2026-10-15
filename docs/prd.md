@@ -66466,3 +66466,18 @@ The in-content back rows become the title's first word. Casberi's settings, open
 2. **Declined:** carrying our own persistence patch (serialising `MemoryStorage` into the SQLCipher store) — weighed as protocol-neutral and no weaker on the device, but a temporary fork either confined to TestFlight ("boring") or shipped to the App Store with the RLN-enforcement and testnet-reset risks attached. The user chose to wait instead.
 3. **What stands, kept out of the repo:** the native core built 2026-10-14 — the Go light client as a C archive and the Rust chat core over libchat `f26b576` with a small C API, proven on the Mac sending to a Basecamp-compatible client — sits in `~/Developer/logos-chat-spike/native/`, never in the tree, so no ship can carry it. Building resumes when #229 (or its successor) lands; then the order is §1215's.
 4. The read side is unchanged: Basecamp's chats keep reaching the phone through the Observer (`chat.read`, §1155, §1213).
+
+## §1314 — Sources' first box: "Start with any of these" (supersedes §1166's Start here) (user, 2026-10-15: "start here in the box: LOVE IT", then "if they do one let it clear and not be below the box", "the user may think it is a checklist … need something more clear than start here … like 'start with any of these'", and of three layouts, "C is more purposefully designed. what would apple do")
+
+1. **Until anything arrives, the box offers four ways in, not eight zeros.** While every count is zero (apps, calendars, cards, followed feeds, mail lists, people, subscriptions, wallets), Sources' box is titled "Start with any of these" over four rows: App, Calendar, Subscription, Wallet.
+2. **Settings' row grammar, A–Z.** Each row is a glyph in one column, the name, a grey value ("Your apps", "Your events", "What you pay", "Any address") and the pink plus; the whole row is one button, labelled by its verb ("Add an app", "Add a calendar", Track a subscription, "Follow a wallet"). A–Z, as every room's tiles read (§995), so no row is the first step. The rows share the box evenly; the box keeps its one size.
+3. **Any one done clears it.** The first thing that arrives turns the box into the counts, with the same plus in the same place. Nothing stands under the box: §1166's step-by-step Start here list is deleted, and your name is not a way in (it lives in Casberi's own settings).
+4. **App** focuses Sources' search, the catalogue being under the box.
+5. A setup mode's chip reads "No sign-in", never "No account": the old words read as "you have no account".
+
+## §1315 — One sheet at a time, from a raised page too (extends §1238) (user, 2026-10-15: "sheet on a sheet: I hate that … rather get rid of that behavior b/c it is confusing to users")
+
+1. **A raised page is its own stack, so what it opens pushes.** The thing sheet, Find's pivot page, a person card and a person's room each hold a `NavigationStack` marked `dsInSheetStack` and `dsInSheet`; a step opened from them (Share, Track, Follow, a price alert, a reply's parent, a post's author, a thing from the pivot, Walletbeat's review) pushes inside, with Back at the foot (§1304), instead of rising over it. A pull down closes the whole sheet. `View.dsRaisedStack()` is the one wrapper for a page raised from the shell.
+2. **What still rises over a sheet:** Safari, the system share sheet and the system pickers (§1238), and full-screen covers.
+3. The nightly sheet sweep (§1308) walks these as pushed steps: Back returns to the sheet, a pull closes it. Its app-sheet row moved to a wallet tile that truly rises (Security, §1220); the old row opened Home's Needs you, which is the page, not a sheet.
+

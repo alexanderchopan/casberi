@@ -638,7 +638,9 @@
     }
    ],
    "anchor": "button:=Post on X",
-   "afterSwipe": "button:=Everything from Telegram"
+   "afterSwipe": "button:^Sources, Everything",
+   "control": "button:=Back",
+   "afterControl": "button:^Share"
   },
   {
    "id": "share-system",
@@ -886,7 +888,8 @@
      "tap": "button:^Track"
     }
    ],
-   "anchor": "button:=Track Spotify"
+   "anchor": "button:=Track Spotify",
+   "afterSwipe": "button:^Sources, Everything"
   },
   {
    "id": "thing-alert-new",
@@ -908,7 +911,8 @@
      "tap": "button:^Add an alert"
     }
    ],
-   "anchor": "text:=New alert"
+   "anchor": "text:=New alert",
+   "afterSwipe": "button:^Sources, Everything"
   },
   {
    "id": "addresses-thing",
@@ -1214,7 +1218,10 @@
      "tap": "button:^Kettlebell complexes for cyclists, "
     }
    ],
-   "anchor": "text:=Site"
+   "anchor": "text:=Site",
+   "afterSwipe": "button:^Sources, Everything",
+   "control": "button:=Back",
+   "afterControl": "button:^Kettlebell complexes for cyclists, "
   },
   {
    "id": "thing-reply-to",
@@ -1236,7 +1243,10 @@
      "tap": "button:^Replying to you"
     }
    ],
-   "anchor": "button:=@you"
+   "anchor": "button:=@you",
+   "afterSwipe": "button:^Sources, Everything",
+   "control": "button:=Back",
+   "afterControl": "button:^Replying to you"
   },
   {
    "id": "thing-photo",
@@ -1282,7 +1292,10 @@
      "tap": "button:^@nils, "
     }
    ],
-   "anchor": "button:=@nils"
+   "anchor": "button:=@nils",
+   "afterSwipe": "button:^Sources, Everything",
+   "control": "button:=Back",
+   "afterControl": "button:^@nils, "
   },
   {
    "id": "plan-edit",
@@ -1355,9 +1368,9 @@
    ],
    "anchor": "link:=Full review on Walletbeat",
    "afterSwipe": "button:^Sources, Everything",
+   "offscreen": true,
    "control": "button:=Back",
-   "afterControl": "button:^Ledger Wallet, ",
-   "offscreen": true
+   "afterControl": "button:^Ledger Wallet, "
   },
   {
    "id": "walletbeat-wallet",
@@ -1385,9 +1398,9 @@
    ],
    "anchor": "link:=Full review on Walletbeat",
    "afterSwipe": "button:=Add to Media",
+   "offscreen": true,
    "control": "button:=Back",
-   "afterControl": "text:=Ambire",
-   "offscreen": true
+   "afterControl": "text:=Ambire"
   },
   {
    "id": "l2beat-chain",
@@ -1415,9 +1428,9 @@
    ],
    "anchor": "link:=Full assessment on L2BEAT",
    "afterSwipe": "button:=Add to Media",
+   "offscreen": true,
    "control": "button:=Back",
-   "afterControl": "text:=Abstract",
-   "offscreen": true
+   "afterControl": "text:=Abstract"
   },
   {
    "id": "thing-walletbeat",
@@ -1440,7 +1453,10 @@
     }
    ],
    "anchor": "link:=Full review on Walletbeat",
-   "offscreen": true
+   "afterSwipe": "button:^Sources, Everything",
+   "offscreen": true,
+   "control": "button:=Back",
+   "afterControl": "button:^What Walletbeat says about Trezor"
   },
   {
    "id": "social-post-author",
@@ -1466,7 +1482,7 @@
     }
    ],
    "anchor": "button:=Follow",
-   "afterSwipe": "button:^@nils, ",
+   "afterSwipe": "button:^Sources, Everything",
    "control": "button:=Back",
    "afterControl": "button:=@nils"
   },
@@ -1490,7 +1506,10 @@
      "tap": "button:^Follow"
     }
    ],
-   "anchor": "field:?@handle or channel link"
+   "anchor": "field:?@handle or channel link",
+   "afterSwipe": "button:^Sources, Everything",
+   "control": "button:=Back",
+   "afterControl": "button:^Follow"
   },
   {
    "id": "thing-follow-site",
@@ -1512,7 +1531,10 @@
      "tap": "button:^Follow, Follow"
     }
    ],
-   "anchor": "field:?A site's address"
+   "anchor": "field:?A site's address",
+   "afterSwipe": "button:^Sources, Everything",
+   "control": "button:=Back",
+   "afterControl": "button:^Follow, Follow"
   },
   {
    "id": "wallet-worth-a-look",
@@ -1568,7 +1590,10 @@
      "tap": "button:^Rises to "
     }
    ],
-   "anchor": "text:=Edit alert"
+   "anchor": "text:=Edit alert",
+   "afterSwipe": "button:^Sources, Everything",
+   "control": "button:=Back",
+   "afterControl": "button:^Rises to "
   },
   {
    "id": "wallet-history",
@@ -1687,11 +1712,12 @@
      "tap": "button:=Wallet"
     },
     {
-     "tap": "button:^Needs you. "
+     "tap": "button:^Security, Who"
     }
    ],
-   "anchor": "button:=Wallet, ·, Needs you",
-   "swipeFrom": "button:=Sheet Grabber"
+   "anchor": "text:=Fake transfers",
+   "swipeFrom": "button:=Sheet Grabber",
+   "afterSwipe": "button:^Holdings, Your"
   },
   {
    "id": "notes",

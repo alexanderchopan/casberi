@@ -1,0 +1,94 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sources first box</title>
+<style>
+:root{color-scheme:light dark;--ground:#f2f1f5;--ink:#15141a;--ink2:#56535f;--rounded:ui-rounded,"SF Pro Rounded",-apple-system,sans-serif}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--ground:#0b0b0f;--ink:#eeecf3;--ink2:#a29ead}}
+:root[data-theme="dark"]{--ground:#0b0b0f;--ink:#eeecf3;--ink2:#a29ead}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;-webkit-font-smoothing:antialiased;padding:16px 16px 40px}
+main{max-width:1200px;margin:0 auto}
+h1{font:700 24px/30px var(--rounded)}
+p.desc{font-size:14px;line-height:20px;color:var(--ink2);max-width:860px;margin-top:4px}
+.stage{display:flex;gap:22px;flex-wrap:wrap;margin-top:16px}
+figure{width:300px;flex:none}
+figcaption{font-size:12px;line-height:16px;color:var(--ink2);margin:8px 2px 0}
+figcaption b{color:var(--ink)}
+/* the phone at true points, scaled */
+.phone{--brand:#ff375f;--t1:#fff;--t2:#ebebf599;--t3:#ebebf54d;--well:#1c1c1e;zoom:.745;width:402px;background:#000;color:var(--t1);border-radius:44px;padding:58px 18px 24px;box-shadow:0 24px 70px #00000055}
+.title{font:700 36px/42px var(--rounded);margin:0 0 14px 4px}
+.box{background:var(--well);border-radius:26px;height:240px;padding:16px;display:flex;flex-direction:column}
+.search{margin-top:20px;height:48px;border-radius:24px;background:var(--well);display:flex;align-items:center;gap:10px;padding:0 16px;color:var(--t2);font-size:17px}
+.seg{margin:22px 0 0 14px;font:700 20px var(--rounded)}.seg span{color:var(--t3);margin-left:14px}
+svg{width:26px;height:26px;stroke:var(--brand);fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.lede{font:700 20px/25px var(--rounded);padding:2px 4px 0}
+.sub{font-size:15px;line-height:20px;color:var(--t2);padding:2px 4px 0}
+/* A: four doors share the box */
+.quad{flex:1;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:8px;margin-top:12px}
+.quad div{display:flex;flex-direction:column;justify-content:space-between;padding:10px 6px 4px}
+.quad b{font-weight:400;font-size:17px}
+.quad i{font-style:normal;font-size:13px;color:var(--t2);display:block;margin-top:1px}
+/* B: one row of four */
+.row4{margin-top:auto;display:grid;grid-template-columns:repeat(4,1fr);text-align:center}
+.row4 div{display:flex;flex-direction:column;align-items:center;gap:10px;font-size:13px;color:var(--t1)}
+.row4 svg{width:30px;height:30px}
+.ring{width:62px;height:62px;border-radius:31px;border:1.5px solid #ff375f55;display:flex;align-items:center;justify-content:center}
+/* C: rows down the box */
+.rows{margin-top:10px;flex:1;display:flex;flex-direction:column;justify-content:space-between}
+.rows div{display:flex;align-items:center;gap:14px;font-size:17px;height:38px;padding:0 4px}
+.rows em{font-style:normal;color:var(--t2);font-size:15px;margin-left:auto}
+.plus{color:var(--brand);font-size:24px;font-weight:300;line-height:1}
+</style>
+<main>
+<h1>Sources, first box, round two</h1>
+<p class="desc">What was wrong with the build: four small tiles floating in the top half, each plus stranded at the column edge, a third of the box empty. Each option below fills the box's one fixed size with the four ways in, so nothing floats.</p>
+<div class="stage">
+
+<svg style="display:none"><defs>
+<symbol id="cal" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="16" rx="3"/><path d="M3 9h18M8 3v3M16 3v3"/></symbol>
+<symbol id="wal" viewBox="0 0 24 24"><path d="M4 8.5h14a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-11a2 2 0 0 1 2-2h10"/><circle cx="16" cy="14" r="1.2"/></symbol>
+<symbol id="app" viewBox="0 0 24 24"><rect x="4" y="4" width="6.5" height="6.5" rx="1.6"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.6"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.6"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.6"/></symbol>
+<symbol id="sub" viewBox="0 0 24 24"><path d="M19.5 9A8 8 0 0 0 5 7.5M4.5 15A8 8 0 0 0 19 16.5"/><path d="M5 3.5v4h4M19 20.5v-4h-4"/></symbol>
+</defs></svg>
+
+<figure><div class="phone"><div class="title">Sources</div>
+  <div class="box">
+    <div class="lede">Start with any of these</div>
+    <div class="quad">
+      <div><svg><use href="#cal"/></svg><span><b>Calendar</b><i>Add a calendar</i></span></div>
+      <div><svg><use href="#wal"/></svg><span><b>Wallet</b><i>Follow an address</i></span></div>
+      <div><svg><use href="#app"/></svg><span><b>An app</b><i>100+ to pick from</i></span></div>
+      <div><svg><use href="#sub"/></svg><span><b>Subscription</b><i>Track what you pay</i></span></div>
+    </div></div>
+  <div class="search">⌕ Search</div><div class="seg">By category<span>A–Z</span></div>
+</div><figcaption><b>A. Four doors share the box.</b> Each quarter is one button: glyph at its top, the name and what it does at its foot. No pluses; the whole quarter presses. Fills the box the way the counts will.</figcaption></figure>
+
+<figure><div class="phone"><div class="title">Sources</div>
+  <div class="box">
+    <div class="lede">Start with any of these</div>
+    <div class="sub">Any one starts your Feed.</div>
+    <div class="row4">
+      <div><span class="ring"><svg><use href="#cal"/></svg></span>Calendar</div>
+      <div><span class="ring"><svg><use href="#wal"/></svg></span>Wallet</div>
+      <div><span class="ring"><svg><use href="#app"/></svg></span>App</div>
+      <div><span class="ring"><svg><use href="#sub"/></svg></span>Subscription</div>
+    </div></div>
+  <div class="search">⌕ Search</div><div class="seg">By category<span>A–Z</span></div>
+</div><figcaption><b>B. One row, side by side.</b> A sentence, then four discs across the foot of the box, the way a share sheet offers apps. Side by side has no first item, so it cannot read as a checklist. Ringed, never filled (no plates).</figcaption></figure>
+
+<figure><div class="phone"><div class="title">Sources</div>
+  <div class="box">
+    <div class="lede">Start with any of these</div>
+    <div class="rows">
+      <div><svg><use href="#cal"/></svg>Calendar<em>Your events</em><span class="plus">+</span></div>
+      <div><svg><use href="#wal"/></svg>Wallet<em>Any address</em><span class="plus">+</span></div>
+      <div><svg><use href="#app"/></svg>App<em>100+</em><span class="plus">+</span></div>
+      <div><svg><use href="#sub"/></svg>Subscription<em>What you pay</em><span class="plus">+</span></div>
+    </div></div>
+  <div class="search">⌕ Search</div><div class="seg">By category<span>A–Z</span></div>
+</div><figcaption><b>C. Four rows down the box.</b> One column, each row a word, a quiet hint and a plus. Fills the height evenly. Closest to a list, so the most likely to read as steps.</figcaption></figure>
+
+</div>
+<p class="desc">My pick: A. The box becomes four doors of equal weight, every one says what it does, and it fills the box without inventing anything. B is the prettiest but the discs are a new part. C is the safest build but risks the checklist reading you flagged.</p>
+</main>
