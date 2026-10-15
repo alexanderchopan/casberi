@@ -6,7 +6,7 @@ import SwiftData
 /// One paste of a read-only API key, plain `TokenSetupScreen`, generic
 /// dispatch — the Trello/Cloudflare tier, not Stripe's bespoke screen and
 /// room head. Grouped **Wallet** (user ruling, 2026-08-30) — beside
-/// Privacy.com and Gnosis Pay rather than Stripe/PostHog's "Work": the
+/// Privacy.com and the cards rather than Stripe/PostHog's "Work": the
 /// catalog files it as money in reach the way a card's spending is, not as a
 /// dev-tool integration.
 ///
@@ -19,7 +19,7 @@ import SwiftData
 /// creators and small SaaS founders, i.e. accounts that take a payment
 /// occasionally rather than constantly — for that audience a payment
 /// arriving IS the news, the same reasoning that already lands every card
-/// spend for Privacy.com and Gnosis Pay. So this bridge lands every
+/// spend for Privacy.com and the onchain cards. So this bridge lands every
 /// SUCCEEDED payment, every refund, and (Stripe's shapes, unchanged) a
 /// dispute opening, a dispute closing, and a subscription leaving a healthy
 /// state. If this bridge is ever pointed at a high-volume account, revisit —

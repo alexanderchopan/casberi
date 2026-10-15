@@ -48,7 +48,6 @@ extension DS {
         case "safari":              return Color.fixed("#1d9bf6")
         case "wallet":              return Color.fixed("#2461ff")
         case "peer":                return Color.fixed("#4b47f6")   // an indigo in their family — approximate; re-sample when bundling the official mark
-        case "gnosis pay":          return Color.fixed("#4830c0")   // the owl's indigo (icon-sampled from the bundled mark)
         case "apple wallet":        return Color.fixed("#1d1d1f")   // Apple Card graphite — the titanium card's own near-black
         case "safe":                return Color.fixed("#12ff80")   // Safe{Wallet}'s green (icon-sampled from the bundled mark)
         case "privacy pools", "0xbow privacy pools":

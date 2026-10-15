@@ -201,7 +201,8 @@ final class BridgeStore {
     /// Peer and Privacy Pools moved onto that rule on 2026-07-30. They shipped
     /// with the §207 mirror — lit for ANY watched wallet — which claimed a
     /// relationship most people don't have, and made the seat wallpaper for
-    /// the ones who do. Gnosis Pay (§222) and Safe already diverged this way;
+    /// the ones who do. Gnosis Pay (§222, removed §1318) and Safe already
+    /// diverged this way;
     /// now there is one rule instead of two, and five more protocols the app
     /// already reads (Aave, Morpho, Hyperliquid, Aerodrome, Uniswap) can wear
     /// a seat honestly without a single extra request.
@@ -219,12 +220,7 @@ final class BridgeStore {
                    can: ["Reads what you shield into Railgun and what comes back out, for the wallets you follow, from the public chain.",
                          "Never sees inside the pool — an unshield never names its sender, and relayer sends leave no public trace.",
                          "Read-only — never shields, unshields, or moves funds."]),
-        WalletSeat(id: "gnosispay", name: "Gnosis Pay",
-                   count: { GnosisPayBridge.evidence.count(in: $0) }, noun: "card",
-                   can: ["Reads your Gnosis Pay card spending from Gnosis Chain, for the wallets you follow.",
-                         "Amounts and timing only — the merchant never reaches the chain.",
-                         "Read-only — never spends, tops up, or freezes a card."]),
-        // Counted in CARDS like Gnosis Pay, not wallets: one watched wallet is
+        // Counted in CARDS, not wallets: one watched wallet is
         // one card here, because the allowance that makes a card is granted by
         // the wallet itself. The second line is not boilerplate — the merchant
         // is genuinely unreachable (it lives behind an OAuth API belonging to

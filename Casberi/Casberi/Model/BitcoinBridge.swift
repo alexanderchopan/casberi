@@ -26,7 +26,7 @@ import SwiftData
 /// over it are not publicly readable — there is nothing here to watch, so
 /// the catalog copy says so rather than offering a dead field. No approvals,
 /// no DeFi positions: Bitcoin has no approval surface and no Peer/0xBow/
-/// Gnosis Pay analog to read.
+/// card analog to read.
 ///
 /// **MEASURED 2026-07-27, don't "fix" without re-measuring:** (1) a busy
 /// address's `/utxo` call 400s outright once it holds more than 500 UTXOs
@@ -36,9 +36,9 @@ import SwiftData
 /// (2) `/address/<addr>/txs` (the default, no pagination cursor) returns the
 /// **50 most recent** confirmed + mempool transactions, newest first — a
 /// heavily used address can carry thousands, and walking full history would
-/// bury the feed the same way an unbounded EVM backfill would (the GnosisPay
-/// lesson, generalized); this bridge deliberately reads ONLY that bounded
-/// recent page, every pass, and relies on ref-dedupe rather than a block-
+/// bury the feed the same way an unbounded EVM backfill would (the Gnosis Pay
+/// seat's lesson, generalized); this bridge deliberately reads ONLY that
+/// bounded recent page, every pass, and relies on ref-dedupe rather than a block-
 /// style cursor, since Esplora has no cheap "since" filter to walk forward
 /// from and a personal wallet's real gap between refreshes is a handful of
 /// transactions, well inside one page; (3) JSON amounts (`value` on a vout,
@@ -142,7 +142,7 @@ enum BitcoinBridge {
     /// when nothing could be reached at all.
     ///
     /// Takes the pass's `existing` refs set like every sibling arm — and
-    /// unlike them, actually DEPENDS on it. Peer/Gnosis Pay/Privacy Pools
+    /// unlike them, actually DEPENDS on it. Peer/Privacy Pools
     /// dedupe cross-pass through their own persistent block cursors and
     /// treat that set as a same-pass safety net their differently-sourced
     /// refs could never match anyway (see `PeerBridge.sync`'s doc). This arm

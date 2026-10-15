@@ -33,7 +33,7 @@ enum SafeSimulation {
     /// The Safe chains Alchemy's simulation serves, by the Alchemy network id
     /// every other Alchemy read in this app uses for that chain (their hosts
     /// are declared in `NetworkReach`). Gnosis Chain (100) is absent: this app
-    /// reads it through `GnosisPayBridge`'s public RPCs and has no Alchemy
+    /// reads it through `GnosisChainRPC`'s public RPCs and has no Alchemy
     /// host for it, so a Gnosis Safe is `.chainNotServed`.
     static let networks: [Int: String] = [
         1: "eth-mainnet",

@@ -44,9 +44,11 @@ enum SafeSigner {
     /// `gno` (Gnosis Chain) was absent under that rule until 2026-09-07, when
     /// it turned out the rule was being applied to a fact about ONE FILE —
     /// "`WalletApprovals` carries no Gnosis host" — rather than about the app.
-    /// `GnosisPayBridge` has read Gnosis Chain on every wallet pass since
+    /// The Gnosis Pay seat had read Gnosis Chain on every wallet pass since
     /// 2026-07-26 through hosts it measured and `NetworkReach` discloses, so
-    /// the cross-check has somewhere to run and the refusal no longer follows.
+    /// the cross-check had somewhere to run and the refusal no longer
+    /// followed. Those hosts are `GnosisChainRPC`'s since the seat went
+    /// (prd §1318).
     /// See the rail's own comment for what remains unmeasured.
     private struct Rail: Sendable {
         let seg: String
@@ -78,7 +80,7 @@ enum SafeSigner {
     private enum Reader {
         /// `WalletApprovals`' keyless per-chain hosts — five EVM chains.
         case walletApprovals
-        /// `GnosisPayBridge`'s two measured Gnosis Chain hosts.
+        /// `GnosisChainRPC`'s two measured Gnosis Chain hosts.
         case gnosisChain
     }
 
@@ -97,15 +99,12 @@ enum SafeSigner {
         // host, so the rail could not run there — and a chain where the
         // cross-check cannot run is a chain where this app must not sign."
         // The RULE is untouched and is the whole safety argument. What changed
-        // is that its premise was about one file: `GnosisPayBridge` has swept
-        // Gnosis Chain on every wallet pass since 2026-07-26 through two hosts
+        // is that its premise was about one file: the Gnosis Pay seat swept
+        // Gnosis Chain on every wallet pass from 2026-07-26 through two hosts
         // it MEASURED (`rpc.gnosischain.com`, `rpc.gnosis.gateway.fm`, both
         // disclosed in `NetworkReach`), so the cross-check does have somewhere
-        // to run.
-        //
-        // This matters more than a sixth chain usually would: a Gnosis Pay
-        // account IS a Safe on Gnosis Chain (prd §222), so every card account
-        // this app already reads sat on the one chain it refused to sign for.
+        // to run. They are `GnosisChainRPC`'s since that seat was removed
+        // (prd §1318); a Safe on Gnosis Chain is still a Safe.
         //
         // UNMEASURED: those hosts are proven for `eth_getLogs` and
         // `eth_getBlockByNumber`, not for `eth_call`. If they refuse it the
@@ -148,7 +147,7 @@ enum SafeSigner {
             return await WalletApprovals.rpcRead(
                 network: network, method: "eth_getCode", params: params) as? String
         case .gnosisChain:
-            return await GnosisPayBridge.read(method: "eth_getCode", params: params) as? String
+            return await GnosisChainRPC.read(method: "eth_getCode", params: params) as? String
         }
     }
 
@@ -588,7 +587,7 @@ enum SafeSigner {
             return await WalletApprovals.rpcRead(
                 network: network, method: "eth_call", params: params) as? String
         case .gnosisChain:
-            return await GnosisPayBridge.read(method: "eth_call", params: params) as? String
+            return await GnosisChainRPC.read(method: "eth_call", params: params) as? String
         }
     }
 

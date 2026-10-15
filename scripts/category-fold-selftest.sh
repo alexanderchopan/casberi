@@ -1256,10 +1256,10 @@ for name in ("Kalshi", "Polymarket", "GeckoTerminal", "Circle x402", "1Claw", "O
 # in one list and not the other is a row that either lingers or flashes a room.
 # Deals, Shopify and Cursor went the same way the same day (prd §1049), and
 # Nostr and Farcaster on 2026-10-05 (prd §1109, §1110), Hegotá Frames and its
-# earlier name on 2026-10-08 (prd §1206).
+# earlier name on 2026-10-08 (prd §1206), Gnosis Pay on 2026-10-15 (prd §1318).
 for name in ("Altana", "Base Vibenet", "Hegotá UTXO", "Hegotá Privacy", "Reddit",
              "Deals", "Shopify", "Cursor", "Nostr", "Farcaster",
-             "Hegotá Frames", "Frames Devnet"):
+             "Hegotá Frames", "Frames Devnet", "Gnosis Pay"):
     if name not in retired:
         sys.exit(f'✗ "{name}" is no longer in Corpus.retiredSources — a deleted seat\'s row would earn a chip and a room (prd §1038)')
 sweep_src = open("Casberi/Casberi/Model/SourceRename.swift").read()
@@ -1271,7 +1271,7 @@ if dropped != set(retired) & dropped or not dropped:
     sys.exit(f"✗ SourceRename.droppedSources names {sorted(dropped - set(retired))} that Corpus.retiredSources does not — a row that syncs in mid-session earns a room (prd §1038)")
 for name in ("Altana", "Base Vibenet", "Hegotá UTXO", "Hegotá Privacy", "Reddit",
              "Deals", "Shopify", "Cursor", "Nostr", "Farcaster",
-             "Hegotá Frames", "Frames Devnet"):
+             "Hegotá Frames", "Frames Devnet", "Gnosis Pay"):
     if name not in dropped:
         sys.exit(f'✗ "{name}" left SourceRename.droppedSources — its rows outlive the seat (prd §1038)')
 shell_src = open("Casberi/Casberi/Shell/RootShell.swift").read()

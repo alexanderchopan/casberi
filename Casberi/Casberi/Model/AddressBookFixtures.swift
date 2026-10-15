@@ -38,8 +38,11 @@ extension AddressBook {
     /// the same key `entries` is keyed by.
     static let fixtureKeys: Set<String> = {
         var out = Set(WalletStore.fixtureAddresses.map { key(for: $0) })
-        for party in DemoSeedAll.demoCounterparties {
-            out.insert(key(for: DemoSeedAll.counterpartyAddress(for: party.name)))
+        // The retired names too (prd §1318): a book an older demo seeded still
+        // holds them, and only a fixture key lets the rail sweep one.
+        for name in DemoSeedAll.demoCounterparties.map(\.name)
+            + DemoSeedAll.retiredDemoCounterparties {
+            out.insert(key(for: DemoSeedAll.counterpartyAddress(for: name)))
         }
         return out
     }()

@@ -11,7 +11,7 @@ import SwiftData
 /// terms to `summary` and the expiry to `dueAt`, so the room reads those three
 /// directly. Splitting "Amex Gold · Amazon" back apart would break the moment a
 /// merchant contained the separator, and `titleLine` clamps at 80 anyway — the
-/// same rule `GnosisPayRoomSource` follows for its amounts.
+/// same rule `MetaMaskCardRoomSource` follows for its amounts.
 enum CardPointersRoomSource {
     static let source = CardPointersIngest.source
 

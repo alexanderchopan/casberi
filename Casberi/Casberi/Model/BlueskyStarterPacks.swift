@@ -14,7 +14,7 @@ import Foundation
 /// clean. Re-measure from the app itself (`-starterPackProbe`) before
 /// leaning on this in a release build — the standing discipline every
 /// keyless bridge in this codebase follows (see `WalletApprovals`,
-/// `PrivacyPoolsBridge`, `GnosisPayBridge` for the pattern).
+/// `PrivacyPoolsBridge`, `MetaMaskCardBridge` for the pattern).
 enum BlueskyStarterPacks {
     struct Pack: Identifiable, Equatable {
         let uri: String

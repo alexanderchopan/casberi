@@ -82,7 +82,7 @@ enum EtherFiUnstake {
 
     /// Which watched wallets actually hold an unstake request — the catalog
     /// seat's gate. A seat reading "ether.fi · watching 3 wallets" for someone
-    /// who has never unstaked is fake status (the `GnosisPayBridge` rule).
+    /// who has never unstaked is fake status (the `WalletSeatEvidence` rule).
     static let evidence = WalletSeatEvidence("etherfi.unstake.accounts")
 
     static func accounts() -> [String] { evidence.addresses }

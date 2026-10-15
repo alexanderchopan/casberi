@@ -618,7 +618,7 @@ def audit_room_doors(name: str, body: str, stamped: set, roomless: set = frozens
 # So it inherits check 7a's failure mode EXACTLY — hand it a string no bridge
 # stamps and nothing errors, the pop happens, the filter is written, and the
 # tile lands you in a room that will never hold a row. The natural mistake is
-# the same one: passing the CATALOG name ("0xBow Privacy Pools", "Gnosis Pay")
+# the same one: passing the CATALOG name ("0xBow Privacy Pools", "MetaMask Card")
 # where the bridge stamps something else.
 #
 # Two more halves that only exist on this side of the door:
@@ -634,7 +634,7 @@ def audit_room_doors(name: str, body: str, stamped: set, roomless: set = frozens
 #
 # STATED CEILING, the same one check 7a states and for the same reason: only a
 # LITERAL can be resolved from text. A case answering with a constant
-# (`EtherFiCash.source`, `GnosisPayBridge.sourceName`) is skipped, and that is
+# (`EtherFiCash.source`, `MetaMaskCardBridge.source`) is skipped, and that is
 # the right answer rather than a gap — one constant read by both the stamp and
 # the door is the pattern that cannot drift at all (§311's lesson).
 ROOM_SOURCE_FN_RE = re.compile(
@@ -1223,16 +1223,16 @@ def self_test() -> bool:
     routing_ok = ('    static func roomSource(forID id: String) -> String? {\n'
                   '        switch id {\n'
                   '        case "aave", "morpho": "Wallet"\n'
-                  '        case "gnosispay": GnosisPayBridge.sourceName\n'
+                  '        case "metamaskcard": MetaMaskCardBridge.source\n'
                   '        default: nil\n'
                   '        }\n'
                   '    }\n'
                   '        Row(offer: "Aave", id: "aave", destination: .wallet),\n'
                   '        Row(offer: "Morpho", id: "morpho", destination: .wallet),\n'
-                  '        Row(offer: "Gnosis Pay", id: "gnosispay", destination: .wallet),\n')
+                  '        Row(offer: "MetaMask Card", id: "metamaskcard", destination: .wallet),\n')
     seats_ok = ('WalletSeat(id: "aave", name: "Aave",\n'
                 'WalletSeat(id: "morpho", name: "Morpho",\n'
-                'WalletSeat(id: "gnosispay", name: "Gnosis Pay",\n')
+                'WalletSeat(id: "metamaskcard", name: "MetaMask Card",\n')
     stamped_w = {"Wallet", "Peer"}
     if audit_seat_rooms(routing_ok, seats_ok, stamped_w):
         print("  ✗ flagged a correct seat-room table"); ok = False
@@ -1240,7 +1240,7 @@ def self_test() -> bool:
         print("  ✓ passes a correct seat-room table (a constant is not a literal)")
 
     # The catalog name where the source was wanted — check 7a's trap, reached
-    # from the other side. "Gnosis Pay" happens to be both here, so the fixture
+    # from the other side. "MetaMask Card" happens to be both here, so the fixture
     # uses a seat whose two spellings really differ.
     routing_catalog_name = routing_ok.replace('case "aave", "morpho": "Wallet"',
                                               'case "aave", "morpho": "0xBow Privacy Pools"')
@@ -1334,14 +1334,14 @@ def self_test() -> bool:
     routing_7e_ok = ('    static func roomSource(forID id: String) -> String? {\n'
                      '        switch id {\n'
                      '        case "peer": "Peer"\n'
-                     '        case "gnosispay": GnosisPayBridge.sourceName\n'
+                     '        case "metamaskcard": MetaMaskCardBridge.source\n'
                      '        default: nil\n'
                      '        }\n'
                      '    }\n'
                      '        Row(offer: "Peer", id: "peer", destination: .wallet),\n'
-                     '        Row(offer: "Gnosis Pay", id: "gnosispay", destination: .wallet),\n')
+                     '        Row(offer: "MetaMask Card", id: "metamaskcard", destination: .wallet),\n')
     seats_7e = ('WalletSeat(id: "peer", name: "Peer",\n'
-                'WalletSeat(id: "gnosispay", name: "Gnosis Pay",\n')
+                'WalletSeat(id: "metamaskcard", name: "MetaMask Card",\n')
     if audit_seat_room_ownership(routing_7e_ok, seats_7e, catalog_7e):
         print("  ✗ flagged a seat opening the room it is named for"); ok = False
     else:

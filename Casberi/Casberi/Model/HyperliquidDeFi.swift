@@ -6,7 +6,7 @@ import SwiftData
 /// (`api.hyperliquid.xyz/info`, keyless — every request in this file
 /// measured live against real accounts pulled off the public leaderboard,
 /// each returning in well under a second). Rides watched wallets like
-/// Peer/Privacy Pools/Gnosis Pay — no account, no key, no connect switch: an
+/// Peer/Privacy Pools — no account, no key, no connect switch: an
 /// address either has a Hyperliquid account or it doesn't, and the read
 /// answers that for free.
 ///

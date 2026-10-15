@@ -40,7 +40,7 @@ extension FeedScreen {
     /// app's slice of it (prd §1048b). Sliced HERE as well as when the read
     /// lands, because a read that landed before the pick would otherwise put
     /// the whole Wallet's total under one app's name (measured: "$44K" over
-    /// Gnosis Pay, which holds nothing in the total). `scoped` is idempotent.
+    /// a card app, which holds nothing in the total). `scoped` is idempotent.
     var portfolioShown: WalletPortfolio? {
         guard let seat = selectedSeat else { return portfolio }
         guard let slice = portfolio.map({ Self.slice($0, for: seat) }), !slice.isEmpty else { return nil }

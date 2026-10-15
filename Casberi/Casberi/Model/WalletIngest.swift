@@ -529,7 +529,7 @@ enum WalletIngest {
                 if !leg.hash.isEmpty,
                    existingWalletContent.contains(chain.explorer + leg.hash) { continue }
                 // …and the same check against the labelled seats (prd §271):
-                // Railgun, Privacy Pools, Peer and Gnosis Pay each describe a
+                // Railgun, Privacy Pools and Peer each describe a
                 // transaction that IS an ordinary transfer, so without this the
                 // feed carries both "Sent 1.2 WETH" and "Shielded 1.2 WETH into
                 // Railgun" for one movement of money. The labelled row wins.
@@ -777,25 +777,17 @@ enum WalletIngest {
                                                      addresses: evmAddresses,
                                                      existing: existing)
         added += railgunAdded ?? 0
-        // Gnosis Pay card spends ride the same pass (prd §222) — one filtered
-        // settlement-transfer read per wallet on Gnosis Chain, landing "Spent
-        // €42.50 with Gnosis Pay" things. Inside the running guard like
-        // everything above; no-ops for a wallet that holds no card.
-        let gnosisPayAdded = await GnosisPayBridge.sync(context: context,
-                                                        addresses: evmAddresses,
-                                                        existing: existing)
-        added += gnosisPayAdded ?? 0
-        // MetaMask Card spends ride the same pass (2026-09-20) — the third
-        // seat on Gnosis Pay's shape: one filtered settlement-transfer read per
-        // wallet on Linea, both card programmes in the same call, landing
-        // "Spent $12.40 with MetaMask Card" things. No-ops for a wallet that
+        // MetaMask Card spends ride the same pass (2026-09-20) — the shape the
+        // Gnosis Pay seat set (prd §222, removed §1318): one filtered
+        // settlement-transfer read per wallet on Linea, both card programmes
+        // in the same call, landing "Spent $12.40 with MetaMask Card" things. No-ops for a wallet that
         // holds no card, which is almost all of them.
         let metamaskCardAdded = await MetaMaskCardBridge.sync(context: context,
                                                               addresses: evmAddresses,
                                                               existing: existing)
         added += metamaskCardAdded ?? 0
-        // Plasma One rides the same pass (prd §1311) — the fourth onchain
-        // card, and the first that settles in a daily batch: one row a day per
+        // Plasma One rides the same pass (prd §1311) — an onchain card, and
+        // the first that settles in a daily batch: one row a day per
         // card. A plain key costs one `eth_getCode`, re-asked daily, and no
         // scan; only an account with code on Plasma is walked.
         let plasmaOneAdded = await PlasmaOneCard.sync(context: context,

@@ -4,7 +4,8 @@ import SwiftUI
 /// generalised 2026-09-20, prd §858) — what the card cost you this month, and
 /// whether that's more than usual.
 ///
-/// Shared by Gnosis Pay and MetaMask Card. Only ONE thing here was ever
+/// Shared by every onchain card (MetaMask Card, ether.fi Cash, Plasma One;
+/// Gnosis Pay until prd §1318). Only ONE thing here was ever
 /// seat-specific — the mark's fill — so it is a parameter, and everything else
 /// reads `CardSpendRoom`. A second copy of this view would be a second place
 /// for the no-colour rule and the one-currency rule to drift.
@@ -30,8 +31,9 @@ import SwiftUI
 /// ## Liveness
 ///
 /// Stores no `Thing` — only value types out of `CardSpendRoom`, filtered at the
-/// boundary by `GnosisPayRoomSource`. The tap hands back a `Currency` and the
-/// section that owns the sheet does the lookup (corollary 5).
+/// boundary by each card's room source (`MetaMaskCardRoomSource`). The tap
+/// hands back a `Currency` and the section that owns the sheet does the
+/// lookup (corollary 5).
 ///
 /// Composed through `DSRoomChassis.Head`, its `SpanStrip` and its ranked `Row`.
 struct CardSpendRoomCard: View {

@@ -168,41 +168,32 @@ enum BridgeCatalog {
         // dead control.
         Offer(name: "CardPointers", tagline: "Needs CardPointers+", group: "Wallet", connectable: true,
               needsSetup: true, added: day(2026, 8, 20)),
-        // Wallet group by ruling (prd §222, 2026-07-26): a Gnosis Pay account
-        // IS a Safe holding your own balance, so it belongs beside the wallets
-        // whose total it joins — not Shopping, where Privacy.com's card
-        // receipts live, because this is the account and not just the receipt.
-        // Honesty note: the summary names BOTH ceilings plainly — no merchant
-        // names (they never reach the chain) and no refunds (they settle off
-        // it) — because the obvious expectation of a card feed is that it
-        // reads like a statement, and this one can't.
-        Offer(name: "Gnosis Pay",  tagline: "", group: "Wallet",    connectable: true,
-              needsSetup: true, added: day(2026, 7, 26)),
-        // MetaMask Card (2026-09-20) — the same object as Gnosis Pay one chain
-        // over, so the same group for the same reason: the money is in your own
-        // wallet until the swipe, which is what puts it beside the wallets and
-        // not in Shopping with Privacy.com's receipts.
+        // MetaMask Card (2026-09-20) — a card that settles onchain, Wallet
+        // group because the money is in your own wallet until the swipe, which
+        // is what puts it beside the wallets and not in Shopping with
+        // Privacy.com's receipts. (Gnosis Pay sat here on the same reasoning
+        // until prd §1318 removed it.)
         //
-        // The TAGLINE must not promise a statement, and must not REPEAT Gnosis
-        // Pay's. Both constraints are load-bearing: the merchant is not on the
-        // chain and cannot be (it lives behind Baanx's OAuth API under
-        // MetaMask's own client id — see `MetaMaskCardBridge`'s header for why
-        // that door stays shut), and two adjacent Wallet rows sharing one
-        // sentence would read as one thing listed twice, which is the very
-        // thing `KindGlyph`'s ether.fi/Gnosis Pay comment forbids in the other
-        // direction. So this one names its own chain. `alsoReads` carries Linea
+        // The TAGLINE must not promise a statement, and must not repeat
+        // another card's. Both constraints are load-bearing: the merchant is
+        // not on the chain and cannot be (it lives behind Baanx's OAuth API
+        // under MetaMask's own client id — see `MetaMaskCardBridge`'s header
+        // for why that door stays shut), and two adjacent Wallet rows sharing
+        // one sentence would read as one thing listed twice, which is the very
+        // thing `KindGlyph`'s ether.fi comment forbids in the other direction.
+        // So this one names its own chain. `alsoReads` carries Linea
         // and Baanx so a search for either finds the seat that really reads it.
         Offer(name: "MetaMask Card", tagline: "", group: "Wallet", connectable: true,
               alsoReads: ["Linea", "Base", "Baanx"], needsSetup: true, added: day(2026, 9, 20)),
-        // Plasma One (prd §1311) — the fourth onchain card, Wallet for the same
-        // reason as the three: the money is in your own account until the card
+        // Plasma One (prd §1311) — an onchain card, Wallet for the same
+        // reason as the others: the money is in your own account until the card
         // settles. `alsoReads` carries the chain and the issuer so a search for
         // either finds the seat that reads them.
         Offer(name: "Plasma One", tagline: "", group: "Wallet", connectable: true,
               alsoReads: ["Plasma", "Rain", "USDT0"], needsSetup: true, added: day(2026, 10, 15)),
         // Apple Wallet (prd §313, 2026-08-06) — FinanceKit, granted by Apple
-        // for this bundle id on request QVDBMBPMJU. Wallet group beside Gnosis
-        // Pay for that seat's own reason: a card feed belongs with the cards.
+        // for this bundle id on request QVDBMBPMJU. Wallet group beside the
+        // onchain cards: a card feed belongs with the cards.
         // The summary's third paragraph is the entitlement's terms in plain
         // words and is NOT ordinary marketing copy — see AppleWalletScreen.
         // The last line names the two ceilings so the copy can never drift
@@ -225,8 +216,8 @@ enum BridgeCatalog {
               // Health/Strava/HomeKit already set the precedent for a seat
               // that cannot exist here.
               needsSetup: true, added: day(2026, 8, 6), unavailableOnMac: true),
-        // The two finance seats of §780b. Wallet group, beside Apple Wallet and
-        // Gnosis Pay — this shelf is where money lives, and Reading would
+        // The two finance seats of §780b. Wallet group, beside Apple Wallet
+        // — this shelf is where money lives, and Reading would
         // promise reading rather than an account.
         Offer(name: "Acorns", tagline: "", group: "Wallet", connectable: true,
               needsSetup: true, added: day(2026, 9, 15)),
@@ -324,7 +315,7 @@ enum BridgeCatalog {
         // argument too — it no longer distinguishes the two groups.)
         Offer(name: "Peer",        tagline: "Fiat to crypto trades, as they settle",      group: "Wallet",    connectable: true,
               needsSetup: true, added: day(2026, 7, 17)),
-        // Wallet group, beside Peer/Privacy Pools/Gnosis Pay (2026-07-30): a
+        // Wallet group, beside Peer/Privacy Pools (2026-07-30): a
         // Safe multisig is your own account too, and the seat rides the
         // watched wallets the same way — no account, no key, watching is
         // consent (§207). Split from a generic Wallet feature into its own
@@ -360,7 +351,7 @@ enum BridgeCatalog {
         // used to say naming them there would "sell the same thing twice"; it
         // was right that it was twice, and wrong about which half to keep.
         //
-        // Peer, 0xBow, Railgun, Safe, Gnosis Pay and ether.fi keep their
+        // Peer, 0xBow, Railgun, Safe and ether.fi keep their
         // seats and pass the same test: every one lands rows under its own
         // source, so its icon is the only door to a room nothing else opens.
         Offer(name: "ether.fi",    tagline: "Your staked ETH, and the card",     group: "Wallet",    connectable: true,
@@ -1057,13 +1048,13 @@ enum BridgeSetupMode {
     /// `WalletSeatStanding.seats`, by offer name (that table is by seat id and
     /// is not compiled by the harnesses that compile this file).
     static let walletRidingSeats: Set<String> = ["Peer", "0xBow Privacy Pools", "Railgun", "Safe",
-        // MetaMask Card belongs here for Gnosis Pay's exact reason, and
+        // MetaMask Card belongs here because it rides the watched wallets, and
         // leaving it out is not cosmetic (prd §857): `Offer.mode` falls
         // through to `.pasteKey`, so the catalogue row offered **Add key** for
         // a seat that takes no key and cannot be connected at all — §83's dead
         // control, shipped by omission. `catalog-mode-audit.py` check F exists
         // for exactly this fallthrough and caught it.
-        "Gnosis Pay", "MetaMask Card", "ether.fi", "Plasma One"]
+        "MetaMask Card", "ether.fi", "Plasma One"]
 
     /// A handle, an address, a feed URL — public reads, no key.
     static let noAccountSeats: Set<String> = ["Wallet", "Markets", "YouTube",

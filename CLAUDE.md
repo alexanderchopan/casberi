@@ -342,8 +342,8 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - `-stripeRoomProbe` `-posthogRoomProbe` — the two room heads' readings line by line (prd §298, 2026-08-04; one NSLog per line, the -todayProbe truncation → docs/hooks/rooms.md · prd §298
 - **The note THING SHEETS, past §366** → docs/hooks/rooms.md · prd §399
 - **The journals' three shipped defects, fixed in the same pass** → docs/hooks/imports.md · prd §398
-- `-peerRoomProbe` `-privacyPoolsRoomProbe` `-gnosisPayRoomProbe` — the three WALLET-RIDING room heads, line by line (prd §349, 2026-08-10; one NSLog per fill/row/spend → docs/hooks/wallet.md · prd §349
-- **The onchain card head is SHARED (prd §858, 2026-09-20): `CardSpendRoom` — was `GnosisPayRoom` — serves Gnosis Pay AND MetaMask Card, drawn by one `CardSpendRoomCard(room:seat:)` behind one `FeedScreen` case `.cardSpend(_, seat:)`.** → docs/hooks/wallet.md · prd §858
+- `-peerRoomProbe` `-privacyPoolsRoomProbe` — the WALLET-RIDING room heads, line by line (prd §349, 2026-08-10; one NSLog per fill/row/spend → docs/hooks/wallet.md · prd §349
+- **The onchain card head is SHARED (prd §858, 2026-09-20): `CardSpendRoom` serves every onchain card, drawn by one `CardSpendRoomCard(room:seat:)` behind one `FeedScreen` case `.cardSpend(_, seat:)`.** → docs/hooks/wallet.md · prd §858
 - **`CardSpendSeat` is the ONE rule for which rows in a card's room are SPENDS (prd §868, `-etherfiCashRoomProbe`), read by all three sources and the door under the card** → docs/hooks/wallet.md · prd §868 · §858
 - `-instagramImport` — import an UNZIPPED Instagram export folder (prd §245, Model/InstagramImport.swift; screen → docs/hooks/imports.md · prd §245
 - `-tiktokImport` `-tiktokFaces` — import a TikTok export (the user_data_tiktok.json file itself, or a folder holding it), -tiktokFaces <limit|YES> → docs/hooks/imports.md · prd §279
@@ -374,7 +374,7 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - Apple Wallet (2026-08-06, prd §313 + §317, Model/AppleWalletBridge.swift / AppleWalletRoom.swift / → docs/hooks/bridges.md · prd §313
 - Peer (2026-07-17, prd 113; connect model superseded by §207, 2026-07-25) — the fiat↔crypto onramp → docs/hooks/wallet.md · prd §207
 - Privacy Pools (2026-07-21, prd §162) — 0xBow's compliant-privacy pools, the second seat → docs/hooks/wallet.md · prd §162
-- `-gnosisPayProbe` — Gnosis Pay (2026-07-26, prd §222) → docs/hooks/wallet.md · prd §222
+- **Gnosis Pay is deleted (prd §1318)**; `sweepRetiredSeats` drops its rows. Gnosis Chain stays (`GnosisChainRPC`)
 - `-metamaskCardProbe` `-plasmaOneProbe` — MetaMask Card (§857b, §860) and Plasma One, settled once a day so a row is a DAY → docs/hooks/wallet.md · prd §857 · §1311 · §222
 - `-bitcoinProbe <address | xpub/zpub/descriptor>` — one Bitcoin address or a whole WALLET (prd §1097): the gap-limit walk, change counted home, dust tagged, reuse reconciled, a waiting send stamped; a pasted `xprv` is refused and never stored. A host gets 20s of wall clock per page (mempool.space trickles busy addresses) → prd §1097 · §226 · §227
 - `-lightningConnect "<nostr+walletconnect://…>"|forget` — the Lightning seat (prd §1098): Nostr Wallet Connect, kept only if the connection cannot pay (`get_info`, else the kind-13194 info event), NIP-04, settled payments only, balance into the total as BTC; redacted from the probe log → prd §1098

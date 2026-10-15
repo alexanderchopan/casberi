@@ -3,9 +3,9 @@ import SwiftData
 
 /// WHICH ROWS IN AN ONCHAIN CARD'S ROOM ARE SPENDS (2026-09-21, prd §868).
 ///
-/// Three seats read a card that settles on a public chain — Gnosis Pay, MetaMask
-/// Card, ether.fi Cash — and all three draw one head (`CardSpendRoom`, prd
-/// §858). That head sums money, counts what it could not price, and refuses a
+/// Three seats read a card that settles on a public chain — MetaMask Card,
+/// ether.fi Cash, Plasma One (Gnosis Pay too, until prd §1318) — and all
+/// three draw one head (`CardSpendRoom`, prd §858). That head sums money, counts what it could not price, and refuses a
 /// comparison it has not observed. Every one of those judgements is only as
 /// honest as the set of rows handed to it, so the set is decided HERE, once,
 /// and read by the head's three sources AND by the door `FeedScreen` opens
@@ -34,7 +34,7 @@ enum CardSpendSeat {
     /// The source test comes first for every seat, so no rule below can reach
     /// across rooms. Then: for a room that holds nothing but the card, every
     /// row is a spend and there is nothing further to ask — that is the answer
-    /// for Gnosis Pay and MetaMask Card, and it is stated rather than assumed.
+    /// for MetaMask Card and Plasma One, and it is stated rather than assumed.
     /// ether.fi's room is shared, so its spends are named by the namespace the
     /// bridge has always written them under.
     static func isSpend(_ thing: Thing, seat: String) -> Bool {

@@ -167,11 +167,9 @@ final class WalletStore {
                 // — same back-fill reason, plus a stale mark would keep the
                 // seat lit for a wallet that's gone.
                 RailgunBridge.clearState(address: old.address)
-                // Gnosis Pay's cursor and its card-account mark leave too
-                // (prd §222) — same back-fill reason, plus a stale mark would
+                // MetaMask Card's cursor and its card-account mark leave too
+                // (2026-09-20) — same back-fill reason, plus a stale mark would
                 // keep the seat lit for a card whose wallet is gone.
-                GnosisPayBridge.clearState(address: old.address)
-                // MetaMask Card's leave for the same reason (2026-09-20).
                 MetaMaskCardBridge.clearState(address: old.address)
                 // Plasma One's cursor, role, card and balance (prd §1311).
                 PlasmaOneCard.clearState(address: old.address)
@@ -240,7 +238,6 @@ final class WalletStore {
                     PeerBridge.clearCursor(address: hex)
                     PrivacyPoolsBridge.clearState(address: hex)
                     RailgunBridge.clearState(address: hex)
-                    GnosisPayBridge.clearState(address: hex)
                     MetaMaskCardBridge.clearState(address: hex)
                     PlasmaOneCard.clearState(address: hex)
                     MorphoDeFi.clearState(address: hex)

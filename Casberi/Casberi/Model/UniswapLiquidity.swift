@@ -1070,7 +1070,7 @@ enum UniswapLiquidity {
     /// Uniswap book, V3 AND V4 (pair, version, range status, value, fees) or
     /// the honest miss. A numeric spec ALSO rewinds every activity cursor
     /// that many BLOCKS (not Morpho's days — this rides raw RPC like
-    /// Approvals/Peer/GnosisPay) and runs the settled-activity sweep. Pairs
+    /// Approvals/Peer) and runs the settled-activity sweep. Pairs
     /// with `-walletAddress`; two live-verified reference wallets
     /// (2026-07-30): `0x7516d4e35a369fc18ddfeec0d69c28112fe13bf0` holds
     /// three real V3 positions including an out-of-range one, and

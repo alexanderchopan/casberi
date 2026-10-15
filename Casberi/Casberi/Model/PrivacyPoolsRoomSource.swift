@@ -34,7 +34,7 @@ enum PrivacyPoolsRoomSource {
     /// `priceValue`/`priceCurrency` are read as DATA — never `transferAmount`,
     /// which is a rounded display string whose thousands separator is
     /// locale-dependent, and never the title, which is prose
-    /// (`GnosisPayRoomSource`'s rule, and the reason §349 could not state a
+    /// (`MetaMaskCardRoomSource`'s rule, and the reason §349 could not state a
     /// figure at all until the bridge started stamping this pair).
     @MainActor
     private static func sighting(_ thing: Thing) -> PrivacyPoolsRoom.Sighting {

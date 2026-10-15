@@ -3,14 +3,14 @@ import SwiftUI
 /// THE DODO PAYMENTS ROOM'S HEAD (2026-09-01, prd §558) — what came in, what
 /// went back out, and what needs you.
 ///
-/// This room is two rooms at once: a windowed money reading like Gnosis Pay's
+/// This room is two rooms at once: a windowed money reading like an onchain card's
 /// card, and a deadline rail like the Merchant of Record's. So it draws both of
 /// the template's blocks for those shapes — the rail with its `DeadlineRow`s,
 /// then the currency `Row`s — under one sentence (prd §745).
 ///
 /// ## No green, no red, no arrow
 ///
-/// `GnosisPayRoomCard`'s restraint, and here the temptation is stronger still:
+/// `CardSpendRoomCard`'s restraint, and here the temptation is stronger still:
 /// this is revenue, and a card that paints a good month green is a card that
 /// paints a bad one red at the moment somebody least needs an opinion from an
 /// app. The change is stated in words and never coloured. A dispute gets the
@@ -21,7 +21,7 @@ import SwiftUI
 ///
 /// A single-currency account — the ordinary case — gets the headline, the
 /// change and the rail. A legend of one row is a restatement of the sentence
-/// above it (`GnosisPayRoomCard`'s rule, unchanged).
+/// above it (`CardSpendRoomCard`'s rule, unchanged).
 ///
 /// ## Liveness
 ///

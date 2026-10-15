@@ -21,7 +21,6 @@ enum AppHomepages {
         "Railgun": "railgun.org",
         "ENS": "ens.domains",
         "CardPointers": "cardpointers.com",
-        "Gnosis Pay": "gnosispay.com",
         "MetaMask Card": "metamask.io",
         "Plasma One": "plasma.to",
         "Acorns": "acorns.com",

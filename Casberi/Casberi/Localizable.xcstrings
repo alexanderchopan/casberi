@@ -85954,34 +85954,6 @@
         }
       }
     },
-    "Gnosis Pay" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Gnosis Pay"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Gnosis Pay"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Gnosis Pay"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Gnosis Pay"
-          }
-        }
-      }
-    },
     "Going" : {
       "localizations" : {
         "es" : {
@@ -141633,34 +141605,6 @@
         }
       }
     },
-    "Spent %@ with Gnosis Pay" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Gastaste %@ con Gnosis Pay"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Gnosis Payで%@を使用"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Gnosis Pay로 %@ 지출"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "通过 Gnosis Pay 花费了 %@"
-          }
-        }
-      }
-    },
     "Spent %@ with MetaMask Card" : {
       "localizations" : {
         "es" : {
@@ -147241,34 +147185,6 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你的卡片应用读取的卡片"
-          }
-        }
-      }
-    },
-    "The chain carries the amount, never the merchant." : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "La cadena lleva el importe, nunca el comercio."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "チェーンに記録されるのは金額だけで、店舗名は含まれません。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "체인에는 금액만 기록되며, 가맹점은 포함되지 않습니다."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "链上只记录金额，从不记录商户。"
           }
         }
       }

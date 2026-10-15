@@ -3071,7 +3071,7 @@ struct ThingSheetView: View {
     /// last four off the account label the bridge stamped ("Apple Card,
     /// ending 4821").
     private var moneyCard: MoneyReceiptBox.Card? {
-        let cardSources: Set<String> = ["Apple Wallet", "Gnosis Pay", "MetaMask Card", "ether.fi", "Privacy"]
+        let cardSources: Set<String> = ["Apple Wallet", "MetaMask Card", "ether.fi", "Privacy"]
         guard cardSources.contains(thing.source), moneyReceipt?.mine == nil,
               let account = thing.authorHandle, !account.isEmpty else { return nil }
         let parts = account.components(separatedBy: ", ending ")

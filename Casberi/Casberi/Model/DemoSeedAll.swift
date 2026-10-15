@@ -1667,13 +1667,22 @@ enum DemoSeedAll {
     /// three named here are what make the demo exercise all three rather than
     /// twelve identical rows. Assigned by what each counterparty really IS: a
     /// person or an exchange deposit address is a wallet, a router or an
-    /// orchestrator is a contract, and Gnosis Pay settles through a Safe.
+    /// orchestrator is a contract, and the household's shared account is a
+    /// Safe. (That Safe was "Gnosis Pay" until prd §1318 removed the seat.)
     static let demoCounterparties: [(name: String, kind: AddressBook.Kind)] = [
         ("Sam", .wallet), ("Mia", .wallet), ("Coinbase", .wallet),
         ("Stripe", .wallet), ("Bitrefill", .wallet),
         ("Uniswap", .contract), ("Peer", .contract),
-        ("Gnosis Pay", .safe),
+        ("Household Safe", .safe),
     ]
+
+    /// Counterparties an earlier demo named and this one no longer does. Still
+    /// FIXTURES (`AddressBook.fixtureKeys`) and still unwound by
+    /// `forgetAddressBook`, because a book seeded by an older build keeps the
+    /// entry: dropping the name from both would turn a demo's synthetic
+    /// address into a contact nobody typed (prd §549). "Gnosis Pay" left with
+    /// its seat (prd §1318).
+    static let retiredDemoCounterparties = ["Gnosis Pay"]
 
     static let demoBluesky: [(handle: String, name: String, bio: String)] = [
         ("you", "You", "Making a small thing carefully."),
@@ -1726,8 +1735,8 @@ enum DemoSeedAll {
         //
         // People only, deliberately. An ENS avatar is a picture somebody set
         // on their own name, so Coinbase, Stripe and Bitrefill keep their
-        // identicons (a venue is not a face), and Uniswap, Peer and Gnosis Pay
-        // are a contract and two protocols — `AddressKind` already draws those
+        // identicons (a venue is not a face), and Uniswap, Peer and the
+        // household Safe are contracts — `AddressKind` already draws those
         // as machinery, and putting a face on one would say a person is
         // standing behind an address that nobody stands behind.
         WalletStore.shared.seedDemoAvatars(
@@ -1744,8 +1753,8 @@ enum DemoSeedAll {
     /// dev install's book holds real people under the same store.
     @MainActor
     static func forgetAddressBook() {
-        for party in demoCounterparties {
-            AddressBook.shared.remove(counterpartyAddress(for: party.name))
+        for name in demoCounterparties.map(\.name) + retiredDemoCounterparties {
+            AddressBook.shared.remove(counterpartyAddress(for: name))
         }
         WalletStore.shared.forgetDemoAvatars(demoFacedParties.map(counterpartyAddress(for:)))
     }
@@ -3175,7 +3184,7 @@ enum DemoSeedAll {
             (true,  "850 USDC",   "Stripe",      850, 16),
             (false, "0.08 ETH",   "Uniswap",     254, 19),
             (true,  "0.25 ETH",   "Mia",         795, 22),
-            (false, "300 USDC",   "Gnosis Pay",  300, 25),
+            (false, "300 USDC",   "Household Safe", 300, 25),
             (true,  "1,000 USDC", "Peer",      1_000, 27),
             (false, "0.05 ETH",   "Sam",         159, 29),
             // Spending's examples (the Wallet Home): an exchange deposit
@@ -3572,31 +3581,32 @@ enum DemoSeedAll {
         }
     }
 
-    /// The three onchain cards. The spends are spread across at least two
+    /// The onchain cards. The spends are spread across at least two
     /// calendar months on purpose, though the reason is now HISTORY rather
     /// than a live requirement: these rows were shaped for
     /// `FeedInsight.cardMonths`, a spend-by-month leaderboard that was deleted
     /// with the rest of the ranked boards ("we were trying to add
     /// visualization data just for the sake of it").
     ///
-    /// **The spread is a live requirement again, for all three (prd §868).**
-    /// Gnosis Pay's own head superseded that board and survives; MetaMask Card
-    /// joined it in §858 and ether.fi Cash in §868, so every one of these
-    /// seats now leads with `CardSpendRoom`'s head — whose history strip draws
-    /// nothing below TWO calendar months, deliberately, because a one-column
-    /// history is not a history. A demo whose spends all landed in one month
-    /// would show three heads with the strip silently missing, which reads as
-    /// an unbuilt feature rather than as a young room.
+    /// **The spread is a live requirement again, for every card (prd §868).**
+    /// Gnosis Pay's own head superseded that board (the seat itself went in
+    /// prd §1318); MetaMask Card joined it in §858 and ether.fi Cash in §868,
+    /// so every one of these seats now leads with `CardSpendRoom`'s head —
+    /// whose history strip draws nothing below TWO calendar months,
+    /// deliberately, because a one-column history is not a history. A demo
+    /// whose spends all landed in one month would show heads with the strip
+    /// silently missing, which reads as an unbuilt feature rather than as a
+    /// young room.
     ///
     /// It also still reads better: a card feed that all lands in one month
     /// reads as a burst rather than a habit, which is the wrong impression of
     /// what these seats are for.
     ///
     /// **MetaMask Card's rows name NO MERCHANT, and that is the seat's own
-    /// ceiling shown rather than papered over (prd §857).** Its two siblings
-    /// below title their rows "Supermarket · €42.80", which the real bridges
+    /// ceiling shown rather than papered over (prd §857).** Its siblings once
+    /// titled their rows "Supermarket · €42.80", which the real bridges
     /// cannot land either — the merchant is not on the chain for any of the
-    /// three. Leaving that inherited liberty in place for a seat whose whole
+    /// cards. Leaving that inherited liberty in place for a seat whose whole
     /// documented boundary is "amounts and timing only" would make the demo
     /// advertise a statement the app cannot produce, which is §83 arriving
     /// through the one surface anyone can see without an account. So these
@@ -3604,19 +3614,6 @@ enum DemoSeedAll {
     /// MetaMask Card".
     private static func cards() -> [Thing] {
         var out: [Thing] = []
-        let gnosis: [(String, Double, Double)] = [
-            ("Supermarket", 42.80, 3), ("Pharmacy", 12.40, 9), ("Restaurant", 68.00, 20),
-            ("Supermarket", 51.25, 38), ("Transit", 22.50, 44), ("Bookshop", 31.90, 61),
-        ]
-        out += gnosis.enumerated().map { i, g in
-            row(.transaction, "\(g.0) · €\(String(format: "%.2f", g.1))",
-                source: "Gnosis Pay", ref: "demo:gnosispay:\(i)", days: g.2, hour: 13,
-                content: "Gnosis Chain · EURe") { t in
-                t.priceValue = g.1
-                t.priceCurrency = "EUR"
-                t.walletAddress = demoWallet
-            }
-        }
         // Dollars, not euros, because the card's lists are dollar stablecoins
         // (USDC, USDT, mUSD, aUSDC, amUSD) plus EURe and GBPe — and `content`
         // names the chain and the token the way the real row's explorer link
@@ -3698,7 +3695,7 @@ enum DemoSeedAll {
         // would leave the feature's own sentence undrawn.
         // The oldest row is 62 days back, PAST the 60-day bar
         // `CardSpendRoom.knowsPriorWindow` sets — as its two siblings' oldest
-        // rows already were (61 and 64). It stopped at 52 while nothing read
+        // rows already were (MetaMask Card's is 64). It stopped at 52 while nothing read
         // these dates, so the newest seat's head would have been the only one
         // of the three saying "not watching long enough to compare", from an
         // accident rather than a decision. Two rows sit in the prior window so
@@ -5431,7 +5428,7 @@ enum DemoSeedAll {
     /// evidence and REMOVES any whose count is zero. The demo reaches no
     /// network, so it earns no evidence, and `BridgeRefresh.refreshAllConnected`
     /// returns before that reconcile while `DemoMode.isActive` — which is the
-    /// only reason the demo's Peer, Privacy Pools, Railgun, Gnosis Pay and
+    /// only reason the demo's Peer, Privacy Pools, Railgun, card and
     /// ether.fi seats survived at all. They did not survive a visit to their
     /// own setup screens: `PeerScreen`, `PrivacyPoolsScreen`, `RailgunScreen`,
     /// `SafeScreen` and the wallet picker each call `reconcileWalletSeats()`
@@ -5472,7 +5469,7 @@ enum DemoSeedAll {
     /// leaves a mark behind on the way out.
     private static let walletSeatEvidence: [WalletSeatEvidence] = [
         PeerBridge.evidence, PrivacyPoolsBridge.evidence, RailgunBridge.evidence,
-        GnosisPayBridge.evidence, WalletDeFi.evidence, MorphoDeFi.evidence,
+        WalletDeFi.evidence, MorphoDeFi.evidence,
         HyperliquidDeFi.evidence, AerodromeDeFi.evidence, UniswapLiquidity.evidence,
         EtherFiUnstake.evidence, EtherFiCash.evidence,
         MetaMaskCardBridge.evidence, PlasmaOneCard.evidence,
@@ -5534,7 +5531,6 @@ enum DemoSeedAll {
         // status check D exists to catch.
         ("Peer", "Rides your wallet", "Lands settled fills, never trades."),
         ("Privacy Pools", "Rides your wallet", "Reads your deposits' review status."),
-        ("Gnosis Pay", "Rides your wallet", "Reads what the card settled onchain."),
         ("MetaMask Card", "Rides your wallet", "Reads what the card settled onchain."),
         ("ether.fi", "Rides your wallet", "Reads what the card settled onchain."),
         ("Plasma One", "Rides your wallet", "Reads what the card settled each day."),

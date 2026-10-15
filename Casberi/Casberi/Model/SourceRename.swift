@@ -283,6 +283,9 @@ enum SourceRename {
     /// we could drop frames today b/c nobody really uses it"), with the name
     /// it wore before §685's rename. It landed no rows of its own, so this is
     /// for its seat record, its address-book tag, its defaults and its keys.
+    /// Gnosis Pay joined them 2026-10-15 (prd §1318, user: "they are
+    /// deprecating it"): the seat record and its card spends
+    /// (`gnosispay:spend:` refs, all under the source "Gnosis Pay").
     static let droppedSources: Set<String> = [
         "Altana", "Base Vibenet", "Hegotá UTXO", "Hegotá Privacy", "Reddit",
         "Ethrex Hegot\u{00e1}", "Ethrex Privacy", "Hegota Devnet", "Privacy Devnet",
@@ -290,6 +293,7 @@ enum SourceRename {
         // 1Claw's grants (retired §638): their sheet went with prd §1187.
         "1Claw",
         "Hegotá Frames", "Frames Devnet",
+        "Gnosis Pay",
     ]
 
     /// The address-book network tags those seats wrote (`AddressBook.Network`
@@ -306,12 +310,14 @@ enum SourceRename {
     /// `nostr.lastHeal`); Farcaster's accounts, channels, heal stamp,
     /// follower ledgers and signer cursors (`farcaster.`); Hegotá Frames'
     /// watch list, live-state cache, chain record, sent log, signer addresses
-    /// and passkey public key (`frames.`).
+    /// and passkey public key (`frames.`); Gnosis Pay's per-wallet scan
+    /// cursors and its card-account evidence mark (`gnosispay.cursor.`,
+    /// `gnosispay.accounts`).
     private static let droppedDefaultsPrefixes = [
         "altana.", "vibenet.", "hegota.", "privacydevnet.",
         "room.value.history.privacyDevnet", "feed.reddit",
         "deals.", "shopify.", "heal.due.cursor.", "nostr.", "farcaster.",
-        "frames.",
+        "frames.", "gnosispay.",
     ]
 
     /// The Keychain services the devnets' signing keys lived under. Test money
@@ -331,10 +337,10 @@ enum SourceRename {
 
     /// `.v2` since prd §1049 added three seats, `.v3` since Nostr joined,
     /// `.v4` since Farcaster joined (prd §1110), `.v5` since Hegotá Frames
-    /// joined (prd §1206): a device that ran the earlier pass would otherwise
+    /// joined (prd §1206), `.v6` since Gnosis Pay joined (prd §1318): a device that ran the earlier pass would otherwise
     /// never clear the new seats' defaults. The work it repeats is idempotent
     /// — every delete finds nothing.
-    private static let droppedLocalKey = "sourceRename.droppedSeats.local.v5"
+    private static let droppedLocalKey = "sourceRename.droppedSeats.local.v6"
 
     /// Drops what the deleted seats left behind, in `sweepVoice`'s shape: the
     /// ROWS at every launch, because the store mirrors to CloudKit and a

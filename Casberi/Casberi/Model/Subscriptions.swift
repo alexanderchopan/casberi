@@ -18,7 +18,7 @@ import Foundation
 ///   • one the person added (`SubscriptionStore`), for anything none of the
 ///     above can see.
 /// The onchain cards are NOT read: a chain row says what was spent, never
-/// where (`GnosisPayBridge`'s standing ceiling), so no merchant can recur.
+/// where (`CardSpendRoom`'s standing ceiling), so no merchant can recur.
 ///
 /// ## What it refuses to claim
 ///

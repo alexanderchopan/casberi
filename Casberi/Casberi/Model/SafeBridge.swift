@@ -89,7 +89,7 @@ import SwiftData
 ///     amendment). It used to land under `source: "Wallet"` like Aave/Morpho/
 ///     Hyperliquid/Aerodrome — folded in as a sub-lens because it had no chip
 ///     of its own to fold. That premise no longer held: Peer/Privacy Pools/
-///     Gnosis Pay/Railgun/ether.fi all already carry their own chip, so
+///     Gnosis Pay (since removed)/Railgun/ether.fi all carried their own chip, so
 ///     "Wallet" was one lens with its own chip beside five that shared it —
 ///     an inconsistency, not a design. `sourceName` is now `"Safe"`;
 ///     `retagToOwnSource` is a one-time pass that re-stamps every ALREADY-
@@ -103,10 +103,9 @@ import SwiftData
 ///     description), so the head spends no extra read.
 enum SafeBridge {
 
-    /// The seat's own source name — `PeerBridge.sourceName`/
-    /// `GnosisPayBridge.sourceName`'s shape, joined 2026-08-11. Read here
-    /// rather than spelled as a literal at every landing site, the same
-    /// reason those two are.
+    /// The seat's own source name — `PeerBridge.sourceName`'s shape, joined
+    /// 2026-08-11. Read here rather than spelled as a literal at every landing
+    /// site, the same reason that one is.
     static let sourceName = "Safe"
 
     private struct Chain {
@@ -127,10 +126,10 @@ enum SafeBridge {
     }
     /// `gno` (Gnosis Chain) carries `network: nil` — it isn't a
     /// WalletChainStore/Alchemy-selectable chain at all (same reason
-    /// `GnosisPayBridge` reads it over its own public RPCs rather than
+    /// `GnosisChainRPC` reads it over its own public RPCs rather than
     /// through the chain picker), so its Safe reads aren't gated by that
-    /// toggle either — they run whenever a watched EOA might be a Gnosis
-    /// Pay/Safe signer.
+    /// toggle either — they run whenever a watched EOA might be a Safe
+    /// signer.
     private static let chains: [Chain] = [
         Chain(network: "eth-mainnet",   seg: "eth",  shortName: "eth",   chainId: 1),
         Chain(network: "base-mainnet",  seg: "base", shortName: "base",  chainId: 8453),
@@ -465,7 +464,7 @@ enum SafeBridge {
     /// Every Safe this app has ever confirmed real (cleared the spam filter
     /// below, or was watched directly) — an append-only local cache, NOT
     /// re-derived live, so the catalog seat (`BridgeStore.reconcileWalletSeats`)
-    /// can gate "connected" synchronously the way `GnosisPayBridge.accounts()`
+    /// can gate "connected" synchronously the way `WalletSeatEvidence`
     /// does, without a network round trip on every foreground.
     private static let detectedKey = "wallet.safe.detected.v1"
     private static func rememberDetected(_ chain: Chain, _ safeAddress: String) {

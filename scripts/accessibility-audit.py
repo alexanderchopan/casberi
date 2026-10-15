@@ -140,7 +140,7 @@ liveness audit's stated lesson, and `design-motion-audit`'s):
     beside the figure and no text check can see that: the Uniswap range bar
     beside its "Idle 3d" pill, the melt bar beside "N votes left" and the
     deposit share beside its printed percent are all correctly mute, while
-    `GnosisPayRoomCard.monthStrip` and `SafeRoomCard.ring` are correctly
+    `CardSpendRoomCard.monthStrip` and `SafeRoomCard.ring` are correctly
     labelled. The lead `ShareBar`s are always exactly full — `top` is the
     lead's own count — so they are scale anchors carrying no information at
     all, and hiding them is right.

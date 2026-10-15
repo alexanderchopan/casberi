@@ -192,7 +192,7 @@ for seat in "Dodo Payments" "Polar" "Stripe"; do
     *"\"$seat\""*) echo "✗ $seat joined Corpus.cardSpendSources — revenue is now counted as spending (prd §558)"; exit 1;;
   esac
 done
-for seat in "Apple Wallet" "Gnosis Pay" "MetaMask Card" "ether.fi"; do
+for seat in "Apple Wallet" "MetaMask Card" "ether.fi" "Plasma One"; do
   case "$SET_LINE" in
     *"\"$seat\""*) ;;
     *) echo "✗ $seat left Corpus.cardSpendSources — the spend answer now omits a real card (prd §558, §868)"; exit 1;;

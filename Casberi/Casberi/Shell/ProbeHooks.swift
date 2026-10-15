@@ -1346,19 +1346,18 @@ enum ProbeHooks {
                 NSLog("[Casberi] awsRoom| %@", line)
             }
         },
-        // The three WALLET-RIDING room heads (2026-08-10, prd §349). Each rides
-        // the watched wallets — no key, no account — so all three are probed by
-        // landing rows and nothing else; pair with `-walletAddress` plus the
-        // seat's own sync probe (`-peerProbe`, `-privacyPoolsProbe`,
-        // `-gnosisPayProbe`) to land some first.
+        // The WALLET-RIDING room heads (2026-08-10, prd §349). Each rides the
+        // watched wallets — no key, no account — so each is probed by landing
+        // rows and nothing else; pair with `-walletAddress` plus the seat's own
+        // sync probe (`-peerProbe`, `-privacyPoolsProbe`) to land some first.
         //
         // Each `probeLines` names every cause of an empty head, because for
         // these seats "nothing" is usually the HEALTHY answer — most wallets
         // have never touched Peer, never deposited into a pool, and hold no
-        // Gnosis Pay card — and only one or two causes per room are bugs.
+        // card — and only one or two causes per room are bugs.
         // `-metamaskCardRoomProbe` (prd §858) — the second onchain card's head,
-        // line by line. Same shape as `-gnosisPayRoomProbe` because the head is
-        // the SAME TYPE; what differs is the source it filters and the six
+        // line by line. Same shape as the other card heads' probes because the
+        // head is the SAME TYPE; what differs is the source it filters and the six
         // causes of an empty head that its own `probeLines` names.
         Hook(key: "metamaskCardRoomProbe") { _, context in
             let source = MetaMaskCardRoomSource.source
@@ -1415,21 +1414,6 @@ enum ProbeHooks {
             descriptor.fetchLimit = 500
             let rows = (try? context.fetch(descriptor)) ?? []
             for line in PrivacyPoolsRoomSource.probeLines(things: rows) {
-                NSLog("[Casberi] %@", line)
-            }
-        },
-        // Card spends are NOT rare (`GnosisPayBridge` lands them uncapped for
-        // exactly that reason), so this one fetches the widest window of the
-        // three. The head reads a 30-day window off the newest of them; a limit
-        // that cut into the room's history would make `knowsPriorWindow` answer
-        // no and silently withdraw the comparison.
-        Hook(key: "gnosisPayRoomProbe") { _, context in
-            let source = GnosisPayRoomSource.source
-            var descriptor = FetchDescriptor<Thing>(
-                predicate: #Predicate { $0.source == source })
-            descriptor.fetchLimit = 2000
-            let rows = (try? context.fetch(descriptor)) ?? []
-            for line in GnosisPayRoomSource.probeLines(things: rows) {
                 NSLog("[Casberi] %@", line)
             }
         },
@@ -4156,31 +4140,14 @@ enum ProbeHooks {
                       RailgunBridge.accountSummary())
             }
         },
-        // `-gnosisPayProbe <blocksBack|YES>` runs the Gnosis Pay card-spend
-        // sweep over the watched wallets, NSLogging the landed count and
-        // which watched wallets turned out to be card accounts. A numeric
-        // spec rewinds every cursor that many blocks below the Gnosis Chain
-        // head first, so real past spends land instead of waiting for someone
-        // to buy something. Pair with `-walletAddress <a card Safe>`.
-        // NOTE the measured ceiling (prd §222): an `eth_getLogs` range much
-        // over 500k blocks comes back EMPTY rather than erroring, so a spec
-        // far past that reads as "no spends" — the sweep chunks internally,
-        // but a probe asking for millions is testing the wrong thing.
-        Hook(key: "gnosisPayProbe") { spec, context in
-            Task { @MainActor in
-                let n = await GnosisPayBridge.probe(context: context, blocksBack: Int(spec))
-                NSLog("Gnosis Pay probe: %@ landed; %@",
-                      n.map(String.init) ?? "FAILED",
-                      GnosisPayBridge.accountSummary())
-            }
-        },
-        // `-metamaskCardProbe <blocksBack|YES>` is the same probe one chain
-        // over (2026-09-20) — the MetaMask Card sweep across the watched
+        // `-metamaskCardProbe <blocksBack|YES>` (2026-09-20) — the MetaMask
+        // Card sweep across the watched
         // wallets, NSLogging the landed count, which wallets turned out to
         // hold a card, and one line per row so a decimals bug is visible as
         // money rather than hidden in a count.
         //
-        // The ceiling here is the OPPOSITE of Gnosis Pay's above, which is why
+        // The ceiling here is the OPPOSITE of Gnosis Chain's (the removed Gnosis
+        // Pay seat's, whose over-large range came back EMPTY), which is why
         // it is spelled out: Linea's primary host ERRORS on a range over
         // 10,000 instead of returning an empty list, so an over-large spec
         // fails loudly and the sweep just chunks. What a huge spec really
@@ -6888,14 +6855,9 @@ enum ProbeHooks {
              ? PrivacyPoolsRoomSource.compose(things: things).map {
                 "\(PrivacyPoolsRoom.headline($0)) · \($0.deposits) deposits"
              } : nil)
-        note("gnosisPayHead", source == GnosisPayRoomSource.source
-             ? GnosisPayRoomSource.compose(things: things).map {
-                "\(CardSpendRoom.headline($0)) · \($0.currencies.count) currencies"
-             } : nil)
-        // The same head on the second onchain card (prd §858). Censused
-        // separately from Gnosis Pay's on purpose: they share a TYPE, so a
-        // single row would go green off whichever seat happened to have rows
-        // and say nothing about the other.
+        // The shared onchain-card head (prd §858). Censused per seat on
+        // purpose: they share a TYPE, so a single row would go green off
+        // whichever seat happened to have rows and say nothing about the other.
         note("metamaskCardHead", source == MetaMaskCardRoomSource.source
              ? MetaMaskCardRoomSource.compose(things: things).map {
                 "\(CardSpendRoom.headline($0)) · \($0.currencies.count) currencies"

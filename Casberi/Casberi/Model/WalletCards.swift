@@ -18,8 +18,7 @@ enum WalletCards {
     static func isSpend(_ thing: Thing) -> Bool {
         guard !isRefund(thing) else { return false }
         switch thing.source {
-        case GnosisPayBridge.sourceName, MetaMaskCardBridge.source, EtherFiCash.source,
-             PlasmaOneCard.source:
+        case MetaMaskCardBridge.source, EtherFiCash.source, PlasmaOneCard.source:
             return CardSpendSeat.isSpend(thing, seat: thing.source)
         case AppleWalletBridge.sourceName:
             return thing.kind == .transaction && thing.tags.contains("Card")

@@ -362,8 +362,8 @@ enum PeerBridge {
             // still proving the fills are theirs. Keying it on `landed` cost
             // the seat forever for anyone who unwatched and re-watched — the
             // re-watch seeds silently at head, so nothing ever lands again
-            // (found in review, 2026-07-30; it's the hazard `GnosisPayBridge`
-            // already documents in prose).
+            // (found in review, 2026-07-30; it's the hazard the Gnosis Pay seat
+            // documented in prose, and `MetaMaskCardBridge` does now).
             if !logs.isEmpty || !depositLogs.isEmpty { evidence.remember(address) }
             registerNewDeposits(from: depositLogs, wallet: address)
             defaults.set(scanned, forKey: key)

@@ -83,7 +83,6 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
 .ai-todoist   { background: #e44332; }
 .ai-wallet    { background: #2962ef; }
 .ai-peer      { background: #4b47f6; }
-.ai-gnosispay { background: #4830c0; }   /* their indigo (icon-sampled) */
 .ai-metamaskcard { background: #fff; }   /* the fox on white — the mark bundled in the app */
 .ai-plasmaone  { background: #162f29; }   /* the mark's own green (icon-sampled), so the disc reads full-bleed */
 .ai-applewallet { background: #1d1d1f; } /* Apple Card graphite */
@@ -173,7 +172,7 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
 .ai-jira img  { width: 100%; height: 100%; border-radius: inherit; }
 .ai-stripe    { background: #635bff; }
 /* Dodo Payments' official mark is full-bleed square art with its lime-green
-   field baked in (the same treatment Privacy.com and Gnosis Pay get above) —
+   field baked in (the same treatment Privacy.com gets above) —
    carries `.tilefull` in markup, so no background rule is needed here. */
 /* Stripe's mark is the wordmark, so its tile is full-bleed square
    artwork carrying its own purple field — same treatment as PostHog

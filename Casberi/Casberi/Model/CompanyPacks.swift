@@ -7,7 +7,7 @@ import Observation
 ///
 /// A pack is a catalogue CATEGORY (`BridgeCatalog.categories`), and its
 /// members are the makers of that category's accounts — GitHub and npm are
-/// Microsoft, Slack is Salesforce, Gnosis Pay is GNO. Derived from the
+/// Microsoft, Slack is Salesforce, MetaMask Card is Consensys. Derived from the
 /// catalogue, never curated beside it: an account added to Work joins the Work
 /// pack by its row here, and an account with no row is simply not in a pack.
 ///
@@ -86,7 +86,6 @@ enum CompanyPacks {
             "ENS": coin("ENS", "ENS", "ens-ethereum-name-service"),
             "ETH Validators": coin("Ethereum", "ETH", "eth-ethereum"),
             "Gemini Exchange": ("Gemini", .stock("GEMI")),
-            "Gnosis Pay": coin("Gnosis", "GNO", "gno-gnosis"),
             "Kraken": own("Kraken"),
             "L2BEAT": own("L2BEAT"),
             "MetaMask Card": own("Consensys"),

@@ -232,7 +232,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1459 of 1525 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1460 of 1526 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -492,7 +492,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §219b — Connect raises, Open pushes — §218's split was the wrong axis
 - §220 — A step that was already on screen twice
 - §221 — A like of a post you already have
-- §222 — Gnosis Pay: the card that settles onchain, read the Peer way
+- §222 — Gnosis Pay: the card that settles onchain, read the Peer way (amended by §1318)
 - §223 — PostHog: a count is not a thing
 - §223a — The calendar room reads one direction
 - §224 — Bookmarks — one importer for Safari and Chrome, Reading List folded in
@@ -1196,7 +1196,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §856 — Muse's key check was wrong within the hour, and §854 said exactly where to look
 - §857 — MetaMask Card: the third card that settles onchain, and the file that named its addresses
 - §857b — MetaMask Card reads Base too, and Monad is measured, buildable and refused (part superseded by §860)
-- §858 — The onchain card head is SHARED, and the rename is the feature (amended by §1311)
+- §858 — The onchain card head is SHARED, and the rename is the feature (amended by §1311, §1318)
 - §859 — The demo stands every agent's room as a keyed one
 - §860 — MetaMask Card reads Monad through an index, and §857b asked the wrong door
 - §861 — An empty agent room still holds the lead slot
@@ -1693,6 +1693,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1315 — One sheet at a time, from a raised page too (extends §1238)
 - §1316 — Sources is a library: every category a folder (supersedes §1253's cards and its By category / A–Z words)
 - §1317 — Every count in Sources picks what stands under the box (supersedes §1274; amends §1217 item 2, §1292)
+- §1318 — Gnosis Pay is removed
 
 ## Dead rulings → what replaced them (generated)
 

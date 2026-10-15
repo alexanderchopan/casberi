@@ -17,7 +17,7 @@
 #
 # WHY A HARNESS AND NOT A LIVE CHECK. These four seats ride the WATCHED
 # WALLETS: there is no key to mint, no account to open, and nothing on this host
-# can make a Peer fill settle, a 0xBow screener rule, a Gnosis Pay card get
+# can make a Peer fill settle, a 0xBow screener rule, an onchain card get
 # swiped, or a Railgun shield land. A room's numbers can only ever be checked by
 # somebody who already has the history — and every failure mode here is a
 # SILENT WRONG ANSWER that renders perfectly:
@@ -83,27 +83,27 @@ fi
 PEER="Casberi/Casberi/Model/PeerRoom.swift"
 LEDE="Casberi/Casberi/Model/RoomLede.swift"   # prd §585 — the shared lede type these rooms now return
 POOLS="Casberi/Casberi/Model/PrivacyPoolsRoom.swift"
-GNOSIS="Casberi/Casberi/Model/CardSpendRoom.swift"
+CARDSPEND="Casberi/Casberi/Model/CardSpendRoom.swift"
 RAILGUN="Casberi/Casberi/Model/RailgunRoom.swift"
 SAFE="Casberi/Casberi/Model/SafeRoom.swift"
 # (The Privacy Pools room's scope enum, `PrivacyPoolsSection`, left with its
 # tiles, prd §1060: the head draws every reading.)
-for f in "$PEER" "$POOLS" "$GNOSIS" "$RAILGUN" "$SAFE"; do
+for f in "$PEER" "$POOLS" "$CARDSPEND" "$RAILGUN" "$SAFE"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
 SRC_PEER="Casberi/Casberi/Model/PeerRoomSource.swift"
 SRC_POOLS="Casberi/Casberi/Model/PrivacyPoolsRoomSource.swift"
-SRC_GNOSIS="Casberi/Casberi/Model/GnosisPayRoomSource.swift"
+SRC_METAMASK="Casberi/Casberi/Model/MetaMaskCardRoomSource.swift"
 SRC_RAILGUN="Casberi/Casberi/Model/RailgunRoomSource.swift"
 SRC_SAFE="Casberi/Casberi/Model/SafeRoomSource.swift"
 BR_PEER="Casberi/Casberi/Model/PeerBridge.swift"
 BR_POOLS="Casberi/Casberi/Model/PrivacyPoolsBridge.swift"
-BR_GNOSIS="Casberi/Casberi/Model/GnosisPayBridge.swift"
+BR_METAMASK="Casberi/Casberi/Model/MetaMaskCardBridge.swift"
 BR_RAILGUN="Casberi/Casberi/Model/RailgunBridge.swift"
 CARD_PEER="Casberi/Casberi/Screens/PeerRoomCard.swift"
 CARD_POOLS="Casberi/Casberi/Screens/PrivacyPoolsRoomCard.swift"
-CARD_GNOSIS="Casberi/Casberi/Screens/CardSpendRoomCard.swift"
+CARD_SPEND="Casberi/Casberi/Screens/CardSpendRoomCard.swift"
 CARD_RAILGUN="Casberi/Casberi/Screens/RailgunRoomCard.swift"
 CARD_SAFE="Casberi/Casberi/Screens/SafeRoomCard.swift"
 # FeedScreen is split across files (prd §718). Checks read the room as ONE text,
@@ -162,10 +162,10 @@ grep -q 'thing.authorHandle = story.method' "$BR_PEER" \
   || { echo "✗ PeerBridge no longer stamps the funding rail on a BUY — every purchase would be an unplaced fill"; exit 1; }
 grep -q 'thing.authorHandle = signal.method' "$BR_PEER" \
   || { echo "✗ PeerBridge no longer stamps the funding rail on a SELL — the room would rank half its traffic"; exit 1; }
-grep -q 'thing.priceValue = amount' "$BR_GNOSIS" \
-  || { echo "✗ GnosisPayBridge no longer stamps priceValue — every spend would be unpriced and the card could state no money at all"; exit 1; }
-grep -q 'thing.priceCurrency = spend.token.currency' "$BR_GNOSIS" \
-  || { echo "✗ GnosisPayBridge no longer stamps priceCurrency — spends would drop out of every total with nothing on screen to say so"; exit 1; }
+grep -q 'thing.priceValue = value' "$BR_METAMASK" \
+  || { echo "✗ MetaMaskCardBridge no longer stamps priceValue — every spend would be unpriced and the card could state no money at all"; exit 1; }
+grep -q 'thing.priceCurrency = currency' "$BR_METAMASK" \
+  || { echo "✗ MetaMaskCardBridge no longer stamps priceCurrency — spends would drop out of every total with nothing on screen to say so"; exit 1; }
 grep -q 'tags: \["Shielded", "Pending"\]' "$BR_POOLS" \
   || { echo "✗ a Privacy Pools deposit no longer lands wearing a state tag — every deposit would compose as untagged"; exit 1; }
 
@@ -310,10 +310,10 @@ grep -q 'static let sourceName = "Privacy Pools"' "$BR_POOLS" \
   || { echo "✗ PrivacyPoolsBridge.sourceName changed"; exit 1; }
 grep -q 'source: "Privacy Pools"' "$BR_POOLS" \
   || { echo "✗ PrivacyPoolsBridge no longer lands rows under \"Privacy Pools\""; exit 1; }
-grep -q 'static let sourceName = "Gnosis Pay"' "$BR_GNOSIS" \
-  || { echo "✗ GnosisPayBridge.sourceName changed"; exit 1; }
-grep -q 'source: "Gnosis Pay"' "$BR_GNOSIS" \
-  || { echo "✗ GnosisPayBridge no longer lands rows under \"Gnosis Pay\""; exit 1; }
+grep -q 'static let source = "MetaMask Card"' "$BR_METAMASK" \
+  || { echo "✗ MetaMaskCardBridge.source changed"; exit 1; }
+grep -q 'source: source,' "$BR_METAMASK" \
+  || { echo "✗ MetaMaskCardBridge no longer lands rows under its own source"; exit 1; }
 grep -q 'static let sourceName = "Railgun"' "$BR_RAILGUN" \
   || { echo "✗ RailgunBridge.sourceName changed"; exit 1; }
 
@@ -327,7 +327,7 @@ grep -q 'thing.priceCurrency = symbol' "$BR_RAILGUN" \
 # Corollary 4 — filtered live at the boundary, before any stored property is
 # read. The caller hands these a debounced snapshot and the foreground sweep
 # deletes rows while it is held.
-for f in "$SRC_PEER" "$SRC_POOLS" "$SRC_GNOSIS" "$SRC_RAILGUN"; do
+for f in "$SRC_PEER" "$SRC_POOLS" "$SRC_METAMASK" "$SRC_RAILGUN"; do
   grep -q 'things.live' "$f" \
     || { echo "✗ $f no longer filters live at the boundary (corollary 4)"; exit 1; }
 done
@@ -339,7 +339,7 @@ grep -q 'case .peer(let room)' "$FEED" \
 grep -q 'case .privacyPools(let room)' "$FEED" \
   || { echo "✗ the Privacy Pools head is no longer rendered from the sourceHead chain"; exit 1; }
 grep -q 'case .cardSpend(let room, let seat)' "$FEED" \
-  || { echo "✗ the Gnosis Pay head is no longer rendered from the sourceHead chain"; exit 1; }
+  || { echo "✗ the onchain-card head is no longer rendered from the sourceHead chain"; exit 1; }
 grep -q 'case .railgun(let room)' "$FEED" \
   || { echo "✗ the Railgun head is no longer rendered from the sourceHead chain"; exit 1; }
 grep -q 'case .safe(let room)' "$FEED" \
@@ -348,8 +348,6 @@ grep -q 'case PeerRoomSource.source:' "$FEED" \
   || { echo "✗ the sourceHead switch no longer claims the Peer room"; exit 1; }
 grep -q 'case PrivacyPoolsRoomSource.source:' "$FEED" \
   || { echo "✗ the sourceHead switch no longer claims the Privacy Pools room"; exit 1; }
-grep -q 'case GnosisPayRoomSource.source:' "$FEED" \
-  || { echo "✗ the sourceHead switch no longer claims the Gnosis Pay room"; exit 1; }
 grep -q 'case RailgunRoomSource.source:' "$FEED" \
   || { echo "✗ the sourceHead switch no longer claims the Railgun room"; exit 1; }
 grep -q 'case SafeRoomSource.source:' "$FEED" \
@@ -359,10 +357,10 @@ grep -q 'case SafeRoomSource.source:' "$FEED" \
 # card cannot quietly re-rank or over-draw what the room composed.
 grep -q 'room.rails.prefix(PeerRoomSource.rowCap)' "$CARD_PEER" \
   || { echo "✗ the Peer card no longer honours the rail cap — the footnote would count rows that are drawn anyway"; exit 1; }
-grep -q 'room.currencies.prefix(CardSpendRoom.rowCap)' "$CARD_GNOSIS" \
+grep -q 'room.currencies.prefix(CardSpendRoom.rowCap)' "$CARD_SPEND" \
   || { echo "✗ the onchain-card head no longer honours the currency cap"; exit 1; }
 
-# prd §858: the head is SHARED, so both seats must reach it. A rename that
+# prd §858: the head is SHARED, so every card seat must reach it. A rename that
 # quietly dropped one would leave that room leading with its newest row and
 # nothing would fail — the §83 silence this whole harness exists to break.
 grep -q 'case MetaMaskCardRoomSource.source:' "$FEED" \
@@ -400,7 +398,7 @@ grep -qF 'EtherFiCash.spendRefPrefix' "$SEAT" \
   || { echo "✗ CardSpendSeat no longer names the spend namespace — the ether.fi room's unstake and risk rows would count as unpriced spends (§868)"; exit 1; }
 grep -qF 'spendRefPrefix + ' "Casberi/Casberi/Model/EtherFiCash.swift" \
   || { echo "✗ EtherFiCash builds a spend ref without its own prefix constant — the room's filter and the bridge's writes could drift (§868)"; exit 1; }
-for f in "$SRC_ETHERFI" "$SRC_GNOSIS" "Casberi/Casberi/Model/MetaMaskCardRoomSource.swift"; do
+for f in "$SRC_ETHERFI" "$SRC_METAMASK" "Casberi/Casberi/Model/PlasmaOneRoomSource.swift"; do
   grep -qF 'CardSpendSeat.isSpend($0, seat: source)' "$f" \
     || { echo "✗ $(basename "$f") filters its room by something other than CardSpendSeat.isSpend — two card seats would decide what a spend is apart (§868)"; exit 1; }
   if grep -qF 'things.live.filter { $0.source == source }' "$f"; then
@@ -456,8 +454,8 @@ done
 # The rooms whose every row is a transfer read as a LEDGER, not as prose: the
 # amount leaves the sentence for a right-aligned figure (`BandRow.moneyColumn`,
 # §158's reading). Both had no `Shape` case at all until this pass, so both drew
-# the generic band. Gnosis Pay is deliberately absent — see the switch's own
-# comment for the two-spellings-of-one-figure reason.
+# the generic band. The onchain cards are deliberately absent — see the
+# switch's own comment for the two-spellings-of-one-figure reason.
 grep -q 'case "Railgun", "Privacy Pools": self = .ledger' "$FEED" \
   || { echo "✗ the wallet-riding money rooms no longer take the ledger shape — their rows would fall back to the generic band and keep the figure inside the sentence"; exit 1; }
 grep -q 'case .ledger: BandRow(thing: thing, moneyColumn: true' "$FEED" \
@@ -488,10 +486,10 @@ grep -q 'room.entries.prefix(SafeRoomSource.rowCap)' "$CARD_SAFE" \
 # The strip exists so that superseding `FeedInsight.cardMonths` costs nothing.
 # A head outranks the generic registries, so a head that draws less than the
 # card it displaced is a regression wearing a new feature.
-grep -q 'CardSpendRoom.monthShare(total: month.total, of: top)' "$CARD_GNOSIS" \
-  || { echo "✗ the Gnosis Pay history strip no longer sizes its columns through the shipped monthShare()"; exit 1; }
-# `cardMonths` went with the boards (prd §723); the Gnosis Pay head is no
-# longer superseding anything, it is simply the room's head.
+grep -q 'CardSpendRoom.monthShare(total: month.total, of: top)' "$CARD_SPEND" \
+  || { echo "✗ the onchain-card history strip no longer sizes its columns through the shipped monthShare()"; exit 1; }
+# `cardMonths` went with the boards (prd §723); the card head is no longer
+# superseding anything, it is simply the room's head.
 # Peer's §311 board WAS the head's fallback below `minimumFills`, and prd §723
 # deleted every ranked board. Below the minimums Peer now falls through the
 # same chain every other room does — to a distribution, a mosaic, its heatmap,
@@ -513,15 +511,15 @@ grep -q 'note("peerHead"' "$PROBES" \
   || { echo "✗ -roomInsightProbe no longer mirrors the Peer head"; exit 1; }
 grep -q 'note("privacyPoolsHead"' "$PROBES" \
   || { echo "✗ -roomInsightProbe no longer mirrors the Privacy Pools head"; exit 1; }
-grep -q 'note("gnosisPayHead"' "$PROBES" \
-  || { echo "✗ -roomInsightProbe no longer mirrors the Gnosis Pay head"; exit 1; }
+grep -q 'note("metamaskCardHead"' "$PROBES" \
+  || { echo "✗ -roomInsightProbe no longer mirrors the MetaMask Card head"; exit 1; }
 grep -q 'note("railgunHead"' "$PROBES" \
   || { echo "✗ -roomInsightProbe no longer mirrors the Railgun head"; exit 1; }
 grep -q 'note("safeHead"' "$PROBES" \
   || { echo "✗ -roomInsightProbe no longer mirrors the Safe head"; exit 1; }
 # Each head gets its own probe, because for these five seats an empty room is
 # usually the HEALTHY answer and only one or two causes per room are bugs.
-for key in peerRoomProbe privacyPoolsRoomProbe gnosisPayRoomProbe railgunRoomProbe safeRoomProbe; do
+for key in peerRoomProbe privacyPoolsRoomProbe metamaskCardRoomProbe railgunRoomProbe safeRoomProbe; do
   grep -q "Hook(key: \"$key\")" "$PROBES" \
     || { echo "✗ -$key is gone — an empty head's several causes would be indistinguishable"; exit 1; }
 done
@@ -1152,14 +1150,14 @@ check("a wholly untagged room says its standing isn't recorded",
 
 // ===========================================================================
 print("")
-print("Gnosis Pay — composing")
+print("Onchain card — composing")
 // ===========================================================================
 
 func spend(_ amount: Double?, _ code: String?, at: Date) -> CardSpendRoom.Sighting {
     CardSpendRoom.Sighting(amount: amount, currency: code, at: at)
 }
 
-let gnosis = CardSpendRoom.compose(spends: [
+let cardRoom = CardSpendRoom.compose(spends: [
     spend(12.50, "EUR", at: day(-1)),
     spend(30.00, "EUR", at: day(-10)),
     spend(7.50,  "GBP", at: day(-3)),
@@ -1169,24 +1167,24 @@ let gnosis = CardSpendRoom.compose(spends: [
     spend(5.00,  "EUR", at: day(-200)),    // old enough to prove we were watching
 ], now: t0)
 check("the window's spends are summed per currency",
-      gnosis.lead?.code == "EUR" && abs((gnosis.lead?.total ?? 0) - 42.50) < 0.0001)
+      cardRoom.lead?.code == "EUR" && abs((cardRoom.lead?.total ?? 0) - 42.50) < 0.0001)
 // EUR + GBP is an exchange rate this app does not have.
-check("currencies are never summed into one figure", gnosis.currencies.count == 2)
+check("currencies are never summed into one figure", cardRoom.currencies.count == 2)
 check("the second currency keeps its own total",
-      abs((gnosis.currencies.last?.total ?? 0) - 7.50) < 0.0001)
+      abs((cardRoom.currencies.last?.total ?? 0) - 7.50) < 0.0001)
 // A zero is a spend of nothing, which is a different and false claim. BOTH
 // shapes land here: no amount, and an amount with no currency to put it in.
-check("an unreadable amount is counted, never treated as zero", gnosis.unpriced == 2)
+check("an unreadable amount is counted, never treated as zero", cardRoom.unpriced == 2)
 check("a missing amount alone is counted",
       CardSpendRoom.compose(spends: [spend(nil, "EUR", at: day(-1))], now: t0).unpriced == 1)
 check("a missing CURRENCY alone is counted too — it drops from every total",
       CardSpendRoom.compose(spends: [spend(9.99, nil, at: day(-1))], now: t0).unpriced == 1)
-check("the window's spend count excludes the unpriced", gnosis.lead?.spends == 2)
-check("all-time counts every row the room holds", gnosis.allTime == 7)
-check("the oldest spend is remembered", gnosis.oldest == day(-200))
+check("the window's spend count excludes the unpriced", cardRoom.lead?.spends == 2)
+check("all-time counts every row the room holds", cardRoom.allTime == 7)
+check("the oldest spend is remembered", cardRoom.oldest == day(-200))
 
 print("")
-print("Gnosis Pay — the comparison is refused rather than estimated")
+print("Onchain card — the comparison is refused rather than estimated")
 check("the prior window is known when history reaches past it",
       CardSpendRoom.knowsPriorWindow(oldest: day(-200), now: t0))
 // A first sync backfills about six days. The prior window is then not quiet,
@@ -1196,7 +1194,7 @@ check("a young room knows nothing about the window before",
 check("a room with no spends at all knows nothing",
       CardSpendRoom.knowsPriorWindow(oldest: nil, now: t0) == false)
 check("the prior total is carried when it is knowable",
-      abs((gnosis.lead?.prior ?? 0) - 20.00) < 0.0001)
+      abs((cardRoom.lead?.prior ?? 0) - 20.00) < 0.0001)
 let young = CardSpendRoom.compose(spends: [spend(10, "EUR", at: day(-2))], now: t0)
 check("a young room carries no prior at all", young.lead?.prior == nil)
 check("and says so out loud rather than leaving a blank",
@@ -1223,7 +1221,7 @@ check("a hidden balance hides this one too",
       CardSpendRoom.balanceLine(dailyHeld.balance!, mask: "••••") == "•••• on the card")
 
 print("")
-print("Gnosis Pay — the change")
+print("Onchain card — the change")
 func cur(_ total: Double, prior: Double?, spends: Int = 3) -> CardSpendRoom.Currency {
     CardSpendRoom.Currency(code: "EUR", total: total, spends: spends, prior: prior, newest: t0)
 }
@@ -1241,7 +1239,7 @@ check("a real fall is stated in words",
       CardSpendRoom.deltaLabel(cur(70, prior: 100)) == "30% less than the 30 days before")
 
 print("")
-print("Gnosis Pay — the history strip")
+print("Onchain card — the history strip")
 // This head OUTRANKS `FeedInsight.cardMonths`, the 12-month leaderboard the
 // room drew before it. A head that showed less than the card it displaced would
 // be a regression wearing a new feature, so the months come with it.
@@ -1293,7 +1291,7 @@ check("a zero peak can't divide by zero", CardSpendRoom.monthShare(total: 5, of:
 check("a month abbreviates", CardSpendRoom.monthLabel(dec, locale: us) == "Dec")
 
 print("")
-print("Gnosis Pay — ranking never compares magnitudes across currencies")
+print("Onchain card — ranking never compares magnitudes across currencies")
 func c(_ code: String, spends: Int, total: Double, at: Date = t0) -> CardSpendRoom.Currency {
     CardSpendRoom.Currency(code: code, total: total, spends: spends, prior: nil, newest: at)
 }
@@ -1312,7 +1310,7 @@ check("the bar is a share of the spend COUNT", CardSpendRoom.share(spends: 3, of
 check("a zero denominator can't divide by zero", CardSpendRoom.share(spends: 3, of: 0) == 0)
 
 print("")
-print("Gnosis Pay — words")
+print("Onchain card — words")
 check("money is rendered in its own currency",
       CardSpendRoom.money(42.5, code: "GBP", locale: us) == "£42.50")
 check("a zero-decimal currency is not forced to two",
@@ -1320,7 +1318,7 @@ check("a zero-decimal currency is not forced to two",
 check("a single-currency headline states the money and the window",
       CardSpendRoom.headline(young, locale: us) == "€10.00 on your card in 30 days")
 check("several currencies are named as several, never added",
-      CardSpendRoom.headline(gnosis, locale: us).contains("plus another currency"))
+      CardSpendRoom.headline(cardRoom, locale: us).contains("plus another currency"))
 // The honest reading a list of old rows never states.
 let quiet = CardSpendRoom.compose(spends: [spend(10, "EUR", at: day(-90))], now: t0)
 check("a quiet window on a real room says so",
@@ -1333,7 +1331,7 @@ check("an unused card is stated once the gap outruns the window",
 check("a card used inside the window is never called unused",
       CardSpendRoom.idleNote(newest: day(-3), now: t0) == nil)
 check("a room with no spends at all is no card", CardSpendRoom.compose(spends: [], now: t0).isEmpty)
-let gpFoot = CardSpendRoom.footnote(gnosis, now: t0) ?? ""
+let gpFoot = CardSpendRoom.footnote(cardRoom, now: t0) ?? ""
 check("unreadable spends are named — that is money missing from the total above",
       gpFoot.contains("2 spends have no readable amount"))
 
@@ -1827,7 +1825,7 @@ MUTAPPLY
 mkdir -p "$TMP/base"
 cp "$PEER"    "$TMP/base/PeerRoom.swift"
 cp "$POOLS"   "$TMP/base/PrivacyPoolsRoom.swift"
-cp "$GNOSIS"  "$TMP/base/CardSpendRoom.swift"
+cp "$CARDSPEND"  "$TMP/base/CardSpendRoom.swift"
 cp "$RAILGUN" "$TMP/base/RailgunRoom.swift"
 cp "$SAFE"    "$TMP/base/SafeRoom.swift"
 cp "$LEDE"    "$TMP/base/RoomLede.swift"
@@ -1866,7 +1864,7 @@ mutate() {
   case "$which" in
     peer)    file=PeerRoom.swift ;;
     pools)   file=PrivacyPoolsRoom.swift ;;
-    gnosis)  file=CardSpendRoom.swift ;;
+    card)    file=CardSpendRoom.swift ;;
     railgun) file=RailgunRoom.swift ;;
     safe)    file=SafeRoom.swift ;;
     *)       echo "✗ mutation '$name' names no known file: $which"; exit 1 ;;
@@ -2073,21 +2071,21 @@ mutate "an unreadable deposit size is no longer named beside the figure" pools \
   'if room.unpriced > 0 {' \
   'if false, room.unpriced > 0 {'
 # The cross-currency sum this file exists to refuse.
-mutate "every currency lands in one bucket" gnosis \
+mutate "every currency lands in one bucket" card \
   'var bucket = buckets[code] ?? (total: 0, spends: 0, newest: sighting.at)' \
   'let code = "ALL"; var bucket = buckets[code] ?? (total: 0, spends: 0, newest: sighting.at)'
 # "Up 400%" against a window the room was never watching.
-mutate "a comparison is claimed against an unobserved window" gnosis \
+mutate "a comparison is claimed against an unobserved window" card \
   'guard let oldest else { return false }
         return oldest <= windowStart(now, back: 2, calendar: calendar)' \
   'return true'
 # Coming back from nothing has no percentage.
-mutate "a zero prior window divides anyway" gnosis \
+mutate "a zero prior window divides anyway" card \
   'guard let prior = currency.prior, prior > 0 else { return nil }' \
   'guard let prior = currency.prior else { return nil }'
 # A zero is a spend of nothing, which is a different and false claim. Again
 # written to compile, so the catch is behavioural.
-mutate "an unreadable amount is folded into the total as zero" gnosis \
+mutate "an unreadable amount is folded into the total as zero" card \
   '            let code = sighting.currency?.trimmingCharacters(in: .whitespacesAndNewlines)
             guard let amount = sighting.amount, let code, !code.isEmpty else {
                 if sighting.at >= start { unpriced += 1 }
@@ -2097,27 +2095,27 @@ mutate "an unreadable amount is folded into the total as zero" gnosis \
             let amount = sighting.amount ?? 0'
 # A dropped month looks exactly like a quiet one, which is the failure the
 # import drop counters exist to prevent, one room over.
-mutate "the strip truncates its history silently" gnosis \
+mutate "the strip truncates its history silently" card \
   'return (months, keys.count - drawn.count, other)' \
   'return (months, 0, other)'
 # The oldest months kept instead of the newest — a "history" that stops a year
 # ago and renders perfectly.
-mutate "the strip keeps the oldest months instead of the newest" gnosis \
+mutate "the strip keeps the oldest months instead of the newest" card \
   'let drawn = Array(keys.suffix(monthCap))' \
   'let drawn = Array(keys.prefix(monthCap))'
 # A month key that resets each year sorts December after the January following
 # it, so the strip runs backwards across every year boundary.
-mutate "a month key stops surviving the year boundary" gnosis \
+mutate "a month key stops surviving the year boundary" card \
   'return year * 12 + (month - 1)' \
   'return month - 1'
 # One card, two sorts of money: the strip drawn in a currency the headline is
 # not talking about.
-mutate "spends in another currency are folded into the strip" gnosis \
+mutate "spends in another currency are folded into the strip" card \
   'for (otherCode, otherCells) in monthly where otherCode != code {' \
   'for (otherCode, otherCells) in monthly where otherCode == "\u{0}" && otherCode != code {'
 # Ranking by amount compares 400 EUR against 380 GBP as if they were on one
 # scale — the refused sum, wearing a sort instead of a plus.
-mutate "currencies are ranked by amount instead of count" gnosis \
+mutate "currencies are ranked by amount instead of count" card \
   'if a.spends != b.spends { return a.spends > b.spends }' \
   'if a.total != b.total { return a.total > b.total }'
 

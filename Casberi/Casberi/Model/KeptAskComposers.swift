@@ -1272,8 +1272,6 @@ enum KeptAskComposers {
     /// doc a kept pill would re-run.
     static func matchesSeatAsk(_ query: String) -> String? {
         let q = query.lowercased()
-        for phrase in ["my card", "card spending", "what did i spend on my card"]
-        where q.contains(phrase) { return "Gnosis Pay" }
         for phrase in ["shielded", "privacy pool", "privacy pools", "0xbow"]
         where q.contains(phrase) { return "Privacy Pools" }
         for phrase in ["to claim", "unstake", "unstaking", "claimable"]
@@ -1324,9 +1322,8 @@ enum KeptAskComposers {
         //
         // **The merchant clause is scoped to the DOMINANT currency and gated on
         // attribution being nearly complete**, and both guards are load-bearing:
-        // only Apple Wallet stores a counterparty at all (Gnosis Pay's stated
-        // ceiling is "rows say what was spent, never where", and ether.fi is
-        // the same), so an unguarded version reads the top Apple Wallet
+        // only Apple Wallet stores a counterparty at all (an onchain card's
+        // stated ceiling is "rows say what was spent, never where"), so an unguarded version reads the top Apple Wallet
         // merchant and attaches it to a total spanning three seats and two
         // currencies — "€900.00 · $30.00 on cards — most of it at Blue Bottle",
         // where Blue Bottle is 3% of it. "Most" also has to MEAN most, or one

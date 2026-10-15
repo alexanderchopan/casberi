@@ -110,10 +110,10 @@ extension FeedScreen {
             // `transferDirection`, so `moneyAmount` returns nil and it keeps
             // its full sentence. The flag is opt-in per ROW, not per room.
             //
-            // GNOSIS PAY IS DELIBERATELY NOT HERE, and the reason is data, not
-            // taste: its title states the spend in FIAT ("Spent EUR 42.80 with
-            // Gnosis Pay") while its `transferAmount` is the TOKEN amount
-            // ("42.80 EURe") — two spellings of one figure — so `titleText`'s
+            // THE ONCHAIN CARDS ARE DELIBERATELY NOT HERE, and the reason is
+            // data, not taste: a card's title states the spend in FIAT ("Spent
+            // $12.40 with MetaMask Card") while its `transferAmount` is the
+            // TOKEN amount ("12.40 USDC") — two spellings of one figure — so `titleText`'s
             // strip can never match and the row would print the amount twice,
             // in two units. Its honest column is the fiat one, which means
             // teaching the money column to prefer `priceValue`/`priceCurrency`

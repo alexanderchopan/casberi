@@ -394,21 +394,16 @@ enum BridgeRouter {
         Row(offer: "0xBow Privacy Pools", id: "privacypools", destination: .privacyPools),
         Row(offer: "Railgun", id: "railgun", destination: .railgun),
         Row(offer: "Safe", id: "safe", destination: .safe),
-        // Gnosis Pay has no screen of its own (prd §222). CONNECT routes to
-        // the wallet manager, because watching the wallet is the only real
-        // action — the §209 reasoning. What it must never route to is the
-        // generic BridgeDetailScreen: that carries a Remove button, and this
-        // seat is a MIRROR of "has a watched wallet spent on a card", so
-        // removing it would silently re-register on the next foreground —
-        // exactly the dead control the honesty rule forbids. OPEN no longer
-        // comes here at all: the spends live in the feed, where every other
-        // landed thing lives, so it opens that room (`roomSource(forID:)`).
-        Row(offer: "Gnosis Pay", id: "gnosispay", destination: .wallet),
-        // MetaMask Card routes exactly like Gnosis Pay above, for every one of
-        // that comment's reasons (2026-09-20): no screen of its own, Connect
-        // to the wallet manager because watching the wallet is the only real
-        // action, never the generic detail screen with its Remove button, and
-        // Open to the room its rows land in.
+        // MetaMask Card has no screen of its own (2026-09-20, the shape Gnosis
+        // Pay set in prd §222 until §1318 removed it). CONNECT routes to the
+        // wallet manager, because watching the wallet is the only real action
+        // — the §209 reasoning. What it must never route to is the generic
+        // BridgeDetailScreen: that carries a Remove button, and this seat is a
+        // MIRROR of "has a watched wallet spent on a card", so removing it
+        // would silently re-register on the next foreground — exactly the dead
+        // control the honesty rule forbids. OPEN no longer comes here at all:
+        // the spends live in the feed, where every other landed thing lives,
+        // so it opens that room (`roomSource(forID:)`).
         Row(offer: "MetaMask Card", id: "metamaskcard", destination: .wallet),
         // Plasma One, the same for the same reasons (prd §1311).
         Row(offer: "Plasma One", id: "plasmaone", destination: .wallet),
@@ -552,8 +547,8 @@ enum BridgeRouter {
     /// `source: "Wallet"` (prd §349) — so what this table did for them was
     /// point Open at the room the WALLET seat's own Open opens, which is
     /// §494's fix working exactly as designed and revealing that the seat, not
-    /// the door, was the mistake. They are not offers any more. Gnosis Pay and
-    /// ether.fi land under sources of their own and stay: their rows' comment
+    /// the door, was the mistake. They are not offers any more. The onchain
+    /// cards and ether.fi land under sources of their own and stay: their rows' comment
     /// already said the spends "live in the feed, where every other landed
     /// thing lives", and no other seat opens those rooms.
     ///
@@ -577,7 +572,6 @@ enum BridgeRouter {
         // stopped being offers. The rule is mechanical — `setup-copy-audit.py`
         // check 7e: a catalog seat lands rows under a source of its own, or it
         // is not a seat.
-        case "gnosispay": GnosisPayBridge.sourceName
         case "metamaskcard": MetaMaskCardBridge.source
         case "plasmaone": PlasmaOneCard.source
         case "etherfi":   EtherFiCash.source

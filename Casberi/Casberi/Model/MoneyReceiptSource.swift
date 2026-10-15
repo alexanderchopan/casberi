@@ -5,7 +5,7 @@ import SwiftData
 /// into `MoneyReceipt.Facts`, with every judgement left on the other side of
 /// the line.
 ///
-/// The split is `GnosisPayRoomSource`'s, and it earns itself the same way:
+/// The split is `MetaMaskCardRoomSource`'s, and it earns itself the same way:
 /// everything that could be wrong while still rendering perfectly — a sentence
 /// claiming a network the row never carried, a "biggest yet" that isn't, an
 /// amount whose unit was mistaken for part of the number — lives in
@@ -96,7 +96,7 @@ enum MoneyReceiptSource {
         guard thing.isLive else { return nil }
         switch thing.source {
         case "Wallet":         return walletCommentary(thing, context)
-        case "Apple Wallet", "Gnosis Pay", "ether.fi", "Privacy":
+        case "Apple Wallet", "ether.fi", "Privacy":
             return merchantCommentary(thing, context)
         case "Privacy Pools":  return poolsCommentary(thing)
         case "Peer", "Railgun":

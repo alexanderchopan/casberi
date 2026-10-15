@@ -4,8 +4,8 @@ import SwiftData
 /// Aerodrome (2026-07-30) — veAERO locks for a watched wallet on Base, read
 /// straight off the VotingEscrow and Voter contracts (`eth_call`, keyless,
 /// riding `WalletApprovals.rpcRead(network: "base-mainnet", …)` — the same
-/// shared host pool Peer/Gnosis Pay/Uniswap already use). Rides watched
-/// wallets like Peer/Privacy Pools/Gnosis Pay — no account, no key, no
+/// shared host pool Peer/Uniswap already use). Rides watched
+/// wallets like Peer/Privacy Pools — no account, no key, no
 /// connect switch.
 ///
 /// veAERO is a lock, not a balance: AERO is deposited into an NFT (a

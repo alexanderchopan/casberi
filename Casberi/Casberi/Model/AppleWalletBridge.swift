@@ -24,7 +24,7 @@ import FinanceKit
 /// ## Why this seat is worth its cost
 ///
 /// It is the only source in this app that sees a MERCHANT NAME. The chain
-/// carries an amount and a moment and nothing else (`GnosisPayBridge`'s stated
+/// carries an amount and a moment and nothing else (the onchain cards' stated
 /// ceiling), Privacy.com carries a card descriptor, a wallet transfer carries
 /// an address. FinanceKit carries "Blue Bottle Coffee". Every card in
 /// `AppleWalletRoom` is built on that one field.
@@ -34,8 +34,9 @@ import FinanceKit
 /// A charge IS a thing here, unlike Stripe where an individual charge is a
 /// tally wearing a currency symbol (prd §250). The difference is whose money
 /// it is: Stripe reads a merchant's firehose of strangers paying them, this
-/// reads YOUR spending, and the precedent is `GnosisPayBridge` /
-/// `PrivacyBridge`, which have landed individual purchases since they shipped.
+/// reads YOUR spending, and the precedent is the Gnosis Pay seat (removed,
+/// prd §1318) and `PrivacyBridge`, which landed individual purchases since
+/// they shipped.
 ///
 /// But charges never NOTIFY (prd §313 ruling, and the same call the wallet
 /// seats shipped): your bank already pushed you that notification, and a second

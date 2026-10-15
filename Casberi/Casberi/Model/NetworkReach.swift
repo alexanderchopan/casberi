@@ -435,7 +435,7 @@ enum NetworkReach {
                  reach: .whenConnected(bridge: "0xBow Privacy Pools"),
                  purpose: "Reads your Privacy Pools deposits from the public chain and their review status from 0xBow's public API, for the wallets you follow.",
                  hosts: ["api.0xbow.io", "rpc.mevblocker.io", "gateway.tenderly.co"]),
-        // Reach is WALLET, not "Railgun" — Gnosis Pay's reason below: the seat
+        // Reach is WALLET, not "Railgun" — MetaMask Card's reason below: the seat
         // appears only once a shield has been seen, but the read that
         // discovers one runs for every watched wallet, so declaring it under
         // its own seat would say this host is reached only after connecting,
@@ -448,18 +448,18 @@ enum NetworkReach {
                  reach: .whenConnected(bridge: "Peer"),
                  purpose: "Reads your settled Peer trades off Base's public chain, for the wallets you follow.",
                  hosts: ["mainnet.base.org", "base-rpc.publicnode.com", "gateway.tenderly.co"]),
-        // Reach is WALLET, not "Gnosis Pay" — the seat only appears once a
+        // Gnosis Chain's two public nodes, kept when the Gnosis Pay seat that
+        // measured them went (prd §1318): `SafeSigner` asks a Safe on Gnosis
+        // Chain for its own transaction hash through them (`GnosisChainRPC`),
+        // and that is now their only use. Reach WALLET with the Safe reads.
+        Endpoint(service: "Gnosis Chain",
+                 reach: .whenConnected(bridge: "Wallet"),
+                 purpose: "Asks a Safe on Gnosis Chain for its own hash of a transaction before this phone will sign it, through Gnosis Chain's public nodes. Carries the Safe's address and the transaction, nothing else about you.",
+                 hosts: ["rpc.gnosischain.com", "rpc.gnosis.gateway.fm"]),
+        // Reach is WALLET, not "MetaMask Card": the seat only appears once a
         // card spend has been seen, but the read that discovers one runs for
         // every watched wallet. Declaring it under its own seat would say
         // this host is only reached after connecting, which is false.
-        Endpoint(service: "Gnosis Pay",
-                 reach: .whenConnected(bridge: "Wallet"),
-                 purpose: "Reads your Gnosis Pay card spending off Gnosis Chain's public chain, for the wallets you follow — the amount and the moment, which is all the chain carries. Also asks a Gnosis Chain Safe for its own hash of a transaction before this phone will sign it.",
-                 hosts: ["rpc.gnosischain.com", "rpc.gnosis.gateway.fm"]),
-        // Reach is WALLET, not "MetaMask Card" — Gnosis Pay's reason directly
-        // above, and the same shape: the seat only appears once a card spend
-        // has been seen, but the read that discovers one runs for every
-        // watched wallet.
         // Plasma One (prd §1311) — Reach WALLET for MetaMask Card's reason: the
         // read that discovers a card runs for every watched wallet. Two hosts,
         // measured to agree exactly; `rpc.plasma.to` is Plasma's own.
@@ -476,7 +476,7 @@ enum NetworkReach {
                          // stopped serving (2026-10-14).
                          "mainnet.base.org", "base-rpc.publicnode.com", "gateway.tenderly.co"]),
         // Both ether.fi entries reach under WALLET, not their own seats, for
-        // Gnosis Pay's reason above: each seat appears only once there's
+        // MetaMask Card's reason above: each seat appears only once there's
         // evidence (an unstake request / a Cash account), but the read that
         // discovers one runs for every watched wallet.
         Endpoint(service: "ether.fi",
@@ -509,7 +509,7 @@ enum NetworkReach {
                  hosts: ["ethereum-beacon-api.publicnode.com"]),
         // Reach is WALLET, not a Bitcoin-specific seat — Bitcoin has no
         // connect switch of its own, it rides watched wallet addresses the
-        // same way Gnosis Pay's entry above does.
+        // same way MetaMask Card's entry above does.
         Endpoint(service: "Bitcoin",
                  reach: .whenConnected(bridge: "Wallet"),
                  purpose: "Reads balance, sends/receives, and confirmation status for the Bitcoin addresses you follow, off two public Esplora APIs. No account, no key.",

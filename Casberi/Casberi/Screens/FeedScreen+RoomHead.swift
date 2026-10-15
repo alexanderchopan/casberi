@@ -501,7 +501,7 @@ extension FeedScreen {
         // composition strip, which is where they belong.
         case peer(PeerRoom)
         case privacyPools(PrivacyPoolsRoom)
-        // ONE case for every onchain card (prd §858, was `gnosisPay`). The
+        // ONE case for every onchain card (prd §858). The
         // seat rides along because `CardSpendRoomCard` needs it for the mark
         // and `openNewest` needs it for the lookup — the room itself is
         // seat-agnostic and must stay that way.
@@ -622,16 +622,13 @@ extension FeedScreen {
             return PeerRoomSource.compose(things: visible).map { .peer($0) }
         case PrivacyPoolsRoomSource.source:
             return PrivacyPoolsRoomSource.compose(things: visible).map { .privacyPools($0) }
-        case GnosisPayRoomSource.source:
-            return GnosisPayRoomSource.compose(things: visible)
-                .map { .cardSpend($0, seat: GnosisPayRoomSource.source) }
-        // The second onchain card (prd §858). Same head, same judgements — the
+        // The onchain cards (prd §858). Same head, same judgements — the
         // only thing that differs is which rows it reads and whose mark it
         // wears.
         case MetaMaskCardRoomSource.source:
             return MetaMaskCardRoomSource.compose(things: visible)
                 .map { .cardSpend($0, seat: MetaMaskCardRoomSource.source) }
-        // The third and last onchain card (prd §868). Same head again — what
+        // ether.fi Cash (prd §868). Same head again — what
         // differs is that this room is SHARED with the staking half of the
         // seat, so its source declines the unstake and risk rows rather than
         // counting them as spends it could not price (`CardSpendSeat`).

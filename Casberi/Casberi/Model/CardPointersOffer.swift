@@ -119,7 +119,7 @@ enum CardPointers {
     /// "<card> · <merchant>" and the card is its OWN stored field, so this
     /// removes a known prefix rather than splitting on a separator a merchant
     /// might contain. If the prefix is not there the whole title IS the
-    /// merchant — the same rule `GnosisPayRoomSource` follows for its amounts.
+    /// merchant — the same rule `MetaMaskCardRoomSource` follows for its amounts.
     ///
     /// It lives here, in the Foundation-only half, because §487 gave it a
     /// SECOND reader: the room head rebuilds offers from rows, and now the row

@@ -18,7 +18,7 @@ import Testing
 /// ("ether.fi — Your staked ETH, and the card"), so its room also holds
 /// `EtherFiUnstake`'s withdrawal-queue rows and this seat's own credit-line
 /// risk crossings. Both are `.link` rows with no price. Filtering that room by
-/// source alone — which is exactly right for Gnosis Pay and MetaMask Card, and
+/// source alone — which is exactly right for MetaMask Card and Plasma One, and
 /// is what a third copy of a sibling source would have said — puts them in
 /// `CardSpendRoom.allTime` and in the footnote's count of "spends with no
 /// readable amount": a sentence about money, on the screen where money is the
@@ -72,7 +72,7 @@ struct CardSpendSeatTests {
     /// every row is a spend whatever its ref looks like — Plasma One's a day's
     /// settlement (prd §1311), which every total sums the same.
     @Test func aSeatThatOwnsItsRoomAcceptsEveryRow() {
-        for seat in [GnosisPayBridge.sourceName, MetaMaskCardBridge.source, PlasmaOneCard.source] {
+        for seat in [MetaMaskCardBridge.source, PlasmaOneCard.source] {
             #expect(CardSpendSeat.isSpend(Self.row(source: seat, ref: "anything:1"),
                                           seat: seat))
             #expect(CardSpendSeat.isSpend(Self.row(source: seat, ref: nil), seat: seat))
@@ -82,18 +82,18 @@ struct CardSpendSeatTests {
     // MARK: - No rule reaches across rooms
 
     /// The source test runs FIRST for every seat. Without it the ether.fi arm
-    /// would be skipped for a Gnosis Pay row handed to the ether.fi seat and
+    /// would be skipped for a MetaMask Card row handed to the ether.fi seat and
     /// the row would be accepted, which is how one card's head starts totalling
     /// another card's money.
     @Test func aRowFromAnotherRoomIsNeverASpend() {
-        let gnosis = Self.row(source: GnosisPayBridge.sourceName, ref: "gnosispay:spend:1")
-        #expect(!CardSpendSeat.isSpend(gnosis, seat: EtherFiCash.source))
-        #expect(!CardSpendSeat.isSpend(gnosis, seat: MetaMaskCardBridge.source))
-        #expect(!CardSpendSeat.isSpend(gnosis, seat: PlasmaOneCard.source))
+        let metamask = Self.row(source: MetaMaskCardBridge.source, ref: "metamaskcard:spend:1")
+        #expect(!CardSpendSeat.isSpend(metamask, seat: EtherFiCash.source))
+        #expect(!CardSpendSeat.isSpend(metamask, seat: PlasmaOneCard.source))
 
         let etherfi = Self.row(source: EtherFiCash.source,
                                ref: EtherFiCash.spendRefPrefix + "0xabc:1")
-        #expect(!CardSpendSeat.isSpend(etherfi, seat: GnosisPayBridge.sourceName))
+        #expect(!CardSpendSeat.isSpend(etherfi, seat: MetaMaskCardBridge.source))
+        #expect(!CardSpendSeat.isSpend(etherfi, seat: PlasmaOneCard.source))
     }
 
     // MARK: - The head reads what the rule accepts

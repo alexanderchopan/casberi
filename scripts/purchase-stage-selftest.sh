@@ -165,14 +165,12 @@ let bitrefill = row("Bitrefill", ref: "bitrefill:order:9", title: "Amazon gift c
                     price: 50, currency: "USD")
 let refillRow = row("Bitrefill", ref: "bitrefill:invoice:9", title: "Added $50 to your balance",
                     price: 50, currency: "USD")
-let gnosis = row("Gnosis Pay", ref: "gnosispay:spend:7", title: "Card spend — €18.40",
-                 price: 18.40, currency: "EUR")
 ok("product.prov.silent", PurchaseStage.provenance(product) == nil)
 ok("food.prov.silent", PurchaseStage.provenance(food) == nil)
 ok("privacy.prov.silent", PurchaseStage.provenance(privacy) == nil)
-// The two that survive, each naming an absence the sheet has no field for.
+// The one that survives, naming an absence the sheet has no field for. (Gnosis
+// Pay's "never the merchant" sentence left with its seat, prd §1318.)
 ok("bitrefill.prov.code", PurchaseStage.provenance(bitrefill)?.contains("code") == true)
-ok("gnosis.prov.merchant", PurchaseStage.provenance(gnosis)?.contains("merchant") == true)
 // A refill has no code to explain, so it says nothing.
 ok("refill.prov.silent", PurchaseStage.provenance(refillRow) == nil)
 // And the ROLE word, which is why the seller is a pair and not a name.
@@ -289,11 +287,10 @@ mutate "an unmarked charge defaults to settled" \
 mutate "the merchant is sliced out of the title" \
   's|return merchant.isEmpty ? row.title.trimmingCharacters(in: .whitespaces) : merchant|return String(row.title.split(separator: "·").first ?? "")|'
 
-# The missing-merchant sentence lost, so a Gnosis Pay spend with no merchant
-# reads as a failed lookup. Range-scoped to `provenance`, the one switch that
-# names the seat.
+# The code sentence lost, so a Bitrefill order with no code reads as a failed
+# lookup. Range-scoped to `provenance`, the one switch that names the seat.
 mutate "provenance loses the seat that made it necessary" \
-  '/static func provenance/,/^    }$/ s|case "Gnosis Pay":|case "Gnosis Pay (gone)":|'
+  '/static func provenance/,/^    }$/ s|case "Bitrefill":|case "Bitrefill (gone)":|'
 
 # The ruling reverted — a sentence on every seat again, restating the role line.
 mutate "provenance speaks where the screen already spoke" \

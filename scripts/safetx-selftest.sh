@@ -279,8 +279,8 @@ printf '%s' "$SIGNER_CODE" | grep -q 'case .gnosisChain:' \
 # …and it borrows the hosts from the bridge that already owns and discloses
 # them, rather than naming one here (which the host guard above forbids, and
 # which would add an undisclosed reach).
-printf '%s' "$SIGNER_CODE" | grep -q 'GnosisPayBridge.read(method: "eth_call"' \
-  || { echo "✗ the Gnosis cross-check no longer goes through GnosisPayBridge's disclosed hosts"; exit 1; }
+printf '%s' "$SIGNER_CODE" | grep -q 'GnosisChainRPC.read(method: "eth_call"' \
+  || { echo "✗ the Gnosis cross-check no longer goes through GnosisChainRPC's disclosed hosts"; exit 1; }
 grep -q 'own hash of a transaction before this phone will sign it' "$REACH" \
   || { echo "✗ NetworkReach no longer says the Gnosis hosts are reached for a signature cross-check — the privacy screen understates what this app does"; exit 1; }
 

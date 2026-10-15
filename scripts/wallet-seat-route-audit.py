@@ -18,7 +18,7 @@ Both directions are checked because they fail differently and both failed here:
 
 A THIRD direction since prd s515 (2026-08-29): every wallet-riding seat must
 also have an entry in `WalletSeatStanding.seats`, which is where its product
-page gets the word for what the sweep looks for ("No Gnosis Pay card seen
+page gets the word for what the sweep looks for ("No MetaMask Card seen
 yet"). A seat missing from there wears the right verb and says NOTHING under
 it, which is the state s515 removed -- a page that raises a question and does
 not answer it. Silent, because a nil sentence renders as no sentence.
@@ -36,7 +36,7 @@ re-broken, which is why every other load-bearing rule here is a script.
 
 `alsoReads` is the right hook and `WalletSeatStanding.rides(id:)` is NOT, which
 is worth stating because s515a's first cut named the wrong one. `rides` answers
-"does this seat ride the watched wallets", which is TRUE of Peer, Gnosis Pay,
+"does this seat ride the watched wallets", which is TRUE of Peer, MetaMask Card,
 Privacy Pools and Railgun -- seats that correctly exist, because each lands
 rows under a source of its own. Riding the wallets is not the disqualifier;
 being read on the person's behalf while landing nothing of your own is, and
@@ -142,13 +142,13 @@ def selftest():
     private static let walletSeats: [WalletSeat] = [
         WalletSeat(id: "peer", name: "Peer",
                    count: { x }, noun: "wallet", can: []),
-        WalletSeat(id: "gnosispay", name: "Gnosis Pay",
+        WalletSeat(id: "metamaskcard", name: "MetaMask Card",
                    count: { x }, noun: "card", can: []),
     ]
 '''
     ROUTE_OK = '''
         Row(offer: "Peer", id: "peer", destination: .peer),
-        Row(offer: "Gnosis Pay", id: "gnosispay", destination: .wallet),
+        Row(offer: "MetaMask Card", id: "metamaskcard", destination: .wallet),
     static func destination(forOffer name: String) -> Destination? {
         if name == "Peer" { return .wallet }
         return rows.first { $0.offer == name }?.destination
@@ -156,7 +156,7 @@ def selftest():
     static func roomSource(forID id: String) -> String? {
         switch id {
         case "aave", "morpho": "Wallet"
-        case "gnosispay": GnosisPayBridge.sourceName
+        case "metamaskcard": MetaMaskCardBridge.source
         default: nil
         }
     }
@@ -178,12 +178,12 @@ def selftest():
     cases.append((not any("NO Connect route" in x for x in p), "naming it in the .wallet return fixes Connect")) 
     cases.append((any("NO Open route" in x for x in p), "...and does NOT silently fix Open"))
     # Open wired via roomSource.
-    route_full = route_half.replace('case "gnosispay": GnosisPayBridge.sourceName',
-                                    'case "gnosispay": GnosisPayBridge.sourceName\n        case "keyring": KeyringBridge.source')
+    route_full = route_half.replace('case "metamaskcard": MetaMaskCardBridge.source',
+                                    'case "metamaskcard": MetaMaskCardBridge.source\n        case "keyring": KeyringBridge.source')
     cases.append((not check(store_bad, route_full), "both doors wired passes"))
     # A seat carrying its own Row satisfies both.
-    route_row = ROUTE_OK.replace('Row(offer: "Gnosis Pay"',
-                                 'Row(offer: "Keyring", id: "keyring", destination: .safe),\n        Row(offer: "Gnosis Pay"')
+    route_row = ROUTE_OK.replace('Row(offer: "MetaMask Card"',
+                                 'Row(offer: "Keyring", id: "keyring", destination: .safe),\n        Row(offer: "MetaMask Card"')
     cases.append((not check(store_bad, route_row), "a seat with its own Row satisfies both"))
     # A multi-id `case` line must count every id on it, or aave/morpho read as unrouted.
     store_multi = STORE_OK.replace('WalletSeat(id: "peer", name: "Peer"',
@@ -197,7 +197,7 @@ def selftest():
     STAND_OK = '''
     static let seats: [Seat] = [
         Seat(id: "peer", thing: "Peer trade"),
-        Seat(id: "gnosispay", thing: "Gnosis Pay card"),
+        Seat(id: "metamaskcard", thing: "MetaMask Card"),
     ]
 '''
     cases.append((not check(STORE_OK, ROUTE_OK, STAND_OK), "a seat that also speaks passes"))

@@ -3,7 +3,7 @@ import SwiftData
 
 /// One transaction, one row (2026-08-01, prd §271).
 ///
-/// The wallet-riding seats — Railgun, Privacy Pools, Peer, Gnosis Pay — read
+/// The wallet-riding seats — Railgun, Privacy Pools, Peer — read
 /// protocols whose activity IS an ordinary token transfer. So on any chain the
 /// generic wallet sweep also covers, the same transaction landed twice: once as
 /// `Sent 1.2 WETH` under `Wallet`, and once as `Shielded 1.2 WETH into Railgun`
@@ -13,8 +13,8 @@ import SwiftData
 ///
 /// This shipped with 0xBow Privacy Pools and went unnoticed for weeks, because
 /// its deposits are rare enough that the pair rarely appeared side by side.
-/// Railgun made it obvious. Peer and Gnosis Pay escaped only by living on
-/// chains the wallet sweep doesn't read.
+/// Railgun made it obvious. Peer and Gnosis Pay (removed, prd §1318) escaped
+/// only by living on chains the wallet sweep didn't read.
 ///
 /// **The labelled row wins, always.** It says everything the generic one does
 /// plus what the transaction MEANT, which is the entire reason the seat
@@ -48,12 +48,12 @@ enum WalletRowSupersede {
     /// an explorer transaction URL — Privacy Pools' status ALERTS point at
     /// 0xbow.io and simply never match, which is correct and needs no special
     /// case.
-    static let sources: Set<String> = ["Railgun", "Privacy Pools", "Peer", "Gnosis Pay"]
+    static let sources: Set<String> = ["Railgun", "Privacy Pools", "Peer"]
 
     /// Every explorer URL a labelled seat has claimed.
     ///
     /// Cheap by construction: these seats land RARE events (a shield, a
-    /// deposit, a fill, a card spend), so this fetch is small where a scan of
+    /// deposit, a fill), so this fetch is small where a scan of
     /// `Wallet` rows would not be — which is why the lookup runs in this
     /// direction rather than the obvious one.
     @MainActor

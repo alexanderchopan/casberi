@@ -5,7 +5,7 @@ import SwiftData
 /// rows turned into the card's own value, with every judgement left to
 /// `DodoPaymentsRoom`.
 ///
-/// The split is `GnosisPayRoomSource`'s, for its reason: everything that could
+/// The split is `MetaMaskCardRoomSource`'s, for its reason: everything that could
 /// be wrong in a way that still renders perfectly — currencies summed into one
 /// figure, a payment with no readable amount counted as zero, a window-on-window
 /// claim made against a window the room never observed, an unsettled refund
@@ -14,7 +14,7 @@ import SwiftData
 enum DodoPaymentsRoomSource {
 
     /// The bridge's own source name, taken from the bridge rather than spelled
-    /// again — `GnosisPayRoomSource.source`'s rule.
+    /// again — `MetaMaskCardRoomSource.source`'s rule.
     static let source = DodoPaymentsAccount.source
 
     /// The head, or nil when there is nothing worth drawing.
@@ -37,7 +37,7 @@ enum DodoPaymentsRoomSource {
     /// The ONLY place a `Thing`'s stored money fields are touched.
     ///
     /// `priceValue`/`priceCurrency` are read as DATA, never the title, which is
-    /// prose the bridge composed (`GnosisPayRoomSource`'s rule, and
+    /// prose the bridge composed (`MetaMaskCardRoomSource`'s rule, and
     /// `StripeRoom`'s reason for having no figure at all).
     @MainActor
     private static func sightings(_ rows: [Thing]) -> [DodoPaymentsRoom.Sighting] {

@@ -6,7 +6,7 @@ import Foundation
 /// **Why this exists.** Until now exactly three things got a hero on the thing
 /// sheet, and the gate was a source-name string: `kind == .transaction &&
 /// source == "Wallet"` (`ThingStage`'s three parsers). Everything else — an
-/// Apple Wallet charge, a Gnosis Pay spend, a Peer fill, a Privacy Pools
+/// Apple Wallet charge, an ether.fi Cash spend, a Peer fill, a Privacy Pools
 /// deposit, a Railgun unshield, a Safe transaction waiting on your signature, a
 /// Morpho risk crossing — fell through `ThingContent`'s `default:` branch, which
 /// renders `content` as a paragraph of body copy. For ten families `content` is
@@ -294,7 +294,7 @@ struct MoneyReceipt: Equatable {
     /// missing from here keeps exactly the sheet it has today rather than
     /// getting a half-composed hero.
     static let sources: Set<String> = [
-        "Wallet", "Apple Wallet", "Gnosis Pay", "ether.fi", "Privacy",
+        "Wallet", "Apple Wallet", "ether.fi", "Privacy",
         "Peer", "Privacy Pools", "Railgun", "Safe",
     ]
 
@@ -305,7 +305,7 @@ struct MoneyReceipt: Equatable {
         guard sources.contains(f.source) else { return nil }
         switch f.source {
         case "Apple Wallet":                 return card(f, hue: .neutral)
-        case "Gnosis Pay", "ether.fi", "Privacy": return card(f, hue: .card)
+        case "ether.fi", "Privacy":          return card(f, hue: .card)
         case "Peer":                         return peer(f)
         case "Privacy Pools":                return pools(f)
         case "Railgun":                      return railgun(f)
@@ -380,7 +380,7 @@ struct MoneyReceipt: Equatable {
 
     // MARK: Card spends
 
-    /// Apple Wallet, Gnosis Pay, ether.fi Cash and Privacy.com. One arm,
+    /// Apple Wallet, ether.fi Cash and Privacy.com. One arm,
     /// because a card spend is a card spend; the differences that matter are
     /// which subject can be drawn (a merchant name, or a void where the chain
     /// carries none) and whether the amount can still change.
@@ -394,7 +394,7 @@ struct MoneyReceipt: Equatable {
         // figure count toward a value it isn't showing.
         let priced = currency(f.priceValue, code: f.priceCurrency)
         let money = priced ?? split(f.amount).number
-        let onchain = f.source == "Gnosis Pay" || f.source == "ether.fi"
+        let onchain = f.source == "ether.fi"
         return MoneyReceipt(
             subject: merchant.map { Subject.named($0) }
                 ?? (onchain ? .absent(.merchantOffchain) : .named(f.source)),

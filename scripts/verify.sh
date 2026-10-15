@@ -796,8 +796,9 @@ python3 "$ROOT/scripts/wallet-total-audit.py" \
   || fail "the wallet crown counts the wrong money, or one chain can empty it — see above"
 print -P "%F{green}✓ wallet-total audit%f"
 
-# The three onchain-card seats (2026-09-20) — Gnosis Pay, ether.fi Cash and
-# MetaMask Card read the same object on three chains, and every way they break
+# The onchain-card seats (2026-09-20) — ether.fi Cash, MetaMask Card and
+# Plasma One read the same object on three chains (Gnosis Pay too, until prd
+# §1318), and every way they break
 # is a way that COMPILES AND LOOKS RIGHT. A lookup key carrying one capital
 # letter never matches the lowercased log address, so the seat lands nothing
 # and reads as "this wallet holds no card" — which is the healthy answer for
@@ -2615,8 +2616,8 @@ harness "Room-head pure-logic self-test" "room-head self-test" "scripts/room-hea
 # look wrong, it looks absent.
 harness "Room-runway pure-logic self-test" "room-runway self-test" "scripts/room-runway-selftest.sh" "the room-runway logic self-test failed — run scripts/room-runway-selftest.sh"
 
-# Pure-logic self-test for the three WALLET-RIDING room heads — Peer, Privacy
-# Pools, Gnosis Pay (prd §349). These seats ride the watched wallets, so there
+# Pure-logic self-test for the WALLET-RIDING room heads — Peer, Privacy
+# Pools, the onchain cards (prd §349). These seats ride the watched wallets, so there
 # is no key to mint and nothing on this host can make a fill settle, a screener
 # rule, or a card get swiped: the harness is the only proof these numbers are
 # right. Every failure is a silent wrong answer — every SALE counted as a
@@ -3380,7 +3381,7 @@ xcrun simctl terminate "$DEVICE_ID" "$BUNDLE" 2>/dev/null || true
 # Extends the same "does the demo have parity" question (2026-08-08 ruling)
 # to a second surface: `FeedScreen.SourceHead` (prd §349's runway/stripeHead/
 # posthogHead/appleWallet/x402/appStoreConnect/cursorHead/peerHead/
-# privacyPoolsHead/gnosisPayHead) — the per-source hero card a room draws
+# privacyPoolsHead/metamaskCardHead) — the per-source hero card a room draws
 # when you open it directly, read via `-roomInsightProbe <Source>` the same
 # way the panel check above reads `-agentOpenProbe`.
 #
@@ -3502,7 +3503,7 @@ else
     posthogHead       "PostHog"
     peerHead          "Peer"
     privacyPoolsHead  "Privacy Pools"
-    gnosisPayHead     "Gnosis Pay"
+    metamaskCardHead  "MetaMask Card"
     railgunHead       "Railgun"
     safeHead          "Safe"
     cardPointersHead  "CardPointers"

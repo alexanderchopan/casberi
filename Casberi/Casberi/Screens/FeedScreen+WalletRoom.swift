@@ -1413,7 +1413,7 @@ extension FeedScreen {
         let sign = received ? "+" : "−"
         // **WHO, THEN DOLLARS, THEN THE QUANTITY ON THE LINE (prd §1090).**
         // A card spend names no merchant on chain, so its title was "Spent
-        // $12.40 with Gnosis Pay" beside "−12.40 USDC": the amount twice and
+        // $12.40 with MetaMask Card" beside "−12.40 USDC": the amount twice and
         // the card cut off. Its who is the card; the dollars stand on the
         // right; the token's quantity moves to the line under the name.
         let who = thing.transferCounterparty.flatMap { $0.isEmpty ? nil : $0 }

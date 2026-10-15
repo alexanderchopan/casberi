@@ -132,7 +132,7 @@ struct DodoPaymentsRoom: Equatable {
     /// `DodoPaymentsAccount.windowDays` by the harness — see the type note.
     static let windowDays = 30
 
-    /// Currencies drawn. Unlike Gnosis Pay's closed three-stablecoin set, a
+    /// Currencies drawn. Unlike an onchain card's closed stablecoin set, a
     /// payment processor can bill in anything, so the tail is folded and NAMED
     /// by `coverageNote` rather than silently cut.
     static let rowCap = 8   // DSRoomChassis.headRowCap (prd §760)

@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """THE ONCHAIN-CARD SEATS, AND THE FOUR WAYS THEY FAIL WITHOUT FAILING.
 
-Three seats read a card whose swipe settles on a public chain — Gnosis Pay on
-Gnosis Chain (prd §222), ether.fi Cash on Optimism, MetaMask Card on Linea
-(2026-09-20). They are the same object read three times, and every one of them
-is a filtered log read, a cursor, an evidence mark and a money formatter.
+Three seats read a card whose swipe settles on a public chain — ether.fi Cash
+on Optimism, MetaMask Card on Linea (2026-09-20), Plasma One on Plasma (prd
+§1311). They are the same object read three times, and every one of them is a
+filtered log read, a cursor, an evidence mark and a money formatter. (Gnosis
+Pay on Gnosis Chain, prd §222, was the first, and left with prd §1318.)
 
 Every check below guards a failure that COMPILES, RENDERS AND LOOKS RIGHT. That
 is the whole reason this file exists: a card seat that is subtly wrong does not
@@ -41,8 +42,8 @@ seat lit for a card whose wallet is gone — and, worse, makes re-watching land
 nothing because the cursor is still ahead of the blocks it never read).
 
 **(5) Evidence keys are distinct.** Two seats sharing a `WalletSeatEvidence`
-key would light each other: hold a Gnosis Pay card and a MetaMask Card seat
-appears. A copy-paste of a sibling bridge is exactly how that arrives, and it
+key would light each other: hold an ether.fi Cash card and a MetaMask Card
+seat appears. A copy-paste of a sibling bridge is exactly how that arrives, and it
 is one string in a file nobody re-reads.
 
 What this deliberately does NOT check:
@@ -69,7 +70,6 @@ SOURCES = ["Casberi/Casberi", "Casberi/Shared"]
 # that does not exist on disk is a finding of its own (check 4), so this list
 # cannot rot quietly into a check that scans nothing.
 CARD_BRIDGES = [
-    "GnosisPayBridge.swift",
     "EtherFiCash.swift",
     "MetaMaskCardBridge.swift",
     "PlasmaOneCard.swift",

@@ -359,8 +359,6 @@ KNOWN_HONEST_ABSENCE = {
     # An Instagram SAVE is a handle and a timestamp and nothing else —
     # measured against four independent parsers (§245).
     "Instagram": {"postText", "summary", "likeCount", "replyCount", "repostCount"},
-    # Gnosis Pay merchant names never reach the chain (§222).
-    "Gnosis Pay": {"authorHandle"},
     # Peer stamps no money: the amount is prose in a title and the token
     # differs per fill, so a summed figure would add USDC to ETH (§311).
     "Peer": {"priceValue", "priceCurrency"},

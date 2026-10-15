@@ -1073,7 +1073,7 @@ enum NotifyDigest {
     static let hasOwnApp: Set<String> = [
         "Gmail", "iCloud Mail", "Calendar", "Reminders",
         "ChatGPT", "Claude", "Gemini", "Grok",
-        "Coinbase", "Kraken", "Binance", "Gemini Exchange", "Gnosis Pay",
+        "Coinbase", "Kraken", "Binance", "Gemini Exchange",
         "Apple Wallet", "Safe", "ether.fi",
         "GitHub", "GitLab", "Linear", "Notion", "Slack", "Trello", "Jira",
         "Sentry", "Vercel", "PagerDuty", "Cloudflare", "App Store Connect", "Stripe",

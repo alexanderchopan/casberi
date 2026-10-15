@@ -976,9 +976,10 @@ failed**. `hegota-tx` and `vibenet-signer` pass on the vendored keccak,
 
 ## Card-spend audit (scripts/card-spend-audit.py, 2026-09-20, prd §857)
 
-Three seats read a card whose swipe settles on a public chain — Gnosis Pay on
-Gnosis Chain, ether.fi Cash on Optimism, MetaMask Card on Linea. They are the
-same object read three times, and **every way they break is a way that
+Three seats read a card whose swipe settles on a public chain — ether.fi Cash
+on Optimism, MetaMask Card on Linea, Plasma One on Plasma (Gnosis Pay on Gnosis
+Chain was the first, removed in prd §1318). They are the same object read three
+times, and **every way they break is a way that
 compiles, renders and looks right.** That is the whole reason this check
 exists: a card seat that is subtly wrong does not crash, it says you did not
 spend anything — and for almost every wallet on earth that IS the healthy

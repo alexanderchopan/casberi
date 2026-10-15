@@ -128,7 +128,7 @@ Each step is tagged with where it runs.
 ### 4. Pages per integration
 
 - [cloud] Generate one page per offer in `BridgeCatalog.offers` under `website/apps/`
-  ("Gnosis Pay spending tracker", "Farcaster notifications on iPhone"), linked with that
+  ("MetaMask Card spending tracker", "Farcaster notifications on iPhone"), linked with that
   channel's campaign token. Extend `scripts/catalog-sync.sh` so a new offer without a page
   fails.
 - [mac] Deploy through cPanel (`docs/website.md`).
@@ -151,7 +151,7 @@ Each step is tagged with where it runs.
 
 - Apple featuring nomination (App Store Connect → Nominations): Liquid Glass, Visual
   Intelligence, widgets, the Apple Intelligence seat once it is live.
-- Ecosystem directories and grants: Farcaster, Base, Safe, World, Gnosis Pay, Obsidian,
+- Ecosystem directories and grants: Farcaster, Base, Safe, World, Obsidian,
   Ethereum Foundation. Claude compiles the list with links and drafts each submission.
 - Instagram: run by the user through another service, outside this plan, and it does NOT
   carry our `ct=instagram` link (user, 2026-09-27). Its installs show in the detailed reports

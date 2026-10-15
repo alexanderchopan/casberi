@@ -11,7 +11,7 @@ import WalletConnectSign
 /// Unlike those two, this seat is gated on an ACTUAL detected Safe
 /// (`SafeBridge.detectedCount()`), not on a wallet merely being watched:
 /// most wallets are neither a Safe nor a Safe signer, and a seat claiming
-/// otherwise would be fake status (the same divergence Gnosis Pay's seat
+/// otherwise would be fake status (the same divergence every card seat
 /// makes for the same reason).
 struct SafeScreen: View {
     /// Inside a sheet's stack the next step pushes (prd §1238).

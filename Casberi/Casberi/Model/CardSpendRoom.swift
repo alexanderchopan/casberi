@@ -3,7 +3,8 @@ import Foundation
 /// AN ONCHAIN CARD ROOM'S HEAD (2026-08-10 as `GnosisPayRoom`, prd §349;
 /// generalised 2026-09-20, prd §858) — what the card actually costs you.
 ///
-/// **It was Gnosis Pay's and is now every onchain card's, and the rename is
+/// **It was Gnosis Pay's and is now every onchain card's (the Gnosis Pay seat
+/// itself was removed in prd §1318), and the rename is
 /// the point rather than tidying.** Nothing in this type was ever
 /// Gnosis-specific: a `Sighting` is an amount, a currency and a moment, and
 /// every judgement below — currencies never summed, an unreadable amount
@@ -15,7 +16,8 @@ import Foundation
 /// paid for more than once).
 ///
 /// The SEAT-specific half lives in each room's own source
-/// (`GnosisPayRoomSource`, `MetaMaskCardRoomSource`): the `Thing.source` to
+/// (`MetaMaskCardRoomSource`, `EtherFiCashRoomSource`,
+/// `PlasmaOneRoomSource`): the `Thing.source` to
 /// filter on, and the probe prefixes. Nothing else differs, and if something
 /// starts to, it belongs there and not here.
 ///
@@ -27,16 +29,16 @@ import Foundation
 ///
 /// ## It spends nothing, and unlike its neighbours it can state money
 ///
-/// `GnosisPayBridge` stamps `priceValue` and `priceCurrency` on every spend —
-/// deliberately, per its own note, "without these an amount can never be
-/// re-formatted or compared". So this head sums real numbers off real fields,
+/// Every onchain card stamps `priceValue` and `priceCurrency` on every spend
+/// it can price — deliberately (the Gnosis Pay seat's note, prd §222):
+/// "without these an amount can never be re-formatted or compared". So this head sums real numbers off real fields,
 /// where `PeerRoom` and `PrivacyPoolsRoom` must refuse to (their bridges keep
 /// the amount only as prose in a title). No request, no new `Thing` property,
 /// no CloudKit deploy.
 ///
 /// ## Currencies are never summed
 ///
-/// A Gnosis Pay account can settle in EURe, GBPe and USDCe, and adding them
+/// A MetaMask Card can settle in USD stablecoins, EURe and GBPe, and adding them
 /// needs an exchange rate this app does not have and will not invent — the
 /// standing rule `StripeScreen` set and `StripeRoom` keeps. Every total here is
 /// per currency, the rows are ranked by SPEND COUNT rather than by amount (the
@@ -45,14 +47,14 @@ import Foundation
 ///
 /// ## What it may NOT draw: where you spent it
 ///
-/// The obvious card for a payment card is a merchant board, and this bridge
+/// The obvious card for a payment card is a merchant board, and these bridges
 /// structurally cannot have one. §222's measured ceiling: merchant names never
-/// reach the chain — the settlement is an ERC-20 transfer from your Safe to
-/// Gnosis Pay's, and that is all there is. `AppleWalletRoom` ranks merchants
+/// reach the chain — the settlement is an ERC-20 transfer from your account to
+/// the issuer's, and that is all there is. `AppleWalletRoom` ranks merchants
 /// because FinanceKit hands them over; drawing the same card here would mean
-/// inventing them. Refunds are equally out of reach (they settle off-chain,
-/// measured as zero outbound from the settlement Safe across 40k blocks), so
-/// no total here is a NET and none of them claims to be.
+/// inventing them. Refunds are equally out of reach (they settle off-chain —
+/// measured on Gnosis Pay's settlement Safe as zero outbound across 40k
+/// blocks), so no total here is a NET and none of them claims to be.
 ///
 /// ## The comparison is refused rather than estimated
 ///
@@ -110,8 +112,8 @@ struct CardSpendRoom: Equatable {
     }
 
     /// The card draws at most this many currency rows. The set is closed and
-    /// small on every onchain card — Gnosis Pay settles in three (EURe, GBPe,
-    /// USDCe), MetaMask Card in up to seven — so the cap is deliberately all of
+    /// small on every onchain card — MetaMask Card settles in up to seven —
+    /// so the cap is deliberately all of
     /// them and there is nothing to hide behind a "1 more". It lives HERE, not
     /// on a seat's source, because two seats reading two caps would make the
     /// same head draw a different number of rows for no reason anyone chose.

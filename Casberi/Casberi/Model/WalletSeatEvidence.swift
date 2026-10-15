@@ -4,7 +4,7 @@ import SwiftData
 /// The EVIDENCE MARK behind a wallet-riding catalog seat (2026-07-30).
 ///
 /// A handful of protocols in this app have no account and no key: Peer,
-/// Privacy Pools, Gnosis Pay, Safe, Morpho, Hyperliquid, Aerodrome, Uniswap.
+/// Privacy Pools, Safe, Morpho, Hyperliquid, Aerodrome, Uniswap, the cards.
 /// Watching a wallet is the whole consent (prd §207), and every one of their
 /// sweeps runs unconditionally inside `WalletIngest.refresh` — the catalog
 /// seat gates nothing, and never has since §207 took the connect switches
@@ -45,10 +45,10 @@ import SwiftData
 ///    `forget` self-corrects rather than inflating a seat forever.
 ///
 /// Addresses are stored lowercased hex, matching the resolved form every
-/// sweep works in. This is deliberately the shape `GnosisPayBridge` invented
-/// for itself on 2026-07-26 (`gnosispay.accounts`, an array of lowercased
-/// addresses in `UserDefaults`); that bridge now reads through here against
-/// its original key, so nothing needs migrating.
+/// sweep works in. This is deliberately the shape the Gnosis Pay seat invented
+/// for itself on 2026-07-26 (an array of lowercased addresses in
+/// `UserDefaults`); that seat read through here against its original key
+/// until prd §1318 removed it, so nothing needed migrating.
 struct WalletSeatEvidence: Sendable {
 
     /// The `UserDefaults` key this mark persists under. Owned by the sweep,

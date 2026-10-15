@@ -216,7 +216,6 @@ enum BridgeGlyph {
         case "wallet":    return "wallet.bifold"
         case "peer":      return "arrow.left.arrow.right"
         case "privacy pools", "0xbow privacy pools": return "shield.lefthalf.filled"
-        case "gnosis pay": return "creditcard"
         case "apple wallet": return "creditcard.fill"
         // The conversion, which is what a Wise transfer IS. Not Peer's
         // `arrow.left.arrow.right`, which is the same group: these two are not
@@ -235,16 +234,12 @@ enum BridgeGlyph {
         // The unstake queue's whole subject is waiting, then collecting — an
         // hourglass says that where a generic coin or chain glyph wouldn't.
         case "ether.fi":  return "hourglass"
-        // Same mark as Gnosis Pay: they are the same object (a card that
-        // settles onchain), and picking a different glyph for one would say
-        // they were different kinds of thing.
-        case "ether.fi cash": return "creditcard"
-        // And the same again for the third one (2026-09-20). The rule is worth
-        // restating rather than inferring: these three seats are not similar,
-        // they are the SAME OBJECT — a card whose swipe settles onchain — so a
+        // One mark for every onchain card (2026-09-20). The rule is worth
+        // restating rather than inferring: these seats are not similar, they
+        // are the SAME OBJECT — a card whose swipe settles onchain — so a
         // distinct glyph for each would say they were different kinds of thing
-        // and make the wallet group read as three unrelated products.
-        case "metamask card", "plasma one": return "creditcard"
+        // and make the wallet group read as unrelated products.
+        case "ether.fi cash", "metamask card", "plasma one": return "creditcard"
         // A multisig is a signature queue — the same mark `WalletWarning.Kind`
         // already uses for a pending Safe signature, so the catalog tile and
         // the Worth-a-look row can't pick different glyphs for one thing.
@@ -332,8 +327,8 @@ enum BridgeGlyph {
         case "pagerduty": return "bell.badge"
         // A package is a package on both registries — but they must not share
         // a glyph, or two seats sitting side by side in the same Work group
-        // read as one thing listed twice (the ether.fi/Gnosis Pay rule, in
-        // reverse: those two ARE the same object, these two are not).
+        // read as one thing listed twice (the onchain-card rule, in
+        // reverse: the cards ARE the same object, these two are not).
         case "npm":       return "shippingbox.fill"
         case "pypi":      return "shippingbox"
         case "homekit":   return "homekit"
@@ -360,7 +355,7 @@ enum BridgeGlyph {
         case "hugging face": return "face.smiling"
         case "circle x402":  return "dollarsign.circle"
         // DeFi protocols the wallet rides — each a distinct glyph even where
-        // the shape (lending, a lock, a swap) rhymes, the ether.fi/Gnosis Pay
+        // the shape (lending, a lock, a swap) rhymes, the onchain-card
         // rule in reverse: these are genuinely different objects and must not
         // read as one thing listed twice.
         case "aave":         return "a.circle"

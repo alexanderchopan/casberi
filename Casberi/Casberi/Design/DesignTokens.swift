@@ -766,7 +766,7 @@ enum DS {
     ///
     /// Kept, not deleted, and the distinction is the whole of why this doc
     /// survives: `MoneyReceipt.Hue` is still COMPUTED — `MoneyReceiptSource`
-    /// still decides that a Railgun unshield is a `.shield` and a Gnosis Pay
+    /// still decides that a Railgun unshield is a `.shield` and an ether.fi
     /// swipe is a `.card`, and `money-receipt-selftest.sh` still proves it
     /// nine ways. What changed is that no view PAINTS with the answer. Ripping
     /// the enum out would delete a working classification, its harness and its

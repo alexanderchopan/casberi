@@ -287,7 +287,7 @@ enum EtherFiCash {
     @MainActor private static var running = false
 
     /// Lands new card spends for the given resolved hex addresses — called
-    /// inside `WalletIngest.refresh`'s pass beside `GnosisPayBridge.sync`.
+    /// inside `WalletIngest.refresh`'s pass beside `MetaMaskCardBridge.sync`.
     /// Returns the landed count, nil when Optimism couldn't be reached.
     @MainActor
     static func sync(context: ModelContext, addresses: [String],

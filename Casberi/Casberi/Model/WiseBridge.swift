@@ -38,7 +38,7 @@ import SwiftData
 /// ## The module doctrine, applied
 ///
 /// A transfer IS a `Thing` — money moving is the standing exception (Apple
-/// Wallet, Gnosis Pay, Privacy.com), and a transfer is the clearest
+/// Wallet, the onchain cards, Privacy.com), and a transfer is the clearest
 /// case of it. A BALANCE is a state (§216): it composes into `WiseStanding`,
 /// written by the same pass that reads it, and never lands as a row.
 ///

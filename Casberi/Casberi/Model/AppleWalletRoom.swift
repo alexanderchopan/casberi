@@ -4,7 +4,7 @@ import Foundation
 /// pay, and what changed since last time.
 ///
 /// FinanceKit is the only source in this app that sees a MERCHANT NAME. The
-/// chain never carries one (`GnosisPayBridge`'s standing ceiling: "rows say
+/// chain never carries one (the onchain cards' standing ceiling: "rows say
 /// what was spent, never where"), a Privacy.com row carries a card descriptor,
 /// and a wallet transfer carries an address. So this room leads with WHO, and
 /// every card here is built on the one field nothing else can supply.

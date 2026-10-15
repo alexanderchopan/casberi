@@ -268,7 +268,7 @@ enum CategoryFold {
     /// A category whose chip always opens on ONE member, regardless of where
     /// you last stood — Wallet, and only Wallet (user ruling, prd §354,
     /// 2026-08-11: "wallet should always land on balance room"). The balance
-    /// room is the SUBJECT — Peer, Privacy Pools, Gnosis Pay and Railgun are
+    /// room is the SUBJECT — Peer, Privacy Pools, the cards and Railgun are
     /// ledgers riding the same watched addresses — so the chip reopening on
     /// whichever rider you last glanced at reads as landing somewhere
     /// strange, where a folder like Work reopening on the venue you live in

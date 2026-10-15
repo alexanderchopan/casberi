@@ -5,9 +5,8 @@ import SwiftData
 /// rows turned into the card's own value, with every judgement left to
 /// `CardSpendRoom`.
 ///
-/// The THIRD seat on the shared head (prd §858), and the last onchain card this
-/// app reads. Gnosis Pay and MetaMask Card have led with what the card cost
-/// since §349 and §858; this room led with its newest row, which for a spending
+/// The THIRD seat on the shared head (prd §858). Gnosis Pay (removed, prd
+/// §1318) and MetaMask Card led with what the card cost since §349 and §858; this room led with its newest row, which for a spending
 /// card is the §247 gap at its widest — a list of purchases is a statement, and
 /// nobody opens a statement to read it line by line. Nothing about the head
 /// needed changing to take this seat: `EtherFiCash` already stamps

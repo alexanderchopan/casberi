@@ -20,7 +20,8 @@ import SwiftData
 /// walk, but an indexer has already walked it — see `monad`.
 ///
 /// This is the THIRD seat on the same shape, and the shape is the reason it is
-/// buildable at all: `GnosisPayBridge` proved the pattern, `EtherFiCash`
+/// buildable at all: the Gnosis Pay seat (prd §222, removed §1318) proved the
+/// pattern, `EtherFiCash`
 /// proved it generalised, and everything below that differs from them differs
 /// because Linea measured differently, not because it was written fresh.
 ///
@@ -66,7 +67,8 @@ import SwiftData
 ///     build` caps at 10,000 and ERRORS (`range 20000 exceeds limit of 10000`)
 ///     rather than returning `[]`; Tenderly has no cap at all and answered
 ///     100,000 blocks (11,319 logs). So the silent-zero trap that shaped
-///     `GnosisPayBridge` does not exist on this chain. `maxRange` sits under
+///     the Gnosis Pay seat's reads on Gnosis Chain does not exist on this
+///     chain. `maxRange` sits under
 ///     the STRICTER host's cap anyway, because a pair that answers different
 ///     questions is worse than a pair that answers one.
 ///  3. A FILTERED READ IS EXACT. One call over 9,000 blocks and a three-way
@@ -369,7 +371,7 @@ enum MetaMaskCardBridge {
 
     /// Reads new card spends for the given (resolved, hex) addresses and lands
     /// them — called inside `WalletIngest.refresh`'s pass beside
-    /// `GnosisPayBridge.sync`, under that pass's running guard. Returns the
+    /// `RailgunBridge.sync`, under that pass's running guard. Returns the
     /// landed count, nil when NO chain could be reached at all.
     @MainActor
     static func sync(context: ModelContext, addresses: [String],

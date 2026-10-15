@@ -1499,8 +1499,8 @@ struct MainSurface: View {
         // 4).** Their rows ride the merged room, so they leave the list here —
         // and with it the tray, Recent, search and the swipe, which all read
         // these venues — and the merged room stands in for them even when
-        // nothing has landed under its own name (Gnosis Pay alone still opens
-        // a Wallet).
+        // nothing has landed under its own name (a card alone still opens a
+        // Wallet).
         let hosts = Set(ordered.compactMap { RoomAccounts.host(ofSource: $0)?.room })
         ordered.removeAll { RoomAccounts.host(ofSource: $0) != nil }
         for room in RoomAccounts.mergedRooms where hosts.contains(room) && !ordered.contains(room) {

@@ -287,8 +287,6 @@ enum RoomAccounts {
              holder: WalletPortfolio.validatorHolderID, group: staking, mark: "ETH Validators"),
         Seat(name: "Apple Wallet", source: AppleWalletBridge.sourceName,
              holder: WalletCash.holderPrefix + "applewallet:", group: cards, mark: "Apple Wallet"),
-        Seat(name: "Gnosis Pay", source: GnosisPayBridge.sourceName,
-             holder: nil, group: cards, mark: "Gnosis Pay"),
         Seat(name: "MetaMask Card", source: MetaMaskCardBridge.source,
              holder: nil, group: cards, mark: "MetaMask Card"),
         Seat(name: "ether.fi", source: EtherFiCash.source,

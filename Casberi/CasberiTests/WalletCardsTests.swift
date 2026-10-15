@@ -64,8 +64,8 @@ struct WalletCardsTests {
     }
 
     @Test func onlyTheWalletCarriesTheCardSeats() {
-        #expect(RoomAccounts.rides(room: CategoryFold.walletRoom, source: GnosisPayBridge.sourceName))
-        #expect(!RoomAccounts.rides(room: "Markets", source: GnosisPayBridge.sourceName))
+        #expect(RoomAccounts.rides(room: CategoryFold.walletRoom, source: MetaMaskCardBridge.source))
+        #expect(!RoomAccounts.rides(room: "Markets", source: MetaMaskCardBridge.source))
         #expect(RoomAccounts.roomSources("Markets") == ["Markets"])
         #expect(RoomAccounts.roomSources(CategoryFold.walletRoom).first == CategoryFold.walletRoom)
     }

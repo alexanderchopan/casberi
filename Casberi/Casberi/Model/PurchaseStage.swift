@@ -26,7 +26,7 @@ import Foundation
 ///   comes from a feed publisher, a barcode scan comes from your own hand.
 ///
 /// **Not `ShopStage`.** A Privacy card purchase is the same archetype as an
-/// Apple Wallet, Gnosis Pay or ether.fi spend — which sit in the Wallet band,
+/// Apple Wallet or ether.fi spend — which sit in the Wallet band,
 /// not Shopping. Scoping this to one catalog band would have given four card
 /// seats two different purchase sheets, so the fork is what HAPPENED, never
 /// which shelf the seat sits on.
@@ -138,8 +138,9 @@ enum PurchaseStage {
         /// catalogue" and "Charged to your Privacy card" were the same fact
         /// twice. "You scanned this barcode" told someone what their own hand
         /// had just done. **A sentence survives only when it explains an
-        /// ABSENCE the screen cannot** — no merchant on a Gnosis Pay row, no
-        /// code on a Bitrefill order — **or a
+        /// ABSENCE the screen cannot** — no code on a Bitrefill order (and,
+        /// until prd §1318 removed the seat, no merchant on a Gnosis Pay
+        /// row) — **or a
         /// notice this app raised rather than the seat.** Everything else is
         /// nil, and the line simply doesn't draw.
         var provenance: String?
@@ -218,7 +219,7 @@ enum PurchaseStage {
     /// only answers "which seat". A new card seat is one entry.
     static let purchaseRefs = [
         "privacy:txn:", "bitrefill:order:",
-        "applewallet:txn:", "gnosispay:spend:", "etherficash:spend:",
+        "applewallet:txn:", "etherficash:spend:",
         // The third onchain card (prd §857). Its real refs are
         // `metamaskcard:spend:<tx>:<logIndex>`, so the prefix catches both the
         // shipped row and the demo's — the §368 lesson, which found every
@@ -455,10 +456,6 @@ enum PurchaseStage {
         // record — said once, here, or the sheet looks like it lost it.
         case "Bitrefill":
             return isRefill(row) ? nil : word("The code lives on Bitrefill's own page.")
-        // §222: merchant names never reach the chain. A missing seller on a
-        // card purchase reads as a failed lookup unless it is stated.
-        case "Gnosis Pay":
-            return word("The chain carries the amount, never the merchant.")
         default:
             return nil
         }

@@ -344,7 +344,7 @@ final class ShellChrome {
     /// **It lives here rather than on `FeedScreen` because it has to survive a
     /// room change.** `MainSurface` renders one `FeedScreen(source:)` carrying
     /// `.id(filter.source)`, so every move between Wallets / Peer / Privacy
-    /// Pools / Gnosis Pay / Railgun DESTROYS the screen and its `@State` with
+    /// Pools / Railgun DESTROYS the screen and its `@State` with
     /// it — which is exactly why scoping used to be possible in the balance
     /// room alone and evaporated the moment you left it. A scope is a property
     /// of the category, not of one room in it.

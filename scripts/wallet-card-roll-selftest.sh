@@ -27,8 +27,8 @@ func day(_ d: Int, month: Int = 10) -> Date { cal.date(from: DateComponents(year
 
 let roll = WalletCardRoll.compose(
     spends: [
-        .init(card: "Big Spender", app: "Gnosis Pay", usd: 900, at: day(3)),
-        .init(card: "Big Spender", app: "Gnosis Pay", usd: 400, at: day(20, month: 9)),
+        .init(card: "Big Spender", app: "ether.fi", usd: 900, at: day(3)),
+        .init(card: "Big Spender", app: "ether.fi", usd: 400, at: day(20, month: 9)),
         .init(card: "Apple Card", app: "Apple Wallet", usd: 50, at: day(5)),
         .init(card: "Apple Card", app: "Apple Wallet", usd: -20, at: day(6)),
         .init(card: "Small", app: "MetaMask Card", usd: 10, at: day(7)),

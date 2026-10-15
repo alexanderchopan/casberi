@@ -162,6 +162,9 @@ enum Corpus {
         // could drop frames today b/c nobody really uses it"), with its
         // name before §685's rename.
         "Hegotá Frames", "Frames Devnet",
+        // Gnosis Pay the same way (prd §1318, user: "they are deprecating
+        // it"); the card head it shared stays for the other onchain cards.
+        "Gnosis Pay",
     ]
 
     /// Sources whose SEAT WAS RENAMED, and the name it answers to now
@@ -412,12 +415,14 @@ enum Corpus {
     /// the same. Found while giving ether.fi Cash the same head — the third
     /// seat was in the set and the second was not.
     ///
-    /// Plasma One (prd §1311) joins as the fourth onchain card. Its rows are a
+    /// Gnosis Pay left the set with its seat (prd §1318).
+    ///
+    /// Plasma One (prd §1311) joins as an onchain card. Its rows are a
     /// DAY's settlement rather than a purchase, which every total here sums
     /// correctly — the money is the same money — and only a COUNT of them
     /// would be wrong, which is why its head counts days.
     static let cardSpendSources: Set<String> =
-        ["Apple Wallet", "Gnosis Pay", "MetaMask Card", "ether.fi", "Plasma One"]
+        ["Apple Wallet", "MetaMask Card", "ether.fi", "Plasma One"]
 
     /// The stable ref of a source's import receipt. Stable ON PURPOSE: a
     /// second import must UPDATE the one receipt rather than stack another,

@@ -187,7 +187,7 @@ struct PrivacyPoolsRoom: Equatable {
         /// `Thing.priceValue` — the deposit's size in that token's own units.
         /// Read as DATA and never parsed back out of `transferAmount`, which
         /// is a rounded display string whose thousands separator is
-        /// locale-dependent (`GnosisPayRoomSource`'s rule).
+        /// locale-dependent (`MetaMaskCardRoomSource`'s rule).
         let amount: Double?
         let at: Date
 

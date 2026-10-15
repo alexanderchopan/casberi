@@ -86,8 +86,7 @@ APPSHORTCUTS_CATALOG = ROOT / "Casberi/Casberi/AppShortcuts.xcstrings"
 # reader of the app ever sees.
 KNOWN_EXEMPT = {
     "ProbeHooks.swift",       # -*Probe NSLog output — developer diagnostics only
-    "GnosisPayBridge.swift",  # accountSummary() is the probe's status line
-    "MetaMaskCardBridge.swift",  # same accountSummary(), same -metamaskCardProbe line
+    "MetaMaskCardBridge.swift",  # accountSummary() is -metamaskCardProbe's status line
     "RailgunBridge.swift",    # accountSummary() is the probe's status line
     "SafeBridge.swift",       # probe() is -safeProbe's NSLog output
 }

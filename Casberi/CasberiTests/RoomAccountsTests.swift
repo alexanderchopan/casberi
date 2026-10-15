@@ -8,15 +8,15 @@ import Testing
 /// an app's name.
 struct RoomAccountsTests {
 
-    private var gnosis: RoomAccounts.Seat? {
-        RoomAccounts.seats(for: CategoryFold.walletRoom).first { $0.name == "Gnosis Pay" }
+    private var metamaskCard: RoomAccounts.Seat? {
+        RoomAccounts.seats(for: CategoryFold.walletRoom).first { $0.name == "MetaMask Card" }
     }
     private var appleWallet: RoomAccounts.Seat? {
         RoomAccounts.seats(for: CategoryFold.walletRoom).first { $0.name == "Apple Wallet" }
     }
 
     @Test func aSeatScopeRoundTrips() throws {
-        let seat = try #require(gnosis)
+        let seat = try #require(metamaskCard)
         let scope = RoomAccounts.scopeID(seat)
         #expect(RoomAccounts.isSeat(scope))
         #expect(RoomAccounts.seat(scope, in: CategoryFold.walletRoom) == seat)
@@ -32,15 +32,15 @@ struct RoomAccountsTests {
     /// A room not merged yet lists nothing, so a stale pick reads as All.
     @Test func anUnmergedRoomListsNoApps() {
         #expect(RoomAccounts.seats(for: "Markets").isEmpty)
-        #expect(RoomAccounts.seat("seat:Gnosis Pay", in: "Markets") == nil)
+        #expect(RoomAccounts.seat("seat:MetaMask Card", in: "Markets") == nil)
     }
 
     /// Step 4's fold: a folded app's room name lands in the Wallet, scoped to
     /// it; the Wallet itself and the rooms that stay apart are their own.
     @Test func aFoldedAppHasTheWalletAsItsRoom() {
-        let gnosis = RoomAccounts.host(ofSource: GnosisPayBridge.sourceName)
-        #expect(gnosis?.room == CategoryFold.walletRoom)
-        #expect(gnosis?.seat.name == "Gnosis Pay")
+        let card = RoomAccounts.host(ofSource: MetaMaskCardBridge.source)
+        #expect(card?.room == CategoryFold.walletRoom)
+        #expect(card?.seat.name == "MetaMask Card")
         #expect(RoomAccounts.host(ofSource: SafeBridge.sourceName)?.room == CategoryFold.walletRoom)
         // The source and the catalogue name both resolve (Privacy Pools lands
         // rows as "Privacy Pools"; its seat is "0xBow Privacy Pools").
@@ -215,14 +215,14 @@ struct RoomAccountsTests {
         let sources = RoomAccounts.roomSources(CategoryFold.walletRoom)
         #expect(sources.first == CategoryFold.walletRoom)
         #expect(sources.contains(SafeBridge.sourceName))
-        #expect(sources.contains(GnosisPayBridge.sourceName))
+        #expect(sources.contains(MetaMaskCardBridge.source))
         #expect(!RoomAccounts.rides(room: CategoryFold.walletRoom, source: CategoryFold.walletRoom))
         #expect(RoomAccounts.rides(room: CategoryFold.walletRoom, source: PeerBridge.sourceName))
     }
 
     @Test func onlyConnectedAppsAreListed() {
-        let listed = RoomAccounts.connected(in: CategoryFold.walletRoom, names: ["Wise", "Gnosis Pay"])
-        #expect(Set(listed.map(\.name)) == ["Wise", "Gnosis Pay"])
+        let listed = RoomAccounts.connected(in: CategoryFold.walletRoom, names: ["Wise", "MetaMask Card"])
+        #expect(Set(listed.map(\.name)) == ["Wise", "MetaMask Card"])
     }
 
     @Test func aPrefixHolderMatchesItsAccountsAndNothingElse() throws {
@@ -243,7 +243,7 @@ struct RoomAccountsTests {
         let apple = whole.scoped(to: try #require(appleWallet))
         #expect(apple.totalUSD == 9_400)
         #expect(apple.positions.map(\.symbol) == ["USD"])
-        #expect(whole.scoped(to: try #require(gnosis)).isEmpty)
+        #expect(whole.scoped(to: try #require(metamaskCard)).isEmpty)
         // Idempotent: the box slices again at render.
         #expect(apple.scoped(to: try #require(appleWallet)) == apple)
     }

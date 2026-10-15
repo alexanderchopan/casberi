@@ -583,7 +583,7 @@ enum PrivacyPoolsBridge {
             // display string. `WalletIngest.format` rounds and groups by
             // locale, so parsing it back is both lossy and locale-dependent —
             // which is exactly why the room reads `priceValue` and never
-            // `transferAmount` (`GnosisPayRoomSource`'s rule).
+            // `transferAmount` (`MetaMaskCardRoomSource`'s rule).
             let value = pool.map { deposit.rawAmount / pow(10, Double($0.decimals)) }
             let amount = value.map { WalletIngest.format($0) }
             let what = pool.map { "\(amount ?? "") \($0.symbol)" } ?? "crypto"
@@ -598,7 +598,7 @@ enum PrivacyPoolsBridge {
                 sourceRef: ref)
             thing.walletAddress = wallet
             // The amount as DATA (prd §369, 2026-08-12) — the same
-            // `transferAmount` slot Gnosis Pay and Railgun already fill. Until
+            // `transferAmount` slot the cards and Railgun already fill. Until
             // this it existed only inside the localized title, so the receipt
             // could not state a figure without parsing a sentence, which is the
             // one thing it refuses to do. Only when a pool resolved: `what`
@@ -615,7 +615,7 @@ enum PrivacyPoolsBridge {
             // else in this app.
             thing.transferDirection = "sent"
             // The size as STRUCTURED data (prd §397, 2026-08-17) — the same
-            // `priceValue`/`priceCurrency` pair Railgun and Gnosis Pay already
+            // `priceValue`/`priceCurrency` pair Railgun and the cards already
             // stamp, and the only reason the room can state what is in the
             // pools per asset. §349 refused that figure because the amount
             // lived solely inside a localized title; this is what retires the

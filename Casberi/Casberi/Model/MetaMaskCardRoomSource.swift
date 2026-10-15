@@ -6,14 +6,14 @@ import SwiftData
 /// `CardSpendRoom`.
 ///
 /// The split is `CursorRoomSource`'s, and the JUDGEMENT half is shared with
-/// Gnosis Pay rather than copied: currencies summed into one figure, a spend
+/// the other onchain cards rather than copied: currencies summed into one figure, a spend
 /// with no readable amount counted as zero, a month-on-month claim made
 /// against a window the room never observed — every one of those lives in
 /// `CardSpendRoom`, in a file the harness compiles whole. What is left here is
 /// the seat: which `Thing.source` to filter on, and what the probe calls its
 /// lines.
 ///
-/// **This seat's history is SHORTER than Gnosis Pay's, and the head already
+/// **This seat's history is SHORTER than Gnosis Pay's was, and the head already
 /// handles it.** `MetaMaskCardBridge` backfills about six days on Linea and
 /// one on Base (prd §857b — Base's only usable host serves 2,000 blocks at a
 /// time), so a fresh connection cannot know a prior 30-day window at all.
@@ -83,7 +83,7 @@ enum MetaMaskCardRoomSource {
     ///      answer the card states out loud;
     ///   3. the room is younger than 60 days, so no comparison is possible and
     ///      `prior` is nil throughout — correct, and easily read as a missing
-    ///      feature. It is the COMMON case here for longer than at Gnosis Pay,
+    ///      feature. It is the COMMON case here for longer than it was at Gnosis Pay,
     ///      because the backfill is six days at most;
     ///   4. every spend is in WETH, which carries no `priceValue` by design —
     ///      so the window has real spending and no total, and `unpriced` is the

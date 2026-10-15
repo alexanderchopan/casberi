@@ -739,7 +739,7 @@ enum FollowPrune {
     /// Unwatching a wallet takes every row attributed to it — deliberately
     /// NOT scoped to one source. `walletAddress` is stamped by sixteen
     /// different files (plain transfers and approvals, but also Peer fills,
-    /// Privacy Pools deposits, Gnosis Pay spends, Aerodrome locks, Uniswap
+    /// Privacy Pools deposits, card spends, Aerodrome locks, Uniswap
     /// positions, EtherFi, Bitcoin, the Safe queue), so a source-scoped prune
     /// would leave most of an unwatched wallet's history sitting in the feed.
     ///

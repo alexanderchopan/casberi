@@ -37,9 +37,9 @@ import SwiftData
 /// ALSO runs a second market on Gnosis Chain (`Gnosis.sol.POOL`,
 /// 0x2Dae5307c5E3FD1CF5A72Cb6F698f915860607e0) — deliberately NOT added:
 /// Gnosis Chain isn't one of `WalletChainStore`'s five toggleable networks
-/// or `WalletApprovals`'s RPC table at all (the only precedent, `GnosisPay
-/// Bridge`, carries its own private RPC host list because of exactly this
-/// gap), so wiring it in is a new chain-support decision, not a pool-table
+/// or `WalletApprovals`'s RPC table at all (the only precedent,
+/// `GnosisChainRPC`, carries its own private RPC host list because of exactly
+/// this gap), so wiring it in is a new chain-support decision, not a pool-table
 /// addition — do that as its own piece of work, not folded in here. Base
 /// has NO SparkLend Pool (checked `Base.sol` — Spark's Base footprint is
 /// its PSM/vaults/Fluid integration, not a lending market), so it's simply

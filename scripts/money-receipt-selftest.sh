@@ -451,10 +451,10 @@ do {
     check(refund?.stamp == .refund, "and is stamped as one")
 
     // Onchain cards carry NO merchant — a ceiling the copy has always named.
-    let gnosis = MoneyReceipt.compose(card("Gnosis Pay", tags: ["Card"], merchant: nil))
-    check(gnosis?.subject == .absent(.merchantOffchain),
+    let onchain = MoneyReceipt.compose(card("ether.fi", tags: ["Card"], merchant: nil))
+    check(onchain?.subject == .absent(.merchantOffchain),
           "an onchain card with no merchant draws a VOID, not a monogram")
-    check(gnosis?.hue == .card, "and pours the card hue")
+    check(onchain?.hue == .card, "and pours the card hue")
     // Apple Wallet genuinely knows merchants, so a missing one there is an
     // ordinary gap and must NOT claim to be a designed absence.
     let appleNoMerchant = MoneyReceipt.compose(card("Apple Wallet", tags: ["Card"], merchant: nil))
