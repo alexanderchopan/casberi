@@ -8,6 +8,9 @@ import Testing
 /// person's Feed. Found walking a first run: the Instagram, TikTok and Threads
 /// demo notices ("tomas replied…") stood on the Feed of someone who had only
 /// connected Bluesky.
+/// `@MainActor`: `DemoSeedAll.rooms()` reaches main-only demo state
+/// (`flaggedMoves()` asserts it), and a test off it traps.
+@MainActor
 struct DemoTeardownTests {
 
     @Test func everyDemoRowWearsAPrefixExitRemoves() {

@@ -159,12 +159,8 @@ struct SettingsHome: View {
                         // the Wallet, a mail list in Life, a feed in Media. Under
                         // the box is the same list drawn again, its rows and
                         // their sheets, never a copy of what it holds (§1317).
-                        case .feeds:
-                            followsList
-                        case .newsletters:
-                            listsList
-                        case .subscriptions:
-                            plansList
+                        case .feeds, .newsletters, .subscriptions:
+                            EmptyView()
                         }
                     }
                 }
@@ -174,6 +170,8 @@ struct SettingsHome: View {
                 .listRowSeparator(.hidden)
             }
             if !casberiOpen, scope == .apps, appsSearching { appsByLetter }
+            // Following, Mail lists, Subscriptions: a cell per row (§1317).
+            kindLists
             // Room for the floating bar, as every room leaves it.
             Color.clear.frame(height: ShellMetrics.bottomInset - 40)
                 .listRowBackground(Color.clear)
@@ -887,7 +885,6 @@ struct SettingsHome: View {
     /// those cards tho").
     static let cardApps: [(app: String, cards: String)] = [
         ("Apple Wallet", "Apple Card, Apple Cash"),
-        ("Gnosis Pay", "Gnosis Pay card"),
         ("MetaMask Card", "MetaMask Card"),
         ("Plasma One", "Plasma One card"),
         ("ether.fi", "ether.fi Cash"),
@@ -1049,6 +1046,21 @@ struct SettingsHome: View {
 
     // MARK: - Following, mail lists, subscriptions (prd §1317)
 
+    /// The kind a count picked, when its rows are list rows of their own:
+    /// each row is its own cell, as in its room, so its hold raises its menu
+    /// (in one shared cell a hold read as a tap, measured 2026-10-15).
+    @ViewBuilder
+    private var kindLists: some View {
+        if !casberiOpen {
+            switch scope {
+            case .feeds:         followsList
+            case .newsletters:   listsList
+            case .subscriptions: plansList
+            default:             EmptyView()
+            }
+        }
+    }
+
     /// What you follow on the web and in Media, its room's rows (§1118).
     @ViewBuilder
     private var followsList: some View {
@@ -1056,18 +1068,13 @@ struct SettingsHome: View {
         let items = rooms.flatMap { room in
             FollowingReading.shared.items(for: room).filter { hit($0.name) }.map { (room, $0) }
         }
-        kindCard(SettingsScope.feeds.label, glyph: ScopeTileGlyph.feeds) {
-            if items.isEmpty {
-                empty(query.isEmpty ? "Follow a site, a channel or a show with the plus." : "Nothing matches.")
-            } else {
-                VStack(alignment: .leading, spacing: DS.Space.s2) {
-                    ForEach(items, id: \.1.id) { room, item in
-                        kindRow({ sheet = .follow(item.id, room) }) {
-                            FollowingRow(room: room, item: item)
-                        } menu: {
-                            StopMenus.follow(item, room, context: context, chrome: chrome)
-                        }
-                    }
+        kindGroup(SettingsScope.feeds.label, glyph: ScopeTileGlyph.feeds, empty: items.isEmpty,
+                  words: "Follow a site, a channel or a show with the plus.") {
+            ForEach(items, id: \.1.id) { room, item in
+                kindRow({ sheet = .follow(item.id, room) }) {
+                    FollowingRow(room: room, item: item)
+                } menu: {
+                    StopMenus.follow(item, room, context: context, chrome: chrome)
                 }
             }
         }
@@ -1077,18 +1084,13 @@ struct SettingsHome: View {
     @ViewBuilder
     private var listsList: some View {
         let items = MailSubscriptionsReading.shared.items.filter { hit($0.name) }
-        kindCard(SettingsScope.newsletters.label, glyph: ScopeTileGlyph.newsletters) {
-            if items.isEmpty {
-                empty(query.isEmpty ? "Lists that write to your mail show here." : "Nothing matches.")
-            } else {
-                VStack(alignment: .leading, spacing: DS.Space.s2) {
-                    ForEach(items) { item in
-                        kindRow({ sheet = .list(item.id) }) {
-                            MailSubscriptionRow(item: item, paid: FeedScreen.mailSubscriptionIsPaid(item))
-                        } menu: {
-                            StopMenus.list(item, context: context, chrome: chrome)
-                        }
-                    }
+        kindGroup(SettingsScope.newsletters.label, glyph: ScopeTileGlyph.newsletters, empty: items.isEmpty,
+                  words: "Lists that write to your mail show here.") {
+            ForEach(items) { item in
+                kindRow({ sheet = .list(item.id) }) {
+                    MailSubscriptionRow(item: item, paid: FeedScreen.mailSubscriptionIsPaid(item))
+                } menu: {
+                    StopMenus.list(item, context: context, chrome: chrome)
                 }
             }
         }
@@ -1098,40 +1100,56 @@ struct SettingsHome: View {
     @ViewBuilder
     private var plansList: some View {
         let items = SubscriptionsReading.shared.items.filter { hit($0.name) }
-        kindCard(SettingsScope.subscriptions.label, glyph: ScopeTileGlyph.subscriptions) {
-            if items.isEmpty {
-                empty(query.isEmpty ? "Track one with the plus." : "Nothing matches.")
-            } else {
-                VStack(alignment: .leading, spacing: DS.Space.s2) {
-                    ForEach(items) { item in
-                        kindRow({ sheet = .plan(item.id) }) {
-                            WalletSubscriptionRow(item: item, writes: FeedScreen.walletSubscriptionWrites(item))
-                        } menu: {
-                            StopMenus.plan(item, context: context, chrome: chrome)
-                        }
-                    }
+        kindGroup(SettingsScope.subscriptions.label, glyph: ScopeTileGlyph.subscriptions, empty: items.isEmpty,
+                  words: "Track one with the plus.") {
+            ForEach(items) { item in
+                kindRow({ sheet = .plan(item.id) }) {
+                    WalletSubscriptionRow(item: item, writes: FeedScreen.walletSubscriptionWrites(item))
+                } menu: {
+                    StopMenus.plan(item, context: context, chrome: chrome)
                 }
             }
         }
     }
 
-    /// One row of a kind's list: the row opens its sheet over Sources, and
-    /// a hold offers what its room's hold does.
+    /// The Feed's card for a kind's rows (`SectionPanelGroup`): the name on
+    /// the panel's top, a row per cell, the end cap; empty, its one clause.
+    private func kindGroup<Rows: View>(_ name: String, glyph: String, empty isEmpty: Bool,
+                                       words: LocalizedStringKey,
+                                       @ViewBuilder rows: () -> Rows) -> some View {
+        SectionPanelGroup {
+            SectionPanelName(name: name, glyph: glyph)
+        } rows: {
+            if isEmpty {
+                empty(query.isEmpty ? words : "Nothing matches.")
+                    .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.rowInset,
+                                              bottom: 0, trailing: DSRoomChassis.rowInset))
+                    .feedRowBackground()
+                    .listRowSeparator(.hidden)
+            } else {
+                rows()
+            }
+        }
+    }
+
+    /// One row of a kind's list, as its room draws it: the row opens its
+    /// sheet over Sources, and a hold offers what its room's hold does.
     private func kindRow<Row: View, Menu: View>(_ open: @escaping () -> Void,
                                                 @ViewBuilder row: () -> Row,
                                                 @ViewBuilder menu: () -> Menu) -> some View {
-        // A tap and a hold on one view, not a Button: several rows share one
-        // list cell here, and a Button there took the hold as a tap, so the
-        // menu never rose (measured 2026-10-15).
-        row()
-            .contentShape(Rectangle())
-            .onTapGesture {
-                DSHaptic.selection()
-                open()
-            }
-            .contextMenu { menu() }
-            .accessibilityAddTraits(.isButton)
-            .dsHover()
+        Button {
+            DSHaptic.selection()
+            open()
+        } label: {
+            row().contentShape(Rectangle())
+        }
+        .buttonStyle(RowPress())
+        .contextMenu { menu() }
+        .dsHover()
+        .listRowInsets(EdgeInsets(top: FeedScreen.rowAir, leading: DSRoomChassis.rowInset,
+                                  bottom: FeedScreen.rowAir, trailing: DSRoomChassis.rowInset))
+        .feedRowBackground()
+        .listRowSeparator(.hidden)
     }
 
     private func calendarRow(_ entry: CalendarSubscriptionStore.Entry) -> some View {
