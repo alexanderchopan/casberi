@@ -106,7 +106,18 @@ enum SpendingSource {
         // Every address a watched wallet's row was read for is yours, so a
         // send to one of them is a move, not spending.
         let own = Set(things.compactMap { $0.walletAddress?.lowercased() })
-        return things.compactMap { thing in
+        // A send that money came back for is a trade, not spending (`Spending.trades`).
+        let onchain = things.enumerated().compactMap { i, thing -> Spending.Leg? in
+            guard thing.source == SpendingReading.walletSource, thing.kind == .transaction,
+                  let wallet = thing.walletAddress?.lowercased(),
+                  let direction = thing.transferDirection,
+                  direction == "sent" || direction == "received" else { return nil }
+            return Spending.Leg(id: i, wallet: wallet, tx: thing.content, sent: direction == "sent",
+                                usd: thing.transferUSD.flatMap { $0.isFinite ? $0 : nil },
+                                at: thing.capturedAt)
+        }
+        let trades = Spending.trades(onchain)
+        return things.enumerated().compactMap { i, thing -> Raw? in
             guard thing.kind == .transaction else { return nil }
             switch thing.source {
             case AppleWalletBridge.sourceName, WalletCards.privacySource:
@@ -137,6 +148,7 @@ enum SpendingSource {
                 guard thing.transferDirection == "sent",
                       let usd = thing.transferUSD, usd.isFinite, usd > 0 else { return nil }
                 if thing.sourceRef?.hasPrefix("wallet:swap:") ?? false { return nil }
+                if trades.contains(i) { return nil }
                 if let to = thing.counterpartyAddress?.lowercased() {
                     if own.contains(to) { return nil }
                     // Machinery is not a place you spent at: a router or an
