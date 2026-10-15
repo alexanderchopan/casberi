@@ -624,7 +624,14 @@ private struct ReachCard: View {
     /// Services is the headline unit — it's the one a person can act on. A
     /// ledger holding only undeclared hosts has no services to count, so it
     /// falls back to hosts rather than printing "0 services" over six rows.
+    /// The noun follows the figure beside it, so a single request reads
+    /// "1 request" — and one request reaches one service, or one host.
     private var unit: String {
+        if reach.requests == 1 {
+            return reach.services > 0
+                ? String(localized: "request · 1 service")
+                : String(localized: "request · 1 host")
+        }
         if reach.services > 0 {
             return reach.services == 1
                 ? String(localized: "requests · 1 service")

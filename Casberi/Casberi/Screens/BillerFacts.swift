@@ -12,7 +12,7 @@ struct BillerFacts: View {
     var body: some View {
         let item = biller.item
         VStack(spacing: 0) {
-            if let cadence = cadenceWord(item.cadenceDays) {
+            if let cadence = Self.cadenceWord(item.cadenceDays) {
                 fact(String(localized: "Bills"), cadence)
             }
             if !biller.subscription, item.cadenceDays != nil {
@@ -43,7 +43,8 @@ struct BillerFacts: View {
         return biller.subscription ? String(localized: "Renews") : String(localized: "Expected")
     }
 
-    private func cadenceWord(_ days: Int?) -> String? {
+    /// How often it bills, in a word — never what (Addresses' row line too).
+    static func cadenceWord(_ days: Int?) -> String? {
         guard let days else { return nil }
         if days >= Subscriptions.yearlyFromDays { return String(localized: "Yearly") }
         if Subscriptions.monthlyDays.contains(days) { return String(localized: "Monthly") }

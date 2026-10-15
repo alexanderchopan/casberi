@@ -739,11 +739,25 @@ grep -q 'dsStaysUnderKeyboard()' "$TMP/main.nc" \
        echo "  its content the modifier cannot move it, and at its mount it strips the"; \
        echo "  scroll view's keyboard inset and drops the focused field's baseline under"; \
        echo "  the keyboard. The band collapses on keyboardUp instead (prd §865)."; fail=1; }
+# A SHEET'S STEP IS THE SEAT'S OTHER MOUNT (prd §1304): the same disc in the
+# same place, so it takes the same opt-out — exactly once, and on the disc in
+# its OVERLAY, never on the step's content (which would stop the field rising).
+STEP="Casberi/Casberi/Design/DSSheetStep.swift"
+strip_comments "$STEP" > "$TMP/step.nc"
+[ "$(grep -c 'dsStaysUnderKeyboard()' "$TMP/step.nc")" -le 1 ] \
+  || { echo "✗ DSSheetStep opts out of the keyboard more than once (prd §865, §1304)."; fail=1; }
+if grep -q 'dsStaysUnderKeyboard()' "$TMP/step.nc"; then
+  awk '/\.overlay\(alignment: \.bottomLeading\)/,/^                }/' "$TMP/step.nc" \
+    | grep -q 'dsStaysUnderKeyboard()' \
+    || { echo "✗ DSSheetStep's keyboard opt-out is not on the back disc in its overlay —"; \
+         echo "  on the step's content it stops the scroll view rising and the focused"; \
+         echo "  field lands under the keyboard (prd §865, §1304)."; fail=1; }
+fi
 # NOWHERE ELSE.
 stray=$(grep -rl 'dsStaysUnderKeyboard()' Casberi --include='*.swift' \
-        | grep -v -e "$DOCK" -e "$ROOTS" || true)
+        | grep -v -e "$DOCK" -e "$ROOTS" -e "$STEP" || true)
 [ -z "$stray" ] \
-  && : || { echo "✗ dsStaysUnderKeyboard has a caller outside the dock's own two files:"; \
+  && : || { echo "✗ dsStaysUnderKeyboard has a caller outside the seat's own files:"; \
        echo "$stray" | sed 's/^/    /'; \
        echo "  On a scroll view it stops the CONTENT rising, so the focused field lands"; \
        echo "  under the keyboard — the fix inverted, still compiling (prd §865)."; fail=1; }

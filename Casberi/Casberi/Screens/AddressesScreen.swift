@@ -604,12 +604,29 @@ struct AddressesSection: View {
     /// addresses they carry that the name does not already say (never a
     /// card ref, never the name itself), at most three. Nil draws one line.
     static func line(of contact: Contact) -> String? {
+        // A biller's newest thing is a charge, and its title carries the
+        // figure; an address draws how it bills, never money (prd §1106, §1113).
+        if contact.lead.kind == .biller { return billerLine(contact) }
         if let thing = contact.lastThing, !thing.isEmpty { return thing }
         let labels = contact.identities
             .filter { $0.kind != .contact
                    && fold($0.label) != fold(contact.name) && fold($0.body) != fold(contact.name) }
             .map(\.label)
         return labels.isEmpty ? nil : labels.prefix(3).joined(separator: " · ")
+    }
+
+    /// "Monthly · Renews October 29": the cadence and the next date, the
+    /// facts `BillerFacts` leads with, and no amount.
+    static func billerLine(_ contact: Contact) -> String? {
+        guard let biller = BillersSource.byKey[contact.lead.key] else { return nil }
+        var parts: [String] = []
+        if let cadence = BillerFacts.cadenceWord(biller.item.cadenceDays) { parts.append(cadence) }
+        if let next = biller.item.next {
+            let date = next.formatted(.dateTime.month(.wide).day())
+            parts.append(biller.subscription ? String(localized: "Renews \(date)")
+                                             : String(localized: "Next \(date)"))
+        }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 
     /// When this contact was SAVED by hand, in `LeadCycle`'s clock: a

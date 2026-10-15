@@ -136,14 +136,16 @@ final class JourneyTests: XCTestCase {
         w.finish()
     }
 
-    /// Follow a site from Sources' Following plus (§1292): its address typed,
-    /// Follow pressed, the feed read once. Refused in the demo, so it starts
-    /// on Sources after Exit. Needs the network: a site with no reachable feed
-    /// breaks the last step ("doesn't publish a feed").
+    /// Follow a site from Sources' Following plus (§1292): the plus lists
+    /// Media's follow-by-name apps since §1300, so RSS is picked, its address
+    /// typed, Follow pressed, the feed read once. Refused in the demo, so it
+    /// starts on Sources after Exit. Needs the network: a site with no
+    /// reachable feed breaks the last step ("doesn't publish a feed").
     @MainActor func testSite() {
         let w = Walk("site", launch: [], test: self)
         leaveDemo(w)
-        w.tap(w.el(.button, "label == %@", "Follow a site"), "Following plus")
+        w.tap(w.el(.button, "label == %@", "Follow something"), "Following plus")
+        w.tap(w.el(.button, "label BEGINSWITH %@", "RSS"), "RSS in the plus")
         w.focus(w.el(.textField, "placeholderValue == %@", "A site's address"), "site field")
         w.type("xkcd.com", "type a site")
         w.tap(w.el(.button, "label == %@", "Follow xkcd.com"), "Follow")
