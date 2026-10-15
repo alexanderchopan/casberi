@@ -1,6 +1,6 @@
 # Casberi
 
-> Casberi puts every subscription in one place. Everything you do is scattered across apps, wallets and agents; Casberi shows what each one is doing, all together or one at a time. Free on iPhone, iPad and Mac, with no account, and read on your device.
+> Everything you do is scattered across apps, agents, wallets. Casberi is an inbox for your apps and, soon, a rewards account for your subscriptions. Free on iPhone, iPad and Mac, with no account, and read on your device.
 
 Key facts:
 

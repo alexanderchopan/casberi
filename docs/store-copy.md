@@ -49,7 +49,7 @@ Still pending on iOS, refused with 409 on 2026-09-03 and already applied on Mac:
 
 ### iOS description (1,641 chars) — 2.0, no third-party product names (4.1(a), 2026-10-02)
 
-Every subscription, in one place. Everything you build, run and owe is scattered across apps, wallets and agents. Casberi shows what each one is doing, all together or one at a time, on your iPhone, iPad and Mac. No account, no servers, no tracking.
+Everything you do is scattered across apps, agents, wallets. Casberi is an inbox for your apps and, soon, a rewards account for your subscriptions. On your iPhone, iPad and Mac. No account, no servers, no tracking.
 
 Everything new, in one place.
 Home is your daily brief: a deploy that failed, a payment that landed, a meeting coming up, a note you saved. Newest first, in one feed.
@@ -105,7 +105,7 @@ menu-bar-and-keyboard line where the Apple Card sentence sits on iOS.
 
 ### Mac description (2,039 chars)
 
-Everything you build is scattered across apps, wallets and agents. Casberi is a productivity app for Mac that puts all your accounts in one private feed, so you read them in one place. No account, no servers, no tracking.
+Everything you do is scattered across apps, agents, wallets. Casberi is an inbox for your apps and, soon, a rewards account for your subscriptions. On your Mac, iPhone and iPad. No account, no servers, no tracking.
 
 TRY IT BEFORE YOU CONNECT ANYTHING
 One tap fills Casberi with sample data, so you can feel the whole app first.
@@ -162,6 +162,6 @@ Bugs
 
 Bankr answers about your onchain holdings and only answers. It never moves funds or makes transactions on your behalf.
 
-### Promotional text — both platforms (142 chars) — "Every subscription, in one place" (user, 2026-10-05); NOT YET APPLIED to 2.0.x (both read empty 2026-10-05)
+### Promotional text — both platforms (147 chars) — the line (user, 2026-10-15), APPLIED 2026-10-15 (iOS 3.0.5 live, 3.0.6 in review; Mac 3.0.3 live, 3.0.5 in review)
 
-Every subscription, in one place. See what every app, wallet and agent you use is doing, all together or one at a time. Free, with no account.
+Everything you do is scattered across apps, agents, wallets. Casberi is an inbox for your apps and, soon, a rewards account for your subscriptions.
