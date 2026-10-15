@@ -67,6 +67,13 @@ extension FeedScreen {
     /// the Testnets room stands on (it has no view across networks).
     var clearRoomPick: (() -> Void)? {
         guard roomPick != nil else { return nil }
+        // An open Notes folder: "Notes" goes back to the folders (prd §1312).
+        if Pinboard.isPinnedRoom(source), openNotesFolderName != nil {
+            return {
+                DSHaptic.selection()
+                withAnimation(DS.Motion.standard) { chrome.notesFolder = nil }
+            }
+        }
         if !Pinboard.isPinnedRoom(source), let rail = chrome.accountRail,
            rail.source == source || source == RoomAccounts.testnetsRoom,
            rail.slots.contains(where: { !$0.id.isEmpty && $0.isShowing(rail.scope) }) {
@@ -114,8 +121,9 @@ extension FeedScreen {
     /// network the Testnets room is showing. You's places name themselves
     /// (`youPlaceName`, §1156), so they pick nothing.
     var roomPick: String? {
-        // Notes names the app you picked from the tray (prd §1235).
-        if Pinboard.isPinnedRoom(source) { return selectedSeat?.name }
+        // Notes names the open folder (prd §1312), else the app you picked
+        // from the tray (prd §1235).
+        if Pinboard.isPinnedRoom(source) { return openNotesFolderName ?? selectedSeat?.name }
         if HomeScope.contains(source) { return nil }
         if let rail = chrome.accountRail,
            rail.source == source || source == RoomAccounts.testnetsRoom,
@@ -125,6 +133,13 @@ extension FeedScreen {
         if mergedMenuDraws, let seat = selectedSeat { return seat.name }
         if let host = hostRoom, host != source { return BridgeCatalog.seatName(forSource: source) }
         return nil
+    }
+
+    /// The open Notes folder's name as the title draws it (a vault folder
+    /// without its prefix), or nil when no folder is open.
+    var openNotesFolderName: String? {
+        guard chrome.notesScope == .folders, let open = chrome.notesFolder else { return nil }
+        return open.hasPrefix(Pinboard.vaultPrefix) ? String(open.dropFirst(Pinboard.vaultPrefix.count)) : open
     }
 
     #if DEBUG

@@ -66453,3 +66453,9 @@ The sheet sweep's audit (`sheet-sweep-audit.py`, §1308) lists every presentatio
 6. **Plasma joins the Wallet as a chain**, on by default and Zerion only (`plasma`, `onAlchemy: false`), Tempo's shape (§810).
 7. **No money on the Feed, in one test.** The Feed's quiet-day cover (`newestKept`) led with the first settlement because §1207's rule lived only in the day grouping; both read `FeedScreen.isFeedMoney` now. The lead card no longer draws rowless facts.
 8. **Not known, so never claimed:** which purchases a day covers, how a refund nets, and whether every card on the Safe is Plasma One rather than another Rain programme on Plasma. Not built: the weekly WXPL drop (an unnamed sender; 84% of its recipients are cardholders, which is not proof of cashback) and Plasma One USD (a Veda vault Zerion leaves unpriced).
+
+## §1312 — The top holds the title, and only the title presses (2026-10-15, user: "5. yes lets do it!", on the law-reversed review's Bend of §752)
+
+Amends §752 as it stands, not as it was written: the top already pressed in four places, every one the title or its line (the grey word in "Feed Wallet" §1203, the category's word that clears a pick §1262, the section pill §1212, a sheet's Done). So the rule reads: nothing that picks or scopes sits at the top, and the title is the one thing there that presses.
+
+The in-content back rows become the title's first word. Casberi's settings, opened inside Sources, read "Sources · Settings", and "Sources" goes back (the "‹ Sources" row under the box is deleted). An open Notes folder reads "Notes · Books", and "Notes" goes back to the folders (the folder's back row is deleted; its Share stays on the folder list's long press, §1021). Both through `DSRoomTitleRow(title:pick:onTitle:)`, as "Wallet · Privy" does.

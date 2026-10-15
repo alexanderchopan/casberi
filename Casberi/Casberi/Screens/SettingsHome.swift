@@ -75,7 +75,17 @@ struct SettingsHome: View {
         // Notes' and Markets' do on every screen, by construction.
         ScrollViewReader { proxy in
         List {
-            DSRoomTitleRow(title: casberiOpen ? String(localized: "Settings") : String(localized: "Sources"))
+            // THE TITLE IS THE WAY BACK (prd §1312): Casberi's settings
+            // open inside Sources, so the title says both, "Sources ·
+            // Settings", and "Sources" presses back, as the category's word
+            // does over an app's pick (§1262). The "‹ Sources" row it replaces
+            // stood in the content because §752 kept the top clear.
+            DSRoomTitleRow(title: String(localized: "Sources"),
+                           pick: casberiOpen ? String(localized: "Settings") : nil,
+                           onTitle: casberiOpen ? {
+                               DSHaptic.selection()
+                               withAnimation(DS.Motion.standard) { casberiOpen = false }
+                           } : nil)
                 .dsRoomTitleListRow(inSheet: route.sheet != nil)
             Section {
                 // Under the Settings tile the box is Casberi's own settings
@@ -109,10 +119,6 @@ struct SettingsHome: View {
                     }
                     if !casberiOpen, scope == .apps { orderWords }
                     if casberiOpen {
-                        // The way back, in the content (prd §752): Sources.
-                        DSDoorRow(icon: "chevron.left", title: Text("Sources")) {
-                            withAnimation(DS.Motion.standard) { casberiOpen = false }
-                        }
                         casberiOptions
                     } else {
                         switch scope {

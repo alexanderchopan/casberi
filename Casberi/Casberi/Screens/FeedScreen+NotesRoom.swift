@@ -122,9 +122,6 @@ extension FeedScreen {
         if folderList {
             noteFolderRows(visible)
         } else {
-            if chrome.notesScope == .folders, let open = chrome.notesFolder {
-                openFolderRow(open)
-            }
             if chrome.notesScope == .all {
                 // One plain list, no day dividers (§969); the Pinned group
                 // that led it (§983, §985) went with Pin (§1175).
@@ -251,28 +248,6 @@ extension FeedScreen {
                     .accessibilityHidden(true)
             }
             .frame(minHeight: DS.Hit.min)
-            .noteFolderRowChrome()
-        }
-    }
-
-    /// The open folder's name, under the tiles: the tap leads back to the
-    /// folder list, as the lit Folders tile does.
-    private func openFolderRow(_ open: String) -> some View {
-        let name = open.hasPrefix(Pinboard.vaultPrefix) ? String(open.dropFirst(Pinboard.vaultPrefix.count)) : open
-        return Section {
-            DSDoorRow(icon: "chevron.left", title: Text(verbatim: name)) {
-                withAnimation(DS.Motion.standard) { chrome.notesFolder = nil }
-            }
-            .accessibilityHint(Text("Back to folders"))
-            // The open folder's long press shares it too (prd §1021); its
-            // rows are the list under it.
-            .contextMenu {
-                Button {
-                    folderShare = FolderShareCard.Input(name: name, things: visible)
-                } label: {
-                    Label("Share", systemImage: "square.and.arrow.up")
-                }
-            }
             .noteFolderRowChrome()
         }
     }
