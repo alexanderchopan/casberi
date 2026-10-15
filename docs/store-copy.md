@@ -47,33 +47,30 @@ Still pending on iOS, refused with 409 on 2026-09-03 and already applied on Mac:
   a reviewer scans on an app that was just rejected under Guideline 3.1.5;
   reordering costs nothing, since keyword order does not affect search ranking)
 
-### iOS description (1,641 chars) — 2.0, no third-party product names (4.1(a), 2026-10-02)
+### iOS description (1547 chars) — LIVE on 3.0.6 (in review), read back 2026-10-15; the opening is the line (user, 2026-10-15)
 
-Everything you do is scattered across apps, agents, wallets. Casberi is an inbox for your apps and, soon, a rewards account for your subscriptions. On your iPhone, iPad and Mac. No account, no servers, no tracking.
+Everything you do is scattered across apps, agents, wallets. Casberi is an inbox for your apps and, soon, a rewards account for your subscriptions. It all comes together on your iPhone, iPad and Mac, with no account, no servers and no tracking.
 
-Everything new, in one place.
-Home is your daily brief: a deploy that failed, a payment that landed, a meeting coming up, a note you saved. Newest first, in one feed.
+Every subscription, in one place.
+See the newsletters and lists filling your inbox beside the software and services you pay for. What each one costs, when it renews, and which you haven't used in a month.
 
-Know what needs you.
-Work gathers issues, reviews, releases, incidents, payouts and disputes from the tools you build with. Deadlines rise to the top, soonest first. Pick one account to see only that.
+One wallet for all your money.
+Your wallets, exchanges, cards, savings and cash add up to one number. Follow any wallet address without a key or a signature. See what you hold, how it moved and what's at risk. Casberi can read, never spend.
 
-All your money, one number.
-Follow any wallet address without a key or a signature, alongside your exchanges, cards and bank balances. See what you hold, how it moved and what is at risk. Casberi can read, never spend.
+Follow the stocks behind your apps.
+Every app you use is made by a company. Markets shows its stock or token, with a heat map of your day and price alerts.
 
-What's next, soonest first.
-Day puts your calendar, to-dos and mail in one list that reads forward: what is next, then what already happened.
+Wallet, Work, Day, Life, Agents, Media, Social, Reading.
+More than 100 apps, sorted into the categories you live in. Apple's apps connect with one tap; other services with a read-only key, so Casberi can see but never change.
 
-Your notes, and everything you keep.
-Write, record or sketch a note. Share anything from any app and it lands instantly. Screenshots are searchable by the words inside them.
+One feed per category.
+Everything in a category lands in one feed, newest first: a deploy that failed, a payment that landed, a reply, a meeting coming up.
 
-Every category, one screen.
-Wallet, Work, Day, Life, Media, Social, Reading and Agents each open as one screen. Pick an account to narrow it, or see them all together.
-
-Connect with confidence.
-More than 100 apps. Apple's apps connect with one tap. Other services connect with a read-only key, so Casberi can see but never change.
+Or one app at a time.
+Pick one account from a category's menu to see only that.
 
 Try it first.
-Casberi opens with a demo you can browse. Clear it when you are ready and connect your own.
+Casberi opens with a demo you can browse. Clear it when you're ready and connect your own.
 
 Yours.
 No server, no account, no ads. Sync through your own iCloud. Export everything to one file, or delete it all for good.
@@ -103,32 +100,33 @@ differences in the copy below, each deliberate: no Apple Card block, "reading"
 where iOS says "workouts", no fitness in the category list, and a
 menu-bar-and-keyboard line where the Apple Card sentence sits on iOS.
 
-### Mac description (2,039 chars)
+### Mac description (1546 chars) — iOS 3.0.6's text for the next Mac version; "More than 90 apps" because four seats are not on the Mac (`unavailableOnMac`), NOT YET APPLIED
 
-Everything you do is scattered across apps, agents, wallets. Casberi is an inbox for your apps and, soon, a rewards account for your subscriptions. On your Mac, iPhone and iPad. No account, no servers, no tracking.
+Everything you do is scattered across apps, agents, wallets. Casberi is an inbox for your apps and, soon, a rewards account for your subscriptions. It all comes together on your Mac, iPhone and iPad, with no account, no servers and no tracking.
 
-TRY IT BEFORE YOU CONNECT ANYTHING
-One tap fills Casberi with sample data, so you can feel the whole app first.
+Every subscription, in one place.
+See the newsletters and lists filling your inbox beside the software and services you pay for. What each one costs, when it renews, and which you haven't used in a month.
 
-ONE FEED
-A deploy failing, an incident resolving, a dispute deadline, App Review's verdict — beside your posts, your reading and your notes. Read it all together, or one app at a time. No dashboard tour every morning. Every view answers to the menu bar and the keyboard; a row copies, previews with Space, and drags out to any app.
+One wallet for all your money.
+Your wallets, exchanges, cards, savings and cash add up to one number. Follow any wallet address without a key or a signature. See what you hold, how it moved and what's at risk. Casberi can read, never spend.
 
-SEE WHAT'S HAPPENING
-Every app opens shaped like what's in it: a calendar reads as an agenda, a wallet leads with its balance. Widgets carry your day, what's due and your wallet. Spotlight and Shortcuts find any thing by what it says.
+Follow the stocks behind your apps.
+Every app you use is made by a company. Markets shows its stock or token, with a heat map of your day and price alerts.
 
-CONNECT HONESTLY
-Over 90 apps across work, wallet, social, reading, notes, schedule, mail and storage. A tap for Apple apps. A read-only key for services. An import where there is no API. A pasted address for wallets, which can never trade or move funds. Never a password.
+Wallet, Work, Day, Life, Agents, Media, Social, Reading.
+More than 90 apps, sorted into the categories you live in. Apple's apps connect with one tap; other services with a read-only key, so Casberi can see but never change.
 
-CAPTURE WITHOUT FRICTION
-Share from any app and it lands instantly. Screenshots flow in on their own and become searchable by what is in them. Voice notes transcribe. Import your X, Instagram, TikTok and Snapchat archives, plus ChatGPT and Claude conversations, then search them like memory.
+One feed per category.
+Everything in a category lands in one feed, newest first: a deploy that failed, a payment that landed, a reply, a meeting coming up.
 
-YOUR OWN AGENT
-Bring your own key for Claude, ChatGPT, Gemini, Grok, Venice, OpenRouter, NEAR AI, Muse or Bankr. Open an agent to talk to it, and every conversation lands beside the history you imported from it. Your words go from this Mac straight to that provider, on your key. Nothing routes through us.
+Or one app at a time.
+Pick one account from a category's menu to see only that.
 
-YOURS, ACTUALLY
-There is no Casberi server and no backend at all. No account, no ads, no tracking. Optional sync through your own iCloud. Export everything to one file. Delete everything for real.
+Try it first.
+Casberi opens with a demo you can browse. Clear it when you're ready and connect your own.
 
-Your own things in one feed, with your own agent beside them.
+Yours.
+No server, no account, no ads. Sync through your own iCloud. Export everything to one file, or delete it all for good.
 
 ### Mac What's New — APPLIED 2026-09-08 on 1.0.15 (1,891 chars)
 
