@@ -512,7 +512,73 @@ enum SpotifyIngest {
             SpotlightIndex.index(things)
             context.saveHonestly()
         }
+        await healBylines(context: context)
         return things.count
+    }
+
+    // MARK: - Who made it (prd §1305)
+
+    /// How many landed rows one pass re-reads for their maker. Each costs
+    /// one page head, and the backlog drains over a few passes.
+    static let bylinesPerPass = 20
+    /// Pages already asked this launch and named nobody, so a head without
+    /// the tag is not asked again every sweep.
+    @MainActor private static var bylineMisses = Set<String>()
+
+    /// The rows landed before §1305 wear their kind word ("— Album") where
+    /// the maker now goes. The title is the ledger: a row named by its maker
+    /// no longer matches, so this never runs twice on one row.
+    @MainActor
+    private static func healBylines(context: ModelContext) async {
+        let descriptor = FetchDescriptor<Thing>(predicate: #Predicate { $0.source == "Spotify" })
+        guard let rows = try? context.fetch(descriptor) else { return }
+        let stale = rows.filter { thing in
+            guard thing.tags.contains("Played"), SpotifyPlays.hasByline(thing.content),
+                  !bylineMisses.contains(thing.content),
+                  let type = SpotifyPlays.pageType(thing.content),
+                  let line = TitleSeam.split(thing.title).line else { return false }
+            return line == SpotifyPlays.kindWord(type)
+        }
+        var healed: [Thing] = []
+        for thing in stale.prefix(bylinesPerPass) {
+            let page = thing.content
+            let byline = await byline(of: page)
+            // The read is an await, and the row can be deleted under it.
+            guard thing.isLive else { continue }
+            guard let byline else { bylineMisses.insert(page); continue }
+            thing.title = TitleSeam.join(TitleSeam.split(thing.title).name, byline)
+            healed.append(thing)
+        }
+        guard !healed.isEmpty else { return }
+        context.saveHonestly()
+        SpotlightIndex.index(healed)
+    }
+
+    /// Who made what an open.spotify.com page opens, off its `<head>` alone
+    /// (`SpotifyPlays.byline`). The page is ~300KB and its head ~18KB, so the
+    /// read stops at `</head>`, capped at 128KB. Keyless, the host the
+    /// oEmbed read already declares.
+    static func byline(of page: String) async -> String? {
+        guard SpotifyPlays.hasByline(page), let url = URL(string: page) else { return nil }
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 8
+        request.setValue(IngestSupport.safariUserAgent, forHTTPHeaderField: "User-Agent")
+        NetworkLedger.shared.record(request)
+        guard let (bytes, response) = try? await URLSession.shared.bytes(for: request),
+              (response as? HTTPURLResponse)?.statusCode == 200 else { return nil }
+        let close = Array("</head>".utf8)
+        var head = [UInt8]()
+        head.reserveCapacity(32_768)
+        do {
+            for try await byte in bytes {
+                head.append(byte)
+                if head.count >= 128_000 { break }
+                if byte == UInt8(ascii: ">"), head.count >= close.count,
+                   head.suffix(close.count).elementsEqual(close) { break }
+            }
+        } catch { return nil }
+        bytes.task.cancel()
+        return SpotifyPlays.byline(head: String(decoding: head, as: UTF8.self), page: page)
     }
 
     // MARK: - Yours: what you played, by album, playlist, artist or show
@@ -546,9 +612,12 @@ enum SpotifyIngest {
             }
             // Unnamed is unlanded: the next pass asks again.
             guard let name = named, !name.isEmpty else { continue }
+            // Who made it, where the page names them: "WORLD IN TWO — The
+            // Rain", the kind word only where it does not (prd §1305).
+            let byline = await byline(of: play.page)
             let thing = Thing(
                 kind: .link,
-                title: TitleSeam.join(name, play.kindWord),
+                title: TitleSeam.join(name, byline ?? play.kindWord),
                 content: play.page,
                 source: "Spotify",
                 capturedAt: play.playedAt,

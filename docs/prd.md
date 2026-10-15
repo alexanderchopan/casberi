@@ -66392,3 +66392,16 @@ The share tray (docs/social-spec.md section 3) gains **Post on X**, a row beside
 4. **Not touched**: the in-content back rows that swap a screen's own state rather than pop a push (Sources' "‹ Sources" row, a Notes folder, the starter-pack import, the devnet console).
 
 **Seen** on the simulator (iPhone 17 Pro, iOS 27): Sources › Following and Sources › Follow a wallet with no Back at the top and the disc at the seat's place; the disc pops, the edge swipe pops, a push after either works; Follow a wallet's keyboard covers the disc. **Not seen:** the Mac and iPad sheets, the composer's and Worth a look's pushes.
+
+## §1305
+
+**A Spotify play names who made it (amends §1158)** (user, 2026-10-14: of a shared album card reading "WORLD IN TWO / Album", "can you show the artist? i thought spotify downgraded that")
+
+1. **Spotify did not take the artist away; we never read it.** The rows are named by Spotify's oEmbed, which answers a title and a picture and has never carried `author_name` (measured again today). Spotify's 2024 Web API cut (related artists, recommendations, audio features) is a different door this seat does not use.
+2. **The page's own head names the maker, keylessly** (`SpotifyPlays.byline`, measured en/de/ja): an album's `og:description` leads with its artists, a song's `music:musician_description` lists every artist, a podcast's description names its publisher second. A row reads "WORLD IN TWO — The Rain"; the kind word ("Playlist", "Artist", "Liked Songs") stays the line only where no maker is named — a playlist's head names its owner by a user URL alone.
+3. **The head, never the page.** The page is ~300KB and its head ~20–30KB, so the read stops at `</head>`, capped at 128KB (`SpotifyIngest.byline(of:)`). Same host the oEmbed read declares; nothing new in `NetworkReach`.
+4. **Rows landed before are healed by their title**, twenty a pass (`healBylines`): a row whose line is still its kind word is re-read once a launch, so a named row is never asked again and a head without the tag is not asked every sweep.
+
+**Not built:** naming the maker on a Spotify link you saved yourself (`LinkTitle` → `OEmbed`), which would take the same read; a playlist's owner (a second request to the user page).
+
+**Seen:** the parser against five live pages (Drake; "Drake, Wizkid, Kyla"; Joe Rogan; Simon & Garfunkel; a playlist names nobody), `spotify-plays-selftest.sh`. **Not seen:** a signed-in Spotify sweep — no session is held here.

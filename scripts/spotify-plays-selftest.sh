@@ -43,6 +43,11 @@ grep -qF 'recently-played/v3/user/' "$BRIDGE" \
 for host in spclient.wg.spotify.com api-partner.spotify.com clienttoken.spotify.com; do
   grep -qF "\"$host\"" "$REACH" || { echo "✗ $host is not in Spotify's reach entry"; exit 1; }
 done
+# A row names who made it off the page head, and the rows landed before do too (§1305).
+grep -qF 'title: TitleSeam.join(name, byline ?? play.kindWord)' "$BRIDGE" \
+  || { echo "✗ your plays no longer name the artist (§1305)"; exit 1; }
+grep -qF 'await healBylines(context: context)' "$BRIDGE" \
+  || { echo "✗ the rows landed before §1305 are no longer healed"; exit 1; }
 echo "spotify-plays-selftest: drift guards ✓"
 
 TMP="$(mktemp -d)"
@@ -121,6 +126,43 @@ let tomorrow = SpotifyPlays.Play(uri: "spotify:album:a", page: "p", fixedName: n
 check(morning.ref == evening.ref, "the same album twice in a day is one row")
 check(morning.ref != tomorrow.ref, "the same album the next day is a new row")
 check(morning.ref.hasPrefix("spotify:played:spotify:album:a:"), "the ref names the context")
+
+// ── Who made it (prd §1305): heads as measured 2026-10-14 ────────────────
+func head(_ tags: [(String, String, String)]) -> String {
+    "<html><head><meta charSet=\"utf-8\"/>" + tags.map { "<meta \($0.0)=\"\($0.1)\" content=\"\($0.2)\"/>" }.joined() + "</head><body>"
+}
+let albumHead = head([("property", "og:title", "Bridge Over Troubled Water - Album by Simon &amp; Garfunkel | Spotify"),
+                      ("property", "og:description", "Simon &amp; Garfunkel · album · 1970 · 11 songs")])
+check(SpotifyPlays.byline(head: albumHead, page: "https://open.spotify.com/album/0JwHz5SSvpYWuuCNbtYZoV")
+      == "Simon & Garfunkel", "an album's artist leads its description, entities decoded")
+let germanAlbum = head([("property", "og:description", "Drake · Album · 2018 · 25 Songs")])
+check(SpotifyPlays.byline(head: germanAlbum, page: "https://open.spotify.com/album/1ATL5GLyefJaxhQzSPVrLX")
+      == "Drake", "a localized album head still leads with the artist")
+let songHead = head([("property", "og:description", "ザ・キラーズ · Hot Fuss · 曲 · 2004"),
+                     ("name", "music:musician_description", "Drake, Wizkid, Kyla")])
+check(SpotifyPlays.byline(head: songHead, page: "https://open.spotify.com/track/1zi7xx7UVEFkmKfv06H8x0")
+      == "Drake, Wizkid, Kyla", "a song names every artist from music:musician_description")
+let bareSong = head([("property", "og:description", "The Killers · Hot Fuss · Song · 2004")])
+check(SpotifyPlays.byline(head: bareSong, page: "https://open.spotify.com/track/3n3Ppam7vgaVa1iaRUc9Lp")
+      == "The Killers", "a song without the musician tag falls back to the description's lead")
+let showHead = head([("property", "og:description", "Podcast · Joe Rogan · The official podcast of comedian Joe Rogan.")])
+check(SpotifyPlays.byline(head: showHead, page: "https://open.spotify.com/show/4rOoJ6Egrf8K2IrywzwOMk")
+      == "Joe Rogan", "a podcast names its publisher second")
+let playlistHead = head([("property", "og:description", "The hottest 50. Cover: ASHE")])
+check(SpotifyPlays.byline(head: playlistHead, page: "https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M") == nil,
+      "a playlist's description is its blurb, never a maker")
+let stock = head([("property", "og:description", "Spotify is a digital music service that gives you access to millions of songs.")])
+check(SpotifyPlays.byline(head: stock, page: "https://open.spotify.com/album/x1") == nil,
+      "the web player's stock head names nobody")
+check(SpotifyPlays.byline(head: albumHead, page: "https://open.spotify.com.evil.example/album/x1") == nil,
+      "only Spotify's own host is read")
+check(SpotifyPlays.pageType("https://open.spotify.com/intl-de/album/abc") == "album",
+      "a localized page keeps its type")
+check(SpotifyPlays.hasByline("https://open.spotify.com/album/a") && !SpotifyPlays.hasByline("https://open.spotify.com/playlist/a")
+      && !SpotifyPlays.hasByline("https://open.spotify.com/collection/tracks"),
+      "only albums, songs and podcasts are asked")
+check(SpotifyPlays.kindWord("album") == "Album" && SpotifyPlays.kindWord("station") == nil,
+      "the kind word stays the line where no maker is named")
 
 print(failures == 0 ? "spotify-plays-selftest: all checks ✓" : "spotify-plays-selftest: \(failures) FAILED")
 exit(failures == 0 ? 0 : 1)

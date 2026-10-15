@@ -80,17 +80,89 @@ enum SpotifyPlays {
         let typed = parts.count >= 5 && parts[1] == "user" ? Array(parts[3...]) : Array(parts[1...])
         guard typed.count == 2, !typed[1].isEmpty,
               typed[1].allSatisfy({ $0.isLetter || $0.isNumber }) else { return nil }
-        let kind: String
-        switch typed[0] {
-        case "album": kind = String(localized: "Album")
-        case "playlist": kind = String(localized: "Playlist")
-        case "artist": kind = String(localized: "Artist")
-        case "show": kind = String(localized: "Podcast")
-        case "episode": kind = String(localized: "Episode")
-        case "track": kind = String(localized: "Song")
-        default: return nil
-        }
+        guard let kind = kindWord(typed[0]) else { return nil }
         return ("https://open.spotify.com/\(typed[0])/\(typed[1])", nil, kind)
+    }
+
+    /// The row's line for a Spotify type, where the page names no one.
+    static func kindWord(_ type: String) -> String? {
+        switch type {
+        case "album": String(localized: "Album")
+        case "playlist": String(localized: "Playlist")
+        case "artist": String(localized: "Artist")
+        case "show": String(localized: "Podcast")
+        case "episode": String(localized: "Episode")
+        case "track": String(localized: "Song")
+        default: nil
+        }
+    }
+
+    // MARK: - Who made it (prd §1305)
+
+    /// The type of an open.spotify.com page (`album`, `track`, …), or nil
+    /// for any other address.
+    static func pageType(_ page: String) -> String? {
+        guard let url = URL(string: page), url.host() == "open.spotify.com" else { return nil }
+        let path = url.pathComponents.filter { $0 != "/" && !$0.hasPrefix("intl-") }
+        return path.count == 2 ? path[0] : nil
+    }
+
+    /// The pages whose head names who made them: an album's and a song's
+    /// artists, a podcast's publisher. A playlist's head names its owner by
+    /// a user URL only, an artist's page is the artist, and an episode's head
+    /// is the web player's stock one (all measured 2026-10-14).
+    static func hasByline(_ page: String) -> Bool {
+        ["album", "track", "show"].contains(pageType(page) ?? "")
+    }
+
+    /// Who made what a page opens, read off its `<head>`. Spotify's oEmbed
+    /// answers a title and a picture and has never named an artist, but the
+    /// page itself does, keylessly, in every locale measured (en, de, ja):
+    ///
+    /// - album: `og:description` "Drake · album · 2018 · 25 songs" — the
+    ///   artists lead
+    /// - song: `music:musician_description` "Drake, Wizkid, Kyla", else the
+    ///   description's lead
+    /// - podcast: `og:description` "Podcast · Joe Rogan · The official…" —
+    ///   the publisher second
+    ///
+    /// nil for any other page, a head without the tag, or a blank name.
+    static func byline(head html: String, page: String) -> String? {
+        let parts = meta(html, "og:description")?
+            .components(separatedBy: " · ")
+            .map { $0.trimmingCharacters(in: .whitespaces) } ?? []
+        let name: String?
+        switch pageType(page) {
+        case "album": name = parts.count >= 2 ? parts[0] : nil
+        case "track": name = meta(html, "music:musician_description") ?? (parts.count >= 2 ? parts[0] : nil)
+        case "show": name = parts.count >= 3 ? parts[1] : nil
+        default: name = nil
+        }
+        guard let name = name?.trimmingCharacters(in: .whitespacesAndNewlines), !name.isEmpty
+        else { return nil }
+        return name
+    }
+
+    /// A `<meta property|name="key" content="…">` value, entities decoded.
+    static func meta(_ html: String, _ key: String) -> String? {
+        for attribute in ["property", "name"] {
+            let open = "\(attribute)=\"\(key)\" content=\""
+            guard let start = html.range(of: open),
+                  let end = html[start.upperBound...].firstIndex(of: "\"") else { continue }
+            let value = decode(String(html[start.upperBound..<end]))
+            return value.isEmpty ? nil : value
+        }
+        return nil
+    }
+
+    /// The entities a Spotify head writes ("Simon &amp; Garfunkel").
+    static func decode(_ s: String) -> String {
+        var out = s
+        for (entity, char) in [("&quot;", "\""), ("&#x27;", "'"), ("&#39;", "'"),
+                               ("&lt;", "<"), ("&gt;", ">"), ("&amp;", "&")] {
+            out = out.replacingOccurrences(of: entity, with: char)
+        }
+        return out
     }
 
     /// The local calendar day a play falls on, `yyyy-MM-dd`.
