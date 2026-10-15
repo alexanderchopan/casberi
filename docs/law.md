@@ -232,7 +232,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1452 of 1518 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1453 of 1519 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1196,7 +1196,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §856 — Muse's key check was wrong within the hour, and §854 said exactly where to look
 - §857 — MetaMask Card: the third card that settles onchain, and the file that named its addresses
 - §857b — MetaMask Card reads Base too, and Monad is measured, buildable and refused (part superseded by §860)
-- §858 — The onchain card head is SHARED, and the rename is the feature
+- §858 — The onchain card head is SHARED, and the rename is the feature (amended by §1311)
 - §859 — The demo stands every agent's room as a keyed one
 - §860 — MetaMask Card reads Monad through an index, and §857b asked the wrong door
 - §861 — An empty agent room still holds the lead slot
@@ -1209,7 +1209,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §866 — The feed's days are felt, and the floor draws the mark
 - §866a — The floor was drawing over a door to the rest of the corpus
 - §867 — The dial answers the hand
-- §868 — ether.fi Cash gets the head its two siblings have had, and the room it shares is why it needed more than a copy
+- §868 — ether.fi Cash gets the head its two siblings have had, and the room it shares is why it needed more than a copy (amended by §1311)
 - §869 — The icon colour setting is declined, and the light icon was the dark one
 - §870 — Quiet hours are deleted
 - §871 — "Your key" leaves Settings, because every other account is connected on its own page
@@ -1686,6 +1686,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1308 — The sheet sweep: every sheet opens and closes
 - §1309 — Four sheets nothing raised are deleted, view and model (retires §155's allocation tray and §447's holdings tail; amen…
 - §1310 — A source map's circle opens its app's feed, and the Themes lede is deleted (amends §1309, §384)
+- §1311 — Plasma One: the fourth card that settles onchain, read as the DAY it settles
 
 ## Dead rulings → what replaced them (generated)
 

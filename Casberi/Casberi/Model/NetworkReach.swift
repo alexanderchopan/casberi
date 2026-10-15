@@ -460,6 +460,13 @@ enum NetworkReach {
         // above, and the same shape: the seat only appears once a card spend
         // has been seen, but the read that discovers one runs for every
         // watched wallet.
+        // Plasma One (prd §1311) — Reach WALLET for MetaMask Card's reason: the
+        // read that discovers a card runs for every watched wallet. Two hosts,
+        // measured to agree exactly; `rpc.plasma.to` is Plasma's own.
+        Endpoint(service: "Plasma One",
+                 reach: .whenConnected(bridge: "Wallet"),
+                 purpose: "Reads what your Plasma One card settles on Plasma, for the wallets you follow — one total a day, and what the card still holds. The card settles once a day, so no purchase and no merchant ever reaches the chain. Read-only: nothing here spends, tops up, or changes a limit.",
+                 hosts: ["rpc.plasma.to", "9745.rpc.thirdweb.com"]),
         Endpoint(service: "MetaMask Card",
                  reach: .whenConnected(bridge: "Wallet"),
                  purpose: "Reads your MetaMask Card spending off the public chains it settles on — Linea, Base and Monad — for the wallets you follow. Monad is read through Alchemy's index, the same host the Wallet's own reads use. The amount, the token and the moment, which is all the chain carries; the merchant is never on the chain, so it is never read. Read-only: nothing here spends, tops up, or changes a card's spending cap.",

@@ -75,6 +75,7 @@ final class WalletChainStore {
         ("worldchain-mainnet", "World Chain"),
         ("arc-mainnet",      "Arc"),
         ("tempo-mainnet",    "Tempo"),
+        ("plasma-mainnet",   "Plasma"),
     ]
     static var allNetworkIDs: [String] { selectable.map(\.id) }
 
@@ -106,7 +107,8 @@ final class WalletChainStore {
                                     "opt-mainnet", "matic-mainnet",
                                     "hyperliquid-mainnet", "monad-mainnet",
                                     "solana-mainnet", "robinhood-mainnet",
-                                    "worldchain-mainnet", "arc-mainnet", "tempo-mainnet"]
+                                    "worldchain-mainnet", "arc-mainnet", "tempo-mainnet",
+                                    "plasma-mainnet"]
 
     private var selected: [String] { didSet { persist() } }
 
@@ -162,6 +164,9 @@ final class WalletChainStore {
         // Tempo (2026-09-17, prd §810, user: "lets add tempo on by default") —
         // free the same way: Zerion only, no Alchemy request.
         ("tempo-mainnet",       "wallet.chains.tempoSeeded.v1"),
+        // Plasma (2026-10-15, prd §1311) — free like Tempo: Zerion only, and a
+        // Plasma One cardholder's money (WXPL, Plasma One USD) lives there.
+        ("plasma-mainnet",      "wallet.chains.plasmaSeeded.v2"),
     ]
 
     /// **THE ONE RULE FOR "WHICH CHAINS ARE ON" (prd §827).** Pure: it reads

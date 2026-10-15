@@ -25,6 +25,7 @@ final class SpendingReading {
     static let cardSources: [String] = [
         AppleWalletBridge.sourceName, WalletCards.privacySource,
         GnosisPayBridge.sourceName, MetaMaskCardBridge.source, EtherFiCash.source,
+        PlasmaOneCard.source,
     ]
     static let walletSource = "Wallet"
     static var sources: [String] { cardSources + [WiseShape.source, walletSource] }
@@ -118,9 +119,11 @@ enum SpendingSource {
                 return Raw(place: merchant, amount: refund ? -abs(amount) : abs(amount),
                            currency: currency, at: thing.capturedAt,
                            card: SubscriptionsSource.payer(of: thing), app: thing.source)
-            case GnosisPayBridge.sourceName, MetaMaskCardBridge.source, EtherFiCash.source:
-                // The chain names no merchant for any of the three cards, so
-                // the card is the place.
+            case GnosisPayBridge.sourceName, MetaMaskCardBridge.source, EtherFiCash.source,
+                 PlasmaOneCard.source:
+                // The chain names no merchant for any of the four cards, so
+                // the card is the place. Plasma One's row is a day's total
+                // (prd §1311), which a sum by place adds exactly the same.
                 guard CardSpendSeat.isSpend(thing, seat: thing.source),
                       let amount = thing.priceValue, let currency = thing.priceCurrency else { return nil }
                 return Raw(place: thing.source, amount: abs(amount), currency: currency, at: thing.capturedAt,

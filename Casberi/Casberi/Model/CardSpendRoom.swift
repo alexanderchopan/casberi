@@ -160,6 +160,26 @@ struct CardSpendRoom: Equatable {
     /// contribute to no column. Counted for the same reason.
     let monthsOtherCurrency: Int
 
+    /// What one landed row IS (prd §1311). Three cards land a row per
+    /// purchase; Plasma One lands a row per DAY, because its card settles in
+    /// one daily batch and a tap writes nothing to the chain. The money sums
+    /// the same either way — only a COUNT changes meaning, so every count this
+    /// head draws is worded by the unit and never says "spend" of a day.
+    enum Unit: Equatable { case spend, settledDay }
+
+    var unit: Unit = .spend
+
+    /// What the card contract still holds, read off the chain at the last
+    /// sync — Plasma One's only (prd §1311). A fact about the card, never
+    /// added to a window's total: it is money not yet spent.
+    struct Balance: Equatable {
+        let amount: Double
+        let code: String
+        let at: Date
+    }
+
+    var balance: Balance? = nil
+
     var lead: Currency? { currencies.first }
     var spends: Int { currencies.reduce(0) { $0 + $1.spends } }
 
@@ -176,7 +196,8 @@ struct CardSpendRoom: Equatable {
     /// `now` is taken rather than read, so the harness and the probe compose
     /// against a fixed clock.
     static func compose(spends sightings: [Sighting], now: Date = .now,
-                        calendar: Calendar = .current) -> CardSpendRoom {
+                        calendar: Calendar = .current,
+                        unit: Unit = .spend) -> CardSpendRoom {
         let start = windowStart(now, back: 1, calendar: calendar)
         let priorStart = windowStart(now, back: 2, calendar: calendar)
 
@@ -245,7 +266,7 @@ struct CardSpendRoom: Equatable {
         return CardSpendRoom(currencies: ranked, unpriced: unpriced,
                              allTime: sightings.count, oldest: oldest, newest: newest,
                              months: strip.months, monthsHidden: strip.hidden,
-                             monthsOtherCurrency: strip.otherCurrency)
+                             monthsOtherCurrency: strip.otherCurrency, unit: unit)
     }
 
     /// The lead currency's trailing months, oldest first, plus what the cap and
@@ -420,8 +441,22 @@ struct CardSpendRoom: Equatable {
         amount.formatted(.currency(code: code).locale(locale))
     }
 
-    static func spendsLabel(_ count: Int) -> String {
-        count == 1 ? String(localized: "1 spend") : String(localized: "\(count) spends")
+    static func spendsLabel(_ count: Int, unit: Unit = .spend) -> String {
+        switch unit {
+        case .spend:
+            return count == 1 ? String(localized: "1 spend") : String(localized: "\(count) spends")
+        case .settledDay:
+            return count == 1 ? String(localized: "1 day of spending")
+                : String(localized: "\(count) days of spending")
+        }
+    }
+
+    /// "$3,850.84 on the card" — the balance as a note. `mask` as everywhere
+    /// here: hidden balances hide this one too (§374).
+    static func balanceLine(_ balance: Balance, locale: Locale = .current,
+                            mask: String? = nil) -> String {
+        let amount = mask ?? money(balance.amount, code: balance.code, locale: locale)
+        return String(localized: "\(amount) on the card")
     }
 
     /// The line beside a currency row: the money, then how many times.
@@ -436,10 +471,11 @@ struct CardSpendRoom: Equatable {
     /// The SPEND COUNT survives the mask on purpose: how many times you used
     /// the card is not a balance, and it is what is left to say once the
     /// amount is gone.
-    static func currencyLine(_ currency: Currency, locale: Locale = .current,
+    static func currencyLine(_ currency: Currency, unit: Unit = .spend,
+                             locale: Locale = .current,
                              mask: String? = nil) -> String {
         (mask ?? money(currency.total, code: currency.code, locale: locale))
-            + " · " + spendsLabel(currency.spends)
+            + " · " + spendsLabel(currency.spends, unit: unit)
     }
 
     /// The one line at the top of the card — the lead currency's money for the
@@ -505,16 +541,16 @@ struct CardSpendRoom: Equatable {
     static func note(_ room: CardSpendRoom) -> String {
         guard let lead = room.lead else {
             guard room.allTime > 0 else { return String(localized: "No settlements have landed") }
-            return String(localized: "\(spendsLabel(room.allTime)) before that")
+            return String(localized: "\(spendsLabel(room.allTime, unit: room.unit)) before that")
         }
         if let change = deltaLabel(lead) { return change }
         if lead.prior == nil {
             // Said out loud rather than left blank: "no comparison" and "no
             // change" look identical on a card, and only one of them is a
             // measurement.
-            return String(localized: "\(spendsLabel(lead.spends)) · not following long enough to compare")
+            return String(localized: "\(spendsLabel(lead.spends, unit: room.unit)) · not following long enough to compare")
         }
-        return String(localized: "\(spendsLabel(lead.spends)) · about the same as the 30 days before")
+        return String(localized: "\(spendsLabel(lead.spends, unit: room.unit)) · about the same as the 30 days before")
     }
 
     /// The quiet line at the foot: spends we could not price, and how long the
@@ -523,9 +559,21 @@ struct CardSpendRoom: Equatable {
     static func footnote(_ room: CardSpendRoom, now: Date = .now) -> String? {
         var parts: [String] = []
         if room.unpriced > 0 {
-            parts.append(room.unpriced == 1
-                         ? String(localized: "1 spend has no readable amount")
-                         : String(localized: "\(room.unpriced) spends have no readable amount"))
+            switch room.unit {
+            case .spend:
+                parts.append(room.unpriced == 1
+                             ? String(localized: "1 spend has no readable amount")
+                             : String(localized: "\(room.unpriced) spends have no readable amount"))
+            case .settledDay:
+                parts.append(room.unpriced == 1
+                             ? String(localized: "1 day has no readable amount")
+                             : String(localized: "\(room.unpriced) days have no readable amount"))
+            }
+        }
+        // The one thing a daily card must say that the controls cannot: the
+        // newest day on the card is yesterday's, not today's (prd §1311).
+        if room.unit == .settledDay {
+            parts.append(String(localized: "Settles once a day, so today's spending lands tomorrow"))
         }
         if let idle = idleNote(newest: room.newest, now: now) { parts.append(idle) }
         return parts.isEmpty ? nil : parts.joined(separator: " · ")

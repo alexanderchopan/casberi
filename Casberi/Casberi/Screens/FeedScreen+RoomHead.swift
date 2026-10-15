@@ -638,6 +638,11 @@ extension FeedScreen {
         case EtherFiCashRoomSource.source:
             return EtherFiCashRoomSource.compose(things: visible)
                 .map { .cardSpend($0, seat: EtherFiCashRoomSource.source) }
+        // The fourth (prd §1311): the same head, counting DAYS — its card
+        // settles once a day, so each row is a day's total.
+        case PlasmaOneRoomSource.source:
+            return PlasmaOneRoomSource.compose(things: visible)
+                .map { .cardSpend($0, seat: PlasmaOneRoomSource.source) }
         case RailgunRoomSource.source:
             return RailgunRoomSource.compose(things: visible).map { .railgun($0) }
         case PrivyHomeFeed.source:

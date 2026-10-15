@@ -922,6 +922,7 @@ struct SettingsHome: View {
         ("Apple Wallet", "Apple Card, Apple Cash"),
         ("Gnosis Pay", "Gnosis Pay card"),
         ("MetaMask Card", "MetaMask Card"),
+        ("Plasma One", "Plasma One card"),
         ("ether.fi", "ether.fi Cash"),
     ]
 

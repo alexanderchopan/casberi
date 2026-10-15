@@ -411,8 +411,13 @@ enum Corpus {
     /// total that silently left a card out, and a money-flow card leg that did
     /// the same. Found while giving ether.fi Cash the same head — the third
     /// seat was in the set and the second was not.
+    ///
+    /// Plasma One (prd §1311) joins as the fourth onchain card. Its rows are a
+    /// DAY's settlement rather than a purchase, which every total here sums
+    /// correctly — the money is the same money — and only a COUNT of them
+    /// would be wrong, which is why its head counts days.
     static let cardSpendSources: Set<String> =
-        ["Apple Wallet", "Gnosis Pay", "MetaMask Card", "ether.fi"]
+        ["Apple Wallet", "Gnosis Pay", "MetaMask Card", "ether.fi", "Plasma One"]
 
     /// The stable ref of a source's import receipt. Stable ON PURPOSE: a
     /// second import must UPDATE the one receipt rather than stack another,
@@ -589,12 +594,17 @@ struct ThingFact: Hashable, Identifiable, Sendable {
         /// before mailto (`MailSubscriptions.unsubscribeURL`). Drawn as the
         /// subscription sheet's door, never as a fact row.
         case unsubscribe
+        /// One part of a card's day (prd §1311): `value` the settlement's
+        /// `<tx>:<logIndex>`, so a day's row can take a second settlement
+        /// without ever counting one twice (`PlasmaOneSettlement.newParts`).
+        /// Never drawn as a fact row.
+        case settlement
 
         /// Kept on the thing for a reader elsewhere, never drawn as a label
         /// and value row (`FactRows` skips these).
         var isRowless: Bool {
             switch self {
-            case .reminder, .edited, .list, .unsubscribe: return true
+            case .reminder, .edited, .list, .unsubscribe, .settlement: return true
             default: return false
             }
         }

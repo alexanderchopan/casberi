@@ -1201,6 +1201,26 @@ let young = CardSpendRoom.compose(spends: [spend(10, "EUR", at: day(-2))], now: 
 check("a young room carries no prior at all", young.lead?.prior == nil)
 check("and says so out loud rather than leaving a blank",
       CardSpendRoom.note(young).contains("not following long enough to compare"))
+// Plasma One (prd §1311): a row is a DAY's settlement, so every count says
+// days and the footnote says the newest day is yesterday's — while the money
+// is summed exactly as a spend's would be.
+let daily = CardSpendRoom.compose(spends: [spend(10, "USD", at: day(-2)), spend(5.5, "USD", at: day(-1))],
+                                  now: t0, unit: .settledDay)
+check("a daily card counts days, never spends",
+      CardSpendRoom.note(daily).hasPrefix("2 days of spending")
+      && !CardSpendRoom.note(daily).contains("spends"))
+check("a daily card's money sums like any card's", abs((daily.lead?.total ?? 0) - 15.5) < 0.0001)
+check("a daily card says today's spending lands tomorrow",
+      (CardSpendRoom.footnote(daily, now: t0) ?? "").contains("Settles once a day"))
+check("a per-purchase card never says it",
+      !(CardSpendRoom.footnote(young, now: t0) ?? "").contains("Settles once a day"))
+var dailyHeld = daily
+dailyHeld.balance = .init(amount: 3850.84, code: "USD", at: t0)
+check("the balance is a line of its own, never in the window's total",
+      CardSpendRoom.balanceLine(dailyHeld.balance!, locale: Locale(identifier: "en_US")) == "$3,850.84 on the card"
+      && abs((dailyHeld.lead?.total ?? 0) - 15.5) < 0.0001)
+check("a hidden balance hides this one too",
+      CardSpendRoom.balanceLine(dailyHeld.balance!, mask: "••••") == "•••• on the card")
 
 print("")
 print("Gnosis Pay — the change")

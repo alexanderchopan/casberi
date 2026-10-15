@@ -2550,6 +2550,12 @@ harness "Notification pure-logic self-test" "notify self-test" "scripts/notify-s
 harness "Wallet section scopes" "wallet sections" "scripts/wallet-section-selftest.sh" "the wallet section self-test failed — run scripts/wallet-section-selftest.sh"
 harness "Wallet card roll" "wallet card roll" "scripts/wallet-card-roll-selftest.sh" "the wallet card roll self-test failed — run scripts/wallet-card-roll-selftest.sh"
 
+# Plasma One's settlement decoder (prd §1311), against a REAL batch of twenty
+# settlements: the amount read off the paired transfer, the hash that proves it,
+# the one recipient, a day keyed in UTC, and a part never counted twice. Each
+# failure draws an ordinary row with the wrong money.
+harness "Plasma One settlements" "plasma one" "scripts/plasma-one-selftest.sh" "the Plasma One settlement self-test failed — run scripts/plasma-one-selftest.sh"
+
 # The Wallet's Subscriptions tile (prd §1105): which repeating charges are
 # subscriptions, how a card charge, a bill and a hand-added one merge, and the
 # monthly total. Every failure is an ordinary-looking list with wrong numbers:

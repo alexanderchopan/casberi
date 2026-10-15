@@ -72,6 +72,7 @@ CARD_BRIDGES = [
     "GnosisPayBridge.swift",
     "EtherFiCash.swift",
     "MetaMaskCardBridge.swift",
+    "PlasmaOneCard.swift",
 ]
 
 SWEEPER = "WalletIngest.swift"

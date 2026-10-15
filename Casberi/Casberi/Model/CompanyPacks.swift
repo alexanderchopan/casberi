@@ -90,6 +90,7 @@ enum CompanyPacks {
             "Kraken": own("Kraken"),
             "L2BEAT": own("L2BEAT"),
             "MetaMask Card": own("Consensys"),
+            "Plasma One": coin("Plasma", "XPL", "xpl-plasma"),
             "NerdWallet": ("NerdWallet", .stock("NRDS")),
             "Peer": own("Peer"),
             "Privacy": own("Privacy.com"),

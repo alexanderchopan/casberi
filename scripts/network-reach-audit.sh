@@ -37,6 +37,9 @@ KNOWN_NON_REACH=(
   # makes this a permalink rather than a hidden read — a door here can never
   # stand in for an undisclosed fetch, because it is a different host.
   lineascan.build
+  # Plasma's explorer (prd §1311) — a Plasma One day row's permalink, opened in
+  # the person's browser; the seat's own hosts are disclosed in `NetworkReach`.
+  plasmascan.to
   # World's own page for its grant-claim app (prd §795) — the permalink a World
   # ID grant row opens in the person's browser. The app never fetches world.org.
   world.org

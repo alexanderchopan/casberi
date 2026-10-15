@@ -1452,6 +1452,14 @@ extension FeedScreen {
                 let symbol = WalletFlow.parseAmount(thing.transferAmount ?? "").symbol
                 if let address = thing.counterpartyAddress, !address.isEmpty {
                     WalletFace(address: address, size: DS.Face.list, circular: true)
+                } else if WalletCards.isSpend(thing) {
+                    // A card spend's subject is the CARD, not the coin it
+                    // settled in (prd §1311, user: "why is this showing
+                    // Tether"): the row is named for the card two lines down,
+                    // and a Tether mark beside "Plasma One" reads as Tether's
+                    // row. The token stays on the subline.
+                    BridgeIcon(name: BridgeCatalog.seatName(forSource: thing.source),
+                               size: DS.Face.list, circular: true)
                 } else if symbol.isEmpty, thing.source != "Wallet" {
                     // A folded app's row with no token (a Wise transfer, prd
                     // §1067) wears its app's mark, not a "?" monogram.

@@ -293,6 +293,8 @@ enum RoomAccounts {
              holder: nil, group: cards, mark: "MetaMask Card"),
         Seat(name: "ether.fi", source: EtherFiCash.source,
              holder: nil, group: cards, mark: "ether.fi"),
+        Seat(name: "Plasma One", source: PlasmaOneCard.source,
+             holder: nil, group: cards, mark: "Plasma One"),
         Seat(name: "Privacy", source: WalletCards.privacySource,
              holder: nil, group: cards, mark: "Privacy"),
         Seat(name: "CardPointers", source: CardPointersIngest.source,

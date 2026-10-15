@@ -410,6 +410,8 @@ enum BridgeRouter {
         // action, never the generic detail screen with its Remove button, and
         // Open to the room its rows land in.
         Row(offer: "MetaMask Card", id: "metamaskcard", destination: .wallet),
+        // Plasma One, the same for the same reasons (prd §1311).
+        Row(offer: "Plasma One", id: "plasmaone", destination: .wallet),
         // (Aave, Morpho, Uniswap, Hyperliquid and Aerodrome had rows here
         // until prd §515. They are not seats any more: all five land under
         // `source: "Wallet"`, so this table pointed Connect at the wallet
@@ -577,6 +579,7 @@ enum BridgeRouter {
         // is not a seat.
         case "gnosispay": GnosisPayBridge.sourceName
         case "metamaskcard": MetaMaskCardBridge.source
+        case "plasmaone": PlasmaOneCard.source
         case "etherfi":   EtherFiCash.source
         default: nil
         }

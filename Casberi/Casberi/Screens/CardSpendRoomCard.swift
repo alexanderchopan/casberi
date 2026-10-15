@@ -68,7 +68,10 @@ struct CardSpendRoomCard: View {
             door: room.lead.map { lead in
                 DSRoomChassis.Door(hint: Text("Opens this currency")) { onOpen(lead) }
             },
-            notes: [.note(CardSpendRoom.note(room))],
+            // Plasma One's balance rides as a second note (prd §1311): what
+            // the card can still spend, never part of the window's total.
+            notes: [.note(CardSpendRoom.note(room)),
+                    .note(room.balance.map { CardSpendRoom.balanceLine($0, mask: mask) })],
             footnotes: [.quiet(CardSpendRoom.footnote(room))]) {
             if !room.months.isEmpty {
                 DSRoomChassis.Block {
@@ -85,7 +88,7 @@ struct CardSpendRoomCard: View {
             if drawn.count > 1 {
                 DSRoomChassis.Block {
                     DSRoomChassis.Rows(items: drawn) { index, currency in
-                        let line = CardSpendRoom.currencyLine(currency, mask: mask)
+                        let line = CardSpendRoom.currencyLine(currency, unit: room.unit, mask: mask)
                         DSRoomChassis.Row(
                             title: currency.code,
                             glyph: "banknote",

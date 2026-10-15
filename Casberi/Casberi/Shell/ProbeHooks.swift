@@ -1370,6 +1370,18 @@ enum ProbeHooks {
                 NSLog("[Casberi] %@", line)
             }
         },
+        // `-plasmaOneRoomProbe` (prd §1311) — the fourth onchain card's head,
+        // composed with days as the unit and the card's balance alongside.
+        Hook(key: "plasmaOneRoomProbe") { _, context in
+            let source = PlasmaOneRoomSource.source
+            var descriptor = FetchDescriptor<Thing>(
+                predicate: #Predicate { $0.source == source })
+            descriptor.fetchLimit = 500
+            let rows = (try? context.fetch(descriptor)) ?? []
+            for line in PlasmaOneRoomSource.probeLines(things: rows) {
+                NSLog("[Casberi] %@", line)
+            }
+        },
         // `-etherfiCashRoomProbe` (prd §868) — the third onchain card's head.
         // It fetches the WHOLE room rather than the spends, on purpose: the
         // gap between the two is this seat's own cause of an empty head (the
@@ -4183,6 +4195,20 @@ enum ProbeHooks {
                       MetaMaskCardBridge.accountSummary())
             }
         },
+        // `-plasmaOneProbe <blocksBack|YES>` (prd §1311) — the Plasma One
+        // sweep across the watched wallets: each address's role on Plasma
+        // (card, account, plain key), the rows landed, one line each with its
+        // part count, and the card's balance. A block is ~1.0s, so 86,400 is a
+        // day; rpc.plasma.to ERRORS past 10,000 blocks, so a big spec only
+        // costs time.
+        Hook(key: "plasmaOneProbe") { spec, context in
+            Task { @MainActor in
+                let n = await PlasmaOneCard.probe(context: context, blocksBack: Int(spec))
+                NSLog("Plasma One probe: %@ landed; %@",
+                      n.map(String.init) ?? "FAILED",
+                      PlasmaOneCard.accountSummary())
+            }
+        },
         // `-bitcoinHalvingHorizon <days>` widens the window in which the
         // halving row is allowed to land. The real next halving is ~90,000
         // blocks out — well past the shipped 180-day horizon — so without
@@ -6873,6 +6899,10 @@ enum ProbeHooks {
         note("metamaskCardHead", source == MetaMaskCardRoomSource.source
              ? MetaMaskCardRoomSource.compose(things: things).map {
                 "\(CardSpendRoom.headline($0)) · \($0.currencies.count) currencies"
+             } : nil)
+        note("plasmaOneHead", source == PlasmaOneRoomSource.source
+             ? PlasmaOneRoomSource.compose(things: things).map {
+                "\(CardSpendRoom.headline($0)) · \(CardSpendRoom.note($0))"
              } : nil)
         // Privy (prd §803c) — composed from its store, not the rows.
         note("privyHead", source == PrivyHomeFeed.source

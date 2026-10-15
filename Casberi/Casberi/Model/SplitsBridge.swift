@@ -376,7 +376,7 @@ enum SplitsIngest {
         1: "eth-mainnet", 8453: "base-mainnet", 42161: "arb-mainnet", 10: "opt-mainnet",
         137: "matic-mainnet", 999: "hyperliquid-mainnet", 143: "monad-mainnet",
         480: "worldchain-mainnet", 5042: "arc-mainnet", 4217: "tempo-mainnet",
-        4663: "robinhood-mainnet",
+        4663: "robinhood-mainnet", 9745: "plasma-mainnet",
     ]
 
     @MainActor

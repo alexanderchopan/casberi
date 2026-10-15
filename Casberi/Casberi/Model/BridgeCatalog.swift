@@ -194,6 +194,12 @@ enum BridgeCatalog {
         // and Baanx so a search for either finds the seat that really reads it.
         Offer(name: "MetaMask Card", tagline: "", group: "Wallet", connectable: true,
               alsoReads: ["Linea", "Base", "Baanx"], needsSetup: true, added: day(2026, 9, 20)),
+        // Plasma One (prd §1311) — the fourth onchain card, Wallet for the same
+        // reason as the three: the money is in your own account until the card
+        // settles. `alsoReads` carries the chain and the issuer so a search for
+        // either finds the seat that reads them.
+        Offer(name: "Plasma One", tagline: "", group: "Wallet", connectable: true,
+              alsoReads: ["Plasma", "Rain", "USDT0"], needsSetup: true, added: day(2026, 10, 15)),
         // Apple Wallet (prd §313, 2026-08-06) — FinanceKit, granted by Apple
         // for this bundle id on request QVDBMBPMJU. Wallet group beside Gnosis
         // Pay for that seat's own reason: a card feed belongs with the cards.
@@ -1057,7 +1063,7 @@ enum BridgeSetupMode {
         // a seat that takes no key and cannot be connected at all — §83's dead
         // control, shipped by omission. `catalog-mode-audit.py` check F exists
         // for exactly this fallthrough and caught it.
-        "Gnosis Pay", "MetaMask Card", "ether.fi"]
+        "Gnosis Pay", "MetaMask Card", "ether.fi", "Plasma One"]
 
     /// A handle, an address, a feed URL — public reads, no key.
     static let noAccountSeats: Set<String> = ["Wallet", "Markets", "YouTube",

@@ -1088,7 +1088,9 @@ struct FeedLedeCard: View {
             out.append(.quote(quote))
         }
         if let excerpt { out.append(.excerpt(excerpt)) }
-        let facts = thing.factList
+        // Rowless facts are kept for a reader elsewhere and never drawn
+        // (`FactRows` skips them too): a mail's list key, a card day's parts.
+        let facts = thing.factList.filter { !$0.action.isRowless }
         if !facts.isEmpty { out.append(.facts(facts)) }
         // What it is FILED UNDER — the person's subjects, never the kind's own
         // type tag or a bridge's row labels (prd §1005). "Note  Node  Voucher"

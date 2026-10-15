@@ -173,6 +173,8 @@ final class WalletStore {
                 GnosisPayBridge.clearState(address: old.address)
                 // MetaMask Card's leave for the same reason (2026-09-20).
                 MetaMaskCardBridge.clearState(address: old.address)
+                // Plasma One's cursor, role, card and balance (prd §1311).
+                PlasmaOneCard.clearState(address: old.address)
                 // Morpho's activity cursor and risk buckets leave too
                 // (2026-07-21) — same back-fill reason, plus a stale
                 // "at-risk" bucket would suppress a real alert on re-watch.
@@ -240,6 +242,7 @@ final class WalletStore {
                     RailgunBridge.clearState(address: hex)
                     GnosisPayBridge.clearState(address: hex)
                     MetaMaskCardBridge.clearState(address: hex)
+                    PlasmaOneCard.clearState(address: hex)
                     MorphoDeFi.clearState(address: hex)
                     UniswapLiquidity.clearState(address: hex)
                     HyperliquidDeFi.clearState(address: hex)

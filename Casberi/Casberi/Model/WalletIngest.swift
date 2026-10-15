@@ -107,6 +107,16 @@ enum WalletIngest {
         // `explore.tempo.xyz` answers 200 on `/tx/` and `/address/`.
         Chain(network: "tempo-mainnet", explorer: "https://explore.tempo.xyz/tx/", symbol: "USD", displayName: "Tempo",
               onAlchemy: false),
+        // Plasma (2026-10-15, prd §1311) — the stablecoin L1 Plasma One's card
+        // settles on, chain id 9745 (`0x2611` from `eth_chainId` on
+        // `rpc.plasma.to`). XPL is its gas coin, 18 decimals. Zerion (`plasma`,
+        // `external_id` 0x2611) served positions (WXPL, Plasma One USD) and
+        // dated transactions for a live Plasma One account with the chain in
+        // the filter. Off Alchemy like Tempo: Alchemy serves Plasma's RPC but
+        // not its Transfers API. `plasmascan.to` answers 200 on `/tx/` and
+        // `/address/`.
+        Chain(network: "plasma-mainnet", explorer: "https://plasmascan.to/tx/", symbol: "XPL", displayName: "Plasma",
+              onAlchemy: false),
     ]
 
     /// The chains the Alchemy calls may name (see `Chain.onAlchemy`).
@@ -784,6 +794,14 @@ enum WalletIngest {
                                                               addresses: evmAddresses,
                                                               existing: existing)
         added += metamaskCardAdded ?? 0
+        // Plasma One rides the same pass (prd §1311) — the fourth onchain
+        // card, and the first that settles in a daily batch: one row a day per
+        // card. A plain key costs one `eth_getCode`, re-asked daily, and no
+        // scan; only an account with code on Plasma is walked.
+        let plasmaOneAdded = await PlasmaOneCard.sync(context: context,
+                                                      addresses: evmAddresses,
+                                                      existing: existing)
+        added += plasmaOneAdded ?? 0
         // Rows landed before this seat had a room of its own move ONCE, here,
         // so the first sync after updating leaves nothing behind in Wallet
         // (prd §311). Cheap and self-terminating — see `moveToOwnRoomOnce`.

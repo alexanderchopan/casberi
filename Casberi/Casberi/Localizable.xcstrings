@@ -1217,6 +1217,34 @@
         }
       }
     },
+    "%@ on the card" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ en la tarjeta"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "カード残高 %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "카드에 %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "卡内余额 %@"
+          }
+        }
+      }
+    },
     "%@ on your cards in %lld days" : {
       "localizations" : {
         "es" : {
@@ -2143,6 +2171,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "%lld 个也通过邮件"
+          }
+        }
+      }
+    },
+    "%lld days have no readable amount" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld días no tienen un importe legible"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld 日分は金額を読み取れません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld일치는 금액을 읽을 수 없음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld 天的金额无法读取"
+          }
+        }
+      }
+    },
+    "%lld days of spending" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld días de gastos"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld 日分の支出"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld일치 지출"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld 天的消费"
           }
         }
       }
@@ -3179,6 +3263,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "1 个对话"
+          }
+        }
+      }
+    },
+    "1 day has no readable amount" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1 día no tiene un importe legible"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1 日分は金額を読み取れません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1일치는 금액을 읽을 수 없음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1 天的金额无法读取"
+          }
+        }
+      }
+    },
+    "1 day of spending" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1 día de gastos"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1 日分の支出"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1일치 지출"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1 天的消费"
           }
         }
       }
@@ -10493,6 +10633,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "设置、数据和通知"
+          }
+        }
+      }
+    },
+    "Settled %@ of card spending" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Se liquidaron %@ de gastos con tarjeta"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "カード利用 %@ を精算"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "카드 사용 %@ 정산됨"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已结算 %@ 的刷卡消费"
+          }
+        }
+      }
+    },
+    "Settles once a day, so today's spending lands tomorrow" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Se liquida una vez al día, así que lo de hoy aparece mañana"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1 日 1 回の精算のため、今日の支出は明日表示されます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "하루 한 번 정산되므로 오늘 지출은 내일 표시됩니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "每天结算一次，今天的消费明天才会显示"
           }
         }
       }

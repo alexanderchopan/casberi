@@ -250,6 +250,42 @@ left standing here) nor the spend prefix the new head filters on.
 seat's too — the merchant never reaches the chain for any of the three cards),
 no refund arithmetic, and no comparison against the ~6-day backfill window.
 
+## Plasma One, the fourth onchain card — a row is a DAY (prd §1311, 2026-10-15)
+
+`-plasmaOneProbe <blocksBack|YES>` — the sweep over the watched wallets. Logs
+each address's role on Plasma (`card`, `account`, `key`), one
+`plasmaOneWalk|` line per walk (host, windows answered, settlements, blocks),
+every row with its part count, and the card's balance. A block is ~1.0s, so
+86,400 is a day. Pair with `-walletAddress <a Plasma One account>`.
+`-plasmaOneRoomProbe YES` — the head's reading off the real `compose`.
+
+**Measured 2026-10-15, and verified on screen the same day** against a live
+cardholder: six days landed with one probe, each equal to the chain's own
+settlements summed (10-15: $246.31 + $168.91 = $415.22; 10-11: $20.84 +
+$25,495.55), the balance $3,850.84, a 600,000-block rewind landed one more day
+(10-09) and added nothing twice. The head drew "$27,736.59 · 7 days of
+spending · $3,850.84 on the card".
+
+**What the probe separates.** An empty room has four causes and only the
+last is a bug: the watched address is a plain key (`key`: Plasma One accounts
+are smart accounts, so a key holds no card); the account has never settled
+(no card, or a card never used); the walk is still catching up (a wallet
+behind walks FORWARD, 60 windows a pass, never jumping to the head); or a
+settlement was refused (`plasmaOne| N settlement(s) refused` — a transfer that
+did not pair or a hash that disagreed).
+
+**Traps, each measured:**
+- The amount is not in the event in the clear: topic3 is the HASH of
+  `(USDT0, amount)`. Read the transfer at `logIndex − 1` and check it; never
+  decode topic3.
+- `rpc.plasma.to` allows 25 requests a second, including inside a batch: a
+  batch of 61 lost 36 calls. Batches of 20, a second apart.
+- Routescan's Etherscan API answers `status 1, []` over a range holding a known
+  settlement. Do not add it as a host.
+- The Feed's quiet-day cover took the first settlement because §1207's "no
+  money on the Feed" lived only in the day grouping; `FeedScreen.isFeedMoney` is
+  now the one test for both.
+
 ## Safe's keyless quota is one shared pool, and the lever was a different host (prd §789 · §789a · §789b, 2026-09-17)
 
 **Safe's keyless quota is ONE shared pool, it is empty, and a REAL KEY IS SERVED AS ANONYMOUS (prd §789 · §789a, measured twice).** A refused read is never "nothing": every tx-service GET goes through `SafeServiceGate` (`ok`/`missing`/`throttled`/`unreachable`, a 429 shuts the gate until `x-ratelimit-reset` and persists it), and a surface may say "nothing" only about a pass that answered (`mark()` then `health(since:)`, `safe-gate-selftest.sh`). A real key, no key and `Bearer not-a-real-key` all answered 429 with the keyless tier's own `x-ratelimit-limit: 5000`, so **the header is never read while the pool is empty** and **`shippedKey` stays empty with `NetworkReach` still saying keyless** — the key is unproven, not dead (only a 401 would say dead, and the edge sends none); retry it when the pool reopens and ask whether `x-ratelimit-limit` is still 5000, and prove any key with `-safeKey "$(scripts/dev-keys.sh get safe)"` before filling the constant. **The lever was not fewer reads — it was a different host (§789b, 2026-09-17).** Safe's own Client Gateway (`safe-client.safe.global`, what `app.safe.global` reads) answers all six chains keyless, publishes no `x-ratelimit` header, declares no auth scheme in its own OpenAPI, and serves ALL FOUR reads — including the owner lookup, which has no on-chain equivalent (`AddedOwner` is unindexed before Safe 1.4.1). Cutting our own calls could never have helped: the 5,000 is shared with every keyless caller on earth, so the pool is drained by strangers. Its only cap is a per-IP BURST (~60 per short window, refilling in ~20s), which is why `SafeServiceLedger.defaultClosed` is 60s and not 15min, and why the queue's per-transaction detail reads are sequential. `SafeGatewayShape` is the whole translation and the four silent traps are named there (a wrapped address — except `gasToken`; a `null` guard; millisecond times; furniture rows in the queued list); `safe-gateway-selftest.sh` drives it off measured fixtures. The one WRITE stays on `api.safe.global`, which is where a signature has to land

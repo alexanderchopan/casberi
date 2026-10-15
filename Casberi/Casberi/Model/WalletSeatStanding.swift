@@ -58,6 +58,8 @@ enum WalletSeatStanding {
         // a statement about what we found.
         Seat(id: "metamaskcard", thing: "MetaMask Card"),
         Seat(id: "etherfi",      thing: "ether.fi stake or card"),
+        // A CARD, for MetaMask Card's reason above (prd §1311).
+        Seat(id: "plasmaone",    thing: "Plasma One card"),
     ]
 
     static func seat(id: String) -> Seat? { seats.first { $0.id == id } }

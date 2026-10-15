@@ -109,7 +109,7 @@ extension FeedScreen {
                     // second copy, and the cover never leads with one.
                     ? dayGroups(visible.filter {
                         $0.isLive && Self.groupingCalendar.isDateInToday($0.capturedAt)
-                            && BridgeCatalog.category(forSource: $0.source) != CategoryFold.walletCategory
+                            && !Self.isFeedMoney($0)
                     })
                     : recentDaysThenCoarseTail(visible)
             }
@@ -410,10 +410,20 @@ extension FeedScreen {
     /// The newest live thing that has already happened — Home's cover on a
     /// day with nothing in it yet (prd §1136i). `.isLive` before the date
     /// read, the dead-Thing rule.
+    ///
+    /// Money is kept out here too (prd §1207 item 10): this is the Feed's
+    /// cover on a quiet day, and it led with a Plasma One settlement the day
+    /// the seat landed because the rule lived only in the day grouping above.
     func newestKept(_ visible: [Thing]) -> Thing? {
         let now = Date.now
-        return visible.lazy.filter { $0.isLive && $0.capturedAt <= now }
+        return visible.lazy.filter { $0.isLive && $0.capturedAt <= now && !Self.isFeedMoney($0) }
             .max { $0.capturedAt < $1.capturedAt }
+    }
+
+    /// NO MONEY ON THE FEED (prd §1207 item 10) — the ONE test, read by the
+    /// day grouping and the quiet-day cover alike, so the two cannot drift.
+    static func isFeedMoney(_ thing: Thing) -> Bool {
+        BridgeCatalog.category(forSource: thing.source) == CategoryFold.walletCategory
     }
 
     /// Home's box (prd §1136): today's cover, or — when today has none, or

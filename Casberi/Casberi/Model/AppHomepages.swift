@@ -23,6 +23,7 @@ enum AppHomepages {
         "CardPointers": "cardpointers.com",
         "Gnosis Pay": "gnosispay.com",
         "MetaMask Card": "metamask.io",
+        "Plasma One": "plasma.to",
         "Acorns": "acorns.com",
         "Rocket Money": "rocketmoney.com",
         "Privy": "privy.io",

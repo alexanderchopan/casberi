@@ -167,6 +167,9 @@ enum BrandMark {
     /// and Lido's mark is a different thing from Ethereum's.
     private static let alias: [String: String] = [
         "usdbc": "usdc", "usdce": "usdc", "usdte": "usdt",
+        // USDT0 is Tether's own omnichain USDT (LayerZero OFT) — Plasma One's
+        // card money (prd §1311), and a dollar like the rest of the family.
+        "usdt0": "usdt",
         "cbbtc": "wbtc", "btc": "wbtc", "sats": "wbtc",
         "wsol": "sol", "msol": "sol", "jitosol": "sol",
         "pol": "matic",

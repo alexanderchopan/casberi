@@ -190,6 +190,9 @@ enum DemoSeedAll {
                               // so `MetaMaskCardRoomSource` counts them; the
                               // `demo` infix keeps teardown off a real swipe.
                               "metamaskcard:spend:demo",
+                              // Plasma One's demo days (prd §1311) wear the
+                              // real `plasmaone:day:` shape for the same reason.
+                              "plasmaone:day:demo",
                               // The ether.fi Cash head's demo spends (prd §868),
                               // for the same reason one line up: they left the
                               // blanket `demo:` family to wear the real seat's
@@ -3640,6 +3643,33 @@ enum DemoSeedAll {
                 t.walletAddress = demoWallet
             }
         }
+        // Plasma One, as the shipped bridge writes it (prd §1311): ONE ROW A
+        // DAY, titled as a settlement and never as a purchase, USDT0 in
+        // dollars, the day's parts kept as rowless facts so the demo row is
+        // the real row's shape down to what a grown day holds.
+        let plasmaOne: [(Double, Double, Int)] = [
+            (246.31, 0, 2), (58.22, 1, 1), (412.90, 3, 2), (19.00, 5, 1),
+            (133.75, 9, 1), (71.40, 15, 2), (26.11, 22, 1), (305.60, 38, 1),
+        ]
+        out += plasmaOne.enumerated().map { i, d in
+            row(.transaction,
+                "Settled $\(String(format: "%.2f", d.0)) of card spending",
+                source: "Plasma One",
+                ref: "plasmaone:day:demo\(i)", days: d.1, hour: 12,
+                content: "https://plasmascan.to/tx/0xdemo\(i)") { t in
+                t.priceValue = d.0
+                t.priceCurrency = "USD"
+                t.transferAmount = "\(String(format: "%.2f", d.0)) USDT0"
+                t.transferDirection = "sent"
+                t.walletAddress = demoWallet
+                let at = Int(t.capturedAt.timeIntervalSince1970)
+                let share = (d.0 / Double(d.2) * 100).rounded() / 100
+                t.facts = (0..<d.2).map { p in
+                    let amount = p == d.2 - 1 ? ((d.0 - share * Double(d.2 - 1)) * 100).rounded() / 100 : share
+                    return ThingFact("Settlement", "0xdemo\(i):\(p)|\(amount)|\(at)", .settlement).encoded
+                }
+            }
+        }
         // ether.fi Cash, read exactly as the shipped bridge writes it — the
         // same correction MetaMask Card's rows above carry, applied to the
         // seat that still had the inherited liberty (prd §868). The merchant
@@ -5437,7 +5467,7 @@ enum DemoSeedAll {
         GnosisPayBridge.evidence, WalletDeFi.evidence, MorphoDeFi.evidence,
         HyperliquidDeFi.evidence, AerodromeDeFi.evidence, UniswapLiquidity.evidence,
         EtherFiUnstake.evidence, EtherFiCash.evidence,
-        MetaMaskCardBridge.evidence,
+        MetaMaskCardBridge.evidence, PlasmaOneCard.evidence,
     ]
 
     // MARK: - Seats
@@ -5499,6 +5529,7 @@ enum DemoSeedAll {
         ("Gnosis Pay", "Rides your wallet", "Reads what the card settled onchain."),
         ("MetaMask Card", "Rides your wallet", "Reads what the card settled onchain."),
         ("ether.fi", "Rides your wallet", "Reads what the card settled onchain."),
+        ("Plasma One", "Rides your wallet", "Reads what the card settled each day."),
         // (Aave, Morpho, Uniswap, Hyperliquid and Aerodrome were claimed here
         // from §484 until §515 retired their seats. They are not seats any
         // more — all five land under `source: "Wallet"`, so their icons were

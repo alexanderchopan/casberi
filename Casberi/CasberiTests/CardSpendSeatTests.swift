@@ -68,10 +68,11 @@ struct CardSpendSeatTests {
 
     // MARK: - The rooms that hold only the card
 
-    /// Stated rather than assumed: these two seats own their rooms outright,
-    /// so every row is a spend whatever its ref looks like.
+    /// Stated rather than assumed: these seats own their rooms outright, so
+    /// every row is a spend whatever its ref looks like — Plasma One's a day's
+    /// settlement (prd §1311), which every total sums the same.
     @Test func aSeatThatOwnsItsRoomAcceptsEveryRow() {
-        for seat in [GnosisPayBridge.sourceName, MetaMaskCardBridge.source] {
+        for seat in [GnosisPayBridge.sourceName, MetaMaskCardBridge.source, PlasmaOneCard.source] {
             #expect(CardSpendSeat.isSpend(Self.row(source: seat, ref: "anything:1"),
                                           seat: seat))
             #expect(CardSpendSeat.isSpend(Self.row(source: seat, ref: nil), seat: seat))
@@ -88,6 +89,7 @@ struct CardSpendSeatTests {
         let gnosis = Self.row(source: GnosisPayBridge.sourceName, ref: "gnosispay:spend:1")
         #expect(!CardSpendSeat.isSpend(gnosis, seat: EtherFiCash.source))
         #expect(!CardSpendSeat.isSpend(gnosis, seat: MetaMaskCardBridge.source))
+        #expect(!CardSpendSeat.isSpend(gnosis, seat: PlasmaOneCard.source))
 
         let etherfi = Self.row(source: EtherFiCash.source,
                                ref: EtherFiCash.spendRefPrefix + "0xabc:1")

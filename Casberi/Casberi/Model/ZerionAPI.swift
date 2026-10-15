@@ -76,6 +76,11 @@ enum ZerionAPI {
         // `/v1/chains/`; positions (USDC, pathUSD on a live Tempo wallet) and
         // transactions (dated) both came back with it in the chain filter.
         "tempo": "tempo-mainnet",
+        // 2026-10-15 (prd §1311). `plasma` (`external_id` 0x2611 = 9745), read
+        // off `/v1/chains/plasma` (positions and transactions both supported);
+        // a live Plasma One account answered positions (WXPL priced, Plasma One
+        // USD unpriced) and dated USDT0 transactions with it in the filter.
+        "plasma": "plasma-mainnet",
     ]
 
     /// One fungible holding as Zerion hands it over — already decimal-adjusted

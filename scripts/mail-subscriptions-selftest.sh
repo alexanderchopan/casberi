@@ -291,7 +291,7 @@ grep -q "WalletCalendar(marks: Self.marks(items), looksBack: true)" Casberi/Casb
   || fail "drift: Day's box is no longer the Wallet's calendar looking back (prd §1117)"
 grep -q "MailSubscriptionStore.shared.remove(address: address)" Casberi/Casberi/Screens/MailSubscriptionViews.swift \
   || fail "drift: an added sender's sheet no longer stops tracking it (prd §1115)"
-grep -q "case .reminder, .edited, .list, .unsubscribe: return true" Casberi/Shared/Thing.swift \
+grep -Eq 'case \.reminder, \.edited, \.list, \.unsubscribe(, \.[a-z]+)*: return true' Casberi/Shared/Thing.swift \
   || fail "drift: a list's facts are no longer rowless — the mail's sheet prints its key and its link"
 grep -q "MailIngest.readListHeaders(provider, context: context, force: force)" Casberi/Casberi/Model/BridgeRefresh.swift \
   || fail "drift: the sweep no longer reads the list headers of mail landed before ingest kept them (prd §1160)"

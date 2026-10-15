@@ -244,7 +244,7 @@ enum BridgeGlyph {
         // they are the SAME OBJECT — a card whose swipe settles onchain — so a
         // distinct glyph for each would say they were different kinds of thing
         // and make the wallet group read as three unrelated products.
-        case "metamask card": return "creditcard"
+        case "metamask card", "plasma one": return "creditcard"
         // A multisig is a signature queue — the same mark `WalletWarning.Kind`
         // already uses for a pending Safe signature, so the catalog tile and
         // the Worth-a-look row can't pick different glyphs for one thing.

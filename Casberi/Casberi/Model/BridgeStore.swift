@@ -234,6 +234,14 @@ final class BridgeStore {
                    can: ["Reads your MetaMask Card spending from Linea, for the wallets you follow.",
                          "Amounts and timing only — the merchant never reaches the chain.",
                          "Read-only — never spends, tops up, or changes a spending cap."]),
+        // Counted in CARDS. The second line is the one this seat cannot leave
+        // out (prd §1311): the card settles once a day, so the feed is a day's
+        // total, never a purchase — a person must not expect one row a tap.
+        WalletSeat(id: "plasmaone", name: "Plasma One",
+                   count: { PlasmaOneCard.evidence.count(in: $0) }, noun: "card",
+                   can: ["Reads what your Plasma One card settles on Plasma, for the wallets you follow — follow your Plasma One account.",
+                         "One total a day: the card settles daily, so purchases and merchants never reach the chain.",
+                         "Read-only — never spends, tops up, or changes a limit."]),
         WalletSeat(id: "safe", name: "Safe",
                    count: { _ in SafeBridge.detectedCount() }, noun: "Safe",
                    can: ["Reads the pending signature queue for any Safe you follow, or that follows you as a signer.",
