@@ -66525,3 +66525,7 @@ The Wallet's Home is the aggregated page: Spending sums every watched wallet (§
 3. **Adding or removing a wallet re-reads.** `walletSpendingKey` carries the watched addresses.
 
 **Not measured.** Written in a cloud session with no Xcode: not built, not run.
+
+## §1321 — Sources' three wells are allowed (user, 2026-10-15: "those are allowed")
+
+§1314's first box ("Start with any of these") and §1316's folders (each category's well of nine apps, and the Casberi folder) draw `dsWell` on content, which §782 forbids without a ruling and a row in `plate-audit.py`. The rulings asked for the wells; the rows were never added, so `plate-audit.py` failed on `main`. The rows are added: `SettingsHome.swift` (1), `SourcesLibrary.swift` (2). The design does not change.
