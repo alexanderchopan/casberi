@@ -1,6 +1,7 @@
 #!/bin/zsh
-# Nightly Mac pass — what launchd actually runs (see com.casberi.nightly-mac
-# below). Thin on purpose: verify-mac.sh holds every check; this only wraps it
+# Nightly Mac pass — the last step of the nightly audit (the Claude scheduled
+# task casberi-nightly-screen-audit) since 2026-10-14; launchd ran it before
+# (com.casberi.nightly-mac below, kept for a by-hand install). Thin on purpose: verify-mac.sh holds every check; this only wraps it
 # in the three things an unattended run needs and an interactive one doesn't.
 #
 #   1. A durable one-line-per-night ledger, so a slow drift is visible without

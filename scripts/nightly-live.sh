@@ -1,6 +1,7 @@
 #!/bin/zsh
-# Nightly live-integrations pass — what launchd runs (see
-# com.casberi.nightly-live.plist). Thin on purpose, like nightly-mac.sh:
+# Nightly live-integrations pass — the first step of the nightly audit (the
+# Claude scheduled task casberi-nightly-screen-audit) since 2026-10-14; launchd
+# ran it before (com.casberi.nightly-live.plist, kept for a by-hand install). Thin on purpose, like nightly-mac.sh:
 # live-integrations.sh holds every row; this wraps it in the two things an
 # unattended run needs and an interactive one doesn't.
 #

@@ -166,7 +166,7 @@ deliberately does not check are in `docs/verify.md`.
 - **The Mac verify's cleanup is BOUNDED — a fix, not a precaution** → docs/verify.md
 - **iCloud sync on the Mac, and the four things no check could see** → docs/verify.md · prd §607
 - **The Mac nightly was red ELEVEN of TWELVE nights, and every one resolves green on today's tree** → docs/verify.md
-- **Mac nightly (scripts/nightly-mac.sh + scripts/com.casberi.nightly-mac.plist)** → docs/verify.md
+- **Mac nightly (scripts/nightly-mac.sh), a step of the nightly audit task** → docs/verify.md
 
 - Test device: **iPhone 17 Pro** sim, BY UDID — `scripts/sim-device.py`, never `name=` → docs/verify.md
 - FoundationModels (on-device LLM) is iOS 26-only at **runtime** — `#if canImport` is not enough, use `if #available(iOS 26.0, *)`. `@Generable` schema types MUST be file-scope (nesting one in a private enum emits broken keypaths → heap corruption crashing on unrelated threads).
