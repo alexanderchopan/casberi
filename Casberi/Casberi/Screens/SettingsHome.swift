@@ -686,7 +686,9 @@ struct SettingsHome: View {
 
     private var startHere: [StartStep] {
         var steps: [StartStep] = []
-        if !hasName { steps.append(.name) }
+        // The demo is someone else's life: asking for YOUR name there reads
+        // as a step of theirs left undone.
+        if !hasName && !DemoMode.isActive { steps.append(.name) }
         if calendarsEmpty && !bridges.bridges.contains(where: { $0.name == "Calendar" && $0.status != .paused }) {
             steps.append(.calendar)
         }
