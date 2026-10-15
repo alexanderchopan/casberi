@@ -1995,23 +1995,9 @@
   },
   {
    "covers": [
-    "Screens/FeedScreen+Sheets.swift:feedSheet#allocation",
-    "Screens/FeedScreen+Sheets.swift:feedSheet#web",
-    "Screens/SettingsHome.swift:sheet#followAdd"
-   ],
-   "why": "no code sets it: the door that raised it is gone (see the spawned cleanup)"
-  },
-  {
-   "covers": [
-    "Screens/SettingsHome.swift:sheet#socialFollow"
-   ],
-   "why": "its only setter is the Following count's plus, which lists Media's apps; FollowByName lands Bluesky and Telegram nowhere in that menu, so no phone path reaches it"
-  },
-  {
-   "covers": [
     "Shell/MainSurface.swift:route.sheet#node.project"
    ],
-   "why": "its themes-map door is gone; only the composer's `show <topic>` reaches it, which the sweep does not type"
+   "why": "its one door is a circle on Find's source map (`genProjectTap`), which the sweep does not search; the composer's `show <topic>` cannot reach it, since it parses with no tags"
   },
   {
    "covers": [

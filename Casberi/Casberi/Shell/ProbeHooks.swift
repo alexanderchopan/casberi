@@ -4755,13 +4755,6 @@ enum ProbeHooks {
                         : ($0.address == "ethvalidators" ? "validators" : "venue")
                 }).sorted()
                 NSLog("Portfolio probe: holders=%@", kinds.isEmpty ? "none" : kinds.joined(separator: ", "))
-                // The card's whole tail, and its halves apart — `shapeLine` is
-                // what the row DRAWS, but a nil there has two causes (an
-                // unpriced/single-position book, no stables above the floor)
-                // and only the pair separates them.
-                NSLog("Portfolio probe: shape=%@ (concentration=%@ stables=%@)",
-                      p.shapeLine ?? "—", p.concentrationShort ?? "—",
-                      p.stableShort ?? "—")
                 for position in p.positions.prefix(5) {
                     let held = position.holders
                         .map { "\($0.label) \(TokenStats.compact($0.usd))" }

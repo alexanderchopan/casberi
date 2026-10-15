@@ -4,7 +4,7 @@
 #
 #   Casberi/Casberi/Model/WalletFlow.swift       — the flow band's grouping
 #   Casberi/Casberi/Model/WalletRiskScale.swift  — the distance-to-liquidation axis
-#   Casberi/Casberi/Model/WalletStables.swift    — the stable share
+#   Casberi/Casberi/Model/WalletStables.swift    — the dollar coins
 #
 # Each source is compiled AS SHIPPED with a driver appended — never a copy, so
 # the harness cannot pass against code the app doesn't run. All three files are
@@ -135,17 +135,10 @@ grep -q 'walletFlowSection\|WalletFlowRows(' <<< "$FEED_CODE" \
 grep -q 'WalletFlowBand(band: band' <<< "$FEED_CODE" \
   && { echo "✗ the sankey is back in the room's list half (prd §692) — the band"; \
        echo "  belongs to the brief (GenRenderer), not to Home"; exit 1; }
-grep -q 'portfolio.shapeLine' <<< "$FEED_CODE" \
-  || { echo "✗ the holdings tail no longer reads WalletPortfolio.shapeLine — compose it"; \
-       echo "  in the model, never in the view"; exit 1; }
-#
-# (4) The door names the token COUNT. It is the one clause rescued from the
-# deleted subline, and the only place left that says six cells are drawn out of
-# thirteen held.
-TILES_CODE=$(sed 's://.*::' "$TILES")
-grep -q 'Text("All \\(portfolio.tokenCount)")' <<< "$TILES_CODE" \
-  || { echo "✗ the allocation door stopped naming the token count (prd §447) — that count"; \
-       echo "  is the only surviving clause of the map's deleted subline"; exit 1; }
+grep -q 'holdingsTail\|WalletAllocationDoor\|WalletAllocationTray' \
+  <<< "$FEED_CODE$(sed 's://.*::' "$TILES")" \
+  && { echo "✗ the holdings tail is back (prd §1309) — its door and line were deleted"; \
+       echo "  with the allocation tray, view and model"; exit 1; }
 
 TMP=$(mktemp -d /tmp/wallet-viz-selftest.XXXXXX)
 trap 'rm -rf "$TMP"' EXIT
@@ -644,42 +637,18 @@ check(WalletRiskScale.lendingEntry(id: "x", label: "Aave", hf: 0, riskFloor: FLO
       "a position with no usable health factor is not a dot")
 
 // ===========================================================================
-// WalletStables — the stable share
+// WalletStables — the dollar coins
 // ===========================================================================
 print("WalletStables")
 
-check(WalletStables.isStable("USDC"), "USDC is stable")
-check(WalletStables.isStable("usdc"), "matching folds case")
-check(WalletStables.isStable("EURe"), "a euro stablecoin is stable")
-check(WalletStables.isStable("sDAI"), "a yield-bearing wrapper is stable")
-check(!WalletStables.isStable("ETH"), "ETH is not stable")
+check(WalletStables.isDollar("USDC"), "USDC is a dollar")
+check(WalletStables.isDollar(" usdc "), "matching folds case and trims")
+check(!WalletStables.isDollar("EURe"), "a euro stablecoin is not a dollar")
+check(!WalletStables.isDollar("sDAI"), "a yield-bearing wrapper is not a dollar")
 // The whole reason this is a set and not a prefix rule: the app already knows
 // spoofed symbols are real, and `hasPrefix("USD")` would count every one.
-check(!WalletStables.isStable("USDCoin"), "a lookalike symbol is not stable")
-check(!WalletStables.isStable("USDT_CLAIM"), "a scam symbol is not stable")
-check(!WalletStables.isStable("USD_REWARD"), "another lookalike is refused")
-
-do {
-    let book = [("ETH", 30_000.0), ("USDC", 10_000.0), ("AERO", 10_000.0)]
-    eq(WalletStables.share(positions: book, totalUSD: 50_000), 0.2, "a fifth in dollars reads 20%")
-}
-do {
-    let book = [("ETH", 30_000.0), ("USDC", 6_000.0), ("EURe", 4_000.0)]
-    eq(WalletStables.share(positions: book, totalUSD: 40_000), 0.25, "stables across currencies sum")
-}
-// Declines — the same guard the concentration line keeps, and for the same
-// reason: a $5 stablecoin dust position in a $48k book rounds to 0%, and
-// "0% stable" printed beside a real holding is a fake status.
-eq(WalletStables.share(positions: [("ETH", 48_000), ("USDC", 5)], totalUSD: 48_005), nil,
-   "a dust share that rounds to zero says nothing")
-eq(WalletStables.share(positions: [("USDC", 1_000), ("USDT", 9_000)], totalUSD: 10_000), nil,
-   "an all-stable book has no split to report")
-eq(WalletStables.share(positions: [("ETH", 1_000)], totalUSD: 1_000), nil,
-   "one position is not a composition")
-eq(WalletStables.share(positions: [("ETH", 1_000), ("AERO", 500)], totalUSD: 1_500), nil,
-   "no stables at all draws no line")
-eq(WalletStables.share(positions: [("ETH", 1_000), ("USDC", 100)], totalUSD: 0), nil,
-   "an empty book has no share")
+check(!WalletStables.isDollar("USDCoin"), "a lookalike symbol is not a dollar")
+check(!WalletStables.isDollar("USDT_CLAIM"), "a scam symbol is not a dollar")
 
 // ═══════════════════════════════════════════════════════════════════════════
 // WalletApprovalExposure — what someone else can still move (prd §292)
@@ -1009,15 +978,13 @@ eq(WalletUserOps.word(nil, at: 0), 0, "absent data reads zero")
 // (AddressConnections' assertions are deleted with the model, prd §1041.)
 
 // ===========================================================================
-// WalletPortfolio — the holdings card's whole remaining vocabulary (prd §447)
+// WalletPortfolio — the merged book (prd §155)
 // ===========================================================================
-// Four prose lines were cut from this card on 2026-08-22 because the screen
-// already said them. What is left is the pair the treemap is STRUCTURALLY
-// unable to draw, so these assertions are the proof that the pair is right —
-// and there is no other proof available: a wrong share renders as a perfectly
-// ordinary caption under a perfectly ordinary map.
+// The concentration and stable-share line this section once proved is deleted
+// with the holdings tail that drew it (prd §1309); the merge stays, because
+// the crown, the treemap and the token sheet's holders all read it.
 print("")
-print("WalletPortfolio — the tail")
+print("WalletPortfolio — the merge")
 
 func wpGroup(_ label: String, _ bySymbol: [String: Double]) -> WalletIngest.HoldingsGroup {
     var g = WalletIngest.HoldingsGroup(label: label, address: "0x" + label)
@@ -1033,63 +1000,13 @@ let wpBook = WalletPortfolio.from(groups: [
 ])
 check(wpBook.walletCount == 3, "three groups merge into one portfolio")
 check(wpBook.tokenCount == 6, "…and six distinct symbols across them")
-check(wpBook.concentrationShort == "ETH 61%",
-      "the share is the FRAGMENT, not the old sentence — it sits in a tertiary tail now")
-check(wpBook.stableShort == "16% stables", "…and its sibling in the same idiom")
-check(wpBook.shapeLine == "ETH 61% · 16% stables",
-      "the tail joins them with the middot, concentration first")
-
-// ── each half declines on its own, and the line survives the other ─────────
-// The two nil for different reasons, so a tail that only worked when both
-// spoke would go blank on the ordinary books either one covers alone.
-let wpNoStables = WalletPortfolio.from(groups: [
-    wpGroup("main", ["ETH": 6_000, "AERO": 4_000]),
-])
-check(wpNoStables.stableShort == nil, "a book with no stablecoin says nothing about stables")
-check(wpNoStables.shapeLine == "ETH 60%",
-      "…and the tail is the surviving half ALONE, never a dangling separator")
-
-let wpAllStables = WalletPortfolio.from(groups: [wpGroup("main", ["USDC": 5_000])])
-check(wpAllStables.concentrationShort == nil,
-      "a single position rounds to 100% and stays quiet — the rounding destroyed the precision")
-check(wpAllStables.stableShort == nil,
-      "…and 100% stable stays quiet too, which the one-cell map has already said")
-check(wpAllStables.shapeLine == nil,
-      "with neither half speaking the tail is nil, so the row can't take a spacing slot")
-
-// The empty book: the card never renders, but the model must not trap or
-// invent a share of nothing.
+// The empty book: the card never renders, but the model must not trap.
 let wpEmpty = WalletPortfolio.from(groups: [])
-check(wpEmpty.shapeLine == nil, "an empty portfolio has no shape to report")
-check(wpEmpty.tokenCount == 0, "…and no tokens for the door to name")
-
-// ── the door's gate ────────────────────────────────────────────────────────
-// It reads "All \(tokenCount)", so it is gated on that count and NOT on the
-// concentration read it used to gate on. This case is exactly why: the top
-// share rounds to 100% and silences `concentrationShort`, while the door has
-// two real positions to open.
-let wpLopsided = WalletPortfolio.from(groups: [
-    wpGroup("main", ["ETH": 99_600, "LINK": 400]),
-])
-check(wpLopsided.concentrationShort == nil,
-      "a 99.6% top share rounds to 100% and the line declines")
-check(wpLopsided.tokenCount == 2,
-      "…but the door still has two positions to open, which the old gate hid")
-
-// ── the count is what the door promises ────────────────────────────────────
-// The map draws at most six cells (UnitTreemap.maxCells); the door's number is
-// the WHOLE book, which is the gap the deleted subline used to state.
-let wpDeep = WalletPortfolio.from(groups: [
-    wpGroup("main", ["ETH": 100, "USDC": 90, "A": 80, "B": 70,
-                     "C": 60, "D": 50, "E": 40, "F": 30]),
-])
-check(wpDeep.tokenCount == 8,
-      "the door counts every position, not the six the map has room for")
+check(wpEmpty.tokenCount == 0, "an empty portfolio has no tokens")
 
 // ── merging is by SYMBOL across wallets ────────────────────────────────────
-// The share is computed over the merged book, so a token split across three
-// wallets must not be counted as three smaller positions — that would deflate
-// the concentration figure on exactly the books this card exists for.
+// A token split across three wallets must not be counted as three smaller
+// positions — the treemap would draw it as three cells, each understated.
 check(wpBook.positions.first?.symbol == "ETH", "the merged leader is ETH")
 eq(wpBook.positions.first?.usd, 12_100, "…summed across both wallets holding it")
 check(wpBook.positions.map(\.symbol).count == Set(wpBook.positions.map(\.symbol)).count,

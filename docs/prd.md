@@ -66425,3 +66425,14 @@ Every sheet, tray and cover in the app is opened on the simulator the way a pers
 What counts as a sheet is read off the code, not remembered: `scripts/sheet-sweep-audit.py` lists every presentation site and every case of a router enum, and fails verify when one has no entry in `scripts/sheet-sweep.json` and no exempt row saying why it cannot be walked. A sheet that will not open or close files an issue (`sheet-<id>`); one that comes back clean closes it.
 
 Exempt rows name a reason a reader can check: off the phone, no simulator path (composers, the camera, a peer's pairing), dead code, or the demo not carrying what raises it. Four say NOT WALKED YET, and stay open until walked.
+
+## §1309 — Four sheets nothing raised are deleted, view and model (retires §155's allocation tray and §447's holdings tail; amends §1300) (user, 2026-10-14: of the sheet sweep's exempt rows, "verify each is truly unreachable … then delete the dead case, its sheet content, and any helper only it used")
+
+The sheet sweep's audit (`sheet-sweep-audit.py`, §1308) lists every presentation in the code; four were raised by nothing, each checked against every setter.
+
+1. **`FeedSheetRoute.allocation`** — its one door, `holdingsTail` (§447's "ETH 61% · 16% stables" line and its "All N" door), was drawn by nothing since the holdings card lost its tail. Gone with it: `WalletAllocationDoor`, `WalletAllocationTray`, `WalletPortfolio.top`/`topShare`/`concentrationShort`/`stableShort`/`shapeLine`, the stable share (`WalletStables.share`/`isStable` and the euro and wrapper sets; `isDollar` stays for §1090), the portfolio probe's shape line, and their `wallet-viz-selftest.sh` checks, which now fail if the tail returns.
+2. **`FeedSheetRoute.web`** — nothing set it (a room's Top up opens its page another way); `pushesInSheet` is now every route inside an app sheet.
+3. **`SettingsSheet.followAdd`** — declared and drawn, never set.
+4. **`SettingsSheet.socialFollow`** — set only by Following's plus, which lists Media's apps; Bluesky and Telegram are Social, so it never landed. Were a Social app ever listed there, `FollowByName`'s `.socialFollow` now opens its page, as `.page` does.
+
+**Kept, for a ruling:** `HomeRoute.Node.project`. Its themes-map door is gone (`themesLedeSection` is compiled and never called), and the composer's "show <topic>" cannot reach it, since `NavigateCommand.parse` is called with no tags. Its one live door is a circle on Find's source map (`genProjectTap` with a source name), which opens a tag view filtered by that name, likely empty.

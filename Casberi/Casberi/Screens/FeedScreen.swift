@@ -664,8 +664,6 @@ struct FeedScreen: View {
     /// Followed chains the last pass held money on and priced nothing (prd §828).
     @State var unpricedChains: [String] = []
 
-    /// The full allocation tray — every position and which wallets hold it.
-    /// Routed through `feedSheet` (`.allocation`) now, not its own bool.
     /// The balance line's window (prd §155). Narrowed to what the record can
     /// actually answer each render; the choice persists across launches.
     @State var balanceRange: WalletRange = .watched

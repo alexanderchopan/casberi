@@ -1,38 +1,19 @@
 import Foundation
 
-/// How much of a portfolio is sitting still — the stable share (2026-08-01,
-/// ruled in from `design/wallet-viz`).
+/// The US-dollar coins (prd §1090): a quantity of one IS a dollar amount, so a
+/// move in it can be stated in dollars with no rate.
 ///
-/// This shipped as the surviving half of a two-bar "splits" card. The other
-/// half — a by-chain breakdown — was cut in review as trivia: knowing 27% of
-/// the book is on Base changes no decision, while the treemap and the
-/// concentration line already answer "too much in one thing". What survived
-/// answers something neither of them does — how exposed the whole book is —
-/// and it earns one quiet line rather than a card, in the concentration
-/// line's own idiom.
+/// An EXPLICIT set, never a prefix or substring rule: `hasPrefix("USD")` would
+/// also swallow every scam token that names itself `USDCoin` or `USDT_CLAIM`,
+/// and this app already raises a `spoofedSymbol` warning for exactly that.
 ///
-/// PURE AND FOUNDATION-ONLY: `WalletPortfolio` calls in, nothing calls out,
-/// so the shipped source compiles standalone under
+/// The stable share it also held (the holdings card's "21% stables") is
+/// deleted with the line that drew it (prd §1309).
+///
+/// PURE AND FOUNDATION-ONLY, so the shipped source compiles standalone under
 /// `scripts/wallet-viz-selftest.sh`.
 enum WalletStables {
 
-    /// The symbols that count as stable — an EXPLICIT set, never a prefix or
-    /// substring rule.
-    ///
-    /// A `hasPrefix("USD")` test would be shorter and would also swallow
-    /// every scam token that names itself `USDCoin`, `USDT_CLAIM` or similar —
-    /// and this app already knows spoofed symbols are a live problem (it
-    /// raises a `spoofedSymbol` warning for exactly that). A set can be read,
-    /// audited and argued with; a prefix rule quietly decides.
-    ///
-    /// Fiat-referenced only. A yield-bearing wrapper (sDAI, sUSDe) is
-    /// deliberately IN — it tracks the same unit and the person holding it
-    /// means it as dollars — while a governance token of a stablecoin
-    /// protocol is not, however closely it is associated.
-    static let symbols: Set<String> = dollarSymbols.union(dollarWrappers).union(otherFiat)
-
-    /// The US-dollar coins: a quantity of one IS a dollar amount, so a move in
-    /// it can be stated in dollars with no rate (prd §1090).
     static let dollarSymbols: Set<String> = [
         "USDC", "USDC.E", "USDBC", "USDT", "USDT.E", "DAI", "USDS",
         "USDE", "PYUSD", "TUSD", "FDUSD", "LUSD", "SUSD", "CRVUSD",
@@ -40,49 +21,7 @@ enum WalletStables {
         "DOLA", "MIM", "USDL", "AUSD", "USDF",
     ]
 
-    /// Dollar-tracking, but a unit is not a dollar: a yield-bearing wrapper
-    /// (sDAI is worth more than one DAI) and the tokenised funds.
-    private static let dollarWrappers: Set<String> = ["SDAI", "SUSDS", "SUSDE", "BUIDL", "USDY"]
-
-    /// Euro, sterling and the cards that settle in them — stable, but a rate
-    /// away from dollars.
-    private static let otherFiat: Set<String> = ["EURE", "EURC", "EURS", "AGEUR", "EURT", "GBPE", "GBPT"]
-
     static func isDollar(_ symbol: String) -> Bool {
         dollarSymbols.contains(symbol.trimmingCharacters(in: .whitespaces).uppercased())
-    }
-
-    /// Whether a held symbol is stable. Case-folded because the symbol
-    /// reaching us is whatever the token contract says it is, and casing is
-    /// not consistent across chains or sources.
-    static func isStable(_ symbol: String) -> Bool {
-        symbols.contains(symbol.trimmingCharacters(in: .whitespaces).uppercased())
-    }
-
-    /// The stable share of a book, 0…1, or nil when there is no share worth
-    /// stating.
-    ///
-    /// Declines when the rounded percentage would be 0 or 100 — the same guard
-    /// `WalletPortfolio.concentrationShort` keeps, and for the same reason: $5
-    /// of USDC in a $48,000 book rounds to 0%, and a line reading "0% stable"
-    /// beside a real stablecoin holding is a fake status, not a rounding
-    /// nicety. At the other end, "100% stable" is what a book of nothing but
-    /// dollars looks like, where the treemap has already said so with one
-    /// cell.
-    ///
-    /// Note this counts what the portfolio could PRICE, which is what every
-    /// other number on this screen counts too — an unpriced holding is absent
-    /// from the denominator rather than assumed volatile.
-    static func share(positions: [(symbol: String, usd: Double)],
-                      totalUSD: Double) -> Double? {
-        guard totalUSD > 0, positions.count >= 2 else { return nil }
-        let stable = positions
-            .filter { isStable($0.symbol) }
-            .reduce(0.0) { $0 + max(0, $1.usd) }
-        guard stable > 0 else { return nil }
-        let share = stable / totalUSD
-        let pct = Int((share * 100).rounded())
-        guard pct > 0, pct < 100 else { return nil }
-        return share
     }
 }
