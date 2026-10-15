@@ -447,7 +447,11 @@ extension FeedScreen {
     }
 
     /// Re-read when the room's rows change or the demo flips.
-    var walletSpendingKey: String { "\(DemoMode.isActive)|\(walletSubscriptionsKey)" }
+    /// The watched list rides the key, so adding or removing a wallet re-reads (prd §1320).
+    var walletSpendingKey: String {
+        let wallets = WalletStore.shared.addresses.map(\.address).joined(separator: ",")
+        return "\(DemoMode.isActive)|\(walletSubscriptionsKey)|\(wallets)"
+    }
 
     /// "$3,410 in October · $280 less than this point in September".
     static func spendingLine(_ reading: Spending.Reading, now: Date = .now, mask: String?) -> String {

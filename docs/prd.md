@@ -66504,3 +66504,28 @@ The in-content back rows become the title's first word. Casberi's settings, open
 2. **The rows.** "Gnosis Pay" joins `SourceRename.droppedSources` and `Corpus.retiredSources` (§1038's sweep): the seat record and every stored spend (`gnosispay:spend:` refs) go at every launch, and once per device every `UserDefaults` key under `gnosispay.` (the per-wallet scan cursors and the card-account evidence mark). The local-pass key moved to `.v6`. A sweep, never a schema change.
 3. **What stays.** Gnosis CHAIN: the Safe rail signs on chain 100, and its `getTransactionHash` cross-check reads through `GnosisChainRPC` on the two hosts the seat measured (`rpc.gnosischain.com`, `rpc.gnosis.gateway.fm`), disclosed in `NetworkReach` as "Gnosis Chain". `CardSpendRoom`, `CardSpendSeat` and `CardSpendRoomCard` stay for MetaMask Card, ether.fi Cash and Plasma One (§858, §868, §1311). The demo's Safe counterparty is "Household Safe"; the old "Gnosis Pay" address stays a fixture (`retiredDemoCounterparties`) so a book an older demo seeded is still swept and never syncs.
 4. **Guards.** `card-spend-audit.py` lists the three remaining card bridges; `category-fold-selftest.sh` pins the name in both retired lists; `wallet-rooms-selftest.sh`, `room-heads-selftest.sh`, `wallet-seat-route-audit.py` and `setup-copy-audit.py` moved their card fixtures to MetaMask Card; `safetx-selftest.sh` requires the Gnosis cross-check to go through `GnosisChainRPC`; the live heartbeat's Gnosis Pay section is deleted.
+
+## §1319 — A trade is not spending: a send that money came back for is left out of Spending (user, 2026-10-15: "Our wallet says I've spent $10,000. But that's impossible", "I may have swapped $1000 in 10 different swaps, but I didn't spend $10,000", "we keep misreading wallets") — BUILT, UNMEASURED
+
+Extends §1201's list of what is not spending.
+
+1. **The cause, from the code.** Ingest folds a swap into one `wallet:swap:` row only when its sell and buy land in ONE pass, on ONE hash, in two different symbols (`WalletIngest.refresh`). A cross-chain swap, an intent filled in a second transaction, a USDC → USDC.e route and a leg landed a pass apart each leave the sell as a plain `sent` row carrying Zerion's price, and Spending counted that row at full value once per swap.
+2. **The rule** (`Spending.trades`, read by `SpendingSource.charges`): a wallet send is a trade, never spending, when its transaction also paid the same wallet; else when a priced receipt to the same wallet lands within 30 minutes (`tradeWindow`) worth 0.8–1.25× the send (`tradeBand`), the nearest in time, each receipt matched once. A send to a person or an exchange with nothing back stays spending, as §1201 asked.
+3. **Not built.** Zerion's `operation_type` is not stored on the row, so a send Zerion called a `trade` or a `deposit` with no receipt inside the window still counts. Deposits into a protocol ("Deposited … into") still count, as before.
+4. **Guard.** `CasberiTests/SpendingTradesTests` (seven cases: the same transaction, ten swaps a transaction apart, nothing back, outside the window or band, another wallet's receipt, one receipt per send, a buy not reused).
+
+**Not measured.** Written in a cloud session with no Xcode and no egress to Zerion or any explorer: not built, not run, and the user's wallet (`0x2F60…2725`) was not read. Measure on a Mac: build, run `CasberiTests`, and watch Spending's figure for this wallet before and after.
+
+## §1320 — Spending counts every wallet on the list and none that left it (user, 2026-10-15: "spending should count all wallets, but if you remove wallets, then it shouldn't count them", "if I add a wallet and then remove it, it shouldn't historically keep any data") — BUILT, UNMEASURED
+
+The Wallet's Home is the aggregated page: Spending sums every watched wallet (§1201). §1135 deletes a removed wallet's rows, but only at the book's unfollow, the account page's swipe and disconnect, and the top of `WalletIngest.refresh`, and Spending's reading re-read only on the refresh pulse and the Subscriptions key. A removed wallet's sends therefore stood in the figure until the next ingest.
+
+1. **The read prunes first.** `SpendingReading.refresh` runs `FollowPrune.pruneUnwatchedWallets` before it fetches, so a removed wallet's rows are gone, not skipped.
+2. **The read counts only the list.** `SpendingSource.charges` drops any row whose `walletAddress` the list does not hold under either spelling (`WalletStore.scopeMatches`), and a send counts as a move only when it goes to a wallet on the list now (was: any address a fetched row was stamped with). Card rows (MetaMask Card, ether.fi Cash, Plasma One) carry the watched address and pass; Apple Wallet, Privacy and Wise rows carry none and are unaffected. The trade match (§1319) reads only the list's legs.
+3. **Adding or removing a wallet re-reads.** `walletSpendingKey` carries the watched addresses.
+
+**Not measured.** Written in a cloud session with no Xcode: not built, not run.
+
+## §1321 — Sources' three wells are allowed (user, 2026-10-15: "those are allowed")
+
+§1314's first box ("Start with any of these") and §1316's folders (each category's well of nine apps, and the Casberi folder) draw `dsWell` on content, which §782 forbids without a ruling and a row in `plate-audit.py`. The rulings asked for the wells; the rows were never added, so `plate-audit.py` failed on `main`. The rows are added: `SettingsHome.swift` (1), `SourcesLibrary.swift` (2). The design does not change.

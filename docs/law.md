@@ -232,7 +232,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1460 of 1526 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1463 of 1529 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1694,6 +1694,9 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1316 — Sources is a library: every category a folder (supersedes §1253's cards and its By category / A–Z words)
 - §1317 — Every count in Sources picks what stands under the box (supersedes §1274; amends §1217 item 2, §1292)
 - §1318 — Gnosis Pay is removed
+- §1319 — A trade is not spending: a send that money came back for is left out of Spending
+- §1320 — Spending counts every wallet on the list and none that left it
+- §1321 — Sources' three wells are allowed
 
 ## Dead rulings → what replaced them (generated)
 
