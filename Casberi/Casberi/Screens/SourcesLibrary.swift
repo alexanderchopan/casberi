@@ -4,10 +4,10 @@ import SwiftUI
 /// and so will feel familiar"; "the app is a joy to use, but the app
 /// catalogue and sources section is not").** Under the box, every category is
 /// a folder, three across, as the App Library draws them: inside, the apps you
-/// have in colour and the rest faint, so a folder shows how full it is; under
+/// have wearing a green dot (§1319), every icon in colour; under
 /// it the name and "3 of 21". A tap springs the folder open in place, over the
 /// page (`SourcesOpenFolder`), the way the dock's folders spring (§621):
-/// yours first, the rest faint with a plus. Casberi's own settings take the
+/// yours first with the dot, the rest with a plus. Casberi's own settings take the
 /// first slot, where the App Library keeps Suggestions.
 ///
 /// The search field stays above the folders: on the phone Sources rises as a
@@ -53,10 +53,27 @@ struct SourcesLibrary: View {
     }
 }
 
-/// An app you could add: grey and faint, so a folder reads how full it is.
+/// AN APP YOU HAVE WEARS A GREEN DOT (prd §1319, user: "C is better but not
+/// green check can't we do green dot?"). Every icon stands in its own colour,
+/// as the App Library draws them, so a first run is not a wall of grey; the
+/// dot at the corner says which are yours. The ring is the ground it sits
+/// on, so the dot reads apart from the icon under it.
 private extension View {
-    func sourcesFaint(_ faint: Bool) -> some View {
-        saturation(faint ? 0 : 1).opacity(faint ? 0.4 : 1)
+    func sourcesYours(_ yours: Bool, size: CGFloat, ring: Color) -> some View {
+        overlay(alignment: .bottomTrailing) {
+            if yours {
+                Circle()
+                    .fill(DS.confirm)
+                    .frame(width: size, height: size)
+                    // The ring is the ground under it: the page, and the
+                    // folder's own lift where it stands in a well.
+                    .overlay(Circle().strokeBorder(ring, lineWidth: max(1.5, size * 0.18)))
+                    .overlay(Circle().strokeBorder(ring == DS.page ? DS.fillFaint : .clear,
+                                                   lineWidth: max(1.5, size * 0.18)))
+                    .offset(x: size * 0.3, y: size * 0.3)
+                    .accessibilityHidden(true)
+            }
+        }
     }
 }
 
@@ -83,7 +100,7 @@ private struct SourcesFolderTile: View {
                                       alignment: .leading, spacing: gap) {
                                 ForEach(folder.apps.prefix(9), id: \.self) { name in
                                     BridgeIcon(name: name, size: side)
-                                        .sourcesFaint(!has(name))
+                                        .sourcesYours(has(name), size: max(7, side * 0.34), ring: DS.page)
                                 }
                             }
                             .padding(pad)
@@ -153,6 +170,7 @@ private struct SourcesFolderWords: View {
 /// sheet: the page dims under it, a tap outside closes it, and an app opens
 /// from here as its row would (yours its page, the rest their way in). It
 /// stays open behind what that raises, so coming back is the folder again.
+/// Yours wear the green dot, the rest the pink plus (§1319).
 struct SourcesOpenFolder: View {
     let folder: SourcesLibrary.Folder
     let has: (String) -> Bool
@@ -214,8 +232,8 @@ struct SourcesOpenFolder: View {
     }
 }
 
-/// One app in an open folder: its icon over its name; one you could add is
-/// faint and wears a plus.
+/// One app in an open folder: its icon over its name; yours wears the green
+/// dot, one you could add the pink plus.
 private struct SourcesFolderApp: View {
     let name: String
     let yours: Bool
@@ -225,7 +243,7 @@ private struct SourcesFolderApp: View {
         Button(action: action) {
             VStack(spacing: DS.Space.s1) {
                 BridgeIcon(name: name, size: DS.Face.seat + 12)
-                    .sourcesFaint(!yours)
+                    .sourcesYours(yours, size: 14, ring: DS.surfaceRaised)
                     .overlay(alignment: .topTrailing) {
                         if !yours {
                             Image(systemName: "plus")
@@ -238,7 +256,7 @@ private struct SourcesFolderApp: View {
                     }
                 Text(verbatim: name)
                     .dsText(.label12)
-                    .foregroundStyle(yours ? DS.textPrimary : DS.textTertiary)
+                    .foregroundStyle(DS.textPrimary)
                     // Two lines between words, never inside one: a single
                     // long word ("CardPointers") shrinks to one line instead.
                     .lineLimit(name.contains(" ") ? 2 : 1)
