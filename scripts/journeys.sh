@@ -47,7 +47,9 @@ else
   for j in "$@"; do
     # The sheet sweep is its own test class (`SheetSweepTests`).
     if [[ "$j" == sheets ]]; then
-      ONLY+=(-only-testing:CasberiUITests/SheetSweepTests/testSheets)
+      # One test case per sheet (`SheetSweepTests.defaultTestSuite`), and a
+      # failed case runs once more: an XCUITest hiccup is not a stuck sheet.
+      ONLY+=(-only-testing:CasberiUITests/SheetSweepTests -retry-tests-on-failure -test-iterations 2)
       continue
     fi
     [[ -n "${METHOD[$j]-}" ]] || { print -P "%F{red}✗ no journey \"$j\" (${(k)METHOD} sheets)%f"; exit 2; }
@@ -100,6 +102,15 @@ TEST_STATUS=$?
 # The sheet sweep reports apart: one row per sheet, ✗ for one that did not
 # open or did not close (prd §1308).
 if [[ -f "$OUT/sheets.tsv" ]]; then
+  # A retried case writes twice; its last row is its result.
+  python3 - "$OUT/sheets.tsv" <<'PY'
+import sys
+rows = {}
+for line in open(sys.argv[1], encoding="utf-8"):
+    if line.strip():
+        rows[line.split("\t", 1)[0]] = line
+open(sys.argv[1], "w", encoding="utf-8").writelines(rows.values())
+PY
   python3 "$ROOT/scripts/sheet-sweep-report.py" "$OUT/sheets.tsv" "$ROOT/scripts/sheet-sweep.json" \
     "${JOURNEYS_SHEETS:-}" | tee "$OUT/sheets-report.txt"
   [[ -f "$OUT/results.tsv" || -f "$OUT/catalog.tsv" ]] || { print -P "%F{green}✓ sheet report: $OUT/sheets-report.txt%f"; exit 0; }

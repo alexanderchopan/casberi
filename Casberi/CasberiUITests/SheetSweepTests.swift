@@ -28,41 +28,96 @@ import XCTest
 /// one sheet cannot end the sweep. Run through `journeys.sh sheets`
 /// (`JOURNEYS_SHEETS` is the manifest's path).
 ///
+/// **One test per sheet** (`defaultTestSuite`, 2026-10-15): XCUITest ends a
+/// test at a failed interaction ("Failed to determine hittability"), and the
+/// sweep was one method, so one such hiccup ended every sheet after it. Each
+/// entry is now its own test case; a case that ends early still writes its
+/// row (`tearDown`), and `journeys.sh` retries a failed case once.
+///
 /// An element is spelled `<type>:<op><text>`: type `button`, `text`,
 /// `field`, `secure`, `cell`, `image`, `switch`, `any`; op `=` equals, `^`
 /// begins with, `~` contains, `?` placeholder equals.
 final class SheetSweepTests: XCTestCase {
 
+    /// This case's entry (nil for the placeholder `testSheets`).
+    var entry: [String: Any]?
+    private var wroteRow = false
+    private var lastIssue = ""
+    private var walk: JourneyTests.Walk?
+
     override func setUp() {
         continueAfterFailure = true
     }
 
-    @MainActor func testSheets() throws {
+    /// The manifest's entries, narrowed by `JOURNEYS_SHEET_IDS="a,b"`.
+    static var entries: [[String: Any]] {
         let env = ProcessInfo.processInfo.environment
         guard let path = env["JOURNEYS_SHEETS"],
               let data = FileManager.default.contents(atPath: path),
               let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let entries = root["entries"] as? [[String: Any]] else {
-            throw XCTSkip("no sheet manifest (run through journeys.sh sheets)")
-        }
-        // `JOURNEYS_SHEET_IDS="a,b"` narrows the sweep to those entries.
+              let all = root["entries"] as? [[String: Any]] else { return [] }
         let only = Set((env["JOURNEYS_SHEET_IDS"] ?? "").split(separator: ",").map(String.init))
-        for entry in entries {
-            guard let id = entry["id"] as? String, only.isEmpty || only.contains(id) else { continue }
-            sweep(id, entry)
+        return all.filter { only.isEmpty || only.contains($0["id"] as? String ?? "") }
+    }
+
+    override class var defaultTestSuite: XCTestSuite {
+        let entries = Self.entries
+        guard !entries.isEmpty else { return super.defaultTestSuite }
+        let suite = XCTestSuite(name: "SheetSweepTests")
+        for e in entries {
+            let test = SheetSweepTests(selector: #selector(sweepEntry))
+            test.entry = e
+            suite.addTest(test)
         }
+        return suite
+    }
+
+    /// Without a manifest (a plain test run) the class has one skipped case.
+    @MainActor func testSheets() throws {
+        throw XCTSkip("no sheet manifest (run through journeys.sh sheets)")
+    }
+
+    @MainActor @objc func sweepEntry() {
+        guard let entry, let id = entry["id"] as? String else { return }
+        sweep(id, entry)
+    }
+
+    override func record(_ issue: XCTIssue) {
+        lastIssue = issue.compactDescription
+        super.record(issue)
+    }
+
+    /// A case XCUITest ended early still leaves its row, so the report says
+    /// why instead of "no row".
+    override func tearDown() {
+        if !wroteRow, let id = entry?["id"] as? String {
+            let note = "the walk ended early: " + lastIssue.replacingOccurrences(of: "\t", with: " ")
+                .replacingOccurrences(of: "\n", with: " ").prefix(200)
+            MainActor.assumeIsolated {
+                walk?.append("sheets.tsv", "\(id)\tfail\tskip\tskip\t0\t\(note)\n")
+                walk?.app.terminate()
+            }
+        }
+        super.tearDown()
     }
 
     @MainActor private func sweep(_ id: String, _ entry: [String: Any]) {
         let args = Self.launch(entry["launch"])
         let steps = entry["steps"] as? [[String: Any]] ?? []
         let w = JourneyTests.Walk("sheet-\(id)", launch: args, test: self, quiet: true)
-        let anchor = { Self.element(w, entry["anchor"] as? String ?? "") }
+        walk = w
+        let spec = entry["anchor"] as? String ?? ""
+        currentSpec = spec
+        // An anchor below the fold of a pushed page is there but not
+        // tappable until scrolled to; such an entry counts it by existence.
+        let offscreen = entry["offscreen"] as? Bool ?? false
+        currentOffscreen = offscreen
+        let anchor = { Self.pick(w, spec, within: 0) }
         var row = (opened: "fail", swipe: "skip", control: "skip")
         var notes: [String] = []
 
         // 1. Opens.
-        let opened = open(w, steps, anchor: anchor)
+        let opened = open(w, steps, spec: spec, offscreen: offscreen)
         // The tree as it opened (or failed to), so an anchor is read, not guessed.
         w.write("sheet-\(id)-tree.txt", Data(w.app.debugDescription.utf8))
         if opened {
@@ -90,11 +145,11 @@ final class SheetSweepTests: XCTestCase {
             var again = false
             if row.swipe == "ok", entry["afterSwipe"] == nil, let last = steps.last {
                 run(w, last)
-                again = w.broken == nil && anchor().waitForExistence(timeout: 10)
+                again = w.broken == nil && shows(w, spec, offscreen: offscreen, within: 10)
             }
             if !again {
                 w.relaunch(args)
-                again = open(w, steps, anchor: anchor)
+                again = open(w, steps, spec: spec, offscreen: offscreen)
             }
             if again {
                 // The keyboard covers the dock and the seat's Back (prd §865),
@@ -102,7 +157,9 @@ final class SheetSweepTests: XCTestCase {
                 lowerKeyboard(w)
                 let c = Self.element(w, control)
                 if c.waitForExistence(timeout: 6), w.hittable(c, within: 3) {
-                    c.tap()
+                    // By coordinate: an element tap that loses its hit test
+                    // between the check and the tap ends the whole sweep.
+                    c.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
                     let under = (entry["afterControl"] as? String).map { Self.element(w, $0, hittable: true) } ?? opener(w, steps)
                     let why = closed(w, anchor: anchor(), opener: under)
                     row.control = why == nil ? "ok" : "fail"
@@ -120,6 +177,7 @@ final class SheetSweepTests: XCTestCase {
 
         let seconds = Date().timeIntervalSince(w.start)
         let note = notes.joined(separator: "; ").replacingOccurrences(of: "\t", with: " ")
+        wroteRow = true
         w.append("sheets.tsv", "\(id)\t\(row.opened)\t\(row.swipe)\t\(row.control)\t\(String(format: "%.1f", seconds))\t\(note)\n")
         print("sheet|\(id)|opened=\(row.opened)|swipe=\(row.swipe)|control=\(row.control)|\(note)")
         w.app.terminate()
@@ -127,10 +185,31 @@ final class SheetSweepTests: XCTestCase {
 
     /// Walk every step; true when the anchor shows.
     @MainActor private func open(_ w: JourneyTests.Walk, _ steps: [[String: Any]],
-                                 anchor: () -> XCUIElement) -> Bool {
+                                 spec: String, offscreen: Bool) -> Bool {
         for step in steps { run(w, step) }
         guard w.broken == nil else { return false }
-        return anchor().waitForExistence(timeout: 12)
+        return shows(w, spec, offscreen: offscreen, within: 12)
+    }
+
+    /// The anchor stands on screen: some match a person could tap (a copy
+    /// under the sheet, the thing sheet a pivot rises over, is in the tree
+    /// but covered), or, for an `offscreen` entry, any match at all.
+    @MainActor private func shows(_ w: JourneyTests.Walk, _ spec: String, offscreen: Bool,
+                                  within s: TimeInterval) -> Bool {
+        let e = Self.pick(w, spec, within: s)
+        return offscreen ? e.waitForExistence(timeout: 1) : (e.exists && e.isHittable)
+    }
+
+    /// The first match a person could tap, waiting up to `within`; else the
+    /// first match (which may be covered, or absent).
+    @MainActor static func pick(_ w: JourneyTests.Walk, _ spec: String, within s: TimeInterval) -> XCUIElement {
+        let q = query(w, spec)
+        let deadline = Date().addingTimeInterval(s)
+        repeat {
+            if let hit = q.allElementsBoundByIndex.first(where: { $0.exists && $0.isHittable }) { return hit }
+            if s > 0 { RunLoop.current.run(until: Date().addingTimeInterval(0.3)) }
+        } while Date() < deadline
+        return q.firstMatch
     }
 
     @MainActor private func run(_ w: JourneyTests.Walk, _ step: [String: Any]) {
@@ -150,6 +229,10 @@ final class SheetSweepTests: XCTestCase {
             RunLoop.current.run(until: Date().addingTimeInterval(s))
         } else if let n = step["swipeUp"] as? Int {
             for _ in 0..<n { w.app.swipeUp(velocity: .slow) }
+        } else if let n = step["swipeDown"] as? Int {
+            // Back to the top: a Feed left scrolled by the sheet before puts
+            // its tiles under the Demo pill, where XCUITest cannot hit them.
+            for _ in 0..<n { w.app.swipeDown(velocity: .fast) }
         } else if let args = step["relaunch"] {
             w.relaunch(Self.launch(args))
         }
@@ -162,13 +245,25 @@ final class SheetSweepTests: XCTestCase {
         return Self.element(w, s, hittable: true)
     }
 
+    /// The tappable copy of the anchor right now, if any.
+    @MainActor private func anchorSpec(_ w: JourneyTests.Walk, _ anchor: XCUIElement) -> XCUIElement? {
+        guard let spec = currentSpec else { return anchor }
+        return Self.pick(w, spec, within: 0)
+    }
+    private var currentSpec: String?
+    private var currentOffscreen = false
+
     /// Nil when the sheet is gone, the app runs and the opener is back.
     @MainActor private func closed(_ w: JourneyTests.Walk, anchor: XCUIElement, opener: XCUIElement?) -> String? {
         // Gone, or no longer a thing a person could touch: a page behind the
         // Feed's pager or under another sheet still stands in the tree.
-        let gone = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false OR isHittable == false"), object: anchor)
-        if XCTWaiter().wait(for: [gone], timeout: 6) != .completed {
-            return "still open after 6s"
+        // Gone when no copy of it can be touched (a page behind the Feed's
+        // pager, or under another sheet, still stands in the tree).
+        let deadline = Date().addingTimeInterval(6)
+        // An offscreen anchor is never tappable, so it must be gone outright.
+        while anchorSpec(w, anchor).map({ $0.exists && (currentOffscreen || $0.isHittable) }) ?? false {
+            if Date() > deadline { return "still open after 6s" }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.3))
         }
         if w.app.state != .runningForeground { return "the app stopped" }
         if let opener {
@@ -184,7 +279,10 @@ final class SheetSweepTests: XCTestCase {
         guard keyboard.exists else { return }
         let keys = keyboard.buttons.matching(NSPredicate(format: "label IN %@",
             ["Return", "return", "Done", "done", "Go", "go", "Search", "search", "Next", "next"]))
-        if keys.firstMatch.exists { keys.firstMatch.tap() } else { keyboard.buttons.allElementsBoundByIndex.last?.tap() }
+        // Only a key a person could press: a failed tap ends the whole sweep.
+        let key = keys.allElementsBoundByIndex.first { $0.exists && $0.isHittable }
+            ?? keyboard.buttons.allElementsBoundByIndex.last { $0.exists && $0.isHittable }
+        key?.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
         RunLoop.current.run(until: Date().addingTimeInterval(0.8))
     }
 
@@ -207,11 +305,30 @@ final class SheetSweepTests: XCTestCase {
 
     static let types: [String: XCUIElement.ElementType] = [
         "button": .button, "text": .staticText, "field": .textField, "secure": .secureTextField,
-        "cell": .cell, "image": .image, "switch": .switch, "any": .any, "web": .webView,
+        "cell": .cell, "image": .image, "switch": .switch, "any": .any, "web": .webView, "link": .link,
     ]
 
     /// `<type>:<op><text>` as an element; `hittable` takes the first a person
     /// could tap (a name can stand twice, the drawn copy and a hidden one).
+    @MainActor static func query(_ w: JourneyTests.Walk, _ spec: String) -> XCUIElementQuery {
+        let (type, format, text) = parse(spec)
+        return w.app.descendants(matching: type).matching(NSPredicate(format: format, argumentArray: [text]))
+    }
+
+    static func parse(_ spec: String) -> (XCUIElement.ElementType, String, String) {
+        let parts = spec.split(separator: ":", maxSplits: 1).map(String.init)
+        let type = types[parts.first ?? ""] ?? .any
+        let rest = parts.count > 1 ? parts[1] : ""
+        let op = rest.first ?? "="
+        let text = String(rest.dropFirst())
+        switch op {
+        case "^": return (type, "label BEGINSWITH %@", text)
+        case "~": return (type, "label CONTAINS %@", text)
+        case "?": return (type, "placeholderValue == %@", text)
+        default: return (type, "label == %@", text)
+        }
+    }
+
     @MainActor static func element(_ w: JourneyTests.Walk, _ spec: String, hittable: Bool = false) -> XCUIElement {
         let parts = spec.split(separator: ":", maxSplits: 1).map(String.init)
         let type = types[parts.first ?? ""] ?? .any
