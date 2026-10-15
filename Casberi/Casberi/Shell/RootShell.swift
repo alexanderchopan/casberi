@@ -2929,6 +2929,13 @@ struct RootShell: View {
                     sceneState.route.present(.apps)
                     return
                 }
+                // A source map's circle (prd §1310): that app's feed, once
+                // the composer has gone.
+                if name.hasPrefix("@source:") {
+                    composerOpen = false
+                    chrome.openApp(String(name.dropFirst("@source:".count)))
+                    return
+                }
                 // Other sentinels ("@wallet", "@token:…") are surface routes,
                 // not tags — from the composer they'd open a bogus tag view
                 // literally named "@token:…"; an unknown sentinel does
@@ -2936,9 +2943,9 @@ struct RootShell: View {
                 guard !name.hasPrefix("@") else { return }
                 composerOpen = false
                 sceneState.filter.source = "All"
-                // Land on the All feed with the tag's project view pushed —
-                // the same screen the feed's Themes treemap opens (this wrote
-                // a `HomeRoute.openTag` nothing consumed after the board
+                // Land on the All feed with the tag's project view: an
+                // answer's tag tile or "Your tags" map (this wrote a
+                // `HomeRoute.openTag` nothing consumed after the board
                 // retired, so the tile was silently inert until 2026-07-22).
                 // A sheet on the phone, a push on the Mac (prd §1132).
                 sceneState.route.present(.project(name))

@@ -732,16 +732,6 @@ struct FeedScreen: View {
     }
     @State var memo = DerivationMemo()
 
-    /// Same memo, for the themes treemap's own corpus walk (`projectClusters`
-    /// → `themesDocument` → `GenParser.parse`), which ran on every one of those
-    /// same ~18 passes.
-    @MainActor final class ThemesMemo {
-        var key: Int?
-        var clusters: [HomeComposition.Cluster] = []
-        var doc: [String]?
-    }
-    @State var themesMemo = ThemesMemo()
-
     /// The All snapshot's CONTENT signature, computed once each time the
     /// snapshot is written — the All room's O(1) derivation identity at render
     /// time. See `derivationKey`.
@@ -793,29 +783,7 @@ struct FeedScreen: View {
     /// Day's Coming up tile (prd §1136c): every app's dated rows ahead, read
     /// in the tile's own `.task`, never in a body (§628).
     @State var dayComingUp: [Thing] = []
-    /// A tapped Themes cell (2026-07-18, the All feed's own treemap) — the
-    /// same project detail door Home's map already opened.
-    @State var openProject: ProjectRoute?
     @State private var openPerson: SocialProfile?
-    /// One scroll-past per mount (prd §385, 2026-08-14): on appear the list
-    /// settles just below the Themes card, so the map lives ABOVE THE FOLD —
-    /// revealed by scrolling up past the top, the way Mail hides search.
-    /// Every source switch re-mounts this screen (`.id(filter.source)` in
-    /// `MainSurface`), which resets this and re-hides the map — the stronger
-    /// form of the digest-collapse behaviour it replaced (the one thing the
-    /// user kept from that design: "i like that it collapses when you
-    /// navigate away and come back").
-    @State var foldSettled = false
-    /// The zero-height row just below the Themes card that `foldSettled`'s
-    /// scroll targets. `scrollTo` on an id that never rendered is a no-op,
-    /// which is the whole guard: non-All rooms, a filtered All, and an empty
-    /// corpus render no anchor and so never scroll.
-    static let themesFoldAnchor = "feed.themesFold"
-    struct ProjectRoute: Identifiable, Hashable {
-        let name: String
-        var id: String { name }
-    }
-    @Namespace private var zoomNS
     /// prd 43h: Reduce Motion is law — the hand-rolled moves (row entrances)
     /// fall back to plain state changes under it.
     @Environment(\.accessibilityReduceMotion) var reduceMotion
@@ -1396,29 +1364,8 @@ struct FeedScreen: View {
     @ViewBuilder
     private func populatedRoom(_ visible: [Thing]) -> some View {
                 let nextID = nextEventID(visible)
-                // The Themes treemap, ABOVE THE FOLD of the unfiltered All
-                // room (prd §385) — called HERE, before `shapedSections`,
-                // and not inside its `.all` branch where it lived from
-                // 2026-07-18 to 2026-08-14: the shape chain draws its
-                // heroes (a live stream above all) before the branch
-                // runs, and the fold-settle scroll hides EVERYTHING above
-                // `themesFoldAnchor` — a live hero must stay below the
-                // anchor or going live would hide it. The condition is
-                // the `.all` branch's own gate restated (kind-filtered
-                // All and the pinned room take other branches, and
-                // neither draws the map).
-                // The themes lede LEFT the All feed (user ruling
-                // 2026-08-14, prd §386a: "we could put the treemap of
-                // themes here [the overview] and get rid of it on the all
-                // page, i don't think it really works there") — hours
-                // after §385 moved it above the fold, which is the
-                // fastest a ruling here has ever been reversed by its own
-                // author watching it. The treemap's one home is now the
-                // Today overview's "What you're into" module, where it
-                // sits beside the other aggregates instead of ahead of
-                // the chronology it was interrupting.
-                // `themesLedeSection` and the §385 fold machinery stay
-                // compiled but unreached (dormant-not-deleted).
+                // The themes lede left the All feed (prd §386a) and is
+                // deleted with its fold machinery (prd §1310).
                 // A pin is a HOME pin only (ruling 2026-07-10): the Feed's
                 // own Pinned section doubled what Home already shows and
                 // cluttered the record — pinned things now ride the feed in
@@ -2047,18 +1994,11 @@ struct FeedScreen: View {
                 chrome.pourHue = selectedWallet.map(WalletFace.tint)
             }
         }
-        // Both destinations below leave the seat's column clear
-        // (`DSDock.seatClearance`). These two pushes do not run through
+        // The destination below leaves the seat's column clear
+        // (`DSDock.seatClearance`). This push does not run through
         // `HomeRoute.path`, so `MainSurface`'s resolver — where every other
-        // pushed screen gets this line — never sees them; the seat floats over
-        // them just the same, wearing the face rather than the back door.
-        .navigationDestination(item: $openProject) { route in
-            ProjectDetailScreen(projectName: route.name)
-                .navigationTransition(.zoom(sourceID: route.name, in: zoomNS))
-                .dsIf(!inPresentedSheet) { $0.dsSeatClearance() }
-                .dsDemoMarkClearance()
-                .dsSheetStep()
-        }
+        // pushed screen gets this line — never sees it; the seat floats over
+        // it just the same, wearing the face rather than the back door.
         // The social roster's own door (item 2, 2026-07-27) — a face pushes
         // the person room, not the quick-glance tray `SocialProfileCard`
         // still serves everywhere else.

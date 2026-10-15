@@ -2527,6 +2527,11 @@ private struct GenTagMap: View {
             projectTap?(item.route.map { r in
                 sym.isEmpty ? "@token:\(r)" : "@token:\(r):\(sym)"
             } ?? "@wallet")
+        } else if iconMode == "source" {
+            // A source map's circle is an APP, never a tag (prd §1310): a
+            // tag view filtered by "Bluesky" was empty. The sentinel lands
+            // in that app's feed.
+            projectTap?("@source:\(item.tag)")
         } else {
             projectTap?(item.tag)
         }

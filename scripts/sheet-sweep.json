@@ -1011,7 +1011,7 @@
    "covers": [
     "Shell/MainSurface.swift:route.sheet#node.project"
    ],
-   "why": "its one door is a circle on Find's source map (`genProjectTap`), which the sweep does not search; the composer's `show <topic>` cannot reach it, since it parses with no tags"
+   "why": "its doors are an answer's tag tile and its \"Your tags\" map (`genProjectTap`), which the sweep does not ask for; a source map's circle opens its app's feed instead (prd §1310)"
   },
   {
    "covers": [

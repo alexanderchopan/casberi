@@ -5,28 +5,6 @@ import SwiftData
 // FeedScreen.swift (prd §718). Nothing here changed but the file it lives
 // in and, where another file reads a member, its access level.
 extension FeedScreen {
-    /// The themes lede's corpus walk, computed once per real change. Kept as a
-    /// function (not inline in the `@ViewBuilder`) because a memo needs a
-    /// statement body, which a ViewBuilder won't take.
-    /// Takes the render's own `visible` (PERF 2026-07-31). It used to read
-    /// `self.visible` twice — and for the All room every read is a `.live`
-    /// filter over the WHOLE corpus, so the render paid for three passes where
-    /// one would do. The caller already holds the array; passing it makes that
-    /// obvious rather than incidental.
-    func themesData(_ visible: [Thing]) -> (clusters: [HomeComposition.Cluster], doc: [String]?) {
-        let key = derivationKey(visible)
-        if themesMemo.key != key {
-            themesMemo.key = key
-            themesMemo.clusters = perfAccum("projectClusters") {
-                HomeComposition.projectClusters(things: visible)
-            }
-            themesMemo.doc = perfAccum("themesDocument") {
-                HomeComposition.themesDocument(clusters: themesMemo.clusters)
-            }
-        }
-        return (themesMemo.clusters, themesMemo.doc)
-    }
-
     /// Cheap identity for a derivation input — count + every id and capture
     /// date, which is what the grouping and bundling actually key on. O(n)
     /// hashing is ~1% of the grouping it saves. An in-place cosmetic heal (a

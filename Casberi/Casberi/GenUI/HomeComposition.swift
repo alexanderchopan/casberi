@@ -8,11 +8,8 @@ import SwiftData
 /// `boardSources`) is gone; the agent's `KeptAskComposers` reimplements the
 /// away-window read independently now (the same parallel-reads pattern this
 /// file and `RootShell` always used with each other, not a shared private
-/// helper). What survives are the two derivations that outlived the board:
-/// `projectClusters` (the tag-clustering the Themes treemap draws from,
-/// `FeedScreen`'s own top-of-feed card since 2026-07-18) and `themesDocument`
-/// itself, plus `MCPTools`'s week-synthesis tool, which reads
-/// `projectClusters` directly.
+/// helper). What survives is `projectClusters`, the tag clustering
+/// `DayBrief` reads; the Themes treemap it once drew is deleted (prd §1310).
 enum HomeComposition {
 
     struct Cluster {
@@ -263,60 +260,4 @@ enum HomeComposition {
             }
     }
 
-    /// The Themes treemap document — the cross-source overview that moved OFF
-    /// Home to the top of the "All" feed (2026-07-18, user: "should it go on
-    /// all?"): a cross-source view belongs on the cross-source feed, same
-    /// split that already sent the Wallet treemap to the Wallet feed. Same
-    /// TagMap component/sizing the wallet treemap draws (no `genSpan` pin, so
-    /// it takes the renderer's own unconstrained size — answering "is it too
-    /// large / same as the wallet one?": identically sized, since it's the
-    /// same component). Nil when no project has clustered yet — same standard
-    /// `projectClusters` always held (min 2 things sharing a real tag).
-    static func themesDocument(things: [Thing]) -> [String]? {
-        themesDocument(clusters: projectClusters(things: things))
-    }
-
-    /// Same doc, from clusters already computed — for a caller (FeedScreen's
-    /// `themesData` memo, 2026-07-21) that computes the cluster list once and
-    /// would otherwise call `projectClusters` a second time over the same
-    /// things just to get it.
-    static func themesDocument(clusters: [Cluster]) -> [String]? {
-        guard !clusters.isEmpty else { return nil }
-        let items = clusters.prefix(cellCap).map { "\($0.name) \($0.things.count)" }
-        let sub = themesSubline(clusters: clusters)
-        return ["root = TagMap(\(q(String(localized: "Themes"))), \(sub.map(q) ?? "null"), [\(items.joined(separator: ", "))])"]
-    }
-
-    /// How many cells the map draws — `UnitTreemap`'s six-cell layout.
-    private static let cellCap = 6
-
-    /// The map's subline — the honesty valve the topic map's own subtitle
-    /// already carries: the map draws six cells and says nothing when there
-    /// are eleven themes, and a silently truncated map looks exactly like a
-    /// complete one. Nil when the map is whole.
-    ///
-    /// The "Most new this week" freshness leader that briefly lived here is
-    /// GONE, hours after it shipped (prd §385, user: "the 'most new this
-    /// week...' is useless") — the day's freshness reading moved to where the
-    /// day is, the All feed's Today header (`DayBrief.whisper`), and the map
-    /// itself moved above the fold the same pass. What survives from that
-    /// morning's reasoning: re-ranking cells by recency stays declined —
-    /// magnitude-is-area is the treemap's one honest voice, and a map that
-    /// reshuffles by window stops being a map of your corpus.
-    static func themesSubline(clusters: [Cluster]) -> String? {
-        guard clusters.count > cellCap else { return nil }
-        return String(localized: "\(cellCap) of \(clusters.count) shown")
-    }
-
-    /// Quotes a string for the document; strips embedded quotes rather than
-    /// escaping (the line grammar has no escape sequence).
-    private static func q(_ s: String) -> String {
-        // GenParser splits the whole document on "\n" per line (brief §5) —
-        // a raw newline inside a value (a multi-line social post, Goal 3)
-        // would fracture one doc line into several malformed ones. Collapse
-        // to spaces, same "no escape sequence" treatment as embedded quotes.
-        let flat = s.replacingOccurrences(of: "\r\n", with: " ")
-            .replacingOccurrences(of: "\n", with: " ")
-        return "\"\(flat.replacingOccurrences(of: "\"", with: ""))\""
-    }
 }
