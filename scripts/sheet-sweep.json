@@ -390,7 +390,8 @@
      "tap": "button:^Gmail, A sender"
     }
    ],
-   "anchor": "button:=Sheet Grabber"
+   "anchor": "button:=Sheet Grabber",
+   "afterSwipe": "button:=Add to Life"
   },
   {
    "id": "app-key",
@@ -457,8 +458,8 @@
     }
    ],
    "anchor": "button:=Done",
-   "afterSwipe": "button:^Sources, Everything",
-   "control": "button:=Back",
+   "control": "button:=Done",
+   "afterSwipe": "text:=Your Gemini key",
    "afterControl": "text:=Your Gemini key"
   },
   {
@@ -490,344 +491,6 @@
     }
    ],
    "anchor": "button:=Done",
-   "afterSwipe": "button:^Sources, Everything",
-   "control": "button:=Back",
-   "afterControl": "button:^Website"
-  },
-  {
-   "id": "app-profile",
-   "covers": [
-    "Screens/AccountPage.swift:sheet#profile"
-   ],
-   "launch": [
-    "demo"
-   ],
-   "steps": [
-    {
-     "tap": "button:^Sources, Everything"
-    },
-    {
-     "tap": "button:~, Apps"
-    },
-    {
-     "focus": "field:?Search"
-    },
-    {
-     "type": "Bluesky"
-    },
-    {
-     "tap": "button:^Bluesky,"
-    },
-    {
-     "tap": "button:^Uma"
-    }
-   ],
-   "anchor": "button:^Who they follow",
-   "afterSwipe": "button:^Sources, Everything",
-   "control": "button:=Back",
-   "afterControl": "button:^Nils"
-  },
-  {
-   "id": "app-follow-import",
-   "covers": [
-    "Screens/SocialPostViews.swift:followImport"
-   ],
-   "launch": [
-    "demo"
-   ],
-   "steps": [
-    {
-     "tap": "button:^Sources, Everything"
-    },
-    {
-     "tap": "button:~, Apps"
-    },
-    {
-     "focus": "field:?Search"
-    },
-    {
-     "type": "Bluesky"
-    },
-    {
-     "tap": "button:^Bluesky,"
-    },
-    {
-     "tap": "button:^Nils"
-    },
-    {
-     "tap": "button:^Who they follow"
-    }
-   ],
-   "anchor": "button:=Back",
-   "afterSwipe": "button:^Sources, Everything",
-   "control": "button:=Back",
-   "afterControl": "button:^Who they follow"
-  },
-  {
-   "id": "app-starter-pack",
-   "covers": [
-    "Screens/StarterPackImportSheet.swift:open"
-   ],
-   "launch": [
-    "demo"
-   ],
-   "steps": [
-    {
-     "tap": "button:^Sources, Everything"
-    },
-    {
-     "tap": "button:~, Apps"
-    },
-    {
-     "focus": "field:?Search"
-    },
-    {
-     "type": "Bluesky"
-    },
-    {
-     "tap": "button:^Bluesky,"
-    },
-    {
-     "tap": "button:^Follow a starter pack"
-    }
-   ],
-   "anchor": "button:=Back",
-   "afterSwipe": "button:^Sources, Everything",
-   "control": "button:=Back",
-   "afterControl": "button:^Follow a starter pack"
-  },
-  {
-   "id": "app-thing",
-   "covers": [
-    "Screens/AccountPage.swift:sheet#thing"
-   ],
-   "launch": [
-    "demo"
-   ],
-   "steps": [
-    {
-     "tap": "button:^Sources, Everything"
-    },
-    {
-     "tap": "button:~, Apps"
-    },
-    {
-     "focus": "field:?Search"
-    },
-    {
-     "type": "ENS"
-    },
-    {
-     "tap": "button:^ENS,"
-    },
-    {
-     "tap": "button:^nick.eth"
-    }
-   ],
-   "anchor": "button:^Everything from",
-   "afterSwipe": "button:^Sources, Everything",
-   "control": "button:=Back",
-   "afterControl": "button:^nick.eth"
-  },
-  {
-   "id": "app-card",
-   "covers": [
-    "Screens/AccountPage.swift:sheet#card"
-   ],
-   "launch": [
-    "demo"
-   ],
-   "steps": [
-    {
-     "tap": "button:^Sources, Everything"
-    },
-    {
-     "tap": "button:~, Apps"
-    },
-    {
-     "focus": "field:?Search"
-    },
-    {
-     "type": "Walletbeat"
-    },
-    {
-     "tap": "button:^Walletbeat,"
-    },
-    {
-     "tap": "button:^MetaMask"
-    }
-   ],
-   "anchor": "button:=Back",
-   "afterSwipe": "button:^Sources, Everything",
-   "control": "button:=Back",
-   "afterControl": "button:^Browse every wallet"
-  },
-  {
-   "id": "walletbeat-wallet",
-   "covers": [
-    "Screens/WalletbeatDirectoryScreen.swift:opened"
-   ],
-   "launch": [
-    "demo"
-   ],
-   "steps": [
-    {
-     "tap": "button:^Sources, Everything"
-    },
-    {
-     "tap": "button:~, Apps"
-    },
-    {
-     "focus": "field:?Search"
-    },
-    {
-     "type": "Walletbeat"
-    },
-    {
-     "tap": "button:^Walletbeat,"
-    },
-    {
-     "tap": "button:^Browse every wallet"
-    },
-    {
-     "tap": "button:^Rabby"
-    }
-   ],
-   "anchor": "button:=Back",
-   "afterSwipe": "button:^Sources, Everything",
-   "control": "button:=Back",
-   "afterControl": "button:^Rainbow"
-  },
-  {
-   "id": "l2beat-chain",
-   "covers": [
-    "Screens/L2beatDirectoryScreen.swift:opened"
-   ],
-   "launch": [
-    "demo"
-   ],
-   "steps": [
-    {
-     "tap": "button:^Sources, Everything"
-    },
-    {
-     "tap": "button:~, Apps"
-    },
-    {
-     "focus": "field:?Search"
-    },
-    {
-     "type": "L2BEAT"
-    },
-    {
-     "tap": "button:^L2BEAT,"
-    },
-    {
-     "tap": "button:^Browse every chain"
-    },
-    {
-     "tap": "button:^Optimism"
-    }
-   ],
-   "anchor": "button:=Back",
-   "afterSwipe": "button:^Sources, Everything",
-   "control": "button:=Back",
-   "afterControl": "button:^Arbitrum One"
-  },
-  {
-   "id": "acorns-login",
-   "covers": [
-    "Screens/AcornsScreen.swift:showLogin"
-   ],
-   "launch": [
-    "demo"
-   ],
-   "steps": [
-    {
-     "tap": "button:^Sources, Everything"
-    },
-    {
-     "tap": "button:~, Apps"
-    },
-    {
-     "focus": "field:?Search"
-    },
-    {
-     "type": "Acorns"
-    },
-    {
-     "tap": "button:^Acorns,"
-    },
-    {
-     "tap": "button:^Connect Acorns"
-    }
-   ],
-   "anchor": "text:=Log in to Acorns",
-   "swipe": false,
-   "control": "button:=Done"
-  },
-  {
-   "id": "rocket-login",
-   "covers": [
-    "Screens/RocketMoneyScreen.swift:showLogin"
-   ],
-   "launch": [
-    "demo"
-   ],
-   "steps": [
-    {
-     "tap": "button:^Sources, Everything"
-    },
-    {
-     "tap": "button:~, Apps"
-    },
-    {
-     "focus": "field:?Search"
-    },
-    {
-     "type": "Rocket Money"
-    },
-    {
-     "tap": "button:^Rocket Money,"
-    },
-    {
-     "tap": "button:^Connect Rocket Money"
-    }
-   ],
-   "anchor": "text:=Log in to Rocket Money",
-   "swipe": false,
-   "control": "button:=Done"
-  },
-  {
-   "id": "spotify-login",
-   "covers": [
-    "Screens/SpotifyScreen.swift:showLogin"
-   ],
-   "launch": [
-    "demo"
-   ],
-   "steps": [
-    {
-     "tap": "button:^Sources, Everything"
-    },
-    {
-     "tap": "button:~, Apps"
-    },
-    {
-     "focus": "field:?Search"
-    },
-    {
-     "type": "Spotify"
-    },
-    {
-     "tap": "button:^Spotify,"
-    },
-    {
-     "tap": "button:^Connect Spotify"
-    }
-   ],
-   "anchor": "text:=Log in to Spotify",
-   "swipe": false,
    "control": "button:=Done"
   },
   {
@@ -1074,64 +737,6 @@
    "afterSwipe": "button:=Add to Life"
   },
   {
-   "id": "life-mail-list",
-   "covers": [
-    "Screens/FeedScreen+Sheets.swift:feedSheet#mailSubscription"
-   ],
-   "launch": [
-    "demo",
-    "-openRoom",
-    "Life",
-    "-openSection",
-    "subscriptions"
-   ],
-   "steps": [
-    {
-     "tap": "button:^The Weekly Fold"
-    }
-   ],
-   "anchor": "button:=Sheet Grabber"
-  },
-  {
-   "id": "media-following",
-   "covers": [
-    "Screens/FeedScreen+Sheets.swift:feedSheet#following"
-   ],
-   "launch": [
-    "demo",
-    "-openRoom",
-    "Media",
-    "-openSection",
-    "subscriptions"
-   ],
-   "steps": [
-    {
-     "tap": "button:^Computerphile"
-    }
-   ],
-   "anchor": "button:=Sheet Grabber"
-  },
-  {
-   "id": "social-person",
-   "covers": [
-    "Screens/FeedScreen+Sheets.swift:feedSheet#person"
-   ],
-   "launch": [
-    "demo",
-    "-openRoom",
-    "Social"
-   ],
-   "steps": [
-    {
-     "tap": "button:^Uma"
-    },
-    {
-     "tap": "button:^Uma"
-    }
-   ],
-   "anchor": "button:=Sheet Grabber"
-  },
-  {
    "id": "person-by-link",
    "covers": [
     "Shell/RootShell.swift:deepLinkPerson"
@@ -1148,29 +753,6 @@
    ],
    "anchor": "button:=Sheet Grabber",
    "afterSwipe": "button:^Sources, Everything"
-  },
-  {
-   "id": "person-thing",
-   "covers": [
-    "Screens/PersonRoomScreen.swift:sheetThing"
-   ],
-   "launch": [
-    "demo",
-    "-deeplink",
-    "casberi://person/Bluesky/uma"
-   ],
-   "steps": [
-    {
-     "wait": 3
-    },
-    {
-     "tap": "button:~Critique day"
-    }
-   ],
-   "anchor": "button:^Everything from",
-   "afterSwipe": "button:^Sources, Everything",
-   "control": "button:=Back",
-   "afterControl": "button:~Critique day"
   },
   {
    "id": "pivot",
@@ -1193,157 +775,7 @@
     }
    ],
    "anchor": "button:=Sheet Grabber",
-   "afterSwipe": "button:=Everything from Telegram"
-  },
-  {
-   "id": "pivot-thing",
-   "covers": [
-    "Screens/PivotPage.swift:opened"
-   ],
-   "launch": [
-    "demo"
-   ],
-   "steps": [
-    {
-     "relaunch": [
-      "demo",
-      "-openThing",
-      "Sourdough"
-     ]
-    },
-    {
-     "tap": "button:=Everything from Telegram"
-    },
-    {
-     "tap": "button:~Sourdough"
-    }
-   ],
-   "anchor": "button:=Back",
-   "afterSwipe": "button:=Everything from Telegram",
-   "control": "button:=Back",
-   "afterControl": "button:~Sourdough"
-  },
-  {
-   "id": "room-share",
-   "covers": [
-    "Screens/FeedScreen.swift:roomShare"
-   ],
-   "launch": [
-    "demo",
-    "-openRoom",
-    "Work",
-    "-roomScope",
-    "Work|seat:GitHub"
-   ],
-   "steps": [
-    {
-     "tap": "button:^Share this week"
-    }
-   ],
-   "anchor": "button:^Share…"
-  },
-  {
-   "id": "thing-reply-to",
-   "covers": [
-    "Screens/ThingSheetView.swift:walkingTo"
-   ],
-   "launch": [
-    "demo"
-   ],
-   "steps": [
-    {
-     "relaunch": [
-      "demo",
-      "-openThing",
-      "Critique day"
-     ]
-    },
-    {
-     "tap": "button:~Small software, made carefully"
-    }
-   ],
-   "anchor": "button:=Back",
-   "afterSwipe": "button:^Sources, Everything",
-   "control": "button:=Back",
-   "afterControl": "button:~Small software"
-  },
-  {
-   "id": "thing-profile",
-   "covers": [
-    "Screens/ThingSheetView.swift:faceTarget#person"
-   ],
-   "launch": [
-    "demo"
-   ],
-   "steps": [
-    {
-     "relaunch": [
-      "demo",
-      "-openThing",
-      "Critique day"
-     ]
-    },
-    {
-     "tap": "button:^Open profile"
-    }
-   ],
-   "anchor": "button:=Back",
-   "afterSwipe": "button:^Sources, Everything",
-   "control": "button:=Back",
-   "afterControl": "button:^Open profile"
-  },
-  {
-   "id": "thing-address",
-   "covers": [
-    "Screens/ThingSheetView.swift:faceTarget#address"
-   ],
-   "launch": [
-    "demo"
-   ],
-   "steps": [
-    {
-     "relaunch": [
-      "demo",
-      "-openThing",
-      "Sent 0.15 ETH to Sam"
-     ]
-    },
-    {
-     "tap": "button:^Every transfer with Sam"
-    }
-   ],
-   "anchor": "button:=Back",
-   "afterSwipe": "button:^Sources, Everything",
-   "control": "button:=Back",
-   "afterControl": "button:^Every transfer with Sam"
-  },
-  {
-   "id": "thing-linked-note",
-   "covers": [
-    "Screens/ThingSheetView.swift:walkingToNote"
-   ],
-   "launch": [
-    "demo"
-   ],
-   "steps": [
-    {
-     "relaunch": [
-      "demo",
-      "-openThing",
-      "Sent 0.15 ETH to Sam"
-     ]
-    },
-    {
-     "tap": "button:^Every transfer with Sam"
-    },
-    {
-     "tap": "button:~Sam"
-    }
-   ],
-   "anchor": "button:=Back",
-   "afterSwipe": "button:^Sources, Everything",
-   "control": "button:=Back",
-   "afterControl": "button:~Sam"
+   "afterSwipe": "button:^Sources, Everything"
   },
   {
    "id": "thing-track",
@@ -1365,109 +797,7 @@
      "tap": "button:^Track"
     }
    ],
-   "anchor": "button:=Back",
-   "afterSwipe": "button:^Sources, Everything",
-   "control": "button:=Back",
-   "afterControl": "button:^Track"
-  },
-  {
-   "id": "thing-follow-site",
-   "covers": [
-    "Screens/ThingSheetView.swift:faceTarget#followSite"
-   ],
-   "launch": [
-    "demo"
-   ],
-   "steps": [
-    {
-     "relaunch": [
-      "demo",
-      "-openThing",
-      "SwiftData"
-     ]
-    },
-    {
-     "tap": "button:^Follow"
-    }
-   ],
-   "anchor": "button:=Back",
-   "afterSwipe": "button:^Sources, Everything",
-   "control": "button:=Back",
-   "afterControl": "button:^Follow"
-  },
-  {
-   "id": "thing-follow-channel",
-   "covers": [
-    "Screens/ThingSheetView.swift:faceTarget#followChannel"
-   ],
-   "launch": [
-    "demo"
-   ],
-   "steps": [
-    {
-     "relaunch": [
-      "demo",
-      "-openThing",
-      "How a compiler actually reads"
-     ]
-    },
-    {
-     "tap": "button:^Follow"
-    }
-   ],
-   "anchor": "button:=Back",
-   "afterSwipe": "button:^Sources, Everything",
-   "control": "button:=Back",
-   "afterControl": "button:^Follow"
-  },
-  {
-   "id": "thing-photo",
-   "covers": [
-    "Screens/ThingSheetView.swift:zoomingPhoto"
-   ],
-   "launch": [
-    "demo"
-   ],
-   "steps": [
-    {
-     "relaunch": [
-      "demo",
-      "-openThing",
-      "Figma — spacing tokens"
-     ]
-    },
-    {
-     "tap": "image:~"
-    }
-   ],
-   "anchor": "button:=Close",
-   "swipe": false,
-   "control": "button:=Close"
-  },
-  {
-   "id": "thing-walletbeat",
-   "covers": [
-    "Screens/WalletbeatSheetViews.swift:openedWallet"
-   ],
-   "launch": [
-    "demo"
-   ],
-   "steps": [
-    {
-     "relaunch": [
-      "demo",
-      "-openThing",
-      "Customer Data Exposed in Trezor"
-     ]
-    },
-    {
-     "tap": "button:^What Walletbeat says"
-    }
-   ],
-   "anchor": "button:=Back",
-   "afterSwipe": "button:^Sources, Everything",
-   "control": "button:=Back",
-   "afterControl": "button:^What Walletbeat says"
+   "anchor": "button:=Track Spotify"
   },
   {
    "id": "thing-alert-new",
@@ -1489,63 +819,7 @@
      "tap": "button:^Add an alert"
     }
    ],
-   "anchor": "text:=New alert",
-   "afterSwipe": "button:^Sources, Everything",
-   "control": "button:=Back",
-   "afterControl": "button:^Add an alert"
-  },
-  {
-   "id": "social-post",
-   "covers": [
-    "Screens/SocialPostViews.swift:walking"
-   ],
-   "launch": [
-    "demo"
-   ],
-   "steps": [
-    {
-     "relaunch": [
-      "demo",
-      "-openThing",
-      "Local-first is just software"
-     ]
-    },
-    {
-     "tap": "button:~@nils"
-    }
-   ],
-   "anchor": "button:=Back",
-   "afterSwipe": "button:^Sources, Everything",
-   "control": "button:=Back",
-   "afterControl": "button:~@nils"
-  },
-  {
-   "id": "social-post-author",
-   "covers": [
-    "Screens/SocialPostViews.swift:profile"
-   ],
-   "launch": [
-    "demo"
-   ],
-   "steps": [
-    {
-     "relaunch": [
-      "demo",
-      "-openThing",
-      "Local-first is just software"
-     ]
-    },
-    {
-     "tap": "button:~@nils"
-    },
-    {
-     "tap": "button:^Nils"
-    }
-   ],
-   "anchor": "button:^Who they follow",
-   "afterSwipe": "button:^Sources, Everything",
-   "control": "button:=Back",
-   "afterControl": "button:^Nils"
+   "anchor": "text:=New alert"
   },
   {
    "id": "addresses-thing",
@@ -1572,68 +846,6 @@
    "afterSwipe": "button:^Sources, Everything",
    "control": "button:=Back",
    "afterControl": "button:^Sent 0.15 ETH"
-  },
-  {
-   "id": "plan-edit",
-   "covers": [
-    "Screens/SubscriptionSheets.swift:editing"
-   ],
-   "launch": [
-    "demo",
-    "-subscriptionTrack",
-    "Hulu:15.99"
-   ],
-   "steps": [
-    {
-     "tap": "button:^Sources, Everything"
-    },
-    {
-     "tap": "button:~, Subscriptions"
-    },
-    {
-     "tap": "button:^Hulu, "
-    },
-    {
-     "tap": "button:^Edit"
-    }
-   ],
-   "anchor": "button:=Back",
-   "afterSwipe": "button:^Sources, Everything",
-   "control": "button:=Back",
-   "afterControl": "button:^Edit"
-  },
-  {
-   "id": "app-track",
-   "covers": [
-    "Screens/AccountPage.swift:sheet#track"
-   ],
-   "launch": [
-    "demo"
-   ],
-   "steps": [
-    {
-     "tap": "button:^Sources, Everything"
-    },
-    {
-     "tap": "button:~, Apps"
-    },
-    {
-     "focus": "field:?Search"
-    },
-    {
-     "type": "Dropbox"
-    },
-    {
-     "tap": "button:^Dropbox,"
-    },
-    {
-     "tap": "button:^Track a subscription"
-    }
-   ],
-   "anchor": "field:?Search, or type any name",
-   "afterSwipe": "button:^Sources, Everything",
-   "control": "button:=Back",
-   "afterControl": "button:^Track a subscription"
   },
   {
    "id": "notes",
@@ -1694,153 +906,6 @@
    "afterSwipe": "button:=Format"
   },
   {
-   "id": "note-sketch",
-   "covers": [
-    "Shell/NoteCaptureSheet.swift:sketchOpen"
-   ],
-   "launch": [
-    "demo"
-   ],
-   "steps": [
-    {
-     "tap": "button:^Notes, Your notes"
-    },
-    {
-     "tap": "button:^New, Write"
-    },
-    {
-     "tap": "button:=Attach"
-    },
-    {
-     "tap": "button:^Sketch"
-    }
-   ],
-   "anchor": "button:=Sheet Grabber",
-   "afterSwipe": "button:=Format"
-  },
-  {
-   "id": "notes-trash",
-   "covers": [
-    "Screens/FeedScreen.swift:open"
-   ],
-   "launch": [
-    "demo"
-   ],
-   "steps": [
-    {
-     "tap": "button:^Notes, Your notes"
-    },
-    {
-     "hold": "button:^Note, Kitchen paint colors"
-    },
-    {
-     "tap": "button:=Delete"
-    },
-    {
-     "maybe": "button:=Delete"
-    },
-    {
-     "tap": "button:^Folders, What you filed"
-    },
-    {
-     "tap": "button:^Recently deleted"
-    }
-   ],
-   "anchor": "text:=Recently deleted",
-   "afterSwipe": "button:^Recently deleted"
-  },
-  {
-   "id": "wallet-follow",
-   "covers": [
-    "Screens/FeedScreen+Sheets.swift:feedSheet#walletFollow"
-   ],
-   "launch": [
-    "demo"
-   ],
-   "steps": [
-    {
-     "tap": "button:=Wallet"
-    },
-    {
-     "tap": "button:=Accounts"
-    },
-    {
-     "tap": "button:=Follow a wallet"
-    }
-   ],
-   "anchor": "field:?An address or a name",
-   "afterSwipe": "button:^Holdings, Your",
-   "control": "button:=Back",
-   "afterControl": "button:=Accounts"
-  },
-  {
-   "id": "wallet-history",
-   "covers": [
-    "Shell/MainSurface.swift:route.sheet#node.bridge"
-   ],
-   "launch": [
-    "demo"
-   ],
-   "steps": [
-    {
-     "tap": "button:=Wallet"
-    },
-    {
-     "swipeUp": 2
-    },
-    {
-     "tap": "button:^See all "
-    }
-   ],
-   "anchor": "button:=Sheet Grabber"
-  },
-  {
-   "id": "wallet-history-thing",
-   "covers": [
-    "Screens/WalletHistoryScreen.swift:sheetThing"
-   ],
-   "launch": [
-    "demo"
-   ],
-   "steps": [
-    {
-     "tap": "button:=Wallet"
-    },
-    {
-     "swipeUp": 2
-    },
-    {
-     "tap": "button:^See all "
-    },
-    {
-     "tap": "button:^Sent to Put 0.0700"
-    }
-   ],
-   "anchor": "button:^Everything from",
-   "afterSwipe": "button:^Holdings, Your",
-   "control": "button:=Back",
-   "afterControl": "button:^Sent to Put 0.0700"
-  },
-  {
-   "id": "wallet-tile",
-   "covers": [
-    "Shell/RootShell.swift:chrome.appSheet"
-   ],
-   "launch": [
-    "demo"
-   ],
-   "steps": [
-    {
-     "tap": "button:=Wallet"
-    },
-    {
-     "tap": "button:^Needs you. "
-    }
-   ],
-   "anchor": "button:=Wallet, ·, Needs you",
-   "swipeFrom": "button:=Wallet, ·, Needs you"
-  },
-  {
    "id": "wallet-subscription",
    "covers": [
     "Screens/FeedScreen+Sheets.swift:feedSheet#subscription"
@@ -1880,58 +945,7 @@
      "tap": "button:=Track a subscription"
     }
    ],
-   "anchor": "field:?Search, or type any name",
-   "afterSwipe": "button:^Holdings, Your",
-   "control": "button:=Back",
-   "afterControl": "button:=Wallet, ·, Subscriptions"
-  },
-  {
-   "id": "wallet-token",
-   "covers": [
-    "Screens/FeedScreen+Sheets.swift:feedSheet#token"
-   ],
-   "launch": [
-    "demo"
-   ],
-   "steps": [
-    {
-     "tap": "button:=Wallet"
-    },
-    {
-     "tap": "button:^Holdings, Your"
-    },
-    {
-     "tap": "button:^ETH, Main"
-    }
-   ],
-   "anchor": "button:=Back",
-   "afterSwipe": "button:^Holdings, Your",
-   "control": "button:=Back",
-   "afterControl": "button:^USDC, Main"
-  },
-  {
-   "id": "wallet-worth-a-look",
-   "covers": [
-    "Screens/FeedScreen+Sheets.swift:feedSheet#worthALook"
-   ],
-   "launch": [
-    "demo"
-   ],
-   "steps": [
-    {
-     "tap": "button:=Wallet"
-    },
-    {
-     "tap": "button:^Security, Who"
-    },
-    {
-     "tap": "button:^1 lookalike address"
-    }
-   ],
-   "anchor": "button:=Back",
-   "afterSwipe": "button:^Holdings, Your",
-   "control": "button:=Back",
-   "afterControl": "button:^1 transfer uses"
+   "anchor": "field:?Search, or type any name"
   },
   {
    "id": "markets-follow-company",
@@ -2026,6 +1040,20 @@
   },
   {
    "covers": [
+    "Screens/AccountPage.swift:sheet#profile",
+    "Screens/SocialPostViews.swift:followImport",
+    "Screens/StarterPackImportSheet.swift:open"
+   ],
+   "why": "NOT WALKED YET: the demo's Bluesky page lists no followed people and no starter-pack door (measured 2026-10-14); a profile is reached instead through a post (`social-post-author`)"
+  },
+  {
+   "covers": [
+    "Screens/AccountPage.swift:sheet#thing"
+   ],
+   "why": "NOT WALKED YET: ENS's page by Sources' search did not open its nick.eth thing in the first run; the path is unsettled"
+  },
+  {
+   "covers": [
     "Screens/MarketsViews.swift:tray#edit",
     "Screens/FeedScreen.swift:folderShare",
     "Screens/ThingSheetView.swift:faceTarget#remind",
@@ -2112,6 +1140,198 @@
     "Screens/LogosScreen.swift:pairOffer"
    ],
    "why": "raised by a logos-observer pairing offer from a Logos node; there is no node on the simulator"
+  },
+  {
+   "covers": [
+    "Screens/AccountPage.swift:sheet#card"
+   ],
+   "why": "NOT WALKED YET (app-card): Walletbeat's followed wallet is Ledger Wallet; the sheet it raises is unread"
+  },
+  {
+   "covers": [
+    "Screens/WalletbeatDirectoryScreen.swift:opened"
+   ],
+   "why": "NOT WALKED YET (walletbeat-wallet): the directory's rows were not where the walk looked (no Rabby row)"
+  },
+  {
+   "covers": [
+    "Screens/L2beatDirectoryScreen.swift:opened"
+   ],
+   "why": "NOT WALKED YET (l2beat-chain): the directory's rows were not where the walk looked (no Optimism row)"
+  },
+  {
+   "covers": [
+    "Screens/AcornsScreen.swift:showLogin"
+   ],
+   "why": "NOT WALKED YET (acorns-login): the page's ask is a Sign in tile; the login cover's own words are unread"
+  },
+  {
+   "covers": [
+    "Screens/RocketMoneyScreen.swift:showLogin"
+   ],
+   "why": "NOT WALKED YET (rocket-login): the page's ask is a Sign in tile; the login cover's own words are unread"
+  },
+  {
+   "covers": [
+    "Screens/SpotifyScreen.swift:showLogin"
+   ],
+   "why": "NOT WALKED YET (spotify-login): the page's ask is a Sign in tile; the login cover's own words are unread"
+  },
+  {
+   "covers": [
+    "Screens/FeedScreen+Sheets.swift:feedSheet#mailSubscription"
+   ],
+   "why": "NOT WALKED YET (life-mail-list): Life's Subscriptions tile did not show The Weekly Fold where the walk looked"
+  },
+  {
+   "covers": [
+    "Screens/FeedScreen+Sheets.swift:feedSheet#following"
+   ],
+   "why": "NOT WALKED YET (media-following): Media's Subscriptions tile did not show Computerphile where the walk looked"
+  },
+  {
+   "covers": [
+    "Screens/FeedScreen+Sheets.swift:feedSheet#person"
+   ],
+   "why": "NOT WALKED YET (social-person): no Uma face to tap in Social's section"
+  },
+  {
+   "covers": [
+    "Screens/PersonRoomScreen.swift:sheetThing"
+   ],
+   "why": "NOT WALKED YET (person-thing): the person room opened by link showed no Critique day row"
+  },
+  {
+   "covers": [
+    "Screens/PivotPage.swift:opened"
+   ],
+   "why": "NOT WALKED YET (pivot-thing): the pivot page showed no Sourdough row to tap"
+  },
+  {
+   "covers": [
+    "Screens/FeedScreen.swift:roomShare"
+   ],
+   "why": "NOT WALKED YET (room-share): no Share this week in Work's GitHub scope"
+  },
+  {
+   "covers": [
+    "Screens/ThingSheetView.swift:walkingTo"
+   ],
+   "why": "NOT WALKED YET (thing-reply-to): the reply card's label is Replying to you. Opens the post.; its sheet is unread"
+  },
+  {
+   "covers": [
+    "Screens/ThingSheetView.swift:faceTarget#person"
+   ],
+   "why": "NOT WALKED YET (thing-profile): the post's sheet has no Open profile face"
+  },
+  {
+   "covers": [
+    "Screens/ThingSheetView.swift:faceTarget#address"
+   ],
+   "why": "NOT WALKED YET (thing-address): -openThing \"Sent 0.15 ETH to Sam\" did not land on that thing"
+  },
+  {
+   "covers": [
+    "Screens/ThingSheetView.swift:walkingToNote"
+   ],
+   "why": "NOT WALKED YET (thing-linked-note): -openThing \"Sent 0.15 ETH to Sam\" did not land on that thing"
+  },
+  {
+   "covers": [
+    "Screens/ThingSheetView.swift:faceTarget#followSite"
+   ],
+   "why": "NOT WALKED YET (thing-follow-site): the SwiftData thing's dial showed no Follow"
+  },
+  {
+   "covers": [
+    "Screens/ThingSheetView.swift:faceTarget#followChannel"
+   ],
+   "why": "NOT WALKED YET (thing-follow-channel): the compiler video's Follow raised a sheet whose words are unread"
+  },
+  {
+   "covers": [
+    "Screens/ThingSheetView.swift:zoomingPhoto"
+   ],
+   "why": "NOT WALKED YET (thing-photo): the Figma thing's picture is not an image element the walk could tap"
+  },
+  {
+   "covers": [
+    "Screens/WalletbeatSheetViews.swift:openedWallet"
+   ],
+   "why": "NOT WALKED YET (thing-walletbeat): the Trezor thing showed no What Walletbeat says row"
+  },
+  {
+   "covers": [
+    "Screens/SocialPostViews.swift:walking"
+   ],
+   "why": "NOT WALKED YET (social-post): the quoted card raised a sheet whose words are unread"
+  },
+  {
+   "covers": [
+    "Screens/SocialPostViews.swift:profile"
+   ],
+   "why": "NOT WALKED YET (social-post-author): the quoted post's author row is not labelled Nils"
+  },
+  {
+   "covers": [
+    "Screens/SubscriptionSheets.swift:editing"
+   ],
+   "why": "NOT WALKED YET (plan-edit): Edit rose over the plan page and its Back check stayed open; anchor unsettled"
+  },
+  {
+   "covers": [
+    "Screens/AccountPage.swift:sheet#track"
+   ],
+   "why": "NOT WALKED YET (app-track): Dropbox's page showed no Track a subscription row"
+  },
+  {
+   "covers": [
+    "Shell/NoteCaptureSheet.swift:sketchOpen"
+   ],
+   "why": "NOT WALKED YET (note-sketch): a pull from the grabber left it open twice (the canvas takes the drag); prd §1023 says a pull keeps the drawing and closes, so a person should check it"
+  },
+  {
+   "covers": [
+    "Screens/FeedScreen.swift:open"
+   ],
+   "why": "NOT WALKED YET (notes-trash): after deleting a note, Folders could not be tapped (covered by the confirm)"
+  },
+  {
+   "covers": [
+    "Screens/FeedScreen+Sheets.swift:feedSheet#walletFollow"
+   ],
+   "why": "NOT WALKED YET (wallet-follow): the Wallet has no Accounts button where the walk looked"
+  },
+  {
+   "covers": [
+    "Shell/MainSurface.swift:route.sheet#node.bridge"
+   ],
+   "why": "NOT WALKED YET (wallet-history): See all opened a Wallet page whose head is unread"
+  },
+  {
+   "covers": [
+    "Screens/WalletHistoryScreen.swift:sheetThing"
+   ],
+   "why": "NOT WALKED YET (wallet-history-thing): See all opened a Wallet page whose head is unread"
+  },
+  {
+   "covers": [
+    "Shell/RootShell.swift:chrome.appSheet"
+   ],
+   "why": "NOT WALKED YET (wallet-tile): a pull from the sheet's title did not close it twice; whether the Demo pill over its head blocks the pull is unsettled"
+  },
+  {
+   "covers": [
+    "Screens/FeedScreen+Sheets.swift:feedSheet#token"
+   ],
+   "why": "NOT WALKED YET (wallet-token): a token row raised a sheet whose words are unread"
+  },
+  {
+   "covers": [
+    "Screens/FeedScreen+Sheets.swift:feedSheet#worthALook"
+   ],
+   "why": "NOT WALKED YET (wallet-worth-a-look): Security's rows are counts (1, Poisoning), not the warning rows the walk looked for"
   }
  ]
 }
