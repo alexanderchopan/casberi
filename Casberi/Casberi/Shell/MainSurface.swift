@@ -823,7 +823,7 @@ struct MainSurface: View {
             NavigationStack(path: $route.sheetPath) {
                 leafRoom(node)
                     .dsSheetDismiss { route.closeSheet() }
-                    .navigationDestination(for: HomeRoute.Node.self) { leafRoom($0) }
+                    .navigationDestination(for: HomeRoute.Node.self) { leafRoom($0).dsSheetStep() }
             }
             // A note opened in here (a thing's Edit) rises over the sheet.
             .noteCover(chrome, when: chrome.appSheet == nil) { page in

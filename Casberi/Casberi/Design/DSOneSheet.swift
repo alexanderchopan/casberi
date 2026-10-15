@@ -17,7 +17,7 @@ struct DSOneSheet<Route: Identifiable, Raised: View, Pushed: View>: ViewModifier
                                  set: { route = $0 })) { raised($0) }
             .navigationDestination(isPresented: Binding(get: { route.map(pushes) ?? false },
                                                         set: { if !$0 { route = nil } })) {
-                if let current = route { pushed(current) }
+                if let current = route { pushed(current).dsSheetStep() }
             }
     }
 }
@@ -38,7 +38,7 @@ extension View {
                                         set: { isPresented.wrappedValue = $0 }), content: content)
             .navigationDestination(isPresented: Binding(get: { isPresented.wrappedValue && pushes },
                                                         set: { isPresented.wrappedValue = $0 })) {
-                content().environment(\.dsInPane, true)
+                content().environment(\.dsInPane, true).dsSheetStep()
             }
     }
 

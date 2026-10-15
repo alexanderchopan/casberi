@@ -681,6 +681,7 @@ struct Composer: View {
                             onLowerAgent()
                             return .handled
                         })
+                        .dsSheetStep()
                 }
             }
         }

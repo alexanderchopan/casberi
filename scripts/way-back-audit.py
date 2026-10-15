@@ -17,6 +17,11 @@ the usual way back OFF, and those are the four shapes this audit checks:
      the dock's leading seat (prd §767) and `DSSwipeBack()`, which turns the
      edge swipe back on; the swipe must sit right beside the hide.
   D. UIKit's `isModalInPresentation = true` is B under another spelling.
+  E. Every push names its way back (prd §1304): a `.navigationDestination`
+     closure wears `.dsSheetStep()` (in a sheet, the seat's back door at the
+     foot, never the system's Back under the sheet's corner) or hides the
+     back itself, as the shell's own stack does where the dock's seat is
+     the way back (C then holds it to its swipe).
 
 What it does NOT check: that the dock's seat actually draws on a pushed screen,
 or that a close control is reachable on screen. Those are runtime facts, for
@@ -44,6 +49,8 @@ BACK_HIDDEN = re.compile(r"\.navigationBarBackButtonHidden\s*\(\s*true\s*\)")
 MODAL = re.compile(r"isModalInPresentation\s*=\s*true")
 ESCAPE = re.compile(r"\bdismiss\s*\(\s*\)|\.dsSheetDismiss\b|\bonCancel\b")
 SWIPE_BACK = re.compile(r"\bDSSwipeBack\s*\(")
+DESTINATION = re.compile(r"\.navigationDestination\s*\(")
+SHEET_STEP = re.compile(r"\.dsSheetStep\s*\(\s*\)")
 # How many lines after a hidden back button its swipe may sit.
 SWIPE_WINDOW = 3
 
@@ -198,6 +205,16 @@ def audit(paths):
                     f"no DSSwipeBack() beside it — the edge swipe goes with the "
                     f"button (prd §767)")
 
+        # E. A push with no way back of its own.
+        for m in DESTINATION.finditer(code):
+            content = cover_content(code, m.start())
+            if not (SHEET_STEP.search(content) or BACK_HIDDEN.search(content)):
+                findings.append(
+                    f"{rel(path)}:{line_of(m.start())}: a navigationDestination "
+                    f"whose step wears neither .dsSheetStep() nor its own "
+                    f"hidden back — in a sheet it draws the system's Back "
+                    f"under the sheet's corner (prd §1304)")
+
         # D. UIKit's spelling of B.
         if path.name not in ALLOWED:
             for m in MODAL.finditer(code):
@@ -241,6 +258,20 @@ def self_test():
             ("v.navigationBarBackButtonHidden(true)\n", True),
         "UIKit's modal lock":
             ("vc.isModalInPresentation = true\n", True),
+        "a push that wears the seat's back door":
+            ("x.navigationDestination(for: N.self) { Room($0).dsSheetStep() }\n", False),
+        "a push left on the system's Back":
+            ("x.navigationDestination(for: N.self) { Room($0) }\n", True),
+        "a push whose binding has closures, and no step":
+            ("x.navigationDestination(isPresented: Binding(get: { a }, set: { a = $0 })) {\n"
+             "    Room()\n}\n", True),
+        "a push that hides its back and keeps the swipe (the shell's stack)":
+            ("x.navigationDestination(for: N.self) { n in\n"
+             "    Room(n).navigationBarBackButtonHidden(true)\n"
+             "        .background(DSSwipeBack())\n}\n", False),
+        "the step named only in a comment is not the step":
+            ("x.navigationDestination(for: N.self) {\n"
+             "    Room($0) // .dsSheetStep()\n}\n", True),
     }
     ok = True
     with tempfile.TemporaryDirectory() as tmp:
@@ -268,4 +299,4 @@ if __name__ == "__main__":
             print(f"  {p}")
         sys.exit(1)
     print("✓ way back: every cover closes, every sheet swipes, every hidden "
-          "back button keeps its swipe")
+          "back button keeps its swipe, every push names its way back")

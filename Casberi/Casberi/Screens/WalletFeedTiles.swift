@@ -1487,7 +1487,7 @@ struct WalletWorthALookTray: View {
         // `dsInk()` documents.
         .dsIf(!inSheetStack) { $0.dsInk() }
         .navigationDestination(item: $opened) { thing in
-            ThingSheetView(thing: thing)
+            ThingSheetView(thing: thing).dsSheetStep()
         }
         .navigationDestination(for: Thing.self) { thing in
             // `.presentationDetents` is a preference DSTray declares on
@@ -1505,8 +1505,10 @@ struct WalletWorthALookTray: View {
             // stops taking effect once pushed past DSTray's own declared
             // preferences too, so it's pinned again here, right beside the
             // detents fix.
-            ThingSheetView(thing: thing, onBack: { path.removeLast() })
+            // The seat's back door, as every step in a sheet (prd §1304).
+            ThingSheetView(thing: thing)
                 .dsIf(!inSheetStack) { $0.presentationDetents(trayDetents).dsSizedSheet(trayHeight).dsInk() }
+                .dsSheetStep()
         }
         }
     }

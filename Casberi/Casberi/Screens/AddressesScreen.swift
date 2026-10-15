@@ -1281,10 +1281,13 @@ struct ContactSheet: View {
                 }
             }
             .navigationDestination(item: $pushed) { door in
-                switch door {
-                case .address(let entry): AddressCard(entry: entry)
-                case .profile(let profile): SocialProfileCard(profile: profile)
+                Group {
+                    switch door {
+                    case .address(let entry): AddressCard(entry: entry)
+                    case .profile(let profile): SocialProfileCard(profile: profile)
+                    }
                 }
+                .dsSheetStep()
             }
         }
     }

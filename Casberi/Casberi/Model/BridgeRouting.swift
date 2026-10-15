@@ -722,7 +722,7 @@ struct ConnectFormSheet<Deeper: View>: View {
                 // is finished rather than abandoned: you either connected or
                 // you did not, and both are done.
                 .dsSheetDismiss { dismiss() }
-                .navigationDestination(for: HomeRoute.Node.self) { deeper($0) }
+                .navigationDestination(for: HomeRoute.Node.self) { deeper($0).dsSheetStep() }
         }
         .environment(\.dsInSheetStack, true)
         // THE GRABBER WENT WITH THE WORD (prd §560, 2026-09-01). A

@@ -80,7 +80,7 @@ struct WalletbeatScreen: View {
 			keySheet: { EmptyView() }
 		)
 		.navigationDestination(isPresented: $browsing) {
-			WalletbeatDirectoryScreen()
+			WalletbeatDirectoryScreen().dsSheetStep()
 		}
 		.onAppear {
 			following = WalletbeatWatch.following

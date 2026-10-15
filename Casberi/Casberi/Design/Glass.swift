@@ -607,6 +607,9 @@ extension View {
     /// exactly as they were.
     func dsSheetCorner() -> some View {
         presentationCornerRadius(DS.Radius.presentedSheet)
+            // Says it is a sheet, so a step pushed in it draws the seat's
+            // back door (prd §1304).
+            .environment(\.dsInSheet, true)
     }
 }
 

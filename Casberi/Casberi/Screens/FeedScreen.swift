@@ -109,6 +109,8 @@ struct FeedScreen: View {
     /// Opened from a Sources count, whose plus already adds (prd §1292): the
     /// page's own Track or Follow row is not drawn twice.
     @Environment(\.dsAddOnCount) var addOnCount
+    /// In a sheet a push draws the seat's back door and its clearance (prd §1304).
+    @Environment(\.dsInSheet) var inPresentedSheet
 
     /// Latches true the first time this page is active/near, so a page already
     /// assembled once stays assembled — the built set only ever grows, spread
@@ -2055,16 +2057,18 @@ struct FeedScreen: View {
         .navigationDestination(item: $openProject) { route in
             ProjectDetailScreen(projectName: route.name)
                 .navigationTransition(.zoom(sourceID: route.name, in: zoomNS))
-                .dsSeatClearance()
+                .dsIf(!inPresentedSheet) { $0.dsSeatClearance() }
                 .dsDemoMarkClearance()
+                .dsSheetStep()
         }
         // The social roster's own door (item 2, 2026-07-27) — a face pushes
         // the person room, not the quick-glance tray `SocialProfileCard`
         // still serves everywhere else.
         .navigationDestination(item: $openPerson) { profile in
             PersonRoomScreen(profile: profile)
-                .dsSeatClearance()
+                .dsIf(!inPresentedSheet) { $0.dsSeatClearance() }
                 .dsDemoMarkClearance()
+                .dsSheetStep()
         }
         // …asked for by the shell's face rail now (prd §362), which is where the
         // faces live since they became a filter. It hands the request down

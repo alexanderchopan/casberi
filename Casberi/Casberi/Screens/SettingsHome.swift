@@ -260,7 +260,7 @@ struct SettingsHome: View {
         }
         .navigationDestination(isPresented: Binding(get: { calendarAdd && route.sheet != nil },
                                                     set: { calendarAdd = $0 })) {
-            CalendarSubscribeSheet().environment(\.dsInPane, true)
+            CalendarSubscribeSheet().environment(\.dsInPane, true).dsSheetStep()
         }
         .confirmationDialog(Text("Add a calendar"), isPresented: $calendarChoice, titleVisibility: .visible) {
             Button("Your phone’s calendars") { setup("Calendar") }

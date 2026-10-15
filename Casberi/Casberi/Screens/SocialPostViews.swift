@@ -306,6 +306,7 @@ struct SocialPostSheet: View {
                 SocialPostThread(post: post, source: source, open: { path.append($0) })
                     .navigationDestination(for: SocialCard.self) { card in
                         SocialPostThread(post: card, source: source, open: { path.append($0) })
+                            .dsSheetStep()
                     }
             }
             .environment(\.dsInSheetStack, true)
@@ -324,7 +325,7 @@ private struct SocialPostWalk: View {
     var body: some View {
         SocialPostThread(post: post, source: source, open: { next = $0 })
             .navigationDestination(item: $next) { card in
-                SocialPostWalk(post: card, source: source)
+                SocialPostWalk(post: card, source: source).dsSheetStep()
             }
     }
 }

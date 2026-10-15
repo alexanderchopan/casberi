@@ -77,7 +77,7 @@ struct L2beatScreen: View {
 			keySheet: { EmptyView() }
 		)
 		.navigationDestination(isPresented: $browsing) {
-			L2beatDirectoryScreen()
+			L2beatDirectoryScreen().dsSheetStep()
 		}
 		.onAppear {
 			following = L2beatWatch.following
