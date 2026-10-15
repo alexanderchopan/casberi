@@ -13,7 +13,8 @@
 #
 # Usage: scripts/journeys.sh [journey ...]     e.g. scripts/journeys.sh find note
 #   No names: every journey. A name is a test method without `test`, lowercased:
-#   connect, find, maillist, note, site, spending, subscription, wallet.
+#   bluesky, connect, find, github, maillist, note, share, site, spending,
+#   stoptracking, stripe, subscription, wallet, x.
 # Output: scripts/output/journeys-<ts>/ — results.tsv, xcodebuild.log, and one
 #   screenshot per step (<journey>-<n>-<step>.png), the before shots a proposal
 #   is drawn against.
@@ -31,7 +32,9 @@ SHA=$(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null || echo unknown)
 
 typeset -A METHOD=(connect testConnect note testNote find testFind
                    spending testSpending subscription testSubscription
-                   maillist testMailList site testSite wallet testWallet)
+                   maillist testMailList site testSite wallet testWallet
+                   stripe testStripe bluesky testBluesky github testGitHub x testX
+                   share testShare stoptracking testStopTracking)
 typeset -a ONLY
 if (( $# == 0 )); then
   ONLY=(-only-testing:CasberiUITests/JourneyTests)

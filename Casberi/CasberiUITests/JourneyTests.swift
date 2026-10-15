@@ -104,7 +104,7 @@ final class JourneyTests: XCTestCase {
         w.tap(w.el(.button, "label BEGINSWITH %@", "Sources"), "Sources tile")
         // The plus on the count, not Start here's row of the same verb (the
         // demo has tracked plans, so that row is gone) and not the count.
-        w.tap(w.el(.button, "label == %@", "Track a subscription"), "Subscriptions plus")
+        w.tap(w.visible(.button, "label == %@", "Track a subscription"), "Subscriptions plus")
         w.tap(w.el(.textField, "placeholderValue == %@", "Search, or type any name"), "tray search field")
         w.type("Hulu\n", "type Hulu, Return")
         w.focus(w.el(.textField, "placeholderValue == %@", "0"), "price field")
@@ -164,6 +164,101 @@ final class JourneyTests: XCTestCase {
         w.finish()
     }
 
+    // MARK: - Connecting an app, one journey per kind of connect
+
+    /// PASTE A KEY (Stripe): find the app in Sources, its key field, a key in
+    /// Stripe's shape, Save. A made-up key reaches Stripe and is turned down,
+    /// which is as far as a walk can honestly go; every step before it is
+    /// ours. After Exit, as connect is.
+    @MainActor func testStripe() {
+        let w = Walk("stripe", launch: [], test: self)
+        leaveDemo(w)
+        openApp(w, "Stripe")
+        // A slab field says its placeholder as its label.
+        w.focus(w.el(.secureTextField, "label BEGINSWITH %@ OR placeholderValue BEGINSWITH %@", "rk_live_", "rk_live_"), "key field")
+        w.type("rk_live_" + String(repeating: "x", count: 24), "type a key")
+        w.tap(w.el(.button, "label == %@", "Save"), "Save")
+        w.see(w.el(.staticText, "label CONTAINS %@", "accept that key"), "Stripe answered")
+        w.finish()
+    }
+
+    /// JUST A NAME (Bluesky): a handle, Connect, and the connect lands in its
+    /// room (§1029) with the handle's posts. Needs the network.
+    @MainActor func testBluesky() {
+        let w = Walk("bluesky", launch: [], test: self)
+        leaveDemo(w)
+        openApp(w, "Bluesky")
+        w.focus(w.el(.textField, "label == %@ OR placeholderValue == %@", "Handle, or search a feed", "Handle, or search a feed"), "handle field")
+        w.type("bsky.app", "type a handle")
+        w.tap(w.el(.button, "label == %@ OR label == %@", "Connect", "Add"), "Connect")
+        w.see(w.el(.staticText, "label == %@", "bsky.app"), "Bluesky connected, its posts")
+        w.finish()
+    }
+
+    /// A CODE FOR ANOTHER DEVICE (GitHub): Sign in, and GitHub's code stands
+    /// on the page with its door. Approving it happens on github.com, out of
+    /// the meter's reach. Needs the network.
+    @MainActor func testGitHub() {
+        let w = Walk("github", launch: [], test: self)
+        leaveDemo(w)
+        openApp(w, "GitHub")
+        w.tap(w.visible(.button, "label BEGINSWITH %@", "Sign in"), "Sign in")
+        w.see(w.el(.any, "label BEGINSWITH %@", "Enter it on GitHub"), "GitHub's code")
+        w.finish()
+    }
+
+    /// SIGN IN ON THE PROVIDER'S PAGE (X): Connect raises x.com's sign-in in
+    /// a web view; what the person types there is X's, not ours.
+    @MainActor func testX() {
+        let w = Walk("x", launch: [], test: self)
+        leaveDemo(w)
+        openApp(w, "X")
+        w.tap(w.visible(.button, "label BEGINSWITH %@", "Sign in"), "Sign in")
+        w.see(w.app.webViews.firstMatch, "X's sign-in")
+        w.finish()
+    }
+
+    // MARK: - Acting on what you have
+
+    /// SHARE A THING you are looking at: its sheet's Share, and the tray
+    /// with Post on X standing in it (§1299). Posting is X's composer, so the
+    /// tray is the end of ours. The demo's one X post (`find`'s) is open as
+    /// the setup (`-openThing`), since getting to a thing is `find`'s job.
+    @MainActor func testShare() {
+        let w = Walk("share", launch: Walk.demo, test: self)
+        // `-openThing` runs at mount, before a fresh install's pour lands, so
+        // the demo pours on the first launch and the thing opens on the next.
+        w.relaunch(Walk.demo + ["-openThing", "Sourdough"])
+        // The tile's label is its glyph's and its word's: "Share, Share".
+        w.tap(w.visible(.button, "label BEGINSWITH %@", "Share"), "Share")
+        w.see(w.el(.button, "label == %@", "Post on X"), "share tray, Post on X")
+        w.finish()
+    }
+
+    /// STOP TRACKING a plan you track by hand (only those can stop; a card's
+    /// plan is the card's): Sources › Subscriptions › Hulu › Stop tracking ›
+    /// confirm. Hulu is tracked by `-subscriptionTrack` as the walk's setup.
+    @MainActor func testStopTracking() {
+        let w = Walk("stoptracking", launch: Walk.demo + ["-subscriptionTrack", "Hulu:15.99"], test: self)
+        w.tap(w.el(.button, "label BEGINSWITH %@", "Sources"), "Sources tile")
+        w.tap(w.visible(.button, "label CONTAINS %@", "Subscriptions"), "Subscriptions count")
+        w.tap(w.el(.staticText, "label == %@", "Hulu"), "Hulu")
+        w.tap(w.el(.button, "label == %@", "Stop tracking"), "Stop tracking")
+        // The dialog's own button, not the sheet's row of the same name.
+        w.tap(w.app.sheets.buttons["Stop tracking"].firstMatch, "confirm")
+        w.gone(w.el(.staticText, "label == %@", "Hulu"), within: 8, "Hulu gone")
+        w.finish()
+    }
+
+    /// An app by name, found as a person finds it: Sources' search, then its
+    /// row (counted: the field's focus and the row).
+    @MainActor private func openApp(_ w: Walk, _ name: String) {
+        w.focus(w.el(.textField, "placeholderValue == %@", "Search"), "Sources search")
+        w.type(name, "type \(name)")
+        // The row as drawn, whatever element type the list gives it.
+        w.tap(w.visible(.any, "label BEGINSWITH %@", name), "\(name) row")
+    }
+
     /// The demo's cover and its Exit, walked but never counted (owner,
     /// 2026-10-14: "i know the demo adds steps but i don't want you to count
     /// it. we need the demo for a user to see everything"). The meter and the
@@ -220,11 +315,35 @@ final class JourneyTests: XCTestCase {
                 .matching(NSPredicate(format: format, argumentArray: args.map { $0 as Any })).firstMatch
         }
 
+        /// The first match a person could tap. A name can stand twice, the
+        /// drawn row and a hidden copy behind a sheet (an app's chip, a Home
+        /// row), and `firstMatch` takes whichever the tree lists first.
+        func visible(_ type: XCUIElement.ElementType, _ format: String, _ args: CVarArg...) -> XCUIElement {
+            let q = app.descendants(matching: type)
+                .matching(NSPredicate(format: format, argumentArray: args.map { $0 as Any }))
+            let deadline = Date().addingTimeInterval(8)
+            repeat {
+                if let hit = q.allElementsBoundByIndex.first(where: { $0.exists && $0.isHittable }) { return hit }
+                RunLoop.current.run(until: Date().addingTimeInterval(0.25))
+            } while Date() < deadline
+            return q.firstMatch
+        }
+
         func tap(_ e: XCUIElement, _ what: String) {
             guard ready(e, what) else { return }
             e.tap()
             taps += 1
             shoot(what)
+        }
+
+        /// Launch again with `args`, as setup: the meter starts after it.
+        func relaunch(_ args: [String]) {
+            guard broken == nil else { return }
+            app.terminate()
+            app.launchArguments = args
+            app.launch()
+            shoot("relaunched")
+            begin()
         }
 
         /// A tap on something that may not be there (a cover a later journey
@@ -335,9 +454,19 @@ final class JourneyTests: XCTestCase {
             if hittable(e, within: 3) { return true }
             // Off screen: swipe toward it, as a person would, and count each
             // swipe. A target still not reachable after `maxScrolls` is a
-            // broken step, as before.
+            // broken step, as before. ON screen and not hittable (covered,
+            // or a hidden copy behind a sheet) is no reason to swipe: it
+            // fails as it did, uncounted.
+            let window = app.windows.firstMatch.frame
+            // The keyboard hides what is under it as surely as the screen's
+            // edge does (a search's results), so its top is the bottom.
+            let keyboard = app.keyboards.firstMatch
+            let bottom = keyboard.exists ? keyboard.frame.minY : window.maxY
+            guard !window.intersects(e.frame) || e.frame.maxY > bottom - 100 else {
+                fail(what, "found but not hittable")
+                return false
+            }
             for _ in 0..<Self.maxScrolls {
-                let window = app.windows.firstMatch.frame
                 if e.frame.midY < window.minY + window.height * 0.25 {
                     app.swipeDown(velocity: .slow)
                 } else {
@@ -371,6 +500,9 @@ final class JourneyTests: XCTestCase {
 
         private func fail(_ what: String, _ why: String) {
             broken = "step \(step + 1) (\(what)): \(why)"
+            // The screen's tree beside its picture, so a wrong label is read,
+            // not guessed (a row can be a cell, a button or a static text).
+            write("\(name)-tree.txt", Data(app.debugDescription.utf8))
             shoot("BROKEN-\(what)")
         }
 

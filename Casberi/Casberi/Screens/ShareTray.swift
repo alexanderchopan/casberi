@@ -50,6 +50,7 @@ struct ShareTray: View {
     @State private var voiceFile: URL?
     @State private var activityUp = false
     @Environment(\.modelContext) private var context
+    @Environment(\.openURL) private var openURL
 
     private enum Composer: String, Identifiable {
         case messages, mail, messagesTo, mailTo
@@ -78,7 +79,7 @@ struct ShareTray: View {
     private static let previewHeight: CGFloat = 420
     private var trayHeight: CGFloat {
         let rows = CGFloat(1 + (MessageCompose.canText ? 1 : 0) + (MessageCompose.canMail ? 1 : 0)
-                           + (recipientChannel != nil ? 1 : 0))
+                           + (recipientChannel != nil ? 1 : 0) + (xPost != nil ? 1 : 0))
         return DS.Space.s6 + 40 + DS.Space.s4 + Self.previewHeight + DS.Space.s3
              + rows * DS.Hit.min + DS.Space.s6
     }
@@ -104,6 +105,11 @@ struct ShareTray: View {
                     }
                     if MessageCompose.canMail {
                         DSDoorRow(icon: "envelope", label: "Send in Mail") { composer = .mail }
+                    }
+                    // X's composer with the words and the link (prd §1299),
+                    // a row of its own rather than a target in `Share…`.
+                    if let xPost {
+                        DSDoorRow(icon: "square.and.pencil", label: "Post on X") { openURL(xPost) }
                     }
                     if let image {
                         // The card and the link (or a voice note's recording,
@@ -184,6 +190,11 @@ struct ShareTray: View {
     private var shareWords: String {
         if case .folder(let input) = source { return FolderShareCard.words(input) }
         return shareTitle
+    }
+
+    /// X's post link for this card (prd §1299): its words and its link.
+    private var xPost: URL? {
+        XPostIntent.url(words: shareWords, link: model?.link)
     }
 
     /// The composer's body: the thing's link when it has one, else the

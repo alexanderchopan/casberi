@@ -66329,3 +66329,9 @@ Social's and Work's Feed headers are their names and their + (§1293), no choice
 3. **Exit takes the demo wallets' names with them.** `WalletStore.add(label:)` wrote Everyday, Savings and Hardware into the book, which outlived the watch, so Sources counted them as People after Exit and Start here lost steps (§1166's "not looked into"). Teardown removes each name while it is still the demo's. Seen: a clean install's Exit reads 0 People and 0 Wallets, Start here showing Follow a wallet and Track a subscription.
 
 **Declined.** Opening the Track tray with its search focused (one tap fewer, but the keyboard covers the apps the tray is there to show: "we want user to scroll and add easily not search"); capping Your apps; trimming Start here, which stays the first run's guide (§1166).
+
+## §1299 — Post on X from the share tray (user, 2026-10-14: "share a thing is good, and we should have share to twitter in the app isntead of behind the ios share sheet", then "build")
+
+The share tray (docs/social-spec.md section 3) gains **Post on X**, a row beside Send in Messages, Send in Mail and Share…: it opens X's own public post link (`https://x.com/intent/post`, `XPostIntent`), which raises X's composer in the X app when it is installed and on x.com when not, with the card's words and its link filled in. The person presses Post there. Casberi never posts and never uses a session (the X seat stays read-only); x.com is already a declared host. The link carries words and a URL only, never a picture, so the card itself still goes through Share…. Words are cut at a word with an ellipsis so the composer never opens over 280 (a link counts 23). Guards: `CasberiTests/XPostIntentTests` (the link's parts, the cut, the whole limit without a link, nothing to say is no link); the `share` journey ends on the tray with the row in it.
+
+**Not seen:** X's composer opened (the simulator has no X app; the link opens Safari), the Mac.

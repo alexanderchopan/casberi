@@ -9853,6 +9853,34 @@
         }
       }
     },
+    "Post on X" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Publicar en X"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Xに投稿"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "X에 게시"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "发布到 X"
+          }
+        }
+      }
+    },
     "Private balances stay private to their owner." : {
       "localizations" : {
         "es" : {
