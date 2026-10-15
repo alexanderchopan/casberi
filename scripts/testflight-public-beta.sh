@@ -166,7 +166,14 @@ CODE=$(echo "$SUBMIT" | jq -r '.errors[0].code // empty')
 if [ -n "$STATE" ]; then
   echo "  betaReviewState: $STATE"
   echo "OK: Public Beta handoff complete for build $VERSION."
-  "$(dirname "$0")/testflight-expire-after.sh" "$BUILD_ID"
+  # SKIP_EXPIRE=1 keeps older builds while a new marketing version waits on
+  # App Review: they are what testers run until it is approved (user,
+  # 2026-10-15: "we can't expire previous testflight b/c we are on new version").
+  if [ "${SKIP_EXPIRE:-0}" = "1" ]; then
+    echo "  SKIP_EXPIRE=1: older builds kept."
+  else
+    "$(dirname "$0")/testflight-expire-after.sh" "$BUILD_ID"
+  fi
 elif [ "$CODE" = "ENTITY_UNPROCESSABLE.SUBMISSION_LIMIT_REACHED" ]; then
   cat <<MSG
   ⚠ Apple's beta-review submission limit is reached — NOT submitted.
