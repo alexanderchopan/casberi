@@ -856,7 +856,9 @@ struct SettingsHome: View {
                       subtitleTone: DS.tint, opens: false) {
                 setup(name)
             } leading: {
-                BridgeIcon(name: name, size: DS.Face.seat)
+                BridgeIcon(name: name, size: DS.Face.row)
+                    // A row's mark is the row size (§1071), in the Feed's column.
+                    .frame(width: DS.Face.seat, height: DS.Face.seat)
             }
         } else {
             DSPushRow(title: Text(verbatim: name), fact: Text("Add"), factTone: DS.tint) {
@@ -914,7 +916,9 @@ struct SettingsHome: View {
                           opens: false) {
                     setup(card.app)
                 } leading: {
-                    BridgeIcon(name: card.app, size: DS.Face.seat)
+                    BridgeIcon(name: card.app, size: DS.Face.row)
+                    // A row's mark is the row size (§1071), in the Feed's column.
+                    .frame(width: DS.Face.seat, height: DS.Face.seat)
                 }
             }
         }
@@ -980,7 +984,9 @@ struct SettingsHome: View {
         if card {
             DSPushRow(title: Text(verbatim: app.name), subtitle: Text(verbatim: app.statusLine),
                       subtitleTone: tone, opens: false, action: open) {
-                BridgeIcon(name: app.name, size: DS.Face.seat)
+                BridgeIcon(name: app.name, size: DS.Face.row)
+                    // A row's mark is the row size (§1071), in the Feed's column.
+                    .frame(width: DS.Face.seat, height: DS.Face.seat)
             }
         } else {
             DSPushRow(title: Text(verbatim: app.name),
