@@ -30,6 +30,9 @@ final class SpendingReading {
     static var sources: [String] { cardSources + [WiseShape.source, walletSource] }
 
     func refresh(_ context: ModelContext, now: Date = .now, calendar: Calendar = .current) async {
+        // A wallet you removed counts for nothing (user, 2026-10-15, prd §1320):
+        // its rows leave before the read, not at the next ingest.
+        FollowPrune.pruneUnwatchedWallets(context: context)
         let members = Self.sources
         // Two months back covers this month and last month to date.
         let floor = calendar.date(byAdding: .month, value: -2, to: now) ?? now
@@ -103,13 +106,18 @@ enum SpendingSource {
 
     @MainActor
     static func charges(from things: [Thing]) -> [Raw] {
-        // Every address a watched wallet's row was read for is yours, so a
-        // send to one of them is a move, not spending.
-        let own = Set(things.compactMap { $0.walletAddress?.lowercased() })
+        // Spending counts every wallet on the list and none that left it
+        // (prd §1320): a row stamped with a wallet no longer watched is not
+        // counted, and a send to a watched wallet is a move, not spending.
+        let store = WalletStore.shared
+        let watched = store.addresses.map(\.address)
+        func isWatched(_ address: String) -> Bool {
+            watched.contains { store.scopeMatches(address, scope: $0) }
+        }
         // A send that money came back for is a trade, not spending (`Spending.trades`).
         let onchain = things.enumerated().compactMap { i, thing -> Spending.Leg? in
             guard thing.source == SpendingReading.walletSource, thing.kind == .transaction,
-                  let wallet = thing.walletAddress?.lowercased(),
+                  let wallet = thing.walletAddress?.lowercased(), isWatched(wallet),
                   let direction = thing.transferDirection,
                   direction == "sent" || direction == "received" else { return nil }
             return Spending.Leg(id: i, wallet: wallet, tx: thing.content, sent: direction == "sent",
@@ -119,6 +127,7 @@ enum SpendingSource {
         let trades = Spending.trades(onchain)
         return things.enumerated().compactMap { i, thing -> Raw? in
             guard thing.kind == .transaction else { return nil }
+            if let wallet = thing.walletAddress, !isWatched(wallet) { return nil }
             switch thing.source {
             case AppleWalletBridge.sourceName, WalletCards.privacySource:
                 guard SubscriptionsSource.payer(of: thing) != nil,
@@ -150,7 +159,7 @@ enum SpendingSource {
                 if thing.sourceRef?.hasPrefix("wallet:swap:") ?? false { return nil }
                 if trades.contains(i) { return nil }
                 if let to = thing.counterpartyAddress?.lowercased() {
-                    if own.contains(to) { return nil }
+                    if isWatched(to) { return nil }
                     // Machinery is not a place you spent at: a router or an
                     // onramp trades the money back, and a card's Safe tops up
                     // a card whose spends are counted at the card. A person,

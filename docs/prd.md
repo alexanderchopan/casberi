@@ -66515,3 +66515,13 @@ Extends §1201's list of what is not spending.
 4. **Guard.** `CasberiTests/SpendingTradesTests` (seven cases: the same transaction, ten swaps a transaction apart, nothing back, outside the window or band, another wallet's receipt, one receipt per send, a buy not reused).
 
 **Not measured.** Written in a cloud session with no Xcode and no egress to Zerion or any explorer: not built, not run, and the user's wallet (`0x2F60…2725`) was not read. Measure on a Mac: build, run `CasberiTests`, and watch Spending's figure for this wallet before and after.
+
+## §1320 — Spending counts every wallet on the list and none that left it (user, 2026-10-15: "spending should count all wallets, but if you remove wallets, then it shouldn't count them", "if I add a wallet and then remove it, it shouldn't historically keep any data") — BUILT, UNMEASURED
+
+The Wallet's Home is the aggregated page: Spending sums every watched wallet (§1201). §1135 deletes a removed wallet's rows, but only at the book's unfollow, the account page's swipe and disconnect, and the top of `WalletIngest.refresh`, and Spending's reading re-read only on the refresh pulse and the Subscriptions key. A removed wallet's sends therefore stood in the figure until the next ingest.
+
+1. **The read prunes first.** `SpendingReading.refresh` runs `FollowPrune.pruneUnwatchedWallets` before it fetches, so a removed wallet's rows are gone, not skipped.
+2. **The read counts only the list.** `SpendingSource.charges` drops any row whose `walletAddress` the list does not hold under either spelling (`WalletStore.scopeMatches`), and a send counts as a move only when it goes to a wallet on the list now (was: any address a fetched row was stamped with). Card rows (MetaMask Card, ether.fi Cash, Plasma One) carry the watched address and pass; Apple Wallet, Privacy and Wise rows carry none and are unaffected. The trade match (§1319) reads only the list's legs.
+3. **Adding or removing a wallet re-reads.** `walletSpendingKey` carries the watched addresses.
+
+**Not measured.** Written in a cloud session with no Xcode: not built, not run.
