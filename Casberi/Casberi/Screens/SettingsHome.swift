@@ -486,12 +486,13 @@ struct SettingsHome: View {
     }
 
     /// One row of a count's plus (prd §1300): `FollowByName.landing`, the
-    /// Feed's own rule, through the trays Sources raises.
+    /// Feed's own rule, through the trays Sources raises. Following's plus
+    /// lists Media's apps, so a Social follow never lands here; were one to,
+    /// it opens its app's page (prd §1309).
     private func followByName(_ app: String) {
         DSHaptic.selection()
         let connected = connectedApps.contains { $0.name == app }
         switch FollowByName.landing(for: app) {
-        case .socialFollow:    sheet = .socialFollow
         case .reading:         trackPick = TrackPick(room: .reading, seat: app)
         case .calendar:        calendarAdd = true
         case .track(let room): trackPick = TrackPick(room: room, seat: app)
@@ -499,7 +500,7 @@ struct SettingsHome: View {
             if connected { trackPick = TrackPick(room: .work, seat: app) } else { setup(app) }
         case .mail:
             if connected { sheet = .mailAdd } else { setup(app) }
-        case .page:            setup(app)
+        case .page, .socialFollow: setup(app)
         }
     }
 
@@ -613,9 +614,7 @@ struct SettingsHome: View {
         switch route {
         case .subscriptionAdd:      SubscriptionAddTray()
         case .mailAdd:              MailSubscriptionAddTray()
-        case .followAdd:            ReadingFindSheet()
         case .walletFollow:         WalletFollowSheet()
-        case .socialFollow:         SocialFollowSheet()
         case .newContact:
             // The list re-reads, and People is what shows, so the person
             // just kept is on screen.
@@ -1217,10 +1216,8 @@ enum SettingsLanding: Hashable {
 
 /// What Settings raises over itself (prd §1143).
 enum SettingsSheet: Identifiable, Hashable {
-    case subscriptionAdd, mailAdd, followAdd
+    case subscriptionAdd, mailAdd
     case walletFollow
-    /// Follow a person or a channel (prd §1300).
-    case socialFollow
     /// Keep a person by hand (prd §1300), People's plus.
     case newContact
     /// A kind's home page, opened from its count (prd §1274).
@@ -1232,9 +1229,7 @@ enum SettingsSheet: Identifiable, Hashable {
         switch self {
         case .subscriptionAdd:            "subscriptionAdd"
         case .mailAdd:                    "mailAdd"
-        case .followAdd:                  "followAdd"
         case .walletFollow:               "walletFollow"
-        case .socialFollow:               "socialFollow"
         case .newContact:                 "newContact"
         case .home(let home):             "home:\(home)"
         case .plan(let id):               "plan:\(id)"

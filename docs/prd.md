@@ -66417,3 +66417,14 @@ The share tray (docs/social-spec.md section 3) gains **Post on X**, a row beside
 ## §1307 — Casberi leads Apps only (2026-10-14, user: "when you go to cards it shows casberi again, it shouldn't show there")
 
 Amends §1231. The pinned Casberi row (Settings, data and notifications) stands at the top of Sources › Apps only. Casberi is an app, so it leads the apps; it never stands above another kind's list. Following, Mail lists and Subscriptions open their own pages (§1274) and never showed it; Cards, Calendars, People and Wallets are drawn inside Sources and all did. `SettingsHome` now draws the row inside the `.apps` arm.
+
+## §1309 — Four sheets nothing raised are deleted, view and model (retires §155's allocation tray and §447's holdings tail; amends §1300) (user, 2026-10-14: of the sheet sweep's exempt rows, "verify each is truly unreachable … then delete the dead case, its sheet content, and any helper only it used")
+
+The sheet sweep's audit (`sheet-sweep-audit.py`) lists every presentation in the code; four were raised by nothing, each checked against every setter.
+
+1. **`FeedSheetRoute.allocation`** — its one door, `holdingsTail` (§447's "ETH 61% · 16% stables" line and its "All N" door), was drawn by nothing since the holdings card lost its tail. Gone with it: `WalletAllocationDoor`, `WalletAllocationTray`, `WalletPortfolio.top`/`topShare`/`concentrationShort`/`stableShort`/`shapeLine`, the stable share (`WalletStables.share`/`isStable` and the euro and wrapper sets; `isDollar` stays for §1090), the portfolio probe's shape line, and their `wallet-viz-selftest.sh` checks, which now fail if the tail returns.
+2. **`FeedSheetRoute.web`** — nothing set it (a room's Top up opens its page another way); `pushesInSheet` is now every route inside an app sheet.
+3. **`SettingsSheet.followAdd`** — declared and drawn, never set.
+4. **`SettingsSheet.socialFollow`** — set only by Following's plus, which lists Media's apps; Bluesky and Telegram are Social, so it never landed. Were a Social app ever listed there, `FollowByName`'s `.socialFollow` now opens its page, as `.page` does.
+
+**Kept, for a ruling:** `HomeRoute.Node.project`. Its themes-map door is gone (`themesLedeSection` is compiled and never called), and the composer's "show <topic>" cannot reach it, since `NavigateCommand.parse` is called with no tags. Its one live door is a circle on Find's source map (`genProjectTap` with a source name), which opens a tag view filtered by that name, likely empty.

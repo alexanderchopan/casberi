@@ -23,18 +23,7 @@ extension FeedScreen {
         /// is every hero and shelf door below.
         case thing(Thing, walk: WalkScope)
         case token(TokenQuickRoute)
-        case allocation
         case worthALook
-        /// The two composition doors (prd §240, 2026-07-31). Both carry the
-        /// composition VALUE rather than reading `walletLive` at present time:
-        /// the books can land again under an open tray, and a tray that
-        /// re-reads mid-presentation would renumber itself while being looked
-        /// at. Value-typed all the way down, so no `Thing` and no liveness
-        /// question here.
-        /// A web page in the in-app Safari sheet (prd §653) — a faucet page
-        /// raised from a room's Top up, which sits inside this List's rows and
-        /// cannot present its own sheet.
-        case web(URL)
         /// The NFT picker (prd §387). Routed here rather than presented by the
         /// shelf card, which lives inside this List's rows — a `.sheet` on a row
         /// resolves to the same presenting controller as this one and the picker
@@ -99,7 +88,6 @@ extension FeedScreen {
             // reuses the first's doors.
             case .thing(let t, let walk): "thing:\(t.id.uuidString)@\(walk.key)"
             case .token(let r): "token:\(r.id)"
-            case .allocation: "allocation"
             case .worthALook: "worthALook"
             case .socialFaces: "socialFaces"
             case .watchAdd: "watchAdd"
@@ -115,7 +103,6 @@ extension FeedScreen {
             case .mailSubscription(let id): "mailSubscription:\(id)"
             case .mailSubscriptionAdd: "mailSubscriptionAdd"
             case .company(let c): "company:\(c.name)"
-            case .web(let url): "web:\(url.absoluteString)"
             case .nftPicks(let address, _): "nftPicks:\(address)"
             case .person(let source, let handle): "person:\(source):\(handle)"
             case .logosSend: "logosSend"
@@ -237,15 +224,8 @@ extension FeedScreen {
     }
 
     /// Whether a route pushes inside this app sheet rather than rising over
-    /// it (prd §1238). Only inside an app sheet; the in-app browser is the
-    /// system's, and Worth a look keeps a stack of its own.
-    func pushesInSheet(_ route: FeedSheetRoute) -> Bool {
-        guard inSheet else { return false }
-        switch route {
-        case .web: return false
-        default: return true
-        }
-    }
+    /// it (prd §1238): every route, only inside an app sheet.
+    func pushesInSheet(_ route: FeedSheetRoute) -> Bool { inSheet }
 
     /// A route pushed inside the app sheet: the same view, drawn as a page
     /// (`dsInPane`: no grabber, no detents), the person room without the
@@ -339,10 +319,6 @@ extension FeedScreen {
             CompanySheet(company: company)
         case .githubWatch:
             GitHubWatchTray()
-        case .allocation:
-            if let portfolio {
-                WalletAllocationTray(portfolio: portfolio)
-            }
         case .worthALook:
             // The two walk doors (prd §449). Each is handed over ONLY
             // when its card is really on screen — the sheet falls back to
@@ -365,8 +341,6 @@ extension FeedScreen {
                 // and Positions' now, so it enumerates those groups itself.
                 onWalkToApprovals: nil,
                 onWalkToLending: nil)
-        case .web(let url):
-            DSWebSheet(url: url) { feedSheet = nil }
         case .nftPicks(let address, let label):
             WalletNFTPickerSheet(wallet: address, label: label)
         case .person(let source, let handle):

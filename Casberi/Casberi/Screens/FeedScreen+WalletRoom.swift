@@ -727,57 +727,6 @@ extension FeedScreen {
         return entry
     }
 
-    /// The holdings card's tail — the book's shape on the left, the door to
-    /// the whole allocation on the right, in ONE tertiary row (2026-08-22,
-    /// prd §447).
-    ///
-    /// **This is what a four-line block reduced to.** §417 promoted the
-    /// concentration sentence to a `heading24` lead above the map, on the
-    /// reasoning that Lending and Approvals lead with their reading; that was
-    /// right for those cards and wrong here, because the §417 group headers
-    /// landed a 22pt "What you hold" in the same pass — so the card opened
-    /// with two stacked 22pt lines, and the map under them opened with its own
-    /// eyebrow repeating the header word for word. Three voices before the
-    /// drawing. The reading is not deleted, it is demoted to where its sibling
-    /// already lived.
-    ///
-    /// **What survives is exactly the pair the treemap cannot draw**, which is
-    /// the test every cut here was made against: `UnitTreemap` is rank-ordered
-    /// rather than area-proportional, so it cannot state a share; and stables
-    /// are scattered across its cells by symbol, so it cannot group them. Both
-    /// halves are composed by `WalletPortfolio.shapeLine`, never assembled
-    /// here — a sentence built in a view would be a second definition of
-    /// concentration, and the two would drift.
-    ///
-    /// Guarded as a WHOLE rather than per-child: both halves self-gate (a
-    /// single-position book has no shape, a single wallet has no door), so an
-    /// unguarded row would take a spacing slot in the card's stack and draw
-    /// nothing in it.
-    @ViewBuilder
-    var holdingsTail: some View {
-        if let portfolio, !portfolio.isEmpty,
-           portfolio.shapeLine != nil || portfolio.walletCount > 1 {
-            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                if let shape = portfolio.shapeLine {
-                    Text(shape)
-                        .dsText(.subhead12).foregroundStyle(DS.textTertiary)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.85)
-                }
-                Spacer(minLength: 0)
-                WalletAllocationDoor(
-                    portfolio: portfolio,
-                    onOpen: portfolio.walletCount > 1 && selectedWallet == nil
-                        ? { feedSheet = .allocation } : nil)
-            }
-            .padding(.horizontal, DS.Space.s4)
-            // s2 from the stack + s1 here = s3 of air under the drawing. A
-            // caption sits closer to its figure than two cards sit to each
-            // other, and at the bare s2 the row read as a seventh cell.
-            .padding(.top, DS.Space.s1)
-        }
-    }
-
     /// Does the "What you hold" block have anything in it — the treemap, the
     /// NFT list under it (prd §1048), or both.
     var walletHoldsSomething: Bool {
@@ -1623,9 +1572,7 @@ extension FeedScreen {
                     // the same pass put a 22pt "What you hold" header directly
                     // above this card: two display lines stacked, then the
                     // map's own eyebrow saying the header's words again. The
-                    // reading moved down to `holdingsTail`, beside the stables
-                    // line it always belonged with; the header is the card's
-                    // title and always was.
+                    // header is the card's title and always was.
                     GenRender(id: "root", els: blockStream.els)
                         // The day's heat map (prd §1090): each tile's move.
                         .environment(\.holdingsDayMoves, walletHoldingMoves)
