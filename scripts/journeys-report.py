@@ -37,6 +37,12 @@ becomes the baseline):
                   only when it changes: the gap is the work.
 It REPORTS and never gates, like perf.sh: exit 0 unless its input is missing.
 
+THE CATALOGUE SWEEP (prd §1306, `--catalog catalog.tsv [targets.json]`): one
+row per app — app, ask (field | the tile pressed | none | broken), taps from
+Sources, scrolls, seconds, what opened, note. Flagged: over the tap target,
+no first step found, or a step broken (the row's note says which). A summary
+counts the asks; nothing is appended to the history.
+
 Input  results.tsv: journey \\t ok|broken \\t taps \\t typed \\t seconds \\t scrolls \\t backs \\t note
        (the older six-column form, without scrolls and backs, still reads)
 History CSV: ts,sha,journey,status,taps,typed,scrolls,backs,seconds,note
@@ -173,7 +179,50 @@ def append(history_path, rows):
             w.writerow(r)
 
 
+def read_catalog(path):
+    rows = []
+    for line in pathlib.Path(path).read_text().splitlines():
+        parts = line.split("\t")
+        if len(parts) < 5 or not parts[0].strip():
+            continue
+        parts += [""] * (7 - len(parts))
+        rows.append(dict(app=parts[0], ask=parts[1], taps=int(parts[2]), scrolls=int(parts[3]),
+                         seconds=float(parts[4]), opened=parts[5], note=parts[6]))
+    return rows
+
+
+def catalog_report(rows, target=3):
+    """The sweep's lines: a summary, then each app that needs a look."""
+    flagged = []
+    for r in rows:
+        why = []
+        if r["note"] or r["ask"] == "broken":
+            why.append(f"broken: {r['note'] or 'a step was not found'}")
+        elif r["ask"] == "none":
+            why.append("no first step found")
+        elif r["taps"] > target:
+            why.append(f"over target: {r['taps']} taps (target {target})")
+        if why:
+            flagged.append(f"⚠ {r['app']:<24} {r['ask']:<10} taps={r['taps']:<2} " + "; ".join(why))
+    kinds = {}
+    for r in rows:
+        kinds[r["ask"]] = kinds.get(r["ask"], 0) + 1
+    summary = (f"catalogue: {len(rows)} apps · {len(flagged)} need a look · asks: "
+               + ", ".join(f"{k} {n}" for k, n in sorted(kinds.items(), key=lambda kv: -kv[1])))
+    return [summary] + flagged
+
+
 def main(argv):
+    if argv and argv[0] == "--catalog":
+        if len(argv) < 2 or not pathlib.Path(argv[1]).exists():
+            print("✗ no catalogue results — read the run's xcodebuild.log")
+            return 1
+        target = 3
+        if len(argv) > 2 and pathlib.Path(argv[2]).exists():
+            import json
+            target = int(json.loads(pathlib.Path(argv[2]).read_text()).get("default_taps", 3))
+        print("\n".join(catalog_report(read_catalog(argv[1]), target)))
+        return 0
     if len(argv) not in (3, 4):
         print(__doc__.strip().splitlines()[-1])
         return 2

@@ -980,6 +980,17 @@ struct SettingsHome: View {
                         WalletFace(address: addr.address, size: DS.Face.row, circular: true)
                             .frame(width: DS.Face.seat, height: DS.Face.seat)
                     }
+                    // What you follow goes from a hold on its row (prd §1302),
+                    // through the book row's own unwatch, Undo included.
+                    .contextMenu {
+                        if let entry = AddressBook.shared.entry(for: addr.address) {
+                            Button(role: .destructive) {
+                                WalletUnwatch.perform(entry, context: context, chrome: chrome)
+                            } label: {
+                                Label(String(localized: "Stop following"), systemImage: "trash")
+                            }
+                        }
+                    }
                 }
             }
             }

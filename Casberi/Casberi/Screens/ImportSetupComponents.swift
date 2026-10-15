@@ -219,17 +219,14 @@ struct ImportArchiveSection: View {
                          detail: ImportOptions.messagesDetail,
                          isOn: $includeMessages)
         }
-        if pickLeads {
-            DSSlabButton(title: pickTitle, systemImage: pickIcon) {
-                DSHaptic.tap()
-                pick()
-            }
-        } else {
-            // Quiet, not hidden: someone who already has the zip is rare but
-            // must never be stuck behind a door they don't need.
-            DSSlabDoor(title: pickTitle,
-                       detail: String(localized: "Already have it?"),
-                       systemImage: pickIcon) { pick() }
+        // THE FIRST STEP IS A TILE (prd §1306, the catalogue sweep: every
+        // import page showed "no first step" under its box, the pick sitting
+        // below the export's steps). The pick stands under the box as Import,
+        // as a sign-in page's Sign in does; the steps stay in the card for
+        // whoever has no export yet.
+        DSSlabButton(tile: .importFile, title: pickTitle, systemImage: pickIcon) {
+            DSHaptic.tap()
+            pick()
         }
     }
 

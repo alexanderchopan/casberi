@@ -142,7 +142,8 @@ fi
 # file, so a journey added there is expected here the same night. A run that
 # reported nothing (the UI-test target failed to build, say) files too, as
 # `journeys-run`, since no Mac check builds the iOS test target.
-JOURNEYS_TOTAL=$(grep -cE '^ *@MainActor func test[A-Z]' "$ROOT/Casberi/CasberiUITests/JourneyTests.swift")
+# The catalogue sweep is opt-in and runs apart below, so it is not counted.
+JOURNEYS_TOTAL=$(grep -E '^ *@MainActor func test[A-Z]' "$ROOT/Casberi/CasberiUITests/JourneyTests.swift" | grep -vc 'testCatalog')
 "$ROOT/scripts/journeys.sh" > /tmp/nightly-journeys.log 2>&1
 JOURNEYS_DIR=$(print -l -- "$ROOT"/scripts/output/journeys-*(/om[1]N) 2>/dev/null)
 if [[ -n "$JOURNEYS_DIR" && -f "$JOURNEYS_DIR/results.tsv" ]]; then
@@ -174,6 +175,18 @@ $JTAIL
 \`\`\`
 
 Re-run with \`scripts/journeys.sh\`."
+fi
+
+# THE CATALOGUE SWEEP (prd §1306): every app's first step from Sources, one
+# row each, flagged over 3 taps or with no first step. Reported in the log and
+# kept beside its pictures, never filed: a flag is a design question for the
+# weekly review, as a journey that only got longer is.
+"$ROOT/scripts/journeys.sh" catalog > /tmp/nightly-catalog.log 2>&1
+CATALOG_DIR=$(print -l -- "$ROOT"/scripts/output/journeys-*(/om[1]N) 2>/dev/null)
+if [[ -n "$CATALOG_DIR" && -f "$CATALOG_DIR/catalog-report.txt" ]]; then
+  print -r -- "catalogue:" && sed 's/^/  /' "$CATALOG_DIR/catalog-report.txt"
+else
+  print -r -- "catalogue: no report — read /tmp/nightly-catalog.log"
 fi
 
 # Prune: keep the most recent $KEEP mac-* dirs, drop the rest. Journeys keep

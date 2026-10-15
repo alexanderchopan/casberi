@@ -34,10 +34,12 @@ typeset -A METHOD=(connect testConnect note testNote find testFind
                    spending testSpending subscription testSubscription
                    maillist testMailList site testSite wallet testWallet
                    stripe testStripe bluesky testBluesky github testGitHub x testX
-                   share testShare stoptracking testStopTracking)
+                   share testShare stoptracking testStopTracking catalog testCatalog)
 typeset -a ONLY
 if (( $# == 0 )); then
-  ONLY=(-only-testing:CasberiUITests/JourneyTests)
+  # The catalogue sweep is opt-in (`journeys.sh catalog`, ~20 minutes, prd
+  # §1306): every other journey runs by default.
+  ONLY=(-only-testing:CasberiUITests/JourneyTests -skip-testing:CasberiUITests/JourneyTests/testCatalog)
 else
   for j in "$@"; do
     [[ -n "${METHOD[$j]-}" ]] || { print -P "%F{red}✗ no journey \"$j\" (${(k)METHOD})%f"; exit 2; }
@@ -67,12 +69,31 @@ done
 xcrun simctl privacy "$DEVICE_ID" reset calendar "$BUNDLE" 2>/dev/null
 
 print -P "%F{cyan}▶ journeys on $DEVICE_ID at $SHA → $OUT%f"
-TEST_RUNNER_JOURNEYS_OUT="$OUT" "$ROOT/scripts/xcb.sh" \
+# The catalogue's names for the sweep, read off `BridgeCatalog.offers` (the
+# one source of truth for the app list, CLAUDE.md), one per line.
+CATALOG="$OUT/catalog-names.txt"
+grep -oE 'Offer\(name: "[^"]+"' "$ROOT/Casberi/Casberi/Model/BridgeCatalog.swift" \
+  | sed -E 's/Offer\(name: "//; s/"$//' | sort -u \
+  | grep -vx 'Markets' | grep -vx '…' > "$CATALOG"   # built in (prd §1234); a placeholder
+# JOURNEYS_APPS="A,B" narrows the sweep to those apps (a re-check of what it flagged).
+if [[ -n "${JOURNEYS_APPS:-}" ]]; then
+  print -l -- ${(s:,:)JOURNEYS_APPS} > "$CATALOG"
+fi
+
+TEST_RUNNER_JOURNEYS_OUT="$OUT" TEST_RUNNER_JOURNEYS_CATALOG="$CATALOG" "$ROOT/scripts/xcb.sh" \
   -project "$ROOT/Casberi/Casberi.xcodeproj" -scheme Casberi \
   -destination "id=$DEVICE_ID" -derivedDataPath "$HOME/Library/Developer/CasberiDD" \
   "${ONLY[@]}" test > "$OUT/xcodebuild.log" 2>&1
 TEST_STATUS=$?
 (( TEST_STATUS != 0 )) && print -P "%F{yellow}⚠ xcodebuild exited $TEST_STATUS — a broken journey does that; the report says which%f"
+
+# The sweep reports apart: one row per app, flagged over the target or with
+# no first step found (prd §1306).
+if [[ -f "$OUT/catalog.tsv" ]]; then
+  python3 "$ROOT/scripts/journeys-report.py" --catalog "$OUT/catalog.tsv" \
+    "$ROOT/scripts/journeys-targets.json" | tee "$OUT/catalog-report.txt"
+  [[ -f "$OUT/results.tsv" ]] || { print -P "%F{green}✓ catalogue report: $OUT/catalog-report.txt%f"; exit 0; }
+fi
 
 python3 "$ROOT/scripts/journeys-report.py" "$OUT/results.tsv" "$HIST" "$SHA" \
   "$ROOT/scripts/journeys-targets.json" | tee "$OUT/report.txt"

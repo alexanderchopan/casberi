@@ -79,8 +79,23 @@ def row_findings(root):
     return out
 
 
+WALLETS = "Casberi/Casberi/Screens/SettingsHome.swift"
+
+
+def wallet_findings(root):
+    """Sources' followed wallets (prd §1302): each row removes from a hold."""
+    text = (root / WALLETS).read_text()
+    i = text.find("ForEach(watched) { addr in")
+    if i < 0:
+        return [f"{WALLETS}: no followed-wallet rows found (the audit's anchor moved)"]
+    block = text[i:i + 1800]
+    if ".contextMenu" not in block or "WalletUnwatch.perform" not in block:
+        return [f"{WALLETS}: a followed wallet's row has no hold menu to stop following it"]
+    return []
+
+
 def audit(root):
-    return ask_findings(root) + row_findings(root)
+    return ask_findings(root) + row_findings(root) + wallet_findings(root)
 
 
 def self_test():
@@ -95,6 +110,7 @@ def self_test():
         (SCREENS + "/FeedScreen+Subscriptions.swift", ".contextMenu { stopTrackingMenu(item) }", "", "WalletSubscriptionRow has no hold menu"),
         (SCREENS + "/FeedScreen+MergedRoom.swift", ".contextMenu { stopTrackingMenu(item) }", "", "MailSubscriptionRow has no hold menu"),
         (SCREENS + "/FeedScreen+Following.swift", ".contextMenu { stopFollowingMenu(item, room) }", "", "FollowingRow has no hold menu"),
+        (WALLETS, "WalletUnwatch.perform(entry, context: context, chrome: chrome)", "", "followed wallet's row has no hold menu"),
     ]
     clean = audit(ROOT)
     if clean:
@@ -104,7 +120,7 @@ def self_test():
     for rel, old, new, expect in cases:
         with tempfile.TemporaryDirectory() as tmp:
             copy = pathlib.Path(tmp)
-            for f in (SLAB, PAGE):
+            for f in (SLAB, PAGE, WALLETS):
                 (copy / f).parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy(ROOT / f, copy / f)
             (copy / SCREENS).mkdir(parents=True, exist_ok=True)
@@ -136,7 +152,7 @@ def main():
     if findings:
         print(f"✗ ask-and-remove audit: {len(findings)} finding(s) (prd §1302)")
         return 1
-    print("✓ ask-and-remove audit: connect pages focus their one ask; every added row removes from a hold")
+    print("✓ ask-and-remove audit: connect pages focus their one ask; every added row and followed wallet removes from a hold")
     return 0
 
 

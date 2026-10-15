@@ -218,6 +218,38 @@ final class JourneyTests: XCTestCase {
         w.finish()
     }
 
+    // MARK: - Every app in the catalogue (prd §1306)
+
+    /// THE CATALOGUE SWEEP: every app, opened as a person finds it (Sources'
+    /// search › its row), then its page's first step — a field that already
+    /// has the keyboard (a key or a name, §1302), else the one tile that
+    /// starts the connect (Sign in, Allow, Import…), pressed once to see what
+    /// it opens. One row per app in `catalog.tsv`: what the ask was, the taps
+    /// to reach it from Sources, what opened. Over 3 taps, or no ask found,
+    /// is flagged by the report. Not connected, not in the demo: each app is
+    /// met fresh. The names come from `BridgeCatalog` through the runner
+    /// (`JOURNEYS_CATALOG`); opt-in (`journeys.sh catalog`), about 20 minutes.
+    @MainActor func testCatalog() throws {
+        let env = ProcessInfo.processInfo.environment
+        guard let listPath = env["JOURNEYS_CATALOG"],
+              let list = try? String(contentsOfFile: listPath, encoding: .utf8) else {
+            throw XCTSkip("no catalogue list (run through journeys.sh catalog)")
+        }
+        let names = list.split(separator: "\n").map(String.init).filter { !$0.isEmpty }
+        let fresh = ["-onboarded", "YES", "-demo.corpusAllowed", "NO", "-openSettings", "YES"]
+        for name in names {
+            let w = Walk("catalog-\(Walk.slug(name))", launch: fresh, test: self, quiet: true)
+            // Settings opens on Casberi's options; its "Sources" row is the way in.
+            w.tap(w.visible(.button, "label BEGINSWITH %@", "Sources"), "Sources")
+            w.begin()
+            w.focus(w.el(.textField, "placeholderValue == %@", "Search"), "Sources search")
+            w.type(name, "type the name")
+            w.tap(w.visible(.any, "label BEGINSWITH %@", "\(name),"), "its row")
+            let (ask, opened) = w.firstAsk()
+            w.record(catalog: name, ask: ask, opened: opened)
+        }
+    }
+
     // MARK: - Acting on what you have
 
     /// SHARE A THING you are looking at: its sheet's Share, and the tray
@@ -300,9 +332,14 @@ final class JourneyTests: XCTestCase {
         var broken: String?
         var start = Date()
 
-        init(_ name: String, launch args: [String], test: XCTestCase) {
+        /// A sweep's walk: a missing step is recorded on its row, never an
+        /// XCTest failure, so one app cannot end the sweep.
+        var quiet = false
+
+        init(_ name: String, launch args: [String], test: XCTestCase, quiet: Bool = false) {
             self.name = name
             self.test = test
+            self.quiet = quiet
             app.launchArguments = args
             app.launch()
             start = Date()
@@ -343,6 +380,82 @@ final class JourneyTests: XCTestCase {
             app.launch()
             shoot("relaunched")
             begin()
+        }
+
+        /// The words a tile that STARTS a connect wears (`SlabTile`, prd §1302):
+        /// a door to the provider's key page is not the ask, the field is.
+        static let askTiles = ["Sign in", "Allow", "Import", "Folder", "Photos", "Key file",
+                               "Password", "Follow", "Turn on", "Approve", "Get app", "Connect"]
+
+        /// The page's first step: a field holding the keyboard (no tap), else
+        /// the first ask tile, pressed, and what it opened.
+        func firstAsk() -> (ask: String, opened: String) {
+            guard broken == nil else { return ("broken", broken ?? "") }
+            RunLoop.current.run(until: Date().addingTimeInterval(1.5))
+            let focused = NSPredicate(format: "hasKeyboardFocus == true")
+            if app.textFields.matching(focused).count > 0 || app.secureTextFields.matching(focused).count > 0 {
+                shoot("ask: field")
+                return ("field", "keyboard")
+            }
+            // Already connected on this device (a session the keychain kept
+            // across reinstalls): the page offers to disconnect, not to ask.
+            if app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Disconnect")).firstMatch.exists {
+                shoot("ask: already connected")
+                return ("connected", "")
+            }
+            // An app with no page of its own fires the system's ask as its row
+            // is tapped (prd §1275): an alert, or Apple's own sheet (Health).
+            if springboard.alerts.firstMatch.exists {
+                shoot("ask: system")
+                let alert = springboard.alerts.firstMatch
+                let no = alert.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Don")).firstMatch
+                (no.exists ? no : alert.buttons.firstMatch).tap()
+                return ("system", "system ask")
+            }
+            let sheet = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "Allow \u{201C}Casberi\u{201D}")).firstMatch
+            if sheet.exists {
+                shoot("ask: system sheet")
+                let no = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Don")).firstMatch
+                if no.exists { no.tap() }
+                return ("system", "system sheet")
+            }
+            for word in Self.askTiles {
+                let q = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", word))
+                guard let tile = q.allElementsBoundByIndex.first(where: { $0.exists && $0.isHittable }) else { continue }
+                tile.tap()
+                taps += 1
+                RunLoop.current.run(until: Date().addingTimeInterval(2.5))
+                let opened: String
+                if springboard.alerts.firstMatch.exists {
+                    opened = "system ask"
+                    let alert = springboard.alerts.firstMatch
+                    let no = alert.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Don")).firstMatch
+                    (no.exists ? no : alert.buttons.firstMatch).tap()
+                } else if app.webViews.firstMatch.exists {
+                    opened = "web page"
+                } else if app.keyboards.firstMatch.exists {
+                    opened = "keyboard"
+                } else {
+                    opened = "a sheet or page"
+                }
+                shoot("ask: \(word)")
+                return (word, opened)
+            }
+            shoot("ask: none found")
+            return ("none", "")
+        }
+
+        /// One catalogue row, appended to `catalog.tsv`, and the app closed.
+        func record(catalog name: String, ask: String, opened: String) {
+            let seconds = Date().timeIntervalSince(start)
+            let note = broken ?? ""
+            append("catalog.tsv", "\(name)\t\(ask)\t\(taps)\t\(scrolls)\t\(String(format: "%.1f", seconds))\t\(opened)\t\(note)\n")
+            app.terminate()
+        }
+
+        /// A file-safe name.
+        static func slug(_ s: String) -> String {
+            String(s.lowercased().map { $0.isLetter || $0.isNumber ? $0 : "-" })
         }
 
         /// A tap on something that may not be there (a cover a later journey
@@ -515,6 +628,8 @@ final class JourneyTests: XCTestCase {
 
         private func shoot(_ what: String) {
             step += 1
+            // A sweep keeps its pictures to what it found and what broke.
+            if quiet, !what.hasPrefix("ask"), !what.hasPrefix("BROKEN") { return }
             let shot = app.screenshot()
             let slug = what.lowercased().map { $0.isLetter || $0.isNumber ? $0 : "-" }
             let file = String(format: "%@-%02d-%@.png", name, step, String(slug))

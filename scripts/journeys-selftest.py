@@ -122,6 +122,20 @@ def fixture(m):
         check("eight columns read scrolls and backs", got[0]["scrolls"] == 2 and got[0]["backs"] == 1
               and got[0]["note"] == "note here")
         check("six columns still read", got[1]["scrolls"] is None and got[1]["note"] == "old note")
+
+        # The catalogue sweep (prd §1306).
+        cat = pathlib.Path(tmp) / "catalog.tsv"
+        cat.write_text("Stripe\tfield\t2\t1\t9.0\tkeyboard\t\n"
+                       "Plaid\tSign in\t4\t0\t9.0\tweb page\t\n"
+                       "Mystery\tnone\t2\t0\t9.0\t\t\n"
+                       "Broken\tbroken\t1\t0\t9.0\t\tstep 3 (its row): not found\n")
+        lines = m.catalog_report(m.read_catalog(cat), 3)
+        out = "\n".join(lines)
+        check("the summary counts every app", lines[0].startswith("catalogue: 4 apps · 3 need a look"))
+        check("an app within the target is not flagged", "Stripe" not in out)
+        check("an app over the target is flagged", "Plaid" in out and "over target: 4 taps" in out)
+        check("an app with no first step is flagged", "Mystery" in out and "no first step found" in out)
+        check("a broken app is flagged with its step", "Broken" in out and "its row): not found" in out)
     return bad
 
 
@@ -140,6 +154,9 @@ MUTATIONS = [
     ("old header kept", "if header != FIELDS:", "if False:"),
     ("old rows dropped", "                for r in old:\n                    w.writerow(r)", "                pass"),
     ("new columns unread", "counted = len(parts) >= 7 and", "counted = False and"),
+    ("catalogue over-target silent", 'elif r["taps"] > target:', "elif False:"),
+    ("catalogue no-ask silent", 'elif r["ask"] == "none":', 'elif r["ask"] == "nothing":'),
+    ("catalogue broken silent", 'if r["note"] or r["ask"] == "broken":', "if False:"),
     ("history overwritten", 'with p.open("a", newline="") as f:', 'with p.open("w", newline="") as f:\n        new = True'),
 ]
 

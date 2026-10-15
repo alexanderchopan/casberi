@@ -91,9 +91,6 @@ struct StripeScreen: View {
             DSSlabField(placeholder: TokenBridge.stripe.placeholder,
                         text: $keyField, actionLabel: "Save", secure: true,
                         action: saveKey)
-            BridgeSyncStatusRows(syncing: connecting,
-                                 syncingLine: String(localized: "Checking the key…"),
-                                 proof: result)
             BridgeSetupCard(steps: [TokenBridge.stripe.steps[0]], numbered: false) {
                 if let url = TokenBridge.stripe.setupURL {
                     // Step one, doing itself (prd §218) — verb over address,
@@ -115,6 +112,10 @@ struct StripeScreen: View {
                                 "Subscriptions — read",
                                 "Invoices — read",
                                 "Balance — read"])
+            // The result reports last (connect-shape-audit).
+            BridgeSyncStatusRows(syncing: connecting,
+                                 syncingLine: String(localized: "Checking the key…"),
+                                 proof: result)
         }
     }
 
