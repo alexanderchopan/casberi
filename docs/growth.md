@@ -116,6 +116,11 @@ Each step is tagged with where it runs.
   Description and keywords need a version in an editable state; they go with the next
   submission.
 
+- [mac, OWED at the next Mac version] Apply the Mac description from `docs/store-copy.md`
+  (`asc-copy.py apply --platform MAC_OS --field description --yes`) as soon as the new Mac
+  version is created, before its submit. Mac 3.0.3/3.0.5 still say Casberi "reads them back
+  to you" (the deleted ask); the user chose to wait over pulling 3.0.5 from review (2026-10-15).
+
 ### 3. Audience tests
 
 - [cloud] Three Custom Product Pages, each with its own screenshots and link: all your apps
