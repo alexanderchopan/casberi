@@ -590,13 +590,7 @@ struct SectionPanelName<Trailing: View>: View {
                 .accessibilityLabel(Text(verbatim: only.label))
             } else if !adds.isEmpty {
                 Menu {
-                    ForEach(adds) { add in
-                        if add.apart { Divider() }
-                        Button { add.act() } label: {
-                            Text(verbatim: add.label)
-                            if let detail = add.detail { Text(verbatim: detail) }
-                        }
-                    }
+                    SectionAddMenu(adds: adds)
                 } label: { plus }
                 .accessibilityLabel(Text("Add to \(name)"))
             }
@@ -630,7 +624,33 @@ struct SectionAdd: Identifiable {
     var detail: String? = nil
     /// Set apart from the rows above it by a divider.
     var apart = false
+    /// The row's mark: an app's art by its catalogue name, else a glyph.
+    var app: String? = nil
+    var glyph: String? = nil
     let act: () -> Void
+}
+
+/// One row of a + menu (prd §1303): the app's mark, its name, and what it
+/// follows under it — the Feed's sections and Sources' counts draw the same.
+struct SectionAddMenu: View {
+    let adds: [SectionAdd]
+
+    var body: some View {
+        ForEach(adds) { add in
+            if add.apart { Divider() }
+            // Two texts and an image straight in the label: a menu reads them
+            // as title, subtitle and icon (a `Label` keeps one line only).
+            Button { add.act() } label: {
+                Text(verbatim: add.label)
+                if let detail = add.detail { Text(verbatim: detail) }
+                if let app = add.app {
+                    BridgeIcon.menuMark(app)
+                } else if let glyph = add.glyph {
+                    Image(systemName: glyph)
+                }
+            }
+        }
+    }
 }
 
 /// One choice a section header names (prd §1251).
@@ -671,16 +691,21 @@ extension FeedScreen {
     /// its apps. A category with no such app draws no +.
     func sectionAdds(_ category: String) -> [SectionAdd] {
         var adds = FollowByName.doors(in: category).map { door in
-            SectionAdd(label: door.app, detail: door.what) { followByName(door.app) }
+            SectionAdd(label: door.app, detail: door.what, app: door.app) { followByName(door.app) }
         }
-        // MORE SOCIAL APPS (prd §1300, user: "we don't or ever will have that
-        // many bluesky users"): X, Instagram and TikTok follow nobody by
-        // name, so the + ends on Sources' Social card, where they connect.
+        // MORE SOCIAL APPS LEADS (prd §1303, user: "we don't or ever will
+        // have that many bluesky users", then "do the social bluesky thing
+        // too"): X, Instagram and TikTok follow nobody by name, so the first
+        // row is Sources' Social card, where they connect; Bluesky and
+        // Telegram stand under it.
         if category == RoomAccounts.socialRoom {
-            adds.append(SectionAdd(label: String(localized: "More social apps"), apart: true) {
+            if !adds.isEmpty { adds[0].apart = true }
+            adds.insert(SectionAdd(label: String(localized: "More social apps"),
+                                   detail: String(localized: "X, Instagram, TikTok and more"),
+                                   glyph: "square.grid.2x2") {
                 route.openCategory = RoomAccounts.socialRoom
                 route.present(.apps)
-            })
+            }, at: 0)
         }
         return adds
     }

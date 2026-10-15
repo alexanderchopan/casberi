@@ -460,19 +460,21 @@ struct SettingsHome: View {
         switch kind {
         case .feeds:
             return FollowByName.doors(in: RoomAccounts.mediaRoom).map { door in
-                SectionAdd(label: door.app, detail: door.what) { followByName(door.app) }
+                SectionAdd(label: door.app, detail: door.what, app: door.app) { followByName(door.app) }
             }
         case .people:
             // A MASTER LIST (user: "people's i guess should add contacts and
             // a contact entry if they don't want to import"): import the
             // address book, or keep one person by hand.
             return [
-                SectionAdd(label: "Contacts", detail: String(localized: "Import your address book")) {
+                SectionAdd(label: "Contacts", detail: String(localized: "Import your address book"),
+                           app: "Contacts") {
                     DSHaptic.selection()
                     setup("Contacts")
                 },
                 SectionAdd(label: String(localized: "New contact"),
-                           detail: String(localized: "A name and an email or address")) {
+                           detail: String(localized: "A name and an email or address"),
+                           glyph: "person.crop.circle.badge.plus") {
                     DSHaptic.selection()
                     sheet = .newContact
                 },

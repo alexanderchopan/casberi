@@ -88,10 +88,14 @@ struct FollowTrackTray: View {
     }
 
     var body: some View {
-        DSTray(title: room.verb, height: 520, detents: [.large], scrollsItself: true) {
+        // AN APP PICKED ON THE WAY IN IS NOT PICKED AGAIN (prd §1303): a +
+        // row or an app's door names it, so the tray is that app's, by name,
+        // with no chips; the room's own verb still offers them all.
+        DSTray(title: seatPicked ? target.rawValue : room.verb, height: 520,
+               detents: [.large], scrollsItself: true) {
             ScrollView {
                 VStack(alignment: .leading, spacing: DS.Space.s3) {
-                    picker
+                    if !seatPicked { picker }
                     if target == .podcasts, !hits.isEmpty {
                         ForEach(hits) { hit in hitRow(hit) }
                     }

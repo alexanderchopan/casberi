@@ -66373,3 +66373,13 @@ The share tray (docs/social-spec.md section 3) gains **Post on X**, a row beside
 3. **Guarded** by `scripts/ask-and-remove-audit.py` (in `verify.sh`, 8 mutations): the field claims the ask, the page hands it only to the two modes, and every `WalletSubscriptionRow`, `MailSubscriptionRow` and `FollowingRow` in a `FeedScreen*.swift` carries its hold menu.
 
 **Measured** from a clean copy of main plus these files: stripe 2 taps (1 swipe, was 2), bluesky 2, github 3 and x 3 with no keyboard over Sign in. The first journey after a fresh install can miss a row that is on screen (seen once on bluesky, passing on a rerun).
+
+## §1303 — A + menu row wears its app's mark, a picked app is not picked again, and Social's + leads with More social apps (amends §1300) (user, 2026-10-14: of the review "the icons and drop the repeated chips first", "yes", then "do the social bluesky thing too")
+
+1. **Each row of a + menu wears its app's mark** — the app's art at 26pt, rounded, in its own colours (`BridgeIcon.menuMark`), else its glyph — over its name and what it follows. The Feed's sections and Sources' counts draw one row view (`SectionAddMenu`). Two texts and an image go straight in the button's label: a `Label` kept one line only (measured).
+2. **An app picked on the way in is not picked again.** A row, an app's door or a video's Follow opens `FollowTrackTray` titled with that app and no chips; the room's own Follow something still shows them all.
+3. **Social's + leads with More social apps** ("X, Instagram, TikTok and more"), then Bluesky and Telegram under a divider (user: "i only have bluesky just to hve it. nobobdy will use it").
+
+**Declined, tried:** lowering the system Back in a step pushed inside the Sources sheet (user: "this arrow is touching to top"). `safeAreaPadding` on the sheet's stack does not move the bar (measured); moving it means hiding the system Back in every pushed sheet step and drawing one in the content (§752), which is its own pass.
+
+**Seen** on the simulator: Following's menu with marks and lines, the YouTube tray with no chips, every + logged (`-sectionAdd`). **Not seen:** Social's menu opened by a tap, the Mac.

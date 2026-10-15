@@ -49,6 +49,37 @@ private enum BridgeIconArt {
         images[asset] = found
         return found
     }
+
+    private static var menuImages: [String: UIImage?] = [:]
+
+    /// The app's art at a menu row's size, rounded, in its own colours (prd
+    /// §1303): a menu draws its images as they are, so the size and the
+    /// corner are set here. Nil for an app with no bundled art.
+    static func menuImage(for name: String) -> UIImage? {
+        if let hit = menuImages[name] { return hit }
+        let made = image(assetName(for: name)).map { art -> UIImage in
+            let side: CGFloat = 26
+            let rect = CGRect(x: 0, y: 0, width: side, height: side)
+            return UIGraphicsImageRenderer(size: rect.size).image { _ in
+                UIBezierPath(roundedRect: rect, cornerRadius: side * 0.225).addClip()
+                art.draw(in: rect)
+            }.withRenderingMode(.alwaysOriginal)
+        }
+        menuImages[name] = made
+        return made
+    }
+}
+
+extension BridgeIcon {
+    /// An app's mark for a menu row: its art, else its glyph (prd §1303).
+    @MainActor @ViewBuilder
+    static func menuMark(_ name: String) -> some View {
+        if let ui = BridgeIconArt.menuImage(for: name) {
+            Image(uiImage: ui)
+        } else {
+            Image(systemName: BridgeGlyph.symbol(for: name))
+        }
+    }
 }
 
 struct BridgeIcon: View {

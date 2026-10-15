@@ -86,13 +86,7 @@ struct DSCountTile: View {
                         .accessibilityLabel(Text(addLabel ?? label))
                 } else {
                     Menu {
-                        ForEach(addMenu) { add in
-                            if add.apart { Divider() }
-                            Button { add.act() } label: {
-                                Text(verbatim: add.label)
-                                if let detail = add.detail { Text(verbatim: detail) }
-                            }
-                        }
+                        SectionAddMenu(adds: addMenu)
                     } label: { plus }
                     .accessibilityLabel(Text(addLabel ?? label))
                 }
