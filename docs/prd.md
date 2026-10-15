@@ -66481,3 +66481,12 @@ The in-content back rows become the title's first word. Casberi's settings, open
 2. **What still rises over a sheet:** Safari, the system share sheet and the system pickers (§1238), and full-screen covers.
 3. The nightly sheet sweep (§1308) walks these as pushed steps: Back returns to the sheet, a pull closes it. Its app-sheet row moved to a wallet tile that truly rises (Security, §1220); the old row opened Home's Needs you, which is the page, not a sheet.
 
+
+## §1316 — Sources is a library: every category a folder (supersedes §1253's cards and its By category / A–Z words) (user, 2026-10-15: "the app is a joy to use, but the app catalogue and sources section is not", "the vibe we want … one user can come back to and enjoy tinkering around in. like how things3 feels … maybe that means folders for categories", then of three mockups, "Do A. it's like Apple's Library and so will feel familiar")
+
+1. **Under the box and the search field, every category is a folder, three across**, as the App Library draws them: a well holding nine of its apps, yours in colour and the rest faint (grey, 40%), the name under it and "N of M". Yours lead each folder, A–Z, then the rest, A–Z. `Screens/SourcesLibrary.swift`.
+2. **A tap springs the folder open in place** (`DS.Motion.folder`, the dock's spring, §621), never a sheet: the page dims under it, a tap outside or Escape closes it. Inside, every app as its icon over its name, four across; one you could add is faint and wears a pink plus. A tap opens an app as its row did (yours its page, the rest their way in), and the folder stays open behind what that raises. A long folder (Wallet) scrolls inside the panel. A door that names a category (§1300) springs its folder.
+3. **Casberi's own settings take the first slot**, where the App Library keeps Suggestions: the mark in the well, "Casberi" over "Settings"; a tap opens them in the box as before (§1231, §1312).
+4. **The search field stays**: on the phone Sources rises as a sheet over the band's search (§1245), and the App Library keeps its own for the same reason. Focused or holding words, it lists every app A–Z under letters (§1253's A–Z list, now the search's).
+5. **Not in the library:** Markets (automatic, §1167) and the Wallet seat (the wallets you follow, added by the Wallets count's plus; user: "wallet should no longer be a tile in the wallet folder").
+6. The category glyph stands in the open folder's title, as the Feed's sections wear it; not under the closed folders (user: "ok that's fine then leave as you have it").

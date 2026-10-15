@@ -57,13 +57,10 @@ struct SettingsHome: View {
     /// The Track tray of an app that needs only a name (prd §1119), raised
     /// by a door that named it (prd §1234; the Apps screen's until then).
     @State private var trackPick: TrackPick?
-    /// The categories whose More was pressed: every app shown (prd §1253).
-    @State private var openCategories: Set<String> = []
-    /// The apps by category (the cards) or A–Z (one list under letters),
-    /// remembered on this phone (prd §1253).
-    @AppStorage("sources.appsAZ") private var appsAZ = false
-    /// The category a door named (`route.openCategory`, prd §1300): the
-    /// list scrolls to its card once, then lets go.
+    /// The folder sprung open over the page (prd §1316).
+    @State private var openFolder: String?
+    /// The category a door named (`route.openCategory`, prd §1300): its
+    /// folder springs open once the page has risen, then lets go.
     @State private var landCategory: String?
     /// Bumped when a person is kept by hand, so People's list reads again.
     @State private var peopleRevision = 0
@@ -119,25 +116,28 @@ struct SettingsHome: View {
                                     glyph: "magnifyingglass", clearable: true,
                                     size: .slab, submitLabel: .search, action: {})
                     }
-                    if !casberiOpen, scope == .apps { orderWords }
                     if casberiOpen {
                         casberiOptions
                     } else {
                         switch scope {
                         case .apps:
-                            // CASBERI LEADS SOURCES (prd §1231, user: "casberi
-                            // becomes a source but is at the top above the
-                            // apps"): its own options, where an app's settings
-                            // are on the phone. It is an app, so it leads Apps
-                            // only, never another kind's page (prd §1307).
-                            DSPushRow(title: Text(verbatim: "Casberi"),
-                                      subtitle: Text("Settings, data and notifications")) {
-                                withAnimation(DS.Motion.standard) { casberiOpen = true }
-                            } leading: {
-                                CasberiMark(size: DS.Mark.notice * 0.7)
-                                    .frame(width: DS.Mark.notice, height: DS.Mark.notice)
+                            // THE LIBRARY (prd §1316): every category a
+                            // folder, Casberi's own settings the first slot
+                            // (it leads Sources, §1231, and Apps only, §1307).
+                            // The field focused or holding words lists every
+                            // app A–Z instead, as the App Library's does.
+                            if appsSearching {
+                                appsList
+                            } else {
+                                SourcesLibrary(folders: libraryFolders, has: isYours,
+                                               open: { category in
+                                                   withAnimation(DS.Motion.folder) { openFolder = category }
+                                               },
+                                               openCasberi: {
+                                                   withAnimation(DS.Motion.standard) { casberiOpen = true }
+                                               })
+                                .padding(.horizontal, DSRoomChassis.rowInset - DSRoomChassis.inset - DS.Space.s1)
                             }
-                            appsList
                         // EACH KIND IS THE FEED'S CARD (prd §1265): its act
                         // first, then its rows in the Feed's anatomy.
                         case .calendars:
@@ -168,11 +168,8 @@ struct SettingsHome: View {
                                      bottom: DS.Space.s4, trailing: DS.Space.s4))
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
-                // The cards are rows of this section, so they keep the air
-                // they had inside it (prd §1253) and a landing can reach one.
-                if !casberiOpen, scope == .apps, !appsAZ { appsByCategory }
             }
-            if !casberiOpen, scope == .apps, appsAZ { appsByLetter }
+            if !casberiOpen, scope == .apps, appsSearching { appsByLetter }
             // Room for the floating bar, as every room leaves it.
             Color.clear.frame(height: ShellMetrics.bottomInset - 40)
                 .listRowBackground(Color.clear)
@@ -185,15 +182,9 @@ struct SettingsHome: View {
             NSLog("[Casberi] sourcesCategory: %@", category)
             #endif
             Task { @MainActor in
-                var instant = Transaction()
-                instant.disablesAnimations = true
-                // After the sheet has risen (a scroll during its rise is
-                // dropped), then a few passes settle the list's estimate
-                // (the Feed's section jump, `FeedScreen.landingPasses`).
-                for pass in 0..<4 {
-                    try? await Task.sleep(for: .milliseconds(pass == 0 ? 550 : 70))
-                    withTransaction(instant) { proxy.scrollTo(Self.categoryID(category), anchor: .top) }
-                }
+                // After the sheet has risen, so the spring is seen.
+                try? await Task.sleep(for: .milliseconds(550))
+                withAnimation(DS.Motion.folder) { openFolder = category }
                 landCategory = nil
             }
         }
@@ -207,12 +198,22 @@ struct SettingsHome: View {
                 }
                 .padding(.trailing, 2)
                 .padding(.bottom, ShellMetrics.bottomInset + DS.Space.s4)
-            } else if !casberiOpen, scope == .apps, appsAZ, query.isEmpty {
+            } else if !casberiOpen, scope == .apps, appsSearching, query.isEmpty {
                 LetterIndex(letters: appLetters.map(\.letter)) { letter in
                     proxy.scrollTo(Self.appLetterID(letter), anchor: .top)
                 }
                 .padding(.trailing, 2)
                 .padding(.bottom, ShellMetrics.bottomInset + DS.Space.s4)
+            }
+        }
+        // A folder springs open over the page (prd §1316).
+        .overlay {
+            if let category = openFolder, !casberiOpen, scope == .apps,
+               let folder = libraryFolders.first(where: { $0.category == category }) {
+                SourcesOpenFolder(folder: folder, has: isYours,
+                                  open: { openFromFolder($0) },
+                                  close: { withAnimation(DS.Motion.folder) { openFolder = nil } })
+                    .transition(.scale(scale: 0.7).combined(with: .opacity))
             }
         }
         }
@@ -295,10 +296,6 @@ struct SettingsHome: View {
                 casberiOpen = false
                 scope = .apps
                 query = ""
-                if let category {
-                    appsAZ = false
-                    openCategories.insert(category)
-                }
             }
             landCategory = category
         }
@@ -638,13 +635,10 @@ struct SettingsHome: View {
     // MARK: - Apps
 
     /// APPS, THE FIRST LANDING (prd §1166, user: "it shouldn't just be
-    /// start here, it should be all the apps"): Casberi's own row, then EVERY
-    /// app under
-    /// its category (categories A–Z, Other last; apps A–Z), yours wearing
-    /// their state and the rest Add. Supersedes §1145's "only yours": this is
-    /// where a first run sets up, so what you could add stands here too.
-    /// Nothing at all when there is nothing to say, so the stack it stands
-    /// in adds no air for it: the cards follow as rows of their own.
+    /// start here, it should be all the apps"): every app, yours and the
+    /// ones you could add, as the library's folders (§1316) or, searching,
+    /// A–Z. This draws only the search's empty answer; the letters follow
+    /// as rows of their own.
     @ViewBuilder
     private var appsList: some View {
         if appCategories.isEmpty {
@@ -656,9 +650,7 @@ struct SettingsHome: View {
     /// Every app the search admits, under its category: categories A–Z,
     /// Other last; apps A–Z.
     private var appCategories: [(category: String, apps: [BridgeCatalog.Offer])] {
-        let offers = BridgeCatalog.offers.filter {
-            BridgeCatalog.category(of: $0) != HomeScope.markets && hit($0.name)
-        }
+        let offers = BridgeCatalog.offers.filter { Self.inLibrary($0) && hit($0.name) }
         let other = String(localized: "Other")
         let byCategory = Dictionary(grouping: offers) { BridgeCatalog.category(of: $0) }
         return byCategory.keys
@@ -673,85 +665,38 @@ struct SettingsHome: View {
             }
     }
 
-    static func categoryID(_ category: String) -> String { "apps-category-\(category)" }
+    /// Whether an app is yours, as its row says it (a paused one is not).
+    private func isYours(_ name: String) -> Bool {
+        bridges.bridges.contains { $0.name == name && $0.status != .paused }
+    }
 
-    /// **EACH CATEGORY IS A CARD, AS THE FEED'S SECTIONS ARE (prd §1253,
-    /// user: "the section headers are too close to the list ending above
-    /// them"):** the Feed's panel and name (a pink glyph, the name in the
-    /// head ink), its row (the app over its state, no chevron) and its More,
-    /// which opens the rest in place. "All apps" went: the cards say it. A
-    /// search lists every match. Each card is its own list row, so a door
-    /// that names a category can scroll to it (prd §1300).
-    @ViewBuilder
-    private var appsByCategory: some View {
-        // Keyed by `categoryID`, the id a landing scrolls to: a `List` jumps
-        // to its `ForEach`'s identity (the Feed's sections do the same).
-        let groups = Dictionary(uniqueKeysWithValues: appCategories.map { (Self.categoryID($0.category), $0) })
-        let firstID = appCategories.first.map { Self.categoryID($0.category) }
-        ForEach(appCategories.map { Self.categoryID($0.category) }, id: \.self) { id in
-            let group = groups[id] ?? (category: "", apps: [])
-            let category = group.category
-            let capped = query.isEmpty && !openCategories.contains(category)
-            let shown = capped ? Array(group.apps.prefix(Self.categoryFirstRows)) : group.apps
-            // The list row already stands in the room's column, so the card
-            // takes the rest of `rowInset`: rows land where the Feed's do.
-            SectionPanelCard(name: category, glyph: CategoryFold.glyph(for: category),
-                             inset: DSRoomChassis.rowInset - DSRoomChassis.inset) {
-                ForEach(shown, id: \.name) { offerRow($0.name, card: true) }
-                if shown.count < group.apps.count {
-                    Button {
-                        DSHaptic.tap()
-                        withAnimation(DS.Motion.standard) { _ = openCategories.insert(category) }
-                    } label: {
-                        DSPushRowLabel(title: Text("More from \(category)"), fact: nil,
-                                       tint: DS.tint, opens: false) {
-                            DSGlyphLead(glyph: "arrow.down", tint: DS.tint)
-                        }
-                        .frame(minHeight: DS.Hit.min)
-                    }
-                    .buttonStyle(RowPress())
-                }
-            }
-            // The first card keeps the s6 it stood at inside the section's
-            // stack: the row above ends on s4.
-            .listRowInsets(.init(top: id == firstID ? DS.Space.s6 - DS.Space.s4 : 0,
-                                 leading: DS.Space.s4,
-                                 bottom: DS.Space.s6, trailing: DS.Space.s4))
-            .listRowBackground(Color.clear)
-            .listRowSeparator(.hidden)
+    /// Every category as a folder, yours first in each (prd §1316).
+    private var libraryFolders: [SourcesLibrary.Folder] {
+        SourcesLibrary.folders(appCategories, has: isYours)
+    }
+
+    /// The field focused or holding words: every app A–Z, as the App
+    /// Library's search lists them (prd §1316).
+    private var appsSearching: Bool { searchFocused || !query.isEmpty }
+
+    /// An app in an open folder, as its row opens it: yours its page, the
+    /// rest their way in.
+    private func openFromFolder(_ name: String) {
+        DSHaptic.selection()
+        if let app = bridges.bridges.first(where: { $0.name == name && $0.status != .paused }) {
+            route.openAccount(BridgeRouter.destination(forID: app.id))
+        } else {
+            setup(name)
         }
     }
 
-    // MARK: - By category or A–Z (prd §1253)
-
-    /// "By category A–Z", the Feed header's words (§1251): the order in the
-    /// head ink, the other grey, a tap switches.
-    private var orderWords: some View {
-        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s4) {
-            orderWord(Text("By category"), on: !appsAZ) { appsAZ = false }
-            orderWord(Text(verbatim: "A–Z"), on: appsAZ) { appsAZ = true }
-            Spacer(minLength: 0)
-        }
-        .padding(.horizontal, DSRoomChassis.rowInset - DSRoomChassis.inset)
-    }
-
-    private func orderWord(_ word: Text, on: Bool, pick: @escaping () -> Void) -> some View {
-        Button {
-            guard !on else { return }
-            DSHaptic.selection()
-            withAnimation(DS.Motion.standard) { pick() }
-        } label: {
-            word.dsText(.heading20).foregroundStyle(on ? DS.headInk : DS.textTertiary)
-        }
-        .buttonStyle(RowPress())
-        .accessibilityAddTraits(on ? [.isSelected] : [])
-    }
+    // MARK: - A–Z (prd §1253, the search's list since §1316)
 
     /// Every app the search admits, A–Z under its first letter; anything
     /// that does not start with a letter files under "#", last.
     private var appLetters: [(letter: String, names: [String])] {
         let names = BridgeCatalog.offers
-            .filter { BridgeCatalog.category(of: $0) != HomeScope.markets && hit($0.name) }
+            .filter { Self.inLibrary($0) && hit($0.name) }
             .map(\.name)
             .sorted { $0.localizedStandardCompare($1) == .orderedAscending }
         let groups = Dictionary(grouping: names) { name -> String in
@@ -761,6 +706,14 @@ struct SettingsHome: View {
         return groups.keys
             .sorted { ($0 == "#") != ($1 == "#") ? $1 == "#" : $0 < $1 }
             .map { ($0, groups[$0] ?? []) }
+    }
+
+    /// The built-ins are not apps you add: Markets is automatic (§1167),
+    /// and the Wallet seat is the wallets you follow, added by the Wallets
+    /// count's plus (user: "wallet should no longer be a tile in the wallet
+    /// folder").
+    static func inLibrary(_ offer: BridgeCatalog.Offer) -> Bool {
+        BridgeCatalog.category(of: offer) != HomeScope.markets && offer.name != "Wallet"
     }
 
     static func appLetterID(_ letter: String) -> String { "apps-letter-\(letter)" }
@@ -914,9 +867,6 @@ struct SettingsHome: View {
             }
         }
     }
-
-    /// Rows a category's card shows before its More (prd §1253).
-    static let categoryFirstRows = 6
 
     /// Where an empty kind fills from: its apps, each one tap.
     private func comesFrom(_ names: [String]) -> some View {

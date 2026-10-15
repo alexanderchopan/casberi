@@ -84,7 +84,7 @@ print -P "%F{cyan}▶ journeys on $DEVICE_ID at $SHA → $OUT%f"
 CATALOG="$OUT/catalog-names.txt"
 grep -oE 'Offer\(name: "[^"]+"' "$ROOT/Casberi/Casberi/Model/BridgeCatalog.swift" \
   | sed -E 's/Offer\(name: "//; s/"$//' | sort -u \
-  | grep -vx 'Markets' | grep -vx '…' > "$CATALOG"   # built in (prd §1234); a placeholder
+  | grep -vx 'Markets' | grep -vx 'Wallet' | grep -vx '…' > "$CATALOG"   # built in (prd §1234, §1316); a placeholder
 # JOURNEYS_APPS="A,B" narrows the sweep to those apps (a re-check of what it flagged).
 if [[ -n "${JOURNEYS_APPS:-}" ]]; then
   print -l -- ${(s:,:)JOURNEYS_APPS} > "$CATALOG"
