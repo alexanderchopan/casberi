@@ -232,7 +232,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1454 of 1520 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1455 of 1521 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1591,7 +1591,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1212 — The pill above the Feed takes you to its top (amended by §1208l)
 - §1213 — Logos chat says who, then what (amended by §1214)
 - §1214 — The Node box says the stage Basecamp's bar says (amended by §1216)
-- §1215 — Logos chat is two-way, on the phone, as its own client
+- §1215 — Logos chat is two-way, on the phone, as its own client (amended by §1313)
 - §1216 — The Node box reads the stake: Funded, aging, Eligible to propose
 - §1217 — Each kind that keeps coming has one home, and one verb
 - §1218 — The picked tile is the page's ink
@@ -1688,6 +1688,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1310 — A source map's circle opens its app's feed, and the Themes lede is deleted (amends §1309, §384)
 - §1311 — Plasma One: the fourth card that settles onchain, read as the DAY it settles
 - §1312 — The top holds the title, and only the title presses
+- §1313 — Two-way Logos chat waits for Logos' own restart fix
 
 ## Dead rulings → what replaced them (generated)
 
