@@ -232,7 +232,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1461 of 1527 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1462 of 1528 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1695,6 +1695,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1317 — Every count in Sources picks what stands under the box (supersedes §1274; amends §1217 item 2, §1292)
 - §1318 — Gnosis Pay is removed
 - §1319 — Sources' folders draw every app in colour, and yours wear a green dot (amends §1316 item 1)
+- §1320 — Sources' lists stand on one line, and a title's way back is grey (amends §1133, §1262, §1312)
 
 ## Dead rulings → what replaced them (generated)
 

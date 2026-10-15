@@ -66510,3 +66510,9 @@ The in-content back rows become the title's first word. Casberi's settings, open
 1. **Every icon in a folder stands in its own colour**, closed or open, so a first run is not a page of grey folders. The grey-and-faint treatment is deleted.
 2. **An app you have wears a green dot** at the icon's bottom corner (`DS.confirm`, a third of the icon's side in a closed folder, 14pt in an open one), ringed in the ground under it so it reads apart from the icon. In an open folder an app you could add keeps the pink plus; the two marks never share an icon.
 3. "N of M" under each folder still says how full it is; yours still lead each folder.
+
+## §1320 — Sources' lists stand on one line, and a title's way back is grey (amends §1133, §1262, §1312) (user, 2026-10-15: "is everything sharing the same alignment on all the sources pages, like all the left indented icons on people apps subscriptions etc", "on settings it shows sources / Settings both in white in the title is sources supposed to be gray, eg only one is white")
+
+1. **One column on every Sources page.** Cards, Calendars, Wallets, Wallet apps, Comes from and the Apps A–Z list drew their marks centred in a 46pt column (icon at 40pt, name at 92pt) while Following, Mail lists, Subscriptions and People draw the Feed's row (icon at 32pt, name at 76pt). Every lead column on Sources is now the row mark's size (`DS.Mark.row`), so icons and names start on the Feed's line.
+2. **One card width.** The lists that draw on `SectionPanelGroup` stand their panels at Sources' s4, where its cards and box stand (`feedSectionPanelInset`; the Feed keeps s2). A row's background does not see the row's environment, so the width is passed to `SectionPanel` by the views that build it.
+3. **A title's way back is grey.** In "Sources · Settings", "Wallet · Savings" and "Notes · Books" the word that goes back takes the tertiary ink and where you stand the primary, as the walk's title greys its neighbours (§1207).

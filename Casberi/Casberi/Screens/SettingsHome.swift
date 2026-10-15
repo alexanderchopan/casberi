@@ -170,8 +170,10 @@ struct SettingsHome: View {
                 .listRowSeparator(.hidden)
             }
             if !casberiOpen, scope == .apps, appsSearching { appsByLetter }
-            // Following, Mail lists, Subscriptions: a cell per row (§1317).
+            // Following, Mail lists, Subscriptions: a cell per row (§1317),
+            // on panels as wide as Sources' own cards and box (§1320).
             kindLists
+                .environment(\.feedSectionPanelInset, DS.Space.s4)
             // Room for the floating bar, as every room leaves it.
             Color.clear.frame(height: ShellMetrics.bottomInset - 40)
                 .listRowBackground(Color.clear)
@@ -838,7 +840,7 @@ struct SettingsHome: View {
             Image(systemName: glyph)
                 .dsGlyph(.body, weight: .medium)
                 .foregroundStyle(DS.brandInk)
-                .frame(width: DS.Face.seat, height: DS.Face.seat)
+                .frame(width: DS.Mark.row, height: DS.Mark.row)
         }
     }
 
@@ -857,8 +859,9 @@ struct SettingsHome: View {
                 setup(name)
             } leading: {
                 BridgeIcon(name: name, size: DS.Face.row)
-                    // A row's mark is the row size (§1071), in the Feed's column.
-                    .frame(width: DS.Face.seat, height: DS.Face.seat)
+                    // A row's mark is the row size (§1071), in the Feed's own lead column
+                    // (`DS.Mark.row`, `DSFeedRow.leadSize`), so every list on Sources starts on one line.
+                    .frame(width: DS.Mark.row, height: DS.Mark.row)
             }
         } else {
             DSPushRow(title: Text(verbatim: name), fact: Text("Add"), factTone: DS.tint) {
@@ -917,8 +920,9 @@ struct SettingsHome: View {
                     setup(card.app)
                 } leading: {
                     BridgeIcon(name: card.app, size: DS.Face.row)
-                    // A row's mark is the row size (§1071), in the Feed's column.
-                    .frame(width: DS.Face.seat, height: DS.Face.seat)
+                    // A row's mark is the row size (§1071), in the Feed's own lead column
+                    // (`DS.Mark.row`, `DSFeedRow.leadSize`), so every list on Sources starts on one line.
+                    .frame(width: DS.Mark.row, height: DS.Mark.row)
                 }
             }
         }
@@ -947,7 +951,7 @@ struct SettingsHome: View {
                         // A face keeps its own ramp (face-ramp audit), centred in the
                         // Feed's 46pt column (prd §1170, §1265).
                         WalletFace(address: addr.address, size: DS.Face.row, circular: true)
-                            .frame(width: DS.Face.seat, height: DS.Face.seat)
+                            .frame(width: DS.Mark.row, height: DS.Mark.row)
                     }
                     // What you follow goes from a hold on its row (prd §1302),
                     // through the book row's own unwatch, Undo included.
@@ -985,8 +989,9 @@ struct SettingsHome: View {
             DSPushRow(title: Text(verbatim: app.name), subtitle: Text(verbatim: app.statusLine),
                       subtitleTone: tone, opens: false, action: open) {
                 BridgeIcon(name: app.name, size: DS.Face.row)
-                    // A row's mark is the row size (§1071), in the Feed's column.
-                    .frame(width: DS.Face.seat, height: DS.Face.seat)
+                    // A row's mark is the row size (§1071), in the Feed's own lead column
+                    // (`DS.Mark.row`, `DSFeedRow.leadSize`), so every list on Sources starts on one line.
+                    .frame(width: DS.Mark.row, height: DS.Mark.row)
             }
         } else {
             DSPushRow(title: Text(verbatim: app.name),
@@ -1042,7 +1047,7 @@ struct SettingsHome: View {
                                    opens: false) {
                         Circle().fill(cal.color)
                             .frame(width: 14, height: 14)
-                            .frame(width: DS.Face.seat, height: DS.Face.seat)
+                            .frame(width: DS.Mark.row, height: DS.Mark.row)
                     }
                 }
                 ForEach(subscribed) { calendarRow($0) }
@@ -1166,7 +1171,7 @@ struct SettingsHome: View {
             Image(systemName: ScopeTileGlyph.calendars)
                 .dsGlyph(.body, weight: .regular)
                 .foregroundStyle(DS.brandInk)
-                .frame(width: DS.Face.seat, height: DS.Face.seat)
+                .frame(width: DS.Mark.row, height: DS.Mark.row)
         }
     }
 

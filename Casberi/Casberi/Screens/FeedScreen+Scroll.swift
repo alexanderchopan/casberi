@@ -347,11 +347,20 @@ extension FeedScreen {
 /// A section's panel (prd §1208d, amends §782 for the Feed's sections only):
 /// the room's fill, inset to the box's column, its top and foot rounded at
 /// the widget radius so a category reads as one object.
+extension EnvironmentValues {
+    /// `SectionPanel`'s distance from the list's edge (prd §1320).
+    @Entry var feedSectionPanelInset: CGFloat = DS.Space.s2
+}
+
 struct SectionPanel: View {
     enum Part { case top, middle, bottom }
     let part: Part
     /// Brightened once on landing (prd §1208l).
     var lit = false
+    /// How far in from the list's edge the panel stands: the Feed's s2, or
+    /// Sources' s4, where its own cards and box stand (prd §1320). Passed in,
+    /// never read here: a row's background does not see the row's environment.
+    var inset: CGFloat = DS.Space.s2
 
     var body: some View {
         let r = DS.Radius.widget
@@ -361,7 +370,7 @@ struct SectionPanel: View {
                                topTrailingRadius: part == .top ? r : 0,
                                style: .continuous)
             .fill(lit ? DS.fillFaint : Self.fill)
-            .padding(.horizontal, DS.Space.s2)
+            .padding(.horizontal, inset)
     }
 
     /// A shade under the boxes and tiles (theirs is `fillFaint`), so they
@@ -772,6 +781,7 @@ extension SectionPanelName where Trailing == EmptyView {
 struct SectionPanelGroup<Header: View, Rows: View>: View {
     var anchor: String? = nil
     var lit = false
+    @Environment(\.feedSectionPanelInset) private var panelInset
     @ViewBuilder let header: Header
     @ViewBuilder let rows: Rows
 
@@ -788,7 +798,7 @@ struct SectionPanelGroup<Header: View, Rows: View>: View {
                 header
                     .listRowInsets(EdgeInsets())
                     .listRowSeparator(.hidden)
-                    .listRowBackground(SectionPanel(part: .top, lit: lit))
+                    .listRowBackground(SectionPanel(part: .top, lit: lit, inset: panelInset))
             }
         }
         Group {
@@ -800,7 +810,7 @@ struct SectionPanelGroup<Header: View, Rows: View>: View {
                 .frame(height: DS.Space.s4)
                 .listRowInsets(EdgeInsets())
                 .listRowSeparator(.hidden)
-                .listRowBackground(SectionPanel(part: .bottom))
+                .listRowBackground(SectionPanel(part: .bottom, inset: panelInset))
                 .accessibilityHidden(true)
         }
     }

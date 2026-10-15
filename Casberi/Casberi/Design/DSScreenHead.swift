@@ -30,8 +30,9 @@ struct DSScreenHead: View {
     }
 }
 
-/// **A CATEGORY'S TITLE ROW (prd §1129, §1133).** Its name in pink, and
-/// once something in it is picked, the pick after a dot in the primary ink:
+/// **A CATEGORY'S TITLE ROW (prd §1129, §1133, §1320).** Its name in the head
+/// ink; once something in it is picked, the name greys and the pick after a
+/// dot takes the primary ink:
 /// "Wallet · Coinbase", "You · Settings". A label that presses nothing (§1133:
 /// the face says where, the tiles say what), on one line at one height
 /// picked or not, so nothing under it moves; a long pair shrinks to fit.
@@ -72,9 +73,13 @@ struct DSRoomTitleRow: View {
             // The category's word presses (prd §1262); the pick after the
             // dot stays a label. Same rung, ink and height as the label row.
             HStack(alignment: .firstTextBaseline, spacing: 0) {
+                // The word that goes back is grey, where you stand is the
+                // head ink (user, 2026-10-15: "is sources supposed to be
+                // gray, eg only one is white"), as the walk's title greys
+                // its neighbours (§1207).
                 Button(action: onTitle) {
                     Text(verbatim: title)
-                        .foregroundStyle(DS.headInk)
+                        .foregroundStyle(DS.textTertiary)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(RowPress())
@@ -111,7 +116,7 @@ struct DSRoomTitleRow: View {
 
     private var label: Text {
         guard let pick else { return Text(verbatim: title) }
-        return Text(verbatim: title)
+        return Text(verbatim: title).foregroundStyle(DS.textTertiary)
             + Text(verbatim: " · ").foregroundStyle(DS.textTertiary)
             + Text(verbatim: pick).foregroundStyle(DS.textPrimary)
     }

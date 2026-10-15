@@ -91,10 +91,11 @@ extension EnvironmentValues {
 /// or the section panel's fill inside the Feed's scroll (§1208d).
 struct FeedRowBackground: ViewModifier {
     @Environment(\.feedSectionPanel) private var panel
+    @Environment(\.feedSectionPanelInset) private var panelInset
 
     func body(content: Content) -> some View {
         if panel {
-            content.listRowBackground(SectionPanel(part: .middle))
+            content.listRowBackground(SectionPanel(part: .middle, inset: panelInset))
         } else {
             content.listRowBackground(Color.clear)
         }
@@ -111,11 +112,12 @@ extension View {
 /// scroll (prd §1208d) — read on the row, where the environment is.
 struct FeedRunBackground<Base: View>: ViewModifier {
     @Environment(\.feedSectionPanel) private var panel
+    @Environment(\.feedSectionPanelInset) private var panelInset
     let base: Base
 
     func body(content: Content) -> some View {
         if panel {
-            content.listRowBackground(SectionPanel(part: .middle))
+            content.listRowBackground(SectionPanel(part: .middle, inset: panelInset))
         } else {
             content.listRowBackground(base)
         }
