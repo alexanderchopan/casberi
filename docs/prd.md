@@ -66413,3 +66413,7 @@ The share tray (docs/social-spec.md section 3) gains **Post on X**, a row beside
 3. **Sources' followed wallets stop from a hold** (`WalletUnwatch.perform`, Undo included), the last list §1302 left; `ask-and-remove-audit.py` holds it (9 mutations).
 
 **Open:** the sweep cannot find Apple Intelligence's row by its catalogue name; whether its row is named differently or not listed in Sources is not looked into.
+
+## §1307 — Casberi leads Apps only (2026-10-14, user: "when you go to cards it shows casberi again, it shouldn't show there")
+
+Amends §1231. The pinned Casberi row (Settings, data and notifications) stands at the top of Sources › Apps only. Casberi is an app, so it leads the apps; it never stands above another kind's list. Following, Mail lists and Subscriptions open their own pages (§1274) and never showed it; Cards, Calendars, People and Wallets are drawn inside Sources and all did. `SettingsHome` now draws the row inside the `.apps` arm.

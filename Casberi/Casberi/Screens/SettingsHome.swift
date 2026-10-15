@@ -115,19 +115,20 @@ struct SettingsHome: View {
                         }
                         casberiOptions
                     } else {
-                        // CASBERI LEADS SOURCES (prd §1231, user: "casberi
-                        // becomes a source but is at the top above the
-                        // apps"): its own options, where an app's settings
-                        // are on the phone.
-                        DSPushRow(title: Text(verbatim: "Casberi"),
-                                  subtitle: Text("Settings, data and notifications")) {
-                            withAnimation(DS.Motion.standard) { casberiOpen = true }
-                        } leading: {
-                            CasberiMark(size: DS.Mark.notice * 0.7)
-                                .frame(width: DS.Mark.notice, height: DS.Mark.notice)
-                        }
                         switch scope {
                         case .apps:
+                            // CASBERI LEADS SOURCES (prd §1231, user: "casberi
+                            // becomes a source but is at the top above the
+                            // apps"): its own options, where an app's settings
+                            // are on the phone. It is an app, so it leads Apps
+                            // only, never another kind's page (prd §1307).
+                            DSPushRow(title: Text(verbatim: "Casberi"),
+                                      subtitle: Text("Settings, data and notifications")) {
+                                withAnimation(DS.Motion.standard) { casberiOpen = true }
+                            } leading: {
+                                CasberiMark(size: DS.Mark.notice * 0.7)
+                                    .frame(width: DS.Mark.notice, height: DS.Mark.notice)
+                            }
                             appsList
                         // EACH KIND IS THE FEED'S CARD (prd §1265): its act
                         // first, then its rows in the Feed's anatomy.
