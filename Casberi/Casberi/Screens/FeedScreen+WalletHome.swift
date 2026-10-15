@@ -228,6 +228,7 @@ extension FeedScreen {
                             .arrivalWash(SubscriptionStore.shared.justTracked(item.id), hue: DS.brand)
                     }
                     .buttonStyle(RowPress())
+                    .contextMenu { stopTrackingMenu(item) }
                     .dsHover()
                     .listRowInsets(EdgeInsets(top: Self.rowAir, leading: DSRoomChassis.rowInset,
                                               bottom: Self.rowAir, trailing: DSRoomChassis.rowInset))

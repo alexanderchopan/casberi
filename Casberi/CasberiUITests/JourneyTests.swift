@@ -176,8 +176,8 @@ final class JourneyTests: XCTestCase {
         openApp(w, "Stripe")
         // A slab field says its placeholder as its label.
         w.focus(w.el(.secureTextField, "label BEGINSWITH %@ OR placeholderValue BEGINSWITH %@", "rk_live_", "rk_live_"), "key field")
-        w.type("rk_live_" + String(repeating: "x", count: 24), "type a key")
-        w.tap(w.el(.button, "label == %@", "Save"), "Save")
+        // Return saves, as the field's button does: the key, then Go.
+        w.type("rk_live_" + String(repeating: "x", count: 24) + "\n", "type a key, Return")
         w.see(w.el(.staticText, "label CONTAINS %@", "accept that key"), "Stripe answered")
         w.finish()
     }
@@ -189,8 +189,8 @@ final class JourneyTests: XCTestCase {
         leaveDemo(w)
         openApp(w, "Bluesky")
         w.focus(w.el(.textField, "label == %@ OR placeholderValue == %@", "Handle, or search a feed", "Handle, or search a feed"), "handle field")
-        w.type("bsky.app", "type a handle")
-        w.tap(w.el(.button, "label == %@ OR label == %@", "Connect", "Add"), "Connect")
+        // Return connects, as the field's button does.
+        w.type("bsky.app\n", "type a handle, Return")
         w.see(w.el(.staticText, "label == %@", "bsky.app"), "Bluesky connected, its posts")
         w.finish()
     }
@@ -236,16 +236,15 @@ final class JourneyTests: XCTestCase {
     }
 
     /// STOP TRACKING a plan you track by hand (only those can stop; a card's
-    /// plan is the card's): Sources › Subscriptions › Hulu › Stop tracking ›
-    /// confirm. Hulu is tracked by `-subscriptionTrack` as the walk's setup.
+    /// plan is the card's): Sources › Subscriptions › hold Hulu › Stop
+    /// tracking, the row's own menu (§1301). Hulu is tracked by
+    /// `-subscriptionTrack` as the walk's setup.
     @MainActor func testStopTracking() {
         let w = Walk("stoptracking", launch: Walk.demo + ["-subscriptionTrack", "Hulu:15.99"], test: self)
         w.tap(w.el(.button, "label BEGINSWITH %@", "Sources"), "Sources tile")
         w.tap(w.visible(.button, "label CONTAINS %@", "Subscriptions"), "Subscriptions count")
-        w.tap(w.el(.staticText, "label == %@", "Hulu"), "Hulu")
-        w.tap(w.el(.button, "label == %@", "Stop tracking"), "Stop tracking")
-        // The dialog's own button, not the sheet's row of the same name.
-        w.tap(w.app.sheets.buttons["Stop tracking"].firstMatch, "confirm")
+        w.hold(w.visible(.staticText, "label == %@", "Hulu"), "hold Hulu")
+        w.tap(w.visible(.button, "label == %@", "Stop tracking"), "Stop tracking")
         w.gone(w.el(.staticText, "label == %@", "Hulu"), within: 8, "Hulu gone")
         w.finish()
     }
@@ -351,6 +350,14 @@ final class JourneyTests: XCTestCase {
         func maybe(_ e: XCUIElement, within s: TimeInterval, _ what: String) {
             guard broken == nil, e.waitForExistence(timeout: s), hittable(e, within: 3) else { return }
             e.tap()
+            taps += 1
+            shoot(what)
+        }
+
+        /// A press and hold (a row's menu): one touch, counted as a tap.
+        func hold(_ e: XCUIElement, _ what: String) {
+            guard ready(e, what) else { return }
+            e.press(forDuration: 1.0)
             taps += 1
             shoot(what)
         }

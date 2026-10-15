@@ -66355,3 +66355,13 @@ The share tray (docs/social-spec.md section 3) gains **Post on X**, a row beside
 **Guards.** `CasberiTests/FollowByNameTests`: every row is a catalogue app, stands in a Feed section and has somewhere to land; Social is Bluesky and Telegram; rows read A–Z; what New contact takes.
 
 **Seen** on the simulator: every section's + logged as the table; Work's tray on GitHub; More social apps landing on Social; People's menu and New contact's sheet. **Not seen:** New contact saving (the simulator was in the demo, which refuses), GitHub's follow with a real key, the Mac.
+
+## §1301 — Three journeys shortened: a connect's field first and focused, and Stop tracking from the row (user, 2026-10-14: of the stripe, bluesky and stoptracking journeys over target, "yes do all")
+
+1. **Stripe's key field comes first and takes the keyboard** on a page with no key: above the door and the six reads, which it stood under, below the fold. Return saves (the field's own `onSubmit`).
+2. **A handle page not connected takes the keyboard on its field** (`HandleSetupScreen`, Bluesky and every handle seat), Return connects.
+3. **Stop tracking from a hold on the row**: a plan you track by hand (`stopTrackingMenu`, the Wallet's Subscriptions list and Home's rows) and a mail list you added (Life's list). Choosing it from the menu is the consent, so no second dialog; the notice says "Stopped tracking <name>" and the list is read again. A card's plan, or a list sent as a list, draws no menu (each sheet's own rule).
+
+**Measured** (journeys, from a clean copy of main plus these files): stripe 4 taps → 2, bluesky 4 → 2, stoptracking 5 → 4 (Sources › Subscriptions › hold › Stop tracking; reaching the list from Sources is two). The walk gains `hold` (a press, counted as a tap).
+
+**Amends** design law's "writes live in the sheet, with consent" for this one write: a menu chosen from a hold is the consent, as Notes' delete is (§983).

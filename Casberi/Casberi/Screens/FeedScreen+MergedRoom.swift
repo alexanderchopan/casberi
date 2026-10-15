@@ -363,6 +363,7 @@ extension FeedScreen {
                 .contentShape(Rectangle())
         }
         .buttonStyle(RowPress())
+        .contextMenu { stopTrackingMenu(item) }
         .dsHover()
         .listRowInsets(EdgeInsets(top: Self.rowAir, leading: DSRoomChassis.rowInset,
                                   bottom: Self.rowAir, trailing: DSRoomChassis.rowInset))

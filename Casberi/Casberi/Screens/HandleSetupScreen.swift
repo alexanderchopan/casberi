@@ -370,6 +370,9 @@ struct HandleSetupScreen: View {
     /// The one omnibox — finds a person (and, on Bluesky, a feed) as you
     /// type. Doubles as the single/multi bridges' plain add field.
     @State private var query = ""
+    /// The field takes the keyboard on a page not connected yet (prd §1301):
+    /// a name is the one thing the page asks for.
+    @FocusState private var fieldFocused: Bool
     @State private var syncing = false
     @State private var result: BridgeProof?
     /// The page's one presentation (`AccountPage.sheet`): the reach sheet, or
@@ -463,6 +466,11 @@ struct HandleSetupScreen: View {
             query = bridge.displayName
             if bridge.isConnected {
                 Task { await sync() }
+            } else if bridge.names.isEmpty {
+                // THE NAME IS THE ASK (prd §1301, user: "yes do all", of the
+                // bluesky journey's tap on its own field): not connected, the
+                // field takes the keyboard as the page opens.
+                fieldFocused = true
             }
         }
         // The debounced omnibox search — people, and on Bluesky feeds too;
@@ -610,7 +618,7 @@ struct HandleSetupScreen: View {
             FollowListDoor(room: room, count: bridge.names.count)
         } else {
             DSSlabField(placeholder: fieldPlaceholder, text: $query,
-                        actionLabel: omniButtonLabel, action: omniSubmit)
+                        actionLabel: omniButtonLabel, focus: $fieldFocused, action: omniSubmit)
         }
         if !omniHits.isEmpty {
             Text(AccountPageShape.onLabel(bridge.rawValue))

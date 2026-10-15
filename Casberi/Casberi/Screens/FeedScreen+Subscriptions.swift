@@ -154,6 +154,7 @@ extension FeedScreen {
                         .arrivalWash(SubscriptionStore.shared.justTracked(item.id), hue: DS.brand)
                 }
                 .buttonStyle(RowPress())
+                .contextMenu { stopTrackingMenu(item) }
                 .dsHover()
                 .listRowInsets(EdgeInsets(top: Self.rowAir, leading: DSRoomChassis.rowInset,
                                           bottom: Self.rowAir, trailing: DSRoomChassis.rowInset))
@@ -404,5 +405,43 @@ struct WalletSubscriptionRow: View {
         let word = Text("Price rise · was \(mask ?? CardSpendRoom.money(was, code: item.currency))")
             .foregroundStyle(DS.attentionInk).fontWeight(.semibold)
         return rest.isEmpty ? word : word + Text(verbatim: " · ") + tail
+    }
+}
+
+// MARK: - Stop tracking from the row (prd §1301)
+
+extension FeedScreen {
+    /// A plan you track by hand stops from its row's hold, the sheet's act one
+    /// step nearer (user, 2026-10-14: "yes do all", of "let a hold on the row
+    /// offer Stop tracking, skipping the sheet"). Choosing it from the menu is
+    /// the consent, so no second dialog; the notice says what happened, and
+    /// tracking it again is the tray's one tap. A card's plan draws no menu:
+    /// what a card shows stays (the sheet's own rule).
+    @ViewBuilder
+    func stopTrackingMenu(_ item: Subscriptions.Item) -> some View {
+        if let manualID = item.manualID {
+            Button(role: .destructive) {
+                SubscriptionStore.shared.remove(manualID)
+                // The list reads its own fetch, so it is read again now.
+                Task { await SubscriptionsReading.shared.refresh(modelContext) }
+                chrome.flash(String(localized: "Stopped tracking \(item.name)"))
+            } label: {
+                Label(String(localized: "Stop tracking"), systemImage: "trash")
+            }
+        }
+    }
+
+    /// A mail list you added (prd §1115), the same way.
+    @ViewBuilder
+    func stopTrackingMenu(_ item: MailSubscriptions.Item) -> some View {
+        if item.byYou, let address = item.address {
+            Button(role: .destructive) {
+                MailSubscriptionStore.shared.remove(address: address)
+                MailSubscriptionsReading.shared.refresh(modelContext)
+                chrome.flash(String(localized: "Stopped tracking \(item.name)"))
+            } label: {
+                Label(String(localized: "Stop tracking"), systemImage: "trash")
+            }
+        }
     }
 }

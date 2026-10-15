@@ -18,6 +18,9 @@ struct StripeScreen: View {
     @Environment(ShellChrome.self) private var chrome
 
     @State private var keyField = ""
+    /// The key field takes the keyboard on a page with no key yet (prd
+    /// §1301): pasting it is the one thing the page asks for.
+    @FocusState private var keyFocused: Bool
     /// Bumped whenever the key changes, so the derived reads below
     /// re-evaluate. The Keychain stays the source of truth — mirroring it into
     /// @State meant hand-kept assignments that could disagree with it
@@ -67,7 +70,7 @@ struct StripeScreen: View {
         )
         .onAppear {
             load()
-            if hasKey { Task { await sync() } }
+            if hasKey { Task { await sync() } } else { keyFocused = true }
         }
     }
 
@@ -82,6 +85,17 @@ struct StripeScreen: View {
             // be useful there — the reorder is what let that sentence lose
             // them (2026-07-31). Unnumbered since 2026-08-14: the door did
             // step one, and a "2" under it read as a missing-1 riddle.
+            // THE FIELD FIRST (prd §1301, user: "yes do all", of the
+            // stripe journey's scroll): the key is pasted back here from
+            // Stripe, and under the door and six reads it stood below the fold, a swipe
+            // every connect paid. Slabbed with the rest of the family (audit,
+            // 2026-07-31).
+            DSSlabField(placeholder: TokenBridge.stripe.placeholder,
+                        text: $keyField, actionLabel: "Save", secure: true,
+                        focus: $keyFocused, action: saveKey)
+            BridgeSyncStatusRows(syncing: connecting,
+                                 syncingLine: String(localized: "Checking the key…"),
+                                 proof: result)
             BridgeSetupCard(steps: [TokenBridge.stripe.steps[0]], numbered: false) {
                 if let url = TokenBridge.stripe.setupURL {
                     // Step one, doing itself (prd §218) — verb over address,
@@ -103,15 +117,6 @@ struct StripeScreen: View {
                                 "Subscriptions — read",
                                 "Invoices — read",
                                 "Balance — read"])
-            // Slabbed with the rest of the family (audit, 2026-07-31) — it
-            // was a `BridgeFieldRow` capsule, the one control on the screen
-            // still wearing the pre-§218 shape.
-            DSSlabField(placeholder: TokenBridge.stripe.placeholder,
-                        text: $keyField, actionLabel: "Save", secure: true,
-                        action: saveKey)
-            BridgeSyncStatusRows(syncing: connecting,
-                                 syncingLine: String(localized: "Checking the key…"),
-                                 proof: result)
         }
     }
 

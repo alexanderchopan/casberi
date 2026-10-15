@@ -10693,6 +10693,34 @@
         }
       }
     },
+    "Stopped tracking %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Se dejó de seguir %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ の追跡を停止しました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 추적을 중지했습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已停止追踪 %@"
+          }
+        }
+      }
+    },
     "Stops %@ from moving funds without a signature." : {
       "localizations" : {
         "es" : {
