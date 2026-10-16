@@ -61,8 +61,8 @@ guard "a lock drops the vector made from the words" 'thing\.embedding = nil' "$L
 guard "a lock drops the detected phone number" 'thing\.detectedTel = nil' "$LOCK"
 guard "a lock drops the picture" 'thing\.previewImageData = nil' "$LOCK"
 guard "a lock re-indexes Spotlight with the sealed record" 'SpotlightIndex\.index\(\[thing\]\)' "$LOCK"
-guard "the Notes room asks a note of yours for its preview (prd §983)" \
-  'notePreview: Pinboard\.isPinnedRoom\(source\) && Pinboard\.isNote\(thing\)' "$FEED"
+guard "the Notes room, and the Feed's Notes section, ask a note of yours for its preview (prd §983, §1347)" \
+  'notePreview: \(Pinboard\.isPinnedRoom\(source\) \|\| source == "All"\) && Pinboard\.isNote\(thing\)' "$FEED"
 guard "a note of yours draws no dial; its keys stand at the foot (prd §983)" \
   'if !pagedNote \{ noteDial \}' "$VIEW"
 guard "the keys ride the sheet's foot" 'if pagedNote \{ keptNoteBand \}' "$VIEW"
