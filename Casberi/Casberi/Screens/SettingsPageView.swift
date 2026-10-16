@@ -11,6 +11,8 @@ import SwiftUI
 /// a screen with no bar).
 struct SettingsPageView: View {
     let page: SettingsPage
+    @Environment(HomeRoute.self) private var route
+    @Environment(\.dsTitleBack) private var titleBack
 
     var body: some View {
         Group {
@@ -28,13 +30,24 @@ struct SettingsPageView: View {
             }
         }
         .environment(\.dsInPane, true)
+        // Pushed beside Sources on the phone (prd §1321): "Sources · Data".
+        .environment(\.dsTitleBack, route.sheet == nil && SettingsHome.bandSearches
+                     ? DSTitleBack(word: String(localized: "Sources"), action: { route.goBack() }) : nil)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
 
-    private func headed<Content: View>(_ title: LocalizedStringKey,
+    private func headed<Content: View>(_ title: String,
                                        @ViewBuilder _ content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
-            DSScreenHead(title: Text(title))
+            Group {
+                if route.sheet == nil && SettingsHome.bandSearches {
+                    DSRoomTitleRow(title: String(localized: "Sources"),
+                                   pick: String(localized: String.LocalizationValue(title)),
+                                   onTitle: { route.goBack() })
+                } else {
+                    DSScreenHead(title: Text(LocalizedStringKey(title)))
+                }
+            }
                 .padding(.horizontal, DS.Space.s4)
                 .padding(.top, DS.Space.s6)
             content()

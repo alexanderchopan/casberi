@@ -395,8 +395,10 @@ grep -q 'screen(.casberi)' "$TMP/tray.nc" \
   || { echo "✗ the tray's You row lost its Sources door (prd §1136)."; fail=1; }
 grep -q 'screen(.apps)' "$TMP/tray.nc" && grep -q 'screen(.addresses)' "$TMP/tray.nc" \
   && { echo "✗ the tray's You row has Apps and Addresses doors again — they are filters in Sources (prd §1136)."; fail=1; }
+# The Addresses screen is deleted (prd §1323): the directory is Sources ›
+# Contacts, so a door or a case naming it is a screen nothing should reach.
 grep -qE '^[[:space:]]*case addresses[[:space:]]*$' "Casberi/Casberi/Shell/HomeRoute.swift" \
-  || { echo "✗ HomeRoute.Node lost its addresses case — Addresses is a screen (prd §933)."; fail=1; }
+  && { echo "✗ HomeRoute.Node has an addresses case again — the directory is Sources › Contacts (prd §1323)."; fail=1; }
 # THE CATALOGUE DOOR IS DELETED (prd §798, 2026-09-17, user: "you forgot to
 # get rid of the account icon"). It stood in the fixed seat for a few hours
 # (§697), went to the strip's tail (§700) and took a word there (§793) — by

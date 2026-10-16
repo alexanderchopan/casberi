@@ -74,7 +74,7 @@ struct SocialFollowSheet: View {
     /// "remove the bluesky thing" — the line naming Bluesky's replies).
     @ViewBuilder private var before: some View {
         if !near.isEmpty {
-            DSTrayGroup(String(localized: "Near you"), glyph: "person.2") {
+            DSTrayGroup(String(localized: "Suggested"), glyph: "person.2") {
                 ForEach(near) { person in row(person) }
             }
         }
@@ -261,10 +261,9 @@ struct SocialFollowSheet: View {
         near = SocialToYou.suggestions(talkers: talkers, posts: posts, watched: watched,
                                        mine: mine, now: .now).map { person in
             let face = faces[person.source + ":" + person.handle]
-            let line: String = switch person.why {
-            case .talksToYou: String(localized: "Talks to you · \(person.source)")
-            case .mentioned(let n): String(localized: "In \(n) posts you saw · \(person.source)")
-            }
+            // Who they are, never why they are here (user, of "Talks to you",
+            // "In 3 posts you saw": "god that's awful").
+            let line = "@\(person.handle) · \(person.source)"
             return Candidate(source: person.source, handle: person.handle, name: face?.name,
                              avatarURL: face?.avatar, line: line)
         }

@@ -105,6 +105,44 @@ struct DemoBanner: View {
     }
 }
 
+/// **THE DEMO TAG, IN THE BAND (prd §1322).** "Exit demo" on the demo's
+/// blue, between the search pill and the Wallet; the tap exits, as the top
+/// pill's Exit always did (§919).
+struct DemoTag: View {
+    @Environment(\.modelContext) private var modelContext
+    @Environment(BridgeStore.self) private var store
+    @Environment(HomeRoute.self) private var route
+    @Environment(FeedFilter.self) private var filter
+    @Environment(ShellChrome.self) private var chrome
+
+    var body: some View {
+        // As tall as the face and search beside it (user: "shouldn't the
+        // exit demo pill be the same height as the face/search pill?").
+        // "Exit demo" with the door glyph (user: "it needs to be wider and
+        // say … 'exit demo'"): the verb names what the tap does, so the tap
+        // does it, no question first (§919; user, of a confirm box: "we don't
+        // do that anymore").
+        DSDemoPill(height: DSDock.agentSize(fold: chrome.fold)) {
+            HStack(spacing: DS.Space.s2) {
+                Text("Exit demo")
+                    .dsText(.heading17)
+                    .lineLimit(1)
+                    .fixedSize()
+                Image(systemName: "rectangle.portrait.and.arrow.right")
+                    .dsGlyph(.caption, weight: .semibold)
+                    .accessibilityHidden(true)
+            }
+            .foregroundStyle(.white)
+            .padding(.horizontal, DS.Space.s2)
+        } action: {
+            DSHaptic.tap()
+            DemoLeave.run(context: modelContext, store: store, route: route,
+                          filter: filter, chrome: chrome)
+        }
+        .accessibilityLabel(Text("Exit demo"))
+    }
+}
+
 /// The way out.
 /// The DEBUG door that takes the demo's marking out of a marketing capture
 /// (`-hideDemoBanner YES`, 2026-09-08). ONE definition, read by the pill's

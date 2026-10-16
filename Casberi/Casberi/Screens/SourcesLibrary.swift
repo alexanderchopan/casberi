@@ -273,3 +273,44 @@ private struct SourcesFolderApp: View {
         .accessibilityAddTraits(.isButton)
     }
 }
+
+/// **CASBERI'S FOLDER IS ITS SETTINGS (prd §1321, user: "perhaps each setting
+/// could be a tile like an app").** It springs open over Sources as any folder
+/// does: the mark and "Casberi" over every setting as a tile, the version
+/// under them. A setting opens as a page pushed beside Sources; the folder
+/// stays open behind it, so coming back is the folder again.
+struct SourcesSettingsFolder: View {
+    let close: () -> Void
+
+    var body: some View {
+        ZStack {
+            Rectangle()
+                .fill(DS.scrim)
+                .ignoresSafeArea()
+                .onTapGesture { close() }
+                .accessibilityLabel(Text("Close Casberi"))
+                .accessibilityAddTraits(.isButton)
+            VStack(alignment: .leading, spacing: DS.Space.s4) {
+                // The mark stands once, in the colophon under the tiles.
+                HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                    Text(verbatim: "Casberi")
+                        .dsText(.heading24).foregroundStyle(DS.headInk)
+                    Spacer(minLength: DS.Space.s2)
+                    Text("Settings")
+                        .dsText(.body17).foregroundStyle(DS.textSecondary)
+                }
+                SettingsRows(style: .tiles)
+            }
+            .padding(DS.Space.s6)
+            .frame(maxWidth: 440)
+            .background(DS.surfaceRaised, in: RoundedRectangle(cornerRadius: DS.Radius.widget + DS.Space.s2,
+                                                               style: .continuous))
+            .padding(DS.Space.s6)
+        }
+        .background {
+            Button(action: close) { EmptyView() }
+                .keyboardShortcut(.cancelAction)
+                .hidden()
+        }
+    }
+}

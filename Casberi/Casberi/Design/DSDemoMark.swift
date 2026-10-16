@@ -36,9 +36,23 @@ enum DSDemoMark {
     /// not a marketing capture (`DemoCapture`, the one door, §864).
     static var marking: Bool { DemoMode.isActive && !DemoCapture.hidesMarking }
 
+    /// **ON THE PHONE THE MARK RIDES THE BAND (prd §1322, user: "i thought
+    /// we were going to do something different w/ the demo bar so it
+    /// doesn't push everything down … maybe in the bottom between the glass
+    /// pill and wallet button").** A small tag between the band's two ends
+    /// (`DemoTag`); nothing at the top, so no screen reserves a band. The
+    /// iPad and the Mac, which have no band, keep the pill at the top.
+    static var inBand: Bool {
+        #if targetEnvironment(macCatalyst)
+        false
+        #else
+        UIDevice.current.userInterfaceIdiom == .phone
+        #endif
+    }
+
     /// The band a screen reserves at its top edge while the pill is up.
     static var screenClearance: CGFloat {
-        marking ? pillTop + pillHeight + gap : 0
+        marking && !inBand ? pillTop + pillHeight + gap : 0
     }
 }
 
@@ -47,6 +61,9 @@ enum DSDemoMark {
 /// failure (`ds-template-audit.py` check C), and this one is a template with
 /// one caller, `DemoBanner`.
 struct DSDemoPill<Label: View>: View {
+    /// The band's tag takes the band's height (prd §1322); the top pill a
+    /// control's.
+    var height: CGFloat = DSDemoMark.pillHeight
     @ViewBuilder let label: Label
     let action: () -> Void
 
@@ -54,7 +71,7 @@ struct DSDemoPill<Label: View>: View {
         Button(action: action) {
             label
                 .padding(.horizontal, DS.Space.s4)
-                .frame(minHeight: DSDemoMark.pillHeight)
+                .frame(minHeight: height)
                 .background(DS.tint, in: Capsule(style: .continuous))
                 .contentShape(Capsule(style: .continuous))
                 // The floating layer casts; content does not (§759). Without

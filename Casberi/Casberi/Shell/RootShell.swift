@@ -1020,8 +1020,11 @@ struct RootShell: View {
                     sceneState.route.present(.casberi)
                 }
             }
+            // `-openAddresses YES` lands on Sources › Contacts, where the
+            // directory lives since its own screen was deleted (prd §1323).
             if UserDefaults.standard.bool(forKey: "openAddresses") {
-                sceneState.route.present(.addresses)
+                chrome.settingsLanding = .kind(.people)
+                sceneState.route.present(.casberi)
             }
             // `-openReach YES` — the reach screen, the same shape (prd §967).
             // `-seedReceipts YES` records a week's worth of receipts through
@@ -2459,6 +2462,17 @@ struct RootShell: View {
                                             }
                                             .transition(.identity)
                                             Spacer(minLength: 0)
+                                            // The demo's mark, between the band's
+                                            // two ends (prd §1322).
+                                            if demoActive && !DemoCapture.hidesMarking {
+                                                rootPresented(DemoTag())
+                                                    .environment(sceneState.route)
+                                                    .environment(sceneState.filter)
+                                                    .opacity(chrome.demoLeaving ? 0 : 1)
+                                                    .animation(DS.Motion.standard, value: chrome.demoLeaving)
+                                                    .transition(.opacity)
+                                                Spacer(minLength: 0)
+                                            }
                                         } else {
                                             // The tray's capsule holds the bar's
                                             // place; the Wallet keeps its own.
@@ -2527,7 +2541,7 @@ struct RootShell: View {
             // `rootPresented` for the cover's reason, plus the route and the
             // filter the exit resets.
             // `DemoCapture` is the one capture door (§864).
-            if demoActive && !DemoCapture.hidesMarking {
+            if demoActive && !DemoCapture.hidesMarking && !DSDemoMark.inBand {
                 rootPresented(DemoBanner())
                     .environment(sceneState.route)
                     .environment(sceneState.filter)

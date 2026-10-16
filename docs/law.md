@@ -232,7 +232,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1462 of 1528 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1466 of 1532 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1696,6 +1696,10 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1318 — Gnosis Pay is removed
 - §1319 — Sources' folders draw every app in colour, and yours wear a green dot (amends §1316 item 1)
 - §1320 — Sources' lists stand on one line, and a title's way back is grey (amends §1133, §1262, §1312)
+- §1321 — Pages, not sheets, on the phone (retires §1132, §1208l's places, §1208m and §1220 on the phone; amends §1231, §1312,…
+- §1322 — On the phone the demo's mark is "Exit demo" in the band (amends §919, §946, §1005)
+- §1323 — Sources names what it holds: Media and Contacts; the Addresses screen is deleted; suggestions name themselves, never…
+- §1324 — A verb is a row, a choice is a pill, and nothing else has a backing (amends §190, §613, §640; extends §746, §782)
 
 ## Dead rulings → what replaced them (generated)
 

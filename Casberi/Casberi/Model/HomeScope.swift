@@ -22,7 +22,7 @@ enum HomeScope {
     /// prefix no seat or catalogue category can spell ("Notes" taught that,
     /// prd §975).
     enum Place: String, CaseIterable {
-        case apps, addresses, settings
+        case apps, settings
 
         var source: String { "you:" + rawValue }
 

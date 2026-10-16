@@ -26,7 +26,6 @@ extension HomeScope.Place {
     var name: String {
         switch self {
         case .apps: String(localized: "Apps")
-        case .addresses: String(localized: "Addresses")
         case .settings: String(localized: "Settings")
         }
     }
@@ -48,7 +47,18 @@ extension FeedScreen {
     /// (with its pick), the stop after in grey, each grey word pressable.
     @ViewBuilder
     var roomTitle: some View {
-        if let walk = walkNeighbours {
+        // A PAGE OPENED FROM THE FEED READS "Feed · Day" (prd §1321, user:
+        // "why do we have a dot between some titles and not others"): the
+        // dot means inside or opened from, so Day, Notes and Markets take it
+        // and "Feed" goes back; only the two pages you swipe between, Feed
+        // and Wallet, stand side by side without one. A pick inside the page
+        // ("Notes · Books") names the page and its pick instead.
+        if let walk = walkNeighbours, walk.after == nil, walk.before == "All", roomPick == nil {
+            DSRoomTitleRow(title: Self.walkWord("All"), pick: roomName) {
+                DSHaptic.selection()
+                chrome.sourceRequest = "All"
+            }
+        } else if let walk = walkNeighbours {
             DSWalkTitleRow(before: walk.before.map(Self.walkWord),
                            title: roomName,
                            pick: roomPick,
@@ -82,6 +92,13 @@ extension FeedScreen {
                 rail.onPick(nil)
             }
         }
+        if source == CategoryFold.walletRoom, selectedSeat == nil,
+           let section = chrome.walletSection, section != .home {
+            return {
+                DSHaptic.selection()
+                withAnimation(DS.Motion.standard) { chrome.walletSection = .home }
+            }
+        }
         guard selectedSeat != nil else { return nil }
         let room = source
         return {
@@ -105,7 +122,8 @@ extension FeedScreen {
         // Notes and Markets are the Feed's own places (prd §1208c, user: "to
         // get back to feed its complicated"): the Feed stands before them,
         // pressable, and nothing after.
-        if HomeScope.contains(source), source != "All" { return ("All", nil) }
+        // Day too, since it became a page beside the Feed (prd §1321).
+        if HomeScope.contains(source) || source == RoomAccounts.dayRoom, source != "All" { return ("All", nil) }
         let walk = HomeScope.phoneWalk(chips: chrome.chipOrder)
         guard let i = walk.firstIndex(of: HomeScope.walkStop(source)) else { return nil }
         return (i > 0 ? walk[i - 1] : nil, i + 1 < walk.count ? walk[i + 1] : nil)
@@ -132,6 +150,11 @@ extension FeedScreen {
         }
         if mergedMenuDraws, let seat = selectedSeat { return seat.name }
         if let host = hostRoom, host != source { return BridgeCatalog.seatName(forSource: source) }
+        // The Wallet's tile, now a page (prd §1321): "Wallet · Holdings".
+        if source == CategoryFold.walletRoom, pinnedWalletSection == nil,
+           let section = chrome.walletSection, section != .home {
+            return section.label
+        }
         return nil
     }
 

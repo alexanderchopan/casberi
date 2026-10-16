@@ -1464,18 +1464,10 @@ struct FeedScreen: View {
                     chrome.sourceRequest = HomeScope.markets
                     return
                 }
-                // **ON THE PHONE A WALLET TILE RISES AS A SHEET (prd §1220)**,
-                // the Feed's rule for Markets, Settings and Sources (§1208m):
-                // Home is the page, and every door that asks for Holdings,
-                // Security or Subscriptions — a tile, a count, a notice —
-                // lands in that sheet. The Mac and iPad keep the page swap.
-                if roomSizeClass == .compact, shape == .wallet, isActive, pinnedWalletSection == nil,
-                   let picked, picked != .home {
-                    chrome.walletSection = .home
-                    let sheet = ShellChrome.AppSheet(source: source, walletSection: picked)
-                    if chrome.appSheet == nil { chrome.appSheet = sheet }
-                    return
-                }
+                // A WALLET TILE IS THE WALLET'S PAGE, on every size class
+                // (prd §1321, retiring §1220's phone sheet, user: "ya wallet
+                // needs to do the same"): the tile swaps the page in place,
+                // the band stays under it.
                 returnToRoomTop(proxy)
             }
             // **AND ON AN ACCOUNT PICK** (prd §495, user: *"it makes the

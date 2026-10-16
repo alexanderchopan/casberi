@@ -465,7 +465,7 @@ struct RoomsTray: View {
             Door(word: String(localized: "Notes"), glyph: ScopeTileGlyph.notes,
                  lit: notes, key: Pinboard.room) { pick(Pinboard.room) },
             Door(word: String(localized: "Settings"), glyph: ScopeTileGlyph.settings,
-                 lit: place == .settings || place == .apps || place == .addresses,
+                 lit: place == .settings || place == .apps,
                  key: HomeScope.Place.settings.source) { screen(.casberi) },
             // The other pole (prd §1203) closes the row (user, 2026-10-08:
             // "move the wallet to the last position … feed markets notes

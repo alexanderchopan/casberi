@@ -144,12 +144,14 @@ final class JourneyTests: XCTestCase {
     @MainActor func testSite() {
         let w = Walk("site", launch: [], test: self)
         leaveDemo(w)
-        w.tap(w.el(.button, "label == %@", "Follow something"), "Following plus")
-        w.tap(w.el(.button, "label BEGINSWITH %@", "RSS"), "RSS in the plus")
-        w.focus(w.el(.textField, "placeholderValue == %@", "A site's address"), "site field")
+        // A first run has no Media count yet (its box is "Start with any of
+        // these", prd §1314), so a site is followed where a new person finds
+        // it: the band's search, RSS, its page's field (prd §1321).
+        openApp(w, "RSS")
+        w.focus(w.el(.textField, "label == %@ OR placeholderValue == %@", "Site or feed URL", "Site or feed URL"), "site field")
         w.type("xkcd.com", "type a site")
-        w.tap(w.el(.button, "label == %@", "Follow xkcd.com"), "Follow")
-        w.see(w.el(.any, "label == %@", "Following xkcd.com"), "site followed")
+        w.tap(w.el(.button, "label == %@", "Follow"), "Follow")
+        w.see(w.el(.any, "label CONTAINS[c] %@", "xkcd"), "site followed")
         w.finish()
     }
 
@@ -241,10 +243,12 @@ final class JourneyTests: XCTestCase {
         let fresh = ["-onboarded", "YES", "-demo.corpusAllowed", "NO", "-openSettings", "YES"]
         for name in names {
             let w = Walk("catalog-\(Walk.slug(name))", launch: fresh, test: self, quiet: true)
-            // Settings opens on Casberi's options; its "Sources" row is the way in.
-            w.tap(w.visible(.button, "label BEGINSWITH %@", "Sources"), "Sources")
+            // Settings opens on Sources with Casberi's folder up (prd §1321);
+            // the band's search finds every app.
+            w.maybe(w.el(.button, "label == %@", "Close Casberi"), within: 5, "close Casberi's folder")
             w.begin()
-            w.focus(w.el(.textField, "placeholderValue == %@", "Search"), "Sources search")
+            w.tap(w.el(.button, "label == %@", "Search"), "band Search")
+            w.focus(w.el(.textField, "label == %@ OR placeholderValue == %@", "Search", "Search"), "tray search field")
             w.type(name, "type the name")
             w.tap(w.visible(.any, "label BEGINSWITH %@", "\(name),"), "its row")
             let (ask, opened) = w.firstAsk()
@@ -284,10 +288,12 @@ final class JourneyTests: XCTestCase {
         w.finish()
     }
 
-    /// An app by name, found as a person finds it: Sources' search, then its
-    /// row (counted: the field's focus and the row).
+    /// An app by name, found as a person finds it: the band's search (prd
+    /// §1321: on the phone Sources has no field of its own), then its row
+    /// (counted: the band's Search, the field's focus and the row).
     @MainActor private func openApp(_ w: Walk, _ name: String) {
-        w.focus(w.el(.textField, "placeholderValue == %@", "Search"), "Sources search")
+        w.tap(w.el(.button, "label == %@", "Search"), "band Search")
+        w.focus(w.el(.textField, "label == %@ OR placeholderValue == %@", "Search", "Search"), "tray search field")
         w.type(name, "type \(name)")
         // The row as drawn, whatever element type the list gives it.
         w.tap(w.visible(.any, "label BEGINSWITH %@", name), "\(name) row")
@@ -304,15 +310,15 @@ final class JourneyTests: XCTestCase {
         // The intro cover is one button and lifts by itself after the demo
         // pour; a person who taps it skips the wait.
         w.maybe(w.el(.button, "label BEGINSWITH %@", "One inbox for all your apps"), within: 8, "intro cover")
-        w.maybe(w.el(.button, "label CONTAINS %@", "Exit"), within: 8, "demo pill, Exit")
-        // On Sources already when Exit landed there. Sources' own search
-        // field is the test: the Feed's tile says "Sources" too, and Start
-        // here clears for good once an earlier journey connected something.
-        let sourcesField = w.el(.textField, "placeholderValue == %@", "Search")
-        if !sourcesField.waitForExistence(timeout: 5) {
+        // The band's "Exit demo" (prd §1322).
+        w.maybe(w.el(.button, "label == %@", "Exit demo"), within: 8, "band, Exit demo")
+        // On Sources once Exit lands there. Casberi's folder is the test: it
+        // stands only in Sources' library (prd §1316, §1321).
+        let casberi = w.el(.button, "label == %@", "Casberi, Settings")
+        if !casberi.waitForExistence(timeout: 6) {
             w.tap(w.el(.button, "label BEGINSWITH %@", "Sources"), "Sources tile")
         }
-        w.see(sourcesField, "Sources")
+        w.see(casberi, "Sources")
         w.begin()
     }
 

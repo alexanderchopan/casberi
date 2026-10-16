@@ -92,6 +92,13 @@ struct CategoryOrderSheet: View {
 
     private func row(_ name: String) -> some View {
         HStack(spacing: DS.Space.s3) {
+            // The category's glyph, as its Feed section wears it (user:
+            // "here we should have the icons").
+            Image(systemName: CategoryFold.glyph(for: name))
+                .dsGlyph(.body)
+                .foregroundStyle(DS.brandInk)
+                .frame(width: DS.Mark.row)
+                .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 1) {
                 Text(name).dsText(.heading17).foregroundStyle(DS.textPrimary)
                 // States the slot's own fact, and only when it is worth

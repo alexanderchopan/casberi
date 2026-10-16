@@ -36,7 +36,7 @@ struct SettingsRows: View {
     /// How the rows draw (prd §1208c): as rows, as the Settings box's grid,
     /// or only the colophon under that box.
     var style: Style = .rows
-    enum Style { case rows, box, colophon }
+    enum Style { case rows, box, colophon, tiles }
 
     /// What the Notifications row says without being opened (prd §1237):
     /// which of the two switches are on.
@@ -62,7 +62,9 @@ struct SettingsRows: View {
         if route.paneHostsPushes {
             DSHaptic.tap()
             route.fromAccountsList { route.push(.settingsPage(page)) }
-        } else if route.sheet != nil {
+        } else if route.sheet != nil || SettingsHome.bandSearches {
+            // On the phone a setting is a page pushed beside Sources (prd
+            // §1321), never a sheet over it.
             DSHaptic.tap()
             route.push(.settingsPage(page))
         } else {
@@ -83,6 +85,9 @@ struct SettingsRows: View {
             case .box:
                 boxGrid(allRows)
             case .colophon:
+                colophon
+            case .tiles:
+                tileGrid(allRows)
                 colophon
             }
         }
@@ -518,6 +523,41 @@ struct SettingsRows: View {
             ForEach(rows, id: \.title) { row in
                 DSCountTile(count: nil, label: String(localized: String.LocalizationValue(row.title)),
                             glyph: Self.glyph(row.title), isOn: false, inline: true, action: row.action)
+            }
+        }
+    }
+
+    /// **EACH SETTING IS A TILE, AS AN APP IS (prd §1321, user: "perhaps
+    /// each setting could be a tile like an app").** Casberi's folder in
+    /// Sources springs open on these: the glyph on an icon's squircle, the
+    /// name under it, four across; each opens what its row opens.
+    private func tileGrid(_ rows: [RowSpec]) -> some View {
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: DS.Space.s2, alignment: .top), count: 4),
+                  alignment: .center, spacing: DS.Space.s4) {
+            ForEach(rows, id: \.title) { row in
+                Button(action: row.action) {
+                    VStack(spacing: DS.Space.s1) {
+                        let side = DS.Face.seat + 12
+                        Image(systemName: Self.glyph(row.title))
+                            .dsGlyph(.title, weight: .regular)
+                            .foregroundStyle(DS.brandInk)
+                            .frame(width: side, height: side)
+                            .background(DS.fillFaint, in: RoundedRectangle(cornerRadius: DS.Radius.appIcon(side),
+                                                                           style: .continuous))
+                        Text(LocalizedStringKey(row.title))
+                            .dsText(.label12)
+                            .foregroundStyle(DS.textPrimary)
+                            // Two lines between words, never inside one.
+                            .lineLimit(row.title.contains(" ") ? 2 : 1)
+                            .minimumScaleFactor(0.7)
+                            .multilineTextAlignment(.center)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(PressSpring())
+                .accessibilityLabel(Text(LocalizedStringKey(row.title)))
             }
         }
     }

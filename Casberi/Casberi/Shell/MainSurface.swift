@@ -748,7 +748,6 @@ struct MainSurface: View {
     private func youPlace(_ place: HomeScope.Place) -> some View {
         switch place {
         case .apps: appsPlace.dsDemoMarkClearance()
-        case .addresses: AddressesScreen().dsDemoMarkClearance()
         // The master list of everything connected (prd §1136 item 3). It
         // draws through the room's frame (prd §1136f), whose title row
         // already reserves the demo's band, as every room's does.
@@ -785,8 +784,6 @@ struct MainSurface: View {
             SettingsHome()
         case .casberi:
             SettingsHome()
-        case .addresses:
-            AddressesScreen()
         case .reach:
             NetworkReachScreen()
         case .settingsPage(let page):
@@ -2641,14 +2638,14 @@ struct MainSurface: View {
             }
             return .section
         }
-        // ONE RULE FOR WHAT OPENS ON TOP (prd §1208l, user: "i want one
-        // rule"): Markets and your notes rise as a sheet over the Feed, as an
-        // app does and Settings and Sources do; the Wallet alone stands
-        // beside the Feed.
-        // Day rises the same way (prd §1231): its door is a Feed tile now,
-        // and so does an app that lives in it (Calendar, Reminders…).
-        let onTop = label == HomeScope.markets || label == Pinboard.room || label == RoomAccounts.dayRoom
-        if onTop || RoomAccounts.host(ofSource: label).map({
+        // WHAT OPENS ON TOP IS AN APP (prd §1321, retiring §1208l's rule for
+        // places, user: "if it is a page then we can do the nav better"):
+        // Day, your notes and Markets are pages beside the Feed, under the
+        // band, as Sources and Settings are; an app picked from the tray, or
+        // one that lives in Day (Calendar, Reminders…), still rises over the
+        // page you are on.
+        if label != RoomAccounts.dayRoom, label != Pinboard.room, label != HomeScope.markets,
+           RoomAccounts.host(ofSource: label).map({
             HomeScope.isFeedSection($0.room) || $0.room == RoomAccounts.dayRoom
         }) == true {
             let sheet = ShellChrome.AppSheet(source: label)

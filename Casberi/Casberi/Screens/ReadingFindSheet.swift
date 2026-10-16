@@ -80,9 +80,16 @@ struct ReadingFindSheet: View {
 
     @ViewBuilder private var before: some View {
         if !suggestions.isEmpty {
-            DSTrayGroup(String(localized: "Sites you save from"), glyph: "globe") {
+            // Sites your bookmarking apps keep links from (Bookmarks,
+            // Raindrop, Readwise: `ReadingRoom.saveSources`), offered to
+            // follow; the line says where the count comes from (user,
+            // 2026-10-15: "wtf does it mean 'sites you save from'", "we
+            // don't save links").
+            DSTrayGroup(String(localized: "Suggested"), glyph: "globe") {
                 ForEach(suggestions, id: \.host) { s in
-                    siteRow(s.host, line: String(localized: "You saved \(s.count) lately"))
+                    // The site alone, as Apple's suggestions read (user,
+                    // of a reason line: "god that's awful").
+                    siteRow(s.host, line: "")
                 }
             }
         }
@@ -113,7 +120,9 @@ struct ReadingFindSheet: View {
     }
 
     private var footnote: some View {
-        DSFootnote(Text("Sites you save from twice show here."))
+        // What to do, not how suggestions are made (user, 2026-10-15: "this
+        // is nonsense", of "Sites you save from twice show here.").
+        DSFootnote(Text("Type a site's address to follow it."))
             .padding(.horizontal, DS.Space.s4)
             .padding(.top, DS.Space.s4)
     }
@@ -140,8 +149,10 @@ struct ReadingFindSheet: View {
             WatchFace(url: nil, lettered: host)
             VStack(alignment: .leading, spacing: 1) {
                 Text(verbatim: host).dsText(.body17).foregroundStyle(DS.textPrimary).lineLimit(1)
-                Text(verbatim: on ? String(localized: "Following") : line)
-                    .dsText(.subhead12).foregroundStyle(DS.textTertiary).lineLimit(1)
+                if on || !line.isEmpty {
+                    Text(verbatim: on ? String(localized: "Following") : line)
+                        .dsText(.subhead12).foregroundStyle(DS.textTertiary).lineLimit(1)
+                }
             }
             Spacer(minLength: DS.Space.s2)
             if busy {

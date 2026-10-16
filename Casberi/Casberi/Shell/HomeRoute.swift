@@ -36,7 +36,7 @@ final class HomeRoute {
         /// the Added filter. §1050g folded Settings into it for four days;
         /// §1111 gave Settings its own door back.
         ///
-        /// `.apps`, `.casberi` and `.addresses` are DOORS, never pushed since
+        /// `.apps` and `.casberi` are DOORS, never pushed since
         /// prd §1129: `present` and `toggle` land them as places in You
         /// (`HomeScope.Place`), so the screen changes and nothing slides.
         case apps
@@ -44,9 +44,6 @@ final class HomeRoute {
         /// this app reaches, Diagnostics), the tray's Settings door and
         /// `casberi://settings` (prd §933, again since §1111).
         case casberi
-        /// The Addresses directory, its own screen for the same reason (§933;
-        /// it was Accounts' fourth section since §916's amendment).
-        case addresses
         /// What this app reaches and what it reached — one pushed directory
         /// of the registry and the ledger (prd §967), so its category tiles
         /// can ride the seat's capsule like Accounts' and Addresses' (§960).
@@ -136,16 +133,19 @@ final class HomeRoute {
     static func door(for place: HomeScope.Place) -> Node {
         switch place {
         case .apps: .apps
-        case .addresses: .addresses
         case .settings: .casberi
         }
     }
 
-    /// The place a door names, or nil for a screen that pushes.
-    /// Whether a place rises as a sheet: the phone's one rule (§1208m).
-    @MainActor static var risesAsSheet: Bool {
+    /// **PAGES, NOT SHEETS, ON THE PHONE (prd §1321, retiring §1132 and
+    /// §1208m there, user: "settings opens up in a sheet within a sheet …
+    /// its all very confusing where you are").** A place lands as a page
+    /// under the band and a step deeper pushes on the pager's stack, as the
+    /// Mac does; the title says where you are and its grey word goes back.
+    /// The iPad keeps its sheets over the pane.
+    @MainActor static var pushes: Bool {
         #if targetEnvironment(macCatalyst)
-        false
+        true
         #else
         UIDevice.current.userInterfaceIdiom == .phone
         #endif
@@ -156,7 +156,6 @@ final class HomeRoute {
         // The catalogue is no place since prd §1136 (Apps left You's tiles):
         // it rises as a sheet over Settings, so a swipe down is the way back
         // (prd §1142, user: "there is no way to get back").
-        case .addresses: .addresses
         case .casberi: .settings
         default: nil
         }
@@ -210,15 +209,20 @@ final class HomeRoute {
     /// the sheet already up (prd §1132).
     @MainActor private func stack(_ node: Node) {
         #if targetEnvironment(macCatalyst)
-        path.append(node)
+        let onPath = true
         #else
-        if sheet == nil {
+        // The phone pushes a page while nothing is raised (prd §1321); the
+        // iPad, and a step inside a sheet already up, keep the sheet.
+        let onPath = Self.pushes && sheet == nil
+        #endif
+        if onPath {
+            path.append(node)
+        } else if sheet == nil {
             sheetPath = []
             sheet = .node(node)
         } else {
             sheetPath.append(node)
         }
-        #endif
     }
 
     /// Open a shell door (Apps / Settings) so it lands there fresh —
@@ -238,21 +242,19 @@ final class HomeRoute {
         if door == .casberi, openOffer != nil || openCategory != nil || openConnect {
             openSources = true
         }
-        // ONE RULE ON THE PHONE (prd §1208m, user: "we decided 1 rule"):
-        // Settings, Sources and Addresses rise as a sheet over the Feed, as
-        // Markets, your notes and every app do; the Wallet alone stands
-        // beside the Feed. iPad and the Mac keep their places.
-        if let place = Self.place(door), !Self.risesAsSheet {
+        // A place lands as a page (prd §1321); any other door is a page
+        // pushed on the pager's stack where the shell pushes, else the
+        // iPad's sheet.
+        if let place = Self.place(door) {
             path = []
             closeSheet()
             placeRequest = place.source
-        } else {
-            #if targetEnvironment(macCatalyst)
+        } else if Self.pushes {
+            closeSheet()
             path = [door]
-            #else
+        } else {
             sheetPath = []
             sheet = .node(door)
-            #endif
         }
     }
 

@@ -685,8 +685,10 @@ struct DSSlabButton: View {
     @Environment(\.openURL) private var openURL
 
     var body: some View {
+        // A VERB IS A ROW, EVERYWHERE (prd §1324): the filled slab is
+        // deleted; the commit row (§640) is the button's one form.
         if let tile, let tileBoard { hoisted(tile, on: tileBoard) }
-        else if accountAct { actRow } else { slab }
+        else { actRow }
     }
 
     /// Registers the verb with the page's tiles and takes no room. `fire`
@@ -736,56 +738,6 @@ struct DSSlabButton: View {
             .animation(DS.Motion.standard, value: busy)
         }
         .buttonStyle(RowPress())
-        .disabled(!enabled || busy)
-        .dsDoorWayOut(url)
-    }
-
-    private var slab: some View {
-        Button(action: fire) {
-            HStack(spacing: DS.Space.s3) {
-                if let systemImage {
-                    DSSlabDisc(systemImage: systemImage, onFill: true,
-                               busy: busy, inert: !enabled)
-                } else if busy {
-                    // No glyph to put a spinner inside. Every shipped call
-                    // site passes one; this is the honest fallback rather
-                    // than a disc drawn around a guessed symbol.
-                    ProgressView().controlSize(.small).tint(.white)
-                }
-                VStack(alignment: .leading, spacing: 0) {
-                    verb
-                    if !detail.isEmpty {
-                        Text(detail)
-                            .dsText(.label12)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.8)
-                            // Quiet against the fill, not a second headline —
-                            // the disabled fill already flattens everything to
-                            // tertiary below, so only the live state dims it.
-                            .opacity(enabled && !busy ? 0.75 : 1)
-                    }
-                }
-                // The verb is left-anchored (§613) and the slab keeps its full
-                // width, so the trailing air is deliberate — it is what makes
-                // the block read as an object with a verb on it rather than as
-                // a centered form submit.
-                Spacer(minLength: 0)
-            }
-            .padding(.horizontal, DS.Space.s4)
-            // A hand-rolled fill must swap the FILL when inert, not just dim
-            // the label (§83, paid for by a button that read live while dead).
-            .foregroundStyle(enabled && !busy ? AnyShapeStyle(.white)
-                                              : AnyShapeStyle(DS.textTertiary))
-            .frame(maxWidth: .infinity)
-            .frame(height: DSSlab.height)
-            .background(enabled && !busy ? AnyShapeStyle(DS.tint)
-                                         : AnyShapeStyle(DS.gray200),
-                        in: DSSlab.shape)
-            .contentShape(DSSlab.shape)
-            .animation(DS.Motion.standard, value: busy)
-            .animation(DS.Motion.standard, value: enabled)
-        }
-        .buttonStyle(PressSpring())
         .disabled(!enabled || busy)
         .dsDoorWayOut(url)
     }
@@ -852,7 +804,8 @@ struct DSSlabDoor: View {
     @Environment(\.openURL) private var openURL
 
     var body: some View {
-        if accountAct { actRow } else { slab }
+        // A door is a row, everywhere (prd §1324).
+        actRow
     }
 
     private func fire() {
@@ -887,44 +840,6 @@ struct DSSlabDoor: View {
             .dsActRowFrame(glyphless: systemImage == nil)
         }
         .buttonStyle(RowPress())
-        .disabled(inert)
-        .opacity(inert ? 0.5 : 1)
-        .dsDoorWayOut(url)
-    }
-
-    private var slab: some View {
-        Button(action: fire) {
-            HStack(spacing: DS.Space.s3) {
-                if let systemImage {
-                    DSSlabDisc(systemImage: systemImage)
-                }
-                Text(LocalizedStringKey(title))
-                    // Semibold, matching the commit's verb (§613). §190 already
-                    // asked for "one font at one weight" and these two shipped
-                    // a rung apart — medium here, semibold there — so the fill
-                    // was never the only thing separating them. Now it is.
-                    .dsText(.heading17)
-                    .foregroundStyle(DS.textPrimary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-                Spacer(minLength: 0)
-                if !detail.isEmpty {
-                    Text(detail)
-                        .dsText(.subhead12).foregroundStyle(DS.textTertiary)
-                        .lineLimit(1)
-                }
-                if opens {
-                    Image(systemName: "chevron.right")
-                        .dsGlyph(.caption)
-                        .foregroundStyle(DS.textTertiary)
-                }
-            }
-            .padding(.horizontal, DS.Space.s4)
-            .frame(height: DSSlab.height)
-            .background(DS.gray100, in: DSSlab.shape)
-            .contentShape(DSSlab.shape)
-        }
-        .buttonStyle(PressSpring())
         .disabled(inert)
         .opacity(inert ? 0.5 : 1)
         .dsDoorWayOut(url)

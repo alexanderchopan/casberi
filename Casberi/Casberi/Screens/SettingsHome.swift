@@ -77,19 +77,24 @@ struct SettingsHome: View {
             // Settings", and "Sources" presses back, as the category's word
             // does over an app's pick (§1262). The "‹ Sources" row it replaces
             // stood in the content because §752 kept the top clear.
-            DSRoomTitleRow(title: String(localized: "Sources"),
-                           pick: casberiOpen ? String(localized: "Settings") : nil,
-                           onTitle: casberiOpen ? {
-                               DSHaptic.selection()
-                               withAnimation(DS.Motion.standard) { casberiOpen = false }
-                           } : nil)
-                .dsRoomTitleListRow(inSheet: route.sheet != nil)
+            Group {
+                if route.sheet == nil {
+                    // A PAGE OPENED FROM THE FEED (prd §1321): "Feed · Sources",
+                    // the Feed grey and going back, as Day and Notes read.
+                    DSRoomTitleRow(title: String(localized: "Feed"), pick: String(localized: "Sources")) {
+                        DSHaptic.selection()
+                        chrome.goToFeed()
+                    }
+                } else {
+                    DSRoomTitleRow(title: String(localized: "Sources"))
+                }
+            }
+            .dsRoomTitleListRow(inSheet: route.sheet != nil)
             Section {
-                // Under the Settings tile the box is Casberi's own settings
-                // (prd §1208c); under Sources, the kinds you connected.
+                // The kinds you connected; Casberi's own settings are its
+                // folder's tiles since prd §1321, never the box.
                 Group {
-                    if casberiOpen { SettingsRows(style: .box) }
-                    else if startsInBox { startBox }
+                    if startsInBox { startBox }
                     else { countsBox }
                 }
                 .dsRoomLeadListRow()
@@ -109,16 +114,17 @@ struct SettingsHome: View {
                     // apps"): risen as a sheet it covers the band's bar, so
                     // the Apps list keeps a field of its own. Elsewhere it
                     // is the name a tray search landed on (§1171), clearable.
-                    if !casberiOpen, scope == .apps || !query.isEmpty {
+                    // On the phone Sources is a page under the band (prd
+                    // §1321), whose search finds every app: the field stays
+                    // only for a name a search landed on.
+                    if !casberiOpen, (scope == .apps && !Self.bandSearches) || !query.isEmpty {
                         DSSlabField(placeholder: String(localized: "Search"),
                                     text: $query, actionLabel: "",
                                     focus: $searchFocused,
                                     glyph: "magnifyingglass", clearable: true,
                                     size: .slab, submitLabel: .search, action: {})
                     }
-                    if casberiOpen {
-                        casberiOptions
-                    } else {
+                    Group {
                         switch scope {
                         case .apps:
                             // THE LIBRARY (prd §1316): every category a
@@ -134,7 +140,7 @@ struct SettingsHome: View {
                                                    withAnimation(DS.Motion.folder) { openFolder = category }
                                                },
                                                openCasberi: {
-                                                   withAnimation(DS.Motion.standard) { casberiOpen = true }
+                                                   withAnimation(DS.Motion.folder) { casberiOpen = true }
                                                })
                                 .padding(.horizontal, DSRoomChassis.rowInset - DSRoomChassis.inset - DS.Space.s1)
                             }
@@ -208,6 +214,14 @@ struct SettingsHome: View {
                 }
                 .padding(.trailing, 2)
                 .padding(.bottom, ShellMetrics.bottomInset + DS.Space.s4)
+            }
+        }
+        // Casberi's folder springs open on its settings, each a tile like an
+        // app (prd §1321).
+        .overlay {
+            if casberiOpen {
+                SourcesSettingsFolder(close: { withAnimation(DS.Motion.folder) { casberiOpen = false } })
+                    .transition(.scale(scale: 0.7).combined(with: .opacity))
             }
         }
         // A folder springs open over the page (prd §1316).
@@ -525,7 +539,7 @@ struct SettingsHome: View {
         case .newsletters:
             connectedApps.contains { Self.mailApps.contains($0.name) }
                 ? String(localized: "Track a mail list") : nil
-        case .people:        String(localized: "Add someone")
+        case .people:        String(localized: "Add a contact")
         case .subscriptions: SubscriptionWords.track
         case .wallets:       String(localized: "Follow a wallet")
         }
@@ -605,13 +619,6 @@ struct SettingsHome: View {
     // MARK: - Casberi
 
 
-    @ViewBuilder
-    /// Under the Settings tile the settings are the box (prd §1208c), so the
-    /// list is only the colophon; Sources is the tile beside it.
-    private var casberiOptions: some View {
-        SettingsRows(style: .colophon)
-    }
-
     // MARK: - Sheets over Settings (prd §1143)
 
     @ViewBuilder
@@ -664,6 +671,15 @@ struct SettingsHome: View {
                     $0.name.localizedStandardCompare($1.name) == .orderedAscending
                 })
             }
+    }
+
+    /// The phone's band carries the one search (prd §1321).
+    static var bandSearches: Bool {
+        #if targetEnvironment(macCatalyst)
+        false
+        #else
+        UIDevice.current.userInterfaceIdiom == .phone
+        #endif
     }
 
     /// Whether an app is yours, as its row says it (a paused one is not).
@@ -775,7 +791,13 @@ struct SettingsHome: View {
             VStack(spacing: 0) {
                 firstRow(String(localized: "App"), glyph: "square.grid.2x2",
                          value: String(localized: "Your apps"),
-                         verb: String(localized: "Add an app")) { searchFocused = true }
+                         verb: String(localized: "Add an app")) {
+                    if Self.bandSearches {
+                        withAnimation(DS.Motion.standard) { chrome.roomsTray = true }
+                    } else {
+                        searchFocused = true
+                    }
+                }
                 firstRow(String(localized: "Calendar"), glyph: "calendar",
                          value: String(localized: "Your events"),
                          verb: String(localized: "Add a calendar")) { add(.calendars) }
@@ -1215,11 +1237,16 @@ enum SettingsScope: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .apps:          return String(localized: "Apps")
         case .calendars:     return String(localized: "Calendars")
         case .cards:         return String(localized: "Cards")
-        case .feeds:         return String(localized: "Following")
+        // Where what you follow lands: the Feed's Media section (prd §1323,
+        // user: "why isn't all that stuff media? it's what goes in the media
+        // section of the feed"). "Following" promised wallets and people too.
+        case .feeds:         return String(localized: "Media")
         // Whole everywhere since prd §1166 (user: "we going to say 'Subs'
         // everywhere?"): no shortened word on any surface.
         case .newsletters:   return String(localized: "Mail lists")
-        case .people:        return String(localized: "People")
+        // One word with its plus's "New contact" and "Contacts" (prd §1323,
+        // user: "when you click plus it says add contact or contacts").
+        case .people:        return String(localized: "Contacts")
         case .subscriptions: return String(localized: "Subscriptions")
         case .wallets:       return String(localized: "Wallets")
         }
@@ -1231,9 +1258,9 @@ enum SettingsScope: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .cards:         return String(localized: "The cards your card apps read")
         case .wallets:       return String(localized: "The wallets you follow, and their apps")
         case .calendars:     return String(localized: "Every calendar Casberi reads")
-        case .feeds:         return String(localized: "Sites, channels and repos you follow")
+        case .feeds:         return String(localized: "The sites and shows you follow")
         case .newsletters:   return String(localized: "The lists that write to your mail")
-        case .people:        return String(localized: "The people behind your accounts")
+        case .people:        return String(localized: "Everyone you know, from every app")
         case .subscriptions: return String(localized: "What renews, free or paid")
         }
     }

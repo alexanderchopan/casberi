@@ -129,20 +129,20 @@ struct DSRangeChips<Option: Hashable>: View {
                         DSHaptic.tap()
                         onPick(r)
                     } label: {
+                        // WORDS, NO BACKING (prd §1324, user, of the token
+                        // pages: "buttons with backing … we don't do that
+                        // anymore"): the pick in the head ink, the rest grey,
+                        // as the Feed header's choices read (§1251), spread
+                        // across the figure as the tiles were.
                         Text(label(r))
-                            .dsText(.body17)
-                            .fontWeight(.semibold)
+                            .dsText(.heading17)
                             .lineLimit(1)
-                            .foregroundStyle(on ? Color.white : DS.textPrimary)
+                            .foregroundStyle(on ? DS.headInk : DS.textTertiary)
                             .frame(maxWidth: .infinity, minHeight: Self.tileHeight)
-                            .background {
-                                RoundedRectangle(cornerRadius: DS.Radius.sheet, style: .continuous)
-                                    .fill(on ? DS.tint : DS.surfaceRaised)
-                            }
                             .animation(DS.Motion.standard, value: on)
-                            .contentShape(RoundedRectangle(cornerRadius: DS.Radius.sheet, style: .continuous))
+                            .contentShape(Rectangle())
                     }
-                    .buttonStyle(PressSpring())
+                    .buttonStyle(RowPress())
                     .accessibilityAddTraits(on ? .isSelected : [])
                 }
             }

@@ -64,6 +64,9 @@ struct DSTray<Content: View>: View {
     /// phone tray gains no second control.
     @Environment(\.dismiss) private var dismiss
     @Environment(\.dsInPane) private var inPane
+    /// The page it was pushed from, on the phone's pages (prd §1321): the
+    /// title reads "Sources · Data", the grey word going back.
+    @Environment(\.dsTitleBack) private var titleBack
 
     /// **A TITLE WRAPS, IT DOES NOT TRUNCATE** (2026-09-02, user: "in hegota we
     /// have sheets w/ titles that are clipped now that we use bigger font").
@@ -110,14 +113,22 @@ struct DSTray<Content: View>: View {
 
     /// A presented find tray on the phone: its field sits on the keyboard
     /// (`DSKeyboardLift`). The pane and a Mac or iPad box keep the system's.
-    private var liftsField: Bool {
-        scrollsItself && !inPane && !DSSheetSize.sizesSheets
-    }
+    ///
+    /// **Off since prd §1321**: raised over a page, a find tray's field sat
+    /// under the keyboard with nothing on screen to type in (measured by the
+    /// `site` and `wallet` journeys, user: "this follow a site doesn't even
+    /// have a way for someone to follow a site"). The system's own keyboard
+    /// avoidance, which every pushed tray already used, keeps it in view.
+    private var liftsField: Bool { false }
 
     var body: some View {
         let tray = VStack(alignment: .leading, spacing: DS.Space.s4) {
             // The title doubles as its own catalog key — a title that isn't a
             // key just renders verbatim, so dynamic titles stay safe.
+            if inPane, let back = titleBack {
+                DSRoomTitleRow(title: back.word, pick: String(localized: String.LocalizationValue(title)),
+                               onTitle: back.action)
+            } else {
             HStack(alignment: .firstTextBaseline, spacing: DS.Space.s3) {
                 Text(LocalizedStringKey(title))
                     // THE HEAD RUNG (prd §532) — a tray is a place, and at the
@@ -145,6 +156,7 @@ struct DSTray<Content: View>: View {
                         .foregroundStyle(DS.tint)
                 }
                 #endif
+            }
             }
             // **THE TRAY HAS SPENT THE HEAD RUNG, AND SAYS SO** (2026-09-02).
             // Read by `DSSheetHead`, which takes the next rung down rather than
@@ -510,4 +522,14 @@ extension EnvironmentValues {
     /// (prd §876). A tray there drops its Done and scrolls as a page; a nav
     /// sheet drops its toolbar exit. One flag, set once by `SettingsPageView`.
     @Entry var dsInPane: Bool = false
+}
+
+/// The page a pushed page came from, named first in its title (prd §1321).
+struct DSTitleBack {
+    let word: String
+    let action: () -> Void
+}
+
+extension EnvironmentValues {
+    @Entry var dsTitleBack: DSTitleBack? = nil
 }
