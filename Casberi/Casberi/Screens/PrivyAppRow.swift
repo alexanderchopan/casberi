@@ -29,7 +29,9 @@ struct PrivyAppRow: View {
         DSFeedRow(name: app?.name ?? thing.title,
                   line: DSFeed.line(PrivyHomeFeed.lastUsed(app?.lastActiveAt, now: .now)
                                         ?? app.map(PrivyHomeFeed.line) ?? thing.summary)) {
-            PrivyAppMark(logoURL: app?.logoURL)
+            // The store's logo; a row that carries its own (the demo's drawn
+            // marks, prd §1338) draws that when the store has none.
+            PrivyAppMark(logoURL: app?.logoURL ?? thing.previewImageURL)
         } trailing: {
             if let usd, usd >= PrivyHomeFeed.fundedFloor {
                 Text(verbatim: mask ?? PrivyHomeFeed.usd(usd))

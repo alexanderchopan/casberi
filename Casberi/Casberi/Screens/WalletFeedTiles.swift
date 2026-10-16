@@ -885,7 +885,6 @@ struct WalletLendingCard: View {
                     }
                 }
             }
-            .padding(.bottom, DS.Space.s4)
         }
     }
 
@@ -932,11 +931,9 @@ struct WalletLendingCard: View {
         // The protocol's own mark — Aave ships one, Spark doesn't, and the
         // fallback says so honestly rather than inventing artwork.
         return withLineMenu(
-            WalletRow(mark: .asset(title, tint: atRisk ? DS.attention : DS.tint,
-                                   atRisk: atRisk),
+            WalletRow(mark: .asset(title, tint: atRisk ? DS.attention : DS.tint),
                       title: title,
                       subtitleText: Self.line(borrowing: borrowing, health: health, atRisk: atRisk,
-                                              chains: positions.map(\.network),
                                               fall: borrowing ? falls[title] : nil)) {
                 WalletRowValue(value: WalletValue.money(borrowing ? debt : collateral))
             },
@@ -962,33 +959,16 @@ struct WalletLendingCard: View {
     /// The riskiest market — Morpho markets are isolated, so the worst one is
     /// the one that liquidates first; nil when nothing is borrowed.
     private var morphoHealth: Double? { morpho.positions.compactMap(\.healthFactor).min() }
-    /// The position BEHIND `morphoHealth` — needed to key the trajectory
-    /// lookup (per market, not per chain), since two isolated positions on
-    /// the same chain can be drifting in different directions.
-    private var worstMorphoPosition: MorphoDeFi.Position? {
-        morpho.positions.filter { $0.healthFactor != nil }
-            .min { $0.healthFactor! < $1.healthFactor! }
-    }
-
     private var morphoRow: some View {
         let atRisk = (morphoHealth ?? .infinity) < Self.riskMargin
         let borrowing = morphoDebt > 0
-        // Morpho's two faces still differ, they just differ in one line now:
-        // BORROWING states its health, EARNING states how many places the
-        // money sits (isolated markets and vaults are Morpho's whole shape,
-        // and "2 vaults" is the fact a single Deposits number can't carry).
-        let trend = worstMorphoPosition.flatMap {
-            MorphoDeFi.hfTrend(network: $0.network, address: $0.address, marketLabel: $0.marketLabel)
-        }
+        // Morpho's two faces differ in one word: borrowing says how far it
+        // can fall, earning says it earns (prd §1338: one fact a row).
         let subtitle = borrowing
-            ? Self.line(borrowing: true, health: morphoHealth, atRisk: atRisk,
-                        chains: morpho.positions.map(\.network), trend: trend,
-                        fall: falls["Morpho"])
-            : Text(Self.earning(vaults: morpho.vaults.count, markets: morpho.positions.count))
-                .foregroundStyle(DS.textTertiary)
+            ? Self.line(borrowing: true, health: morphoHealth, atRisk: atRisk, fall: falls["Morpho"])
+            : Text("Earning").foregroundStyle(DS.textTertiary)
         return withLineMenu(
-            WalletRow(mark: .asset("Morpho", tint: atRisk ? DS.attention : DS.tint,
-                                   atRisk: atRisk),
+            WalletRow(mark: .asset("Morpho", tint: atRisk ? DS.attention : DS.tint),
                       title: "Morpho", subtitleText: subtitle) {
                 WalletRowValue(value: WalletValue.money(borrowing ? morphoDebt : morphoDeposits))
             },
@@ -997,48 +977,19 @@ struct WalletLendingCard: View {
 
     // MARK: - Sublines
 
-    /// "Health 1.82 · Base · drifting down for 4 days" — the reading, then
-    /// where it lives, then which way it's moving. A position with no debt
-    /// says so instead of printing a sentinel, a book spread across chains
-    /// names none rather than picking one arbitrarily, and `trend` (Morpho
-    /// only — Aave/Spark are one account-wide number, not per-market, so
-    /// there's no single position to trend) is silent until there's a real
-    /// day of history to read a direction from.
-    /// "Borrowed · Health 1.32 · Ethereum" — what the figure is first (it
-    /// was a second line under the figure), then the health, red only when
-    /// it is at risk (the one word on the row that needs you, prd §945),
-    /// then the chain.
-    private static func line(borrowing: Bool, health: Double?, atRisk: Bool, chains: [String],
-                             trend: String? = nil, fall: String? = nil) -> Text {
-        func quiet(_ s: String) -> Text { Text(s).foregroundStyle(DS.textTertiary) }
-        var out = quiet(borrowing ? String(localized: "Borrowed") : String(localized: "Supplied"))
-            + quiet(" · ")
+    /// **ONE FACT A ROW (prd §1338, user: "don't need the subtext").** A
+    /// borrow says how far it can fall ("can fall 24%", the distance that can
+    /// act), its health where that is not known, red only at risk; a supply
+    /// says so. The chain, the trend and "Borrowed · Health · …" went: the
+    /// figure on the right is the debt, and the sheet carries the rest.
+    private static func line(borrowing: Bool, health: Double?, atRisk: Bool, fall: String?) -> Text {
+        guard borrowing else { return Text("Supplied").foregroundStyle(DS.textTertiary) }
+        let ink = atRisk ? DS.destructiveInk : DS.textTertiary
+        if let fall { return Text(fall).foregroundStyle(ink) }
         if let health {
-            out = out + Text(String(localized: "Health \(WalletIngest.format(health))"))
-                .foregroundStyle(atRisk ? DS.destructiveInk : DS.textTertiary)
-        } else {
-            out = out + quiet(String(localized: "No debt"))
+            return Text(String(localized: "Health \(WalletIngest.format(health))")).foregroundStyle(ink)
         }
-        // What it can bear takes the chain's place (prd §1107): one line has
-        // room for one of them, and the distance is the one that can act.
-        if let fall {
-            out = out + Text(" · \(fall)").foregroundStyle(atRisk ? DS.destructiveInk : DS.textTertiary)
-        } else {
-            let unique = Set(chains)
-            if unique.count == 1, let network = unique.first,
-               let chain = WalletIngest.displayName(forNetwork: network) {
-                out = out + quiet(" · \(chain)")
-            }
-        }
-        if let trend { out = out + quiet(" · \(trend)") }
-        return out
-    }
-
-    private static func earning(vaults: Int, markets: Int) -> String {
-        let places = vaults + markets
-        guard places > 0 else { return String(localized: "Earning") }
-        return places == 1 ? String(localized: "Earning · 1 position")
-                           : String(localized: "Earning · \(places) positions")
+        return Text("Borrowed").foregroundStyle(DS.textTertiary)
     }
 }
 

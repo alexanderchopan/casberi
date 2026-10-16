@@ -38,7 +38,6 @@ struct WalletPerpsCard: View {
                     positionRow(position)
                 }
             }
-            .padding(.bottom, DS.Space.s4)
         }
     }
 
@@ -105,18 +104,15 @@ struct WalletPerpsCard: View {
     /// "3× cross · 34% from liquidation" — the distance red only when it is
     /// near (the one word on the row that needs you, prd §945).
     private static func line(_ position: HyperliquidDeFi.Position) -> Text {
-        func quiet(_ s: String) -> Text { Text(s).foregroundStyle(DS.textTertiary) }
-        var out = quiet(String(localized: "\(position.leverageX)× \(position.leverageType)"))
+        // **ONE FACT A ROW (prd §1338).** The distance, red only when near;
+        // the leverage only where the API withholds the distance.
         if let proximity = position.liquidationProximity {
             let pct = Int((proximity * 100).rounded())
-            out = out + quiet(" · ")
-                + Text(String(localized: "\(pct)% from liquidation"))
-                    .foregroundStyle(position.isNearLiquidation ? DS.destructiveInk : DS.textTertiary)
+            return Text(String(localized: "\(pct)% from liquidation"))
+                .foregroundStyle(position.isNearLiquidation ? DS.destructiveInk : DS.textTertiary)
         }
-        if let label = position.accountLabel, !label.isEmpty {
-            out = out + quiet(" · \(label)")
-        }
-        return out
+        return Text(String(localized: "\(position.leverageX)× \(position.leverageType)"))
+            .foregroundStyle(DS.textTertiary)
     }
 }
 

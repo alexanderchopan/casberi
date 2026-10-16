@@ -32,12 +32,11 @@ struct WalletLiquidityCard: View {
             // The group's name is the room's `DSGroupHeader` (prd §945), and
             // the second headline ("1 of 2 positions idle") is each row's own
             // first word now.
-            VStack(alignment: .leading, spacing: DS.Space.s2) {
+            VStack(alignment: .leading, spacing: DS.Space.s1) {
                 ForEach(sorted, id: \.key) { position in
                     positionRow(position)
                 }
             }
-            .padding(.bottom, DS.Space.s4)
         }
     }
 
@@ -90,28 +89,20 @@ struct WalletLiquidityCard: View {
         if let days = UniswapLiquidity.daysOutOfRange(
             address: position.address, network: position.network,
             version: position.version, tokenId: position.tokenId) {
-            return days == 1 ? String(localized: "Out of range · 1 day")
-                             : String(localized: "Out of range · \(days) days")
+            return days == 1 ? String(localized: "Out of range for a day")
+                             : String(localized: "Out of range for \(days) days")
         }
         return String(localized: "Out of range")
     }
 
+    /// **ONE SENTENCE A ROW (prd §1338).** What the pool is doing and where:
+    /// "Out of range on Base", "Earning $193 on Ethereum". The chain stays
+    /// because two pools of one pair differ by nothing else; the fee tier
+    /// is not a row's fact.
     private static func line(_ position: UniswapLiquidity.Position) -> String {
-        var parts: [String] = [state(position)]
-        if position.feeTier != Self.dynamicFeeFlag {
-            parts.append(feeTierLabel(position.feeTier))
-        }
-        if let chain = WalletIngest.displayName(forNetwork: position.network) {
-            parts.append(chain)
-        }
-        return parts.joined(separator: " · ")
+        let what = state(position)
+        guard let chain = WalletIngest.displayName(forNetwork: position.network) else { return what }
+        return String(localized: "\(what) on \(chain)")
     }
 
-    /// V4's `0x800000` sentinel in the fee field — "this pool's hook sets the
-    /// fee per swap", not a rate of 838.86%.
-    private static let dynamicFeeFlag = 0x800000
-
-    private static func feeTierLabel(_ hundredthsOfBip: Int) -> String {
-        String(format: "%.2f%%", Double(hundredthsOfBip) / 10_000)
-    }
 }

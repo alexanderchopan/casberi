@@ -73,7 +73,10 @@ struct PrivyAppMark: View {
     var body: some View {
         DSGlyphLead(glyph: "square.stack.3d.up")
             .overlay {
-                if let url = logoURL.flatMap(URL.init(string:)) {
+                if let logoURL, logoURL.hasPrefix("sample:"),
+                   let image = UIImage.demoSample(for: logoURL) {
+                    Image(uiImage: image).resizable().scaledToFill()
+                } else if let url = logoURL.flatMap(URL.init(string:)) {
                     AsyncImage(url: url) { phase in
                         if let image = phase.image {
                             image.resizable().scaledToFill()

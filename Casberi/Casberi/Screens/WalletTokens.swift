@@ -46,30 +46,25 @@ struct WalletTokenRowLabel: View {
             // Always a mark — `TokenIcon` draws nothing for a token with no
             // picture, and the row's name then stood in a different column.
             AssetMark(name: position.symbol, size: DS.Face.list)
-            VStack(alignment: .leading, spacing: 1) {
-                Text(position.symbol)
-                    .dsText(.body17).foregroundStyle(DS.textPrimary)
-                    .lineLimit(1)
-                // Whose it is, only where that is a real question — one
-                // watched wallet has no split to report (§212's guard).
-                if position.holders.count > 1 {
-                    Text(position.holders.prefix(2).map(\.label).joined(separator: " · "))
-                        .dsText(.subhead12).foregroundStyle(DS.textTertiary)
-                        .lineLimit(1)
-                }
-            }
+            // **ONE LINE, NO SUBTEXT (prd §1338, user: "don't need the
+            // subtext").** Whose it is lives in the token's sheet.
+            Text(position.symbol)
+                .dsText(.body17).foregroundStyle(DS.textPrimary)
+                .lineLimit(1)
             Spacer(minLength: DS.Space.s2)
             // **THE AMOUNT PINS TO THE EDGE, THE SHARE STANDS BEFORE IT**
             // (user, 2026-09-26: "the dollar values should be aligned").
             HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
                 // The day's move, where a read has one (prd §1090).
+                // A move that rounds to nothing says nothing (§83, prd
+                // §1338): a stablecoin's "0.0%" is dropped, not greyed.
                 if let move {
-                    let flat = TokenChartStyle.isFlat(move)
-                    Text(TokenChartStyle.changeText(move))
-                        .dsText(.subhead12)
-                        .foregroundStyle(flat ? DS.textTertiary
-                                         : (move > 0 ? DS.confirmInk : DS.destructiveInk))
-                        .monospacedDigit()
+                    if !TokenChartStyle.isFlat(move) {
+                        Text(TokenChartStyle.changeText(move))
+                            .dsText(.subhead12)
+                            .foregroundStyle(move > 0 ? DS.confirmInk : DS.destructiveInk)
+                            .monospacedDigit()
+                    }
                 } else if total > 0 {
                     let pct = Int((position.usd / total * 100).rounded())
                     if pct >= 1 {

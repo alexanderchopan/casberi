@@ -21,7 +21,6 @@ struct WalletZFiOrdersCard: View {
                     row(order)
                 }
             }
-            .padding(.bottom, DS.Space.s4)
         }
     }
 

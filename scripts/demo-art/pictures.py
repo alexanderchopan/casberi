@@ -13,6 +13,7 @@ Families:
   sleeve      — made square/capsule art: albums, podcast episodes, game headers
   scene_home  — drawn photographs of food, rooms, objects and craft
   scene_out   — drawn photographs of places, streets, weather and moments
+  mark        — made app icons for the demo's own apps (Privy's app wallets)
 """
 
 PHONE = (390, 844)
@@ -268,6 +269,12 @@ covers = [
 ]
 for key, book, motif in covers:
     pic(f"cover-{key}", "cover", (400, 600), f"A made book cover for '{book}' — title and author in type, motif: {motif}; NOT the real jacket", asset=f"sample-cover-{key}")
+
+# ── Privy: the demo's app wallets (DemoSeedAll, prd §1338) ─────────────────
+# Made-up apps, so their marks are drawn, never a real product's logo.
+for slug, name in (("tidepool", "Tidepool"), ("lantern", "Lantern"), ("kitebox", "Kitebox"),
+                   ("mossline", "Mossline"), ("pebble-arcade", "Pebble Arcade"), ("sundial", "Sundial")):
+    pic(f"privy-{slug}", "mark", (180, 180), f"App icon for the made-up app {name}: a rounded square in its colours, one motif, no words", scale=1)
 
 PICTURES = P
 

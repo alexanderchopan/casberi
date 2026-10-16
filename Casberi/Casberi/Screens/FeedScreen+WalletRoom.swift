@@ -612,7 +612,7 @@ extension FeedScreen {
     @ViewBuilder
     var walletNFTDoorSection: some View {
         if let entry = nftShelfWallet {
-            Section {
+            walletCard(String(localized: "NFTs"), glyph: Self.nftGlyph) {
                 DSPushRow(title: Text("Choose collections"), tint: DS.tint, opens: false,
                           action: {
                               feedSheet = .nftPicks(address: entry.address,
@@ -624,6 +624,9 @@ extension FeedScreen {
             }
         }
     }
+
+    /// The NFTs group's mark, the door's and the list's one header.
+    static let nftGlyph = "photo.on.rectangle.angled"
 
     /// The 26pt disc every verb row in this room leads with.
     func walletDoorLead(_ glyph: String) -> some View {
@@ -805,7 +808,10 @@ extension FeedScreen {
     @ViewBuilder
     var walletNFTListSection: some View {
         if let entry = nftShelfEntry {
-            Section {
+            // **THE COLLECTIONS STAND UNDER THEIR NAME (prd §1338).** They drew
+            // as bare rows below the Apps card, reading as Apps that had
+            // fallen out of it.
+            walletCard(String(localized: "NFTs"), glyph: Self.nftGlyph) {
                 WalletNFTCollectionRows(
                     wallet: entry.address,
                     onEdit: { feedSheet = .nftPicks(address: entry.address,
@@ -953,43 +959,27 @@ extension FeedScreen {
         let orders = !walletLive.zfiOrders.isEmpty
         if lending || perps || liquidity || staking || orders {
             walletCard(String(localized: "Positions"), glyph: "building.columns") {
-                if lending {
-                    WalletLendingCard(aave: walletLive.positions, morpho: walletLive.morpho,
-                                      falls: walletLendingFalls,
-                                      lineMenu: { AnyView(walletAlertLineMenu) })
-                        .modifier(rowEntrance(2))
-                        .feedRowBackground()
-                        .listRowSeparator(.hidden)
-                        .listRowInsets(WalletCardStyle.rowInsets)
+                // **ONE COLUMN, ONE RHYTHM (prd §1338, user: the gaps).** The
+                // five kinds were five list rows, each padding its own foot,
+                // so the air between two kinds was three times the air
+                // between two rows. They stand in one stack now, every row
+                // the same distance from the next.
+                VStack(alignment: .leading, spacing: DS.Space.s1) {
+                    if lending {
+                        WalletLendingCard(aave: walletLive.positions, morpho: walletLive.morpho,
+                                          falls: walletLendingFalls,
+                                          lineMenu: { AnyView(walletAlertLineMenu) })
+                    }
+                    if perps { WalletPerpsCard(book: walletLive.hyperliquid) }
+                    if liquidity { WalletLiquidityCard(book: walletLive.uniswap) }
+                    if staking { WalletAztecStakingCard(book: walletLive.aztecStaking) }
+                    if orders { WalletZFiOrdersCard(book: walletLive.zfiOrders) }
                 }
-                if perps {
-                    WalletPerpsCard(book: walletLive.hyperliquid)
-                        .modifier(rowEntrance(3))
-                        .feedRowBackground()
-                        .listRowSeparator(.hidden)
-                        .listRowInsets(WalletCardStyle.rowInsets)
-                }
-                if liquidity {
-                    WalletLiquidityCard(book: walletLive.uniswap)
-                        .modifier(rowEntrance(4))
-                        .feedRowBackground()
-                        .listRowSeparator(.hidden)
-                        .listRowInsets(WalletCardStyle.rowInsets)
-                }
-                if staking {
-                    WalletAztecStakingCard(book: walletLive.aztecStaking)
-                        .modifier(rowEntrance(5))
-                        .feedRowBackground()
-                        .listRowSeparator(.hidden)
-                        .listRowInsets(WalletCardStyle.rowInsets)
-                }
-                if orders {
-                    WalletZFiOrdersCard(book: walletLive.zfiOrders)
-                        .modifier(rowEntrance(6))
-                        .feedRowBackground()
-                        .listRowSeparator(.hidden)
-                        .listRowInsets(WalletCardStyle.rowInsets)
-                }
+                .padding(.bottom, DS.Space.s4)
+                .modifier(rowEntrance(2))
+                .feedRowBackground()
+                .listRowSeparator(.hidden)
+                .listRowInsets(WalletCardStyle.rowInsets)
             }
         }
     }

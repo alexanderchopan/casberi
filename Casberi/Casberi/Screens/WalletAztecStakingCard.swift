@@ -25,7 +25,6 @@ struct WalletAztecStakingCard: View {
                     vaultRow(vault)
                 }
             }
-            .padding(.bottom, DS.Space.s4)
         }
     }
 

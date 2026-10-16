@@ -232,7 +232,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1479 of 1545 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1480 of 1546 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1713,6 +1713,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1335 — Day's Coming up carries what the app computes: renewals with their price, card payments, and Track a subscription (bu…
 - §1336 — A room's row of tiles speaks at the page's volume
 - §1337 — Markets opens in place, a Wallet tile like Holdings (amends §1232 item 1, §1325, §1167)
+- §1338 — Holdings, made over: the box says what and how much, a row says one fact, Positions keep one rhythm, NFTs stand under…
 
 ## Dead rulings → what replaced them (generated)
 

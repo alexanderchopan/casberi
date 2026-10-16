@@ -66649,3 +66649,13 @@ Mocks: `design/mockups/tab-bar-options.html`, `design/mockups/tab-bar-library.ht
 **Guards.** `wallet-section-selftest.sh` denies the Markets pick's request for another page and asks for the door's landing and the tile's lists; its Markets empty-state check now says why Markets has none (never empty), not that it opens elsewhere.
 
 **Not seen** on a simulator (none booted, per the task): the box's five rows at the Wallet's slot height, the iPad/Mac layout.
+
+## §1338 — Holdings, made over: the box says what and how much, a row says one fact, Positions keep one rhythm, NFTs stand under their name, the demo's apps wear marks (amends §1090's tile text, §1107's Positions lines, §945's sub-lines in Holdings) (user, 2026-10-16: "yes do all. and yes apps belong here", of the ten points read off the live screen; "hey here in apps where are the logos")
+
+1. **A treemap tile states its token and share, never the day's move** (`HoldingsTreemap`). The move stays the tile's colour (§1090's heat) and is the row's number; written on a tile beside a share it read as a second measure. The folded tail says "Other" over its share.
+2. **A token row is one line**: the symbol, then the move and the amount (`WalletTokenRowLabel`). Whose it is (two wallets' labels) went to the token's sheet; a move that rounds to nothing draws nothing, so a stablecoin's "0.0%" is gone (§83).
+3. **Positions are one stack with one gap** (`walletPositionsSections`): lending, perps, liquidity, staking and orders were five list rows each padding its own foot, so two kinds stood three times as far apart as two rows.
+4. **One fact a position row.** A borrow says "can fall N%" (its health where that is unknown), red only at risk; a supply says "Supplied", a Morpho deposit "Earning"; a perp its distance from liquidation (its leverage only when the distance is withheld); a pool one sentence, "Out of range on Base", "Earning $193 on Ethereum", the chain kept because two pools of one pair differ by nothing else. The risk dot on a protocol's mark is deleted (the red words say it).
+5. **NFTs stand under an "NFTs" header** (`walletNFTListSection`, `walletNFTDoorSection`), where their rows had fallen below the Apps card with no name.
+6. **Apps stay in Holdings** (user: "apps belong here"). The demo's Privy apps are made up (Tidepool, Lantern, Kitebox, Mossline, Pebble Arcade, Sundial) and wear marks drawn by `scripts/demo-art/fam_mark.py`; a real product's name with a drawn logo would be a forgery. `PrivyAppRow` draws a row's own `previewImageURL` when the store holds no logo, and `PrivyAppMark` resolves a `sample:` mark from the bundle.
+

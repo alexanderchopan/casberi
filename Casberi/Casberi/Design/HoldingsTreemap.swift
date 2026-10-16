@@ -268,23 +268,24 @@ struct HoldingsTreemap: View {
                     AssetMark(name: tile.id, size: HoldingsTreemapLayout.markSize(for: tile.rect))
                 }
                 Spacer(minLength: 0)
-                if let m = move(tile.id) {
-                    // The heat map's tile (prd §1090): its dollars where it
-                    // has the room, and the day's move.
-                    if large, let holding = holdings.first(where: { $0.id == tile.id }) {
+                // **A TILE SAYS WHAT AND HOW MUCH, NEVER THE DAY (prd §1338,
+                // amends §1090's tile text).** The day's move is the tile's
+                // colour and the row's number; written on the tile beside a
+                // share it read as a second measure. "Other" names itself.
+                if showsShares {
+                    if large, !isOther, let holding = holdings.first(where: { $0.id == tile.id }) {
                         Text(holding.display ?? WalletValue.money(holding.usd))
                             .dsText(.label12)
                             .monospacedDigit()
                             .foregroundStyle(isLit ? Color.white : DS.textPrimary.opacity(0.9))
                             .lineLimit(1)
                     }
-                    Text(TokenChartStyle.changeText(m))
-                        .dsText(large ? .stat24 : (small ? .label12 : .price17))
-                        .monospacedDigit()
-                        .foregroundStyle(isLit ? Color.white : DS.textPrimary)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.6)
-                } else if showsShares {
+                    if isOther {
+                        Text("Other")
+                            .dsText(.label12)
+                            .foregroundStyle(isLit ? Color.white : DS.textSecondary)
+                            .lineLimit(1)
+                    }
                     Text(HoldingsTreemapLayout.percent(tile.share))
                         .dsText(large ? .stat24 : (small ? .label12 : .price17))
                         .monospacedDigit()

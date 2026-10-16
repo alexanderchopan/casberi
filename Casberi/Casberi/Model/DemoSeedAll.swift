@@ -3877,21 +3877,25 @@ enum DemoSeedAll {
         // made, and what moved in two of them. The room's own head reads
         // `PrivyHomeStore`, which a demo never fills, so what the demo shows of
         // Privy is its ROWS: the app wallets and their activity.
-        let privyApps: [(String, Double)] = [
-            ("Zora", 640), ("Paragraph", 430), ("Quidli", 300),
-            ("Wildcard", 210), ("Virtuals Protocol", 120), ("Clankermon", 40),
+        // MADE-UP APPS WITH DRAWN MARKS (prd §1338): six real products drew
+        // the stack glyph, because the demo never reads Privy's logos, and a
+        // drawn logo on a real product would be a forgery.
+        let privyApps: [(String, String, Double)] = [
+            ("Tidepool", "tidepool", 640), ("Lantern", "lantern", 430), ("Kitebox", "kitebox", 300),
+            ("Mossline", "mossline", 210), ("Pebble Arcade", "pebble-arcade", 120), ("Sundial", "sundial", 40),
         ]
         out += privyApps.enumerated().map { i, app in
             row(.event, app.0, source: "Privy", ref: "privy:app:demo\(i)",
-                days: app.1, hour: 11) { t in
+                days: app.2, hour: 11) { t in
                 t.content = "0x8f2c…a41\(i)"
+                t.previewImageURL = art("privy-\(app.1)")
             }
         }
         let privyMoves: [(String, String, Bool, Double, Double)] = [
-            ("Received 0.6974 ZORA", "Zora", true, 12.40, 6),
-            ("Sent 0.004145 ETH", "Zora", false, 15.90, 12),
-            ("Received 2.154 ZORA", "Zora", true, 38.20, 24),
-            ("Received 0.02 ETH", "Paragraph", true, 76.50, 31),
+            ("Received 12.40 USDC", "Tidepool", true, 12.40, 6),
+            ("Sent 0.004145 ETH", "Tidepool", false, 15.90, 12),
+            ("Received 38.20 USDC", "Tidepool", true, 38.20, 24),
+            ("Received 0.02 ETH", "Lantern", true, 76.50, 31),
         ]
         out += privyMoves.enumerated().map { i, move in
             row(.transaction, move.0, source: "Privy",
