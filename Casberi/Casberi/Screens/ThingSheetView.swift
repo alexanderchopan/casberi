@@ -662,7 +662,7 @@ struct ThingSheetView: View {
                                              onOpen: { walkingToScope = .none; walkingToNote = KeyedThing($0) })
                                 .padding(.top, DS.Space.s6)
                                 .settleIn(delay: 0.12)
-                        } else if moneyCard == nil {
+                        } else if moneyCard == nil, thing.sourceRef?.hasPrefix("wallet:approval:") != true {
                             MoneyHistoryRows(title: moneyHistoryTitle(moneyReceipt),
                                              rows: moneyHistory.keyed,
                                              onOpen: { walkingToScope = .none; walkingToNote = KeyedThing($0) })
@@ -3153,6 +3153,16 @@ struct ThingSheetView: View {
             }
             return out
         }
+        // An approval is standing permission, never a visit or a settled
+        // move (prd §1360): it is Active, and since when.
+        if thing.sourceRef?.hasPrefix("wallet:approval:") == true {
+            out.append(MoneyReceiptCell(value: String(localized: "Active"), label: String(localized: "Status")))
+            out.append(MoneyReceiptCell(value: FeedScreen.dayWord(thing.capturedAt), label: String(localized: "Granted")))
+            if let wallet = MoneyReceiptSource.walletLabel(thing.walletAddress) {
+                out.append(MoneyReceiptCell(value: wallet, label: String(localized: "Wallet")))
+            }
+            return out
+        }
         // A swap's facts are its rate and the wallet that traded (prd §1351);
         // the box's stamp already says it settled.
         // A Peer fill in the same layout (prd §1356) keeps only the wallet: its
@@ -4410,7 +4420,7 @@ struct ThingSheetView: View {
                     // resized the row and moved the dial. The label still rides
                     // the clipboard into Calendar; only the screen stops
                     // waiting for it. No year: a fact is within the next one.
-                    Text(fact.date.formatted(.dateTime.weekday(.wide).month(.abbreviated).day().hour().minute()))
+                    Text(verbatim: String(localized: "\(FeedScreen.dayWord(fact.date)) at \(fact.date.formatted(date: .omitted, time: .shortened))"))
                         .dsText(.body17)
                         .foregroundStyle(DS.textSecondary)
                         .lineLimit(1)

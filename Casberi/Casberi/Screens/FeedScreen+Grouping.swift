@@ -630,6 +630,14 @@ extension FeedScreen {
         // next day is actually named — a dated weekday header for it read as
         // history sitting at the top of the list.
         if Self.groupingCalendar.isDateInTomorrow(date) { return String(localized: "Tomorrow") }
-        return date.formatted(.dateTime.weekday(.wide).month().day())
+        // **ONE DAY WORD EVERYWHERE (prd §1359, user: "you decide on the date.
+        // i want to be consistent").** Apple's own (Messages, Wallet): within a
+        // week either side the weekday alone, "Tuesday"; further out "Sep 15".
+        // Day dividers, a receipt's eyebrow and every line in a box read this.
+        let days = Self.groupingCalendar.dateComponents(
+            [.day], from: Self.groupingCalendar.startOfDay(for: .now),
+            to: Self.groupingCalendar.startOfDay(for: date)).day ?? 0
+        if abs(days) < 7 { return date.formatted(.dateTime.weekday(.wide)) }
+        return date.formatted(.dateTime.month(.abbreviated).day())
     }
 }

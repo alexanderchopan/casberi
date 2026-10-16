@@ -66856,3 +66856,13 @@ A launch that finds no saved connection list may only have been unable to read i
 1. **`BridgeStore` writes only a list it stands on** (`hydrated`): a launch that found none reads the disk again before any write, at every foreground sweep and when the phone unlocks, keeping what this run registered meanwhile; before the first unlock it writes nothing.
 2. **The intro never starts the demo before the first unlock** (`IntroCover.holdsYourOwn`): an empty read then proves nothing.
 3. **Once, the seats a lost list dropped come back** (`restoreSeatsFromRows`): every app that brought in something of yours in the last two weeks gets its seat, under the id its own connect registers (`BridgeStore.seatID(forName:)`); a name no table knows is left for its own connect, never guessed.
+## §1359 — One day word everywhere (amends §882's divider form, §1349, §1352, §1357 item 2) (user, 2026-10-16: "you decide on the date. i want to be consistent.")
+
+Every day the app names reads one rule, Apple's own (Messages, Wallet): "Today", "Yesterday", "Tomorrow"; within a week either side the weekday alone, "Tuesday"; further out "Sep 15". `FeedScreen.dayWord` is the one spelling: the day dividers, a receipt's pink eyebrow, a transfer's and a swap's line, a card spend's "Tuesday at 2:31 AM", the history rows ("This month", "Every charge"), the Wallet's history, a lede's due day and a fact's date all call it. The spoken calendar (VoiceOver) keeps the full date.
+
+## §1360 — An approval says itself once, and is Active, never a visit (user, 2026-10-16: "seems silly to repeat the same thing 'uniswap can spend...' three times")
+
+1. **The sentence is the title, once** ("Uniswap can spend your USDC"); the box states what it covers — the token, and the allowance when one is stamped (`MoneyReceipt.approvalToken`) — never the sentence again.
+2. **Its facts are Active · Status, Granted (the day word, §1359) and the wallet**, never a shop's "3rd · Visit" or "Last visit", and never "Settled": permission stands until revoked.
+3. **No "At Uniswap can spend…" history card**: what an approval has is standing, not visits.
+

@@ -457,7 +457,7 @@ struct FeedLedeCard: View {
         if Calendar.current.isDateInToday(due) || Calendar.current.isDateInTomorrow(due) {
             return due.formatted(date: .omitted, time: .shortened)
         }
-        return due.formatted(.dateTime.weekday(.wide).month(.abbreviated).day())
+        return FeedScreen.dayWord(due)
     }
 
     // MARK: - The post face (prd §756)
@@ -722,7 +722,7 @@ struct FeedLedeCard: View {
         if Calendar.current.isDateInToday(when) || Calendar.current.isDateInTomorrow(when) {
             return when.formatted(date: .omitted, time: .shortened)
         }
-        return when.formatted(.dateTime.weekday(.wide).month(.abbreviated).day())
+        return FeedScreen.dayWord(when)
     }
 
     /// WORK B: the state word leads at the ladder's large rung, the title

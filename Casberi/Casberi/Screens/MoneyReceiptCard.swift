@@ -614,10 +614,7 @@ struct MoneyReceiptBox: View {
     }
 
     private func swapWorthLine(_ s: Swap) -> String {
-        let cal = Calendar.current
-        let day = cal.isDateInToday(landed) ? String(localized: "Today")
-            : cal.isDateInYesterday(landed) ? String(localized: "Yesterday")
-            : landed.formatted(.dateTime.month(.abbreviated).day())
+        let day = FeedScreen.dayWord(landed)
         guard let usd = s.usd, usd > 0 else { return day }
         return "\(usd.formatted(.currency(code: "USD"))) · \(day)"
     }
@@ -681,11 +678,7 @@ struct MoneyReceiptBox: View {
     }
 
     private var cardWhen: String {
-        let cal = Calendar.current
-        let day = cal.isDateInToday(landed) ? String(localized: "Today")
-            : cal.isDateInYesterday(landed) ? String(localized: "Yesterday")
-            : landed.formatted(.dateTime.month(.abbreviated).day())
-        return String(localized: "\(day) at \(landed.formatted(date: .omitted, time: .shortened))")
+        String(localized: "\(FeedScreen.dayWord(landed)) at \(landed.formatted(date: .omitted, time: .shortened))")
     }
 
     /// A spend reads unsigned; a refund keeps its plus.
@@ -756,12 +749,8 @@ struct MoneyReceiptBox: View {
     }
 
     private func worthLine(_ t: Transfer) -> String {
-        // "Today", "Yesterday", else "Oct 16" (prd §1349): the weekday made
-        // the line run long and said nothing the date did not.
-        let cal = Calendar.current
-        let day = cal.isDateInToday(landed) ? String(localized: "Today")
-            : cal.isDateInYesterday(landed) ? String(localized: "Yesterday")
-            : landed.formatted(.dateTime.month(.abbreviated).day())
+        // The one day word (prd §1359).
+        let day = FeedScreen.dayWord(landed)
         guard let usd = t.usd, usd > 0 else { return day }
         return "\(usd.formatted(.currency(code: "USD"))) · \(day)"
     }
@@ -868,7 +857,8 @@ struct MoneyReceiptBox: View {
         if let amount = receipt.amount {
             // A typographic minus, never the hyphen the amount was written with.
             let number = amount.number.hasPrefix("-") ? "−" + amount.number.dropFirst() : amount.number
-            return [number, amount.unit].compactMap { $0 }.joined(separator: " ")
+            // An approval with no stated allowance is its token alone (prd §1360).
+            return [number.isEmpty ? nil : number, amount.unit].compactMap { $0 }.joined(separator: " ")
         }
         return receipt.titleFallback ?? receipt.lead
     }

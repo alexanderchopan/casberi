@@ -33,7 +33,7 @@ struct MoneyHistoryRows: View {
                     Button { onOpen(thing) } label: {
                         HStack(spacing: DS.Space.s3) {
                             if let amount {
-                                Text(verbatim: thing.capturedAt.formatted(.dateTime.weekday(.wide).month(.abbreviated).day()))
+                                Text(verbatim: FeedScreen.dayWord(thing.capturedAt))
                                     .dsText(.body17).foregroundStyle(DS.textPrimary).lineLimit(1)
                                 Spacer(minLength: DS.Space.s2)
                                 Text(verbatim: amount(thing) ?? "")

@@ -554,6 +554,13 @@ struct MoneyReceipt: Equatable {
         title.replacingOccurrences(of: #" \([^)]*\)"#, with: "", options: .regularExpression)
     }
 
+    /// "Uniswap can spend your USDC" → "USDC" (prd §1360).
+    static func approvalToken(_ title: String) -> String? {
+        guard let r = title.range(of: " can spend your ") else { return nil }
+        let token = String(title[r.upperBound...]).trimmingCharacters(in: .whitespaces)
+        return token.isEmpty ? nil : token
+    }
+
     /// "Bought 250 USDC with Venmo on Peer" → ("250", "USDC").
     static func peerAmount(_ title: String) -> (number: String, unit: String?) {
         let words = title.split(separator: " ").map(String.init)
@@ -951,8 +958,11 @@ struct MoneyReceipt: Equatable {
             mine: f.walletAddress,
             lead: String(localized: "In your wallet"),
             party: approval ? f.title : f.myLabel,
-            titleFallback: f.title,
-            amount: nil,
+            // **SAID ONCE (prd §1360, user: "seems silly to repeat the same
+            // thing three times").** An approval's title is its sentence; the
+            // box states what it covers — the token — not the sentence again.
+            titleFallback: approval ? nil : f.title,
+            amount: approval ? approvalToken(f.title).map { Amount(number: f.amount ?? "", unit: $0, tone: .plain) } : nil,
             secondary: worthLine(f.usd),
             sentence: placeSentence(String(localized: "Happened"), f),
             stamp: risk ? .openPosition : nil,

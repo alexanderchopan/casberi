@@ -70,7 +70,7 @@ struct WalletHistoryScreen: View {
     private static func dayLabel(_ date: Date) -> String {
         if calendar.isDateInToday(date) { return String(localized: "Today") }
         if calendar.isDateInYesterday(date) { return String(localized: "Yesterday") }
-        return date.formatted(.dateTime.weekday(.wide).month().day())
+        return FeedScreen.dayWord(date)
     }
 
     private var title: String {

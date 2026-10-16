@@ -172,7 +172,7 @@ struct JournalEntryBox: View {
 
     /// "Sunday, Sep 21".
     private var dayWords: String {
-        thing.capturedAt.formatted(.dateTime.weekday(.wide).month(.abbreviated).day())
+        FeedScreen.dayWord(thing.capturedAt)
     }
 
     /// "9:00 PM · Lyon · 14°, clear" — the place and the weather only when the
