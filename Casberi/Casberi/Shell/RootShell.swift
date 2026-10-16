@@ -32,7 +32,7 @@ struct RootShell: View {
     /// modifier chain: six `||` operands there put `RootShell`'s body past
     /// the type-checker's limit the day the note sheet joined them.
     private var modalUp: Bool {
-        composerOpen || chrome.noteOpen || deepLinkThing != nil
+        composerOpen || chrome.noteOpen || chrome.docToRead != nil || deepLinkThing != nil
             || deepLinkPerson != nil || safeAsk != nil || observerOffer != nil || aztecSign != nil || !onboarded
     }
     @State private var deepLinkThing: Thing?
@@ -45,6 +45,8 @@ struct RootShell: View {
         guard let thing else { return }
         if FeedScreen.opensAsPage(thing) {
             chrome.editNote(thing.id, typing: false)
+        } else if FeedScreen.opensAsDocPage(thing) {
+            withAnimation(DS.Motion.standard) { chrome.docToRead = thing.id }
         } else {
             deepLinkThing = thing
         }
@@ -2686,6 +2688,16 @@ struct RootShell: View {
 
             // THE NOTE SHEET (prd §969) — its own view, one identifier here.
             noteLayer
+            docLayer
+        }
+    }
+
+    /// A Fileverse doc's page (prd §1346): the note page's layer, read-only.
+    @ViewBuilder private var docLayer: some View {
+        if chrome.docToRead != nil && !NoteHost.sheetStands(chrome: chrome, route: sceneState.route) {
+            FileverseDocLayer(chrome: chrome)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .zIndex(3)
         }
     }
 

@@ -544,6 +544,9 @@ final class ShellChrome {
     /// row's tap, prd §1099: the note is its page, and the keyboard waits
     /// for a tap on the words). Consumed on read, back to typing.
     var noteFocusOnOpen = true
+    /// A Fileverse doc open on its read-only page (prd §1346), drawn as a
+    /// layer over the shell as the note page is.
+    var docToRead: UUID? = nil
     func editNote(_ id: UUID, typing: Bool = true) {
         noteVoiceOnOpen = false
         noteToEdit = id

@@ -6221,6 +6221,12 @@ enum ProbeHooks {
         // whether a token is stored and whose account it names, what the
         // profile read answers, what the practice record parses to, and what a
         // sweep lands.
+        // `-fileverseSync YES` runs the Fileverse seat's pass at mount and
+        // logs its counts (`fileverse|`, prd §1346): portals, live files,
+        // landed, re-read, pruned, failed. Nothing is printed of a doc.
+        Hook(key: "fileverseSync") { _, context in
+            Task { @MainActor in _ = await FileverseLive.pass(context: context) }
+        },
         Hook(key: "duolingoProbe") { _, context in
             Task { @MainActor in await DuolingoLive.diagnose(context: context) }
         },

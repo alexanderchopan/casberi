@@ -404,6 +404,11 @@ enum DemoSeedAll {
                               // the demo can never delete a real vault's
                               // notes — `files:demo/`'s shape, same reason.
                               "obsidian:demo-vault/",
+                              // Fileverse's demo docs (prd §1346): the REAL
+                              // `fileverse:<portal>:<id>` shape on a portal
+                              // named `0xdemo`, which no real contract address
+                              // (0x and forty hex) can ever be.
+                              "fileverse:0xdemo:",
                               // App Store Connect joins the REAL `asc:` shapes
                               // because `WorkStage.ascOutcome` parses the ref
                               // itself. EXACT refs, never a bare "asc:" prefix
@@ -1513,6 +1518,7 @@ enum DemoSeedAll {
         var out: [Thing] = []
         out += photos()
         out += obsidian()
+        out += fileverse()
         out += ownCaptures()
         out += xArchive()
         out += xNotices()
@@ -1611,6 +1617,72 @@ enum DemoSeedAll {
             }
         }
         return out
+    }
+
+    /// Fileverse docs (prd §1346), in the shape a real one lands: a `.note`
+    /// under "Fileverse", the real ref shape on the `0xdemo` portal, the
+    /// doc's page as its door, and the body as `FileverseDoc` writes it, so
+    /// the doc page draws a heading, a list, a checklist and a table.
+    private static func fileverse() -> [Thing] {
+        let docs: [(String, Double, String)] = [
+            ("Quillmark 1.1 — launch plan", 3, """
+            ## What ships
+
+            Sync for **shared notebooks**, and a faster search.
+
+            - Shared notebooks
+              - invite by link
+              - read-only guests
+            - Search that finds a word inside a photo
+
+            ## Who does what
+
+            | Owner | Task | Due |
+            | --- | --- | --- |
+            | Maya | Release notes | Friday |
+            | Theo | App Store pictures | Monday |
+            | Me | Press list | Tuesday |
+
+            ## Before we ship
+
+            - [x] Freeze the build
+            - [x] Beta to the testers
+            - [ ] Answer the review notes
+            - [ ] Post the changelog
+            """),
+            ("Notes on The Timeless Way of Building", 12, """
+            ## The quality without a name
+
+            A place is alive when it lets the people in it be _themselves_.
+
+            > The search which we make for this quality, in our own lives, is the central search of any person.
+
+            ## Patterns I keep coming back to
+
+            1. Light on two sides of every room
+            2. A window place
+            3. Paths and goals
+            """),
+            ("Lisbon trip — packing", 26, """
+            ## Pack
+
+            - [x] Passport
+            - [x] Adapter
+            - [ ] Rain jacket
+            - [ ] The good camera
+
+            ---
+
+            Flight leaves at **7:40**, so the 5:15 train.
+            """),
+        ]
+        return docs.enumerated().map { i, d in
+            row(.note, d.0, source: "Fileverse", ref: "fileverse:0xdemo:\(i + 1)",
+                days: d.1, hour: 19, content: MarkdownBlocks.excerpt(d.2)) { t in
+                t.enrichedText = d.2
+                t.externalLink = "https://docs.fileverse.io"
+            }
+        }
     }
 
     private static func obsidian() -> [Thing] {
@@ -5511,6 +5583,7 @@ enum DemoSeedAll {
     /// name · status line · the one sentence the seat says it can do.
     private static let seatTable: [(String, String, String)] = [
         ("Obsidian", "Synced 4m ago", "Reads the notes in your vault."),
+        ("Fileverse", "Synced 9m ago", "Opens your docs on this phone."),
         ("CardPointers", "Synced 6m ago", "Reads the offers on your cards."),
         ("Files", "Synced 12m ago", "Reads a folder you point it at."),
         ("Dropbox", "Synced 1h ago", "Reads the folder you name."),

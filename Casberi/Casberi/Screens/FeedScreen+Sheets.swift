@@ -467,9 +467,19 @@ extension FeedScreen {
             chrome.editNote(thing.id, typing: false)
             return
         }
+        if Self.opensAsDocPage(thing) {
+            withAnimation(DS.Motion.standard) { chrome.docToRead = thing.id }
+            return
+        }
         let walk = rowWalk
         guard !detail.present(thing, walk: walk) else { return }
         feedSheet = .thing(thing, walk: walk)
+    }
+
+    /// Whether a tap opens this thing on the Fileverse doc page (prd §1346):
+    /// a doc whose words were read (a row landed before its body has none).
+    static func opensAsDocPage(_ thing: Thing) -> Bool {
+        thing.isLive && thing.source == FileverseLive.source && !(thing.enrichedText ?? "").isEmpty
     }
 
     /// Whether a tap opens this thing on the note page (prd §1099).

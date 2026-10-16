@@ -108,6 +108,8 @@ enum BridgeRouter {
         case rocketMoney
         // Privy Home (prd §803c) — a web sign-in, one account.
         case privy
+        // Fileverse (prd §1346) — a web sign-in; the portals' keys are kept.
+        case fileverse
         case twitch
         case slack
         case substack
@@ -267,7 +269,7 @@ enum BridgeRouter {
         /// deciding you were done. Those stay up until they're closed.
         var finishesOnConnect: Bool {
             switch self {
-            case .token, .steam, .obsidian, .files, .dropbox, .spotify, .threads, .duolingo, .privy, .twitch, .slack,
+            case .token, .steam, .obsidian, .files, .dropbox, .spotify, .threads, .duolingo, .privy, .fileverse, .twitch, .slack,
                  .icloudMail, .gmail, .exchange,
                  // Grok is `OpenRouterSetupScreen` structurally (its own
                  // doc-comment says so) and was missed here when it landed
@@ -345,6 +347,7 @@ enum BridgeRouter {
             case .acorns:         AcornsLive.seatID
             case .rocketMoney:    RocketMoneyLive.seatID
             case .privy:          PrivyHomeFeed.seatID
+            case .fileverse:      FileverseAuth.seatID
             case .twitch:         "twitch"
             case .slack:          "slack"
             case .substack:       "substack"
@@ -461,6 +464,7 @@ enum BridgeRouter {
         Row(offer: "Acorns", id: AcornsLive.seatID, destination: .acorns),
         Row(offer: "Rocket Money", id: RocketMoneyLive.seatID, destination: .rocketMoney),
         Row(offer: "Privy", id: PrivyHomeFeed.seatID, destination: .privy),
+        Row(offer: "Fileverse", id: FileverseAuth.seatID, destination: .fileverse),
         Row(offer: "Twitch",    id: "twitch", destination: .twitch),
         Row(offer: "Slack",    id: "slack",   destination: .slack),
         Row(offer: "Substack",  id: "substack", destination: .substack),
@@ -651,6 +655,7 @@ struct BridgeDestinationView: View {
         case .acorns:         AcornsScreen()
         case .rocketMoney:    RocketMoneyScreen()
         case .privy:          PrivyScreen()
+        case .fileverse:      FileverseScreen()
         case .twitch:         TwitchScreen()
         case .slack:          SlackScreen()
         case .substack:       HandleSetupScreen(bridge: .substack)

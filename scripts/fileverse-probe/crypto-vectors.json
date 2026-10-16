@@ -1,0 +1,18 @@
+{
+ "_about": "From vectors.json (Fileverse's own libraries). scalar = randomSecretKey(portalSeed); sharedPoint = compressed ECDH(scalar, the appLock's ephemeral key); publicKey = the scalar's compressed public key.",
+ "scalar": "4EYRVYXIAl9oXqGf4PTtgTIIUzrJwAkaotKDg96Oi88=",
+ "publicKey": "A6gFV3K1UIaUbA1BG9w9pZek/7CH1KFxnWiS8I20jKQ5",
+ "ephemeral": "A5aEeDNabgRYUZbDuUBjzJFQ/3EjhJy0Uh/C+CvV0yg7",
+ "sharedPoint": "Ax+He3DPoJ+rb/ReTo8KbaLz1LxvOjyaXIrMhsS2kWgP",
+ "metadata": "{\"title\":\"eDGRMkGw6CP8knPO4kL9v9yvcZ3c3gnKuM00eKFX9OSAX898wgGw+3kW5z1uNL/CU0bxLRkLS//VmBMlNNcVx9aG\",\"appLock\":{\"lockedFileKey\":\"A5aEeDNabgRYUZbDuUBjzJFQ/3EjhJy0Uh/C+CvV0yg7__n__NMJ5mrbAcaTOw08y__n__QM9T31sZ5CNIk6qr6eij5IWs3JZKGrToCKZYGFdNTDY=__n__eZOQc3fZKhaLGJn8jmur6Q==\"}}",
+ "content": "zQBz4jjH/Sfthny1vY/VNKaUJE8I0apdQFsgjXinleVCzG4khwnppD9Xms5RPQm3YCGFnlfxurgCBswhTjJrklLJ5O3hHC6j6kiYsaddCamzBZxWl9oVypf3g2uurgpWZnWQAuZbtABL7uZJaRrvAQ6DSGRj/tNfRtUWMtnfUc2vULxXM51TAbeeruyOW1Gc+gvdrPBaETyWkpTrDLxRd6U0hUDRIDH+Msi97ctuL/r4FYxr6X1jialDdxKneF4u+q7AF/OtKK34E+vJkE2VQ0YpFig6jnLUQJrESl50vxjFRGZN5addKrMyvQ3GoeNoqkKfKwRdjpY2N/R1/3hAF+hSJc53nyZPE5jL4oyu8vP/w81pgtavY5MGbziJXqbRmYTvX1GAhFtxof3bKva6EgitoSt1+VENbKUBFrDl1ekGfwXSLTTPEj32h2vs9+l9y5JWa5aXIkInl0Egj1sK8cXaPEj1A4EbmcRHsKvt+SO9s3oJ6agNLWJ5vYqD9eM+BlTgeLQ2iLGeDD7GQgjPvhGxPNled5xUcBa+yKe/KwsxeHPbXAq5QFgggO9hu+Ge4/ZVoMQ70JyCWg+nQcR8+UOOaeMRCH1rcFVTpYS7pYq23X8TrjpunPL7rYy6pB2Im6S/6Tf+R9NoCyMEUxsdX+QyV7qJz8h83S4kk/08qHaIadJu4uamugQi4QXR8K/4Lo7RAKWpz9JL7yR39ExeH1iZf3C4pUzUdjGrhTcnCCUafLLAsqWq8cfpqmu8OYuFhxKjCbo91f0Ba4/3qLCq1IvISazZS0gEfyvV3kDOnw7b+zmVSOs39W8/UX9dffWXZqvTvMLE6DshXyVWd0wZ32nsF/Tl3rRbXpPQAK1HmJ0km19jyFVQ4V7rLF0HRadf3TjxT5ZSxbl87Lx+C3YFjTAcBxOFlqD9gjdy4ADXWI1vh5lkp0faCNoJ+2yJikYSgY4WTPHiuvTNvnsD62yd0+Fba3CBqEhorhnv6dc3yRrsejnzBXCK/Bdcab4dfrcVmXLzOtffT4CfYuJmn/IXW6Mk7iYpqIuZ4A84/g9x5bFFF3kvKPYvndqcXrEkGG3MpblIGOxcJMqgy6k+uhzAGKL3Sld6BnJ0jkJgPV3XYZbQijrc6749PDbTBLDyO8+4G5usczZFZ7SsiM9Kdbz3lthaGDX9fSw=",
+ "expect": {
+  "title": "Probe vector — groceries",
+  "lines": [
+   "Heading",
+   "First paragraph with bold.",
+   "one",
+   "two"
+  ]
+ }
+}

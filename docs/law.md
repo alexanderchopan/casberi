@@ -232,7 +232,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1496 of 1562 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1497 of 1563 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1730,6 +1730,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1352 — A card spend finds its other visits by the shop, says its day short, and offers Track only for what recurs
 - §1353 — Every card spend draws the card
 - §1354 — A recurring charge lists every charge; an app's link is named for the app, and only a transaction's is copied
+- §1355 — Fileverse is a seat: read-only, your dDocs opened on the phone as pages in Casberi's type (builds §1339, §1342, §1346…
 
 ## Dead rulings → what replaced them (generated)
 

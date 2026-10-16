@@ -313,6 +313,17 @@ enum BridgeRefresh {
                 _ = await sweepTimed("privy.home") { await PrivyHomeLive.refresh(context: context) }
             }
         }
+        // Fileverse (prd §1346) — a doc changes when you edit it, and each
+        // pass reads the portal's whole log, so it rides the same ten-minute
+        // throttle and by-name pause as the other sign-in seats.
+        let fileversePaused = store.bridges.contains { $0.id == FileverseAuth.seatID && $0.status == .paused }
+        if FileverseAuth.connected, !fileversePaused,
+           force || BridgeRefresh.dueForHeal("fileverse") {
+            let s = slot(); BridgeRefresh.landingTask { @MainActor in
+                await BridgeRefresh.stagger(s)
+                _ = await sweepTimed("fileverse") { await FileverseLive.refresh(context: context) }
+            }
+        }
         // Instagram's live door (prd §726) — the person's own session, read
         // on `dueForHeal`'s ten-minute throttle and NEVER every foreground:
         // Meta flags a busy session harder than X or Spotify do, and the cost

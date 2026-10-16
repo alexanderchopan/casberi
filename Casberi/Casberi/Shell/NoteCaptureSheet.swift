@@ -1214,11 +1214,17 @@ enum NoteHost {
 extension View {
     /// The note page over this sheet while `hosted` (see `NoteHost`). `wrap`
     /// re-injects what the sheet's own environment cannot hand a cover.
+    /// A Fileverse doc's page (prd §1346) rises the same way, for the same
+    /// reason: a layer in the shell would open under the sheet.
     func noteCover<Wrapped: View>(_ chrome: ShellChrome, when hosted: Bool,
-                                  @ViewBuilder wrap: @escaping (NotePageLayer) -> Wrapped) -> some View {
+                                  @ViewBuilder wrap: @escaping (AnyView) -> Wrapped) -> some View {
         fullScreenCover(isPresented: Binding(get: { hosted && chrome.noteOpen },
                                              set: { if !$0 { chrome.noteOpen = false } })) {
-            wrap(NotePageLayer(chrome: chrome)).environment(chrome)
+            wrap(AnyView(NotePageLayer(chrome: chrome))).environment(chrome)
+        }
+        .fullScreenCover(isPresented: Binding(get: { hosted && chrome.docToRead != nil },
+                                              set: { if !$0 { chrome.docToRead = nil } })) {
+            wrap(AnyView(FileverseDocLayer(chrome: chrome))).environment(chrome)
         }
     }
 }

@@ -629,6 +629,10 @@ enum BridgeCatalog {
               needsSetup: true),
         Offer(name: "Obsidian",    tagline: "",        group: "Notes",     connectable: true,
               needsSetup: true),
+        // Fileverse (prd §1339, §1346) — your encrypted dDocs, opened on the
+        // phone with keys read off Fileverse's own sign-in. Read-only.
+        Offer(name: "Fileverse", tagline: "Your encrypted docs", group: "Notes", connectable: true,
+              needsSetup: true, added: day(2026, 10, 16)),
         // Any folder, not just an Obsidian vault (2026-07-27) — Files
         // generalizes the same "point at a folder" mechanism past Markdown to
         // whatever's inside: receipts, scans, a Downloads folder redirected to
@@ -1048,7 +1052,7 @@ enum BridgeSetupMode {
     /// X, Instagram and TikTok sign in since §701/§726/§731 — each keeps its
     /// export as a second act, but the word on the catalogue is the first door.
     static let signInSeats: Set<String> = ["Dropbox", "Slack", "Twitch", "CardPointers", "GitHub", "X", "Spotify",
-        "Instagram", "TikTok", "Threads", "Duolingo", "Acorns", "Rocket Money", "Bankr", "Privy"]
+        "Instagram", "TikTok", "Threads", "Duolingo", "Acorns", "Rocket Money", "Bankr", "Privy", "Fileverse"]
 
     /// A one-time export you point at. Instagram and Snapchat were missed in
     /// this list's first life (2026-07-31) and TikTok would have been missed

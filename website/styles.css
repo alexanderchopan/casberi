@@ -251,6 +251,7 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
 .ai-garmin img { width: 100%; height: 100%; border-radius: inherit; }
 .ai-steam     { background: #1b2838; }
 .ai-obsidian  { background: #7c3aed; }
+.ai-fileverse { background: #fedf0a; }
 .ai-files     { background: #4aa8f0; }
 .ai-dropbox   { background: #0061ff; }
 /* Unlike the monochrome-glyph brands above, this Slack mark is full-bleed

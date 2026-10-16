@@ -27,7 +27,7 @@ enum NoteSheetSource {
     /// `note-sheet-selftest.sh`, so a renamed or added `Notes` seat fails the
     /// build rather than silently losing its anatomy.
     static let sources: Set<String> = [
-        "Obsidian", "Day One", "Apple Journal", "Kindle",
+        "Obsidian", "Day One", "Apple Journal", "Kindle", "Fileverse",
     ]
 
     static func isNotes(_ source: String) -> Bool { sources.contains(source) }

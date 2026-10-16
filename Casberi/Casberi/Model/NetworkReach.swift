@@ -831,6 +831,22 @@ enum NetworkReach {
                  reach: .whenConnected(bridge: "Privy"),
                  purpose: "Signs you in on Privy Home's own page, then reads which apps made you a wallet. Read-only — nothing here can export a key or move money.",
                  hosts: ["home.privy.io", "privy.home.privy.io"]),
+        // Fileverse (prd §1346): signs in on Fileverse's own page and keeps
+        // each portal's read key; then lists the portal's files off its
+        // contract on Gnosis Chain and fetches each one's ciphertext from a
+        // public IPFS gateway. Neither read carries a credential: the chain
+        // and the gateways see a contract address and a CID, and the
+        // documents are opened on this phone.
+        Endpoint(service: "Fileverse",
+                 reach: .whenConnected(bridge: "Fileverse"),
+                 purpose: "Signs you in on Fileverse's own page and keeps the key that opens your docs on this phone. Read-only — nothing here can edit, share or delete a doc.",
+                 hosts: ["docs.fileverse.io"]),
+        Endpoint(service: "Fileverse documents",
+                 reach: .whenConnected(bridge: "Fileverse"),
+                 purpose: "Lists your docs from your Fileverse portal on Gnosis Chain and fetches each one, still encrypted, from IPFS. They are opened on this phone; the hosts see a contract address and a file id, never a word you wrote.",
+                 hosts: ["rpc.gnosischain.com", "rpc.gnosis.gateway.fm", "gnosis.blockscout.com",
+                         "gateway.pinata.cloud", "ipfs.io", "dweb.link"],
+                 credentialed: false),
         Endpoint(service: "Rocket Money",
                  reach: .whenConnected(bridge: "Rocket Money"),
                  purpose: "Signs you in on Rocket Money's own page, then reads your subscriptions and recurring bills as you. Read-only — nothing here can cancel or pay anything.",

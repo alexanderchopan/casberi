@@ -75,6 +75,10 @@ const GATEWAYS = opt("--gateway", null)
     ];
 const LIMIT = Number(opt("--limit", "5"));
 const SHOW = flag("--show");
+// Recovery (prd §1346): keep files the log deleted, and write each opened
+// doc to --out <dir> as text plus its decrypted Yjs update. Local only.
+const INCLUDE_DELETED = flag("--include-deleted");
+const OUT = opt("--out", null);
 
 const enc = new TextEncoder();
 const dec = new TextDecoder();
@@ -495,7 +499,7 @@ const openPortal = async (portal, openers) => {
     counts[e.kind]++;
     const fileId = BigInt(l.topics[1]).toString();
     if (e.kind === "deleted") {
-      files.delete(fileId);
+      if (INCLUDE_DELETED) { if (files.has(fileId)) files.get(fileId).deleted = true; } else files.delete(fileId);
       continue;
     }
     const by = "0x" + l.topics[2].slice(26);
@@ -568,6 +572,15 @@ const openPortal = async (portal, openers) => {
         log(tag, "body", `${body.shape} · ${lines.length} blocks · nodes: ${[...y.kinds].map(([k, c]) => `${k}×${c}`).join(" ")}`);
       } else log(tag, "body", `${body.shape} · ${lines.length} lines`);
       log(tag, "chars", String(lines.reduce((m, s) => m + s.length, 0)));
+      if (OUT) {
+        const { mkdirSync, writeFileSync } = await import("node:fs");
+        mkdirSync(OUT, { recursive: true });
+        const name = `${f.fileId}-${(title ?? "untitled").replace(/[^\w .-]+/g, "_").slice(0, 60)}`;
+        writeFileSync(`${OUT}/${name}.txt`, `${title ?? ""}\n\n${lines.join("\n\n")}\n`);
+        if (body.yjs) writeFileSync(`${OUT}/${name}.yjs`, body.yjs);
+        writeFileSync(`${OUT}/${name}.content.json`, dec.decode(plain));
+        log(tag, "written", `${OUT}/${name}.txt${f.deleted ? " (deleted on chain)" : ""}`);
+      }
       if (SHOW) {
         console.log(`  title: ${title ?? "(none)"}`);
         console.log(`  text:  ${lines.join(" / ").slice(0, 160)}`);

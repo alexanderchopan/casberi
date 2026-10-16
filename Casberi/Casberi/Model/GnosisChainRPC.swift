@@ -3,10 +3,13 @@ import Foundation
 /// Read-only JSON-RPC on Gnosis Chain (chain id 100), through two measured
 /// public hosts — first that answers wins.
 ///
-/// ONE caller: `SafeSigner`'s `getTransactionHash` cross-check on the `gno`
-/// rail (2026-09-07, prd §425 amendment). That file's conduct guard requires
+/// TWO callers: `SafeSigner`'s `getTransactionHash` cross-check on the `gno`
+/// rail (2026-09-07, prd §425 amendment) — that file's conduct guard requires
 /// every host it names to be Safe's own, so a chain read it borrows lives
-/// here, disclosed in `NetworkReach` under "Gnosis Chain".
+/// here, disclosed in `NetworkReach` under "Gnosis Chain" — and the Fileverse
+/// seat's portal log and block dates (prd §1346, `eth_getLogs` and
+/// `eth_getBlockByNumber`, both measured), disclosed under "Fileverse
+/// documents".
 ///
 /// The hosts were measured for the Gnosis Pay seat (2026-07-26, prd §222),
 /// which owned this reader until prd §1318 removed the seat. What that
