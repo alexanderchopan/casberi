@@ -133,6 +133,10 @@ enum CategoryFold {
         "Work":     "laptopcomputer",
         // Day is what needs you next, Life what you made (prd §1049, §1050a).
         "Day":      "calendar.day.timeline.left",
+        // Notes is a category again (prd §1347): the Notes tile's own glyph
+        // (`ScopeTileGlyph.notes`), so the folder, the tab and the section
+        // wear one mark.
+        "Notes":    "note.text",
         // SF Symbols names this pair backwards: `face.smiling` draws FILLED
         // and `.inverse` the outline, so the outline every other category
         // wears is `.inverse` (prd §1198, measured off the rendered glyphs).

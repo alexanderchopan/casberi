@@ -92,7 +92,11 @@ extension FeedScreen {
         for source in sources {
             sectionOf[source] = Self.scrollCategory(ofSource: source) ?? ""
         }
-        var byCategory = Dictionary(grouping: live) { sectionOf[$0.source] ?? "" }
+        // A note of yours, or an entry from an app you write in, stands in
+        // Notes (prd §1347), whatever the app's category.
+        var byCategory = Dictionary(grouping: live) {
+            Pinboard.inRoom($0) ? HomeScope.notesSection : (sectionOf[$0.source] ?? "")
+        }
         // **THE WALLET'S SECTION IS WHAT MOVED (prd §1343, user: "wallet
         // section skip what needs you shows … feed is a feed, not the entire
         // source").** Its moves, never a state (`walletMoves`), and nothing
@@ -157,6 +161,8 @@ extension FeedScreen {
         // Day reads its own rows (`dayFeedRows`): the Feed's list holds none
         // of what is ahead (prd §1343). Day's room on iPad and the Mac draws
         // this section over the room's own rows (prd §1344).
+        case HomeScope.notesSection:
+            notesFeedSection(things, nextEventID: nextEventID)
         case RoomAccounts.dayRoom:
             dayFeedSections(nextEventID: nextEventID,
                             rows: source == RoomAccounts.dayRoom ? things : nil)
@@ -760,10 +766,30 @@ extension FeedScreen {
         // **DAY ADDS FROM ITS HEADER (prd §1343, user: "each category header
         // has a + sign by it so we don't need 'new' and 'all'").** An event,
         // a reminder, an email, a subscription to track.
+        // Then what Day follows by name — a calendar to subscribe to, now
+        // that Calendar is Day's (prd §1347) — set apart under the makes.
         if category == RoomAccounts.dayRoom {
+            var follows = adds
+            if !follows.isEmpty { follows[0].apart = true }
             adds = dayMakes.map { make in
                 SectionAdd(label: make.label, glyph: Self.dayMakeGlyph(make)) { makeInDay(make) }
-            }
+            } + follows
+        }
+        // **NOTES WRITES FROM ITS HEADER (prd §1347, user: "the plus button
+        // just opens notes, same way calendar plus button opens new").** A
+        // note, or one spoken, as the Notes page's New and its hold do.
+        if category == HomeScope.notesSection {
+            adds = [
+                SectionAdd(label: String(localized: "New note"), glyph: ScopeTileGlyph.new) { chrome.newNote += 1 },
+                SectionAdd(label: String(localized: "Voice note"), glyph: "waveform") { chrome.newNoteByVoice() },
+            ]
+        }
+        // **THE WALLET FOLLOWS FROM ITS HEADER (prd §1347, user: "wallet
+        // category will have a plus too to follow more wallets").**
+        if category == CategoryFold.walletRoom {
+            adds = [SectionAdd(label: String(localized: "Watch a wallet"), glyph: ScopeTileGlyph.wallets) {
+                feedSheet = .walletFollow
+            }]
         }
         if category == RoomAccounts.socialRoom {
             if !adds.isEmpty { adds[0].apart = true }

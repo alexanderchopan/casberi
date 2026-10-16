@@ -80,8 +80,9 @@ enum CategoryOrder {
         // keeps its own. Media stands in Reading's slot since Reading folded
         // into it (prd §1204): most of what it holds is still reading.
         // Day files under Life since prd §1239: no slot of its own.
-        // Day is a Feed section again (prd §1343): first, and movable.
-        "Day", "Social", "Work", "Wallet", "Media", "Life",
+        // Day is a Feed section again (prd §1343): first, and movable; Notes
+        // after it (prd §1347), your writing before the feeds.
+        "Day", "Notes", "Social", "Work", "Wallet", "Media", "Life",
         "Agents", "Testnets",
     ]
 

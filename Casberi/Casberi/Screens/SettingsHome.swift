@@ -214,7 +214,11 @@ struct SettingsHome: View {
                let folder = libraryFolders.first(where: { $0.category == category }) {
                 SourcesOpenFolder(folder: folder, has: isYours,
                                   open: { openFromFolder($0) },
-                                  close: { withAnimation(DS.Motion.folder) { openFolder = nil } })
+                                  close: { withAnimation(DS.Motion.folder) { openFolder = nil } },
+                                  // The Notes folder leads with the Notes
+                                  // page, pushed beside Library (prd §1347).
+                                  notesPage: category == BridgeCatalog.notesCategory
+                                      ? { route.push(.notes) } : nil)
                     .transition(.scale(scale: 0.7).combined(with: .opacity))
             }
         }
@@ -657,11 +661,12 @@ struct SettingsHome: View {
         let offers = BridgeCatalog.offers.filter { Self.inLibrary($0) && hit($0.name) }
         let other = String(localized: "Other")
         let byCategory = Dictionary(grouping: offers) { BridgeCatalog.category(of: $0) }
-        return byCategory.keys
-            .sorted {
-                if ($0 == other) != ($1 == other) { return $1 == other }
-                return $0.localizedStandardCompare($1) == .orderedAscending
-            }
+        // THE FEED'S ORDER (prd §1347): Library's folders and the Feed's
+        // sections are one list in one order, so a reorder on the Feed moves
+        // the folders too. A name the order has never heard of sorts A–Z
+        // after it (`CategoryOrder.sorted`), and Other is last.
+        let named = CategoryOrder.sorted(byCategory.keys.filter { $0 != other })
+        return (named + (byCategory[other] == nil ? [] : [other]))
             .map { category in
                 (category, (byCategory[category] ?? []).sorted {
                     $0.name.localizedStandardCompare($1.name) == .orderedAscending

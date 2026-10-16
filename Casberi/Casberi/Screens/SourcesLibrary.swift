@@ -176,12 +176,22 @@ struct SourcesOpenFolder: View {
     let has: (String) -> Bool
     let open: (String) -> Void
     let close: () -> Void
+    /// **THE NOTES FOLDER LEADS WITH YOUR NOTES (prd §1347).** Notes is a
+    /// category again, and its folder is where you manage it: the first
+    /// cell opens the Notes page itself (All · Folders · Voice · New) as a
+    /// page pushed beside Library, the way a setting opens from Casberi's
+    /// folder; the apps you write in follow, as in any folder. Nil for
+    /// every other folder.
+    var notesPage: (() -> Void)? = nil
 
     private let columns = Array(repeating: GridItem(.flexible(), spacing: DS.Space.s2, alignment: .top),
                                 count: 4)
 
     private var apps: some View {
         LazyVGrid(columns: columns, alignment: .center, spacing: DS.Space.s4) {
+            if let notesPage {
+                SourcesFolderNotesPage(action: notesPage)
+            }
             ForEach(folder.apps, id: \.self) { name in
                 SourcesFolderApp(name: name, yours: has(name)) { open(name) }
             }
@@ -229,6 +239,37 @@ struct SourcesOpenFolder: View {
                 .keyboardShortcut(.cancelAction)
                 .hidden()
         }
+    }
+}
+
+/// Your notes, the Notes folder's first cell (prd §1347): the mark a note
+/// of yours wears (`BridgeIcon`'s symbol drawing, §976a) over the page's
+/// name. Never a dot or a plus: it is a page, not an app.
+private struct SourcesFolderNotesPage: View {
+    let action: () -> Void
+
+    var body: some View {
+        Button {
+            DSHaptic.selection()
+            action()
+        } label: {
+            VStack(spacing: DS.Space.s1) {
+                BridgeIcon(name: Pinboard.room, size: DS.Face.seat + 12, symbol: ScopeTileGlyph.notes)
+                Text("Your notes")
+                    .dsText(.label12)
+                    .foregroundStyle(DS.textPrimary)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.7)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .frame(maxWidth: .infinity)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(PressSpring())
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text("Your notes"))
+        .accessibilityAddTraits(.isButton)
     }
 }
 

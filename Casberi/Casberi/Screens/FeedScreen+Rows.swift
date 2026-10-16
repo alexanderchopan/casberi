@@ -683,9 +683,12 @@ extension FeedScreen {
                             live: isLive(thing),
                             // The Notes room has no day dividers, so the
                             // row carries its own time (prd §969).
-                            stamp: Pinboard.isPinnedRoom(source) ? thing.capturedAt : nil,
+                            // The Feed's Notes section draws the same row
+                            // (prd §1347).
+                            stamp: Pinboard.isPinnedRoom(source) || (source == "All" && Pinboard.inRoom(thing))
+                                ? thing.capturedAt : nil,
                             // What a note of yours says (prd §983).
-                            notePreview: Pinboard.isPinnedRoom(source) && Pinboard.isNote(thing),
+                            notePreview: (Pinboard.isPinnedRoom(source) || source == "All") && Pinboard.isNote(thing),
                             imageOnly: imageOnly,
                             wideArt: wideArt)
                 }

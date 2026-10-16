@@ -3,16 +3,17 @@ import SwiftUI
 /// **THE PLACES ARE TABS (prd §1327, user: "i feel like the solution is in
 /// the tab bar that we have been avoiding … we need those 'places'
 /// accessible and to make sense, so they need to be on the tab bar").**
-/// Feed · Wallet · Notes · Library, in that order: the places you manage
-/// (prd §1343, user: "tabs should be places you actually manage things");
-/// Day is the Feed's first section, not a tab. Search stands beside them. Library wears your face,
+/// Feed · Wallet · Library, in that order: the places you manage (prd §1343,
+/// §1347, user: "tabs should be places you actually manage things"); Day and
+/// Notes are Feed sections, and Notes' folders live in Library. Search
+/// stands beside them. Library wears your face,
 /// the octopus until you choose one, and carries the face's broken-app ring.
 ///
 /// Each tab is the place's own `filter.source`, so the tab you are on is
 /// derived from the one switch the shell already has, and the swipe walks the
 /// same five in the same order (`HomeScope.phoneWalk`).
 enum PlaceTab: String, CaseIterable, Identifiable {
-    case feed, wallet, notes, library
+    case feed, wallet, library
 
     var id: String { rawValue }
 
@@ -20,7 +21,6 @@ enum PlaceTab: String, CaseIterable, Identifiable {
         switch self {
         case .feed:    String(localized: "Feed")
         case .wallet:  String(localized: "Wallet")
-        case .notes:   String(localized: "Notes")
         case .library: String(localized: "Library")
         }
     }
@@ -30,7 +30,6 @@ enum PlaceTab: String, CaseIterable, Identifiable {
         switch self {
         case .feed:    "All"
         case .wallet:  CategoryFold.walletRoom
-        case .notes:   Pinboard.room
         case .library: HomeScope.Place.settings.source
         }
     }
@@ -41,7 +40,6 @@ enum PlaceTab: String, CaseIterable, Identifiable {
         switch self {
         case .feed:    ScopeTileGlyph.feed
         case .wallet:  ScopeTileGlyph.wallets
-        case .notes:   ScopeTileGlyph.notes
         case .library: ScopeTileGlyph.apps
         }
     }
@@ -50,8 +48,10 @@ enum PlaceTab: String, CaseIterable, Identifiable {
     /// a room off the five (Testnets) is nobody's tab.
     @MainActor static func current(_ source: String) -> PlaceTab? {
         if HomeScope.isMarkets(source) { return .wallet }
-        // Day is the Feed's section (prd §1343).
+        // Day is the Feed's section (prd §1343); the Notes page is Library's
+        // (prd §1347).
         if source == RoomAccounts.dayRoom { return .feed }
+        if Pinboard.isPinnedRoom(source) { return .library }
         return allCases.first { $0.source == source }
     }
 }

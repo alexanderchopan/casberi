@@ -919,25 +919,43 @@
    "afterControl": "button:^Browse every wallet"
   },
   {
-   "id": "life-calendar-link",
+   "id": "day-calendar-link",
    "covers": [
     "Screens/FeedScreen+Sheets.swift:feedSheet#calendarSubscribe"
    ],
    "launch": [
     "demo",
     "-openRoom",
-    "Life"
+    "Day"
    ],
    "steps": [
     {
-     "tap": "button:=Add to Life"
+     "tap": "button:=Add to Day"
     },
     {
      "tap": "button:^Calendar"
     }
    ],
    "anchor": "button:=Sheet Grabber",
-   "afterSwipe": "button:=Add to Life"
+   "afterSwipe": "button:=Add to Day"
+  },
+  {
+   "id": "feed-reorder",
+   "covers": [
+    "Screens/FeedScreen+Sheets.swift:feedSheet#feedOrder"
+   ],
+   "launch": [
+    "demo"
+   ],
+   "steps": [
+    {
+     "wait": 2
+    },
+    {
+     "tap": "button:^Reorder,"
+    }
+   ],
+   "anchor": "text:=Feed order"
   },
   {
    "id": "person-by-link",
@@ -1508,12 +1526,11 @@
     "Screens/FeedScreen.swift:open"
    ],
    "launch": [
-    "demo"
+    "demo",
+    "-openRoom",
+    "Your notes"
    ],
    "steps": [
-    {
-     "tap": "button:^Notes, Your notes"
-    },
     {
      "hold": "button:^Note, Composer grammar notes"
     },
@@ -1538,12 +1555,11 @@
     "Shell/NoteCaptureSheet.swift:hosted&&chrome.noteOpen"
    ],
    "launch": [
-    "demo"
+    "demo",
+    "-openRoom",
+    "Your notes"
    ],
    "steps": [
-    {
-     "tap": "button:^Notes, Your notes"
-    },
     {
      "tap": "button:^New, Write"
     }
@@ -1558,12 +1574,11 @@
     "Shell/NoteCaptureSheet.swift:linkPickerOpen"
    ],
    "launch": [
-    "demo"
+    "demo",
+    "-openRoom",
+    "Your notes"
    ],
    "steps": [
-    {
-     "tap": "button:^Notes, Your notes"
-    },
     {
      "tap": "button:^New, Write"
     },
@@ -1576,24 +1591,6 @@
    ],
    "anchor": "text:=Link something",
    "afterSwipe": "button:=Format"
-  },
-  {
-   "id": "feed-reorder",
-   "covers": [
-    "Screens/FeedScreen+Sheets.swift:feedSheet#feedOrder"
-   ],
-   "launch": [
-    "demo"
-   ],
-   "steps": [
-    {
-     "wait": 2
-    },
-    {
-     "tap": "button:^Reorder,"
-    }
-   ],
-   "anchor": "text:=Feed order"
   }
  ],
  "exempt": [
@@ -1610,9 +1607,10 @@
     "Shell/MainSurface.swift:route.sheet#node.reach",
     "Shell/MainSurface.swift:route.sheet#node.bridge",
     "Shell/MainSurface.swift:route.sheet#node.l2beatDirectory",
-    "Shell/MainSurface.swift:route.sheet#node.walletbeatDirectory"
+    "Shell/MainSurface.swift:route.sheet#node.walletbeatDirectory",
+    "Shell/MainSurface.swift:route.sheet#node.notes"
    ],
-   "why": "on the phone a page since prd §1321 (HomeRoute.present/stack push it on the pager's stack while no sheet is up); this root rises only on the iPad (Sources, a setting, What this app reaches, an app's page or the Wallet's history, a directory)"
+   "why": "on the phone a page since prd §1321 (HomeRoute.present/stack push it on the pager's stack while no sheet is up); this root rises only on the iPad (Sources, a setting, What this app reaches, an app's page or the Wallet's history, a directory, the Notes page Library's Notes folder opens, prd §1347)"
   },
   {
    "covers": [

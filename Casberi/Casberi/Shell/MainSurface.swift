@@ -797,6 +797,11 @@ struct MainSurface: View {
                 .connectPushWatcher(dest)
         case .project(let name):
             ProjectDetailScreen(projectName: name)
+        case .notes:
+            // The Notes room itself (prd §1347): pushed on the phone and the
+            // Mac, risen in the sheet on the iPad, so it draws as a sheet's
+            // page there.
+            FeedScreen(source: Pinboard.room, isActive: true, inSheet: !HomeRoute.pushes)
         case .walletbeatDirectory:
             WalletbeatDirectoryScreen()
         case .l2beatDirectory:

@@ -122,31 +122,43 @@ struct RoomAccountsTests {
 
     // MARK: - Life and Day (prd §1056)
 
-    /// Life is what you made, kept or did; Day what needs you next; Notes is
-    /// no category, its journals Life's.
-    /// Day's apps file under Life (prd §1239) and Mail lives in Life (prd
-    /// §1231); Day's section is still built from the calendar and to-do
-    /// apps, and an icon of theirs opens Day, never Life. Day is no catalogue
-    /// category, but it is a Feed section, first by default (prd §1343), and
-    /// has no page of its own (§1344).
-    @Test func lifeAndDaySplit() {
+    /// Life is what you made, kept or did; Day what needs you next; Notes
+    /// what you write. The Feed's sections and Library's folders are one list
+    /// (prd §1347), so Day and Notes are catalogue categories again: Day holds
+    /// the calendar and to-do apps, Notes the apps you write in, and Life is
+    /// thinner (Mail stays, §1231). An icon of Day's opens Day, one of Notes'
+    /// opens Notes (`Pinboard.room`, never the word "Notes", §975). Day is a
+    /// Feed section, first by default (prd §1343), with no page of its own
+    /// (§1344). Photos is Media's.
+    @Test func lifeDayAndNotesSplit() {
         let life = Set(RoomAccounts.seats(for: RoomAccounts.lifeRoom).map(\.name))
         let day = Set(RoomAccounts.seats(for: RoomAccounts.dayRoom).map(\.name))
-        for app in ["Apple Journal", "Day One", "Obsidian", "Files", "Dropbox", "Apple Health",
-                    "Duolingo", "Gmail", "iCloud Mail"] {
+        for app in ["Files", "Dropbox", "Apple Health", "Duolingo", "Gmail", "iCloud Mail"] {
             #expect(life.contains(app), "\(app) is in Life")
         }
         #expect(day == ["Calendar", "Reminders", "Todoist", "Cal.com", "Calendly"])
-        #expect(day.isSubset(of: life), "Day's apps file under Life (prd §1239)")
+        #expect(day.isDisjoint(with: life), "Day's apps are Day's, not Life's (prd §1347)")
         for app in day {
+            #expect(BridgeCatalog.category(forSource: app) == "Day", "\(app) files under Day")
             #expect(RoomAccounts.host(ofSource: app)?.room == RoomAccounts.dayRoom, "\(app) opens Day")
             #expect(RoomAccounts.isDaySource(app))
         }
+        for app in ["Obsidian", "Apple Journal", "Day One"] {
+            #expect(!life.contains(app), "\(app) left Life (prd §1347)")
+            #expect(BridgeCatalog.category(forSource: app) == "Notes", "\(app) files under Notes")
+            #expect(RoomAccounts.host(ofSource: app)?.room == Pinboard.room, "\(app) opens Notes")
+        }
+        // Notion is written in (§1235) but stays Work's in the catalogue.
+        #expect(BridgeCatalog.category(forSource: "Notion") == "Work")
+        #expect(RoomAccounts.host(ofSource: "Notion")?.room == RoomAccounts.workRoom)
         #expect(!RoomAccounts.isDaySource("Gmail"))
         #expect(!life.contains("Photos"))
+        #expect(BridgeCatalog.category(forSource: "Photos") == RoomAccounts.mediaRoom)
         let categories = BridgeCatalog.categories.map(\.name)
-        #expect(!categories.contains("Notes"))
-        #expect(!categories.contains("Day"))
+        #expect(categories.contains("Notes"))
+        #expect(categories.contains("Day"))
+        #expect(BridgeCatalog.notesCategory == "Notes")
+        #expect(BridgeCatalog.notesCategory != Pinboard.room, "the room's id is not the category (§975)")
         #expect(CategoryOrder.defaultOrder.first == "Day", "Day leads Feed order (prd §1343)")
     }
 

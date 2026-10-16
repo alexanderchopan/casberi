@@ -84,6 +84,11 @@ enum HomeScope {
     /// The categories the Feed stacks (prd §1208 item 2): every one with a
     /// room, in the dock's order, the Wallet (its own place) and Testnets
     /// (the tray's) excepted.
+    /// The Feed's Notes section (prd §1347): your notes and the apps you
+    /// write in. Its rows are `Pinboard.inRoom`'s; the page behind it is
+    /// `Pinboard.room`, reached from Library.
+    static let notesSection = "Notes"
+
     @MainActor static func feedCategories(chips: [String]) -> [String] {
         let present = Set(chips)
         // **DAY AND THE WALLET ARE FEED SECTIONS (prd §1343, user: "we just
@@ -93,7 +98,7 @@ enum HomeScope {
         // names it: it is gathered, never one app's.
         return CategoryOrder.current.filter {
             $0 != RoomAccounts.testnetsRoom
-                && ($0 == RoomAccounts.dayRoom || present.contains($0))
+                && ($0 == RoomAccounts.dayRoom || $0 == Self.notesSection || present.contains($0))
         }
     }
 

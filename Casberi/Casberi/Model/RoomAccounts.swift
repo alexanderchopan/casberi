@@ -90,9 +90,12 @@ enum RoomAccounts {
     /// own, and every door that named its room lands in the merged room
     /// scoped to it. Nil for a source that is its own room.
     static func host(ofSource source: String) -> (room: String, seat: Seat)? {
-        // Day first: its apps are Life's in the catalogue (prd §1239), and
-        // the Day screen, not Life, is where their rows stand.
-        for room in [dayRoom] + mergedRooms.filter({ $0 != dayRoom }) {
+        // Day's apps are Day's in the catalogue since prd §1347, so no room
+        // has to be asked first. Notes is asked LAST: Obsidian, Apple Journal
+        // and Day One left Life for the Notes category (§1347) and their rows
+        // stand in Notes (§1235), so Notes hosts them; Notion is written in
+        // too, but Work hosts it first, as before.
+        for room in mergedRooms + [Pinboard.room] {
             if let seat = seats(for: room).first(where: { $0.owns(source) }) {
                 return (room, seat)
             }
@@ -216,29 +219,32 @@ enum RoomAccounts {
     /// Podcasts, Steam, Pinterest and Photos.
     private static let media = catalogSeats(mediaRoom)
 
-    /// Life's (prd §1049): Apple Journal, Day One, Obsidian, Files, Dropbox,
-    /// Apple Health with Strava and Garmin, Duolingo, Contacts. Contacts
-    /// lands no row (§916), so it never reaches the menu.
+    /// Life's (prd §1049, thinner since §1347): Gmail and iCloud Mail, Files,
+    /// Dropbox, Apple Health with Strava and Garmin, Duolingo, Contacts.
+    /// Contacts lands no row (§916), so it never reaches the menu. The
+    /// journals and Obsidian are the Notes category's (§1347), the calendars
+    /// and to-dos Day's.
     private static let life = catalogSeats(lifeRoom)
 
     /// Notes' (prd §1235): the apps you write in, picked from their tray
-    /// icons (they stay in Life's and Work's rows), so "Notes · Obsidian".
+    /// icons, so "Notes · Obsidian". Obsidian, Apple Journal and Day One are
+    /// the Notes category's since §1347; Notion stays Work's.
     private static let notes: [Seat] = Pinboard.writtenSources.sorted {
         $0.localizedStandardCompare($1) == .orderedAscending
     }.map { Seat(name: $0, source: $0, holder: nil, group: "", mark: $0) }
 
-    /// Day's (prd §1049): Calendar, Reminders, Todoist, Cal.com, Calendly,
-    /// Gmail and iCloud Mail.
+    /// Day's (prd §1049): Calendar, Reminders, Todoist, Cal.com and Calendly
+    /// (Mail went to Life, §1231). The Day category's apps since §1347, which
+    /// is its one catalogue group.
     private static let day: [Seat] = BridgeCatalog.allOffers.filter { $0.group == dayGroup }
         .map { Seat(name: $0.name, source: $0.name, holder: nil, group: "", mark: $0.name) }
         .sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
 
-    /// The catalogue group whose apps the Day screen is built from (prd
-    /// §1239): calendars and to-dos, filed under Life.
+    /// The catalogue group whose apps the Day section is built from (prd
+    /// §1239): calendars and to-dos, the Day category's (§1347).
     static let dayGroup = "Schedule"
 
-    /// Whether a row is Day's: it stands on the Day screen, never in Life's
-    /// list or the Feed's Life section.
+    /// Whether a row is Day's: it stands in Day's section, never in Life's.
     static func isDaySource(_ source: String) -> Bool {
         day.contains { $0.owns(source) }
     }

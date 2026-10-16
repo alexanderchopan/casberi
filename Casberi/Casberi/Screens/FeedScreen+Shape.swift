@@ -302,6 +302,8 @@ extension FeedScreen {
         // **THE FEED'S WALLET SECTION READS AS THE WALLET (prd §1343, user:
         // "fix rows").** A money row in the Feed keeps the ledger's band, its
         // amount pulled out to the right, as on the Wallet's own lists.
+        // The Feed's Notes section reads as the Notes page (prd §1347).
+        if source == "All", Pinboard.inRoom(thing) { return Shape(source: Pinboard.room) }
         if source == "All", BridgeCatalog.category(forSource: thing.source) == CategoryFold.walletRoom {
             if case .cardPointers = Shape(source: thing.source) { return .cardPointers }
             return .wallet

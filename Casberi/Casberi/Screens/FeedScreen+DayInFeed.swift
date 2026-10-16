@@ -186,3 +186,19 @@ extension FeedScreen {
         }
     }
 }
+
+// **NOTES IS A FEED SECTION (prd §1347, user: "mock up what notes would look
+// like in the feed", then "lets build it").** The reading half: your newest
+// notes and the apps you write in, one plain list as the Notes page draws it
+// (no day headers, the time at the row's edge), capped like every section,
+// then More. The managing half — folders, voice, an old note — is the Notes
+// page, reached from Library.
+extension FeedScreen {
+    @ViewBuilder
+    func notesFeedSection(_ things: [Thing], nextEventID: UUID?) -> some View {
+        let cap = sectionCaps[HomeScope.notesSection] ?? Self.sectionFirstRows
+        let notes = things.filter(\.isLive).sorted { $0.capturedAt > $1.capturedAt }
+        daySection("", Array(notes.prefix(cap)), nextEventID: nextEventID, dated: false, headed: false)
+        if notes.count > cap { sectionMoreRow(HomeScope.notesSection) }
+    }
+}

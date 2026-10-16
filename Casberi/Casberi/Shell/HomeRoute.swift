@@ -80,6 +80,11 @@ final class HomeRoute {
         /// ever placed in `accountsPane`: on a layout with no pane the same
         /// rows raise their sheets, as they always have.
         case settingsPage(SettingsPage)
+        /// THE NOTES PAGE, PUSHED FROM LIBRARY (prd §1347): the Notes folder
+        /// is where Notes is managed, and its first cell opens the room
+        /// (`Pinboard.room`: All · Folders · Voice · New) beside Library, as
+        /// a setting opens beside Casberi's folder (§1321).
+        case notes
     }
     /// The pushed stack — the Mac's only, since prd §1132: on the phone and
     /// the iPad nothing pushes, and every step `place` takes rises in `sheet`.

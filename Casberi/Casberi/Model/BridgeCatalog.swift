@@ -797,7 +797,18 @@ enum BridgeCatalog {
         // catalogue more comprehensible tho?"): Calendar, Reminders, Todoist,
         // Cal.com and Calendly are Life's in the catalogue, the tray and
         // Markets; the Day button is still their screen (`RoomAccounts.day`).
-        ("Life",    "Apple Health", ["Fitness", "People", "Storage", "Learning", "Notes", "Mail", "Schedule"]),
+        // THE FEED'S SECTIONS AND LIBRARY'S FOLDERS ARE ONE LIST (prd §1347,
+        // user: "it'll be confusing to have different categories in feed than
+        // we do in library"; "i'm ok with life thinner"). Day and Notes are
+        // categories again, so the catalogue, Library and the Feed name the
+        // same ones: Day holds the calendars and to-dos (`Schedule`), Notes
+        // the apps you write in (Obsidian, Apple Journal, Day One), and Life
+        // keeps mail, files, workouts, lessons and contacts. The Notes
+        // CATEGORY is the word "Notes"; the Notes ROOM's sentinel stays
+        // `Pinboard.room` ("Your notes", §975), never this name.
+        ("Day",     "Calendar",    ["Schedule"]),
+        ("Notes",   "Obsidian",    ["Notes"]),
+        ("Life",    "Apple Health", ["Fitness", "People", "Storage", "Learning", "Mail"]),
         ("Agents",  "Claude",      ["Agent"]),
         // MEDIA HOLDS READING (prd §1204, user: "reading for example maybe
         // goes with media", then "i like 'play'"): what you read, watch and
@@ -824,6 +835,13 @@ enum BridgeCatalog {
     /// unfiltered.
     static var agentsCategory: String? {
         categories.first { $0.groups.contains("Agent") }?.name
+    }
+
+    /// The Notes category's name (prd §1347), derived for `agentsCategory`'s
+    /// reason: Library's Notes folder leads with the Notes page by it. Never
+    /// the Notes room's id, which is `Pinboard.room` (§975).
+    static var notesCategory: String? {
+        categories.first { $0.groups.contains("Notes") }?.name
     }
 
     /// The catalog category a landed SOURCE belongs to — the join `SourcesTray`

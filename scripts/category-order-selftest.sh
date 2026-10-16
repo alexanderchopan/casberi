@@ -214,7 +214,7 @@ func rawStored() -> [String]? { UserDefaults.standard.stringArray(forKey: "chips
 // became a note of yours with no source of its own (§972). Pinned as a count
 // AND as the absences, so either slot creeping back fails here rather than
 // drawing a folder for a band nothing fills.
-check("eight slots: every catalogue category but Markets, a place in You (§1123, §1151); Reading folded into Media (§1204); Day a Feed section again (§1343)", d.count == 8)
+check("nine slots: every catalogue category but Markets, a place in You (§1123, §1151); Reading folded into Media (§1204); Day and Notes Feed sections (§1343, §1347)", d.count == 9)
 check("Day is a slot, first (a Feed section, §1343)", d.first == "Day")
 check("Reading is not a slot (folded into Media, §1204)", !d.contains("Reading"))
 check("a stored order from before §1204 sheds its Reading slot",
@@ -230,13 +230,13 @@ check("no duplicate slot", Set(d).count == d.count)
 // §1151 (user: "have day first instead of wallet"): the day, then the feeds.
 // Day left the order with its category (§1239) and came back as the Feed's
 // first section (§1343); Social, Work and the Wallet follow it.
-check("Day, then Social, Work and the Wallet (§1151, §1343)",
-      Array(d[0...3]) == ["Day", "Social", "Work", "Wallet"])
+check("Day, Notes, then Social, Work and the Wallet (§1151, §1343, §1347)",
+      Array(d[0...4]) == ["Day", "Notes", "Social", "Work", "Wallet"])
 check("Media follows the Wallet, in Reading's slot (§1151, §1204)",
       d[d.firstIndex(of: "Wallet")! + 1] == "Media")
 check("Life follows Media (§1204)",
       d[d.firstIndex(of: "Media")! + 1] == "Life")
-check("Notes is not a slot (no category, §1056)", !d.contains("Notes"))
+check("Notes is a slot, after Day (a Feed section and a category, §1347)", d.firstIndex(of: "Notes") == 1)
 check("All is not a category slot", !d.contains("All"))
 check("Pinned is not a category slot", !d.contains("Pinned"))
 

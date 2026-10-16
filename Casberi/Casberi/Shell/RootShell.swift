@@ -185,8 +185,6 @@ struct RootShell: View {
                 chrome.goToFeed()
             case .wallet:
                 chrome.openWallet()
-            case .notes:
-                chrome.sourceRequest = tab.source
             case .library:
                 chrome.settingsPick = .sources
                 route.present(.casberi)
