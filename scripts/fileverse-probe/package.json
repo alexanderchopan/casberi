@@ -1,0 +1,15 @@
+{
+  "name": "casberi-fileverse-probe",
+  "private": true,
+  "type": "module",
+  "description": "Can a client read dDocs with the Developer Mode key alone? (prd §669)",
+  "scripts": {
+    "self-test": "node probe.mjs --self-test"
+  },
+  "dependencies": {
+    "@noble/ciphers": "2.4.0",
+    "@noble/curves": "2.4.0",
+    "@noble/hashes": "2.4.0",
+    "yjs": "13.6.33"
+  }
+}
