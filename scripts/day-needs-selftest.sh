@@ -140,7 +140,9 @@ func waits(_ source: String, ref: String?, tags: [String] = [], at: Date = ago(1
     WalletNeedsYou.waiting(source: source, ref: ref, tags: tags, capturedAt: at,
                            safePending: safe, zfi: zfi, now: now)
 }
-check(waits("Safe", ref: "safe:tx:1", safe: ["safe:tx:1"]), "a Safe transaction in the queue needs you")
+check(waits("Safe", ref: "safe:tx:1", tags: ["Your turn"], safe: ["safe:tx:1"]), "a Safe transaction waiting on your signature needs you")
+check(!waits("Safe", ref: "safe:tx:1", safe: ["safe:tx:1"]), "one collecting others' signatures does not (prd §1340)")
+check(!waits("Privacy Pools", ref: "privacypools:dep:1", tags: ["Pending"]), "a deposit under review waits on the screener, not you (prd §1340)")
 check(!waits("Safe", ref: "safe:tx:2", safe: ["safe:tx:1"]), "an executed one does not, whatever its tags")
 check(waits("Privacy Pools", ref: "privacypools:dep:1", tags: ["Needs proof"]), "a deposit waiting on proof needs you")
 check(!waits("Privacy Pools", ref: "privacypools:dep:1", tags: ["Approved"]), "a cleared deposit does not")
@@ -207,11 +209,13 @@ mutate "Work's asks come oldest first" "$DAY" \
 mutate "a price rise stands forever" "$WALLET" \
   'return now.timeIntervalSince(capturedAt) < priceRiseWindow|||return true' || mfail=1
 mutate "an executed Safe transaction still waits" "$WALLET" \
-  'return safePending.contains(ref)|||return true' || mfail=1
+  'return safePending.contains(ref) && |||return true || ' || mfail=1
 mutate "every Wise transfer waits" "$WALLET" \
   'return WiseShape.isStuck(tags: tags)|||return true' || mfail=1
-mutate "an untagged deposit is called waiting" "$WALLET" \
-  'map { !$0.resolved } ?? false|||map { !$0.resolved } ?? true' || mfail=1
+mutate "a deposit under review is called waiting" "$WALLET" \
+  'PrivacyPoolsRoom.state(tags: tags) == .needsProof|||PrivacyPoolsRoom.state(tags: tags).map { !$0.resolved } ?? false' || mfail=1
+mutate "a Safe transaction waiting on others still waits on you" "$WALLET" \
+  'safePending.contains(ref) && tags.contains("Your turn")|||safePending.contains(ref)' || mfail=1
 
 [[ $mfail -eq 0 ]] || { echo "day-needs-selftest: a mutation SURVIVED — a check above proves nothing"; exit 1; }
 echo "day-needs-selftest: OK — the gather, Work's fold-then-ask and the Wallet's one rule all pinned."

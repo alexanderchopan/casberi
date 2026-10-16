@@ -38,6 +38,13 @@ struct WalletCalendar: View {
     /// Reading draws none (prd §1144, user: "i don't think we need to count
     /// the number of feeds per day").
     var counts = true
+    /// Day's box (prd §1340, user: "day gets 1 dot ok but you should be able
+    /// to tap it and see what is there"): every day keeps its number, a day
+    /// with something on it wears one dot under it, and a tap hands the day
+    /// to `onDay`. The faces stay on the Wallet's and the lists' calendars.
+    var dots = false
+    var selected: Date? = nil
+    var onDay: ((Date) -> Void)? = nil
 
     static let weeks = 5
     static let rowHeight: CGFloat = 27
@@ -67,16 +74,85 @@ struct WalletCalendar: View {
                             let index = week * 7 + weekday
                             if index < days.count {
                                 let day = days[index]
-                                cell(day, index: index, today: today,
-                                     marks: byDay[day] ?? [], calendar: cal)
+                                if dots {
+                                    dotCell(day, index: index, today: today,
+                                            marks: byDay[day] ?? [], calendar: cal)
+                                } else {
+                                    cell(day, index: index, today: today,
+                                         marks: byDay[day] ?? [], calendar: cal)
+                                }
                             }
                         }
                     }
                 }
             }
         }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(Text(spoken(start: start, calendar: cal)))
+        .modifier(SpokenWhole(enabled: onDay == nil, label: spoken(start: start, calendar: cal)))
+    }
+
+    /// A figure reads as one sentence; a calendar you can tap keeps its days.
+    private struct SpokenWhole: ViewModifier {
+        let enabled: Bool
+        let label: String
+        func body(content: Content) -> some View {
+            if enabled {
+                content.accessibilityElement(children: .ignore).accessibilityLabel(Text(label))
+            } else {
+                content
+            }
+        }
+    }
+
+    /// A day as a number with one dot under it when anything stands on it;
+    /// today filled in the tint, the picked day in the strong fill.
+    private func dotCell(_ day: Date, index: Int, today: Date, marks: [Mark],
+                         calendar cal: Calendar) -> some View {
+        let isToday = day == today
+        let isPicked = selected.map { cal.isDate($0, inSameDayAs: day) } ?? false
+        let isPast = day < today
+        let number = cal.component(.day, from: day)
+        let label = number == 1 && index > 0
+            ? day.formatted(.dateTime.month(.abbreviated).day())
+            : "\(number)"
+        let face = VStack(spacing: 2) {
+            Text(verbatim: label)
+                .dsText(.dockCaption10)
+                .monospacedDigit()
+                .lineLimit(1)
+                .foregroundStyle(isToday ? Color.white
+                                 : isPicked ? DS.textPrimary
+                                 : (isPast ? DS.textTertiary : DS.textSecondary))
+                .frame(minWidth: Self.faceSize, minHeight: Self.faceSize)
+                .background {
+                    if isToday { Circle().fill(DS.tint) }
+                    else if isPicked { Circle().fill(DS.fillStrong) }
+                }
+            Circle()
+                .fill(marks.contains(where: \.attention) ? DS.attention : DS.brandInk)
+                .frame(width: 4, height: 4)
+                .opacity(marks.isEmpty ? 0 : 1)
+        }
+        .frame(maxWidth: .infinity, minHeight: Self.rowHeight, maxHeight: Self.rowHeight)
+        .contentShape(Rectangle())
+        return Group {
+            if let onDay {
+                Button {
+                    DSHaptic.selection()
+                    onDay(day)
+                } label: { face }
+                .buttonStyle(PressSpring())
+                .accessibilityLabel(Text(spokenDay(day, marks: marks)))
+                .accessibilityAddTraits(isPicked ? .isSelected : [])
+            } else {
+                face
+            }
+        }
+    }
+
+    private func spokenDay(_ day: Date, marks: [Mark]) -> String {
+        let date = day.formatted(.dateTime.weekday(.wide).month(.wide).day())
+        guard !marks.isEmpty else { return date }
+        return "\(date), " + String(localized: "\(marks.count) things")
     }
 
     private func cell(_ day: Date, index: Int, today: Date, marks: [Mark],

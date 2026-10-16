@@ -132,7 +132,8 @@ extension FeedScreen {
                 // calendar that is empty, not the weeks.
                 DayCalendarFigure(title: marks.isEmpty ? String(localized: "Nothing ahead")
                                                        : String(localized: "Nothing on your calendar"),
-                                  when: "", line: "", marks: marks)
+                                  when: "", line: "", marks: marks,
+                                  selected: daySelected, onDay: pickDay)
                     .dsRoomBox()
                     .feedRowBackground()
                     .listRowInsets(.init(top: DS.Space.s2, leading: 0,
@@ -145,7 +146,10 @@ extension FeedScreen {
             DSScopeTiles(sections: DayScope.allCases.filter { !$0.isVerb || !makes.isEmpty },
                          active: chrome.dayScope, attention: [], verbs: [.new]) { picked in
                 guard picked.isVerb else {
-                    withAnimation(DS.Motion.standard) { chrome.dayScope = picked }
+                    withAnimation(DS.Motion.standard) {
+                        chrome.dayScope = picked
+                        daySelected = nil
+                    }
                     return
                 }
                 if makes.count == 1 { makeInDay(makes[0]) } else { dayMakeOpen = true }
@@ -178,6 +182,10 @@ extension FeedScreen {
         }
         // **NEEDS YOU LEADS DAY'S LIST (prd §1327 item 9)**: every place's,
         // above Today, on Day's own page; nothing when nothing waits.
+        // A day picked on the calendar stands in for Day's own list (prd §1340).
+        if let picked = daySelected, !comingUp, !inFeed {
+            dayPickedSection(picked, visible, nextEventID: nextEventID)
+        } else {
         if !inFeed {
             dayNeedsSection(nextEventID: nextEventID)
         }
@@ -189,6 +197,7 @@ extension FeedScreen {
             }
             groupedSections(liftingCover(groups, id: cover?.id, keeping: Set(byDay.keys)),
                             nextEventID: nextEventID, renewals: byDay)
+        }
         }
     }
 }
@@ -481,6 +490,55 @@ extension FeedScreen {
         return bridges.bridges.contains { names.contains($0.name) && $0.status != .paused }
     }
 
+    /// A day tapped on the calendar (prd §1340): it becomes Day's list; the
+    /// same day again, or Day's All tile, gives Day's own list back.
+    func pickDay(_ day: Date) {
+        let cal = Self.groupingCalendar
+        withAnimation(DS.Motion.standard) {
+            if let picked = daySelected, cal.isDate(picked, inSameDayAs: day) {
+                daySelected = nil
+            } else {
+                daySelected = cal.startOfDay(for: day)
+                if chrome.dayScope != .all { chrome.dayScope = .all }
+            }
+        }
+    }
+
+    /// The picked day's list: what the calendar drew a dot for on it, its
+    /// events and due things, then the renewals on it; empty, one line.
+    @ViewBuilder
+    func dayPickedSection(_ day: Date, _ visible: [Thing], nextEventID: UUID?) -> some View {
+        let cal = Self.groupingCalendar
+        let things = visible.filter { thing in
+            thing.isLive && (thing.kind == .event || thing.dueAt != nil)
+                && cal.isDate(Self.dayWhen(thing), inSameDayAs: day)
+        }
+        .sorted { Self.dayWhen($0) < Self.dayWhen($1) }
+        let renewals = SubscriptionsReading.shared.items.filter { item in
+            item.next.map { cal.isDate($0, inSameDayAs: day) } ?? false
+        }
+        let label = dayLabel(day)
+        if things.isEmpty && renewals.isEmpty {
+            Section {
+                Text(label).dsText(.heading20).foregroundStyle(DS.headInk)
+                    .padding(.leading, DSRoomChassis.rowInset)
+                    .padding(.top, DS.Space.s6)
+                    .listRowInsets(EdgeInsets())
+                    .feedRowBackground()
+                    .listRowSeparator(.hidden)
+                Text("Nothing on this day")
+                    .dsText(.body17).foregroundStyle(DS.textSecondary)
+                    .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DSRoomChassis.rowInset,
+                                              bottom: DS.Space.s2, trailing: DSRoomChassis.rowInset))
+                    .feedRowBackground()
+                    .listRowSeparator(.hidden)
+            }
+        } else {
+            groupedSections([(label, things)], nextEventID: nextEventID,
+                            renewals: renewals.isEmpty ? [:] : [label: renewals])
+        }
+    }
+
     /// Box B's row: the cover's tap, press and long press, drawing the next
     /// thing over the calendar (prd §1229).
     func dayAheadRow(_ thing: Thing, marks: [WalletCalendar.Mark]) -> some View {
@@ -500,16 +558,14 @@ extension FeedScreen {
             ?? (allDay ? nil : clock)
         let line = [time, facts.first { $0.action == .map }?.value]
             .compactMap(\.self).joined(separator: " · ")
-        return Button {
-            openThing(thing)
-        } label: {
-            DayCalendarFigure(title: thing.title, when: when, line: line, marks: marks)
-                .dsRoomBox()
-                .modifier(rowEntrance(0))
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(RowPress())
-        .contextMenu {
+        // The title opens the next thing; each day of the grid is its own
+        // door (prd §1340), so the box is no longer one button.
+        return DayCalendarFigure(title: thing.title, when: when, line: line, marks: marks,
+                                 onOpen: { openThing(thing) },
+                                 selected: daySelected, onDay: pickDay)
+            .dsRoomBox()
+            .modifier(rowEntrance(0))
+            .contextMenu {
             RowVerbMenu(thing: thing, room: source, run: { run($0, on: $1) }, onDelete: askDeleteNote,
                         onFile: fileThing, onNewFolder: { folderPrompt = .make(filing: $0) })
         }

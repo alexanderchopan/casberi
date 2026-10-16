@@ -54,16 +54,40 @@ extension FeedScreen {
         #endif
     }
 
-    /// The section: "Needs you", named by what it is rather than a time
-    /// (prd §740), in the day sections' own anatomy, each row the Feed's
-    /// grouped row with its place first on the app's line.
+    /// **ONE CARD, A SECTION PER PLACE (prd §1340, user: "there should be
+    /// section headers like lil cards or something for the different types
+    /// of 'needs you' eg wallet work life", "or one card w/ sections").** The
+    /// Wallet's own card ("Needs you" under its bell), then each place's rows
+    /// under its name, in Day's order; the rows are Day's rows, so the place
+    /// stands once over them rather than on every row's line.
     @ViewBuilder
     func dayNeedsSection(nextEventID: UUID?) -> some View {
-        let places = Dictionary(dayNeedsItems.map { ($0.id, $0.place) }, uniquingKeysWith: { a, _ in a })
         let rows = dayNeeds.live
         if !rows.isEmpty {
-            daySection(Self.needsYouGroup, rows, nextEventID: nextEventID,
-                       dated: false, places: places)
+            let placeOf = Dictionary(dayNeedsItems.map { ($0.id, $0.place) }, uniquingKeysWith: { a, _ in a })
+            var order: [String] = []
+            let _ = rows.forEach { thing in
+                if let place = placeOf[thing.id], !order.contains(place) { order.append(place) }
+            }
+            walletCard(Self.needsYouGroup, glyph: ScopeTileGlyph.alerts) {
+                ForEach(order, id: \.self) { place in
+                    let mine = rows.filter { placeOf[$0.id] == place }
+                    Text(verbatim: place)
+                        .dsText(.label12)
+                        .foregroundStyle(DS.textSecondary)
+                        .padding(.top, place == order.first ? 0 : DS.Space.s3)
+                        .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DSRoomChassis.rowInset,
+                                                  bottom: 0, trailing: DSRoomChassis.rowInset))
+                        .feedRowBackground()
+                        .listRowSeparator(.hidden)
+                    // Keyed by value, read live (`ThingRowKeying`, the liveness rule).
+                    ForEach(Array(keyed(mine).enumerated()), id: \.element.id) { i, item in
+                        if let thing = item.live {
+                            shapedListRow(thing, index: i, nextEventID: nextEventID)
+                        }
+                    }
+                }
+            }
         }
     }
 }

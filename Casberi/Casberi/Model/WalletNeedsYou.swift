@@ -25,9 +25,15 @@ enum WalletNeedsYou {
     static func waiting(source: String, ref: String?, tags: [String], capturedAt: Date,
                         safePending: Set<String>, zfi: ZFiOrders.Book, now: Date) -> Bool {
         guard let ref else { return false }
-        if source == SafeBridge.sourceName { return safePending.contains(ref) }
+        // **ONLY WHAT WAITS ON YOU (prd §1340).** A Safe transaction in the
+        // queue waits on you only when your signature is the one missing
+        // ("Your turn", `SafeRoom.Entry.awaitsYou`): one collecting others'
+        // signatures, or fully signed, waits on someone else. A Privacy Pools
+        // deposit under review waits on the screener; only one asking for
+        // your proof waits on you.
+        if source == SafeBridge.sourceName { return safePending.contains(ref) && tags.contains("Your turn") }
         if source == PrivacyPoolsBridge.sourceName, ref.hasPrefix(PrivacyPoolsRoom.depositPrefix) {
-            return PrivacyPoolsRoom.state(tags: tags).map { !$0.resolved } ?? false
+            return PrivacyPoolsRoom.state(tags: tags) == .needsProof
         }
         // Off chain: a Wise transfer Wise is holding until you act, and a
         // subscription that went up, until the next charge at the new

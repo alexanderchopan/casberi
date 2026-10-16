@@ -494,9 +494,12 @@ struct BandRow: View {
     /// the title ("Joiner site visit · 11:07 AM"), so the one fact the row's
     /// mark cannot say sat in the name while the line under it said the name
     /// of the calendar the mark had already said.
+    ///
+    /// An all-day event has no clock (prd §1264, §1340): its midnight start
+    /// read "12:00 AM" under a birthday.
     private var eventClock: String? {
-        thing.kind == .event
-            ? thing.capturedAt.formatted(date: .omitted, time: .shortened) : nil
+        guard thing.kind == .event, !thing.factList.contains(where: { $0.action == .allDay }) else { return nil }
+        return thing.capturedAt.formatted(date: .omitted, time: .shortened)
     }
 
     /// A voice note's LENGTH (prd §987), on the line where an event's clock

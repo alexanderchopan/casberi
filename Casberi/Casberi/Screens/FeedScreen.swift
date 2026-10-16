@@ -781,6 +781,9 @@ struct FeedScreen: View {
     /// own `.task` (`loadDayNeeds`), never in a body (§628). The items carry
     /// the place each row names; the things are those items, resolved.
     @State var dayNeedsItems: [DayNeeds.Item] = []
+    /// The day picked on Day's calendar (prd §1340): its list stands in for
+    /// Day's own until the day is tapped again or a tile is picked.
+    @State var daySelected: Date? = nil
     @State var dayNeeds: [Thing] = []
     /// The Wallet's Markets tile (prd §1337): Markets' own rows, read in the
     /// tile's `.task` (`loadWalletMarkets`), never in a body (§628). Raw

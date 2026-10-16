@@ -11,28 +11,41 @@ struct DayCalendarFigure: View {
     let when: String
     let line: String
     let marks: [WalletCalendar.Mark]
+    /// The next thing's door: the title and its time open it (the grid's
+    /// days are doors of their own, so the box is no longer one button).
+    var onOpen: (() -> Void)? = nil
+    var selected: Date? = nil
+    var onDay: ((Date) -> Void)? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Space.s1) {
-            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                Text(verbatim: title)
-                    .dsText(.heading24).foregroundStyle(DS.textPrimary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-                Spacer(minLength: DS.Space.s2)
-                Text(verbatim: when)
-                    .dsText(.subhead12).foregroundStyle(DS.headInk)
-                    .lineLimit(1)
+            Button {
+                onOpen?()
+            } label: {
+                VStack(alignment: .leading, spacing: DS.Space.s1) {
+                    HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                        Text(verbatim: title)
+                            .dsText(.heading24).foregroundStyle(DS.textPrimary)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                        Spacer(minLength: DS.Space.s2)
+                        Text(verbatim: when)
+                            .dsText(.subhead12).foregroundStyle(DS.headInk)
+                            .lineLimit(1)
+                    }
+                    if !line.isEmpty {
+                        Text(verbatim: line)
+                            .dsText(.subhead12).foregroundStyle(DS.textTertiary)
+                            .lineLimit(1)
+                    }
+                }
+                .contentShape(Rectangle())
             }
-            if !line.isEmpty {
-                Text(verbatim: line)
-                    .dsText(.subhead12).foregroundStyle(DS.textTertiary)
-                    .lineLimit(1)
-            }
+            .buttonStyle(RowPress())
+            .disabled(onOpen == nil)
             Spacer(minLength: DS.Space.s1)
-            WalletCalendar(marks: marks)
+            WalletCalendar(marks: marks, dots: true, selected: selected, onDay: onDay)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .accessibilityElement(children: .combine)
     }
 }

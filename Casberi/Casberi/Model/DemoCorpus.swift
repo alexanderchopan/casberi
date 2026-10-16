@@ -84,6 +84,17 @@ enum DemoCorpus {
         Date(timeIntervalSinceNow: -hours * 3600)
     }
 
+    /// Today at a clock time, so an event's row and its words agree (prd
+    /// §1340: "Evening run" read 9:49 AM because it was dated "45 minutes
+    /// from now"). `ahead` moves a time already past to tomorrow, for the one
+    /// event the agenda needs ahead of now.
+    private static func today(_ hour: Int, _ minute: Int = 0, ahead: Bool = false) -> Date {
+        let cal = Calendar.current
+        let at = cal.date(bySettingHour: hour, minute: minute, second: 0, of: .now) ?? .now
+        guard ahead, at <= .now else { return at }
+        return cal.date(byAdding: .day, value: 1, to: at) ?? at
+    }
+
     /// Remove exactly the rows this file seeds, and nothing else.
     ///
     /// **`DemoSeedAll` has had `clear()` since it was written and this base
@@ -250,17 +261,17 @@ enum DemoCorpus {
             // ── Loose things (unclustered / admin) ─────────────────────────
             Thing(kind: .event, title: "Team standup",
                   content: "9:30 AM · daily", source: "Calendar",
-                  capturedAt: ago(hours: 0.5), tags: ["Work"]),
+                  capturedAt: today(9, 30), tags: ["Work"]),
             Thing(kind: .event, title: "Dinner with Sam",
                   content: "7:00 PM · Uma", source: "Calendar",
-                  capturedAt: ago(hours: 0.8)),
+                  capturedAt: today(19)),
             Thing(kind: .reminder, title: "Book dentist",
                   source: "Reminders", capturedAt: ago(hours: 34), mark: .todo),
             // A FUTURE event (negative ago) — the agenda shape emphasizes the
             // next upcoming row (mock C2), so the demo needs one ahead of now.
             Thing(kind: .event, title: "Evening run",
                   content: "6:30 PM · with Mira", source: "Calendar",
-                  capturedAt: ago(hours: -0.75), tags: ["Fitness"]),
+                  capturedAt: today(18, 30, ahead: true), tags: ["Fitness"]),
             Thing(kind: .file, title: "receipt-lyft-0630.png",
                   content: "$18.40", source: "You", capturedAt: ago(hours: 42),
                   mark: .saved),
