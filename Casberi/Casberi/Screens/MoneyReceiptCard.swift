@@ -66,7 +66,7 @@ struct MoneySubjectDisc: View {
             AssetMark(name: symbol, size: size)
         case .named(let name):
             // An app the catalogue carries wears its own mark (Lightning's
-            // bolt drew as an "LI" disc, prd §1339); a merchant or a rail
+            // bolt drew as an "LI" disc, prd §1341); a merchant or a rail
             // keeps the asset rule.
             if BridgeIcon.hasMark(name) {
                 BridgeIcon(name: name, size: size, circular: true)
