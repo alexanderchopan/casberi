@@ -70,6 +70,12 @@ struct PlaceTabBar: View {
     let search: () -> Void
 
     private var folded: Bool { chrome.minimized || chrome.roomsTray }
+    /// **THE LABELS WIN OVER THE PAGE (user, 2026-10-15: "it is hard to see
+    /// the icons and words especially when selected").** The glass takes the
+    /// page's own ground as its tint, so a busy row under the bar sinks back
+    /// instead of reading through the words; the pick stands on the strong
+    /// fill, a lighter pill, as iOS 26's bar draws its selected tab.
+    static var lens: Color { DS.page }
     private var size: CGFloat { DSDock.agentSize(fold: chrome.fold) }
 
     var body: some View {
@@ -105,7 +111,7 @@ struct PlaceTabBar: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .background {
                         if tab == current {
-                            Capsule().fill(DS.fillFaint).padding(.vertical, DS.Space.s1)
+                            Capsule().fill(DS.fillStrong).padding(.vertical, DS.Space.s1)
                         }
                     }
                     .contentShape(Rectangle())
@@ -121,7 +127,7 @@ struct PlaceTabBar: View {
         .padding(.horizontal, DS.Space.s1)
         .frame(height: size)
         .frame(maxWidth: .infinity)
-        .dsGlass(cornerRadius: size / 2)
+        .dsGlass(cornerRadius: size / 2, tint: Self.lens)
     }
 
     /// The tab you are on, alone: a tap unfolds the bar, or closes the tray.
@@ -137,7 +143,7 @@ struct PlaceTabBar: View {
         } label: {
             mark(tab, on: true, glyphSize: .body)
                 .frame(width: size, height: size)
-                .dsGlass(cornerRadius: size / 2)
+                .dsGlass(cornerRadius: size / 2, tint: Self.lens)
                 .dsTapTarget(Circle())
         }
         .buttonStyle(PressSpring())
@@ -155,7 +161,7 @@ struct PlaceTabBar: View {
                 .dsGlyph(.body, weight: .semibold)
                 .foregroundStyle(DS.textPrimary)
                 .frame(width: size, height: size)
-                .dsGlass(cornerRadius: size / 2)
+                .dsGlass(cornerRadius: size / 2, tint: Self.lens)
                 .dsTapTarget(Circle())
                 .dsHover()
         }
