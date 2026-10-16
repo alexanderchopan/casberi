@@ -25,6 +25,8 @@ final class FollowingReading {
     private(set) var links: [String: Link] = [:]
     /// The rooms read at least once, so a box can tell "none" from "not yet".
     private(set) var read: Set<Following.Room> = []
+    /// What each room follows, as last read: the rule `owner(of:)` reads.
+    private var followedLists: [Following.Room: [Following.Followed]] = [:]
 
     private init() {}
 
@@ -41,6 +43,34 @@ final class FollowingReading {
             }
         }
         return nil
+    }
+
+    /// **WHAT BROUGHT THIS ROW IN (prd §1325).** The thing you follow that a
+    /// landed row is, by the rule the list counts with (`Following.owner`;
+    /// a GitHub row by its watch's scope), and the room that lists it. Nil
+    /// for a room not read yet: the caller reads it first, from a task.
+    func owner(source: String, handle: String?, ref: String?, link: String?) -> (Following.Item, Following.Room)? {
+        for room in Following.Room.allCases where Self.seats(room).contains(source) {
+            guard let list = followedLists[room] else { continue }
+            var post = Following.Post(source: source, handle: handle, ref: ref, link: link, at: .now)
+            if source == "GitHub" {
+                guard let ref, !ref.hasPrefix("gh:watchrepo:"),
+                      let scope = list.filter({ $0.seat == "GitHub" }).map(\.id).first(where: {
+                          GitHubRowTag.matches(scope: $0, ref: ref, url: link ?? "", authorHandle: handle)
+                      }) else { continue }
+                post.handle = "scope:\(scope)"
+            }
+            if let index = Following.owner(of: post, in: list),
+               let item = items(for: room).first(where: { $0.id == list[index].id }) {
+                return (item, room)
+            }
+        }
+        return nil
+    }
+
+    /// The rooms that could hold what brought a row from this app in.
+    nonisolated static func rooms(forSource source: String) -> [Following.Room] {
+        Following.Room.allCases.filter { seats($0).contains(source) }
     }
 
     func item(_ id: String) -> Following.Item? {
@@ -106,6 +136,7 @@ final class FollowingReading {
         }
         let next = Following.compose(followed, posts: posts)
         if items[room] != next { items[room] = next }
+        followedLists[room] = followed
         // Joined over the two Subscriptions readings as last read
         // (`ServiceLinks.refresh` reads them first, from the box's task).
         let plans = SubscriptionsReading.shared.items

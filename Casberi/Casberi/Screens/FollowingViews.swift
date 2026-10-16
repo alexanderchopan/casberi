@@ -182,6 +182,11 @@ struct FollowingSheet: View {
     @Environment(BridgeStore.self) private var store
     @Environment(ShellChrome.self) private var chrome
     @State private var confirmingStop = false
+    /// Its three newest, read once the sheet is up (prd §1325, §628).
+    @State private var recent: [Thing] = []
+    @State private var opened: Thing?
+    /// Inside a sheet's stack the next step pushes (prd §1315).
+    @Environment(\.dsInSheetStack) private var inSheetStack
 
     private var item: Following.Item? { FollowingReading.shared.item(id) }
 
@@ -193,6 +198,10 @@ struct FollowingSheet: View {
         .task(id: id) {
             await ServiceLinks.shared.refresh(modelContext, seats: store.bridges.map(\.name))
             FollowingReading.shared.refresh(room, context: modelContext)
+            loadRecent()
+        }
+        .dsOneSheet(item: $opened, pushes: { _ in inSheetStack }) { thing in
+            ThingSheetView(thing: thing)
         }
         .confirmationDialog(Text(verbatim: "\(room.stopWord) \(item?.name ?? "")?"), isPresented: $confirmingStop,
                             titleVisibility: .visible) {
@@ -207,7 +216,43 @@ struct FollowingSheet: View {
 
     private func content(_ item: Following.Item) -> some View {
         SubscriptionPage(name: item.name, face: item.avatar, statement: statement(item),
-                         facts: facts(item), doors: doors(item))
+                         facts: facts(item), doors: doors(item)) {
+            // EVERYTHING FROM IT, NEWEST FIRST (prd §1325): a thing's From
+            // card leads here, so the page answers "what is this source".
+            if !recent.live.isEmpty {
+                SheetCard(name: String(localized: "Recent"), glyph: "clock") {
+                    ForEach(recent.keyed) { row in
+                        if let thing = row.live { recentRow(thing, item: item) }
+                    }
+                }
+            }
+        }
+    }
+
+    private func recentRow(_ thing: Thing, item: Following.Item) -> some View {
+        Button { opened = thing } label: {
+            DSFeedRow(name: thing.title,
+                      line: Text(verbatim: thing.capturedAt.formatted(date: .abbreviated, time: .omitted))) {
+                SubscriptionFace(name: item.name, url: item.avatar)
+            } trailing: { EmptyView() }
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(RowPress())
+    }
+
+    /// Its newest three: the app's newest rows that the follow owns, by the
+    /// rule the list counts with (`FollowingReading.owner`).
+    private func loadRecent() {
+        guard let item else { return }
+        let seat = item.seat
+        var d = FetchDescriptor<Thing>(predicate: #Predicate<Thing> { $0.source == seat },
+                                       sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
+        d.fetchLimit = 400
+        let reading = FollowingReading.shared
+        recent = Array(((try? modelContext.fetch(d)) ?? []).live.filter { thing in
+            reading.owner(source: thing.source, handle: thing.authorHandle, ref: thing.sourceRef,
+                          link: thing.content)?.0.id == item.id
+        }.prefix(3))
     }
 
     private func statement(_ item: Following.Item) -> SubscriptionStatement? {

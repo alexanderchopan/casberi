@@ -703,6 +703,15 @@ struct SocialProfileCard: View {
                 Spacer(minLength: 0)
             }
             .frame(minHeight: DS.Hit.min)
+            // **THE PAGE HOLDS ITS CONTROLS (prd §1325).** A post's From card
+            // leads here, so stopping is here: §286's prune, with its Undo.
+            if let chrome {
+                DSDoorRow(icon: "person.badge.minus", title: Text("Unfollow"), role: .destructive) {
+                    SocialUnfollow.perform([(source: shown.source, handle: shown.handle)],
+                                           name: "@\(shown.shortHandle)", context: modelContext, chrome: chrome)
+                    watched = false
+                }
+            }
         } else {
             // **THE ONE ACT, AT THE HEAD RUNG (prd §569).** This card exists
             // to answer "who is this, and do I want their posts" — everything

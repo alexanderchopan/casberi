@@ -1388,6 +1388,59 @@
    "afterControl": "button:=@nils"
   },
   {
+   "id": "thing-from-follow",
+   "covers": [
+    "Screens/ThingSheetView.swift:faceTarget#followed"
+   ],
+   "launch": [
+    "demo"
+   ],
+   "steps": [
+    {
+     "relaunch": [
+      "demo",
+      "-openThing",
+      "A quieter approach"
+     ]
+    },
+    {
+     "tap": "button:^The Verge"
+    }
+   ],
+   "anchor": "text:=Through",
+   "afterSwipe": "button:^Sources, Everything",
+   "control": "button:=Back",
+   "afterControl": "button:^The Verge"
+  },
+  {
+   "id": "following-recent",
+   "covers": [
+    "Screens/FollowingViews.swift:opened"
+   ],
+   "launch": [
+    "demo"
+   ],
+   "steps": [
+    {
+     "relaunch": [
+      "demo",
+      "-openThing",
+      "A quieter approach"
+     ]
+    },
+    {
+     "tap": "button:^The Verge"
+    },
+    {
+     "tap": "button:^The return of local-first"
+    }
+   ],
+   "anchor": "text:=From",
+   "afterSwipe": "button:^Sources, Everything",
+   "control": "button:=Back",
+   "afterControl": "button:^The return of local-first"
+  },
+  {
    "id": "thing-follow-channel",
    "covers": [
     "Screens/ThingSheetView.swift:faceTarget#followChannel"

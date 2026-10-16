@@ -156,6 +156,8 @@ struct ThingSheetView: View {
         case followSite(String)
         /// Follow a video's channel, Media's tray opened on it (§1186).
         case followChannel(seat: String, name: String)
+        /// What you follow that brought this in, its own page (prd §1325).
+        case followed(String, Following.Room)
 
         var id: String {
             switch self {
@@ -165,6 +167,7 @@ struct ThingSheetView: View {
             case .track(let name): return "track:\(name)"
             case .followSite(let host): return "followSite:\(host)"
             case .followChannel(let seat, let name): return "followChannel:\(seat):\(name)"
+            case .followed(let id, let room): return "followed:\(room.rawValue):\(id)"
             }
         }
     }
@@ -210,6 +213,10 @@ struct ThingSheetView: View {
     /// door to the list, or Track a subscription when it is on none.
     @State private var mailList: MailSubscriptions.Item?
     @State private var mailListRead = false
+    /// What you follow that brought this in, and the room listing it (prd
+    /// §1325), read once the sheet is up.
+    @State private var fromFollow: Following.Item?
+    @State private var fromRoom: Following.Room?
     /// The same link, saved earlier from a different source (2026-07-21) —
     /// `CrossSourceEcho` was built for this and briefly wired into a row
     /// anatomy (`ThingRow.swift`) nothing actually rendered, which would
@@ -978,14 +985,10 @@ struct ThingSheetView: View {
                     .padding(.horizontal, DS.Space.s4)
                     .padding(.top, DS.Space.s6)
                     .settleIn(delay: 0.18)
-                // A MAIL'S SUBSCRIPTION (prd §1115): the list it is on, or
-                // the add when it is on none — the person's word puts a
-                // sender with no list header on Day's Subscriptions tile.
+                // A MAIL'S SUBSCRIPTION (prd §1115): the list it is on is a
+                // row in From (§1325); read here, once the sheet is up.
                 if mailHead {
-                    mailSubscriptionDoor
-                        .padding(.horizontal, DS.Space.s4)
-                        .padding(.top, DS.Space.s3)
-                        .settleIn(delay: 0.19)
+                    Color.clear.frame(height: 0)
                         .task(id: thing.id) { readMailList() }
                 }
                 if let check = approvalCheck {
@@ -1159,21 +1162,12 @@ struct ThingSheetView: View {
                 }
                 relatedShelf
                     .padding(.top, DS.Space.s4)
-                // THE NAMES ON A THING ARE PAGES (prd §1209a): its person and
-                // its app, each a door to everything with them.
-                if !ThingPivotDoors.queries(for: thing).isEmpty {
-                    SheetCard(name: String(localized: "More"), glyph: "ellipsis.circle") {
-                        ThingPivotDoors(thing: thing) { query in
-                            dismiss()
-                            Task { @MainActor in
-                                try? await Task.sleep(for: .milliseconds(450))
-                                chrome.pivot = query
-                            }
-                        }
-                    }
+                // WHERE IT CAME FROM (prd §1325, retiring §1209a's More):
+                // what you follow, the person, the list, the app — each a
+                // door to its own page, which holds its controls.
+                fromCard
                     .padding(.horizontal, DS.Space.s4)
                     .padding(.top, DS.Space.s4)
-                }
             }
             .padding(.bottom, DS.Space.s6)
         }
@@ -1439,6 +1433,11 @@ struct ThingSheetView: View {
                 NoteRemindTray(note: thing, item: text)
             case .followChannel(let seat, let name):
                 FollowTrackTray(room: .media, seat: seat, initialQuery: name)
+                    .environment(chrome)
+                    .environment(bridges)
+                    .environment(\.modelContext, modelContext)
+            case .followed(let id, let room):
+                FollowingSheet(id: id, room: room)
                     .environment(chrome)
                     .environment(bridges)
                     .environment(\.modelContext, modelContext)
@@ -3790,23 +3789,163 @@ struct ThingSheetView: View {
         }
     }
 
-    /// The door under a mail (prd §1115). On a list: "Writes about weekly",
-    /// into Day's Subscriptions tile with the list's sheet up (§1113's door,
-    /// the tile's glyph). On none: Track a subscription, the Wallet's words,
-    /// which files every mail from this sender, the ones already here
-    /// included. Nothing while the reading has not answered, and nothing for
-    /// a sender with no address to file by (§83).
+    // MARK: - From (prd §1325)
+
+    /// **WHERE IT CAME FROM, ONE TAP AWAY (prd §1325, user: "today when you
+    /// click 'more' it's kind of confusing").** The names on a thing, each a
+    /// door to that source's own page, which holds its controls: the feed or
+    /// channel you follow (its sheet, Stop following), the person (their card,
+    /// Unfollow), the wallet, the mailing list, then the app. Sources keeps
+    /// the full lists; this is the way in from what you are reading.
     @ViewBuilder
-    private var mailSubscriptionDoor: some View {
-        if mailListRead, let list = mailList {
-            DSDoorRow(icon: SubscriptionWords.planGlyph,
-                      title: Text(verbatim: MailSubscriptions.writesWords(list))) {
-                dismiss()
-                chrome.open(.list(list.id))
+    private var fromCard: some View {
+        let app = fromApp
+        let person = fromPerson
+        let contact = person == nil ? fromContact : nil
+        let wallet = fromWallet
+        let list = mailListRead ? mailList : nil
+        Group {
+            if fromFollow != nil || person != nil || contact != nil || wallet != nil || list != nil || app != nil {
+                SheetCard(name: String(localized: "From"), glyph: "arrow.right.to.line") {
+                    VStack(alignment: .leading, spacing: 0) {
+                        if let item = fromFollow, let room = fromRoom { fromFollowRow(item, room) }
+                        if let person { fromPersonRow(person) }
+                        if let contact { fromContactRow(contact) }
+                        if let wallet { fromWalletRow(wallet) }
+                        if let list { fromListRow(list) }
+                        if let app { fromAppRow(app) }
+                    }
+                }
             }
-        } else {
-            Color.clear.frame(height: 0)
         }
+        .task(id: thing.id) { readFrom() }
+    }
+
+    /// The rooms that list what this app brings in, read where they have not
+    /// been (prd §628: from a task), then the follow that owns this row.
+    private func readFrom() {
+        guard thing.isLive, bridges != nil else { return }
+        let reading = FollowingReading.shared
+        for room in FollowingReading.rooms(forSource: thing.source) where !reading.read.contains(room) {
+            reading.refresh(room, context: modelContext)
+        }
+        let found = reading.owner(source: thing.source, handle: thing.authorHandle,
+                                  ref: thing.sourceRef, link: thing.content)
+        fromFollow = found?.0
+        fromRoom = found?.1
+    }
+
+    /// The app it came through, when it is one the catalogue knows: its own
+    /// page is a place to land (`ShellChrome.openApp`).
+    private var fromApp: String? {
+        guard thing.isLive, thing.source != NoteSheetSource.keptSource,
+              BridgeCatalog.offer(forSource: thing.source) != nil else { return nil }
+        let seat = BridgeCatalog.seatName(forSource: thing.source)
+        return seat.isEmpty ? nil : seat
+    }
+
+    /// The person behind a post: their card, which follows and unfollows.
+    private var fromPerson: SocialProfile? {
+        guard thing.isLive, SocialThread.isSocial(thing.source),
+              let handle = thing.authorHandle, !handle.isEmpty else { return nil }
+        return SocialProfile(source: thing.source, handle: handle, displayName: nil,
+                             bio: nil, avatarURL: thing.authorAvatarURL)
+    }
+
+    /// A named contact behind anything else: everything with them.
+    private var fromContact: PivotQuery? {
+        guard thing.isLive else { return nil }
+        return ThingPivotDoors.queries(for: thing).first {
+            if case .person = $0.subject { return true }
+            return false
+        }
+    }
+
+    /// The wallet a move is on, when it is one in your book.
+    private var fromWallet: AddressBook.Entry? {
+        guard thing.isLive, let address = thing.walletAddress, !address.isEmpty else { return nil }
+        return AddressBook.shared.entry(for: address)
+    }
+
+    private func fromFollowRow(_ item: Following.Item, _ room: Following.Room) -> some View {
+        let state = room == .work ? String(localized: "Watching") : String(localized: "Following")
+        let line = [state, MailSubscriptions.cadenceWords(item.cadenceDays)].compactMap { $0 }
+            .joined(separator: " · ")
+        return fromRow(title: item.name, line: line) {
+            faceTarget = .followed(item.id, room)
+        } lead: {
+            if let avatar = item.avatar, !avatar.isEmpty {
+                RemoteThumb(urlString: avatar, size: DS.Mark.row, fallback: item.seat, circular: true)
+            } else {
+                BridgeIcon(name: item.seat, size: DS.Mark.row)
+            }
+        }
+    }
+
+    private func fromPersonRow(_ profile: SocialProfile) -> some View {
+        let following = SocialPeople.isWatched(handle: profile.handle, source: profile.source)
+        let line = following ? String(localized: "Following") : String(localized: "Not following")
+        return fromRow(title: "@\(profile.shortHandle)", line: line) {
+            faceTarget = .person(profile)
+        } lead: {
+            RemoteThumb(urlString: profile.avatarURL ?? "", size: DS.Mark.row,
+                        fallback: thing.source, circular: true)
+        }
+    }
+
+    private func fromContactRow(_ query: PivotQuery) -> some View {
+        fromRow(title: query.title, line: String(localized: "Contact")) {
+            dismiss()
+            Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(450))
+                chrome.pivot = query
+            }
+        } lead: {
+            DSGlyphLead(glyph: query.doorGlyph, tint: DS.textSecondary)
+                .frame(width: DS.Mark.row, height: DS.Mark.row)
+        }
+    }
+
+    private func fromWalletRow(_ entry: AddressBook.Entry) -> some View {
+        fromRow(title: entry.name, line: WalletStore.shortAddress(entry.address)) {
+            faceTarget = .address(entry)
+        } lead: {
+            BridgeIcon(name: CategoryFold.walletRoom, size: DS.Mark.row)
+        }
+    }
+
+    private func fromListRow(_ list: MailSubscriptions.Item) -> some View {
+        fromRow(title: list.name, line: MailSubscriptions.writesWords(list)) {
+            dismiss()
+            chrome.open(.list(list.id))
+        } lead: {
+            DSGlyphLead(glyph: SubscriptionWords.planGlyph, tint: DS.textSecondary)
+                .frame(width: DS.Mark.row, height: DS.Mark.row)
+        }
+    }
+
+    private func fromAppRow(_ app: String) -> some View {
+        fromRow(title: app, line: String(localized: "App")) {
+            dismiss()
+            chrome.openApp(app)
+        } lead: {
+            BridgeIcon(name: app, size: DS.Mark.row)
+        }
+    }
+
+    /// One door in From: the source's face, its name, one line of fact.
+    private func fromRow<Lead: View>(title: String, line: String, act: @escaping () -> Void,
+                                     @ViewBuilder lead: @escaping () -> Lead) -> some View {
+        Button {
+            DSHaptic.tap()
+            act()
+        } label: {
+            DSPushRowLabel(title: Text(verbatim: title), subtitle: Text(verbatim: line)) { lead() }
+                .padding(.vertical, DS.Space.s2)
+                .frame(minHeight: DS.Hit.min)
+        }
+        .buttonStyle(RowPress())
+        .dsHover()
     }
 
     /// The sender's mailbox: the envelope's address, else the one in the

@@ -435,25 +435,10 @@ private extension View {
     }
 }
 
-/// THE NAMES ON A THING ARE PAGES (prd §1209a): a thing's sheet ends with a
-/// door to everything with its person and everything from its app — the
-/// pivot, from wherever you are reading. Nothing draws for a note of yours
-/// or a thing whose person the app does not know.
-struct ThingPivotDoors: View {
-    let thing: Thing
-    let open: (PivotQuery) -> Void
-
-    var body: some View {
-        let doors = Self.queries(for: thing)
-        if !doors.isEmpty {
-            VStack(alignment: .leading, spacing: 0) {
-                ForEach(doors, id: \.id) { q in
-                    DSDoorRow(icon: q.doorGlyph, title: Text(verbatim: q.offerTitle)) { open(q) }
-                }
-            }
-        }
-    }
-
+/// THE NAMES ON A THING ARE PAGES (prd §1209a): its person, then its app.
+/// The thing sheet's From card (prd §1326) reads the person; nothing comes
+/// back for a note of yours or a thing whose person the app does not know.
+enum ThingPivotDoors {
     @MainActor
     static func queries(for thing: Thing) -> [PivotQuery] {
         guard thing.isLive, thing.source != NoteSheetSource.keptSource else { return [] }

@@ -66550,3 +66550,9 @@ The in-content back rows become the title's first word. Casberi's settings, open
 ## §1325 — Markets reads "Wallet · Markets" (amends §1321 item 4) (user, 2026-10-16: "markets leads back to feed but is part of wallet and should go back there in the title")
 
 1. **Markets' title names its parent, the Wallet** (§1232 made it a Wallet tile): "Wallet · Markets", the Wallet grey, and pressing it lands on the Wallet (`FeedScreen.walkNeighbours`, `roomTitle`). Day and Notes keep "Feed · Day", "Feed · Notes".
+
+## §1326 — A thing names where it came from, and the source's page holds its controls (retires §1209a's More card on the thing sheet; amends §736, §1118) (user, 2026-10-15: "i was confused where to unfollow an rss feed", "'settings' to a user live in sources apps, and sources sections", "i think that is better b/c today when you click 'more' it's kind of confusing", "yes build it")
+
+1. **The thing sheet ends with From, not More.** Each row names a source of the thing and opens that source's own page: what you follow that brought it in (its sheet; `FollowingReading.owner`, the rule the follow list counts with, a GitHub row by its watch's scope), the person behind a post (their card), a named contact (everything with them), the wallet a move is on (its address card), the mailing list (Life's Subscriptions, the list's sheet up), then the app (`ShellChrome.openApp`). A row draws only while its page exists (§83). §736 stands: every row here is a door.
+2. **A source's page holds its controls.** A followed thing's sheet keeps Stop following and gains Recent, its three newest; a person's card gains Unfollow beside Following (§286's prune, with Undo). Long press stays for reading verbs, so nothing is stopped by accident.
+3. **Sources keeps the full lists** (§1317); From is the way in from what you are reading. The mail sheet's standalone list door is folded into From.
