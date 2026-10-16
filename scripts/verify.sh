@@ -1731,6 +1731,10 @@ harness "Live messages self-test" "live messages self-test" "scripts/live-messag
 # 200 that is not a summaries array read as an empty history says "up to date"
 # over a body nobody understood, and today's row never grows.
 harness "Duolingo self-test" "Duolingo self-test" "scripts/duolingo-selftest.sh" "the Duolingo self-test failed — run scripts/duolingo-selftest.sh"
+# Fileverse (prd §1346, §1355): the dDoc read path — Yjs's integration rule,
+# the doc decryption and the chain read, held to recorded vectors, so a reader
+# that reorders racing edits fails here instead of rewriting someone's words.
+harness "Fileverse self-test" "Fileverse self-test" "scripts/fileverse-selftest.sh" "the Fileverse self-test failed — run scripts/fileverse-selftest.sh"
 # Spotify's `spclient` reads (prd §1158) — a 200 of another shape read as an
 # empty history, a timeless play dated by the sweep, a ref that lands an album
 # once ever or every pass, and the ingest drifting back onto `api.spotify.com`,
