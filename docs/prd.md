@@ -66630,3 +66630,11 @@ Mocks: `design/mockups/tab-bar-options.html`, `design/mockups/tab-bar-library.ht
 7. **Not built.** A mail list's day: `MailSubscriptions` reads a median gap (how often) and predicts no day, and a newsletter has no date anyone set, so its day would be a guess (§83). Birthdays and an offer's end date are not dated here either.
 
 **Guards.** `scripts/day-dated-selftest.sh` (in verify.sh beside the Needs you harness): the window's two edges, each place's own day through `Subscriptions.compose` as shipped, the order, the days; 12 mutations, each must compile and be caught; drift guards for the readings, the task, the bill dedupe, Hide balances and New's tray. **Seen:** build only; no simulator was used in this pass, and the new strings are not yet in the String Catalog.
+
+## §1336 — A room's row of tiles speaks at the page's volume (user, 2026-10-16: "the row of buttons now feel small compared to … the rest of the content on the screen", then "ok" to option B of design/mockups/row-tiles-options.html, and "this needs to be global where ever we have those")
+
+1. **Every `DSScopeTiles` row, in every room, draws a 30pt semibold glyph over a 15pt bold word (`DSTextStyle.tile15`), 72pt columns, 70pt tall.** One template, so Feed, Day, Wallet, Notes, Markets and every other room change together.
+2. **No backing, active or not.** The pick fills its glyph (`.symbolVariant(.fill)`) and takes the full ink; the others stand in secondary ink. A plate behind the pick is what made the mocked B+C read as generic buttons.
+3. **No glass.** The row scrolls with the page, so it is content; Liquid Glass stays on the floating layer (the tab bar), and two glass layers would stack at the foot of the screen.
+4. **The row is centred between the box and the list** (`dsRoomTilesListRow`: `s3` above, `s1` below, where it sat flush under the box and `leadGap` above the list).
+

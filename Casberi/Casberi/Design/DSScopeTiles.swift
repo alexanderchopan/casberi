@@ -43,9 +43,10 @@ extension DSTileScope {
 /// **Home is a tile, and there is no back chevron.** Leaving a scope and moving
 /// sideways are one act on a grid that shows both, so one control does both.
 ///
-/// **The tile is the dock's category tile** — a 20pt glyph over the
-/// `dockCaption10` word, 52pt tall, the pick filled in the page's ink (`pickFill`) — so a scope reads
-/// as the same kind of thing as the folder that opened the room. A short last
+/// **The tile speaks at the page's volume** (prd §1336) — a 30pt semibold glyph
+/// over a `tile15` word, 70pt tall, no backing; the pick fills its glyph and
+/// takes the full ink, the rest stand in secondary ink. The row sits centred
+/// between the box above and the list below (`dsRoomTilesListRow`). A short last
 /// row is left-aligned, and every column is the same width in every room.
 ///
 /// **Flat, never raised** (§752b). The first build gave each tile
@@ -140,10 +141,10 @@ struct DSScopeTiles<Scope: DSTileScope>: View {
     private static var armDelay: Duration { .milliseconds(180) }
 
     private static var columns: Int { 4 }
-    private static var stripTileWidth: CGFloat { 52 }
+    private static var stripTileWidth: CGFloat { 72 }
     /// Frozen, like the dock's `CategoryGlyph`, so a wide symbol and a tall one
     /// seat the word at the same height.
-    private static var glyphSize: CGFloat { 20 }
+    private static var glyphSize: CGFloat { 30 }
     /// **THE PICK IS A LIFTED GREY, THE GLYPHS ARE PINK (prd §1252, user:
     /// "white words everywhere but pink glyphs", "pink on every").** Music's
     /// sidebar: every glyph in the hue, every word in the page's ink, the
@@ -156,7 +157,7 @@ struct DSScopeTiles<Scope: DSTileScope>: View {
     /// elsewhere in the app, it's a language — the app categories, and in the
     /// rooms like github").** The glyphs are the app's one vocabulary for a
     /// section; a room's tiles speak it too.
-    private static var tileHeight: CGFloat { 52 }
+    private static var tileHeight: CGFloat { 70 }
 
     /// The boxes', the panels' and the glance tiles' corner (prd §1208l):
     /// one radius for every block on a page.
@@ -291,14 +292,17 @@ struct DSScopeTiles<Scope: DSTileScope>: View {
                 // The dock's glyph, bouncing once when its tile becomes the
                 // pick — in the strip only, the one place these tiles ARE the
                 // dock's (user, 2026-09-17). A room's scope grid stays still.
+                // **THE PICK FILLS ITS GLYPH (prd §1335)**, as a tab bar
+                // marks where you are; the rest stay drawn in line.
                 CategoryGlyph(name: arming == section ? (hold?.glyph ?? section.glyph) : section.glyph,
                               size: Self.glyphSize, isActive: strip && isOn)
+                    .symbolVariant(isOn ? .fill : .none)
                     .rotationEffect(.degrees(isVerb && section.glyph == "plus" ? plusTurn : 0))
                 // A section that wants you says so in its WORD's tone, never
                 // a dot (user, 2026-09-24: "if we want yellow just make the
                 // word Risk yellow"). The picked tile keeps its pick ink.
                 Text(section.label)
-                    .dsText(.dockCaption10)
+                    .dsText(.tile15)
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
                     // NO TILE HAS A BACKING (prd §1267, user: "no backing"): a

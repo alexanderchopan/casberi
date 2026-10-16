@@ -66,8 +66,11 @@ extension View {
 
     /// The tiles' row, straight under the box.
     func dsRoomTilesListRow() -> some View {
-        listRowInsets(.init(top: 0, leading: DSRoomChassis.inset,
-                            bottom: DSRoomChassis.leadGap, trailing: DSRoomChassis.inset))
+        // CENTERED BETWEEN THE BOX AND THE CARD BELOW (prd §1335, user: "they
+        // are close to the top card more than the card below"): the next
+        // section's own spacing already stands under the row.
+        listRowInsets(.init(top: DS.Space.s3, leading: DSRoomChassis.inset,
+                            bottom: DS.Space.s1, trailing: DSRoomChassis.inset))
             .feedRowBackground()
             .listRowSeparator(.hidden)
     }

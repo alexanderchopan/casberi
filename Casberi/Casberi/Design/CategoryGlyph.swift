@@ -28,7 +28,7 @@ struct CategoryGlyph: View {
 
     var body: some View {
         Image(dsSymbol: name)
-            .font(.system(size: size, weight: .medium))
+            .font(.system(size: size, weight: .semibold))
             // A glyph that changes MORPHS (§867) — a held tile's plus into
             // its hold verb's glyph (prd §973). The dock's names never change,
             // so there it never runs.
