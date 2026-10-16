@@ -196,6 +196,8 @@ struct ThingSheetView: View {
     /// (prd §1182).
     @State private var moneyMonth: [Thing] = []
     @State private var moneyMonthTotal: String?
+    /// What every charge at this shop comes to, for what recurs (prd §1354).
+    @State private var moneyEveryTotal: String?
     /// The event's day around it (prd §1182): this event and its neighbours
     /// in a four-hour window, read on the sheet's task (§628).
     @State private var dayBlocks: [EventDaySlice.Block] = []
@@ -648,6 +650,17 @@ struct ThingSheetView: View {
                             MoneyHistoryRows(title: String(localized: "This month"),
                                              rows: moneyMonth.keyed,
                                              trailing: moneyMonthTotal,
+                                             amount: Self.spendAmount,
+                                             onOpen: { walkingToScope = .none; walkingToNote = KeyedThing($0) })
+                                .padding(.top, DS.Space.s6)
+                                .settleIn(delay: 0.12)
+                        } else if moneyCard != nil, moneyRecurs, !moneyHistory.isEmpty {
+                            // **EVERY CHARGE, FOR WHAT RECURS (prd §1354).** A
+                            // monthly plan has one charge a month, so "This month"
+                            // never drew: the earlier charges and what they come to.
+                            MoneyHistoryRows(title: String(localized: "Every charge"),
+                                             rows: ([thing] + moneyHistory).keyed,
+                                             trailing: moneyEveryTotal,
                                              amount: Self.spendAmount,
                                              onOpen: { walkingToScope = .none; walkingToNote = KeyedThing($0) })
                                 .padding(.top, DS.Space.s6)
@@ -3215,6 +3228,8 @@ struct ThingSheetView: View {
             others = ((try? modelContext.fetch(d)) ?? []).filter { $0.isLive && $0.id != id }
         }
         moneyHistoryTotal = others.count
+        let every = ([thing] + others).compactMap(\.priceValue).map(abs).reduce(0, +)
+        moneyEveryTotal = every > 0 ? every.formatted(.currency(code: thing.priceCurrency ?? "USD")) : nil
         let price = thing.priceValue
         moneyRecurs = price.map { p in
             others.contains { other in
@@ -3350,9 +3365,15 @@ struct ThingSheetView: View {
         if let url = page {
             // A Wise transfer's link is its page in Wise, where a stuck one
             // is fixed (prd §1332): named for the app, as a song's is (§1186).
+            // A chain's row opens an explorer; any other app's row opens its
+            // own page, named for where it lands ("Privacy.com", prd §1354).
+            let host = (url.host ?? "").replacingOccurrences(of: "www.", with: "")
+            let site = host.isEmpty ? BridgeCatalog.seatName(forSource: thing.source)
+                : host.prefix(1).uppercased() + host.dropFirst()
             let label = thing.source == "Wise" ? "Wise"
                 // A Safe row's link is its transaction in the Safe app (prd §1334).
-                : thing.source == "Safe" ? "Safe" : String(localized: "Explorer")
+                : thing.source == "Safe" ? "Safe"
+                : thing.source == "Wallet" ? String(localized: "Explorer") : site
             out.append(Verb(label: label, icon: "arrow.up.right", action: .openURL(url)))
         }
         // A World ID grant opens where the next one is claimed (prd §792) —
@@ -3362,7 +3383,9 @@ struct ThingSheetView: View {
             out.append(Verb(label: "World App", icon: "arrow.up.right",
                             action: .openURL(WalletIngest.worldAppGrantsLink)))
         }
-        if page != nil {
+        // A transaction's link is worth copying; an app's account page is not
+        // (prd §1354).
+        if page != nil, thing.source == "Wallet" {
             out.append(Verb(label: "Copy link", icon: "doc.on.doc", action: .copyText))
         }
         return out

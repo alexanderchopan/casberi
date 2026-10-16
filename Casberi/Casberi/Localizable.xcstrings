@@ -8095,6 +8095,34 @@
         }
       }
     },
+    "Every charge" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Todos los cargos"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "すべての請求"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "모든 결제"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "每一笔扣款"
+          }
+        }
+      }
+    },
     "Every company behind every app" : {
       "localizations" : {
         "es" : {

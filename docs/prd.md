@@ -66807,3 +66807,9 @@ Mocks: `design/mockups/tab-bar-options.html`, `design/mockups/tab-bar-library.ht
 2. **The empty "no shop" disc is gone** with the plain receipt it sat on; the title still says "Spent with MetaMask Card" when the chain names no shop.
 3. **A dark card stands off the box on the strong fill**: on `surfaceRaised` it was the box's own colour.
 
+## §1354 — A recurring charge lists every charge; an app's link is named for the app, and only a transaction's is copied (user, 2026-10-16: "ok", of a Privacy.com charge for Netflix with "Explorer" and "Copy", and no history)
+
+1. **What recurs (§1352's test) lists "Every charge"**: this charge and the earlier ones, newest first, with what they come to in the header. A monthly plan has one charge a month, so "This month" never drew.
+2. **A link that is not a chain's opens under the app's own name** ("Privacy.com", read off the link's host); a Wallet row's is still "Explorer", Wise's "Wise", Safe's "Safe".
+3. **Copy link is offered only for a transaction's link** (the Wallet's): an app's account page is not worth copying.
+
