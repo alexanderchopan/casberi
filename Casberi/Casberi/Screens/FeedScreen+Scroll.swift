@@ -784,6 +784,14 @@ extension FeedScreen {
             adds = [
                 SectionAdd(label: String(localized: "New note"), glyph: ScopeTileGlyph.new) { chrome.newNote += 1 },
                 SectionAdd(label: String(localized: "Voice note"), glyph: "waveform") { chrome.newNoteByVoice() },
+                // **EVERY NOTE, FROM THE FEED (2026-10-16, user: "maybe the
+                // plus button should also offer an 'all notes' in its
+                // menu").** The Notes page Library's folder opens, on All.
+                SectionAdd(label: String(localized: "All notes"), apart: true, glyph: ScopeTileGlyph.all) {
+                    chrome.notesScope = .all
+                    chrome.notesFolder = nil
+                    route.push(.notes)
+                },
             ]
         }
         // **THE WALLET FOLLOWS FROM ITS HEADER (prd §1347, user: "wallet

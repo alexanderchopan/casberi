@@ -66768,3 +66768,11 @@ Mocks: `design/mockups/tab-bar-options.html`, `design/mockups/tab-bar-library.ht
 6. **Day and Notes are catalogue categories** (the website's shelves and docs split the same way). Day holds Calendar, Reminders, Todoist, Cal.com and Calendly (group Schedule); Notes holds Obsidian, Apple Journal and Day One, wearing `note.text`. Life is thinner: Mail, Files, Dropbox, Apple Health with Strava and Garmin, Duolingo, Contacts. Photos stays Media's; Notion stays Work's though its rows list in Notes (§1235). The category is the word "Notes"; the room keeps its sentinel `Pinboard.room`, "Your notes" (§975), and `RoomAccounts.host` asks it last.
 7. **Day's + keeps its follows**: the makes first, then a calendar to subscribe to, set apart, since Calendar is Day's.
 
+
+## §1348 — The Feed's Notes + offers All notes (amends §1347 item 3) (user, 2026-10-16: "another thing is how does a user get to 'all' notes, not sure we have a way to do that", then "maybe the plus button should also offer an 'all notes' in its menu")
+
+1. **The Notes section's + menu ends in All notes**, set apart under New note and Voice note (`sectionAdds`). It pushes the Notes page Library's folder opens (`HomeRoute.Node.notes`), landed on All with no folder open.
+2. The header stays unpressable (§1208a): the + is the section's one door, as Day's and the Wallet's are.
+3. **Fixed the same day, no ruling changed:** the Feed's Notes section reads its own rows (`loadNotesFeedRows`), since the Feed's list is the newest 1,200 things and drops the apps you write in; Day's section caps rows, not whole days, and at rest lists only the week its strip shows; the recording Live Activity's Stop is a `LiveActivityIntent`; a voice capture starts once and Stop cancels a start; stray recording activities end at launch; the intro cover never starts the demo over an install with your own apps or things.
+
+**Not built or seen:** written in a Linux container with no Swift toolchain.
