@@ -264,6 +264,7 @@ struct FeedScreen: View {
             _things = Query(filter: #Predicate<Thing> {
                                 $0.source == "You" || $0.source == "Obsidian" || $0.source == "Apple Journal"
                                     || $0.source == "Day One" || $0.source == "Notion"
+                                    || $0.source == "Fileverse"
                             },
                             sort: \Thing.capturedAt, order: .reverse)
         } else if RoomAccounts.mergedRooms.contains(source) {

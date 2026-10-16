@@ -73,7 +73,8 @@ enum Pinboard {
     /// so their tray icons and Markets' packs do not move; their entries
     /// leave those rooms and the Feed and stand in Notes. Read-only, as they
     /// always were: only a note of yours edits, locks or deletes (`isNote`).
-    static let writtenSources: [String] = ["Obsidian", "Apple Journal", "Day One", "Notion"]
+    /// Fileverse's docs too (prd §1346), read-only like the rest.
+    static let writtenSources: [String] = ["Obsidian", "Apple Journal", "Day One", "Notion", "Fileverse"]
 
     static func isWritten(_ source: String) -> Bool { writtenSources.contains(source) }
 
