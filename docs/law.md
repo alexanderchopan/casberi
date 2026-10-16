@@ -232,11 +232,11 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1486 of 1552 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1487 of 1553 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
-- §4 — Persona variables (amended by §1126)
+- §4 — Persona variables (amended by §1126, §1344)
 - §5 — How it works today — Bob (amended by §1208c)
 - §6 — How it works today — Alice (amended by §1113)
 - §7 — Outcomes — Bob (amended by §1100)
@@ -1413,7 +1413,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1053 — The rooms tray is ONE LIST: four You rows led by a tile, then Categories as plain rows
 - §1054 — Agents is one room, built: every agent folds in, New starts a conversation with the agent the menu picked
 - §1055 — Media is one room, built: its apps and Photos fold in, its list is one square grid, and the music shelf is deleted (amended by §1118)
-- §1056 — Life splits into Life and Day, each one room, and Notes is no category, built
+- §1056 — Life splits into Life and Day, each one room, and Notes is no category, built (amended by §1344)
 - §1057 — Work is one room, built: every builder seat folds in, All · Coming up · Watch, and a swipe between merged rooms shows… (amended by §1079, §1080, §1118)
 - §1058 — The rooms tray is a floating glass menu, as Messages draws its attachment menu (amended by §1122)
 - §1059 — The folded rooms' own views are deleted: the kind tiles, Reminders' and Mail's tiles, the Calendar agenda, and every…
@@ -1605,7 +1605,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1226 — Data reads in groups (amended by §1227)
 - §1227 — Data is a box and three cards; the switches stay switches
 - §1228 — A box's jump lands at once, the same way every time
-- §1229 — Day's box is a calendar
+- §1229 — Day's box is a calendar (amended by §1344)
 - §1230 — Follow and subscriptions, one standard
 - §1231 — The Feed's row is Feed · Day · Notes · Sources; Day is a door, mail lives in Life
 - §1232 — Markets is a Wallet tile; Wallet Home is Needs you · Subscriptions · Spending · Cards · Transactions
@@ -1702,7 +1702,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1324 — A verb is a row, a choice is a pill, and nothing else has a backing (amends §190, §613, §640; extends §746, §782)
 - §1325 — Markets reads "Wallet · Markets" (amends §1321 item 4)
 - §1326 — A thing names where it came from, and the source's page holds its controls (retires §1209a's More card on the thing s…
-- §1327 — A tab bar: Feed · Day · Wallet · Notes · Library, and Search (ruled, not built; retires §100's "no tab bar" on the ph…
+- §1327 — A tab bar: Feed · Day · Wallet · Notes · Library, and Search (ruled, not built; retires §100's "no tab bar" on the ph… (amended by §1344)
 - §1328 — The Feed's row is its categories (amends §1327 item 8)
 - §1329 — Day leads with Needs you, gathered from every place (builds §1327 item 9; Wallet's Home and Work's Coming up keep the…
 - §1330 — Spending counts only what you follow, and never a trade; an unfollow takes the Safes it led to (amends §1201 item 2,…
@@ -1715,10 +1715,11 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1337 — Markets opens in place, a Wallet tile like Holdings (amends §1232 item 1, §1325, §1167)
 - §1338 — Holdings, made over: the box says what and how much, a row says one fact, Positions keep one rhythm, NFTs stand under…
 - §1339 — Fileverse reopens for read AND write, and the measured read goes through the documents portal's own key, not the Deve…
-- §1340 — Day: Needs you is one card with a section per place, only what waits on you; the calendar is a dot a day, and a day o…
+- §1340 — Day: Needs you is one card with a section per place, only what waits on you; the calendar is a dot a day, and a day o… (amended by §1344)
 - §1341 — Every money row in the Wallet opens the receipt; a balance is a holding, never a transaction (amends §1232's Transact…
 - §1342 — Fileverse connects by its own sign-in on a page inside Casberi, and keeps each portal's key off that page (builds §13…
 - §1343 — Day is the Feed's first section, not a tab; the Wallet is a Feed section too; tabs are the places you manage (amends…
+- §1344 — Day's own page and Coming up are deleted; every door to Day lands on its Feed section
 - §1345 — The Feed reorders from its own row; Feed order leaves Settings
 
 ## Dead rulings → what replaced them (generated)

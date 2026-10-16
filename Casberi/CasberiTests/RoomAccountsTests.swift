@@ -125,8 +125,10 @@ struct RoomAccountsTests {
     /// Life is what you made, kept or did; Day what needs you next; Notes is
     /// no category, its journals Life's.
     /// Day's apps file under Life (prd §1239) and Mail lives in Life (prd
-    /// §1231); the Day screen is still built from the calendar and to-do
-    /// apps, and an icon of theirs opens Day, never Life.
+    /// §1231); Day's section is still built from the calendar and to-do
+    /// apps, and an icon of theirs opens Day, never Life. Day is no catalogue
+    /// category, but it is a Feed section, first by default (prd §1343), and
+    /// has no page of its own (§1344).
     @Test func lifeAndDaySplit() {
         let life = Set(RoomAccounts.seats(for: RoomAccounts.lifeRoom).map(\.name))
         let day = Set(RoomAccounts.seats(for: RoomAccounts.dayRoom).map(\.name))
@@ -145,7 +147,7 @@ struct RoomAccountsTests {
         let categories = BridgeCatalog.categories.map(\.name)
         #expect(!categories.contains("Notes"))
         #expect(!categories.contains("Day"))
-        #expect(!CategoryOrder.defaultOrder.contains("Day"))
+        #expect(CategoryOrder.defaultOrder.first == "Day", "Day leads Feed order (prd §1343)")
     }
 
     // MARK: - Work (prd §1057)

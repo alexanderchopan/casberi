@@ -145,17 +145,6 @@ extension SocialScope: DSTileScope {
     }
 }
 
-/// The Day room's tiles (prd §1056; Subscriptions, §1111).
-extension DayScope: DSTileScope {
-    var glyph: String {
-        switch self {
-        case .all: return ScopeTileGlyph.all
-        case .comingUp: return ScopeTileGlyph.comingUp
-        case .new: return ScopeTileGlyph.new
-        }
-    }
-}
-
 /// Life's tiles (prd §1231): All, and the mailing lists that came with Mail.
 extension LifeScope: DSTileScope {
     var glyph: String {

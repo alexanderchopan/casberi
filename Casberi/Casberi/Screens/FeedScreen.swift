@@ -536,7 +536,7 @@ struct FeedScreen: View {
     }
 
     /// **A SERVICE DOOR LANDS HERE** (`ShellChrome.serviceDoor`): a plan's
-    /// sheet in the Wallet, a list's in Day, asked for from the service's
+    /// sheet in the Wallet, a list's in Life, asked for from the service's
     /// other page. Keyed on `isActive` for `landGitHubWatch`'s reason (the
     /// pager mounts neighbours). The room reads its own tile's reading first
     /// when the id is not in it yet, and a door whose destination is gone, or
@@ -564,7 +564,10 @@ struct FeedScreen: View {
             }
             route = .subscription(id)
         case .list(let id):
-            guard source == RoomAccounts.dayRoom else { return }
+            // Life holds the lists since prd §1231 (`ShellChrome.open`): its
+            // room on iPad and the Mac, its Feed section on the phone. This
+            // waited for Day's page, which no door reached (prd §1344).
+            guard source == RoomAccounts.lifeRoom || (source == "All" && roomScopeInRoom) else { return }
             if !MailSubscriptionsReading.shared.items.contains(where: { $0.id == id }) {
                 MailSubscriptionsReading.shared.refresh(modelContext)
             }
@@ -764,25 +767,12 @@ struct FeedScreen: View {
     /// New was tapped in the Agents room with no agent picked and several
     /// that can answer (prd §1054).
     @State var askingWhichAgent = false
-    /// New was tapped in the Day room with more than one thing to make
-    /// (prd §1056).
-    @State var dayMakeOpen = false
-    /// Watch was tapped in the Work room with more than one seat that keeps
-    /// a watch (prd §1057).
-    /// Today's shape under Day's next thing (prd §1087). Value types only.
-    /// Day's Coming up tile (prd §1136c): every app's dated rows ahead, read
-    /// in the tile's own `.task`, never in a body (§628).
-    @State var dayComingUp: [Thing] = []
-    /// What Coming up dates without storing (prd §1327 item 3): renewals and
-    /// card payment dates, each place's own reading turned into entries
-    /// (`DayDated`) in the same `.task`. Value types only.
-    @State var dayComingUpDated: [DayDated.Entry] = []
-    /// Day's Needs you (prd §1327 item 9): every place's, gathered in Day's
-    /// own `.task` (`loadDayNeeds`), never in a body (§628). The items carry
-    /// the place each row names; the things are those items, resolved.
+    /// Day's Needs you (prd §1327 item 9): every place's, gathered in the
+    /// screen's `.task` (`loadDayNeeds`), never in a body (§628). The items
+    /// carry the place each row names; the things are those items, resolved.
     @State var dayNeedsItems: [DayNeeds.Item] = []
     /// The day picked on Day's calendar (prd §1340): its list stands in for
-    /// Day's own until the day is tapped again or a tile is picked.
+    /// the section's own until the day is tapped again or Back to today.
     @State var daySelected: Date? = nil
     /// The Feed's Day section shows its five weeks (prd §1343): opened by a
     /// tapped day, closed by Back to today.
@@ -1322,10 +1312,10 @@ struct FeedScreen: View {
             || source == "All"
             // (Markets, never replaced by §1167, is the Wallet's tile since
             // §1337, and the Wallet keeps its chrome above.)
-            // NOR IS DAY, A DOOR ON THE FEED'S ROW SINCE prd §1231: an empty
+            // NOR IS DAY'S ROOM ON iPAD AND THE MAC (prd §1231, §1344): an empty
             // one drew "One inbox for all your apps" and Browse apps (user,
-            // 2026-10-10, on device). Its box is the calendar, drawn empty,
-            // and its first row connects a calendar (prd §1233).
+            // 2026-10-10, on device). It draws the Feed's Day section, its
+            // week of dots empty.
             || source == RoomAccounts.dayRoom
             || pinnedPage
     }
@@ -1515,10 +1505,11 @@ struct FeedScreen: View {
             .onChange(of: chrome.feedJump) { _, _ in settleFeedJump(proxy) }
             // Day's rows and Needs you, read by the Feed itself (prd §1343):
             // the Wallet's section subtracts Needs you even when a jump
-            // passes Day's section before its row has appeared.
+            // passes Day's section before its row has appeared. Day's room
+            // on iPad and the Mac reads Needs you here too, over its own
+            // rows (prd §1344).
             .task(id: dayNeedsKey) {
-                guard source == "All" else { return }
-                loadDayFeedRows()
+                if source == "All" { loadDayFeedRows() }
                 await loadDayNeeds()
             }
             // The face pressed on the Feed (prd §1280): back to its top.
@@ -2085,7 +2076,6 @@ struct FeedScreen: View {
             }
         }
         .modifier(NoteDeleteDialog(note: $deletingNote, onDelete: deleteNote))
-        .modifier(DayMakeDialog(open: $dayMakeOpen, makes: dayMakes, onPick: makeInDay))
         .modifier(WhichAgentDialog(open: $askingWhichAgent, agents: answeringAgents) { provider in
             pickAgent(provider)
             chrome.beginConversation(with: provider.agent)
@@ -2111,23 +2101,6 @@ struct FeedScreen: View {
     @State var feedSectionForward = true
     /// The section a tile's jump just landed on, brightened once (§1208l).
     @State var landedSection: String?
-}
-
-/// What New makes in the Day room (prd §1056).
-private struct DayMakeDialog: ViewModifier {
-    @Binding var open: Bool
-    let makes: [DayMake]
-    let onPick: (DayMake) -> Void
-
-    func body(content: Content) -> some View {
-        content.confirmationDialog(String(localized: "New"), isPresented: $open,
-                                   titleVisibility: .hidden) {
-            ForEach(makes) { make in
-                Button(make.label) { onPick(make) }
-            }
-            Button(String(localized: "Cancel"), role: .cancel) {}
-        }
-    }
 }
 
 /// Which agent New talks to, when the Agents room has no pick (prd §1054).

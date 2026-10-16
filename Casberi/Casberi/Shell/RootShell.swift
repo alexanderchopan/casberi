@@ -247,8 +247,6 @@ struct RootShell: View {
                 if let s = TokensScope.all.first(where: { $0.category == raw }) { chrome.tokensScope = s }
                 // Work's Coming up (prd §1057), for the room sweep.
                 if let s = WorkScope(rawValue: raw), !s.isVerb { chrome.workScope = s }
-                // Day's Subscriptions (prd §1111).
-                if let s = DayScope(rawValue: raw), !s.isVerb { chrome.dayScope = s }
                 // Life's mailing lists (prd §1231; Day's until then).
                 if let s = LifeScope(rawValue: raw) { chrome.lifeScope = s }
                 // Media's Play, Read and Subscriptions (prd §1118, §1204).

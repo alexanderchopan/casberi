@@ -119,7 +119,7 @@ extension FeedScreen {
     /// necessary now"): the name caps its top, every row of the section
     /// stands on the panel's fill, and an end cap rounds its foot.
     @ViewBuilder
-    private func scrollSection(_ category: String, _ things: [Thing], nextEventID: UUID?) -> some View {
+    func scrollSection(_ category: String, _ things: [Thing], nextEventID: UUID?) -> some View {
         let _ = { memo.sectionCounts[category] = things.count }()
         let cap = sectionCaps[category] ?? Self.sectionFirstRows
         panelSection(category, glyph: CategoryFold.glyph(for: category), things: things,
@@ -155,9 +155,11 @@ extension FeedScreen {
     private func categorySections(_ category: String, _ things: [Thing], nextEventID: UUID?) -> some View {
         switch category {
         // Day reads its own rows (`dayFeedRows`): the Feed's list holds none
-        // of what is ahead (prd §1343).
+        // of what is ahead (prd §1343). Day's room on iPad and the Mac draws
+        // this section over the room's own rows (prd §1344).
         case RoomAccounts.dayRoom:
-            dayFeedSections(nextEventID: nextEventID)
+            dayFeedSections(nextEventID: nextEventID,
+                            rows: source == RoomAccounts.dayRoom ? things : nil)
         case RoomAccounts.lifeRoom:
             lifeRoomSections(things, nextEventID: nextEventID)
         case RoomAccounts.workRoom:

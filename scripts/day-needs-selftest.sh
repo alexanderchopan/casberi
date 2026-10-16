@@ -15,7 +15,8 @@
 # Day copied instead of shared drifts from the Wallet's own list, and the two
 # places disagree about what needs you (§837). Only a case-by-case statement
 # can say the merge is right, and the drift guards say both places still ask
-# the one rule.
+# the one rule. Since prd §1344 it also holds Day's own page deleted: its
+# tiles, Coming up and the page's Needs you card, model included.
 #
 # Pure, local, deterministic. Exit non-zero on failure. `--self-test` (and
 # every plain run) also proves each check can fail: plausible mutations of the
@@ -34,9 +35,51 @@ SCREEN="Casberi/Casberi/Screens/FeedScreen+DayNeeds.swift"
 ROOM="Casberi/Casberi/Screens/FeedScreen+MergedRoom.swift"
 WROOM="Casberi/Casberi/Screens/FeedScreen+WalletRoom.swift"
 TABS="Casberi/Casberi/Design/PlaceTabBar.swift"
-for f in "$DAY" "$WALLET" "$FOLD" "$LINKS" "$ASK" "$STAGE" "$SOURCE" "$SCREEN" "$ROOM" "$WROOM" "$TABS"; do
+INFEED="Casberi/Casberi/Screens/FeedScreen+DayInFeed.swift"
+FEED="Casberi/Casberi/Screens/FeedScreen.swift"
+MAKE="Casberi/Casberi/Model/DayMake.swift"
+SECTIONS="Casberi/Casberi/Screens/FeedScreen+DaySections.swift"
+SCROLL="Casberi/Casberi/Screens/FeedScreen+Scroll.swift"
+SHAPED="Casberi/Casberi/Screens/FeedScreen+ShapedSections.swift"
+GLYPHS="Casberi/Casberi/Screens/ScopeTileGlyphs.swift"
+CHROME="Casberi/Casberi/Shell/ShellChrome.swift"
+RSHELL="Casberi/Casberi/Shell/RootShell.swift"
+SURFACE="Casberi/Casberi/Shell/MainSurface.swift"
+for f in "$DAY" "$WALLET" "$FOLD" "$LINKS" "$ASK" "$STAGE" "$SOURCE" "$SCREEN" "$ROOM" "$WROOM" "$TABS" \
+         "$INFEED" "$FEED" "$MAKE" "$SECTIONS" "$SCROLL" "$SHAPED" "$GLYPHS" "$CHROME" "$RSHELL" "$SURFACE"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
+
+# --- Day's own page stays deleted (prd §1344) -------------------------------
+# Day is the Feed's section (§1343); its page, its All · Coming up · New tiles,
+# Coming up (and the DayDated entries only it drew), the page's calendar box
+# and its Needs you card are gone, model included (CLAUDE.md: a feature
+# deleted from the surface is deleted from the model). A file coming back, or
+# a file that would wire it back naming it, fails here. Paths are literal so
+# verify.sh's skip cache re-runs this the moment one of them exists again.
+DELETED_FILES=(
+  "Casberi/Casberi/Model/DayScope.swift"
+  "Casberi/Casberi/Model/DayDated.swift"
+  "Casberi/Casberi/Screens/FeedScreen+ComingUp.swift"
+  "Casberi/Casberi/Screens/FeedScreen+DayDated.swift"
+  "Casberi/Casberi/Screens/DayCalendarFigure.swift"
+)
+WATCHED=("$ROOM" "$SCREEN" "$INFEED" "$FEED" "$SECTIONS" "$SCROLL" "$SHAPED" "$GLYPHS" "$CHROME" "$RSHELL" "$SURFACE" "$MAKE")
+GONE='DayScope|dayScope|dayComingUp|ComingUpWeek|DayDated|dayDatedRow|DayCalendarFigure|dayAheadRow|dayNeedsSection|DayMakeDialog|dayMakeOpen|dayHasApp|func pickDay[(]'
+day_page_gone() { # $1 a root holding the paths above; prints the breach and fails
+  local root="$1" f
+  for f in "${DELETED_FILES[@]}"; do
+    [[ -e "$root/$f" ]] && { echo "✗ $f is back — Day has no page, no tiles and no Coming up (prd §1344)"; return 1; }
+  done
+  for f in "${WATCHED[@]}"; do
+    if grep -v '^[[:space:]]*//' "$root/$f" | grep -Eq "$GONE"; then
+      echo "✗ $f names Day's deleted page again ($(grep -v '^[[:space:]]*//' "$root/$f" | grep -Eo "$GONE" | head -1)) — prd §1344"
+      return 1
+    fi
+  done
+  return 0
+}
+day_page_gone . || exit 1
 
 # --- drift guards -----------------------------------------------------------
 # Wiring the compiled functions cannot prove about themselves.
@@ -48,10 +91,24 @@ grep -q 'DayNeeds.workAsks(' "$SOURCE" \
   || { echo "✗ Day no longer reads Work's asks through the fold"; exit 1; }
 grep -q 'DayNeeds.gather(' "$SCREEN" \
   || { echo "✗ Day no longer gathers the places into one list"; exit 1; }
-grep -q 'dayNeedsSection(nextEventID:' "$ROOM" \
-  || { echo "✗ Day's list no longer leads with Needs you"; exit 1; }
-grep -q '.task(id: dayNeedsKey)' "$ROOM" \
+grep -q 'dayNeedsRows(nextEventID: nextEventID, limit: window.needs)' "$INFEED" \
+  || { echo "✗ Day's section no longer leads with Needs you (prd §1343)"; exit 1; }
+grep -q '.task(id: dayNeedsKey)' "$FEED" \
   || { echo "✗ Day's Needs you is no longer read in a task (prd §628)"; exit 1; }
+# Every door to Day lands on its section (prd §1344): on the phone a door
+# naming Day is a Feed section, and Day's room on iPad and the Mac draws that
+# one section, never a page of its own.
+grep -q 'scrollSection(RoomAccounts.dayRoom, visible, nextEventID: nextEventID)' "$ROOM" \
+  || { echo "✗ Day's room on iPad and the Mac no longer draws the Feed's Day section (prd §1344)"; exit 1; }
+grep -q 'source != CategoryFold.walletRoom && source != RoomAccounts.testnetsRoom' "Casberi/Casberi/Model/HomeScope.swift" \
+  && ! grep -q 'source != RoomAccounts.dayRoom' "Casberi/Casberi/Model/HomeScope.swift" \
+  || { echo "✗ a door naming Day no longer lands on its Feed section (HomeScope.isFeedSection, prd §1343)"; exit 1; }
+# Day's + (prd §1343): Track a subscription, in the verb's own word, raising
+# the Wallet's own tray (moved here from day-dated-selftest.sh, §1344).
+grep -q 'case .subscription: return SubscriptionWords.track' "$MAKE" \
+  || { echo "✗ Day's + lost Track a subscription, or its verb is not SubscriptionWords.track"; exit 1; }
+grep -q 'feedSheet = .subscriptionAdd' "$ROOM" \
+  || { echo "✗ Day's Track a subscription no longer raises the Wallet's own tray"; exit 1; }
 grep -q 'WorkAsk.needsYou(' "$ROOM" \
   || { echo "✗ Work's own Coming up lost its Needs you — each place keeps its own"; exit 1; }
 grep -q 'walletDaySections(\[(Self.needsYouGroup' "Casberi/Casberi/Screens/FeedScreen+WalletHome.swift" \
@@ -217,5 +274,35 @@ mutate "a deposit under review is called waiting" "$WALLET" \
 mutate "a Safe transaction waiting on others still waits on you" "$WALLET" \
   'safePending.contains(ref) && tags.contains("Your turn")|||safePending.contains(ref)' || mfail=1
 
+# The stays-deleted guard (prd §1344), over a copy of the watched files: a
+# deleted file brought back, and a watched file naming the page again, must
+# each be caught; the untouched copy must pass, or the two catches prove nothing.
+guard_root() { # a fresh copy of every watched file under $TMP/root
+  rm -rf "$TMP/root"
+  local f
+  for f in "${WATCHED[@]}"; do mkdir -p "$TMP/root/$(dirname "$f")"; cp "$f" "$TMP/root/$f"; done
+}
+guard_mutate() { # $1 label, then a command run inside the copy
+  local label="$1"; shift
+  guard_root
+  ( cd "$TMP/root" && eval "$*" )
+  if day_page_gone "$TMP/root" >/dev/null; then
+    echo "  ✗ mutation SURVIVED: $label"
+    return 1
+  fi
+  echo "  ✓ mutation caught: $label"
+}
+guard_root
+day_page_gone "$TMP/root" >/dev/null \
+  || { echo "  ✗ the stays-deleted guard fails an untouched copy — it would catch anything"; mfail=1; }
+guard_mutate "Coming up's file comes back" \
+  'mkdir -p Casberi/Casberi/Screens && echo "extension FeedScreen {}" > Casberi/Casberi/Screens/FeedScreen+ComingUp.swift' || mfail=1
+guard_mutate "DayScope comes back" \
+  'echo "enum DayScope { case all, comingUp, new }" >> Casberi/Casberi/Model/DayMake.swift' || mfail=1
+guard_mutate "the chrome holds Day's tile again" \
+  'echo "    var dayScope = 0" >> Casberi/Casberi/Shell/ShellChrome.swift' || mfail=1
+guard_mutate "the page's Needs you card comes back" \
+  'echo "    func dayNeedsSection(nextEventID: UUID?) {}" >> Casberi/Casberi/Screens/FeedScreen+DayNeeds.swift' || mfail=1
+
 [[ $mfail -eq 0 ]] || { echo "day-needs-selftest: a mutation SURVIVED — a check above proves nothing"; exit 1; }
-echo "day-needs-selftest: OK — the gather, Work's fold-then-ask and the Wallet's one rule all pinned."
+echo "day-needs-selftest: OK — the gather, Work's fold-then-ask, the Wallet's one rule and Day's deleted page all pinned."

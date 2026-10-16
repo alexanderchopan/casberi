@@ -2661,15 +2661,13 @@ struct MainSurface: View {
         }
         // WHAT OPENS ON TOP IS AN APP (prd §1321, retiring §1208l's rule for
         // places, user: "if it is a page then we can do the nav better"):
-        // Day and your notes are pages beside the Feed, under the band, as
-        // Sources and Settings are (Markets is the Wallet's tile, §1337,
-        // redirected before this); an app picked from the tray, or
-        // one that lives in Day (Calendar, Reminders…), still rises over the
-        // page you are on.
-        if label != RoomAccounts.dayRoom, label != Pinboard.room,
-           RoomAccounts.host(ofSource: label).map({
-            HomeScope.isFeedSection($0.room) || $0.room == RoomAccounts.dayRoom
-        }) == true {
+        // your notes are a page beside the Feed, under the band, as Sources
+        // and Settings are (Markets is the Wallet's tile, §1337, redirected
+        // before this; Day is the Feed's section, §1343, and has no page,
+        // §1344); an app picked from the tray, or one that lives in Day
+        // (Calendar, Reminders…), still rises over the page you are on.
+        if label != Pinboard.room,
+           RoomAccounts.host(ofSource: label).map({ HomeScope.isFeedSection($0.room) }) == true {
             let sheet = ShellChrome.AppSheet(source: label)
             chrome.routedRequest = label
             // A sheet still closing refuses a second one (UIKit's "already

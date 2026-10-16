@@ -12,9 +12,11 @@ import SwiftData
 // in its header (`sectionAdds`): an event, a reminder, an email, a plan.
 extension FeedScreen {
 
+    /// `rows` is Day's room's own list on iPad and the Mac (prd §1344);
+    /// in the Feed, nil: the section reads its own (`dayFeedRows`).
     @ViewBuilder
-    func dayFeedSections(nextEventID: UUID?) -> some View {
-        let all = dayFeedRows.live
+    func dayFeedSections(nextEventID: UUID?, rows: [Thing]? = nil) -> some View {
+        let all = (rows ?? dayFeedRows).live
         let visible = all
         let marks = dayCalendarMarks(all)
         let now = Date.now
@@ -29,7 +31,7 @@ extension FeedScreen {
             dayPickedSection(picked, visible, nextEventID: nextEventID)
         } else {
             let window = dayFeedWindow(visible)
-            dayNeedsRows(nextEventID: nextEventID, named: true, limit: window.needs)
+            dayNeedsRows(nextEventID: nextEventID, limit: window.needs)
             // The window is the section's own (needs and days counted
             // together); the days draw uncapped inside it, then More.
             let _ = { Self.sectionCapNow = (RoomAccounts.dayRoom, Int.max) }()

@@ -4,22 +4,23 @@ import SwiftData
 // NEEDS YOU STAYS IN EACH PLACE, AND DAY GATHERS THEM ALL (prd §1327 item 9,
 // user: "we DO need to leave 'needs you' in wallet … so they'd see it twice
 // anyways"). The Wallet's Home keeps its stuck transfer and price rise, Work's
-// Coming up its asks; Day leads its list with every one, each row naming the
+// Coming up its asks; Day's section leads its rows with every one, under the
 // place it came from, opening what it opens there. Empty, nothing is drawn.
-// The Day tab wears no badge (user: "day tab does not wear a badge!").
+// Day wears no badge (user: "day tab does not wear a badge!").
 extension FeedScreen {
 
-    /// What Day's read is keyed on: any change to the corpus, on Day's own
-    /// page only. Everywhere else `.idle`, so the task does nothing there.
+    /// What Day's read is keyed on: any change to the corpus, on the Feed,
+    /// whose Day section holds it (prd §1343), and on Day's room on iPad and
+    /// the Mac, which draws that section (prd §1344). Everywhere else
+    /// `.idle`, so the task does nothing there.
     var dayNeedsKey: Corpus.Revision {
-        // Day's page, and the Feed, whose Day section holds it (prd §1343).
         guard source == RoomAccounts.dayRoom || source == "All" else { return .idle }
         return Corpus.revision(in: modelContext)
     }
 
     /// Every place's Needs you, read off the rows each place reads, through
     /// each place's own rule (`WalletNeedsYou`, `WorkAsk`), gathered newest
-    /// first (`DayNeeds.gather`). Runs from Day's `.task`, never a body.
+    /// first (`DayNeeds.gather`). Runs from the screen's `.task`, never a body.
     @MainActor
     func loadDayNeeds() async {
         guard source == RoomAccounts.dayRoom || source == "All" else {
@@ -55,26 +56,15 @@ extension FeedScreen {
         #endif
     }
 
-    /// **ONE CARD, A SECTION PER PLACE (prd §1340, user: "there should be
-    /// section headers like lil cards or something for the different types
-    /// of 'needs you' eg wallet work life", "or one card w/ sections").** The
-    /// Wallet's own card ("Needs you" under its bell), then each place's rows
-    /// under its name, in Day's order; the rows are Day's rows, so the place
-    /// stands once over them rather than on every row's line.
+    /// **A SECTION PER PLACE (prd §1340, user: "there should be section
+    /// headers like lil cards or something for the different types of 'needs
+    /// you' eg wallet work life").** Each place's rows under "Needs you ·
+    /// Wallet", in Day's order, inside the Day section, which is itself the
+    /// card (prd §1343); the rows are Day's rows, so the place stands once
+    /// over them rather than on every row's line. Day's page and its card
+    /// form are deleted (prd §1344).
     @ViewBuilder
-    func dayNeedsSection(nextEventID: UUID?) -> some View {
-        if !dayNeeds.live.isEmpty {
-            walletCard(Self.needsYouGroup, glyph: ScopeTileGlyph.alerts) {
-                dayNeedsRows(nextEventID: nextEventID, named: false)
-            }
-        }
-    }
-
-    /// Each place's rows under its name: inside Day's card ("Wallet"), or
-    /// in the Feed's Day section, which is itself the card, as "Needs you ·
-    /// Wallet" (prd §1343).
-    @ViewBuilder
-    func dayNeedsRows(nextEventID: UUID?, named: Bool, limit: Int? = nil) -> some View {
+    func dayNeedsRows(nextEventID: UUID?, limit: Int? = nil) -> some View {
         let all = dayNeeds.live
         let rows = limit.map { Array(all.prefix($0)) } ?? all
         let placeOf = Dictionary(dayNeedsItems.map { ($0.id, $0.place) }, uniquingKeysWith: { a, _ in a })
@@ -83,7 +73,7 @@ extension FeedScreen {
         }
         ForEach(order, id: \.self) { place in
             let mine = rows.filter { placeOf[$0.id] == place }
-            Text(verbatim: named ? "\(Self.needsYouGroup) · \(place)" : place)
+            Text(verbatim: "\(Self.needsYouGroup) · \(place)")
                 .dsText(.label12)
                 .foregroundStyle(DS.textSecondary)
                 .padding(.top, place == order.first ? 0 : DS.Space.s3)

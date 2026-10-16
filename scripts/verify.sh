@@ -2049,10 +2049,9 @@ harness "Work ask self-test" "work ask self-test" "scripts/work-ask-selftest.sh"
 
 # Day gathers every place's Needs you (prd §1327 item 9): newest first, a thing
 # once, Work folded before it asks, and the Wallet's one rule shared with Home.
+# It also holds Day's own page, its tiles and Coming up deleted (prd §1344;
+# Coming up's DayDated and its self-test went with them).
 harness "Day needs self-test" "day needs self-test" "scripts/day-needs-selftest.sh" "the day needs self-test failed — run scripts/day-needs-selftest.sh"
-# Day's Coming up carries what the app computes (prd §1327 item 3): each
-# plan's renewal and each card's payment date, on its own place's day.
-harness "Day dated self-test" "day dated self-test" "scripts/day-dated-selftest.sh" "the day dated self-test failed — run scripts/day-dated-selftest.sh"
 harness "Reading room self-test" "reading room self-test" "scripts/reading-room-selftest.sh" "the reading room self-test failed — run scripts/reading-room-selftest.sh"
 harness "Social to-you self-test" "social to-you self-test" "scripts/social-toyou-selftest.sh" "the social to-you self-test failed — run scripts/social-toyou-selftest.sh"
 harness "Wallet makeover self-test" "wallet makeover self-test" "scripts/wallet-makeover-selftest.sh" "the wallet makeover self-test failed — run scripts/wallet-makeover-selftest.sh"

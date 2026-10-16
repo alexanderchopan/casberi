@@ -50,7 +50,7 @@ extension FeedScreen {
         }
     }
 
-    /// What New can make: only what a connected seat makes, and only where
+    /// What Day's + can make (prd §1343): only what a connected seat makes, and only where
     /// its app answers (§83).
     var dayMakes: [DayMake] {
         let seats = Set(RoomAccounts.connected(in: RoomAccounts.dayRoom, names: connectedSeatNames)
@@ -99,106 +99,15 @@ extension FeedScreen {
         if let url { openExternal(url) }
     }
 
-    /// The Day room: the cover (what is next, else the newest), All · New,
-    /// the menu, then the days.
+    /// **DAY HAS NO PAGE OF ITS OWN (prd §1344, after §1343).** On the
+    /// phone every door to Day lands on the Feed's Day section
+    /// (`HomeScope.isFeedSection`). iPad and the Mac keep rooms rather than
+    /// the Feed's sections (§1208), so Day's room there draws that one
+    /// section and nothing else: the same panel and +, the week and the next
+    /// thing, Needs you, the days and More, over the room's own rows.
     @ViewBuilder
-    func dayRoomSections(_ visible: [Thing], nextEventID: UUID?, heroShown: Bool) -> some View {
-        let renewals = dayRenewals()
-        let groups = dayRoomGroups(visible, renewals: renewals)
-        let now = Date.now
-        let next = visible.filter { $0.isLive && Self.dayWhen($0) >= now }
-            .min { Self.dayWhen($0) < Self.dayWhen($1) }
-        let comingUp = chrome.dayScope == .comingUp
-        let anyCover = heroShown || comingUp ? nil : (next ?? visible.first { $0.isLive })
-        // In the Feed's scroll (prd §1208c) only the timeline earns the box:
-        // a plain cover stands down and its thing stays a row.
-        let inFeed = Self.sectionCapNow != nil
-        let marks = dayCalendarMarks(visible)
-        let timeline = anyCover.map { $0.id == next?.id && !marks.isEmpty } ?? false
-        let cover = inFeed && !timeline ? nil : anyCover
-        // Box B (prd §1087): the next thing over today's shape, while there
-        // is a next thing and a day to draw; else the cover, as every room.
-        // Subscriptions draws its own figure in the box (prd §1111).
-        if comingUp {
-            Section { dayComingUpBox }
-        } else if let cover, cover.id == next?.id, !marks.isEmpty {
-            Section { dayAheadRow(cover, marks: marks) }
-        } else if let cover {
-            Section { ledeListRow(cover) }
-        } else if !heroShown && !inFeed {
-            // **AN EMPTY DAY DRAWS ITS CALENDAR, EMPTY (prd §769, §1233).**
-            Section {
-                // Renewals may still stand on it (prd §1260): then it is the
-                // calendar that is empty, not the weeks.
-                DayCalendarFigure(title: marks.isEmpty ? String(localized: "Nothing ahead")
-                                                       : String(localized: "Nothing on your calendar"),
-                                  when: "", line: "", marks: marks,
-                                  selected: daySelected, onDay: pickDay)
-                    .dsRoomBox()
-                    .feedRowBackground()
-                    .listRowInsets(.init(top: DS.Space.s2, leading: 0,
-                                         bottom: DSRoomChassis.leadGap, trailing: 0))
-                    .listRowSeparator(.hidden)
-            }
-        }
-        let makes = dayMakes
-        Section {
-            DSScopeTiles(sections: DayScope.allCases.filter { !$0.isVerb || !makes.isEmpty },
-                         active: chrome.dayScope, attention: [], verbs: [.new]) { picked in
-                guard picked.isVerb else {
-                    withAnimation(DS.Motion.standard) {
-                        chrome.dayScope = picked
-                        daySelected = nil
-                    }
-                    return
-                }
-                if makes.count == 1 { makeInDay(makes[0]) } else { dayMakeOpen = true }
-            }
-            // The renewals on the calendar (prd §1260) read the Wallet's own
-            // reading, from here, since Day may open before the Wallet has.
-            .task(id: walletSubscriptionsKey) { await SubscriptionsReading.shared.refresh(modelContext) }
-            // Every place's Needs you (prd §1327 item 9), read from here on
-            // Day's own page; the Feed's Day section reads none.
-            .task(id: dayNeedsKey) { await loadDayNeeds() }
-            .feedRowBackground()
-            .listRowSeparator(.hidden)
-            .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
-                                      bottom: DSRoomChassis.leadGap,
-                                      trailing: DSRoomChassis.inset))
-        }
-        roomScopeSection
-        // With no calendar or to-do app connected, the first row is the act
-        // that fills the box (prd §1166's rule, §1233).
-        if !dayHasApp && !inFeed {
-            Section {
-                DSDoorRow(icon: "plus", title: Text("Connect a calendar")) {
-                    openOutsideSheet { route.openSetup(forOffer: "Calendar") }
-                }
-                .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.rowInset,
-                                          bottom: 0, trailing: DSRoomChassis.rowInset))
-                .feedRowBackground()
-                .listRowSeparator(.hidden)
-            }
-        }
-        // **NEEDS YOU LEADS DAY'S LIST (prd §1327 item 9)**: every place's,
-        // above Today, on Day's own page; nothing when nothing waits.
-        // A day picked on the calendar stands in for Day's own list (prd §1340).
-        if let picked = daySelected, !comingUp, !inFeed {
-            dayPickedSection(picked, visible, nextEventID: nextEventID)
-        } else {
-        if !inFeed {
-            dayNeedsSection(nextEventID: nextEventID)
-        }
-        if comingUp {
-            dayComingUpSections(nextEventID: nextEventID)
-        } else {
-            let byDay = Dictionary(grouping: renewals) {
-                dayLabel(Self.groupingCalendar.startOfDay(for: $0.next ?? .now))
-            }
-            groupedSections(liftingCover(groups, id: cover?.id, keeping: Set(byDay.keys)),
-                            nextEventID: nextEventID, renewals: byDay)
-        }
-        }
+    func dayRoomSections(_ visible: [Thing], nextEventID: UUID?) -> some View {
+        scrollSection(RoomAccounts.dayRoom, visible, nextEventID: nextEventID)
     }
 }
 
@@ -484,26 +393,6 @@ extension FeedScreen {
         }
     }
 
-    /// Whether any of Day's apps is connected and not paused.
-    var dayHasApp: Bool {
-        let names = Set(RoomAccounts.seats(for: RoomAccounts.dayRoom).map(\.name))
-        return bridges.bridges.contains { names.contains($0.name) && $0.status != .paused }
-    }
-
-    /// A day tapped on the calendar (prd §1340): it becomes Day's list; the
-    /// same day again, or Day's All tile, gives Day's own list back.
-    func pickDay(_ day: Date) {
-        let cal = Self.groupingCalendar
-        withAnimation(DS.Motion.standard) {
-            if let picked = daySelected, cal.isDate(picked, inSameDayAs: day) {
-                daySelected = nil
-            } else {
-                daySelected = cal.startOfDay(for: day)
-                if chrome.dayScope != .all { chrome.dayScope = .all }
-            }
-        }
-    }
-
     /// The picked day's list: what the calendar drew a dot for on it, its
     /// events and due things, then the renewals on it; empty, one line.
     @ViewBuilder
@@ -537,45 +426,6 @@ extension FeedScreen {
             groupedSections([(label, things)], nextEventID: nextEventID,
                             renewals: renewals.isEmpty ? [:] : [label: renewals])
         }
-    }
-
-    /// Box B's row: the cover's tap, press and long press, drawing the next
-    /// thing over the calendar (prd §1229).
-    func dayAheadRow(_ thing: Thing, marks: [WalletCalendar.Mark]) -> some View {
-        let start = Self.dayWhen(thing)
-        // The day alone, no clock (prd §1264): an all-day event read
-        // "12:00 AM", and the span under the title carries a timed one's.
-        let cal = Calendar.current
-        let when: String = cal.isDateInToday(start) ? String(localized: "Today")
-            : cal.isDateInTomorrow(start) ? String(localized: "Tomorrow")
-            : start.formatted(.dateTime.month(.abbreviated).day())
-        let clock = start.formatted(date: .omitted, time: .shortened)
-        let facts = thing.factList
-        let allDay = facts.contains { $0.action == .allDay }
-        // The time and the place: the span, else a timed start alone, never
-        // an all-day event's midnight (prd §1264).
-        let time = thing.endAt.map { "\(clock)–\($0.formatted(date: .omitted, time: .shortened))" }
-            ?? (allDay ? nil : clock)
-        let line = [time, facts.first { $0.action == .map }?.value]
-            .compactMap(\.self).joined(separator: " · ")
-        // The title opens the next thing; each day of the grid is its own
-        // door (prd §1340), so the box is no longer one button.
-        return DayCalendarFigure(title: thing.title, when: when, line: line, marks: marks,
-                                 onOpen: { openThing(thing) },
-                                 selected: daySelected, onDay: pickDay)
-            .dsRoomBox()
-            .modifier(rowEntrance(0))
-            .contextMenu {
-            RowVerbMenu(thing: thing, room: source, run: { run($0, on: $1) }, onDelete: askDeleteNote,
-                        onFile: fileThing, onNewFolder: { folderPrompt = .make(filing: $0) })
-        }
-        .dsHover()
-        .macHoverLift()
-        .id(thing.id.uuidString)
-        .feedRowBackground()
-        .listRowInsets(.init(top: DS.Space.s2, leading: 0,
-                             bottom: DSRoomChassis.leadGap, trailing: 0))
-        .listRowSeparator(.hidden)
     }
 }
 

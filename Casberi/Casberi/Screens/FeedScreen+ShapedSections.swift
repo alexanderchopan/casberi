@@ -483,7 +483,7 @@ extension FeedScreen {
             } else if source == RoomAccounts.workRoom {
                 workRoomSections(visible, nextEventID: nextEventID, heroShown: heroShown)
             } else if source == RoomAccounts.dayRoom {
-                dayRoomSections(visible, nextEventID: nextEventID, heroShown: heroShown)
+                dayRoomSections(visible, nextEventID: nextEventID)
             } else if source == RoomAccounts.lifeRoom {
                 lifeRoomSections(visible, nextEventID: nextEventID)
             } else if source == RoomAccounts.mediaRoom {
