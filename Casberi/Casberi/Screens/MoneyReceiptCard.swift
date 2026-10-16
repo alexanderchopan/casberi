@@ -451,12 +451,19 @@ struct MoneyReceiptBox: View {
     /// A card spend (prd §1182): the card that paid, drawn beside the amount
     /// — Apple Wallet's own picture of a transaction.
     var card: Card? = nil
+    /// A swap's two legs (prd §1351): drawn as the transfer is, token to token.
+    var swap: Swap? = nil
     struct Card: Equatable {
         let name: String
         let last4: String?
         let source: String
         /// Apple Card is titanium; every other card draws on the raised fill.
         var light: Bool { name.localizedCaseInsensitiveContains("Apple Card") }
+    }
+    struct Swap: Equatable {
+        let outAmount: String
+        let inAmount: String
+        let usd: Double?
     }
     struct Transfer: Equatable {
         let mineAddress: String
@@ -475,7 +482,8 @@ struct MoneyReceiptBox: View {
     var onSubject: ((String) -> Void)?
 
     var body: some View {
-        if let transfer { transferBody(transfer) }
+        if let swap { swapBody(swap) }
+        else if let transfer { transferBody(transfer) }
         else if let card { cardBody(card) }
         else { receiptBody }
     }
@@ -529,6 +537,78 @@ struct MoneyReceiptBox: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text(verbatim: spoken(t)))
+    }
+
+    /// A swap as the transfer draws (prd §1351): what left over what came, each
+    /// token's mark with its amount under it, then what it was worth and when.
+    private func swapBody(_ s: Swap) -> some View {
+        let out = MoneyReceipt.split(s.outAmount), into = MoneyReceipt.split(s.inAmount)
+        return VStack(spacing: 0) {
+            HStack(spacing: DS.Space.s2) {
+                leg(out.unit ?? "", amount: s.outAmount)
+                HStack(spacing: 0) {
+                    Capsule().fill(DS.textTertiary).frame(width: 40, height: 2)
+                    Image(systemName: "chevron.right")
+                        .dsGlyph(.caption, weight: .bold)
+                        .foregroundStyle(DS.textTertiary)
+                }
+                .padding(.bottom, DS.Space.s4)
+                .accessibilityHidden(true)
+                leg(into.unit ?? "", amount: s.inAmount)
+            }
+            Text(verbatim: s.inAmount)
+                .dsText(.heading34)
+                .monospacedDigit()
+                .foregroundStyle(DS.textPrimary)
+                .lineLimit(1).minimumScaleFactor(0.6)
+                .padding(.top, DS.Space.s3)
+            Text(verbatim: swapWorthLine(s))
+                .dsText(.body17)
+                .foregroundStyle(DS.textSecondary)
+                .lineLimit(1).minimumScaleFactor(0.8)
+                .padding(.top, 2)
+            Spacer(minLength: DS.Space.s2)
+            // The rate and the wallet that traded (prd §1351), as facts.
+            HStack(alignment: .top, spacing: DS.Space.s4) {
+                ForEach(cells.prefix(2)) { cell in
+                    VStack(spacing: 0) {
+                        Text(verbatim: cell.value)
+                            .dsText(.heading17)
+                            .monospacedDigit()
+                            .foregroundStyle(DS.textPrimary)
+                            .lineLimit(1).minimumScaleFactor(0.7)
+                        Text(verbatim: cell.label)
+                            .dsText(.label12)
+                            .foregroundStyle(DS.textSecondary)
+                    }
+                }
+            }
+            .padding(.bottom, DS.Space.s2)
+            DSStamp(word: statusWord, weight: statusWeight)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(verbatim: String(localized: "Swapped \(s.outAmount) for \(s.inAmount)")))
+    }
+
+    private func leg(_ symbol: String, amount: String) -> some View {
+        VStack(spacing: DS.Space.s1) {
+            AssetMark(name: symbol, size: DS.Face.shelf)
+            Text(verbatim: amount)
+                .dsText(.label12)
+                .foregroundStyle(DS.textSecondary)
+                .lineLimit(1)
+        }
+        .frame(width: 96)
+    }
+
+    private func swapWorthLine(_ s: Swap) -> String {
+        let cal = Calendar.current
+        let day = cal.isDateInToday(landed) ? String(localized: "Today")
+            : cal.isDateInYesterday(landed) ? String(localized: "Yesterday")
+            : landed.formatted(.dateTime.month(.abbreviated).day())
+        guard let usd = s.usd, usd > 0 else { return day }
+        return "\(usd.formatted(.currency(code: "USD"))) · \(day)"
     }
 
     /// The card that paid beside what it paid (prd §1182): the card, then its

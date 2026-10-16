@@ -66788,3 +66788,10 @@ Mocks: `design/mockups/tab-bar-options.html`, `design/mockups/tab-bar-library.ht
 1. **An address with no name goes by its short form, "0x1f2e…a91c"** (`MoneyReceiptSource.facts`): the title, the face's caption and the year card ("This year with 0x1f2e…a91c") read it, where the lead's "Sent to" had stood in for a name.
 2. **The "Name this address?" block is deleted** (`NameAddressPrompt`, `AddressNudge`): the verb row's Save names the address, and the block asked the same thing a second time under it.
 
+## §1351 — A swap's receipt says what it traded (user, 2026-10-16: "ok", of a swap titled "In your wallet" with its legs as text, "Final", and its rate loose under the box)
+
+1. **Titled "Swapped ETH for USDC"** (`MoneyReceipt.wallet`, off the title's own " → " legs, `SwapStage`'s parse), never the fallback "In your wallet".
+2. **The box draws the trade as a transfer draws its parties** (`MoneyReceiptBox.swapBody`): each token's mark with its amount under it, an arrow between, what came in large, then its worth and the day ("Today", "Oct 16").
+3. **Its facts are the rate and the wallet that traded**, inside the box; the loose rate line under it is gone (`walletCommentary` returns nothing for a swap).
+4. **"Settled"**, as every other receipt says it; a cell's fallback no longer says "Final".
+

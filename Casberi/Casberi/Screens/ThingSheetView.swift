@@ -580,6 +580,10 @@ struct ThingSheetView: View {
                     MoneyReceiptBox(receipt: moneyReceipt, landed: thing.capturedAt,
                                     transfer: moneyTransfer(moneyReceipt),
                                     card: moneyCard,
+                                    swap: SwapStage(thing).map {
+                                        MoneyReceiptBox.Swap(outAmount: $0.outAmount, inAmount: $0.inAmount,
+                                                             usd: thing.transferUSD)
+                                    },
                                     source: thing.source, cells: moneyCells(moneyReceipt),
                                     unnamed: moneyUnnamed, onSubject: openAddressCard)
                         // Read once per open (§628), the spec row's own read.
@@ -3114,8 +3118,19 @@ struct ThingSheetView: View {
             }
             return out
         }
+        // A swap's facts are its rate and the wallet that traded (prd §1351);
+        // the box's stamp already says it settled.
+        if let swap = SwapStage(thing) {
+            if case .rate(let rate, _)? = MoneyCommentary.rate(out: swap.outAmount, into: swap.inAmount) {
+                out.append(MoneyReceiptCell(value: rate, label: String(localized: "Rate")))
+            }
+            if let wallet = MoneyReceiptSource.walletLabel(thing.walletAddress) {
+                out.append(MoneyReceiptCell(value: wallet, label: String(localized: "Wallet")))
+            }
+            return out
+        }
         out.append(MoneyReceiptCell(value: r.stamp?.word ?? (r.finality == .open ? String(localized: "Waiting")
-                                                                                 : String(localized: "Final")),
+                                                                                 : String(localized: "Settled")),
                                     label: String(localized: "Status"), wants: r.finality == .open))
         if let network = WalletIngest.chainName(forContent: thing.content), !network.isEmpty {
             out.append(MoneyReceiptCell(value: network, label: String(localized: "Network")))

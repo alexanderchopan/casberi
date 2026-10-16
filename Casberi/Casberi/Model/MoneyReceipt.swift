@@ -381,6 +381,25 @@ struct MoneyReceipt: Equatable {
         let unit = split(f.amount).unit
         if unit == "BTC" { return bitcoin(f) }
 
+        // **A SWAP SAYS WHAT IT TRADED (prd §1351, user: "ok").** "Swapped ETH
+        // for USDC" over the legs the title's own " → " separates (the
+        // `SwapStage` parse), settled; the header draws the two tokens.
+        if f.title.hasPrefix("Swapped "), let arrow = f.title.range(of: " → ") {
+            let out = split(String(f.title.dropFirst("Swapped ".count)[..<arrow.lowerBound]
+                .replacingOccurrences(of: "Swapped ", with: "")))
+            let into = split(String(f.title[arrow.upperBound...]))
+            if let a = out.unit, let b = into.unit {
+                return MoneyReceipt(
+                    subject: .asset(b), mine: f.walletAddress,
+                    lead: String(localized: "Swapped"),
+                    party: String(localized: "Swapped \(a) for \(b)"),
+                    titleFallback: nil,
+                    amount: Amount(number: into.number, unit: b, tone: .plain),
+                    secondary: worthLine(f.usd),
+                    sentence: placeSentence(String(localized: "Swapped"), f),
+                    stamp: .settled, finality: .torn, hue: .wallet)
+            }
+        }
         guard let direction = f.direction, let raw = f.amount, !raw.isEmpty,
               direction == "sent" || direction == "received" else {
             // No stamped direction/amount. A self-move, a swap, a Hyperliquid

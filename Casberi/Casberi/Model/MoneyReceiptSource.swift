@@ -123,9 +123,9 @@ enum MoneyReceiptSource {
                                          _ context: ModelContext) -> MoneyCommentary? {
         // A swap states its rate — the one thing a trade is for, and pure
         // arithmetic on the two legs `SwapStage` has parsed since 2026-07-21.
-        if let swap = SwapStage(thing) {
-            return MoneyCommentary.rate(out: swap.outAmount, into: swap.inAmount)
-        }
+        // A swap's rate is a fact in its box now (prd §1351), not a line
+        // under it.
+        if SwapStage(thing) != nil { return nil }
         if thing.content.hasPrefix(BitcoinBridge.explorer),
            BitcoinBridge.isSettling(address: thing.walletAddress, ref: thing.sourceRef) {
             return MoneyCommentary.settling(need: BitcoinBridge.settledConfirmations)
