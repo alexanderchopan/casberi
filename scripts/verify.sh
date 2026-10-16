@@ -924,6 +924,16 @@ step "Plate audit"
 "$ROOT/scripts/plate-audit.py" || fail "the elevated card is back on content — see the output above"
 print -P "%F{green}✓ plate audit%f"
 
+# Verb-row audit (prd §1324): the slab buttons — `DSSlabButton`, `DSSlabDoor` —
+# draw as rows. A `.background(` or the slab's own shape coming back inside
+# either is the backed button the user retired; no screen sweep tells a row
+# from a slab, so only a read of `Design/DSSlab.swift` catches it.
+step "Verb-row audit"
+"$ROOT/scripts/verb-row-audit.py" --self-test >/dev/null \
+  || fail "the verb-row audit's own self-test failed — the check is broken, not the code"
+"$ROOT/scripts/verb-row-audit.py" || fail "a slab button has a backing again — see the output above"
+print -P "%F{green}✓ verb-row audit%f"
+
 # A landed row carries its door (prd §909, §912). `Thing.init` defaults
 # `content` to "", so a row with nowhere to go is the path of least resistance
 # and looks like every other row in every screenshot — the Safe signature that
