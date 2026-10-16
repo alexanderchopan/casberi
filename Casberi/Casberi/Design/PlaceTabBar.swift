@@ -167,7 +167,7 @@ struct PlaceTabBar: View {
     @ViewBuilder
     private func mark(_ tab: PlaceTab, on: Bool, glyphSize: DSGlyph) -> some View {
         if tab == .library {
-            YouFace(size: 26)
+            LibraryFace()
         } else {
             Image(systemName: tab.glyph)
                 .dsGlyph(glyphSize, weight: on ? .semibold : .regular)
@@ -213,5 +213,17 @@ private struct LibraryAlarm: ViewModifier {
             }
             .animation(reduceMotion ? nil : DS.Motion.press, value: broken)
             .accessibilityValue(broken ? Text("needs attention") : Text(verbatim: ""))
+    }
+}
+
+/// Your face on Library's tab, and the pull-to-refresh spin it always did
+/// (`DoorSpin`, prd §1327 item 10): the pull winds it, the refresh turns it
+/// once. A leaf, so the pull's every frame redraws the face and not the bar.
+private struct LibraryFace: View {
+    @Environment(ShellChrome.self) private var chrome
+
+    var body: some View {
+        YouFace(size: 26)
+            .modifier(DoorSpin(trigger: chrome.refreshPulse, tension: chrome.pullTension))
     }
 }

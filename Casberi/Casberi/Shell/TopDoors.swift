@@ -129,7 +129,7 @@ struct AvatarChip: View {
 /// forward rotation, value-driven with no animation so it tracks the finger
 /// — then the release spin launches from wherever the wind-up left it, in
 /// the same direction. Tension arrives pre-zeroed under Reduce Motion.
-private struct DoorSpin: ViewModifier {
+struct DoorSpin: ViewModifier {
     let trigger: Int
     var tension: CGFloat = 0
     @State private var angle: Double = 0
