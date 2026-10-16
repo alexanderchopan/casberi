@@ -65,7 +65,14 @@ struct MoneySubjectDisc: View {
         case .asset(let symbol):
             AssetMark(name: symbol, size: size)
         case .named(let name):
-            AssetMark(name: name, size: size)
+            // An app the catalogue carries wears its own mark (Lightning's
+            // bolt drew as an "LI" disc, prd §1339); a merchant or a rail
+            // keeps the asset rule.
+            if BridgeIcon.hasMark(name) {
+                BridgeIcon(name: name, size: size, circular: true)
+            } else {
+                AssetMark(name: name, size: size)
+            }
         case .absent:
             // A hole in the paper, not a placeholder. The inner shadow is what
             // makes it read as recessed — the `surfaceWell` rung's own job.
