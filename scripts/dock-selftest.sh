@@ -866,7 +866,8 @@ strip_comments "Casberi/Casberi/Screens/SettingsHome.swift" > "$TMP/apps.nc"
 [ ! -f "Casberi/Casberi/Shell/RoomAccountDoor.swift" ] \
   && ! grep -q 'RoomAccountDoor' Casberi/Casberi/Screens/FeedScreen*.swift \
   || { echo "✗ a room draws a sliders disc again — settings open from Apps (prd §1050f)."; fail=1; }
-grep -q 'route.openAccount(BridgeRouter.destination(forID:' "$TMP/apps.nc" \
+# Pushed beside Sources since §1321 item 2 (`pushBridge`); either call opens it.
+grep -Eq 'route\.(openAccount|pushBridge)\(BridgeRouter\.destination\(forID:' "$TMP/apps.nc" \
   || { echo "✗ a connected row in Apps no longer opens its account page (prd §1050f)."; fail=1; }
 # §1159 amended this: an app's icon in a tray row holds Open, then Settings,
 # its account page through the one call Settings' row makes. Any other hold in
