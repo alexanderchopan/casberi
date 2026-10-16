@@ -3652,8 +3652,10 @@ private struct PagerCover: View {
                     // You's places by their own words: the Feed (prd §1203,
                     // the source is "All") and, since a room opened on top
                     // goes back to the pole it came from, Notes and Markets.
+                    // Library is a tab too (prd §1327): named, never "Feed".
                     Text(Pinboard.isPinnedRoom(label) ? String(localized: "Notes")
                          : HomeScope.isMarkets(label) ? String(localized: "Markets")
+                         : HomeScope.Place(source: label) == .settings ? String(localized: "Library")
                          : String(localized: "Feed"))
                         .dsText(.heading40).foregroundStyle(DS.headInk)
                 } else {
