@@ -416,10 +416,11 @@ extension FeedScreen {
                 if all.isEmpty {
                     walletSkeletonRowsSection
                 }
-            // **MARKETS IS NEVER DRAWN HERE (prd §1232).** Its tile opens the
-            // Markets sheet and the pick falls back to Home.
+            // **MARKETS STANDS HERE, IN PLACE (prd §1337, retiring §1232's
+            // own page).** Its tiles are the box's figure; what you follow,
+            // its alerts or a category's companies follow under the row.
             case .markets:
-                EmptyView()
+                walletMarketsSections(nextEventID: nextEventID)
             case .subscriptions:
                 // **SUBSCRIPTIONS AND NOTHING ELSE (prd §1111).** Add first,
                 // the person builds the list up, then every plan.
@@ -454,16 +455,6 @@ extension FeedScreen {
                     walletSkeletonRowsSection
                 }
                 walletSecuritySections
-            }
-        case .tokens:
-            // The Watchlist, or a catalogue category's company pack
-            // (`CompanyPacks`), picked on the tiles.
-            if chrome.tokensScope.isPack {
-                marketsIndexSections(chrome.tokensScope, visible: visible)
-            } else if chrome.tokensScope == .alerts {
-                marketsAlertsSections(visible, nextEventID: nextEventID)
-            } else {
-                marketsWatchlistSections(visible, nextEventID: nextEventID)
             }
         default:
             if Pinboard.isPinnedRoom(source) {

@@ -41,8 +41,11 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
     /// What you hold — tokens, then Positions (prd §1107).
     case holdings
     /// MARKETS IS A WALLET TILE (prd §1232, user: "markets into wallet …
-    /// it could replace subscriptions as a button"): it opens Markets as the
-    /// Feed's button did, a sheet, the same page; never a section drawn here.
+    /// it could replace subscriptions as a button"), DRAWN IN PLACE (prd
+    /// §1337, user: "it should open in place not the overlay. it's
+    /// jarring"): its tiles in the box, its lists under the row, as Holdings.
+    /// Never empty (its index needs nothing followed, §1167), so it carries
+    /// no empty state.
     case markets
     /// What renews, and what it costs (prd §1111): every subscription, the
     /// user's to build up. Was `comingUp` (§1041, §1107); a remembered

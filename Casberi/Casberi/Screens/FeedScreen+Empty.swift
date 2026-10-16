@@ -217,13 +217,9 @@ extension FeedScreen {
     /// nothing in it (delight pass 2026-07-21). Retires the moment anything
     /// is watched — the empty state itself stops rendering.
     @ViewBuilder private var tryItChip: some View {
-        if shape == .tokens {
-            tryItButton(label: "Follow ETH") {
-                guard let resolved = await TokenWatch.resolve("ETH") else { return }
-                TokenWatch.add(resolved, context: modelContext)
-                TokenWatch.registerBridge(store: bridges, context: modelContext)
-            }
-        } else if source == "RSS" {
+        // Markets' "Follow ETH" left with its room (prd §1337): the Wallet's
+        // Markets tile never draws this empty state (§1167).
+        if source == "RSS" {
             tryItButton(label: "Follow NASA's feed") {
                 guard RSSStore.shared.add("https://www.nasa.gov/feed/") else { return }
                 let added = await RSSIngest.refresh(context: modelContext,

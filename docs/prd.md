@@ -66638,3 +66638,14 @@ Mocks: `design/mockups/tab-bar-options.html`, `design/mockups/tab-bar-library.ht
 3. **No glass.** The row scrolls with the page, so it is content; Liquid Glass stays on the floating layer (the tab bar), and two glass layers would stack at the foot of the screen.
 4. **The row is centred between the box and the list** (`dsRoomTilesListRow`: `s3` above, `s1` below, where it sat flush under the box and `leadGap` above the list).
 
+## §1337 — Markets opens in place, a Wallet tile like Holdings (amends §1232 item 1, §1325, §1167) (user, 2026-10-16: "it should open in place not the overlay. it's jarring")
+
+1. **Picking Markets keeps the Wallet's box and row on screen**, Markets lit (the row's `bare: false`, §1331), and draws Markets under the row, as Holdings and Security do. The Markets pick no longer resets to Home and requests another page (`FeedScreen`'s `walletSection` change); it resets Markets to Following, as landing in its room did.
+2. **Markets' box is the Wallet's box while it is picked**: Following, Alerts and the categories A–Z, two across (§1167's grid, `walletMarketsFigure`, drawn bare as Security's checkup is). Pressing one lists it below: Following (its sort menu, Follow a company, gas, the rows), Alerts, or a category's companies (`walletMarketsSections`). The iPad/Mac bar (Watchlist · Alerts · New, `tokensInlineTiles`) is deleted: Following and Alerts stand in the box on every size class, and Follow a company leads Following.
+3. **Markets' rows are read in the tile's own `.task`** (`loadWalletMarkets`, keyed on Markets' SQL count and the corpus signal, `walletMarketsKey`), never a body (§628); they keep Markets' row and long press (`drawsMarketsRow`, `rowShape`).
+4. **Markets has no room of its own; every door lands on the Wallet with the tile picked** (`MainSurface.walletLanding`): the tray's Markets door and its search (a company, Look up), the rail, `-openRoom Markets`, `casberi://room/Markets` and a filter written directly. `-marketsScope` and `-openSection <Category>` still work there. The tray lights Markets while the Wallet shows it, and its Wallet door goes back to Home. With no wallet followed the Wallet keeps its chrome while Markets is picked (`walletKeepsChrome`), so Markets never needs a watch (§1167).
+5. **The title reads "Wallet · Markets" through the Wallet's own pick** (`roomPick`, "Wallet" grey and back to Home, §1262), so §1325's walk title is deleted with the room: `walkNeighbours`, `DSWalkTitleRow`, the Markets room's own sections, title word and empty "Follow ETH".
+
+**Guards.** `wallet-section-selftest.sh` denies the Markets pick's request for another page and asks for the door's landing and the tile's lists; its Markets empty-state check now says why Markets has none (never empty), not that it opens elsewhere.
+
+**Not seen** on a simulator (none booted, per the task): the box's five rows at the Wallet's slot height, the iPad/Mac layout.

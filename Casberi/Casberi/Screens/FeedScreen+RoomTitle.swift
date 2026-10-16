@@ -32,46 +32,27 @@ extension HomeScope.Place {
 }
 
 extension FeedScreen {
-    /// You's place as the title's own word (prd §1156): Home, Notes or
-    /// Markets, never your name before it.
+    /// You's place as the title's own word (prd §1156): Home or Notes,
+    /// never your name before it (Markets is the Wallet's tile, §1337).
     var youPlaceName: String {
         if Pinboard.isPinnedRoom(source) { return String(localized: "Notes") }
-        if HomeScope.isMarkets(source) { return String(localized: "Markets") }
         // "Today" until prd §1203: beside "Wallet" it named a time where the
         // other named a place, and said your money was not part of your day.
         return String(localized: "Feed")
     }
 
-    /// The room's title row. On the phone it names the walk's neighbours
-    /// (prd §1207 item 2): the stop before in grey, where you stand in pink
-    /// (with its pick), the stop after in grey, each grey word pressable.
-    @ViewBuilder
+    /// The room's title row: the room's name, and its pick after a dot
+    /// ("Wallet · Markets", "Notes · Books"), the name grey and pressable
+    /// back to the whole room (prd §1262).
+    ///
+    /// **THE WALK'S TITLE IS DELETED (prd §1337).** Since the five tabs
+    /// (§1327 item 5) Markets was the one page that still named a stop
+    /// before it ("Wallet · Markets", §1325, the Wallet pressable back);
+    /// Markets is the Wallet's own tile now, drawn in place, so it reads the
+    /// same through `roomPick`, and `walkNeighbours`, `DSWalkTitleRow` and
+    /// the walk's arms went with it.
     var roomTitle: some View {
-        // A PAGE OPENED FROM THE FEED READS "Feed · Day" (prd §1321, user:
-        // "why do we have a dot between some titles and not others"): the
-        // dot means inside or opened from, so Day and Notes take it and
-        // "Feed" goes back; Markets is a Wallet tile (prd §1232), so it reads
-        // "Wallet · Markets" and "Wallet" goes back. Only the two pages you
-        // swipe between, Feed and Wallet, stand side by side without one. A
-        // pick inside the page ("Notes · Books") names the page and its pick
-        // instead.
-        if let walk = walkNeighbours, walk.after == nil, let parent = walk.before,
-           parent == "All" || parent == CategoryFold.walletRoom, roomPick == nil {
-            DSRoomTitleRow(title: Self.walkWord(parent), pick: roomName) {
-                DSHaptic.selection()
-                chrome.sourceRequest = parent
-            }
-        } else if let walk = walkNeighbours {
-            DSWalkTitleRow(before: walk.before.map(Self.walkWord),
-                           title: roomName,
-                           pick: roomPick,
-                           onTitle: clearRoomPick,
-                           after: walk.after.map(Self.walkWord)) { forward in
-                chrome.sourceRequest = forward ? walk.after : walk.before
-            }
-        } else {
-            DSRoomTitleRow(title: roomName, pick: roomPick, onTitle: clearRoomPick)
-        }
+        DSRoomTitleRow(title: roomName, pick: roomPick, onTitle: clearRoomPick)
     }
 
     /// The title's category word pressed: drop the pick `roomPick` names and
@@ -114,29 +95,6 @@ extension FeedScreen {
                 }
             }
         }
-    }
-
-    /// The stops either side of this page in the phone's walk, or nil off
-    /// the walk and wherever the rail stands.
-    private var walkNeighbours: (before: String?, after: String?)? {
-        // A page risen as a sheet (prd §1208l) stands on nothing: its own
-        // name alone, and the pull closes it.
-        guard roomScopeInRoom, !inSheet else { return nil }
-        // Notes and Markets are the Feed's own places (prd §1208c, user: "to
-        // get back to feed its complicated"): the Feed stands before them,
-        // pressable, and nothing after.
-        // Day too, since it became a page beside the Feed (prd §1321).
-        // Markets opens from the Wallet's tile (prd §1232), so the Wallet
-        // stands before it.
-        if HomeScope.isMarkets(source) { return (CategoryFold.walletRoom, nil) }
-        // Every other place is a tab (prd §1327 item 5): its title is its
-        // own name, large, and the bar says where the others are.
-        return nil
-    }
-
-    /// A stop's word in the title: the Feed for "All", else its category.
-    private static func walkWord(_ stop: String) -> String {
-        stop == "All" ? String(localized: "Feed") : stop
     }
 
     /// What the title names after the category's dot, or nil while the room

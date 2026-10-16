@@ -1,49 +1,88 @@
 import SwiftUI
 import SwiftData
 
-// THE MARKETS ROOM (prd §1081, §1171b): the categories in the box, the
-// watchlist under one sort menu, and Watchlist · Alerts · New on the bar.
+// MARKETS, THE WALLET'S TILE (prd §1081, §1171b; in place since §1337): the
+// categories in the Wallet's box, the watchlist under one sort menu.
 extension FeedScreen {
     /// The watched rows: Markets' rows that are not a fired alert.
     func marketsWatches(_ visible: [Thing]) -> [Thing] {
         visible.live.filter { !PriceAlertStore.isAlertRow($0) }
     }
 
-    /// THE BOX IS THE CATEGORIES (prd §1138, §1171b): A–Z, a glyph and a
-    /// name each, no figure and no colour (user: "the categories w/ no
-    /// numbers, just their glyph and name"); Watchlist and Alerts ride the bar.
-    /// Pressing one lists it below; the box never moves. It replaced the
-    /// watchlist's heat map (§1081) and the category bar.
-    var marketsTilesSection: some View {
-        // Two across, each glyph and its word on one line, as Settings'
-        // counts stand (prd §1167, user: "organize the markets header in
-        // same way you did settings").
-        // On the phone Watchlist and Alerts stand in the box (prd §1209a):
-        // the bar that held them is the band's search now, which adds.
-        let tiles = DSScopeDock<TokensScope>.atBottom(roomSizeClass)
-            ? [TokensScope.watchlist, .alerts] + TokensScope.box : TokensScope.box
-        return Section {
-            DSCountGrid(items: tiles.count) {
-                ForEach(tiles) { tile in
-                    DSCountTile(count: nil, label: tile.label, glyph: tile.glyph,
-                                isOn: tile == chrome.tokensScope, inline: true) { pickTokensScope(tile) }
-                }
+    /// Whether `thing` draws as Markets' own row here (prd §1337): a Markets
+    /// row in the Wallet's Markets tile, the one page that lists them.
+    func drawsMarketsRow(_ thing: Thing) -> Bool {
+        source == CategoryFold.walletRoom && thing.source == TokenWatch.source
+    }
+
+    /// **MARKETS OPENS IN PLACE (prd §1337, user: "it should open in place
+    /// not the overlay. it's jarring").** Its room's box (prd §1138, §1167:
+    /// the categories A–Z with Following and Alerts first, a glyph and a name
+    /// each, two across) is the Wallet's box while Markets is picked, the way
+    /// Security's checkup stands there: the Wallet's row stays under it with
+    /// Markets lit, and pressing a tile lists it below.
+    var walletMarketsFigure: some View {
+        let tiles = [TokensScope.watchlist, .alerts] + TokensScope.box
+        return DSCountGrid(items: tiles.count, bare: true) {
+            ForEach(tiles) { tile in
+                DSCountTile(count: nil, label: tile.label, glyph: tile.glyph,
+                            isOn: tile == chrome.tokensScope, inline: true) { pickTokensScope(tile) }
             }
-            .feedRowBackground()
-            .listRowInsets(.init(top: DS.Space.s2, leading: DSRoomChassis.inset,
-                                 bottom: DSRoomChassis.leadGap, trailing: DSRoomChassis.inset))
-            .listRowSeparator(.hidden)
+        }
+        // Markets' rows are a different source from the Wallet's, so the
+        // tile reads them here, keyed on their own count and the corpus
+        // signal (a SQL COUNT, no model built), never in a body (§628).
+        .task(id: walletMarketsKey) { loadWalletMarkets() }
+        // A category's quotes, read when its tile is pressed (prd §1082).
+        .task(id: chrome.tokensScope.id) {
+            let pack = chrome.tokensScope.pack
+            if !pack.isEmpty { await CompanyQuotes.shared.load(pack) }
         }
         // The tray's search can open a company or New from any room (prd
-        // §1185), so it asks; the room raises once it stands. The box stands
-        // on every Markets tile, so the ask is heard whichever is picked.
-        .onChange(of: chrome.marketsRequest, initial: true) { _, request in
-            guard let request, isActive else { return }
-            chrome.marketsRequest = nil
-            switch request {
-            case .company(let company): openCompany(company)
-            case .lookUp: feedSheet = .watchAdd
-            }
+        // §1185), so it asks; the tile raises once it stands, whichever of
+        // its lists is picked.
+        .onChange(of: chrome.marketsRequest, initial: true) { _, _ in takeMarketsRequest() }
+        .onChange(of: isActive) { _, _ in takeMarketsRequest() }
+    }
+
+    /// The Markets tile's reading key: Markets' own row count and the
+    /// corpus signal. Read only while the tile is picked (its figure is the
+    /// one caller), so no other page pays the COUNT.
+    var walletMarketsKey: Corpus.Revision {
+        Corpus.revision(in: modelContext, source: TokenWatch.source)
+    }
+
+    /// Markets' rows, as its room's query read them: newest first, bounded
+    /// like a source room, surfaced by the one rule.
+    func loadWalletMarkets() {
+        let markets = TokenWatch.source
+        var d = FetchDescriptor<Thing>(predicate: #Predicate<Thing> { $0.source == markets },
+                                       sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
+        d.fetchLimit = Self.sourceRoomFetchLimit
+        walletMarketsRows = Corpus.surfaced((try? modelContext.fetch(d)) ?? [], room: markets)
+    }
+
+    private func takeMarketsRequest() {
+        guard let request = chrome.marketsRequest, isActive else { return }
+        chrome.marketsRequest = nil
+        switch request {
+        case .company(let company): openCompany(company)
+        case .lookUp: feedSheet = .watchAdd
+        }
+    }
+
+    /// Under the Wallet's row while Markets is picked (prd §1337): what you
+    /// follow, the alerts, or a category's companies — the lists its room
+    /// drew under its box.
+    @ViewBuilder
+    func walletMarketsSections(nextEventID: UUID?) -> some View {
+        let rows = walletMarketsRows.live
+        if chrome.tokensScope.isPack {
+            marketsIndexSections(chrome.tokensScope, visible: rows)
+        } else if chrome.tokensScope == .alerts {
+            marketsAlertsSections(rows, nextEventID: nextEventID)
+        } else {
+            marketsWatchlistSections(rows, nextEventID: nextEventID)
         }
     }
 
@@ -91,14 +130,11 @@ extension FeedScreen {
         }
     }
 
-    /// The Watchlist tile: the box, the tiles where the rail stands, the
-    /// list's head, then the rows in the chosen order.
+    /// The Following list: its head, Follow a company, gas, then the rows
+    /// in the chosen order.
     @ViewBuilder
     func marketsWatchlistSections(_ visible: [Thing], nextEventID: UUID?) -> some View {
         let watches = marketsWatches(visible)
-        marketsTilesSection
-        // The Feed's tiles left Markets (prd §1231): it is a Wallet tile now.
-        tokensInlineTiles
         if watches.count > 1 { marketsListHead }
         // THE VERB LEADS THE LIST (prd §1230), as every Following and
         // Subscriptions list's does: under the list's head, not above it.
@@ -168,8 +204,6 @@ extension FeedScreen {
     @ViewBuilder
     func marketsAlertsSections(_ visible: [Thing], nextEventID: UUID?) -> some View {
         let watches = marketsWatches(visible)
-        marketsTilesSection
-        tokensInlineTiles
         let byRef = Dictionary(watches.compactMap { t in t.sourceRef.map { ($0, t) } },
                                uniquingKeysWith: { a, _ in a })
         // A gas alert watches a chain, not a row (prd §1250).
@@ -247,16 +281,13 @@ extension FeedScreen {
     @ViewBuilder
     func marketsIndexSections(_ scope: TokensScope, visible: [Thing]) -> some View {
         let pack = scope.pack
-        let quotes = CompanyQuotes.shared
         let connected = connectedSeatNames
         let byName = Dictionary(pack.map { ($0.name, $0) }, uniquingKeysWith: { a, _ in a })
         let split = MarketsIndex.sections(pack.map(MarketsWatch.entry), connected: connected)
         let watched = MarketsWatch.watchedTickers(visible)
-        // The box is the tiles on every Markets page (prd §1138): the pack's
-        // own heat map and its lede gave way to it.
-        marketsTilesSection
-            .task(id: scope.id) { await quotes.load(pack) }
-        tokensInlineTiles
+        // The box is the tiles on every Markets list (prd §1138, §1337):
+        // the pack's own heat map and its lede gave way to it, and the
+        // figure reads the pack's quotes.
         indexSection(String(localized: "From your apps"), split.yours, byName: byName,
                      connected: connected, watched: watched, watchAll: true)
         indexSection(split.yours.isEmpty ? scope.label : String(localized: "Everything else"),

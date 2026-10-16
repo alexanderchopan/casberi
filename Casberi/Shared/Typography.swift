@@ -296,7 +296,7 @@ extension DSTextStyle {
     /// at accessibility sizes, so a row drew two caption sizes exactly where
     /// the tier exists to prevent it (prd §762).
     static let label12 = DSTextStyle(size: 12, weight: .medium, tracking: 0, lineHeight: 16, relative: .caption1)
-    /// A row tile's word (prd §1335): the section titles' weight at a tile's
+    /// A row tile's word (prd §1336): the section titles' weight at a tile's
     /// width, so a row speaks at the page's volume, not a caption's.
     static let tile15 = DSTextStyle(size: 15, weight: .bold, tracking: 0, lineHeight: 19, relative: .subheadline)
     /// The dock tile's caption — the ONE rung under the 12pt caption tier

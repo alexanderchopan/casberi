@@ -6,24 +6,10 @@ import SwiftData
 // FeedScreen.swift (prd §718). Nothing here changed but the file it lives
 // in and, where another file reads a member, its access level.
 extension FeedScreen {
-    /// The Tokens room's tiles where the rail stands (iPad, Mac); on the phone
-    /// they ride the glass capsule beside the seat (`dsScopeDock`, the
-    /// Addresses and What-this-app-reaches control) and nothing stands here.
-    @ViewBuilder
-    var tokensInlineTiles: some View {
-        if !DSScopeDock<TokensScope>.atBottom(roomSizeClass) {
-            Section {
-                DSScopeTiles(sections: TokensScope.bar, active: chrome.tokensScope,
-                             strip: true, verbs: [.new]) { pickTokensScope($0) }
-                    .feedRowBackground()
-                    .listRowSeparator(.hidden)
-                    .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
-                                              bottom: DSRoomChassis.leadGap,
-                                              trailing: DSRoomChassis.inset))
-            }
-        }
-    }
-
+    /// A Markets tile pressed in the Wallet's box (prd §1337). Its room's
+    /// bar (Watchlist · Alerts · New where the rail stood) is deleted with
+    /// the room: Following and Alerts stand in the box on every size class,
+    /// and Follow a company leads the Following list.
     func pickTokensScope(_ picked: TokensScope) {
         // New is a verb (prd §1081, §1171b): it opens the sheet, never lights.
         if picked == .new {

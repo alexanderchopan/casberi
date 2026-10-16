@@ -296,6 +296,9 @@ extension FeedScreen {
     /// deadline. Every other folded row reads as the room's ledger, which is
     /// already how card spends and transfers want to look.
     func rowShape(_ thing: Thing) -> Shape {
+        // Markets' rows in the Wallet's Markets tile (prd §1337) keep
+        // Markets' own row, never the ledger's band.
+        if drawsMarketsRow(thing) { return .tokens }
         guard RoomAccounts.rides(room: source, source: thing.source) else { return shape }
         // Outside the Wallet a folded app's row keeps its own design: a
         // rating change reads as one in Reading, an article as an article.

@@ -782,6 +782,10 @@ struct FeedScreen: View {
     /// the place each row names; the things are those items, resolved.
     @State var dayNeedsItems: [DayNeeds.Item] = []
     @State var dayNeeds: [Thing] = []
+    /// The Wallet's Markets tile (prd §1337): Markets' own rows, read in the
+    /// tile's `.task` (`loadWalletMarkets`), never in a body (§628). Raw
+    /// model refs, so every reader takes `.live` first.
+    @State var walletMarketsRows: [Thing] = []
     @State private var openPerson: SocialProfile?
     /// prd 43h: Reduce Motion is law — the hand-rolled moves (row entrances)
     /// fall back to plain state changes under it.
@@ -1174,7 +1178,7 @@ struct FeedScreen: View {
         // told a first-time writer to open the catalog instead.
         if !roomHasContent && !LiveRoomSources.has(source) && !agentRoomShown
             && !Pinboard.isPinnedRoom(source) && !walletKeepsChrome && source != "All"
-            && !HomeScope.isMarkets(source) && source != RoomAccounts.dayRoom && !pinnedPage {
+            && source != RoomAccounts.dayRoom && !pinnedPage {
             // An empty Home still names what stopped (prd §1162): an app
             // that broke before anything landed is the likeliest reason the
             // feed is empty at all.
@@ -1223,7 +1227,7 @@ struct FeedScreen: View {
         // exact shape — it is why Logos has an arm above
         // rather than a flag.
         } else if roomHasContent || agentRoomShown || Pinboard.isPinnedRoom(source)
-                    || walletKeepsChrome || source == "All" || HomeScope.isMarkets(source)
+                    || walletKeepsChrome || source == "All"
                     || source == RoomAccounts.dayRoom || pinnedPage {
             // Derived ONCE per render and threaded into everything below
             // — the day groups, ledes, and per-row hint/next-event ids
@@ -1307,8 +1311,8 @@ struct FeedScreen: View {
             // box holds the day, You's tiles stand under it, and the day says
             // it holds nothing yet.
             || source == "All"
-            // Nor is Markets (prd §1167): its tiles and index need no watch.
-            || HomeScope.isMarkets(source)
+            // (Markets, never replaced by §1167, is the Wallet's tile since
+            // §1337, and the Wallet keeps its chrome above.)
             // NOR IS DAY, A DOOR ON THE FEED'S ROW SINCE prd §1231: an empty
             // one drew "One inbox for all your apps" and Browse apps (user,
             // 2026-10-10, on device). Its box is the calendar, drawn empty,
@@ -1336,8 +1340,14 @@ struct FeedScreen: View {
     /// rather than a seat. The box and its figures already say "nothing yet"
     /// in their own slots (`walletScopeIsEmpty`), so the room keeps its
     /// chrome over an empty list.
+    ///
+    /// **NOR WHILE MARKETS IS PICKED (prd §1337).** Markets needs nothing
+    /// watched (§1167) and is the Wallet's tile now, so a Markets door taken
+    /// before any wallet is followed lands on the box and the row with
+    /// Markets lit, never the empty state.
     private var walletKeepsChrome: Bool {
-        source == CategoryFold.walletRoom && !wallet.addresses.isEmpty
+        source == CategoryFold.walletRoom
+            && (!wallet.addresses.isEmpty || chrome.walletSection == .markets)
     }
 
     /// The day sections of a room that has rows, plus its closing line.
@@ -1463,16 +1473,12 @@ struct FeedScreen: View {
             // and it SUPERSEDES §357's placement for these two rooms rather
             // than extending it, so it wants its own ruling rather than a
             // quiet diff.
-            .onChange(of: chrome.walletSection) { _, picked in
-                // **MARKETS OPENS AS IT DID FROM THE FEED (prd §1232)**: the
-                // same request the Feed's button made, so the same sheet and
-                // the same page, on every size class; the pick stays Home.
-                if picked == .markets {
-                    chrome.walletSection = .home
-                    chrome.lastChipTouch = Date.timeIntervalSinceReferenceDate
-                    chrome.sourceRequest = HomeScope.markets
-                    return
-                }
+            .onChange(of: chrome.walletSection) { old, picked in
+                // **MARKETS OPENS IN PLACE (prd §1337, retiring §1232's
+                // request for its own page, user: "it should open in place
+                // not the overlay. it's jarring")**: a tile like Holdings,
+                // opening on what you follow, as its room did.
+                if picked == .markets, old != .markets { chrome.tokensScope = .watchlist }
                 // A WALLET TILE IS THE WALLET'S PAGE, on every size class
                 // (prd §1321, retiring §1220's phone sheet, user: "ya wallet
                 // needs to do the same"): the tile swaps the page in place,

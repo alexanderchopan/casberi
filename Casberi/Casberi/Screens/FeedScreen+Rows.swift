@@ -408,10 +408,10 @@ extension FeedScreen {
                 // work that no longer runs, not a cache over it.
                 RowVerbMenu(thing: thing, room: source, run: { run($0, on: $1) }, onDelete: askDeleteNote,
                             onFile: fileThing, onNewFolder: { folderPrompt = .make(filing: $0) },
-                            onUnwatch: source == TokenWatch.source ? { unwatch($0) } : nil,
-                            onMoveToTop: source == TokenWatch.source ? { moveToTop($0, in: things) } : nil,
-                            onReorder: source == TokenWatch.source ? { startReorder() } : nil,
-                            onPin: source == TokenWatch.source ? { pinToLockScreen($0) } : nil)
+                            onUnwatch: drawsMarketsRow(thing) ? { unwatch($0) } : nil,
+                            onMoveToTop: drawsMarketsRow(thing) ? { moveToTop($0, in: walletMarketsRows) } : nil,
+                            onReorder: drawsMarketsRow(thing) ? { startReorder() } : nil,
+                            onPin: drawsMarketsRow(thing) ? { pinToLockScreen($0) } : nil)
             } preview: {
                 // What the band could not fit (prd §412a) — the full title, the
                 // picture at a size worth looking at, the opening words. Until
@@ -630,7 +630,7 @@ extension FeedScreen {
                 // watched token whose pulse has landed wears the fat anatomy
                 // (TokenRow, prd §102) everywhere too; until it lands, the
                 // plain band + timestamp — never a faked price.
-                if source == TokenWatch.source, !PriceAlertStore.isAlertRow(thing) {
+                if drawsMarketsRow(thing), !PriceAlertStore.isAlertRow(thing) {
                     // Markets' own row (prd §1081): the one line, the day's
                     // shape and the span's move.
                     marketsRow(thing)

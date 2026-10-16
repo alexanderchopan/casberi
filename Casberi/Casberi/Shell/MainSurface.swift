@@ -2103,6 +2103,13 @@ struct MainSurface: View {
         // source that belongs to no catalog category, so this costs a
         // dictionary lookup on every source switch and nothing else.
         .onChange(of: filter.source, initial: true) { old, source in
+            // A door that wrote Markets straight into the filter (a deep
+            // link, a stored order) lands on the Wallet's Markets tile, in
+            // place (prd §1337): Markets is no page of its own.
+            if HomeScope.isMarkets(source) {
+                filter.source = walletLanding(source)
+                return
+            }
             // On the phone a category is a section of the Feed and an app
             // rises as a sheet over it (prd §1208), whichever door wrote the
             // filter: the page underneath stays where it was, else the Feed.
@@ -2196,9 +2203,10 @@ struct MainSurface: View {
         .onChange(of: filter.source, initial: true) { _, source in
             route.shownPlace = HomeScope.Place(source: source)
         }
-        .onChange(of: chrome.sourceRequest) { _, request in
-            guard let request else { return }
+        .onChange(of: chrome.sourceRequest) { _, asked in
+            guard let asked else { return }
             chrome.sourceRequest = nil
+            let request = walletLanding(asked)
             if routeIntoFeed(request) != nil {
                 ChipMemory.visited(request)
                 return
@@ -2256,7 +2264,8 @@ struct MainSurface: View {
     /// The one door every source switch walks through (prd §265): chip taps and
     /// swipes both come here, so direction, the tag reset, and tap-learning
     /// cannot drift between them.
-    private func go(to label: String, landNow: Bool = false) {
+    private func go(to asked: String, landNow: Bool = false) {
+        let label = walletLanding(asked)
         // Picking a source means the WHOLE of that source — a kind filter never
         // survives the tap. Two changes from the old rule (2026-08-01), both
         // forced by the "× Links" chip's removal, which was the only way out:
@@ -2603,6 +2612,18 @@ struct MainSurface: View {
         return b >= a ? .trailing : .leading
     }
 
+    /// **MARKETS OPENS IN PLACE, A WALLET TILE (prd §1337, user: "it should
+    /// open in place not the overlay. it's jarring").** Every door that names
+    /// Markets (the Wallet's tile, the tray's door and its search, the rail,
+    /// `-openRoom Markets`, `casberi://room/Markets`) lands on the Wallet with
+    /// Markets picked: the Wallet's box and row stay, Markets lit, and
+    /// Markets' lists stand under them. Markets has no room of its own.
+    private func walletLanding(_ label: String) -> String {
+        guard HomeScope.isMarkets(label) else { return label }
+        chrome.walletSection = .markets
+        return CategoryFold.walletRoom
+    }
+
     /// **ON THE PHONE THE FEED HOLDS THE CATEGORIES (prd §1208).** A door
     /// that names a category scrolls the Feed to its section; a door that
     /// names an app of one raises that app as a sheet over the page you are
@@ -2640,11 +2661,12 @@ struct MainSurface: View {
         }
         // WHAT OPENS ON TOP IS AN APP (prd §1321, retiring §1208l's rule for
         // places, user: "if it is a page then we can do the nav better"):
-        // Day, your notes and Markets are pages beside the Feed, under the
-        // band, as Sources and Settings are; an app picked from the tray, or
+        // Day and your notes are pages beside the Feed, under the band, as
+        // Sources and Settings are (Markets is the Wallet's tile, §1337,
+        // redirected before this); an app picked from the tray, or
         // one that lives in Day (Calendar, Reminders…), still rises over the
         // page you are on.
-        if label != RoomAccounts.dayRoom, label != Pinboard.room, label != HomeScope.markets,
+        if label != RoomAccounts.dayRoom, label != Pinboard.room,
            RoomAccounts.host(ofSource: label).map({
             HomeScope.isFeedSection($0.room) || $0.room == RoomAccounts.dayRoom
         }) == true {
@@ -3651,10 +3673,10 @@ private struct PagerCover: View {
                 if HomeScope.contains(label) {
                     // You's places by their own words: the Feed (prd §1203,
                     // the source is "All") and, since a room opened on top
-                    // goes back to the pole it came from, Notes and Markets.
-                    // Library is a tab too (prd §1327): named, never "Feed".
+                    // goes back to the pole it came from, Notes (Markets is
+                    // the Wallet's tile since prd §1337). Library is a tab too
+                    // (prd §1327): named, never "Feed".
                     Text(Pinboard.isPinnedRoom(label) ? String(localized: "Notes")
-                         : HomeScope.isMarkets(label) ? String(localized: "Markets")
                          : HomeScope.Place(source: label) == .settings ? String(localized: "Library")
                          : String(localized: "Feed"))
                         .dsText(.heading40).foregroundStyle(DS.headInk)

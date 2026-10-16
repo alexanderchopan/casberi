@@ -94,11 +94,12 @@ let all = WalletSection.present()
 check(all == WalletSection.order, "every scope is present, in order")
 check(all.count == WalletSection.order.count, "no scope is hidden from anybody")
 
-// Every scope DRAWN here teaches its own empty state (prd §611, §799);
-// Markets opens its own page (prd §1232) and draws nothing in the Wallet.
+// Every scope that CAN BE EMPTY teaches its own empty state (prd §611, §799).
+// Markets is drawn in place (prd §1337, retiring §1232's own page) and is
+// never empty — its index needs nothing followed (§1167) — so it has none.
 let drawn = WalletSection.order.filter { $0 != .markets }
 check(WalletSection.markets.emptyHeadline == nil && WalletSection.markets.emptyBody == nil,
-      "markets draws no empty state here — it opens Markets")
+      "markets draws no empty state — it is never empty (prd §1167, §1337)")
 for s in drawn {
     check(!(s.emptyHeadline ?? "").isEmpty, "\(s.rawValue) names its own empty state")
     check(!(s.emptyBody ?? "").isEmpty, "\(s.rawValue) says what it would hold")
@@ -223,6 +224,18 @@ deny()  { have "$1"; if grep -q -- "$2" "$work/$1.bare"; then fail "drift: $3"; 
 
 guard MainSurface.swift "extension WalletSection: DSSectionScope" \
   "the conformance moved — it must stay OUT of the Foundation-only model file"
+
+# **MARKETS OPENS IN PLACE (prd §1337, retiring §1232's own page; user: "it
+# should open in place not the overlay. it's jarring").** The Wallet's FeedScreen
+# no longer turns the Markets pick into a request for another page, every door
+# that names Markets lands on the Wallet with the tile picked, and the tile's
+# lists draw under the Wallet's row.
+deny FeedScreen.swift "chrome.sourceRequest = HomeScope.markets" \
+  "the Markets tile requests its own page again — it is drawn in place (prd §1337)"
+guard MainSurface.swift "chrome.walletSection = .markets" \
+  "a Markets door no longer lands on the Wallet's Markets tile (prd §1337)"
+guard FeedScreen.swift "walletMarketsSections(nextEventID: nextEventID)" \
+  "the Wallet's Markets tile draws no lists under its row (prd §1337)"
 
 # BELOW THE SPARKLINE, IN THE CONTENT (user ruling, 2026-08-26: "we need to have
 # those toggles be below the sparkline", "we cannot have four rows of chips").

@@ -181,8 +181,13 @@ extension FeedScreen {
     @ViewBuilder
     func walletScopeVisualSection(_ section: WalletSection, upcoming: [Thing] = []) -> some View {
         switch section {
-        case .home, .markets:
+        case .home:
             EmptyView()
+        // **MARKETS' BOX IS ITS TILES (prd §1337)**: Following, Alerts and
+        // the categories two across, as its room's box stood (§1167), in the
+        // Wallet's box the way Security's checkup stands in it.
+        case .markets:
+            walletMarketsFigure
         // **SUBSCRIPTIONS, AND ONLY THEM (prd §1111).** The calendar shows
         // each renewal on its day and the statement what they cost a month;
         // what waits on you and the dated rows moved to Home. It starts the

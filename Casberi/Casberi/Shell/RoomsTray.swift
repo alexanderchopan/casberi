@@ -427,10 +427,16 @@ struct RoomsTray: View {
     private var youDoors: [Door] {
         let place = route.path.isEmpty ? HomeScope.Place(source: filter.source) : nil
         return doors(home: filter.source == "All" && route.path.isEmpty,
-                     wallet: filter.source == CategoryFold.walletRoom && route.path.isEmpty,
+                     wallet: filter.source == CategoryFold.walletRoom && !standsInMarkets && route.path.isEmpty,
                      notes: Pinboard.isPinnedRoom(filter.source) && route.path.isEmpty,
-                     markets: HomeScope.isMarkets(filter.source) && route.path.isEmpty,
+                     markets: standsInMarkets && route.path.isEmpty,
                      place: place)
+    }
+
+    /// Markets is the Wallet's tile, drawn in place (prd §1337): you stand
+    /// in it while the Wallet shows it.
+    private var standsInMarkets: Bool {
+        filter.source == CategoryFold.walletRoom && chrome.walletSection == .markets
     }
 
     /// The You row's doors, in order.
@@ -451,12 +457,11 @@ struct RoomsTray: View {
             // You's four places, in the tiles' order (prd §1136 item 1):
             // Home, then A–Z. Apps and Addresses are filters inside Sources
             // now, the master list of everything you've connected.
-            // Markets (prd §1123): its room once something is watched, else
-            // the page where the first stock or token is added, so the door
-            // is always drawn (§969).
+            // Markets (prd §1123), always drawn (§969, §1167): the Wallet
+            // with its Markets tile picked, in place (§1337; the shell turns
+            // the request into the Wallet).
             Door(word: String(localized: "Markets"), glyph: CategoryFold.glyph(for: Self.markets),
                  lit: markets, key: Self.markets) {
-                // Always its room (prd §1167): Markets is no app to connect.
                 pickCategory(Self.markets)
             },
             // The Notes tile's own glyph (`ScopeTileGlyph.notes`), lit or not: the
@@ -472,7 +477,11 @@ struct RoomsTray: View {
             // settings wallet"): the Feed's places in its tiles' order, then
             // the Wallet, where the swipe left lands and its card begins.
             Door(word: String(localized: "Wallet"), glyph: CategoryFold.glyph(for: CategoryFold.walletCategory),
-                 lit: wallet, key: CategoryFold.walletRoom) { pickCategory(CategoryFold.walletCategory) },
+                 lit: wallet, key: CategoryFold.walletRoom) {
+                // From the Wallet's Markets tile, the Wallet door is its Home.
+                if standsInMarkets { chrome.walletSection = .home }
+                pickCategory(CategoryFold.walletCategory)
+            },
         ]
     }
 
@@ -855,7 +864,7 @@ struct RoomsTray: View {
     /// places in You, Markets in Markets, a room in its category.
     private var standingGroup: String? {
         guard route.path.isEmpty, filter.source != "All" else { return nil }
-        if HomeScope.isMarkets(filter.source) { return Self.markets }
+        if standsInMarkets { return Self.markets }
         if HomeScope.contains(filter.source) { return TraySearch.you }
         return standingCategory
     }

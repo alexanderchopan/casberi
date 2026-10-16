@@ -292,7 +292,7 @@ struct DSScopeTiles<Scope: DSTileScope>: View {
                 // The dock's glyph, bouncing once when its tile becomes the
                 // pick — in the strip only, the one place these tiles ARE the
                 // dock's (user, 2026-09-17). A room's scope grid stays still.
-                // **THE PICK FILLS ITS GLYPH (prd §1335)**, as a tab bar
+                // **THE PICK FILLS ITS GLYPH (prd §1336)**, as a tab bar
                 // marks where you are; the rest stay drawn in line.
                 CategoryGlyph(name: arming == section ? (hold?.glyph ?? section.glyph) : section.glyph,
                               size: Self.glyphSize, isActive: strip && isOn)
