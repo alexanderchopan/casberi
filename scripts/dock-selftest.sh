@@ -807,7 +807,8 @@ grep -q 'route.openAccount(' "$TMP/apps.nc" \
        echo "  pages behind each other (prd §876)."; fail=1; }
 # Every SettingsPage case is opened by a row, or it is a page nothing reaches.
 strip_comments "Casberi/Casberi/Screens/AccountScreen.swift" > "$TMP/settings.nc"
-for page in data notifications diagnostics language dockOrder; do
+# Feed order left Settings for the Feed's Reorder tile (prd §1345).
+for page in data notifications diagnostics language; do
   grep -q "open(.$page)" "$TMP/settings.nc" \
     || { echo "✗ no Settings row opens .$page through open(_:sheet:) — on the Mac it"; \
          echo "  would still raise a sheet over the pane (prd §876)."; fail=1; }
