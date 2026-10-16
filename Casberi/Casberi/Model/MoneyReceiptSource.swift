@@ -55,8 +55,11 @@ enum MoneyReceiptSource {
         f.tags = thing.tags
         f.authorHandle = thing.authorHandle
         f.myLabel = walletLabel(thing.walletAddress)
+        // An address with no name goes by its short form (prd §1350), never
+        // the lead's "Sent to" standing in for a name.
         f.partyLabel = thing.counterpartyAddress
             .flatMap { WalletIngest.knownLabel(for: $0) } ?? thing.transferCounterparty
+            ?? thing.counterpartyAddress.flatMap { $0.count > 10 ? "\($0.prefix(6))…\($0.suffix(4))" : nil }
         f.partyWatched = WalletStore.shared.watches(thing.counterpartyAddress)
         f.network = WalletIngest.chainName(forContent: thing.content)
         // By the explorer, never the unit: a receipt under 0.01 BTC is written

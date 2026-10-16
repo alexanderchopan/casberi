@@ -66783,3 +66783,8 @@ Mocks: `design/mockups/tab-bar-options.html`, `design/mockups/tab-bar-library.ht
 2. **The wallet family's row stands `s3` under its box** (`DSRoomScopeChrome`), as every other room's does since §1336; it sat higher.
 3. **A transfer between two wallets you watch** (`WalletStore.watches`, `MoneyReceipt.Facts.partyWatched`) is titled where it went ("Everyday to Savings", lead "Moved"), both ends wear the wallet's mark, there is no "This year with" card (there is no "them"), and the From card drops the wallet row the header already draws. Every transfer's line reads "Today", "Yesterday" or "Oct 16", never the weekday.
 
+## §1350 — A transfer with an unnamed address names it by its short form; the "Name this address?" block is deleted (user, 2026-10-16: "ok", of a receipt titled "Sent to" with "This year with Sent to" and a naming block under Save)
+
+1. **An address with no name goes by its short form, "0x1f2e…a91c"** (`MoneyReceiptSource.facts`): the title, the face's caption and the year card ("This year with 0x1f2e…a91c") read it, where the lead's "Sent to" had stood in for a name.
+2. **The "Name this address?" block is deleted** (`NameAddressPrompt`, `AddressNudge`): the verb row's Save names the address, and the block asked the same thing a second time under it.
+

@@ -92,7 +92,6 @@ struct ThingSheetView: View {
     @State private var identityTarget: Identity?
     /// Flipped by "Not now" so the nudge leaves immediately — the decline is
     /// also persisted, so it never returns for this address (prd §169).
-    @State private var nudgeDeclined = false
 
     // MARK: - The note anatomies (prd §366)
 
@@ -111,11 +110,6 @@ struct ThingSheetView: View {
     @State private var previousEntry: KeyedThing?
     @State private var nextEntry: KeyedThing?
 
-    /// The second-encounter naming nudge, when this sheet earns one.
-    private var namePrompt: (address: String, count: Int, kind: AddressBook.Kind)? {
-        guard !nudgeDeclined else { return nil }
-        return AddressNudge.prompt(for: thing, context: modelContext)
-    }
     @State private var counterpartyDraft = ""
     /// A post/cast's thread (2026-07-14) — fetched live from the source's
     /// public API when the sheet opens a social thing (Bluesky);
@@ -1044,18 +1038,8 @@ struct ThingSheetView: View {
                         .padding(.horizontal, DS.Space.s4)
                         .padding(.top, DS.Space.s3)
                 }
-                if let nudge = namePrompt {
-                    NameAddressPrompt(address: nudge.address, count: nudge.count,
-                                      kind: nudge.kind) {
-                        counterpartyTarget = nudge.address
-                        counterpartyDraft = ""
-                    } onDismiss: {
-                        AddressNudge.decline(nudge.address)
-                        withAnimation(DS.Motion.standard) { nudgeDeclined = true }
-                    }
-                    .padding(.horizontal, DS.Space.s4)
-                    .padding(.top, DS.Space.s3)
-                }
+                // The "Name this address?" block is deleted (prd §1350): the
+                // verb row's Save names the address, and the block said so twice.
                 let headDrawsTiles: Bool = moneyReceipt != nil || framedShot || articleHead
                     || noteShape != nil || talkHead || momentHead || mediaHead
                     || workReading != nil || framesOwnTiles || postHead || chartHead || plainHead
