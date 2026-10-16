@@ -2,27 +2,6 @@
  "_doc": "The sheet sweep's list (prd §1308): scripts/sheet-sweep-audit.py holds it to the code; CasberiUITests/SheetSweepTests.swift walks it.",
  "entries": [
   {
-   "id": "sources",
-   "covers": [
-    "Shell/MainSurface.swift:route.sheet#node.casberi"
-   ],
-   "launch": [
-    "demo"
-   ],
-   "steps": [
-    {
-     "wait": 2
-    },
-    {
-     "swipeDown": 2
-    },
-    {
-     "tap": "button:^Sources, Everything"
-    }
-   ],
-   "anchor": "button:~, Subscriptions"
-  },
-  {
    "id": "sources-track-subscription",
    "covers": [
     "Screens/SettingsHome.swift:sheet#subscriptionAdd"
@@ -44,10 +23,7 @@
      "tap": "button:=Track a subscription"
     }
    ],
-   "anchor": "field:?Search, or type any name",
-   "afterSwipe": "button:^Sources, Everything",
-   "control": "button:=Back",
-   "afterControl": "button:~, Subscriptions"
+   "anchor": "field:?Search, or type any name"
   },
   {
    "id": "sources-track-mail-list",
@@ -71,10 +47,7 @@
      "tap": "button:=Track a mail list"
     }
    ],
-   "anchor": "text:=Uma Patel",
-   "afterSwipe": "button:^Sources, Everything",
-   "control": "button:=Back",
-   "afterControl": "button:~, Mail lists"
+   "anchor": "text:=Uma Patel"
   },
   {
    "id": "sources-follow-wallet",
@@ -98,10 +71,7 @@
      "tap": "button:=Follow a wallet"
     }
    ],
-   "anchor": "field:?An address or a name",
-   "afterSwipe": "button:^Sources, Everything",
-   "control": "button:=Back",
-   "afterControl": "button:~, Wallets"
+   "anchor": "field:?An address or a name"
   },
   {
    "id": "sources-new-contact",
@@ -129,9 +99,7 @@
     }
    ],
    "anchor": "button:=Save",
-   "afterSwipe": "button:^Sources, Everything",
-   "control": "button:=Back",
-   "afterControl": "button:~, Contacts"
+   "afterSwipe": "button:=Add a contact"
   },
   {
    "id": "sources-track-pick",
@@ -139,13 +107,17 @@
     "Screens/SettingsHome.swift:trackPick"
    ],
    "launch": [
-    "demo",
-    "-openSettings",
-    "YES"
+    "demo"
    ],
    "steps": [
     {
-     "tap": "button:=Sources"
+     "wait": 2
+    },
+    {
+     "swipeDown": 2
+    },
+    {
+     "tap": "button:^Sources, Everything"
     },
     {
      "tap": "button:=Follow something"
@@ -154,10 +126,36 @@
      "tap": "button:^YouTube, A channel"
     }
    ],
-   "anchor": "button:=Back",
-   "afterSwipe": "button:^Sources, Everything",
-   "control": "button:=Back",
-   "afterControl": "button:~, Media"
+   "anchor": "button:=Sheet Grabber",
+   "afterSwipe": "button:=Follow something"
+  },
+  {
+   "id": "sources-subscribe-calendar",
+   "covers": [
+    "Screens/SettingsHome.swift:calendarAdd&&route.sheet"
+   ],
+   "launch": [
+    "demo"
+   ],
+   "steps": [
+    {
+     "wait": 2
+    },
+    {
+     "swipeDown": 2
+    },
+    {
+     "tap": "button:^Sources, Everything"
+    },
+    {
+     "tap": "button:=Add a calendar"
+    },
+    {
+     "tap": "button:=Subscribe by link"
+    }
+   ],
+   "anchor": "button:=Sheet Grabber",
+   "afterSwipe": "button:=Add a calendar"
   },
   {
    "id": "sources-plan",
@@ -184,10 +182,7 @@
      "tap": "button:^iCloud+, Monthly"
     }
    ],
-   "anchor": "button:=Back",
-   "afterSwipe": "button:^Sources, Everything",
-   "control": "button:=Back",
-   "afterControl": "button:~, Contacts"
+   "anchor": "text:=Paid so far"
   },
   {
    "id": "sources-contact",
@@ -214,129 +209,122 @@
      "tap": "button:^Ana Kovač, "
     }
    ],
-   "anchor": "button:=Back",
-   "afterSwipe": "button:^Sources, Everything",
-   "control": "button:=Back",
-   "afterControl": "button:^Ana Kovač, "
+   "anchor": "button:=ana@studio.com"
   },
   {
-   "id": "sources-subscribe-calendar",
+   "id": "sources-mail-list",
    "covers": [
-    "Screens/SettingsHome.swift:calendarAdd&&route.sheet"
+    "Screens/SettingsHome.swift:sheet#list"
    ],
    "launch": [
-    "demo",
-    "-openSettings",
-    "YES"
+    "demo"
    ],
    "steps": [
     {
-     "tap": "button:=Sources"
+     "wait": 2
     },
     {
-     "tap": "button:=Add a calendar"
+     "swipeDown": 2
     },
     {
-     "tap": "button:=Subscribe by link"
+     "tap": "button:^Sources, Everything"
+    },
+    {
+     "tap": "button:~, Mail lists"
+    },
+    {
+     "tap": "button:^Uber Eats, "
     }
    ],
-   "anchor": "button:=Back",
-   "afterSwipe": "button:^Sources, Everything",
-   "control": "button:=Back",
-   "afterControl": "button:~, Calendars"
+   "anchor": "button:=Sheet Grabber"
   },
   {
-   "id": "settings-data",
+   "id": "sources-followed",
    "covers": [
-    "Shell/MainSurface.swift:route.sheet#node.settingsPage"
+    "Screens/SettingsHome.swift:sheet#follow"
    ],
    "launch": [
-    "demo",
-    "-openSettings",
-    "YES"
+    "demo"
    ],
    "steps": [
     {
-     "tap": "button:=Data"
-    }
-   ],
-   "anchor": "button:^What this app reaches",
-   "afterSwipe": "button:^Sources, Everything",
-   "control": "button:=Back",
-   "afterControl": "button:=Language"
-  },
-  {
-   "id": "settings-notifications",
-   "covers": [],
-   "launch": [
-    "demo",
-    "-openSettings",
-    "YES"
-   ],
-   "steps": [
+     "wait": 2
+    },
     {
-     "tap": "button:=Notifications"
-    }
-   ],
-   "anchor": "switch:^Feed, Everything else",
-   "afterSwipe": "button:^Sources, Everything",
-   "control": "button:=Back",
-   "afterControl": "button:=Language"
-  },
-  {
-   "id": "settings-language",
-   "covers": [],
-   "launch": [
-    "demo",
-    "-openSettings",
-    "YES"
-   ],
-   "steps": [
+     "swipeDown": 2
+    },
     {
-     "tap": "button:=Language"
-    }
-   ],
-   "anchor": "text:=Español",
-   "afterSwipe": "button:^Sources, Everything",
-   "control": "button:=Back",
-   "afterControl": "button:=Data"
-  },
-  {
-   "id": "settings-feed-order",
-   "covers": [],
-   "launch": [
-    "demo",
-    "-openSettings",
-    "YES"
-   ],
-   "steps": [
+     "tap": "button:^Sources, Everything"
+    },
     {
-     "tap": "button:=Feed order"
+     "tap": "button:~, Media"
+    },
+    {
+     "tap": "button:^Hacker News, "
     }
    ],
-   "anchor": "button:=Reorder Social",
-   "afterSwipe": "button:^Sources, Everything",
-   "control": "button:=Back",
-   "afterControl": "button:=Data"
+   "anchor": "button:=Sheet Grabber"
   },
   {
-   "id": "reach",
+   "id": "plan-edit",
    "covers": [
-    "Shell/MainSurface.swift:route.sheet#node.reach"
+    "Screens/SubscriptionSheets.swift:editing"
    ],
    "launch": [
     "demo",
-    "-openReach",
+    "-subscriptionTrack",
+    "Hulu:15.99"
+   ],
+   "steps": [
+    {
+     "wait": 2
+    },
+    {
+     "swipeDown": 2
+    },
+    {
+     "tap": "button:^Sources, Everything"
+    },
+    {
+     "tap": "button:~, Subscriptions"
+    },
+    {
+     "tap": "button:^Hulu, "
+    },
+    {
+     "tap": "button:^Edit"
+    }
+   ],
+   "anchor": "button:=Save",
+   "afterSwipe": "button:^Hulu, ",
+   "control": "button:=Back",
+   "afterControl": "button:^Edit"
+  },
+  {
+   "id": "addresses-thing",
+   "covers": [
+    "Screens/AddressesScreen.swift:openedThing"
+   ],
+   "launch": [
+    "demo",
+    "-openAddresses",
     "YES"
    ],
    "steps": [
     {
      "wait": 2
+    },
+    {
+     "tap": "button:^Sam, "
+    },
+    {
+     "tap": "button:^Sent 0.15 ETH"
     }
    ],
-   "anchor": "button:^Casberi. Saved links",
-   "afterSwipe": "button:^Sources, Everything",
-   "offscreen": true
+   "anchor": "button:=Share, Share",
+   "afterSwipe": "button:^Sam, ",
+   "control": "button:=Back",
+   "afterControl": "button:^Sent 0.15 ETH"
   },
   {
    "id": "app-page",
@@ -378,25 +366,16 @@
      "tap": "button:^Sources, Everything"
     },
     {
-     "tap": "button:~, Apps"
+     "tap": "button:^Agents, "
     },
     {
-     "focus": "field:?Search"
-    },
-    {
-     "type": "Gemini"
-    },
-    {
-     "tap": "button:^Gemini,"
+     "tap": "button:=Gemini"
     },
     {
      "tap": "button:^Add your Google key"
     }
    ],
-   "anchor": "text:=Your Gemini key",
-   "afterSwipe": "button:^Sources, Everything",
-   "control": "button:=Back",
-   "afterControl": "button:^Add your Google key"
+   "anchor": "text:=Your Gemini key"
   },
   {
    "id": "app-key-door",
@@ -417,16 +396,10 @@
      "tap": "button:^Sources, Everything"
     },
     {
-     "tap": "button:~, Apps"
+     "tap": "button:^Agents, "
     },
     {
-     "focus": "field:?Search"
-    },
-    {
-     "type": "Gemini"
-    },
-    {
-     "tap": "button:^Gemini,"
+     "tap": "button:=Gemini"
     },
     {
      "tap": "button:^Add your Google key"
@@ -459,23 +432,265 @@
      "tap": "button:^Sources, Everything"
     },
     {
-     "tap": "button:~, Apps"
+     "swipeUp": 1
     },
     {
-     "focus": "field:?Search"
+     "tap": "button:^Work, "
     },
     {
-     "type": "Stripe"
-    },
-    {
-     "tap": "button:^Stripe,"
+     "tap": "button:=Stripe"
     },
     {
      "tap": "button:^Website"
     }
    ],
+   "anchor": "button:=Open in Safari"
+  },
+  {
+   "id": "app-thing",
+   "covers": [
+    "Screens/AccountPage.swift:sheet#thing"
+   ],
+   "launch": [
+    "demo"
+   ],
+   "steps": [
+    {
+     "wait": 2
+    },
+    {
+     "swipeDown": 2
+    },
+    {
+     "tap": "button:^Sources, Everything"
+    },
+    {
+     "swipeUp": 1
+    },
+    {
+     "tap": "button:^Wallet, "
+    },
+    {
+     "tap": "button:=ENS"
+    },
+    {
+     "swipeUp": 1
+    },
+    {
+     "tap": "button:^nick.eth, "
+    }
+   ],
+   "anchor": "button:^Share, Share"
+  },
+  {
+   "id": "app-track",
+   "covers": [
+    "Screens/AccountPage.swift:sheet#track"
+   ],
+   "launch": [
+    "demo"
+   ],
+   "steps": [
+    {
+     "wait": 2
+    },
+    {
+     "swipeDown": 2
+    },
+    {
+     "tap": "button:^Sources, Everything"
+    },
+    {
+     "swipeUp": 1
+    },
+    {
+     "tap": "button:^Wallet, "
+    },
+    {
+     "tap": "button:=Acorns"
+    },
+    {
+     "tap": "button:^Track a subscription, Free"
+    }
+   ],
+   "anchor": "button:=Track Acorns"
+  },
+  {
+   "id": "app-card",
+   "covers": [
+    "Screens/AccountPage.swift:sheet#card"
+   ],
+   "launch": [
+    "demo"
+   ],
+   "steps": [
+    {
+     "wait": 2
+    },
+    {
+     "swipeDown": 2
+    },
+    {
+     "tap": "button:^Sources, Everything"
+    },
+    {
+     "tap": "button:^Media, "
+    },
+    {
+     "tap": "button:=Walletbeat"
+    },
+    {
+     "swipeUp": 2
+    },
+    {
+     "tap": "button:^Ledger Wallet, "
+    }
+   ],
+   "anchor": "link:=Full review on Walletbeat",
+   "offscreen": true
+  },
+  {
+   "id": "acorns-login",
+   "covers": [
+    "Screens/AcornsScreen.swift:showLogin"
+   ],
+   "launch": [
+    "demo"
+   ],
+   "steps": [
+    {
+     "wait": 2
+    },
+    {
+     "swipeDown": 2
+    },
+    {
+     "tap": "button:^Sources, Everything"
+    },
+    {
+     "swipeUp": 1
+    },
+    {
+     "tap": "button:^Wallet, "
+    },
+    {
+     "tap": "button:=Acorns"
+    },
+    {
+     "tap": "button:^Sign in"
+    }
+   ],
+   "anchor": "text:=Log in to Acorns",
+   "swipe": false,
+   "control": "button:=Done",
+   "afterControl": "button:^Sign in"
+  },
+  {
+   "id": "rocket-login",
+   "covers": [
+    "Screens/RocketMoneyScreen.swift:showLogin"
+   ],
+   "launch": [
+    "demo"
+   ],
+   "steps": [
+    {
+     "wait": 2
+    },
+    {
+     "swipeDown": 2
+    },
+    {
+     "tap": "button:^Sources, Everything"
+    },
+    {
+     "swipeUp": 1
+    },
+    {
+     "tap": "button:^Wallet, "
+    },
+    {
+     "tap": "button:=Rocket Money"
+    },
+    {
+     "tap": "button:^Sign in"
+    }
+   ],
    "anchor": "button:=Done",
-   "control": "button:=Done"
+   "swipe": false,
+   "control": "button:=Done",
+   "afterControl": "button:^Sign in"
+  },
+  {
+   "id": "spotify-login",
+   "covers": [
+    "Screens/SpotifyScreen.swift:showLogin"
+   ],
+   "launch": [
+    "demo"
+   ],
+   "steps": [
+    {
+     "wait": 2
+    },
+    {
+     "swipeDown": 2
+    },
+    {
+     "tap": "button:^Sources, Everything"
+    },
+    {
+     "tap": "button:^Media, "
+    },
+    {
+     "tap": "button:=Spotify"
+    },
+    {
+     "tap": "button:^Sign in"
+    }
+   ],
+   "anchor": "button:=Done",
+   "swipe": false,
+   "control": "button:=Done",
+   "afterControl": "button:^Sign in"
+  },
+  {
+   "id": "tray-app",
+   "covers": [
+    "Shell/RootShell.swift:chrome.appSheet"
+   ],
+   "launch": [
+    "demo",
+    "-openTray",
+    "YES"
+   ],
+   "steps": [
+    {
+     "tap": "button:=GitHub"
+    }
+   ],
+   "anchor": "button:^Share this week",
+   "afterSwipe": "button:=Search"
+  },
+  {
+   "id": "room-share",
+   "covers": [
+    "Screens/FeedScreen.swift:roomShare"
+   ],
+   "launch": [
+    "demo",
+    "-openTray",
+    "YES"
+   ],
+   "steps": [
+    {
+     "tap": "button:=GitHub"
+    },
+    {
+     "tap": "button:^Share this week"
+    }
+   ],
+   "anchor": "button:=Share…"
   },
   {
    "id": "feed-thing",
@@ -496,7 +711,7 @@
      "tap": "button:~Needs attention · £200"
     }
    ],
-   "anchor": "button:^Everything from"
+   "anchor": "button:=Wise, App"
   },
   {
    "id": "thing-by-link",
@@ -515,8 +730,8 @@
      ]
     }
    ],
-   "anchor": "button:=Everything from Telegram",
-   "afterSwipe": "button:^Sources, Everything"
+   "anchor": "button:=Telegram, App",
+   "afterSwipe": "button:=Search"
   },
   {
    "id": "share-tray",
@@ -539,7 +754,7 @@
     }
    ],
    "anchor": "button:=Post on X",
-   "afterSwipe": "button:^Sources, Everything",
+   "afterSwipe": "button:=Search",
    "control": "button:=Back",
    "afterControl": "button:^Share"
   },
@@ -657,9 +872,7 @@
   },
   {
    "id": "l2beat-directory",
-   "covers": [
-    "Shell/MainSurface.swift:route.sheet#node.l2beatDirectory"
-   ],
+   "covers": [],
    "launch": [
     "demo",
     "-openRoom",
@@ -683,9 +896,7 @@
   },
   {
    "id": "walletbeat-directory",
-   "covers": [
-    "Shell/MainSurface.swift:route.sheet#node.walletbeatDirectory"
-   ],
+   "covers": [],
    "launch": [
     "demo",
     "-openRoom",
@@ -744,7 +955,7 @@
     }
    ],
    "anchor": "button:=Sheet Grabber",
-   "afterSwipe": "button:^Sources, Everything"
+   "afterSwipe": "button:=Search"
   },
   {
    "id": "pivot",
@@ -756,18 +967,23 @@
    ],
    "steps": [
     {
-     "relaunch": [
-      "demo",
-      "-openThing",
-      "Sourdough"
-     ]
+     "wait": 2
     },
     {
-     "tap": "button:=Everything from Telegram"
+     "tap": "button:=Search"
+    },
+    {
+     "focus": "field:?Search"
+    },
+    {
+     "type": "Telegram"
+    },
+    {
+     "tap": "button:^Everything from Telegram"
     }
    ],
    "anchor": "button:=Sheet Grabber",
-   "afterSwipe": "button:^Sources, Everything"
+   "afterSwipe": "button:=Search"
   },
   {
    "id": "thing-track",
@@ -790,7 +1006,7 @@
     }
    ],
    "anchor": "button:=Track Spotify",
-   "afterSwipe": "button:^Sources, Everything"
+   "afterSwipe": "button:=Search"
   },
   {
    "id": "thing-alert-new",
@@ -813,288 +1029,7 @@
     }
    ],
    "anchor": "text:=New alert",
-   "afterSwipe": "button:^Sources, Everything"
-  },
-  {
-   "id": "addresses-thing",
-   "covers": [
-    "Screens/AddressesScreen.swift:openedThing"
-   ],
-   "launch": [
-    "demo",
-    "-openAddresses",
-    "YES"
-   ],
-   "steps": [
-    {
-     "wait": 2
-    },
-    {
-     "tap": "button:^Sam, "
-    },
-    {
-     "tap": "button:^Sent 0.15 ETH"
-    }
-   ],
-   "anchor": "button:^Everything from",
-   "afterSwipe": "button:^Sources, Everything",
-   "control": "button:=Back",
-   "afterControl": "button:^Sent 0.15 ETH"
-  },
-  {
-   "id": "app-thing",
-   "covers": [
-    "Screens/AccountPage.swift:sheet#thing"
-   ],
-   "launch": [
-    "demo"
-   ],
-   "steps": [
-    {
-     "wait": 2
-    },
-    {
-     "swipeDown": 2
-    },
-    {
-     "tap": "button:^Sources, Everything"
-    },
-    {
-     "tap": "button:~, Apps"
-    },
-    {
-     "focus": "field:?Search"
-    },
-    {
-     "type": "ENS"
-    },
-    {
-     "tap": "button:^ENS,"
-    },
-    {
-     "tap": "button:^nick.eth, "
-    }
-   ],
-   "anchor": "button:^Share, Share",
-   "afterSwipe": "button:^Sources, Everything",
-   "control": "button:=Back",
-   "afterControl": "button:^nick.eth, "
-  },
-  {
-   "id": "app-track",
-   "covers": [
-    "Screens/AccountPage.swift:sheet#track"
-   ],
-   "launch": [
-    "demo"
-   ],
-   "steps": [
-    {
-     "wait": 2
-    },
-    {
-     "swipeDown": 2
-    },
-    {
-     "tap": "button:^Sources, Everything"
-    },
-    {
-     "tap": "button:~, Apps"
-    },
-    {
-     "focus": "field:?Search"
-    },
-    {
-     "type": "Acorns"
-    },
-    {
-     "tap": "button:^Acorns,"
-    },
-    {
-     "tap": "button:^Track a subscription, Free"
-    }
-   ],
-   "anchor": "button:=Track Acorns",
-   "afterSwipe": "button:^Sources, Everything",
-   "control": "button:=Back",
-   "afterControl": "button:^Track a subscription, Free"
-  },
-  {
-   "id": "acorns-login",
-   "covers": [
-    "Screens/AcornsScreen.swift:showLogin"
-   ],
-   "launch": [
-    "demo"
-   ],
-   "steps": [
-    {
-     "wait": 2
-    },
-    {
-     "swipeDown": 2
-    },
-    {
-     "tap": "button:^Sources, Everything"
-    },
-    {
-     "tap": "button:~, Apps"
-    },
-    {
-     "focus": "field:?Search"
-    },
-    {
-     "type": "Acorns"
-    },
-    {
-     "tap": "button:^Acorns,"
-    },
-    {
-     "tap": "button:^Sign in"
-    }
-   ],
-   "anchor": "text:=Log in to Acorns",
-   "swipe": false,
-   "control": "button:=Done",
-   "afterControl": "button:^Sign in"
-  },
-  {
-   "id": "rocket-login",
-   "covers": [
-    "Screens/RocketMoneyScreen.swift:showLogin"
-   ],
-   "launch": [
-    "demo"
-   ],
-   "steps": [
-    {
-     "wait": 2
-    },
-    {
-     "swipeDown": 2
-    },
-    {
-     "tap": "button:^Sources, Everything"
-    },
-    {
-     "tap": "button:~, Apps"
-    },
-    {
-     "focus": "field:?Search"
-    },
-    {
-     "type": "Rocket Money"
-    },
-    {
-     "tap": "button:^Rocket Money,"
-    },
-    {
-     "tap": "button:^Sign in"
-    }
-   ],
-   "anchor": "button:=Done",
-   "swipe": false,
-   "control": "button:=Done",
-   "afterControl": "button:^Sign in"
-  },
-  {
-   "id": "spotify-login",
-   "covers": [
-    "Screens/SpotifyScreen.swift:showLogin"
-   ],
-   "launch": [
-    "demo"
-   ],
-   "steps": [
-    {
-     "wait": 2
-    },
-    {
-     "swipeDown": 2
-    },
-    {
-     "tap": "button:^Sources, Everything"
-    },
-    {
-     "tap": "button:~, Apps"
-    },
-    {
-     "focus": "field:?Search"
-    },
-    {
-     "type": "Spotify"
-    },
-    {
-     "tap": "button:^Spotify,"
-    },
-    {
-     "tap": "button:^Sign in"
-    }
-   ],
-   "anchor": "button:=Done",
-   "swipe": false,
-   "control": "button:=Done",
-   "afterControl": "button:^Sign in"
-  },
-  {
-   "id": "sources-mail-list",
-   "covers": [
-    "Screens/SettingsHome.swift:sheet#list"
-   ],
-   "launch": [
-    "demo"
-   ],
-   "steps": [
-    {
-     "wait": 2
-    },
-    {
-     "swipeDown": 2
-    },
-    {
-     "tap": "button:^Sources, Everything"
-    },
-    {
-     "tap": "button:~, Mail lists"
-    },
-    {
-     "tap": "button:^The Sunday Loaf, "
-    }
-   ],
-   "anchor": "button:^A starter that forgives you, ",
-   "afterSwipe": "button:^Sources, Everything",
-   "control": "button:=Back",
-   "afterControl": "button:^The Sunday Loaf, "
-  },
-  {
-   "id": "sources-followed",
-   "covers": [
-    "Screens/SettingsHome.swift:sheet#follow"
-   ],
-   "launch": [
-    "demo"
-   ],
-   "steps": [
-    {
-     "wait": 2
-    },
-    {
-     "swipeDown": 2
-    },
-    {
-     "tap": "button:^Sources, Everything"
-    },
-    {
-     "tap": "button:~, Media"
-    },
-    {
-     "tap": "button:^Computerphile, "
-    }
-   ],
-   "anchor": "text:=Through",
-   "afterSwipe": "button:^Sources, Everything",
-   "control": "button:=Back",
-   "afterControl": "button:^Computerphile, "
+   "afterSwipe": "button:=Search"
   },
   {
    "id": "pivot-thing",
@@ -1106,21 +1041,26 @@
    ],
    "steps": [
     {
-     "relaunch": [
-      "demo",
-      "-openThing",
-      "Sourdough"
-     ]
+     "wait": 2
     },
     {
-     "tap": "button:=Everything from Telegram"
+     "tap": "button:=Search"
+    },
+    {
+     "focus": "field:?Search"
+    },
+    {
+     "type": "Telegram"
+    },
+    {
+     "tap": "button:^Everything from Telegram"
     },
     {
      "tap": "button:^Kettlebell complexes for cyclists, "
     }
    ],
    "anchor": "text:=Site",
-   "afterSwipe": "button:^Sources, Everything",
+   "afterSwipe": "button:=Search",
    "control": "button:=Back",
    "afterControl": "button:^Kettlebell complexes for cyclists, "
   },
@@ -1145,7 +1085,7 @@
     }
    ],
    "anchor": "button:=@you",
-   "afterSwipe": "button:^Sources, Everything",
+   "afterSwipe": "button:=Search",
    "control": "button:=Back",
    "afterControl": "button:^Replying to you"
   },
@@ -1194,84 +1134,9 @@
     }
    ],
    "anchor": "button:=@nils",
-   "afterSwipe": "button:^Sources, Everything",
+   "afterSwipe": "button:=Search",
    "control": "button:=Back",
    "afterControl": "button:^@nils, "
-  },
-  {
-   "id": "plan-edit",
-   "covers": [
-    "Screens/SubscriptionSheets.swift:editing"
-   ],
-   "launch": [
-    "demo",
-    "-subscriptionTrack",
-    "Hulu:15.99"
-   ],
-   "steps": [
-    {
-     "wait": 2
-    },
-    {
-     "swipeDown": 2
-    },
-    {
-     "tap": "button:^Sources, Everything"
-    },
-    {
-     "tap": "button:~, Subscriptions"
-    },
-    {
-     "tap": "button:^Hulu, "
-    },
-    {
-     "tap": "button:^Edit"
-    }
-   ],
-   "anchor": "button:=Save",
-   "afterSwipe": "button:^Sources, Everything",
-   "control": "button:=Back",
-   "afterControl": "button:^Edit"
-  },
-  {
-   "id": "app-card",
-   "covers": [
-    "Screens/AccountPage.swift:sheet#card"
-   ],
-   "launch": [
-    "demo"
-   ],
-   "steps": [
-    {
-     "wait": 2
-    },
-    {
-     "swipeDown": 2
-    },
-    {
-     "tap": "button:^Sources, Everything"
-    },
-    {
-     "tap": "button:~, Apps"
-    },
-    {
-     "focus": "field:?Search"
-    },
-    {
-     "type": "Walletbeat"
-    },
-    {
-     "tap": "button:^Walletbeat,"
-    },
-    {
-     "tap": "button:^Ledger Wallet, "
-    }
-   ],
-   "anchor": "link:=Full review on Walletbeat",
-   "afterSwipe": "button:^Sources, Everything",
-   "offscreen": true,
-   "control": "button:=Back",
-   "afterControl": "button:^Ledger Wallet, "
   },
   {
    "id": "walletbeat-wallet",
@@ -1354,7 +1219,7 @@
     }
    ],
    "anchor": "link:=Full review on Walletbeat",
-   "afterSwipe": "button:^Sources, Everything",
+   "afterSwipe": "button:=Search",
    "offscreen": true,
    "control": "button:=Back",
    "afterControl": "button:^What Walletbeat says about Trezor"
@@ -1383,7 +1248,7 @@
     }
    ],
    "anchor": "button:=Follow",
-   "afterSwipe": "button:^Sources, Everything",
+   "afterSwipe": "button:=Search",
    "control": "button:=Back",
    "afterControl": "button:=@nils"
   },
@@ -1408,7 +1273,7 @@
     }
    ],
    "anchor": "text:=Through",
-   "afterSwipe": "button:^Sources, Everything",
+   "afterSwipe": "button:=Search",
    "control": "button:=Back",
    "afterControl": "button:^The Verge"
   },
@@ -1436,34 +1301,9 @@
     }
    ],
    "anchor": "text:=From",
-   "afterSwipe": "button:^Sources, Everything",
+   "afterSwipe": "button:=Search",
    "control": "button:=Back",
    "afterControl": "button:^The return of local-first"
-  },
-  {
-   "id": "thing-follow-channel",
-   "covers": [
-    "Screens/ThingSheetView.swift:faceTarget#followChannel"
-   ],
-   "launch": [
-    "demo"
-   ],
-   "steps": [
-    {
-     "relaunch": [
-      "demo",
-      "-openThing",
-      "How a compiler actually reads"
-     ]
-    },
-    {
-     "tap": "button:^Follow"
-    }
-   ],
-   "anchor": "field:?@handle or channel link",
-   "afterSwipe": "button:^Sources, Everything",
-   "control": "button:=Back",
-   "afterControl": "button:^Follow"
   },
   {
    "id": "thing-follow-site",
@@ -1486,34 +1326,9 @@
     }
    ],
    "anchor": "field:?A site's address",
-   "afterSwipe": "button:^Sources, Everything",
+   "afterSwipe": "button:=Search",
    "control": "button:=Back",
    "afterControl": "button:^Follow, Follow"
-  },
-  {
-   "id": "wallet-worth-a-look",
-   "covers": [
-    "Screens/FeedScreen+Sheets.swift:feedSheet#worthALook"
-   ],
-   "launch": [
-    "demo"
-   ],
-   "steps": [
-    {
-     "tap": "button:=Wallet"
-    },
-    {
-     "tap": "button:^Security, Who"
-    },
-    {
-     "tap": "button:=1, Poisoning"
-    },
-    {
-     "tap": "button:^1 lookalike address, "
-    }
-   ],
-   "anchor": "text:=Worth a look",
-   "afterSwipe": "button:^Holdings, Your"
   },
   {
    "id": "alert-edit",
@@ -1545,118 +1360,14 @@
     }
    ],
    "anchor": "text:=Edit alert",
-   "afterSwipe": "button:^Sources, Everything",
+   "afterSwipe": "button:=Search",
    "control": "button:=Back",
    "afterControl": "button:^Rises to "
   },
   {
-   "id": "wallet-history",
+   "id": "wallet-worth-a-look",
    "covers": [
-    "Shell/MainSurface.swift:route.sheet#node.bridge"
-   ],
-   "launch": [
-    "demo"
-   ],
-   "steps": [
-    {
-     "tap": "button:=Wallet"
-    },
-    {
-     "tap": "button:^Home, The line"
-    },
-    {
-     "swipeUp": 5
-    },
-    {
-     "tap": "button:^See all "
-    }
-   ],
-   "anchor": "button:^Sending · £120 → €141"
-  },
-  {
-   "id": "wallet-history-thing",
-   "covers": [
-    "Screens/WalletHistoryScreen.swift:sheetThing"
-   ],
-   "launch": [
-    "demo"
-   ],
-   "steps": [
-    {
-     "tap": "button:=Wallet"
-    },
-    {
-     "tap": "button:^Home, The line"
-    },
-    {
-     "swipeUp": 5
-    },
-    {
-     "tap": "button:^See all "
-    },
-    {
-     "tap": "button:^Sending · £120 → €141"
-    }
-   ],
-   "anchor": "button:^Everything from",
-   "afterSwipe": "button:^See all ",
-   "control": "button:=Back",
-   "afterControl": "button:^Sending · £120 → €141"
-  },
-  {
-   "id": "room-share",
-   "covers": [
-    "Screens/FeedScreen.swift:roomShare"
-   ],
-   "launch": [
-    "demo",
-    "-openTray",
-    "YES"
-   ],
-   "steps": [
-    {
-     "tap": "button:=GitHub"
-    },
-    {
-     "tap": "button:^Share this week"
-    }
-   ],
-   "anchor": "button:=Share…"
-  },
-  {
-   "id": "notes-trash",
-   "covers": [
-    "Screens/FeedScreen.swift:open"
-   ],
-   "launch": [
-    "demo"
-   ],
-   "steps": [
-    {
-     "tap": "button:^Notes, Your notes"
-    },
-    {
-     "hold": "button:^Note, Composer grammar notes"
-    },
-    {
-     "tap": "button:=Delete"
-    },
-    {
-     "tap": "button:=Delete note"
-    },
-    {
-     "tap": "button:^Folders, What you filed"
-    },
-    {
-     "tap": "button:^Recently deleted"
-    }
-   ],
-   "anchor": "text:=Composer grammar notes"
-  },
-  {
-   "id": "wallet-tile",
-   "covers": [
-    "Shell/RootShell.swift:chrome.appSheet"
+    "Screens/FeedScreen+Sheets.swift:feedSheet#worthALook"
    ],
    "launch": [
     "demo"
@@ -1667,70 +1378,15 @@
     },
     {
      "tap": "button:^Security, Who"
-    }
-   ],
-   "anchor": "text:=Fake transfers",
-   "swipeFrom": "button:=Sheet Grabber",
-   "afterSwipe": "button:^Holdings, Your"
-  },
-  {
-   "id": "notes",
-   "covers": [],
-   "launch": [
-    "demo"
-   ],
-   "steps": [
-    {
-     "tap": "button:^Notes, Your notes"
-    }
-   ],
-   "anchor": "button:^Folders, What you filed"
-  },
-  {
-   "id": "note-page",
-   "covers": [
-    "Shell/NoteCaptureSheet.swift:hosted&&chrome.noteOpen"
-   ],
-   "launch": [
-    "demo"
-   ],
-   "steps": [
-    {
-     "tap": "button:^Notes, Your notes"
     },
     {
-     "tap": "button:^New, Write"
+     "tap": "button:=1, Poisoning"
+    },
+    {
+     "tap": "button:^1 lookalike address, "
     }
    ],
-   "anchor": "button:=Format",
-   "swipe": false,
-   "control": "button:=All notes"
-  },
-  {
-   "id": "note-link",
-   "covers": [
-    "Shell/NoteCaptureSheet.swift:linkPickerOpen"
-   ],
-   "launch": [
-    "demo"
-   ],
-   "steps": [
-    {
-     "tap": "button:^Notes, Your notes"
-    },
-    {
-     "tap": "button:^New, Write"
-    },
-    {
-     "tap": "button:=Attach"
-    },
-    {
-     "tap": "button:^Link"
-    }
-   ],
-   "anchor": "button:=Order the tiles",
-   "offscreen": true,
-   "afterSwipe": "button:=Format"
+   "anchor": "text:=Worth a look"
   },
   {
    "id": "wallet-subscription",
@@ -1775,6 +1431,33 @@
    "anchor": "field:?Search, or type any name"
   },
   {
+   "id": "wallet-history-thing",
+   "covers": [
+    "Screens/WalletHistoryScreen.swift:sheetThing"
+   ],
+   "launch": [
+    "demo"
+   ],
+   "steps": [
+    {
+     "tap": "button:=Wallet"
+    },
+    {
+     "tap": "button:^Home, The line"
+    },
+    {
+     "swipeUp": 5
+    },
+    {
+     "tap": "button:^See all "
+    },
+    {
+     "tap": "button:^Swapped 0.5 ETH"
+    }
+   ],
+   "anchor": "button:=Share, Share"
+  },
+  {
    "id": "markets-follow-company",
    "covers": [
     "Screens/FeedScreen+Sheets.swift:feedSheet#watchAdd"
@@ -1793,10 +1476,7 @@
      "tap": "button:=Follow a company"
     }
    ],
-   "anchor": "button:=Back",
-   "afterSwipe": "button:^Holdings, Your",
-   "control": "button:=Back",
-   "afterControl": "button:^Apple Inc, "
+   "anchor": "button:=Sheet Grabber"
   },
   {
    "id": "markets-company",
@@ -1814,16 +1494,108 @@
      "tap": "button:^Markets, What"
     },
     {
-     "tap": "button:^Apple Inc, "
+     "tap": "button:=Work"
+    },
+    {
+     "tap": "button:^Amazon, AMZN"
     }
    ],
-   "anchor": "button:=Back",
-   "afterSwipe": "button:^Holdings, Your",
-   "control": "button:=Back",
-   "afterControl": "button:=Follow a company"
+   "anchor": "button:=Sheet Grabber"
+  },
+  {
+   "id": "notes-trash",
+   "covers": [
+    "Screens/FeedScreen.swift:open"
+   ],
+   "launch": [
+    "demo"
+   ],
+   "steps": [
+    {
+     "tap": "button:^Notes, Your notes"
+    },
+    {
+     "hold": "button:^Note, Composer grammar notes"
+    },
+    {
+     "tap": "button:=Delete"
+    },
+    {
+     "tap": "button:=Delete note"
+    },
+    {
+     "tap": "button:^Folders, What you filed"
+    },
+    {
+     "tap": "button:^Recently deleted"
+    }
+   ],
+   "anchor": "text:=Composer grammar notes"
+  },
+  {
+   "id": "note-page",
+   "covers": [
+    "Shell/NoteCaptureSheet.swift:hosted&&chrome.noteOpen"
+   ],
+   "launch": [
+    "demo"
+   ],
+   "steps": [
+    {
+     "tap": "button:^Notes, Your notes"
+    },
+    {
+     "tap": "button:^New, Write"
+    }
+   ],
+   "anchor": "button:=Format",
+   "swipe": false,
+   "control": "button:=All notes"
+  },
+  {
+   "id": "note-link",
+   "covers": [
+    "Shell/NoteCaptureSheet.swift:linkPickerOpen"
+   ],
+   "launch": [
+    "demo"
+   ],
+   "steps": [
+    {
+     "tap": "button:^Notes, Your notes"
+    },
+    {
+     "tap": "button:^New, Write"
+    },
+    {
+     "tap": "button:=Attach"
+    },
+    {
+     "tap": "button:^Link"
+    }
+   ],
+   "anchor": "text:=Link something",
+   "afterSwipe": "button:=Format"
   }
  ],
  "exempt": [
+  {
+   "covers": [
+    "Screens/ThingSheetView.swift:faceTarget#followChannel"
+   ],
+   "why": "the Follow tile draws only for a video or podcast whose channel you do not follow, and every demo channel is followed (measured 2026-10-15 after prd §1326: Computerphile, Strange Loop and Signals and Threads each read Following in the From card, no Follow tile)"
+  },
+  {
+   "covers": [
+    "Shell/MainSurface.swift:route.sheet#node.casberi",
+    "Shell/MainSurface.swift:route.sheet#node.settingsPage",
+    "Shell/MainSurface.swift:route.sheet#node.reach",
+    "Shell/MainSurface.swift:route.sheet#node.bridge",
+    "Shell/MainSurface.swift:route.sheet#node.l2beatDirectory",
+    "Shell/MainSurface.swift:route.sheet#node.walletbeatDirectory"
+   ],
+   "why": "on the phone a page since prd §1321 (HomeRoute.present/stack push it on the pager's stack while no sheet is up); this root rises only on the iPad (Sources, a setting, What this app reaches, an app's page or the Wallet's history, a directory)"
+  },
   {
    "covers": [
     "Screens/FeedScreen+Sheets.swift:feedSheet#mailSubscription",
@@ -1839,7 +1611,7 @@
     "Screens/AccountScreen.swift:chipOrderOpen",
     "Screens/AccountScreen.swift:diagnosticsOpen"
    ],
-   "why": "on the phone Settings is already a sheet, so AccountScreen.open pushes the row's page (route.sheet#node.settingsPage, swept as settings-*); these rise only on iPad/Mac outside the pane"
+   "why": "on the phone a setting is a page pushed beside Sources (AccountScreen.open, SettingsHome.bandSearches, prd §1321), never a sheet; these rise only on the iPad outside a sheet"
   },
   {
    "covers": [
@@ -1966,7 +1738,7 @@
    "covers": [
     "Shell/MainSurface.swift:route.sheet#node.apps"
    ],
-   "why": "present(.apps) is rewritten to .casberi (HomeRoute.present, prd §1234), so this sheet is node.casberi's, swept as `sources`"
+   "why": "present(.apps) is rewritten to .casberi (HomeRoute.present, prd §1234), so this sheet is node.casberi's, which on the phone is the Sources page (prd §1321) and rises only on the iPad"
   },
   {
    "covers": [
