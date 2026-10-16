@@ -507,6 +507,11 @@ struct NoteCaptureSheet: View {
         .onChange(of: voice.interrupted) { _, now in
             if now { stopAndKeep() }
         }
+        // The Live Activity's Stop (`StopVoiceRecordingIntent`): keep and
+        // close, as the page's own Stop does.
+        .onReceive(NotificationCenter.default.publisher(for: .voiceRecordingStopRequested)) { _ in
+            if isRecording { stopAndKeep() }
+        }
         // The sheet went away by some path that is not its own (prd §972):
         // never leave the mic live behind it. What was recorded is kept, as a
         // pull-down keeps it.

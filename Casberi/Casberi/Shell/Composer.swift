@@ -1350,6 +1350,11 @@ struct Composer: View {
             // Recording is the third state the foot moves between (prd §973);
             // mic to Stop snapped while the other two animated.
             .animation(DS.Motion.standard, value: isRecording)
+            // The Live Activity's Stop (`StopVoiceRecordingIntent`): the words
+            // land in the field, as the mic's own Stop lands them.
+            .onReceive(NotificationCenter.default.publisher(for: .voiceRecordingStopRequested)) { _ in
+                if isRecording { endDictation() }
+            }
         }
         .padding(.horizontal, DS.Space.s4)
         .padding(.top, DS.Space.s2)
@@ -1398,7 +1403,11 @@ struct Composer: View {
     private func endDictation() {
         let capture = voice
         Task { @MainActor in
-            guard await capture.settle() else { return }
+            guard await capture.settle() else {
+                // Still starting: nothing to settle, so end the start.
+                if capture.starting { capture.stop(keep: false) }
+                return
+            }
             let spoken = capture.transcript.trimmingCharacters(in: .whitespacesAndNewlines)
             capture.stop(keep: false)
             guard !spoken.isEmpty else { return }

@@ -59,9 +59,13 @@ struct VoiceRecordingActivity: Widget {
                     .dsText(.widgetChrome15)
                     .monospacedDigit()
                     .frame(maxWidth: 56)
-                Image(systemName: "stop.circle.fill")
-                    .dsGlyph(.title)
-                    .foregroundStyle(WidgetChrome.recording)
+                Button(intent: StopVoiceRecordingIntent()) {
+                    Image(systemName: "stop.circle.fill")
+                        .dsGlyph(.title)
+                        .foregroundStyle(WidgetChrome.recording)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(Text("Stop recording"))
             }
             .padding(14)
             .activityBackgroundTint(.black.opacity(0.8))
@@ -83,6 +87,14 @@ struct VoiceRecordingActivity: Widget {
                 DynamicIslandExpandedRegion(.center) {
                     Text("Recording")
                         .dsText(.widgetChrome15)
+                }
+                DynamicIslandExpandedRegion(.bottom) {
+                    Button(intent: StopVoiceRecordingIntent()) {
+                        Label("Stop", systemImage: "stop.circle.fill")
+                            .dsText(.widgetChrome15)
+                            .foregroundStyle(WidgetChrome.recording)
+                    }
+                    .buttonStyle(.plain)
                 }
             } compactLeading: {
                 Image(systemName: "waveform")
