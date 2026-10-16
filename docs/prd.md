@@ -66795,3 +66795,9 @@ Mocks: `design/mockups/tab-bar-options.html`, `design/mockups/tab-bar-library.ht
 3. **Its facts are the rate and the wallet that traded**, inside the box; the loose rate line under it is gone (`walletCommentary` returns nothing for a swap).
 4. **"Settled"**, as every other receipt says it; a cell's fallback no longer says "Final".
 
+## §1352 — A card spend finds its other visits by the shop, says its day short, and offers Track only for what recurs (user, 2026-10-16: "ok", of a Whole Foods spend with no month history and a weekday-long date)
+
+1. **Visits are matched by the shop** (`transferCounterparty`), never by title: a spend's title carries its amount ("Whole Foods · $84.20"), so "This month" found no other visit and never drew.
+2. **The day reads "Today at 2:31 AM", "Oct 1 at 2:31 AM"** (`MoneyReceiptBox.cardWhen`), as the transfers read theirs since §1349.
+3. **Track is offered only for what looks like a subscription**: the same price charged again at least 25 days apart (`moneyRecurs`, the Wallet's own `Subscriptions.believes` test). Groceries at three prices are not a plan; Apple at $12.99 a month apart is.
+

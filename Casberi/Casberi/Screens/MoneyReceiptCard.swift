@@ -628,7 +628,9 @@ struct MoneyReceiptBox: View {
                     .contentTransition(roll)
                     .lineLimit(1).minimumScaleFactor(0.6)
                     .padding(.top, DS.Space.s3)
-                Text(verbatim: landed.formatted(.dateTime.weekday(.wide).month(.abbreviated).day().hour().minute()))
+                // "Today at 2:31 AM", "Oct 1 at 2:31 AM" (prd §1352), as the
+                // transfers read their day since §1349.
+                Text(verbatim: cardWhen)
                     .dsText(.body17)
                     .foregroundStyle(DS.textSecondary)
                     .lineLimit(2).minimumScaleFactor(0.8)
@@ -662,6 +664,14 @@ struct MoneyReceiptBox: View {
                 }
             }
             .accessibilityHidden(true)
+    }
+
+    private var cardWhen: String {
+        let cal = Calendar.current
+        let day = cal.isDateInToday(landed) ? String(localized: "Today")
+            : cal.isDateInYesterday(landed) ? String(localized: "Yesterday")
+            : landed.formatted(.dateTime.month(.abbreviated).day())
+        return String(localized: "\(day) at \(landed.formatted(date: .omitted, time: .shortened))")
     }
 
     /// A spend reads unsigned; a refund keeps its plus.

@@ -232,7 +232,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1493 of 1559 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1494 of 1560 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1727,6 +1727,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1349 — Every tile answers a tap; the wallet family's row stands at the Feed's height; a move between your own wallets reads…
 - §1350 — A transfer with an unnamed address names it by its short form; the "Name this address?" block is deleted
 - §1351 — A swap's receipt says what it traded
+- §1352 — A card spend finds its other visits by the shop, says its day short, and offers Track only for what recurs
 
 ## Dead rulings → what replaced them (generated)
 

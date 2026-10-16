@@ -190,6 +190,8 @@ struct ThingSheetView: View {
     /// This year with this party (prd §1181): sent and received, in dollars
     /// and counts, this transfer included.
     @State private var moneyYear = MoneyYear()
+    /// The same price charged again at least 25 days apart (prd §1352).
+    @State private var moneyRecurs = false
     /// A card spend's visits this month, this one included, and their total
     /// (prd §1182).
     @State private var moneyMonth: [Thing] = []
@@ -3170,7 +3172,10 @@ struct ThingSheetView: View {
                              tone: added ? .success : .failure)
             }
         }
-        guard thing.source != "Wallet", moneyHistoryTotal >= 1, bridges != nil,
+        // Only what looks like a subscription (prd §1352): the same price at
+        // least 25 days apart, the Wallet's own test (`Subscriptions.believes`)
+        // — three grocery runs at three prices are not a plan to track.
+        guard thing.source != "Wallet", moneyRecurs, bridges != nil,
               let receipt = moneyReceipt else { return nil }
         let name = moneyPartyName(receipt)
         return VerbDial.Keep(label: String(localized: "Track"), glyph: SubscriptionWords.planGlyph) {
@@ -3189,6 +3194,15 @@ struct ThingSheetView: View {
                 predicate: #Predicate { $0.source == "Wallet" && $0.counterpartyAddress == cp },
                 sortBy: [SortDescriptor(\Thing.capturedAt, order: .reverse)])
             others = ((try? modelContext.fetch(d)) ?? []).filter { $0.isLive && $0.id != id }
+        } else if let merchant = thing.transferCounterparty, !merchant.isEmpty {
+            // **A SHOP BY ITS NAME, NOT ITS TITLE (prd §1352).** A card spend's
+            // title carries its amount ("Whole Foods · $84.20"), so matching
+            // titles found no other visit and "This month" never drew.
+            let source = thing.source
+            let d = FetchDescriptor<Thing>(
+                predicate: #Predicate { $0.source == source && $0.transferCounterparty == merchant },
+                sortBy: [SortDescriptor(\Thing.capturedAt, order: .reverse)])
+            others = ((try? modelContext.fetch(d)) ?? []).filter { $0.isLive && $0.id != id }
         } else {
             let source = thing.source, title = thing.title
             let d = FetchDescriptor<Thing>(
@@ -3197,6 +3211,14 @@ struct ThingSheetView: View {
             others = ((try? modelContext.fetch(d)) ?? []).filter { $0.isLive && $0.id != id }
         }
         moneyHistoryTotal = others.count
+        let price = thing.priceValue
+        moneyRecurs = price.map { p in
+            others.contains { other in
+                guard let q = other.priceValue else { return false }
+                return abs(abs(q) - abs(p)) < 0.005
+                    && abs(other.capturedAt.timeIntervalSince(thing.capturedAt)) >= 25 * 86_400
+            }
+        } ?? false
         moneyHistory = Array(others.prefix(3))
         // This year with them, this transfer included (prd §1181).
         var year = MoneyYear()
