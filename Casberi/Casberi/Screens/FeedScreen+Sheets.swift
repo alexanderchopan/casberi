@@ -59,6 +59,8 @@ extension FeedScreen {
         case followingAdd(Following.Room, seat: String? = nil)
         /// Subscribe to a calendar, from an empty Coming up (prd §1137).
         case calendarSubscribe
+        /// The Feed's sections in order, from its Reorder tile (prd §1345).
+        case feedOrder
         /// Social's Follow (prd §1086).
         case socialFollow
         /// The Wallet's Follow (prd §1090), the Watch tile since prd §1105.
@@ -94,6 +96,7 @@ extension FeedScreen {
             case .following(let id, let room): "following:\(room.rawValue):\(id)"
             case .followingAdd(let room, let seat): "followingAdd:\(room.rawValue):\(seat ?? "")"
             case .calendarSubscribe: "calendarSubscribe"
+            case .feedOrder: "feedOrder"
             case .socialFollow: "socialFollow"
             case .walletFollow: "walletFollow"
             case .walletTokens: "walletTokens"
@@ -326,6 +329,8 @@ extension FeedScreen {
             followingAddTray(room, seat: seat)
         case .calendarSubscribe:
             CalendarSubscribeSheet()
+        case .feedOrder:
+            NavigationStack { CategoryOrderSheet() }
         case .company(let company):
             CompanySheet(company: company)
         case .githubWatch:

@@ -45,8 +45,10 @@ extension FeedScreen {
         let tiles = scrollsCategories && !inSheet ? scrollCategories.map(FeedSectionTile.init) : []
         if tiles.count > 1 {
             Section {
-                DSScopeTiles(sections: tiles, active: FeedSectionTile(name: ""), scrollsColumns: true) { picked in
+                DSScopeTiles(sections: tiles + [.reorder], active: FeedSectionTile(name: ""),
+                             scrollsColumns: true, verbs: [.reorder]) { picked in
                     DSHaptic.selection()
+                    if picked.isReorder { feedSheet = .feedOrder; return }
                     chrome.feedJump = picked.name
                 }
                 .dsRoomTilesListRow()
@@ -944,8 +946,16 @@ struct SectionPanelCard<Content: View>: View {
 struct FeedSectionTile: DSTileScope {
     let name: String
     var id: String { name }
-    var label: String { name }
-    var summary: String { String(localized: "Go to \(name)") }
-    var glyph: String { CategoryFold.glyph(for: name) }
+    var label: String { isReorder ? String(localized: "Reorder") : name }
+    var summary: String {
+        isReorder ? String(localized: "Reorder sections") : String(localized: "Go to \(name)")
+    }
+    var glyph: String { isReorder ? ScopeTileGlyph.reorder : CategoryFold.glyph(for: name) }
     static var keepsOrder: Bool { true }
+
+    /// **THE FEED REORDERS FROM ITS OWN ROW (prd §1345, user: "users should
+    /// be able to reorder their feed from the feed and not in settings";
+    /// "re A: its discoverable").** The last tile, a verb.
+    static let reorder = FeedSectionTile(name: "feedSection.reorder")
+    var isReorder: Bool { name == Self.reorder.name }
 }

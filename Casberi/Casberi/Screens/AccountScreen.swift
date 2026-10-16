@@ -31,7 +31,6 @@ struct SettingsRows: View {
     @State private var rungBounce = 0
     @State private var diagnosticsOpen = false
     @State private var languageOpen = false
-    @State private var chipOrderOpen = false
     @State private var detail: AccountDetail?
     /// How the rows draw (prd §1208c): as rows, as the Settings box's grid,
     /// or only the colophon under that box.
@@ -109,9 +108,6 @@ struct SettingsRows: View {
                 presented(AccountDetailSheet(detail: $0))
             }
             .sheet(isPresented: $languageOpen) { presented(LanguagePickerSheet()) }
-            .sheet(isPresented: $chipOrderOpen) {
-                presented(NavigationStack { CategoryOrderSheet() }.dsNavSheet())
-            }
             .photosPicker(isPresented: $avatarPickerOpen,
                           selection: $avatarSelection, matching: .images)
             // A set photo can come off, not just be replaced — every setting
@@ -172,9 +168,6 @@ struct SettingsRows: View {
                 guard style != .colophon else { return }
                 if UserDefaults.standard.bool(forKey: "openDiagnostics") {
                     open(.diagnostics) { diagnosticsOpen = true }
-                }
-                if UserDefaults.standard.bool(forKey: "openChipOrder") {
-                    open(.dockOrder) { chipOrderOpen = true }
                 }
                 if let raw = UserDefaults.standard.string(forKey: "accountDetail"),
                    let which = AccountDetail(rawValue: raw),
@@ -342,20 +335,8 @@ struct SettingsRows: View {
             // way Theme's and Color's do — the first three chips, in the order
             // they will actually appear.
             //
-            // "DOCK ORDER", not "chip order" (user, 2026-09-06): the strip is
-            // the dock, it is the app's signature object and it has a name.
-            // Naming the setting after the part rather than the thing made a
-            // person map "chip" onto "dock" before they could act on it. And
-            // the seats no longer learn (prd §634), so this screen is the ONLY
-            // thing deciding order — which is the other half of why it should
-            // be named after what it governs.
-            //
-            // "FEED ORDER" since prd §1208f (user, 2026-10-09): what it
-            // governs is now the Feed's sections first.
-            RowSpec(title: "Feed order",
-                    value: CategoryOrder.current.prefix(3).joined(separator: ", "),
-                    badge: ("arrow.up.arrow.down", DS.textPrimary),
-                    action: { open(.dockOrder) { chipOrderOpen = true } }),
+            // Feed order left Settings for the Feed's own Reorder tile
+            // (prd §1345, user: "this means removing it from the settings menu").
             // A binary choice earns a tap, not a tray with one empty screen's
             // worth of nothing below two chips (report 2026-07-09) — the row
             // itself flips, and the icon states which way.

@@ -14,6 +14,8 @@ enum ScopeTileGlyph {
     /// are basically the same. make home be bar chart"); it was the rising
     /// line Markets' own glyph also draws.
     static let home        = "chart.bar"
+    /// The Feed's Reorder tile (prd §1345).
+    static let reorder     = "arrow.up.arrow.down"
     static let activity    = "clock.arrow.circlepath"
     static let holdings    = "chart.pie"
     static let accounts    = "person.2"

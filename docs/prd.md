@@ -66729,3 +66729,10 @@ Mocks: `design/mockups/tab-bar-options.html`, `design/mockups/tab-bar-library.ht
 7. **The Wallet is a Feed section: its last moves** (`walletMoves`, never a state), **skipping what Day's Needs you already shows.** The Wallet tab stays the place you manage it.
 8. Not built here: Day's own page and its Coming up tile still exist behind their old doors (`-openRoom Day`, deep links) — deleting them, and `DayScope`/`dayComingUp` with them, is the follow-up.
 
+## §1345 — The Feed reorders from its own row; Feed order leaves Settings (user, 2026-10-16: "users should be able to reorder their feed from the feed and not in settings … perhaps in their row of category glyphs the last one is 'reorder feed'"; of the options: "re A: its discoverable", "B: its not discoverable", "C: no way. too janky", "So it is A"; "there should be no option to hide a section b/c user has already added them"; "also this means removing it from the settings menu")
+
+1. **The Feed's row of section tiles ends in a Reorder tile** (`FeedSectionTile.reorder`, a verb, `ScopeTileGlyph.reorder`), and it opens the order (`feedSheet = .feedOrder`, `CategoryOrderSheet`): drag handles always out, Done, Reset when the order is custom.
+2. **The sheet lists only the Feed's sections** (`CategoryOrderSheet.feedOrder` → `HomeScope.feedCategories`), never an empty slot, and **nothing hides a section**: everything there was added by the person.
+3. **Feed order is gone from Settings** (`AccountScreen`'s row and sheet, `SettingsPage.dockOrder`, `-openChipOrder`); the Feed's row is its one door. `category-order-selftest.sh` fails if Settings opens it again.
+4. Not chosen: a long press to wiggle the row (not discoverable, and fiddly in a scrolling row), a header's long press to move a section (too easy to get wrong), a row at the Feed's end (too far down).
+

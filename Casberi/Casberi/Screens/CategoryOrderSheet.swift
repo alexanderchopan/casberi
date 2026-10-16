@@ -23,15 +23,11 @@ import SwiftUI
 /// the grabbers ARE the affordance: without them a row that can be dragged
 /// looks exactly like a row that cannot.
 ///
-/// # ALL ELEVEN are listed, including the ones with nothing behind them
+/// # Only the Feed's sections (prd §1345)
 ///
-/// The strip only draws a category once something in it has landed, so a list
-/// of what is *currently* on screen would be short, would reshuffle as sources
-/// arrive, and would give no way to say where a category should go BEFORE you
-/// connect it. Every position is listed instead, and a category with nothing
-/// behind it says so — which is honest rather than a dead control (§83): the
-/// row is not a door, it is a slot, and the slot is real whether or not
-/// anything occupies it yet.
+/// It used to list every slot, a category with nothing behind it saying so.
+/// Opened from the Feed's own Reorder tile, it lists what the Feed draws:
+/// everything there was added by the person, so nothing is hidden or empty.
 struct CategoryOrderSheet: View {
     @Environment(ShellChrome.self) private var chrome
     @Environment(\.dismiss) private var dismiss
@@ -40,24 +36,17 @@ struct CategoryOrderSheet: View {
     /// written once per move rather than read back mid-gesture.
     /// Markets is a place in Home and not in the walk (prd §1127), so it
     /// has no slot to move here.
-    @State private var order: [String] = CategoryOrder.current.filter { !HomeScope.leavesWalk($0) }
+    ///
+    /// **ONLY THE FEED'S SECTIONS (prd §1345, user: "there should be no option
+    /// to hide a section b/c user has already added them").** Opened from the
+    /// Feed's own Reorder tile, it lists what the Feed draws, in its order —
+    /// never an empty slot.
+    @State private var order: [String] = []
 
-    /// Which categories the strip is actually drawing — read from
-    /// `ShellChrome.chipOrder`, the strip's own published order, so this
-    /// screen and the strip can never disagree about what is present. NOT
-    /// re-derived from the corpus: that walk is the strip's single largest
-    /// launch cost and there is no reason to pay it twice.
-    private var present: Set<String> { Set(chrome.chipOrder) }
 
     var body: some View {
         List {
             Section {
-                // A row, not a header (prd §784): a plain list pins headers.
-                Text("Home always leads.")
-                    .dsText(.body17)
-                    .foregroundStyle(DS.textSecondary)
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
                 ForEach(order, id: \.self) { name in
                     row(name)
                         .dsListRow()
@@ -86,6 +75,7 @@ struct CategoryOrderSheet: View {
         // Two of the twelve nav sheets wore it, so the family had two title
         // sizes as well as two close placements.
         .navigationTitle(Text("Feed order"))
+        .onAppear { if order.isEmpty { order = Self.feedOrder(chrome) } }
         .navigationBarTitleDisplayMode(.inline)
         .dsSheetDismiss { dismiss() }
     }
@@ -101,15 +91,6 @@ struct CategoryOrderSheet: View {
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 1) {
                 Text(name).dsText(.heading17).foregroundStyle(DS.textPrimary)
-                // States the slot's own fact, and only when it is worth
-                // saying: "In your strip" on every occupied row would be
-                // eleven lines of noise on a full corpus, so the quiet case
-                // is the unremarkable one.
-                if !present.contains(name) {
-                    Text("Nothing here yet")
-                        .dsText(.subhead12)
-                        .foregroundStyle(DS.textTertiary)
-                }
             }
             Spacer(minLength: 0)
         }
@@ -129,7 +110,7 @@ struct CategoryOrderSheet: View {
         DSHaptic.tap()
         withAnimation(DS.Motion.standard) {
             CategoryOrder.reset()
-            order = CategoryOrder.current.filter { !HomeScope.leavesWalk($0) }
+            order = Self.feedOrder(chrome)
         }
         chrome.chipOrderPulse += 1
     }
@@ -137,6 +118,11 @@ struct CategoryOrderSheet: View {
     /// Store the order and tell the strip. Written on every move rather than
     /// on Done, so backing out with the swipe-down gesture — which never
     /// reaches a Done handler — cannot silently discard the rearrangement.
+    /// The Feed's sections, in the order in force.
+    @MainActor static func feedOrder(_ chrome: ShellChrome) -> [String] {
+        HomeScope.feedCategories(chips: chrome.chipOrder)
+    }
+
     private func commit() {
         DSHaptic.tap()
         CategoryOrder.set(order)

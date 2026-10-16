@@ -165,9 +165,15 @@ if "chipOrderPulse" not in body:
              "  the app was next backgrounded.")
 PY3
 
-# The door. A setting nothing opens is a setting nobody has.
-grep -q 'CategoryOrderSheet()' "$TMP/settings.nc" \
-  || { echo "✗ Settings no longer opens the chip-order screen"; exit 1; }
+# The door. A screen nothing opens is a screen nobody has: the Feed's
+# Reorder tile opens it (prd §1345), and Settings no longer does.
+grep -q 'case .feedOrder:' Casberi/Casberi/Screens/FeedScreen+Sheets.swift \
+  && grep -q 'CategoryOrderSheet()' Casberi/Casberi/Screens/FeedScreen+Sheets.swift \
+  && grep -q 'feedSheet = .feedOrder' Casberi/Casberi/Screens/FeedScreen+Scroll.swift \
+  || { echo "✗ the Feed's Reorder tile no longer opens the order"; exit 1; }
+if grep -q 'CategoryOrderSheet()' "$TMP/settings.nc"; then
+  echo "✗ Feed order is back in Settings (prd §1345: the Feed's own row is the one door)"; exit 1
+fi
 
 # --- the compiled half ------------------------------------------------------
 cat > "$TMP/main.swift" <<'SWIFT'

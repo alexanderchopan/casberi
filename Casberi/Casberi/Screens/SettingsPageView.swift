@@ -25,8 +25,6 @@ struct SettingsPageView: View {
                 LanguagePickerSheet()
             case .diagnostics:
                 headed("Diagnostics") { DiagnosticsScreen() }
-            case .dockOrder:
-                headed("Feed order") { CategoryOrderSheet() }
             }
         }
         .environment(\.dsInPane, true)

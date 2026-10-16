@@ -12015,6 +12015,34 @@
         }
       }
     },
+    "Reorder sections" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Reordenar secciones"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "セクションを並べ替え"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "섹션 순서 변경"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "重新排列分区"
+          }
+        }
+      }
+    },
     "Replaces this Safe's own code with %@'s — after this, the Safe does what that code says." : {
       "localizations" : {
         "es" : {

@@ -1576,6 +1576,24 @@
    ],
    "anchor": "text:=Link something",
    "afterSwipe": "button:=Format"
+  },
+  {
+   "id": "feed-reorder",
+   "covers": [
+    "Screens/FeedScreen+Sheets.swift:feedSheet#feedOrder"
+   ],
+   "launch": [
+    "demo"
+   ],
+   "steps": [
+    {
+     "wait": 2
+    },
+    {
+     "tap": "button:^Reorder,"
+    }
+   ],
+   "anchor": "text:=Feed order"
   }
  ],
  "exempt": [
@@ -1608,7 +1626,6 @@
     "Screens/AccountScreen.swift:detail#data",
     "Screens/AccountScreen.swift:detail#notifications",
     "Screens/AccountScreen.swift:languageOpen",
-    "Screens/AccountScreen.swift:chipOrderOpen",
     "Screens/AccountScreen.swift:diagnosticsOpen"
    ],
    "why": "on the phone a setting is a page pushed beside Sources (AccountScreen.open, SettingsHome.bandSearches, prd §1321), never a sheet; these rise only on the iPad outside a sheet"
