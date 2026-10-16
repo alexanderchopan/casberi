@@ -3497,21 +3497,24 @@ enum DemoSeedAll {
         // exactly, including the fully-signed face, which is a different
         // sentence and a different tag rather than "3 of 3".
         let safeTxs: [(title: String, tags: [String], days: Double)] = [
-            ("2 of 3 signatures collected on sending 1,500 USDC to payroll.eth — your signature is needed",
+            ("2 of 3 signatures collected on a transfer of 1,500 USDC to payroll.eth — your signature is needed",
              ["Your turn"], 5),
-            ("Fully signed — sending 900 USDC to vendor.eth is ready to execute",
+            ("Fully signed — a transfer of 900 USDC to vendor.eth is ready to execute",
              ["Ready to execute"], 4),
-            ("1 of 3 signatures collected on approving Uniswap to spend 2,000 USDC — waiting on others",
+            ("1 of 3 signatures collected on an approval for Uniswap to spend 2,000 USDC — waiting on others",
              [], 9),
             // The rival: same Safe, same nonce as the row above it. Only one of
             // the two can ever execute, which is the fact §238 could state in
             // the sheet and the head could not until the nonce was tracked.
-            ("1 of 3 signatures collected on revoking Uniswap's spending approval — waiting on others",
+            ("1 of 3 signatures collected on an approval for Uniswap to spend 0 USDC — waiting on others",
              [], 6),
         ]
         out += safeTxs.enumerated().map { i, s in
+            // The queue in the Safe app, as a real row links (prd §1334), so
+            // the sheet's Safe tile is there in the demo too.
             row(.transaction, s.title, source: "Safe", ref: "wallet:safe:eth:demo\(i)",
-                days: s.days, hour: 15) { t in
+                days: s.days, hour: 15,
+                content: "https://app.safe.global/transactions/queue?safe=eth:\(demoWallet)") { t in
                 t.walletAddress = demoWallet
                 t.tags = s.tags
             }

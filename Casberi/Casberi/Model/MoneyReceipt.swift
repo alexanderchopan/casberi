@@ -563,16 +563,22 @@ struct MoneyReceipt: Equatable {
         let have = f.signaturesHave ?? 0
         let need = f.signaturesNeed ?? 0
         let waiting = need > 0 && have < need
+        // NAMED BY WHAT IT DOES (prd §1334, user: "ok on B"): the action the
+        // row's own sentence carries ("a transfer of 1,500 USDC to
+        // payroll.eth") is the title ("Send 1,500 USDC") and its party the
+        // box's line ("to payroll.eth"); the Safe's name is the eyebrow.
+        let act = safeAct(safeDescription(f.title))
         return MoneyReceipt(
-            subject: subject(address: f.walletAddress,
-                             name: f.myLabel, fallbackAsset: nil),
+            // The Safe's own mark, not a blank person (prd §1334).
+            subject: .named("Safe"),
             mine: f.counterpartyAddress,
             lead: waiting ? String(localized: "Waiting to send")
                           : String(localized: "Sent from"),
-            party: f.myLabel,
+            party: act?.title ?? f.myLabel,
             // Safe stamps no amount field, and a multisig payload's value is
             // exactly the kind of number this file will not parse out of prose.
-            titleFallback: f.title,
+            // With an act and no line ("Batch of …"), the box says the lead.
+            titleFallback: act == nil ? f.title : act?.line,
             amount: nil,
             secondary: waiting && need - have == 1
                 ? String(localized: "one more signature and it goes")
@@ -583,8 +589,62 @@ struct MoneyReceipt: Equatable {
                 ? String(localized: "Proposed \(dayPhrase(f.capturedAt)). Nothing has moved yet, so there's no receipt to show.")
                 : placeSentence(String(localized: "Executed"), f),
             stamp: yourTurn ? .yourTurn : (waiting ? .pending : .settled),
-            finality: waiting ? .open : .torn,
+            // Yours to sign stays open while the count is unknown (the demo,
+            // or a check that has not answered yet); a met count tears it.
+            finality: waiting || (yourTurn && need == 0) ? .open : .torn,
             hue: .safe)
+    }
+
+    /// The action inside a Safe row's sentence, as `SafeBridge.rowFace`
+    /// writes it: "N of M signatures collected on <it>[ — …]" or "Fully
+    /// signed — <it> is ready to execute / is behind …". nil when the
+    /// sentence is in another shape (another language included).
+    static func safeDescription(_ title: String) -> String? {
+        var body = title
+        if let r = body.range(of: " signatures collected on ") {
+            body = String(body[r.upperBound...])
+            if let dash = body.range(of: " — ") { body = String(body[..<dash.lowerBound]) }
+            return body.isEmpty ? nil : body
+        }
+        if let r = body.range(of: "Fully signed — ") {
+            body = String(body[r.upperBound...])
+            for tail in [" is ready to execute", " is behind "] {
+                if let t = body.range(of: tail) { body = String(body[..<t.lowerBound]) }
+            }
+            return body.isEmpty ? nil : body
+        }
+        return nil
+    }
+
+    /// The action as a title and a line: "a transfer of 1,500 USDC to
+    /// payroll.eth" → ("Send 1,500 USDC", "to payroll.eth"); an approval
+    /// names who may spend. Anything else stands as its own words,
+    /// capitalised, with no line.
+    static func safeAct(_ description: String?) -> (title: String, line: String?)? {
+        guard let d = description, !d.isEmpty else { return nil }
+        func cut(_ s: String, _ prefix: String) -> String? {
+            s.hasPrefix(prefix) ? String(s.dropFirst(prefix.count)) : nil
+        }
+        if let rest = cut(d, "a transfer of "), let to = rest.range(of: " to ", options: .backwards) {
+            return (String(localized: "Send \(rest[..<to.lowerBound])"),
+                    String(localized: "to \(rest[to.upperBound...])"))
+        }
+        if let rest = cut(d, "a transfer to ") {
+            return (String(localized: "Send"), String(localized: "to \(rest)"))
+        }
+        if let rest = cut(d, "an unlimited approval for ") {
+            return (String(localized: "Approve \(rest)"), String(localized: "to spend without limit"))
+        }
+        if let rest = cut(d, "an approval for "), let spend = rest.range(of: " to spend ") {
+            return (String(localized: "Approve \(rest[..<spend.lowerBound])"),
+                    String(localized: "to spend \(rest[spend.upperBound...])"))
+        }
+        if let rest = cut(d, "an approval for ") {
+            return (String(localized: "Approve \(rest)"), nil)
+        }
+        var words = d
+        for article in ["a ", "an "] where words.hasPrefix(article) { words = String(words.dropFirst(article.count)) }
+        return (words.prefix(1).uppercased() + words.dropFirst(), nil)
     }
 
     // MARK: The fallback that is not a failure

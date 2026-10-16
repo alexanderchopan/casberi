@@ -66610,3 +66610,11 @@ Mocks: `design/mockups/tab-bar-options.html`, `design/mockups/tab-bar-library.ht
 
 1. **A money receipt that waits on you says "Needs you"** (`MoneyReceipt.Stamp.yourTurn`'s word), the app's one word for it (the Wallet's, Day's and Work's lists); the Safe's "Your turn" tag stays data.
 2. **"Follow it on the lock screen" is not offered when the receipt waits on you, or for a Wise transfer** (its state is learned only on a read): following moves nothing.
+
+## §1334 — A Safe transaction is named by what it does (user, 2026-10-15: "ok on B", of the mock at design/mockups/safe-sheet.html; and of the live sheet's "…c95f", Explorer, the repeated lines)
+
+1. **The title is the action**, read from the row's own sentence (`MoneyReceipt.safeDescription`, `safeAct`): "a transfer of 1,500 USDC to payroll.eth" is "Send 1,500 USDC" over "to payroll.eth"; an approval is "Approve <spender>" over "to spend …"; anything else (a batch, a module) stands as its own words. Another language, or another shape, falls back to the sentence. The box wears Safe's mark.
+2. **Its first tile opens the transaction in the Safe app** ("Safe", never "Explorer"); the queue card's own "Open in Safe" row and its hand-off footnote are deleted (the commentary says it once).
+3. **Yours to sign stays open while the count is unknown**, so "Needs you" takes the attention ink before the Safe has answered.
+4. **"Follow it on the lock screen" is offered only for a transfer still settling on its chain** (Bitcoin's confirmations; amends §1333 item 2).
+5. **The demo's Safe rows speak the composer's words** ("a transfer of …", "an approval for …") and link their queue, so the demo shows what a real Safe does.

@@ -610,11 +610,10 @@ struct ThingSheetView: View {
                             .padding(.top, DS.Space.s3)
                             .settleIn(delay: 0.1)
                     }
-                    // Nothing to follow on the lock screen when it waits on
-                    // you, or when the app only learns of it on a read (a Wise
-                    // transfer): prd §1333, user: "follow on lock screen is lame".
-                    if moneyReceipt.finality == .open, moneyReceipt.stamp != .yourTurn,
-                       thing.source != "Wise" {
+                    // ONLY A TRANSFER STILL SETTLING ON ITS CHAIN (Bitcoin's
+                    // confirmations) has news worth the lock screen (prd §1333,
+                    // §1334, user: "follow on lock screen is lame").
+                    if moneyReceipt.finality == .open, moneyReceipt.stamp == .settling {
                         trackRecordControl(moneyReceipt)
                             .padding(.horizontal, DS.Space.s4)
                             .padding(.top, DS.Space.s3)
@@ -3300,7 +3299,9 @@ struct ThingSheetView: View {
         if let url = Capture.detectURL(in: thing.content) {
             // A Wise transfer's link is its page in Wise, where a stuck one
             // is fixed (prd §1332): named for the app, as a song's is (§1186).
-            let label = thing.source == "Wise" ? "Wise" : String(localized: "Explorer")
+            let label = thing.source == "Wise" ? "Wise"
+                // A Safe row's link is its transaction in the Safe app (prd §1334).
+                : thing.source == "Safe" ? "Safe" : String(localized: "Explorer")
             out.append(Verb(label: label, icon: "arrow.up.right", action: .openURL(url)))
         }
         // A World ID grant opens where the next one is claimed (prd §792) —

@@ -46,12 +46,9 @@ struct SafeQueueCard: View {
                 statusLine(icon: "arrow.triangle.2.circlepath", tone: DS.textTertiary,
                            text: "Replaced — another transaction executed at this position.")
             }
-            if let door = check.doorURL, let url = URL(string: door) {
-                DSDoorRow(icon: "arrow.up.right", label: "Open in Safe") { openURL(url) }
-            }
-            if !signable {
-                DSFootnote("Signatures happen in your Safe app — never here.")
-            }
+            // No "Open in Safe" and no hand-off footnote here (prd §1334):
+            // the sheet's first tile is Safe, and the commentary above says
+            // once that signing happens in the Safe app.
         }
         // No well (prd §782): the block stands in the sheet's column.
         .frame(maxWidth: .infinity, alignment: .leading)
