@@ -1,0 +1,177 @@
+#if DEBUG
+import UIKit
+import WebKit
+import P256K
+
+/// `-fileverseKeysProbe YES` (prd §1342) — can the app sign in to Fileverse on
+/// Fileverse's own page and read each portal's key back off it? A measuring
+/// instrument, not a seat: nothing is stored, and the jar is non-persistent,
+/// so closing the sheet leaves nothing behind.
+///
+/// The page keeps every portal's keys in IndexedDB `DdocDatabase_v1`, store
+/// `keyStoreCache` (measured in desktop Chrome). Every few seconds this asks
+/// that store for its SHAPE — field names, lengths, the portal's first and
+/// last hex — and, for a record with an `appDecryptionKey`, proves the app
+/// holds a usable key by deriving its public half with libsecp256k1 and
+/// comparing it to the record's `appEncryptionKey`. A key's value is never
+/// logged, kept or returned past that comparison.
+enum FileverseKeysProbe {
+    static func present() {
+        guard let root = UIApplication.shared.connectedScenes
+            .compactMap({ $0 as? UIWindowScene })
+            .flatMap(\.windows)
+            .first(where: \.isKeyWindow)?.rootViewController else {
+            NSLog("[Casberi] fileverseKeys| no window to present on")
+            return
+        }
+        var top = root
+        while let next = top.presentedViewController { top = next }
+        let nav = UINavigationController(rootViewController: ProbeController())
+        top.present(nav, animated: true)
+        NSLog("[Casberi] fileverseKeys| sheet up")
+    }
+
+    /// The page reads, once per tick. Returns JSON with shapes and the two
+    /// keys a record needs for the comparison; the comparison happens in
+    /// Swift and only its verdict is logged.
+    static let read = """
+    const out = { url: location.host + location.pathname, privy: (localStorage.getItem('privy:connections') || '').length, dbs: [], records: [] };
+    try { out.dbs = (await indexedDB.databases()).map(d => d.name); } catch (e) { out.dbs = ['error ' + e.message]; }
+    if (!out.dbs.includes('DdocDatabase_v1')) return JSON.stringify(out);
+    const db = await new Promise((res, rej) => { const r = indexedDB.open('DdocDatabase_v1'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+    out.version = db.version;
+    if (!db.objectStoreNames.contains('keyStoreCache')) { out.noStore = true; db.close(); return JSON.stringify(out); }
+    const rows = await new Promise(res => { const r = db.transaction('keyStoreCache', 'readonly').objectStore('keyStoreCache').getAll(); r.onsuccess = () => res(r.result); r.onerror = () => res([]); });
+    db.close();
+    out.records = rows.map(r => ({
+      portal: typeof r.portalAddress === 'string' ? r.portalAddress.slice(0, 6) + '…' + r.portalAddress.slice(-4) : '?',
+      fields: Object.keys(r).sort().join(','),
+      registryVersion: r.registryVersion,
+      dec: typeof r.appDecryptionKey === 'string' ? r.appDecryptionKey : null,
+      enc: typeof r.appEncryptionKey === 'string' ? r.appEncryptionKey : null
+    }));
+    return JSON.stringify(out);
+    """
+
+    struct Reading: Decodable {
+        struct Record: Decodable {
+            let portal: String
+            let fields: String
+            let registryVersion: Int?
+            let dec: String?
+            let enc: String?
+        }
+        let url: String
+        let privy: Int
+        let dbs: [String]
+        let version: Int?
+        let noStore: Bool?
+        let records: [Record]
+    }
+
+    /// Whether `dec` is a secp256k1 scalar whose compressed public key is
+    /// `enc`, both base64. Only the verdict leaves this function.
+    static func keyHolds(dec: String, enc: String) -> String {
+        guard let scalar = Data(base64Encoded: dec), let pub = Data(base64Encoded: enc) else { return "not base64" }
+        guard scalar.count == 32 else { return "\(scalar.count) bytes, not a scalar" }
+        guard let key = try? P256K.Signing.PrivateKey(dataRepresentation: scalar, format: .compressed) else {
+            return "refused by libsecp256k1"
+        }
+        return key.publicKey.dataRepresentation == pub ? "32 bytes · public key matches" : "32 bytes · public key DIFFERS"
+    }
+
+    final class ProbeController: UIViewController, WKNavigationDelegate, WKUIDelegate {
+        private var webView: WKWebView!
+        private var timer: Timer?
+        private var last = ""
+        private var done = false
+
+        override func viewDidLoad() {
+            super.viewDidLoad()
+            title = "Fileverse keys"
+            navigationItem.rightBarButtonItem = UIBarButtonItem(systemItem: .close, primaryAction: UIAction { [weak self] _ in
+                self?.dismiss(animated: true)
+            })
+            let config = WKWebViewConfiguration()
+            config.websiteDataStore = .nonPersistent()
+            webView = WKWebView(frame: .zero, configuration: config)
+            webView.navigationDelegate = self
+            webView.uiDelegate = self
+            webView.isInspectable = true
+            view.backgroundColor = .systemBackground
+            view.addSubview(webView)
+            // Below the bar: the page's own header holds its sign-in.
+            webView.translatesAutoresizingMaskIntoConstraints = false
+            NSLayoutConstraint.activate([
+                webView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+                webView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+                webView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+                webView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            ])
+            webView.load(URLRequest(url: URL(string: "https://docs.fileverse.io/u/0/w/personal/home")!))
+            timer = Timer.scheduledTimer(withTimeInterval: 4, repeats: true) { [weak self] _ in self?.tick() }
+        }
+
+        override func viewDidDisappear(_ animated: Bool) {
+            super.viewDidDisappear(animated)
+            timer?.invalidate()
+            NSLog("[Casberi] fileverseKeys| sheet closed")
+        }
+
+        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            NSLog("[Casberi] fileverseKeys| loaded %@", webView.url?.host ?? "?")
+        }
+
+        func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+            NSLog("[Casberi] fileverseKeys| load failed %@", error.localizedDescription)
+        }
+
+        /// A sign-in that opens a window (a wallet, Google) gets one.
+        func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration,
+                     for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
+            NSLog("[Casberi] fileverseKeys| popup %@", navigationAction.request.url?.host ?? "?")
+            let child = WKWebView(frame: webView.bounds, configuration: configuration)
+            child.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+            child.uiDelegate = self
+            webView.addSubview(child)
+            return child
+        }
+
+        func webViewDidClose(_ webView: WKWebView) { webView.removeFromSuperview() }
+
+        private func tick() {
+            guard !done else { return }
+            webView.callAsyncJavaScript(FileverseKeysProbe.read, arguments: [:], in: nil, in: .page) { [weak self] result in
+                guard let self else { return }
+                switch result {
+                case .failure(let error):
+                    self.log("read failed · \(error.localizedDescription)")
+                case .success(let value):
+                    guard let json = value as? String, let data = json.data(using: .utf8),
+                          let r = try? JSONDecoder().decode(Reading.self, from: data) else {
+                        self.log("read returned no JSON")
+                        return
+                    }
+                    var line = "\(r.url) · privy \(r.privy) · dbs \(r.dbs.joined(separator: ",")) · v\(r.version.map(String.init) ?? "-") · keyStoreCache \(r.noStore == true ? "absent" : String(r.records.count))"
+                    for rec in r.records {
+                        let held = rec.dec.flatMap { d in rec.enc.map { FileverseKeysProbe.keyHolds(dec: d, enc: $0) } } ?? "no app key"
+                        line += "\n  portal \(rec.portal) · registry v\(rec.registryVersion.map(String.init) ?? "?") · \(held) · fields \(rec.fields)"
+                    }
+                    self.log(line)
+                    if r.records.contains(where: { $0.dec != nil }) {
+                        self.done = true
+                        self.log("READ FROM THE APP · \(r.records.filter { $0.dec != nil }.count) portal keys usable")
+                    }
+                }
+            }
+        }
+
+        /// Logs a reading only when it changed, so a four-second tick is quiet.
+        private func log(_ line: String) {
+            guard line != last else { return }
+            last = line
+            for part in line.split(separator: "\n") { NSLog("[Casberi] fileverseKeys| %@", String(part)) }
+        }
+    }
+}
+#endif
