@@ -36,8 +36,12 @@ done
 if grep -nE 'https?://' "$APP" | grep -v '^\s*[0-9]*:\s*///' | grep -v 'content: "https://etherscan.io/nft/' | grep -q .; then
   echo "✗ ZFiOrders.swift names a host; it reads through WalletApprovals' mainnet pool only"; exit 1
 fi
-grep -q 'if ref.hasPrefix(ZFiOrders.reclaimPrefix) { return ZFiOrders.stillWaiting(ref: ref, in: walletLive.zfiOrders) }' \
-  Casberi/Casberi/Screens/FeedScreen+WalletRoom.swift || { echo "✗ a waiting zFi escrow no longer leads Needs you"; exit 1; }
+# The rule lives in WalletNeedsYou since §1329 (Home and Day both ask it);
+# the Wallet hands it the live book.
+grep -q 'if ref.hasPrefix(ZFiOrders.reclaimPrefix) { return ZFiOrders.stillWaiting(ref: ref, in: zfi) }' \
+  Casberi/Casberi/Model/WalletNeedsYou.swift || { echo "✗ a waiting zFi escrow no longer leads Needs you"; exit 1; }
+grep -q 'let zfi = walletLive.zfiOrders' Casberi/Casberi/Screens/FeedScreen+WalletRoom.swift \
+  || { echo "✗ the Wallet no longer hands Needs you the live zFi book"; exit 1; }
 grep -q 'if ref.hasPrefix("zfi:reclaim:") { return .poolCleared }' Casberi/Casberi/Model/NotifySweep.swift \
   || { echo "✗ a waiting zFi escrow no longer notifies"; exit 1; }
 grep -q 'await ZFiOrders.syncEvents(context: context, addresses: evmAddresses, existing: existing)' \
