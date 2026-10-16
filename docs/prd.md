@@ -66546,3 +66546,7 @@ The in-content back rows become the title's first word. Casberi's settings, open
 3. **Checked, not remembered:** `scripts/verb-row-audit.py` fails if either slab struct draws a backing or regains a slab form; its self-test proves five cases.
 4. **A chart's range picker is words** (`DSRangeChips(tiles:)`, a thing sheet's and the token pages' 1H · 1D · 1W · 1M): the pick in the head ink, the rest grey, spread across the figure, no fill; as the Feed header's choices read (§1251). Retires §1174's filled tiles there.
 5. **A find tray's field takes the system's keyboard avoidance** (`DSTray.liftsField` is off): raised over a page (§1321), the custom lift left Follow a site and Follow a wallet with no field over the keyboard.
+
+## §1325 — Markets reads "Wallet · Markets" (amends §1321 item 4) (user, 2026-10-16: "markets leads back to feed but is part of wallet and should go back there in the title")
+
+1. **Markets' title names its parent, the Wallet** (§1232 made it a Wallet tile): "Wallet · Markets", the Wallet grey, and pressing it lands on the Wallet (`FeedScreen.walkNeighbours`, `roomTitle`). Day and Notes keep "Feed · Day", "Feed · Notes".

@@ -49,14 +49,17 @@ extension FeedScreen {
     var roomTitle: some View {
         // A PAGE OPENED FROM THE FEED READS "Feed · Day" (prd §1321, user:
         // "why do we have a dot between some titles and not others"): the
-        // dot means inside or opened from, so Day, Notes and Markets take it
-        // and "Feed" goes back; only the two pages you swipe between, Feed
-        // and Wallet, stand side by side without one. A pick inside the page
-        // ("Notes · Books") names the page and its pick instead.
-        if let walk = walkNeighbours, walk.after == nil, walk.before == "All", roomPick == nil {
-            DSRoomTitleRow(title: Self.walkWord("All"), pick: roomName) {
+        // dot means inside or opened from, so Day and Notes take it and
+        // "Feed" goes back; Markets is a Wallet tile (prd §1232), so it reads
+        // "Wallet · Markets" and "Wallet" goes back. Only the two pages you
+        // swipe between, Feed and Wallet, stand side by side without one. A
+        // pick inside the page ("Notes · Books") names the page and its pick
+        // instead.
+        if let walk = walkNeighbours, walk.after == nil, let parent = walk.before,
+           parent == "All" || parent == CategoryFold.walletRoom, roomPick == nil {
+            DSRoomTitleRow(title: Self.walkWord(parent), pick: roomName) {
                 DSHaptic.selection()
-                chrome.sourceRequest = "All"
+                chrome.sourceRequest = parent
             }
         } else if let walk = walkNeighbours {
             DSWalkTitleRow(before: walk.before.map(Self.walkWord),
@@ -123,6 +126,9 @@ extension FeedScreen {
         // get back to feed its complicated"): the Feed stands before them,
         // pressable, and nothing after.
         // Day too, since it became a page beside the Feed (prd §1321).
+        // Markets opens from the Wallet's tile (prd §1232), so the Wallet
+        // stands before it.
+        if HomeScope.isMarkets(source) { return (CategoryFold.walletRoom, nil) }
         if HomeScope.contains(source) || source == RoomAccounts.dayRoom, source != "All" { return ("All", nil) }
         let walk = HomeScope.phoneWalk(chips: chrome.chipOrder)
         guard let i = walk.firstIndex(of: HomeScope.walkStop(source)) else { return nil }
