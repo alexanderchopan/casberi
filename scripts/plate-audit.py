@@ -101,6 +101,8 @@ WELL_ALLOWED = {
     "FeedLedeCard.swift": (1, "the media cover's well — art at its top, words on its ground (prd §915)"),
     "GenRenderer.swift": (1, "the live stream's cover, the same stacked well (prd §915)"),
     "NoteSheetViews.swift": (1, "a monospaced code block"),
+    "SettingsHome.swift": (1, "the first-run box, four ways in where the counts will stand, which IS Sources' lead well (prd §766, §1314)"),
+    "SourcesLibrary.swift": (2, "a folder's well holding nine of its apps, and Casberi's folder holding the mark — the App Library's folders (prd §1316)"),
 }
 
 
