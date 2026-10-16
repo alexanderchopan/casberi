@@ -21,14 +21,10 @@ extension FeedScreen {
         let next = all.filter { $0.isLive && Self.dayWhen($0) >= now }
             .min { Self.dayWhen($0) < Self.dayWhen($1) }
         dayFeedCalendarRow(marks: marks, next: next)
-            // The renewals on the calendar read the Wallet's own reading, and
-            // Needs you each place's (prd §1327 item 9), from here, since the
-            // Feed may open before either place has.
+            // The renewals on the calendar read the Wallet's own reading, from
+            // here, since the Feed may open before the Wallet has; the rows and
+            // Needs you are read by the Feed's own list (prd §1343).
             .task(id: walletSubscriptionsKey) { await SubscriptionsReading.shared.refresh(modelContext) }
-            .task(id: dayNeedsKey) {
-                loadDayFeedRows()
-                await loadDayNeeds()
-            }
         if let picked = daySelected {
             dayPickedSection(picked, visible, nextEventID: nextEventID)
         } else {

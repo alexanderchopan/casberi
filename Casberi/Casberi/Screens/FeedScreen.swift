@@ -1513,6 +1513,14 @@ struct FeedScreen: View {
                 #endif
             }
             .onChange(of: chrome.feedJump) { _, _ in settleFeedJump(proxy) }
+            // Day's rows and Needs you, read by the Feed itself (prd §1343):
+            // the Wallet's section subtracts Needs you even when a jump
+            // passes Day's section before its row has appeared.
+            .task(id: dayNeedsKey) {
+                guard source == "All" else { return }
+                loadDayFeedRows()
+                await loadDayNeeds()
+            }
             // The face pressed on the Feed (prd §1280): back to its top.
             .onChange(of: chrome.feedTop) { _, _ in
                 if source == "All", isActive { returnToRoomTop(proxy) }
