@@ -66801,3 +66801,9 @@ Mocks: `design/mockups/tab-bar-options.html`, `design/mockups/tab-bar-library.ht
 2. **The day reads "Today at 2:31 AM", "Oct 1 at 2:31 AM"** (`MoneyReceiptBox.cardWhen`), as the transfers read theirs since §1349.
 3. **Track is offered only for what looks like a subscription**: the same price charged again at least 25 days apart (`moneyRecurs`, the Wallet's own `Subscriptions.believes` test). Groceries at three prices are not a plan; Apple at $12.99 a month apart is.
 
+## §1353 — Every card spend draws the card (user, 2026-10-16: "yes", of a MetaMask Card spend in the plain receipt with an empty disc and a signed amount)
+
+1. **Every card spend, the onchain cards included (ether.fi, MetaMask Card, Plasma One), draws in the card's own layout** (`moneyCard`): the card with its app's mark beside the amount, unsigned, "Today at 2:16 AM", the state. A card that names no account goes by its app's name.
+2. **The empty "no shop" disc is gone** with the plain receipt it sat on; the title still says "Spent with MetaMask Card" when the chain names no shop.
+3. **A dark card stands off the box on the strong fill**: on `surfaceRaised` it was the box's own colour.
+

@@ -3075,9 +3075,13 @@ struct ThingSheetView: View {
     /// last four off the account label the bridge stamped ("Apple Card,
     /// ending 4821").
     private var moneyCard: MoneyReceiptBox.Card? {
-        let cardSources: Set<String> = ["Apple Wallet", "MetaMask Card", "ether.fi", "Privacy"]
-        guard cardSources.contains(thing.source), moneyReceipt?.mine == nil,
-              let account = thing.authorHandle, !account.isEmpty else { return nil }
+        // **EVERY CARD SPEND IN THE CARD'S OWN LAYOUT (prd §1353).** The
+        // onchain cards (ether.fi, MetaMask Card, Plasma One) name no account,
+        // so the card goes by its app's name, never the plain receipt.
+        let cardSources: Set<String> = ["Apple Wallet", "MetaMask Card", "ether.fi", "Privacy", "Plasma One"]
+        guard cardSources.contains(thing.source), moneyReceipt?.mine == nil else { return nil }
+        let account = (thing.authorHandle?.isEmpty == false ? thing.authorHandle : nil)
+            ?? BridgeCatalog.seatName(forSource: thing.source)
         let parts = account.components(separatedBy: ", ending ")
         return MoneyReceiptBox.Card(name: parts[0],
                                     last4: parts.count > 1 ? parts[1] : nil,

@@ -648,7 +648,10 @@ struct MoneyReceiptBox: View {
     /// A card, portrait as Wallet stacks it: the issuer's mark, the last four.
     private func cardArt(_ c: Card) -> some View {
         RoundedRectangle(cornerRadius: DS.Radius.sheet, style: .continuous)
-            .fill(c.light ? Color(white: 0.91) : DS.surfaceRaised)
+            // A dark card stands off the box on the strong fill (prd §1353):
+            // on `surfaceRaised` it was the box's own colour, a mark floating
+            // on nothing.
+            .fill(c.light ? Color(white: 0.91) : DS.fillStrong)
             .frame(width: 112, height: 176)
             .overlay(alignment: .topLeading) {
                 BridgeIcon(name: c.source, size: DS.Mark.row)
