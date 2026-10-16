@@ -299,6 +299,13 @@ extension FeedScreen {
         // Markets' rows in the Wallet's Markets tile (prd §1337) keep
         // Markets' own row, never the ledger's band.
         if drawsMarketsRow(thing) { return .tokens }
+        // **THE FEED'S WALLET SECTION READS AS THE WALLET (prd §1343, user:
+        // "fix rows").** A money row in the Feed keeps the ledger's band, its
+        // amount pulled out to the right, as on the Wallet's own lists.
+        if source == "All", BridgeCatalog.category(forSource: thing.source) == CategoryFold.walletRoom {
+            if case .cardPointers = Shape(source: thing.source) { return .cardPointers }
+            return .wallet
+        }
         guard RoomAccounts.rides(room: source, source: thing.source) else { return shape }
         // Outside the Wallet a folded app's row keeps its own design: a
         // rating change reads as one in Reading, an article as an article.
