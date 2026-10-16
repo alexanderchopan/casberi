@@ -108,7 +108,7 @@ ALLOWANCE = {
     # "Simulated as the Safe's call, before signatures and gas" — an honesty
     # guard on a figure (a), drawn only when a simulation answered, beside the
     # sign block's signing disclosure (b). Both kept categories.
-    "SafeQueueCard.swift": (3, "exclusive states; signing (b); simulation's ceiling (a)"),
+    "SafeQueueCard.swift": (2, "exclusive states; signing (b) — the Open in Safe footnote went with §1334"),
     # The watch form and the co-signer block: the second is the one place the
     # app says a key has no recovery phrase (b).
     "SafeScreen.swift": (2, "watch form + co-signer key custody (b)"),
