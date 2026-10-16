@@ -1042,29 +1042,18 @@ extension FeedScreen {
     /// "now", so they come before anything dated, newest first. Peer's open
     /// trades and Rocket Money's bills are not here: neither stores a pending
     /// item or a due date the room could read.
-    /// How long a price rise stands in Needs you: one monthly cycle.
-    static let priceRiseWindow: TimeInterval = 30 * 86_400
-
+    ///
+    /// **THE PENDING RULE IS `WalletNeedsYou.waiting`** (prd §1327 item 9):
+    /// Day gathers the Wallet's Needs you through the same function, so the
+    /// two lists can never disagree.
     func walletUpcoming(_ visible: [Thing]) -> [Thing] {
         let now = Date.now
         let live = visible.live
+        let safe = walletSafePending
+        let zfi = walletLive.zfiOrders
         let pending = live.filter { thing in
-            guard let ref = thing.sourceRef else { return false }
-            if thing.source == SafeBridge.sourceName { return walletSafePending.contains(ref) }
-            if thing.source == PrivacyPoolsBridge.sourceName, ref.hasPrefix(PrivacyPoolsRoom.depositPrefix) {
-                return PrivacyPoolsRoom.state(tags: thing.tags).map { !$0.resolved } ?? false
-            }
-            // Off chain: a Wise transfer Wise is holding until you act, and a
-            // subscription that went up, until the next charge at the new
-            // price would land — the decision is keep it or cancel first.
-            if thing.source == WiseShape.source { return WiseShape.isStuck(tags: thing.tags) }
-            // A zFi order whose escrow waits on the board (prd §1282), while
-            // the live book still says so.
-            if ref.hasPrefix(ZFiOrders.reclaimPrefix) { return ZFiOrders.stillWaiting(ref: ref, in: walletLive.zfiOrders) }
-            if thing.source == AppleWalletBridge.sourceName, thing.tags.contains("Price rise") {
-                return now.timeIntervalSince(thing.capturedAt) < Self.priceRiseWindow
-            }
-            return false
+            WalletNeedsYou.waiting(source: thing.source, ref: thing.sourceRef, tags: thing.tags,
+                                   capturedAt: thing.capturedAt, safePending: safe, zfi: zfi, now: now)
         }
         .sorted { $0.capturedAt > $1.capturedAt }
         // A bill that repeats is Subscriptions' (prd §1105), never two tiles'.

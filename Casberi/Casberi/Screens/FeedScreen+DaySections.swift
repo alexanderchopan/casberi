@@ -775,14 +775,23 @@ extension FeedScreen {
     /// The row's top line on Home (prd §1152, §1157): the app's name, and
     /// when its thing landed at the trailing edge, as a notification
     /// carries its time.
-    func appLine(_ source: String, at date: Date) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-            Text(BridgeCatalog.seatName(forSource: source))
+    ///
+    /// **A ROW GATHERED FROM ANOTHER PLACE NAMES THE PLACE FIRST** (Day's
+    /// Needs you, prd §1327 item 9): "Wallet · Wise", "Work · GitHub", and
+    /// its day when it was not today, because what waits may have landed
+    /// last week.
+    func appLine(_ source: String, at date: Date, place: String? = nil) -> some View {
+        let app = BridgeCatalog.seatName(forSource: source)
+        let name = place.map { $0 == app ? $0 : "\($0) · \(app)" } ?? app
+        let when = place == nil || Self.groupingCalendar.isDateInToday(date)
+            ? date.formatted(date: .omitted, time: .shortened) : Self.dayWord(date)
+        return HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+            Text(name)
                 .dsText(.label12)
                 .foregroundStyle(DS.textSecondary)
                 .lineLimit(1)
                 .frame(maxWidth: .infinity, alignment: .leading)
-            Text(date.formatted(date: .omitted, time: .shortened))
+            Text(when)
                 .dsText(.label12)
                 .foregroundStyle(DS.textSecondary)
                 .lineLimit(1)
@@ -908,7 +917,12 @@ extension FeedScreen {
                             headed: Bool = true,
                             // Day's renewals on this day (prd §1261), after
                             // its things: a plan has no time of day.
-                            renewals: [Subscriptions.Item] = []) -> some View {
+                            renewals: [Subscriptions.Item] = [],
+                            // Rows gathered from other places (Day's Needs
+                            // you, prd §1327 item 9), by id: each draws as
+                            // the Feed's grouped row, its app's icon leading
+                            // and its line naming the place.
+                            places: [UUID: String] = [:]) -> some View {
         // LIVE ONLY, before anything reads a stored property (build 150 crash,
         // 2026-07-25 — pull-to-refresh, symbolicated to `countLabel` inside
         // this section's own header). `rows` is a DERIVED array (the day
@@ -987,8 +1001,18 @@ extension FeedScreen {
                     // (corollary 3, build 176 — see `ThingRowKeying`).
                     if let thing = item.live {
                         if thing.id == boundary { newSinceDivider }
-                        shapedListRow(thing, index: i, nextEventID: nextEventID,
-                                      position: positions[i], replies: replies)
+                        if let place = places[thing.id] {
+                            shapedListRow(thing, index: i, nextEventID: nextEventID,
+                                          position: positions[i], replies: replies,
+                                          grouped: true, app: (source: thing.source, date: thing.capturedAt),
+                                          place: place)
+                                // The app's icon leads the row (prd §1157);
+                                // the row's own lead stands empty (§1103a).
+                                .environment(\.dsGroupedSource, thing.source)
+                        } else {
+                            shapedListRow(thing, index: i, nextEventID: nextEventID,
+                                          position: positions[i], replies: replies)
+                        }
                     }
                 }
                 ForEach(renewals) { item in dayRenewalRow(item) }

@@ -143,6 +143,9 @@ extension FeedScreen {
             // The renewals on the calendar (prd §1260) read the Wallet's own
             // reading, from here, since Day may open before the Wallet has.
             .task(id: walletSubscriptionsKey) { await SubscriptionsReading.shared.refresh(modelContext) }
+            // Every place's Needs you (prd §1327 item 9), read from here on
+            // Day's own page; the Feed's Day section reads none.
+            .task(id: dayNeedsKey) { await loadDayNeeds() }
             .feedRowBackground()
             .listRowSeparator(.hidden)
             .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.inset,
@@ -162,6 +165,11 @@ extension FeedScreen {
                 .feedRowBackground()
                 .listRowSeparator(.hidden)
             }
+        }
+        // **NEEDS YOU LEADS DAY'S LIST (prd §1327 item 9)**: every place's,
+        // above Today, on Day's own page; nothing when nothing waits.
+        if !inFeed {
+            dayNeedsSection(nextEventID: nextEventID)
         }
         if comingUp {
             dayComingUpSections(nextEventID: nextEventID)

@@ -2036,6 +2036,10 @@ harness "Object fold self-test" "object fold self-test" "scripts/object-fold-sel
 # What leads Work's Coming up as "Needs you" (prd §1080): asks and breakages by
 # stable signal per service, never the to-do mark, and a week at most.
 harness "Work ask self-test" "work ask self-test" "scripts/work-ask-selftest.sh" "the work ask self-test failed — run scripts/work-ask-selftest.sh"
+
+# Day gathers every place's Needs you (prd §1327 item 9): newest first, a thing
+# once, Work folded before it asks, and the Wallet's one rule shared with Home.
+harness "Day needs self-test" "day needs self-test" "scripts/day-needs-selftest.sh" "the day needs self-test failed — run scripts/day-needs-selftest.sh"
 harness "Reading room self-test" "reading room self-test" "scripts/reading-room-selftest.sh" "the reading room self-test failed — run scripts/reading-room-selftest.sh"
 harness "Social to-you self-test" "social to-you self-test" "scripts/social-toyou-selftest.sh" "the social to-you self-test failed — run scripts/social-toyou-selftest.sh"
 harness "Wallet makeover self-test" "wallet makeover self-test" "scripts/wallet-makeover-selftest.sh" "the wallet makeover self-test failed — run scripts/wallet-makeover-selftest.sh"

@@ -773,6 +773,11 @@ struct FeedScreen: View {
     /// Day's Coming up tile (prd §1136c): every app's dated rows ahead, read
     /// in the tile's own `.task`, never in a body (§628).
     @State var dayComingUp: [Thing] = []
+    /// Day's Needs you (prd §1327 item 9): every place's, gathered in Day's
+    /// own `.task` (`loadDayNeeds`), never in a body (§628). The items carry
+    /// the place each row names; the things are those items, resolved.
+    @State var dayNeedsItems: [DayNeeds.Item] = []
+    @State var dayNeeds: [Thing] = []
     @State private var openPerson: SocialProfile?
     /// prd 43h: Reduce Motion is law — the hand-rolled moves (row entrances)
     /// fall back to plain state changes under it.

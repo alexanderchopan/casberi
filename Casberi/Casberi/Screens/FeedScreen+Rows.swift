@@ -293,7 +293,11 @@ extension FeedScreen {
                                wideArt: Bool = false,
                                replies: [String: [Thing]] = [:],
                                grouped: Bool = false,
-                               app: (source: String, date: Date)? = nil) -> some View {
+                               app: (source: String, date: Date)? = nil,
+                               // The place a gathered row came from (Day's
+                               // Needs you, prd §1327 item 9), named first on
+                               // the app's line.
+                               place: String? = nil) -> some View {
         // AnyView: same metadata-depth insurance as GenRender (crash fix).
         // A Button since 2026-08-04 (the microanimation pass), not an
         // `onTapGesture`: the tap gesture gave no touch-down feedback, so a
@@ -316,7 +320,7 @@ extension FeedScreen {
                 openThing(thing)
             } label: {
                 VStack(alignment: .leading, spacing: 2) {
-                    if let app { appLine(app.source, at: app.date) }
+                    if let app { appLine(app.source, at: app.date, place: place) }
                     AnyView(shapedRow(thing, nextEventID: nextEventID, index: index,
                                       imageOnly: imageOnly, wideArt: wideArt,
                                       replies: replies))
