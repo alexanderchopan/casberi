@@ -401,7 +401,10 @@ struct SubscriptionAddTray: View {
                 HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
                     HStack(alignment: .firstTextBaseline, spacing: 0) {
                         // Typed in dollars, as the store keeps a hand-added price.
+                        // Its own width, always: the field beside it is
+                        // fixed-size, and the squeeze clipped the "$" to a sliver.
                         Text(verbatim: "$").dsText(.price40).foregroundStyle(DS.textPrimary)
+                            .fixedSize()
                         TextField(String(localized: "0"), text: $price)
                             .keyboardType(.decimalPad)
                             .dsText(.price40).monospacedDigit()

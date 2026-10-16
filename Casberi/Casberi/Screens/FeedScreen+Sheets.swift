@@ -220,7 +220,18 @@ extension FeedScreen {
     /// The screen's one presentation: risen, or pushed inside an app sheet.
     var feedSheetHost: some ViewModifier {
         DSOneSheet(route: $feedSheet, pushes: pushesInSheet,
-                   raised: { sheetContent($0) }, pushed: { pushedSheetContent($0) })
+                   raised: { raisedSheetContent($0) }, pushed: { pushedSheetContent($0) })
+    }
+
+    /// A route risen over a page. A subscription's, a list's or a follow's
+    /// sheet opens onward (Edit, a mail, a recent row), so it hosts a stack
+    /// and that step pushes inside it, never a sheet on a sheet (prd §1315).
+    @ViewBuilder
+    func raisedSheetContent(_ route: FeedSheetRoute) -> some View {
+        switch route {
+        case .subscription, .mailSubscription, .following: sheetContent(route).dsRaisedStack()
+        default: sheetContent(route)
+        }
     }
 
     /// Whether a route pushes inside this app sheet rather than rising over

@@ -369,7 +369,7 @@ struct SettingsHome: View {
     /// A sheet's content with the environment a Catalyst sheet does not
     /// inherit (prd §872).
     private func settingsSheet(_ raised: SettingsSheet) -> some View {
-        sheetContent(raised)
+        raisedContent(raised)
             .environment(chrome)
             .environment(bridges)
             .environment(route)
@@ -408,7 +408,8 @@ struct SettingsHome: View {
     /// fallback for a pageless app is this.
     private func openOffer(_ name: String) {
         if let bridge = bridges.bridges.first(where: { $0.name == name }) {
-            route.openAccount(BridgeRouter.destination(forID: bridge.id))
+            // A connected app's page is a page (prd §1321 item 2).
+            route.pushBridge(BridgeRouter.destination(forID: bridge.id))
             return
         }
         guard let offer = BridgeCatalog.offers.first(where: { $0.name == name }) else { return }
@@ -621,6 +622,17 @@ struct SettingsHome: View {
 
     // MARK: - Sheets over Settings (prd §1143)
 
+    /// A plan's, a list's or a follow's sheet opens onward (Edit, a mail, a
+    /// recent row): risen over Sources it hosts a stack, so that step pushes
+    /// inside it instead of rising over it (prd §1315).
+    @ViewBuilder
+    private func raisedContent(_ route: SettingsSheet) -> some View {
+        switch route {
+        case .follow, .list, .plan: sheetContent(route).dsRaisedStack()
+        default: sheetContent(route)
+        }
+    }
+
     @ViewBuilder
     private func sheetContent(_ route: SettingsSheet) -> some View {
         switch route {
@@ -701,7 +713,9 @@ struct SettingsHome: View {
     private func openFromFolder(_ name: String) {
         DSHaptic.selection()
         if let app = bridges.bridges.first(where: { $0.name == name && $0.status != .paused }) {
-            route.openAccount(BridgeRouter.destination(forID: app.id))
+            // A page pushed beside Sources (prd §1321 item 2); only a
+            // connect form rises.
+            route.pushBridge(BridgeRouter.destination(forID: app.id))
         } else {
             setup(name)
         }
@@ -1006,7 +1020,7 @@ struct SettingsHome: View {
         let tone = app.status == .attention ? DS.attentionInk : DS.textTertiary
         // By the seat, as the catalogue's connected row opens (prd §1050f):
         // an offer with no setup page still has this one.
-        let open = { route.openAccount(BridgeRouter.destination(forID: app.id)) }
+        let open = { route.pushBridge(BridgeRouter.destination(forID: app.id)) }
         if card {
             DSPushRow(title: Text(verbatim: app.name), subtitle: Text(verbatim: app.statusLine),
                       subtitleTone: tone, opens: false, action: open) {

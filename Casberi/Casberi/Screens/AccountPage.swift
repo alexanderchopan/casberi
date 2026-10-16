@@ -938,7 +938,9 @@ private struct AccountThingSheet: View {
     @State private var thing: Thing?
 
     var body: some View {
-        Group {
+        // A ZStack, never a Group: an empty Group is no view at all, so its
+        // `.task` never ran and the sheet rose blank (ENS's followed names).
+        ZStack {
             if let thing, thing.isLive {
                 ThingSheetView(thing: thing)
             }

@@ -1275,7 +1275,9 @@ struct ContactSheet: View {
                     }
                 }
             }
-            .dsOneSheet(item: $openedThing, pushes: { _ in inSheetStack }) { thing in ThingSheetView(thing: thing) }
+            // The card always stands in a stack, its own or the one it was
+            // pushed into (`body`), so a thing pushes (prd §1315).
+            .dsOneSheet(item: $openedThing, pushes: { _ in true }) { thing in ThingSheetView(thing: thing) }
             .sheet(item: $composer) { which in
                 switch which {
                 case .messages:
