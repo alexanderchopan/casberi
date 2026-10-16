@@ -366,7 +366,7 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
     @ViewBuilder private var roomFrame: some View {
         // Sources since prd §1254: the Apps screen is deleted (§1234), and
         // every app's page is reached from Sources.
-        DSRoomTitleRow(title: String(localized: "Sources"))
+        DSRoomTitleRow(title: String(localized: "Library"))
             .padding(.horizontal, DSRoomChassis.inset)
             .padding(.top, DS.Space.s2)
             .frameRow()

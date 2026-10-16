@@ -171,6 +171,28 @@ struct RootShell: View {
         if !sceneState.route.path.isEmpty { return { sceneState.route.goBack() } }
         return nil
     }
+
+    /// A tab pressed (prd §1327): the place's own door, the one its tile and
+    /// the face took before. The Feed's, pressed on the Feed, returns to the
+    /// top (§1280's face); Library is Sources' place (§1321).
+    private func openPlaceTab(_ tab: PlaceTab) {
+        let chrome = self.chrome
+        let route = sceneState.route
+        withAnimation(DS.Motion.standard) {
+            chrome.roomsTray = false
+            switch tab {
+            case .feed:
+                chrome.goToFeed()
+            case .wallet:
+                chrome.openWallet()
+            case .day, .notes:
+                chrome.sourceRequest = tab.source
+            case .library:
+                chrome.settingsPick = .sources
+                route.present(.casberi)
+            }
+        }
+    }
     /// The bar↔surface morph (2026-07-20) — shared between `AgentBar` and
     /// `Composer`'s `glassNamespace`, both keying `matchedGeometryEffect` to
     /// the same `"agentMorph"` id.
@@ -2416,7 +2438,26 @@ struct RootShell: View {
                     // same frame. With nothing pushed there is nowhere to go
                     // back to, and a seat that did nothing would be §83's
                     // dead control — so it is not mounted at all.
-                    if padShell.railInset == 0 || !sceneState.route.path.isEmpty {
+                    // THE PLACES ARE TABS (prd §1327): on the phone, with
+                    // nothing pushed, the band is the tab bar and Search; a
+                    // pushed page keeps the seat as its way back (prd §767).
+                    if padShell.railInset == 0, sceneState.route.path.isEmpty {
+                        VStack(alignment: .trailing, spacing: DS.Space.s3) {
+                            // The demo's mark stands on its own row above the
+                            // bar's trailing end (prd §1322's place, moved up).
+                            if demoActive && !DemoCapture.hidesMarking && !chrome.roomsTray {
+                                rootPresented(DemoTag())
+                                    .environment(sceneState.route)
+                                    .environment(sceneState.filter)
+                                    .opacity(chrome.demoLeaving ? 0 : 1)
+                                    .animation(DS.Motion.standard, value: chrome.demoLeaving)
+                                    .transition(.opacity)
+                            }
+                            PlaceTabBar(current: PlaceTab.current(sceneState.filter.source),
+                                        open: openPlaceTab,
+                                        search: { withAnimation(DS.Motion.standard) { chrome.roomsTray = true } })
+                        }
+                    } else if padShell.railInset == 0 || !sceneState.route.path.isEmpty {
                         DockDoors(onAccounts: {
                                       // THE FACE GOES TO THE FEED (prd §1280,
                                       // amends §930 and §1207 item 4 on the

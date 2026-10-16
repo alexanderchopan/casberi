@@ -129,10 +129,9 @@ extension FeedScreen {
         // Markets opens from the Wallet's tile (prd §1232), so the Wallet
         // stands before it.
         if HomeScope.isMarkets(source) { return (CategoryFold.walletRoom, nil) }
-        if HomeScope.contains(source) || source == RoomAccounts.dayRoom, source != "All" { return ("All", nil) }
-        let walk = HomeScope.phoneWalk(chips: chrome.chipOrder)
-        guard let i = walk.firstIndex(of: HomeScope.walkStop(source)) else { return nil }
-        return (i > 0 ? walk[i - 1] : nil, i + 1 < walk.count ? walk[i + 1] : nil)
+        // Every other place is a tab (prd §1327 item 5): its title is its
+        // own name, large, and the bar says where the others are.
+        return nil
     }
 
     /// A stop's word in the title: the Feed for "All", else its category.

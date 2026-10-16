@@ -243,19 +243,6 @@ extension AztecSection: DSTileScope {
     }
 }
 
-/// You's four places as tiles (prd §1136). Markets wears the dock's own
-/// category glyph, the one its door has always worn.
-extension YouTile: DSTileScope {
-    var glyph: String {
-        switch self {
-        case .feed:     return ScopeTileGlyph.feed
-        case .day:      return CategoryFold.glyph(for: RoomAccounts.dayRoom)
-        case .notes:    return ScopeTileGlyph.notes
-        case .sources:  return ScopeTileGlyph.apps
-        }
-    }
-}
-
 /// Settings' own filters (prd §1136 item 5), pressed in the box (§1138);
 /// no bar since §1171.
 extension SettingsScope: DSTileScope {

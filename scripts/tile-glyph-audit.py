@@ -64,10 +64,6 @@ ALIASES = {
     # Media's Following (prd §1230; the case keeps its `subscriptions` name
     # for its hooks): what you follow wears Follow's eye, as Work's does.
     ("MediaScope", "subscriptions"): "watch",
-    # You's Sources (prd §1207 item 9) is the master list that opens on your
-    # apps (SettingsScope.apps): the same meaning, so the same grid.
-    ("YouTile", "sources"): "apps",
-    # You's Today (prd §1168) IS the "All" source, the dock's inbox tray.
 }
 
 # Symbols the user named as one meaning's own (2026-09-18; the Wallet's
@@ -279,14 +275,8 @@ extension MediaScope: DSTileScope {
     }
 }
 
-extension YouTile: DSTileScope {
-    var glyph: String {
-        switch self {
-        case .feed: return ScopeTileGlyph.feed
-        case .sources: return ScopeTileGlyph.apps
-        }
-    }
-}
+// The Feed's tab (prd §1327) wears the inbox tray.
+enum PlaceTab { static let feedGlyph = ScopeTileGlyph.feed }
 '''
 
 CLEAN_FOLD = '''import Foundation

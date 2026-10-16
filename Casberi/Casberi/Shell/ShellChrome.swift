@@ -147,6 +147,12 @@ final class ShellChrome {
         applyFold(min(1, max(0, fold + delta / Self.foldTravel)), animated: false)
     }
 
+    /// The folded tab bar's circle pressed (prd §1327 item 7): open the bar
+    /// again, as a scroll back up would.
+    func unfold() {
+        applyFold(0, animated: true)
+    }
+
     /// The scroll went idle: rest at whichever end is nearer.
     func settleFold() {
         guard fold > 0, fold < 1 else { return }

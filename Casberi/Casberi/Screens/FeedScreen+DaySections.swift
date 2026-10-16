@@ -288,9 +288,7 @@ extension FeedScreen {
         // the day's empty state while there is anything to show.
         let homeCover = ledeThing ?? fallbackCover
         homeLead(homeCover, heroShown: heroShown)
-        // You's tiles under the box, the slot every room's tiles stand in
-        // (prd §1136 item 1).
-        if source == "All" { youTilesSection(.feed) }
+        // The places' row under the box is gone (prd §1327 item 1): they are tabs.
         // What stopped working, named, before anything that arrived (prd §1162).
         if source == "All" { reconnectSection }
         // "Nothing yet today" only when today truly holds nothing: a box
@@ -447,7 +445,7 @@ extension FeedScreen {
                 emptyLeadRow(headline: Text(Date.now.formatted(.dateTime.weekday(.wide))),
                              words: Text(Date.now.formatted(.dateTime.month(.wide).day())),
                              note: bridges.connectedCount == 0
-                                 ? Text("Connect apps in Sources.") : nil)
+                                 ? Text("Connect apps in Library.") : nil)
             }
         }
     }

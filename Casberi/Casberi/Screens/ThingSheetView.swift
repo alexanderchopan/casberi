@@ -3871,7 +3871,7 @@ struct ThingSheetView: View {
         let state = room == .work ? String(localized: "Watching") : String(localized: "Following")
         let line = [state, MailSubscriptions.cadenceWords(item.cadenceDays)].compactMap { $0 }
             .joined(separator: " · ")
-        return fromRow(title: item.name, line: line) {
+        return sourceDoor(title: item.name, line: line) {
             faceTarget = .followed(item.id, room)
         } lead: {
             if let avatar = item.avatar, !avatar.isEmpty {
@@ -3885,7 +3885,7 @@ struct ThingSheetView: View {
     private func fromPersonRow(_ profile: SocialProfile) -> some View {
         let following = SocialPeople.isWatched(handle: profile.handle, source: profile.source)
         let line = following ? String(localized: "Following") : String(localized: "Not following")
-        return fromRow(title: "@\(profile.shortHandle)", line: line) {
+        return sourceDoor(title: "@\(profile.shortHandle)", line: line) {
             faceTarget = .person(profile)
         } lead: {
             RemoteThumb(urlString: profile.avatarURL ?? "", size: DS.Mark.row,
@@ -3894,7 +3894,7 @@ struct ThingSheetView: View {
     }
 
     private func fromContactRow(_ query: PivotQuery) -> some View {
-        fromRow(title: query.title, line: String(localized: "Contact")) {
+        sourceDoor(title: query.title, line: String(localized: "Contact")) {
             dismiss()
             Task { @MainActor in
                 try? await Task.sleep(for: .milliseconds(450))
@@ -3907,7 +3907,7 @@ struct ThingSheetView: View {
     }
 
     private func fromWalletRow(_ entry: AddressBook.Entry) -> some View {
-        fromRow(title: entry.name, line: WalletStore.shortAddress(entry.address)) {
+        sourceDoor(title: entry.name, line: WalletStore.shortAddress(entry.address)) {
             faceTarget = .address(entry)
         } lead: {
             BridgeIcon(name: CategoryFold.walletRoom, size: DS.Mark.row)
@@ -3915,7 +3915,7 @@ struct ThingSheetView: View {
     }
 
     private func fromListRow(_ list: MailSubscriptions.Item) -> some View {
-        fromRow(title: list.name, line: MailSubscriptions.writesWords(list)) {
+        sourceDoor(title: list.name, line: MailSubscriptions.writesWords(list)) {
             dismiss()
             chrome.open(.list(list.id))
         } lead: {
@@ -3925,7 +3925,7 @@ struct ThingSheetView: View {
     }
 
     private func fromAppRow(_ app: String) -> some View {
-        fromRow(title: app, line: String(localized: "App")) {
+        sourceDoor(title: app, line: String(localized: "App")) {
             dismiss()
             chrome.openApp(app)
         } lead: {
@@ -3934,7 +3934,7 @@ struct ThingSheetView: View {
     }
 
     /// One door in From: the source's face, its name, one line of fact.
-    private func fromRow<Lead: View>(title: String, line: String, act: @escaping () -> Void,
+    private func sourceDoor<Lead: View>(title: String, line: String, act: @escaping () -> Void,
                                      @ViewBuilder lead: @escaping () -> Lead) -> some View {
         Button {
             DSHaptic.tap()

@@ -32,7 +32,7 @@ struct SettingsPageView: View {
         .environment(\.dsInPane, true)
         // Pushed beside Sources on the phone (prd §1321): "Sources · Data".
         .environment(\.dsTitleBack, route.sheet == nil && SettingsHome.bandSearches
-                     ? DSTitleBack(word: String(localized: "Sources"), action: { route.goBack() }) : nil)
+                     ? DSTitleBack(word: String(localized: "Library"), action: { route.goBack() }) : nil)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
 
@@ -41,7 +41,7 @@ struct SettingsPageView: View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             Group {
                 if route.sheet == nil && SettingsHome.bandSearches {
-                    DSRoomTitleRow(title: String(localized: "Sources"),
+                    DSRoomTitleRow(title: String(localized: "Library"),
                                    pick: String(localized: String.LocalizationValue(title)),
                                    onTitle: { route.goBack() })
                 } else {

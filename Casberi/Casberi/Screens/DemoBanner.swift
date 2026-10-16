@@ -116,13 +116,13 @@ struct DemoTag: View {
     @Environment(ShellChrome.self) private var chrome
 
     var body: some View {
-        // As tall as the face and search beside it (user: "shouldn't the
-        // exit demo pill be the same height as the face/search pill?").
+        // On its own row above the tab bar since prd §1327, so it is no
+        // longer matched to a seat beside it: a small pill, the Hit floor.
         // "Exit demo" with the door glyph (user: "it needs to be wider and
         // say … 'exit demo'"): the verb names what the tap does, so the tap
         // does it, no question first (§919; user, of a confirm box: "we don't
         // do that anymore").
-        DSDemoPill(height: DSDock.agentSize(fold: chrome.fold)) {
+        DSDemoPill(height: DS.Hit.min) {
             HStack(spacing: DS.Space.s2) {
                 Text("Exit demo")
                     .dsText(.heading17)

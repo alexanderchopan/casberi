@@ -2766,13 +2766,10 @@ struct MainSurface: View {
         // scroll and an app rises as a sheet (`routeIntoFeed`), so a room
         // off the walk (Testnets) goes back to the Feed.
         if !isRegular {
-            // Notes and Markets stand on the Feed (prd §1208c): a swipe right
-            // goes back to it, a swipe left raises the tray.
-            if HomeScope.contains(filter.source), filter.source != "All" {
-                return delta < 0 ? "All" : nil
-            }
+            // The tabs, in the bar's order (prd §1327 item 6); Markets walks
+            // from the Wallet, whose tile it is.
             let walk = phoneWalk
-            let here = HomeScope.walkStop(filter.source)
+            let here = PlaceTab.current(filter.source)?.source ?? HomeScope.walkStop(filter.source)
             guard let i = walk.firstIndex(of: here) else { return delta < 0 ? "All" : nil }
             return walk.indices.contains(i + delta) ? walk[i + delta] : nil
         }

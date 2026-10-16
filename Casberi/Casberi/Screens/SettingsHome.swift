@@ -77,19 +77,10 @@ struct SettingsHome: View {
             // Settings", and "Sources" presses back, as the category's word
             // does over an app's pick (§1262). The "‹ Sources" row it replaces
             // stood in the content because §752 kept the top clear.
-            Group {
-                if route.sheet == nil {
-                    // A PAGE OPENED FROM THE FEED (prd §1321): "Feed · Sources",
-                    // the Feed grey and going back, as Day and Notes read.
-                    DSRoomTitleRow(title: String(localized: "Feed"), pick: String(localized: "Sources")) {
-                        DSHaptic.selection()
-                        chrome.goToFeed()
-                    }
-                } else {
-                    DSRoomTitleRow(title: String(localized: "Sources"))
-                }
-            }
-            .dsRoomTitleListRow(inSheet: route.sheet != nil)
+            // LIBRARY IS A TAB (prd §1327 items 2, 5): its name alone, as
+            // every tab's page reads; the bar says where the others are.
+            DSRoomTitleRow(title: String(localized: "Library"))
+                .dsRoomTitleListRow(inSheet: route.sheet != nil)
             Section {
                 // The kinds you connected; Casberi's own settings are its
                 // folder's tiles since prd §1321, never the box.
@@ -99,14 +90,7 @@ struct SettingsHome: View {
                 }
                 .dsRoomLeadListRow()
             }
-            // Risen as a sheet (prd §1208m) it stands on nothing: the Feed's
-            // tiles belong to the Feed, and the pull closes it.
-            if route.sheet == nil {
-                Section {
-                    YouTilesRow(active: .sources)
-                        .dsRoomTilesListRow()
-                }
-            }
+            // The places' row is gone (prd §1327 item 1): they are tabs.
             Section {
                 VStack(alignment: .leading, spacing: DS.Space.s6) {
                     // SOURCES FINDS ITS APPS (prd §1245, user: "there is no
