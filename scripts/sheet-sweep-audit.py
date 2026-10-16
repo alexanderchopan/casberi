@@ -49,7 +49,7 @@ BARE = re.compile(r"(?<![\w.$])(sheet|fullScreenCover)\(")
 CROSS_FILE = {"route.sheet": "SheetRoot", "chrome.pivot": "PivotQuery",
               "chrome.appSheet": "AppSheet"}
 # A route case whose payload is itself a route: expanded one more level.
-NESTED = {("SheetRoot", "node"): "Node", ("SettingsSheet", "home"): "ListHome"}
+NESTED = {("SheetRoot", "node"): "Node@Shell/HomeRoute.swift", ("SettingsSheet", "home"): "ListHome"}
 
 
 def swift_files(root, overrides=None):
@@ -101,12 +101,15 @@ class Index:
         return self.enum(name)
 
     def enum(self, name):
-        key = ("enum", name)
+        # "Node@Shell/HomeRoute.swift" names the file: a second `enum Node`
+        # elsewhere (Yjs.swift's, prd §1355) took the route's cases otherwise.
+        name, _, home = name.partition("@")
+        key = ("enum", name, home)
         if key not in self.memo:
             self.memo[key] = None
             needle = "enum " + name
-            for _, text in self.sources:
-                if needle not in text:
+            for path, text in self.sources:
+                if needle not in text or (home and not str(path).endswith(home)):
                     continue
                 for m in ENUM_DECL.finditer(text):
                     if m.group(1) == name:
@@ -135,7 +138,8 @@ def index(sources):
 
 def enum_cases(enums, name):
     """Top-level case names of `enum <name>` anywhere in the tree, else None."""
-    short = name.split(".")[-1]
+    base, at, home = name.partition("@")
+    short = base.split(".")[-1] + at + home
     for text, m in ([enums[short]] if short in enums else []):
         if not m:
             continue

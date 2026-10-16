@@ -1778,6 +1778,13 @@
   },
   {
    "covers": [
+    "Screens/FileverseDocPage.swift:webDoor",
+    "Shell/NoteCaptureSheet.swift:hosted&&chrome.docToRead"
+   ],
+   "why": "NOT WALKED YET: a dDoc's page (prd §1355) and a link inside it; the journey to a demo Fileverse doc is not written (2026-10-16)"
+  },
+  {
+   "covers": [
     "Shell/RootShell.swift:safeAsk",
     "Screens/SafeScreen.swift:pastedAsk"
    ],

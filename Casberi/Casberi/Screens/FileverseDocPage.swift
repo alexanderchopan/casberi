@@ -289,6 +289,7 @@ private struct MarkdownBlockView: View {
 struct FileverseDocLayer: View {
     let chrome: ShellChrome
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var thing: Thing?
 
     var body: some View {
@@ -307,6 +308,6 @@ struct FileverseDocLayer: View {
     }
 
     private func close() {
-        withAnimation(DS.Motion.standard) { chrome.docToRead = nil }
+        withAnimation(reduceMotion ? nil : DS.Motion.standard) { chrome.docToRead = nil }
     }
 }
