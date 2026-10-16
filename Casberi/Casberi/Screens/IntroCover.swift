@@ -484,6 +484,17 @@ struct IntroCover: View {
         // re-mark a demo already running; `pourIfNeeded` is its own no-op when
         // nothing is pending.
         .task {
+            // **NEVER OVER YOUR OWN THINGS (2026-10-16, user: "i opened the
+            // app and it started me in demo mode", then "when i exit my notes
+            // in feed do not show").** `begin` replaces the connected apps
+            // with the demo's and Exit empties them, so a cover raised on an
+            // install that already holds the person's own apps or things
+            // (`onboarded` read false for any reason) lifts at once instead.
+            if !DemoMode.isActive, Self.holdsYourOwn(store: store, context: modelContext) {
+                NSLog("[Casberi] introCover: your own things are here, no demo")
+                onStart()
+                return
+            }
             if !DemoMode.isActive { DemoMode.begin(store: store) }
             let mounted = Date.timeIntervalSinceReferenceDate
             // Wait for the first painted frame (the tiles' first deal), then
@@ -532,6 +543,19 @@ struct IntroCover: View {
     /// the bottom edge under the gravity it arrived by, and the page lifts
     /// once the last tile has left (`onDroppedOut` → `onStart`). Under Reduce
     /// Motion the tiles are simply removed and the page lifts at once.
+    /// Whether this install already holds the person's own: a connected
+    /// app, or any of the newest things that is not a demo row.
+    @MainActor
+    static func holdsYourOwn(store: BridgeStore, context: ModelContext) -> Bool {
+        if !store.bridges.isEmpty { return true }
+        var newest = FetchDescriptor<Thing>(sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
+        newest.fetchLimit = 50
+        return ((try? context.fetch(newest)) ?? []).contains { thing in
+            guard let ref = thing.sourceRef else { return true }
+            return !DemoSeedAll.refPrefixes.contains { ref.hasPrefix($0) }
+        }
+    }
+
     private func start() {
         guard !leaving else { return }
         DSHaptic.tap()

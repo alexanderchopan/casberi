@@ -781,6 +781,12 @@ struct FeedScreen: View {
     /// list carries none of what is ahead, and the calendar is all ahead.
     @State var dayFeedRows: [Thing] = []
     @State var dayNeeds: [Thing] = []
+    /// The Feed's Notes section reads its own rows too (prd §1347): the
+    /// Feed's list is the newest `allRoomFetchLimit` things and drops the
+    /// apps you write in, so a note older than that window, or any journal
+    /// entry, never reached the section (2026-10-16, user: "my notes in feed
+    /// do not show"). Raw model refs, so every reader takes `.live` first.
+    @State var notesFeedRows: [Thing] = []
     /// The Wallet's Markets tile (prd §1337): Markets' own rows, read in the
     /// tile's `.task` (`loadWalletMarkets`), never in a body (§628). Raw
     /// model refs, so every reader takes `.live` first.
@@ -1509,7 +1515,7 @@ struct FeedScreen: View {
             // on iPad and the Mac reads Needs you here too, over its own
             // rows (prd §1344).
             .task(id: dayNeedsKey) {
-                if source == "All" { loadDayFeedRows() }
+                if source == "All" { loadDayFeedRows(); loadNotesFeedRows() }
                 await loadDayNeeds()
             }
             // The face pressed on the Feed (prd §1280): back to its top.

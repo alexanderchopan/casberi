@@ -201,4 +201,24 @@ extension FeedScreen {
         daySection("", Array(notes.prefix(cap)), nextEventID: nextEventID, dated: false, headed: false)
         if notes.count > cap { sectionMoreRow(HomeScope.notesSection) }
     }
+
+    /// The section's rows: your notes and the apps you write in, newest
+    /// first, one bounded fetch from the Feed's `.task`, never a body (§628).
+    /// The sources are spelled into the predicate because it cannot read
+    /// `Pinboard.writtenSources`; `Pinboard.inRoom` narrows "You" to the
+    /// note and voice kinds after the fetch.
+    @MainActor
+    func loadNotesFeedRows() {
+        let sources = ["You"] + Pinboard.writtenSources
+        var newest = FetchDescriptor<Thing>(
+            predicate: #Predicate { sources.contains($0.source) },
+            sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
+        newest.fetchLimit = Self.notesFeedFetchLimit
+        let rows = ((try? modelContext.fetch(newest)) ?? []).filter { $0.isLive && Pinboard.inRoom($0) }
+        guard rows.map(\.id) != notesFeedRows.map(\.id) else { return }
+        notesFeedRows = rows
+    }
+
+    /// Past every cap More can reach in a sitting; the Notes page lists the rest.
+    static let notesFeedFetchLimit = 200
 }
