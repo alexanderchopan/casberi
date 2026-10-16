@@ -28,6 +28,20 @@ final class VoiceCapture: NSObject {
     }
 
     private(set) var phase: Phase = .idle
+    /// `start()` is under way: the permission asks and the speech model's
+    /// check are awaited before `phase` turns `.recording`, and the recorder
+    /// is already running by then. A caller that keyed Stop (or a second
+    /// Record) on `phase` alone saw an idle capture in that window, so a
+    /// second tap started a second recorder and a second Live Activity over
+    /// the first, and nothing held the first to stop it (2026-10-16, user:
+    /// "it also is recording a voice note i can't stop"). `isLive` is the
+    /// one test a caller uses.
+    private(set) var starting = false
+    /// Recording, or about to be: what a Stop key and a disappear test read.
+    var isLive: Bool { phase == .recording || starting }
+    /// Bumped by `stop`, so a `start` resuming from an await after a Stop
+    /// knows it was cancelled and tears down what it made.
+    @ObservationIgnored private var startGeneration = 0
     private(set) var transcript = ""
     private(set) var elapsed: TimeInterval = 0
     /// The system took the microphone mid-recording — a call, an alarm, Siri
@@ -90,12 +104,21 @@ final class VoiceCapture: NSObject {
     // MARK: - Session
 
     func start() async {
+        // One capture at a time: a second Record while the first is starting
+        // or running is a no-op, never a second recorder.
+        guard !isLive else { return }
+        starting = true
+        startGeneration += 1
+        let generation = startGeneration
+        defer { if generation == startGeneration { starting = false } }
         // Both asks, in order, in context.
         let micOK = await AVAudioApplication.requestRecordPermission()
+        guard generation == startGeneration else { return }
         guard micOK else { phase = .denied; return }
         let speechStatus = await withCheckedContinuation { cont in
             SFSpeechRecognizer.requestAuthorization { cont.resume(returning: $0) }
         }
+        guard generation == startGeneration else { return }
         guard speechStatus == .authorized else { phase = .denied; return }
 
         fileID = UUID()
@@ -137,8 +160,27 @@ final class VoiceCapture: NSObject {
         if #available(iOS 26.0, *) {
             usingModern = await startModernTranscription()
         }
+        // Stopped while the model was checked: `stop` already ended the
+        // recorder; the session it could not see yet ends here.
+        guard generation == startGeneration else {
+            recorder?.stop(); recorder = nil
+            if #available(iOS 26.0, *), let session = modernSession as? ModernSpeechSession {
+                modernSession = nil
+                Task { await session.finish() }
+            }
+            try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+            return
+        }
 
-        if usingModern {
+        // A tap in a format with no rate or no channel (the session did not
+        // activate: another app holds the input) raises an Objective-C
+        // exception, which is a crash. The file still records; the words
+        // don't.
+        let tapFormatValid = format.sampleRate > 0 && format.channelCount > 0
+        if !tapFormatValid {
+            NSLog("VoiceCapture: input format invalid (%.0f Hz, %u ch) — recording without a transcript",
+                  format.sampleRate, format.channelCount)
+        } else if usingModern {
             input.installTap(onBus: 0, bufferSize: 1024, format: format) { [weak self] buffer, _ in
                 if #available(iOS 26.0, *) {
                     (self?.modernSession as? ModernSpeechSession)?.append(buffer)
@@ -193,6 +235,9 @@ final class VoiceCapture: NSObject {
         // and Dynamic Island get the timer, never the words. Unavailable on
         // Mac Catalyst (no Dynamic Island/lock screen there).
         #if !targetEnvironment(macCatalyst)
+        // One recording runs at a time, so any activity standing now was
+        // left by a capture that never stopped.
+        Self.endStrayActivities()
         if ActivityAuthorizationInfo().areActivitiesEnabled {
             activity = try? Activity.request(
                 attributes: VoiceRecordingAttributes(),
@@ -255,6 +300,9 @@ final class VoiceCapture: NSObject {
     /// Discard (`keep: false`) removes the file.
     @discardableResult
     func stop(keep: Bool = true) -> (transcript: String, sourceRef: String)? {
+        // A `start` still awaiting reads this and stands down.
+        startGeneration += 1
+        starting = false
         timer?.invalidate(); timer = nil
         if let interruptionObserver {
             NotificationCenter.default.removeObserver(interruptionObserver)
@@ -287,6 +335,18 @@ final class VoiceCapture: NSObject {
             return nil
         }
         return (transcript, "voice:\(fileID.uuidString).m4a")
+    }
+
+    /// End every recording Live Activity this app has standing. A launch
+    /// calls it, because no capture outlives its process: an activity still
+    /// standing then is one a crash or a kill left counting on the lock
+    /// screen and in the Dynamic Island, with no Stop anywhere.
+    static func endStrayActivities() {
+        #if !targetEnvironment(macCatalyst)
+        for stray in Activity<VoiceRecordingAttributes>.activities {
+            Task { await stray.end(nil, dismissalPolicy: .immediate) }
+        }
+        #endif
     }
 
     /// Tries the iOS 26 path. Bounded to what's already installed

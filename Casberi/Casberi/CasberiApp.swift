@@ -75,6 +75,9 @@ struct CasberiApp: App {
         // answers (prd §833); the catalogue asks through a closure so its
         // harnesses can compile it alone.
         BridgeCatalog.privateCloudAvailable = { AskModel.cloudAvailable }
+        // No recording outlives its process: a recording Live Activity still
+        // standing at launch was left by a crash, counting with no Stop.
+        VoiceCapture.endStrayActivities()
         // The store lives in the app group so the share extension writes to
         // the same corpus (S3: every capture surface routes here).
         // `containerWithFallback` degrades (CloudKit off, then in-memory)
