@@ -288,7 +288,10 @@ extension FeedScreen {
         // the day's empty state while there is anything to show.
         let homeCover = ledeThing ?? fallbackCover
         homeLead(homeCover, heroShown: heroShown)
-        // The places' row under the box is gone (prd §1327 item 1): they are tabs.
+        // THE FEED'S ROW IS ITS CATEGORIES (prd §1328): the places' row went
+        // to the tab bar (§1327), and the slot under the box holds the
+        // sections below it, a tap landing on one.
+        if source == "All" { feedCategoryRow }
         // What stopped working, named, before anything that arrived (prd §1162).
         if source == "All" { reconnectSection }
         // "Nothing yet today" only when today truly holds nothing: a box

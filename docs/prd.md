@@ -66571,3 +66571,8 @@ The in-content back rows become the title's first word. Casberi's settings, open
 10. **Built, step 1 (2026-10-15):** the bar (`Design/PlaceTabBar.swift`, `PlaceTab`), its fold on scroll and under the tray, the five-stop swipe (`HomeScope.phoneWalk`), tab pages titled with their own name, Library's title and its pages' "Library ·", the places' row deleted with `YouTile` and `YouTilesRow`, "Exit demo" on its own row above the bar. Still to build: Search's two steps (the tray's You row; the full search), Day's blend, and the face's pull-to-refresh spin, which the Feed's tab does not yet carry.
 
 Mocks: `design/mockups/tab-bar-options.html`, `design/mockups/tab-bar-library.html`.
+
+## §1328 — The Feed's row is its categories (amends §1327 item 8) (user, 2026-10-15: "the fix isn't to close the gap its to add its row of stuff like the categories that are in the feed", "should the icons in the Feed row on Feed be same spacing the icons on the other rows are? i think so yes", "what would apple do")
+
+1. **Under the Feed's box stands its categories**, in Feed order (`HomeScope.feedCategories`), on the tiles every room's row uses: a tap lands on that section (`chrome.feedJump`, the pill menu's jump), and no tile is ever lit, since the row jumps rather than narrows (`FeedSectionTile`, `FeedScreen.feedCategoryRow`).
+2. **The tiles stand on the grid's four columns**, as the Wallet's, Day's and Notes' do, and a row longer than four scrolls sideways rather than wrapping (`DSScopeTiles(scrollsColumns:)`), Apple's shelf. Library keeps no row: its counts are its sections.

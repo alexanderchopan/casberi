@@ -74,6 +74,13 @@ struct DSScopeTiles<Scope: DSTileScope>: View {
     /// fill, because the dock's don't: a row of ten grey squares is the plate
     /// §782 deleted.
     var strip: Bool = false
+    /// **THE GRID'S COLUMNS, SCROLLING (prd §1328, user: "should the icons
+    /// in the Feed row … be same spacing the icons on the other rows are? i
+    /// think so yes", "what would apple do").** Tiles one grid column wide,
+    /// so they stand where every other room's row stands them, and a row
+    /// longer than four scrolls sideways, the next tile peeking at the edge
+    /// as Apple's shelves show there is more. Never wraps to a second row.
+    var scrollsColumns: Bool = false
     /// The tiles that are VERBS, not scopes (the Notes room's New, prd
     /// §969): drawn in tint, never lit, and every tap fires — a verb has no
     /// "already picked".
@@ -158,7 +165,17 @@ struct DSScopeTiles<Scope: DSTileScope>: View {
     }
 
     var body: some View {
-        if strip, !sections.isEmpty, sections.allSatisfy({ verbs.contains($0) }) {
+        if scrollsColumns, sections.count > 1 {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: DS.Space.s2) {
+                    ForEach(sections) { section in
+                        tile(section)
+                            .containerRelativeFrame(.horizontal, count: Self.columns, spacing: DS.Space.s2)
+                    }
+                }
+            }
+            .scrollClipDisabled()
+        } else if strip, !sections.isEmpty, sections.allSatisfy({ verbs.contains($0) }) {
             // VERBS ALONE (prd §1138): Sources' Add · Search and Apps' Search,
             // whose filters are the counts in the box. Nothing scrolls.
             HStack(spacing: DS.Space.s1) {

@@ -33,6 +33,27 @@ extension FeedScreen {
         HomeScope.feedCategories(chips: chrome.chipOrder)
     }
 
+    /// **THE FEED'S ROW IS ITS CATEGORIES (prd §1328, user: "the fix isn't
+    /// to close the gap its to add its row of stuff like the categories that
+    /// are in the feed").** Day, Notes and the Wallet each stand a row under
+    /// the box, so the Feed does too: its sections, in Feed order, on the
+    /// strip their rows use. A tap lands on that section, as the pill's menu
+    /// does (`feedJump`); nothing is ever lit, since the row jumps rather than
+    /// narrows.
+    @ViewBuilder
+    var feedCategoryRow: some View {
+        let tiles = scrollsCategories && !inSheet ? scrollCategories.map(FeedSectionTile.init) : []
+        if tiles.count > 1 {
+            Section {
+                DSScopeTiles(sections: tiles, active: FeedSectionTile(name: ""), scrollsColumns: true) { picked in
+                    DSHaptic.selection()
+                    chrome.feedJump = picked.name
+                }
+                .dsRoomTilesListRow()
+            }
+        }
+    }
+
     /// The sections the pill names (prd §1208d): the Feed's categories, or
     /// the Wallet Home's lists (prd §1219).
     var pillSections: [String] {
@@ -883,4 +904,15 @@ struct SectionPanelCard<Content: View>: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(SectionPanel.fill, in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
     }
+}
+
+/// One of the Feed's sections as a tile in its row (prd §1328): the
+/// category's own glyph and name, in Feed order.
+struct FeedSectionTile: DSTileScope {
+    let name: String
+    var id: String { name }
+    var label: String { name }
+    var summary: String { String(localized: "Go to \(name)") }
+    var glyph: String { CategoryFold.glyph(for: name) }
+    static var keepsOrder: Bool { true }
 }
