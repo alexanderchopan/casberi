@@ -96,7 +96,9 @@ struct MoneyReceipt: Equatable {
             case .pending:      return String(localized: "Pending")
             case .settling:     return String(localized: "Settling")
             case .filled:       return String(localized: "Filled")
-            case .yourTurn:     return String(localized: "Your turn")
+            // "Needs you", the app's one word for what waits on you (prd
+            // §1333, user: "'your turn' is lame"); the Safe's tag stays data.
+            case .yourTurn:     return String(localized: "Needs you")
             case .shielded:     return String(localized: "Shielded")
             case .screening:    return String(localized: "Screening")
             case .needsProof:   return String(localized: "Needs proof")

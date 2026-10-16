@@ -610,7 +610,11 @@ struct ThingSheetView: View {
                             .padding(.top, DS.Space.s3)
                             .settleIn(delay: 0.1)
                     }
-                    if moneyReceipt.finality == .open {
+                    // Nothing to follow on the lock screen when it waits on
+                    // you, or when the app only learns of it on a read (a Wise
+                    // transfer): prd §1333, user: "follow on lock screen is lame".
+                    if moneyReceipt.finality == .open, moneyReceipt.stamp != .yourTurn,
+                       thing.source != "Wise" {
                         trackRecordControl(moneyReceipt)
                             .padding(.horizontal, DS.Space.s4)
                             .padding(.top, DS.Space.s3)

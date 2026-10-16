@@ -232,7 +232,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1474 of 1540 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1475 of 1541 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1708,6 +1708,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1330 — Spending counts only what you follow, and never a trade; an unfollow takes the Safes it led to (amends §1201 item 2,…
 - §1331 — The Wallet's Home, first pass: a bare line, the pick lit, Overview without sub-lines; the Feed's Newest is the Feed's…
 - §1332 — A Wise transfer is a receipt; an empty history draws nothing
+- §1333 — "Needs you", never "Your turn"; nothing to follow on the lock screen when it waits on you (amends §1332)
 
 ## Dead rulings → what replaced them (generated)
 

@@ -66605,3 +66605,8 @@ Mocks: `design/mockups/tab-bar-options.html`, `design/mockups/tab-bar-library.ht
 1. **A Wise transfer's sheet is a money receipt** (`MoneyReceipt.wise`): titled by the reference you wrote, Wise's face, the money that left as a minus, what arrives under it ("€235 arrives", the title's own pair, never a figure computed here), and the state first: Your turn for a transfer Wise holds until you act (`WiseShape.stuckTag`), Pending, Came back, Sent.
 2. **Its first tile opens the transfer in Wise**, where a stuck one is fixed, named for the app ("Wise", as a song's tile is, §1186), never "Explorer". The demo's Wise rows carry their page as a real one does (§912).
 3. **A money sheet's history draws nothing when it holds nothing** (`MoneyHistoryRows`): "Nothing before this one." is deleted, on every receipt.
+
+## §1333 — "Needs you", never "Your turn"; nothing to follow on the lock screen when it waits on you (amends §1332) (user, 2026-10-15: "'your turn' is lame. and follow on lock screen is lame.")
+
+1. **A money receipt that waits on you says "Needs you"** (`MoneyReceipt.Stamp.yourTurn`'s word), the app's one word for it (the Wallet's, Day's and Work's lists); the Safe's "Your turn" tag stays data.
+2. **"Follow it on the lock screen" is not offered when the receipt waits on you, or for a Wise transfer** (its state is learned only on a read): following moves nothing.
