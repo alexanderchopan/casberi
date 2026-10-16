@@ -547,6 +547,10 @@ struct IntroCover: View {
     /// app, or any of the newest things that is not a demo row.
     @MainActor
     static func holdsYourOwn(store: BridgeStore, context: ModelContext) -> Bool {
+        // Before the first unlock nothing saved can be read, so an empty
+        // read proves nothing (prd §1361): no demo over a list not yet seen.
+        guard UIApplication.shared.isProtectedDataAvailable else { return true }
+        store.hydrateIfNeeded()
         if !store.bridges.isEmpty { return true }
         var newest = FetchDescriptor<Thing>(sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
         newest.fetchLimit = 50

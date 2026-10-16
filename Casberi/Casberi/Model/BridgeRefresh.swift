@@ -141,6 +141,11 @@ enum BridgeRefresh {
         // key that arrived from the other device its seat — before the loops
         // below, so a key that just arrived is read on this same pass.
         TokenVault.migrateToSynced()
+        // A list a locked launch could not read is read now, before anything
+        // below registers a seat into it (prd §1361); then, once, the seats
+        // the lost list dropped come back from what their apps brought in.
+        store.hydrateIfNeeded()
+        store.restoreSeatsFromRows(context: context)
         store.reconcileKeyedSeats()
         // Returns this slot's DELAY IN MILLISECONDS, not its index — so every
         // `stagger(s)` below carries its pass's pace with it.

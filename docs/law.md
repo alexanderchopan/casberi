@@ -232,7 +232,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1500 of 1566 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1501 of 1567 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1734,6 +1734,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1356 — A Peer fill reads as a trade
 - §1357 — Every remaining money receipt is titled by what happened, dated short, and an approval or a price rise reads as itself
 - §1358 — Notion is the Notes category's (amends §1347 item 6, §1235's "Notion stays Work's")
+- §1361 — A list the phone could not read is never saved over the one it holds
 
 ## Dead rulings → what replaced them (generated)
 

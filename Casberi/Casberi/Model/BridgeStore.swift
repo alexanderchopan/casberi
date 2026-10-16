@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 import Observation
 
 /// Bridge (app) state, shared across the shell. One store feeds three
@@ -16,21 +17,67 @@ final class BridgeStore {
         didSet { persist() }
     }
 
+    /// Whether `bridges` stands on the saved list (prd §1361). False when
+    /// the launch found none: a fresh install, or a launch that could not
+    /// READ the saved list yet. iOS can start the app before the phone's
+    /// first unlock (prewarming), when the defaults read as empty; the next
+    /// write then saved that empty list, plus GitHub and App Store Connect
+    /// from their synced keys, over every connected app the person had
+    /// (2026-10-16, user: "my app library says 0 for all categories except
+    /// github and app store connect"). An unhydrated store writes nothing
+    /// until it has read the disk again.
+    private var hydrated: Bool
+
     /// Saved bridges come back first (real connections survive relaunch);
     /// the demo set seeds dev installs; a fresh user starts with none.
     init(bridges: [BridgeApp]? = nil) {
         if let bridges {
             self.bridges = bridges
-        } else if let data = ScratchDefaults.standard.data(forKey: Self.saveKey),
-                  let saved = try? JSONDecoder().decode([BridgeApp].self, from: data),
-                  !saved.isEmpty {
+            hydrated = true
+        } else if let saved = Self.savedList() {
             self.bridges = saved
+            hydrated = true
         } else {
             self.bridges = DemoState.seedsDemoData ? BridgeApp.demo : []
+            hydrated = false
+            // The phone unlocking is when the list can first be read.
+            unlockWatch = NotificationCenter.default.addObserver(
+                forName: UIApplication.protectedDataDidBecomeAvailableNotification,
+                object: nil, queue: .main) { [weak self] _ in self?.hydrateIfNeeded() }
         }
     }
 
+    @ObservationIgnored private var unlockWatch: NSObjectProtocol?
+
+    private static func savedList() -> [BridgeApp]? {
+        guard let data = ScratchDefaults.standard.data(forKey: saveKey),
+              let saved = try? JSONDecoder().decode([BridgeApp].self, from: data),
+              !saved.isEmpty else { return nil }
+        return saved
+    }
+
+    /// Whether the saved list can be read now: the phone has been unlocked
+    /// since it started. Asked on the main thread, where every write to
+    /// this store happens; elsewhere it answers yes, as before.
+    private static var defaultsReadable: Bool {
+        guard Thread.isMainThread else { return true }
+        return MainActor.assumeIsolated { UIApplication.shared.isProtectedDataAvailable }
+    }
+
+    /// Reads the saved list once it can be read, keeping any seat this run
+    /// registered before then (prd §1361). Called before every write, at
+    /// every foreground sweep, and when the phone unlocks.
+    func hydrateIfNeeded() {
+        guard !hydrated, Self.defaultsReadable else { return }
+        hydrated = true
+        guard let saved = Self.savedList() else { return }
+        let names = Set(saved.map(\.name))
+        bridges = saved + bridges.filter { !names.contains($0.name) }
+    }
+
     private func persist() {
+        hydrateIfNeeded()
+        guard hydrated else { return }
         if let data = try? JSONEncoder().encode(bridges) {
             ScratchDefaults.standard.set(data, forKey: Self.saveKey)
         }
@@ -378,6 +425,70 @@ final class BridgeStore {
             }
         }
     }
+
+    /// Puts back the seats a lost list dropped (prd §1361), once: every app
+    /// that brought in something of yours in the last two weeks is still
+    /// connected, because a sweep reads the app's own credential, never its
+    /// seat — the feed kept filling while Library said 0. A seat lands here
+    /// only under the id its own connect registers (`seatID(forName:)`), so
+    /// its page, Open and Disconnect behave as before.
+    @MainActor
+    func restoreSeatsFromRows(context: ModelContext) {
+        guard hydrated, !DemoMode.isActive,
+              !ScratchDefaults.standard.bool(forKey: Self.restoredKey) else { return }
+        ScratchDefaults.standard.set(true, forKey: Self.restoredKey)
+        let since = Calendar.current.date(byAdding: .day, value: -14, to: .now) ?? .distantPast
+        var recent = FetchDescriptor<Thing>(predicate: #Predicate { $0.capturedAt >= since },
+                                            sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
+        recent.fetchLimit = 5000
+        var sources = Set<String>()
+        for thing in (try? context.fetch(recent)) ?? [] {
+            if let ref = thing.sourceRef, DemoSeedAll.refPrefixes.contains(where: { ref.hasPrefix($0) }) { continue }
+            sources.insert(thing.source)
+        }
+        let proof = String(localized: "Synced just now")
+        var restored: [String] = []
+        for source in sources.sorted() {
+            guard Corpus.earnsRoom(source), let offer = BridgeCatalog.offer(forSource: source),
+                  let id = Self.seatID(forName: offer.name),
+                  !bridges.contains(where: { $0.name == offer.name || $0.id == id }) else { continue }
+            if registerConnected(id: id, name: offer.name, proof: proof) { restored.append(offer.name) }
+        }
+        NSLog("[Casberi] restoreSeats| %d | %@", restored.count, restored.joined(separator: ", "))
+    }
+
+    private static let restoredKey = "bridges.restoredFromRows.v1"
+
+    /// The id a catalogue name's own connect registers its seat under —
+    /// read from the same tables those screens use, so a restored seat and
+    /// a connected one are one seat. Nil for a name no table knows: that
+    /// seat is left for its own connect, never guessed.
+    static func seatID(forName name: String) -> String? {
+        if let id = BridgeRouter.id(forOffer: name) { return id }
+        if let bridge = TokenBridge(rawValue: name) { return bridge.bridgeID }
+        if let bridge = HandleBridge(rawValue: name), !bridge.bridgeID.isEmpty { return bridge.bridgeID }
+        if let kind = FeedFollowKind(rawValue: name) { return kind.bridgeID }
+        if let mail = MailProvider(rawValue: name) { return mail.bridgeID }
+        if let venue = ExchangeBridge.Venue.allCases.first(where: { $0.display == name }) { return venue.rawValue }
+        return knownSeatIDs[name]
+    }
+
+    /// The seats whose connect spells its id in place (`BridgeConnect`, the
+    /// account pages).
+    private static let knownSeatIDs: [String: String] = [
+        "Photos": "pho", "Calendar": "cal", "Reminders": "rem", "Apple Health": "hlt",
+        "Strava": "strava", "Garmin": "garmin", "Apple Music": "music", "Contacts": "contacts",
+        "Acorns": "acorns", "Apple Intelligence": "appleintelligence", "Bankr": "bankr",
+        "Bookmarks": "bookmarks", "Claude": "claude", "Claude Code": "claudecode",
+        "Day One": "dayone", "Dropbox": "dropbox", "Duolingo": "duolingo", "Files": "files",
+        "Gemini": "gemini", "ChatGPT": "gpt", "Grok": "grok", "Hugging Face": "huggingface",
+        "Instagram": "instagram", "Apple Journal": "journal", "Kindle": "kindle", "Muse": "muse",
+        "NEAR AI": "nearai", "NerdWallet": "nerdwallet", "Obsidian": "obsidian",
+        "OpenRouter": "openrouter", "Rocket Money": "rocketmoney", "RSS": "rss", "Slack": "slack",
+        "Snapchat": "snapchat", "Spotify": "spotify", "Steam": "steam", "Threads": "threads",
+        "TikTok": "tiktok", "Twitch": "twitch", "Venice": "venice", "X": "x",
+        "Fileverse": "fileverse", "Privy": "privy",
+    ]
 
     /// Whether this seat's key travels through iCloud Keychain (prd §1162) —
     /// a static table read, never the Keychain, so a body may ask it.

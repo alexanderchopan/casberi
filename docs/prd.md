@@ -66848,3 +66848,11 @@ Mocks: `design/mockups/tab-bar-options.html`, `design/mockups/tab-bar-library.ht
 
 Notion's rows already stood in Notes; its catalogue category now does too, so Library's Notes folder, the Feed's Notes section and the website's Notes shelf name the same apps (`BridgeCatalog`, `RoomAccounts.host` → `Pinboard.room`). Work's folder no longer lists it.
 
+
+## §1361 — A list the phone could not read is never saved over the one it holds (user, 2026-10-16: "my app library says 0 for all categories except github and app store connect", "my feed however still shows content")
+
+A launch that finds no saved connection list may only have been unable to read it: iOS starts an app before the phone's first unlock (prewarming), when the defaults read as empty. That launch then saved the empty list, plus GitHub and App Store Connect re-added from their synced keys, over every connected app. The feed kept filling because a sweep reads an app's own credential, never its seat.
+
+1. **`BridgeStore` writes only a list it stands on** (`hydrated`): a launch that found none reads the disk again before any write, at every foreground sweep and when the phone unlocks, keeping what this run registered meanwhile; before the first unlock it writes nothing.
+2. **The intro never starts the demo before the first unlock** (`IntroCover.holdsYourOwn`): an empty read then proves nothing.
+3. **Once, the seats a lost list dropped come back** (`restoreSeatsFromRows`): every app that brought in something of yours in the last two weeks gets its seat, under the id its own connect registers (`BridgeStore.seatID(forName:)`); a name no table knows is left for its own connect, never guessed.
