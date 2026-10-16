@@ -33,7 +33,7 @@ extension FeedScreen {
     /// One list, so a mail that arrived this morning stands in today beside
     /// the meeting after lunch. A day only a renewal stands on (prd §1261)
     /// is a day too, with no things in it.
-    private func dayRoomGroups(_ visible: [Thing], renewals: [Subscriptions.Item]) -> [(String, [Thing])] {
+    func dayRoomGroups(_ visible: [Thing], renewals: [Subscriptions.Item]) -> [(String, [Thing])] {
         let cal = Self.groupingCalendar
         let today = cal.startOfDay(for: .now)
         var buckets: [Date: [Thing]] = [:]

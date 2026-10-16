@@ -784,6 +784,12 @@ struct FeedScreen: View {
     /// The day picked on Day's calendar (prd §1340): its list stands in for
     /// Day's own until the day is tapped again or a tile is picked.
     @State var daySelected: Date? = nil
+    /// The Feed's Day section shows its five weeks (prd §1343): opened by a
+    /// tapped day, closed by Back to today.
+    @State var dayCalendarOpen = false
+    /// The Feed's Day section reads its own rows (prd §1343): the Feed's
+    /// list carries none of what is ahead, and the calendar is all ahead.
+    @State var dayFeedRows: [Thing] = []
     @State var dayNeeds: [Thing] = []
     /// The Wallet's Markets tile (prd §1337): Markets' own rows, read in the
     /// tile's `.task` (`loadWalletMarkets`), never in a body (§628). Raw

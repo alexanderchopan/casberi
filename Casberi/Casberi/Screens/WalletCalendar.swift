@@ -45,6 +45,9 @@ struct WalletCalendar: View {
     var dots = false
     var selected: Date? = nil
     var onDay: ((Date) -> Void)? = nil
+    /// How many weeks draw: the Feed's Day section rests on this one week
+    /// and opens into all five in place (prd §1343).
+    var shownWeeks: Int? = nil
 
     static let weeks = 5
     static let rowHeight: CGFloat = 27
@@ -57,7 +60,8 @@ struct WalletCalendar: View {
         let cal = Calendar.current
         let start = Self.start(now: now, calendar: cal, looksBack: looksBack)
         let today = cal.startOfDay(for: now)
-        let days = (0..<(Self.weeks * 7)).compactMap { cal.date(byAdding: .day, value: $0, to: start) }
+        let weekCount = shownWeeks ?? Self.weeks
+        let days = (0..<(weekCount * 7)).compactMap { cal.date(byAdding: .day, value: $0, to: start) }
         let byDay = Dictionary(grouping: marks) { cal.startOfDay(for: $0.day) }
         VStack(spacing: 2) {
             HStack(spacing: 0) {
@@ -68,7 +72,7 @@ struct WalletCalendar: View {
                 }
             }
             Grid(horizontalSpacing: 0, verticalSpacing: 0) {
-                ForEach(0..<Self.weeks, id: \.self) { week in
+                ForEach(0..<weekCount, id: \.self) { week in
                     GridRow {
                         ForEach(0..<7, id: \.self) { weekday in
                             let index = week * 7 + weekday

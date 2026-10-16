@@ -12,7 +12,8 @@ extension FeedScreen {
     /// What Day's read is keyed on: any change to the corpus, on Day's own
     /// page only. Everywhere else `.idle`, so the task does nothing there.
     var dayNeedsKey: Corpus.Revision {
-        guard source == RoomAccounts.dayRoom else { return .idle }
+        // Day's page, and the Feed, whose Day section holds it (prd §1343).
+        guard source == RoomAccounts.dayRoom || source == "All" else { return .idle }
         return Corpus.revision(in: modelContext)
     }
 
@@ -21,7 +22,7 @@ extension FeedScreen {
     /// first (`DayNeeds.gather`). Runs from Day's `.task`, never a body.
     @MainActor
     func loadDayNeeds() async {
-        guard source == RoomAccounts.dayRoom else {
+        guard source == RoomAccounts.dayRoom || source == "All" else {
             if !dayNeedsItems.isEmpty { dayNeedsItems = []; dayNeeds = [] }
             return
         }
@@ -62,30 +63,38 @@ extension FeedScreen {
     /// stands once over them rather than on every row's line.
     @ViewBuilder
     func dayNeedsSection(nextEventID: UUID?) -> some View {
-        let rows = dayNeeds.live
-        if !rows.isEmpty {
-            let placeOf = Dictionary(dayNeedsItems.map { ($0.id, $0.place) }, uniquingKeysWith: { a, _ in a })
-            var order: [String] = []
-            let _ = rows.forEach { thing in
-                if let place = placeOf[thing.id], !order.contains(place) { order.append(place) }
-            }
+        if !dayNeeds.live.isEmpty {
             walletCard(Self.needsYouGroup, glyph: ScopeTileGlyph.alerts) {
-                ForEach(order, id: \.self) { place in
-                    let mine = rows.filter { placeOf[$0.id] == place }
-                    Text(verbatim: place)
-                        .dsText(.label12)
-                        .foregroundStyle(DS.textSecondary)
-                        .padding(.top, place == order.first ? 0 : DS.Space.s3)
-                        .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DSRoomChassis.rowInset,
-                                                  bottom: 0, trailing: DSRoomChassis.rowInset))
-                        .feedRowBackground()
-                        .listRowSeparator(.hidden)
-                    // Keyed by value, read live (`ThingRowKeying`, the liveness rule).
-                    ForEach(Array(keyed(mine).enumerated()), id: \.element.id) { i, item in
-                        if let thing = item.live {
-                            shapedListRow(thing, index: i, nextEventID: nextEventID)
-                        }
-                    }
+                dayNeedsRows(nextEventID: nextEventID, named: false)
+            }
+        }
+    }
+
+    /// Each place's rows under its name: inside Day's card ("Wallet"), or
+    /// in the Feed's Day section, which is itself the card, as "Needs you ·
+    /// Wallet" (prd §1343).
+    @ViewBuilder
+    func dayNeedsRows(nextEventID: UUID?, named: Bool, limit: Int? = nil) -> some View {
+        let all = dayNeeds.live
+        let rows = limit.map { Array(all.prefix($0)) } ?? all
+        let placeOf = Dictionary(dayNeedsItems.map { ($0.id, $0.place) }, uniquingKeysWith: { a, _ in a })
+        let order = rows.reduce(into: [String]()) { order, thing in
+            if let place = placeOf[thing.id], !order.contains(place) { order.append(place) }
+        }
+        ForEach(order, id: \.self) { place in
+            let mine = rows.filter { placeOf[$0.id] == place }
+            Text(verbatim: named ? "\(Self.needsYouGroup) · \(place)" : place)
+                .dsText(.label12)
+                .foregroundStyle(DS.textSecondary)
+                .padding(.top, place == order.first ? 0 : DS.Space.s3)
+                .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DSRoomChassis.rowInset,
+                                          bottom: 0, trailing: DSRoomChassis.rowInset))
+                .feedRowBackground()
+                .listRowSeparator(.hidden)
+            // Keyed by value, read live (`ThingRowKeying`, the liveness rule).
+            ForEach(Array(keyed(mine).enumerated()), id: \.element.id) { i, item in
+                if let thing = item.live {
+                    shapedListRow(thing, index: i, nextEventID: nextEventID)
                 }
             }
         }

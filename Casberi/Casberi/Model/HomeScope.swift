@@ -86,18 +86,22 @@ enum HomeScope {
     /// (the tray's) excepted.
     @MainActor static func feedCategories(chips: [String]) -> [String] {
         let present = Set(chips)
-        // Day is a door of its own (prd §1231), never a Feed section.
+        // **DAY AND THE WALLET ARE FEED SECTIONS (prd §1343, user: "we just
+        // make day a section", "wallet section should show last N things").**
+        // Day leads by default and moves like any category; the Wallet's
+        // section is a preview of its tab. Day stands whether or not a chip
+        // names it: it is gathered, never one app's.
         return CategoryOrder.current.filter {
-            $0 != CategoryFold.walletRoom && $0 != RoomAccounts.testnetsRoom
-                && $0 != RoomAccounts.dayRoom && present.contains($0)
+            $0 != RoomAccounts.testnetsRoom
+                && ($0 == RoomAccounts.dayRoom || present.contains($0))
         }
     }
 
     /// Whether the phone shows `source` as a section of the Feed rather than
     /// a page: a category's combined room, the Wallet and Testnets excepted.
     @MainActor static func isFeedSection(_ source: String) -> Bool {
+        // Day is a section since prd §1343; the Wallet keeps its tab.
         source != CategoryFold.walletRoom && source != RoomAccounts.testnetsRoom
-            && source != RoomAccounts.dayRoom
             && RoomAccounts.mergedRooms.contains(source)
     }
 

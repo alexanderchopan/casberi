@@ -64,8 +64,11 @@ extension FeedScreen {
 
     /// The section a thing stands in: its category, Reading's under Media
     /// (prd §1204), nil for anything with no category page (a note of yours).
-    static func scrollCategory(of thing: Thing) -> String? {
-        guard let category = BridgeCatalog.category(forSource: thing.source) else { return nil }
+    /// Day's apps stand in Day (prd §1343), which the catalogue files under
+    /// Life. Asked once per source, never per row.
+    @MainActor static func scrollCategory(ofSource source: String) -> String? {
+        if RoomAccounts.host(ofSource: source)?.room == RoomAccounts.dayRoom { return RoomAccounts.dayRoom }
+        guard let category = BridgeCatalog.category(forSource: source) else { return nil }
         return category == RoomAccounts.readingRoom ? RoomAccounts.mediaRoom : category
     }
 
@@ -77,11 +80,31 @@ extension FeedScreen {
     /// The id a section's name carries, so the tray can scroll to it.
     static func scrollAnchor(_ category: String) -> String { "feedSection:\(category)" }
 
+    /// Each section's rows (prd §1343).
+    func feedSectionRows(_ visible: [Thing], hiding shown: Set<UUID>) -> [String: [Thing]] {
+        let live = visible.filter { $0.isLive && !shown.contains($0.id) }
+        let sources = Set(live.map(\.source))
+        // Each source's section once, not each row's (prd §1343): Day's apps
+        // are Life's in the catalogue, and their rows stand in Day.
+        var sectionOf: [String: String] = [:]
+        for source in sources {
+            sectionOf[source] = Self.scrollCategory(ofSource: source) ?? ""
+        }
+        var byCategory = Dictionary(grouping: live) { sectionOf[$0.source] ?? "" }
+        // **THE WALLET'S SECTION IS WHAT MOVED (prd §1343, user: "wallet
+        // section skip what needs you shows … feed is a feed, not the entire
+        // source").** Its moves, never a state (`walletMoves`), and nothing
+        // Day's Needs you already holds.
+        if let wallet = byCategory[CategoryFold.walletRoom] {
+            let waiting = Set(dayNeeds.map(\.id))
+            byCategory[CategoryFold.walletRoom] = Self.walletMoves(wallet).filter { !waiting.contains($0.id) }
+        }
+        return byCategory
+    }
+
     @ViewBuilder
     func feedScrollSections(_ visible: [Thing], hiding shown: Set<UUID>, nextEventID: UUID?) -> some View {
-        let byCategory = Dictionary(grouping: visible.filter { $0.isLive && !shown.contains($0.id) }) {
-            Self.scrollCategory(of: $0) ?? ""
-        }
+        let byCategory = feedSectionRows(visible, hiding: shown)
         ForEach(scrollCategories.map(Self.sectionID), id: \.self) { id in
             let category = String(id.dropFirst(Self.sectionPrefix.count))
             // Live again inside the closure: `List` may run it after a heal
@@ -129,8 +152,10 @@ extension FeedScreen {
     @ViewBuilder
     private func categorySections(_ category: String, _ things: [Thing], nextEventID: UUID?) -> some View {
         switch category {
+        // Day reads its own rows (`dayFeedRows`): the Feed's list holds none
+        // of what is ahead (prd §1343).
         case RoomAccounts.dayRoom:
-            dayRoomSections(things, nextEventID: nextEventID, heroShown: false)
+            dayFeedSections(nextEventID: nextEventID)
         case RoomAccounts.lifeRoom:
             lifeRoomSections(things, nextEventID: nextEventID)
         case RoomAccounts.workRoom:
@@ -728,6 +753,14 @@ extension FeedScreen {
         // too"): X, Instagram and TikTok follow nobody by name, so the first
         // row is Sources' Social card, where they connect; Bluesky and
         // Telegram stand under it.
+        // **DAY ADDS FROM ITS HEADER (prd §1343, user: "each category header
+        // has a + sign by it so we don't need 'new' and 'all'").** An event,
+        // a reminder, an email, a subscription to track.
+        if category == RoomAccounts.dayRoom {
+            adds = dayMakes.map { make in
+                SectionAdd(label: make.label, glyph: Self.dayMakeGlyph(make)) { makeInDay(make) }
+            }
+        }
         if category == RoomAccounts.socialRoom {
             if !adds.isEmpty { adds[0].apart = true }
             adds.insert(SectionAdd(label: String(localized: "More social apps"),
