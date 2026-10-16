@@ -32,6 +32,10 @@
 //   npm ci --prefix scripts/fileverse-probe
 //   scripts/dev-keys.sh get fileverse | node scripts/fileverse-probe/probe.mjs
 //   node scripts/fileverse-probe/probe.mjs --self-test
+//   node scripts/fileverse-probe/probe.mjs --backup <ddocs backup-keys .json>
+//     (a legacy account's portals, which no Developer Mode key covers: the
+//     file's secp256k1 app key and RSA keys are tried on every lock; the file
+//     is read from disk and no value it holds is ever printed)
 // Flags: --limit <n> (files opened, default 5), --gateway <url ending /ipfs/>,
 //        --rpc <url>, --show (print titles and the first 160 characters; the
 //        default prints shapes and counts only, never a word you wrote).
@@ -46,6 +50,7 @@ import { gcm } from "@noble/ciphers/aes.js";
 import { secp256k1 } from "@noble/curves/secp256k1.js";
 import * as Y from "yjs";
 import { readFileSync } from "node:fs";
+import { createPrivateKey, privateDecrypt, publicEncrypt, generateKeyPairSync, randomBytes, constants as cryptoConstants } from "node:crypto";
 
 const args = process.argv.slice(2);
 const flag = (name) => args.includes(name);
@@ -195,6 +200,26 @@ const selfTest = () => {
   }));
   check("mutant: a flipped content byte is refused", throws(() => contentOpen(fileKey, flip(b64(v.content), 7))));
 
+  // The legacy RSA lock. No legacy vector exists (nobody has run one), so
+  // this one is built here to @fileverse/crypto 0.0.21's webcrypto/core.js:
+  // base64(nonce 24 ‖ RSA-OAEP-SHA256), and its envelope's AES half is aes24.
+  const rsa = generateKeyPairSync("rsa", { modulusLength: 2048 });
+  const der = new Uint8Array(rsa.privateKey.export({ format: "der", type: "pkcs8" }));
+  const rsaSeal = (bytes, hash = "sha256") =>
+    Buffer.from([...randomBytes(24), ...publicEncrypt({ key: rsa.publicKey, padding: cryptoConstants.RSA_PKCS1_OAEP_PADDING, oaepHash: hash }, bytes)]).toString("base64");
+  const aesKey = randomBytes(32);
+  const nonce = randomBytes(24);
+  const aesHalf = Buffer.from([...nonce, ...gcm(aesKey, nonce).encrypt(fileKey)]).toString("base64");
+  const opener = rsaOpener("rsa test", der);
+  const same = (a, b) => a && b && Buffer.from(a).equals(Buffer.from(b));
+  check("legacy: RSA envelope opens to the file key", same(asFileKey(opener.open(rsaSeal(aesKey) + SEPARATOR + aesHalf)).key, fileKey));
+  check("legacy: a bare RSA lock opens", same(asFileKey(opener.open(rsaSeal(fileKey))).key, fileKey));
+  check("legacy: a base64-string file key is read as the key", same(asFileKey(enc.encode(Buffer.from(fileKey).toString("base64"))).key, fileKey));
+  check("legacy: the ECIES opener passes an RSA lock by", secpOpener("t", fileKey).open(rsaSeal(fileKey)) === null);
+  check("mutant: RSA-OAEP with SHA-1 is refused", throws(() => opener.open(rsaSeal(fileKey, "sha1"))));
+  check("mutant: an RSA lock read with its nonce left on is refused", throws(() =>
+    privateDecrypt({ key: createPrivateKey({ key: Buffer.from(der), format: "der", type: "pkcs8" }), padding: cryptoConstants.RSA_PKCS1_OAEP_PADDING, oaepHash: "sha256" }, b64(rsaSeal(fileKey)))));
+
   console.log(`selftest| ${failed === 0 ? "ok" : `${failed} FAILED`}`);
   process.exit(failed === 0 ? 0 : 1);
 };
@@ -238,11 +263,23 @@ const rpc = async (method, params) => {
 };
 
 const topic = (sig) => "0x" + bytesToHex(keccak_256(enc.encode(sig)));
+// Two portal generations log files. The ddocs.new-era portal names the app's
+// file id, type and version; the legacy portal (`@fileverse/agents`'
+// abi/Portal.json, the RSA-key accounts) logs the three CIDs and nothing else.
 const EVENTS = {
-  [topic("AddedFile(uint256,string,uint8,string,string,string,uint256,address)")]: "added",
-  [topic("EditedFile(uint256,string,uint8,string,string,string,uint256,address)")]: "edited",
-  [topic("DeletedFile(uint256,string,address)")]: "deleted",
+  [topic("AddedFile(uint256,string,uint8,string,string,string,uint256,address)")]: { kind: "added", layout: "ddocs" },
+  [topic("EditedFile(uint256,string,uint8,string,string,string,uint256,address)")]: { kind: "edited", layout: "ddocs" },
+  [topic("DeletedFile(uint256,string,address)")]: { kind: "deleted", layout: "ddocs" },
+  [topic("AddedFile(uint256,string,string,string,address)")]: { kind: "added", layout: "legacy" },
+  [topic("EditedFile(uint256,string,string,string,address)")]: { kind: "edited", layout: "legacy" },
 };
+
+// The legacy ABI's other events, named so a portal holding only setup reads
+// as setup, not as an unknown layout.
+const NAMES = Object.fromEntries(
+  ["AddedCollaborator(address,address)", "OwnershipTransferStarted(address,address)", "OwnershipTransferred(address,address)",
+   "RegisteredCollaboratorKeys(address)", "RemovedCollaborator(address,address)", "RemovedCollaboratorKeys(address)",
+   "UpdatedKeyVerifiers(bytes32,bytes32,bytes32,bytes32)", "UpdatedPortalMetadata(string,address)"].map((sig) => [topic(sig), sig.split("(")[0]]));
 
 // ABI head/tail decode for the events' non-indexed fields.
 const decodeData = (hex, types) => {
@@ -255,32 +292,60 @@ const decodeData = (hex, types) => {
     return data.subarray(at + 32, at + 32 + len).toString("utf8");
   });
 };
-const FILE_FIELDS = ["string", "uint8", "string", "string", "string", "uint256"];
+const FILE_FIELDS = {
+  ddocs: ["string", "uint8", "string", "string", "string", "uint256"],
+  legacy: ["string", "string", "string"],
+};
+const fileFields = (layout, data) => {
+  if (layout === "legacy") {
+    const [metadataCID, contentCID, gateCID] = decodeData(data, FILE_FIELDS.legacy);
+    return { appFileId: null, fileType: null, metadataCID, contentCID, gateCID, version: null };
+  }
+  const [appFileId, fileType, metadataCID, contentCID, gateCID, version] = decodeData(data, FILE_FIELDS.ddocs);
+  return { appFileId, fileType: Number(fileType), metadataCID, contentCID, gateCID, version: Number(version) };
+};
 
+// Every log the portal ever wrote, unfiltered, so an event layout nobody
+// expected shows up as a topic count instead of as an empty portal.
 const portalLogs = async (portal) => {
-  const topics = [Object.keys(EVENTS)];
+  let logs = null;
   try {
-    const logs = await rpc("eth_getLogs", [{ address: portal, fromBlock: "0x0", toBlock: "latest", topics }]);
+    logs = await rpc("eth_getLogs", [{ address: portal, fromBlock: "0x0", toBlock: "latest" }]);
     log("logs", "ok", `rpc full range · ${logs.length} logs`);
-    return logs;
   } catch (e) {
     log("logs", "rpc refused", e.message.slice(0, 120));
   }
-  const all = [];
-  for (const t0 of Object.keys(EVENTS)) {
+  if (!logs?.length) {
+    // A public RPC may answer [] for a range it will not scan, so an empty
+    // answer is asked again of Blockscout before it counts as a finding.
+    const all = [];
     for (let page = 1; page < 50; page++) {
-      const url = `${BLOCKSCOUT}?module=logs&action=getLogs&address=${portal}&fromBlock=0&toBlock=latest&topic0=${t0}&page=${page}&offset=1000`;
-      const { status, body } = await getJSON(url);
+      const { status, body } = await getJSON(`${BLOCKSCOUT}?module=logs&action=getLogs&address=${portal}&fromBlock=0&toBlock=latest&page=${page}&offset=1000`);
       if (status !== 200 || !Array.isArray(body?.result)) {
-        if (body?.message === "No records found") break;
-        throw new Error(`blockscout HTTP ${status} ${body?.message ?? ""}`);
+        if (!/no (records|logs)/i.test(body?.message ?? "")) log("logs", "blockscout refused", `HTTP ${status} ${body?.message ?? ""}`);
+        break;
       }
       all.push(...body.result);
       if (body.result.length < 1000) break;
     }
+    log("logs", "blockscout", `${all.length} logs`);
+    if (all.length) logs = all;
+    else {
+      const code = await rpc("eth_getCode", [portal, "latest"]).catch((e) => `err ${e.message}`);
+      log("logs", "portal code", typeof code === "string" && code.startsWith("0x") ? `${(code.length - 2) / 2} bytes` : code);
+      const counters = await getJSON(`https://gnosis.blockscout.com/api/v2/addresses/${portal}/counters`);
+      log("logs", "blockscout counters", counters.status === 200 ? `txs ${counters.body?.transactions_count} · transfers ${counters.body?.token_transfers_count}` : `HTTP ${counters.status}`);
+    }
   }
-  log("logs", "ok", `blockscout · ${all.length} logs`);
-  return all;
+  logs ??= [];
+  const kinds = new Map();
+  for (const l of logs) {
+    const e = EVENTS[l.topics[0]];
+    const name = e ? `${e.kind}/${e.layout}` : NAMES[l.topics[0]] ?? `unknown ${l.topics[0]?.slice(0, 10)}`;
+    kinds.set(name, (kinds.get(name) ?? 0) + 1);
+  }
+  log("logs", "events", [...kinds].map(([k, c]) => `${k}×${c}`).join(", ") || "none");
+  return logs;
 };
 
 let gateway = null;
@@ -338,7 +403,86 @@ const live = async () => {
   log("portal", "seed", `${seed.length} bytes`);
   const secret = portalSecret(seed);
 
-  // 4 · the portal's files, off the chain
+  // 4 · the portal's files, off the chain, and 5 · open the newest few
+  verdict(await openPortal(portal, [secpOpener("portal seed", secret)]));
+};
+
+// ---- openers: one per key that might open a lock ---------------------------
+
+// ddocs.new-era lock: ECIES to a secp256k1 scalar, four parts.
+const secpOpener = (name, secret) => ({
+  name,
+  open: (s) => (s.split(SEPARATOR).length === 4 ? eciesOpen(secret, s) : null),
+});
+
+// Legacy lock, @fileverse/crypto's webcrypto/core.js rsaDecrypt: base64 of
+// nonce (24, which RSA-OAEP ignores) ‖ RSA-OAEP-SHA256 ciphertext. Its
+// envelope (webcrypto/envelope.js) is "<rsa(aesKey)>__n__<aes24(message)>".
+const rsaOpen = (key, bytes) =>
+  new Uint8Array(privateDecrypt({ key, padding: cryptoConstants.RSA_PKCS1_OAEP_PADDING, oaepHash: "sha256" }, bytes.slice(24)));
+const rsaOpener = (name, der) => {
+  const key = createPrivateKey({ key: Buffer.from(der), format: "der", type: "pkcs8" });
+  return {
+    name,
+    open: (s) => {
+      const parts = s.split(SEPARATOR);
+      if (parts.length === 2) return aesOpen24(rsaOpen(key, b64(parts[0])), b64(parts[1]));
+      if (parts.length === 1) return rsaOpen(key, b64(s));
+      return null;
+    },
+  };
+};
+
+// A lock may seal the raw 32 key bytes or a base64 string of them.
+const asFileKey = (bytes) => {
+  if (bytes.length === 32) return { key: bytes, as: "raw" };
+  const s = dec.decode(bytes).trim();
+  if (/^[A-Za-z0-9+/=_-]+$/.test(s) && b64(s).length === 32) return { key: b64(s), as: "base64" };
+  return { key: null, as: `${bytes.length} bytes, not a key` };
+};
+
+// Every string under a metadata field named like a lock or a key.
+const lockStrings = (meta) => {
+  const out = [];
+  for (const [k, v] of Object.entries(meta)) {
+    if (!/lock|key/i.test(k)) continue;
+    if (typeof v === "string") out.push([k, v]);
+    else if (v && typeof v === "object")
+      for (const [f, s] of Object.entries(v)) if (typeof s === "string" && s.length > 40) out.push([`${k}.${f}`, s]);
+  }
+  return out;
+};
+
+const openContent = (fileKey, blob) => {
+  for (const [how, fn] of [["tail iv", contentOpen], ["front nonce", aesOpen24]]) {
+    try {
+      return { how, plain: fn(fileKey, blob) };
+    } catch {}
+  }
+  try {
+    return { how: "base64 · front nonce", plain: aesOpen24(fileKey, b64(dec.decode(blob))) };
+  } catch {}
+  throw new Error("no content layout opened");
+};
+
+// What the opened bytes are: the ddocs JSON around a Yjs update, a bare Yjs
+// update, other JSON, or text.
+const readBody = (plain) => {
+  const text = dec.decode(plain);
+  try {
+    const j = JSON.parse(text);
+    if (typeof j.file === "string") return { shape: `json {${Object.keys(j).sort().join(", ")}} · source ${j.source ?? "?"}`, yjs: b64(j.file) };
+    return { shape: `json {${Object.keys(j).sort().join(", ")}}`, text: null };
+  } catch {}
+  try {
+    if (yjsLines(plain).lines.length) return { shape: "bare yjs", yjs: plain };
+  } catch {}
+  return { shape: "text", text };
+};
+
+// ---- one portal: list its files off the chain, open the newest few ----------
+
+const openPortal = async (portal, openers) => {
   const logs = await portalLogs(portal);
   const files = new Map();
   const counts = { added: 0, edited: 0, deleted: 0 };
@@ -346,66 +490,84 @@ const live = async () => {
   const n = (hex) => BigInt(hex && hex !== "0x" ? hex : 0);
   logs.sort((a, b) => Number(n(a.blockNumber) - n(b.blockNumber)) || Number(n(a.logIndex) - n(b.logIndex)));
   for (const l of logs) {
-    const kind = EVENTS[l.topics[0]];
-    if (!kind) continue;
-    counts[kind]++;
+    const e = EVENTS[l.topics[0]];
+    if (!e) continue;
+    counts[e.kind]++;
     const fileId = BigInt(l.topics[1]).toString();
-    if (kind === "deleted") {
+    if (e.kind === "deleted") {
       files.delete(fileId);
       continue;
     }
-    const [appFileId, fileType, metadataCID, contentCID, gateCID, version] = decodeData(l.data, FILE_FIELDS);
-    files.set(fileId, { fileId, appFileId, fileType: Number(fileType), metadataCID, contentCID, gateCID, version: Number(version), by: "0x" + l.topics[2].slice(26) });
+    const by = "0x" + l.topics[2].slice(26);
+    files.set(fileId, { fileId, layout: e.layout, ...fileFields(e.layout, l.data), by });
   }
   const tally = (key) => [...files.values()].reduce((m, f) => m.set(f[key], (m.get(f[key]) ?? 0) + 1), new Map());
   log("files", "listed", `${files.size} live · added ${counts.added} · edited ${counts.edited} · deleted ${counts.deleted}`);
-  log("files", "fileType", [...tally("fileType")].map(([k, n]) => `${k}×${n}`).join(" "));
-  log("files", "version", [...tally("version")].map(([k, n]) => `${k}×${n}`).join(" "));
+  log("files", "layout", [...tally("layout")].map(([k, c]) => `${k}×${c}`).join(" "));
+  log("files", "fileType", [...tally("fileType")].map(([k, c]) => `${k}×${c}`).join(" "));
   log("files", "writers", `${tally("by").size} addresses`);
 
-  // 5 · open the newest few
   const newest = [...files.values()].sort((a, b) => Number(b.fileId) - Number(a.fileId)).slice(0, LIMIT);
-  const outcome = { opened: 0, failed: 0 };
+  const outcome = { opened: 0, failed: 0, total: newest.length };
   for (const f of newest) {
     const tag = `file ${f.fileId}`;
     try {
+      log(tag, "cids", `metadata ${f.metadataCID ? "yes" : "empty"} · content ${f.contentCID ? "yes" : "empty"} · gate ${f.gateCID ? "yes" : "empty"}`);
+      if (!f.metadataCID) throw new Error("no metadata CID (deleted in place?)");
       const meta = JSON.parse(dec.decode(await ipfs(f.metadataCID)));
       log(tag, "metadata", `fields: ${Object.keys(meta).sort().join(", ")} · version ${meta.version ?? "?"} · sourceApp ${meta.sourceApp ?? "?"}`);
 
+      const sealed = lockStrings(meta);
+      log(tag, "locks", sealed.map(([p, s]) => `${p} (${s.split(SEPARATOR).length} parts, ${s.length} chars)`).join(", ") || "none");
       let fileKey = null;
-      for (const lock of ["appLock", "ownerLock"]) {
-        const sealed = meta[lock]?.lockedFileKey;
-        if (!sealed) {
-          log(tag, lock, "absent");
-          continue;
+      for (const [path, s] of sealed) {
+        for (const o of openers) {
+          try {
+            const bytes = o.open(s);
+            if (!bytes) continue;
+            const k = asFileKey(bytes);
+            log(tag, "lock", `${path} opened by ${o.name} · ${k.as}`);
+            if (k.key) {
+              fileKey = k.key;
+              break;
+            }
+          } catch (e) {
+            log(tag, "lock", `${path} refused by ${o.name} · ${e.message.slice(0, 60)}`);
+          }
         }
-        try {
-          fileKey = eciesOpen(secret, sealed);
-          log(tag, lock, `opened · ${fileKey.length}-byte key`);
-          break;
-        } catch (e) {
-          log(tag, lock, `refused · ${e.message.slice(0, 80)}`);
-        }
+        if (fileKey) break;
       }
-      if (!fileKey) throw new Error("no lock opened");
+      if (sealed.length && !fileKey) throw new Error("no lock opened");
 
       let title = null;
-      try {
-        title = dec.decode(aesOpen24(fileKey, b64(meta.title)));
-        log(tag, "title", `opened · ${title.length} chars`);
-      } catch (e) {
-        log(tag, "title", `refused · ${e.message.slice(0, 80)}`);
-      }
+      const rawTitle = meta.title ?? meta.name;
+      if (typeof rawTitle === "string" && fileKey) {
+        try {
+          title = dec.decode(aesOpen24(fileKey, b64(rawTitle)));
+          log(tag, "title", `opened · ${title.length} chars`);
+        } catch {
+          title = rawTitle;
+          log(tag, "title", `not sealed · ${rawTitle.length} chars`);
+        }
+      } else log(tag, "title", typeof rawTitle === "string" ? `plain · ${rawTitle.length} chars` : "absent");
+      title ??= rawTitle ?? null;
 
+      if (!f.contentCID) throw new Error("no content CID");
       const blob = await ipfs(f.contentCID);
-      const plain = contentOpen(fileKey, blob);
-      const content = JSON.parse(dec.decode(plain));
-      log(tag, "content", `opened · ${blob.length} bytes · fields: ${Object.keys(content).sort().join(", ")} · file is ${typeof content.file} · source ${content.source ?? "?"}`);
-
-      if (typeof content.file !== "string") throw new Error("content.file is not a Yjs string");
-      const { lines, kinds } = yjsLines(b64(content.file));
-      const chars = lines.reduce((n, s) => n + s.length, 0);
-      log(tag, "yjs", `${lines.length} blocks · ${chars} chars · nodes: ${[...kinds].map(([k, n]) => `${k}×${n}`).join(" ")}`);
+      let plain = blob;
+      if (fileKey) {
+        const c = openContent(fileKey, blob);
+        plain = c.plain;
+        log(tag, "content", `opened · ${blob.length} bytes · ${c.how}`);
+      } else log(tag, "content", `public · ${blob.length} bytes`);
+      const body = readBody(plain);
+      let lines = body.text != null ? body.text.split("\n").filter(Boolean) : [];
+      if (body.yjs) {
+        const y = yjsLines(body.yjs);
+        lines = y.lines;
+        log(tag, "body", `${body.shape} · ${lines.length} blocks · nodes: ${[...y.kinds].map(([k, c]) => `${k}×${c}`).join(" ")}`);
+      } else log(tag, "body", `${body.shape} · ${lines.length} lines`);
+      log(tag, "chars", String(lines.reduce((m, s) => m + s.length, 0)));
       if (SHOW) {
         console.log(`  title: ${title ?? "(none)"}`);
         console.log(`  text:  ${lines.join(" / ").slice(0, 160)}`);
@@ -416,12 +578,54 @@ const live = async () => {
       outcome.failed++;
     }
   }
-  log("verdict", outcome.opened > 0 && outcome.failed === 0 ? "READ WORKS" : outcome.opened > 0 ? "PARTIAL" : "READ FAILED", `${outcome.opened} opened · ${outcome.failed} failed of ${newest.length}`);
-  process.exit(outcome.failed === 0 && outcome.opened > 0 ? 0 : 1);
+  return outcome;
+};
+
+const verdict = (o) => {
+  log("verdict", o.opened > 0 && o.failed === 0 ? "READ WORKS" : o.opened > 0 ? "PARTIAL" : "READ FAILED", `${o.opened} opened · ${o.failed} failed of ${o.total}`);
+  process.exit(o.failed === 0 && o.opened > 0 ? 0 : 1);
+};
+
+// ---- --backup: the keys ddocs.new exports, for a portal no API key covers ---
+// Prints which keys each entry carries and what they open, never a value.
+const backup = async (path) => {
+  const data = JSON.parse(readFileSync(path, "utf8"));
+  const total = { opened: 0, failed: 0, total: 0 };
+  let i = 0;
+  for (const [id, entry] of Object.entries(data)) {
+    const tag = `backup ${++i}`;
+    const portal = entry?.portalAddress;
+    if (!portal) {
+      log(tag, "skipped", "no portalAddress");
+      continue;
+    }
+    const openers = [];
+    if (entry.appDecryptionKey) {
+      const secret = b64(entry.appDecryptionKey);
+      const matches = entry.appEncryptionKey
+        ? bytesToHex(secp256k1.getPublicKey(secret, true)) === bytesToHex(b64(entry.appEncryptionKey))
+        : "no public key";
+      log(tag, "app key", `${secret.length} bytes · public key matches ${matches}`);
+      openers.push(secpOpener("app key", secret));
+    }
+    for (const [k, v] of Object.entries(entry)) {
+      if (!/PrivateKey$/.test(k) || typeof v !== "string") continue;
+      try {
+        openers.push(rsaOpener(`rsa ${k.replace("PrivateKey", "")}`, b64(v)));
+      } catch (e) {
+        log(tag, k, `not an RSA PKCS#8 key · ${e.message.slice(0, 60)}`);
+      }
+    }
+    log(tag, "portal", `${short(portal)} · entry id is the portal ${id.toLowerCase() === portal.toLowerCase()} · source ${entry.source ?? "?"} · openers: ${openers.map((o) => o.name).join(", ") || "none"}`);
+    const o = await openPortal(portal, openers);
+    log(tag, "result", `${o.opened} opened · ${o.failed} failed of ${o.total}`);
+    for (const k of Object.keys(total)) total[k] += o[k];
+  }
+  verdict(total);
 };
 
 if (flag("--self-test")) selfTest();
-else live().catch((e) => {
+else (opt("--backup", null) ? backup(opt("--backup")) : live()).catch((e) => {
   log("error", e.name, e.message.slice(0, 200));
   process.exit(1);
 });
