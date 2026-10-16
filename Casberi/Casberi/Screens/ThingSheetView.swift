@@ -633,7 +633,9 @@ struct ThingSheetView: View {
                                 .padding(.top, DS.Space.s6)
                                 .settleIn(delay: 0.11)
                         }
-                        if moneyHasPerson, let cp = thing.counterpartyAddress {
+                        // Between your own wallets there is no "them" (prd §1349).
+                        if moneyHasPerson, !WalletStore.shared.watches(thing.counterpartyAddress),
+                           let cp = thing.counterpartyAddress {
                             MoneyYearTotals(name: moneyPartyName(moneyReceipt),
                                             sentUSD: moneyYear.sentUSD, sentCount: moneyYear.sentCount,
                                             receivedUSD: moneyYear.receivedUSD, receivedCount: moneyYear.receivedCount,
@@ -2948,9 +2950,13 @@ struct ThingSheetView: View {
         let mineLabel = WalletStore.shared.addresses
             .first { $0.address.caseInsensitiveCompare(mine) == .orderedSame }
             .map { $0.label.isEmpty ? WalletStore.shortAddress(mine) : $0.label } ?? WalletStore.shortAddress(mine)
+        // Your own other wallet goes by its own name; the receipt's party is
+        // "Everyday to Savings" there (prd §1349).
+        let theirName = WalletStore.shared.watches(cp)
+            ? MoneyReceiptSource.walletLabel(cp) ?? moneyPartyName(r) : moneyPartyName(r)
         return MoneyReceiptBox.Transfer(
             mineAddress: mine, mineLabel: mineLabel,
-            theirAddress: cp, theirName: moneyPartyName(r),
+            theirAddress: cp, theirName: theirName,
             sent: thing.transferDirection != "received",
             usd: thing.transferUSD,
             network: WalletIngest.chainName(forContent: thing.content))
@@ -3831,7 +3837,8 @@ struct ThingSheetView: View {
         let app = fromApp
         let person = fromPerson
         let contact = person == nil ? fromContact : nil
-        let wallet = fromWallet
+        // A transfer's header already draws its wallet (prd §1349).
+        let wallet = moneyHasPerson ? nil : fromWallet
         let list = mailListRead ? mailList : nil
         Group {
             if fromFollow != nil || person != nil || contact != nil || wallet != nil || list != nil || app != nil {

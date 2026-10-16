@@ -66776,3 +66776,10 @@ Mocks: `design/mockups/tab-bar-options.html`, `design/mockups/tab-bar-library.ht
 3. **Fixed the same day, no ruling changed:** the Feed's Notes section reads its own rows (`loadNotesFeedRows`), since the Feed's list is the newest 1,200 things and drops the apps you write in; Day's section caps rows, not whole days, and at rest lists only the week its strip shows; the recording Live Activity's Stop is a `LiveActivityIntent`; a voice capture starts once and Stop cancels a start; stray recording activities end at launch; the intro cover never starts the demo over an install with your own apps or things.
 
 **Not built or seen:** written in a Linux container with no Swift toolchain.
+
+## §1349 — Every tile answers a tap; the wallet family's row stands at the Feed's height; a move between your own wallets reads as one (user, 2026-10-16: "tapping holdings and security have animations, but tapping markets and home do not. i'd like them all to. same actually with the category row icons on Feed"; "row of icons are not on the same x axis as feeds, they need to be centered"; of an Everyday-to-Savings receipt, "re the fixes yes do all")
+
+1. **Every tile's glyph bounces once on a tap** (`DSScopeTiles.taps` → `CategoryGlyph.tapped`), in every room's row and the Feed's: a glyph with a filled form only showed the pick by morphing, and one without (Markets' chart, the Feed's jump tiles) answered nothing. Reduce Motion turns it off; the + keeps its turn.
+2. **The wallet family's row stands `s3` under its box** (`DSRoomScopeChrome`), as every other room's does since §1336; it sat higher.
+3. **A transfer between two wallets you watch** (`WalletStore.watches`, `MoneyReceipt.Facts.partyWatched`) is titled where it went ("Everyday to Savings", lead "Moved"), both ends wear the wallet's mark, there is no "This year with" card (there is no "them"), and the From card drops the wallet row the header already draws. Every transfer's line reads "Today", "Yesterday" or "Oct 16", never the weekday.
+

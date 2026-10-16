@@ -115,6 +115,12 @@ struct DSRoomScopeChrome<Scope: DSTileScope, Crown: View, Figure: View>: View {
                     accountLine
                 }
                 .padding(.horizontal, DSRoomChassis.inset)
+                // **THE ROW AT THE FEED'S Y (prd §1349, user: "row of icons are
+                // not on the same x axis as feeds, they need to be centered").**
+                // Every other room's row stands `s3` under its box
+                // (`dsRoomTilesListRow`, §1336); this one stood flush on
+                // `leadGap`, so the wallet family's row sat higher.
+                .padding(.top, DS.Space.s3)
             }
         }
         .padding(.top, DS.Space.s2)

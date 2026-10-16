@@ -808,6 +808,13 @@ final class WalletStore {
     /// feed to "vitalik.eth" compared the name against stamped hex, matched
     /// nothing, and showed "Nothing from Wallet yet" over a corpus full of
     /// that wallet's own transactions (caught on camera, 2026-07-20).
+    /// Whether `address` is one of the wallets you watch (prd §1349): a
+    /// transfer between two of them is a move between your own wallets.
+    func watches(_ address: String?) -> Bool {
+        guard let address, !address.isEmpty else { return false }
+        return addresses.contains { scopeMatches(address, scope: $0.address) }
+    }
+
     func scopeMatches(_ stored: String?, scope: String) -> Bool {
         guard let stored else { return false }
         if WalletWatch.sameAddress(stored, scope) { return true }

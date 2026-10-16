@@ -619,7 +619,13 @@ struct MoneyReceiptBox: View {
     private func party(address: String, name: String) -> some View {
         Button { onSubject?(address) } label: {
             VStack(spacing: DS.Space.s1) {
-                WalletFace(address: address, size: DS.Face.shelf, circular: true)
+                // A wallet you watch wears the wallet's mark, never a stranger's
+                // person (prd §1349).
+                if WalletStore.shared.watches(address) {
+                    BridgeIcon(name: "Wallet", size: DS.Face.shelf, circular: true)
+                } else {
+                    WalletFace(address: address, size: DS.Face.shelf, circular: true)
+                }
                 Text(verbatim: name)
                     .dsText(.label12)
                     .foregroundStyle(DS.textSecondary)
@@ -646,7 +652,12 @@ struct MoneyReceiptBox: View {
     }
 
     private func worthLine(_ t: Transfer) -> String {
-        let day = landed.formatted(.dateTime.weekday(.wide).month(.abbreviated).day())
+        // "Today", "Yesterday", else "Oct 16" (prd §1349): the weekday made
+        // the line run long and said nothing the date did not.
+        let cal = Calendar.current
+        let day = cal.isDateInToday(landed) ? String(localized: "Today")
+            : cal.isDateInYesterday(landed) ? String(localized: "Yesterday")
+            : landed.formatted(.dateTime.month(.abbreviated).day())
         guard let usd = t.usd, usd > 0 else { return day }
         return "\(usd.formatted(.currency(code: "USD"))) · \(day)"
     }

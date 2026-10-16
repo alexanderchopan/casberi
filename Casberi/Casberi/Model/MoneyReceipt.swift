@@ -281,6 +281,8 @@ struct MoneyReceipt: Equatable {
         /// Resolved by the source half.
         var myLabel: String?
         var partyLabel: String?
+        /// The other end is one of the wallets you watch (prd §1349).
+        var partyWatched = false
         var network: String?
         /// Bitcoin only — is this transfer still short of
         /// `BitcoinBridge.settledConfirmations`?
@@ -390,13 +392,20 @@ struct MoneyReceipt: Equatable {
         }
         let received = direction == "received"
         let parts = split(raw)
-        let party = f.partyLabel ?? f.counterparty
+        // **BETWEEN YOUR OWN WALLETS IT SAYS WHERE IT WENT (prd §1349, user:
+        // "yes do all").** "Everyday to Savings", never one wallet's name as
+        // if it were a person.
+        let between: String? = f.partyWatched
+            ? (received ? "\(f.partyLabel ?? f.counterparty ?? "") to \(f.myLabel ?? "")"
+                        : "\(f.myLabel ?? "") to \(f.partyLabel ?? f.counterparty ?? "")")
+            : nil
+        let party = between ?? f.partyLabel ?? f.counterparty
         return MoneyReceipt(
             subject: subject(address: f.counterpartyAddress, name: party,
                              fallbackAsset: parts.unit),
             mine: f.walletAddress,
-            lead: received ? String(localized: "Received from")
-                           : String(localized: "Sent to"),
+            lead: between != nil ? String(localized: "Moved")
+                : received ? String(localized: "Received from") : String(localized: "Sent to"),
             party: party,
             titleFallback: nil,
             amount: Amount(number: (received ? "+" : "−") + parts.number,

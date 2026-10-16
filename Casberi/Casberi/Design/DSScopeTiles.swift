@@ -130,6 +130,10 @@ struct DSScopeTiles<Scope: DSTileScope>: View {
     @State private var verbFrames: [Scope: CGRect] = [:]
     /// A plus turns a quarter each time it is pressed (prd §1199).
     @State private var plusTurn: Double = 0
+    /// Each tile's taps, so every tap bounces its glyph once (prd §1349):
+    /// a glyph with a filled form showed the pick by morphing, and one
+    /// without (Markets' chart, the Feed's jump tiles) answered nothing.
+    @State private var taps: [Scope: Int] = [:]
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// The verb tile a finger is resting on (prd §973), and the one that has
     /// rested long enough to arm — past a tap, before the hold lands.
@@ -280,6 +284,7 @@ struct DSScopeTiles<Scope: DSTileScope>: View {
             if held == section { held = nil; return }
             guard !isOn else { return }
             DSHaptic.selection()
+            if !reduceMotion, section.glyph != "plus" { taps[section, default: 0] += 1 }
             if isVerb, let frame = verbFrames[section] {
                 DSTileOrigin.mark(CGPoint(x: frame.midX, y: frame.midY))
                 if section.glyph == "plus", !reduceMotion {
@@ -295,7 +300,8 @@ struct DSScopeTiles<Scope: DSTileScope>: View {
                 // **THE PICK FILLS ITS GLYPH (prd §1336)**, as a tab bar
                 // marks where you are; the rest stay drawn in line.
                 CategoryGlyph(name: arming == section ? (hold?.glyph ?? section.glyph) : section.glyph,
-                              size: Self.glyphSize, isActive: strip && isOn)
+                              size: Self.glyphSize, isActive: strip && isOn,
+                              tapped: taps[section] ?? 0)
                     .symbolVariant(isOn ? .fill : .none)
                     .rotationEffect(.degrees(isVerb && section.glyph == "plus" ? plusTurn : 0))
                 // A section that wants you says so in its WORD's tone, never

@@ -57,6 +57,7 @@ enum MoneyReceiptSource {
         f.myLabel = walletLabel(thing.walletAddress)
         f.partyLabel = thing.counterpartyAddress
             .flatMap { WalletIngest.knownLabel(for: $0) } ?? thing.transferCounterparty
+        f.partyWatched = WalletStore.shared.watches(thing.counterpartyAddress)
         f.network = WalletIngest.chainName(forContent: thing.content)
         // By the explorer, never the unit: a receipt under 0.01 BTC is written
         // in sats (§227), and reading "BTC" off the amount missed every one.

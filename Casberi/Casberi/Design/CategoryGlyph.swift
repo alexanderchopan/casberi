@@ -23,6 +23,9 @@ struct CategoryGlyph: View {
     let name: String
     let size: CGFloat
     let isActive: Bool
+    /// The tile's taps (prd §1349): every one bounces once, whatever the
+    /// glyph, so a tap always answers.
+    var tapped: Int = 0
     @State private var landTick = 0
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -34,7 +37,7 @@ struct CategoryGlyph: View {
             // so there it never runs.
             .dsSymbolSwap(name)
             .frame(width: size + 6, height: size + 2)
-            .symbolEffect(.bounce.up, value: landTick)
+            .symbolEffect(.bounce.up, value: landTick + tapped)
             .onChange(of: isActive) { _, on in
                 if on, !reduceMotion { landTick += 1 }
             }
