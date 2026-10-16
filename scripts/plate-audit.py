@@ -87,6 +87,8 @@ WELL_ALLOWED = {
     "DSRoomScopeChrome.swift": (1, "a room scope's figure well (prd §766)"),
     "AccountDetailSheet.swift": (1, "Data's box — what is kept and that nothing routes through us — "
                                    "which IS the screen's lead well (prd §766, §1227)"),
+    "SettingsHome.swift": (1, "Library's count box, which IS the screen's lead well (prd §766, §1316)"),
+    "SourcesLibrary.swift": (2, "a Library folder's face and Casberi's own folder, App Library's folders (prd §1316, §1319)"),
     "DSCountTile.swift": (1, "Settings' and Markets' count box, which IS the room's lead well (prd §766, §1198)"),
     "Composer.swift": (1, "the composer's draft field — the floating layer"),
     "VoiceListeningBand.swift": (1, "the live transcript, one band for the composer and the note sheet (§970) — the floating layer"),

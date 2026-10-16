@@ -3882,7 +3882,7 @@ struct ThingSheetView: View {
             faceTarget = .followed(item.id, room)
         } lead: {
             if let avatar = item.avatar, !avatar.isEmpty {
-                RemoteThumb(urlString: avatar, size: DS.Mark.row, fallback: item.seat, circular: true)
+                RemoteThumb(urlString: avatar, size: DS.Face.row, fallback: item.seat, circular: true)
             } else {
                 BridgeIcon(name: item.seat, size: DS.Mark.row)
             }
@@ -3895,7 +3895,7 @@ struct ThingSheetView: View {
         return sourceDoor(title: "@\(profile.shortHandle)", line: line) {
             faceTarget = .person(profile)
         } lead: {
-            RemoteThumb(urlString: profile.avatarURL ?? "", size: DS.Mark.row,
+            RemoteThumb(urlString: profile.avatarURL ?? "", size: DS.Face.row,
                         fallback: thing.source, circular: true)
         }
     }
