@@ -27,8 +27,16 @@ extension FeedScreen {
     /// what STARTS ahead (events), and what is DUE ahead (deadlines, bills,
     /// reminders, whose `capturedAt` is when they landed) — run from the
     /// tile's `.task`, on the main context, never from a body.
+    ///
+    /// Then what the app dates without storing (prd §1327 item 3): each
+    /// plan's next renewal off the Wallet's own reading (`SubscriptionsReading`)
+    /// and each card's payment date off Home's (`SpendingReading`), read here
+    /// because Day may open before the Wallet has, turned into entries by
+    /// `DayDated` and never re-dated. A Rocket Money bill is a plan there, so
+    /// once the plans have read, its stored row steps aside and the plan
+    /// stands for it: one bill, one row (§1105).
     @MainActor
-    func loadDayComingUp() {
+    func loadDayComingUp() async {
         let now = Date.now
         let end = Self.comingUpEnd(now: now)
         var starting = FetchDescriptor<Thing>(
@@ -40,30 +48,65 @@ extension FeedScreen {
         let a = (try? modelContext.fetch(starting)) ?? []
         let b = (try? modelContext.fetch(due)) ?? []
         var seen = Set<UUID>()
-        dayComingUp = (a + b)
+        let stored = (a + b)
             .filter { $0.isLive }
             .filter { let w = Self.comingUpWhen($0); return w > now && w < end }
             .filter { seen.insert($0.id).inserted }
             .sorted { Self.comingUpWhen($0) < Self.comingUpWhen($1) }
+        let plans = SubscriptionsReading.shared
+        // The plan stands for a bill only once the plans have read.
+        func kept() -> [Thing] {
+            plans.read ? stored.filter { $0.isLive && !SubscriptionsSource.isBill($0, now: now) } : stored
+        }
+        dayComingUp = kept()
+
+        await plans.refresh(modelContext, now: now)
+        guard !Task.isCancelled else { return }
+        await SpendingReading.shared.refresh(modelContext, now: now)
+        guard !Task.isCancelled else { return }
+        let cal = Self.groupingCalendar
+        let dated = DayDated.entries([
+            DayDated.renewals(plans.items, now: now, end: end, calendar: cal),
+            DayDated.cardDues(SpendingReading.shared.cards, now: now, end: end, calendar: cal),
+        ])
+        let rows = kept()
+        if rows.map(\.id) != dayComingUp.map(\.id) { dayComingUp = rows }
+        if dated != dayComingUpDated { dayComingUpDated = dated }
         #if DEBUG
         // `comingUp|` — how many rows Home's Later today and Day's week hold
-        // (prd §1139), for a check that cannot scroll.
-        let later = dayComingUp.filter { Self.groupingCalendar.isDateInToday(Self.comingUpWhen($0)) }
-        NSLog("[Casberi] comingUp| laterToday=%d week=%d first=%@", later.count, dayComingUp.count,
+        // (prd §1139), for a check that cannot scroll; `dated=` what the
+        // places computed (prd §1327 item 3), then by place.
+        let later = rows.filter { $0.isLive && Self.groupingCalendar.isDateInToday(Self.comingUpWhen($0)) }
+        NSLog("[Casberi] comingUp| laterToday=%d week=%d dated=%d plans=%d cards=%d first=%@",
+              later.count, rows.count, dated.count,
+              dated.filter { $0.place == .subscription }.count, dated.filter { $0.place == .card }.count,
               later.first.map { TitleSeam.split($0.title).name } ?? "-")
         #endif
     }
 
-    /// The days ahead as groups: "Later today", "Tomorrow", then a weekday.
-    func comingUpDays(_ rows: [Thing]) -> [(String, [Thing])] {
-        var out: [(String, [Thing])] = []
-        for thing in rows where thing.isLive {
-            let when = Self.comingUpWhen(thing)
-            let label = Self.groupingCalendar.isDateInToday(when)
-                ? String(localized: "Later today") : Self.dayWord(when)
-            if out.last?.0 == label { out[out.count - 1].1.append(thing) } else { out.append((label, [thing])) }
+    /// What re-reads Coming up: a pick of the tile, and every refresh the
+    /// Wallet's readings take (`walletSpendingKey` carries the pulse and the
+    /// hand-tracked list).
+    var dayComingUpKey: String { "\(chrome.dayScope.rawValue)|\(walletSpendingKey)" }
+
+    /// The days ahead as groups: "Later today", "Tomorrow", then a weekday;
+    /// each day's stored rows, and by its label the entries computed for it
+    /// (`DayDated.days`), so a day only a renewal stands on is a day too.
+    func comingUpDays(_ rows: [Thing], dated: [DayDated.Entry])
+        -> (groups: [(String, [Thing])], entries: [String: [DayDated.Entry]]) {
+        let live = rows.filter(\.isLive)
+        let byID = Dictionary(live.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
+        let days = DayDated.days(stored: live.map { (id: $0.id, when: Self.comingUpWhen($0)) },
+                                 dated: dated, calendar: Self.groupingCalendar)
+        var groups: [(String, [Thing])] = []
+        var entries: [String: [DayDated.Entry]] = [:]
+        for day in days {
+            let label = Self.groupingCalendar.isDateInToday(day.start)
+                ? String(localized: "Later today") : Self.dayWord(day.start)
+            groups.append((label, day.stored.compactMap { byID[$0] }))
+            if !day.dated.isEmpty { entries[label] = day.dated }
         }
-        return out
+        return (groups, entries)
     }
 
     /// Coming up's box: the week as seven days, a dot under a day with
@@ -71,7 +114,7 @@ extension FeedScreen {
     var dayComingUpBox: some View {
         let days = Set(dayComingUp.filter(\.isLive).map {
             Self.groupingCalendar.startOfDay(for: Self.comingUpWhen($0))
-        })
+        } + dayComingUpDated.map { Self.groupingCalendar.startOfDay(for: $0.when) })
         return VStack(alignment: .leading, spacing: DS.Space.s3) {
             Text("This week")
                 .dsText(.heading20)
@@ -82,7 +125,7 @@ extension FeedScreen {
         .frame(maxWidth: .infinity, minHeight: DSRoomChassis.leadBox,
                maxHeight: DSRoomChassis.leadBox, alignment: .leading)
         .dsRoomHeadBlock()
-        .task(id: chrome.dayScope) { loadDayComingUp() }
+        .task(id: dayComingUpKey) { await loadDayComingUp() }
         .feedRowBackground()
         .listRowSeparator(.hidden)
         .listRowInsets(.init(top: DS.Space.s2, leading: DSRoomChassis.inset,
@@ -91,7 +134,7 @@ extension FeedScreen {
 
     @ViewBuilder
     func dayComingUpSections(nextEventID: UUID?) -> some View {
-        let groups = comingUpDays(dayComingUp)
+        let (groups, entries) = comingUpDays(dayComingUp, dated: dayComingUpDated)
         if groups.isEmpty {
             // Empty, it shows what would fill it (prd §769), as two doors
             // (prd §1137a): no calendar is added for you, because a default
@@ -123,7 +166,7 @@ extension FeedScreen {
                 .listRowSeparator(.hidden)
             }
         } else {
-            groupedSections(groups, nextEventID: nextEventID)
+            groupedSections(groups, nextEventID: nextEventID, entries: entries)
         }
     }
 }

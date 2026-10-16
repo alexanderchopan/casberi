@@ -63,6 +63,9 @@ extension FeedScreen {
             case .event:    return !DS.isMac
             case .reminder: return HandOffState.answers("x-apple-reminderkit")
             case .email:    return dayCompose != nil
+            // Day says when a plan renews (prd §1327 item 3), so it tracks
+            // one too: by hand, it needs nothing connected.
+            case .subscription: return true
             }
         }
     }
@@ -79,11 +82,18 @@ extension FeedScreen {
     }
 
     func makeInDay(_ make: DayMake) {
+        // Track a subscription is the Wallet's own tray, raised as its
+        // Subscriptions tile raises it (prd §1105, §1117).
+        if make == .subscription {
+            feedSheet = .subscriptionAdd
+            return
+        }
         let url: URL? = {
             switch make {
-            case .event:    return URL(string: "calshow://")
-            case .reminder: return URL(string: "x-apple-reminderkit://")
-            case .email:    return dayCompose
+            case .event:        return URL(string: "calshow://")
+            case .reminder:     return URL(string: "x-apple-reminderkit://")
+            case .email:        return dayCompose
+            case .subscription: return nil
             }
         }()
         if let url { openExternal(url) }

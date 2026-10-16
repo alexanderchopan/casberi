@@ -773,6 +773,10 @@ struct FeedScreen: View {
     /// Day's Coming up tile (prd §1136c): every app's dated rows ahead, read
     /// in the tile's own `.task`, never in a body (§628).
     @State var dayComingUp: [Thing] = []
+    /// What Coming up dates without storing (prd §1327 item 3): renewals and
+    /// card payment dates, each place's own reading turned into entries
+    /// (`DayDated`) in the same `.task`. Value types only.
+    @State var dayComingUpDated: [DayDated.Entry] = []
     /// Day's Needs you (prd §1327 item 9): every place's, gathered in Day's
     /// own `.task` (`loadDayNeeds`), never in a body (§628). The items carry
     /// the place each row names; the things are those items, resolved.

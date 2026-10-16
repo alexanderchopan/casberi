@@ -27,7 +27,7 @@ enum DayScope: String, CaseIterable, Identifiable, Hashable, Sendable {
         switch self {
         case .all: return String(localized: "What needs you next")
         case .comingUp: return String(localized: "Everything dated, from every app")
-        case .new: return String(localized: "Make an event, a reminder or an email")
+        case .new: return String(localized: "Make an event, a reminder or an email, or track a subscription")
         }
     }
 
@@ -36,17 +36,19 @@ enum DayScope: String, CaseIterable, Identifiable, Hashable, Sendable {
 
 /// What New in the Day room can make, each in the app that makes it (the
 /// rooms' own New doors: Calendar's `calshow:`, Reminders' scheme, the mail
-/// seat's compose).
+/// seat's compose), and Track a subscription, which Day says the day of
+/// (prd §1327 item 3): the Wallet's own tray, the verb Track, never Add.
 enum DayMake: String, CaseIterable, Identifiable, Sendable {
-    case event, reminder, email
+    case event, reminder, email, subscription
 
     var id: String { rawValue }
 
     var label: String {
         switch self {
-        case .event:    return String(localized: "Event")
-        case .reminder: return String(localized: "Reminder")
-        case .email:    return String(localized: "Email")
+        case .event:        return String(localized: "Event")
+        case .reminder:     return String(localized: "Reminder")
+        case .email:        return String(localized: "Email")
+        case .subscription: return SubscriptionWords.track
         }
     }
 }

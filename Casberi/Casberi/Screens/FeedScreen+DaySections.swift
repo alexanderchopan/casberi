@@ -829,7 +829,10 @@ extension FeedScreen {
                                  scopeControl: Bool = false,
                                  // Day's renewals by day label, drawn after
                                  // that day's things (prd §1261).
-                                 renewals: [String: [Subscriptions.Item]] = [:]) -> some View {
+                                 renewals: [String: [Subscriptions.Item]] = [:],
+                                 // Coming up's computed entries by day label
+                                 // (prd §1327 item 3), after that day's things.
+                                 entries: [String: [DayDated.Entry]] = [:]) -> some View {
         // Computed once for the whole feed rather than per section: every
         // shaped room routes its groups through here, so the folded tail's
         // lighter header (prd §254) reaches all of them from one place.
@@ -874,7 +877,7 @@ extension FeedScreen {
             daySection(label, rows, nextEventID: nextEventID, boundary: boundary,
                        replies: replies, coarse: coarse.contains(label),
                        dated: dated, cover: cover, isTile: isTile, tileShape: tileShape,
-                       renewals: renewals[label] ?? [])
+                       renewals: renewals[label] ?? [], entries: entries[label] ?? [])
         }
         if window.more {
             if let capNow { sectionMoreRow(capNow.category) } else { olderRow(hidden: window.hidden) }
@@ -922,6 +925,10 @@ extension FeedScreen {
                             // Day's renewals on this day (prd §1261), after
                             // its things: a plan has no time of day.
                             renewals: [Subscriptions.Item] = [],
+                            // Coming up's computed entries on this day
+                            // (prd §1327 item 3), after its things: a
+                            // renewal or a payment date has no time of day.
+                            entries: [DayDated.Entry] = [],
                             // Rows gathered from other places (Day's Needs
                             // you, prd §1327 item 9), by id: each draws as
                             // the Feed's grouped row, its app's icon leading
@@ -955,7 +962,7 @@ extension FeedScreen {
         // Asked of what the section DRAWS, not of what it was handed: the
         // cover is lifted out above, so a day holding only the cover has a
         // header and nothing under it (2026-09-26).
-        if !tiles.isEmpty || !run.isEmpty || !renewals.isEmpty {
+        if !tiles.isEmpty || !run.isEmpty || !renewals.isEmpty || !entries.isEmpty {
             Section {
                 // UNPINNED (2026-08-29) — a ROW, not a `header:`. The twin in
                 // `bundledSections` carries the full reasoning; the short of it is
@@ -1020,6 +1027,7 @@ extension FeedScreen {
                     }
                 }
                 ForEach(renewals) { item in dayRenewalRow(item) }
+                ForEach(entries) { entry in dayDatedRow(entry) }
             }
         }
     }
