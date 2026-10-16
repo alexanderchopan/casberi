@@ -604,12 +604,17 @@ struct ThingFact: Hashable, Identifiable, Sendable {
         /// without ever counting one twice (`PlasmaOneSettlement.newParts`).
         /// Never drawn as a fact row.
         case settlement
+        /// What the read called the transaction a sent wallet leg belongs
+        /// to, when it was not a plain send (prd §1330): `value` Zerion's
+        /// operation type, "trade", "deposit", "execute". Read by Spending
+        /// (`SpendingSource.operation(of:)`), never drawn as a fact row.
+        case operation
 
         /// Kept on the thing for a reader elsewhere, never drawn as a label
         /// and value row (`FactRows` skips these).
         var isRowless: Bool {
             switch self {
-            case .reminder, .edited, .list, .unsubscribe, .settlement: return true
+            case .reminder, .edited, .list, .unsubscribe, .settlement, .operation: return true
             default: return false
             }
         }

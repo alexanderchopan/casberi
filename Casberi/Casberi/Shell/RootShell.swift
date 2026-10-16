@@ -587,6 +587,10 @@ struct RootShell: View {
                 // What the ask left behind (2026-10-01): its defaults, the MCP
                 // pairing token, and any MCP save request still in the store.
                 SourceRename.sweepRetiredAsk(context: modelContext)
+                // What an unfollowed wallet or Safe left behind (prd §1330):
+                // the unwatched queue, and every detected Safe no follow
+                // reaches any more, with its rows and its tracked queue.
+                FollowPrune.sweepUnfollowed(context: modelContext)
                 // Every voice note's length, and a few notes' words read back
                 // with their times (prd §987). Its own task: a read is seconds
                 // of on-device work, and nothing below waits on it.

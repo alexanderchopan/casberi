@@ -721,6 +721,41 @@ final class WalletStore {
         resolutions[watched]
     }
 
+    // MARK: - What you follow, as rows spell it (prd §1330)
+
+    /// Every followed wallet as an address, in the person's order: the hex
+    /// itself, or the hex a name resolved to; lowercased. A name not yet
+    /// resolved is left out (see `everyNameResolved`).
+    var followedAddresses: [String] {
+        var out: [String] = []
+        for entry in addresses {
+            let form = ENS.isHexAddress(entry.address) ? entry.address : (resolutions[entry.address] ?? "")
+            let lower = form.lowercased()
+            if !lower.isEmpty, !out.contains(lower) { out.append(lower) }
+        }
+        return out
+    }
+
+    /// Every spelling of every followed wallet, typed and resolved,
+    /// lowercased — what a row's `walletAddress` is matched against.
+    func followedForms() -> Set<String> {
+        var out = Set<String>()
+        for entry in addresses {
+            out.insert(entry.address.lowercased())
+            if let hex = resolutions[entry.address] { out.insert(hex.lowercased()) }
+        }
+        return out
+    }
+
+    /// False while a followed name ("vitalik.eth") has no resolution on this
+    /// device: rows carry the hex, so anything that removes what nobody
+    /// follows must wait, or it would take that wallet's own.
+    var everyNameResolved: Bool {
+        addresses.allSatisfy { entry in
+            !entry.address.contains(".") || resolutions[entry.address] != nil
+        }
+    }
+
     // MARK: - Unwatched, rows still landed (prd §1135)
 
     /// Every spelling of a wallet that stopped being watched, until

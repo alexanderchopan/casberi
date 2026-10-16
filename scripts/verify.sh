@@ -2554,6 +2554,10 @@ harness "Notification pure-logic self-test" "notify self-test" "scripts/notify-s
 # label wearing a control's clothes (§83). None of that fails a build or a sweep.
 harness "Wallet section scopes" "wallet sections" "scripts/wallet-section-selftest.sh" "the wallet section self-test failed — run scripts/wallet-section-selftest.sh"
 harness "Wallet card roll" "wallet card roll" "scripts/wallet-card-roll-selftest.sh" "the wallet card roll self-test failed — run scripts/wallet-card-roll-selftest.sh"
+# The Wallet's Spending (prd §1201, §1330): which onchain sends are money spent.
+# A swap, a bridge, a deposit or a wallet the person no longer follows counted
+# as spending draws an ordinary list of places with a plausible total.
+harness "Wallet spending" "spending" "scripts/spending-selftest.sh" "the spending self-test failed — run scripts/spending-selftest.sh"
 
 # Plasma One's settlement decoder (prd §1311), against a REAL batch of twenty
 # settlements: the amount read off the paired transfer, the hash that proves it,

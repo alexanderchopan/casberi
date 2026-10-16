@@ -432,6 +432,67 @@ enum SafeBridge {
         var rowWallet: String { viaPhone ? safeAddress : (viaOwner ?? safeAddress) }
     }
 
+    // MARK: - A Safe nobody follows (prd §1330)
+
+    /// Does a current follow reach this Safe: watched itself, or one of its
+    /// owners, as last read, a wallet you follow or this phone's key? nil
+    /// when no owner list was ever read for it on this chain, so nothing can
+    /// be said. `followed` is lowercased.
+    static func reached(seg: String, safe: String, followed: Set<String>) -> Bool? {
+        if followed.contains(safe.lowercased()) { return true }
+        guard let data = UserDefaults.standard.data(forKey: configSnapshotKey(seg, safe)),
+              let config = try? JSONDecoder().decode(SafeConfig.self, from: data) else { return nil }
+        return config.owners.contains { followed.contains($0.lowercased()) }
+    }
+
+    /// Takes one Safe out of the registry, with its config snapshot and its
+    /// tracked queue: the seat, the room's Safe pick and the background read
+    /// all stop at it.
+    static func forgetDetected(seg: String, safe: String) {
+        let lower = safe.lowercased()
+        var known = (UserDefaults.standard.array(forKey: detectedKey) as? [String]) ?? []
+        let before = known.count
+        known.removeAll { $0 == "\(seg):\(lower)" }
+        if known.count != before { UserDefaults.standard.set(known, forKey: detectedKey) }
+        UserDefaults.standard.removeObject(forKey: configSnapshotKey(seg, lower))
+        let tracking = loadTracking()
+        let kept = tracking.filter { !($0.value.seg == seg && $0.value.safeAddress.lowercased() == lower) }
+        if kept.count != tracking.count { saveTracking(kept) }
+    }
+
+    /// EVERY LAUNCH (prd §1330): every detected Safe that no follow reaches
+    /// any more is forgotten, and every row filed under it leaves. Unfollowing
+    /// a wallet pruned the wallet's own rows and left the Safes it had led to
+    /// in the registry, whose queue went on landing under the Safe. A Safe
+    /// whose owners were never read, or a follow still known only by a name
+    /// that never resolved, is left alone: nothing can be said of it.
+    /// Returns the rows removed.
+    @MainActor
+    @discardableResult
+    static func forgetUnfollowed(context: ModelContext) -> Int {
+        guard !DemoMode.isActive else { return 0 }
+        let store = WalletStore.shared
+        guard store.everyNameResolved else { return 0 }
+        let followed = store.followedForms().union(phoneOwners())
+        let detected = (UserDefaults.standard.array(forKey: detectedKey) as? [String]) ?? []
+        var gone = Set<String>()
+        for entry in detected {
+            let parts = entry.split(separator: ":", maxSplits: 1).map(String.init)
+            guard parts.count == 2, reached(seg: parts[0], safe: parts[1], followed: followed) == false
+            else { continue }
+            forgetDetected(seg: parts[0], safe: parts[1])
+            gone.insert(parts[1].lowercased())
+        }
+        // A Safe still detected on another chain keeps its rows.
+        let still = detectedAddresses()
+        gone.subtract(still)
+        guard !gone.isEmpty else { return 0 }
+        return FollowPrune.removeRows(context: context) { thing in
+            guard let wallet = thing.walletAddress?.lowercased() else { return false }
+            return gone.contains(wallet) && !followed.contains(wallet)
+        }
+    }
+
     // MARK: - This phone's own keys as owners (prd §1249)
 
     /// This phone's signer addresses, lowercased: the §425 key's own, and the
@@ -1236,8 +1297,9 @@ enum SafeBridge {
         guard !detected.isEmpty else { return 0 }
         running = true
         defer { running = false }
-        let watched = WalletStore.shared.addresses.map(\.address)
-            .filter { ENS.isHexAddress($0) }.map { $0.lowercased() }
+        // Resolved, so an owner followed by name still reaches its Safe
+        // (prd §1330): the arm below forgets a Safe nobody reaches.
+        let watched = WalletStore.shared.followedAddresses
         let phone = phoneOwners()
         let deadline = ContinuousClock.now.advanced(by: budget)
         var pass = Pass(seen: IngestSupport.existingSourceRefs(context, source: sourceName))
@@ -1259,7 +1321,17 @@ enum SafeBridge {
             } else if let key = knownOwner(in: owners, known: phone) {
                 candidate = Candidate(chain: chain, safeAddress: safeAddress, viaOwner: key, viaPhone: true)
             } else {
-                candidate = Candidate(chain: chain, safeAddress: safeAddress, viaOwner: nil)
+                // NOBODY YOU FOLLOW REACHES IT (prd §1330). The registry is
+                // append-only, so a Safe found through a wallet you have since
+                // unfollowed stayed in it, and this arm filed its queue under
+                // the Safe every night: the unfollowed person's Safe kept
+                // landing in your Wallet. Read nothing; and when the owner
+                // list answered, forget the Safe so the launch sweep and the
+                // seat agree. An unanswered read keeps it for the next pass.
+                if !owners.isEmpty, WalletStore.shared.everyNameResolved {
+                    forgetDetected(seg: chain.seg, safe: safeAddress)
+                }
+                continue
             }
             await syncSafe(candidate, context: context, known: watched + phone,
                            history: false, pass: &pass)

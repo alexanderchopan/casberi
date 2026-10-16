@@ -103,10 +103,8 @@ enum SpendingSource {
 
     @MainActor
     static func charges(from things: [Thing]) -> [Raw] {
-        // Every address a watched wallet's row was read for is yours, so a
-        // send to one of them is a move, not spending.
-        let own = Set(things.compactMap { $0.walletAddress?.lowercased() })
-        return things.compactMap { thing in
+        let followed = followedWallets()
+        let cards: [Raw] = things.compactMap { thing in
             guard thing.kind == .transaction else { return nil }
             switch thing.source {
             case AppleWalletBridge.sourceName, WalletCards.privacySource:
@@ -122,7 +120,10 @@ enum SpendingSource {
                 // The chain names no merchant for any of the three cards, so
                 // the card is the place. Plasma One's row is a day's total
                 // (prd §1311), which a sum by place adds exactly the same.
+                // A card read off a wallet the person no longer follows is
+                // not theirs (prd §1330).
                 guard CardSpendSeat.isSpend(thing, seat: thing.source),
+                      thing.walletAddress.map({ followed.contains($0.lowercased()) }) ?? true,
                       let amount = thing.priceValue, let currency = thing.priceCurrency else { return nil }
                 return Raw(place: thing.source, amount: abs(amount), currency: currency, at: thing.capturedAt,
                            card: cardName(forSource: thing.source), app: thing.source)
@@ -133,30 +134,92 @@ enum SpendingSource {
                       let amount = thing.priceValue, let currency = thing.priceCurrency else { return nil }
                 let place = thing.transferCounterparty.flatMap { $0.isEmpty ? nil : $0 } ?? WiseShape.source
                 return Raw(place: place, amount: abs(amount), currency: currency, at: thing.capturedAt)
-            case SpendingReading.walletSource:
-                guard thing.transferDirection == "sent",
-                      let usd = thing.transferUSD, usd.isFinite, usd > 0 else { return nil }
-                if thing.sourceRef?.hasPrefix("wallet:swap:") ?? false { return nil }
-                if let to = thing.counterpartyAddress?.lowercased() {
-                    if own.contains(to) { return nil }
-                    // Machinery is not a place you spent at: a router or an
-                    // onramp trades the money back, and a card's Safe tops up
-                    // a card whose spends are counted at the card. A person,
-                    // an exchange's deposit address and an address nobody
-                    // named are where money went.
-                    if WalletIngest.isKnownContract(to) { return nil }
-                    switch AddressBook.shared.entry(for: to)?.kind {
-                    case .contract?, .safe?: return nil
-                    default: break
-                    }
-                }
-                let place = thing.transferCounterparty.flatMap { $0.isEmpty ? nil : $0 }
-                    ?? thing.counterpartyAddress.map(WalletStore.shortAddress)
-                guard let place else { return nil }
-                return Raw(place: place, amount: usd, currency: "USD", at: thing.capturedAt)
             default:
                 return nil
             }
         }
+        return cards + walletCharges(things, followed: followed)
+    }
+
+    /// The wallets the person follows NOW, lowercased, each in its watched
+    /// and its resolved spelling (prd §1330). Never the wallets the rows
+    /// were read for: a wallet or Safe that was unfollowed leaves rows
+    /// behind until the prune reaches them, and those were never yours.
+    @MainActor
+    static func followedWallets() -> Set<String> {
+        WalletStore.shared.followedForms()
+    }
+
+    /// The `Wallet` rows' sends, through `Spending.walletSpends` — the one
+    /// rule for which onchain sends are spending (prd §1201, §1330).
+    @MainActor
+    static func walletCharges(_ things: [Thing], followed own: Set<String>) -> [Raw] {
+        let moves: [Spending.Move] = things.compactMap { thing in
+            guard thing.kind == .transaction, thing.source == SpendingReading.walletSource,
+                  let wallet = thing.walletAddress?.lowercased() else { return nil }
+            let way: Spending.Move.Way
+            if thing.sourceRef?.hasPrefix("wallet:swap:") ?? false {
+                way = .swap
+            } else if thing.transferDirection == "sent" {
+                way = .sent
+            } else if thing.transferDirection == "received" || thing.transferDirection == WalletActionMark.minted {
+                way = .received
+            } else {
+                return nil
+            }
+            // Every leg of one transaction opens the same explorer page.
+            let tx = thing.content.isEmpty ? (thing.sourceRef ?? thing.id.uuidString) : thing.content.lowercased()
+            let to = thing.counterpartyAddress?.lowercased()
+            return Spending.Move(
+                wallet: wallet, tx: tx, way: way,
+                usd: thing.transferUSD, at: thing.capturedAt,
+                counterparty: to,
+                operation: operation(of: thing),
+                machinery: way == .sent && to.map(isMachinery) ?? false,
+                place: thing.transferCounterparty.flatMap { $0.isEmpty ? nil : $0 }
+                    ?? thing.counterpartyAddress.map(WalletStore.shortAddress))
+        }
+        return Spending.walletSpends(moves, own: own).compactMap { move in
+            guard let place = move.place, let usd = move.usd else { return nil }
+            return Raw(place: place, amount: usd, currency: "USD", at: move.at)
+        }
+    }
+
+    /// Machinery is not a place you spent at: a router or an onramp trades
+    /// the money back, and a card's Safe tops up a card whose spends are
+    /// counted at the card. A person, an exchange's deposit address and an
+    /// address nobody named are where money went.
+    @MainActor
+    private static func isMachinery(_ address: String) -> Bool {
+        if WalletIngest.isKnownContract(address) { return true }
+        switch AddressBook.shared.entry(for: address)?.kind {
+        case .contract?, .safe?: return true
+        default: return false
+        }
+    }
+
+    // MARK: - What the read called a transaction
+
+    /// The label a sent leg's operation fact carries. Never drawn: the
+    /// action is rowless.
+    static let operationLabel = "Operation"
+
+    /// What the read (Zerion) called the transaction a SENT leg belongs to,
+    /// when it was anything but a plain send — "trade", "deposit",
+    /// "execute" — or nil. Stamped at landing and by the heal
+    /// (`WalletIngest`), read by Spending: a send the read called a trade
+    /// is half a swap whose other half never landed, never a purchase.
+    static func operation(of thing: Thing) -> String? {
+        thing.factList.first { $0.action == .operation }?.value
+    }
+
+    /// Stamps `operation` on a sent leg, once. A plain "send" is the
+    /// absence of the fact. Returns whether the thing changed.
+    @discardableResult
+    static func stampOperation(_ thing: Thing, _ operation: String?) -> Bool {
+        guard let operation, !operation.isEmpty, operation != "send",
+              Self.operation(of: thing) == nil else { return false }
+        thing.facts.append(ThingFact(operationLabel, operation, .operation).encoded)
+        return true
     }
 }

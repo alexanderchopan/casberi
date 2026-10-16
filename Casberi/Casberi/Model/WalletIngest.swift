@@ -1806,6 +1806,10 @@ enum WalletIngest {
         // direction — the value is a fact about the leg regardless of whether
         // a single direction could be named for it.
         thing.transferUSD = t["zerionValueUSD"] as? Double
+        // What the read called the whole transaction, on a send that was not
+        // a plain one (prd §1330): a trade whose other leg never landed, a
+        // deposit, a call. Spending reads it; nothing draws it.
+        if !received { SpendingSource.stampOperation(thing, t["zerionOperation"] as? String) }
         return thing
     }
 
@@ -1854,6 +1858,12 @@ enum WalletIngest {
             var touched = false
             if thing.transferUSD == nil, let usd = leg.pricedUSD {
                 thing.transferUSD = usd
+                touched = true
+            }
+            // The read's classification, for sends landed before it was kept
+            // (prd §1330).
+            if !leg.received,
+               SpendingSource.stampOperation(thing, leg.t["zerionOperation"] as? String) {
                 touched = true
             }
             // THE VOID SHAPE, for rows landed before prd §516 (2026-08-28).

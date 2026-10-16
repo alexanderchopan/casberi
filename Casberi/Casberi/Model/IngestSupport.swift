@@ -774,6 +774,39 @@ enum FollowPrune {
         return removedIDs.count
     }
 
+    /// Deletes every row filed under a wallet (`walletAddress` set) that
+    /// `matching` claims, whatever its source, saving and de-indexing once.
+    @MainActor
+    @discardableResult
+    static func removeRows(context: ModelContext, matching: (Thing) -> Bool) -> Int {
+        let descriptor = FetchDescriptor<Thing>(predicate: #Predicate { $0.walletAddress != nil })
+        guard let things = try? context.fetch(descriptor) else { return 0 }
+        var removedIDs: [UUID] = []
+        for thing in things where thing.isLive && matching(thing) {
+            removedIDs.append(thing.id)
+            context.delete(thing)
+        }
+        guard !removedIDs.isEmpty else { return 0 }
+        context.saveHonestly()
+        SpotlightIndex.remove(ids: removedIDs)
+        return removedIDs.count
+    }
+
+    /// EVERY LAUNCH (prd §1330): what an unfollow should have taken and did
+    /// not. The unwatched queue was pruned only by the book's unfollow and
+    /// the wallet's own account page, so a wallet removed any other way (an
+    /// iCloud merge, a disconnect) kept its rows until a screen nobody
+    /// visits appeared; and the Safes an unfollowed wallet led to stayed
+    /// detected, their queues landing on. Both converge here, in the
+    /// `SourceRename.sweep*` shape: a straggler from any build is taken on
+    /// the next launch, with no version stamp to miss a device.
+    @MainActor
+    @discardableResult
+    static func sweepUnfollowed(context: ModelContext) -> Int {
+        guard !DemoMode.isActive else { return 0 }
+        return pruneUnwatchedWallets(context: context) + SafeBridge.forgetUnfollowed(context: context)
+    }
+
     /// One watched address, compared the way its own chain spells addresses:
     /// EVM is case-insensitive (EIP-55 case is a checksum, not identity),
     /// while base58 (Solana) and bech32 are CASE-SENSITIVE — lowercasing
