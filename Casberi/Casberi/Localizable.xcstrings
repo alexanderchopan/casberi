@@ -6387,6 +6387,34 @@
         }
       }
     },
+    "Close Casberi" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cerrar Casberi"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberiを閉じる"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberi 닫기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "关闭 Casberi"
+          }
+        }
+      }
+    },
     "Close folder" : {
       "localizations" : {
         "es" : {
@@ -12263,6 +12291,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "模拟已回滚:%@"
+          }
+        }
+      }
+    },
+    "The sites and shows you follow" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Los sitios y programas que sigues"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "フォロー中のサイトと番組"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "팔로우하는 사이트와 프로그램"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你关注的网站和节目"
           }
         }
       }
@@ -54584,6 +54640,34 @@
         }
       }
     },
+    "Add a contact" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Añadir un contacto"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "連絡先を追加"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "연락처 추가"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "添加联系人"
+          }
+        }
+      }
+    },
     "Add a frame" : {
       "localizations" : {
         "es" : {
@@ -80543,6 +80627,34 @@
         }
       }
     },
+    "Everyone you know, from every app" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Todas las personas que conoces, de cada app"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "すべてのアプリの知り合い全員"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "모든 앱의 아는 사람 모두"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你认识的每个人，来自每个应用"
+          }
+        }
+      }
+    },
     "Everyone · %lld" : {
       "localizations" : {
         "es" : {
@@ -81419,6 +81531,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "退出"
+          }
+        }
+      }
+    },
+    "Exit demo" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Salir de la demo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "デモを終了"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "데모 종료"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "退出演示"
           }
         }
       }
@@ -144983,6 +145123,34 @@
         }
       }
     },
+    "Suggested" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Sugerencias"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "おすすめ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "추천"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "推荐"
+          }
+        }
+      }
+    },
     "Superseded" : {
       "localizations" : {
         "es" : {
@@ -155763,6 +155931,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "输入几个字母来查找某人，或输入完整的用户名 — 帖子是公开的，所以无需提供密码。"
+          }
+        }
+      }
+    },
+    "Type a site's address to follow it." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Escribe la dirección de un sitio para seguirlo."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "サイトのアドレスを入力してフォローできます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "사이트 주소를 입력해 팔로우하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "输入网站地址即可关注。"
           }
         }
       }
