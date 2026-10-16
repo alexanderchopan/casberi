@@ -93,8 +93,8 @@ enum RoomAccounts {
         // Day's apps are Day's in the catalogue since prd §1347, so no room
         // has to be asked first. Notes is asked LAST: Obsidian, Apple Journal
         // and Day One left Life for the Notes category (§1347) and their rows
-        // stand in Notes (§1235), so Notes hosts them; Notion is written in
-        // too, but Work hosts it first, as before.
+        // stand in Notes (§1235), so Notes hosts them; Notion joined them
+        // (prd §1358).
         for room in mergedRooms + [Pinboard.room] {
             if let seat = seats(for: room).first(where: { $0.owns(source) }) {
                 return (room, seat)
@@ -228,7 +228,7 @@ enum RoomAccounts {
 
     /// Notes' (prd §1235): the apps you write in, picked from their tray
     /// icons, so "Notes · Obsidian". Obsidian, Apple Journal and Day One are
-    /// the Notes category's since §1347; Notion stays Work's.
+    /// the Notes category's since §1347, Notion with them since §1358.
     private static let notes: [Seat] = Pinboard.writtenSources.sorted {
         $0.localizedStandardCompare($1) == .orderedAscending
     }.map { Seat(name: $0, source: $0, holder: nil, group: "", mark: $0) }

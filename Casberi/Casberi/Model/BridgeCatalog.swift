@@ -473,7 +473,7 @@ enum BridgeCatalog {
               needsSetup: true, added: day(2026, 10, 11)),
         Offer(name: "Linear",      tagline: "",             group: "Work",      connectable: true,
               needsSetup: true),
-        Offer(name: "Notion",      tagline: "",                group: "Work",      connectable: true,
+        Offer(name: "Notion",      tagline: "",                group: "Notes",     connectable: true,
               needsSetup: true),
         Offer(name: "PostHog",     tagline: "",      group: "Work",      connectable: true,
               needsSetup: true, added: day(2026, 7, 27)),

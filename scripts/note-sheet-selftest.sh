@@ -191,7 +191,9 @@ if not offers:
     sys.exit(1)
 listed = set(re.findall(r'"([^"]+)"', re.search(
     r'static let sources: Set<String> = \[(.*?)\]', source, re.S).group(1)))
-missing = offers - listed
+# Notion joined the Notes category (prd §1358) but its rows are pages, read
+# as documents in their own sheet, never the note sheet.
+missing = offers - listed - {"Notion"}
 if missing:
     print("  \u2717 catalog Notes seats missing from NoteSheetSource.sources: "
           + ", ".join(sorted(missing)))

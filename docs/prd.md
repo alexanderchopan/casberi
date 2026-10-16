@@ -66831,3 +66831,20 @@ Mocks: `design/mockups/tab-bar-options.html`, `design/mockups/tab-bar-library.ht
 **Not built, and why.** Writing (§1339 item 3): unknown who signs a save (the page names an `agentAddress` it does not hold the key for), Casberi's plain editor could strip a rich doc's tables and images, and the gas proxy is beta. The next step, if it is taken, is create-only ("Save this note to Fileverse") after one measured save. The RSA (legacy) portal's documents are not opened: none exists to test against.
 
 **Hooks.** `-fileverseSync YES` runs the pass at mount and logs its counts (`fileverse|`).
+
+## §1356 — A Peer fill reads as a trade (user, 2026-10-16: "ok", of a Peer purchase titled "Venmo" with its sentence squeezed into the box)
+
+1. **Titled by what you bought or sold**, "Bought 250 USDC" (`MoneyReceipt.peer`, the amount off the stamp or the title's own words, `peerAmount`), never the rail's name alone.
+2. **Drawn as the swap draws** (§1351): the rail's app mark → the token's mark, the token amount large, the day short, Filled; its only fact is the wallet, the stamp already saying Filled.
+
+## §1357 — Every remaining money receipt is titled by what happened, dated short, and an approval or a price rise reads as itself (user, 2026-10-16: "i think you can now make changes to all of them based on what we are doing ya?", "i don't need to see first")
+
+1. **Privacy Pools, Railgun, Privy and Splits rows are titled by their own sentence** ("Put 0.3000 ETH into Privacy Pools", "Shielded 0.4000 ETH into Railgun", "Received 12.40 USDC", "Sent $4,500 to Dana Ortiz"), never the app's, the wallet's or the account's name (`MoneyReceipt.actionTitle`: a parenthetical restatement and Splits' state prefix dropped, the state being the stamp).
+2. **The box's own lines say the day short** ("Today", "Sep 15"), as §1349 began; the pink day word in a receipt's eyebrow stays the divider's (§882).
+3. **An approval is titled by who can spend what** ("Uniswap can spend your USDC") and is never drawn as a transfer to a person: no wallet-to-wallet header, no "This year with", no Follow.
+4. **A price rise opens a receipt**, not the bare sheet with Reminders and Copy: the row's words as the title ("Notion went up 20%"), what it costs now, "was $10.00".
+
+## §1358 — Notion is the Notes category's (amends §1347 item 6, §1235's "Notion stays Work's") (user, 2026-10-16: "hm, notion should be in notes don't you think?", "we can fix it for next time")
+
+Notion's rows already stood in Notes; its catalogue category now does too, so Library's Notes folder, the Feed's Notes section and the website's Notes shelf name the same apps (`BridgeCatalog`, `RoomAccounts.host` → `Pinboard.room`). Work's folder no longer lists it.
+

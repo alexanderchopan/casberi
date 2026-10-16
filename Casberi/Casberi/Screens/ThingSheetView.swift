@@ -584,10 +584,7 @@ struct ThingSheetView: View {
                     MoneyReceiptBox(receipt: moneyReceipt, landed: thing.capturedAt,
                                     transfer: moneyTransfer(moneyReceipt),
                                     card: moneyCard,
-                                    swap: SwapStage(thing).map {
-                                        MoneyReceiptBox.Swap(outAmount: $0.outAmount, inAmount: $0.inAmount,
-                                                             usd: thing.transferUSD)
-                                    },
+                                    swap: moneySwap,
                                     source: thing.source, cells: moneyCells(moneyReceipt),
                                     unnamed: moneyUnnamed, onSubject: openAddressCard)
                         // Read once per open (§628), the spec row's own read.
@@ -3087,6 +3084,22 @@ struct ThingSheetView: View {
     /// The card that paid, when this is a card spend (prd §1182): its name and
     /// last four off the account label the bridge stamped ("Apple Card,
     /// ending 4821").
+    /// A trade's two legs, token to token (prd §1351), or a Peer fill's app to
+    /// token (prd §1356).
+    private var moneySwap: MoneyReceiptBox.Swap? {
+        if let swap = SwapStage(thing) {
+            return MoneyReceiptBox.Swap(outAmount: swap.outAmount, inAmount: swap.inAmount, usd: thing.transferUSD)
+        }
+        guard thing.source == "Peer", let rail = thing.authorHandle, !rail.isEmpty else { return nil }
+        let parts = MoneyReceipt.peerAmount(thing.title)
+        guard !parts.number.isEmpty else { return nil }
+        let token = "\(parts.number) \(parts.unit ?? "")"
+        let sell = thing.sourceRef?.hasPrefix("peer:sell:") == true
+        return sell
+            ? MoneyReceiptBox.Swap(outAmount: token, inAmount: rail, usd: thing.transferUSD, inApp: true, headline: token)
+            : MoneyReceiptBox.Swap(outAmount: rail, inAmount: token, usd: thing.transferUSD, outApp: true, headline: token)
+    }
+
     private var moneyCard: MoneyReceiptBox.Card? {
         // **EVERY CARD SPEND IN THE CARD'S OWN LAYOUT (prd §1353).** The
         // onchain cards (ether.fi, MetaMask Card, Plasma One) name no account,
@@ -3117,7 +3130,10 @@ struct ThingSheetView: View {
     /// Whether this is a Wallet transfer with a person on the other side:
     /// not a Moved leg (your own wallet) and not a World ID grant (a contract).
     private var moneyHasPerson: Bool {
+        // An approval's other side is a contract that can spend, not a person
+        // you paid (prd §1357): no transfer header, no year, no Follow.
         thing.source == "Wallet" && MovedStage(thing) == nil
+            && thing.sourceRef?.hasPrefix("wallet:approval:") != true
             && !(thing.counterpartyAddress ?? "").isEmpty
             && !WalletIngest.isWorldGrantHolder(thing.counterpartyAddress)
     }
@@ -3139,8 +3155,11 @@ struct ThingSheetView: View {
         }
         // A swap's facts are its rate and the wallet that traded (prd §1351);
         // the box's stamp already says it settled.
-        if let swap = SwapStage(thing) {
-            if case .rate(let rate, _)? = MoneyCommentary.rate(out: swap.outAmount, into: swap.inAmount) {
+        // A Peer fill in the same layout (prd §1356) keeps only the wallet: its
+        // stamp already says Filled.
+        if moneySwap != nil {
+            if let swap = SwapStage(thing),
+               case .rate(let rate, _)? = MoneyCommentary.rate(out: swap.outAmount, into: swap.inAmount) {
                 out.append(MoneyReceiptCell(value: rate, label: String(localized: "Rate")))
             }
             if let wallet = MoneyReceiptSource.walletLabel(thing.walletAddress) {

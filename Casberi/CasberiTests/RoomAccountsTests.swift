@@ -148,9 +148,9 @@ struct RoomAccountsTests {
             #expect(BridgeCatalog.category(forSource: app) == "Notes", "\(app) files under Notes")
             #expect(RoomAccounts.host(ofSource: app)?.room == Pinboard.room, "\(app) opens Notes")
         }
-        // Notion is written in (§1235) but stays Work's in the catalogue.
-        #expect(BridgeCatalog.category(forSource: "Notion") == "Work")
-        #expect(RoomAccounts.host(ofSource: "Notion")?.room == RoomAccounts.workRoom)
+        // Notion is written in (§1235) and is the Notes category's (§1358).
+        #expect(BridgeCatalog.category(forSource: "Notion") == "Notes")
+        #expect(RoomAccounts.host(ofSource: "Notion")?.room == Pinboard.room)
         #expect(!RoomAccounts.isDaySource("Gmail"))
         #expect(!life.contains("Photos"))
         #expect(BridgeCatalog.category(forSource: "Photos") == RoomAccounts.mediaRoom)
@@ -169,7 +169,7 @@ struct RoomAccountsTests {
     @Test func workHoldsEveryBuilderSeat() {
         let work = Set(RoomAccounts.seats(for: RoomAccounts.workRoom).map(\.name))
         for app in ["GitHub", "GitLab", "Radicle", "Hugging Face", "Linear", "Jira", "Trello",
-                    "Notion", "Slack", "Sentry", "Vercel", "PagerDuty", "Cloudflare", "AWS",
+                    "Slack", "Sentry", "Vercel", "PagerDuty", "Cloudflare", "AWS",
                     "npm", "PyPI", "App Store Connect", "PostHog", "Stripe", "Polar",
                     "Dodo Payments"] {
             #expect(work.contains(app), "\(app) is in Work")

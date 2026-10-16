@@ -464,6 +464,13 @@ struct MoneyReceiptBox: View {
         let outAmount: String
         let inAmount: String
         let usd: Double?
+        /// A leg that is an app, not a token (Peer's Venmo, prd §1356): its
+        /// mark is the app's, its caption the app's name.
+        var outApp = false
+        var inApp = false
+        /// The line drawn large: what came in, or the token side of a trade
+        /// with an app.
+        var headline: String? = nil
     }
     struct Transfer: Equatable {
         let mineAddress: String
@@ -545,7 +552,7 @@ struct MoneyReceiptBox: View {
         let out = MoneyReceipt.split(s.outAmount), into = MoneyReceipt.split(s.inAmount)
         return VStack(spacing: 0) {
             HStack(spacing: DS.Space.s2) {
-                leg(out.unit ?? "", amount: s.outAmount)
+                leg(s.outApp ? s.outAmount : (out.unit ?? ""), amount: s.outAmount, app: s.outApp)
                 HStack(spacing: 0) {
                     Capsule().fill(DS.textTertiary).frame(width: 40, height: 2)
                     Image(systemName: "chevron.right")
@@ -554,9 +561,9 @@ struct MoneyReceiptBox: View {
                 }
                 .padding(.bottom, DS.Space.s4)
                 .accessibilityHidden(true)
-                leg(into.unit ?? "", amount: s.inAmount)
+                leg(s.inApp ? s.inAmount : (into.unit ?? ""), amount: s.inAmount, app: s.inApp)
             }
-            Text(verbatim: s.inAmount)
+            Text(verbatim: s.headline ?? s.inAmount)
                 .dsText(.heading34)
                 .monospacedDigit()
                 .foregroundStyle(DS.textPrimary)
@@ -588,12 +595,16 @@ struct MoneyReceiptBox: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(Text(verbatim: String(localized: "Swapped \(s.outAmount) for \(s.inAmount)")))
+        .accessibilityLabel(Text(verbatim: String(localized: "\(s.outAmount) for \(s.inAmount)")))
     }
 
-    private func leg(_ symbol: String, amount: String) -> some View {
+    private func leg(_ symbol: String, amount: String, app: Bool = false) -> some View {
         VStack(spacing: DS.Space.s1) {
-            AssetMark(name: symbol, size: DS.Face.shelf)
+            if app {
+                BridgeIcon(name: symbol, size: DS.Face.shelf, circular: true)
+            } else {
+                AssetMark(name: symbol, size: DS.Face.shelf)
+            }
             Text(verbatim: amount)
                 .dsText(.label12)
                 .foregroundStyle(DS.textSecondary)

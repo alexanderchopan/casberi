@@ -31,6 +31,8 @@ enum MoneyReceiptSource {
         guard thing.isLive,
               thing.kind == .transaction
                 || MoneyReceipt.isReading(source: thing.source, ref: thing.sourceRef)
+                // A price rise lands as a note (prd §1357).
+                || (thing.source == "Apple Wallet" && thing.tags.contains("Price rise"))
         else { return nil }
         return MoneyReceipt.compose(facts(for: thing, safe: safe))
     }

@@ -356,6 +356,7 @@ struct MoneyReceipt: Equatable {
         guard sources.contains(f.source) else { return nil }
         if isReading(source: f.source, ref: f.sourceRef) { return reading(f) }
         switch f.source {
+        case "Apple Wallet" where f.tags.contains("Price rise"): return priceRise(f)
         case "Apple Wallet":                 return card(f, hue: .neutral)
         case "ether.fi", "Privacy", "MetaMask Card", "Plasma One":
             return card(f, hue: .card)
@@ -520,8 +521,9 @@ struct MoneyReceipt: Equatable {
 
     private static func peer(_ f: Facts) -> MoneyReceipt {
         let rail = f.authorHandle
-        let parts = split(f.amount)
         let sell = f.sourceRef?.hasPrefix("peer:sell:") == true
+        // The stamped amount, else the title's own ("Bought 250 USDC with …").
+        let parts = f.amount?.isEmpty == false ? split(f.amount) : peerAmount(f.title)
         return MoneyReceipt(
             // The rail is the subject: it is the thing you'd recognize, and
             // it's a known app so `AssetMark` may have real artwork for it.
@@ -529,7 +531,11 @@ struct MoneyReceipt: Equatable {
             mine: f.walletAddress,
             lead: sell ? String(localized: "Sold through")
                        : String(localized: "Bought with"),
-            party: rail,
+            // **TITLED BY WHAT YOU TRADED (prd §1356)**, "Bought 250 USDC",
+            // never the rail's name alone.
+            party: parts.number.isEmpty ? rail
+                : (sell ? String(localized: "Sold \(parts.number) \(parts.unit ?? "")")
+                        : String(localized: "Bought \(parts.number) \(parts.unit ?? "")")),
             titleFallback: parts.number.isEmpty ? f.title : nil,
             amount: parts.number.isEmpty ? nil
                 : Amount(number: (sell ? "−" : "+") + parts.number,
@@ -539,6 +545,41 @@ struct MoneyReceipt: Equatable {
             stamp: .filled,
             finality: .torn,
             hue: .peer)
+    }
+
+    /// A row's own title as the sheet's (prd §1357): the sentence the bridge
+    /// wrote, a parenthetical restatement dropped ("Received $12,000 (12,000
+    /// USDC) from Acme Labs" → "Received $12,000 from Acme Labs").
+    static func actionTitle(_ title: String) -> String {
+        title.replacingOccurrences(of: #" \([^)]*\)"#, with: "", options: .regularExpression)
+    }
+
+    /// "Bought 250 USDC with Venmo on Peer" → ("250", "USDC").
+    static func peerAmount(_ title: String) -> (number: String, unit: String?) {
+        let words = title.split(separator: " ").map(String.init)
+        guard words.count >= 3, words[0] == "Bought" || words[0] == "Sold" else { return ("", nil) }
+        return (words[1], words[2])
+    }
+
+    /// **A PRICE RISE IS A RECEIPT (prd §1357).** It opened the bare sheet —
+    /// an empty card, Reminders and Copy. Now: the plan and how much it went
+    /// up as the title (the row's own words), what it costs now, what it was.
+    private static func priceRise(_ f: Facts) -> MoneyReceipt {
+        let now = currency(f.priceValue, code: f.priceCurrency)
+        // `AppleWalletRoom.creepLine` writes "$10.00 to $12.00" as the line.
+        let was = f.content.components(separatedBy: " to ").first.flatMap { $0.hasPrefix("$") ? $0 : nil }
+        return MoneyReceipt(
+            subject: f.counterparty.map { Subject.named($0) } ?? .named(f.source),
+            mine: nil,
+            lead: String(localized: "Price rise"),
+            party: f.title,
+            titleFallback: nil,
+            amount: now.map { Amount(number: $0, unit: nil, tone: .warn) },
+            secondary: was.map { String(localized: "was \($0)") },
+            sentence: placeSentence(String(localized: "Went up"), f),
+            stamp: nil,
+            finality: .torn,
+            hue: .neutral)
     }
 
     // MARK: Wise
@@ -629,7 +670,7 @@ struct MoneyReceipt: Equatable {
                              fallbackAsset: parts.unit),
             mine: nil,
             lead: received ? String(localized: "Received into") : String(localized: "Sent from"),
-            party: app.map { String(localized: "\($0) wallet") },
+            party: actionTitle(f.title),
             titleFallback: parts.number.isEmpty ? f.title : nil,
             amount: parts.number.isEmpty ? nil
                 : Amount(number: (received ? "+" : "−") + parts.number,
@@ -671,7 +712,9 @@ struct MoneyReceipt: Equatable {
                 : waiting ? String(localized: "Waiting to send from")
                 : !directed ? String(localized: "In")
                 : received ? String(localized: "Received into") : String(localized: "Sent from"),
-            party: f.authorHandle.flatMap { $0.isEmpty ? nil : $0 },
+            // Splits writes "<state> · <sentence>"; the state is the stamp.
+            party: figure == nil || failed ? f.authorHandle.flatMap { $0.isEmpty ? nil : $0 }
+                : actionTitle(f.title.components(separatedBy: " · ").last ?? f.title),
             titleFallback: figure == nil || failed ? words : nil,
             amount: failed ? nil : figure.map {
                 Amount(number: (received ? "+" : "−") + fiat($0), unit: nil,
@@ -755,7 +798,8 @@ struct MoneyReceipt: Equatable {
             subject: .asset(parts.unit ?? "ETH"),
             mine: f.walletAddress,
             lead: String(localized: "Put into"),
-            party: String(localized: "Privacy Pools"),
+            // Titled by what happened (prd §1357), never the app's name.
+            party: actionTitle(f.title),
             titleFallback: parts.number.isEmpty ? f.title : nil,
             amount: parts.number.isEmpty ? nil
                 : Amount(number: parts.number, unit: parts.unit, tone: .plain),
@@ -782,7 +826,7 @@ struct MoneyReceipt: Equatable {
             mine: f.walletAddress,
             lead: unshield ? String(localized: "Unshielded into")
                            : String(localized: "Shielded from"),
-            party: f.myLabel,
+            party: actionTitle(f.title),
             titleFallback: parts.number.isEmpty ? f.title : nil,
             amount: parts.number.isEmpty ? nil
                 : Amount(number: (unshield ? "+" : "−") + parts.number,
@@ -897,13 +941,16 @@ struct MoneyReceipt: Equatable {
     /// a headline figure it was never given.
     private static func generic(_ f: Facts, hue: Hue) -> MoneyReceipt {
         let risk = f.tags.contains("At risk")
+        // An approval says who can spend what (prd §1357): "Uniswap can spend
+        // your USDC", never the wallet's name as if it were the other side.
+        let approval = f.sourceRef?.hasPrefix("wallet:approval:") == true
         return MoneyReceipt(
             subject: subject(address: f.counterpartyAddress,
                              name: f.partyLabel ?? f.venue,
                              fallbackAsset: nil),
             mine: f.walletAddress,
             lead: String(localized: "In your wallet"),
-            party: f.myLabel,
+            party: approval ? f.title : f.myLabel,
             titleFallback: f.title,
             amount: nil,
             secondary: worthLine(f.usd),

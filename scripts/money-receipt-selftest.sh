@@ -906,7 +906,7 @@ do {
     pv.usd = 12.4
     pv.authorHandle = "Zora"
     let p = MoneyReceipt.compose(pv)
-    check(p?.party == "Zora wallet", "an app wallet's move is named by its app")
+    check(p?.party == "Received 0.6974 ZORA", "an app wallet's move is titled by what moved (prd §1357)")
     check(p?.amount?.number == "+0.6974" && p?.amount?.unit == "ZORA", "the token amount, signed")
     check(p?.secondary?.contains("12.40") == true, "worth at landing")
     check(p?.mine == nil, "an app's wallet is not one you watch: no tucked face")
@@ -924,7 +924,7 @@ do {
         print("  ✗ a Splits transaction composes nothing"); failures += 1; exit(1)
     }
     check(wait.stamp == .pending && wait.finality == .open, "a proposal is pending and open")
-    check(wait.party == "Payroll", "the account it moves from names it")
+    check(wait.party == "Sent $4,500 to Dana Ortiz", "a Splits move is titled by its sentence, the state and the restated USDC dropped (prd §1357)")
     check(wait.amount?.number.hasPrefix("−") == true, "money leaving wears a minus")
     check(wait.secondary == "Sent $4,500 (4,500 USDC) to Dana Ortiz",
           "Splits' own words under the figure, without the stage this app put first")

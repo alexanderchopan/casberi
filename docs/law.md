@@ -232,7 +232,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1497 of 1563 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1500 of 1566 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1731,6 +1731,9 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1353 — Every card spend draws the card
 - §1354 — A recurring charge lists every charge; an app's link is named for the app, and only a transaction's is copied
 - §1355 — Fileverse is a seat: read-only, your dDocs opened on the phone as pages in Casberi's type (builds §1339, §1342, §1346…
+- §1356 — A Peer fill reads as a trade
+- §1357 — Every remaining money receipt is titled by what happened, dated short, and an approval or a price rise reads as itself
+- §1358 — Notion is the Notes category's (amends §1347 item 6, §1235's "Notion stays Work's")
 
 ## Dead rulings → what replaced them (generated)
 
