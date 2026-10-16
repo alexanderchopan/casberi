@@ -1643,6 +1643,34 @@
         }
       }
     },
+    "%@ wallet" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cartera de %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ ウォレット"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 지갑"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 钱包"
+          }
+        }
+      }
+    },
     "%@ · Due %@" : {
       "localizations" : {
         "es" : {
@@ -4533,6 +4561,34 @@
         }
       }
     },
+    "Account in %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cuenta en %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ のアカウント"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 계정"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 中的账户"
+          }
+        }
+      }
+    },
     "Activity is public, read across chains directly on %@." : {
       "localizations" : {
         "es" : {
@@ -5519,6 +5575,34 @@
         }
       }
     },
+    "An account in your Splits team." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Una cuenta de tu equipo de Splits."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Splits チームのアカウント。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Splits 팀의 계정입니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的 Splits 团队中的账户。"
+          }
+        }
+      }
+    },
     "An author" : {
       "localizations" : {
         "es" : {
@@ -5715,6 +5799,62 @@
         }
       }
     },
+    "As of" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "A fecha de"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "時点"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "기준"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "截至"
+          }
+        }
+      }
+    },
+    "As of %@." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "A fecha de %@."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 時点。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 기준."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "截至 %@。"
+          }
+        }
+      }
+    },
     "Asking your wallet what this connection can do…" : {
       "localizations" : {
         "es" : {
@@ -5851,6 +5991,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "返回 %@"
+          }
+        }
+      }
+    },
+    "Balance in Acorns" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Saldo en Acorns"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Acorns の残高"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Acorns 잔액"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Acorns 余额"
           }
         }
       }
@@ -10923,6 +11091,34 @@
         }
       }
     },
+    "Nothing on this day" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Nada este día"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "この日は予定なし"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이날은 일정 없음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "这一天没有安排"
+          }
+        }
+      }
+    },
     "Nothing on your calendar" : {
       "localizations" : {
         "es" : {
@@ -11399,6 +11595,62 @@
         }
       }
     },
+    "Proposed" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Propuesto"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "提案済み"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "제안됨"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已提议"
+          }
+        }
+      }
+    },
+    "Proposed %@. Nothing has moved yet." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Propuesto %@. Aún no se ha movido nada."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ に提案。まだ何も動いていません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 제안됨. 아직 아무것도 이동하지 않았습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 提议。尚未转出任何资金。"
+          }
+        }
+      }
+    },
     "Proposes in %lld h" : {
       "localizations" : {
         "es" : {
@@ -11675,6 +11927,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "正在读取你的排序器…"
+          }
+        }
+      }
+    },
+    "Recurring charge in Rocket Money" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cargo recurrente en Rocket Money"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Rocket Money の定期請求"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Rocket Money의 정기 결제"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Rocket Money 中的定期扣款"
           }
         }
       }
@@ -12011,6 +12291,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "已结算 %@ 的刷卡消费"
+          }
+        }
+      }
+    },
+    "Settled %@." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Liquidado %@."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ に決済。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 정산됨."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已于 %@ 结算。"
           }
         }
       }
@@ -13103,6 +13411,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "等你处理"
+          }
+        }
+      }
+    },
+    "Waiting to send from" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Esperando para enviar desde"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "送金待ち："
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "보내기 대기 중:"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "等待发送自"
           }
         }
       }
