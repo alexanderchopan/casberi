@@ -2237,6 +2237,34 @@
         }
       }
     },
+    "%@." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@。"
+          }
+        }
+      }
+    },
     "%lld added by you" : {
       "localizations" : {
         "es" : {
@@ -7171,6 +7199,34 @@
         }
       }
     },
+    "Couldn't reach Fileverse — try again in a moment." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se pudo conectar con Fileverse; inténtalo de nuevo en un momento."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Fileverse に接続できませんでした。しばらくしてからもう一度お試しください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Fileverse에 연결할 수 없습니다. 잠시 후 다시 시도하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "无法连接 Fileverse，请稍后再试。"
+          }
+        }
+      }
+    },
     "Couldn't reach the Aztec testnet — check your connection." : {
       "localizations" : {
         "es" : {
@@ -7279,6 +7335,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "无法读取 Threads——如果它要求你确认登录，请打开 Instagram 确认后重试。"
+          }
+        }
+      }
+    },
+    "Couldn't read your docs from the chain — try again in a moment." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se pudieron leer tus documentos de la cadena; inténtalo de nuevo en un momento."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "チェーンから書類を読み取れませんでした。しばらくしてからもう一度お試しください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "체인에서 문서를 읽을 수 없습니다. 잠시 후 다시 시도하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "无法从链上读取你的文档，请稍后再试。"
           }
         }
       }
@@ -8791,6 +8875,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "订阅源"
+          }
+        }
+      }
+    },
+    "Fileverse changed how it keeps your docs — Casberi can't open them yet." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Fileverse cambió cómo guarda tus documentos; Casberi aún no puede abrirlos."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Fileverse が書類の保存方法を変更したため、Casberi ではまだ開けません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Fileverse가 문서 보관 방식을 바꿔 Casberi에서 아직 열 수 없습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Fileverse 更改了文档的保存方式，Casberi 暂时无法打开。"
+          }
+        }
+      }
+    },
+    "Fileverse · %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Fileverse · %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Fileverse · %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Fileverse · %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Fileverse · %@"
           }
         }
       }
@@ -11455,6 +11595,62 @@
         }
       }
     },
+    "Open in Fileverse" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Abrir en Fileverse"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Fileverse で開く"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Fileverse에서 열기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 Fileverse 中打开"
+          }
+        }
+      }
+    },
+    "Opening your docs…" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Abriendo tus documentos…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "書類を開いています…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "문서를 여는 중…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在打开你的文档…"
+          }
+        }
+      }
+    },
     "Or a move in a day, in %" : {
       "localizations" : {
         "es" : {
@@ -11591,6 +11787,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "在 Bluesky 上回复过你的人会显示在这里。"
+          }
+        }
+      }
+    },
+    "Picture" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Imagen"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "画像"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "사진"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "图片"
           }
         }
       }
@@ -12683,6 +12907,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "显示 %@ 中的所有内容"
+          }
+        }
+      }
+    },
+    "Sign in to Fileverse" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Inicia sesión en Fileverse"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Fileverse にサインイン"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Fileverse에 로그인"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "登录 Fileverse"
+          }
+        }
+      }
+    },
+    "Signed in · %lld workspaces" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Sesión iniciada · %lld espacios de trabajo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "サインイン済み · %lld 個のワークスペース"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "로그인됨 · 워크스페이스 %lld개"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已登录 · %lld 个工作区"
           }
         }
       }
@@ -192211,6 +192491,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "“%@” 追溯到 “%@”，已有 %lld 天未被触及"
+          }
+        }
+      }
+    },
+    "•" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "•"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "•"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "•"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "•"
           }
         }
       }
