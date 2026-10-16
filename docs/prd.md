@@ -66592,3 +66592,10 @@ Mocks: `design/mockups/tab-bar-options.html`, `design/mockups/tab-bar-library.ht
 4. **Not built:** a Wise payout to your own bank account still counts (Wise names no "own account" here); an Alchemy-read leg carries no price, so it neither counts nor answers a round trip.
 
 **Checked.** `spending-selftest.sh` red before (8 assertions on the rule as shipped in build 829), green after, six mutations caught; `card-spend-audit.py`, `wallet-total-audit.py` (and `--self-test`); iOS Simulator build. **Not run:** verify.sh, any simulator, the Mac.
+
+## §1331 — The Wallet's Home, first pass: a bare line, the pick lit, Overview without sub-lines; the Feed's Newest is the Feed's own (user, 2026-10-15, going screen by screen: "dots are unnecessary", "needs to mirror what we do on other pages if we have a rule", "don't need the subtext", "it showed wallet actions there (eg logos testnet)")
+
+1. **The Wallet's line carries no dots**: no transaction marks, no ring on the newest, no endpoint dot (`WalletBalanceHeadline`); the marks, their taps and `walletMarks` are deleted.
+2. **The Wallet's row shows its pick in the word**, as Day's and Notes' do (§1267): Home white while you stand on it, the rest grey (`bare: false`).
+3. **Overview's rows are a name and a figure.** The line under each (the first item's raw status, a cut comparison) is deleted from view and model (`OverviewLine.line`); the lists below say the rest.
+4. **The Feed's Newest is the Feed's own**: today's newest from every category but the Wallet, the testnets and Markets, which are their own places, as the sections under it already were.

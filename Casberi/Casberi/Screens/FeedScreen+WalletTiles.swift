@@ -285,9 +285,6 @@ extension FeedScreen {
                         WalletBalanceHeadline(
                             total: total,
                             chart: chart,
-                            marks: drawsChart
-                                ? walletMarks(dates: windowed.map(\.at), things: visible)
-                                : [],
                             // ALWAYS "accounts", never "wallets" (user ruling,
                             // prd §483, 2026-08-26). This forked on whether any
                             // holder was an EXCHANGE — "accounts" when one was,
@@ -371,12 +368,7 @@ extension FeedScreen {
                             // saturated blue measured ~1.35:1, and there is
                             // no blue now. The flag survives for any future
                             // caller that does paint a ground.
-                            onColor: false,
-                            onOpenMark: { id in
-                                // `.none`: a mark on a hero is not a list.
-                                feedSheet = visible.first { $0.id == id }
-                                    .map { .thing($0, walk: .none) }
-                            })
+                            onColor: false)
                     }
                     // Whose the number is (prd §212) — only unscoped and only
                     // with more than one wallet carrying a real line, exactly
@@ -497,32 +489,6 @@ extension FeedScreen {
             WalletScopeEmptyFigure(section: .home, padded: false)
                 .modifier(rowEntrance(0))
         }
-    }
-
-    /// The transactions that landed inside the drawn window, placed against it
-    /// (prd §155, 2026-07-21). A balance line conflates two different stories —
-    /// prices moved, and money moved in or out — and the app holds both halves;
-    /// this is the one that ties them together, so a step in the line can be
-    /// read back to the send that caused it.
-    ///
-    /// Only things that fall BETWEEN the first and last sample are marked:
-    /// a transaction from before the record began has no place on the line, and
-    /// inventing one at the left edge would claim it caused a move the line
-    /// never saw. Capped at the most recent ten — beyond that the punctuation
-    /// becomes a second series and the line stops being readable.
-    private func walletMarks(dates: [Date], things: [Thing]) -> [TokenChartMark] {
-        guard dates.count >= 2, let first = dates.first, let last = dates.last else { return [] }
-        return things
-            .filter { $0.kind == .transaction && $0.capturedAt >= first && $0.capturedAt <= last }
-            .prefix(10)
-            .compactMap { thing in
-                guard let i = dates.lastIndex(where: { $0 <= thing.capturedAt }) else { return nil }
-                let next = min(i + 1, dates.count - 1)
-                let span = dates[next].timeIntervalSince(dates[i])
-                let t = span > 0 ? thing.capturedAt.timeIntervalSince(dates[i]) / span : 0
-                return TokenChartMark(id: thing.id, x: Double(i) + min(max(t, 0), 1),
-                                      label: thing.title)
-            }
     }
 
     /// "Mostly ETH · +$310" — the top attributed mover, in the scope the feed

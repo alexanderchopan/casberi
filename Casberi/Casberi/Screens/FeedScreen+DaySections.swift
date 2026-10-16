@@ -304,7 +304,11 @@ extension FeedScreen {
         }
         // NEWEST (prd §1256): the newest few across every category, as the
         // Feed's rows on one card, where the glance tiles stood (§1208d).
-        let newest = scroll ? Self.newestThings(groups, lede: homeCover) : []
+        // Only the Feed's own categories (prd §1331): the Wallet and the
+        // testnets are their own place, so their moves never stand here,
+        // as they never stand in the sections under it.
+        let elsewhere: Set<String> = [CategoryFold.walletRoom, RoomAccounts.testnetsRoom, HomeScope.markets]
+        let newest = scroll ? Self.newestThings(groups.filter { !elsewhere.contains($0.0) }, lede: homeCover) : []
         if scroll { newestCard(newest, nextEventID: nextEventID) }
         ForEach(scroll ? [] : groups, id: \.0) { label, rows in
             // Bundles merge into the day card like any row-shaped thing —

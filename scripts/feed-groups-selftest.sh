@@ -225,7 +225,7 @@ guard "the category opens its combined page, as the tray's row does" \
 guard "the app's row carries when its thing landed (§1157)" \
       "$FEED" 'app: heads\[row\.id\]\.map \{ \(source: \$0, date: row\.date\) \}'
 guard "the app's name and time ride the row's top line (§1157)" \
-      "$FEED" 'if let app \{ appLine\(app\.source, at: app\.date\) \}'
+      "$FEED" 'if let app \{ appLine\(app\.source, at: app\.date(, place: place)?\) \}'
 guard "Home draws the whole day, no window and no Show older (§1154)" \
       "$FEED" 'let window = \(shown: byApp\.groups, more: false, hidden: 0\)'
 guard "the app's icon leads its row on Home (§1157)" \

@@ -254,7 +254,10 @@ extension FeedScreen {
                 active: active,
                 home: .home,
                 inert: inert,
-                bare: true,
+                // THE PICK IN THE WORD, as Day's and Notes' rows say it (prd
+                // §1267, §1331, user: "needs to mirror what we do on other
+                // pages"): Home white while you stand on it, the rest grey.
+                bare: false,
                 // Instant, for the reason §495 states at length: animating a
                 // swap between two slots of different natural height moves
                 // everything below and settles it back.

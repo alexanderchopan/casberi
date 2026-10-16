@@ -33,9 +33,8 @@ extension FeedScreen {
         var lines: [OverviewLine] = []
         let _ = {
             let waiting = Self.things(needs + dated).filter(\.isLive)
-            if let first = waiting.first {
-                lines.append(OverviewLine(name: Self.needsYouGroup, figure: "\(waiting.count)",
-                                          line: first.title))
+            if !waiting.isEmpty {
+                lines.append(OverviewLine(name: Self.needsYouGroup, figure: "\(waiting.count)"))
             }
             if let plan = plans.first { lines.append(Self.planGlance(plan)) }
             if onAll, let s = Self.spendingGlance(SpendingReading.shared.reading) { lines.append(s) }
@@ -122,11 +121,13 @@ extension FeedScreen {
 
     // MARK: - Overview (prd §1257)
 
-    /// One of Overview's rows: a list's name, its figure, and one line.
+    /// One of Overview's rows: a list's name and its figure. **No sub-line
+    /// (prd §1331, user: "don't need the subtext")**: the line under each
+    /// name restated the list's first item (a raw status, a truncated
+    /// comparison); the list itself is right below.
     struct OverviewLine {
         let name: String
         let figure: String
-        let line: String
     }
 
     /// The card: the Feed's panel, a row per list with its pink glyph, the
@@ -142,15 +143,9 @@ extension FeedScreen {
                     } label: {
                         HStack(spacing: DS.Space.s3) {
                             DSActRow.disc(Self.walletHomeGlyph(item.name))
-                            VStack(alignment: .leading, spacing: 1) {
-                                Text(verbatim: item.name)
-                                    .dsText(.body17)
-                                    .foregroundStyle(DS.textPrimary)
-                                Text(verbatim: item.line)
-                                    .dsText(.subhead12)
-                                    .foregroundStyle(DS.textTertiary)
-                                    .lineLimit(1)
-                            }
+                            Text(verbatim: item.name)
+                                .dsText(.body17)
+                                .foregroundStyle(DS.textPrimary)
                             Spacer(minLength: DS.Space.s2)
                             Text(verbatim: item.figure)
                                 .dsText(.heading17)
@@ -162,7 +157,7 @@ extension FeedScreen {
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(RowPress())
-                    .accessibilityLabel(Text(verbatim: "\(item.name). \(item.figure), \(item.line)"))
+                    .accessibilityLabel(Text(verbatim: "\(item.name). \(item.figure)"))
                     .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.rowInset,
                                               bottom: 0, trailing: DSRoomChassis.rowInset))
                     .feedRowBackground()
@@ -199,9 +194,7 @@ extension FeedScreen {
         } else {
             amount = "—"
         }
-        let name = shownName(item.name)
-        let title = item.next.map { String(localized: "\(name) · Renews \(WalletSubscriptionRow.day($0))") } ?? name
-        return OverviewLine(name: subscriptionsName, figure: amount, line: title)
+        return OverviewLine(name: subscriptionsName, figure: amount)
     }
 
     /// **SUBSCRIPTIONS ON HOME IS A LIST (prd §1232, user: "if subscriptions
@@ -258,17 +251,15 @@ extension FeedScreen {
     /// The card that asks something of you soonest, else the most used.
     static func cardGlance(_ card: WalletCardRoll.Card) -> OverviewLine {
         let mask = BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil
-        if let owed = card.owed, let due = card.due {
+        if let owed = card.owed, card.due != nil {
             return OverviewLine(name: cardsName,
-                                figure: mask ?? CardSpendRoom.money(owed, code: card.owedCurrency),
-                                line: String(localized: "\(card.name) · Due \(WalletSubscriptionRow.day(due))"))
+                                figure: mask ?? CardSpendRoom.money(owed, code: card.owedCurrency))
         }
         if card.spent > 0 || card.offers == 0 {
             return OverviewLine(name: cardsName,
-                                figure: mask ?? AppleWalletRoom.money(max(card.spent, 0), "USD"),
-                                line: String(localized: "\(card.name) · This month"))
+                                figure: mask ?? AppleWalletRoom.money(max(card.spent, 0), "USD"))
         }
-        return OverviewLine(name: cardsName, figure: cardOffersWords(card.offers), line: card.name)
+        return OverviewLine(name: cardsName, figure: cardOffersWords(card.offers))
     }
 
     static func cardOffersWords(_ count: Int) -> String {
@@ -481,13 +472,8 @@ extension FeedScreen {
     static func spendingGlance(_ reading: Spending.Reading, now: Date = .now) -> OverviewLine? {
         guard !reading.places.isEmpty else { return nil }
         let mask = BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil
-        let month = now.formatted(.dateTime.month(.wide))
-        // The line stands alone here, so it opens a sentence.
-        let title = spendingCompare(reading, now: now, mask: mask)
-            .map { $0.prefix(1).uppercased() + $0.dropFirst() }
-            ?? String(localized: "So far in \(month)")
         return OverviewLine(name: spendingName,
-                            figure: mask ?? AppleWalletRoom.money(reading.total, "USD"), line: title)
+                            figure: mask ?? AppleWalletRoom.money(reading.total, "USD"))
     }
 
     static func spendingTimes(_ count: Int) -> String {

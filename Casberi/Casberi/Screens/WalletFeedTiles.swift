@@ -74,9 +74,6 @@ struct WalletBalanceHeadline: View {
     /// The sampled line for the chosen window — nil until two samples fall
     /// inside it.
     let chart: TokenChart?
-    /// Transactions that landed inside the window (prd §155) — punctuation on
-    /// the line, each one a door to its own sheet.
-    var marks: [TokenChartMark] = []
     /// "Across your wallets" on the combined view; scoped, the WALLET'S OWN NAME
     /// (prd §450) — which is why the rail above it no longer captions its faces.
     var caption: String = String(localized: "Balance")
@@ -212,7 +209,6 @@ struct WalletBalanceHeadline: View {
     /// beside the number still states the direction in colour, so nothing is
     /// lost but the redundancy.
     var onColor: Bool = false
-    var onOpenMark: (UUID) -> Void = { _ in }
     @Environment(\.colorScheme) private var scheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(ShellChrome.self) private var chrome
@@ -284,7 +280,7 @@ struct WalletBalanceHeadline: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: DS.Space.s1) {
-            // Only the reading is a door — the chips and the marks below are
+            // Only the reading is a door — the chips below are
             // their own controls, so the tappable region stops at the number.
             //
             // A door-less reading is NOT a disabled button (fixed 2026-07-21,
@@ -350,12 +346,10 @@ struct WalletBalanceHeadline: View {
                 // and the chips below have theirs (`layoutPriority(-1)`).
                 GeometryReader { geo in
                 TokenChartPlot(chart: chart, accent: accent, height: geo.size.height, pulses: false,
-                               lineWidth: 2.6, fillOpacity: 0, endpointDot: true,
-                               marks: marks,
-                               onTapMark: marks.isEmpty ? nil : { onOpenMark($0.id) },
-                               // Wait out the draw-on below, then land (§171).
-                               markDelay: 0.95,
-                               ringsNewestMark: true,
+                               // NO DOTS ON THE LINE (prd §1331, user: "dots
+                               // are unnecessary"): no transaction marks, no
+                               // ring on the newest, no endpoint dot.
+                               lineWidth: 2.6, fillOpacity: 0,
                                // Scrub (2026-08-03, §297): a press-then-drag —
                                // or a resting cursor on the Mac — rolls the
                                // crown number to that sample. The sheet
