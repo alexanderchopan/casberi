@@ -66866,3 +66866,15 @@ Every day the app names reads one rule, Apple's own (Messages, Wallet): "Today",
 2. **Its facts are Active · Status, Granted (the day word, §1359) and the wallet**, never a shop's "3rd · Visit" or "Last visit", and never "Settled": permission stands until revoked.
 3. **No "At Uniswap can spend…" history card**: what an approval has is standing, not visits.
 
+
+## §1362 — Post on X opens X's composer every time and carries the card (amends §1299) (user, 2026-10-16: "post on X isn't working properly. it doesn't open each time or share the casberi card")
+
+Two causes, both in §1299's build. `x.com/intent/post` is a universal link the X app does not claim every time (it opens Safari, or X on its home), and no link to X carries a picture, so the card never went.
+
+1. **The X app's own scheme first.** Post on X opens `twitter://post?message=<words> <link>` when `canOpenURL` answers (`twitter` joins `LSApplicationQueriesSchemes`), else the web intent as before (`XPostIntent.appURL`, `XPostIntent.url`).
+2. **The card on the clipboard.** The tap copies the rendered card as a PNG (`DSPasteboard.copy(png:)`, ordinary content, `copy`'s lifetime), the row reads "Card copied. Paste it in X" with a check, and X opens 0.7s later. The person pastes the card into the post. With no card drawn, the row opens X with the words and the link alone.
+3. **A `+` travels encoded** (`%2B`) in both links: `queryItems` leaves it bare and a query reads a bare `+` as a space.
+
+Guards: `CasberiTests/XPostIntentTests` adds the app link's shape and the `+` encoding.
+
+**Not seen:** this was written in a session with no Xcode; nothing is built or run. X's composer opened by the scheme, X taking a pasted picture, the Mac.

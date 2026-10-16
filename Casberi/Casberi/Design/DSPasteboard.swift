@@ -43,6 +43,14 @@ enum DSPasteboard {
         write(string, localOnly: true, lifetime: sensitiveLifetime)
     }
 
+    /// A picture, as ordinary content: the share card Post on X carries to
+    /// X's composer (prd §1299), since no link to X can hold one.
+    static func copy(png: Data) {
+        UIPasteboard.general.setItems(
+            [[UTType.png.identifier: png]],
+            options: [.expirationDate: Date().addingTimeInterval(contentLifetime)])
+    }
+
     private static func write(_ string: String, localOnly: Bool, lifetime: TimeInterval) {
         var options: [UIPasteboard.OptionsKey: Any] = [
             .expirationDate: Date().addingTimeInterval(lifetime)

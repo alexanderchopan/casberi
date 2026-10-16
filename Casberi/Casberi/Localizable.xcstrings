@@ -66626,6 +66626,34 @@
         }
       }
     },
+    "Card copied. Paste it in X" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tarjeta copiada. Pégala en X"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "カードをコピーしました。Xに貼り付けてください"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "카드를 복사했습니다. X에 붙여넣으세요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已复制卡片。请粘贴到 X"
+          }
+        }
+      }
+    },
     "Card transaction" : {
       "localizations" : {
         "es" : {

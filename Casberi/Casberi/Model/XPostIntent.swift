@@ -7,8 +7,12 @@ import Foundation
 /// Post there; Casberi never posts and never touches a session (the X seat
 /// stays read-only, `docs` cookie-seat rule).
 ///
-/// The link carries text and a URL only, never a picture, so the share card
-/// still goes through `Share…`.
+/// Two links (prd §1299, user: "it doesn't open each time or share the
+/// casberi card"). `x.com/intent/post` is a universal link the X app does not
+/// claim every time — it landed in Safari or on X's home — so the X app's own
+/// scheme, `twitter://post`, goes first when the app is installed, and the
+/// web composer is the fallback. Neither link can carry a picture, so the
+/// tray puts the card on the clipboard before X opens.
 enum XPostIntent {
     /// A post's length, and what X counts any link as (t.co), whatever its
     /// own length.
@@ -31,14 +35,37 @@ enum XPostIntent {
     static func url(words: String, link: URL?) -> URL? {
         let text = text(words, link: link)
         guard !text.isEmpty || link != nil else { return nil }
-        var parts = URLComponents()
-        parts.scheme = "https"
-        parts.host = "x.com"
-        parts.path = "/intent/post"
         var items: [URLQueryItem] = []
         if !text.isEmpty { items.append(URLQueryItem(name: "text", value: text)) }
         if let link { items.append(URLQueryItem(name: "url", value: link.absoluteString)) }
+        return compose(scheme: "https", host: "x.com", path: "/intent/post", items: items)
+    }
+
+    /// The X app's scheme, listed in `LSApplicationQueriesSchemes`.
+    static let appScheme = "twitter"
+
+    /// `twitter://post?message=…`, or nil with nothing to say. The scheme has
+    /// one field, so the link rides at the end of the words.
+    static func appURL(words: String, link: URL?) -> URL? {
+        let message = [text(words, link: link), link?.absoluteString ?? ""]
+            .filter { !$0.isEmpty }
+            .joined(separator: " ")
+        guard !message.isEmpty else { return nil }
+        return compose(scheme: appScheme, host: "post", path: "",
+                       items: [URLQueryItem(name: "message", value: message)])
+    }
+
+    private static func compose(scheme: String, host: String, path: String,
+                                items: [URLQueryItem]) -> URL? {
+        var parts = URLComponents()
+        parts.scheme = scheme
+        parts.host = host
+        parts.path = path
         parts.queryItems = items
+        // `queryItems` leaves a `+` bare, and a bare `+` in a query reads as a
+        // space, so "C++" would arrive as "C  ".
+        parts.percentEncodedQuery = parts.percentEncodedQuery?
+            .replacingOccurrences(of: "+", with: "%2B")
         return parts.url
     }
 }

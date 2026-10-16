@@ -49,6 +49,9 @@ struct ShareTray: View {
     /// A voice note's recording, written once for the system sheet (prd §1024).
     @State private var voiceFile: URL?
     @State private var activityUp = false
+    /// Post on X put the card on the clipboard: the row says so before X
+    /// takes the screen (prd §1299).
+    @State private var xCopied = false
     @Environment(\.modelContext) private var context
     @Environment(\.openURL) private var openURL
 
@@ -106,10 +109,14 @@ struct ShareTray: View {
                     if MessageCompose.canMail {
                         DSDoorRow(icon: "envelope", label: "Send in Mail") { composer = .mail }
                     }
-                    // X's composer with the words and the link (prd §1299),
-                    // a row of its own rather than a target in `Share…`.
-                    if let xPost {
-                        DSDoorRow(icon: "square.and.pencil", label: "Post on X") { openURL(xPost) }
+                    // X's composer with the words and the link, the card on
+                    // the clipboard (prd §1299), a row of its own rather than
+                    // a target in `Share…`.
+                    if xPost != nil {
+                        DSDoorRow(icon: xCopied ? "checkmark" : "square.and.pencil",
+                                  title: xCopied ? Text("Card copied. Paste it in X") : Text("Post on X")) {
+                            postOnX()
+                        }
                     }
                     if let image {
                         // The card and the link (or a voice note's recording,
@@ -195,6 +202,30 @@ struct ShareTray: View {
     /// X's post link for this card (prd §1299): its words and its link.
     private var xPost: URL? {
         XPostIntent.url(words: shareWords, link: model?.link)
+    }
+
+    /// Post on X (prd §1299): the card onto the clipboard, a beat to read
+    /// that it was copied, then X's composer with the words and the link —
+    /// the X app's own scheme when it is installed, else the web composer.
+    @MainActor private func postOnX() {
+        guard let web = xPost else { return }
+        let app = XPostIntent.appURL(words: shareWords, link: model?.link)
+        let png = image?.pngData()
+        if let png {
+            DSPasteboard.copy(png: png)
+            DSHaptic.tap()
+            withAnimation(DS.Motion.standard) { xCopied = true }
+        }
+        Task { @MainActor in
+            if png != nil { try? await Task.sleep(for: .milliseconds(700)) }
+            var opened = false
+            if let app, UIApplication.shared.canOpenURL(app) {
+                opened = await UIApplication.shared.open(app)
+            }
+            if !opened { openURL(web) }
+            try? await Task.sleep(for: .seconds(2))
+            withAnimation(DS.Motion.standard) { xCopied = false }
+        }
     }
 
     /// The composer's body: the thing's link when it has one, else the

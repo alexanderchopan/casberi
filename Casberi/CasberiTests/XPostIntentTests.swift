@@ -36,6 +36,26 @@ struct XPostIntentTests {
         #expect(XPostIntent.text(words, link: nil) == words)
     }
 
+    /// The X app's own scheme, which the app claims every time: one field,
+    /// the words then the link.
+    @Test func theAppLinkCarriesTheWordsThenTheLink() {
+        let link = URL(string: "https://example.com/a?b=1&c=2")!
+        let url = XPostIntent.appURL(words: "Trip plan: Lisbon", link: link)
+        #expect(url?.scheme == "twitter")
+        #expect(url?.host == "post")
+        #expect(query(url)["message"] == "Trip plan: Lisbon https://example.com/a?b=1&c=2")
+        #expect(XPostIntent.appURL(words: " ", link: nil) == nil)
+    }
+
+    /// A bare `+` in a query reads as a space, so it travels encoded.
+    @Test func aPlusTravelsEncoded() {
+        let url = XPostIntent.url(words: "C++ & Swift", link: URL(string: "https://example.com/?q=a+b"))
+        #expect(url?.query(percentEncoded: true)?.contains("+") == false)
+        #expect(query(url)["text"] == "C++ & Swift")
+        #expect(query(url)["url"] == "https://example.com/?q=a+b")
+        #expect(XPostIntent.appURL(words: "C++", link: nil)?.query(percentEncoded: true)?.contains("+") == false)
+    }
+
     @Test func nothingToSayIsNoLink() {
         #expect(XPostIntent.url(words: "  ", link: nil) == nil)
         #expect(query(XPostIntent.url(words: "", link: URL(string: "https://example.com"))).keys.sorted() == ["url"])
