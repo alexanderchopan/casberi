@@ -427,8 +427,9 @@ extension FeedScreen {
                 walletSubscriptionsSections
             case .holdings:
                 let apps = walletAppRows(all)
+                let accounts = walletAccountRows(all)
                 if portfolio?.isEmpty ?? true, !hasLendingCard, walletLive.uniswap.isEmpty,
-                   walletLive.hyperliquid.positions.isEmpty, apps.isEmpty {
+                   walletLive.hyperliquid.positions.isEmpty, apps.isEmpty, accounts.isEmpty {
                     walletSkeletonRowsSection
                 }
                 // **TOKENS, THEN POSITIONS (prd §1107, user: "tokens then
@@ -438,6 +439,9 @@ extension FeedScreen {
                 walletTokenListSection
                 walletStaleReadingsSection
                 walletPositionsSections
+                // What an app holds for you, as it read it (prd §1341): a
+                // balance is a holding, never a transaction.
+                walletAccountsSection(accounts, nextEventID: nextEventID)
                 walletAppsSection(apps, nextEventID: nextEventID)
                 // An app the menu picked holds no collections (prd §1048b).
                 if !seatPicked {

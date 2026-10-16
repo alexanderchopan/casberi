@@ -247,6 +247,90 @@ for f in "$ACTATTR" "$ACTVIEW"; do
   fi
 done
 
+# --- every Wallet app opens a receipt (prd §1341) ---------------------------
+# "they all look like that" (user, 2026-10-16): a Lightning payment and an
+# Acorns account under Home's Transactions opened the GENERIC sheet, because
+# `MoneyReceipt.sources` was a hand list nothing held to the Wallet's apps.
+# The Wallet's apps are read out of `RoomAccounts.wallet` (each seat's
+# `source:` resolved to the literal its type declares), plus the Wallet's own
+# rows, and each must be in `sources` or `elsewhere` (with its reason).
+ROOMS="Casberi/Casberi/Model/RoomAccounts.swift"
+coverage_check() {
+  python3 - "$1" "$ROOMS" <<'PY'
+import re, sys, glob
+receipt, rooms = open(sys.argv[1]).read(), open(sys.argv[2]).read()
+m = re.search(r'private static let wallet: \[Seat\] = \[(.*?)\n    \]', rooms, re.S)
+if not m:
+    print("✗ RoomAccounts.wallet not found — the Wallet's apps cannot be read"); sys.exit(1)
+files = {p: open(p).read() for p in glob.glob("Casberi/Casberi/Model/*.swift")}
+def resolve(expr, depth=0):
+    expr = expr.strip()
+    if expr.startswith('"'): return expr.strip('"')
+    if depth > 3 or "." not in expr: return None
+    typ, name = expr.split(".", 1)
+    for src in files.values():
+        t = re.search(r'\b(enum|struct|class) ' + re.escape(typ) + r'\b', src)
+        if not t: continue
+        v = re.search(r'static let ' + re.escape(name) + r'\s*=\s*([^\n]+)', src[t.start():])
+        if v: return resolve(v.group(1), depth + 1)
+    return None
+sources = set(re.findall(r'"([^"]+)"', re.search(r'static let sources: Set<String> = \[(.*?)\]', receipt, re.S).group(1)))
+elsewhere = set(re.findall(r'^\s*"([^"]+)":', re.search(r'static let elsewhere: \[String: String\] = \[(.*?)\n    \]', receipt, re.S).group(1), re.M))
+seats = re.findall(r'source: ([^,\n]+),', m.group(1))
+wallet = {"Wallet"}
+for expr in seats:
+    if expr.strip() == "nil": continue
+    lit = resolve(expr)
+    if lit is None:
+        print(f"✗ could not resolve the Wallet seat source {expr.strip()} to a literal"); sys.exit(1)
+    wallet.add(lit)
+if len(wallet) < 15:
+    print(f"✗ only {len(wallet)} Wallet sources read — the seat table moved"); sys.exit(1)
+missing = sorted(wallet - sources - elsewhere)
+if missing:
+    print("✗ Wallet apps with no receipt arm and no stated elsewhere: " + ", ".join(missing)); sys.exit(1)
+both = sorted(sources & elsewhere)
+if both:
+    print("✗ in both sources and elsewhere: " + ", ".join(both)); sys.exit(1)
+print(f"  every Wallet app opens a receipt or says where it opens ({len(wallet)} sources)")
+PY
+}
+coverage_check "$RECEIPT" || exit 1
+# The check bites: a copy without Lightning's entry must fail it.
+sed 's/"Lightning", "Privy",/"Privy",/' "$RECEIPT" > "$TMP/no-lightning.swift"
+grep -q '"Lightning"' "$TMP/no-lightning.swift" && ! grep -q '"Lightning", "Privy"' "$TMP/no-lightning.swift" \
+  || { echo "✗ the coverage mutation did not apply"; exit 1; }
+if coverage_check "$TMP/no-lightning.swift" > /dev/null 2>&1; then
+  echo "✗ the coverage check passed with Lightning's arm gone — it checks nothing"; exit 1
+fi
+
+# The literals `MoneyReceipt` (Foundation-only, compiled alone) spells for
+# the bridges' own refs and tags must stay the bridges' own.
+grep -q 'static let refPrefix = "privy:app:"' "Casberi/Casberi/Model/PrivyHomeFeed.swift" \
+  || { echo "✗ PrivyHomeFeed.refPrefix moved — MoneyReceipt.isState spells it"; exit 1; }
+grep -q 'static let accountPrefix = "splits:account:"' "Casberi/Casberi/Model/SplitsShape.swift" \
+  && grep -q 'static let waitingTag = "Waiting"' "Casberi/Casberi/Model/SplitsShape.swift" \
+  || { echo "✗ SplitsShape's account prefix or waiting tag moved — MoneyReceipt spells them"; exit 1; }
+grep -q 'static let source = "Acorns"' "Casberi/Casberi/Model/AcornsLive.swift" \
+  && grep -q 'static let source = "Rocket Money"' "Casberi/Casberi/Model/RocketMoneyLive.swift" \
+  || { echo "✗ the reading seats' source names moved — MoneyReceipt.isReading spells them"; exit 1; }
+# A reading is drawn: the source half lets one through its kind gate…
+grep -q 'MoneyReceipt.isReading(source: thing.source, ref: thing.sourceRef)' "$SOURCE" \
+  || { echo "✗ MoneyReceiptSource no longer lets a reading through — an Acorns balance falls to the generic sheet"; exit 1; }
+# …and the sheet ends a reading at its box: no tiles, no history.
+grep -q 'if moneyReceipt.form == .record {' "$SHEET" \
+  || { echo "✗ a reading draws the record's tiles and history again"; exit 1; }
+# A balance is never a transaction: Home's list and its history share one filter.
+grep -q 'let moves = Self.walletMoves(all)' "Casberi/Casberi/Screens/FeedScreen+WalletHome.swift" \
+  && grep -q 'walletSeeAllSection(total: moves.count)' "Casberi/Casberi/Screens/FeedScreen+WalletHome.swift" \
+  && grep -q 'FeedScreen.walletMoves(all.live)' "Casberi/Casberi/Screens/WalletHistoryScreen.swift" \
+  || { echo "✗ Transactions or its history lists states again (prd §1341)"; exit 1; }
+grep -q 'walletAccountsSection(accounts' "Casberi/Casberi/Screens/FeedScreen+ShapedSections.swift" \
+  || { echo "✗ Holdings no longer lists the accounts Transactions left out — they would vanish"; exit 1; }
+# No Lightning row's content is its hash, the demo's included.
+! grep -q 'content: "lightning:' "Casberi/Casberi/Model/LightningBridge.swift" "Casberi/Casberi/Model/DemoSeedAll.swift" \
+  || { echo "✗ a Lightning row's content is its ref again — the sheet draws it as the card"; exit 1; }
+
 # --- the harness ------------------------------------------------------------
 cat > "$TMP/main.swift" <<'SWIFT'
 import Foundation
@@ -787,6 +871,145 @@ do {
           "a figureless receipt speaks its title")
 }
 
+// MARK: every Wallet app (prd §1341)
+
+do {
+    // Lightning, as `LightningIngest` lands it: the memo, sats, dollars.
+    var ln = MoneyReceipt.Facts(source: "Lightning", title: "Coffee for Ana")
+    ln.capturedAt = realAt(0)
+    ln.direction = "received"
+    ln.amount = "21,000 sats"
+    ln.priceValue = 18.9
+    ln.priceCurrency = "USD"
+    guard let l = MoneyReceipt.compose(ln) else {
+        print("  ✗ a Lightning payment composes nothing"); failures += 1; exit(1)
+    }
+    check(l.form == .record, "a payment is a record")
+    check(l.party == "Coffee for Ana", "the memo names it")
+    check(l.amount?.number == "+21,000" && l.amount?.unit == "sats", "the sats, signed, the unit beside")
+    check(l.amount?.tone == .gain, "a payment received is a gain")
+    check(l.secondary?.contains("18.90") == true, "worth the dollars it landed at")
+    check(l.finality == .torn && l.stamp == .settled, "only settled payments land, so final")
+    ln.direction = "sent"
+    ln.title = "Paid over Lightning"
+    let paid = MoneyReceipt.compose(ln)
+    check(paid?.amount?.number == "−21,000", "a payment sent wears a minus")
+    check(paid?.party == nil, "no memo: the direction's words are the lead, never the party")
+    ln.priceCurrency = "EUR"
+    check(MoneyReceipt.compose(ln)?.secondary == nil, "a figure in no dollars states no dollar worth")
+
+    // Privy: what moved in an app's wallet.
+    var pv = MoneyReceipt.Facts(source: "Privy", title: "Received 0.6974 ZORA")
+    pv.capturedAt = realAt(2)
+    pv.direction = "received"
+    pv.amount = "0.6974 ZORA"
+    pv.usd = 12.4
+    pv.authorHandle = "Zora"
+    let p = MoneyReceipt.compose(pv)
+    check(p?.party == "Zora wallet", "an app wallet's move is named by its app")
+    check(p?.amount?.number == "+0.6974" && p?.amount?.unit == "ZORA", "the token amount, signed")
+    check(p?.secondary?.contains("12.40") == true, "worth at landing")
+    check(p?.mine == nil, "an app's wallet is not one you watch: no tucked face")
+
+    // Splits: a proposal waiting on signatures, then one that went out.
+    var sp = MoneyReceipt.Facts(source: "Splits",
+                                title: "Waiting for signatures · Sent $4,500 (4,500 USDC) to Dana Ortiz")
+    sp.capturedAt = realAt(1)
+    sp.direction = "sent"
+    sp.usd = 4500
+    sp.authorHandle = "Payroll"
+    sp.tags = ["Transfer", "Waiting"]
+    sp.sourceRef = "splits:tx:1"
+    guard let wait = MoneyReceipt.compose(sp) else {
+        print("  ✗ a Splits transaction composes nothing"); failures += 1; exit(1)
+    }
+    check(wait.stamp == .pending && wait.finality == .open, "a proposal is pending and open")
+    check(wait.party == "Payroll", "the account it moves from names it")
+    check(wait.amount?.number.hasPrefix("−") == true, "money leaving wears a minus")
+    check(wait.secondary == "Sent $4,500 (4,500 USDC) to Dana Ortiz",
+          "Splits' own words under the figure, without the stage this app put first")
+    check(wait.sentence.contains("Nothing has moved"), "it says nothing has moved yet")
+    sp.tags = ["Transfer"]
+    sp.title = "Received $12,000 (12,000 USDC) from Acme Labs"
+    sp.direction = "received"
+    sp.usd = 12000
+    let got = MoneyReceipt.compose(sp)
+    check(got?.finality == .torn && got?.amount?.number.hasPrefix("+") == true, "an executed receive tears, plus")
+    sp.direction = nil
+    let undirected = MoneyReceipt.compose(sp)
+    check(undirected?.amount == nil && undirected?.titleFallback == sp.title,
+          "no direction: no signed figure, Splits' own words lead")
+    sp.direction = "received"
+    sp.usd = nil
+    check(MoneyReceipt.compose(sp)?.amount == nil, "no dollars displayed: no figure invented")
+
+    // The onchain cards: no shop on the chain, so a void.
+    var mm = card("MetaMask Card", tags: [], merchant: nil)
+    mm.priceValue = nil
+    mm.priceCurrency = nil
+    mm.amount = "0.01 WETH"
+    let m = MoneyReceipt.compose(mm)
+    check(m?.subject == .absent(.merchantOffchain), "MetaMask Card draws the void where a shop would be")
+    check(m?.amount?.unit == "WETH", "a token spend keeps its unit, never a bare number")
+    check(m?.hue == .card, "and pours the card hue")
+    let plasma = MoneyReceipt.compose(card("Plasma One", tags: [], merchant: nil))
+    check(plasma?.subject == .absent(.merchantOffchain), "Plasma One draws the void too")
+    check(plasma?.lead == "Spent with Plasma One", "the lead completes itself with the card")
+}
+
+// MARK: readings — where things stand, not what happened (prd §1341)
+
+do {
+    var ac = MoneyReceipt.Facts(source: "Acorns", title: "Checking — $191.40")
+    ac.capturedAt = realAt(0)
+    ac.priceValue = 191.40
+    ac.priceCurrency = "USD"
+    ac.sourceRef = "acorns:/v1/accounts:3"
+    guard let a = MoneyReceipt.compose(ac) else {
+        print("  ✗ an Acorns balance composes nothing"); failures += 1; exit(1)
+    }
+    check(a.form == .reading, "a balance is a reading")
+    check(a.party == "Checking", "named by its account, the part before the seam")
+    check(a.amount?.number.contains("191.40") == true, "the balance is the figure")
+    check(a.amount?.number.hasPrefix("+") == false && a.amount?.number.hasPrefix("−") == false,
+          "a balance carries no direction")
+    check(a.stamp == nil, "and no stamp: nothing settled")
+    check(a.sentence.hasPrefix("As of"), "it says when it was read")
+    check(a.amount?.numeric == 191.40, "the stamped figure rolls")
+    ac.priceValue = -12.5
+    check(MoneyReceipt.compose(ac)?.amount?.number.hasPrefix("−") == true,
+          "a balance below zero keeps its minus")
+    // Before the bridge stamped a number: the bridge's own words, no Double.
+    ac.priceValue = nil
+    ac.priceCurrency = nil
+    let words = MoneyReceipt.compose(ac)
+    check(words?.amount?.number == "$191.40" && words?.amount?.numeric == nil,
+          "with no stamped figure the title's money words stand, never parsed into a number")
+
+    var rm = MoneyReceipt.Facts(source: "Rocket Money", title: "Netflix — $22.99")
+    rm.priceValue = 22.99
+    rm.priceCurrency = "USD"
+    let r = MoneyReceipt.compose(rm)
+    check(r?.form == .reading && r?.party == "Netflix", "a Rocket Money plan is a reading")
+    check(r?.lead.contains("Rocket Money") == true, "its lead names the app")
+
+    var acct = MoneyReceipt.Facts(source: "Splits", title: "Treasury", content: "Account")
+    acct.sourceRef = "splits:account:0xabc"
+    let t = MoneyReceipt.compose(acct)
+    check(t?.form == .reading && t?.party == "Treasury", "a Splits account is a reading")
+    check(t?.amount == nil && t?.titleFallback == "Account", "no figure: it says what it is")
+
+    // Which rows are states, never transactions.
+    check(MoneyReceipt.isState(source: "Acorns", ref: "acorns:/v1/accounts:3"), "an Acorns account is a state")
+    check(MoneyReceipt.isState(source: "Splits", ref: "splits:account:0xabc"), "a Splits account is a state")
+    check(!MoneyReceipt.isState(source: "Splits", ref: "splits:tx:1"), "a Splits transaction is not")
+    check(MoneyReceipt.isState(source: "Privy", ref: "privy:app:zora"), "an app that made you a wallet is a state")
+    check(!MoneyReceipt.isState(source: "Privy", ref: "privy:tx:zora:0x1:in:eth"), "what moved in it is not")
+    check(!MoneyReceipt.isState(source: "Lightning", ref: "lightning:w:h"), "a payment is not")
+    check(!MoneyReceipt.isState(source: "Rocket Money", ref: "rocketmoney:1"),
+          "a Rocket Money plan stays listed until it has another place")
+}
+
 if failures > 0 {
     print("\(failures) assertion(s) failed")
     exit(1)
@@ -963,5 +1186,43 @@ mutate "the spoken sign stops being spelled" receipt \
 mutate "the roll's value is filled even when the figure isn't that Double" receipt \
   'numeric: priced == nil ? nil : f.priceValue.map(abs)' \
   'numeric: f.priceValue.map(abs)'
+
+# --- prd §1341's own mutations ----------------------------------------------
+echo ""
+
+# A Lightning payment received drawn as money that left.
+mutate "a Lightning receive wears a minus" receipt \
+  'number: (received ? "+" : "−") + parts.number,
+                         unit: parts.unit, tone: received ? .gain : .plain),
+            secondary: worthLine(f.priceCurrency == "USD" ? f.priceValue : nil),' \
+  'number: (received ? "−" : "+") + parts.number,
+                         unit: parts.unit, tone: received ? .gain : .plain),
+            secondary: worthLine(f.priceCurrency == "USD" ? f.priceValue : nil),'
+
+# A balance drawn as a record: tiles, history and a status over a state.
+mutate "a reading is composed as a record" receipt \
+  'hue: .neutral,
+            form: .reading)' \
+  'hue: .neutral,
+            form: .record)'
+
+# An Acorns balance listed under Transactions again.
+mutate "an Acorns account stops being a state" receipt \
+  'source == "Acorns"
+            || (source == "Splits"' \
+  'source == "Acorns!"
+            || (source == "Splits"'
+
+# A Splits proposal claiming finality before anyone signed.
+mutate "a waiting Splits proposal is torn" receipt \
+  'finality: waiting ? .open : .torn,
+            hue: .wallet)' \
+  'finality: .torn,
+            hue: .wallet)'
+
+# A WETH spend printed as a bare number.
+mutate "a token card spend drops its unit" receipt \
+  'unit: priced == nil ? fallback.unit : nil,' \
+  'unit: nil,'
 
 echo "money-receipt-selftest: OK"

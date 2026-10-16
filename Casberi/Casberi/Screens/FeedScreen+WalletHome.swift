@@ -20,7 +20,11 @@ extension FeedScreen {
         // Spending and Cards read every card and wallet together, so they
         // stand on All.
         let onAll = selectedSeat == nil && selectedWallet == nil
-        let stream = walletStream(all)
+        // **A BALANCE IS NOT A TRANSACTION (prd §1341, user, of an Acorns
+        // account under Transactions: "this is terrible").** An account and
+        // an app that made you a wallet are states; Holdings lists them.
+        let moves = Self.walletMoves(all)
+        let stream = walletStream(moves)
         // An address pays no subscription a reading here can see (§1105).
         let sources = walletSubscriptionSources
         let tracks = sources.map { !$0.isEmpty } ?? true
@@ -93,10 +97,16 @@ extension FeedScreen {
         if !restMoves.isEmpty {
             walletPanel(Self.transactionsName, glyph: Self.walletHomeGlyph(Self.transactionsName), things: Self.things(restMoves)) {
                 walletStreamSections(restMoves, ownMoves: stream.ownMoves, panelled: true, nextEventID: nextEventID)
-                walletSeeAllSection(total: all.count)
+                walletSeeAllSection(total: moves.count)
             }
         }
         jumpRoom
+    }
+
+    /// What happened, without the states (`MoneyReceipt.isState`): the one
+    /// filter Transactions and the history behind its door share (§837).
+    static func walletMoves(_ things: [Thing]) -> [Thing] {
+        things.filter { !MoneyReceipt.isState(source: $0.source, ref: $0.sourceRef) }
     }
 
     /// Home's lists in order, for the pill (prd §1219, §1232).

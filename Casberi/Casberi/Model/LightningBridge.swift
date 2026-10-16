@@ -149,9 +149,13 @@ enum LightningIngest {
             guard !existing.contains(ref) else { continue }
             let sats = payment.amountMsats / 1000
             guard sats > 0 else { continue }
+            // NO CONTENT (prd §1341): a payment has no page, and its hash
+            // drawn as the body was the sheet's whole card. The hash stays
+            // where a search finds it (Splits' rule, §912).
             let thing = Thing(kind: .transaction, title: title(payment),
-                              content: "lightning:\(payment.paymentHash)", source: source,
+                              content: "", source: source,
                               capturedAt: payment.settledAt ?? payment.createdAt, sourceRef: ref)
+            thing.enrichedText = payment.paymentHash
             thing.transferDirection = payment.incoming ? "received" : "sent"
             thing.transferAmount = BitcoinBridge.formatAmount(sats: sats)
             thing.transferVenue = String(localized: "Lightning")

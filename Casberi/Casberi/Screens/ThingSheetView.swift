@@ -596,61 +596,67 @@ struct ThingSheetView: View {
                         .dsRoomBox()
                         .padding(.top, DS.Space.s3)
                         .settleIn(delay: 0.06)
-                    VerbDial(thing: thing, verbs: walletVerbs, onVerb: runVerb, onName: nil,
-                             keep: moneyKeep)
-                        .padding(.top, DSRoomChassis.leadGap)
-                        .settleIn(delay: 0.08)
-                    dialResult
-                    // The poisoning flag rides EVERY wallet stage, and a record
-                    // still in the machine can be watched from the lock screen
-                    // (prd §369 amendment) — both under the tiles now.
-                    if thing.isFlagged {
-                        securityWarning
-                            .padding(.horizontal, DS.Space.s4)
-                            .padding(.top, DS.Space.s3)
-                            .settleIn(delay: 0.1)
-                    }
-                    // ONLY A TRANSFER STILL SETTLING ON ITS CHAIN (Bitcoin's
-                    // confirmations) has news worth the lock screen (prd §1333,
-                    // §1334, user: "follow on lock screen is lame").
-                    if moneyReceipt.finality == .open, moneyReceipt.stamp == .settling {
-                        trackRecordControl(moneyReceipt)
-                            .padding(.horizontal, DS.Space.s4)
-                            .padding(.top, DS.Space.s3)
-                            .settleIn(delay: 0.11)
-                    }
-                    // What the app read around it, when it is not the history the
-                    // rows already list: a Privacy Pools ladder, a swap's rate, a
-                    // note. The history and merchant bars are the rows now.
-                    if let moneySays, moneySays.drawsBesideRows {
-                        MoneyCommentaryCard(commentary: moneySays)
-                            .padding(.horizontal, DS.Space.s4)
-                            .padding(.top, DS.Space.s6)
-                            .settleIn(delay: 0.11)
-                    }
-                    if moneyHasPerson, let cp = thing.counterpartyAddress {
-                        MoneyYearTotals(name: moneyPartyName(moneyReceipt),
-                                        sentUSD: moneyYear.sentUSD, sentCount: moneyYear.sentCount,
-                                        receivedUSD: moneyYear.receivedUSD, receivedCount: moneyYear.receivedCount,
-                                        onAll: { openAddressCard(cp) })
-                            .padding(.top, DS.Space.s6)
-                            .settleIn(delay: 0.12)
-                    } else if moneyCard != nil, moneyMonth.count > 1 {
-                        // This month at the shop (prd §1182): each visit as its
-                        // day and what it cost, the total in the header.
-                        MoneyHistoryRows(title: String(localized: "This month"),
-                                         rows: moneyMonth.keyed,
-                                         trailing: moneyMonthTotal,
-                                         amount: Self.spendAmount,
-                                         onOpen: { walkingToScope = .none; walkingToNote = KeyedThing($0) })
-                            .padding(.top, DS.Space.s6)
-                            .settleIn(delay: 0.12)
-                    } else if moneyCard == nil {
-                        MoneyHistoryRows(title: moneyHistoryTitle(moneyReceipt),
-                                         rows: moneyHistory.keyed,
-                                         onOpen: { walkingToScope = .none; walkingToNote = KeyedThing($0) })
-                            .padding(.top, DS.Space.s6)
-                            .settleIn(delay: 0.12)
+                    // A READING ENDS AT ITS BOX (prd §1341, user, of an Acorns
+                    // account in Home's Transactions: "this is terrible"): a
+                    // balance has no explorer, nobody on the other side and no
+                    // history to walk, so no tiles, no history, no lock screen.
+                    if moneyReceipt.form == .record {
+                        VerbDial(thing: thing, verbs: walletVerbs, onVerb: runVerb, onName: nil,
+                                 keep: moneyKeep)
+                            .padding(.top, DSRoomChassis.leadGap)
+                            .settleIn(delay: 0.08)
+                        dialResult
+                        // The poisoning flag rides EVERY wallet stage, and a record
+                        // still in the machine can be watched from the lock screen
+                        // (prd §369 amendment) — both under the tiles now.
+                        if thing.isFlagged {
+                            securityWarning
+                                .padding(.horizontal, DS.Space.s4)
+                                .padding(.top, DS.Space.s3)
+                                .settleIn(delay: 0.1)
+                        }
+                        // ONLY A TRANSFER STILL SETTLING ON ITS CHAIN (Bitcoin's
+                        // confirmations) has news worth the lock screen (prd §1333,
+                        // §1334, user: "follow on lock screen is lame").
+                        if moneyReceipt.finality == .open, moneyReceipt.stamp == .settling {
+                            trackRecordControl(moneyReceipt)
+                                .padding(.horizontal, DS.Space.s4)
+                                .padding(.top, DS.Space.s3)
+                                .settleIn(delay: 0.11)
+                        }
+                        // What the app read around it, when it is not the history the
+                        // rows already list: a Privacy Pools ladder, a swap's rate, a
+                        // note. The history and merchant bars are the rows now.
+                        if let moneySays, moneySays.drawsBesideRows {
+                            MoneyCommentaryCard(commentary: moneySays)
+                                .padding(.horizontal, DS.Space.s4)
+                                .padding(.top, DS.Space.s6)
+                                .settleIn(delay: 0.11)
+                        }
+                        if moneyHasPerson, let cp = thing.counterpartyAddress {
+                            MoneyYearTotals(name: moneyPartyName(moneyReceipt),
+                                            sentUSD: moneyYear.sentUSD, sentCount: moneyYear.sentCount,
+                                            receivedUSD: moneyYear.receivedUSD, receivedCount: moneyYear.receivedCount,
+                                            onAll: { openAddressCard(cp) })
+                                .padding(.top, DS.Space.s6)
+                                .settleIn(delay: 0.12)
+                        } else if moneyCard != nil, moneyMonth.count > 1 {
+                            // This month at the shop (prd §1182): each visit as its
+                            // day and what it cost, the total in the header.
+                            MoneyHistoryRows(title: String(localized: "This month"),
+                                             rows: moneyMonth.keyed,
+                                             trailing: moneyMonthTotal,
+                                             amount: Self.spendAmount,
+                                             onOpen: { walkingToScope = .none; walkingToNote = KeyedThing($0) })
+                                .padding(.top, DS.Space.s6)
+                                .settleIn(delay: 0.12)
+                        } else if moneyCard == nil {
+                            MoneyHistoryRows(title: moneyHistoryTitle(moneyReceipt),
+                                             rows: moneyHistory.keyed,
+                                             onOpen: { walkingToScope = .none; walkingToNote = KeyedThing($0) })
+                                .padding(.top, DS.Space.s6)
+                                .settleIn(delay: 0.12)
+                        }
                     }
                 } else if framedShot {
                     // The framed exception (B1c): facts stand bare on the wash;
@@ -3109,6 +3115,15 @@ struct ThingSheetView: View {
     /// merchant, when you were last there. Nothing the line above says.
     private func moneyCells(_ r: MoneyReceipt) -> [MoneyReceiptCell] {
         var out: [MoneyReceiptCell] = []
+        // A reading states when it was read, and nothing a move would
+        // (prd §1341): no status, no network, no "2nd with".
+        if r.form == .reading {
+            if r.amount != nil {
+                out.append(MoneyReceiptCell(value: thing.capturedAt.formatted(.dateTime.month(.abbreviated).day().hour().minute()),
+                                            label: String(localized: "As of")))
+            }
+            return out
+        }
         out.append(MoneyReceiptCell(value: r.stamp?.word ?? (r.finality == .open ? String(localized: "Waiting")
                                                                                  : String(localized: "Final")),
                                     label: String(localized: "Status"), wants: r.finality == .open))
@@ -3294,9 +3309,14 @@ struct ThingSheetView: View {
     /// disc that really does open something is a small lie with no symptom.
     private var walletVerbs: [Verb] {
         var out: [Verb] = []
+        // A page on the web, or nothing: a Lightning payment's hash is no
+        // page, and a "Copy link" that copied it, or the title when there
+        // was no content, named a link that was never there (prd §1341).
+        let page = Capture.detectURL(in: thing.content)
+            .flatMap { ["http", "https"].contains($0.scheme?.lowercased() ?? "") ? $0 : nil }
         // "Explorer", whichever site it opens (prd §1181, user: "just say
         // explorer"): a tile names the act, never the place.
-        if let url = Capture.detectURL(in: thing.content) {
+        if let url = page {
             // A Wise transfer's link is its page in Wise, where a stuck one
             // is fixed (prd §1332): named for the app, as a song's is (§1186).
             let label = thing.source == "Wise" ? "Wise"
@@ -3311,7 +3331,9 @@ struct ThingSheetView: View {
             out.append(Verb(label: "World App", icon: "arrow.up.right",
                             action: .openURL(WalletIngest.worldAppGrantsLink)))
         }
-        out.append(Verb(label: "Copy link", icon: "doc.on.doc", action: .copyText))
+        if page != nil {
+            out.append(Verb(label: "Copy link", icon: "doc.on.doc", action: .copyText))
+        }
         return out
     }
 

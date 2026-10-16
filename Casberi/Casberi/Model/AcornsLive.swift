@@ -294,6 +294,11 @@ enum AcornsIngest {
                 let money = value.map { LooseJSON.money($0, currency: LooseJSON.currency(in: record)) }
                 let title = money.map { "\(name) — \($0)" } ?? name
 
+                // The balance as a number beside the words (prd §1341), so the
+                // receipt's reading states the figure the title states, at the
+                // currency the title was written in.
+                let currency = value.map { _ in LooseJSON.currency(in: record) ?? "USD" }
+
                 if existing.contains(ref) {
                     // A balance is a STATE, not an event (§216's split): the
                     // row updates in place rather than landing again daily.
@@ -301,6 +306,12 @@ enum AcornsIngest {
                         thing.title = title
                         thing.embedding = nil
                         thing.capturedAt = .now
+                        touched = true
+                    }
+                    if let thing = stored(ref),
+                       thing.priceValue != value || thing.priceCurrency != currency {
+                        thing.priceValue = value
+                        thing.priceCurrency = currency
                         touched = true
                     }
                     landedHere += 1
@@ -315,6 +326,8 @@ enum AcornsIngest {
                     capturedAt: LooseJSON.date(in: record) ?? .now,
                     sourceRef: ref)
                 thing.authorHandle = AcornsLive.source
+                thing.priceValue = value
+                thing.priceCurrency = currency
                 context.insert(thing)
                 existing.insert(ref)
                 indexed.append(thing)

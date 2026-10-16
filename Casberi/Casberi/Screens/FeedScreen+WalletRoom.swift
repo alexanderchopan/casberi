@@ -577,9 +577,10 @@ extension FeedScreen {
     /// scope there explains itself (§611).
     func walletInertSections(visible: [Thing], upcoming: [Thing]) -> Set<WalletSection> {
         var out: Set<WalletSection> = [.security]
-        // Privy's apps are Holdings' too (§1124), with money or without.
+        // Privy's apps are Holdings' too (§1124), with money or without, and
+        // so is an account an app read (§1341): every state stands there.
         if walletScopeIsEmpty(.holdings),
-           !visible.live.contains(where: { $0.sourceRef?.hasPrefix(PrivyHomeFeed.refPrefix) == true }) {
+           !visible.live.contains(where: { MoneyReceipt.isState(source: $0.source, ref: $0.sourceRef) }) {
             out.insert(.holdings)
         }
         if SubscriptionsReading.shared.items(in: walletSubscriptionSources).isEmpty {
@@ -928,6 +929,34 @@ extension FeedScreen {
             return a.used > b.used
         }
         return ranked.map { (r: Ranked) -> FeedRow in r.row }
+    }
+
+    /// **AN ACCOUNT'S BALANCE STANDS IN HOLDINGS (prd §1341, user, of an
+    /// Acorns account under Transactions: "this is terrible").** What an app
+    /// holds for you, as it last read it — an Acorns account, a Splits
+    /// team's account — beside the apps that made you a wallet (§1124), never
+    /// in the list of what happened. Not counted in the total: Acorns reads
+    /// two endpoints that may each name the same money, unmeasured (§780b).
+    func walletAccountRows(_ things: [Thing]) -> [FeedRow] {
+        things.filter {
+            MoneyReceipt.isState(source: $0.source, ref: $0.sourceRef)
+                && $0.sourceRef?.hasPrefix(PrivyHomeFeed.refPrefix) != true
+        }
+        .sorted { ($0.source, $0.title) < ($1.source, $1.title) }
+        .map(FeedRow.single)
+    }
+
+    @ViewBuilder
+    func walletAccountsSection(_ rows: [FeedRow], nextEventID: UUID?) -> some View {
+        if !rows.isEmpty {
+            walletCard(String(localized: "Accounts"), glyph: "banknote") {
+                ForEach(Array(rows.enumerated()), id: \.element.id) { i, row in
+                    if case .single(let item) = row.kind, let thing = item.live {
+                        shapedListRow(thing, index: i, nextEventID: nextEventID)
+                    }
+                }
+            }
+        }
     }
 
     @ViewBuilder

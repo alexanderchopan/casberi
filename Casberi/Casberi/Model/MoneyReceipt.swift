@@ -196,6 +196,14 @@ struct MoneyReceipt: Equatable {
     var stamp: Stamp?
     var finality: Finality
     var hue: Hue
+    /// A record of something that happened, or a READING of where things
+    /// stand (prd §1341): an Acorns account's balance, a Rocket Money plan's
+    /// price, a Splits account. A reading draws the box and nothing after it:
+    /// no tiles, no history, no lock screen. Last, so every record arm keeps
+    /// its call as it was.
+    var form: Form = .record
+
+    enum Form: Equatable { case record, reading }
 
     // MARK: - Said out loud
 
@@ -298,21 +306,65 @@ struct MoneyReceipt: Equatable {
     static let sources: Set<String> = [
         "Wallet", "Apple Wallet", "ether.fi", "Privacy",
         "Peer", "Privacy Pools", "Railgun", "Safe", "Wise",
+        // EVERY MONEY ROW IN THE WALLET OPENS THE RECEIPT (prd §1341, user,
+        // of a Lightning payment and an Acorns account in Home's
+        // Transactions: "this is terrible", "they all look like that").
+        "Lightning", "Privy", "Splits", "MetaMask Card", "Plasma One",
+        "Acorns", "Rocket Money",
     ]
+
+    /// The Wallet's apps whose rows are NOT money moves, each with where its
+    /// rows open instead (prd §1341). `money-receipt-selftest.sh` reads every
+    /// Wallet seat out of `RoomAccounts` and fails one in neither this nor
+    /// `sources`, so a new money app cannot ship onto the generic sheet.
+    static let elsewhere: [String: String] = [
+        "Bitrefill": "orders and refills open the purchase receipt (PurchaseStage, prd §364)",
+        "CardPointers": "card offers, reminders with an end date, never money moved",
+        "ENS": "name expiries, never money moved",
+    ]
+
+    /// The rows a money app lands as a STATE — what it says you have or pay
+    /// right now, updated in place — rather than as something that happened
+    /// (prd §1341): an Acorns account and its balance, a Rocket Money plan,
+    /// a Splits account. They open the receipt's calm form (`reading`).
+    static func isReading(source: String, ref: String?) -> Bool {
+        source == "Acorns" || source == "Rocket Money"
+            || (source == "Splits" && ref?.hasPrefix("splits:account:") == true)
+    }
+
+    /// A state is never a transaction (prd §1341): an account (Acorns', a
+    /// Splits team's), or an app that made you a wallet (`privy:app:`,
+    /// Holdings' Apps since §1124). Home's Transactions and the history
+    /// behind it leave these out, and Holdings lists them.
+    ///
+    /// A Rocket Money plan is a reading too and is NOT here: one dated ahead
+    /// is Subscriptions' already (`SubscriptionsSource.isBill`), and one with
+    /// no date ahead has no other place yet, so it stays listed rather than
+    /// vanish.
+    static func isState(source: String, ref: String?) -> Bool {
+        source == "Acorns"
+            || (source == "Splits" && ref?.hasPrefix("splits:account:") == true)
+            || ref?.hasPrefix("privy:app:") == true
+    }
 
     // MARK: - Composition
 
     /// The receipt, or nil when this thing isn't one we draw.
     static func compose(_ f: Facts) -> MoneyReceipt? {
         guard sources.contains(f.source) else { return nil }
+        if isReading(source: f.source, ref: f.sourceRef) { return reading(f) }
         switch f.source {
         case "Apple Wallet":                 return card(f, hue: .neutral)
-        case "ether.fi", "Privacy":          return card(f, hue: .card)
+        case "ether.fi", "Privacy", "MetaMask Card", "Plasma One":
+            return card(f, hue: .card)
         case "Peer":                         return peer(f)
         case "Privacy Pools":                return pools(f)
         case "Railgun":                      return railgun(f)
         case "Safe":                         return safe(f)
         case "Wise":                         return wise(f)
+        case "Lightning":                    return lightning(f)
+        case "Privy":                        return privy(f)
+        case "Splits":                       return splits(f)
         default:                             return wallet(f)
         }
     }
@@ -383,7 +435,8 @@ struct MoneyReceipt: Equatable {
 
     // MARK: Card spends
 
-    /// Apple Wallet, ether.fi Cash and Privacy.com. One arm,
+    /// Apple Wallet, ether.fi Cash, Privacy.com, MetaMask Card and Plasma
+    /// One (prd §1341; a Plasma One row is a day's settled spending). One arm,
     /// because a card spend is a card spend; the differences that matter are
     /// which subject can be drawn (a merchant name, or a void where the chain
     /// carries none) and whether the amount can still change.
@@ -396,8 +449,12 @@ struct MoneyReceipt: Equatable {
         // `amount` has no number behind it, and pairing the two would let the
         // figure count toward a value it isn't showing.
         let priced = currency(f.priceValue, code: f.priceCurrency)
-        let money = priced ?? split(f.amount).number
-        let onchain = f.source == "ether.fi"
+        // A token spend with no currency (MetaMask Card's WETH) keeps its
+        // unit beside the figure, never a bare number.
+        let fallback = split(f.amount)
+        let money = priced ?? fallback.number
+        // The three onchain cards: the chain carries no shop (prd §222).
+        let onchain = ["ether.fi", "MetaMask Card", "Plasma One"].contains(f.source)
         return MoneyReceipt(
             subject: merchant.map { Subject.named($0) }
                 ?? (onchain ? .absent(.merchantOffchain) : .named(f.source)),
@@ -413,7 +470,8 @@ struct MoneyReceipt: Equatable {
             party: merchant ?? (onchain ? nil : f.source),
             titleFallback: money.isEmpty ? f.title : nil,
             amount: money.isEmpty ? nil
-                : Amount(number: (refund ? "+" : "−") + money, unit: nil,
+                : Amount(number: (refund ? "+" : "−") + money,
+                         unit: priced == nil ? fallback.unit : nil,
                          tone: refund ? .gain : .plain,
                          numeric: priced == nil ? nil : f.priceValue.map(abs)),
             secondary: cardLine(f),
@@ -496,6 +554,162 @@ struct MoneyReceipt: Equatable {
             stamp: stuck ? .yourTurn : pending ? .pending : returned ? .refund : .settled,
             finality: stuck || pending ? .open : .torn,
             hue: .neutral)
+    }
+
+    // MARK: Lightning (prd §1341)
+
+    /// A settled Lightning payment, as `LightningIngest` lands it: the memo
+    /// as the title (or the direction's own words when there is none), the
+    /// sats stamped on `transferAmount`, and the dollars the bridge priced it
+    /// at when it landed. Only settled payments land, so it is always final.
+    private static func lightning(_ f: Facts) -> MoneyReceipt {
+        let received = f.direction == "received"
+        let lead = received ? String(localized: "Received over Lightning")
+                            : String(localized: "Paid over Lightning")
+        let parts = split(f.amount)
+        // With no memo the bridge titles the row with these same words, so
+        // the memo is the party only when it is a memo.
+        let memo = f.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        return MoneyReceipt(
+            subject: .named("Lightning"),
+            mine: nil,
+            lead: lead,
+            party: memo.isEmpty || memo == lead ? nil : memo,
+            titleFallback: parts.number.isEmpty ? f.title : nil,
+            amount: parts.number.isEmpty ? nil
+                : Amount(number: (received ? "+" : "−") + parts.number,
+                         unit: parts.unit, tone: received ? .gain : .plain),
+            secondary: worthLine(f.priceCurrency == "USD" ? f.priceValue : nil),
+            sentence: String(localized: "Settled \(dayPhrase(f.capturedAt))."),
+            stamp: .settled,
+            finality: .torn,
+            hue: .bitcoin)
+    }
+
+    // MARK: Privy (prd §1341)
+
+    /// What moved in a wallet an app made for you (`PrivyHomeLive`): the
+    /// app's name rides `authorHandle`, the other side `counterpartyAddress`,
+    /// and the dollars Zerion priced it at `transferUSD`. That wallet is not
+    /// one you watch, so no tucked face.
+    private static func privy(_ f: Facts) -> MoneyReceipt {
+        let received = f.direction == "received"
+        let parts = split(f.amount)
+        let app = f.authorHandle.flatMap { $0.isEmpty ? nil : $0 }
+        return MoneyReceipt(
+            subject: subject(address: f.counterpartyAddress, name: f.partyLabel,
+                             fallbackAsset: parts.unit),
+            mine: nil,
+            lead: received ? String(localized: "Received into") : String(localized: "Sent from"),
+            party: app.map { String(localized: "\($0) wallet") },
+            titleFallback: parts.number.isEmpty ? f.title : nil,
+            amount: parts.number.isEmpty ? nil
+                : Amount(number: (received ? "+" : "−") + parts.number,
+                         unit: parts.unit, tone: received ? .gain : .plain),
+            secondary: worthLine(f.usd),
+            sentence: placeSentence(received ? String(localized: "Landed")
+                                             : String(localized: "Left"), f),
+            stamp: .settled,
+            finality: .torn,
+            hue: .wallet)
+    }
+
+    // MARK: Splits (prd §1341)
+
+    /// A Splits team's transaction (`SplitsBridge`): the account it moved
+    /// in on `authorHandle`, the direction, the dollars Splits displayed, and
+    /// Splits' own title ("Received $12,000 (12,000 USDC) from Acme Labs"),
+    /// which names the token and the other side and is drawn as written,
+    /// never read back. A proposal still waiting on signatures is open.
+    private static func splits(_ f: Facts) -> MoneyReceipt {
+        let waiting = f.tags.contains("Waiting")
+        let failed = f.tags.contains(String(localized: "Not executed"))
+        let received = f.direction == "received"
+        // Splits' own words, without the stage this app put in front of them
+        // (`SplitsShape.rowTitle`: "<stage> · <Splits' title>").
+        var words = f.title
+        if waiting || failed, let seam = words.range(of: " · ") {
+            words = String(words[seam.upperBound...])
+        }
+        // A figure needs a direction to wear a sign: Splits names none for
+        // a shape it has not shown us (`SplitsShape.direction`), and then the
+        // row leads with Splits' own words.
+        let directed = f.direction == "received" || f.direction == "sent"
+        let figure = directed ? f.usd.flatMap { $0 > 0 ? $0 : nil } : nil
+        return MoneyReceipt(
+            subject: .named("Splits"),
+            mine: nil,
+            lead: failed ? String(localized: "Not executed")
+                : waiting ? String(localized: "Waiting to send from")
+                : !directed ? String(localized: "In")
+                : received ? String(localized: "Received into") : String(localized: "Sent from"),
+            party: f.authorHandle.flatMap { $0.isEmpty ? nil : $0 },
+            titleFallback: figure == nil || failed ? words : nil,
+            amount: failed ? nil : figure.map {
+                Amount(number: (received ? "+" : "−") + fiat($0), unit: nil,
+                       tone: received ? .gain : .plain, numeric: $0)
+            },
+            secondary: figure == nil || failed ? nil : words,
+            sentence: waiting
+                ? String(localized: "Proposed \(dayPhrase(f.capturedAt)). Nothing has moved yet.")
+                : placeSentence(failed ? String(localized: "Proposed")
+                                : received ? String(localized: "Landed") : String(localized: "Left"), f),
+            stamp: failed ? nil : waiting ? .pending : .settled,
+            finality: waiting ? .open : .torn,
+            hue: .wallet)
+    }
+
+    // MARK: Readings (prd §1341)
+
+    /// WHERE THINGS STAND, NOT WHAT HAPPENED: an account's balance (Acorns),
+    /// a plan's price (Rocket Money), an account (Splits). The receipt's calm
+    /// form: the account's name, the figure the app read, and when. No sign,
+    /// no stamp, no sentence about a move that never happened.
+    ///
+    /// Acorns and Rocket Money title a row "<name> — <money>" themselves
+    /// (`AcornsIngest`, `RocketMoneyIngest`), so the name is the part before
+    /// the seam; the figure is the stamped price when there is one, else the
+    /// bridge's own money words after the seam, never a number parsed back.
+    private static func reading(_ f: Facts) -> MoneyReceipt {
+        var name = f.title
+        var words: String?
+        if let seam = f.title.range(of: " — ", options: .backwards) {
+            name = String(f.title[..<seam.lowerBound])
+            words = String(f.title[seam.upperBound...])
+        }
+        // To the cent, whatever the size: a balance is read, not rounded.
+        let priced: String? = {
+            guard let value = f.priceValue, let code = f.priceCurrency, !code.isEmpty else { return nil }
+            return abs(value).formatted(.currency(code: code))
+        }()
+        // A balance below zero keeps its sign.
+        let figure = priced.map { (f.priceValue ?? 0) < 0 ? "−" + $0 : $0 } ?? words
+        let account = f.source == "Splits"
+        let lead: String
+        switch f.source {
+        case "Acorns":       lead = String(localized: "Balance in Acorns")
+        case "Rocket Money": lead = String(localized: "Recurring charge in Rocket Money")
+        default:             lead = String(localized: "Account in \(f.source)")
+        }
+        return MoneyReceipt(
+            subject: .named(f.source),
+            mine: nil,
+            lead: lead,
+            party: name.isEmpty ? nil : name,
+            // A Splits account carries no figure: its line says what it is
+            // ("Account", "Archived account").
+            titleFallback: figure == nil ? (account && !f.content.isEmpty ? f.content : lead) : nil,
+            amount: figure.map {
+                Amount(number: $0, unit: nil, tone: .plain,
+                       numeric: priced == nil ? nil : f.priceValue)
+            },
+            secondary: nil,
+            sentence: account ? String(localized: "An account in your Splits team.")
+                : String(localized: "As of \(dayPhrase(f.capturedAt))."),
+            stamp: nil,
+            finality: .torn,
+            hue: .neutral,
+            form: .reading)
     }
 
     // MARK: Privacy Pools

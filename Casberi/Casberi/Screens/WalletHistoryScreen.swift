@@ -39,14 +39,17 @@ struct WalletHistoryScreen: View {
     }
 
     private var visible: [Thing] {
-        guard let scope else { return all }
+        // What happened, never a state (prd §1341): Home's Transactions
+        // filter, so the door's count opens the list it counts.
+        let moves = FeedScreen.walletMoves(all.live)
+        guard let scope else { return moves }
         // An app the Wallet's menu picked: its own rows.
         if let seat = RoomAccounts.seat(scope, in: CategoryFold.walletRoom) {
-            return all.filter { $0.source == seat.source }
+            return moves.filter { $0.source == seat.source }
         }
         // Through the resolution cache, not a raw compare — things carry the
         // resolved hex, the scope is the watched spelling (2026-07-20).
-        return all.filter { wallet.scopeMatches($0.walletAddress, scope: scope) }
+        return moves.filter { wallet.scopeMatches($0.walletAddress, scope: scope) }
     }
 
     /// Day groups, newest first — the same grammar the feed's stream uses, so

@@ -486,12 +486,13 @@ src = open(sys.argv[1]).read()
 home = re.search(r"case \.home:(.*?)case \.subscriptions:", src, re.S)
 subs = re.search(r"case \.subscriptions:(.*?)case \.holdings:", src, re.S)
 # Home is four short lists since prd §1201 (`walletHomeSections`): what is
-# ahead (`walletComingUpDays`) is built before what happened (`walletStream`).
+# ahead (`walletComingUpDays`) is built before what happened (`walletStream`),
+# which since prd §1341 reads the moves alone (`walletMoves`), never a balance.
 lists = re.search(r"func walletHomeSections\(.*?\n    }\n", src, re.S)
 ok = home and subs and lists \
     and "walletHomeSections(upcoming: upcoming, all: all" in home.group(1) \
-    and "walletComingUpDays(upcoming)" in lists.group(0) and "walletStream(all)" in lists.group(0) \
-    and lists.group(0).index("walletComingUpDays(upcoming)") < lists.group(0).index("walletStream(all)") \
+    and "walletComingUpDays(upcoming)" in lists.group(0) and "walletStream(moves)" in lists.group(0) \
+    and lists.group(0).index("walletComingUpDays(upcoming)") < lists.group(0).index("walletStream(moves)") \
     and "walletSubscriptionsSections" in subs.group(1) and "walletComingUp" not in subs.group(1)
 sys.exit(0 if ok else 1)
 PY

@@ -3856,7 +3856,9 @@ enum DemoSeedAll {
 
         // Lightning (prd §1098). Three settled payments as the seat lands them:
         // titled by memo, or by direction when there is none, with the amount
-        // in sats in the trailing slot.
+        // in sats in the trailing slot. No content, as a real one has none
+        // since prd §1341: the ref drawn as the body was the sheet's whole
+        // card (user: "this is terrible").
         let lightning: [(String, String, String, Double, Double)] = [
             ("Coffee for Ana", "21,000 sats", "received", 18.9, 0.2),
             ("Paid over Lightning", "4,200 sats", "sent", 3.8, 2),
@@ -3864,7 +3866,7 @@ enum DemoSeedAll {
         ]
         out += lightning.enumerated().map { i, x in
             row(.transaction, x.0, source: "Lightning", ref: "lightning:demo:\(i)",
-                days: x.4, hour: 11, content: "lightning:demo\(i)") { t in
+                days: x.4, hour: 11) { t in
                 t.transferDirection = x.2
                 t.transferAmount = x.1
                 t.transferVenue = String(localized: "Lightning")

@@ -25,7 +25,13 @@ enum MoneyReceiptSource {
     @MainActor
     static func receipt(for thing: Thing,
                         safe: SafeBridge.Check? = nil) -> MoneyReceipt? {
-        guard thing.isLive, thing.kind == .transaction else { return nil }
+        // A move is a `.transaction`; a READING (an Acorns balance, a Rocket
+        // Money plan, a Splits account) lands as whatever kind its seat
+        // writes and opens the receipt's calm form (prd §1341).
+        guard thing.isLive,
+              thing.kind == .transaction
+                || MoneyReceipt.isReading(source: thing.source, ref: thing.sourceRef)
+        else { return nil }
         return MoneyReceipt.compose(facts(for: thing, safe: safe))
     }
 
