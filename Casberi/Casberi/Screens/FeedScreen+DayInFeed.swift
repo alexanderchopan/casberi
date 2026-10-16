@@ -30,7 +30,10 @@ extension FeedScreen {
         if let picked = daySelected {
             dayPickedSection(picked, visible, nextEventID: nextEventID)
         } else {
-            let window = dayFeedWindow(visible)
+            // At rest the strip shows this week, so the rows end with it;
+            // a tapped day opens the five weeks (2026-10-16, user: "ones
+            // into the next month").
+            let window = dayFeedWindow(visible, through: dayCalendarOpen ? nil : Self.dayFeedWeekEnd())
             dayNeedsRows(nextEventID: nextEventID, limit: window.needs)
             // The window is the section's own (needs and days counted
             // together); the days draw uncapped inside it, then More.
@@ -42,35 +45,52 @@ extension FeedScreen {
     }
 
     /// **ONE CAP FOR THE WHOLE SECTION (prd §1343).** Needs you first, then
-    /// whole days — their things and renewals together — while the cap
-    /// lasts; More adds ten, as every section's does. A month of renewals
-    /// no longer runs the section past the screen.
-    func dayFeedWindow(_ visible: [Thing])
+    /// days — their things and renewals together — while the cap lasts;
+    /// More adds ten, as every section's does. The cap counts ROWS: a day
+    /// fuller than what is left is cut at the cap, never drawn whole past
+    /// it (2026-10-16, user: "it's also showing me more than five items").
+    /// `end`, when set, drops what falls on or after it.
+    func dayFeedWindow(_ visible: [Thing], through end: Date? = nil)
         -> (needs: Int, days: [(String, [Thing])], renewals: [String: [Subscriptions.Item]], more: Bool, cap: Int) {
         let cap = sectionCaps[RoomAccounts.dayRoom] ?? Self.sectionFirstRows
         let waiting = dayNeeds.live.count
         // Needs you takes three on the first page, so today still shows
         // under it; More opens the rest.
         let needs = min(waiting, cap == Self.sectionFirstRows ? 3 : cap)
-        // At least today, whole, whatever Needs you took.
-        var budget = max(cap - needs, 1)
+        var budget = max(cap - needs, 0)
         var more = waiting > needs
-        let renewals = dayRenewals()
+        var renewals = dayRenewals()
+        var rows = visible
+        if let end {
+            renewals = renewals.filter { ($0.next ?? .distantFuture) < end }
+            rows = visible.filter { Self.dayWhen($0) < end }
+        }
         let byDay = Dictionary(grouping: renewals) {
             dayLabel(Self.groupingCalendar.startOfDay(for: $0.next ?? .now))
         }
         var days: [(String, [Thing])] = []
         var shown: [String: [Subscriptions.Item]] = [:]
-        for (label, things) in dayRoomGroups(visible, renewals: renewals) {
+        for (label, things) in dayRoomGroups(rows, renewals: renewals) {
+            let live = things.filter(\.isLive)
             let plans = byDay[label] ?? []
-            let count = things.filter(\.isLive).count + plans.count
-            guard count > 0 else { continue }
+            guard live.count + plans.count > 0 else { continue }
             guard budget > 0 else { more = true; break }
-            days.append((label, things))
-            if !plans.isEmpty { shown[label] = plans }
-            budget -= count
+            let keptThings = Array(live.prefix(budget))
+            let keptPlans = Array(plans.prefix(budget - keptThings.count))
+            if keptThings.count + keptPlans.count < live.count + plans.count { more = true }
+            days.append((label, keptThings))
+            if !keptPlans.isEmpty { shown[label] = keptPlans }
+            budget -= keptThings.count + keptPlans.count
         }
         return (needs, days, shown, more, cap)
+    }
+
+    /// The end of the week the strip shows at rest (`WalletCalendar`'s first
+    /// week).
+    static func dayFeedWeekEnd(now: Date = .now) -> Date {
+        let cal = groupingCalendar
+        let start = WalletCalendar.start(now: now, calendar: cal)
+        return cal.date(byAdding: .day, value: 7, to: start) ?? start
     }
 
     /// The week, its dots, and the next thing under it; open, all five
@@ -201,4 +221,24 @@ extension FeedScreen {
         daySection("", Array(notes.prefix(cap)), nextEventID: nextEventID, dated: false, headed: false)
         if notes.count > cap { sectionMoreRow(HomeScope.notesSection) }
     }
+
+    /// The section's rows: your notes and the apps you write in, newest
+    /// first, one bounded fetch from the Feed's `.task`, never a body (§628).
+    /// The sources are spelled into the predicate because it cannot read
+    /// `Pinboard.writtenSources`; `Pinboard.inRoom` narrows "You" to the
+    /// note and voice kinds after the fetch.
+    @MainActor
+    func loadNotesFeedRows() {
+        let sources = ["You"] + Pinboard.writtenSources
+        var newest = FetchDescriptor<Thing>(
+            predicate: #Predicate { sources.contains($0.source) },
+            sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
+        newest.fetchLimit = Self.notesFeedFetchLimit
+        let rows = ((try? modelContext.fetch(newest)) ?? []).filter { $0.isLive && Pinboard.inRoom($0) }
+        guard rows.map(\.id) != notesFeedRows.map(\.id) else { return }
+        notesFeedRows = rows
+    }
+
+    /// Past every cap More can reach in a sitting; the Notes page lists the rest.
+    static let notesFeedFetchLimit = 200
 }

@@ -211,7 +211,9 @@ struct NoteCaptureSheet: View {
         return (written ?? openedAt).formatted(date: .long, time: .shortened)
     }
     @State private var openedAt = Date.now
-    private var isRecording: Bool { voice.phase == .recording }
+    /// Starting counts (`VoiceCapture.isLive`): the key reads Stop from the
+    /// first tap, so a second tap can never start a second recorder.
+    private var isRecording: Bool { voice.isLive }
 
     /// The one explaining line (prd §748): what happens to the words, or,
     /// with the mic refused, the route to allowing it — the composer's own

@@ -575,7 +575,9 @@ struct Composer: View {
         draft = text
     }
 
-    private var isRecording: Bool { voice.phase == .recording }
+    /// Starting counts (`VoiceCapture.isLive`): the key reads Stop from the
+    /// first tap, so a second tap can never start a second recorder.
+    private var isRecording: Bool { voice.isLive }
     private var hasDraft: Bool { !draft.trimmingCharacters(in: .whitespaces).isEmpty }
 
     // MARK: - The ask panel's readings (prd §577, restructured §577c)

@@ -115,7 +115,9 @@ extension FeedScreen {
             let category = String(id.dropFirst(Self.sectionPrefix.count))
             // Live again inside the closure: `List` may run it after a heal
             // deleted a row the body's own filter saw alive.
-            scrollSection(category, (byCategory[category] ?? []).live, nextEventID: nextEventID)
+            scrollSection(category,
+                          category == HomeScope.notesSection ? notesFeedRows.live : (byCategory[category] ?? []).live,
+                          nextEventID: nextEventID)
         }
     }
 
