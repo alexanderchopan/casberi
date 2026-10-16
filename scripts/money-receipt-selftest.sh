@@ -529,6 +529,30 @@ do {
     }
 }
 
+// MARK: Wise (prd §1332)
+
+do {
+    var f = MoneyReceipt.Facts(source: "Wise", title: "Needs attention · £200.00 → €235.00 · Deposit")
+    f.capturedAt = realAt(0)
+    f.priceValue = 200
+    f.priceCurrency = "GBP"
+    f.tags = ["Transfer", "Pending", "Needs attention"]
+    guard let stuck = MoneyReceipt.compose(f) else {
+        print("  ✗ a Wise transfer composes nothing"); failures += 1; exit(1)
+    }
+    check(stuck.stamp == .yourTurn, "a stuck Wise transfer says it's your turn")
+    check(stuck.lead == "Waiting on you", "it leads with what it waits on")
+    check(stuck.party == "Deposit", "it is named by the reference you wrote")
+    check(stuck.secondary == "€235.00 arrives", "it says what arrives, off the title's pair")
+    check(stuck.amount?.number.hasPrefix("−") == true, "the money that left is a minus")
+    check(stuck.finality == .open, "a stuck transfer is never torn")
+    f.tags = ["Transfer"]
+    f.title = "Sent · £200.00 → €235.00"
+    let sent = MoneyReceipt.compose(f)
+    check(sent?.stamp == .settled && sent?.finality == .torn, "a sent transfer tears, settled")
+    check(sent?.party == nil, "no reference names nothing")
+}
+
 // MARK: Safe
 
 do {

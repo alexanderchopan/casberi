@@ -295,7 +295,7 @@ struct MoneyReceipt: Equatable {
     /// getting a half-composed hero.
     static let sources: Set<String> = [
         "Wallet", "Apple Wallet", "ether.fi", "Privacy",
-        "Peer", "Privacy Pools", "Railgun", "Safe",
+        "Peer", "Privacy Pools", "Railgun", "Safe", "Wise",
     ]
 
     // MARK: - Composition
@@ -310,6 +310,7 @@ struct MoneyReceipt: Equatable {
         case "Privacy Pools":                return pools(f)
         case "Railgun":                      return railgun(f)
         case "Safe":                         return safe(f)
+        case "Wise":                         return wise(f)
         default:                             return wallet(f)
         }
     }
@@ -450,6 +451,49 @@ struct MoneyReceipt: Equatable {
             stamp: .filled,
             finality: .torn,
             hue: .peer)
+    }
+
+    // MARK: Wise
+
+    /// **A WISE TRANSFER IS A RECEIPT (prd §1332, user, going through the
+    /// Wallet's screens: "lets start with this from wise").** It drew the
+    /// bare card, a face over nothing, under its raw title ("Needs attention
+    /// · £200 → €235 · Deposit"). Now it names the transfer by the reference
+    /// you wrote, says first what it is waiting on, and draws what left and
+    /// what arrives. Read off the row `WiseShape` landed: the tags carry the
+    /// state (`stuckTag`, "Pending", "Returned"), the price the money that
+    /// left, and the title's second part the pair, never a figure computed here.
+    private static func wise(_ f: Facts) -> MoneyReceipt {
+        // "<state> · <amounts>[ · <reference>]" — `WiseShape.rowTitle`.
+        let parts = f.title.components(separatedBy: " · ")
+        let reference = parts.count > 2 ? parts[2...].joined(separator: " · ") : nil
+        let arrives = parts.count > 1 ? parts[1].components(separatedBy: " → ").dropFirst().first : nil
+        let stuck = f.tags.contains(String(localized: "Needs attention"))
+        let returned = f.tags.contains(String(localized: "Returned"))
+        let pending = !returned && f.tags.contains(String(localized: "Pending"))
+        let priced = currency(f.priceValue, code: f.priceCurrency)
+        let started = dayPhrase(f.capturedAt)
+        return MoneyReceipt(
+            subject: .named("Wise"),
+            mine: nil,
+            lead: stuck ? String(localized: "Waiting on you")
+                : pending ? String(localized: "Sending")
+                : returned ? String(localized: "Came back")
+                : String(localized: "Sent"),
+            party: reference,
+            titleFallback: priced == nil ? f.title : nil,
+            amount: priced.map {
+                Amount(number: (returned ? "+" : "−") + $0, unit: nil,
+                       tone: returned ? .gain : .plain, numeric: f.priceValue.map(abs))
+            },
+            secondary: arrives.map { String(localized: "\($0) arrives") },
+            sentence: stuck ? String(localized: "Wise won't send it until you act in Wise. Started \(started).")
+                : pending ? String(localized: "On its way since \(started).")
+                : returned ? String(localized: "The money came back. Started \(started).")
+                : String(localized: "Sent \(started)."),
+            stamp: stuck ? .yourTurn : pending ? .pending : returned ? .refund : .settled,
+            finality: stuck || pending ? .open : .torn,
+            hue: .neutral)
     }
 
     // MARK: Privacy Pools

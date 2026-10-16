@@ -3809,8 +3809,12 @@ enum DemoSeedAll {
              ["Transfer", "Pending", WiseShape.stuckTag], "sent", 0.2),
         ]
         out += wise.enumerated().map { i, w in
+            // Each with its page in Wise, as a real transfer lands (§912), so
+            // the sheet's Wise tile is there in the demo too (prd §1332).
             row(.transaction, w.0, source: "Wise", ref: "wise:transfer:demo\(i)",
-                days: w.5, hour: 11, tags: w.3) { t in
+                days: w.5, hour: 11,
+                content: "https://wise.com/transactions/activities/by-resource/TRANSFER/demo\(i)",
+                tags: w.3) { t in
                 t.priceValue = w.1
                 t.priceCurrency = w.2
                 t.transferDirection = w.4

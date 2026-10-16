@@ -66599,3 +66599,9 @@ Mocks: `design/mockups/tab-bar-options.html`, `design/mockups/tab-bar-library.ht
 2. **The Wallet's row shows its pick in the word**, as Day's and Notes' do (§1267): Home white while you stand on it, the rest grey (`bare: false`).
 3. **Overview's rows are a name and a figure.** The line under each (the first item's raw status, a cut comparison) is deleted from view and model (`OverviewLine.line`); the lists below say the rest.
 4. **The Feed's Newest is the Feed's own**: today's newest from every category but the Wallet, the testnets and Markets, which are their own places, as the sections under it already were.
+
+## §1332 — A Wise transfer is a receipt; an empty history draws nothing (user, 2026-10-15, going screen by screen: "lets start with this from wise", and of the Safe sheet's "At Everyday — Nothing before this one.")
+
+1. **A Wise transfer's sheet is a money receipt** (`MoneyReceipt.wise`): titled by the reference you wrote, Wise's face, the money that left as a minus, what arrives under it ("€235 arrives", the title's own pair, never a figure computed here), and the state first: Your turn for a transfer Wise holds until you act (`WiseShape.stuckTag`), Pending, Came back, Sent.
+2. **Its first tile opens the transfer in Wise**, where a stuck one is fixed, named for the app ("Wise", as a song's tile is, §1186), never "Explorer". The demo's Wise rows carry their page as a real one does (§912).
+3. **A money sheet's history draws nothing when it holds nothing** (`MoneyHistoryRows`): "Nothing before this one." is deleted, on every receipt.

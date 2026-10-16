@@ -17,13 +17,17 @@ struct MoneyHistoryRows: View {
     var onOpen: (Thing) -> Void
 
     var body: some View {
+        // NOTHING BEFORE THIS ONE DRAWS NOTHING (prd §1332, the user of the
+        // Safe sheet's "At Everyday — Nothing before this one."): a card that
+        // only says it is empty is a section with nothing to show.
+        if !rows.isEmpty {
+            card
+        }
+    }
+
+    private var card: some View {
         // A list's name on the Feed's card (prd §1258), its figure trailing.
         SheetCard(name: title, glyph: "clock", trailing: trailing) {
-            if rows.isEmpty {
-                Text("Nothing before this one.")
-                    .dsText(.body17)
-                    .foregroundStyle(DS.textSecondary)
-            }
             ForEach(rows) { row in
                 if let thing = row.live {
                     Button { onOpen(thing) } label: {

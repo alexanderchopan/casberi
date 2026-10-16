@@ -3294,8 +3294,10 @@ struct ThingSheetView: View {
         // "Explorer", whichever site it opens (prd §1181, user: "just say
         // explorer"): a tile names the act, never the place.
         if let url = Capture.detectURL(in: thing.content) {
-            out.append(Verb(label: String(localized: "Explorer"), icon: "arrow.up.right",
-                            action: .openURL(url)))
+            // A Wise transfer's link is its page in Wise, where a stuck one
+            // is fixed (prd §1332): named for the app, as a song's is (§1186).
+            let label = thing.source == "Wise" ? "Wise" : String(localized: "Explorer")
+            out.append(Verb(label: label, icon: "arrow.up.right", action: .openURL(url)))
         }
         // A World ID grant opens where the next one is claimed (prd §792) —
         // only when World App is on this phone to answer the link.
