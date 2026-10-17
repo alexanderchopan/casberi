@@ -49,6 +49,7 @@ struct FeedLedeCard: View {
     /// The tick on a list in the Notes box (prd §1099) is a write.
     @Environment(\.modelContext) private var modelContext
     @Environment(ShellChrome.self) private var chrome: ShellChrome?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// The Mac keyboard walk's selection. Taken as a parameter rather than
     /// drawn behind the row (`selectionWash`) because this card paints its own
     /// opaque surface — a wash underneath it would be invisible. Only ever
@@ -377,6 +378,10 @@ struct FeedLedeCard: View {
                     Text(verbatim: amount.number)
                         .dsText(.price40)
                         .monospacedDigit()
+                        // A receipt whose amount changes in place rolls, as
+                        // every figure in a box does (prd §1379).
+                        .contentTransition(reduceMotion ? .identity : .numericText())
+                        .animation(reduceMotion ? nil : ChartEntrance.roll, value: amount.number)
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
                     if let unit = amount.unit {

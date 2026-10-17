@@ -713,6 +713,8 @@ extension FeedScreen {
                          // A quiet head's sentence, under the cover (prd §760).
                          note: heads?.quietHead?.quietLine)
                 .modifier(rowEntrance(0))
+                // A new newest thing lands rather than cuts (prd §1379).
+                .coverLanding(thing.id, in: source)
                 .contentShape(Rectangle())
         }
         .buttonStyle(RowPress())

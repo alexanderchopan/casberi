@@ -14,6 +14,7 @@ import SwiftUI
 /// Only the reading clears the gear (§920); the figure under it takes the
 /// whole width.
 struct DSFigureReading: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let number: String
     let caption: String
     var alarm: String? = nil
@@ -29,7 +30,10 @@ struct DSFigureReading: View {
                 .dsText(.price40)
                 .foregroundStyle(numberInk)
                 .monospacedDigit()
-                .contentTransition(.numericText())
+                // Rolls when its number changes, whoever changed it; in place
+                // under Reduce Motion (prd §1379).
+                .contentTransition(reduceMotion ? .identity : .numericText())
+                .animation(reduceMotion ? nil : ChartEntrance.roll, value: number)
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
             // The caption at the move line's rung (`body17`, secondary), so

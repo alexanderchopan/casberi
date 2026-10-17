@@ -72,6 +72,18 @@ struct DSCountTile: View {
     }
 
     @Environment(\.dsCountCellHeight) private var cellHeight
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    /// EVERY COUNT ROLLS TO ITS VALUE (prd §1379, closing §1199's "Settings'
+    /// counts do not roll yet"): the crown's roll, keyed on the count itself so
+    /// a store landing late rolls whether or not its caller animated. Under
+    /// Reduce Motion the digits change in place.
+    private var countRoll: ContentTransition {
+        reduceMotion ? .identity : .numericText(value: Double(count ?? 0))
+    }
+    private var countAnimation: Animation? {
+        reduceMotion ? nil : ChartEntrance.roll
+    }
 
     var body: some View {
         if inline, add != nil || !addMenu.isEmpty {
@@ -141,6 +153,8 @@ struct DSCountTile: View {
                             Text((count ?? 0).formatted())
                                 .dsText(.heading24)
                                 .monospacedDigit()
+                                .contentTransition(countRoll)
+                                .animation(countAnimation, value: count)
                                 .foregroundStyle(isOn ? Self.pickInk : zero ? DS.textTertiary : DS.textPrimary)
                         }
                     }
@@ -175,6 +189,8 @@ struct DSCountTile: View {
                     Text(count.formatted())
                         .dsText(glyph == nil ? .heading28 : .heading24)
                         .monospacedDigit()
+                        .contentTransition(countRoll)
+                        .animation(countAnimation, value: count)
                         .foregroundStyle(isOn ? DS.tint : zero ? DS.textTertiary : DS.textPrimary)
                 }
                 Text(label)

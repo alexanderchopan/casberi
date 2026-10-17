@@ -34,7 +34,9 @@ extension View {
     /// The box's row: the lead at its one size (prd §760), the box's gap under
     /// it (prd §1102: an empty room's tiles stand where a full room's do).
     func dsRoomLeadListRow() -> some View {
-        listRowInsets(.init(top: DS.Space.s2, leading: DSRoomChassis.inset,
+        // Every box arrives with its room (prd §1379).
+        roomBoxArrival()
+            .listRowInsets(.init(top: DS.Space.s2, leading: DSRoomChassis.inset,
                             bottom: DSRoomChassis.leadGap, trailing: DSRoomChassis.inset))
             .feedRowBackground()
             .listRowSeparator(.hidden)

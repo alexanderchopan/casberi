@@ -67026,3 +67026,12 @@ Not built: a per-transfer Hide (the mock's tile). Nothing stores one; the pile's
 3. One rule, `Model/NeedsYouWords.swift`, guarded by `needs-you-words-selftest.sh`, which also fails if either bridge rewords its phrase.
 
 The same sweep trimmed four lines that restated their neighbours (04e8b49b): an unpriced approval's note no longer repeats its row, Connection's footnote drops "across chains", the follow-cap alert drops "That's the cap" under "Following 20 already", the NFT picker drops "only the collections you pick are shown" under "Show which NFTs?".
+
+## §1379 — Every box moves once: it arrives, its numbers roll, a new cover lands (amends §495 for the wallet family's pick, §1199's "Settings' counts do not roll yet", §600/§661's cut for a cover replaced while you look) (user, 2026-10-17, after a design canvas of the box as a monitor ended on "lets stay as is and add motion to our boxes", then "ok do all")
+
+1. **A box arrives with its page.** Every lead list row (`dsRoomLeadListRow`) and the wallet family's chrome fade in on `RoomFigureMotion.dissolve`, opacity only, so the box never moves the tiles (§936). On appear the fade plays only inside the page's wave (`feedWaveAt`, `RowEntrance.cascadeWindow`); a box met by scrolling back stands at rest (§661). Library stamps its own wave.
+2. **A tile pick fades the box in** (`DSRoomScopeChrome.lead`, keyed on the scope): §501's slot dissolve lost its last caller with Vibenet (§1038), so Wallet, Logos and Aztec swapped in a cut. An account pick keeps its own roll and re-wipe, with no second fade.
+3. **Every number in a box rolls when it changes, whoever changed it**: `DSCountTile` (Library, Security, Markets' counts), `RoomLedeView`, `DSFigureReading` and the cover's money, each keyed on its own value on `ChartEntrance.roll`. Under Reduce Motion the digits change in place.
+4. **A new newest thing lands.** `CoverLedger` remembers each room's cover in this process; when the cover re-mounts with a different thing outside the wave, it fades in rather than cutting. Inside the wave the row's own entrance carries it: one animation per moment.
+
+Not built: pulses, glows or any loop (§297: loops are for what streams), and a roll while scrubbing the crown (Apple's own charts change digits under the finger without rolling).

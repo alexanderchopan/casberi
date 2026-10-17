@@ -32,6 +32,8 @@ struct SettingsHome: View {
     /// Casberi's own options, opened in place from its pinned row — the way a
     /// Notes folder opens (prd §980): its name leads back.
     @State private var casberiOpen = false
+    /// When this page mounted, for the box's arrival (prd §1379).
+    @State private var waveAt = Date.timeIntervalSinceReferenceDate
     /// What Sources' Apps field filters (prd §1245), or a name the tray's
     /// search landed on (prd §1171): People narrowed to it, shown in a field
     /// you clear.
@@ -169,6 +171,9 @@ struct SettingsHome: View {
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
         }
+        // The page's wave (prd §1379): the box arrives with the page and
+        // stands at rest when scrolled back to, as a feed page's does.
+        .environment(\.feedWaveAt, waveAt)
         .dsRoomList()
         .onChange(of: landCategory) { _, category in
             guard let category else { return }

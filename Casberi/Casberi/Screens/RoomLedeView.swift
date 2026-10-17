@@ -20,6 +20,7 @@ import SwiftUI
 /// makes that true by construction rather than by memory.
 struct RoomLedeView: View {
     let lede: RoomLede
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// The accessible sentence for the whole block. The figure and its caption
     /// are one statement, so they are spoken as one — reading "312" and "posts
     /// saved from 48 accounts" as two elements is how a screen reader turns a
@@ -39,8 +40,12 @@ struct RoomLedeView: View {
                     // direction where a real number was counted; without it
                     // the digits still transition, they just do not know which
                     // way they are going — `MoneyReceiptCard`'s own note.
-                    .contentTransition(lede.numeric.map { .numericText(value: $0) }
-                                       ?? .numericText())
+                    .contentTransition(reduceMotion ? .identity
+                                       : lede.numeric.map { .numericText(value: $0) } ?? .numericText())
+                    // Keyed here, so it rolls whoever changed it (prd §1379):
+                    // the transition alone rolled only inside a caller's
+                    // animated transaction.
+                    .animation(reduceMotion ? nil : ChartEntrance.roll, value: lede.figure)
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
                     .foregroundStyle(DS.textPrimary)
