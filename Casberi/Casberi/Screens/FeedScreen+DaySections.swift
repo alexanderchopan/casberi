@@ -446,8 +446,7 @@ extension FeedScreen {
         } else if source == "All", !heroShown {
             Section {
                 // **THE WAYS IN, IN THE FEED'S BOX (prd §1365, user: "ok", of
-                // the mockup).** With nothing connected, followed or tracked,
-                // the box is Library's own "Start with any of these" under the
+                // the mockup).** With nothing added, the box is Library's own "Start with any of these" under the
                 // day: "Connect apps in Library." named a door it did not
                 // draw. The first one done gives the box back to the day.
                 if feedStarts {
@@ -462,15 +461,15 @@ extension FeedScreen {
                                      ? Text("Connect apps in Library.") : nil)
                 }
             }
+            // What a body cannot read (the phone's calendars, the people), so
+            // the box gives way when Library's does.
+            .task { await FirstRun.shared.refresh(modelContext) }
         }
     }
 
-    /// Nothing connected, no address followed, no subscription or linked
-    /// calendar: Library's box reads the same stores (`startsInBox`).
+    /// Nothing added yet: the answer Library's box reads too (`FirstRun`).
     var feedStarts: Bool {
-        bridges.connectedCount == 0 && WalletStore.shared.addresses.isEmpty
-            && SubscriptionsReading.shared.items.isEmpty
-            && CalendarSubscriptionStore.shared.calendars.isEmpty
+        FirstRun.shared.isEmpty(bridges: bridges)
     }
 
     /// What a way in opens from the Feed: what its row in Library opens,

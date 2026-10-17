@@ -535,13 +535,11 @@ struct SettingsHome: View {
     }
 
     private func read() async {
-        phoneCalendars = PhoneCalendar.readable(context)
-        await SubscriptionsReading.shared.refresh(context)
-        MailSubscriptionsReading.shared.refresh(context)
-        for room in Following.Room.allCases { FollowingReading.shared.refresh(room, context: context) }
-        let everyone = ContactIndexSources.rebuild(context: context)
-            .filter { !ContactIndexSources.isYours($0) }
-        people = everyone.count
+        // The readings the box's kinds keep, read once for Library and the
+        // Feed (`FirstRun`, prd §1365).
+        await FirstRun.shared.refresh(context)
+        phoneCalendars = FirstRun.shared.phoneCalendars
+        people = FirstRun.shared.people
         // A calendar subscribed elsewhere (or before this page existed) reads
         // its count fresh.
         if CalendarSubscriptionStore.shared.calendars.contains(where: { $0.lastRead == nil }) {
@@ -778,9 +776,7 @@ struct SettingsHome: View {
     /// step-by-step Start here of §1166 is deleted), and your name is not a
     /// way in: it lives in Casberi's own settings.
     private var startsInBox: Bool {
-        connectedApps.isEmpty && calendarsEmpty && connectedCards.isEmpty && feeds.isEmpty
-            && MailSubscriptionsReading.shared.items.isEmpty && people == 0
-            && SubscriptionsReading.shared.items.isEmpty && WalletStore.shared.addresses.isEmpty
+        FirstRun.shared.isEmpty(bridges: bridges)
     }
 
     /// The four ways in, shared with the empty Feed (`StartWaysIn`, prd
