@@ -66988,3 +66988,10 @@ The goal cannot be built. No link to X carries a picture (`twitter://post` and `
 5. **A swap's tiles are Explorer and Share.** Copy link is deleted for a swap: the explorer is the tile beside it.
 6. **Its list is "<token> trades"**: the other trades in the same wallet that touched the token it brought in, flagged trades left out, each drawn as a trade (both marks, "ETH for USDC", the day and what went out, what came in trailing). The router every trade shares no longer stands in for a party.
 7. **The demo carries three ordinary Uniswap trades**, so the receipt and its list have something real to draw; its only swap before was the flagged spoof.
+
+## §1374 — The tab bar hugs its tabs; Search stands at the trailing edge (amends §1327 item 1's bar) (user, 2026-10-17: "today the tab bar has three tabs and spans most of the bottom areea. does it have to? like could it be narrower?", then, of four mockups, "i like the way C looks", "do c")
+
+1. **Each tab is one width (`PlaceTabBar.tabWidth`, 74pt), and the bar is as wide as its three tabs** (230pt, was every point the row left Search, 306pt on a 402pt phone). It stands at the leading edge; Search keeps its own circle at the trailing edge, the page showing between them.
+2. **Why leading, not centred:** the fold already draws the tab you are on at the leading edge and Search at the trailing one, so the bar folds and unfolds in place. A centred bar would slide sideways at every fold.
+3. **Search stays a circle, not a fourth tab.** Tabs are places you manage (§1343) and Search is an act; as a tab it would fold away with the others, where today it stays beside the folded circle.
+4. Considered and not taken: centred (the slide in 2), icons with only the pick named (Library is your face, which says nothing without its word).

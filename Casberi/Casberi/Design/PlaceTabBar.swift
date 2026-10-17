@@ -76,6 +76,12 @@ struct PlaceTabBar: View {
     /// fill, a lighter pill, as iOS 26's bar draws its selected tab.
     static var lens: Color { DS.page }
     private var size: CGFloat { DSDock.agentSize(fold: chrome.fold) }
+    /// **THE BAR HUGS ITS TABS (prd §1374, user: "does it have to [span the
+    /// bottom]? … i like the way C looks").** Each tab is one width, the bar
+    /// stands at the leading edge and Search at the trailing one, which is
+    /// where the fold already puts the tab's circle and Search's: the bar
+    /// folds and unfolds in place, never sliding sideways.
+    static let tabWidth: CGFloat = 74
 
     var body: some View {
         HStack(spacing: DS.Space.s2) {
@@ -85,6 +91,7 @@ struct PlaceTabBar: View {
                 if !chrome.roomsTray { searchCircle }
             } else {
                 bar
+                Spacer(minLength: 0)
                 searchCircle
             }
         }
@@ -107,7 +114,8 @@ struct PlaceTabBar: View {
                             .lineLimit(1)
                             .minimumScaleFactor(0.8)
                     }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .frame(width: Self.tabWidth)
+                    .frame(maxHeight: .infinity)
                     .background {
                         if tab == current {
                             Capsule().fill(DS.fillStrong).padding(.vertical, DS.Space.s1)
@@ -125,7 +133,6 @@ struct PlaceTabBar: View {
         }
         .padding(.horizontal, DS.Space.s1)
         .frame(height: size)
-        .frame(maxWidth: .infinity)
         .dsGlass(cornerRadius: size / 2, tint: Self.lens)
     }
 
