@@ -147,10 +147,10 @@ struct WalletApprovalExposure: Equatable, Sendable {
     /// unpriced, so the card grows the line only when it owes one.
     var unpricedNote: String? {
         guard !unpriced.isEmpty else { return nil }
+        // The row above already says what it reaches ("All · Field Notes"),
+        // so the note says only what the row can't: it is left out.
         if unpriced.count == 1, let g = unpriced.first {
-            return g.forAll
-                ? String(localized: "\(g.spender) can move all your \(g.symbol). Not priced, so not counted.")
-                : String(localized: "\(g.spender)'s \(g.symbol) grant couldn't be priced, so it isn't counted.")
+            return String(localized: "\(g.spender)'s grant couldn't be priced, so it isn't counted.")
         }
         return String(localized: "\(unpriced.count) more grants couldn't be priced, so they aren't counted.")
     }

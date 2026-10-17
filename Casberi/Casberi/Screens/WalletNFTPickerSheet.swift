@@ -87,7 +87,7 @@ struct WalletNFTPickerSheet: View {
     /// One sentence, and it states the thing worth knowing before the first tap:
     /// picking is what causes anything to be fetched at all.
     private var intro: String {
-        String(localized: "Only the collections you pick are shown, and only those are loaded.")
+        String(localized: "Only the ones you pick are loaded.")
     }
 
     private var loading: some View {
