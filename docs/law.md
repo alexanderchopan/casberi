@@ -232,7 +232,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1521 of 1590 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1522 of 1591 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1629,7 +1629,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1250 — The Watchlist prices a coin as itself, draws every row's line, alerts on more than a price, and travels: Reorder, gas…
 - §1251 — A Feed section's header names its choices
 - §1252 — White words, pink glyphs, Apple Music's pink
-- §1253 — Sources' apps are cards like the Feed's, by category or A–Z
+- §1253 — Sources' apps are cards like the Feed's, by category or A–Z (amended by §1383)
 - §1254 — Setup pages take the Feed's cards
 - §1255 — The tray's category glyphs are pink, and the Wallet has one
 - §1256 — Home's glance tiles become one Newest card
@@ -1641,7 +1641,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1262 — The category's word in the title takes you back to the whole category (amends §1133)
 - §1263 — A renewal on an event's day stands beside it (amends §1260)
 - §1264 — Day's box names the day, never the clock (amends §1229)
-- §1265 — Sources' other kinds take the Feed's cards
+- §1265 — Sources' other kinds take the Feed's cards (amended by §1383)
 - §1266 — The add trays' groups are the Feed's cards; Settings' glyphs are pink
 - §1267 — No tile has a backing; Notes' folders are a Feed card
 - §1268 — The rest of the old style: contact and address cards, subscription sheets, Markets, count picks
@@ -1694,7 +1694,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1317 — Every count in Sources picks what stands under the box (supersedes §1274; amends §1217 item 2, §1292)
 - §1318 — Gnosis Pay is removed
 - §1319 — Sources' folders draw every app in colour, and yours wear a green dot (amends §1316 item 1)
-- §1320 — Sources' lists stand on one line, and a title's way back is grey (amends §1133, §1262, §1312)
+- §1320 — Sources' lists stand on one line, and a title's way back is grey (amends §1133, §1262, §1312) (amended by §1383)
 - §1321 — Pages, not sheets, on the phone (retires §1132, §1208l's places, §1208m and §1220 on the phone; amends §1231, §1312,…
 - §1322 — On the phone the demo's mark is "Exit demo" in the band (amends §919, §946, §1005)
 - §1323 — Sources names what it holds: Media and Contacts; the Addresses screen is deleted; suggestions name themselves, never…
@@ -1755,6 +1755,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1380 — No contract of our own, ever; Aztec accounts wait for an audited account that rotates its key
 - §1381 — One slot, no fill: the box keeps its size and place on every screen and draws no well; the thing fills it on sheets a…
 - §1382 — The Feed's and the Wallet's sections stand bare: the panel keeps its air and its column, and draws no fill
+- §1383 — Library's pages stand bare too
 
 ## Dead rulings → what replaced them (generated)
 

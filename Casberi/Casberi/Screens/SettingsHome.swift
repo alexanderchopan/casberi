@@ -812,6 +812,8 @@ struct SettingsHome: View {
                                          @ViewBuilder _ content: () -> Content) -> some View {
         SectionPanelCard(name: name, glyph: glyph,
                          inset: DSRoomChassis.rowInset - DSRoomChassis.inset) { content() }
+            // Bare (prd §1383): Library's lists stand as the Feed's do.
+            .environment(\.feedSectionPanelFilled, false)
     }
 
     /// A kind's own act, first in its card (prd §1265): the pink glyph in
@@ -1122,6 +1124,8 @@ struct SettingsHome: View {
                 rows()
             }
         }
+        // Bare (prd §1383).
+        .environment(\.feedSectionPanelFilled, false)
     }
 
     /// One row of a kind's list, as its room draws it: the row opens its

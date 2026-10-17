@@ -972,6 +972,8 @@ struct SectionPanelCard<Content: View>: View {
     /// already stands in the room's column (Sources, prd §1253) takes the
     /// difference, so its rows land where the Feed's do on the screen.
     var inset: CGFloat = DSRoomChassis.rowInset
+    /// Bare on Library's pages (prd §1383), as the Feed's panels are (§1382).
+    @Environment(\.feedSectionPanelFilled) private var filled
     @ViewBuilder let content: Content
 
     var body: some View {
@@ -984,7 +986,8 @@ struct SectionPanelCard<Content: View>: View {
             .padding(.bottom, DS.Space.s4)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(SectionPanel.fill, in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+        .background(filled ? SectionPanel.fill : Color.clear,
+                    in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
     }
 }
 

@@ -67058,3 +67058,8 @@ Not built: pulses, glows or any loop (§297: loops are for what streams), and a 
 2. **With §1381 the two pages are one surface:** the box, the tiles and the rows stand on the page, and a section is told by its header and its air.
 3. **Only these two.** Thing sheets' named blocks (`SheetCard`, §1258), trays and Sources' cards (`SectionPanelCard`), What this app reaches and Settings keep their panels; account pages read the flag and keep the default.
 4. **The landing's brighten** (§1208l) has nothing to brighten on a bare panel and does not show on these two pages; it stands on What this app reaches.
+
+## §1383 — Library's pages stand bare too (amends §1253's, §1265's and §1320's cards on Sources; user, 2026-10-17: "in Library, there are still cards in each of the categories … like wallets, subscriptions, media etc", then "drop the panels on Library's category pages (keep Casberi's Settings and account pages)")
+
+1. **Library's count pages draw their lists without a fill:** Calendars, Cards, Follows, Mail lists, Subscriptions, Wallets and Comes from — `kindCard` and `kindGroup` set `feedSectionPanelFilled` off, and `SectionPanelCard` reads it. The air, the column and the name with its glyph stay, as §1382 kept them on the Feed and the Wallet.
+2. **What keeps its card:** Casberi's own Settings folder (grouped controls), an app's account page (its Connect and More cards), the folders on Library's face and the folder that springs open from one (App Library's), the trays, Addresses' Recent, and a thing sheet's named blocks.
