@@ -21,8 +21,8 @@ sheet (chrome.appSheet).
 import json, subprocess, pathlib, sys
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 D = "demo"
-# Sources, a page beside the Feed (prd §1321), from the Feed's tile row.
-SRC = [{"wait": 2}, {"swipeDown": 2}, {"tap": "button:^Sources, Everything"}]
+# Sources is the Library tab (prd §1327, §1347); the Feed has no Sources tile.
+SRC = [{"wait": 2}, {"tap": "button:=Library"}]
 APPS = "button:~, Apps"                    # Sources' Apps count: on the Sources page under every sheet it raises
 SEARCH = "button:=Search"                  # the band's Search: takes a touch whenever no sheet covers it
 BACK = "button:=Back"
@@ -109,8 +109,8 @@ ENTRIES = [
        steps=[{"tap": "button:=GitHub"}, {"tap": "button:^Share this week"}], anchor="button:=Close"),
   # ---- The Feed ----
   dict(id="feed-thing", covers=[FS+"thing"], launch=[D], steps=WALLET+[{"tap": "button:^Needs you. "}, {"tap": "button:~Needs attention · £200"}],
-       anchor="button:=Wise, App"),
-  dict(id="thing-by-link", covers=[RS+"deepLinkThing"], launch=[D], steps=THING, anchor="button:=Telegram, App", afterSwipe=SEARCH),
+       anchor="button:=Wise, Wise"),
+  dict(id="thing-by-link", covers=[RS+"deepLinkThing"], launch=[D], steps=THING, anchor="text:^From your Telegram archive", afterSwipe=SEARCH),
   # Share rises as the system share sheet, a system picker (prd §1370).
   rises("share-tray", ["Screens/ThingStage.swift:sharing"], [D], THING+[{"tap": "button:^Share"}], "button:=Close",
         control="button:=Close", afterSwipe="button:^Share", afterControl="button:^Share"),
@@ -133,10 +133,10 @@ ENTRIES = [
   # ---- The thing sheet's own steps (prd §1315: they push inside it) ----
   pushed("thing-track", [TS+"faceTarget#track"], [D], OPEN("Spotify · $11.99")+[{"tap": "button:^Track"}], "button:=Track Spotify", "button:^Track",
          swipe_to=SEARCH, back=False),
-  pushed("thing-alert-new", ["Screens/MarketsViews.swift:tray#new"], [D], OPEN("Ethereum")+[{"tap": "button:^Add an alert"}], "text:=New alert", "button:^Add an alert",
+  pushed("thing-alert-new", ["Screens/MarketsViews.swift:tray#new"], [D], OPEN("Ethereum")+[{"tap": "button:=Alert, Alert"}], "text:=New alert", "button:=Alert, Alert",
          swipe_to=SEARCH, back=False),
   pushed("pivot-thing", ["Screens/PivotPage.swift:opened"], [D],
-         PIVOT+[{"tap": "button:^Kettlebell complexes for cyclists, "}], "text:=Site",
+         PIVOT+[{"tap": "button:^Kettlebell complexes for cyclists, "}], "text:^From your Telegram archive",
          "button:^Kettlebell complexes for cyclists, ", swipe_to=SEARCH),
   pushed("thing-reply-to", [TS+"walkingTo"], [D], OPEN("Critique day")+[{"tap": "button:^Replying to you"}], "button:=@you", "button:^Replying to you",
          swipe_to=SEARCH),
@@ -163,7 +163,7 @@ ENTRIES = [
   pushed("thing-follow-site", [TS+"faceTarget#followSite"], [D], OPEN("Bauhaus")+[{"tap": "button:^Follow, Follow"}],
          "field:?A site's address", "button:^Follow, Follow", swipe_to=SEARCH),
   pushed("alert-edit", ["Screens/MarketsViews.swift:tray#edit"], [D],
-         OPEN("Ethereum")+[{"tap": "button:^Add an alert"}, {"tap": "button:=+10%"}, {"tap": "button:=Set alert"}, {"tap": "button:^Rises to "}],
+         OPEN("Ethereum")+[{"tap": "button:=Alert, Alert"}, {"tap": "button:=+10%"}, {"tap": "button:=Set alert"}, {"tap": "button:^Rises to "}],
          "text:=Edit alert", "button:^Rises to ", swipe_to=SEARCH),
   # ---- The Wallet: every tile is the Wallet's page (prd §1321); what a tile raises rises over it ----
   rises("wallet-worth-a-look", [FS+"worthALook"], [D],
@@ -172,7 +172,7 @@ ENTRIES = [
   rises("wallet-track-subscription", [FS+"subscriptionAdd"], [D], WALLET+[{"tap": "button:^Subscriptions. "}, {"tap": "button:=Track a subscription"}],
         "field:?Search, or type any name"),
   # The history is a page pushed on the pager; a row's thing rises over it.
-  rises("wallet-history-thing", ["Screens/WalletHistoryScreen.swift:sheetThing"], [D], HISTORY+[{"tap": "button:^Swapped 0.5 ETH"}], "button:=Share, Share"),
+  rises("wallet-history-thing", ["Screens/WalletHistoryScreen.swift:sheetThing"], [D], HISTORY+[{"tap": "button:^Sent to Savings, "}], "button:=Share, Share"),
   rises("markets-follow-company", [FS+"watchAdd"], [D], MARKETS+[{"tap": "button:=Follow a company"}], GRAB),
   rises("markets-company", [FS+"company"], [D], MARKETS+[{"tap": "button:=Work"}, {"tap": "button:^Amazon, AMZN"}], GRAB),
   # ---- Notes, a page (prd §1321) ----

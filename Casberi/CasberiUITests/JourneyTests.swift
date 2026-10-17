@@ -70,7 +70,9 @@ final class JourneyTests: XCTestCase {
         let w = Walk("note", launch: Walk.demo, test: self)
         w.tap(w.el(.button, "label BEGINSWITH %@", "Notes, "), "Notes tile")
         // Tap, never hold: a hold of 0.45s records a voice note instead.
-        w.tap(w.el(.button, "label BEGINSWITH %@", "New"), "New")
+        // The section's + menu (prd §1348): New note, Voice note, All notes.
+        w.tap(w.el(.button, "label == %@", "Add to Notes"), "Notes plus")
+        w.tap(w.el(.button, "label == %@", "New note"), "New note")
         w.see(w.el(.textField, "label == %@ OR placeholderValue == %@", "Title", "Title"), "note page")
         w.type("Buy film", "type title")   // the title is focused on open
         w.tap(w.el(.button, "label == %@", "Done"), "Done")
@@ -92,7 +94,7 @@ final class JourneyTests: XCTestCase {
         w.finish()
     }
 
-    /// Track a subscription by hand, from the Feed's Sources tile and the
+    /// Track a subscription by hand, from the Library tab and the
     /// plus on Sources' Subscriptions count (§1161, §1164, §1292). Hulu is in
     /// the catalogue's Popular group and nowhere in the demo, so it is not
     /// already tracked. Return in the tray's search picks the exact catalogue
@@ -101,7 +103,7 @@ final class JourneyTests: XCTestCase {
     /// reads "Tracking Hulu".
     @MainActor func testSubscription() {
         let w = Walk("subscription", launch: Walk.demo, test: self)
-        w.tap(w.el(.button, "label BEGINSWITH %@", "Sources"), "Sources tile")
+        w.tap(w.el(.button, "label == %@", "Library"), "Library tab")
         // The plus on the count, not Start here's row of the same verb (the
         // demo has tracked plans, so that row is gone) and not the count.
         w.tap(w.visible(.button, "label == %@", "Track a subscription"), "Subscriptions plus")
@@ -160,7 +162,7 @@ final class JourneyTests: XCTestCase {
     /// a tap tracks one. The demo's Gmail is the mail, so the plus draws.
     @MainActor func testMailList() {
         let w = Walk("maillist", launch: Walk.demo, test: self)
-        w.tap(w.el(.button, "label BEGINSWITH %@", "Sources"), "Sources tile")
+        w.tap(w.el(.button, "label == %@", "Library"), "Library tab")
         w.tap(w.el(.button, "label == %@", "Track a mail list"), "Mail lists plus")
         // The demo's loudest sender with no list header.
         w.tap(w.el(.staticText, "label == %@", "Uma Patel"), "a sender who writes")
@@ -279,7 +281,7 @@ final class JourneyTests: XCTestCase {
     /// `-subscriptionTrack` as the walk's setup.
     @MainActor func testStopTracking() {
         let w = Walk("stoptracking", launch: Walk.demo + ["-subscriptionTrack", "Hulu:15.99"], test: self)
-        w.tap(w.el(.button, "label BEGINSWITH %@", "Sources"), "Sources tile")
+        w.tap(w.el(.button, "label == %@", "Library"), "Library tab")
         w.tap(w.visible(.button, "label CONTAINS %@", "Subscriptions"), "Subscriptions count")
         // The row under the box is one element named for the plan (prd §1317).
         w.hold(w.visible(.any, "label == %@", "Hulu"), "hold Hulu")
@@ -316,7 +318,7 @@ final class JourneyTests: XCTestCase {
         // stands only in Sources' library (prd §1316, §1321).
         let casberi = w.el(.button, "label == %@", "Casberi, Settings")
         if !casberi.waitForExistence(timeout: 6) {
-            w.tap(w.el(.button, "label BEGINSWITH %@", "Sources"), "Sources tile")
+            w.tap(w.el(.button, "label == %@", "Library"), "Library tab")
         }
         w.see(casberi, "Sources")
         w.begin()

@@ -103,7 +103,12 @@ struct DSCountTile: View {
             .dsGlyph(.body, weight: .regular)
             // Pink, as every verb row's plus is (prd §1265).
             .foregroundStyle(DS.brandInk)
-            .frame(width: DS.Hit.min, height: max(cellHeight ?? DS.Hit.min, DS.Hit.min))
+            // The glyph stands at its target's trailing side, so the word
+            // the target overlaps never touches it ("Subscriptions+", the
+            // 2026-10-17 nightly); the 44pt target is unchanged.
+            .padding(.trailing, DS.Space.s2)
+            .frame(width: DS.Hit.min, height: max(cellHeight ?? DS.Hit.min, DS.Hit.min),
+                   alignment: .trailing)
             .contentShape(Rectangle())
     }
 

@@ -549,7 +549,9 @@ struct AccountDetailSheet: View {
                 ? String(localized: "1 not on the list")
                 : String(localized: "\(reach.undeclaredHosts) not on the list")
         }
-        return String(localized: "All declared · \(reach.services) services this week")
+        return reach.services == 1
+            ? String(localized: "All declared · 1 service this week")
+            : String(localized: "All declared · \(reach.services) services this week")
     }
 
     /// Green for a clean week, attention for a host nobody declared — the

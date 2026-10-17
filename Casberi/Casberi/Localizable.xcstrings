@@ -59382,6 +59382,34 @@
         }
       }
     },
+    "All declared · 1 service this week" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Todo declarado · 1 servicio esta semana"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "すべて申告済み · 今週1件のサービス"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "모두 공개됨 · 이번 주 서비스 1개"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "全部已申报 · 本周 1 项服务"
+          }
+        }
+      }
+    },
     "All done" : {
       "localizations" : {
         "es" : {

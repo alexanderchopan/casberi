@@ -11,7 +11,7 @@ import Foundation
 
 enum L2beatDirectory {
 	/// The day this snapshot was taken from l2beat.com.
-	static let generated = "2026-10-14"
+	static let generated = "2026-10-17"
 
 	/// L2BEAT's risk sentences, stored once and indexed.
 	///
@@ -23,7 +23,7 @@ enum L2beatDirectory {
 		"Users can submit transactions to an L1 queue, but can't force them. The sequencers cannot selectively skip transactions but can stop processing the queue entirely. In other words, if the sequencers censor or are down, they are so for everyone.",
 		"STARKs and SNARKs are zero knowledge proofs that ensure state correctness. STARKs proofs are wrapped in SNARKs proofs for efficiency. SNARKs require a trusted setup.",
 		"All of the data (SD = state diffs) needed for proof construction is published onchain.",
-		"Non-emergency upgrades go through a 4d 3h delay, but the central operator can still censor withdrawal transactions by implementing a TransactionFilterer with no delay.",
+		"Non-emergency upgrades go through a 5d delay, but the central operator can still censor withdrawal transactions by implementing a TransactionFilterer with no delay.",
 		"There is no window for users to exit in case of an unwanted upgrade since contracts are instantly upgradable.",
 		"Only the whitelisted proposers can publish state roots on L1, so in the event of failure the withdrawals are frozen. There is a decentralized Governance system that can attempt changing Proposers with an upgrade.",
 		"Non-emergency upgrades go through a 3d delay, but the central operator can still censor withdrawal transactions by implementing a TransactionFilterer with no delay.",
@@ -62,6 +62,7 @@ enum L2beatDirectory {
 		"Proof construction and state derivation fully rely on data that is posted on EigenDA. The sequencer is publishing data to EigenDA v2. Sequencer transaction data roots are checked against the DACert Verifier data roots, signed off by EigenDA operators.",
 		"There is no exit window for users to exit in case of unwanted upgrades as they are initiated by the Security Council with instant upgrade power and without proper notice.",
 		"Proof construction and state derivation rely fully on data that is NOT published onchain.",
+		"Non-emergency upgrades go through a 4d 3h delay, but the central operator can still censor withdrawal transactions by implementing a TransactionFilterer with no delay.",
 		"Proof construction and state derivation rely fully on data that is NOT published onchain. A custom data availability (DA) provider without attestations is used, but data unavailability can be challenged.",
 		"In the event of a sequencer failure, users can force transactions to be included in the project's chain by sending them to L1. There can be up to a 2d delay on this operation.",
 		"No actor outside of the single Proposer can submit fraud proofs. Interactive proofs (INT) require multiple transactions over time to resolve. The challenge protocol can be subject to delay attacks. There is a 1d challenge period.",
@@ -75,7 +76,6 @@ enum L2beatDirectory {
 		"Users can exit funds at any time because contracts are not upgradeable.",
 		"Anyone can propose blocks if accompanied by a validity proof. Only the whitelisted proposers can propose state roots for recent blocks optimistically. Anyone can propose optimistically for L2 blocks that are older than 14d.",
 		"State roots are accepted on the basis of an AWS Nitro Enclave preconfirmation and a 2d time delay; the SP1 ZK proof system exists in the contracts but is currently unreachable because CHALLENGER_ROLE has no holders. Effective security reduces to trust the TEE and wait the delay. See the State Validation section below for details.",
-		"Currently the system permits invalid state roots. 'Pessimistic' proofs only validate the bridge accounting.",
 		"Proof construction and state derivation rely fully on data that is NOT published on chain. Fraxtal uses a separate data availability module developed by the Frax Core Team, and data availability attestations are not published on chain.",
 		"In the event of a sequencer failure, users can force transactions to be included in the project's chain by sending them to L1.",
 		"Users can permissionlessly become a sequencer (validator) by staking a minimum of 1 GNO to join the queue and wait to obtain block production rights. There is no specific censorship resistance mechanism against selective censorship by parts of the active validator set nor a way to force transactions from Ethereum L1.",
@@ -85,6 +85,7 @@ enum L2beatDirectory {
 		"In the event of a sequencer failure, users can force transactions to be included in the project's chain by sending them to L1. There can be up to a 2y 9mo delay on this operation.",
 		"There is no mechanism to have transactions be included if the sequencer is down or censoring. The Operator actively uses a TransactionFilterer contract, which requires accounts that enqueue or force transactions from L1 to be whitelisted.",
 		"There is no mechanism to have transactions be included if the sequencer is down or censoring. Although the functionality exists in the code, it is currently disabled.",
+		"Currently the system permits invalid state roots. 'Pessimistic' proofs only validate the bridge accounting.",
 		"Proof construction and state derivation rely fully on data that is ultimately NOT published on Ethereum.",
 		"In the event of a sequencer failure, users can force transactions to be included in the project's chain by sending them to L1. There can be up to a 7d delay on this operation. Proposing new blocks requires creating ZK proofs.",
 		"All data required for payments and withdrawals is self custodied by users.",
@@ -109,7 +110,7 @@ enum L2beatDirectory {
 		"In the event of a sequencer failure, users can force transactions to be included in the project's chain by sending them to L1. There can be up to a 11d delay on this operation.",
 		"Fraud proofs only allow 2 WHITELISTED actors watching the chain to prove that the state is incorrect. Interactive proofs (INT) require multiple transactions over time to resolve. The challenge protocol can be subject to delay attacks. There is a 30m challenge period.",
 		"Anyone can become a Proposer after 1mo 4d of inactivity from the currently whitelisted Proposers.",
-		"Although there is a sequencer set of 104 (called validators), if the cap of 105 is reached, no new stakers can join. A minimum of 100,000 POL stake is required to obtain block production rights. There is no specific censorship resistance mechanism against selective censorship by parts of the active validator set nor a way to force transactions from Ethereum L1. The canonical bridge between Polygon PoS and Ethereum allows for queuing transactions from the Ethereum and Polygon PoS sides, which cannot be skipped, except for halting the queue entirely.",
+		"There is a sequencer set of 104 (called validators), capped at 105. Validator entry is permissioned. A minimum of 100,000 POL stake is required to obtain block production rights. There is no specific censorship resistance mechanism against selective censorship by parts of the active validator set nor a way to force transactions from Ethereum L1. The canonical bridge between Polygon PoS and Ethereum allows for queuing transactions from the Ethereum and Polygon PoS sides, which cannot be skipped, except for halting the queue entirely.",
 		"Data is guaranteed to be available by an external proof of stake network of validators. On Ethereum, DA is attested via signed block headers.",
 		"The PoS network is composed of 104 validators. Blocks are included in the chain only if signed by 2/3+1 of the network stake. It's currently not possible to join the set if the validator cap is reached. The current validator cap is set to 105. In the event of a failure in reaching consensus, withdrawals are frozen.",
 		"Fraud proofs allow actors watching the chain to prove that the state is incorrect. Single round proofs (1R) only require a single transaction to resolve. ZK proofs are used to prove the correctness of the state transition. The system currently operates with a closed set of 1 whitelisted challenger.",
@@ -122,12 +123,11 @@ enum L2beatDirectory {
 		"Users can submit transactions to an L1 queue, but can't force them. The sequencers cannot selectively skip transactions but can stop processing the queue entirely. In other words, if the sequencers censor or are down, they are so for everyone. An inclusion becomes due after 9m 36s. From then on, a whitelisted proposer cannot publish another proposal without processing up to ten due inclusions.",
 		"Every proposal range is verified by exactly two proofs chosen from SGX (Geth), SGX (Reth), SP1 and RISC0, with at least one SP1 or RISC0 proof required. Proof submission is gated by ProverWhitelist, which has 2 whitelisted provers. This can affect liveness but does not allow finalizing invalid state.",
 		"Only the whitelisted proposers can publish state roots on L1, so in the event of failure the withdrawals are frozen. Proposing is gated by PreconfWhitelist, which selects a single active operator for the current epoch and has no permissionless fallback.",
-		"Proof construction relies fully on data that is NOT published onchain. There exists a Data Availability Committee (DAC) with a threshold of 1/2 that is tasked with protecting and supplying the data.",
-		"Even though there is a 3d Timelock for non-emergency upgrades, there are no forced transactions and thus no way to exit during operator censorship or downtime.",
 		"Fraud proofs allow actors watching the chain to prove that the state is incorrect. Single round proofs (1R) only require a single transaction to resolve. ZK proofs are used to prove the correctness of the state transition. Challenges are currently restricted to 1 whitelisted challenger and proposals are restricted to 1 whitelisted proposer.",
 		"Only whitelisted proposers can publish state roots. Permissionless proposing becomes available only after 1000y of proposer inactivity, which is not a practical recovery path.",
 		"Proof construction relies fully on data that is NOT published onchain. There exists a Data Availability Committee (DAC) with a threshold of 3/5 that is tasked with protecting and supplying the data.",
 		"Zero knowledge cryptography is used to ensure state correctness. Proofs are first verified on Linea and finally on Ethereum.",
+		"Admin swaps the Portal for 6 min to move 142,818 USDT out of a user account via a forced deposit.",
 		"Abstract announces its shutdown on December 15, 2026. Users must bridge off funds before that date.",
 		"Aztec discloses a critical proving-system vulnerability that can allow invalid state transitions.",
 		"Fuel pauses the bridge, stopping deposits and withdrawal messages.",
@@ -183,7 +183,7 @@ enum L2beatDirectory {
 				L2beatRisk(axis: .sequencerFailure, value: "Enqueue via L1", sentiment: .warning, explanation: note(0), second: nil),
 				L2beatRisk(axis: .stateValidation, value: "Validity proofs (ST, SN)", sentiment: .good, explanation: note(1), second: nil),
 				L2beatRisk(axis: .dataAvailability, value: "Onchain (SD)", sentiment: .good, explanation: note(2), second: nil),
-				L2beatRisk(axis: .exitWindow, value: "None", sentiment: .bad, explanation: note(4), second: L2beatRiskNote(value: "4d 3h", sentiment: .warning, explanation: note(3))),
+				L2beatRisk(axis: .exitWindow, value: "None", sentiment: .bad, explanation: note(4), second: L2beatRiskNote(value: "5d", sentiment: .warning, explanation: note(3))),
 				L2beatRisk(axis: .proposerFailure, value: "Replace proposer", sentiment: .warning, explanation: note(5), second: nil),
 			]),
 		L2beatProject(
@@ -313,7 +313,7 @@ enum L2beatDirectory {
 			hostChain: "Ethereum",
 			category: "Optimistic Rollup",
 			stage: .stage0,
-			underReview: false,
+			underReview: true,
 			archived: false,
 			risks: [
 				L2beatRisk(axis: .sequencerFailure, value: "Self sequence", sentiment: .good, explanation: note(11), second: nil),
@@ -381,7 +381,7 @@ enum L2beatDirectory {
 			hostChain: "Ethereum",
 			category: "Other",
 			stage: .stage0,
-			underReview: true,
+			underReview: false,
 			archived: false,
 			risks: [
 				L2beatRisk(axis: .sequencerFailure, value: "Self sequence", sentiment: .good, explanation: note(8), second: nil),
@@ -472,7 +472,7 @@ enum L2beatDirectory {
 				L2beatRisk(axis: .sequencerFailure, value: "Enqueue via L1", sentiment: .warning, explanation: note(0), second: nil),
 				L2beatRisk(axis: .stateValidation, value: "Validity proofs (ST, SN)", sentiment: .good, explanation: note(1), second: nil),
 				L2beatRisk(axis: .dataAvailability, value: "External", sentiment: .bad, explanation: note(41), second: nil),
-				L2beatRisk(axis: .exitWindow, value: "None", sentiment: .bad, explanation: note(4), second: L2beatRiskNote(value: "4d 3h", sentiment: .warning, explanation: note(3))),
+				L2beatRisk(axis: .exitWindow, value: "None", sentiment: .bad, explanation: note(4), second: L2beatRiskNote(value: "4d 3h", sentiment: .warning, explanation: note(42))),
 				L2beatRisk(axis: .proposerFailure, value: "Replace proposer", sentiment: .warning, explanation: note(5), second: nil),
 			]),
 		L2beatProject(
@@ -488,7 +488,7 @@ enum L2beatDirectory {
 			risks: [
 				L2beatRisk(axis: .sequencerFailure, value: "Self sequence", sentiment: .good, explanation: note(8), second: nil),
 				L2beatRisk(axis: .stateValidation, value: "Fraud proofs (INT)", sentiment: .bad, explanation: note(9), second: nil),
-				L2beatRisk(axis: .dataAvailability, value: "External", sentiment: .bad, explanation: note(42), second: nil),
+				L2beatRisk(axis: .dataAvailability, value: "External", sentiment: .bad, explanation: note(43), second: nil),
 				L2beatRisk(axis: .exitWindow, value: "None", sentiment: .bad, explanation: note(4), second: nil),
 				L2beatRisk(axis: .proposerFailure, value: "Cannot withdraw", sentiment: .bad, explanation: note(7), second: nil),
 			]),
@@ -520,11 +520,11 @@ enum L2beatDirectory {
 			underReview: false,
 			archived: false,
 			risks: [
-				L2beatRisk(axis: .sequencerFailure, value: "Self sequence", sentiment: .good, explanation: note(43), second: nil),
-				L2beatRisk(axis: .stateValidation, value: "Fraud proofs (INT)", sentiment: .bad, explanation: note(44), second: nil),
+				L2beatRisk(axis: .sequencerFailure, value: "Self sequence", sentiment: .good, explanation: note(44), second: nil),
+				L2beatRisk(axis: .stateValidation, value: "Fraud proofs (INT)", sentiment: .bad, explanation: note(45), second: nil),
 				L2beatRisk(axis: .dataAvailability, value: "Onchain", sentiment: .good, explanation: note(17), second: nil),
 				L2beatRisk(axis: .exitWindow, value: "None", sentiment: .bad, explanation: note(4), second: nil),
-				L2beatRisk(axis: .proposerFailure, value: "Self propose", sentiment: .good, explanation: note(45), second: nil),
+				L2beatRisk(axis: .proposerFailure, value: "Self propose", sentiment: .good, explanation: note(46), second: nil),
 			]),
 		L2beatProject(
 			id: "earnm",
@@ -537,9 +537,9 @@ enum L2beatDirectory {
 			underReview: false,
 			archived: false,
 			risks: [
-				L2beatRisk(axis: .sequencerFailure, value: "Self sequence", sentiment: .good, explanation: note(46), second: nil),
-				L2beatRisk(axis: .stateValidation, value: "Fraud proofs (INT)", sentiment: .bad, explanation: note(47), second: nil),
-				L2beatRisk(axis: .dataAvailability, value: "External (DAC)", sentiment: .bad, explanation: note(48), second: nil),
+				L2beatRisk(axis: .sequencerFailure, value: "Self sequence", sentiment: .good, explanation: note(47), second: nil),
+				L2beatRisk(axis: .stateValidation, value: "Fraud proofs (INT)", sentiment: .bad, explanation: note(48), second: nil),
+				L2beatRisk(axis: .dataAvailability, value: "External (DAC)", sentiment: .bad, explanation: note(49), second: nil),
 				L2beatRisk(axis: .exitWindow, value: "None", sentiment: .bad, explanation: note(4), second: nil),
 				L2beatRisk(axis: .proposerFailure, value: "Self propose", sentiment: .good, explanation: note(24), second: nil),
 			]),
@@ -571,9 +571,9 @@ enum L2beatDirectory {
 			underReview: false,
 			archived: false,
 			risks: [
-				L2beatRisk(axis: .sequencerFailure, value: "Self sequence", sentiment: .good, explanation: note(46), second: nil),
-				L2beatRisk(axis: .stateValidation, value: "Fraud proofs (INT)", sentiment: .bad, explanation: note(47), second: nil),
-				L2beatRisk(axis: .dataAvailability, value: "External (DAC)", sentiment: .bad, explanation: note(49), second: nil),
+				L2beatRisk(axis: .sequencerFailure, value: "Self sequence", sentiment: .good, explanation: note(47), second: nil),
+				L2beatRisk(axis: .stateValidation, value: "Fraud proofs (INT)", sentiment: .bad, explanation: note(48), second: nil),
+				L2beatRisk(axis: .dataAvailability, value: "External (DAC)", sentiment: .bad, explanation: note(50), second: nil),
 				L2beatRisk(axis: .exitWindow, value: "None", sentiment: .bad, explanation: note(4), second: nil),
 				L2beatRisk(axis: .proposerFailure, value: "Self propose", sentiment: .good, explanation: note(24), second: nil),
 			]),
@@ -588,7 +588,7 @@ enum L2beatDirectory {
 			underReview: false,
 			archived: false,
 			risks: [
-				L2beatRisk(axis: .sequencerFailure, value: "Self sequence", sentiment: .good, explanation: note(46), second: nil),
+				L2beatRisk(axis: .sequencerFailure, value: "Self sequence", sentiment: .good, explanation: note(47), second: nil),
 				L2beatRisk(axis: .stateValidation, value: "Fraud proofs (INT)", sentiment: .bad, explanation: note(12), second: nil),
 				L2beatRisk(axis: .dataAvailability, value: "External (DAC)", sentiment: .bad, explanation: note(13), second: nil),
 				L2beatRisk(axis: .exitWindow, value: "None", sentiment: .bad, explanation: note(4), second: nil),
@@ -605,8 +605,8 @@ enum L2beatDirectory {
 			underReview: true,
 			archived: false,
 			risks: [
-				L2beatRisk(axis: .sequencerFailure, value: "Self sequence", sentiment: .good, explanation: note(43), second: nil),
-				L2beatRisk(axis: .stateValidation, value: "Fraud proofs (INT)", sentiment: .bad, explanation: note(50), second: nil),
+				L2beatRisk(axis: .sequencerFailure, value: "Self sequence", sentiment: .good, explanation: note(44), second: nil),
+				L2beatRisk(axis: .stateValidation, value: "Fraud proofs (INT)", sentiment: .bad, explanation: note(51), second: nil),
 				L2beatRisk(axis: .dataAvailability, value: "External (DAC)", sentiment: .bad, explanation: note(13), second: nil),
 				L2beatRisk(axis: .exitWindow, value: "None", sentiment: .bad, explanation: note(4), second: nil),
 				L2beatRisk(axis: .proposerFailure, value: "Cannot withdraw", sentiment: .bad, explanation: note(7), second: nil),
@@ -623,10 +623,10 @@ enum L2beatDirectory {
 			archived: false,
 			risks: [
 				L2beatRisk(axis: .sequencerFailure, value: "Self sequence", sentiment: .good, explanation: note(36), second: nil),
-				L2beatRisk(axis: .stateValidation, value: "Fraud proofs (1R, ZK)", sentiment: .good, explanation: note(51), second: nil),
+				L2beatRisk(axis: .stateValidation, value: "Fraud proofs (1R, ZK)", sentiment: .good, explanation: note(52), second: nil),
 				L2beatRisk(axis: .dataAvailability, value: "Onchain", sentiment: .good, explanation: note(17), second: nil),
-				L2beatRisk(axis: .exitWindow, value: "∞", sentiment: .good, explanation: note(52), second: nil),
-				L2beatRisk(axis: .proposerFailure, value: "Self propose", sentiment: .good, explanation: note(53), second: nil),
+				L2beatRisk(axis: .exitWindow, value: "∞", sentiment: .good, explanation: note(53), second: nil),
+				L2beatRisk(axis: .proposerFailure, value: "Self propose", sentiment: .good, explanation: note(54), second: nil),
 			]),
 		L2beatProject(
 			id: "facet",
@@ -640,10 +640,10 @@ enum L2beatDirectory {
 			archived: false,
 			risks: [
 				L2beatRisk(axis: .sequencerFailure, value: "Self sequence", sentiment: .good, explanation: note(36), second: nil),
-				L2beatRisk(axis: .stateValidation, value: "Fraud proofs (1R, ZK)", sentiment: .good, explanation: note(51), second: nil),
+				L2beatRisk(axis: .stateValidation, value: "Fraud proofs (1R, ZK)", sentiment: .good, explanation: note(52), second: nil),
 				L2beatRisk(axis: .dataAvailability, value: "Onchain", sentiment: .good, explanation: note(17), second: nil),
-				L2beatRisk(axis: .exitWindow, value: "∞", sentiment: .good, explanation: note(52), second: nil),
-				L2beatRisk(axis: .proposerFailure, value: "Self propose", sentiment: .good, explanation: note(53), second: nil),
+				L2beatRisk(axis: .exitWindow, value: "∞", sentiment: .good, explanation: note(53), second: nil),
+				L2beatRisk(axis: .proposerFailure, value: "Self propose", sentiment: .good, explanation: note(54), second: nil),
 			]),
 		L2beatProject(
 			id: "fluent",
@@ -657,24 +657,7 @@ enum L2beatDirectory {
 			archived: false,
 			risks: [
 				L2beatRisk(axis: .sequencerFailure, value: "No mechanism", sentiment: .bad, explanation: note(18), second: nil),
-				L2beatRisk(axis: .stateValidation, value: "TEE attestations", sentiment: .bad, explanation: note(54), second: nil),
-				L2beatRisk(axis: .dataAvailability, value: "Onchain", sentiment: .good, explanation: note(17), second: nil),
-				L2beatRisk(axis: .exitWindow, value: "None", sentiment: .bad, explanation: note(4), second: nil),
-				L2beatRisk(axis: .proposerFailure, value: "Cannot withdraw", sentiment: .bad, explanation: note(7), second: nil),
-			]),
-		L2beatProject(
-			id: "forknet",
-			slug: "forknet",
-			name: "Forknet",
-			layer: .layer2,
-			hostChain: "Ethereum",
-			category: "Other",
-			stage: .notApplicable,
-			underReview: false,
-			archived: false,
-			risks: [
-				L2beatRisk(axis: .sequencerFailure, value: "Self sequence", sentiment: .good, explanation: note(8), second: nil),
-				L2beatRisk(axis: .stateValidation, value: "None", sentiment: .bad, explanation: note(55), second: nil),
+				L2beatRisk(axis: .stateValidation, value: "TEE attestations", sentiment: .bad, explanation: note(55), second: nil),
 				L2beatRisk(axis: .dataAvailability, value: "Onchain", sentiment: .good, explanation: note(17), second: nil),
 				L2beatRisk(axis: .exitWindow, value: "None", sentiment: .bad, explanation: note(4), second: nil),
 				L2beatRisk(axis: .proposerFailure, value: "Cannot withdraw", sentiment: .bad, explanation: note(7), second: nil),
@@ -726,7 +709,7 @@ enum L2beatDirectory {
 			risks: [
 				L2beatRisk(axis: .sequencerFailure, value: "Self sequence", sentiment: .good, explanation: note(8), second: nil),
 				L2beatRisk(axis: .stateValidation, value: "Fraud proofs (INT)", sentiment: .bad, explanation: note(9), second: nil),
-				L2beatRisk(axis: .dataAvailability, value: "External", sentiment: .bad, explanation: note(42), second: nil),
+				L2beatRisk(axis: .dataAvailability, value: "External", sentiment: .bad, explanation: note(43), second: nil),
 				L2beatRisk(axis: .exitWindow, value: "None", sentiment: .bad, explanation: note(4), second: nil),
 				L2beatRisk(axis: .proposerFailure, value: "Cannot withdraw", sentiment: .bad, explanation: note(7), second: nil),
 			]),
@@ -759,7 +742,7 @@ enum L2beatDirectory {
 			archived: false,
 			risks: [
 				L2beatRisk(axis: .sequencerFailure, value: "Self sequence", sentiment: .good, explanation: note(62), second: nil),
-				L2beatRisk(axis: .stateValidation, value: "Fraud proofs (INT)", sentiment: .bad, explanation: note(50), second: nil),
+				L2beatRisk(axis: .stateValidation, value: "Fraud proofs (INT)", sentiment: .bad, explanation: note(51), second: nil),
 				L2beatRisk(axis: .dataAvailability, value: "External (DAC)", sentiment: .bad, explanation: note(13), second: nil),
 				L2beatRisk(axis: .exitWindow, value: "None", sentiment: .bad, explanation: note(4), second: nil),
 				L2beatRisk(axis: .proposerFailure, value: "Cannot withdraw", sentiment: .bad, explanation: note(7), second: nil),
@@ -778,7 +761,7 @@ enum L2beatDirectory {
 				L2beatRisk(axis: .sequencerFailure, value: "No mechanism", sentiment: .bad, explanation: note(63), second: nil),
 				L2beatRisk(axis: .stateValidation, value: "Validity proofs (ST, SN)", sentiment: .good, explanation: note(1), second: nil),
 				L2beatRisk(axis: .dataAvailability, value: "External", sentiment: .bad, explanation: note(41), second: nil),
-				L2beatRisk(axis: .exitWindow, value: "None", sentiment: .bad, explanation: note(4), second: L2beatRiskNote(value: "4d 3h", sentiment: .warning, explanation: note(3))),
+				L2beatRisk(axis: .exitWindow, value: "None", sentiment: .bad, explanation: note(4), second: L2beatRiskNote(value: "4d 3h", sentiment: .warning, explanation: note(42))),
 				L2beatRisk(axis: .proposerFailure, value: "Replace proposer", sentiment: .warning, explanation: note(5), second: nil),
 			]),
 		L2beatProject(
@@ -789,7 +772,7 @@ enum L2beatDirectory {
 			hostChain: "Ethereum",
 			category: "Other",
 			stage: .stage0,
-			underReview: true,
+			underReview: false,
 			archived: false,
 			risks: [
 				L2beatRisk(axis: .sequencerFailure, value: "Self sequence", sentiment: .good, explanation: note(8), second: nil),
@@ -810,7 +793,7 @@ enum L2beatDirectory {
 			archived: false,
 			risks: [
 				L2beatRisk(axis: .sequencerFailure, value: "No mechanism", sentiment: .bad, explanation: note(64), second: nil),
-				L2beatRisk(axis: .stateValidation, value: "None", sentiment: .bad, explanation: note(55), second: nil),
+				L2beatRisk(axis: .stateValidation, value: "None", sentiment: .bad, explanation: note(65), second: nil),
 				L2beatRisk(axis: .dataAvailability, value: "External", sentiment: .bad, explanation: note(41), second: nil),
 				L2beatRisk(axis: .exitWindow, value: "None", sentiment: .bad, explanation: note(4), second: nil),
 				L2beatRisk(axis: .proposerFailure, value: "Cannot withdraw", sentiment: .bad, explanation: note(7), second: nil),
@@ -845,7 +828,7 @@ enum L2beatDirectory {
 			risks: [
 				L2beatRisk(axis: .sequencerFailure, value: "No mechanism", sentiment: .bad, explanation: note(18), second: nil),
 				L2beatRisk(axis: .stateValidation, value: "None", sentiment: .bad, explanation: note(35), second: nil),
-				L2beatRisk(axis: .dataAvailability, value: "External", sentiment: .bad, explanation: note(65), second: nil),
+				L2beatRisk(axis: .dataAvailability, value: "External", sentiment: .bad, explanation: note(66), second: nil),
 				L2beatRisk(axis: .exitWindow, value: "None", sentiment: .bad, explanation: note(4), second: nil),
 				L2beatRisk(axis: .proposerFailure, value: "Cannot withdraw", sentiment: .bad, explanation: note(7), second: nil),
 			]),
@@ -894,11 +877,11 @@ enum L2beatDirectory {
 			underReview: false,
 			archived: false,
 			risks: [
-				L2beatRisk(axis: .sequencerFailure, value: "Self sequence", sentiment: .good, explanation: note(66), second: nil),
+				L2beatRisk(axis: .sequencerFailure, value: "Self sequence", sentiment: .good, explanation: note(67), second: nil),
 				L2beatRisk(axis: .stateValidation, value: "Validity proofs (SN)", sentiment: .good, explanation: note(29), second: nil),
-				L2beatRisk(axis: .dataAvailability, value: "Self custodied", sentiment: .good, explanation: note(67), second: nil),
+				L2beatRisk(axis: .dataAvailability, value: "Self custodied", sentiment: .good, explanation: note(68), second: nil),
 				L2beatRisk(axis: .exitWindow, value: "None", sentiment: .bad, explanation: note(4), second: nil),
-				L2beatRisk(axis: .proposerFailure, value: "Self propose", sentiment: .good, explanation: note(68), second: nil),
+				L2beatRisk(axis: .proposerFailure, value: "Self propose", sentiment: .good, explanation: note(69), second: nil),
 			]),
 		L2beatProject(
 			id: "katana",
@@ -914,7 +897,7 @@ enum L2beatDirectory {
 				L2beatRisk(axis: .sequencerFailure, value: "Self sequence", sentiment: .good, explanation: note(8), second: L2beatRiskNote(value: "The self-sequencing delay is configured offchain and the node source and config are unverified.", sentiment: .warning, explanation: nil)),
 				L2beatRisk(axis: .stateValidation, value: "Validity proofs (ST, SN)", sentiment: .good, explanation: note(1), second: nil),
 				L2beatRisk(axis: .dataAvailability, value: "Onchain", sentiment: .good, explanation: note(17), second: nil),
-				L2beatRisk(axis: .exitWindow, value: "None", sentiment: .bad, explanation: note(69), second: L2beatRiskNote(value: "Even though there is a 3d Timelock for non-emergency upgrades, self-proposing is disabled.", sentiment: .warning, explanation: nil)),
+				L2beatRisk(axis: .exitWindow, value: "None", sentiment: .bad, explanation: note(70), second: L2beatRiskNote(value: "Even though there is a 3d Timelock for non-emergency upgrades, self-proposing is disabled.", sentiment: .warning, explanation: nil)),
 				L2beatRisk(axis: .proposerFailure, value: "Cannot withdraw", sentiment: .bad, explanation: note(7), second: nil),
 			]),
 		L2beatProject(
@@ -925,11 +908,11 @@ enum L2beatDirectory {
 			hostChain: "Ethereum",
 			category: "Other",
 			stage: .stage0,
-			underReview: false,
+			underReview: true,
 			archived: false,
 			risks: [
 				L2beatRisk(axis: .sequencerFailure, value: "Self sequence", sentiment: .good, explanation: note(11), second: nil),
-				L2beatRisk(axis: .stateValidation, value: "Fraud proofs (INT)", sentiment: .bad, explanation: note(50), second: nil),
+				L2beatRisk(axis: .stateValidation, value: "Fraud proofs (INT)", sentiment: .bad, explanation: note(51), second: nil),
 				L2beatRisk(axis: .dataAvailability, value: "External (DAC)", sentiment: .bad, explanation: note(13), second: nil),
 				L2beatRisk(axis: .exitWindow, value: "None", sentiment: .bad, explanation: note(4), second: nil),
 				L2beatRisk(axis: .proposerFailure, value: "Cannot withdraw", sentiment: .bad, explanation: note(7), second: nil),
@@ -947,8 +930,8 @@ enum L2beatDirectory {
 			risks: [
 				L2beatRisk(axis: .sequencerFailure, value: "Enqueue via L1", sentiment: .warning, explanation: note(0), second: nil),
 				L2beatRisk(axis: .stateValidation, value: "Validity proofs (ST, SN)", sentiment: .good, explanation: note(1), second: nil),
-				L2beatRisk(axis: .dataAvailability, value: "External", sentiment: .warning, explanation: note(70), second: nil),
-				L2beatRisk(axis: .exitWindow, value: "None", sentiment: .bad, explanation: note(4), second: L2beatRiskNote(value: "4d 3h", sentiment: .warning, explanation: note(3))),
+				L2beatRisk(axis: .dataAvailability, value: "External", sentiment: .warning, explanation: note(71), second: nil),
+				L2beatRisk(axis: .exitWindow, value: "None", sentiment: .bad, explanation: note(4), second: L2beatRiskNote(value: "5d", sentiment: .warning, explanation: note(3))),
 				L2beatRisk(axis: .proposerFailure, value: "Replace proposer", sentiment: .warning, explanation: note(5), second: nil),
 			]),
 		L2beatProject(
@@ -962,11 +945,11 @@ enum L2beatDirectory {
 			underReview: true,
 			archived: false,
 			risks: [
-				L2beatRisk(axis: .sequencerFailure, value: "Force via L1", sentiment: .good, explanation: note(71), second: nil),
+				L2beatRisk(axis: .sequencerFailure, value: "Force via L1", sentiment: .good, explanation: note(72), second: nil),
 				L2beatRisk(axis: .stateValidation, value: "Validity proofs (SN)", sentiment: .good, explanation: note(29), second: nil),
 				L2beatRisk(axis: .dataAvailability, value: "Onchain (SD)", sentiment: .good, explanation: note(2), second: nil),
 				L2beatRisk(axis: .exitWindow, value: "None", sentiment: .bad, explanation: note(4), second: nil),
-				L2beatRisk(axis: .proposerFailure, value: "Use escape hatch", sentiment: .good, explanation: note(72), second: nil),
+				L2beatRisk(axis: .proposerFailure, value: "Use escape hatch", sentiment: .good, explanation: note(73), second: nil),
 			]),
 		L2beatProject(
 			id: "lighter-robinhood",
@@ -979,11 +962,11 @@ enum L2beatDirectory {
 			underReview: false,
 			archived: false,
 			risks: [
-				L2beatRisk(axis: .sequencerFailure, value: "No mechanism", sentiment: .bad, explanation: note(73), second: nil),
-				L2beatRisk(axis: .stateValidation, value: "Fraud proofs (INT)", sentiment: .bad, explanation: note(74), second: nil),
+				L2beatRisk(axis: .sequencerFailure, value: "No mechanism", sentiment: .bad, explanation: note(74), second: nil),
+				L2beatRisk(axis: .stateValidation, value: "Fraud proofs (INT)", sentiment: .bad, explanation: note(75), second: nil),
 				L2beatRisk(axis: .dataAvailability, value: "Onchain", sentiment: .good, explanation: note(20), second: nil),
 				L2beatRisk(axis: .exitWindow, value: "None", sentiment: .bad, explanation: note(4), second: nil),
-				L2beatRisk(axis: .proposerFailure, value: "Use escape hatch", sentiment: .good, explanation: note(72), second: nil),
+				L2beatRisk(axis: .proposerFailure, value: "Use escape hatch", sentiment: .good, explanation: note(73), second: nil),
 			]),
 		L2beatProject(
 			id: "lightlink",
@@ -1013,11 +996,11 @@ enum L2beatDirectory {
 			underReview: false,
 			archived: false,
 			risks: [
-				L2beatRisk(axis: .sequencerFailure, value: "No mechanism", sentiment: .bad, explanation: note(75), second: nil),
+				L2beatRisk(axis: .sequencerFailure, value: "No mechanism", sentiment: .bad, explanation: note(76), second: nil),
 				L2beatRisk(axis: .stateValidation, value: "Validity proofs (SN)", sentiment: .good, explanation: note(29), second: nil),
-				L2beatRisk(axis: .dataAvailability, value: "Onchain", sentiment: .good, explanation: note(76), second: nil),
+				L2beatRisk(axis: .dataAvailability, value: "Onchain", sentiment: .good, explanation: note(77), second: nil),
 				L2beatRisk(axis: .exitWindow, value: "None", sentiment: .bad, explanation: note(4), second: nil),
-				L2beatRisk(axis: .proposerFailure, value: "Cannot withdraw", sentiment: .bad, explanation: note(77), second: nil),
+				L2beatRisk(axis: .proposerFailure, value: "Cannot withdraw", sentiment: .bad, explanation: note(78), second: nil),
 			]),
 		L2beatProject(
 			id: "lisk",
@@ -1048,7 +1031,7 @@ enum L2beatDirectory {
 			archived: false,
 			risks: [
 				L2beatRisk(axis: .sequencerFailure, value: "No mechanism", sentiment: .bad, explanation: note(64), second: nil),
-				L2beatRisk(axis: .stateValidation, value: "None", sentiment: .bad, explanation: note(55), second: nil),
+				L2beatRisk(axis: .stateValidation, value: "None", sentiment: .bad, explanation: note(65), second: nil),
 				L2beatRisk(axis: .dataAvailability, value: "External", sentiment: .bad, explanation: note(41), second: nil),
 				L2beatRisk(axis: .exitWindow, value: "None", sentiment: .bad, explanation: note(4), second: nil),
 				L2beatRisk(axis: .proposerFailure, value: "Cannot withdraw", sentiment: .bad, explanation: note(7), second: nil),
@@ -1061,7 +1044,7 @@ enum L2beatDirectory {
 			hostChain: "Ethereum",
 			category: "Other",
 			stage: .stage0,
-			underReview: true,
+			underReview: false,
 			archived: false,
 			risks: [
 				L2beatRisk(axis: .sequencerFailure, value: "Self sequence", sentiment: .good, explanation: note(8), second: nil),
@@ -1099,7 +1082,7 @@ enum L2beatDirectory {
 			archived: false,
 			risks: [
 				L2beatRisk(axis: .sequencerFailure, value: "Self sequence", sentiment: .good, explanation: note(8), second: nil),
-				L2beatRisk(axis: .stateValidation, value: "Fraud proofs (1R, ZK)", sentiment: .bad, explanation: note(78), second: nil),
+				L2beatRisk(axis: .stateValidation, value: "Fraud proofs (1R, ZK)", sentiment: .bad, explanation: note(79), second: nil),
 				L2beatRisk(axis: .dataAvailability, value: "External", sentiment: .bad, explanation: note(10), second: nil),
 				L2beatRisk(axis: .exitWindow, value: "None", sentiment: .bad, explanation: note(4), second: nil),
 				L2beatRisk(axis: .proposerFailure, value: "Cannot withdraw", sentiment: .bad, explanation: note(7), second: nil),
@@ -1132,11 +1115,11 @@ enum L2beatDirectory {
 			underReview: false,
 			archived: false,
 			risks: [
-				L2beatRisk(axis: .sequencerFailure, value: "No mechanism", sentiment: .bad, explanation: note(79), second: nil),
-				L2beatRisk(axis: .stateValidation, value: "Fraud proofs (INT)", sentiment: .bad, explanation: note(80), second: nil),
+				L2beatRisk(axis: .sequencerFailure, value: "No mechanism", sentiment: .bad, explanation: note(80), second: nil),
+				L2beatRisk(axis: .stateValidation, value: "Fraud proofs (INT)", sentiment: .bad, explanation: note(81), second: nil),
 				L2beatRisk(axis: .dataAvailability, value: "Onchain", sentiment: .good, explanation: note(17), second: nil),
 				L2beatRisk(axis: .exitWindow, value: "None", sentiment: .bad, explanation: note(4), second: nil),
-				L2beatRisk(axis: .proposerFailure, value: "Security Council minority", sentiment: .warning, explanation: note(81), second: nil),
+				L2beatRisk(axis: .proposerFailure, value: "Security Council minority", sentiment: .warning, explanation: note(82), second: nil),
 			]),
 		L2beatProject(
 			id: "mode",
@@ -1166,11 +1149,11 @@ enum L2beatDirectory {
 			underReview: false,
 			archived: false,
 			risks: [
-				L2beatRisk(axis: .sequencerFailure, value: "Force via L1", sentiment: .good, explanation: note(82), second: nil),
+				L2beatRisk(axis: .sequencerFailure, value: "Force via L1", sentiment: .good, explanation: note(83), second: nil),
 				L2beatRisk(axis: .stateValidation, value: "Fraud proofs (1R, ZK)", sentiment: .warning, explanation: note(38), second: nil),
 				L2beatRisk(axis: .dataAvailability, value: "Onchain", sentiment: .good, explanation: note(17), second: nil),
 				L2beatRisk(axis: .exitWindow, value: "None", sentiment: .bad, explanation: note(4), second: nil),
-				L2beatRisk(axis: .proposerFailure, value: "Self propose", sentiment: .good, explanation: note(83), second: nil),
+				L2beatRisk(axis: .proposerFailure, value: "Self propose", sentiment: .good, explanation: note(84), second: nil),
 			]),
 		L2beatProject(
 			id: "nillion",
@@ -1235,8 +1218,8 @@ enum L2beatDirectory {
 			archived: false,
 			risks: [
 				L2beatRisk(axis: .sequencerFailure, value: "No mechanism", sentiment: .bad, explanation: note(18), second: nil),
-				L2beatRisk(axis: .stateValidation, value: "Validity proofs (ST)", sentiment: .good, explanation: note(84), second: nil),
-				L2beatRisk(axis: .dataAvailability, value: "External", sentiment: .bad, explanation: note(85), second: nil),
+				L2beatRisk(axis: .stateValidation, value: "Validity proofs (ST)", sentiment: .good, explanation: note(85), second: nil),
+				L2beatRisk(axis: .dataAvailability, value: "External", sentiment: .bad, explanation: note(86), second: nil),
 				L2beatRisk(axis: .exitWindow, value: "None", sentiment: .bad, explanation: note(4), second: nil),
 				L2beatRisk(axis: .proposerFailure, value: "Cannot withdraw", sentiment: .bad, explanation: note(7), second: nil),
 			]),
@@ -1269,7 +1252,7 @@ enum L2beatDirectory {
 			archived: false,
 			risks: [
 				L2beatRisk(axis: .sequencerFailure, value: "No mechanism", sentiment: .bad, explanation: note(64), second: nil),
-				L2beatRisk(axis: .stateValidation, value: "None", sentiment: .bad, explanation: note(55), second: nil),
+				L2beatRisk(axis: .stateValidation, value: "None", sentiment: .bad, explanation: note(65), second: nil),
 				L2beatRisk(axis: .dataAvailability, value: "External", sentiment: .bad, explanation: note(41), second: nil),
 				L2beatRisk(axis: .exitWindow, value: "None", sentiment: .bad, explanation: note(4), second: nil),
 				L2beatRisk(axis: .proposerFailure, value: "Cannot withdraw", sentiment: .bad, explanation: note(7), second: nil),
@@ -1282,11 +1265,11 @@ enum L2beatDirectory {
 			hostChain: "Ethereum",
 			category: "Other",
 			stage: .stage0,
-			underReview: false,
+			underReview: true,
 			archived: false,
 			risks: [
 				L2beatRisk(axis: .sequencerFailure, value: "Self sequence", sentiment: .good, explanation: note(11), second: nil),
-				L2beatRisk(axis: .stateValidation, value: "Fraud proofs (INT)", sentiment: .bad, explanation: note(50), second: nil),
+				L2beatRisk(axis: .stateValidation, value: "Fraud proofs (INT)", sentiment: .bad, explanation: note(51), second: nil),
 				L2beatRisk(axis: .dataAvailability, value: "External (DAC)", sentiment: .bad, explanation: note(13), second: nil),
 				L2beatRisk(axis: .exitWindow, value: "None", sentiment: .bad, explanation: note(4), second: nil),
 				L2beatRisk(axis: .proposerFailure, value: "Cannot withdraw", sentiment: .bad, explanation: note(7), second: nil),
@@ -1319,11 +1302,11 @@ enum L2beatDirectory {
 			underReview: false,
 			archived: false,
 			risks: [
-				L2beatRisk(axis: .sequencerFailure, value: "Self sequence", sentiment: .good, explanation: note(86), second: nil),
-				L2beatRisk(axis: .stateValidation, value: "Fraud proofs (INT)", sentiment: .bad, explanation: note(87), second: nil),
+				L2beatRisk(axis: .sequencerFailure, value: "Self sequence", sentiment: .good, explanation: note(87), second: nil),
+				L2beatRisk(axis: .stateValidation, value: "Fraud proofs (INT)", sentiment: .bad, explanation: note(88), second: nil),
 				L2beatRisk(axis: .dataAvailability, value: "External (DAC)", sentiment: .bad, explanation: note(13), second: nil),
 				L2beatRisk(axis: .exitWindow, value: "None", sentiment: .bad, explanation: note(4), second: nil),
-				L2beatRisk(axis: .proposerFailure, value: "Self propose", sentiment: .good, explanation: note(88), second: nil),
+				L2beatRisk(axis: .proposerFailure, value: "Self propose", sentiment: .good, explanation: note(89), second: nil),
 			]),
 		L2beatProject(
 			id: "plumenetwork",
@@ -1333,11 +1316,11 @@ enum L2beatDirectory {
 			hostChain: "Ethereum",
 			category: "Other",
 			stage: .stage0,
-			underReview: false,
+			underReview: true,
 			archived: false,
 			risks: [
 				L2beatRisk(axis: .sequencerFailure, value: "Self sequence", sentiment: .good, explanation: note(11), second: nil),
-				L2beatRisk(axis: .stateValidation, value: "Fraud proofs (INT)", sentiment: .bad, explanation: note(50), second: nil),
+				L2beatRisk(axis: .stateValidation, value: "Fraud proofs (INT)", sentiment: .bad, explanation: note(51), second: nil),
 				L2beatRisk(axis: .dataAvailability, value: "External (DAC)", sentiment: .bad, explanation: note(13), second: nil),
 				L2beatRisk(axis: .exitWindow, value: "None", sentiment: .bad, explanation: note(4), second: nil),
 				L2beatRisk(axis: .proposerFailure, value: "Cannot withdraw", sentiment: .bad, explanation: note(7), second: nil),
@@ -1350,14 +1333,14 @@ enum L2beatDirectory {
 			hostChain: "Ethereum",
 			category: "Other",
 			stage: .notApplicable,
-			underReview: true,
+			underReview: false,
 			archived: false,
 			risks: [
-				L2beatRisk(axis: .sequencerFailure, value: "Decentralized Sequencer Set", sentiment: .warning, explanation: note(89), second: nil),
+				L2beatRisk(axis: .sequencerFailure, value: "Decentralized Sequencer Set", sentiment: .warning, explanation: note(90), second: nil),
 				L2beatRisk(axis: .stateValidation, value: "None", sentiment: .bad, explanation: note(35), second: nil),
-				L2beatRisk(axis: .dataAvailability, value: "PoS network", sentiment: .warning, explanation: note(90), second: nil),
+				L2beatRisk(axis: .dataAvailability, value: "PoS network", sentiment: .warning, explanation: note(91), second: nil),
 				L2beatRisk(axis: .exitWindow, value: "None", sentiment: .bad, explanation: note(4), second: nil),
-				L2beatRisk(axis: .proposerFailure, value: "Cannot withdraw", sentiment: .warning, explanation: note(91), second: nil),
+				L2beatRisk(axis: .proposerFailure, value: "Cannot withdraw", sentiment: .warning, explanation: note(92), second: nil),
 			]),
 		L2beatProject(
 			id: "polygonzkevm",
@@ -1371,7 +1354,7 @@ enum L2beatDirectory {
 			archived: false,
 			risks: [
 				L2beatRisk(axis: .sequencerFailure, value: "No mechanism", sentiment: .bad, explanation: note(64), second: nil),
-				L2beatRisk(axis: .stateValidation, value: "None", sentiment: .bad, explanation: note(55), second: nil),
+				L2beatRisk(axis: .stateValidation, value: "None", sentiment: .bad, explanation: note(65), second: nil),
 				L2beatRisk(axis: .dataAvailability, value: "External", sentiment: .bad, explanation: note(41), second: nil),
 				L2beatRisk(axis: .exitWindow, value: "None", sentiment: .bad, explanation: note(4), second: nil),
 				L2beatRisk(axis: .proposerFailure, value: "Cannot withdraw", sentiment: .bad, explanation: note(7), second: nil),
@@ -1384,7 +1367,7 @@ enum L2beatDirectory {
 			hostChain: "Ethereum",
 			category: "Other",
 			stage: .stage0,
-			underReview: false,
+			underReview: true,
 			archived: false,
 			risks: [
 				L2beatRisk(axis: .sequencerFailure, value: "Self sequence", sentiment: .good, explanation: note(11), second: nil),
@@ -1405,7 +1388,7 @@ enum L2beatDirectory {
 			archived: false,
 			risks: [
 				L2beatRisk(axis: .sequencerFailure, value: "Self sequence", sentiment: .good, explanation: note(8), second: nil),
-				L2beatRisk(axis: .stateValidation, value: "Fraud proofs (1R, ZK)", sentiment: .warning, explanation: note(92), second: nil),
+				L2beatRisk(axis: .stateValidation, value: "Fraud proofs (1R, ZK)", sentiment: .warning, explanation: note(93), second: nil),
 				L2beatRisk(axis: .dataAvailability, value: "External", sentiment: .warning, explanation: note(39), second: nil),
 				L2beatRisk(axis: .exitWindow, value: "None", sentiment: .bad, explanation: note(4), second: nil),
 				L2beatRisk(axis: .proposerFailure, value: "Cannot withdraw", sentiment: .bad, explanation: note(7), second: nil),
@@ -1421,8 +1404,8 @@ enum L2beatDirectory {
 			underReview: false,
 			archived: false,
 			risks: [
-				L2beatRisk(axis: .sequencerFailure, value: "No mechanism", sentiment: .bad, explanation: note(73), second: nil),
-				L2beatRisk(axis: .stateValidation, value: "Fraud proofs (INT)", sentiment: .bad, explanation: note(74), second: nil),
+				L2beatRisk(axis: .sequencerFailure, value: "No mechanism", sentiment: .bad, explanation: note(74), second: nil),
+				L2beatRisk(axis: .stateValidation, value: "Fraud proofs (INT)", sentiment: .bad, explanation: note(75), second: nil),
 				L2beatRisk(axis: .dataAvailability, value: "Onchain", sentiment: .good, explanation: note(17), second: nil),
 				L2beatRisk(axis: .exitWindow, value: "None", sentiment: .bad, explanation: note(4), second: nil),
 				L2beatRisk(axis: .proposerFailure, value: "Self propose", sentiment: .good, explanation: note(24), second: nil),
@@ -1455,11 +1438,11 @@ enum L2beatDirectory {
 			underReview: false,
 			archived: false,
 			risks: [
-				L2beatRisk(axis: .sequencerFailure, value: "Self sequence", sentiment: .good, explanation: note(66), second: nil),
+				L2beatRisk(axis: .sequencerFailure, value: "Self sequence", sentiment: .good, explanation: note(67), second: nil),
 				L2beatRisk(axis: .stateValidation, value: "Validity proofs (ST, SN)", sentiment: .good, explanation: note(1), second: nil),
 				L2beatRisk(axis: .dataAvailability, value: "Onchain", sentiment: .good, explanation: note(17), second: nil),
 				L2beatRisk(axis: .exitWindow, value: "None", sentiment: .bad, explanation: note(4), second: nil),
-				L2beatRisk(axis: .proposerFailure, value: "Self propose", sentiment: .good, explanation: note(68), second: nil),
+				L2beatRisk(axis: .proposerFailure, value: "Self propose", sentiment: .good, explanation: note(69), second: nil),
 			]),
 		L2beatProject(
 			id: "settlus",
@@ -1508,7 +1491,7 @@ enum L2beatDirectory {
 			risks: [
 				L2beatRisk(axis: .sequencerFailure, value: "Enqueue via L1", sentiment: .warning, explanation: note(0), second: nil),
 				L2beatRisk(axis: .stateValidation, value: "None", sentiment: .bad, explanation: note(35), second: nil),
-				L2beatRisk(axis: .dataAvailability, value: "External (DAC)", sentiment: .bad, explanation: note(93), second: nil),
+				L2beatRisk(axis: .dataAvailability, value: "External (DAC)", sentiment: .bad, explanation: note(94), second: nil),
 				L2beatRisk(axis: .exitWindow, value: "None", sentiment: .bad, explanation: note(4), second: nil),
 				L2beatRisk(axis: .proposerFailure, value: "Cannot withdraw", sentiment: .bad, explanation: note(7), second: nil),
 			]),
@@ -1524,7 +1507,7 @@ enum L2beatDirectory {
 			archived: false,
 			risks: [
 				L2beatRisk(axis: .sequencerFailure, value: "No mechanism", sentiment: .bad, explanation: note(64), second: nil),
-				L2beatRisk(axis: .stateValidation, value: "None", sentiment: .bad, explanation: note(55), second: nil),
+				L2beatRisk(axis: .stateValidation, value: "None", sentiment: .bad, explanation: note(65), second: nil),
 				L2beatRisk(axis: .dataAvailability, value: "External", sentiment: .bad, explanation: note(41), second: nil),
 				L2beatRisk(axis: .exitWindow, value: "None", sentiment: .bad, explanation: note(4), second: nil),
 				L2beatRisk(axis: .proposerFailure, value: "Cannot withdraw", sentiment: .bad, explanation: note(7), second: nil),
@@ -1541,7 +1524,7 @@ enum L2beatDirectory {
 			archived: false,
 			risks: [
 				L2beatRisk(axis: .sequencerFailure, value: "Self sequence", sentiment: .good, explanation: note(8), second: nil),
-				L2beatRisk(axis: .stateValidation, value: "None", sentiment: .bad, explanation: note(94), second: nil),
+				L2beatRisk(axis: .stateValidation, value: "None", sentiment: .bad, explanation: note(95), second: nil),
 				L2beatRisk(axis: .dataAvailability, value: "Onchain", sentiment: .good, explanation: note(17), second: nil),
 				L2beatRisk(axis: .exitWindow, value: "None", sentiment: .bad, explanation: note(40), second: nil),
 				L2beatRisk(axis: .proposerFailure, value: "Cannot withdraw", sentiment: .bad, explanation: note(7), second: nil),
@@ -1571,13 +1554,13 @@ enum L2beatDirectory {
 			hostChain: "Ethereum",
 			category: "Validium",
 			stage: .stage0,
-			underReview: false,
+			underReview: true,
 			archived: false,
 			risks: [
 				L2beatRisk(axis: .sequencerFailure, value: "No mechanism", sentiment: .bad, explanation: note(63), second: nil),
 				L2beatRisk(axis: .stateValidation, value: "Validity proofs (ST, SN)", sentiment: .good, explanation: note(1), second: nil),
-				L2beatRisk(axis: .dataAvailability, value: "External", sentiment: .warning, explanation: note(70), second: nil),
-				L2beatRisk(axis: .exitWindow, value: "None", sentiment: .bad, explanation: note(4), second: L2beatRiskNote(value: "4d 3h", sentiment: .warning, explanation: note(3))),
+				L2beatRisk(axis: .dataAvailability, value: "External", sentiment: .warning, explanation: note(71), second: nil),
+				L2beatRisk(axis: .exitWindow, value: "None", sentiment: .bad, explanation: note(4), second: L2beatRiskNote(value: "4d 3h", sentiment: .warning, explanation: note(42))),
 				L2beatRisk(axis: .proposerFailure, value: "Replace proposer", sentiment: .warning, explanation: note(5), second: nil),
 			]),
 		L2beatProject(
@@ -1588,14 +1571,14 @@ enum L2beatDirectory {
 			hostChain: "Ethereum",
 			category: "ZK Rollup",
 			stage: .stage1,
-			underReview: true,
+			underReview: false,
 			archived: false,
 			risks: [
-				L2beatRisk(axis: .sequencerFailure, value: "Log via L1", sentiment: .warning, explanation: note(95), second: nil),
-				L2beatRisk(axis: .stateValidation, value: "Validity proofs (ST)", sentiment: .good, explanation: note(84), second: nil),
+				L2beatRisk(axis: .sequencerFailure, value: "Log via L1", sentiment: .warning, explanation: note(96), second: nil),
+				L2beatRisk(axis: .stateValidation, value: "Validity proofs (ST)", sentiment: .good, explanation: note(85), second: nil),
 				L2beatRisk(axis: .dataAvailability, value: "Onchain (SD)", sentiment: .good, explanation: note(2), second: nil),
-				L2beatRisk(axis: .exitWindow, value: "None", sentiment: .bad, explanation: note(4), second: L2beatRiskNote(value: "7d", sentiment: .warning, explanation: note(96))),
-				L2beatRisk(axis: .proposerFailure, value: "Security Council minority", sentiment: .warning, explanation: note(97), second: nil),
+				L2beatRisk(axis: .exitWindow, value: "None", sentiment: .bad, explanation: note(4), second: L2beatRiskNote(value: "7d", sentiment: .warning, explanation: note(97))),
+				L2beatRisk(axis: .proposerFailure, value: "Security Council minority", sentiment: .warning, explanation: note(98), second: nil),
 			]),
 		L2beatProject(
 			id: "superseed",
@@ -1639,11 +1622,11 @@ enum L2beatDirectory {
 			hostChain: "Ethereum",
 			category: "Other",
 			stage: .stage0,
-			underReview: true,
+			underReview: false,
 			archived: false,
 			risks: [
 				L2beatRisk(axis: .sequencerFailure, value: "Self sequence", sentiment: .good, explanation: note(16), second: nil),
-				L2beatRisk(axis: .stateValidation, value: "Fraud proofs (INT)", sentiment: .bad, explanation: note(98), second: nil),
+				L2beatRisk(axis: .stateValidation, value: "Fraud proofs (INT)", sentiment: .bad, explanation: note(99), second: nil),
 				L2beatRisk(axis: .dataAvailability, value: "External (DAC)", sentiment: .bad, explanation: note(13), second: nil),
 				L2beatRisk(axis: .exitWindow, value: "None", sentiment: .bad, explanation: note(4), second: nil),
 				L2beatRisk(axis: .proposerFailure, value: "Self propose", sentiment: .good, explanation: note(14), second: nil),
@@ -1659,11 +1642,11 @@ enum L2beatDirectory {
 			underReview: false,
 			archived: false,
 			risks: [
-				L2beatRisk(axis: .sequencerFailure, value: "Enqueue via L1", sentiment: .warning, explanation: note(99), second: nil),
-				L2beatRisk(axis: .stateValidation, value: "Validity proofs", sentiment: .good, explanation: note(100), second: nil),
+				L2beatRisk(axis: .sequencerFailure, value: "Enqueue via L1", sentiment: .warning, explanation: note(100), second: nil),
+				L2beatRisk(axis: .stateValidation, value: "Validity proofs", sentiment: .good, explanation: note(101), second: nil),
 				L2beatRisk(axis: .dataAvailability, value: "Onchain", sentiment: .good, explanation: note(17), second: nil),
 				L2beatRisk(axis: .exitWindow, value: "None", sentiment: .bad, explanation: note(4), second: nil),
-				L2beatRisk(axis: .proposerFailure, value: "Cannot withdraw", sentiment: .bad, explanation: note(101), second: nil),
+				L2beatRisk(axis: .proposerFailure, value: "Cannot withdraw", sentiment: .bad, explanation: note(102), second: nil),
 			]),
 		L2beatProject(
 			id: "river",
@@ -1700,23 +1683,6 @@ enum L2beatDirectory {
 				L2beatRisk(axis: .proposerFailure, value: "Self propose", sentiment: .good, explanation: note(27), second: nil),
 			]),
 		L2beatProject(
-			id: "wirex",
-			slug: "wirex",
-			name: "Wirex Pay Chain",
-			layer: .layer2,
-			hostChain: "Ethereum",
-			category: "Other",
-			stage: .notApplicable,
-			underReview: false,
-			archived: false,
-			risks: [
-				L2beatRisk(axis: .sequencerFailure, value: "No mechanism", sentiment: .bad, explanation: note(64), second: nil),
-				L2beatRisk(axis: .stateValidation, value: "Validity proofs (ST, SN)", sentiment: .good, explanation: note(1), second: nil),
-				L2beatRisk(axis: .dataAvailability, value: "External (DAC)", sentiment: .bad, explanation: note(102), second: nil),
-				L2beatRisk(axis: .exitWindow, value: "None", sentiment: .bad, explanation: note(69), second: L2beatRiskNote(value: "3d", sentiment: .warning, explanation: note(103))),
-				L2beatRisk(axis: .proposerFailure, value: "Cannot withdraw", sentiment: .bad, explanation: note(7), second: nil),
-			]),
-		L2beatProject(
 			id: "worldchain",
 			slug: "world",
 			name: "World Chain",
@@ -1745,10 +1711,10 @@ enum L2beatDirectory {
 			archived: false,
 			risks: [
 				L2beatRisk(axis: .sequencerFailure, value: "Self sequence", sentiment: .good, explanation: note(8), second: nil),
-				L2beatRisk(axis: .stateValidation, value: "Fraud proofs (1R, ZK)", sentiment: .bad, explanation: note(104), second: nil),
+				L2beatRisk(axis: .stateValidation, value: "Fraud proofs (1R, ZK)", sentiment: .bad, explanation: note(103), second: nil),
 				L2beatRisk(axis: .dataAvailability, value: "Onchain", sentiment: .good, explanation: note(17), second: nil),
 				L2beatRisk(axis: .exitWindow, value: "None", sentiment: .bad, explanation: note(4), second: nil),
-				L2beatRisk(axis: .proposerFailure, value: "Cannot withdraw", sentiment: .bad, explanation: note(105), second: nil),
+				L2beatRisk(axis: .proposerFailure, value: "Cannot withdraw", sentiment: .bad, explanation: note(104), second: nil),
 			]),
 		L2beatProject(
 			id: "xai",
@@ -1761,9 +1727,9 @@ enum L2beatDirectory {
 			underReview: false,
 			archived: false,
 			risks: [
-				L2beatRisk(axis: .sequencerFailure, value: "Self sequence", sentiment: .good, explanation: note(43), second: nil),
-				L2beatRisk(axis: .stateValidation, value: "Fraud proofs (INT)", sentiment: .bad, explanation: note(74), second: nil),
-				L2beatRisk(axis: .dataAvailability, value: "External (DAC)", sentiment: .bad, explanation: note(106), second: nil),
+				L2beatRisk(axis: .sequencerFailure, value: "Self sequence", sentiment: .good, explanation: note(44), second: nil),
+				L2beatRisk(axis: .stateValidation, value: "Fraud proofs (INT)", sentiment: .bad, explanation: note(75), second: nil),
+				L2beatRisk(axis: .dataAvailability, value: "External (DAC)", sentiment: .bad, explanation: note(105), second: nil),
 				L2beatRisk(axis: .exitWindow, value: "None", sentiment: .bad, explanation: note(4), second: nil),
 				L2beatRisk(axis: .proposerFailure, value: "Self propose", sentiment: .good, explanation: note(14), second: nil),
 			]),
@@ -1797,7 +1763,7 @@ enum L2beatDirectory {
 			risks: [
 				L2beatRisk(axis: .sequencerFailure, value: "No mechanism", sentiment: .bad, explanation: note(64), second: nil),
 				L2beatRisk(axis: .stateValidation, value: "None", sentiment: .bad, explanation: note(35), second: nil),
-				L2beatRisk(axis: .dataAvailability, value: "External (DAC)", sentiment: .bad, explanation: note(106), second: nil),
+				L2beatRisk(axis: .dataAvailability, value: "External (DAC)", sentiment: .bad, explanation: note(105), second: nil),
 				L2beatRisk(axis: .exitWindow, value: "None", sentiment: .bad, explanation: note(4), second: nil),
 				L2beatRisk(axis: .proposerFailure, value: "Cannot withdraw", sentiment: .bad, explanation: note(7), second: nil),
 			]),
@@ -1813,8 +1779,8 @@ enum L2beatDirectory {
 			archived: false,
 			risks: [
 				L2beatRisk(axis: .sequencerFailure, value: "No mechanism", sentiment: .bad, explanation: note(18), second: nil),
-				L2beatRisk(axis: .stateValidation, value: "Validity proofs", sentiment: .good, explanation: note(107), second: nil),
-				L2beatRisk(axis: .dataAvailability, value: "External", sentiment: .bad, explanation: note(65), second: nil),
+				L2beatRisk(axis: .stateValidation, value: "Validity proofs", sentiment: .good, explanation: note(106), second: nil),
+				L2beatRisk(axis: .dataAvailability, value: "External", sentiment: .bad, explanation: note(66), second: nil),
 				L2beatRisk(axis: .exitWindow, value: "None", sentiment: .bad, explanation: note(4), second: nil),
 				L2beatRisk(axis: .proposerFailure, value: "Cannot withdraw", sentiment: .bad, explanation: note(7), second: nil),
 			]),
@@ -1832,7 +1798,7 @@ enum L2beatDirectory {
 				L2beatRisk(axis: .sequencerFailure, value: "Enqueue via L1", sentiment: .warning, explanation: note(0), second: nil),
 				L2beatRisk(axis: .stateValidation, value: "Validity proofs (ST, SN)", sentiment: .good, explanation: note(1), second: nil),
 				L2beatRisk(axis: .dataAvailability, value: "Onchain (SD)", sentiment: .good, explanation: note(2), second: nil),
-				L2beatRisk(axis: .exitWindow, value: "None", sentiment: .bad, explanation: note(4), second: L2beatRiskNote(value: "4d 3h", sentiment: .warning, explanation: note(3))),
+				L2beatRisk(axis: .exitWindow, value: "None", sentiment: .bad, explanation: note(4), second: L2beatRiskNote(value: "5d", sentiment: .warning, explanation: note(3))),
 				L2beatRisk(axis: .proposerFailure, value: "Replace proposer", sentiment: .warning, explanation: note(5), second: nil),
 			]),
 		L2beatProject(
@@ -1874,6 +1840,7 @@ enum L2beatDirectory {
 	}
 
 	static let incidents: [Seed] = [
+		Seed(project: "hashkey", day: "2026-10-13", title: "Admin forces a transfer out of a user account", summary: note(107), url: "https://etherscan.io/tx/0xcd999b6859407b249203a3ef665702cb1d2137521a068e534974d779ad035d90"),
 		Seed(project: "abstract", day: "2026-10-06", title: "Abstract shutdown announcement", summary: note(108), url: "https://x.com/AbstractChain/status/2107554632675340420"),
 		Seed(project: "aztecnetwork", day: "2026-08-07", title: "v5 Proving System Vulnerability", summary: note(109), url: "https://aztec.network/blog/alpha-v5-proving-system-vulnerability"),
 		Seed(project: "fuel", day: "2026-07-02", title: "Fuel bridge paused", summary: note(110), url: "https://etherscan.io/tx/0x95d4ff894e805f1c3348bf68022f60bf768ceaec9e58a3f18529da583df1b9f5"),
