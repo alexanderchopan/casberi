@@ -696,6 +696,9 @@ struct ThingSheetView: View {
                         .padding(.horizontal, DSRoomChassis.inset)
                         .padding(.top, onBack == nil ? DS.Space.s4 : DS.Space.s3)
                         .settleIn(delay: 0.04)
+                    // The title's line half (§915) under the name: the
+                    // picture fills the box, so it is said here or nowhere.
+                    seamLine
                     Button {
                         if thing.sourceRef != nil || thing.previewImageData != nil { zoomPhoto() }
                     } label: {
@@ -2631,7 +2634,6 @@ struct ThingSheetView: View {
         // line. This is the row set the user called "a database field", and on
         // a Work sheet it was very nearly the whole thing — "Site: vercel.com"
         // beside "From: in your things".
-        let isWork = workReading != nil
         // "When" and "Due" retired here 2026-08-12 (prd §365). Both existed
         // only because the content anatomy was too thin to carry the fact —
         // and for a calendar event the result was that the sheet printed the
@@ -2641,21 +2643,10 @@ struct ThingSheetView: View {
         // than either row could say: a range, a duration, a relative distance,
         // and an overdue deadline that reads as overdue. Same reasoning as
         // "From" standing down below — the fact isn't lost, it's said better.
-        // A purchase's `content` is the seat's own account page, not a site the
-        // person browsed to — "Site: bitrefill.com" under a gift-card order is
-        // the leaked plumbing the Tokens exclusion beside it was written for,
-        // and the dial's first disc already names where the door goes.
-        // Gated on whether a CHART drew, not on one source's name (2026-08-16).
-        // `thing.source != "Tokens"` was written when Tokens was the only
-        // charted source, so a GeckoTerminal trending row — same dexscreener
-        // link, same chart — printed "Site  dexscreener.com" under a
-        // GeckoTerminal eyebrow: a third party's name attached to a row that
-        // is not from them, which is the exact plumbing leak the comment
-        // above says this row exists to prevent.
-        let hasSite = !isWork && purchaseReading == nil && agentShape == nil
-            && thing.kind == .link && ThingChart.kind(for: thing) == nil
-            && !(contentShown && ThingContentView.showsLinkPreview(thing))
-            && Capture.detectURL(in: thing.content.isEmpty ? thing.title : thing.content)?.host() != nil
+        // THE "SITE" ROW IS DELETED (the redundancy sweep, 2026-10-16): the
+        // plain frame's box said the host as its headline and this said it
+        // again, and the link tile names where it lands ("Open in Polar").
+        // A host is plumbing in every one of the places it was drawn.
         // What a Work row's slab says instead: when it landed, which is the
         // one fact the receipt above never states and the one every archetype
         // has. The project is NOT repeated here — `WorkStageView` draws it
@@ -2681,7 +2672,7 @@ struct ThingSheetView: View {
         // name).
         let hasCounterparty = showsWho && thing.source == "Wallet"
             && !(thing.counterpartyAddress ?? "").isEmpty
-        let anyRow = hasSite || hasEcho || hasAgent
+        let anyRow = hasEcho || hasAgent
             || hasCounterparty || hasLanded
 
         if anyRow {
@@ -2693,18 +2684,6 @@ struct ThingSheetView: View {
                 if hasLanded {
                     specRow("Landed", thing.capturedAt.formatted(
                         .dateTime.month(.abbreviated).day().hour().minute()))
-                }
-                // Tokens' content URL is plumbing (the chart's technical
-                // dependency, not a site the person browsed to) — the native
-                // TokenChartView above already carries the read; a "Site" row
-                // would just leak that dependency's brand under the "Tokens"
-                // eyebrow (report 2026-07-13). And when the link preview card
-                // is on screen its footer already names the host — repeating
-                // it here read as a stutter (2026-07-13 polish).
-                if hasSite,
-                   let url = Capture.detectURL(in: thing.content.isEmpty ? thing.title : thing.content),
-                   let host = url.host() {
-                    specRow("Site", host.replacingOccurrences(of: "www.", with: ""))
                 }
                 // The same link, already in the corpus from somewhere else —
                 // the app recognizing its own history instead of treating a
@@ -3060,9 +3039,15 @@ struct ThingSheetView: View {
         }
     }
 
+    /// The shelf's header names what it lists, never the artist or channel
+    /// again: the box names them, and From's row too (the sweep).
     private var mediaMoreTitle: String {
-        let who = TitleSeam.split(thing.title).line ?? thing.authorHandle ?? thing.source
-        return String(localized: "More from \(who)")
+        switch thing.source {
+        case "YouTube":  return String(localized: "More videos")
+        case "Twitch":   return String(localized: "More streams")
+        case "Podcasts": return String(localized: "More episodes")
+        default:         return String(localized: "More songs")
+        }
     }
 
     /// The artist's other tracks, or the channel's other videos, you have —
@@ -3665,12 +3650,14 @@ struct ThingSheetView: View {
     }
 
     /// Anything else in the room's frame (prd §1191): its title, the box of
-    /// the thing (its picture, or its site or app said big), the tiles.
+    /// the thing (its picture, the title's line half, its words — never its
+    /// site), the tiles.
     @ViewBuilder
     private var plainFrame: some View {
         // A file's name is whole ("Contract — joinery.pdf"): its dash is the
-        // file's own, never §915's seam.
-        DSRoomTitleRow(title: thing.kind == .file ? thing.title : TitleSeam.split(thing.title).name)
+        // file's own, never §915's seam. A row with nothing but its title
+        // puts the title in the box and names its app here (the sweep's P10).
+        DSRoomTitleRow(title: ThingSheetBox.frameTitle(thing))
             .padding(.horizontal, DSRoomChassis.inset)
             .padding(.top, onBack == nil ? DS.Space.s4 : DS.Space.s3)
             .settleIn(delay: 0.04)
@@ -3683,21 +3670,56 @@ struct ThingSheetView: View {
                 guard FileFirstPage.applies(thing) else { return }
                 _ = await FileFirstPage.readAndKeep(thing)
             }
-        VerbDial(thing: thing, verbs: sheetVerbs, onVerb: runVerb, onName: nil, keep: sheetKeep)
+        VerbDial(thing: thing, verbs: plainVerbs, onVerb: runVerb, onName: nil, keep: sheetKeep)
             .padding(.top, DSRoomChassis.leadGap)
             .settleIn(delay: 0.08)
         dialResult
     }
 
+    /// What the title said after its seam (§915), under a title row that
+    /// shows the name alone — a framed picture's, whose box is all picture.
+    @ViewBuilder private var seamLine: some View {
+        if let line = TitleSeam.split(thing.title).line, !line.isEmpty {
+            Text(verbatim: line)
+                .dsText(.body17)
+                .foregroundStyle(DS.textSecondary)
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, DSRoomChassis.inset)
+                .padding(.top, DS.Space.s1)
+                .settleIn(delay: 0.05)
+        }
+    }
+
+    /// The plain frame's tiles: a link door is named for where it lands
+    /// ("Open in GitHub", else "Open link"), never a bare "Open" (prd §364).
+    private var plainVerbs: [Verb] {
+        sheetVerbs.map { verb in
+            guard case .openURL(let url) = verb.action, url.scheme?.hasPrefix("http") == true,
+                  verb.label.hasPrefix("Open"), !verb.label.hasPrefix("Open in ") else { return verb }
+            return Verb(label: ThingSheetBox.openLabel(for: url, thing: thing),
+                        icon: verb.icon, action: verb.action)
+        }
+    }
+
     /// The thing's own content. A charted row is handed the sheet's tiles to
     /// stand under its boxed price (prd §1188).
-    @ViewBuilder
     private func sheetContent(articleHead: Bool, mailHead: Bool, chartHead: Bool) -> some View {
-        ThingContentView(thing: thing, agent: agentConversation,
-                         articleArt: !articleHead,
-                         mailSender: !mailHead)
+        // WHAT THE BOX ALREADY DREW (the redundancy sweep, 2026-10-16): an
+        // agent chat's opening turns, a chat's last exchange; the plain
+        // frame's picture, words and a contact's face are added by
+        // `PlainBoxDrawn`, which reads the frame from `linkInBox`.
+        let agentConversation = self.agentConversation
+        var drawn = SheetBoxDrawn()
+        if let agentConversation { drawn.firstTurns = AgentChatBox.turnsDrawn(agentConversation) }
+        if agentConversation == nil, socialShape == .transcript, workReading == nil, !chartHead, !mailHead {
+            drawn.lastLines = ChatTranscriptBox.linesDrawn(thing)
+        }
+        return ThingContentView(thing: thing, agent: agentConversation,
+                                articleArt: !articleHead,
+                                mailSender: !mailHead)
             .environment(\.priceHeadDrawn, chartHead)
-            .environment(\.postLeadPictureDrawn, PostSheetBox.picturesTheBox(thing))
+            .modifier(PlainBoxDrawn(thing: thing, drawn: drawn))
             .environment(\.priceBoxTiles, chartHead ? { keep in AnyView(chartTiles(keep: keep)) } : nil)
             .environment(\.keepPassage, keepPassage)
     }
@@ -3943,17 +3965,25 @@ struct ThingSheetView: View {
     /// the full lists; this is the way in from what you are reading.
     @ViewBuilder
     private var fromCard: some View {
-        let app = fromApp
-        let person = fromPerson
-        let contact = person == nil ? fromContact : nil
-        // A transfer's header already draws its wallet (prd §1349).
-        let wallet = moneyHasPerson ? nil : fromWallet
-        let list = mailListRead ? mailList : nil
+        // FROM NEVER REPEATS THE HEAD (the redundancy sweep, 2026-10-16): a
+        // row whose name the title, the box or a tile already says is not
+        // drawn, and the card goes when nothing is left.
+        let said = fromHeadWords
+        let fresh: (String) -> Bool = { !said.contains(SheetRepeat.normalized($0)) }
+        let app = fromApp.flatMap { fresh($0) ? $0 : nil }
+        let person = fromPerson.flatMap {
+            fresh($0.shortHandle) && fresh("@\($0.shortHandle)") ? $0 : nil }
+        let contact = person == nil ? fromContact.flatMap { fresh($0.title) ? $0 : nil } : nil
+        // A transfer's header already draws its wallet (prd §1349), and a
+        // receipt's box names it in its Wallet fact.
+        let wallet = moneyHasPerson ? nil : fromWallet.flatMap { fresh($0.name) ? $0 : nil }
+        let list = mailListRead ? mailList.flatMap { fresh($0.name) ? $0 : nil } : nil
+        let follow = fromFollow.flatMap { fresh($0.name) ? $0 : nil }
         Group {
-            if fromFollow != nil || person != nil || contact != nil || wallet != nil || list != nil || app != nil {
+            if follow != nil || person != nil || contact != nil || wallet != nil || list != nil || app != nil {
                 SheetCard(name: String(localized: "From"), glyph: "arrow.right.to.line") {
                     VStack(alignment: .leading, spacing: 0) {
-                        if let item = fromFollow, let room = fromRoom { fromFollowRow(item, room) }
+                        if let item = follow, let room = fromRoom { fromFollowRow(item, room) }
                         if let person { fromPersonRow(person) }
                         if let contact { fromContactRow(contact) }
                         if let wallet { fromWalletRow(wallet) }
@@ -3964,6 +3994,37 @@ struct ThingSheetView: View {
             }
         }
         .task(id: thing.id) { readFrom() }
+    }
+
+    /// Every name the sheet's head already says, normalized: the title and
+    /// its halves, the app every box's label names, the person or channel a
+    /// box leads with, a receipt's party and facts, a sender, and the tiles'
+    /// words. Read once per body (`fromCard`).
+    private var fromHeadWords: Set<String> {
+        guard thing.isLive else { return [] }
+        let seam = TitleSeam.split(thing.title)
+        var out: [String] = [thing.title, seam.name, seam.line ?? ""]
+        // Every box but a framed picture's and a chart's names its app in
+        // its label ("Polar · Today", "Safe", "Gmail · Today, 9:33 AM").
+        let pictured = thing.kind == .screenshot || FilesIngest.isStoredPicture(thing.sourceRef)
+        if !pictured, ThingChart.kind(for: thing) == nil {
+            out += [thing.source, BridgeCatalog.seatName(forSource: thing.source)]
+        }
+        if ThingSheetBox.carriesTitle(thing) { out.append(ThingSheetBox.frameTitle(thing)) }
+        if let handle = thing.authorHandle, !handle.isEmpty {
+            let short = SocialThread.shortHandle(handle)
+            out += [short, "@\(short)"]
+        }
+        if MediaSheetBox.isMedia(thing) { out.append(seam.line ?? "") }
+        if let sender = Self.mailSender(thing) { out.append(SenderInitial.displayName(of: sender)) }
+        if let project = workReading?.project { out.append(project) }
+        if let r = moneyReceipt {
+            out += [MoneyReceiptBox.title(r), r.lead] + moneyCells(r).map(\.value)
+            if let t = moneyTransfer(r) { out += [t.mineLabel, t.theirName] }
+        }
+        // A tile names where it lands ("Polar" for "Open in Polar").
+        out += sheetVerbs.map { VerbDial.dialLabel(for: $0) }
+        return Set(out.map(SheetRepeat.normalized).filter { !$0.isEmpty })
     }
 
     /// The rooms that list what this app brings in, read where they have not
@@ -4491,7 +4552,8 @@ struct ThingSheetView: View {
                         .accessibilityHidden(true)
                         .dsGlyph(.caption)
                         .foregroundStyle(DS.textTertiary)
-                    Text("You kept this \(copy.capturedAt.formatted(.relative(presentation: .named))) · \(copy.source)")
+                    // The one day word (prd §1359), never an age to work out.
+                    Text("You kept this before · \(FeedScreen.dayWord(copy.capturedAt)) · \(copy.source)")
                         .dsText(.body17)
                         .foregroundStyle(DS.textSecondary)
                         .lineLimit(1)
@@ -4531,7 +4593,7 @@ struct ThingSheetView: View {
                             .foregroundStyle(DS.textSecondary)
                             .lineLimit(1)
                         Spacer(minLength: DS.Space.s2)
-                        Text(other.capturedAt.formatted(.relative(presentation: .named)))
+                        Text(verbatim: FeedScreen.dayWord(other.capturedAt))
                             .dsText(.subhead12)
                             .foregroundStyle(DS.textTertiary)
                             .lineLimit(1)

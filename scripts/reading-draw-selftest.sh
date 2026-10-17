@@ -325,14 +325,15 @@ mutate "the fetch arm dropped" ThingContent.swift \
                     || FeedArticleText.readableURL(for: thing) != nil {' \
   'FeedArticleText.hasBody(thing) {'
 
-# 5. The body hoisted above the art.
+# 5. The body hoisted above the art. (The art also stands down when the
+# sheet's box already drew the picture — the redundancy sweep, 2026-10-16.)
 mutate "the body drawn above the art" ThingContent.swift \
-  '                if articleArt, let door {
+  '                if articleArt, !boxDrawn.picture, let door {
                     LinkPreviewCard(url: door, storedImageURL: thing.previewImageURL, artOnly: true)
                 }
                 ArticleBody(thing: thing)' \
   '                ArticleBody(thing: thing)
-                if articleArt, let door {
+                if articleArt, !boxDrawn.picture, let door {
                     LinkPreviewCard(url: door, storedImageURL: thing.previewImageURL, artOnly: true)
                 }'
 

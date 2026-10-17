@@ -364,10 +364,10 @@ func input(source: String = "Bluesky", shape: SocialSheet.Shape = .post,
            reposts: SocialReception.Reading? = nil,
            replies: SocialReception.Reading? = nil,
            likers: String? = nil, ceiling: String? = nil,
-           eyebrowNamesIt: Bool = false) -> SocialReception.Input {
+           eyebrowNamesIt: Bool = false, boxDatesIt: Bool = false) -> SocialReception.Input {
     .init(source: source, shape: shape, archive: archive, when: when,
           importedAt: importedAt, act: act, phrase: phrase,
-          eyebrowNamesIt: eyebrowNamesIt, likes: likes,
+          eyebrowNamesIt: eyebrowNamesIt, boxDatesIt: boxDatesIt, likes: likes,
           reposts: reposts, replies: replies, likers: likers, ceiling: ceiling)
 }
 
@@ -425,6 +425,12 @@ check("an archive still names its file even under a speaking eyebrow",
       SocialReception.compose(input(source: "X", archive: true, when: day,
                                     act: .liked, eyebrowNamesIt: true))?
         .provenance == "From your X archive — you liked this on \(dayText).")
+// The box above already shows this year's day (the sweep, P3): the sentence
+// names the file and the act, and does not say the date a second time.
+check("an archive sentence drops a date the box already shows",
+      SocialReception.compose(input(source: "X", archive: true, when: day,
+                                    act: .liked, likes: like, boxDatesIt: true))?
+        .provenance == "From your X archive — you liked this.")
 check("an archive's counts wear the date they were recorded",
       arch?.recorded == "Counts as the export recorded them, Aug 2026.")
 

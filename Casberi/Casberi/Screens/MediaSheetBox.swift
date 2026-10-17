@@ -50,7 +50,8 @@ struct MediaSheetBox: View {
                 VStack {
                     Spacer()
                     HStack {
-                        Text(verbatim: "\(who) · \(thing.capturedAt.formatted(.relative(presentation: .named)))")
+                        Text(verbatim: ([who, statement, FeedScreen.dayWord(thing.capturedAt)] as [String?])
+                                .compactMap { $0 }.joined(separator: " · "))
                             .dsText(.label12)
                             .fontWeight(.semibold)
                             .foregroundStyle(Color.white)
@@ -83,13 +84,14 @@ struct MediaSheetBox: View {
                         .lineLimit(2).minimumScaleFactor(0.8)
                         .padding(.top, DS.Space.s3)
                 }
-                if let album {
+                if let album = album ?? statement {
                     Text(verbatim: album)
                         .dsText(.body17).foregroundStyle(DS.textSecondary)
                         .lineLimit(2).minimumScaleFactor(0.8)
                 }
                 Spacer(minLength: DS.Space.s2)
-                Text(verbatim: thing.capturedAt.formatted(.dateTime.weekday(.wide).hour().minute()))
+                // The one day word (prd §1359) and the clock.
+                Text(verbatim: "\(FeedScreen.dayWord(thing.capturedAt)), \(thing.capturedAt.formatted(date: .omitted, time: .shortened))")
                     .dsText(.body17).foregroundStyle(DS.textSecondary)
                     .lineLimit(1).minimumScaleFactor(0.8)
             }
@@ -128,6 +130,16 @@ struct MediaSheetBox: View {
 
     private var artist: String? {
         isMusic ? TitleSeam.split(thing.title).line : (who != thing.source ? who : nil)
+    }
+
+    /// What a video's or an episode's title said after its seam (§915) —
+    /// "Factorio", "this month's pick" — when it is not the channel the box
+    /// already names. A song's line is its artist, drawn as such.
+    private var statement: String? {
+        guard !isMusic, let line = TitleSeam.split(thing.title).line?
+            .trimmingCharacters(in: .whitespacesAndNewlines), !line.isEmpty,
+              line.caseInsensitiveCompare(who) != .orderedSame else { return nil }
+        return line
     }
 
     /// The album Spotify's own line names ("From The Campfire Headphase").

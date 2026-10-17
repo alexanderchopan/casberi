@@ -296,6 +296,11 @@ struct SocialReception: Equatable {
         /// eyebrow itself calls — one predicate, so this can never disagree
         /// with what the screen actually drew.
         var eyebrowNamesIt: Bool = false
+        /// Does the sheet's box already show the act's day (the sweep, P3)?
+        /// Every box dates its thing with the one day word, which carries no
+        /// year, so this is true for an act this year: the archive sentence
+        /// then names the file and the act without the date said again.
+        var boxDatesIt: Bool = false
         var likes: Reading?
         var reposts: Reading?
         var replies: Reading?
@@ -354,7 +359,7 @@ struct SocialReception: Equatable {
             guard let act = i.act else {
                 return String(localized: "From your \(i.source) archive.")
             }
-            guard let when = i.when else {
+            guard let when = i.when, !i.boxDatesIt else {
                 return String(localized: "From your \(i.source) archive — you \(act.verb) this.")
             }
             return String(localized:

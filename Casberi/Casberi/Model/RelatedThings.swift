@@ -35,10 +35,15 @@ enum RelatedThings {
     /// "you kept this before" would launder it into a feature.
     static func keptBefore(_ thing: Thing, in corpus: [Thing]) -> Thing? {
         guard thing.isLive else { return nil }
-        let title = normalizedTitle(thing.title)
-        let link = canonicalLink(thing)
-        // A thing with neither a distinctive title nor a link can't be matched
-        // honestly — a wall of untitled screenshots is not a pile of duplicates.
+        // A reading of an account — a charge, a proposal, a deploy, a block —
+        // shares its app's title month after month ("Quillmark Pro · $29.00"),
+        // so a same-title match there is a different record (the sweep's P6).
+        let account = readsAccount(thing.source)
+        let title = account ? nil : normalizedTitle(thing.title)
+        let link = objectLink(thing)
+        // A thing with neither a distinctive title nor an object link can't be
+        // matched honestly — a wall of untitled screenshots is not a pile of
+        // duplicates, and a dashboard link is not an object.
         guard title != nil || link != nil else { return nil }
 
         return corpus
@@ -47,8 +52,8 @@ enum RelatedThings {
                 // A row from the same sync that carries the same ref is our
                 // bookkeeping, not the person's second save.
                 if let a = thing.sourceRef, let b = other.sourceRef, a == b { return false }
-                if let link, canonicalLink(other) == link { return true }
-                if let title, normalizedTitle(other.title) == title {
+                if let link, objectLink(other) == link { return true }
+                if let title, !readsAccount(other.source), normalizedTitle(other.title) == title {
                     // Same words in the same KIND. A note and a screenshot that
                     // happen to share a headline are two different objects.
                     return other.kind == thing.kind
@@ -60,78 +65,33 @@ enum RelatedThings {
             .min { $0.capturedAt < $1.capturedAt }
     }
 
-    // MARK: - Batch lookup
+    // MARK: - The same object, never the same dashboard (the sweep's P6)
 
-    /// `keptBefore` for MANY things at once, in one pass over the corpus.
-    ///
-    /// The single-thing version normalizes every corpus title and canonicalizes
-    /// every corpus link ON EVERY CALL, which is right for the thing sheet (one
-    /// call, when a sheet opens) and quadratic anywhere else. `AgentOpen` asks
-    /// for up to 24 rows at composer-open time on the main actor: against a
-    /// 3,000-thing corpus that is ~72,000 `components(separatedBy:)` calls
-    /// between the tap and the first frame — the foreground-jank class, bought
-    /// for a margin line.
-    ///
-    /// So the keys are computed ONCE (2n string ops instead of 2·k·n) and the
-    /// lookup is a dictionary hit. Same rules as `keptBefore`, deliberately:
-    /// link match wins, a title match must share a KIND, a shared `sourceRef`
-    /// is our own bookkeeping rather than a second save, and the OLDEST copy is
-    /// the answer — so the two oldest per key are kept, because the oldest may
-    /// be the thing doing the asking.
-    struct KeptBeforeIndex {
-        fileprivate var byLink: [String: [(id: UUID, ref: String?, at: Date)]] = [:]
-        fileprivate var byTitle: [String: [(id: UUID, ref: String?, at: Date)]] = [:]
+    /// The rooms whose rows are readings of an account, stamped with one
+    /// dashboard, queue or explorer link (the Safe queue, Polar's and Dodo's
+    /// dashboards, Bitrefill's orders page, PostHog, Logos' and Aztec's
+    /// explorers). There a row is the same object only by a link that NAMES
+    /// one — §1079's per-service test (`ObjectFold.workKey`).
+    static let accountRooms: Set<String> = [CategoryFold.walletRoom, RoomAccounts.testnetsRoom,
+                                            RoomAccounts.workRoom]
 
-        /// When `thing` was first kept before, or nil.
-        ///
-        /// Returns a DATE, not a `Thing`: this index outlives the pass that
-        /// built it by exactly one composition, and handing back a model would
-        /// put a `Thing` reference somewhere the liveness rules would have to
-        /// reach. A value can't be tombstoned.
-        func firstKeep(of thing: Thing) -> Date? {
-            guard thing.isLive else { return nil }
-            let ref = thing.sourceRef
-            let id = thing.id
-            func pick(_ bucket: [(id: UUID, ref: String?, at: Date)]?) -> Date? {
-                bucket?.first { other in
-                    guard other.id != id else { return false }
-                    if let a = ref, let b = other.ref, a == b { return false }
-                    return true
-                }?.at
-            }
-            if let link = canonicalLink(thing), let hit = pick(byLink[link]) { return hit }
-            if let title = normalizedTitle(thing.title) {
-                return pick(byTitle[Self.titleKey(title, thing.kind)])
-            }
-            return nil
-        }
-
-        fileprivate static func titleKey(_ title: String, _ kind: ThingKind) -> String {
-            kind.rawValue + "\u{1}" + title
-        }
+    static func readsAccount(_ source: String) -> Bool {
+        guard let room = RoomAccounts.host(ofSource: source)?.room else { return false }
+        return accountRooms.contains(room)
     }
 
-    /// Build the index. One pass, oldest-first per key.
-    static func keptBeforeIndex(corpus: [Thing]) -> KeptBeforeIndex {
-        var index = KeptBeforeIndex()
-        for thing in corpus where thing.isLive {
-            let entry = (id: thing.id, ref: thing.sourceRef, at: thing.capturedAt)
-            if let link = canonicalLink(thing) {
-                index.byLink[link, default: []].append(entry)
-            }
-            if let title = normalizedTitle(thing.title) {
-                index.byTitle[KeptBeforeIndex.titleKey(title, thing.kind), default: []].append(entry)
-            }
-        }
-        // Two oldest per key is enough to answer around the asker itself, and
-        // keeps the index flat on a corpus with a long run of same-titled rows.
-        for (k, v) in index.byLink {
-            index.byLink[k] = Array(v.sorted { $0.at < $1.at }.prefix(2))
-        }
-        for (k, v) in index.byTitle {
-            index.byTitle[k] = Array(v.sorted { $0.at < $1.at }.prefix(2))
-        }
-        return index
+    /// The object a row's link names, or nil when the link is shared by many
+    /// records. §1079's fold, reused: a Work object's own URL (a PR, an issue,
+    /// a deployment) wherever it was kept; an account room's other links are
+    /// its dashboards and name nothing; anything else is the page itself,
+    /// with a path — two saves of one article.
+    static func objectLink(_ thing: Thing) -> String? {
+        let raw = thing.content.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let key = ObjectFold.workKey(raw) { return key }
+        guard !readsAccount(thing.source),
+              let canonical = canonicalLink(thing),
+              canonical.count >= 12, ThingLinks.hasPath(canonical) else { return nil }
+        return "read:" + canonical
     }
 
     /// A title reduced to what it says: lowercased, punctuation and runs of

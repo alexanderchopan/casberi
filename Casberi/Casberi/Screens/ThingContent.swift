@@ -116,6 +116,9 @@ enum ThingChart {
 struct ThingContentView: View {
     /// The sheet's box draws this link already (prd §1258).
     @Environment(\.linkInBox) private var linkInBox
+    /// What the sheet's box already drew (the redundancy sweep, 2026-10-16):
+    /// the body under the tiles never draws it again.
+    @Environment(\.sheetBoxDrawn) private var boxDrawn
     let thing: Thing
 
     /// The conversation reading, when the sheet decided this row is one (prd
@@ -310,12 +313,19 @@ struct ThingContentView: View {
     /// the media, the way a screenshot's caption follows its image. Skipped
     /// when it would only repeat what's already on screen.
     @ViewBuilder private var summaryBlock: some View {
-        let text = (thing.summary ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        let text = SheetRepeat.dropping(thing.summary ?? "", heads: heads)
         let dupe = text == thing.title.trimmingCharacters(in: .whitespacesAndNewlines)
             || text == thing.content.trimmingCharacters(in: .whitespacesAndNewlines)
         if !text.isEmpty, !dupe {
             ThingSummaryText(text: text)
         }
+    }
+
+    /// The sentences already said above the body: the title, its name half,
+    /// and whatever the sheet's box set. A body paragraph that only restates
+    /// one is not drawn (a Linear issue opening with its own title).
+    private var heads: [String] {
+        [thing.title, TitleSeam.split(thing.title).name] + boxDrawn.words
     }
 
     @ViewBuilder private var kindContent: some View {
@@ -391,7 +401,7 @@ struct ThingContentView: View {
                 // `ArticleBody` owns the fetch, the "reading the article"
                 // line, the Listen control — and the lede, when there is no
                 // body to draw.
-                if articleArt, let door {
+                if articleArt, !boxDrawn.picture, let door {
                     LinkPreviewCard(url: door, storedImageURL: thing.previewImageURL, artOnly: true)
                 }
                 ArticleBody(thing: thing)
@@ -418,8 +428,11 @@ struct ThingContentView: View {
                 // the thing's content is empty and detectURL finds nothing,
                 // yet the record still carries its mzstatic cover. Lead with
                 // that art instead of a blank sheet (fix 2026-07-12: every
-                // music item opened to an empty sheet).
-                StoredArtContent(urlString: art)
+                // music item opened to an empty sheet). Not when the sheet's
+                // box already drew it.
+                if !boxDrawn.picture {
+                    StoredArtContent(urlString: art)
+                }
             case .none:
                 EmptyView()
             }
@@ -481,8 +494,10 @@ struct ThingContentView: View {
                 // there and true here for the same reason: this is not a
                 // payoff fact carved out of a discarded read, it is the thing
                 // itself, clamped further out than the row excerpt.
-                if !agent.turns.isEmpty {
-                    AgentTurnsView(turns: agent.turns, cut: agent.cut,
+                // The turns the box drew (the ask and the reply's first words)
+                // are not drawn again: the transcript starts after them.
+                if agent.turns.count > boxDrawn.firstTurns {
+                    AgentTurnsView(turns: Array(agent.turns.dropFirst(boxDrawn.firstTurns)), cut: agent.cut,
                                    oneSided: agent.oneSided, source: thing.source)
                         // The words' column, under the sheet's head (§894).
                         .padding(.horizontal, DSRoomChassis.leadInset)
@@ -497,8 +512,16 @@ struct ThingContentView: View {
                     // under itself on a row whose title IS its ask.
                     ChatBubbles(text: thing.content)
                 }
-            } else if !thing.content.isEmpty {
-                ChatBubbles(text: thing.content)
+            } else {
+                // The last exchange stands in the box; the chat under the
+                // tiles ends before it.
+                let lines = thing.content.split(separator: "\n")
+                    .filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
+                let rest = SheetRepeat.dropping(lines.dropLast(boxDrawn.lastLines).joined(separator: "\n"),
+                                                heads: heads)
+                if !rest.isEmpty {
+                    ChatBubbles(text: rest)
+                }
             }
         case .voice:
             VoiceContent(transcript: thing.content, sourceRef: thing.sourceRef,
@@ -534,6 +557,15 @@ struct ThingContentView: View {
                 // picture above it: the thing itself first, the name and size
                 // beneath as the quiet line.
                 FileAudioContent(ref: ref, name: thing.title, note: thing.content)
+            } else if linkInBox {
+                // In the room's frame the title names the file and the box
+                // says its words (the sweep's P7): only words beyond them.
+                if case let rest = SheetRepeat.dropping(thing.content, heads: heads), !rest.isEmpty {
+                    NoteProse(text: rest, markdown: false, tier: .body17, ink: DS.textSecondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, DS.Space.s4)
+                        .padding(.bottom, DS.Space.s3)
+                }
             } else {
                 FileChip(name: thing.title, note: thing.content)
             }
@@ -550,7 +582,7 @@ struct ThingContentView: View {
         case .contact:
             // Was `default:` — grey prose (prd §365).
             PersonCard(name: thing.title, facts: thing.factList,
-                       photo: thing.previewImageData)
+                       photo: thing.previewImageData, headDrawn: boxDrawn.person)
         case .accessory:
             // Was `default:` — grey prose, identical whether the accessory was
             // reachable or not (prd §365).
@@ -572,11 +604,11 @@ struct ThingContentView: View {
                 // deadline READS as overdue rather than as a date with a red
                 // word after it.
                 MomentStub(start: due, overdue: due < .now, facts: thing.factList)
-            } else if !thing.content.isEmpty {
+            } else if case let words = SheetRepeat.dropping(thing.content, heads: heads), !words.isEmpty {
                 // No structured due date (a Todoist task, or a Reminders item
                 // with none set) — the same bare-text fallback every kind
                 // without a dedicated anatomy gets.
-                Text(ProseLinks.rendered(thing.content))
+                Text(ProseLinks.rendered(words))
                     .dsText(.body17).foregroundStyle(DS.textSecondary)
                     .lineLimit(12)
                     .padding(.horizontal, DS.Space.s4)
@@ -631,7 +663,11 @@ struct ThingContentView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, DS.Space.s4)
                     .padding(.bottom, DS.Space.s3)
-            } else if !thing.content.isEmpty, !Self.bareLinkBody(thing) {
+            } else if case let words = SheetRepeat.dropping(thing.content, heads: heads),
+                      !words.isEmpty, !Self.bareLinkBody(thing),
+                      // A body that is one URL is plumbing at any kind: the
+                      // tiles carry the door (the sweep's P2).
+                      !ThingSheetBox.isBareLink(words) {
                 // FOLDED AT A BLOCK, NOT CLAMPED AT TWELVE LINES (2026-08-21).
                 // §366 gave the note category a real disclosure and left every
                 // OTHER source on the silent cut — so a Raindrop save, a Slack
@@ -651,7 +687,7 @@ struct ThingContentView: View {
                 // Borrowing the fold must not re-rank the category's type: here
                 // the body really is an annotation under a fact, which is the
                 // case §366 carved the note sources OUT of.
-                NoteProse(text: thing.content,
+                NoteProse(text: words,
                           markdown: false,
                           tier: .body17,
                           ink: DS.textSecondary)
@@ -2380,6 +2416,9 @@ private struct PersonCard: View {
     /// the initials circle below is the fallback, not a placeholder to be
     /// ashamed of.
     var photo: Data?
+    /// The sheet's box draws the face and the role line (the sweep's contact:
+    /// "name 3×, face 2×"), so the card is the numbers and addresses alone.
+    var headDrawn = false
 
     /// The role line under the name — the two facts that describe rather than
     /// dial. Joined here rather than drawn as rows because "Designer" and
@@ -2412,35 +2451,16 @@ private struct PersonCard: View {
         }
     }
 
-    private var initials: String {
-        let letters = name.split(separator: " ").prefix(2).compactMap(\.first)
-        return letters.isEmpty ? "?" : String(letters).uppercased()
-    }
-
     var body: some View {
         VStack(spacing: DS.Space.s2) {
-            if let photo, let image = UIImage(data: photo) {
-                Image(uiImage: image)
-                    .resizable()
-                    .scaledToFill()
-                    // Pinned BEFORE the clip: a bare resizable image in a stack
-                    // expands the stack to the image's own size (the gotcha
-                    // this codebase has already paid for).
-                    .frame(width: 76, height: 76)
-                    .clipShape(Circle())
-                    .accessibilityLabel(name)
-            } else {
-                Text(initials)
+            if !headDrawn {
+                PersonFace(name: name, photo: photo, size: 76)
+                Text(name)
                     .dsText(.heading24)
                     .foregroundStyle(DS.textPrimary)
-                    .frame(width: 76, height: 76)
-                    .background(DS.gray100, in: Circle())
+                    .multilineTextAlignment(.center)
             }
-            Text(name)
-                .dsText(.heading24)
-                .foregroundStyle(DS.textPrimary)
-                .multilineTextAlignment(.center)
-            if let subtitle {
+            if !headDrawn, let subtitle {
                 Text(subtitle)
                     .dsText(.body17)
                     .foregroundStyle(DS.textSecondary)

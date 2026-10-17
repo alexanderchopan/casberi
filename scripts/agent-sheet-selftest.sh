@@ -88,14 +88,20 @@ guard "the receipt card is drawn" \
 # that can disagree about how many turns a chat had.
 guard "the content view is handed the reading, not left to re-derive it" \
   'ThingContentView\(thing: thing, agent: agentConversation[,)]' "$VIEW"
+# The turns the box already drew (the ask and the reply's first words) are not
+# drawn again (the redundancy sweep, 2026-10-16), so the branch hands on the
+# reading's turns after them — still the reading's, never `content`.
 guard "the chat branch draws the turns" \
-  'AgentTurnsView\(turns: agent\.turns' "$CONTENT"
+  'AgentTurnsView\(turns: (Array\()?agent\.turns' "$CONTENT"
 # The two rows this pass takes with it. Deliberately tolerant of extra
 # conjuncts: the same sheet serves every category and sibling passes add their
 # own gates; what is asserted is that each row is gated on the agent shape at
 # all.
-guard "the Site row stands down on an agent sheet" \
-  'hasSite = .*agentShape == nil' "$VIEW"
+# The Site row is deleted from EVERY sheet (the redundancy sweep, 2026-10-16:
+# the box said the host and so did this), so the agent sheet's stand-down is
+# now the row's absence everywhere.
+absent "the Site row stays deleted from every sheet" \
+  'specRow\("Site"' "$VIEW"
 # The From row it also took no longer exists on ANY sheet (prd §736): the dial
 # already carried a door for every kind that row named a place for, so it was
 # the same fact twice — §367's own finding here ("From — from your session was

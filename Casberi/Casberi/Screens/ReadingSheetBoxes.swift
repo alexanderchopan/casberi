@@ -21,7 +21,19 @@ struct PostSheetBox: View {
     /// The title row's name: the author's own name, else the handle.
     static func title(_ thing: Thing) -> String {
         let name = (thing.postAuthor ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-        return name.isEmpty ? SocialThread.shortHandle(thing.authorHandle ?? thing.source) : name
+        if !name.isEmpty { return name }
+        let handle = SocialThread.shortHandle(thing.authorHandle ?? thing.source)
+        // YOUR OWN POST is not titled "you" over "@you" (the sweep): your
+        // name, else what the post says first.
+        if ChatBubbles.isMine(handle) {
+            if DemoMode.isActive { return HomeScope.demoName }
+            if let yours = ProfileStore.shared.name, !yours.isEmpty { return yours }
+            let first = SocialSheetSource.words(for: thing)
+                .split(whereSeparator: \.isNewline).first.map(String.init)?
+                .trimmingCharacters(in: .whitespaces) ?? ""
+            if !first.isEmpty { return first }
+        }
+        return handle
     }
 
     /// The picture the box leads with, when the post has one.

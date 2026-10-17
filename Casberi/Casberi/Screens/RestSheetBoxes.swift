@@ -65,6 +65,17 @@ struct AgentChatBox: View {
         reading.turns.first { $0.voice == .assistant }.map { ($0.name, Self.flat($0.text)) }
     }
 
+    /// How many of the conversation's opening turns this box draws — the
+    /// first ask and the first reply, when they lead it — so the transcript
+    /// under the tiles starts after them (the sweep's P7).
+    static func turnsDrawn(_ reading: AgentSheet.Conversation) -> Int {
+        let ask = reading.turns.firstIndex { $0.voice == .you }
+        let reply = reading.turns.firstIndex { $0.voice == .assistant }
+        var n = 0
+        while n < reading.turns.count, n == ask || n == reply { n += 1 }
+        return n
+    }
+
     private static func flat(_ text: String) -> String {
         text.split(whereSeparator: \.isNewline).joined(separator: " ")
             .trimmingCharacters(in: .whitespaces)
@@ -112,12 +123,19 @@ struct ChatTranscriptBox: View {
         return parts.joined(separator: " · ")
     }
 
+    /// How many of the chat's closing lines this box draws, so the chat
+    /// under the tiles ends before them (the sweep's P7).
+    static func linesDrawn(_ thing: Thing) -> Int {
+        min(2, thing.content.split(whereSeparator: \.isNewline)
+            .filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }.count)
+    }
+
     /// The last two lines of the transcript, who said each.
     private var lastExchange: [(words: String, mine: Bool)] {
         let lines = thing.content.split(whereSeparator: \.isNewline)
             .map { String($0).trimmingCharacters(in: .whitespaces) }
             .filter { !$0.isEmpty }
-        return lines.suffix(2).map { line in
+        return lines.suffix(Self.linesDrawn(thing)).map { line in
             let said = ChatBubbles.speaker(of: line)
             return (said.words, said.name.map(ChatBubbles.isMine) ?? false)
         }
@@ -254,18 +272,104 @@ struct VaultNoteBox: View {
     }
 }
 
+// MARK: - What the box drew
+
+/// WHAT A SHEET'S BOX ALREADY DREW, handed to the body under the tiles so the
+/// two never draw the same thing (the redundancy sweep, 2026-10-16): the
+/// picture once, a chat's turns once, the words once, a contact's face once.
+/// `postLeadPictureDrawn` was the first of these; this is the rest of them.
+struct SheetBoxDrawn: Equatable {
+    /// The box drew the thing's picture.
+    var picture = false
+    /// The sentences the box set — its statement, its words, its headline. A
+    /// body paragraph equal to one of them is not drawn again.
+    var words: [String] = []
+    /// An agent chat's opening turns the box drew (the ask and the reply's
+    /// first words), so the transcript under the tiles starts after them.
+    var firstTurns = 0
+    /// A chat's closing lines the box drew (the last exchange), so the
+    /// transcript under the tiles ends before them.
+    var lastLines = 0
+    /// A contact's face and role line stand in the box; the card under the
+    /// tiles is their numbers and addresses alone.
+    var person = false
+}
+
+private struct SheetBoxDrawnKey: EnvironmentKey {
+    static let defaultValue = SheetBoxDrawn()
+}
+
+extension EnvironmentValues {
+    var sheetBoxDrawn: SheetBoxDrawn {
+        get { self[SheetBoxDrawnKey.self] }
+        set { self[SheetBoxDrawnKey.self] = newValue }
+    }
+}
+
+/// The plain frame's share of `SheetBoxDrawn`: the sheet says it drew the
+/// plain frame through `linkInBox` (prd §1258), so this reads that and adds
+/// what `ThingSheetBox` drew — and tells a post's body its picture is in the
+/// box, as `PostSheetBox` does (a TikTok, a Pinterest pin).
+struct PlainBoxDrawn: ViewModifier {
+    let thing: Thing
+    let drawn: SheetBoxDrawn
+    @Environment(\.linkInBox) private var plainFrame
+
+    func body(content: Content) -> some View {
+        var all = drawn
+        if plainFrame {
+            let box = ThingSheetBox.drawn(thing)
+            all.picture = all.picture || box.picture
+            all.words += box.words
+            all.person = all.person || box.person
+        }
+        return content
+            .environment(\.sheetBoxDrawn, all)
+            .environment(\.postLeadPictureDrawn, PostSheetBox.picturesTheBox(thing) || all.picture)
+    }
+}
+
+enum SheetRepeat {
+    /// A sentence reduced to what it says, for comparing a head with a body:
+    /// case, surrounding space and closing punctuation do not make it new.
+    static func normalized(_ text: String) -> String {
+        text.trimmingCharacters(in: .whitespacesAndNewlines)
+            .trimmingCharacters(in: CharacterSet(charactersIn: ".!?…:;,").union(.whitespaces))
+            .lowercased()
+    }
+
+    /// The body without its opening paragraphs or sentences that only restate
+    /// a head (`heads`: the title, the box's headline, its words). A Linear
+    /// issue's description opens with the issue's own title; a Slack message
+    /// with the channel the box already named.
+    static func dropping(_ text: String, heads: [String]) -> String {
+        let keys = Set(heads.map(normalized).filter { !$0.isEmpty })
+        var rest = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !keys.isEmpty else { return rest }
+        while !rest.isEmpty {
+            // A whole first paragraph…
+            let para = rest.split(separator: "\n", maxSplits: 1, omittingEmptySubsequences: false)
+            if keys.contains(normalized(String(para[0]))) {
+                rest = para.count > 1 ? String(para[1]).trimmingCharacters(in: .whitespacesAndNewlines) : ""
+                continue
+            }
+            // …or the first sentence of it.
+            if let end = rest.range(of: #"[.!?](\s+)"#, options: .regularExpression),
+               end.lowerBound < (rest.firstIndex(of: "\n") ?? rest.endIndex),
+               keys.contains(normalized(String(rest[..<end.lowerBound]))) {
+                rest = String(rest[end.upperBound...]).trimmingCharacters(in: .whitespacesAndNewlines)
+                continue
+            }
+            break
+        }
+        return rest
+    }
+}
+
 // MARK: - Anything else
 
 struct ThingSheetBox: View {
     let thing: Thing
-
-    /// A plain link's site, said big when there is no picture.
-    private var host: String? {
-        let raw = thing.externalLink ?? thing.content
-        guard raw.hasPrefix("http"), let url = URL(string: raw), var h = url.host else { return nil }
-        if h.hasPrefix("www.") { h.removeFirst(4) }
-        return h
-    }
 
     private static let artHeight: CGFloat = 96
 
@@ -274,10 +378,110 @@ struct ThingSheetBox: View {
             if thing.kind == .file, FileFirstPage.isDocument(thing.sourceRef),
                thing.previewImageData != nil {
                 documentBox
+            } else if thing.kind == .contact {
+                contactBox
             } else {
                 plainBox
             }
         }
+    }
+
+    // MARK: The plain frame's words, decided once for the box and the sheet
+
+    /// What the title said after its seam (§915): "Failed", "Dataset", "4
+    /// missed in a row". The title row shows the name alone, so the line half
+    /// is the box's statement, or it is said nowhere. A file's dash is its
+    /// own, never the seam.
+    static func statement(_ thing: Thing) -> String? {
+        guard thing.kind != .file else { return nil }
+        let line = TitleSeam.split(thing.title).line?.trimmingCharacters(in: .whitespacesAndNewlines)
+        return (line ?? "").isEmpty ? nil : line
+    }
+
+    /// What it says beyond its title: the summary, else words that are not
+    /// the title, the statement or a bare link. Never a raw URL.
+    static func words(_ thing: Thing) -> String? {
+        let heads = [thing.title, TitleSeam.split(thing.title).name, statement(thing) ?? ""]
+            .map(SheetRepeat.normalized)
+        for raw in [thing.summary, thing.content] {
+            let words = (raw ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !words.isEmpty, !heads.contains(SheetRepeat.normalized(words)),
+                  !isBareLink(words) else { continue }
+            return words
+        }
+        return nil
+    }
+
+    /// A body that is one URL and nothing else: plumbing, not prose.
+    static func isBareLink(_ text: String) -> Bool {
+        let t = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        return !t.contains(where: \.isWhitespace)
+            && (t.hasPrefix("http://") || t.hasPrefix("https://") || Capture.detectURL(in: t) != nil)
+    }
+
+    /// NOTHING BUT ITS TITLE (P10): no picture, no statement, no words. The
+    /// box then carries the title at the headline rung, never an empty well,
+    /// and the title row says where it is from, so nothing is said twice.
+    static func carriesTitle(_ thing: Thing) -> Bool {
+        thing.kind != .file && thing.kind != .contact && !ArticleSheetHead.hasArt(thing)
+            && statement(thing) == nil && words(thing) == nil
+    }
+
+    /// The plain frame's title row: the thing's name, else (when the box
+    /// carries the name) the app it is from.
+    static func frameTitle(_ thing: Thing) -> String {
+        if thing.kind == .file { return thing.title }
+        if carriesTitle(thing) { return BridgeCatalog.seatName(forSource: thing.source) }
+        return TitleSeam.split(thing.title).name
+    }
+
+    /// What this box draws, for the body under the tiles.
+    static func drawn(_ thing: Thing) -> SheetBoxDrawn {
+        guard thing.isLive else { return SheetBoxDrawn() }
+        if thing.kind == .contact {
+            return SheetBoxDrawn(picture: true, words: [thing.summary ?? ""].filter { !$0.isEmpty },
+                                 person: true)
+        }
+        if thing.kind == .file, FileFirstPage.isDocument(thing.sourceRef), thing.previewImageData != nil {
+            return SheetBoxDrawn(picture: true)
+        }
+        var said: [String] = []
+        if let s = statement(thing) { said.append(s) }
+        if let w = words(thing) { said.append(w) }
+        if carriesTitle(thing) { said.append(thing.title) }
+        return SheetBoxDrawn(picture: ArticleSheetHead.hasArt(thing), words: said)
+    }
+
+    /// The link tile is named for where it lands (prd §364): "Open in GitHub"
+    /// when the page is the app's own, else "Open link" — never a bare
+    /// "Open", which says nothing about where you go.
+    static func openLabel(for url: URL, thing: Thing) -> String {
+        if let app = landingApp(url, source: thing.source) {
+            return String(localized: "Open in \(app)")
+        }
+        return String(localized: "Open link")
+    }
+
+    /// The catalogue app a URL belongs to: the row's own app when the host is
+    /// its domain ("polar.sh" for Polar, "app.dodopayments.com" for Dodo
+    /// Payments), else the app whose declared hosts serve it.
+    static func landingApp(_ url: URL, source: String) -> String? {
+        guard var host = url.host()?.lowercased() else { return nil }
+        if host.hasPrefix("www.") { host.removeFirst(4) }
+        let labels = host.split(separator: ".").map(String.init)
+        let seat = BridgeCatalog.seatName(forSource: source)
+        let squash: (String) -> String = { $0.lowercased().filter { $0.isLetter || $0.isNumber } }
+        let names = Set([squash(source), squash(seat)].filter { $0.count >= 1 })
+        // The registrable label, and every label left of it ("explorer.
+        // testnet.lez.logos.co" names Logos at "logos").
+        if labels.count >= 2, labels.dropLast().contains(where: { names.contains($0) }) {
+            return seat
+        }
+        if let service = NetworkReach.service(forHost: host),
+           BridgeCatalog.offer(forSource: service) != nil {
+            return BridgeCatalog.seatName(forSource: service)
+        }
+        return nil
     }
 
     /// A document (prd §1192): its first page beside what it is — the app,
@@ -336,49 +540,77 @@ struct ThingSheetBox: View {
         return name.isEmpty || name == "/" ? nil : name
     }
 
-    private var plainBox: some View {
-            VStack(alignment: .leading, spacing: DS.Space.s3) {
-                if ArticleSheetHead.hasArt(thing) {
-                    art
-                        .frame(height: Self.artHeight)
-                        .frame(maxWidth: .infinity)
-                        .clipShape(RoundedRectangle(cornerRadius: DS.Radius.widget / 2, style: .continuous))
-                } else {
-                    BridgeIcon(name: thing.source, size: DS.Face.seat, circular: true)
-                }
-                if let host {
-                    Text(verbatim: host)
-                        .dsText(ArticleSheetHead.hasArt(thing) ? .heading20 : .heading28)
-                        .foregroundStyle(DS.textPrimary)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.7)
-                }
-                if let words = summary {
-                    Text(verbatim: words)
-                        .dsText(.subhead12)
-                        .foregroundStyle(DS.textSecondary)
-                        .lineLimit(host == nil ? 4 : 2)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                Spacer(minLength: 0)
-                Text(verbatim: "\(thing.source) · \(FeedScreen.dayWord(thing.capturedAt))")
-                    .dsText(.label12)
-                    .foregroundStyle(DS.textSecondary)
-                    .lineLimit(1)
+    /// A CONTACT IS ONE CARD (the sweep's contact, "name 3×, face 2×"): the
+    /// name is the title, the face and what they do stand in the box, and the
+    /// card under the tiles is their numbers and addresses alone.
+    private var contactBox: some View {
+        let role = thing.factList.filter { $0.label == "Role" || $0.label == "Company" }
+            .map(\.value).joined(separator: " · ")
+        return VStack(alignment: .leading, spacing: DS.Space.s3) {
+            PersonFace(name: thing.title, photo: thing.previewImageData, size: 76)
+            if !role.isEmpty {
+                Text(verbatim: role)
+                    .dsText(.heading20)
+                    .foregroundStyle(DS.textPrimary)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            .accessibilityElement(children: .combine)
+            Spacer(minLength: 0)
+            Text(verbatim: "\(thing.source) · \(FeedScreen.dayWord(thing.capturedAt))")
+                .dsText(.label12)
+                .foregroundStyle(DS.textSecondary)
+                .lineLimit(1)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .accessibilityElement(children: .combine)
     }
 
-    /// What it says beyond its title: the summary, else words that are not
-    /// the title or a link.
-    private var summary: String? {
-        let title = TitleSeam.split(thing.title).name
-        for raw in [thing.summary, thing.content] {
-            let words = (raw ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-            if !words.isEmpty, words != title, !words.hasPrefix("http") { return words }
+    private var plainBox: some View {
+        let pictured = ArticleSheetHead.hasArt(thing)
+        let statement = Self.statement(thing)
+        let words = Self.words(thing)
+        let carries = Self.carriesTitle(thing)
+        return VStack(alignment: .leading, spacing: DS.Space.s3) {
+            if pictured {
+                // The picture takes the box when there is nothing to say
+                // under it; a line or words keep it a band.
+                art
+                    .frame(minHeight: Self.artHeight,
+                           maxHeight: statement == nil && words == nil ? .infinity : Self.artHeight)
+                    .frame(maxWidth: .infinity)
+                    .clipShape(RoundedRectangle(cornerRadius: DS.Radius.widget / 2, style: .continuous))
+            } else {
+                BridgeIcon(name: thing.source, size: DS.Face.seat, circular: true)
+            }
+            // The row's own sentence at the headline rung: the title's line
+            // half, else (nothing else to say) the title itself. Never a host.
+            if let headline = statement ?? (carries ? TitleSeam.split(thing.title).name : nil) {
+                Text(verbatim: headline)
+                    .dsText(pictured ? .heading20 : .heading24)
+                    .foregroundStyle(DS.textPrimary)
+                    .lineLimit(pictured ? 2 : 4)
+                    .minimumScaleFactor(0.85)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            if let words {
+                Text(verbatim: words)
+                    .dsText(statement == nil && !pictured ? .body17 : .subhead12)
+                    .foregroundStyle(DS.textSecondary)
+                    .lineLimit(statement == nil ? 4 : 2)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            if pictured || statement != nil || words != nil || carries {
+                Spacer(minLength: 0)
+            }
+            // The title row names the app when the box carries the title.
+            Text(verbatim: carries ? FeedScreen.dayWord(thing.capturedAt)
+                                   : "\(thing.source) · \(FeedScreen.dayWord(thing.capturedAt))")
+                .dsText(.label12)
+                .foregroundStyle(DS.textSecondary)
+                .lineLimit(1)
         }
-        return nil
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .accessibilityElement(children: .combine)
     }
 
     @ViewBuilder private var art: some View {
@@ -387,8 +619,40 @@ struct ThingSheetBox: View {
         } else if let url = thing.previewImageURL, !url.isEmpty {
             GeometryReader { geo in
                 RemoteArt(urlString: url, width: geo.size.width,
-                          height: Self.artHeight, cornerRadius: 0)
+                          height: geo.size.height, cornerRadius: 0)
             }
+        }
+    }
+}
+
+/// A person's face: their photo in a circle, else their initials.
+struct PersonFace: View {
+    let name: String
+    let photo: Data?
+    var size: CGFloat = 76
+
+    private var initials: String {
+        let letters = name.split(separator: " ").prefix(2).compactMap(\.first)
+        return letters.isEmpty ? "?" : String(letters).uppercased()
+    }
+
+    var body: some View {
+        if let photo, let image = UIImage(data: photo) {
+            Image(uiImage: image)
+                .resizable()
+                .scaledToFill()
+                // Pinned before the clip: a bare resizable image expands its
+                // stack to the image's own size.
+                .frame(width: size, height: size)
+                .clipShape(Circle())
+                .accessibilityLabel(Text(verbatim: name))
+        } else {
+            Text(verbatim: initials)
+                .dsText(.heading24)
+                .foregroundStyle(DS.textPrimary)
+                .frame(width: size, height: size)
+                .background(DS.gray100, in: Circle())
+                .accessibilityLabel(Text(verbatim: name))
         }
     }
 }

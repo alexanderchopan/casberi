@@ -139,6 +139,8 @@ enum SocialSheetSource {
             act: act(for: thing),
             phrase: SocialThread.contextPhrase(for: thing),
             eyebrowNamesIt: eyebrowLeadsWithPerson(thing, shape: shape),
+            // The box dates it with the day word, yearless (the sweep's P3).
+            boxDatesIt: Calendar.current.isDate(thing.capturedAt, equalTo: .now, toGranularity: .year),
             // The noun agrees with its number (prd §884): "1 replies" was the
             // sheet's reading for every post with one answer.
             likes: shown?.likes.map {
