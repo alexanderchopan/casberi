@@ -11,8 +11,9 @@ import Foundation
 /// casberi card"). `x.com/intent/post` is a universal link the X app does not
 /// claim every time — it landed in Safari or on X's home — so the X app's own
 /// scheme, `twitter://post`, goes first when the app is installed, and the
-/// web composer is the fallback. Neither link can carry a picture, so the
-/// tray puts the card on the clipboard before X opens.
+/// web composer is the fallback. Neither link can carry a picture, so a tray
+/// with a card hands the system sheet the card and `message` instead, and X's
+/// share extension attaches it (prd §1366); the links serve a tray with none.
 enum XPostIntent {
     /// A post's length, and what X counts any link as (t.co), whatever its
     /// own length.
@@ -47,12 +48,18 @@ enum XPostIntent {
     /// `twitter://post?message=…`, or nil with nothing to say. The scheme has
     /// one field, so the link rides at the end of the words.
     static func appURL(words: String, link: URL?) -> URL? {
-        let message = [text(words, link: link), link?.absoluteString ?? ""]
-            .filter { !$0.isEmpty }
-            .joined(separator: " ")
+        let message = message(words: words, link: link)
         guard !message.isEmpty else { return nil }
         return compose(scheme: appScheme, host: "post", path: "",
                        items: [URLQueryItem(name: "message", value: message)])
+    }
+
+    /// The words within the limit with the link at their end — the app link's
+    /// one field, and the text the share sheet hands X beside the card.
+    static func message(words: String, link: URL?) -> String {
+        [text(words, link: link), link?.absoluteString ?? ""]
+            .filter { !$0.isEmpty }
+            .joined(separator: " ")
     }
 
     private static func compose(scheme: String, host: String, path: String,

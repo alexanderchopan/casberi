@@ -6,7 +6,8 @@ import SwiftData
 /// out, then the doors as rows (§746: a verb is a row). Messages and Mail
 /// open the system composer with the card attached and the link in the
 /// body; `Share…` is the system sheet with the card and the link as two
-/// UIKit items (`ShareCardPart`, prd §1193), so a target keeps both.
+/// UIKit items (`ShareCardPart`, prd §1193), so a target keeps both; Post
+/// on X is the same sheet with the card and X's words (prd §1366).
 ///
 /// Rows the device cannot honour are not drawn (§83): the simulator and a
 /// Mac with no Messages account have no Messages row; there is always
@@ -49,9 +50,9 @@ struct ShareTray: View {
     /// A voice note's recording, written once for the system sheet (prd §1024).
     @State private var voiceFile: URL?
     @State private var activityUp = false
-    /// Post on X put the card on the clipboard: the row says so before X
-    /// takes the screen (prd §1299).
-    @State private var xCopied = false
+    /// The system sheet was raised by Post on X, so it carries X's words
+    /// beside the card rather than the link item (prd §1366).
+    @State private var activityForX = false
     @Environment(\.modelContext) private var context
     @Environment(\.openURL) private var openURL
 
@@ -109,24 +110,23 @@ struct ShareTray: View {
                     if MessageCompose.canMail {
                         DSDoorRow(icon: "envelope", label: "Send in Mail") { composer = .mail }
                     }
-                    // X's composer with the words and the link, the card on
-                    // the clipboard (prd §1299), a row of its own rather than
-                    // a target in `Share…`.
+                    // X's link takes words only, so with a card Post on X is
+                    // the system sheet holding the card and X's words, where
+                    // X's own share extension attaches the picture (prd §1366);
+                    // with none it opens X's composer as before (§1299).
                     if xPost != nil {
-                        DSDoorRow(icon: xCopied ? "checkmark" : "square.and.pencil",
-                                  title: xCopied ? Text("Card copied. Paste it in X") : Text("Post on X")) {
-                            postOnX()
-                        }
+                        DSDoorRow(icon: "square.and.pencil", label: "Post on X") { postOnX() }
                     }
                     if let image {
                         // The card and the link (or a voice note's recording,
                         // prd §1024) as UIKit items, never a `ShareLink`:
                         // CoreTransferable sends a link as a plist (§1193).
-                        DSDoorRow(icon: "square.and.arrow.up", label: "Share…") { activityUp = true }
+                        DSDoorRow(icon: "square.and.arrow.up", label: "Share…") {
+                            activityForX = false
+                            activityUp = true
+                        }
                             .sheet(isPresented: $activityUp) {
-                                ActivitySheet(items: voiceFile.map { [image, $0] as [Any] }
-                                    ?? ShareCardPart.items(image: image, link: model?.link,
-                                                           title: shareWords, subject: shareTitle))
+                                ActivitySheet(items: activityItems(image))
                                     .ignoresSafeArea()
                             }
                     } else if nothingToDraw {
@@ -204,27 +204,37 @@ struct ShareTray: View {
         XPostIntent.url(words: shareWords, link: model?.link)
     }
 
-    /// Post on X (prd §1299): the card onto the clipboard, a beat to read
-    /// that it was copied, then X's composer with the words and the link —
-    /// the X app's own scheme when it is installed, else the web composer.
+    /// What the system sheet carries: for Post on X the card and X's words
+    /// with the link at their end, the one pair X's share extension posts
+    /// whole (prd §1366); else the card and the link, or a voice note's
+    /// recording (prd §1024).
+    private func activityItems(_ image: UIImage) -> [Any] {
+        if activityForX {
+            let message = XPostIntent.message(words: shareWords, link: model?.link)
+            return message.isEmpty ? [image] : [image, message]
+        }
+        return voiceFile.map { [image, $0] as [Any] }
+            ?? ShareCardPart.items(image: image, link: model?.link, title: shareWords, subject: shareTitle)
+    }
+
+    /// Post on X: with a card, the system sheet carrying it (prd §1366) —
+    /// X's links take words only, so the card goes through X's share
+    /// extension. With none, X's composer with the words and the link: the
+    /// X app's own scheme when it is installed, else the web composer (§1362).
     @MainActor private func postOnX() {
+        if image != nil {
+            activityForX = true
+            activityUp = true
+            return
+        }
         guard let web = xPost else { return }
         let app = XPostIntent.appURL(words: shareWords, link: model?.link)
-        let png = image?.pngData()
-        if let png {
-            DSPasteboard.copy(png: png)
-            DSHaptic.tap()
-            withAnimation(DS.Motion.standard) { xCopied = true }
-        }
         Task { @MainActor in
-            if png != nil { try? await Task.sleep(for: .milliseconds(700)) }
             var opened = false
             if let app, UIApplication.shared.canOpenURL(app) {
                 opened = await UIApplication.shared.open(app)
             }
             if !opened { openURL(web) }
-            try? await Task.sleep(for: .seconds(2))
-            withAnimation(DS.Motion.standard) { xCopied = false }
         }
     }
 

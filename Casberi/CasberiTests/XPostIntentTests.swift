@@ -47,6 +47,19 @@ struct XPostIntentTests {
         #expect(XPostIntent.appURL(words: " ", link: nil) == nil)
     }
 
+    /// What the share sheet hands X beside the card (prd §1366): the words
+    /// within the limit, the link at their end, nothing for nothing to say.
+    @Test func theMessageIsTheWordsThenTheLink() {
+        let link = URL(string: "https://example.com/a")!
+        #expect(XPostIntent.message(words: "Trip plan: Lisbon", link: link) == "Trip plan: Lisbon https://example.com/a")
+        #expect(XPostIntent.message(words: "Trip plan", link: nil) == "Trip plan")
+        #expect(XPostIntent.message(words: " ", link: link) == "https://example.com/a")
+        #expect(XPostIntent.message(words: " ", link: nil).isEmpty)
+        let long = String(repeating: "word ", count: 80)
+        let cut = XPostIntent.message(words: long, link: link)
+        #expect(cut.count - link.absoluteString.count + XPostIntent.linkWeight <= XPostIntent.limit)
+    }
+
     /// A bare `+` in a query reads as a space, so it travels encoded.
     @Test func aPlusTravelsEncoded() {
         let url = XPostIntent.url(words: "C++ & Swift", link: URL(string: "https://example.com/?q=a+b"))

@@ -66919,3 +66919,15 @@ A sweep of 123 sheets across ~40 heads (`design/sweep/REPORT.md`, local) found e
 1. With nothing connected, no address followed, no subscription tracked and no calendar linked, the Feed's box is Library's box under the day ("Saturday, October 17"): App · Your apps, Calendar · Your events, Subscription · What you pay, Wallet · Any address, each with its plus. "Connect apps in Library." named a door it did not draw. The first one done gives the box back to the day; the category row and the grey preview (§1169) stand under it unchanged.
 2. One view, two places (`StartWaysIn`): Library and the Feed cannot drift. Each host decides what a way in opens. From the Feed: App raises the tray (the Apps page off the phone), Calendar opens the phone's calendars (one by link stays in Library), Subscription raises Track, Wallet raises Follow.
 3. Both boxes give way at the same moment (user: "so please make them match"): `FirstRun.isEmpty` is the one answer, over the eight kinds Library counts (an app, a calendar of the phone's or by link, something followed, a mail list, a person, a subscription, an address; a card comes with its app). `FirstRun.refresh` reads what a body cannot (the phone's calendars, the people) on Library's task and the empty Feed's. A contact kept by hand cleared Library's box and left the Feed's.
+
+## §1366 — Post on X carries the card through the share sheet (amends §1299, §1362) (user, 2026-10-17: "Post on X isn't sharing the card it's only sharing the source", then picked "Share sheet with card")
+
+§1362's clipboard left the paste to the person, and the post went out as the words, the link and X's own preview of the source. No link to X takes a picture (`twitter://post` and `x.com/intent/post` carry text only), and the one door that attaches one from another app is X's share extension, which lives in the system sheet.
+
+1. **With a card, Post on X is the system sheet** holding the card and X's words (`XPostIntent.message`: the words within the limit, the link at their end), two UIKit items. The person taps X and its composer opens with the card attached. One more tap than §1299 asked for; it is the price of the card. The row stays in the tray under its own name, so X is still the first thing offered, not one target among many.
+2. **With no card drawn**, the row opens X's composer with the words and the link as §1362 did (the app's scheme, else the web intent).
+3. **Deleted:** the clipboard copy (`DSPasteboard.copy(png:)`) and the "Card copied. Paste it in X" row.
+
+Guards: `CasberiTests/XPostIntentTests` adds the message's shape. The sheet sweep's `share-system` entry covers the one sheet both rows raise.
+
+**Not seen:** this was written in a session with no Xcode; nothing is built or run. X's share extension taking the card and the words, the Mac.
