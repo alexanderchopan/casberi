@@ -3196,8 +3196,15 @@ struct ThingSheetView: View {
         // An approval is standing permission, never a visit or a settled
         // move (prd §1360): it is Active, and since when.
         if thing.sourceRef?.hasPrefix("wallet:approval:") == true {
-            out.append(MoneyReceiptCell(value: String(localized: "Active"), label: String(localized: "Status")))
-            out.append(MoneyReceiptCell(value: FeedScreen.dayWord(thing.capturedAt), label: String(localized: "Granted")))
+            // The chain's answer, once read: a grant revoked elsewhere says
+            // so (prd §83); the day is the grant's own block time, never the
+            // row's capture time, which falls back to now (prd §1369).
+            out.append(MoneyReceiptCell(value: approvalCheck?.active == false
+                                            ? String(localized: "Revoked") : String(localized: "Active"),
+                                        label: String(localized: "Status")))
+            if let granted = thing.grantedAt {
+                out.append(MoneyReceiptCell(value: FeedScreen.dayWord(granted), label: String(localized: "Granted")))
+            }
             if let wallet = MoneyReceiptSource.walletLabel(thing.walletAddress) {
                 out.append(MoneyReceiptCell(value: wallet, label: String(localized: "Wallet")))
             }

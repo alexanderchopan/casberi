@@ -66947,3 +66947,7 @@ The goal cannot be built. No link to X carries a picture (`twitter://post` and `
 2. **The boundary never doubles:** whether the Observer reads `since_ms` as after or from that instant, the message at it is folded once; a message stamped earlier still lands in time order. `logos-observer-selftest.sh` holds both.
 3. Still read-only and still never stored (§1155): what arrives stays in the tray's memory and leaves with it.
 4. To be measured by the Observer's dev on his iPhone, paired with chats on: messages sent from his Basecamp should appear within seconds, with no duplicates and no gaps. The demo carries no new messages, so nothing on screen changes there.
+
+## §1369 — An approval's status and grant day are the chain's, never assumed (amends §1360) (user, 2026-10-16: "ok commit the fix")
+
+§1360 drew "Active" for every approval and "Granted" from the row's capture time, which falls back to now when the grant's block time was never read: an old grant could say "Granted · Today", and a revoked one said Active above a card saying it had been revoked. The status now reads the live check (`WalletPrepare.check`: Revoked when the chain says the allowance is gone), and Granted is `Thing.grantedAt`, the grant's own block time, or no cell when it was never read.
