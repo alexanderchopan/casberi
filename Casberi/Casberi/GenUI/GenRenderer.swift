@@ -1569,7 +1569,7 @@ struct LiveStreamHero: View {
                             }
                         }
                     }
-                    .clipped()
+                    .clipShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
                 VStack(alignment: .leading, spacing: DS.Space.s1) {
                     HStack(spacing: 5) {
                         // The dot breathes (delight, 2026-08-03) — lawful
@@ -1601,12 +1601,12 @@ struct LiveStreamHero: View {
             }
             .frame(height: DSRoomChassis.leadHeight)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .dsWell(cornerRadius: DS.Radius.widget)
-            .clipShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+            // No well (prd §1381): the frame keeps its corners, the words
+            // stand on the page.
         }
         .buttonStyle(RowPress())
-        // The frame IS the well (prd §766): its edge stands where every other
-        // lead's box does.
+        // The frame is the box (prd §766, §1381): its edge stands where every
+        // other lead's box does.
         .dsRoomHeadPlacement()
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text("Live now, \(thing.title)"))

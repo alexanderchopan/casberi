@@ -242,7 +242,7 @@ struct DSCountGrid<Content: View>: View {
                 .padding(DS.Space.s2)
                 .frame(maxWidth: .infinity, minHeight: DSRoomChassis.leadHeight,
                        maxHeight: DSRoomChassis.leadHeight, alignment: .top)
-                .dsWell(cornerRadius: DS.Radius.widget)
+                // The box, without its well (prd §1381).
         }
     }
 }

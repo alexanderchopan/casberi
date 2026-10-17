@@ -423,7 +423,7 @@ struct AccountDetailSheet: View {
             }
             .padding(DS.Space.s4)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .dsWell(cornerRadius: DS.Radius.widget)
+            // Data's box, without its well (prd §1381).
             SectionPanelCard(name: String(localized: "Privacy"), glyph: "hand.raised") {
             // iCloud sync. The container binds at launch, so a fresh flip says
             // WHEN it goes live instead of pretending it is. RULE (2026-07-27):

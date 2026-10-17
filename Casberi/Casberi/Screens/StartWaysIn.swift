@@ -52,7 +52,7 @@ struct StartWaysIn: View {
         .padding(DS.Space.s2)
         .frame(maxWidth: .infinity, minHeight: DSRoomChassis.leadHeight,
                maxHeight: DSRoomChassis.leadHeight, alignment: .topLeading)
-        .dsWell(cornerRadius: DS.Radius.widget)
+        // The box, without its well (prd §1381).
     }
 
     /// One way in, the whole row one button: the plus says what it does,

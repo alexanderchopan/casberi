@@ -34,7 +34,7 @@ Privacy and Reddit. Frames and Logos are the devnets that remain.
 ### 2. Design system
 - One circle size: every mark and face is 46pt (`DS.Face.seat`). Also: `badge` 20 inside a pill, `profile` 76, `Mark.hero` 60 for a screen's own head (§1017).
 - Type: a screen's name is `heading34`, a section `heading24`, a switcher `heading17` (§915). A lead's large statement tier is `heading28` (§1006). Glyphs take a `DSGlyph` rung, never a number (§762).
-- No plates under any spelling: air separates blocks. `dsWell` holds only typed input, a room's lead or scope figure, a monospaced value, or a small control face (§782). The elevated card is off every block (§759).
+- No plates under any spelling: air separates blocks. `dsWell` holds only typed input, a monospaced value, or a small control face (§782); the top box draws none (§1381). The elevated card is off every block (§759).
 - No hairlines anywhere (§478; the tray in §1013).
 - Weight carries a fact (a state word, the next event), never a title (§782).
 - Two pills only: `Chip` is a choice, `DSStamp` is a fact. A verb is a row (§746).
@@ -63,7 +63,7 @@ Privacy and Reddit. Frames and Logos are the devnets that remain.
 - On the phone, a room's "whose" picker sits under its lead, in the rows' column: GitHub and Pinterest use the Wallet's menu, social rooms a row of faces (§959). A social room's capsule never shows sibling networks (§956).
 
 ### 4. Rooms: lead, tiles, empty
-- Every room's lead is one box, `leadHeight` (236pt, measured over the demo's leads, §1102), in one position: above the first day header, in every room and in All (§906), with the tiles at one y under it in every room that has them (§1102). Every cover holds that box (§904); nothing inside it is a fixed height, and a head that overruns drops whole blocks, never half a line (§1102). Sheets keep their own picture height and draw a cover whole (§1102).
+- Every room's lead is one box, `leadHeight` (236pt, measured over the demo's leads, §1102), in one position: above the first day header, in every room and in All (§906), with the tiles at one y under it in every room that has them (§1102). The box keeps its size and place and draws no fill; the thing fills it on sheets and covers (§1381). Every cover holds that box (§904); nothing inside it is a fixed height, and a head that overruns drops whole blocks, never half a line (§1102). Sheets keep their own picture height and draw a cover whole (§1102).
 - The box fills by a ladder of three tiers, large/mid/regular, picked by fit and never by string length (§905a; large rung per §1006).
 - The lead has no count foot, and day headers show no counts (§914).
 - Every room opens on a lead, with no exception for a shape. A room's tiles never depend on its head (`standaloneLead`) (§911).
@@ -232,7 +232,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1519 of 1588 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1520 of 1589 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1082,7 +1082,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §763 — The room's lead stands in the rows' column, ends at one gap, draws its rows as feed rows, and every room has one
 - §764 — One row anatomy in every room: regular titles, a 12pt line, 24pt sections (part superseded by §796)
 - §765 — The section tiles land at one height on every page, because the chrome draws the figure
-- §766 — Every room's lead is one well: a statement, a body, and a foot pinned to the bottom (amended by §905; part superseded by §914)
+- §766 — Every room's lead is one well: a statement, a body, and a foot pinned to the bottom (amended by §905, §1381; part superseded by §914)
 - §767 — The shell around the rows speaks the rooms' grammar: the dock's seat is the way back, a pushed screen names itself in… (amended by §1132)
 - §768 — The load screen says hello
 - §769 — An empty scope draws its own figure as a skeleton, its short state centred on it, and its list as skeleton rows (amended by §771)
@@ -1263,7 +1263,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §912 — Every landed row names its object, opens it, and carries its words: §909 applied to every bridge (amended by §1043)
 - §913 — More signer capabilities without a wallet that holds funds: a paired Safe app, a Secure Enclave owner, Safe statement…
 - §914 — The lead's count foot is deleted; the cast cover's sentence takes the fit's rung; the eyebrow never repeats the cast'…
-- §915 — The Apple polish pass: say every fact once, one scale of hierarchy, one title seam, words under art, the list just en…
+- §915 — The Apple polish pass: say every fact once, one scale of hierarchy, one title seam, words under art, the list just en… (amended by §1381)
 - §916 — Addresses: the unified contacts list comes back as a room that learns, and web3.bio is the resolver behind ENS (amended by §933, §1025, §1109) [+1 sub-entries]
 - §917 — A mark packs, a word tiles: the wallet's holdings and the source mix are circle packs (part superseded by §939)
 - §918 — Addresses gets smarter: the row's line is the corpus's own word, Recent is alive, search resolves what you paste, eve…
@@ -1753,6 +1753,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1378 — Under "Needs you" a row does not say it needs you
 - §1379 — Every box moves once: it arrives, its numbers roll, a new cover lands (amends §495 for the wallet family's pick, §119…
 - §1380 — No contract of our own, ever; Aztec accounts wait for an audited account that rotates its key
+- §1381 — One slot, no fill: the box keeps its size and place on every screen and draws no well; the thing fills it on sheets a…
 
 ## Dead rulings → what replaced them (generated)
 

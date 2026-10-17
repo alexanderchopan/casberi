@@ -880,7 +880,7 @@ struct FeedLedeCard: View {
                         }
                     }
                 }
-                .clipped()
+                .clipShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
             VStack(alignment: .leading, spacing: DS.Space.s1) {
                 Text(mediaTitle)
                     .dsText(.heading24)
@@ -906,9 +906,8 @@ struct FeedLedeCard: View {
         }
         .frame(height: DSRoomChassis.leadHeight)
         .frame(maxWidth: .infinity, alignment: .leading)
-        // The well is the lead's own (§766); art at its top corners, words on
-        // its ground. One `dsWell` — `plate-audit.py` carries its allowance.
-        .dsWell(cornerRadius: DS.Radius.widget)
+        // No well (prd §1381): the art keeps its own corners, the words
+        // stand on the page under it.
         .clipShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
         .background {
             if selected {

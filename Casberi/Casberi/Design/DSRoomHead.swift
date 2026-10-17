@@ -798,6 +798,13 @@ extension View {
     /// `DSRoomChassis.leadInset`, the rows' own edge. The vertical half stays,
     /// and `LeadFit`'s box is spelled against it.
     ///
+    /// **THE WELL IS WITHDRAWN (prd §1381, user: "Go with no well
+    /// everywhere").** The box keeps every point of its size and place — the
+    /// padding below is the slot's, so the words still stand at `leadInset`
+    /// and the tiles at one y — and draws no fill: the thing in it stands on
+    /// the page like the rows under it. What §766 said of the well, kept for
+    /// the geometry it set:
+    ///
     /// **AND IT SITS IN A WELL (prd §766, user: "proposed with the well").**
     /// Not a plate: §759's no-lift rule stands, and `dsWell` is the RECESSED
     /// rung it names as outside that rule — a faint fill, no shadow, no edge.
@@ -850,7 +857,6 @@ struct DSRoomHeadWell: ViewModifier {
                 .padding(.top, DS.Space.s4)
                 .padding(.bottom, DS.Space.s4)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .dsWell(cornerRadius: DS.Radius.widget)
         }
     }
 }

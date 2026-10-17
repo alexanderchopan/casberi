@@ -169,7 +169,8 @@ struct DSRoomScopeChrome<Scope: DSTileScope, Crown: View, Figure: View>: View {
         // `inset`, which is now the well's edge.
         .padding(.horizontal, DS.Space.s3)
         .padding(.vertical, DS.Space.s2)
-        .dsWell(cornerRadius: DS.Radius.widget)
+        // NO WELL (prd §1381): the slot keeps its size and place, the
+        // figure stands on the page.
         .padding(.horizontal, DSRoomChassis.inset)
     }
 

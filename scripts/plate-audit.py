@@ -82,14 +82,9 @@ INK_ALLOWED = {
 
 # file name → (wells it may draw, why). Counted, like ds-template-audit's ratchet.
 WELL_ALLOWED = {
+    # No box draws a well since prd §1381: the top box keeps its size and place, no fill.
     "Glass.swift": (0, "the definition itself"),
-    "DSRoomHead.swift": (1, "the room lead's well, `dsRoomHeadBlock` (prd §766)"),
-    "DSRoomScopeChrome.swift": (1, "a room scope's figure well (prd §766)"),
-    "AccountDetailSheet.swift": (1, "Data's box — what is kept and that nothing routes through us — "
-                                   "which IS the screen's lead well (prd §766, §1227)"),
-    "StartWaysIn.swift": (1, "Start with any of these, Library's and the empty Feed's box, which IS the screen's lead well (prd §766, §1314, §1365)"),
     "SourcesLibrary.swift": (2, "a Library folder's face and Casberi's own folder, App Library's folders (prd §1316, §1319)"),
-    "DSCountTile.swift": (1, "Settings' and Markets' count box, which IS the room's lead well (prd §766, §1198)"),
     "Composer.swift": (1, "the composer's draft field — the floating layer"),
     "VoiceListeningBand.swift": (1, "the live transcript, one band for the composer and the note sheet (§970) — the floating layer"),
     "AgentChatView.swift": (1, "the agent room's entry field — the one thing §782 "
@@ -100,8 +95,6 @@ WELL_ALLOWED = {
     "SafeScreen.swift": (2, "two entry fields: a pairing link, a pasted signing request (prd §913)"),
     "SafeAskSheet.swift": (1, "the pasted statement, an entry field (prd §913)"),
     "ThingContent.swift": (1, "a monospaced text block"),
-    "FeedLedeCard.swift": (1, "the media cover's well — art at its top, words on its ground (prd §915)"),
-    "GenRenderer.swift": (1, "the live stream's cover, the same stacked well (prd §915)"),
     "NoteSheetViews.swift": (1, "a monospaced code block"),
 }
 
