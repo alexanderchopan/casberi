@@ -1,36 +1,16 @@
 import SwiftUI
 import MessageUI
 
-/// The system composers, as sheets (docs/social-spec.md section 0, section 3). The card
-/// rides as a PNG attachment and the thing's link as the body; the person
-/// taps Send, the app never does — a composer is the one sanctioned write
-/// for Messages and Mail, and it ends on its own Cancel or Send, which is
-/// all the app reads.
-///
-/// A recipient is prefilled only on the tray's named row (`Send to Sam`),
-/// resolved through the address book (`ShareTray.recipient(for:context:)`,
-/// section 5); the generic rows open with the To line empty.
+/// The system composers, as sheets (docs/social-spec.md section 0). The
+/// person taps Send, the app never does — a composer is the one sanctioned
+/// write for Messages and Mail, and it ends on its own Cancel or Send, which
+/// is all the app reads.
 enum MessageCompose {
     /// Whether this device can raise the Messages composer at all — false on
-    /// the simulator and on a Mac with no Messages account, in which case the
-    /// tray draws no row rather than a dead one (§83).
+    /// the simulator and on a Mac with no Messages account, in which case no row
+    /// draws rather than a dead one (§83).
     static var canText: Bool { MFMessageComposeViewController.canSendText() }
     static var canMail: Bool { MFMailComposeViewController.canSendMail() }
-
-    /// The digits of a stored `tel:` URL, for a recipient line.
-    static func phone(fromTel tel: String?) -> String? {
-        guard let tel, let url = URL(string: tel), url.scheme == "tel" else { return nil }
-        let digits = url.absoluteString.dropFirst("tel:".count)
-        return digits.isEmpty ? nil : String(digits)
-    }
-
-    /// The address of a stored `mailto:` URL (the part before its `?`).
-    static func address(fromMailto mailto: String?) -> String? {
-        guard let mailto, let url = URL(string: mailto), url.scheme == "mailto" else { return nil }
-        let rest = url.absoluteString.dropFirst("mailto:".count)
-        let addr = rest.split(separator: "?", maxSplits: 1).first.map(String.init) ?? ""
-        return addr.contains("@") ? addr.removingPercentEncoding ?? addr : nil
-    }
 }
 
 /// `MFMessageComposeViewController`, presented as a SwiftUI sheet.

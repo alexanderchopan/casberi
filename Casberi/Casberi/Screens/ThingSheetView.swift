@@ -2309,7 +2309,7 @@ struct ThingSheetView: View {
             } else {
                 if Highlight.isHighlight(thing) {
                     // A highlight shares as the quote card (prd §1020), the
-                    // dial's tray on the note's own key.
+                    // dial's share sheet on the note's own key.
                     Button {
                         DSHaptic.tap()
                         sharingHighlight = true
@@ -2318,7 +2318,7 @@ struct ThingSheetView: View {
                     }
                     .buttonStyle(PressSpring())
                     .accessibilityLabel(Text("Share the highlight"))
-                    .dsOneSheet(isPresented: $sharingHighlight, pushes: pushesHere) { ShareTray(thing: thing) }
+                    .sheet(isPresented: $sharingHighlight) { ShareTray(thing: thing) }
                 } else {
                     ThingShareLink(thing: thing) {
                         bandDisc("square.and.arrow.up")

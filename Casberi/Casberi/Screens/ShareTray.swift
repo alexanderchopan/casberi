@@ -1,24 +1,15 @@
 import SwiftUI
-import SwiftData
 
-/// The share tray (docs/social-spec.md section 3) — what the dial's Share disc
-/// raises: the card, drawn at width so the person sees exactly what goes
-/// out, then the doors as rows (§746: a verb is a row). Messages and Mail
-/// open the system composer with the card attached and the link in the
-/// body; `Share…` is the system sheet with the card and the link as two
-/// UIKit items (`ShareCardPart`, prd §1193), so a target keeps both; Post
-/// on X is the same sheet with the card and X's words (prd §1366).
+/// Share (docs/social-spec.md section 3, prd §1370) — what the dial's Share
+/// disc raises: the system share sheet, with the card and the link as two
+/// UIKit items (`ShareCardPart`, prd §1193), so a target keeps both. The
+/// sheet's header draws the card (`LinkItem`'s metadata); Messages, Mail and
+/// every other target are the sheet's own. A spinner holds the slot while
+/// the card's pictures arrive.
 ///
-/// Rows the device cannot honour are not drawn (§83): the simulator and a
-/// Mac with no Messages account have no Messages row; there is always
-/// `Share…`, even when the card cannot be drawn (then it carries the link).
-///
-/// The generic rows open with NO recipient: sending a thing on is usually to
-/// someone other than the person it is from, and a prefilled wrong name is
-/// worse than an empty field. The thing's own person, when the address book
-/// holds one with a way to reach them (section 5), is a row of its own that
-/// says who — `Send to Sam` — so the choice is visible, never hidden in a
-/// composer's To line.
+/// When the card cannot be drawn the sheet still opens, with the link, or
+/// the title in words (§83 — the door never vanishes); with neither, the
+/// slot says so.
 struct ShareTray: View {
     /// What the card is of: one thing, or a room's own figure (section 6,
     /// item 3 — `RoomShareCard`).
@@ -41,130 +32,44 @@ struct ShareTray: View {
     }
     @State private var model: ShareCard.Model?
     @State private var image: UIImage?
-    @State private var composer: Composer?
-    /// The room could not draw a card (nothing this week, nothing read) —
-    /// said in the slot, never a spinner that spins for ever (§83).
+    /// The card could not be drawn (nothing this week, nothing read).
     @State private var nothingToDraw = false
-    /// The thing's own person, resolved on open through the address book.
-    @State private var recipient: Recipient?
     /// A voice note's recording, written once for the system sheet (prd §1024).
     @State private var voiceFile: URL?
-    @State private var activityUp = false
-    @Environment(\.modelContext) private var context
-
-    private enum Composer: String, Identifiable {
-        case messages, mail, messagesTo, mailTo
-        var id: String { rawValue }
-    }
-
-    /// Who the named row sends to, and the one channel it opens: a phone
-    /// in Messages first, else an email in Mail.
-    struct Recipient: Equatable {
-        let name: String
-        let phone: String?
-        let email: String?
-    }
-
-    /// The named row's channel, or nil when this device cannot open it.
-    private var recipientChannel: Composer? {
-        guard let recipient else { return nil }
-        if recipient.phone != nil, MessageCompose.canText { return .messagesTo }
-        if recipient.email != nil, MessageCompose.canMail { return .mailTo }
-        return nil
-    }
-
-    /// Pad, title, gap, the card at `previewHeight`, the rows, pad — the
-    /// arithmetic every `DSTray` caller spells out, because the tray clips at
-    /// its detent.
-    private static let previewHeight: CGFloat = 420
-    private var trayHeight: CGFloat {
-        let rows = CGFloat(1 + (MessageCompose.canText ? 1 : 0) + (MessageCompose.canMail ? 1 : 0)
-                           + (recipientChannel != nil ? 1 : 0))
-        return DS.Space.s6 + 40 + DS.Space.s4 + Self.previewHeight + DS.Space.s3
-             + rows * DS.Hit.min + DS.Space.s6
-    }
 
     var body: some View {
         if let thing, !thing.isLive { EmptyView() } else { liveBody }
     }
 
     private var liveBody: some View {
-        DSTray(title: "Share", height: trayHeight, ink: true,
-               detents: [.height(trayHeight), .large]) {
-            VStack(alignment: .leading, spacing: DS.Space.s3) {
-                preview
-                    .frame(maxWidth: .infinity)
-                    .frame(height: Self.previewHeight)
-                VStack(spacing: 0) {
-                    if let recipient, let channel = recipientChannel {
-                        DSDoorRow(icon: channel == .messagesTo ? "message" : "envelope",
-                                  title: Text("Send to \(recipient.name)")) { composer = channel }
-                    }
-                    if MessageCompose.canText {
-                        DSDoorRow(icon: "message", label: "Send in Messages") { composer = .messages }
-                    }
-                    if MessageCompose.canMail {
-                        DSDoorRow(icon: "envelope", label: "Send in Mail") { composer = .mail }
-                    }
-                    if let image {
-                        // The card and the link (or a voice note's recording,
-                        // prd §1024) as UIKit items, never a `ShareLink`:
-                        // CoreTransferable sends a link as a plist (§1193).
-                        DSDoorRow(icon: "square.and.arrow.up", label: "Share…") { activityUp = true }
-                            .sheet(isPresented: $activityUp) {
-                                ActivitySheet(items: activityItems(image))
-                                    .ignoresSafeArea()
-                            }
-                    } else if nothingToDraw {
-                        // No card to send, but the thing still goes out: its
-                        // link, or its words (§83 — the door never vanishes).
-                        fallbackShare
-                    }
-                }
+        Group {
+            if let items {
+                ActivitySheet(items: items)
+                    .ignoresSafeArea()
+            } else if nothingToDraw {
+                Text("Nothing to draw yet.")
+                    .dsText(.body17)
+                    .foregroundStyle(DS.textTertiary)
+            } else {
+                DSSpinner()
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .dsReadSheet()
         .task { await build() }
-        .sheet(item: $composer) { which in
-            switch which {
-            case .messages, .messagesTo:
-                TextComposer(body: composeBody, attachment: image?.pngData(), attachmentName: "casberi.png",
-                             recipients: which == .messagesTo ? (recipient?.phone).map { [$0] } ?? [] : [])
-                    .ignoresSafeArea()
-            case .mail, .mailTo:
-                MailComposer(subject: shareTitle, body: composeBody, attachment: image?.pngData(),
-                             attachmentName: "casberi.png",
-                             recipients: which == .mailTo ? (recipient?.email).map { [$0] } ?? [] : [])
-                    .ignoresSafeArea()
-            }
-        }
     }
 
-    /// The card as it will be sent — the rendered bitmap, never a live
-    /// view, so what is previewed is what goes out. A spinner holds the
-    /// slot while the pictures arrive.
-    @ViewBuilder private var preview: some View {
+    /// What the system sheet carries: the card and the link, or a voice
+    /// note's recording (prd §1024); with no card, the link or the words.
+    /// nil while the card is drawn, and when there is nothing to send.
+    private var items: [Any]? {
         if let image {
-            Image(uiImage: image)
-                .resizable()
-                .scaledToFit()
-                .clipShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
-        } else if nothingToDraw {
-            Text("Nothing to draw yet.")
-                .dsText(.body17)
-                .foregroundStyle(DS.textTertiary)
-        } else {
-            DSSpinner()
+            return voiceFile.map { [image, $0] as [Any] }
+                ?? ShareCardPart.items(image: image, link: model?.link, title: shareWords, subject: shareTitle)
         }
-    }
-
-    /// `Share…` with no card: the link when the thing has one, else the
-    /// subject in words — a real `URL`, never a `ShareLink`'s (§1193).
-    private var fallbackShare: some View {
-        DSDoorRow(icon: "square.and.arrow.up", label: "Share…") { activityUp = true }
-            .sheet(isPresented: $activityUp) {
-                ActivitySheet(items: [model?.link.map { $0 as Any } ?? shareTitle])
-                    .ignoresSafeArea()
-            }
+        guard nothingToDraw else { return nil }
+        if let link = model?.link { return [link] }
+        return shareTitle.isEmpty ? nil : [shareTitle]
     }
 
     /// The subject and the preview's name: the thing's title, or the room's
@@ -185,27 +90,12 @@ struct ShareTray: View {
         return shareTitle
     }
 
-    /// What the system sheet carries: the card and the link, or a voice
-    /// note's recording (prd §1024).
-    private func activityItems(_ image: UIImage) -> [Any] {
-        voiceFile.map { [image, $0] as [Any] }
-            ?? ShareCardPart.items(image: image, link: model?.link, title: shareWords, subject: shareTitle)
-    }
-
-    /// The composer's body: the thing's link when it has one, else the
-    /// subject.
-    private var composeBody: String {
-        if let link = model?.link { return link.absoluteString }
-        return shareTitle
-    }
-
     /// Build the model on main, fetch the pictures off it, render on main.
     @MainActor private func build() async {
         switch source {
         case .thing(let thing):
             guard let base = ShareCard.model(for: thing) else { nothingToDraw = true; return }
             model = base
-            recipient = Self.recipient(for: thing, context: context)
             let pixels = thing.isLive ? thing.previewImageData : nil
             var filled = await ShareCard.fetchingPictures(base, storedPixels: pixels)
             // A voice note's strip (prd §1024), read off the bytes once.
@@ -234,34 +124,6 @@ struct ShareTray: View {
             image = ShareCard.render(built)
             if image == nil { nothingToDraw = true }
         }
-    }
-
-    /// The person the thing is from or about, when the address book holds
-    /// one (section 5) and it is a person, not you, with a way to reach
-    /// them: a phone or an email off their Contacts card, else a mail
-    /// identity, else the thing's own detected `tel:` / `mailto:`. Read on
-    /// open, never from a body (§628); one fetch, of one card.
-    @MainActor
-    static func recipient(for thing: Thing, context: ModelContext) -> Recipient? {
-        guard thing.isLive, let contact = ContactIndexSources.contact(for: thing),
-              contact.kind == .person, !contact.isUnnamed,
-              !ContactIndexSources.isYours(contact) else { return nil }
-        var phone: String?
-        var email: String?
-        if let key = contact.identities.first(where: { $0.kind == .contact })?.key,
-           let ref = ContactIndexSources.cardRef(forKey: key) {
-            var fetch = FetchDescriptor<Thing>(predicate: #Predicate { $0.sourceRef == ref })
-            fetch.fetchLimit = 4
-            let card = (try? context.fetch(fetch))?.first { $0.isLive && $0.kind == .contact }
-            let facts = card?.factList ?? []
-            phone = facts.first { $0.action == .call }?.value
-            email = facts.first { $0.action == .mail }?.value
-        }
-        if email == nil { email = contact.identities.first { $0.kind == .email }?.body }
-        if phone == nil { phone = MessageCompose.phone(fromTel: thing.detectedTel) }
-        if email == nil { email = MessageCompose.address(fromMailto: thing.detectedMailto) }
-        guard phone != nil || email != nil else { return nil }
-        return Recipient(name: contact.name, phone: phone, email: email)
     }
 }
 

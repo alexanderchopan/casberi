@@ -99,7 +99,7 @@ struct SwapStage {
 
 /// The verb dial (B1, 2026-07-16): a thing sheet's acts. Reads pass, writes
 /// confirm (the caller routes through the same confirm dialog), Share raises
-/// the share tray.
+/// the system share sheet with the card (`ShareTray`).
 ///
 /// **THE ROOMS' TILES SINCE prd §1178** (user: "for the buttons on the thing
 /// sheets i'd like them to be same size they are on the rooms … so we are
@@ -132,10 +132,8 @@ struct VerbDial: View {
     /// an outcome the parent is still computing (§83): `DSPasteboard.copy`
     /// cannot fail, which is why this is the one verb that gets it.
     @State private var copied: Verb.ID?
-    /// The share tray, raised by the Share disc.
+    /// The system share sheet, raised by the Share disc.
     @State private var sharing = false
-    /// Inside the thing sheet's stack, Share pushes (prd §1315).
-    @Environment(\.dsInSheetStack) private var inSheetStack
 
 
     /// Liveness guard (build 188 — see `ThingRowKeying.swift`). SwiftUI
@@ -155,8 +153,8 @@ struct VerbDial: View {
             // centred and needed no inset; a grid does.
             .padding(.horizontal, DSRoomChassis.inset)
             .frame(maxWidth: .infinity)
-            // Pushes inside the thing sheet's stack (prd §1315).
-            .dsOneSheet(isPresented: $sharing, pushes: inSheetStack) { ShareTray(thing: thing) }
+            // The system share sheet rises, a system picker (prd §1238, §1370).
+            .sheet(isPresented: $sharing) { ShareTray(thing: thing) }
             // Bound to `copied`, so SwiftUI cancels it when the sheet goes and
             // restarts it when a second copy lands before the first has cleared.
             .task(id: copied) {

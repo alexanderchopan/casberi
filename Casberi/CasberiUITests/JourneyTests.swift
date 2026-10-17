@@ -258,10 +258,10 @@ final class JourneyTests: XCTestCase {
 
     // MARK: - Acting on what you have
 
-    /// SHARE A THING you are looking at: its sheet's Share, and the tray
-    /// with the card drawn and Share… under it (prd §1367). The system sheet
-    /// is the end of ours. The demo's one X post (`find`'s) is open as
-    /// the setup (`-openThing`), since getting to a thing is `find`'s job.
+    /// SHARE A THING you are looking at: its sheet's Share raises the system
+    /// share sheet with the card (prd §1370), which is the end of ours. The
+    /// demo's one X post (`find`'s) is open as the setup (`-openThing`),
+    /// since getting to a thing is `find`'s job.
     @MainActor func testShare() {
         let w = Walk("share", launch: Walk.demo, test: self)
         // `-openThing` runs at mount, before a fresh install's pour lands, so
@@ -269,7 +269,7 @@ final class JourneyTests: XCTestCase {
         w.relaunch(Walk.demo + ["-openThing", "Sourdough"])
         // The tile's label is its glyph's and its word's: "Share, Share".
         w.tap(w.visible(.button, "label BEGINSWITH %@", "Share"), "Share")
-        w.see(w.el(.button, "label == %@", "Share…"), "share tray, Share…")
+        w.see(w.el(.button, "label == %@", "Close"), "the system share sheet")
         w.finish()
     }
 

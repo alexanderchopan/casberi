@@ -690,7 +690,7 @@
      "tap": "button:^Share this week"
     }
    ],
-   "anchor": "button:=Share…"
+   "anchor": "button:=Close"
   },
   {
    "id": "feed-thing",
@@ -753,38 +753,10 @@
      "tap": "button:^Share"
     }
    ],
-   "anchor": "button:=Share…",
-   "afterSwipe": "button:=Search",
-   "control": "button:=Back",
-   "afterControl": "button:^Share"
-  },
-  {
-   "id": "share-system",
-   "covers": [
-    "Screens/ShareTray.swift:activityUp"
-   ],
-   "launch": [
-    "demo"
-   ],
-   "steps": [
-    {
-     "relaunch": [
-      "demo",
-      "-openThing",
-      "Sourdough"
-     ]
-    },
-    {
-     "tap": "button:^Share"
-    },
-    {
-     "tap": "button:=Share…"
-    }
-   ],
    "anchor": "button:=Close",
    "control": "button:=Close",
-   "afterSwipe": "button:=Share…",
-   "afterControl": "button:=Share…"
+   "afterSwipe": "button:^Share",
+   "afterControl": "button:^Share"
   },
   {
    "id": "media-follow-site",
@@ -1757,8 +1729,6 @@
   },
   {
    "covers": [
-    "Screens/ShareTray.swift:composer#messages",
-    "Screens/ShareTray.swift:composer#mail",
     "Screens/AddressesScreen.swift:composer#messages",
     "Screens/AddressesScreen.swift:composer#mail"
    ],
@@ -1769,12 +1739,6 @@
     "Shell/NoteCaptureSheet.swift:scanOpen"
    ],
    "why": "the document camera needs a camera; the simulator has none, so Attach offers no Scan there"
-  },
-  {
-   "covers": [
-    "Screens/ShareTray.swift:activityUp@2"
-   ],
-   "why": "the same ActivitySheet as `share-system`, drawn only when a thing's share card cannot render"
   },
   {
    "covers": [

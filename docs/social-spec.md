@@ -192,6 +192,14 @@ When the card cannot be drawn, `Share…` still stands and carries the link, or
 the title in words; the tray never spins with no door. The card's foot carries
 `casberi.app` on its far edge, quieter than the mark.
 
+**Amended 2026-10-17 (prd §1370, the tray is deleted).** The Share disc raises
+the system share sheet directly, with the card and the link as two items
+(`ShareCardPart`); the sheet's header draws the card. The tray's preview, its
+Messages and Mail rows and `Send to <person>` are deleted with it, and
+`ShareTray.recipient(for:context:)` with them: Messages and Mail are the
+sheet's own targets, and its people row suggests who to send to. The rest of
+this section is the record of what the tray was.
+
 ---
 
 ## 4. Acts by seat (share-card session, LATER — not in the first pass)
