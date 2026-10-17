@@ -364,8 +364,14 @@ final class VoiceCapture: NSObject {
                   String(describing: status))
             return false
         }
+        // The analyzer takes ONE format, its own; the mic's is the hardware's.
+        guard let analyzerFormat = await SpeechAnalyzer.bestAvailableAudioFormat(compatibleWith: [transcriber]) else {
+            NSLog("VoiceCapture: SpeechAnalyzer offered no audio format — using SFSpeechRecognizer this session")
+            return false
+        }
         do {
-            let session = try await ModernSpeechSession(transcriber: transcriber) { [weak self] text in
+            let session = try await ModernSpeechSession(transcriber: transcriber,
+                                                        format: analyzerFormat) { [weak self] text in
                 Task { @MainActor in self?.transcript = text }
             } onEnded: { [weak self] text in
                 // The last words and the flag in ONE hop (prd §972): two
@@ -394,9 +400,16 @@ private final class ModernSpeechSession {
     private let analyzer: SpeechAnalyzer
     private let inputContinuation: AsyncStream<AnalyzerInput>.Continuation
     private var resultsTask: Task<Void, Never>?
+    /// The analyzer's own format (`bestAvailableAudioFormat`), and the
+    /// converter from the mic's to it, built on the first buffer. Touched
+    /// only from the tap's thread, one buffer at a time.
+    private let format: AVAudioFormat
+    private var converter: AVAudioConverter?
 
-    init(transcriber: SpeechTranscriber, onTranscript: @escaping (String) -> Void,
+    init(transcriber: SpeechTranscriber, format: AVAudioFormat,
+         onTranscript: @escaping (String) -> Void,
          onEnded: @escaping (String) -> Void) async throws {
+        self.format = format
         let (stream, continuation) = AsyncStream<AnalyzerInput>.makeStream()
         inputContinuation = continuation
         let analyzer = SpeechAnalyzer(modules: [transcriber])
@@ -440,8 +453,48 @@ private final class ModernSpeechSession {
     /// Called from the audio tap's callback (an arbitrary, non-main thread)
     /// — `AsyncStream.Continuation.yield` is safe to call concurrently from
     /// any thread, same contract the legacy path's `request.append` relied on.
+    ///
+    /// **THE MIC'S BUFFER IS CONVERTED FIRST (build 796, crash 2026-10-10).**
+    /// The raw tap buffer, in the mic's hardware format, trapped inside
+    /// Speech (`AnalyzerInput.data(from:)`) on the audio thread,
+    /// mid-recording. Apple's contract is the analyzer's own format, from
+    /// `bestAvailableAudioFormat`, so every buffer is converted to it. The
+    /// simulator never reached this path: it cannot install the model (prd
+    /// §987), so it always fell back to `SFSpeechRecognizer`.
     func append(_ buffer: AVAudioPCMBuffer) {
-        inputContinuation.yield(AnalyzerInput(buffer: buffer))
+        guard let converted = converted(buffer) else { return }
+        inputContinuation.yield(AnalyzerInput(buffer: converted))
+    }
+
+    /// `buffer` in the analyzer's format, or nil for an empty buffer or a
+    /// conversion that failed (that slice of audio goes untranscribed; the
+    /// recording file is written separately and keeps it).
+    private func converted(_ buffer: AVAudioPCMBuffer) -> AVAudioPCMBuffer? {
+        guard buffer.frameLength > 0 else { return nil }
+        if buffer.format == format { return buffer }
+        if converter?.inputFormat != buffer.format {
+            converter = AVAudioConverter(from: buffer.format, to: format)
+            // A live stream: no priming, so no frames are swallowed at the
+            // seam between one buffer and the next.
+            converter?.primeMethod = .none
+        }
+        guard let converter else { return nil }
+        let ratio = format.sampleRate / buffer.format.sampleRate
+        let capacity = AVAudioFrameCount((Double(buffer.frameLength) * ratio).rounded(.up)) + 1
+        guard let out = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: capacity) else { return nil }
+        var handed = false
+        var error: NSError?
+        let status = converter.convert(to: out, error: &error) { _, inputStatus in
+            if handed {
+                inputStatus.pointee = .noDataNow
+                return nil
+            }
+            handed = true
+            inputStatus.pointee = .haveData
+            return buffer
+        }
+        guard status != .error, error == nil, out.frameLength > 0 else { return nil }
+        return out
     }
 
     func finish() async {
