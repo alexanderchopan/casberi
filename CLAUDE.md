@@ -360,7 +360,7 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - **The vault (Obsidian)** (`-obsidianVault` `-obsidianProbe`) → docs/hooks/imports.md · prd §320
 - **The folder a file is saved in (user feedback: "would be great to be able to press here and it takes you to folder where the file is saved") — the disc says the FOLDER since §736 (`Show in Receipts`), and the From row that carried it is deleted** (`-filesRevealProbe`) → docs/hooks/imports.md · prd §408 · §736
 - **The email a mail row came from (user: "see how this says from your inbox? Can we make it so that if you tap it, it takes the user to the email in the inbox")** → docs/hooks/bridges.md · prd §735 · §736
-- **A connected folder's images could not be read at all, and iCloud was never why** (`-filesHealProbe`) → docs/hooks/imports.md · prd §604
+- **A connected folder's images could not be read at all, and iCloud was never why** (`-filesHealProbe`); reads are coordinated (§1376) → docs/hooks/imports.md · prd §604 · §1376
 - **Telegram, through the two doors §57 never weighed** → docs/hooks/bridges.md · prd §456
 - `-rssFeed` `-chatgptImport` `-claudeImport` — follow a feed and sync headlessly; -chatgptImport <path> → docs/hooks/imports.md
 - `-trelloKey` `-trelloProbe` `-tokenBridge` — Trello (2026-08-03, prd §291, Model/TokenBridges.swift's TrelloAuth + trello(); seat id trello, group Work) → docs/hooks/bridges.md · prd §291

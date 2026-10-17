@@ -23,7 +23,7 @@
 # So the rule is that the scope belongs to the READ, never to whichever caller
 # happens to enclose it — and this is that rule, mechanically.
 #
-# `--self-test` mutates a COPY of the real source four ways, one per shape this
+# `--self-test` mutates a COPY of the real source five ways, one per shape this
 # is meant to catch, and requires each to go red. A check that cannot be shown
 # to fail certifies nothing.
 set -uo pipefail
@@ -57,6 +57,10 @@ check_reader() {
     || fail "$fn does not open the security scope — a picked folder's bytes are unreadable outside one, silently and permanently"
   print -r -- "$b" | grep -q 'folder.stopAccessingSecurityScopedResource()' \
     || fail "$fn opens the security scope and never closes it — the scope is refcounted, so a leaked start holds it open for the life of the process"
+  # prd §1376: a scoped plain read of a file iCloud has not brought to the
+  # phone gets nothing. The coordinated read is what asks for the bytes.
+  print -r -- "$b" | grep -q 'coordinatedRead(url)' \
+    || fail "$fn reads the file without NSFileCoordinator — an iCloud file not yet on this device never arrives and draws as its filename"
 }
 
 run_checks() {
@@ -122,6 +126,9 @@ if [[ "${1:-}" == "--self-test" ]]; then
   # 4. A call site stops handing the folder over.
   probe "heal stops passing the folder to a reader" \
     's/await ocrRead\(url: fileURL, folder: folder\)/await ocrRead(url: fileURL)/s'
+  # 5. A reader goes back to a plain, uncoordinated read (prd §1376).
+  probe "ocrRead reads without coordination" \
+    's/(func ocrRead\(.*?)guard let data = coordinatedRead\(url\),\n\s*let src = CGImageSourceCreateWithData\(data as CFData, nil\)/$1guard let src = CGImageSourceCreateWithURL(url as CFURL, nil)/s'
   # And the real tree must PASS, or every red above is red for the wrong reason.
   ( run_checks "$BRIDGE" "$MEDIA" ) >/dev/null 2>&1 \
     || fail "self-test: the unmutated tree fails its own checks"

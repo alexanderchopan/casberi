@@ -709,7 +709,8 @@ struct ThingSheetView: View {
                     Button {
                         if thing.sourceRef != nil || thing.previewImageData != nil { zoomPhoto() }
                     } label: {
-                        PhotoWell(thing: thing, anchor: thing.kind == .screenshot ? .top : .center)
+                        PhotoWell(thing: thing, anchor: thing.kind == .screenshot ? .top : .center,
+                                  readsFolder: true)
                             .overlay(alignment: .topTrailing) {
                                 Image(systemName: "arrow.up.left.and.arrow.down.right")
                                     .dsGlyph(.caption, weight: .bold)

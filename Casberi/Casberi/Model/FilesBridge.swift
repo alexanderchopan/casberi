@@ -580,6 +580,14 @@ enum FilesIngest {
     /// use their network for. Later passes ask for the rest.
     private static let downloadRequestsPerPass = 20
 
+    /// How many not-yet-downloaded files one heal pass READS, each waiting
+    /// on its download for up to `coordinatedRead`'s timeout (prd §1376).
+    private static let downloadsReadPerPass = 6
+
+    /// How long a heal pass starts new reads. Well inside `stuckAfter`, so
+    /// the last read plus its OCR still ends before a second pass may start.
+    private static let readWindow: TimeInterval = 60
+
     /// Thumbnails, OCRs, and retitles the image files a sync already landed —
     /// the same land-fast/heal-later split `ScreenshotIngest.heal` uses,
     /// since a folder can be large (or live on iCloud Drive, not yet fully
@@ -670,18 +678,25 @@ enum FilesIngest {
             }.value
         let byRef = walked.byRef
 
-        var thumbed = 0, ocred = 0, postered = 0
+        var thumbed = 0, ocred = 0, postered = 0, fetched = 0
+        let deadline = Date.now.addingTimeInterval(Self.readWindow)
         var reindex: [Thing] = []
         for thing in things {
             // Not in the current walk — moved or deleted since this Thing
             // landed; `refresh` prunes it on its own next pass. Nothing to
             // read here.
             guard let ref = thing.sourceRef, let fileURL = byRef[ref] else { continue }
-            // Present in the folder, bytes not on this device yet — the
-            // download was requested above. Reading now would fail and cost a
-            // slot in the budgets below, which is what kept a downloaded file
-            // further along in the same pass from being healed.
-            if walked.pending.contains(ref) { continue }
+            // No read starts past the pass's deadline: a coordinated read
+            // waits on iCloud, and the single-flight box is `stuckAfter`.
+            if Date.now > deadline { break }
+            // Present in the folder, bytes not on this device yet. The
+            // coordinated read brings them down (prd §1376), so a few are
+            // read here; the rest wait for a later pass, or every slot below
+            // would go to waiting on downloads.
+            if walked.pending.contains(ref) {
+                guard fetched < Self.downloadsReadPerPass else { continue }
+                fetched += 1
+            }
             let originalName = fileURL.lastPathComponent
 
             let isVideo = videoExtensions
@@ -809,7 +824,8 @@ enum FilesIngest {
             // IT OPENS THE SCOPE ITSELF — see this function's doc above.
             let scoped = folder.startAccessingSecurityScopedResource()
             defer { if scoped { folder.stopAccessingSecurityScopedResource() } }
-            guard let src = CGImageSourceCreateWithURL(url as CFURL, nil) else { return nil }
+            guard let data = coordinatedRead(url),
+                  let src = CGImageSourceCreateWithData(data as CFData, nil) else { return nil }
             let opts: [CFString: Any] = [
                 kCGImageSourceCreateThumbnailFromImageAlways: true,
                 kCGImageSourceThumbnailMaxPixelSize: 480,
@@ -832,7 +848,8 @@ enum FilesIngest {
             // IT OPENS THE SCOPE ITSELF — see `thumbnail`'s doc above.
             let scoped = folder.startAccessingSecurityScopedResource()
             defer { if scoped { folder.stopAccessingSecurityScopedResource() } }
-            guard let src = CGImageSourceCreateWithURL(url as CFURL, nil) else { return nil }
+            guard let data = coordinatedRead(url),
+                  let src = CGImageSourceCreateWithData(data as CFData, nil) else { return nil }
             let opts: [CFString: Any] = [
                 kCGImageSourceCreateThumbnailFromImageAlways: true,
                 kCGImageSourceThumbnailMaxPixelSize: 1600,
@@ -842,5 +859,51 @@ enum FilesIngest {
         }.value
         guard let cg else { return (false, nil) }
         return (true, await ScreenshotOCR.text(for: cg))
+    }
+
+    /// One file's bytes, read through `NSFileCoordinator` (prd §1376).
+    ///
+    /// A picked iCloud Drive folder is another process's files, and on iOS
+    /// the coordinated read is what asks the provider for the bytes and waits
+    /// for them. A plain read of a file not yet on the phone gets nothing,
+    /// and `startDownloadingUbiquitousItem` alone was never seen to bring one
+    /// down: a CleanShot saved on the Mac stayed a placeholder on the phone
+    /// with its raw name (reported three times, §604 the second).
+    ///
+    /// Bounded: a coordinated read waits for the download with no timeout of
+    /// its own, so it is cancelled after `timeout` and answers nil, and the
+    /// next pass asks again. Runs inside the caller's scope, off main.
+    private static func coordinatedRead(_ url: URL, timeout: TimeInterval = 15) -> Data? {
+        let coordinator = NSFileCoordinator(filePresenter: nil)
+        let stop = DispatchWorkItem { coordinator.cancel() }
+        DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + timeout, execute: stop)
+        defer { stop.cancel() }
+        var refusal: NSError?
+        var data: Data?
+        coordinator.coordinate(readingItemAt: url, options: [], error: &refusal) { readable in
+            data = try? Data(contentsOf: readable)
+        }
+        return data
+    }
+
+    /// The sheet's own read of a folder image the heal has not reached
+    /// (prd §1376): find it in a fresh walk, read it, keep its picture.
+    /// Fills a nil only, so it never races the heal into a different answer.
+    @MainActor
+    static func fillPicture(_ thing: Thing) async -> Bool {
+        guard thing.isLive, thing.previewImageData == nil,
+              let ref = thing.sourceRef, isImageRef(ref),
+              let folder = FilesStore.shared.folderURL() else { return false }
+        let url: URL? = await Task.detached(priority: .userInitiated) { () -> URL? in
+            let scoped = folder.startAccessingSecurityScopedResource()
+            defer { if scoped { folder.stopAccessingSecurityScopedResource() } }
+            return walk(folder)?.first(where: { $0.ref == ref })?.url
+        }.value
+        guard let url, let data = await thumbnail(url: url, folder: folder),
+              thing.isLive, thing.previewImageData == nil else { return false }
+        thing.previewImageData = data
+        StoredPixels.forget(thing.id)   // the well's probe remembered the nil
+        thing.modelContext?.saveHonestly()
+        return true
     }
 }

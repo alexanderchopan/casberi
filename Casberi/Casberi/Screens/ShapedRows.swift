@@ -1990,6 +1990,10 @@ struct PhotoWell: View {
     /// fill mode (prd §910): a screenshot keeps its top, a photograph its
     /// centre. Ignored by the sized (square) mode, which is a mark.
     var anchor: Alignment = .center
+    /// Read a connected folder's image off the folder when the heal has not
+    /// kept its picture yet (prd §1376). The sheet's well only: a grid tile
+    /// asking would walk the folder once per tile.
+    var readsFolder = false
     @State private var image: UIImage?
     /// The snapshot hide is `PrivacyCover`'s window since 2026-09-05, and this
     /// guard is deliberately KEPT rather than deleted with the root
@@ -2083,6 +2087,15 @@ struct PhotoWell: View {
                                                                               targetSide: 600) {
                 if fresh { withAnimation(DS.Motion.standard) { image = art } }
                 else { image = art }
+            }
+            return
+        }
+        // A connected folder's image the heal has not reached (prd §1376):
+        // the sheet reads it now, so it draws while you look.
+        if let ref = thing.sourceRef, ref.hasPrefix("files:") {
+            if readsFolder, await FilesIngest.fillPicture(thing),
+               let stored = await StoredPixels.prepared(for: thing) {
+                withAnimation(DS.Motion.standard) { image = stored.image }
             }
             return
         }
