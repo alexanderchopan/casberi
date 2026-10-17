@@ -4216,13 +4216,19 @@ enum DemoSeedAll {
             }
         }
         let trello: [(String, Double)] = [
-            ("Kitchen · Order the tiles", 2), ("Kitchen · Confirm the joiner", 5),
-            ("Trip · Book the Lisbon flat", 9),
+            // `TitleSeam.join(name, board)`, the bridge's own shape: the card
+            // is the object, the board its qualifier (prd §915).
+            ("Order the tiles — Kitchen", 2), ("Confirm the joiner — Kitchen", 5),
+            ("Book the Lisbon flat — Trip", 9),
         ]
         out += trello.enumerated().map { i, c in
             row(.reminder, c.0, source: "Trello", ref: "demo:trello:\(i)", days: c.1, hour: 9,
                 content: "Assigned to you") { t in
                 t.dueAt = at(-Double(2 + i * 3), 12)
+                // `trelloMark` marks every card it lands (open is `.todo`),
+                // and the Work receipt reads the mark; unmarked, the demo's
+                // cards drew as reminders (sheet sweep, 2026-10-16).
+                t.mark = .todo
                 t.summary = "Card back: check the measurements first."
                 // A card's cover image, which Trello serves and the bridge
                 // stamps (2026-08-17). Sparse, because a real board mixes
@@ -4274,24 +4280,37 @@ enum DemoSeedAll {
         // Work anatomy (its outcome word, its tone, its `code` face) never
         // drew for Sentry. `SentryBridge` stamps exactly one of Issue /
         // Regression; Vercel, PagerDuty, npm and PyPI have their own.
+        // THE BRIDGES' OWN TITLE SHAPES (sheet sweep, 2026-10-16): the
+        // outcome as a leading clause the receipt strips, the project on
+        // `authorHandle` where the bridge stamps it (`SentryShape.title`,
+        // `VercelShape.title`, `PagerDutyShape.title`, `releaseTitle`). The
+        // old prose titles ("New issue: …", "… published") said the status
+        // word a second time under the receipt's own.
         let ops: [(String, String, String, Double, [String])] = [
-            ("Regressed: elevated 5xx on the edge", "Sentry", "12 events", 2, ["Regression"]),
-            ("New issue: nil unwrap in EditorView", "Sentry", "3 events", 6, ["Issue"]),
-            ("Deployed quillmark-site to production", "Vercel", "Ready in 24s", 1, ["Deploy"]),
-            ("Preview ready for pull/412", "Vercel", "Ready in 19s", 3, ["Deploy"]),
-            ("Acknowledged: latency alert", "PagerDuty", "Resolved in 8m", 8, ["Resolved", "Alert"]),
+            ("Regressed · quillmark-web · Elevated 5xx on the edge", "Sentry", "12 events", 2, ["Regression"]),
+            ("quillmark-ios · Fatal error: nil unwrap in EditorView", "Sentry", "3 events", 6, ["Issue"]),
+            ("quillmark-site · Ship the new pricing page", "Vercel", "Ready in 24s", 1, ["Deploy"]),
+            ("quillmark-site · Preview for pull/412", "Vercel", "Ready in 19s", 3, ["Deploy"]),
+            ("Resolved after 8 minutes · quillmark-api · API latency above 2s", "PagerDuty",
+             "Resolved by Uma", 8, ["Resolved"]),
             // Cloudflare's rows are readings, not outcomes — its bridge stamps
             // no outcome tag and `WorkStage.outcome` has no case for it, so
             // these two correctly produce no Work reading. Left tagless on
             // purpose rather than given an invented tag to make a card appear.
             ("quillmark.app · 1.2M requests today", "Cloudflare", "Cached 92%", 1, []),
             ("Certificate renews in 21 days", "Cloudflare", "quillmark.app", 4, []),
-            ("swift-markdown 0.4.0 published", "npm", "2 dependents", 5, ["Release"]),
-            ("httpx 0.28.1 published", "PyPI", "security fix", 7, ["Release"]),
+            ("swift-markdown 0.4.0", "npm", "2 dependents", 5, ["Release"]),
+            ("httpx 0.28.1", "PyPI", "security fix", 7, ["Release"]),
         ]
         out += ops.enumerated().map { i, o in
             row(.link, o.0, source: o.1, ref: "demo:\(o.1.lowercased()):\(i)",
-                days: o.3, hour: 14, content: o.2, tags: o.4)
+                days: o.3, hour: 14, content: o.2, tags: o.4) { t in
+                // The project, where the bridge stamps it (`WorkStage.project`).
+                if ["Sentry", "Vercel", "PagerDuty"].contains(o.1) {
+                    t.authorHandle = o.0.components(separatedBy: " · ")
+                        .first { $0.hasPrefix("quillmark-") }
+                }
+            }
         }
         // REAL `asc:` ref shapes (2026-08-12). `WorkStage.ascOutcome` reads the
         // outcome STRAIGHT OUT OF THE REF — `asc:version:<id>:<STATE>` — and

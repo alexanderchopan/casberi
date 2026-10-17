@@ -227,7 +227,9 @@ struct VerbDial: View {
         for prefix in ["Open in ", "Send to ", "Add to ", "Show in "] where verb.label.hasPrefix(prefix) {
             return String(verb.label.dropFirst(prefix.count))
         }
-        if verb.label.hasPrefix("Open") { return "Open" }
+        // NEVER A BARE "Open" (prd §364, sheet sweep 2026-10-16): "Open
+        // link" and "Open thread" say what opens and fit the tile, so they
+        // stand whole; only a longer label falls to `shortLabel`.
         if verb.label.hasPrefix("Copy") { return "Copy" }
         return verb.label.count <= 12 ? verb.label : verb.shortLabel
     }

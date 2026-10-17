@@ -102,9 +102,11 @@ done
 grep -q 'PriceObjectCard(object: priceObject(' "$CHART" \
   || { echo "✗ the chart no longer draws the price object as its hero"; exit 1; }
 # Three families since prd §1250: a token, a stock and a coin followed by its
-# own price.
-[[ $(grep -c 'object: PriceObjectSource.identity(' "$CONTENT") -eq 3 ]] \
-  || { echo "✗ token, stock and coin no longer ALL draw the object (they diverged by accident once already)"; exit 1; }
+# own price. Four since the sheet sweep (2026-10-16): the demo's watched pulse
+# boxes its price in the room's frame too, and its boxed price must drop its
+# own name the same way.
+[[ $(grep -c 'object: PriceObjectSource.identity(' "$CONTENT") -eq 4 ]] \
+  || { echo "✗ token, stock, coin and pulse no longer ALL draw the object (they diverged by accident once already)"; exit 1; }
 
 # 9. A coin's chart is CoinPaprika's own ticks (prd §1250): a range its free
 #    API does not serve is absent, never drawn from coarser points, and the

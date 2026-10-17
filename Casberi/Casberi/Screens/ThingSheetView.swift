@@ -182,6 +182,10 @@ struct ThingSheetView: View {
     /// re-evaluated many times per open. Recomputed when `safeCheck` answers,
     /// since a Safe receipt's stamp and its signer sentence both read it.
     @State private var moneyReceipt: MoneyReceipt?
+    /// A PagerDuty trigger whose incident has since resolved (sheet sweep,
+    /// 2026-10-16): the receipt states the incident's NEWEST state, read once
+    /// per open from the resolution row the bridge lands beside it.
+    @State private var incidentResolved = false
     @State private var moneySays: MoneyCommentary?
     /// The last three with this party and how many there are in all (prd
     /// §1181), read with the receipt, never in a body (§628).
@@ -488,7 +492,10 @@ struct ThingSheetView: View {
                     && moneyReceipt == nil && !framedShot
                 // A MOMENT (prd §892): an event, a workout, a reminder — its
                 // head, its title, and WHEN, which the sheet never drew.
-                let momentHead = (thing.kind == .event || thing.kind == .reminder)
+                // A chain's DEADLINE (an unlock, a name's expiry, a vote
+                // closing) is a moment ahead, not money that moved (sheet
+                // sweep, 2026-10-16): it lands here once it is no receipt.
+                let momentHead = (thing.kind == .event || thing.kind == .reminder || isWalletMoment)
                     && moneyReceipt == nil
                     && ThingChart.kind(for: thing) == nil && !articleHead && !postHead
                 // A CONVERSATION, A MAIL, A CHAT (prd §894): the shared head,
@@ -782,8 +789,13 @@ struct ThingSheetView: View {
                     // saying, so keeping both would print the row twice.
                     // WORK leads with where it lives (prd §895): the source's
                     // mark and the pink day, the project on the line under it.
-                    // The project is the room's title, else the app (prd §1190).
-                    DSRoomTitleRow(title: workReading.project ?? thing.source)
+                    // THE ITEM'S OWN NAME IS THE TITLE (sheet sweep,
+                    // 2026-10-16, amends prd §1190's "the project, else the
+                    // app"): "Linear" and "Sentry" titled every sheet in
+                    // their rooms. The project goes small in the box; a row
+                    // whose subject is only money is titled by its amount.
+                    let workHead = WorkStage.head(workRow, reading: workReading)
+                    DSRoomTitleRow(title: workHead.title ?? workMoneyTitle ?? workReading.subject)
                         .padding(.horizontal, DSRoomChassis.inset)
                         .padding(.top, onBack == nil ? DS.Space.s4 : DS.Space.s3)
                         .settleIn(delay: 0.04)
@@ -791,10 +803,14 @@ struct ThingSheetView: View {
                     WorkStageView(thing: thing, reading: workReading,
                                   detail: WorkStage.statusDetail(
                                     workRow, clause: workReading.statusWord),
-                                  projectInHead: true)
+                                  projectInHead: true,
+                                  titleDrawn: true,
+                                  moneyInTitle: workHead.title == nil,
+                                  line: workLine(workHead.line))
                         .dsRoomBox()
                         .padding(.top, DS.Space.s4)
                         .settleIn(delay: 0.06)
+                        .task(id: thing.id) { readIncidentResolved() }
                     VerbDial(thing: thing, verbs: sheetVerbs, onVerb: runVerb, onName: nil)
                         .padding(.top, DSRoomChassis.leadGap)
                         .settleIn(delay: 0.08)
@@ -845,6 +861,10 @@ struct ThingSheetView: View {
                     transcriptFrame
                 } else if momentHead, thing.kind == .event,
                           !thing.factList.contains(where: { $0.action == .metric }),
+                          // ONLY A SLOT IN A DAY (sheet sweep, 2026-10-16): a
+                          // Duolingo practice day or a Privy app is not an
+                          // hour on a calendar; it takes the moment box below.
+                          VerbDerivation.isCalendarEvent(thing),
                           let start = momentStart {
                     // AN EVENT AS A SLICE OF ITS DAY (prd §1182): the title a
                     // room's, the box the hours around it, the tiles, the facts.
@@ -872,7 +892,11 @@ struct ThingSheetView: View {
                     // THE ROOM'S FRAME (prd §1179, §1190): the title is the
                     // room's; the box is where it is from, the clock and what
                     // it measured; the tiles, then the facts.
-                    DSRoomTitleRow(title: TitleSeam.split(thing.title).name)
+                    // A workout's distance is its box's figure, so the
+                    // title keeps the sport alone ("Swim", not "Swim ·
+                    // 1,200 m" over "1.20 km", sheet sweep 2026-10-16).
+                    DSRoomTitleRow(title: MomentSheetBlock.title(TitleSeam.split(thing.title).name,
+                                                                 facts: thing.factList))
                         .padding(.horizontal, DSRoomChassis.inset)
                         .padding(.top, onBack == nil ? DS.Space.s4 : DS.Space.s3)
                         .settleIn(delay: 0.04)
@@ -883,9 +907,12 @@ struct ThingSheetView: View {
                             .lineLimit(1)
                         if let start = momentStart {
                             MomentSheetBlock(start: start, end: thing.endAt,
-                                             overdue: thing.kind == .reminder && start < .now,
-                                             isReminder: thing.kind == .reminder,
-                                             facts: thing.factList, part: .box)
+                                             overdue: (thing.kind == .reminder || isWalletMoment)
+                                                && start < .now,
+                                             isReminder: thing.kind == .reminder || isWalletMoment,
+                                             facts: momentFacts, part: .box,
+                                             dueWord: thing.source == "CardPointers" ? .ends
+                                                : isWalletMoment ? .on : .due)
                         }
                     }
                     .dsRoomBox()
@@ -898,7 +925,7 @@ struct ThingSheetView: View {
                     if let start = momentStart {
                         let rows = MomentSheetBlock(start: start, end: thing.endAt,
                                                     isReminder: thing.kind == .reminder,
-                                                    facts: thing.factList, part: .rows)
+                                                    facts: momentFacts, part: .rows)
                         if rows.hasRows {
                             rows.padding(.top, DSRoomChassis.leadGap)
                         }
@@ -954,7 +981,8 @@ struct ThingSheetView: View {
                     && walletbeatShape == nil && l2beatShape == nil && privyApp == nil
                     && purchaseReading == nil
                 // A reminder with a due date says it in its head (§892).
-                let dueInHead: Bool = momentHead && thing.kind == .reminder && thing.dueAt != nil
+                let dueInHead: Bool = momentHead && (thing.kind == .reminder || isWalletMoment)
+                    && thing.dueAt != nil
                 let wordsDiffer: Bool = thing.content.trimmingCharacters(in: .whitespacesAndNewlines)
                     != thing.title.trimmingCharacters(in: .whitespacesAndNewlines)
                 let hasWords: Bool = drawsSocialBody || agentShape == .conversation
@@ -1830,7 +1858,25 @@ struct ThingSheetView: View {
 
     /// When a moment is (prd §892): an event's start, a reminder's due.
     private var momentStart: Date? {
-        thing.kind == .reminder ? thing.dueAt : thing.capturedAt
+        thing.kind == .reminder || isWalletMoment ? thing.dueAt : thing.capturedAt
+    }
+
+    /// A chain's deadline still on the record as a `.transaction`: a staked
+    /// HYPE unlock, an ENS name's expiry, an Aerodrome vote closing. Each
+    /// carries its moment on `dueAt`.
+    private var isWalletMoment: Bool {
+        guard thing.kind == .transaction, thing.dueAt != nil, let ref = thing.sourceRef else { return false }
+        return Self.walletMomentRefs.contains { ref.hasPrefix($0) }
+    }
+
+    static let walletMomentRefs = ["hyperliquid:unlock:", "wallet:ensexpiry:", "aerodrome:vote:"]
+
+    /// The moment's facts as its box draws them (`MomentSheetBlock.shown`):
+    /// one distance in one unit, no pace on a swim, and "Written by" only
+    /// where the source is Apple Health itself — a Strava or Garmin row's
+    /// writer is the app the row already names.
+    private var momentFacts: [ThingFact] {
+        MomentSheetBlock.shown(thing.factList, source: thing.source, title: thing.title)
     }
 
     /// "Reminders · Lisbon trip", "Health · Workout" — where it is from and
@@ -3378,7 +3424,37 @@ struct ThingSheetView: View {
     /// The primitives `WorkStage` reads. Built once so the reading and the
     /// clause detail below can't be derived from two different snapshots.
     private var workRow: WorkStage.Row {
-        WorkStage.Row(thing)
+        var row = WorkStage.Row(thing)
+        if incidentResolved, !row.tags.contains("Resolved") { row.tags.append("Resolved") }
+        return row
+    }
+
+    /// Whether this PagerDuty trigger's incident has a resolution row.
+    private func readIncidentResolved() {
+        guard thing.isLive, thing.source == "PagerDuty",
+              let ref = thing.sourceRef, ref.hasPrefix("pagerduty:incident:") else { return }
+        let resolved = PagerDutyShape.resolvedRef(id: String(ref.dropFirst("pagerduty:incident:".count)))
+        var d = FetchDescriptor<Thing>(predicate: #Predicate { $0.sourceRef == resolved })
+        d.fetchLimit = 1
+        incidentResolved = ((try? modelContext.fetch(d)) ?? []).contains(where: \.isLive)
+    }
+
+    /// The box's small line, minus a qualifier that only restates the due
+    /// date the box already draws ("evidence due Oct 25" over "Due Oct 25 ·
+    /// in 9 days"), matched on the date itself, never on a word.
+    private func workLine(_ line: String?) -> String? {
+        guard let line, let due = thing.dueAt, thing.mark != .done else { return line }
+        let day = due.formatted(.dateTime.month(.abbreviated).day())
+        return line.contains(day) ? nil : line
+    }
+
+    /// A Work row named only by its amount ("Refund · $29.00" once the
+    /// status word has said "Refunded") takes the amount as its title, from
+    /// the row's own stored currency.
+    private var workMoneyTitle: String? {
+        guard let value = thing.priceValue, let code = thing.priceCurrency, !code.isEmpty
+        else { return nil }
+        return value.formatted(.currency(code: code))
     }
 
     // `walletStage` / `isMoved` / `stageView` retired here in the 2026-08-12

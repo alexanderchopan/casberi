@@ -197,6 +197,22 @@ enum WorkStage {
         case "App Store Connect":
             return ascOutcome(row)
 
+        // ── Seller archetype: a sale, a refund, a dispute (sheet sweep,
+        //    2026-10-16 — these fell to the plain frame, which headlined the
+        //    dashboard's host and said nothing the row knew) ──
+        case "Polar", "Dodo Payments":
+            return sellerOutcome(tags)
+
+        // ── A GitHub notification: the reason it reached you. The reason is
+        //    GitHubFeeds' own unlocalized word, the first segment of the
+        //    title's line ("Mentioned you · org/repo"), so it is a stable
+        //    signal, not a clause; the ask tag decides whether it waits on you.
+        case "GitHub" where row.sourceRef?.hasPrefix("gh:notif:") == true && row.mark == "none":
+            guard let reason = notificationReason(row) else { return nil }
+            let asks: Set<String> = ["Review", "Assigned", "Mentioned"]
+            return (word(String.LocalizationValue(reason)),
+                    tags.isDisjoint(with: asks) ? .neutral : .waiting)
+
         // ── Ticket archetype: the outcome is the state you left it in ──
         case "Linear", "Jira", "Trello", "GitLab", "GitHub":
             return markOutcome(row.mark)
@@ -236,6 +252,29 @@ enum WorkStage {
         if tags.contains("Silence") { return (word("Payments stopped"), .waiting) }
         if tags.contains("Runway")  { return (word("Runway low"), .waiting) }
         return nil
+    }
+
+    /// Polar's and Dodo Payments' rows, by the shape tag their bridges stamp.
+    private static func sellerOutcome(_ tags: Set<String>) -> (String, Tone)? {
+        if tags.contains("Dispute") {
+            if tags.contains("Won")  { return (word("Dispute won"), .landed) }
+            if tags.contains("Lost") { return (word("Dispute lost"), .failed) }
+            return (word("Dispute opened"), .failed)
+        }
+        if tags.contains("Refund") { return (word("Refunded"), .neutral) }
+        if tags.contains("Subscription"), tags.contains("Failed") {
+            return (word("Payment failed"), .failed)
+        }
+        if tags.contains("Sale") || tags.contains("Payment") { return (word("Paid"), .landed) }
+        return nil
+    }
+
+    /// The reason segment a notification's line leads with.
+    private static func notificationReason(_ row: Row) -> String? {
+        guard let line = seam(row.title).line else { return nil }
+        let reason = line.components(separatedBy: " · ").first?
+            .trimmingCharacters(in: .whitespaces) ?? ""
+        return reason.isEmpty ? nil : reason
     }
 
     /// App Store Connect encodes the RAW state in its own ref
@@ -349,6 +388,57 @@ enum WorkStage {
         return head
     }
 
+    // MARK: - The sheet's title (sheet sweep, 2026-10-16)
+
+    /// The object and its qualifier, split at the one seam `TitleSeam` joins
+    /// with (" — ", prd §915). Spelled here so this file stays Foundation-
+    /// only and compiles alone; `TitleSeam.mark` is the same string.
+    static func seam(_ title: String) -> (name: String, line: String?) {
+        guard let r = title.range(of: " — ") else { return (title, nil) }
+        let line = String(title[r.upperBound...]).trimmingCharacters(in: .whitespaces)
+        return (String(title[..<r.lowerBound]).trimmingCharacters(in: .whitespaces),
+                line.isEmpty ? nil : line)
+    }
+
+    /// The sheet's TITLE and the small line under the status in its box: the
+    /// item's own name (the issue, the PR, the deploy, the alert), never the
+    /// app's ("Linear", "Sentry" were the titles). Money segments leave the
+    /// name — the box states the amount once, as its figure — and a line
+    /// segment saying the status word again is dropped, so the state is said
+    /// once. `title` is nil when the subject was nothing but money.
+    static func head(_ row: Row, reading: Reading) -> (title: String?, line: String?) {
+        let parts = seam(reading.subject)
+        let segments = parts.name.components(separatedBy: " · ")
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty && !isMoney($0) }
+        let name = segments.isEmpty ? nil : segments.joined(separator: " · ")
+        var line = parts.line?.components(separatedBy: " · ")
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty && !isMoney($0) }
+        if let status = reading.statusWord, let first = line?.first,
+           first.caseInsensitiveCompare(status) == .orderedSame {
+            line?.removeFirst()
+        }
+        let lineText = (line?.isEmpty ?? true) ? nil : line?.joined(separator: " · ")
+        return (name, reading.project ?? lineText)
+    }
+
+    /// "$29.00", "€1,204.50", "49 USD" — an amount and nothing else.
+    static func isMoney(_ segment: String) -> Bool {
+        let digits = segment.filter(\.isNumber)
+        guard !digits.isEmpty else { return false }
+        let rest = segment.unicodeScalars.filter {
+            !CharacterSet.decimalDigits.contains($0) && !CharacterSet.whitespaces.contains($0)
+                && !",.'−-+".unicodeScalars.contains($0)
+        }
+        let letters = String(String.UnicodeScalarView(rest))
+        // A currency sign, or a three-letter code, is all that may remain.
+        return letters.unicodeScalars.allSatisfy { CharacterSet.symbols.contains($0) || $0 == "$" }
+            && !letters.isEmpty
+            || (letters.count == 3 && letters == letters.uppercased()
+                && letters.allSatisfy(\.isLetter))
+    }
+
     // MARK: - Project
 
     /// The owning project, from a stored field ONLY.
@@ -372,6 +462,7 @@ enum WorkStage {
     static func face(_ row: Row) -> Face {
         switch row.source {
         case "Stripe": return row.hasPrice ? .money : .words
+        case "Polar", "Dodo Payments": return row.hasPrice ? .money : .words
         case "Sentry": return .code
         case "App Store Connect":
             return (row.sourceRef?.hasPrefix("asc:review:") ?? false) ? .stars : .words
@@ -393,6 +484,8 @@ enum WorkStage {
         "Dispute", "Payout", "Dunning", "Churn", "Silence", "Runway",
         "Won", "Lost", "Recovered",
         "Review", "Build", "Annotation", "Milestone", "Watchlist", "Paper",
+        "Sale", "Refund", "Payment", "Subscription", "Opened", "Notifications",
+        "Assigned", "Mentioned", "Alert",
     ]
 
     /// The person's own labels: what's left after the shape marks and the

@@ -2593,7 +2593,7 @@ private struct TokenChartContent: View {
             chart
                 .environment(\.priceBoxed, true)
                 .dsRoomBox()
-            tiles(watchKeep)
+            ChartTiles(thing: thing, tiles: tiles, keep: watchKeep)
                 .padding(.top, DSRoomChassis.leadGap)
         }
         rows
@@ -2646,7 +2646,7 @@ private struct TokenChartContent: View {
             if boxTiles == nil { chart }
             statStrip
             if offersWatch && boxTiles == nil { watchRow }
-            watchAlerts(thing)
+            watchAlerts(thing, adds: boxTiles == nil)
         }
         .padding(.top, boxTiles == nil ? 0 : DS.Space.s6)
         .padding(.horizontal, DS.Space.s4)
@@ -2767,18 +2767,37 @@ private struct TokenPulseChartContent: View {
         return (p, thing.capturedAt)
     }
 
+    @Environment(\.priceBoxTiles) private var boxTiles
+
     var body: some View {
         if thing.isLive, let pulse = TokenPulse.shared.pulse(for: thing) {
             // EmptyView, not a link fallback: `TokenChart.from(closes:)` only
             // returns nil under 2 points, which a seeded 24-point pulse never
             // is — the `.dead` phase this would cover is unreachable here.
-            VStack(alignment: .leading, spacing: DS.Space.s4) {
-                TokenChartView<TokenRange, EmptyView>(
-                    memoryKey: "pulse.\(ref)",
-                    fetch: { _ in TokenChart.from(closes: pulse.closes) },
-                    since: since, hero: true, levels: alertLevels(thing)) { EmptyView() }
-                watchAlerts(thing)
+            let chart = TokenChartView<TokenRange, EmptyView>(
+                memoryKey: "pulse.\(ref)",
+                fetch: { _ in TokenChart.from(closes: pulse.closes) },
+                since: since, hero: true,
+                // The asset's identity, as the token, stock and coin charts
+                // pass it, so the boxed price drops its own name.
+                object: PriceObjectSource.identity(title: thing.title,
+                                                   authorHandle: thing.authorHandle),
+                levels: alertLevels(thing)) { EmptyView() }
+            // In the room's frame (prd §1188), as every other price: it drew
+            // no tiles at all, so the sheet had no Share (sheet sweep,
+            // 2026-10-16).
+            if let tiles = boxTiles {
+                chart
+                    .environment(\.priceBoxed, true)
+                    .dsRoomBox()
+                ChartTiles(thing: thing, tiles: tiles)
+                    .padding(.top, DSRoomChassis.leadGap)
             }
+            VStack(alignment: .leading, spacing: DS.Space.s4) {
+                if boxTiles == nil { chart }
+                watchAlerts(thing, adds: boxTiles == nil)
+            }
+            .padding(.top, boxTiles == nil ? 0 : DS.Space.s6)
             .padding(.horizontal, DS.Space.s4)
             .padding(.bottom, DS.Space.s3)
         }
@@ -2817,12 +2836,12 @@ private struct StockChartContent: View {
             chart
                 .environment(\.priceBoxed, true)
                 .dsRoomBox()
-            tiles(nil)
+            ChartTiles(thing: thing, tiles: tiles)
                 .padding(.top, DSRoomChassis.leadGap)
         }
         VStack(alignment: .leading, spacing: DS.Space.s4) {
             if boxTiles == nil { chart }
-            watchAlerts(thing)
+            watchAlerts(thing, adds: boxTiles == nil)
         }
         .padding(.top, boxTiles == nil ? 0 : DS.Space.s6)
         .padding(.horizontal, DS.Space.s4)
@@ -2883,12 +2902,12 @@ private struct CoinChartContent: View {
             chart
                 .environment(\.priceBoxed, true)
                 .dsRoomBox()
-            tiles(nil)
+            ChartTiles(thing: thing, tiles: tiles)
                 .padding(.top, DSRoomChassis.leadGap)
         }
         VStack(alignment: .leading, spacing: DS.Space.s4) {
             if boxTiles == nil { chart }
-            watchAlerts(thing)
+            watchAlerts(thing, adds: boxTiles == nil)
         }
         .padding(.top, boxTiles == nil ? 0 : DS.Space.s6)
         .padding(.horizontal, DS.Space.s4)
@@ -2928,14 +2947,53 @@ private func alertLevels(_ thing: Thing) -> [Double] {
 /// own row, never on a token a post merely mentions, and never on a fired
 /// alert's row.
 @MainActor @ViewBuilder
-private func watchAlerts(_ thing: Thing) -> some View {
+private func watchAlerts(_ thing: Thing, adds: Bool = true) -> some View {
     if thing.isLive, thing.source == TokenWatch.source, !PriceAlertStore.isAlertRow(thing),
        let ref = thing.sourceRef {
         WatchAlertsSection(ref: ref, name: TokensAsk.name(of: thing.title),
                            price: PriceAlertStore.reading(for: thing)?.price,
                            // A day-volume alert is a DEX token's (prd §1250).
-                           volume: TokenChart.route(from: thing.content) != nil)
+                           volume: TokenChart.route(from: thing.content) != nil,
+                           adds: adds)
             .padding(.top, DS.Space.s2)
+    }
+}
+
+/// THE TILES UNDER A BOXED PRICE (prd §1188), with Alert as the fourth
+/// (sheet sweep, 2026-10-16): a watched row's "Add an alert" was a blue
+/// link in a card below, and a chart that drew no tiles at all left the
+/// sheet with no Share. The chart's own keep (a token's Follow) wins the
+/// seat; a watched row takes Alert, which raises the same tray the card's
+/// row did.
+private struct ChartTiles: View {
+    let thing: Thing
+    let tiles: (VerbDial.Keep?) -> AnyView
+    var keep: VerbDial.Keep? = nil
+
+    @State private var tray: WatchAlertTray.Route?
+    @Environment(\.dsInSheetStack) private var inSheetStack
+
+    var body: some View {
+        if thing.isLive {
+            tiles(keep ?? alertKeep)
+                .dsOneSheet(item: $tray, pushes: { _ in inSheetStack }) { route in
+                    WatchAlertTray(route: route, ref: thing.sourceRef ?? "",
+                                   name: TokensAsk.name(of: thing.title),
+                                   price: PriceAlertStore.reading(for: thing)?.price,
+                                   volume: TokenChart.route(from: thing.content) != nil)
+                }
+        }
+    }
+
+    /// Alert, while a price is in hand to measure a level from — the card's
+    /// own rule for its Add row.
+    private var alertKeep: VerbDial.Keep? {
+        guard thing.source == TokenWatch.source, !PriceAlertStore.isAlertRow(thing),
+              thing.sourceRef != nil, PriceAlertStore.reading(for: thing)?.price != nil
+        else { return nil }
+        return VerbDial.Keep(label: String(localized: "Alert"), glyph: ScopeTileGlyph.alerts) {
+            tray = .new
+        }
     }
 }
 
@@ -3027,7 +3085,27 @@ private struct PostHogMetricContent: View {
         if thing.isLive { liveBody }
     }
 
+    @Environment(\.priceBoxTiles) private var boxTiles
+
     @ViewBuilder private var liveBody: some View {
+        // In the room's frame (prd §1188), as a price is: the metric in the
+        // box, the sheet's tiles under it. It drew none, so a watched metric
+        // had no Share (sheet sweep, 2026-10-16).
+        if let tiles = boxTiles {
+            metric
+                .dsRoomBox()
+                .onAppear(perform: load)
+            tiles(nil)
+                .padding(.top, DSRoomChassis.leadGap)
+        } else {
+            metric
+                .padding(.horizontal, DS.Space.s4)
+                .padding(.bottom, DS.Space.s3)
+                .onAppear(perform: load)
+        }
+    }
+
+    private var metric: some View {
         VStack(alignment: .leading, spacing: DS.Space.s3) {
             header
             if let chart {
@@ -3040,9 +3118,6 @@ private struct PostHogMetricContent: View {
             }
             milestoneLine
         }
-        .padding(.horizontal, DS.Space.s4)
-        .padding(.bottom, DS.Space.s3)
-        .onAppear(perform: load)
     }
 
     private var header: some View {

@@ -95,7 +95,11 @@ enum VerbDerivation {
                                     action: .openURL(URL(string: "calshow://")!)))
                 }
             } else if thing.source != PrivyHomeFeed.source,
-                      thing.source != SplitsShape.source {
+                      thing.source != SplitsShape.source,
+                      calendarWorthy(thing) {
+                // ONLY A MOMENT STILL AHEAD (sheet sweep, 2026-10-16): "Send to Calendar"
+                // on a run you finished this morning, or a practice day last
+                // week, files the past as an appointment.
                 // Not a hand-off — EventKit writes into the local store, which
                 // works with no Calendar app present. Ungated on purpose for
                 // every OTHER `.event` source (a workout, a HomeKit-scheduled
@@ -118,11 +122,16 @@ enum VerbDerivation {
             // design law bans). Completing it is a hand-off to Reminders,
             // added by the source-hand-off step below. A reminder captured
             // elsewhere can still be added to the real list.
-            if thing.source != "Reminders" {
+            // A task that already lives in its own app (Todoist, Trello,
+            // Jira) opens THERE (sheet sweep, 2026-10-16); copying it into Reminders made
+            // a second list of the same work. An offer, an alert and a
+            // finished item have no due worth a reminder at all.
+            if remindable(thing) {
                 out.append(Verb(label: "Send to Reminders", icon: "checklist",
                                 action: .addToReminders))
             }
-            if let v = externalVerb(for: thing, apps: [.todoist]) { out.append(v) }
+            if !ownApps.contains(thing.source),
+               let v = externalVerb(for: thing, apps: [.todoist]) { out.append(v) }
         case .link:
             // Music rows open the exact track in their app — the stored content
             // is a music.apple.com / open.spotify.com universal link. Named and
@@ -130,11 +139,25 @@ enum VerbDerivation {
             // as a fallback for a library play that carries no per-track URL, so
             // every music row can hand off the way events and items do (user,
             // 2026-07-13).
+            // A song, a video, an episode or a stream PLAYS (sheet sweep,
+            // 2026-10-16): its one door is the item itself, in its app or on
+            // its page, and the word says what that door does. The app's
+            // front door (no per-item link) is not Play: it opens the app.
             if thing.source == "Apple Music" {
-                if let url = Capture.detectURL(in: thing.content) ?? sourceURL(thing.source) {
+                if let url = Capture.detectURL(in: thing.content) {
+                    out.append(Verb(label: "Play", icon: "play.fill", action: .openURL(url)))
+                } else if let url = sourceURL(thing.source) {
                     out.append(Verb(label: "Open in \(thing.source)",
                                     icon: "music.note", action: .openURL(url)))
                 }
+            } else if thing.source == "Twitch",
+                      let url = Capture.detectURL(in: thing.content) ?? twitchChannel(thing.authorHandle) {
+                // A stream's door is its channel — the page Twitch publishes
+                // for every login, so the handle alone names a real place.
+                out.append(Verb(label: "Play", icon: "play.fill", action: .openURL(url)))
+            } else if thing.source == "Podcasts" || thing.source == "Spotify",
+                      let url = Capture.detectURL(in: thing.content) {
+                out.append(Verb(label: "Play", icon: "play.fill", action: .openURL(url)))
             } else if thing.source == "YouTube",
                       let video = YouTubeShorts.videoID(in: thing.content),
                       HandOffState.installedSchemes.contains("youtube"),
@@ -156,12 +179,16 @@ enum VerbDerivation {
                 // promise the label makes and no more. The video id is
                 // validated to YouTube's own 11-character shape before it is
                 // interpolated.
-                out.append(Verb(label: "Open in YouTube", icon: "play.rectangle",
-                                action: .openURL(app)))
-                if let web = Capture.detectURL(in: thing.content) {
-                    out.append(Verb(label: "Open link", icon: "safari", action: .openURL(web)))
-                }
-            } else if let url = Capture.detectURL(in: thing.content.isEmpty ? thing.title : thing.content) {
+                // Play, in the app (one door: the web page of the same video
+                // was a second disc onto the same thing).
+                out.append(Verb(label: "Play", icon: "play.fill", action: .openURL(app)))
+            } else if thing.source == "YouTube", let web = Capture.detectURL(in: thing.content) {
+                out.append(Verb(label: "Play", icon: "play.fill", action: .openURL(web)))
+            } else if let url = Capture.detectURL(in: thing.content.isEmpty ? thing.title : thing.content)
+                        ?? webLink(thing.externalLink) {
+                // An article whose body is stored keeps its page on
+                // `externalLink`, so the door reads there too (sheet sweep,
+                // 2026-10-16: Reading's sheets had Share and nothing else).
                 out.append(Verb(label: "Open link", icon: "safari", action: .openURL(url)))
             }
         case .product:
@@ -375,13 +402,21 @@ enum VerbDerivation {
             if thing.source == NoteSheetSource.keptSource {
                 out.append(Verb(label: "Edit", icon: "pencil", action: .edit))
             } else if !Corpus.bulkImportSources.contains(thing.source) {
-                out.append(Verb(label: "Send to Reminders", icon: "checklist",
-                                action: .addToReminders))
+                // A note is not a task (sheet sweep, 2026-10-16): a journal
+                // entry, a vault note, a highlight or a Notion page has no
+                // due, and "Send to Reminders" turned prose into a to-do.
+                // Only a captured note that carries a due date offers it.
+                if remindable(thing) {
+                    out.append(Verb(label: "Send to Reminders", icon: "checklist",
+                                    action: .addToReminders))
+                }
             }
-            if let v = externalVerb(for: thing, apps: [.todoist]) { out.append(v) }
-            out.append(Verb(label: "Copy text", icon: "doc.on.doc", action: .copyText))
-            if !(thing.postText ?? thing.content).isEmpty {
-                out.append(Verb(label: "Translate", icon: "character.bubble", action: .translate))
+            if remindable(thing), let v = externalVerb(for: thing, apps: [.todoist]) { out.append(v) }
+            if readsAsWords(thing) {
+                out.append(Verb(label: "Copy text", icon: "doc.on.doc", action: .copyText))
+                if !(thing.postText ?? thing.content).isEmpty {
+                    out.append(Verb(label: "Translate", icon: "character.bubble", action: .translate))
+                }
             }
         case .chat, .mail, .file, .voice:
             // A social post opens its own thread on the network — the specific
@@ -393,14 +428,43 @@ enum VerbDerivation {
                 out.append(Verb(label: "Open thread", icon: "bubble.left.and.bubble.right",
                                 action: .openURL(url)))
             }
-            out.append(Verb(label: "Copy text", icon: "doc.on.doc", action: .copyText))
-            // The full body — a post's own words (postText), else whatever
-            // the kind carries as its text (a transcript, a mail body).
-            //
-            // Mail defers its Translate to the very end of derivation (see
-            // below) so the cap eats it first. Every other kind keeps it here.
-            if thing.kind != .mail, !(thing.postText ?? thing.content).isEmpty {
-                out.append(Verb(label: "Translate", icon: "character.bubble", action: .translate))
+            // Copy and Translate are for a body of words a person reads — a
+            // post, a message, a mail, a voice note's words (sheet sweep,
+            // 2026-10-16) — never a 300-message transcript, a file or an
+            // import's receipt, where "Copy" copied a dump nobody wanted.
+            if readsAsWords(thing) && thing.kind != .file {
+                out.append(Verb(label: "Copy text", icon: "doc.on.doc", action: .copyText))
+                // The full body — a post's own words (postText), else whatever
+                // the kind carries as its text (a message, a mail body).
+                //
+                // Mail defers its Translate to the very end of derivation (see
+                // below) so the cap eats it first. Every other kind keeps it here.
+                if thing.kind != .mail, !(thing.postText ?? thing.content).isEmpty {
+                    out.append(Verb(label: "Translate", icon: "character.bubble", action: .translate))
+                }
+            }
+        case .contact:
+            // A person's two doors (sheet sweep, 2026-10-16): the card held a
+            // number and an address and offered neither. Read off the
+            // contact's own facts, so nothing is guessed from prose.
+            for fact in thing.factList {
+                switch fact.action {
+                case .call:
+                    let digits = fact.value.filter { $0.isNumber || $0 == "+" }
+                    if !digits.isEmpty, !out.contains(where: { $0.label == "Call" }),
+                       let tel = URL(string: "tel:\(digits)") {
+                        out.append(Verb(label: "Call", icon: "phone", action: .openURL(tel)))
+                    }
+                case .mail:
+                    var comps = URLComponents()
+                    comps.scheme = "mailto"
+                    comps.path = fact.value.trimmingCharacters(in: .whitespaces)
+                    if fact.value.contains("@"), !out.contains(where: { $0.label == "Mail" }),
+                       let mailto = comps.url {
+                        out.append(Verb(label: "Mail", icon: "envelope", action: .openURL(mailto)))
+                    }
+                default: break
+                }
             }
         default:
             break
@@ -423,12 +487,29 @@ enum VerbDerivation {
         }
 
         // 1c — reach a person: call a detected number, email a detected address.
-        if let tel = thing.detectedTel.flatMap(URL.init(string:)) {
+        // A contact's own facts answered both above.
+        if thing.kind != .contact, let tel = thing.detectedTel.flatMap(URL.init(string:)) {
             out.append(Verb(label: "Call", icon: "phone", action: .openURL(tel)))
         }
-        if let mail = thing.detectedMailto.flatMap(URL.init(string:)) {
+        if thing.kind != .contact, let mail = thing.detectedMailto.flatMap(URL.init(string:)) {
             out.append(Verb(label: thing.kind == .mail ? "Reply" : "Email",
                             icon: "envelope", action: .openURL(mail)))
+        }
+
+        // 1d — WORK THAT LIVES IN ITS OWN APP OPENS THERE, named for it
+        // (sheet sweep, 2026-10-16; prd §364's where-you-land rule). A
+        // Linear issue, a Trello card, a Slack message or a Sentry error
+        // keeps its page on the record; the door was "Open link" ("Open" on
+        // the tile), or missing where the kind derived none. First, because
+        // it is what the row is for.
+        if ownApps.contains(thing.source),
+           let page = webLink(thing.content) ?? webLink(thing.externalLink) {
+            out.removeAll {
+                if case .openURL(let url) = $0.action { return url == page }
+                return false
+            }
+            out.insert(Verb(label: "Open in \(appWord(thing.source))", icon: "arrow.up.right",
+                            action: .openURL(page)), at: 0)
         }
 
         // 2 — the source hand-off, when the source has an address.
@@ -490,8 +571,13 @@ enum VerbDerivation {
         // 3 — a task verb for marked things. Reminders are excluded: their
         // done-state is read-only, mirrored from the real list (ruling
         // 2026-07-25), so "Mark done" would mark locally then get reverted.
+        // NEVER on a row an app owns (sheet sweep, 2026-10-16): a GitLab
+        // issue's state is GitLab's, and a local tick would be a write the
+        // seat cannot make (acts by seat declined) and a status the next
+        // read reverts — the §83 fake status.
         if thing.mark == .todo || thing.mark == .doing,
-           thing.source != "Reminders",
+           thing.source != "Reminders", !ownApps.contains(thing.source),
+           BridgeCatalog.offer(forSource: thing.source) == nil,
            !out.contains(where: { $0.label == "Mark done" }) {
             out.append(Verb(label: "Mark done", icon: "checkmark.circle", action: .markDone))
         }
@@ -512,6 +598,88 @@ enum VerbDerivation {
         // The cap (was three): a place-y or contactful thing can earn a fourth
         // hand-off, but no thing becomes a menu (brief §12).
         return Array(out.prefix(4))
+    }
+
+    // MARK: - Which verb a kind earns (sheet sweep, 2026-10-16)
+
+    /// The apps a row already LIVES in as work — a task, an issue, a
+    /// message, an alert. Its door is "Open in <App>", it never copies into
+    /// Reminders (that is a second list of the same work), and its state is
+    /// the app's to change, never a local "Mark done".
+    static let ownApps: Set<String> = [
+        "Todoist", "Trello", "Jira", "Linear", "GitLab", "GitHub", "Notion", "Slack",
+        "Sentry", "Vercel", "PagerDuty", "PostHog", "Cloudflare", "Stripe", "Polar",
+        "Dodo Payments", "App Store Connect", "npm", "PyPI", "Hugging Face", "Radicle", "AWS",
+    ]
+
+    /// The word after "Open in" — the place, as people call it.
+    static func appWord(_ source: String) -> String {
+        source == "App Store Connect" ? "Connect" : source
+    }
+
+    /// "Send to Reminders" is for a thing with a DUE that is not already a
+    /// task somewhere: never a task in its own app, an offer (its date is
+    /// when it ENDS, CardPointers), an alert, a finished item, or anything
+    /// with no due at all.
+    static func remindable(_ thing: Thing) -> Bool {
+        guard thing.dueAt != nil, thing.mark != .done,
+              thing.source != "Reminders", thing.source != "CardPointers",
+              !ownApps.contains(thing.source), !isAlert(thing) else { return false }
+        return true
+    }
+
+    /// An alert that went off: a watched price's (Markets) or a Work alarm's.
+    /// Mirrors `PriceAlertStore.isAlertRow`, which is main-actor bound.
+    static func isAlert(_ thing: Thing) -> Bool {
+        thing.tags.contains("Alert")
+    }
+
+    /// "Send to Calendar" only for a timed moment still AHEAD: a past
+    /// workout or a practice day is history, not an appointment.
+    static func calendarWorthy(_ thing: Thing, now: Date = .now) -> Bool {
+        guard !thing.factList.contains(where: { $0.action == .metric || $0.action == .allDay })
+        else { return false }
+        return thing.capturedAt > now
+    }
+
+    /// The sources whose `.event` is a slot in a day — a meeting, a booking —
+    /// and so draws as an hour on the day's grid. A practice day, an app's
+    /// wallet, a chain's unlock borrow the kind for its clock alone.
+    static let calendarSources: Set<String> = ["Calendar", "Cal.com", "Calendly"]
+
+    static func isCalendarEvent(_ thing: Thing) -> Bool {
+        guard thing.kind == .event else { return false }
+        return calendarSources.contains(thing.source)
+            || (thing.endAt != nil && thing.source == NoteSheetSource.keptSource)
+    }
+
+    /// Words a person READS — a note, a post, a message, a mail — as opposed
+    /// to a transcript of a whole chat, an import's receipt or an alert,
+    /// where Copy and Translate offered to carry a dump nobody reads.
+    static func readsAsWords(_ thing: Thing) -> Bool {
+        if Corpus.isImportReceipt(thing) || isAlert(thing) { return false }
+        if thing.kind == .chat, !SocialThread.isSocial(thing.source), thing.postText == nil {
+            // A transcript: one `.chat` row holding a conversation's lines.
+            let lines = thing.content.split(separator: "\n", omittingEmptySubsequences: true)
+            if lines.count > 2 { return false }
+        }
+        return true
+    }
+
+    /// A web page, or nil — a bare `https://` string, never a sentence.
+    static func webLink(_ raw: String?) -> URL? {
+        guard let raw = raw?.trimmingCharacters(in: .whitespacesAndNewlines),
+              raw.hasPrefix("http://") || raw.hasPrefix("https://"),
+              raw.rangeOfCharacter(from: .whitespacesAndNewlines) == nil,
+              let url = URL(string: raw), url.host() != nil else { return nil }
+        return url
+    }
+
+    /// A Twitch login's channel page.
+    private static func twitchChannel(_ handle: String?) -> URL? {
+        guard let handle = handle?.trimmingCharacters(in: .whitespaces), !handle.isEmpty,
+              handle.allSatisfy({ $0.isLetter || $0.isNumber || $0 == "_" }) else { return nil }
+        return URL(string: "https://www.twitch.tv/\(handle.lowercased())")
     }
 
     /// Everything the three scans below read off a thing, as PLAIN VALUES.

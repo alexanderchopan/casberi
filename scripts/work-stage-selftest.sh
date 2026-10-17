@@ -214,6 +214,49 @@ for source in ["Slack", "Notion", "Wallet", "Bluesky", "Photos", "GitHub"] {
     ok("silent.\(source)", WorkStage.reading(row(source, title: "x · y")) == nil)
 }
 
+// 12 ── The sheet's title is the item's own name, the state said once
+//       (sheet sweep, 2026-10-16).
+let rLinear = WorkStage.reading(row("Linear", title: "QM-384 Crash when pasting a large table",
+                                    mark: "done"))!
+let hLinear = WorkStage.head(row("Linear", title: "QM-384 Crash when pasting a large table",
+                                 mark: "done"), reading: rLinear)
+eq("head.linear.title", hLinear.title, "QM-384 Crash when pasting a large table")
+eq("head.linear.line", hLinear.line, nil)
+let trello = row("Trello", title: "Order the tiles — Kitchen", mark: "todo")
+let hTrello = WorkStage.head(trello, reading: WorkStage.reading(trello)!)
+eq("head.trello.title", hTrello.title, "Order the tiles")
+eq("head.trello.line", hTrello.line, "Kitchen")
+// A notification's reason is its status, so the line keeps only the repo.
+let notif = row("GitHub", ref: "gh:notif:1",
+                title: "sync conflicts (#414) — Mentioned you · quillmark/app",
+                tags: ["Notifications", "Mentioned"])
+let rNotif = WorkStage.reading(notif)!
+eq("notif.word", rNotif.statusWord, "Mentioned you")
+eq("notif.tone", rNotif.tone.rawValue, "waiting")
+let hNotif = WorkStage.head(notif, reading: rNotif)
+eq("head.notif.title", hNotif.title, "sync conflicts (#414)")
+eq("head.notif.line", hNotif.line, "quillmark/app")
+eq("notif.news.tone",
+   WorkStage.reading(row("GitHub", ref: "gh:notif:2",
+                         title: "x (#1) — New comment · o/r", tags: ["Notifications"]))!.tone.rawValue,
+   "neutral")
+// A seller's rows: the amount leaves the title, which is the item's name.
+let sale = row("Polar", title: "Quillmark Pro · $29.00", tags: ["Sale"], price: true)
+let rSale = WorkStage.reading(sale)!
+eq("polar.sale.word", rSale.statusWord, "Paid")
+eq("polar.sale.face", rSale.face.rawValue, "money")
+eq("head.polar.title", WorkStage.head(sale, reading: rSale).title, "Quillmark Pro")
+let dispute = row("Polar", title: "Dispute opened · $49.00 — evidence due Oct 25",
+                  tags: ["Dispute", "Opened"], price: true)
+let rDispute = WorkStage.reading(dispute)!
+eq("polar.dispute.word", rDispute.statusWord, "Dispute opened")
+eq("head.polar.dispute.title", WorkStage.head(dispute, reading: rDispute).title, nil)
+eq("dodo.failed.word",
+   WorkStage.reading(row("Dodo Payments", title: "Grace Hopper — Subscription payment failed",
+                         tags: ["Subscription", "Failed"]))!.statusWord, "Payment failed")
+ok("money.segment", WorkStage.isMoney("$29.00") && WorkStage.isMoney("49 USD")
+   && !WorkStage.isMoney("QM-384") && !WorkStage.isMoney("Kitchen"))
+
 if failures == 0 { print("work-stage-selftest: all assertions passed") }
 exit(failures == 0 ? 0 : 1)
 SWIFT

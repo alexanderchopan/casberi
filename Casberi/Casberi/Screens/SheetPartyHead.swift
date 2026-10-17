@@ -76,6 +76,12 @@ struct MomentSheetBlock: View {
     /// rows under its tiles, or both where no card stands.
     enum Part { case whole, box, rows }
     var part: Part = .whole
+    /// What the date IS (sheet sweep, 2026-10-16): a reminder's due, an
+    /// offer's END (CardPointers: "Ends Tuesday", never "Due on"), or a
+    /// chain's deadline whose title already says what happens then
+    /// ("Staked HYPE unlocks" — the line is just the day and the hour).
+    enum DueWord { case due, ends, on }
+    var dueWord: DueWord = .due
 
     /// Inside the card the well gives the inset; outside, the lead's column.
     private var inset: CGFloat { part == .box ? 0 : DSRoomChassis.leadInset }
@@ -164,20 +170,56 @@ struct MomentSheetBlock: View {
             }
     }
 
-    /// "Overdue since yesterday, 12:00" / "Due tomorrow, 11:00".
+    /// "Due Tuesday 12:00 PM", "Overdue · Today 3:38 AM", "Ends Oct 20" —
+    /// the one day word (`FeedScreen.dayWord`, prd §1359) and the clock,
+    /// never a long weekday with its month, day and year (sheet sweep,
+    /// 2026-10-16). An offer ends on a DAY; its clock is the feed's hour.
     private var dueLine: String {
-        let cal = Calendar.current
-        let near = cal.isDateInToday(start) || cal.isDateInYesterday(start)
-            || cal.isDateInTomorrow(start)
         let day = FeedScreen.dayWord(start)
-        // "yesterday" reads inside a sentence; a named day keeps its capital,
-        // and takes "on" only after "Due" ("since on Monday" is not English).
         let clock = start.formatted(date: .omitted, time: .shortened)
-        if overdue {
-            let when = near ? day.lowercased() : day
-            return String(localized: "Overdue since \(when), \(clock)")
+        switch dueWord {
+        case .ends:
+            return overdue ? String(localized: "Ended \(day)") : String(localized: "Ends \(day)")
+        case .on:
+            return "\(day) \(clock)"
+        case .due:
+            if overdue { return String(localized: "Overdue · \(day) \(clock)") }
+            return String(localized: "Due \(day) \(clock)")
         }
-        let when = near ? day.lowercased() : String(localized: "on \(day)")
-        return String(localized: "Due \(when), \(clock)")
+    }
+
+    // MARK: - A workout's numbers, said once (sheet sweep, 2026-10-16)
+
+    /// A workout's title without the distance its box states as the figure:
+    /// "Swim · 1,200 m" over "1.20 km" said one distance in two units. Only
+    /// a trailing segment that IS a distance goes, so "Run · tempo" stays.
+    static func title(_ title: String, facts: [ThingFact]) -> String {
+        guard facts.contains(where: { $0.action == .metric && ($0.label == "km" || $0.label == "m") }),
+              let r = title.range(of: " · ", options: .backwards) else { return title }
+        let tail = title[r.upperBound...].trimmingCharacters(in: .whitespaces)
+        let unit = tail.split(separator: " ").last.map(String.init) ?? ""
+        let number = tail.dropLast(unit.count).trimmingCharacters(in: .whitespaces)
+        guard ["km", "m", "mi"].contains(unit),
+              !number.isEmpty, number.allSatisfy({ $0.isNumber || $0 == "." || $0 == "," })
+        else { return title }
+        return String(title[..<r.lowerBound])
+    }
+
+    /// The facts a moment's box draws. A swim's distance is in METRES and has
+    /// no pace per kilometre (a pool is laps, and nobody swims a km split);
+    /// "Written by" stays only where the source is Apple Health — a Strava
+    /// or Garmin row's writer is the app the source line already names.
+    static func shown(_ facts: [ThingFact], source: String, title: String) -> [ThingFact] {
+        let swim = title.lowercased().contains("swim")
+        return facts.compactMap { fact in
+            if fact.label == "Written by", source != "Apple Health" { return nil }
+            guard swim, fact.action == .metric else { return fact }
+            if fact.label == "Pace / km" { return nil }
+            if fact.label == "km", let km = Double(fact.value) {
+                let meters = Int((km * 1000).rounded())
+                return ThingFact("m", meters.formatted(.number), .metric)
+            }
+            return fact
+        }
     }
 }

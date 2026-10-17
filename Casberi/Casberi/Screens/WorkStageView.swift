@@ -25,6 +25,15 @@ struct WorkStageView: View {
     let detail: String?
     /// The sheet's head names the project (prd §895), so the line here stands down.
     var projectInHead = false
+    /// The sheet's TITLE is the item's own name (sheet sweep, 2026-10-16), so
+    /// the box does not set it again: it says the state, the amount when it
+    /// is money, the project small, and when it is due.
+    var titleDrawn = false
+    /// The title above IS the amount, so the box draws no figure.
+    var moneyInTitle = false
+    /// The small line under the status when the title is drawn above: the
+    /// project, or the title's own qualifier (`WorkStage.head`).
+    var line: String? = nil
 
     /// Liveness guard (build 188, corollary 5 — `ThingRowKeying.swift`).
     /// SwiftUI re-evaluates a leaf view's body on the model's OWN observation,
@@ -37,20 +46,22 @@ struct WorkStageView: View {
     @ViewBuilder private var liveBody: some View {
         VStack(alignment: .leading, spacing: 0) {
             statusLine
-            headline.padding(.top, DS.Space.s1 - 2)
-            if !projectInHead, let project = reading.project {
+            if !titleDrawn || (drawsMoneyFigure && !moneyInTitle) {
+                headline.padding(.top, DS.Space.s1 - 2)
+            }
+            if titleDrawn, let line {
+                projectLine(line).padding(.top, DS.Space.s1 + 2)
+            } else if !titleDrawn, !projectInHead, let project = reading.project {
                 projectLine(project).padding(.top, DS.Space.s1 + 2)
             }
-            // Always, and always amber (user ruling 2026-08-12: "those don't
-            // need to be red tho, b/c it's not necessarily an alert for
-            // someone that is bad. i think yellow is fine"). A deadline is a
-            // fact about the future, not a verdict on it — a Trello card due
-            // next month and a dispute due Friday are the same KIND of thing,
-            // and colouring one of them as an alarm decides for the person how
-            // to feel about their own calendar. The tinted strip is the
-            // information; the tone stays even.
-            if let due = thing.dueAt {
-                deadlineStrip(due).padding(.top, DS.Space.s4)
+            // Always amber (user ruling 2026-08-12: "those don't need to be
+            // red tho, b/c it's not necessarily an alert for someone that is
+            // bad. i think yellow is fine"). A deadline is a fact about the
+            // future, not a verdict on it. A FACT LINE, not a filled capsule
+            // (prd §746, sheet sweep 2026-10-16), and only while the work is
+            // open: "Done" over "Due in 27 days" said two things at once.
+            if let due = thing.dueAt, thing.mark != .done {
+                deadlineLine(due).padding(.top, DS.Space.s3)
             }
             if !pills.isEmpty {
                 pillStrip.padding(.top, DS.Space.s4)
@@ -166,6 +177,9 @@ struct WorkStageView: View {
         return tags.contains("Payout") && !tags.contains("Failed")
             || tags.contains("Recovered")
             || tags.contains("Won")
+            // A seller's sale or payment arrives (Polar, Dodo Payments).
+            || (thing.source == "Polar" || thing.source == "Dodo Payments")
+                && (tags.contains("Sale") || tags.contains("Payment"))
     }
 
     /// Formatted from the row's OWN stored currency — never a guessed symbol.
@@ -191,7 +205,7 @@ struct WorkStageView: View {
 
     // MARK: - Deadline
 
-    private func deadlineStrip(_ due: Date) -> some View {
+    private func deadlineLine(_ due: Date) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
             Image(systemName: "clock")
                 .dsGlyph(.subhead)
@@ -203,10 +217,12 @@ struct WorkStageView: View {
                 .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, DS.Space.s4)
-        .padding(.vertical, DS.Space.s3 - 2)
-        .background(DS.attention.opacity(0.12),
-                    in: RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
+    }
+
+    /// The money figure stands in the box when the row is money and the
+    /// title above is not already that amount.
+    private var drawsMoneyFigure: Bool {
+        reading.face == .money && moneyText != nil
     }
 
     /// "Due Aug 19 · in 7 days" — the date AND the distance.

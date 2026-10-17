@@ -152,6 +152,10 @@ struct WatchAlertsSection: View {
     let price: Double?
     /// Whether a volume alert can be read for this row (a DEX token).
     var volume = false
+    /// Whether the card ends in Add an alert. Off on a thing sheet, where
+    /// Alert is a TILE under the price (sheet sweep, 2026-10-16): the blue
+    /// link card said a verb the tile row should.
+    var adds = true
 
     @State private var tray: WatchAlertTray.Route?
     /// Inside the thing sheet's stack, the alert tray pushes (prd §1315).
@@ -159,18 +163,21 @@ struct WatchAlertsSection: View {
     private var store: PriceAlertStore { .shared }
 
     var body: some View {
-        // The Feed's card (prd §1268).
+        // The Feed's card (prd §1268). Without its Add row, a row with no
+        // alerts draws no card at all.
+        if adds || !store.alerts(for: ref).isEmpty {
         SheetCard(name: String(localized: "Alerts"), glyph: "bell") {
             ForEach(store.alerts(for: ref)) { alert in
                 alertRow(alert)
             }
-            addRow
+            if adds { addRow }
         }
         // The tray reads no Observable environment, so the thing sheet's Mac
         // presentation cannot trap on it (prd §872's two halves).
         // Pushes inside the thing sheet's stack (prd §1315).
         .dsOneSheet(item: $tray, pushes: { _ in inSheetStack }) { route in
             WatchAlertTray(route: route, ref: ref, name: name, price: price, volume: volume)
+        }
         }
     }
 
