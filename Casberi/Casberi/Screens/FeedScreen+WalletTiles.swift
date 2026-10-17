@@ -486,8 +486,15 @@ extension FeedScreen {
             // its own, so the scope slot's pad would put these words 16pt right
             // of the balance they stand in for. The HEIGHT is not switched: the
             // 300pt box is Home's again (§760) and this fills it.
-            WalletScopeEmptyFigure(section: .home, padded: false)
-                .modifier(rowEntrance(0))
+            // With no account at all, the box is where the first starts
+            // (prd §1364).
+            if walletAccountSlots.allSatisfy(\.id.isEmpty) {
+                WalletStartFigure()
+                    .modifier(rowEntrance(0))
+            } else {
+                WalletScopeEmptyFigure(section: .home, padded: false)
+                    .modifier(rowEntrance(0))
+            }
         }
     }
 

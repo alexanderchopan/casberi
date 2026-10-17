@@ -1739,7 +1739,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1361 — A list the phone could not read is never saved over the one it holds
 - §1362 — Post on X opens X's composer every time and carries the card (amends §1299)
 - §1363 — A thing sheet says each thing once, says only what is true, and offers the door it lands on (the redundancy sweep)
-- §1364 — The Wallet tab always lands, and a Wallet with no account offers Watch a wallet (amends §611's "no door" for Home)
+- §1364 — The Wallet tab always lands, and a Wallet with no account starts with any address (amends §611's "no door" for Home)
 
 ## Dead rulings → what replaced them (generated)
 

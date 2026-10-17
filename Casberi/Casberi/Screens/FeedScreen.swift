@@ -1351,9 +1351,11 @@ struct FeedScreen: View {
     /// watched (§1167) and is the Wallet's tile now, so a Markets door taken
     /// before any wallet is followed lands on the box and the row with
     /// Markets lit, never the empty state.
+    /// **…NOR WHILE IT WATCHES NOTHING (prd §1364).** A Wallet with no
+    /// account drew "One inbox for all your apps" in its place; its box is
+    /// where the first account starts now (`WalletStartFigure`).
     private var walletKeepsChrome: Bool {
         source == CategoryFold.walletRoom
-            && (!wallet.addresses.isEmpty || chrome.walletSection == .markets)
     }
 
     /// The day sections of a room that has rows, plus its closing line.

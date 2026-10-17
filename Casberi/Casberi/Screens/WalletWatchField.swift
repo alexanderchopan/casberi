@@ -45,6 +45,9 @@ struct WalletWatchField: View {
     /// setup screen routes into the room, the roster refreshes in place.
     var onWatched: () -> Void
     var showsPeekChip: Bool = false
+    /// Whether the empty field offers connecting a wallet app. Off in the
+    /// Wallet's own box (prd §1364), which offers watching alone.
+    var showsConnect: Bool = true
     /// The connect handshake's picker is a `.sheet(item:)` this field does
     /// NOT own — `FeedScreen`'s single-presentation rule (a `.sheet` inside a
     /// row tears down whatever presented it), and this field is embedded in
@@ -70,15 +73,12 @@ struct WalletWatchField: View {
 
     var body: some View {
         VStack(spacing: DS.Space.s2) {
-            // The placeholder is the only place most people learn what this
-            // field takes, and it named ENS alone while `watch()` has accepted
-            // a Bitcoin address since 2026-07-27 and `looksLikeAddress` has
-            // armed for one just as long (prd §512a). Nothing was broken — a
-            // pasted BTC address watched correctly — but nobody had a reason
-            // to try it. Bitcoin is named and Solana is not, deliberately: a
-            // `.sol` name resolves through the same "or a name" clause, while
-            // Bitcoin has no name service here and so no other way in.
-            DSSlabField(placeholder: String(localized: "Paste an address — 0x, Bitcoin, or a name"),
+            // **THE VERB IN THE FIELD, THE FORMS UNDER IT (prd §1364, user:
+            // "paste or enter 0x address, .eth, .sol. or .wei name").** The
+            // placeholder named them all (§512a) and was cut off at phone
+            // width, so the forms moved to `formsLine` beneath. A Bitcoin
+            // address still watches; the user's list leaves it unnamed.
+            DSSlabField(placeholder: String(localized: "Paste or enter an address"),
                         text: $newAddress,
                         // **"Follow", to match the door that reaches this
                         // field** (user ruling, 2026-09-15: *"change all to
@@ -96,6 +96,9 @@ struct WalletWatchField: View {
                         // exactly as typed (prd §618).
                         paste: { newAddress = $0 },
                         action: watch)
+            if draft.isEmpty, result == nil {
+                formsLine
+            }
             fieldNotice
             addressPreview
                 .animation(DS.Motion.standard, value: previewAddress)
@@ -120,7 +123,7 @@ struct WalletWatchField: View {
             // page that now carries fact rows and a directory beneath it, and
             // — a card, not a 56pt row — it overlapped "Connection". With a
             // wallet already watched the page's own Connection row is the door.
-            if WalletConnectBridge.isAvailable, draft.isEmpty, wallet.canWatchMore,
+            if showsConnect, WalletConnectBridge.isAvailable, draft.isEmpty, wallet.canWatchMore,
                wallet.addresses.isEmpty {
                 ConnectWalletRow(onFound: { showConnectPicker($0) },
                                  onNote: { message, isError in
@@ -169,6 +172,16 @@ struct WalletWatchField: View {
 
     private var draftIsUnsafe: Bool {
         !book.lookalikes(of: draft).isEmpty || AddressSafety.checksum(draft) == .failed
+    }
+
+    /// What the field takes, under it while it is empty (prd §1364).
+    private var formsLine: some View {
+        HStack(spacing: 0) {
+            Text("0x address, or a .eth, .sol or .wei name")
+                .dsText(.subhead12).foregroundStyle(DS.textSecondary)
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, DS.Space.s1)
     }
 
     @ViewBuilder

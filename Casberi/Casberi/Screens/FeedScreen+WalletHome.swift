@@ -45,14 +45,6 @@ extension FeedScreen {
             if let card = cards.first { lines.append(Self.cardGlance(card)) }
         }()
 
-        // **A WALLET WITH NO ACCOUNT OFFERS ONE (user, 2026-10-17: "we need
-        // to give user a way to add wallet or something so they don't
-        // fail").** The tab lands with nothing in it since 08fdbf6, and
-        // Follow lived only in the tray; the row goes with the first account.
-        if walletAccountSlots.allSatisfy(\.id.isEmpty) {
-            walletWatchFirstRow
-        }
-
         Group {
             walletOverview(lines)
         }
@@ -89,7 +81,9 @@ extension FeedScreen {
             }
         }
 
-        if tracks {
+        // A Wallet with no account offers one thing, in its box (prd §1364):
+        // Track waits for the first account unless something is tracked.
+        if tracks, !plans.isEmpty || !walletAccountSlots.allSatisfy(\.id.isEmpty) {
             walletHomeSubscriptionsSection(plans)
         }
 
@@ -115,32 +109,6 @@ extension FeedScreen {
     /// filter Transactions and the history behind its door share (§837).
     static func walletMoves(_ things: [Thing]) -> [Thing] {
         things.filter { !MoneyReceipt.isState(source: $0.source, ref: $0.sourceRef) }
-    }
-
-    /// Watch a wallet, in the Overview row's anatomy: it raises the Watch
-    /// tray the Feed's Wallet + and the tray's Follow raise.
-    var walletWatchFirstRow: some View {
-        Section {
-            Button {
-                DSHaptic.selection()
-                feedSheet = .walletFollow
-            } label: {
-                HStack(spacing: DS.Space.s3) {
-                    DSActRow.disc(ScopeTileGlyph.wallets)
-                    Text("Watch a wallet")
-                        .dsText(.body17)
-                        .foregroundStyle(DS.textPrimary)
-                    Spacer(minLength: 0)
-                }
-                .frame(minHeight: DSActRow.height)
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(RowPress())
-            .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.rowInset,
-                                      bottom: 0, trailing: DSRoomChassis.rowInset))
-            .feedRowBackground()
-            .listRowSeparator(.hidden)
-        }
     }
 
     /// Home's lists in order, for the pill (prd §1219, §1232).
