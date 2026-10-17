@@ -66878,3 +66878,25 @@ Two causes, both in §1299's build. `x.com/intent/post` is a universal link the 
 Guards: `CasberiTests/XPostIntentTests` adds the app link's shape and the `+` encoding.
 
 **Not seen:** this was written in a session with no Xcode; nothing is built or run. X's composer opened by the scheme, X taking a pasted picture, the Mac.
+
+## §1363 — A thing sheet says each thing once, says only what is true, and offers the door it lands on (the redundancy sweep) (user, 2026-10-16: "can you do a sweep of ALL thing sheets for redundancy? this is the vibe coded bolt on poorly designed work i am worried about", "yes do all")
+
+A sweep of 123 sheets across ~40 heads (`design/sweep/REPORT.md`, local) found eleven patterns. Rulings:
+
+**Money receipts**
+1. A receipt never defaults to Settled (§83): Settled only on a past move with a stamped direction or figure, a fill, or an executed Safe outcome (`wallet:safeoutcome:`); otherwise no Status cell. A Safe queue row is Waiting (Needs you on your turn) with a line naming who it waits on; a Railgun unshield is Unshielded.
+2. A row about what will happen is a moment, never a receipt: `hyperliquid:unlock:`, `wallet:ensexpiry:`, `aerodrome:vote:` and any wallet row due ahead.
+3. A receipt's title is the row's own sentence — never a lead word ("In your wallet", "Came back") or the wallet's name ("Everyday"); the box never restates the title.
+4. A swap is never a person (no year totals, Save or Follow); each leg carries its own amount and there is no headline figure.
+5. A price rise is titled by its name half ("Notion went up 20%"), its box says what it costs now and "was $X"; no card, status or charge list.
+6. "Every charge" and "This month" list only the other, real charges, dated by `FeedScreen.dayWord`; a figure is drawn to the currency's minor unit.
+7. An onchain card with no last four wears its issuer's mark; Privacy Pools, Railgun and Privy wear the app's mark with no person badge; an approval wears the token's mark.
+8. A Rocket Money plan is a bill: amount, a Charged or Due day, and Track.
+
+**Every sheet's frame**
+9. From never repeats the head: a row equal to the title (either half), the box's app, person, channel, sender, project, party, wallet or a tile's label is dropped, and an empty card is deleted.
+10. The plain frame never heads with a host and the Site row is deleted everywhere; a title's line half (§915) is the box's statement; a bare URL is never drawn as words; a row with nothing else puts its title at the headline rung under its app's name — never an empty well.
+11. A link tile is named for where it lands: "Open in <App>" or "Open link" (§364).
+12. The box and the body never draw the same thing (`SheetBoxDrawn`): a picture, an agent chat's opening turns, a chat's last exchange, a contact's face, or a sentence the box said.
+13. "You kept this before" names only the same object (a Work object URL via `ObjectFold`, else a page with a path), never a dashboard, queue or explorer link; it and every sheet date use the day word, never a relative age; a footnote drops a date the box shows.
+14. "More from <name>" is "More songs / videos / streams / episodes"; your own post is titled by your name, never "you".
