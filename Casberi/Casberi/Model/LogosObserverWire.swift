@@ -539,6 +539,23 @@ enum LogosObserverWire {
         .sorted { $0.timestampMs < $1.timestampMs }
     }
 
+    /// **New messages folded into an open conversation (prd §1368):** one copy
+    /// of each (`ChatMessage.id`, the key the Observer also de-duplicates on),
+    /// oldest first. Whatever `since_ms` means on the Observer's side — after
+    /// that instant, or from it — the message at the boundary is never doubled.
+    static func merge(_ held: [ChatMessage], _ fresh: [ChatMessage]) -> [ChatMessage] {
+        var seen = Set(held.map(\.id))
+        let added = fresh.filter { seen.insert($0.id).inserted }
+        guard !added.isEmpty else { return held }
+        return (held + added).sorted { $0.timestampMs < $1.timestampMs }
+    }
+
+    /// The `since_ms` for the next read: the newest message held, or nil to
+    /// read the whole conversation.
+    static func since(_ held: [ChatMessage]) -> Int64? {
+        held.map(\.timestampMs).max()
+    }
+
     /// An unknown word is no claim, so it reads as nothing.
     static func delivery(_ word: String?) -> ChatMessage.Delivery? {
         switch word?.lowercased() {

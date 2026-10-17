@@ -10,6 +10,8 @@ import SwiftUI
 /// (`LogosChatNames`). chat_module 0.3.0 gives a person a new address at
 /// every Basecamp launch, so a name holds until they restart Basecamp.
 struct LogosChatTray: View {
+    /// How often an open conversation asks for what is new.
+    static let pollSeconds: Double = 4
     let convo: String
     let title: String
     @State private var messages: [LogosObserverWire.ChatMessage]?
@@ -54,6 +56,23 @@ struct LogosChatTray: View {
         .task {
             messages = await LogosObserver.shared.messages(in: convo)
             failed = messages == nil
+            // **Live while open (prd §1368):** every few seconds ask the
+            // Observer for what is newer than the newest message held
+            // (`since_ms`), and fold it in once. A read that failed is
+            // retried whole. Cancelled with the tray.
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(Self.pollSeconds))
+                guard !Task.isCancelled else { return }
+                guard let held = messages else {
+                    messages = await LogosObserver.shared.messages(in: convo)
+                    failed = messages == nil
+                    continue
+                }
+                guard let fresh = await LogosObserver.shared.messages(
+                    in: convo, sinceMs: LogosObserverWire.since(held)) else { continue }
+                let merged = LogosObserverWire.merge(held, fresh)
+                if merged.count != held.count { messages = merged }
+            }
         }
         .alert(String(localized: "Name this person"), isPresented: $naming) {
             TextField(String(localized: "Name"), text: $draft)
@@ -111,6 +130,11 @@ struct LogosChatTray: View {
                 }
             }
             .onAppear { if let last = lines.last { proxy.scrollTo(last.id, anchor: .bottom) } }
+            // A message that arrives while the tray is open slides into view.
+            .onChange(of: lines.last?.id) { _, newest in
+                guard let newest else { return }
+                withAnimation(DS.Motion.standard) { proxy.scrollTo(newest, anchor: .bottom) }
+            }
         }
     }
 

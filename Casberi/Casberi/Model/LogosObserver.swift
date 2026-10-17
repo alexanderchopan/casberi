@@ -292,11 +292,15 @@ final class LogosObserver {
     }
 
     /// One conversation's messages, oldest first; nil when they could not be read.
-    func messages(in convo: String) async -> [LogosObserverWire.ChatMessage]? {
-        if DemoMode.isActive { return DemoChat.messages(in: convo) }
+    /// `sinceMs` asks only for what is newer (`since_ms`, prd §1368): the
+    /// open conversation's poll.
+    func messages(in convo: String, sinceMs: Int64? = nil) async -> [LogosObserverWire.ChatMessage]? {
+        if DemoMode.isActive {
+            return DemoChat.messages(in: convo).filter { sinceMs == nil || $0.timestampMs > sinceMs! }
+        }
         guard let paired = chatPairing, let key = Self.readKey(account: paired.deviceID) else { return nil }
         guard case .answered(200, let json) = await signed(
-            "GET", LogosObserverWire.messagesTarget(convo: convo), paired: paired, key: key)
+            "GET", LogosObserverWire.messagesTarget(convo: convo, sinceMs: sinceMs), paired: paired, key: key)
         else { return nil }
         return LogosObserverWire.messages(json)
     }

@@ -256,6 +256,16 @@ check(thread[1].delivery == .pending && W.delivery("delivered") == .sent && W.de
       && W.delivery(nil) == nil && W.delivery("bogus") == nil,
       "delivery is read only from the words it knows; anything else claims nothing")
 
+print("Live while open (since_ms, prd §1368)")
+let held: [W.ChatMessage] = [.init(fromSelf: false, sender: "0xa", content: "one", timestampMs: 1000),
+                             .init(fromSelf: true, sender: nil, content: "two", timestampMs: 2000)]
+check(W.since(held) == 2000 && W.since([]) == nil, "the next read asks for what is newer than the newest held; none held reads whole")
+let boundary = W.merge(held, [held[1], .init(fromSelf: false, sender: "0xa", content: "three", timestampMs: 3000)])
+check(boundary.map(\.content) == ["one", "two", "three"], "the message at the boundary is not doubled, the new one is added")
+check(W.merge(held, []) == held && W.merge(held, held) == held, "nothing new changes nothing")
+let late = W.merge(held, [.init(fromSelf: false, sender: "0xb", content: "late", timestampMs: 1500)])
+check(late.map(\.content) == ["one", "late", "two"], "a message stamped earlier still lands in time order")
+
 print("Several Observers, routed by scope (prd §1155a)")
 struct P { let id: String; let granted: [String] }
 let nuc = P(id: "nuc", granted: ["node.status.read", "network.status.read"])

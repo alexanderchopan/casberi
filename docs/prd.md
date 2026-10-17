@@ -66940,3 +66940,10 @@ The goal cannot be built. No link to X carries a picture (`twitter://post` and `
 1. **The row is deleted.** The tray is the card, then Send to <person>, Messages, Mail and Share…; X is reached through Share…, which already carries the card and the link.
 2. **Deleted with it:** `XPostIntent` and its tests, the tray's X-only sheet items (`activityForX`), and `twitter` in `LSApplicationQueriesSchemes` (only Post on X asked for it).
 3. The sheet sweep's `share-tray` anchor and the share journey look for Share… instead.
+
+## §1368 — An open Logos conversation updates live, through `since_ms` (user, 2026-10-16: "yes start on step 1 now", after the Observer dev's Basecamp, with an RLN membership, sent into Casberi's test client; builds on §1155, §1213)
+
+1. **While the conversation tray is open it asks the Observer every 4 seconds for what is newer than the newest message it holds** (`GET /v2/chat/messages?convo=…&since_ms=…`, `LogosObserver.messages(in:sinceMs:)`), folds the answer in once (`LogosObserverWire.merge`, keyed on `ChatMessage.id`, the Observer's own de-duplication key) and slides the newest into view. A first read that failed is retried whole. The poll ends with the tray; the list and the box are unchanged.
+2. **The boundary never doubles:** whether the Observer reads `since_ms` as after or from that instant, the message at it is folded once; a message stamped earlier still lands in time order. `logos-observer-selftest.sh` holds both.
+3. Still read-only and still never stored (§1155): what arrives stays in the tray's memory and leaves with it.
+4. To be measured by the Observer's dev on his iPhone, paired with chats on: messages sent from his Basecamp should appear within seconds, with no duplicates and no gaps. The demo carries no new messages, so nothing on screen changes there.
