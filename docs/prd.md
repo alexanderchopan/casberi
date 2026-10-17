@@ -66907,3 +66907,8 @@ A sweep of 123 sheets across ~40 heads (`design/sweep/REPORT.md`, local) found e
 17. A Work sheet is titled by the item's own name (`WorkStage.head`), states its state once, shows a due date as a fact line and never on a done item; a PagerDuty trigger states its incident's newest state. Polar and Dodo sales, refunds and disputes and GitHub notifications open the Work sheet.
 18. Only calendar sources and your own timed events draw the hour grid; Duolingo, Privy and chain deadlines take the moment box. Due lines are the day word and time; an offer "Ends <day>"; a workout shows one distance, a swim no pace, and "Written by" only from Apple Health.
 19. Track is never offered on mail from a person (a sender at a mailbox provider, §1113); a GitHub notification draws no repo star strip under its Work box.
+
+## §1364 — The Wallet tab always lands, and a Wallet with no account offers Watch a wallet (amends §611's "no door" for Home) (user, 2026-10-17: "a user is pressing wallet button and. nothing happens", "we need to give user a way to add wallet or something so they don't fail", picked "Watch a wallet only")
+
+1. The Wallet tab, its swipe and every Markets door land on the Wallet whether or not anything has landed in it, and before the launch walk lists its venues (`MainSurface.go(to:)`). Waiting on the venues left the tab dead for a person whose wallets had landed no row.
+2. While the Wallet has no account (no watched address, no wallet app), Home's list leads with one row, Watch a wallet, in the Overview row's anatomy (`walletWatchFirstRow`). It raises the Watch tray the Feed's Wallet + raises, and goes with the first account. "No balance yet" stays in the box, unchanged.
