@@ -4,8 +4,9 @@ import SwiftUI
 /// disc raises: the system share sheet, with the card and the link as two
 /// UIKit items (`ShareCardPart`, prd §1193), so a target keeps both. The
 /// sheet's header draws the card (`LinkItem`'s metadata); Messages, Mail and
-/// every other target are the sheet's own. A spinner holds the slot while
-/// the card's pictures arrive.
+/// every other target are the sheet's own. A thing's card is drawn before
+/// Share is pressed (`ShareCardWarm`, prd §1371); a spinner holds the slot
+/// only while a card is still being drawn.
 ///
 /// When the card cannot be drawn the sheet still opens, with the link, or
 /// the title in words (§83 — the door never vanishes); with neither, the
@@ -94,18 +95,14 @@ struct ShareTray: View {
     @MainActor private func build() async {
         switch source {
         case .thing(let thing):
-            guard let base = ShareCard.model(for: thing) else { nothingToDraw = true; return }
-            model = base
-            let pixels = thing.isLive ? thing.previewImageData : nil
-            var filled = await ShareCard.fetchingPictures(base, storedPixels: pixels)
-            // A voice note's strip (prd §1024), read off the bytes once.
-            if ShareCard.isVoice(thing), let audio = thing.audio {
-                filled.wave = await ShareCard.wave(for: audio)
+            // Drawn already when the dial warmed it (prd §1371); else drawn now.
+            if thing.isLive, ShareCard.isVoice(thing), let audio = thing.audio {
                 voiceFile = ShareCard.audioFile(audio, name: TitleSeam.split(thing.title).name)
             }
+            let drawn = await ShareCardWarm.card(for: thing).value
             guard !Task.isCancelled else { return }
-            model = filled
-            image = ShareCard.render(filled)
+            model = drawn.model
+            image = drawn.image
             if image == nil { nothingToDraw = true }
         case .folder(let input):
             let built = FolderShareCard.model(input)

@@ -225,7 +225,7 @@ enum ShareCard {
     /// The pictures, fetched: stored pixels are already in the model; a
     /// thing with `previewImageData` but no decoded bitmap is decoded here,
     /// off main; remote art and a face go through the shared URL cache. One
-    /// fetch each, on a tap, for a picture the person is about to send.
+    /// fetch each, when the card is drawn (`ShareCardWarm`, prd §1371).
     static func fetchingPictures(_ model: Model, storedPixels: Data?) async -> Model {
         var out = model
         if out.picture == nil, let data = storedPixels {
@@ -257,7 +257,7 @@ enum ShareCard {
     }
 
     /// The bitmap. Rendered on the main actor because `ImageRenderer` walks
-    /// a SwiftUI tree; the tree is small and the call is on a tap.
+    /// a SwiftUI tree; the tree is small and the call waits for a still hand.
     @MainActor
     static func render(_ model: Model) -> UIImage? {
         let renderer = ImageRenderer(content: ShareCardView(model: model, ink: Ink.resolved()))

@@ -66960,3 +66960,12 @@ The goal cannot be built. No link to X carries a picture (`twitter://post` and `
 4. The sheet sweep's `share-tray` and `room-share` walks anchor on the system sheet's Close, `share-system` is folded into `share-tray`, and the `share` journey ends on the system sheet.
 
 **UNRUN.** No Swift toolchain or simulator in the session that made this: nothing compiled. The device check is Share on a thing, a room and a folder: the system sheet rises at once with the card in its header, Messages carries the card and the link, and Close leaves the thing sheet standing.
+
+## §1371 — The share card is drawn before Share is pressed (builds on §1370) (user, 2026-10-17: "we did it to make sharing easier, but in the end it's actually more steps", then "ofc")
+
+1. **A thing sheet draws its share card in the background** (`Model/ShareCardWarm.swift`): 0.6s after the dial (or a highlight's Share key) appears, once no gesture is under way (`GestureGate.idle`), the model is built, its pictures fetched and the bitmap rendered. Share then raises the system sheet with the card already in it; the spinner shows only when Share is pressed before the draw ends, and then it waits on the same draw rather than starting a second.
+2. **One draw per thing, shared and bounded.** Keyed on the thing, its title, the length of its words and of its picture, so an edited note draws again; the last six are kept. A sheet closed before the wait ends draws nothing; a Share sheet closed mid-draw does not cancel it.
+3. **The cost:** every opened thing renders one card, and fetches its art and face through the shared URL cache, which the sheet's own art has usually already filled. A voice note's recording is still written to a file only when Share is pressed.
+4. Rooms and folders are not warmed: a room's card reads its week when Share this week is pressed, and a folder's draws from rows already in hand.
+
+**UNRUN.** No Swift toolchain or simulator in the session that made this. The device check is a thing opened, a second's wait, then Share: the system sheet rises with the card in its header and no spinner.

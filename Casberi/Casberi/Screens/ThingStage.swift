@@ -155,6 +155,8 @@ struct VerbDial: View {
             .frame(maxWidth: .infinity)
             // The system share sheet rises, a system picker (prd §1238, §1370).
             .sheet(isPresented: $sharing) { ShareTray(thing: thing) }
+            // The card is drawn before Share is pressed (prd §1371).
+            .task(id: thing.id) { await ShareCardWarm.warm(thing) }
             // Bound to `copied`, so SwiftUI cancels it when the sheet goes and
             // restarts it when a second copy lands before the first has cleared.
             .task(id: copied) {

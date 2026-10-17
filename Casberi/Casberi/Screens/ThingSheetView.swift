@@ -2319,6 +2319,7 @@ struct ThingSheetView: View {
                     .buttonStyle(PressSpring())
                     .accessibilityLabel(Text("Share the highlight"))
                     .sheet(isPresented: $sharingHighlight) { ShareTray(thing: thing) }
+                    .task(id: thing.id) { await ShareCardWarm.warm(thing) }
                 } else {
                     ThingShareLink(thing: thing) {
                         bandDisc("square.and.arrow.up")
