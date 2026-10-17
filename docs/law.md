@@ -232,7 +232,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1508 of 1574 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1506 of 1575 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1674,7 +1674,6 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1295 — Search sits with the face in one glass pill (amends §1294)
 - §1296 — In the Feed, Social has no To you and Work no Coming up (amends §1251, §1293)
 - §1297 — Three fixes from the UX pass, and what it declined
-- §1299 — Post on X from the share tray
 - §1300 — Every + lists what its apps follow by name; People adds a person (amends §1292, §1293)
 - §1301 — Three journeys shortened: a connect's field first and focused, and Stop tracking from the row
 - §1302 — Two rules from the journeys: a connect page's one ask takes the keyboard, and what you added goes from a hold on its…
@@ -1737,17 +1736,16 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1359 — One day word everywhere (amends §882's divider form, §1349, §1352, §1357 item 2)
 - §1360 — An approval says itself once, and is Active, never a visit
 - §1361 — A list the phone could not read is never saved over the one it holds
-- §1362 — Post on X opens X's composer every time and carries the card (amends §1299)
 - §1363 — A thing sheet says each thing once, says only what is true, and offers the door it lands on (the redundancy sweep)
 - §1364 — The Wallet tab always lands, and a Wallet with no account starts with any address (amends §611's "no door" for Home)
 - §1365 — The empty Feed's box is Library's "Start with any of these" (amends §1166's note, §1314)
-- §1366 — Post on X carries the card through the share sheet (amends §1299, §1362)
+- §1367 — Post on X is deleted from the share tray
 
 ## Dead rulings → what replaced them (generated)
 
 Superseded, reversed, deleted or retired whole. Read the right-hand entry instead; the left one is history.
 
-§2→§1037 · §16→§100 · §17→§131 · §34→§1047 · §36a→§36o · §36j→§36o · §58a→§58i · §58h→§58i · §58i→§58j · §58j→§58k · §74→§1110 · §78→§114 · §113→§207 · §124a→§387 · §131→§228a/§1047 · §132→§1047 · §133→§1047 · §160→§212 · §162→§207 · §172→§1047 · §175→§1047 · §180→§1047 · §181→§336/§1047 · §184→§185 · §187→§1047 · §193→§1047 · §201→§518 · §213→§1047 · §214→§1047 · §225→§1047 · §232→§1047 · §248→§1047 · §249→§1047 · §266→§691 · §274→§1047 · §288→§1047 · §304→§1047 · §377a→§1047 · §386→§1047 · §409→§1038 · §437→§440 · §438→§440 · §488→§1038 · §547→§747 · §548→§1206 · §689→§1041 · §689b→§1041 · §689c→§1041 · §697b→§1047 · §728→§1206 · §775→§904 · §818→§916 · §877→§1047 · §922→§949 · §961→§969 · §1001→§1008 · §1002→§1015 · §1008→§1012 · §1011→§1013 · §1016a→§1017 · §1028→§1083 · §1040→§1050f · §1050g→§1111 · §1140→§1142 · §1141→§1154 · §1165→§1166
+§2→§1037 · §16→§100 · §17→§131 · §34→§1047 · §36a→§36o · §36j→§36o · §58a→§58i · §58h→§58i · §58i→§58j · §58j→§58k · §74→§1110 · §78→§114 · §113→§207 · §124a→§387 · §131→§228a/§1047 · §132→§1047 · §133→§1047 · §160→§212 · §162→§207 · §172→§1047 · §175→§1047 · §180→§1047 · §181→§336/§1047 · §184→§185 · §187→§1047 · §193→§1047 · §201→§518 · §213→§1047 · §214→§1047 · §225→§1047 · §232→§1047 · §248→§1047 · §249→§1047 · §266→§691 · §274→§1047 · §288→§1047 · §304→§1047 · §377a→§1047 · §386→§1047 · §409→§1038 · §437→§440 · §438→§440 · §488→§1038 · §547→§747 · §548→§1206 · §689→§1041 · §689b→§1041 · §689c→§1041 · §697b→§1047 · §728→§1206 · §775→§904 · §818→§916 · §877→§1047 · §922→§949 · §961→§969 · §1001→§1008 · §1002→§1015 · §1008→§1012 · §1011→§1013 · §1016a→§1017 · §1028→§1083 · §1040→§1050f · §1050g→§1111 · §1140→§1142 · §1141→§1154 · §1165→§1166 · §1299→§1367 · §1362→§1367 · §1366→§1367
 
 ## Renumbered (generated)
 

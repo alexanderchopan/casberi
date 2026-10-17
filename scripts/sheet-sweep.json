@@ -753,7 +753,7 @@
      "tap": "button:^Share"
     }
    ],
-   "anchor": "button:=Post on X",
+   "anchor": "button:=Share…",
    "afterSwipe": "button:=Search",
    "control": "button:=Back",
    "afterControl": "button:^Share"
@@ -783,8 +783,8 @@
    ],
    "anchor": "button:=Close",
    "control": "button:=Close",
-   "afterSwipe": "button:=Post on X",
-   "afterControl": "button:=Post on X"
+   "afterSwipe": "button:=Share…",
+   "afterControl": "button:=Share…"
   },
   {
    "id": "media-follow-site",

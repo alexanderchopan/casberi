@@ -259,8 +259,8 @@ final class JourneyTests: XCTestCase {
     // MARK: - Acting on what you have
 
     /// SHARE A THING you are looking at: its sheet's Share, and the tray
-    /// with Post on X standing in it (§1299). Posting is X's composer, so the
-    /// tray is the end of ours. The demo's one X post (`find`'s) is open as
+    /// with the card drawn and Share… under it (prd §1367). The system sheet
+    /// is the end of ours. The demo's one X post (`find`'s) is open as
     /// the setup (`-openThing`), since getting to a thing is `find`'s job.
     @MainActor func testShare() {
         let w = Walk("share", launch: Walk.demo, test: self)
@@ -269,7 +269,7 @@ final class JourneyTests: XCTestCase {
         w.relaunch(Walk.demo + ["-openThing", "Sourdough"])
         // The tile's label is its glyph's and its word's: "Share, Share".
         w.tap(w.visible(.button, "label BEGINSWITH %@", "Share"), "Share")
-        w.see(w.el(.button, "label == %@", "Post on X"), "share tray, Post on X")
+        w.see(w.el(.button, "label == %@", "Share…"), "share tray, Share…")
         w.finish()
     }
 

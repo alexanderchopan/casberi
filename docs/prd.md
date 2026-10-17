@@ -66932,3 +66932,11 @@ A sweep of 123 sheets across ~40 heads (`design/sweep/REPORT.md`, local) found e
 Guards: `CasberiTests/XPostIntentTests` adds the message's shape. The sheet sweep's `share-system` entry covers the one sheet both rows raise.
 
 **Not seen:** this was written in a session with no Xcode; nothing is built or run. X's share extension taking the card and the words, the Mac.
+
+## §1367 — Post on X is deleted from the share tray (user, 2026-10-17: "we have a share sheet button too, so what is the point of the 'post on x' button. the goal is to have 'post on x' post the content on the casberi share card, but it keeps not working. if it won't then we need to just remove the 'post on x' button"; retires §1299, §1362, §1366)
+
+The goal cannot be built. No link to X carries a picture (`twitter://post` and `x.com/intent/post` take text only); the one door that hands X a picture from another app is X's share extension, which lives only in the system sheet, and iOS lets no app pre-pick a target there. Posting it ourselves is a write through X's paid API on the person's account, declined for every seat. So Post on X could only be a second Share… or a post without the card, and §1366 made it the first.
+
+1. **The row is deleted.** The tray is the card, then Send to <person>, Messages, Mail and Share…; X is reached through Share…, which already carries the card and the link.
+2. **Deleted with it:** `XPostIntent` and its tests, the tray's X-only sheet items (`activityForX`), and `twitter` in `LSApplicationQueriesSchemes` (only Post on X asked for it).
+3. The sheet sweep's `share-tray` anchor and the share journey look for Share… instead.

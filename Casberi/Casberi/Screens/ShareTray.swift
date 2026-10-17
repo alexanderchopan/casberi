@@ -50,11 +50,7 @@ struct ShareTray: View {
     /// A voice note's recording, written once for the system sheet (prd §1024).
     @State private var voiceFile: URL?
     @State private var activityUp = false
-    /// The system sheet was raised by Post on X, so it carries X's words
-    /// beside the card rather than the link item (prd §1366).
-    @State private var activityForX = false
     @Environment(\.modelContext) private var context
-    @Environment(\.openURL) private var openURL
 
     private enum Composer: String, Identifiable {
         case messages, mail, messagesTo, mailTo
@@ -83,7 +79,7 @@ struct ShareTray: View {
     private static let previewHeight: CGFloat = 420
     private var trayHeight: CGFloat {
         let rows = CGFloat(1 + (MessageCompose.canText ? 1 : 0) + (MessageCompose.canMail ? 1 : 0)
-                           + (recipientChannel != nil ? 1 : 0) + (showsXRow ? 1 : 0))
+                           + (recipientChannel != nil ? 1 : 0))
         return DS.Space.s6 + 40 + DS.Space.s4 + Self.previewHeight + DS.Space.s3
              + rows * DS.Hit.min + DS.Space.s6
     }
@@ -110,21 +106,11 @@ struct ShareTray: View {
                     if MessageCompose.canMail {
                         DSDoorRow(icon: "envelope", label: "Send in Mail") { composer = .mail }
                     }
-                    // X's link takes words only, so with a card Post on X is
-                    // the system sheet holding the card and X's words, where
-                    // X's own share extension attaches the picture (prd §1366);
-                    // with none it opens X's composer as before (§1299).
-                    if showsXRow {
-                        DSDoorRow(icon: "square.and.pencil", label: "Post on X") { postOnX() }
-                    }
                     if let image {
                         // The card and the link (or a voice note's recording,
                         // prd §1024) as UIKit items, never a `ShareLink`:
                         // CoreTransferable sends a link as a plist (§1193).
-                        DSDoorRow(icon: "square.and.arrow.up", label: "Share…") {
-                            activityForX = false
-                            activityUp = true
-                        }
+                        DSDoorRow(icon: "square.and.arrow.up", label: "Share…") { activityUp = true }
                             .sheet(isPresented: $activityUp) {
                                 ActivitySheet(items: activityItems(image))
                                     .ignoresSafeArea()
@@ -199,50 +185,11 @@ struct ShareTray: View {
         return shareTitle
     }
 
-    /// X's post link for this card (prd §1299): its words and its link.
-    /// Post on X waits for the card: a tap while it was still drawing
-    /// opened X with the link alone, and X posted its own preview of the
-    /// source (prd §1366). With no card to draw it shows at once.
-    private var showsXRow: Bool {
-        xPost != nil && (image != nil || nothingToDraw)
-    }
-
-    private var xPost: URL? {
-        XPostIntent.url(words: shareWords, link: model?.link)
-    }
-
-    /// What the system sheet carries: for Post on X the card and X's words
-    /// with the link at their end, the one pair X's share extension posts
-    /// whole (prd §1366); else the card and the link, or a voice note's
-    /// recording (prd §1024).
+    /// What the system sheet carries: the card and the link, or a voice
+    /// note's recording (prd §1024).
     private func activityItems(_ image: UIImage) -> [Any] {
-        if activityForX {
-            let message = XPostIntent.message(words: shareWords, link: model?.link)
-            return message.isEmpty ? [image] : [image, message]
-        }
-        return voiceFile.map { [image, $0] as [Any] }
+        voiceFile.map { [image, $0] as [Any] }
             ?? ShareCardPart.items(image: image, link: model?.link, title: shareWords, subject: shareTitle)
-    }
-
-    /// Post on X: with a card, the system sheet carrying it (prd §1366) —
-    /// X's links take words only, so the card goes through X's share
-    /// extension. With none, X's composer with the words and the link: the
-    /// X app's own scheme when it is installed, else the web composer (§1362).
-    @MainActor private func postOnX() {
-        if image != nil {
-            activityForX = true
-            activityUp = true
-            return
-        }
-        guard let web = xPost else { return }
-        let app = XPostIntent.appURL(words: shareWords, link: model?.link)
-        Task { @MainActor in
-            var opened = false
-            if let app, UIApplication.shared.canOpenURL(app) {
-                opened = await UIApplication.shared.open(app)
-            }
-            if !opened { openURL(web) }
-        }
     }
 
     /// The composer's body: the thing's link when it has one, else the
