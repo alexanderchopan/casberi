@@ -232,7 +232,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1518 of 1587 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1519 of 1588 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1652,7 +1652,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1273 — zk.money: its moves named in the Wallet, its tags read, its links kept safely
 - §1274 — Sources' Subscriptions, Mail lists and Following open their page over Sources (amends §1217, §1265)
 - §1275 — Everything in Sources opens in Sources (amends §1217, §1274)
-- §1276 — Aztec: this phone signs for a TESTNET account
+- §1276 — Aztec: this phone signs for a TESTNET account (amended by §1380)
 - §1277 — Aztec mainnet in the Wallet: its contracts named, AZTEC staked shown in Positions
 - §1278 — The band's ✎ becomes the Wallet (amends §1207 item 6)
 - §1279 — Aztec staking, round two: stakes read where they live, token-sale vaults, rewards, sequencer health, votes (amends §1…
@@ -1752,6 +1752,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1377 — A transfer made to fool you says what it is, in its box (amends §160's red line under the tiles, §1350, §1181's tiles…
 - §1378 — Under "Needs you" a row does not say it needs you
 - §1379 — Every box moves once: it arrives, its numbers roll, a new cover lands (amends §495 for the wallet family's pick, §119…
+- §1380 — No contract of our own, ever; Aztec accounts wait for an audited account that rotates its key
 
 ## Dead rulings → what replaced them (generated)
 
