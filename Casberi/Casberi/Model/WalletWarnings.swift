@@ -57,6 +57,17 @@ struct WalletWarning: Identifiable, Equatable {
             }
         }
 
+        /// The `Thing` security flag behind a flagged-transfer kind, the same
+        /// names `liveState` counts by; nil for every other kind.
+        var securityFlag: String? {
+            switch self {
+            case .poisoning:     "poisoning"
+            case .spoofedSymbol: "symbol"
+            case .fakeTransfer:  "spam"
+            default:             nil
+            }
+        }
+
         /// Whether you can still DO something about this (2026-07-24, the
         /// Act/Aware reframe). `severity` alone had this backwards: a
         /// poisoning or spoofed-symbol transfer already happened — nothing

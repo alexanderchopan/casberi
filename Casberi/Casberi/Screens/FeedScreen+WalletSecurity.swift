@@ -83,7 +83,8 @@ extension FeedScreen {
     }
 
     /// One kind of flagged transfer under its own name (it was one "Worth a
-    /// look" group, §947). A row opens the tray at its group, as it did.
+    /// look" group, §947). A row opens that kind's pile alone, never the
+    /// whole tray, which leads with delegations and approvals.
     @ViewBuilder
     func walletFlaggedSection(_ kind: WalletWarning.Kind, anchor: SecurityAnchor,
                               word: String) -> some View {
@@ -96,7 +97,7 @@ extension FeedScreen {
                                     critical: warning.severity == .critical,
                                     title: warning.rowName ?? warning.title,
                                     line: warning.rowLine ?? warning.subtitle) {
-                            feedSheet = .worthALook
+                            feedSheet = .flagged(kind, title: word)
                         }
                     }
                 }
