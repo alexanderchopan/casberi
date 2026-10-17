@@ -38,6 +38,8 @@ struct MoneyHistoryRows: View {
                                 Spacer(minLength: DS.Space.s2)
                                 Text(verbatim: amount(thing) ?? "")
                                     .dsText(.body17).monospacedDigit().foregroundStyle(DS.textPrimary)
+                            } else if let trade = SwapStage(thing) {
+                                swapRow(trade, at: thing.capturedAt)
                             } else {
                                 VStack(alignment: .leading, spacing: 1) {
                                     // The thing alone (§915's seam): under "More from
@@ -59,6 +61,49 @@ struct MoneyHistoryRows: View {
             }
         }
         .padding(.horizontal, DSRoomChassis.inset)
+    }
+
+    /// A trade as a trade (prd §1373): its two marks, "MUSEGOD for MAG7",
+    /// the day and what went out, what came in trailing. Nothing truncates:
+    /// a line wraps, a figure steps down a size.
+    @ViewBuilder
+    private func swapRow(_ trade: SwapStage, at day: Date) -> some View {
+        let out = MoneyReceipt.split(trade.outAmount), into = MoneyReceipt.split(trade.inAmount)
+        let outName = out.unit ?? trade.outAmount, inName = into.unit ?? trade.inAmount
+        ZStack(alignment: .topLeading) {
+            AssetMark(name: outName, size: 34)
+                .mask(alignment: .topLeading) {
+                    ZStack(alignment: .topLeading) {
+                        Rectangle()
+                        Circle().frame(width: 38, height: 38).offset(x: 14, y: 4)
+                            .blendMode(.destinationOut)
+                    }
+                    .compositingGroup()
+                }
+            AssetMark(name: inName, size: 34).offset(x: 16, y: 6)
+        }
+        .frame(width: 50, height: 40, alignment: .topLeading)
+        .accessibilityHidden(true)
+        VStack(alignment: .leading, spacing: 1) {
+            Text(verbatim: String(localized: "\(outName) for \(inName)"))
+                .dsText(.body17).foregroundStyle(DS.textPrimary)
+                .lineLimit(2)
+            Text(verbatim: String(localized: "\(FeedScreen.dayWord(day)) · gave \(trade.outAmount)"))
+                .dsText(.subhead12).monospacedDigit().foregroundStyle(DS.textTertiary)
+                .lineLimit(2)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        VStack(alignment: .trailing, spacing: 1) {
+            Text(verbatim: "+" + (into.number.isEmpty ? trade.inAmount : into.number))
+                .dsText(.body17).monospacedDigit().foregroundStyle(DS.textPrimary)
+                .lineLimit(1).minimumScaleFactor(0.6)
+            if let unit = into.unit {
+                Text(verbatim: unit)
+                    .dsText(.subhead12).foregroundStyle(DS.textTertiary)
+                    .lineLimit(1).minimumScaleFactor(0.7)
+            }
+        }
+        .fixedSize(horizontal: true, vertical: false)
     }
 }
 

@@ -469,6 +469,11 @@ struct MoneyReceiptBox: View {
         /// mark is the app's, its caption the app's name.
         var outApp = false
         var inApp = false
+        /// "1 MAG7 = 12,177 MUSEGOD", the wallet that traded and its chain
+        /// (prd §1373): the box's two closing lines.
+        var rate: String? = nil
+        var wallet: String? = nil
+        var network: String? = nil
     }
     struct Transfer: Equatable {
         let mineAddress: String
@@ -548,49 +553,57 @@ struct MoneyReceiptBox: View {
         .accessibilityLabel(Text(verbatim: spoken(t)))
     }
 
-    /// A swap as the transfer draws (prd §1351): what left over what came, each
-    /// token's mark with its amount under it, then what it was worth and when.
+    /// A swap, Apple Wallet's way (prd §1373, amends §1351's two legs): the
+    /// two marks overlapped, what came in as the one figure, what went out and
+    /// when under it, then the rate and the wallet on its chain. Each fact
+    /// once, and nothing truncated: a long figure steps down a size, a long
+    /// symbol or line wraps.
     private func swapBody(_ s: Swap) -> some View {
         let out = MoneyReceipt.split(s.outAmount), into = MoneyReceipt.split(s.inAmount)
         return VStack(spacing: 0) {
-            HStack(spacing: DS.Space.s2) {
-                leg(s.outApp ? s.outAmount : (out.unit ?? ""), amount: s.outAmount, app: s.outApp)
-                HStack(spacing: 0) {
-                    Capsule().fill(DS.textTertiary).frame(width: 40, height: 2)
-                    Image(systemName: "chevron.right")
-                        .dsGlyph(.caption, weight: .bold)
-                        .foregroundStyle(DS.textTertiary)
-                }
-                .padding(.bottom, DS.Space.s4)
-                .accessibilityHidden(true)
-                leg(s.inApp ? s.inAmount : (into.unit ?? ""), amount: s.inAmount, app: s.inApp)
-            }
-            // THE AMOUNT DRAWN ONCE (prd §1351 amended): each leg carries its
-            // own figure under its mark, so no headline restates one of them.
-            Text(verbatim: swapWorthLine(s))
-                .dsText(.body17)
-                .foregroundStyle(DS.textSecondary)
-                .lineLimit(1).minimumScaleFactor(0.8)
-                .padding(.top, DS.Space.s3)
-            Spacer(minLength: DS.Space.s2)
-            // The rate and the wallet that traded (prd §1351), as facts.
-            HStack(alignment: .top, spacing: DS.Space.s4) {
-                ForEach(cells.prefix(2)) { cell in
-                    VStack(spacing: 0) {
-                        Text(verbatim: cell.value)
-                            .dsText(.heading17)
-                            .monospacedDigit()
-                            .foregroundStyle(DS.textPrimary)
-                            .lineLimit(1).minimumScaleFactor(0.7)
-                        Text(verbatim: cell.label)
-                            .dsText(.label12)
-                            .foregroundStyle(DS.textSecondary)
+            // The front mark punches its own ring out of the back one, so
+            // the two separate on any fill without a line or a halo.
+            ZStack(alignment: .topLeading) {
+                swapMark(s.outApp ? s.outAmount : (out.unit ?? ""), app: s.outApp)
+                    .mask(alignment: .topLeading) {
+                        ZStack(alignment: .topLeading) {
+                            Rectangle()
+                            Circle().frame(width: 54, height: 54)
+                                .offset(x: 27, y: -1)
+                                .blendMode(.destinationOut)
+                        }
+                        .compositingGroup()
                     }
-                }
+                swapMark(s.inApp ? s.inAmount : (into.unit ?? ""), app: s.inApp)
+                    .offset(x: 30, y: 2)
             }
-            .padding(.bottom, DS.Space.s2)
-            if let statusWord {
-                DSStamp(word: statusWord, weight: statusWeight)
+            .frame(width: 78, height: 50, alignment: .topLeading)
+            .accessibilityHidden(true)
+            swapFigure(s, out: out, into: into)
+                .padding(.top, DS.Space.s3)
+            Text(verbatim: swapGaveLine(s, out: out))
+                .dsText(.body17)
+                .monospacedDigit()
+                .foregroundStyle(DS.textSecondary)
+                .multilineTextAlignment(.center)
+                .lineLimit(2).minimumScaleFactor(0.8)
+                .padding(.top, 2)
+            Spacer(minLength: DS.Space.s2)
+            if let rate = s.rate {
+                Text(verbatim: rate)
+                    .dsText(.heading17)
+                    .monospacedDigit()
+                    .foregroundStyle(DS.textPrimary)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2).minimumScaleFactor(0.7)
+            }
+            if let place = swapPlace(s) {
+                Text(verbatim: place)
+                    .dsText(.label12)
+                    .foregroundStyle(DS.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+                    .padding(.top, 2)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -598,28 +611,78 @@ struct MoneyReceiptBox: View {
         .accessibilityLabel(Text(verbatim: String(localized: "\(s.outAmount) for \(s.inAmount)")))
     }
 
-    private func leg(_ symbol: String, amount: String, app: Bool = false) -> some View {
-        VStack(spacing: DS.Space.s1) {
-            if app {
-                BridgeIcon(name: symbol, size: DS.Face.shelf, circular: true)
-            } else {
-                AssetMark(name: symbol, size: DS.Face.shelf)
-            }
-            // An app's leg is its name; a token's leg is its figure, the
-            // statement of the trade (prd §1351 amended).
-            Text(verbatim: amount)
-                .dsText(app ? .label12 : .heading20)
-                .monospacedDigit()
-                .foregroundStyle(app ? DS.textSecondary : DS.textPrimary)
-                .lineLimit(1).minimumScaleFactor(0.6)
+    /// One leg's mark: a token's, or an app's for a Peer fill (prd §1356).
+    @ViewBuilder
+    private func swapMark(_ name: String, app: Bool) -> some View {
+        if app {
+            BridgeIcon(name: name, size: 48, circular: true)
+        } else {
+            AssetMark(name: name, size: 48)
         }
-        .frame(width: 128)
     }
 
-    private func swapWorthLine(_ s: Swap) -> String {
-        let day = FeedScreen.dayWord(landed)
-        guard let usd = s.usd, usd > 0 else { return day }
-        return "\(usd.formatted(.currency(code: "USD"))) · \(day)"
+    /// The one figure: what came in, signed, its symbol beside it, or under
+    /// it when the two do not fit one line. A Peer sale's figure is what went
+    /// out, since what came in is an app's money, not a token.
+    private func swapFigure(_ s: Swap, out: (number: String, unit: String?),
+                            into: (number: String, unit: String?)) -> some View {
+        let gain = !s.inApp
+        let leg = gain ? into : out
+        let number = (gain ? "+" : "−") + (leg.number.isEmpty ? (gain ? s.inAmount : s.outAmount) : leg.number)
+        let unit = leg.unit ?? ""
+        return ViewThatFits(in: .horizontal) {
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                swapNumber(number)
+                swapUnit(unit)
+            }
+            VStack(spacing: 0) {
+                swapNumber(number)
+                swapUnit(unit)
+            }
+        }
+    }
+
+    private func swapNumber(_ number: String) -> some View {
+        Text(verbatim: number)
+            .dsText(.heading34)
+            .monospacedDigit()
+            .contentTransition(roll)
+            .foregroundStyle(DS.textPrimary)
+            .lineLimit(1).minimumScaleFactor(0.5)
+    }
+
+    private func swapUnit(_ unit: String) -> some View {
+        Text(verbatim: unit)
+            .dsText(.heading17)
+            .foregroundStyle(DS.textSecondary)
+            .lineLimit(1).minimumScaleFactor(0.6)
+    }
+
+    /// "−317.78 MAG7 · $1,204.10 · Today": what went out (or, for a Peer fill,
+    /// the app it went through), its worth when known, and the one day word.
+    private func swapGaveLine(_ s: Swap, out: (number: String, unit: String?)) -> String {
+        let gave: String
+        if s.outApp {
+            gave = String(localized: "Paid with \(s.outAmount)")
+        } else if s.inApp {
+            gave = String(localized: "Paid out to \(s.inAmount)")
+        } else {
+            gave = "−" + s.outAmount
+        }
+        var parts = [gave]
+        if let usd = s.usd, usd > 0 { parts.append(usd.formatted(.currency(code: "USD"))) }
+        parts.append(FeedScreen.dayWord(landed))
+        return parts.joined(separator: " · ")
+    }
+
+    /// "accountless.eth on Base", or the one of the two that is known.
+    private func swapPlace(_ s: Swap) -> String? {
+        switch (s.wallet, s.network) {
+        case let (w?, n?): return String(localized: "\(w) on \(n)")
+        case let (w?, nil): return w
+        case let (nil, n?): return n
+        default: return nil
+        }
     }
 
     /// The card that paid beside what it paid (prd §1182): the card, then its

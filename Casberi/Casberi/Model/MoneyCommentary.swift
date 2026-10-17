@@ -180,11 +180,16 @@ enum MoneyCommentary: Equatable {
         guard let outUnit = a.unit, let inUnit = b.unit,
               let outValue = number(a.number), let inValue = number(b.number),
               outValue > 0, inValue > 0 else { return nil }
-        let rate = inValue / outValue
-        let shown = rate >= 100 ? String(format: "%.0f", rate)
+        // Said from the side that reads as a whole figure (prd §1373):
+        // "1 ETH = 2,499 USDC", never "1 USDC = 0.000400 ETH".
+        let flips = inValue < outValue
+        let rate = flips ? outValue / inValue : inValue / outValue
+        let (from, to) = flips ? (inUnit, outUnit) : (outUnit, inUnit)
+        // Grouped as every other figure is ("12,177", prd §1373).
+        let shown = rate >= 100 ? rate.formatted(.number.precision(.fractionLength(0)))
             : rate >= 1 ? String(format: "%.2f", rate)
             : String(format: "%.6f", rate)
-        return .rate(headline: String(localized: "1 \(outUnit) = \(shown) \(inUnit)"),
+        return .rate(headline: String(localized: "1 \(from) = \(shown) \(to)"),
                      subline: String(localized: "The rate you traded at."))
     }
 

@@ -3193,6 +3193,29 @@ enum DemoSeedAll {
     ///   a received airdrop of an unheld token is dropped before any flag.
     /// - **A fake transfer**: a `Transfer` event naming Everyday as the
     ///   sender of a token it never held and nobody prices.
+    /// Three ordinary trades on Uniswap (prd §1373), so a swap's receipt and
+    /// its token's other trades have something real to draw: the live swap
+    /// arm's shape, its explorer link the content, the router the counterparty.
+    private static func trades() -> [Thing] {
+        let router = "0x3fc91a3afd70395cd496c647d5a6cc9d4b2b7fad"
+        let legs: [(String, Double, Int, Double, String)] = [
+            ("Swapped 1,240 USDC → 0.4962 ETH on Uniswap", 0.2, 9, 1_240, "7c1e"),
+            ("Swapped 0.25 ETH → 640.18 USDC on Uniswap", 6, 18, 640, "a93b"),
+            ("Swapped 500 USDC → 0.2041 ETH on Uniswap", 12, 11, 500, "05d2"),
+        ]
+        return legs.enumerated().map { i, leg in
+            let hash = "0x" + String(repeating: leg.4, count: 16)
+            return row(.transaction, leg.0, source: "Wallet",
+                       ref: "demo:wallet:trade:\(i)", days: leg.1, hour: leg.2,
+                       content: "https://basescan.org/tx/" + hash) { t in
+                t.walletAddress = demoWallet
+                t.counterpartyAddress = router
+                t.transferCounterparty = "Uniswap"
+                t.transferUSD = leg.3
+            }
+        }
+    }
+
     private static func flaggedMoves() -> [Thing] {
         let savings = demoWallets[1].address
         let sam = counterpartyAddress(for: "Sam")
@@ -3319,6 +3342,7 @@ enum DemoSeedAll {
             })
         }
         out += flaggedMoves()
+        out += trades()
         // An approval, so the wallet room's exposure card has something real.
         // `.transaction` and a REAL `wallet:approval:` ref (2026-08-12).
         // `WalletApprovals` lands an approval as a `.transaction`, and the

@@ -377,7 +377,8 @@ do {
     let spoof = MoneyReceipt.split("4,672 USDT Staked • gitos.org")
     check(spoof.unit == nil, "a spoofed token name yields NO unit")
     check(spoof.number.contains("gitos.org"), "the spoof stays inside the clamped number")
-    check(MoneyReceipt.split("100 BTC2").unit == nil, "a unit with a digit is refused")
+    check(MoneyReceipt.split("317.78 MAG7").unit == "MAG7", "a ticker with a digit reads (prd §1373)")
+    check(MoneyReceipt.split("100 2024").unit == nil, "a bare number is not a unit")
     check(MoneyReceipt.split("5 VERYLONGTICKERNAME").unit == nil, "an over-long unit is refused")
     check(MoneyReceipt.split(nil).number == "", "nil amount is empty, not a crash")
     check(MoneyReceipt.split("crypto").unit == nil, "a bare word is not a unit")
@@ -851,7 +852,16 @@ do {
         MoneyCommentary.rate(out: "0.5 ETH", into: "1,240.00 USDC") else {
         print("  ✗ a swap rate composes nothing"); failures += 1; exit(1)
     }
-    check(head.contains("2480"), "0.5 ETH for 1,240 USDC is 2480 per ETH")
+    check(head.contains("2,480"), "0.5 ETH for 1,240 USDC is 2,480 per ETH, grouped")
+    if case .rate(let back, _)? = MoneyCommentary.rate(out: "1,240 USDC", into: "0.5 ETH") {
+        check(back.hasPrefix("1 ETH = 2,480 USDC"), "a rate under one is said from the other side (prd §1373)")
+    } else { check(false, "a USDC-for-ETH rate composes") }
+    let venue = MoneyReceipt.compose(MoneyReceipt.Facts(source: "Wallet",
+        title: "Swapped 1,240 USDC → 0.4962 ETH on Uniswap"))
+    check(venue?.party == "Swapped USDC for ETH", "a venue is no leg: the trade names its tokens (prd §1373)")
+    let digit = MoneyReceipt.compose(MoneyReceipt.Facts(source: "Wallet",
+        title: "Swapped 317.78 MAG7 → 3,869,551 MUSEGOD"))
+    check(digit?.party == "Swapped MAG7 for MUSEGOD", "a ticker with a digit titles its trade (prd §1373)")
     check(head.contains("ETH") && head.contains("USDC"), "both units are named")
     check(MoneyCommentary.rate(out: "0.5", into: "1,240 USDC") == nil,
           "a leg with no unit yields no rate")
@@ -1219,7 +1229,7 @@ mutate "a deadline ref composes a receipt" receipt \
 
 # A phishing domain promoted into the currency slot.
 mutate "the unit rule stops checking for letters" receipt \
-  'last.allSatisfy({ $0.isLetter })' \
+  'last.allSatisfy({ $0.isLetter || $0.isNumber })' \
   'true'
 
 # A weekday named for a day that has not happened.

@@ -3123,16 +3123,24 @@ struct ThingSheetView: View {
     /// token (prd §1356).
     private var moneySwap: MoneyReceiptBox.Swap? {
         if let swap = SwapStage(thing) {
-            return MoneyReceiptBox.Swap(outAmount: swap.outAmount, inAmount: swap.inAmount, usd: thing.transferUSD)
+            var rate: String?
+            if case .rate(let line, _)? = MoneyCommentary.rate(out: swap.outAmount, into: swap.inAmount) {
+                rate = line
+            }
+            return MoneyReceiptBox.Swap(outAmount: swap.outAmount, inAmount: swap.inAmount, usd: thing.transferUSD,
+                                        rate: rate,
+                                        wallet: MoneyReceiptSource.walletLabel(thing.walletAddress),
+                                        network: WalletIngest.chainName(forContent: thing.content).flatMap { $0.isEmpty ? nil : $0 })
         }
         guard thing.source == "Peer", let rail = thing.authorHandle, !rail.isEmpty else { return nil }
         let parts = MoneyReceipt.peerAmount(thing.title)
         guard !parts.number.isEmpty else { return nil }
         let token = "\(parts.number) \(parts.unit ?? "")"
         let sell = thing.sourceRef?.hasPrefix("peer:sell:") == true
+        let wallet = MoneyReceiptSource.walletLabel(thing.walletAddress)
         return sell
-            ? MoneyReceiptBox.Swap(outAmount: token, inAmount: rail, usd: thing.transferUSD, inApp: true)
-            : MoneyReceiptBox.Swap(outAmount: rail, inAmount: token, usd: thing.transferUSD, outApp: true)
+            ? MoneyReceiptBox.Swap(outAmount: token, inAmount: rail, usd: thing.transferUSD, inApp: true, wallet: wallet)
+            : MoneyReceiptBox.Swap(outAmount: rail, inAmount: token, usd: thing.transferUSD, outApp: true, wallet: wallet)
     }
 
     private var moneyCard: MoneyReceiptBox.Card? {
@@ -3257,8 +3265,15 @@ struct ThingSheetView: View {
         return out
     }
 
+    /// The token a swap brought in, whose other trades are its list (prd §1373).
+    private var moneySwapToken: String? {
+        guard let swap = SwapStage(thing) else { return nil }
+        return MoneyReceipt.split(swap.inAmount).unit
+    }
+
     private func moneyHistoryTitle(_ r: MoneyReceipt) -> String {
-        moneyHasPerson ? String(localized: "With \(moneyPartyName(r))")
+        if let token = moneySwapToken { return String(localized: "\(token) trades") }
+        return moneyHasPerson ? String(localized: "With \(moneyPartyName(r))")
                        : String(localized: "At \(moneyPartyName(r))")
     }
 
@@ -3299,7 +3314,21 @@ struct ThingSheetView: View {
         guard thing.isLive, !thing.tags.contains("Price rise") else { return }
         let id = thing.id
         var others: [Thing] = []
-        if let cp = thing.counterpartyAddress?.lowercased(), !cp.isEmpty, thing.source == "Wallet" {
+        if let token = moneySwapToken {
+            // **A SWAP'S LIST IS THE TOKEN'S OTHER TRADES (prd §1373)**, in the
+            // same wallet: its counterparty is a router every trade shares, and
+            // its title is no party ("At Swapped 317.78 MA…").
+            let mine = thing.walletAddress
+            var d = FetchDescriptor<Thing>(
+                predicate: #Predicate { $0.source == "Wallet" && $0.walletAddress == mine && $0.title.starts(with: "Swapped ") },
+                sortBy: [SortDescriptor(\Thing.capturedAt, order: .reverse)])
+            d.fetchLimit = 400
+            others = ((try? modelContext.fetch(d)) ?? []).filter { other in
+                // A flagged trade (a spoofed symbol) is not one of yours to list.
+                guard other.isLive, !other.isFlagged, other.id != id, let leg = SwapStage(other) else { return false }
+                return MoneyReceipt.split(leg.outAmount).unit == token || MoneyReceipt.split(leg.inAmount).unit == token
+            }
+        } else if let cp = thing.counterpartyAddress?.lowercased(), !cp.isEmpty, thing.source == "Wallet" {
             let d = FetchDescriptor<Thing>(
                 predicate: #Predicate { $0.source == "Wallet" && $0.counterpartyAddress == cp },
                 sortBy: [SortDescriptor(\Thing.capturedAt, order: .reverse)])
@@ -3515,7 +3544,9 @@ struct ThingSheetView: View {
         }
         // A transaction's link is worth copying; an app's account page is not
         // (prd §1354).
-        if page != nil, thing.source == "Wallet" {
+        // A swap's tiles are Explorer and Share (prd §1373): its link is the
+        // explorer's page, one tap away, so a second tile copying it is noise.
+        if page != nil, thing.source == "Wallet", SwapStage(thing) == nil {
             out.append(Verb(label: "Copy link", icon: "doc.on.doc", action: .copyText))
         }
         return out

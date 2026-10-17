@@ -417,7 +417,11 @@ struct MoneyReceipt: Equatable {
         if f.title.hasPrefix("Swapped "), let arrow = f.title.range(of: " → ") {
             let out = split(String(f.title.dropFirst("Swapped ".count)[..<arrow.lowerBound]
                 .replacingOccurrences(of: "Swapped ", with: "")))
-            let into = split(String(f.title[arrow.upperBound...]))
+            // The venue's " on Uniswap" is no leg (prd §1373): it read as the
+            // token, titling a trade "Swapped USDC for Uniswap".
+            var inLeg = String(f.title[arrow.upperBound...])
+            if let on = inLeg.range(of: " on ") { inLeg = String(inLeg[..<on.lowerBound]) }
+            let into = split(inLeg)
             if let a = out.unit, let b = into.unit {
                 return MoneyReceipt(
                     subject: .asset(b), mine: f.walletAddress,
@@ -1204,7 +1208,7 @@ struct MoneyReceipt: Equatable {
     /// "0.9962 ETH" → ("0.9962", "ETH").
     ///
     /// The unit is the LAST whitespace component, and only when it looks like a
-    /// ticker: letters alone, at most `unitCap` of them. **A token "name" is
+    /// ticker: letters and digits, one letter at least, at most `unitCap` of them. **A token "name" is
     /// attacker-controlled text** — a real spoofed row measured on this corpus
     /// read `4,672 USDT Staked • gitos.org`, a phishing domain — so anything
     /// that doesn't look like a ticker stays inside `number`, where the view
@@ -1218,7 +1222,10 @@ struct MoneyReceipt: Equatable {
         let parts = raw.split(separator: " ")
         guard parts.count >= 2, let last = parts.last,
               last.count <= unitCap,
-              last.allSatisfy({ $0.isLetter }) else { return (raw, nil) }
+              // A ticker may carry a digit ("MAG7", "1INCH", prd §1373), never
+              // punctuation, and is never a bare number.
+              last.allSatisfy({ $0.isLetter || $0.isNumber }),
+              last.contains(where: { $0.isLetter }) else { return (raw, nil) }
         return (parts.dropLast().joined(separator: " "), String(last))
     }
 
