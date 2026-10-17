@@ -188,283 +188,302 @@ extension FeedScreen {
         } else if let distribution {
             insightSection { DistributionHero(dist: distribution) }
         }
+        // Each arm but the All feed's is behind `AnyView`: a `switch` builds
+        // the type metadata of every arm at the first build, so the Wallet's,
+        // the picture rooms' and the merged rooms' view types were paid for at
+        // launch by a feed that draws none of them (`roomBody`'s doc, PERF
+        // 2026-10-17). A new arm goes in `AnyView(Group { … })` too.
         switch shape {
         case .snapchat:
-            // The memories whose pictures actually came back tile; everything
-            // else — saved chats, videos (never fetched, see `SnapchatImport`),
-            // and memories whose 7-day download window closed before anyone
-            // pressed Get pictures — reads as rows. The split is the honest
-            // one: a tile promises a picture, so a row with no pixels stays a
-            // dated entry rather than a grey well pretending to be a photograph.
-            //
-            // The newest thing leads, above everything (prd §832, X's rule §821),
-            // and the split is PER DAY (prd §910): a day's memories tile under its
-            // header, its other things row beneath them. Kind used to stand
-            // above time here — every picture in the export first, then the
-            // rest by day.
-            let (cover, uncovered) = newestLead(visible, heroShown: heroShown)
-            if let cover { Section { ledeListRow(cover) } }
-            let days = chronoGroups(uncovered)
-            groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days),
-                            isTile: Self.isMemoryTile, tileShape: .square)
+            AnyView(Group {
+                // The memories whose pictures actually came back tile; everything
+                // else — saved chats, videos (never fetched, see `SnapchatImport`),
+                // and memories whose 7-day download window closed before anyone
+                // pressed Get pictures — reads as rows. The split is the honest
+                // one: a tile promises a picture, so a row with no pixels stays a
+                // dated entry rather than a grey well pretending to be a photograph.
+                //
+                // The newest thing leads, above everything (prd §832, X's rule §821),
+                // and the split is PER DAY (prd §910): a day's memories tile under its
+                // header, its other things row beneath them. Kind used to stand
+                // above time here — every picture in the export first, then the
+                // rest by day.
+                let (cover, uncovered) = newestLead(visible, heroShown: heroShown)
+                if let cover { Section { ledeListRow(cover) } }
+                let days = chronoGroups(uncovered)
+                groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days),
+                                isTile: Self.isMemoryTile, tileShape: .square)
+            })
         case .telegram:
-            // The mixed room's fourth instance, and the widest: a followed
-            // channel's wordless pictures tile, while its captioned posts, your
-            // Saved Messages and whole imported conversations read as rows —
-            // per day, under the day's header (prd §910).
-            // The newest thing leads, above the grid (prd §832, X's rule §821).
-            let (cover, uncovered) = newestLead(visible, heroShown: heroShown)
-            if let cover { Section { ledeListRow(cover) } }
-            let telegramDays = chronoGroups(uncovered)
-            groupedSections(telegramDays, nextEventID: nextEventID,
-                            boundary: boundaryThingID(in: telegramDays),
-                            isTile: Self.isTelegramPhotoTile, tileShape: .square)
+            AnyView(Group {
+                // The mixed room's fourth instance, and the widest: a followed
+                // channel's wordless pictures tile, while its captioned posts, your
+                // Saved Messages and whole imported conversations read as rows —
+                // per day, under the day's header (prd §910).
+                // The newest thing leads, above the grid (prd §832, X's rule §821).
+                let (cover, uncovered) = newestLead(visible, heroShown: heroShown)
+                if let cover { Section { ledeListRow(cover) } }
+                let telegramDays = chronoGroups(uncovered)
+                groupedSections(telegramDays, nextEventID: nextEventID,
+                                boundary: boundaryThingID(in: telegramDays),
+                                isTile: Self.isTelegramPhotoTile, tileShape: .square)
+            })
         case .x:
-            // The mixed room's third instance (2026-08-13, prd §375), and the
-            // one that had to wait for the importer: until a wordless picture
-            // post landed as a PICTURE rather than as the t.co shortlink
-            // standing in for it, this room had no tiles to draw — every
-            // photograph in it was a row whose words were a shortened URL.
-            //
-            // Same honesty rule as Snapchat's and Files': a tile promises a
-            // picture, so only a post with pixels and nothing to say becomes
-            // one. A photograph with a caption stays a post card, because the
-            // caption is the post — extracting its picture into a grid would
-            // separate the two halves of one thing.
-            // THE NEWEST THING LEADS, above the grid (prd §821): the cover is
-            // lifted out of the room first, so a picture wall never declines it.
-            let (cover, uncovered) = newestLead(visible, heroShown: heroShown)
-            if let cover { Section { ledeListRow(cover) } }
-            // A THREAD READS AS A THREAD (2026-08-18, prd §396). The archive
-            // has named a self-reply's parent since §308, and until this pass
-            // the only place that fact reached was `enrichedText` — retrieval
-            // text, drawn by nothing — so a twelve-post thread was one
-            // findable argument and twelve unreadable rows. Same fold the
-            // social rooms have used since 2026-07-27, on the same field.
-            //
-            // Instagram deliberately does NOT fold below: only X's archive
-            // names a parent post, which is §309's standing split between what
-            // generalises across the import rooms and what is one export's own
-            // fact.
-            //
-            // The fold runs BEFORE the tile split since prd §910 (it used to
-            // run on the rows the split left), so a wordless picture you posted
-            // into your own thread folds under the thread, which is where it
-            // was said, rather than tiling on its own.
-            let (roomThings, threadReplies) = foldThreadReplies(uncovered)
-            let days = chronoGroups(roomThings)
-            groupedSections(days, nextEventID: nextEventID,
-                            boundary: boundaryThingID(in: days), replies: threadReplies,
-                            isTile: Self.isXPhotoTile, tileShape: .square)
+            AnyView(Group {
+                // The mixed room's third instance (2026-08-13, prd §375), and the
+                // one that had to wait for the importer: until a wordless picture
+                // post landed as a PICTURE rather than as the t.co shortlink
+                // standing in for it, this room had no tiles to draw — every
+                // photograph in it was a row whose words were a shortened URL.
+                //
+                // Same honesty rule as Snapchat's and Files': a tile promises a
+                // picture, so only a post with pixels and nothing to say becomes
+                // one. A photograph with a caption stays a post card, because the
+                // caption is the post — extracting its picture into a grid would
+                // separate the two halves of one thing.
+                // THE NEWEST THING LEADS, above the grid (prd §821): the cover is
+                // lifted out of the room first, so a picture wall never declines it.
+                let (cover, uncovered) = newestLead(visible, heroShown: heroShown)
+                if let cover { Section { ledeListRow(cover) } }
+                // A THREAD READS AS A THREAD (2026-08-18, prd §396). The archive
+                // has named a self-reply's parent since §308, and until this pass
+                // the only place that fact reached was `enrichedText` — retrieval
+                // text, drawn by nothing — so a twelve-post thread was one
+                // findable argument and twelve unreadable rows. Same fold the
+                // social rooms have used since 2026-07-27, on the same field.
+                //
+                // Instagram deliberately does NOT fold below: only X's archive
+                // names a parent post, which is §309's standing split between what
+                // generalises across the import rooms and what is one export's own
+                // fact.
+                //
+                // The fold runs BEFORE the tile split since prd §910 (it used to
+                // run on the rows the split left), so a wordless picture you posted
+                // into your own thread folds under the thread, which is where it
+                // was said, rather than tiling on its own.
+                let (roomThings, threadReplies) = foldThreadReplies(uncovered)
+                let days = chronoGroups(roomThings)
+                groupedSections(days, nextEventID: nextEventID,
+                                boundary: boundaryThingID(in: days), replies: threadReplies,
+                                isTile: Self.isXPhotoTile, tileShape: .square)
+            })
         case .instagram:
-            // The mixed room's fourth instance (2026-08-18, prd §395), on
-            // Snapchat's, Files' and X's terms: what has pixels AND nothing to
-            // say tiles, everything else reads as rows — per day (prd §910).
-            // The newest thing leads, above the grid (prd §821) — X's rule.
-            let (cover, uncovered) = newestLead(visible, heroShown: heroShown)
-            if let cover { Section { ledeListRow(cover) } }
-            let days = chronoGroups(uncovered)
-            groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days),
-                            isTile: Self.isInstagramPhotoTile, tileShape: .square)
+            AnyView(Group {
+                // The mixed room's fourth instance (2026-08-18, prd §395), on
+                // Snapchat's, Files' and X's terms: what has pixels AND nothing to
+                // say tiles, everything else reads as rows — per day (prd §910).
+                // The newest thing leads, above the grid (prd §821) — X's rule.
+                let (cover, uncovered) = newestLead(visible, heroShown: heroShown)
+                if let cover { Section { ledeListRow(cover) } }
+                let days = chronoGroups(uncovered)
+                groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days),
+                                isTile: Self.isInstagramPhotoTile, tileShape: .square)
+            })
         case .wallet:
-            // The reads first, then the stream (2026-07-20, the surface split):
-            // balance + warnings side by side, the holdings treemap, DeFi, and
-            // only then the transactions — capped, with a door to all of them.
-            // Everything above the rows is live state, never a landed thing.
-            // (The wallet switcher isn't here: it PINS over the stream via
-            // safeAreaInset — a scoping control has to stay reachable when
-            // you're deep in the transactions it scopes.)
-            // The stream's rows, gathered ONCE at the top of the case
-            // (2026-08-18): the newest few now LEAD the room from inside the
-            // balance card (`walletTodayCard`) and the rest read below, so
-            // both halves have to be cut from one list — computed twice, a
-            // row would show up in both.
-            let upcoming = walletUpcoming(visible)
-            // Promoted rows leave the stream, or the same deadline would be
-            // read twice on one screen — once as what's coming and once as
-            // whenever it happened to land.
-            // A bill that repeats lives on Subscriptions (prd §1105), so it
-            // leaves the stream the same way.
-            let promoted = Set(upcoming.map(\.id))
-                .union(visible.filter { SubscriptionsSource.isBill($0) }.map(\.id))
-            // **HOME IS EVERYTHING THAT HAPPENED, ACROSS EVERY APP THE WALLET
-            // FOLDED IN (prd §1048, step 4).** The history screen behind its
-            // door reads the same sources (`RoomAccounts.roomSources`), so its
-            // count opens the list it counts (§837). An app pick (§1048b)
-            // narrows both to that app.
-            let seatPicked = selectedSeat != nil
-            let all = visible.live.filter { !promoted.contains($0.id) }
-            // WHICH READING IS ON SCREEN (prd §483). Resolved rather than read
-            // raw: a scope remembered from a wallet that has since closed its
-            // last position falls back to the feed instead of rendering an
-            // empty page that claims to be a section.
-            // An app pick dims the scopes with nothing for that app (prd
-            // §1078), and a remembered one of them resolves to Home.
-            let inert = seatPicked ? walletInertSections(visible: visible, upcoming: upcoming) : []
-            let section = pinnedWalletSection ?? WalletSection.resolve(
-                chrome.walletSection,
-                present: walletSectionPublication.sections.filter { !inert.contains($0) })
-            // The crown's own newest-few (§208, added 2026-08-18) exist for one
-            // reason: "the room's transactions used to begin after ten standing
-            // cards, so on a busy wallet the one thing a wallet app gets opened
-            // for was two screens down." In `.activity` they are no longer two
-            // screens down — they are the next thing on the page — so leading
-            // with three of them and then repeating them below is §208's own
-            // "never say one thing twice", committed by the fix for it.
-            //
-            // Every other scope KEEPS them, and that is the half worth stating:
-            // standing in Holdings or Permissions, the transactions are not on
-            // screen at all, and three of them in the crown is the only place
-            // that room still says what just happened.
-            // HOME'S LIST IS THE LAST FEW MOVES (prd §483). Every scope is one
-            // drawing and one list; Home's list is these three rows, so they
-            // draw here and nowhere else. In `.activity` the full stream is
-            // directly below and repeating three of it at the top is §208's own
-            // "never say one thing twice"; in every other scope the room is
-            // answering a different question entirely.
+            AnyView(Group {
+                // The reads first, then the stream (2026-07-20, the surface split):
+                // balance + warnings side by side, the holdings treemap, DeFi, and
+                // only then the transactions — capped, with a door to all of them.
+                // Everything above the rows is live state, never a landed thing.
+                // (The wallet switcher isn't here: it PINS over the stream via
+                // safeAreaInset — a scoping control has to stay reachable when
+                // you're deep in the transactions it scopes.)
+                // The stream's rows, gathered ONCE at the top of the case
+                // (2026-08-18): the newest few now LEAD the room from inside the
+                // balance card (`walletTodayCard`) and the rest read below, so
+                // both halves have to be cut from one list — computed twice, a
+                // row would show up in both.
+                let upcoming = walletUpcoming(visible)
+                // Promoted rows leave the stream, or the same deadline would be
+                // read twice on one screen — once as what's coming and once as
+                // whenever it happened to land.
+                // A bill that repeats lives on Subscriptions (prd §1105), so it
+                // leaves the stream the same way.
+                let promoted = Set(upcoming.map(\.id))
+                    .union(visible.filter { SubscriptionsSource.isBill($0) }.map(\.id))
+                // **HOME IS EVERYTHING THAT HAPPENED, ACROSS EVERY APP THE WALLET
+                // FOLDED IN (prd §1048, step 4).** The history screen behind its
+                // door reads the same sources (`RoomAccounts.roomSources`), so its
+                // count opens the list it counts (§837). An app pick (§1048b)
+                // narrows both to that app.
+                let seatPicked = selectedSeat != nil
+                let all = visible.live.filter { !promoted.contains($0.id) }
+                // WHICH READING IS ON SCREEN (prd §483). Resolved rather than read
+                // raw: a scope remembered from a wallet that has since closed its
+                // last position falls back to the feed instead of rendering an
+                // empty page that claims to be a section.
+                // An app pick dims the scopes with nothing for that app (prd
+                // §1078), and a remembered one of them resolves to Home.
+                let inert = seatPicked ? walletInertSections(visible: visible, upcoming: upcoming) : []
+                let section = pinnedWalletSection ?? WalletSection.resolve(
+                    chrome.walletSection,
+                    present: walletSectionPublication.sections.filter { !inert.contains($0) })
+                // The crown's own newest-few (§208, added 2026-08-18) exist for one
+                // reason: "the room's transactions used to begin after ten standing
+                // cards, so on a busy wallet the one thing a wallet app gets opened
+                // for was two screens down." In `.activity` they are no longer two
+                // screens down — they are the next thing on the page — so leading
+                // with three of them and then repeating them below is §208's own
+                // "never say one thing twice", committed by the fix for it.
+                //
+                // Every other scope KEEPS them, and that is the half worth stating:
+                // standing in Holdings or Permissions, the transactions are not on
+                // screen at all, and three of them in the crown is the only place
+                // that room still says what just happened.
+                // HOME'S LIST IS THE LAST FEW MOVES (prd §483). Every scope is one
+                // drawing and one list; Home's list is these three rows, so they
+                // draw here and nowhere else. In `.activity` the full stream is
+                // directly below and repeating three of it at the top is §208's own
+                // "never say one thing twice"; in every other scope the room is
+                // answering a different question entirely.
 
-            // **BOX · TILES · MENU, THEN THE LIST (prd §1039).** The crown is
-            // the chrome's box on Home, the scope's figure off it; the tiles
-            // and the account menu sit under it; the scope's list follows.
-            // THE TOGGLE SITS BELOW THE SPARKLINE, IN THE CONTENT (user ruling,
-            // 2026-08-26: *"we need to have those toggles be below the
-            // sparkline"*, and *"we cannot have four rows of chips"*).
-            //
-            // It mounted in `MainSurface.roomControls` for one build, which put
-            // it FOURTH in a stack of pinned strips — source chips, venue rail,
-            // face rail, then this — and pushed the crown to about 45% down the
-            // screen. Moving it into the scroll is the fix for both complaints
-            // at once, and it makes the structure honest rather than merely
-            // shorter: **the crown and its chart belong to no scope.** They are
-            // the room's identity, so they sit ABOVE the control that scopes
-            // everything else, and §482's "crown and holdings are one reading"
-            // now holds by construction instead of by ordering things carefully.
-            //
-            // KNOWN, and the next thing to fix rather than something to pretend
-            // is solved: a control inside the scroll scrolls away, which is
-            // §357's own complaint one level down — a scope control you cannot
-            // reach while deep in the rows it scopes. The answer is a pinned
-            // `Section` header (those stick in a plain `List` for free), not a
-            // return to `safeAreaInset`.
-            // ONE DRAWING PER SCOPE, ABOVE THE CONTROL (prd §483). Home's is
-            // the sparkline, which the crown draws itself; every other scope's
-            // steps into the same slot, so the room always opens on a figure
-            // and the toggle always sits between that figure and its list.
-            // **THE BAR MUST LAND IN THE SAME PLACE ON EVERY SCOPE** (user
-            // ruling, prd §483: *"this bar of avatars and toggles below it
-            // should be in a fixed position on each page, it should not
-            // move"*). The only way that is true is if everything ABOVE it is
-            // one height — so the visual slot is fixed rather than fitted, and
-            // each scope's drawing sits in it top-aligned.
-            //
-            // A `maxHeight` as well as a `minHeight`, which is the half that
-            // makes it a promise: without it the flow band's own card (a header,
-            // three lines of reading and a 138pt band) ran to roughly three
-            // times the sparkline's height and pushed the bar a third of a
-            // screen down.
-            // **NOT EMITTED AT ALL ON HOME** — the counterpart of the crown's
-            // own gate above, and the actual reason the bar kept moving.
-            //
-            // Both were emitted always and collapsed with `maxHeight: 0`, which
-            // collapses the VIEW and not the SECTION: a `List` still gives an
-            // empty section its own spacing. So Home drew ONE MORE SECTION than
-            // every other scope — its crown plus an empty visual — and the bar
-            // sat that spacing higher there. Two zero-height boxes, each
-            // invisible, and the difference between them was the bug.
-            // Off Home the chrome draws the scope's figure in the box Home's crown
-            // takes, then the tiles under it (prd §752, §765). The figure is not
-            // a Section of its own here any more: as a sibling it took its own
-            // row insets and the List's section spacing, and the tiles landed
-            // at a different height than on Home.
-            walletScopeChromeSection(section, visible: visible,
-                                     upcoming: upcoming, inert: inert,
-                                     streamTotal: all.count)
-            // THE FOUR `walletGroupHeader` GROUPS BECOME SCOPES (prd §483).
-            // Renamed to short nouns and split twice — NFTs out of "What you
-            // hold", and "What it's doing" into Positions and Risk — so the
-            // mapping from card to scope is IDENTITY: every section below is
-            // the one that shipped, moved and not redrawn.
-            //
-            // The headers themselves are gone rather than kept inside their
-            // scopes, because the chrome says the same words in the same place
-            // — the scope's own row on Home, its own title inside it (§747) —
-            // and two of them would be §208's rule broken by the very pass
-            // that cites it. They come back the day a scope holds two unlike
-            // kinds of thing.
-            switch section {
-            case .home:
-                // **HOME'S LIST IS THE ACTIVITY, AND ONLY WHAT HAPPENED (prd
-                // §1039, §1041).** Home drew nothing under the chrome since
-                // §747 — its list was the Overview rows, the tiles said twice
-                // — and the moves lived one tile over, under Activity. The
-                // Activity tile is deleted and its list is Home's: the moves
-                // under the feed's day headers (§942), then the door to all of
-                // them.
+                // **BOX · TILES · MENU, THEN THE LIST (prd §1039).** The crown is
+                // the chrome's box on Home, the scope's figure off it; the tiles
+                // and the account menu sit under it; the scope's list follows.
+                // THE TOGGLE SITS BELOW THE SPARKLINE, IN THE CONTENT (user ruling,
+                // 2026-08-26: *"we need to have those toggles be below the
+                // sparkline"*, and *"we cannot have four rows of chips"*).
                 //
-                // **WHAT'S AHEAD LEADS IT (prd §1111, user: "coming up moved to
-                // activity", "'needs you' becomes a section in home").** Coming
-                // up became Subscriptions, so Needs you and the dated rows
-                // stand at the head of Home, above what happened.
+                // It mounted in `MainSurface.roomControls` for one build, which put
+                // it FOURTH in a stack of pinned strips — source chips, venue rail,
+                // face rail, then this — and pushed the crown to about 45% down the
+                // screen. Moving it into the scroll is the fix for both complaints
+                // at once, and it makes the structure honest rather than merely
+                // shorter: **the crown and its chart belong to no scope.** They are
+                // the room's identity, so they sit ABOVE the control that scopes
+                // everything else, and §482's "crown and holdings are one reading"
+                // now holds by construction instead of by ordering things carefully.
                 //
-                // **FOUR SHORT LISTS (user, 2026-10-08):** Needs you, Coming
-                // up, Spending, Transactions, five rows each and a door
-                // (`Screens/FeedScreen+WalletHome.swift`).
-                walletHomeSections(upcoming: upcoming, all: all, nextEventID: nextEventID)
-                // **AN EMPTY LIST DRAWS ITS ROWS EMPTY (prd §769).** Watch a
-                // wallet, at the head of the Accounts pill's list, is the
-                // remedy, one tap away (§1107).
-                if all.isEmpty {
-                    walletSkeletonRowsSection
-                }
-            // **MARKETS STANDS HERE, IN PLACE (prd §1337, retiring §1232's
-            // own page).** Its tiles are the box's figure; what you follow,
-            // its alerts or a category's companies follow under the row.
-            case .markets:
-                walletMarketsSections(nextEventID: nextEventID)
-            case .subscriptions:
-                // **SUBSCRIPTIONS AND NOTHING ELSE (prd §1111).** Add first,
-                // the person builds the list up, then every plan.
-                walletSubscriptionsSections
-            case .holdings:
-                let apps = walletAppRows(all)
-                let accounts = walletAccountRows(all)
-                if portfolio?.isEmpty ?? true, !hasLendingCard, walletLive.uniswap.isEmpty,
-                   walletLive.hyperliquid.positions.isEmpty, apps.isEmpty, accounts.isEmpty {
-                    walletSkeletonRowsSection
-                }
-                // **TOKENS, THEN POSITIONS (prd §1107, user: "tokens then
-                // positions").** Positions' tile folded in, the loan risk with
-                // it; then the apps that hold a wallet for you (§1124); NFTs
-                // still read under them (prd §1048).
-                walletTokenListSection
-                walletStaleReadingsSection
-                walletPositionsSections
-                // What an app holds for you, as it read it (prd §1341): a
-                // balance is a holding, never a transaction.
-                walletAccountsSection(accounts, nextEventID: nextEventID)
-                walletAppsSection(apps, nextEventID: nextEventID)
-                // An app the menu picked holds no collections (prd §1048b).
-                if !seatPicked {
-                    if nftShelfEntry == nil {
-                        walletNFTDoorSection
+                // KNOWN, and the next thing to fix rather than something to pretend
+                // is solved: a control inside the scroll scrolls away, which is
+                // §357's own complaint one level down — a scope control you cannot
+                // reach while deep in the rows it scopes. The answer is a pinned
+                // `Section` header (those stick in a plain `List` for free), not a
+                // return to `safeAreaInset`.
+                // ONE DRAWING PER SCOPE, ABOVE THE CONTROL (prd §483). Home's is
+                // the sparkline, which the crown draws itself; every other scope's
+                // steps into the same slot, so the room always opens on a figure
+                // and the toggle always sits between that figure and its list.
+                // **THE BAR MUST LAND IN THE SAME PLACE ON EVERY SCOPE** (user
+                // ruling, prd §483: *"this bar of avatars and toggles below it
+                // should be in a fixed position on each page, it should not
+                // move"*). The only way that is true is if everything ABOVE it is
+                // one height — so the visual slot is fixed rather than fitted, and
+                // each scope's drawing sits in it top-aligned.
+                //
+                // A `maxHeight` as well as a `minHeight`, which is the half that
+                // makes it a promise: without it the flow band's own card (a header,
+                // three lines of reading and a 138pt band) ran to roughly three
+                // times the sparkline's height and pushed the bar a third of a
+                // screen down.
+                // **NOT EMITTED AT ALL ON HOME** — the counterpart of the crown's
+                // own gate above, and the actual reason the bar kept moving.
+                //
+                // Both were emitted always and collapsed with `maxHeight: 0`, which
+                // collapses the VIEW and not the SECTION: a `List` still gives an
+                // empty section its own spacing. So Home drew ONE MORE SECTION than
+                // every other scope — its crown plus an empty visual — and the bar
+                // sat that spacing higher there. Two zero-height boxes, each
+                // invisible, and the difference between them was the bug.
+                // Off Home the chrome draws the scope's figure in the box Home's crown
+                // takes, then the tiles under it (prd §752, §765). The figure is not
+                // a Section of its own here any more: as a sibling it took its own
+                // row insets and the List's section spacing, and the tiles landed
+                // at a different height than on Home.
+                walletScopeChromeSection(section, visible: visible,
+                                         upcoming: upcoming, inert: inert,
+                                         streamTotal: all.count)
+                // THE FOUR `walletGroupHeader` GROUPS BECOME SCOPES (prd §483).
+                // Renamed to short nouns and split twice — NFTs out of "What you
+                // hold", and "What it's doing" into Positions and Risk — so the
+                // mapping from card to scope is IDENTITY: every section below is
+                // the one that shipped, moved and not redrawn.
+                //
+                // The headers themselves are gone rather than kept inside their
+                // scopes, because the chrome says the same words in the same place
+                // — the scope's own row on Home, its own title inside it (§747) —
+                // and two of them would be §208's rule broken by the very pass
+                // that cites it. They come back the day a scope holds two unlike
+                // kinds of thing.
+                switch section {
+                case .home:
+                    // **HOME'S LIST IS THE ACTIVITY, AND ONLY WHAT HAPPENED (prd
+                    // §1039, §1041).** Home drew nothing under the chrome since
+                    // §747 — its list was the Overview rows, the tiles said twice
+                    // — and the moves lived one tile over, under Activity. The
+                    // Activity tile is deleted and its list is Home's: the moves
+                    // under the feed's day headers (§942), then the door to all of
+                    // them.
+                    //
+                    // **WHAT'S AHEAD LEADS IT (prd §1111, user: "coming up moved to
+                    // activity", "'needs you' becomes a section in home").** Coming
+                    // up became Subscriptions, so Needs you and the dated rows
+                    // stand at the head of Home, above what happened.
+                    //
+                    // **FOUR SHORT LISTS (user, 2026-10-08):** Needs you, Coming
+                    // up, Spending, Transactions, five rows each and a door
+                    // (`Screens/FeedScreen+WalletHome.swift`).
+                    walletHomeSections(upcoming: upcoming, all: all, nextEventID: nextEventID)
+                    // **AN EMPTY LIST DRAWS ITS ROWS EMPTY (prd §769).** Watch a
+                    // wallet, at the head of the Accounts pill's list, is the
+                    // remedy, one tap away (§1107).
+                    if all.isEmpty {
+                        walletSkeletonRowsSection
                     }
-                    walletNFTListSection
+                // **MARKETS STANDS HERE, IN PLACE (prd §1337, retiring §1232's
+                // own page).** Its tiles are the box's figure; what you follow,
+                // its alerts or a category's companies follow under the row.
+                case .markets:
+                    walletMarketsSections(nextEventID: nextEventID)
+                case .subscriptions:
+                    // **SUBSCRIPTIONS AND NOTHING ELSE (prd §1111).** Add first,
+                    // the person builds the list up, then every plan.
+                    walletSubscriptionsSections
+                case .holdings:
+                    let apps = walletAppRows(all)
+                    let accounts = walletAccountRows(all)
+                    if portfolio?.isEmpty ?? true, !hasLendingCard, walletLive.uniswap.isEmpty,
+                       walletLive.hyperliquid.positions.isEmpty, apps.isEmpty, accounts.isEmpty {
+                        walletSkeletonRowsSection
+                    }
+                    // **TOKENS, THEN POSITIONS (prd §1107, user: "tokens then
+                    // positions").** Positions' tile folded in, the loan risk with
+                    // it; then the apps that hold a wallet for you (§1124); NFTs
+                    // still read under them (prd §1048).
+                    walletTokenListSection
+                    walletStaleReadingsSection
+                    walletPositionsSections
+                    // What an app holds for you, as it read it (prd §1341): a
+                    // balance is a holding, never a transaction.
+                    walletAccountsSection(accounts, nextEventID: nextEventID)
+                    walletAppsSection(apps, nextEventID: nextEventID)
+                    // An app the menu picked holds no collections (prd §1048b).
+                    if !seatPicked {
+                        if nftShelfEntry == nil {
+                            walletNFTDoorSection
+                        }
+                        walletNFTListSection
+                    }
+                case .security:
+                    // **WHO CAN ACT FOR YOU, THEN WHAT IS TRYING TO FOOL YOU (prd
+                    // §947, §1107).** Signatures, Delegations, Approvals, then
+                    // Address poisoning, Fake tokens, Fake transfers — the box's
+                    // six cells, in the box's order.
+                    if walletScopeIsEmpty(.security) {
+                        walletSkeletonRowsSection
+                    }
+                    walletSecuritySections
                 }
-            case .security:
-                // **WHO CAN ACT FOR YOU, THEN WHAT IS TRYING TO FOOL YOU (prd
-                // §947, §1107).** Signatures, Delegations, Approvals, then
-                // Address poisoning, Fake tokens, Fake transfers — the box's
-                // six cells, in the box's order.
-                if walletScopeIsEmpty(.security) {
-                    walletSkeletonRowsSection
-                }
-                walletSecuritySections
-            }
+            })
         default:
             if Pinboard.isPinnedRoom(source) {
-                notesSections(visible, nextEventID: nextEventID)
+                AnyView(Group {
+                    notesSections(visible, nextEventID: nextEventID)
+                })
             } else if filter.tag != "All" && shape == .all {
-                daySection(filterLabel, visible, nextEventID: nextEventID, dated: false)
+                AnyView(Group {
+                    daySection(filterLabel, visible, nextEventID: nextEventID, dated: false)
+                })
             } else if shape == .all {
                 // The Themes treemap no longer renders here — it moved ABOVE
                 // the shape chain entirely (prd §385, see the call site in
@@ -481,47 +500,61 @@ extension FeedScreen {
                 // week ahead, so "Your day" and the Coming up door that
                 // closed Home (§1141, §1136c) are deleted (§1154).
             } else if source == RoomAccounts.workRoom {
-                workRoomSections(visible, nextEventID: nextEventID, heroShown: heroShown)
+                AnyView(Group {
+                    workRoomSections(visible, nextEventID: nextEventID, heroShown: heroShown)
+                })
             } else if source == RoomAccounts.dayRoom {
-                dayRoomSections(visible, nextEventID: nextEventID)
+                AnyView(Group {
+                    dayRoomSections(visible, nextEventID: nextEventID)
+                })
             } else if source == RoomAccounts.lifeRoom {
-                lifeRoomSections(visible, nextEventID: nextEventID)
+                AnyView(Group {
+                    lifeRoomSections(visible, nextEventID: nextEventID)
+                })
             } else if source == RoomAccounts.mediaRoom {
-                mediaRoomSections(visible, nextEventID: nextEventID, heroShown: heroShown)
+                AnyView(Group {
+                    mediaRoomSections(visible, nextEventID: nextEventID, heroShown: heroShown)
+                })
             } else if source == RoomAccounts.socialRoom {
-                socialRoomSections(visible, nextEventID: nextEventID, heroShown: heroShown)
+                AnyView(Group {
+                    socialRoomSections(visible, nextEventID: nextEventID, heroShown: heroShown)
+                })
             } else if agentRoomShown {
-                agentRoomSections(visible, nextEventID: nextEventID, heroShown: heroShown)
+                AnyView(Group {
+                    agentRoomSections(visible, nextEventID: nextEventID, heroShown: heroShown)
+                })
             } else {
-                // Threads fold BEFORE day-grouping (item 6, 2026-07-27): a
-                // person's own consecutive replies collapse into one card in
-                // their room, so `roomThings` (fewer rows than `visible`)
-                // feeds the existing day/ForEach pipeline unchanged, and
-                // `threadReplies` rides beside it for `shapedRow` to render
-                // inline. Scoped to `.social` — every other shape's `visible`
-                // passes through untouched.
-                // (The merged Social and Media rooms draw their own
-                // sections since prd §1086 and §1204.)
-                let rows = visible
-                let (roomThings, threadReplies): ([Thing], [String: [Thing]]) =
-                    SocialRoom.foldsThreads(source) ? foldThreadReplies(rows) : (rows, [:])
-                // Live-first in a source's own room (2026-07-21): a stream
-                // that's on RIGHT NOW is the one row whose relevance isn't
-                // chronological, so it leads its group. No-op for sources
-                // with no live set.
-                let days = chronoDays(roomThings)
-                // A room with no head covers its newest thing (prd §732). A
-                // post or thread card declines it (`standsAlone`): the newest
-                // post already draws at card size.
-                // Pinterest's pins tile under their day at 2:3 (the picture
-                // rooms' grid, prd §910); a pin with no image stays a row.
-                let pins = source == "Pinterest"
-                groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days),
-                                replies: threadReplies,
-                                cover: heroShown ? nil : ledeThingID(in: days),
-                                isTile: pins ? Self.isPinTile : nil,
-                                tileShape: pins ? .pin : .square,
-                                scopeControl: true)
+                AnyView(Group {
+                    // Threads fold BEFORE day-grouping (item 6, 2026-07-27): a
+                    // person's own consecutive replies collapse into one card in
+                    // their room, so `roomThings` (fewer rows than `visible`)
+                    // feeds the existing day/ForEach pipeline unchanged, and
+                    // `threadReplies` rides beside it for `shapedRow` to render
+                    // inline. Scoped to `.social` — every other shape's `visible`
+                    // passes through untouched.
+                    // (The merged Social and Media rooms draw their own
+                    // sections since prd §1086 and §1204.)
+                    let rows = visible
+                    let (roomThings, threadReplies): ([Thing], [String: [Thing]]) =
+                        SocialRoom.foldsThreads(source) ? foldThreadReplies(rows) : (rows, [:])
+                    // Live-first in a source's own room (2026-07-21): a stream
+                    // that's on RIGHT NOW is the one row whose relevance isn't
+                    // chronological, so it leads its group. No-op for sources
+                    // with no live set.
+                    let days = chronoDays(roomThings)
+                    // A room with no head covers its newest thing (prd §732). A
+                    // post or thread card declines it (`standsAlone`): the newest
+                    // post already draws at card size.
+                    // Pinterest's pins tile under their day at 2:3 (the picture
+                    // rooms' grid, prd §910); a pin with no image stays a row.
+                    let pins = source == "Pinterest"
+                    groupedSections(days, nextEventID: nextEventID, boundary: boundaryThingID(in: days),
+                                    replies: threadReplies,
+                                    cover: heroShown ? nil : ledeThingID(in: days),
+                                    isTile: pins ? Self.isPinTile : nil,
+                                    tileShape: pins ? .pin : .square,
+                                    scopeControl: true)
+                })
             }
         }
     }

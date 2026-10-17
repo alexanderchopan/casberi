@@ -1094,6 +1094,14 @@ struct FeedScreen: View {
     /// the day sections. Extracted from `feedList` for `populatedRoom`'s
     /// reason (see just below) — pulling one branch out was not enough, since
     /// the cost is the whole chain rather than any one arm of it.
+    ///
+    /// **Every arm but the populated room is behind `AnyView` (PERF
+    /// 2026-10-17).** An `if` in a body builds the type metadata of EVERY arm,
+    /// drawn or not, so the All feed's first build was paying for Logos',
+    /// Aztec's and both empty states' view types at launch. Erased, an arm's
+    /// types are built the first time it draws. `AnyView` forwards a view
+    /// list, so the `List` still sees each section and row. `shapedSections`
+    /// follows the same rule.
     @ViewBuilder
     private func roomBody(_ rows: [Thing]) -> some View {
         // **THE EMPTINESS TEST READS WHAT THE ROOM DRAWS (2026-09-03, prd
@@ -1185,53 +1193,59 @@ struct FeedScreen: View {
         if !roomHasContent && !LiveRoomSources.has(source) && !agentRoomShown
             && !Pinboard.isPinnedRoom(source) && !walletKeepsChrome && source != "All"
             && source != RoomAccounts.dayRoom && !pinnedPage {
-            // An empty Home still names what stopped (prd §1162): an app
-            // that broke before anything landed is the likeliest reason the
-            // feed is empty at all.
-            if source == "All" { reconnectSection }
-            Group { emptyState }
-                .feedRowBackground()
-                .listRowSeparator(.hidden)
-                .listRowInsets(EdgeInsets())
+            AnyView(Group {
+                // An empty Home still names what stopped (prd §1162): an app
+                // that broke before anything landed is the likeliest reason the
+                // feed is empty at all.
+                if source == "All" { reconnectSection }
+                Group { emptyState }
+                    .feedRowBackground()
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets())
+            })
         } else if source == LogosRoom.source {
-            // **THE LOGOS ROOM (prd §991)** — a devnet-family room that DOES land
-            // rows. The chrome draws the box, the tiles and the account menu on
-            // every page (prd §1039). Home (the chain's moves), Node and
-            // Rewards then list their own rows here, with no cover: the crown
-            // is the room's lead, not the newest row.
-            let logosSection = LogosSection.resolve(chrome.logosSection,
-                                                    present: chrome.logosSections)
-            logosScopeChromeSection(logosSection)
-            if logosSection == .holdings {
-                logosHoldingsSection
-            } else {
-                let days = chronoGroups(logosRows(rows, section: logosSection))
-                groupedSections(days, nextEventID: nil, boundary: boundaryThingID(in: days))
-            }
+            AnyView(Group {
+                // **THE LOGOS ROOM (prd §991)** — a devnet-family room that DOES land
+                // rows. The chrome draws the box, the tiles and the account menu on
+                // every page (prd §1039). Home (the chain's moves), Node and
+                // Rewards then list their own rows here, with no cover: the crown
+                // is the room's lead, not the newest row.
+                let logosSection = LogosSection.resolve(chrome.logosSection,
+                                                        present: chrome.logosSections)
+                logosScopeChromeSection(logosSection)
+                if logosSection == .holdings {
+                    logosHoldingsSection
+                } else {
+                    let days = chronoGroups(logosRows(rows, section: logosSection))
+                    groupedSections(days, nextEventID: nil, boundary: boundaryThingID(in: days))
+                }
+            })
         } else if source == AztecRoom.source {
-            // **THE AZTEC ROOM (2026-10-11)** — Logos' arm: the chrome draws
-            // the box, tiles and sequencer menu; the scope's rows follow.
-            let aztecSection = AztecSection.resolve(chrome.aztecSection,
-                                                    present: chrome.aztecSections)
-            aztecScopeChromeSection(aztecSection)
-            if aztecSection == .node {
-                aztecRosterSection
-            } else if aztecSection == .holdings {
-                aztecHoldingsSection
-            } else {
-                let days = chronoGroups(aztecRows(rows))
-                groupedSections(days, nextEventID: nil, boundary: boundaryThingID(in: days))
-            }
-        // **`|| roomAgent != nil` OR THIS CHAIN FALLS THROUGH BOTH ARMS AND
-        // RENDERS A BLACK SCREEN (prd §845).** §842 added `roomAgent == nil`
-        // to the first arm so an agent room would stop being replaced by the
-        // generic empty state — and that is only half a move: it took the room
-        // OUT of the empty arm without putting it INTO a drawing one, so a
-        // connected agent with no conversation yet matched nothing here at all.
-        // Reported the moment the dock fix worked: *"i press the bankr tile i
-        // just see a black screen"*. `LiveRoomSources`' own doc names this
-        // exact shape — it is why Logos has an arm above
-        // rather than a flag.
+            AnyView(Group {
+                // **THE AZTEC ROOM (2026-10-11)** — Logos' arm: the chrome draws
+                // the box, tiles and sequencer menu; the scope's rows follow.
+                let aztecSection = AztecSection.resolve(chrome.aztecSection,
+                                                        present: chrome.aztecSections)
+                aztecScopeChromeSection(aztecSection)
+                if aztecSection == .node {
+                    aztecRosterSection
+                } else if aztecSection == .holdings {
+                    aztecHoldingsSection
+                } else {
+                    let days = chronoGroups(aztecRows(rows))
+                    groupedSections(days, nextEventID: nil, boundary: boundaryThingID(in: days))
+                }
+            // **`|| roomAgent != nil` OR THIS CHAIN FALLS THROUGH BOTH ARMS AND
+            // RENDERS A BLACK SCREEN (prd §845).** §842 added `roomAgent == nil`
+            // to the first arm so an agent room would stop being replaced by the
+            // generic empty state — and that is only half a move: it took the room
+            // OUT of the empty arm without putting it INTO a drawing one, so a
+            // connected agent with no conversation yet matched nothing here at all.
+            // Reported the moment the dock fix worked: *"i press the bankr tile i
+            // just see a black screen"*. `LiveRoomSources`' own doc names this
+            // exact shape — it is why Logos has an arm above
+            // rather than a flag.
+            })
         } else if roomHasContent || agentRoomShown || Pinboard.isPinnedRoom(source)
                     || walletKeepsChrome || source == "All"
                     || source == RoomAccounts.dayRoom || pinnedPage {
@@ -1245,23 +1259,27 @@ struct FeedScreen: View {
             // array (build 537's watchdog, see there).
             let visible = rows
             if visible.isEmpty && !keepsChromeWhenEmpty {
-                Group { filteredEmptyState }
-                    .feedRowBackground()
-                    .listRowSeparator(.hidden)
-                    .listRowInsets(EdgeInsets())
+                AnyView(Group {
+                    Group { filteredEmptyState }
+                        .feedRowBackground()
+                        .listRowSeparator(.hidden)
+                        .listRowInsets(EdgeInsets())
+                })
             } else {
                 populatedRoom(visible)
             }
         } else {
-            // A LIVE-CONTENT ROOM WHOSE HEAD IS NIL (prd §911). Every arm
-            // above declined, and
-            // the chain used to fall through here and draw NOTHING: the black
-            // screen each of those arms' notes describes. The corpus-shaped
-            // empty state is the honest floor.
-            Group { emptyState }
-                .feedRowBackground()
-                .listRowSeparator(.hidden)
-                .listRowInsets(EdgeInsets())
+            AnyView(Group {
+                // A LIVE-CONTENT ROOM WHOSE HEAD IS NIL (prd §911). Every arm
+                // above declined, and
+                // the chain used to fall through here and draw NOTHING: the black
+                // screen each of those arms' notes describes. The corpus-shaped
+                // empty state is the honest floor.
+                Group { emptyState }
+                    .feedRowBackground()
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets())
+            })
         }
     }
 
@@ -1554,7 +1572,27 @@ struct FeedScreen: View {
         }
     }
 
+    /// The room's `List` and everything hung on it, as FIVE short chains
+    /// joined through `AnyView`, never one chain of ~55 modifiers (PERF
+    /// 2026-10-17, cold launch 2.0s → 0.75s with the branch rule in
+    /// `roomBody`/`shapedSections`).
+    ///
+    /// A modifier chain is ONE nested generic type, and the first build of
+    /// the feed makes the Swift runtime demangle and instantiate every level
+    /// of it — sampled on the main thread before the first frame, 78% was
+    /// type metadata, witness tables and conformance scans, not our code. A
+    /// level that names an opaque `some View` re-resolves everything beneath
+    /// it, so splitting into functions returning `some View` bought only
+    /// ~15% (measured); `AnyView` is a plain type and a real boundary. It
+    /// drifted up because every handler appended here lengthened the one
+    /// chain. Order is unchanged; a new modifier goes on the segment it
+    /// belongs to, never back into one long chain.
     private func listBody(_ proxy: ScrollViewProxy) -> some View {
+        listDialogs(listPresentations(listLifecycle(listLoads(listFrame(proxy)))))
+    }
+
+    /// The rows, the list's look and the pull.
+    private func listFrame(_ proxy: ScrollViewProxy) -> AnyView {
         // **ONE READ OF THE ROOM'S ARRAY FOR THE WHOLE SCREEN (prd §646,
         // 2026-09-08, build 537's watchdog).** Reading a `@Query` property is a
         // fetch AND a per-model `Codable` snapshot, and it is not cached between
@@ -1568,7 +1606,7 @@ struct FeedScreen: View {
         // `things` (its heads are computed in `.task(id: headKey)` and memoised,
         // PERF 2026-08-21), which is what makes one binding enough.
         let rows = visible
-        return List {
+        return AnyView(List {
             // THE ROOM NAMES ITSELF (prd §930): its category's name in pink,
             // and what is picked in it after a dot (§1129, §1133; picked in
             // the rooms tray, never here), in the list, so it
@@ -1646,7 +1684,12 @@ struct FeedScreen: View {
         // the trade — a slightly long band row against a picture wall that
         // actually fills the window. Everything else keeps `.reading`, and no
         // paragraph in this app gets wider.
-        .dsAdaptiveContentWidth(shape.widensForPictures ? .wide : .reading)
+        .dsAdaptiveContentWidth(shape.widensForPictures ? .wide : .reading))
+    }
+
+    /// The room's loads and snapshots (`.task`s) and its row metrics.
+    private func listLoads(_ base: AnyView) -> AnyView {
+        AnyView(base
         // Drives `debouncedAllSnapshot` (see its doc above) — `.task(id:)`
         // cancels and restarts on every `@Query` emission, so only the LAST
         // save in a refresh burst survives its sleep and actually publishes;
@@ -1930,7 +1973,12 @@ struct FeedScreen: View {
         // keep their own tap height (`DS.Hit.min`).
         .environment(\.defaultMinListRowHeight, 0)
         // Every lead in the room reads its foot from here (prd §766).
-        .scrollIndicators(.hidden)
+        .scrollIndicators(.hidden))
+    }
+
+    /// Scroll, landing and leaving, and the re-reads a scope change asks for.
+    private func listLifecycle(_ base: AnyView) -> AnyView {
+        AnyView(base
         .minimizesChrome(chrome, active: isActive)
         // The pull's WIND-UP feed (2026-08-04): raw top overscroll, which
         // `minimizesChrome`'s observer deliberately filters out (`new > 60`),
@@ -2001,7 +2049,12 @@ struct FeedScreen: View {
                 // switcher capsule (prd §159).
                 chrome.pourHue = selectedWallet.map(WalletFace.tint)
             }
-        }
+        })
+    }
+
+    /// Pushes, sheets and the landings that raise them.
+    private func listPresentations(_ base: AnyView) -> AnyView {
+        AnyView(base
         // The destination below leaves the seat's column clear
         // (`DSDock.seatClearance`). This push does not run through
         // `HomeRoute.path`, so `MainSurface`'s resolver — where every other
@@ -2068,6 +2121,12 @@ struct FeedScreen: View {
         #if !targetEnvironment(macCatalyst)
         .translationPresentation(isPresented: $showTranslate, text: translateText)
         #endif
+        )
+    }
+
+    /// Confirmations, alerts and the note dialogs.
+    private func listDialogs(_ base: AnyView) -> AnyView {
+        AnyView(base
         .confirmationDialog(
             // Guard the held `Thing` with `isLive` (2026-07-24 crash class):
             // a background heal can delete this exact thing while the dialog
@@ -2094,7 +2153,7 @@ struct FeedScreen: View {
                                  onErase: { NoteTrash.shared.erase($0) }))
         .modifier(NoteFolderAlert(prompt: $folderPrompt, draft: $folderDraft,
                                   onSave: commitFolderPrompt))
-        .modifier(NoteFolderDeleteDialog(folder: $deletingFolder, onDelete: deleteFolder))
+        .modifier(NoteFolderDeleteDialog(folder: $deletingFolder, onDelete: deleteFolder)))
     }
 
     /// Each step opens another target's worth. Monotonic for the life of the
