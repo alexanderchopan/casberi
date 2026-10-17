@@ -190,6 +190,10 @@ struct ThingSheetView: View {
     /// The last three with this party and how many there are in all (prd
     /// §1181), read with the receipt, never in a body (§628).
     @State private var moneyHistory: [Thing] = []
+    /// The address a poisoner's copy imitates, and the real transfers with it
+    /// (prd §1377): read once per open, never in a body.
+    @State private var poisonOriginal: String?
+    @State private var poisonRealTransfers: [Thing] = []
     @State private var moneyHistoryTotal = 0
     /// This year with this party (prd §1181): sent and received, in dollars
     /// and counts, this transfer included.
@@ -584,22 +588,37 @@ struct ThingSheetView: View {
                     // the act that keeps up with it, then the last three with
                     // this party as rows — title, box, tiles, list, a room's order.
                     // The party's name is the sheet's title, a room's own row.
-                    DSRoomTitleRow(title: MoneyReceiptBox.title(moneyReceipt))
+                    DSRoomTitleRow(title: moneyFlag?.title ?? MoneyReceiptBox.title(moneyReceipt))
                         .padding(.horizontal, DSRoomChassis.inset)
                         .padding(.top, onBack == nil ? DS.Space.s4 : DS.Space.s3)
                         .settleIn(delay: 0.04)
-                    MoneyReceiptBox(receipt: moneyReceipt, landed: thing.capturedAt,
-                                    transfer: moneyTransfer(moneyReceipt),
-                                    card: moneyCard,
-                                    swap: moneySwap,
-                                    source: thing.source, cells: moneyCells(moneyReceipt),
-                                    unnamed: moneyUnnamed,
-                                    hidesDay: MoneyReceipt.isBill(source: thing.source),
-                                    onSubject: openAddressCard)
+                    Group {
+                        // What fools you says so in its box (prd §1377).
+                        if let flag = moneyFlag {
+                            FlaggedReceiptBox(flag: flag,
+                                              wallet: MoneyReceiptSource.walletLabel(thing.walletAddress),
+                                              network: WalletIngest.chainName(forContent: thing.content)
+                                                  .flatMap { $0.isEmpty ? nil : $0 },
+                                              landed: thing.capturedAt,
+                                              amount: WalletValue.transferAmount(thing),
+                                              happened: flaggedHappened,
+                                              priced: (thing.transferUSD ?? 0) > 0)
+                        } else {
+                            MoneyReceiptBox(receipt: moneyReceipt, landed: thing.capturedAt,
+                                            transfer: moneyTransfer(moneyReceipt),
+                                            card: moneyCard,
+                                            swap: moneySwap,
+                                            source: thing.source, cells: moneyCells(moneyReceipt),
+                                            unnamed: moneyUnnamed,
+                                            hidesDay: MoneyReceipt.isBill(source: thing.source),
+                                            onSubject: openAddressCard)
+                        }
+                    }
                         // Read once per open (§628), the spec row's own read.
                         .task(id: "firstSeen:\(thing.counterpartyAddress ?? "")") {
                             readFirstSeen()
                             readMoneyHistory()
+                            readPoisonOriginal()
                         }
                         .dsRoomBox()
                         .padding(.top, DS.Space.s3)
@@ -609,15 +628,18 @@ struct ThingSheetView: View {
                     // balance has no explorer, nobody on the other side and no
                     // history to walk, so no tiles, no history, no lock screen.
                     if moneyReceipt.form == .record {
-                        VerbDial(thing: thing, verbs: walletVerbs, onVerb: runVerb, onName: nil,
-                                 keep: moneyKeep)
+                        // A flagged transfer keeps nothing up (prd §1377): no Save
+                        // or Follow for whoever sent it, no copy of its link.
+                        VerbDial(thing: thing, verbs: moneyFlag == nil ? walletVerbs : flaggedVerbs,
+                                 onVerb: runVerb, onName: nil,
+                                 keep: moneyFlag == nil ? moneyKeep : nil)
                             .padding(.top, DSRoomChassis.leadGap)
                             .settleIn(delay: 0.08)
                         dialResult
                         // The poisoning flag rides EVERY wallet stage, and a record
                         // still in the machine can be watched from the lock screen
                         // (prd §369 amendment) — both under the tiles now.
-                        if thing.isFlagged {
+                        if thing.securityFlags.contains(where: { $0 != moneyFlag?.securityFlag }) {
                             securityWarning
                                 .padding(.horizontal, DS.Space.s4)
                                 .padding(.top, DS.Space.s3)
@@ -635,14 +657,26 @@ struct ThingSheetView: View {
                         // What the app read around it, when it is not the history the
                         // rows already list: a Privacy Pools ladder, a swap's rate, a
                         // note. The history and merchant bars are the rows now.
-                        if let moneySays, moneySays.drawsBesideRows {
+                        if moneyFlag == nil, let moneySays, moneySays.drawsBesideRows {
                             MoneyCommentaryCard(commentary: moneySays)
                                 .padding(.horizontal, DS.Space.s4)
                                 .padding(.top, DS.Space.s6)
                                 .settleIn(delay: 0.11)
                         }
+                        // A flagged transfer lists no history of its own (prd §1377):
+                        // a poisoner's copy lists your REAL transfers with the
+                        // address it imitates, and spam is not a visit.
+                        if moneyFlag != nil {
+                            if let original = poisonOriginal {
+                                MoneyHistoryRows(title: poisonHistoryTitle(original),
+                                                 rows: poisonRealTransfers.keyed,
+                                                 amount: { WalletValue.transferAmount($0) },
+                                                 onOpen: { walkingToScope = .none; walkingToNote = KeyedThing($0) })
+                                    .padding(.top, DS.Space.s6)
+                                    .settleIn(delay: 0.12)
+                            }
                         // Between your own wallets there is no "them" (prd §1349).
-                        if moneyHasPerson, !WalletStore.shared.watches(thing.counterpartyAddress),
+                        } else if moneyHasPerson, !WalletStore.shared.watches(thing.counterpartyAddress),
                            let cp = thing.counterpartyAddress {
                             MoneyYearTotals(name: moneyPartyName(moneyReceipt),
                                             sentUSD: moneyYear.sentUSD, sentCount: moneyYear.sentCount,
@@ -2885,7 +2919,7 @@ struct ThingSheetView: View {
     /// needs saying), so each is its own line.
     private var securityWarning: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
-            if thing.hasSecurityFlag("poisoning") {
+            if thing.hasSecurityFlag("poisoning"), moneyFlag?.securityFlag != "poisoning" {
                 warningLine(String(localized: "Looks like a copy of an address you've used — this is a different wallet."))
             }
             // The symbol's own sentence, recovered from the text the row
@@ -2893,13 +2927,13 @@ struct ThingSheetView: View {
             // it imitates: "Looks like a copy of USDC — this is a different
             // token." The symbol keeps its real spelling everywhere; the app
             // never quietly rewrites what the chain said.
-            if let verdict = WalletSafety.spoofVerdict(for: thing) {
+            if let verdict = WalletSafety.spoofVerdict(for: thing), moneyFlag?.securityFlag != "symbol" {
                 warningLine(verdict.sentence)
             }
             // Says what it ISN'T before what it is: the row above already
             // asserts "Sent", in the app's own voice, and the correction has
             // to land before any explanation of the mechanism.
-            if thing.hasSecurityFlag("spam") {
+            if thing.hasSecurityFlag("spam"), moneyFlag?.securityFlag != "spam" {
                 warningLine(String(localized: "You didn't send this. A spam token can announce any transfer it likes — it's advertising, not money that moved."))
             }
         }
@@ -3264,6 +3298,74 @@ struct ThingSheetView: View {
             }
         }
         return out
+    }
+
+    /// The flag a flagged transfer's box speaks for (prd §1377), one at a time:
+    /// a claim nobody made first, then a copied address, then a copied symbol.
+    private var moneyFlag: FlaggedReceiptBox.Flag? {
+        guard thing.isFlagged, thing.source == "Wallet" else { return nil }
+        if thing.hasSecurityFlag("spam") { return .spam }
+        if thing.hasSecurityFlag("poisoning"), let copy = thing.counterpartyAddress {
+            return .poisoning(copy: copy, original: poisonOriginal,
+                              name: poisonOriginal.flatMap(poisonName))
+        }
+        if let verdict = WalletSafety.spoofVerdict(for: thing) { return .symbol(verdict) }
+        return nil
+    }
+
+    /// What the person calls the imitated address: a name they gave it, or
+    /// the wallet's own name when it is one of theirs; never an auto-name.
+    private func poisonName(_ address: String) -> String? {
+        if WalletStore.shared.watches(address), let label = MoneyReceiptSource.walletLabel(address),
+           label != WalletStore.shortAddress(address) { return label }
+        guard let name = AddressBook.shared.name(for: address), !name.isEmpty,
+              !WalletStore.isAutoName(name, for: address) else { return nil }
+        return name
+    }
+
+    private func poisonHistoryTitle(_ original: String) -> String {
+        // Short enough for the card's one-line name: never truncated.
+        String(localized: "The real \(poisonName(original) ?? WalletStore.shortAddress(original))")
+    }
+
+    /// A fake token's trade or transfer in words: "You got 160 ÚЅDС for 0.05 ETH".
+    private var flaggedHappened: String? {
+        if let swap = SwapStage(thing) {
+            return String(localized: "You got \(swap.inAmount) for \(swap.outAmount)")
+        }
+        guard let amount = WalletValue.transferAmount(thing) else { return nil }
+        return thing.transferDirection == "received" ? String(localized: "You got \(amount)")
+                                                     : String(localized: "Sent \(amount)")
+    }
+
+    /// A flagged transfer's tiles (prd §1377): the address it imitates, when
+    /// known, then the explorer. Share rides the dial's own slot.
+    private var flaggedVerbs: [Verb] {
+        var out: [Verb] = []
+        if case .poisoning(_, let original?, let name)? = moneyFlag {
+            out.append(Verb(label: name ?? WalletStore.shortAddress(original),
+                            icon: "person.crop.circle", action: .openAddress(original)))
+        }
+        out += walletVerbs.filter { if case .copyText = $0.action { return false }; return true }
+        return out
+    }
+
+    /// The address a poisoner's copy imitates, among the ones this wallet
+    /// knows (the book's named addresses first), and the real transfers with
+    /// it, newest first, three at most.
+    private func readPoisonOriginal() {
+        guard thing.isLive, thing.hasSecurityFlag("poisoning"),
+              let copy = thing.counterpartyAddress, let owner = thing.walletAddress else { return }
+        let known = WalletSafety.knownGoodCounterparties(context: modelContext, owners: [owner])[owner.lowercased()] ?? []
+        let named = WalletSafety.namedBookAddresses()
+        let matches = known.filter { AddressSafety.isLookalike(copy, $0) }
+        guard let original = matches.first(where: { named.contains($0) }) ?? matches.sorted().first else { return }
+        poisonOriginal = original
+        let d = FetchDescriptor<Thing>(
+            predicate: #Predicate { $0.source == "Wallet" && $0.counterpartyAddress == original },
+            sortBy: [SortDescriptor(\Thing.capturedAt, order: .reverse)])
+        poisonRealTransfers = Array(((try? modelContext.fetch(d)) ?? [])
+            .filter { $0.isLive && !$0.isFlagged }.prefix(3))
     }
 
     /// The token a swap brought in, whose other trades are its list (prd §1373).

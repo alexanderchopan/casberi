@@ -24,11 +24,6 @@ extension FeedScreen {
         case thing(Thing, walk: WalkScope)
         case token(TokenQuickRoute)
         case worthALook
-        /// One kind of flagged transfer, opened from its Security section:
-        /// that pile alone, under the section's name. The whole tray led with
-        /// delegations, so tapping Address poisoning showed what you delegated
-        /// to (user, 2026-10-17: "wrong section").
-        case flagged(WalletWarning.Kind, title: String)
         /// The NFT picker (prd §387). Routed here rather than presented by the
         /// shelf card, which lives inside this List's rows — a `.sheet` on a row
         /// resolves to the same presenting controller as this one and the picker
@@ -96,7 +91,6 @@ extension FeedScreen {
             case .thing(let t, let walk): "thing:\(t.id.uuidString)@\(walk.key)"
             case .token(let r): "token:\(r.id)"
             case .worthALook: "worthALook"
-            case .flagged(let kind, _): "flagged:\(kind)"
             case .socialFaces: "socialFaces"
             case .watchAdd: "watchAdd"
             case .following(let id, let room): "following:\(room.rawValue):\(id)"
@@ -363,14 +357,6 @@ extension FeedScreen {
                 // and Positions' now, so it enumerates those groups itself.
                 onWalkToApprovals: nil,
                 onWalkToLending: nil)
-        case .flagged(let kind, let title):
-            WalletWorthALookTray(
-                warnings: [],
-                flagged: walletLive.flagged.live.filter { thing in
-                    kind.securityFlag.map { thing.hasSecurityFlag($0) } ?? false
-                },
-                activeApprovals: [],
-                title: title)
         case .nftPicks(let address, let label):
             WalletNFTPickerSheet(wallet: address, label: label)
         case .person(let source, let handle):

@@ -83,21 +83,25 @@ extension FeedScreen {
     }
 
     /// One kind of flagged transfer under its own name (it was one "Worth a
-    /// look" group, §947). A row opens that kind's pile alone, never the
-    /// whole tray, which leads with delegations and approvals.
+    /// look" group, §947). **Each row is ONE transfer and opens its own sheet
+    /// (prd §1377)**, which says what it is in its box; the pile it opened
+    /// (`.flagged`) repeated the section's name over "Nothing to do".
     @ViewBuilder
     func walletFlaggedSection(_ kind: WalletWarning.Kind, anchor: SecurityAnchor,
                               word: String) -> some View {
-        let flagged = walletLive.warnings.filter { $0.kind == kind }
-        if !flagged.isEmpty {
+        let things = walletLive.flagged.live.filter { thing in
+            kind.securityFlag.map { thing.hasSecurityFlag($0) } ?? false
+        }
+        if !things.isEmpty {
             walletCard(word, glyph: kind.glyph, anchor: anchor.id) {
                 VStack(alignment: .leading, spacing: 0) {
-                    ForEach(flagged) { warning in
-                        needsYouRow(glyph: warning.kind.glyph,
-                                    critical: warning.severity == .critical,
-                                    title: warning.rowName ?? warning.title,
-                                    line: warning.rowLine ?? warning.subtitle) {
-                            feedSheet = .flagged(kind, title: word)
+                    ForEach(things.keyed) { row in
+                        if let thing = row.live {
+                            let words = Self.flaggedRowWords(thing, kind: kind)
+                            needsYouRow(glyph: kind.glyph, critical: kind != .fakeTransfer,
+                                        title: words.title, line: words.line) {
+                                feedSheet = .thing(thing, walk: .none)
+                            }
                         }
                     }
                 }
@@ -105,6 +109,28 @@ extension FeedScreen {
                 .feedRowBackground()
                 .listRowSeparator(.hidden)
             }
+        }
+    }
+
+    /// A flagged row's words: the verdict, then what it moved and when.
+    static func flaggedRowWords(_ thing: Thing, kind: WalletWarning.Kind) -> (title: String, line: String) {
+        let day = FeedScreen.dayWord(thing.capturedAt)
+        let amount = WalletValue.transferAmount(thing)
+        switch kind {
+        case .poisoning:
+            let copy = thing.counterpartyAddress.map(WalletStore.shortAddress) ?? ""
+            return (String(localized: "A copy of \(copy)"),
+                    [amount.map { String(localized: "Sent you \($0)") }, day].compactMap { $0 }.joined(separator: " · "))
+        case .spoofedSymbol:
+            let verdict = WalletSafety.spoofVerdict(for: thing)
+            let symbol = verdict?.symbol ?? ""
+            let title = verdict?.impersonating.map { String(localized: "\(symbol) isn't \($0)") }
+                ?? String(localized: "\(symbol), a look-alike token")
+            let moved = SwapStage(thing).map { String(localized: "Got \($0.inAmount)") } ?? amount
+            return (title, [moved, day].compactMap { $0 }.joined(separator: " · "))
+        default:
+            return (amount ?? WalletValue.title(thing),
+                    String(localized: "You didn't send this · \(day)"))
         }
     }
 }

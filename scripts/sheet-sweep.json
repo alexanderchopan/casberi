@@ -1720,12 +1720,6 @@
     "Shell/NoteCaptureSheet.swift:sketchOpen"
    ],
    "why": "NOT WALKED YET (note-sketch): a pull from the grabber left it open twice (the canvas takes the drag); prd §1023 says a pull keeps the drawing and closes, so a person should check it"
-  },
-  {
-   "covers": [
-    "Screens/FeedScreen+Sheets.swift:feedSheet#flagged"
-   ],
-   "why": "PENDING: not walked yet"
   }
  ]
 }

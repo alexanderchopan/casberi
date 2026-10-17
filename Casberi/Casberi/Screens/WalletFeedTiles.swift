@@ -1047,8 +1047,6 @@ struct WalletWorthALookTray: View {
     var onWalkToApprovals: (() -> Void)?
     /// The same, for the Lending card.
     var onWalkToLending: (() -> Void)?
-    /// The tray's name; a Security section passes its own.
-    var title = String(localized: "Worth a look")
     @Environment(\.openURL) private var openURL
     /// Mirrors `WalletAwareness.isMuted` locally so toggling redraws THIS
     /// tray immediately; the plain UserDefaults flag underneath is what the
@@ -1255,7 +1253,7 @@ struct WalletWorthALookTray: View {
         // Pushed inside a sheet's stack (prd §1247) it walks to a thing
         // through `opened`; alone it owns its stack and path, as before.
         DSPathStack(path: $path, alone: !inSheetStack) {
-        DSTray(title: title, height: trayHeight, ink: true, detents: trayDetents) {
+        DSTray(title: String(localized: "Worth a look"), height: trayHeight, ink: true, detents: trayDetents) {
                 ScrollView {
                     VStack(alignment: .leading, spacing: DS.Space.s6) {
                         // NO SECTION LABEL and no explainer line (prd §449).

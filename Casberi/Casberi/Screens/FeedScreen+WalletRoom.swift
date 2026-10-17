@@ -447,13 +447,14 @@ extension FeedScreen {
                 }
                 .frame(width: DS.Face.list, height: DS.Face.list)
                 VStack(alignment: .leading, spacing: 1) {
+                    // Wraps, never truncates (prd §1377).
                     Text(title)
                         .dsText(.body17).foregroundStyle(DS.textPrimary)
-                        .lineLimit(1)
+                        .lineLimit(2)
                     if let line {
                         Text(line)
                             .dsText(.subhead12).foregroundStyle(DS.textTertiary)
-                            .lineLimit(1)
+                            .lineLimit(2)
                     }
                 }
                 Spacer(minLength: 0)
