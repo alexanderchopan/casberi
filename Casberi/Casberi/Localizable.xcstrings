@@ -4925,6 +4925,34 @@
         }
       }
     },
+    "Alert" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Alerta"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アラート"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "알림"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "提醒"
+          }
+        }
+      }
+    },
     "Alert at %@" : {
       "localizations" : {
         "es" : {
@@ -6611,6 +6639,34 @@
         }
       }
     },
+    "CI activity" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Actividad de CI"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "CI のアクティビティ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "CI 활동"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "CI 动态"
+          }
+        }
+      }
+    },
     "Came back" : {
       "localizations" : {
         "es" : {
@@ -8011,6 +8067,34 @@
         }
       }
     },
+    "Due %@ %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Vence %@ %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "期限 %@ %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "만기 %@ %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "到期 %@ %@"
+          }
+        }
+      }
+    },
     "Dust" : {
       "localizations" : {
         "es" : {
@@ -8287,6 +8371,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "电子邮件或钱包地址"
+          }
+        }
+      }
+    },
+    "Ended %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Terminó %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@に終了しました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 종료됨"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已于 %@ 结束"
           }
         }
       }
@@ -10643,6 +10755,62 @@
         }
       }
     },
+    "Mentioned you" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Te mencionó"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "あなたをメンション"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "회원님을 언급함"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "提到了你"
+          }
+        }
+      }
+    },
+    "Mentioned your team" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Mencionó a tu equipo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "あなたのチームをメンション"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "회원님의 팀을 언급함"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "提到了你的团队"
+          }
+        }
+      }
+    },
     "Messages in %@" : {
       "localizations" : {
         "es" : {
@@ -11119,6 +11287,34 @@
         }
       }
     },
+    "New activity" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Nueva actividad"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "新しいアクティビティ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "새 활동"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "新动态"
+          }
+        }
+      }
+    },
     "New alert" : {
       "localizations" : {
         "es" : {
@@ -11143,6 +11339,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "新提醒"
+          }
+        }
+      }
+    },
+    "New comment" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Nuevo comentario"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "新しいコメント"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "새 댓글"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "新评论"
           }
         }
       }
@@ -11763,6 +11987,34 @@
         }
       }
     },
+    "Notification" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Notificación"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "通知"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "알림"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "通知"
+          }
+        }
+      }
+    },
     "Now %@. A move listens up and down." : {
       "localizations" : {
         "es" : {
@@ -12039,6 +12291,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "已超出范围 1 天"
+          }
+        }
+      }
+    },
+    "Overdue · %@ %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Vencido · %@ %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "期限切れ · %@ %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "기한 지남 · %@ %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已逾期 · %@ %@"
           }
         }
       }
@@ -13471,6 +13751,34 @@
         }
       }
     },
+    "Status changed" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Estado cambiado"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ステータス変更"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "상태 변경됨"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "状态已更改"
+          }
+        }
+      }
+    },
     "Stop recording" : {
       "localizations" : {
         "es" : {
@@ -14279,6 +14587,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你之前保存过 · %@ · %@"
+          }
+        }
+      }
+    },
+    "You subscribed" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Te suscribiste"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "購読中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "구독함"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你已订阅"
           }
         }
       }

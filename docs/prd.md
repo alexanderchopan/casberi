@@ -66900,3 +66900,9 @@ A sweep of 123 sheets across ~40 heads (`design/sweep/REPORT.md`, local) found e
 12. The box and the body never draw the same thing (`SheetBoxDrawn`): a picture, an agent chat's opening turns, a chat's last exchange, a contact's face, or a sentence the box said.
 13. "You kept this before" names only the same object (a Work object URL via `ObjectFold`, else a page with a path), never a dashboard, queue or explorer link; it and every sheet date use the day word, never a relative age; a footnote drops a date the box shows.
 14. "More from <name>" is "More songs / videos / streams / episodes"; your own post is titled by your name, never "you".
+
+**Verbs and heads**
+15. Send to Reminders only for a due, unfinished thing that is not already a task in its own app; Send to Calendar only for a timed moment still ahead; never Mark done on a row an app owns (a write); Copy and Translate only on words a person reads.
+16. Work that lives in an app leads with "Open in <App>"; media leads with Play; a contact offers Call and Mail; every chart draws its tile row, a watched one with Alert; a tile never says a bare "Open".
+17. A Work sheet is titled by the item's own name (`WorkStage.head`), states its state once, shows a due date as a fact line and never on a done item; a PagerDuty trigger states its incident's newest state. Polar and Dodo sales, refunds and disputes and GitHub notifications open the Work sheet.
+18. Only calendar sources and your own timed events draw the hour grid; Duolingo, Privy and chain deadlines take the moment box. Due lines are the day word and time; an offer "Ends <day>"; a workout shows one distance, a swim no pace, and "Written by" only from Apple Health.
