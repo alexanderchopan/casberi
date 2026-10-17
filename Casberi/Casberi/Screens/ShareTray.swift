@@ -83,7 +83,7 @@ struct ShareTray: View {
     private static let previewHeight: CGFloat = 420
     private var trayHeight: CGFloat {
         let rows = CGFloat(1 + (MessageCompose.canText ? 1 : 0) + (MessageCompose.canMail ? 1 : 0)
-                           + (recipientChannel != nil ? 1 : 0) + (xPost != nil ? 1 : 0))
+                           + (recipientChannel != nil ? 1 : 0) + (showsXRow ? 1 : 0))
         return DS.Space.s6 + 40 + DS.Space.s4 + Self.previewHeight + DS.Space.s3
              + rows * DS.Hit.min + DS.Space.s6
     }
@@ -114,7 +114,7 @@ struct ShareTray: View {
                     // the system sheet holding the card and X's words, where
                     // X's own share extension attaches the picture (prd §1366);
                     // with none it opens X's composer as before (§1299).
-                    if xPost != nil {
+                    if showsXRow {
                         DSDoorRow(icon: "square.and.pencil", label: "Post on X") { postOnX() }
                     }
                     if let image {
@@ -200,6 +200,13 @@ struct ShareTray: View {
     }
 
     /// X's post link for this card (prd §1299): its words and its link.
+    /// Post on X waits for the card: a tap while it was still drawing
+    /// opened X with the link alone, and X posted its own preview of the
+    /// source (prd §1366). With no card to draw it shows at once.
+    private var showsXRow: Bool {
+        xPost != nil && (image != nil || nothingToDraw)
+    }
+
     private var xPost: URL? {
         XPostIntent.url(words: shareWords, link: model?.link)
     }

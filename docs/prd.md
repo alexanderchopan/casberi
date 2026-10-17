@@ -66927,6 +66927,7 @@ A sweep of 123 sheets across ~40 heads (`design/sweep/REPORT.md`, local) found e
 1. **With a card, Post on X is the system sheet** holding the card and X's words (`XPostIntent.message`: the words within the limit, the link at their end), two UIKit items. The person taps X and its composer opens with the card attached. One more tap than §1299 asked for; it is the price of the card. The row stays in the tray under its own name, so X is still the first thing offered, not one target among many.
 2. **With no card drawn**, the row opens X's composer with the words and the link as §1362 did (the app's scheme, else the web intent).
 3. **Deleted:** the clipboard copy (`DSPasteboard.copy(png:)`) and the "Card copied. Paste it in X" row.
+4. **The row waits for the card** (user, 2026-10-17: "it should post the casberi card"): Post on X is drawn once the card is rendered, or once the tray knows there is none (`showsXRow`). Drawn at once, a tap while the pictures were still arriving took the no-card door and posted X's preview of the source.
 
 Guards: `CasberiTests/XPostIntentTests` adds the message's shape. The sheet sweep's `share-system` entry covers the one sheet both rows raise.
 
