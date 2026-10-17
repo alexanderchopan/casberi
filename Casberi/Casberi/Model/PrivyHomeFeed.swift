@@ -326,8 +326,7 @@ enum PrivyHomeFeed {
 
     static func shortAddress(_ address: String) -> String {
         guard address.count > 12 else { return address }
-        let head = address.hasPrefix("0x") ? 5 : 4
-        return "\(address.prefix(head))…\(address.suffix(4))"
+        return "…\(address.suffix(4))"
     }
 
     static func ref(_ app: App) -> String { refPrefix + app.id }

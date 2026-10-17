@@ -410,7 +410,7 @@ enum AztecStakeWire {
     }
 
     static func shortAddress(_ a: String) -> String {
-        a.count > 10 ? "\(a.prefix(6))…\(a.suffix(4))" : a
+        a.count > 10 ? "…\(a.suffix(4))" : a
     }
 
     /// Whole numbers bare, else at most two decimals, grouped.

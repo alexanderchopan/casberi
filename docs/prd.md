@@ -66995,3 +66995,9 @@ The goal cannot be built. No link to X carries a picture (`twitter://post` and `
 2. **Why leading, not centred:** the fold already draws the tab you are on at the leading edge and Search at the trailing one, so the bar folds and unfolds in place. A centred bar would slide sideways at every fold.
 3. **Search stays a circle, not a fourth tab.** Tabs are places you manage (§1343) and Search is an act; as a tab it would fold away with the others, where today it stays beside the folded circle.
 4. Considered and not taken: centred (the slide in 2), icons with only the pick named (Library is your face, which says nothing without its word).
+
+## §1375 — An address shortens to its last four, and a sheet's list is named for what it lists, never the party (amends §1350, §1181's "This year with") (user, 2026-10-17, of a transfer's "This year with 0x2f60……": "we should never start addresses with the first five, they should always be last four eg ...xxxx also do we really need to say 'this year with' why can't we just say activity or history or something what do we do on others?")
+
+1. **Every short address is "…a91c"**, as `WalletStore.shortAddress` already drew it: the receipt's unnamed party (§1350's `0x2f60…a91c`), the Safe room, Aztec and its staking rows, Privy's wallets, the NFT shelf and Logos' account ids. Stored row titles keep the form they landed with; new ones take this. `WalletStore.isAutoName` still knows the old head-first placeholder.
+2. **A transfer's year card is "This year"**, its totals "Sent" and "Received", its door "Every transfer": the sheet's title already names who, and the party in the card's name ran off it.
+3. **A sheet's list is named for what it lists**: "This month", "Every charge", "ETH trades", "This year", and "History" where it was "With <party>" or "At <party>".

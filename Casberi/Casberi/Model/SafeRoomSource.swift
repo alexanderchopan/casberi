@@ -91,7 +91,7 @@ enum SafeRoomSource {
         // The same shortening the address book itself uses. Never the raw
         // hash: a 42-character address inside a sentence is not a name.
         guard address.count > 10 else { return address }
-        return "\(address.prefix(6))…\(address.suffix(4))"
+        return "…\(address.suffix(4))"
     }
 
     /// What the card opens when there is nothing pending to open.

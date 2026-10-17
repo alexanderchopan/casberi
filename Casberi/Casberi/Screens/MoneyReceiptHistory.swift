@@ -119,13 +119,15 @@ struct MoneyYearTotals: View {
     var onAll: (() -> Void)?
 
     var body: some View {
-        SheetCard(name: String(localized: "This year with \(name)"), glyph: "calendar") {
+        // NAMED BY ITS PERIOD, NEVER THE PARTY (prd §1375): the title above
+        // already says who, and "This year with 0x2f60…" ran off the card.
+        SheetCard(name: String(localized: "This year"), glyph: "calendar") {
             HStack(spacing: DS.Space.s2) {
-                total(String(localized: "You sent"), sentUSD, sentCount, gain: false)
-                total(String(localized: "\(name) sent you"), receivedUSD, receivedCount, gain: true)
+                total(String(localized: "Sent"), sentUSD, sentCount, gain: false)
+                total(String(localized: "Received"), receivedUSD, receivedCount, gain: true)
             }
             if let onAll {
-                DSMoreLink(title: Text("Every transfer with \(name)"), action: onAll)
+                DSMoreLink(title: Text("Every transfer"), action: onAll)
             }
         }
         .padding(.horizontal, DSRoomChassis.inset)

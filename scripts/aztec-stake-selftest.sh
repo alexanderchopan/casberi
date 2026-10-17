@@ -201,7 +201,7 @@ check(silent.isStopped && AztecStakeWire.state(silent) == "Missing attestations"
       "three missed in a row: missing attestations, and it asks you")
 var quiet = carried!; quiet.missedStreak = 2
 check(!quiet.isStopped && AztecStakeWire.state(quiet) == "Validating", "two is not yet a stop")
-check(AztecStakeWire.stoppedTitle(silent) == "Your Aztec sequencer 0x70df…e5f1 stopped attesting", "its row")
+check(AztecStakeWire.stoppedTitle(silent) == "Your Aztec sequencer …e5f1 stopped attesting", "its row")
 
 print("governance")
 check(AztecStakeWire.count(reply: reply("gov-count.json")) == 5, "five proposals")

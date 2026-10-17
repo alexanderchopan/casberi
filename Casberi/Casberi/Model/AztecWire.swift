@@ -150,7 +150,7 @@ enum AztecWire {
 
     static func short(_ address: String) -> String {
         guard address.count > 12 else { return address }
-        return "\(address.prefix(6))…\(address.suffix(4))"
+        return "…\(address.suffix(4))"
     }
 
     struct Missed: Codable, Equatable {

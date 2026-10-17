@@ -271,7 +271,7 @@ enum WalletNFTShelf {
     }
 
     private static func shortAddress(_ a: String) -> String {
-        a.count > 10 ? "\(a.prefix(6))…\(a.suffix(4))" : a
+        a.count > 10 ? "…\(a.suffix(4))" : a
     }
 
     // MARK: - The shelf's own narrow read

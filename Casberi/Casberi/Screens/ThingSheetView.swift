@@ -3273,8 +3273,8 @@ struct ThingSheetView: View {
 
     private func moneyHistoryTitle(_ r: MoneyReceipt) -> String {
         if let token = moneySwapToken { return String(localized: "\(token) trades") }
-        return moneyHasPerson ? String(localized: "With \(moneyPartyName(r))")
-                       : String(localized: "At \(moneyPartyName(r))")
+        // A list is named for what it lists, never the party (prd §1375).
+        return String(localized: "History")
     }
 
     /// The fourth tile: the act that keeps up with it for you. Save a person
