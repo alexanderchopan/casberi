@@ -2292,7 +2292,12 @@ struct MainSurface: View {
         if label == Pinboard.room { chrome.mergedScope[Pinboard.room] = nil }
         let target: String
         if CategoryFold.isCategory(label) {
+            // THE WALLET IS A TAB (prd §1327): it lands with nothing in it,
+            // and before the launch walk has listed its venues. Waiting on
+            // the venues left the tab, its swipe and every Markets door dead
+            // for a person whose wallets had landed nothing.
             guard let landing = CategoryFold.landing(category: label, present: categoryVenues[label] ?? [])
+                    ?? (label == CategoryFold.walletCategory ? CategoryFold.walletRoom : nil)
             else { return }
             target = landing
         } else if Pinboard.isWritten(label),
