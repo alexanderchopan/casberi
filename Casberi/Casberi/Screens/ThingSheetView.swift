@@ -3868,9 +3868,13 @@ struct ThingSheetView: View {
     }
 
     /// Track a subscription (prd §1115, the fourth tile since §1188): only
-    /// once the reading says the sender is on no list.
+    /// once the reading says the sender is on no list, and never for a
+    /// person — a sender at a mailbox provider (`gmail.com`, prd §1113)
+    /// writes to you; it does not bill you (prd §1363).
     private var mailKeep: VerbDial.Keep? {
-        guard mailListRead, mailList == nil, let address = mailSubscriptionAddress else { return nil }
+        guard mailListRead, mailList == nil, let address = mailSubscriptionAddress,
+              !ServiceIdentity.mailboxDomains.contains(ServiceIdentity.registrable(address) ?? "")
+        else { return nil }
         return VerbDial.Keep(label: String(localized: "Track"), glyph: SubscriptionWords.planGlyph) {
             addMailSubscription(address)
         }

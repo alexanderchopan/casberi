@@ -282,7 +282,10 @@ struct ThingContentView: View {
             return .chart(chart)
         } else if thing.source == "GitHub", thing.sourceRef?.hasPrefix("gh:release:") == true {
             return .release
-        } else if thing.source == "GitHub", thing.starCount != nil || thing.repoLanguage != nil {
+        } else if thing.source == "GitHub", thing.starCount != nil || thing.repoLanguage != nil,
+                  // A notification is about a thread, not the repo: its Work
+                  // box names the repo, so no star strip under it (prd §1363).
+                  thing.sourceRef?.hasPrefix("gh:notif:") != true {
             return .star
         } else if let url = Capture.detectURL(in: thing.content.isEmpty ? thing.title : thing.content),
                   let id = YouTubeShorts.videoID(in: url.absoluteString) {
