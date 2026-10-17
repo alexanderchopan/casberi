@@ -1066,7 +1066,16 @@ final class ShellChrome {
     /// Take a service door: the caller has already closed its own sheet, so
     /// this waits out that dismissal, then lands in the room and its tile,
     /// on All (a pick made earlier would hide the row the sheet stands on).
+    ///
+    /// **AN APP SHEET STEPS DOWN FIRST (prd §1372).** A door taken from an
+    /// app risen over the Feed (X's "What you pay") landed the Wallet BEHIND
+    /// that sheet, and the Wallet raised the plan's sheet over it: a sheet
+    /// owned by a page under another sheet. Its "Open X" then asked for the
+    /// app still standing beneath, and the shell trapped on a missing
+    /// environment object (build 839, twice). The same wait covers both
+    /// dismissals.
     func open(_ target: ServiceDoor.Target) {
+        appSheet = nil
         Task { @MainActor in
             try? await Task.sleep(for: .milliseconds(450))
             serviceDoor = ServiceDoor(target: target, at: .now)
@@ -1133,7 +1142,13 @@ final class ShellChrome {
     }
 
     /// Land in a connected app's feed from a sheet that has just closed.
+    /// Already standing in that app's sheet, the closed sheet was the way
+    /// back to it; another app's sheet steps down first (prd §1372).
     func openApp(_ source: String) {
+        if let up = appSheet {
+            if up.source == source, up.walletSection == nil { return }
+            appSheet = nil
+        }
         Task { @MainActor in
             try? await Task.sleep(for: .milliseconds(450))
             sourceRequest = source

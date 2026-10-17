@@ -366,7 +366,8 @@ extension FeedScreen {
         let line = [item.cadenceDays == nil ? String(localized: "Next charge") : String(localized: "Renews"),
                     item.paysWith].compactMap(\.self).joined(separator: " · ")
         return Button {
-            openOutsideSheet { chrome.open(.plan(item.id)) }
+            // From inside an app sheet, the door steps it down (prd §1372).
+            chrome.open(.plan(item.id))
         } label: {
             SubscriptionRow(name: FeedScreen.shownName(item.name), line: Text(verbatim: line)) {
                 EmptyView()
@@ -379,18 +380,6 @@ extension FeedScreen {
                                   bottom: Self.rowAir, trailing: DSRoomChassis.rowInset))
         .feedRowBackground()
         .listRowSeparator(.hidden)
-    }
-
-    /// A door to a screen the shell presents: from inside an app sheet the
-    /// shell cannot raise a second one over it, so the sheet steps down
-    /// first and the door opens once it has gone.
-    func openOutsideSheet(_ open: @escaping @MainActor () -> Void) {
-        guard inSheet, chrome.appSheet != nil else { open(); return }
-        chrome.appSheet = nil
-        Task { @MainActor in
-            try? await Task.sleep(for: .milliseconds(450))
-            open()
-        }
     }
 
     /// The picked day's list: what the calendar drew a dot for on it, its

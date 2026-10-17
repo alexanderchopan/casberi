@@ -66969,3 +66969,12 @@ The goal cannot be built. No link to X carries a picture (`twitter://post` and `
 4. Rooms and folders are not warmed: a room's card reads its week when Share this week is pressed, and a folder's draws from rows already in hand.
 
 **UNRUN.** No Swift toolchain or simulator in the session that made this. The device check is a thing opened, a second's wait, then Share: the system sheet rises with the card in its header and no spinner.
+
+## §1372 — A service door taken from an app's sheet steps that sheet down first (amends §1208a, retires `openOutsideSheet`) (user, 2026-10-17: "i opened a subscription thing sheet and tapped inside it on 'open in X' and it crashed", "its trying to 'open in x' in the x app")
+
+1. **The crash (build 839, iOS 27.0, two logs).** From X's page, risen over the Feed as an app sheet, the account page's What you pay row took the plan's door (`ShellChrome.open(.plan)`). The door landed the Wallet BEHIND the X sheet, and the Wallet raised the plan's sheet over it: a sheet owned by a page under another sheet. Its Open X asked for the app still standing beneath; SwiftUI trapped reading an environment object (`EnvironmentValues.subscript.getter` → `_assertionFailure`, no app frames). Claude's Open from the Wallet worked: no app sheet was up.
+2. **`ShellChrome.open` closes the app sheet itself**, before its 450ms wait, so every door to a plan, a list or a follow (the account page, Following's sheet, a mail list's sheet, Addresses, the tray, Day's renewal row) lands with nothing standing over the room. Day's own `openOutsideSheet` did this for one caller and is deleted.
+3. **`ShellChrome.openApp` does nothing when that app's sheet is already up** (the sheet that just closed was standing on it), and steps another app's sheet down first.
+4. The empty Subscriptions list after the relaunch was a reading not yet taken on that launch; nothing was lost (the user: back after a restart and a refresh).
+
+**UNRUN.** No Swift toolchain or simulator in the session that made this; the cause is read from the two logs and the code, not reproduced. The device check: X's page → its account page → What you pay → Open X. The X sheet closes, the Wallet's plan rises alone, and Open X raises X with no crash.
