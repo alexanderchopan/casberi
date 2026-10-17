@@ -2588,6 +2588,11 @@ harness "Plasma One settlements" "plasma one" "scripts/plasma-one-selftest.sh" "
 # $20.29 for a $20 plan, one plan counted twice, a euro plan counted at par.
 harness "Subscriptions pure-logic self-test" "subscriptions" "scripts/subscriptions-selftest.sh" "the subscriptions self-test failed — run scripts/subscriptions-selftest.sh"
 
+# Under the Wallet's "Needs you" heading a row does not say it needs you (prd
+# §1378): Wise's stuck word and Safe's "your signature is needed" are dropped
+# there, the Safe count stays, and the Feed keeps them all.
+harness "Needs-you words self-test" "needs-you words" "scripts/needs-you-words-selftest.sh" "the needs-you words self-test failed — run scripts/needs-you-words-selftest.sh"
+
 # Subscriptions by category, the tile's map (prd §1112): which category each
 # subscription's monthly cost lands in, and what a pressed tile reads. Every
 # failure is an ordinary-looking map: a "Wallet" tile for merchants the

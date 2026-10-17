@@ -67018,3 +67018,11 @@ The goal cannot be built. No link to X carries a picture (`twitter://post` and `
 5. **Security's three transfer sections list each flagged transfer as a row that opens its own sheet** ("A copy of …043c · Sent you 0 USDC · Oct 10", "ÚЅDС isn't USDC", "25,000 BASEDROP · You didn't send this"). The per-kind pile (`FeedSheetRoute.flagged`, its tray title and its sheet-sweep entry) is deleted; a needs-you row wraps to two lines, never truncates.
 
 Not built: a per-transfer Hide (the mock's tile). Nothing stores one; the pile's Mute only stops the feed badge. It needs a stored field and a CloudKit deploy, so it is left for its own ruling.
+
+## §1378 — Under "Needs you" a row does not say it needs you (user, 2026-10-17, of a helper-text sweep of the Wallet finding a Wise row "Needs attention · £200 → €235" and a Safe line "your signature is needed" under the "Needs you" heading: "yes do it", then "but for Safe it will still say something a/b signature or no? we want that")
+
+1. Under the Wallet's "Needs you" heading (`FeedScreen.needsYouGroup`), Wise's stuck word ("Needs attention · ") is dropped from a row's name, so the amounts lead, and Safe's seam clause "your signature is needed" is dropped from its line, which then names the account. The Safe title, its "a of b signatures collected on …" count, stays.
+2. Only there. The stored titles are unchanged, and every other list (the Feed, the rooms, the sheets) draws them whole: `\.dsUnderNeedsYou` defaults to false and is set only by the Wallet's day sections for that heading; the move row takes the same answer as a parameter.
+3. One rule, `Model/NeedsYouWords.swift`, guarded by `needs-you-words-selftest.sh`, which also fails if either bridge rewords its phrase.
+
+The same sweep trimmed four lines that restated their neighbours (04e8b49b): an unpriced approval's note no longer repeats its row, Connection's footnote drops "across chains", the follow-cap alert drops "That's the cap" under "Following 20 already", the NFT picker drops "only the collections you pick are shown" under "Show which NFTs?".

@@ -563,6 +563,9 @@ struct BandRow: View {
 
     /// The app header this row stands under in Home (prd §1103b).
     @Environment(\.dsGroupedSource) private var groupedSource
+    /// Under the Wallet's "Needs you" heading, which says what a stuck word
+    /// or "your signature is needed" would (prd §1378).
+    @Environment(\.dsUnderNeedsYou) private var underNeedsYou
 
     /// A lead that is a picture OF the thing, which under an app header rides
     /// the trailing edge as a thumbnail (prd §1103b). A face, a mark, a site's
@@ -698,11 +701,13 @@ struct BandRow: View {
         // THE TITLE'S SEAM (prd §915): the object is the name, and the
         // qualifier the bridge appended after ` — ` is the line's first clause.
         let seam = TitleSeam.split(titleText)
-        DSFeedRow(name: imageOnly ? thing.source : seam.name,
+        let name = underNeedsYou ? NeedsYouWords.name(seam.name) : seam.name
+        let qualifier = underNeedsYou ? NeedsYouWords.qualifier(seam.line) : seam.line
+        DSFeedRow(name: imageOnly ? thing.source : name,
                   emphasized: emphasized, done: done, ripple: rippleIndex,
                   line: imageOnly ? nil
                       : notePreview ? previewLine
-                      : line(project: project, leader: leader, qualifier: seam.line),
+                      : line(project: project, leader: leader, qualifier: qualifier),
                   leadIsPicture: isPicture(leader),
                   face: personFace) {
             leaderView

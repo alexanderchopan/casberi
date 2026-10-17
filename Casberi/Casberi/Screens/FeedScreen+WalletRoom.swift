@@ -1343,10 +1343,13 @@ extension FeedScreen {
                             if let partner = ownMoves[thing.id]?.live {
                                 walletOwnMoveRow(sent: thing, received: partner, index: i)
                             } else if thing.transferDirection == "received" || thing.transferDirection == "sent" {
-                                walletMoveRow(thing, index: i)
+                                walletMoveRow(thing, index: i,
+                                              underNeedsYou: label == Self.needsYouGroup)
                             } else {
                                 shapedListRow(thing, index: i, nextEventID: nextEventID,
                                               position: positions[i])
+                                    // The heading says it waits on you (prd §1378).
+                                    .environment(\.dsUnderNeedsYou, label == Self.needsYouGroup)
                             }
                         }
                     default:
@@ -1425,7 +1428,7 @@ extension FeedScreen {
     /// nameless counterparty, said nothing else; Holdings and Accounts one
     /// tile over are mark, name, amount.
     @ViewBuilder
-    func walletMoveRow(_ thing: Thing, index: Int) -> some View {
+    func walletMoveRow(_ thing: Thing, index: Int, underNeedsYou: Bool = false) -> some View {
         let received = thing.transferDirection == "received"
         let sign = received ? "+" : "−"
         // **WHO, THEN DOLLARS, THEN THE QUANTITY ON THE LINE (prd §1090).**
@@ -1433,9 +1436,12 @@ extension FeedScreen {
         // $12.40 with MetaMask Card" beside "−12.40 USDC": the amount twice and
         // the card cut off. Its who is the card; the dollars stand on the
         // right; the token's quantity moves to the line under the name.
-        let who = thing.transferCounterparty.flatMap { $0.isEmpty ? nil : $0 }
+        let named = thing.transferCounterparty.flatMap { $0.isEmpty ? nil : $0 }
             ?? thing.counterpartyAddress.map(WalletStore.shortAddress)
             ?? (WalletCards.isSpend(thing) ? BridgeCatalog.seatName(forSource: thing.source) : thing.title)
+        // Under "Needs you" a stuck Wise transfer leads with its amounts, not
+        // the heading's own words (prd §1378).
+        let who = underNeedsYou ? NeedsYouWords.name(named) : named
         let account = selectedWallet == nil && wallet.addresses.count > 1
             ? WalletStore.shared.label(forAddress: thing.walletAddress) : nil
         let parsed = WalletFlow.parseAmount(thing.transferAmount ?? "")
@@ -1736,4 +1742,17 @@ extension FeedScreen {
             Section { rows() }
         }
     }
+}
+
+extension EnvironmentValues {
+    /// Whether a row stands under the Wallet's "Needs you" heading
+    /// (`NeedsYouWords`, prd §1378).
+    var dsUnderNeedsYou: Bool {
+        get { self[DSUnderNeedsYouKey.self] }
+        set { self[DSUnderNeedsYouKey.self] = newValue }
+    }
+}
+
+private struct DSUnderNeedsYouKey: EnvironmentKey {
+    static let defaultValue = false
 }
