@@ -3413,6 +3413,34 @@
         }
       }
     },
+    "0x address, or a .eth, .sol or .wei name" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Dirección 0x, o un nombre .eth, .sol o .wei"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "0x アドレス、または .eth、.sol、.wei の名前"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "0x 주소 또는 .eth, .sol, .wei 이름"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "0x 地址，或 .eth、.sol、.wei 名称"
+          }
+        }
+      }
+    },
     "0x, Solana or Bitcoin, or a name like casberi.eth." : {
       "localizations" : {
         "es" : {
@@ -10503,6 +10531,34 @@
         }
       }
     },
+    "Holdings and activity will appear here." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Los activos y la actividad aparecerán aquí."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "保有資産とアクティビティがここに表示されます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "보유 자산과 활동이 여기에 표시됩니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "持仓和动态将显示在这里。"
+          }
+        }
+      }
+    },
     "Import your address book" : {
       "localizations" : {
         "es" : {
@@ -12323,6 +12379,34 @@
         }
       }
     },
+    "Paste or enter an address" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Pega o escribe una dirección"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アドレスを貼り付けるか入力"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "주소를 붙여넣거나 입력하세요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "粘贴或输入地址"
+          }
+        }
+      }
+    },
     "Payment due" : {
       "localizations" : {
         "es" : {
@@ -13691,6 +13775,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "卖出 %@ %@"
+          }
+        }
+      }
+    },
+    "Start with any address" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Empieza con cualquier dirección"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "任意のアドレスから始める"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "아무 주소로나 시작하세요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "从任意地址开始"
           }
         }
       }
