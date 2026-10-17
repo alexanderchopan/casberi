@@ -352,11 +352,12 @@ extension View {
 
 private struct NoteFolderRowChrome: ViewModifier {
     @Environment(\.feedSectionPanel) private var panel
+    @Environment(\.feedSectionPanelFilled) private var panelFilled
 
     func body(content: Content) -> some View {
         let inset = panel ? DSRoomChassis.rowInset : DSRoomChassis.inset
         return content
-            .listRowBackground(panel ? AnyView(SectionPanel(part: .middle)) : AnyView(Color.clear))
+            .listRowBackground(panel ? AnyView(SectionPanel(part: .middle, filled: panelFilled)) : AnyView(Color.clear))
             .listRowSeparator(.hidden)
             .listRowInsets(EdgeInsets(top: 0, leading: inset, bottom: 0, trailing: inset))
     }

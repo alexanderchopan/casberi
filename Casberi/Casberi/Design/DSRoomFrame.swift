@@ -97,10 +97,11 @@ extension EnvironmentValues {
 struct FeedRowBackground: ViewModifier {
     @Environment(\.feedSectionPanel) private var panel
     @Environment(\.feedSectionPanelInset) private var panelInset
+    @Environment(\.feedSectionPanelFilled) private var panelFilled
 
     func body(content: Content) -> some View {
         if panel {
-            content.listRowBackground(SectionPanel(part: .middle, inset: panelInset))
+            content.listRowBackground(SectionPanel(part: .middle, inset: panelInset, filled: panelFilled))
         } else {
             content.listRowBackground(Color.clear)
         }
@@ -118,11 +119,12 @@ extension View {
 struct FeedRunBackground<Base: View>: ViewModifier {
     @Environment(\.feedSectionPanel) private var panel
     @Environment(\.feedSectionPanelInset) private var panelInset
+    @Environment(\.feedSectionPanelFilled) private var panelFilled
     let base: Base
 
     func body(content: Content) -> some View {
         if panel {
-            content.listRowBackground(SectionPanel(part: .middle, inset: panelInset))
+            content.listRowBackground(SectionPanel(part: .middle, inset: panelInset, filled: panelFilled))
         } else {
             content.listRowBackground(base)
         }

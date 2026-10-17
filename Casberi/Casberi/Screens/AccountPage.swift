@@ -981,12 +981,13 @@ private struct PlainAccountRow: ViewModifier {
     /// Inside a card (prd §1254) the row stands on the card's middle and in
     /// the Feed's row column.
     @Environment(\.feedSectionPanel) private var panel
+    @Environment(\.feedSectionPanelFilled) private var panelFilled
 
     func body(content: Content) -> some View {
         let inset = panel ? DSRoomChassis.rowInset : DS.Space.s4
         return content
             .listRowSeparator(.hidden)
-            .listRowBackground(panel ? AnyView(SectionPanel(part: .middle)) : AnyView(Color.clear))
+            .listRowBackground(panel ? AnyView(SectionPanel(part: .middle, filled: panelFilled)) : AnyView(Color.clear))
             .listRowInsets(EdgeInsets(top: 0, leading: inset, bottom: 0, trailing: inset))
     }
 }

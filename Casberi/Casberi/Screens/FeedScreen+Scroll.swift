@@ -149,6 +149,8 @@ extension FeedScreen {
         } rows: {
             rows()
         }
+        // Bare (prd §1382): the gaps stay, the fill goes.
+        .environment(\.feedSectionPanelFilled, false)
     }
 
     /// Each category's own sections — the room's tiles and list — as its
@@ -408,6 +410,9 @@ extension FeedScreen {
 extension EnvironmentValues {
     /// `SectionPanel`'s distance from the list's edge (prd §1320).
     @Entry var feedSectionPanelInset: CGFloat = DS.Space.s2
+    /// Whether the panel draws its fill (prd §1382): the Feed's sections and
+    /// the Wallet's stand bare, keeping every point of the panel's air.
+    @Entry var feedSectionPanelFilled: Bool = true
 }
 
 struct SectionPanel: View {
@@ -419,6 +424,9 @@ struct SectionPanel: View {
     /// Sources' s4, where its own cards and box stand (prd §1320). Passed in,
     /// never read here: a row's background does not see the row's environment.
     var inset: CGFloat = DS.Space.s2
+    /// Off on the Feed and the Wallet (prd §1382): the shape stays, so the
+    /// rows keep their column and the gaps their height, and nothing fills it.
+    var filled = true
 
     var body: some View {
         let r = DS.Radius.widget
@@ -427,7 +435,7 @@ struct SectionPanel: View {
                                bottomTrailingRadius: part == .bottom ? r : 0,
                                topTrailingRadius: part == .top ? r : 0,
                                style: .continuous)
-            .fill(lit ? DS.fillFaint : Self.fill)
+            .fill(filled ? (lit ? DS.fillFaint : Self.fill) : Color.clear)
             .padding(.horizontal, inset)
     }
 
@@ -876,6 +884,7 @@ struct SectionPanelGroup<Header: View, Rows: View>: View {
     var anchor: String? = nil
     var lit = false
     @Environment(\.feedSectionPanelInset) private var panelInset
+    @Environment(\.feedSectionPanelFilled) private var panelFilled
     @ViewBuilder let header: Header
     @ViewBuilder let rows: Rows
 
@@ -892,7 +901,7 @@ struct SectionPanelGroup<Header: View, Rows: View>: View {
                 header
                     .listRowInsets(EdgeInsets())
                     .listRowSeparator(.hidden)
-                    .listRowBackground(SectionPanel(part: .top, lit: lit, inset: panelInset))
+                    .listRowBackground(SectionPanel(part: .top, lit: lit, inset: panelInset, filled: panelFilled))
             }
         }
         Group {
@@ -904,7 +913,7 @@ struct SectionPanelGroup<Header: View, Rows: View>: View {
                 .frame(height: DS.Space.s4)
                 .listRowInsets(EdgeInsets())
                 .listRowSeparator(.hidden)
-                .listRowBackground(SectionPanel(part: .bottom, inset: panelInset))
+                .listRowBackground(SectionPanel(part: .bottom, inset: panelInset, filled: panelFilled))
                 .accessibilityHidden(true)
         }
     }

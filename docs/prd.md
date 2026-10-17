@@ -67051,3 +67051,10 @@ Not built: pulses, glows or any loop (§297: loops are for what streams), and a 
 5. **Declined: a floating glass bar on the sheets** (user: "no way do i want that. just too confusing"). The sheet's tiles stay as they are.
 
 **Guarded** by `plate-audit.py`: the seven files lost their well allowances, so a well drawn in any of them again fails the pass.
+
+## §1382 — The Feed's and the Wallet's sections stand bare: the panel keeps its air and its column, and draws no fill (amends §1208d's panel and §1225's wallet card; user, 2026-10-17: "do you think the rest of the app would be better without the cards?", then, of the real-app comparison, "i think the gaps between the sectins make it more airy and clearer and cleaner tbh", then "Build it: the section panels lose their fill, the gaps stay")
+
+1. **The fill goes, nothing else moves.** `SectionPanel` takes `filled`, read from `feedSectionPanelFilled`; `panelSection` (the Feed's categories, the Wallet's Home lists) and `walletCard` (Holdings, Security, Positions, NFTs and the rest) set it off. The rows keep the panel's column, the gaps between sections keep their `s6` and `s4`, the headers keep their glyph and name.
+2. **With §1381 the two pages are one surface:** the box, the tiles and the rows stand on the page, and a section is told by its header and its air.
+3. **Only these two.** Thing sheets' named blocks (`SheetCard`, §1258), trays and Sources' cards (`SectionPanelCard`), What this app reaches and Settings keep their panels; account pages read the flag and keep the default.
+4. **The landing's brighten** (§1208l) has nothing to brighten on a bare panel and does not show on these two pages; it stands on What this app reaches.

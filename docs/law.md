@@ -232,7 +232,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1520 of 1589 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1521 of 1590 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1574,7 +1574,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1208a — The scroll's three touches, and no app names under a section (amended by §1208c)
 - §1208b — The Feed opens on its contents, then the sections (amended by §1208d)
 - §1208c — The Feed's sections lose their covers and their fold; Settings shows Casberi's settings; Notes and Markets stand on t… (amended by §1208d)
-- §1208d — The Feed at a glance in tiles, the section you are in above the scroll, a dot for what is new, and each section on it… (amended by §1208e, §1208h, §1208k, §1208l, §1212)
+- §1208d — The Feed at a glance in tiles, the section you are in above the scroll, a dot for what is new, and each section on it… (amended by §1208e, §1208h, §1208k, §1208l, §1212, §1382)
 - §1208e — A glance tile gives its words the room when it has no picture, and never draws a name as a mark; the face is felt (amended by §1208k)
 - §1208f — "Dock order" is "Feed order"
 - §1208g — The Feed comes first: the title reads "Feed Wallet"
@@ -1601,7 +1601,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1222 — What this app reaches takes the Feed's shape
 - §1223 — A Watchlist widget, small (amended by §1242)
 - §1224 — A Wallet box leads with its figure
-- §1225 — Every top-level section of a Wallet page stands on the Feed's card
+- §1225 — Every top-level section of a Wallet page stands on the Feed's card (amended by §1382)
 - §1226 — Data reads in groups (amended by §1227)
 - §1227 — Data is a box and three cards; the switches stay switches
 - §1228 — A box's jump lands at once, the same way every time
@@ -1754,6 +1754,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1379 — Every box moves once: it arrives, its numbers roll, a new cover lands (amends §495 for the wallet family's pick, §119…
 - §1380 — No contract of our own, ever; Aztec accounts wait for an audited account that rotates its key
 - §1381 — One slot, no fill: the box keeps its size and place on every screen and draws no well; the thing fills it on sheets a…
+- §1382 — The Feed's and the Wallet's sections stand bare: the panel keeps its air and its column, and draws no fill
 
 ## Dead rulings → what replaced them (generated)
 

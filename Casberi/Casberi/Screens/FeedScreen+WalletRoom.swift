@@ -1741,6 +1741,8 @@ extension FeedScreen {
         } rows: {
             Section { rows() }
         }
+        // Bare, as the Feed's (prd §1382).
+        .environment(\.feedSectionPanelFilled, false)
     }
 }
 
