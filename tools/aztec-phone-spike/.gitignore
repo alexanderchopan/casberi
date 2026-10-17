@@ -1,0 +1,5 @@
+node_modules/
+# The prover libraries are ~51 MB each; scripts/fetch-prover.sh downloads them.
+App/vendor/
+# Built from web/ by `npm run build`.
+App/Web/

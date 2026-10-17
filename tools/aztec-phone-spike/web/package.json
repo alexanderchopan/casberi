@@ -1,0 +1,22 @@
+{
+  "name": "casberi-aztec-phone-spike",
+  "private": true,
+  "type": "module",
+  "description": "Aztec's PXE in an iPhone web view, proving through the native iOS prover. Testnet only.",
+  "scripts": {
+    "build": "vite build"
+  },
+  "dependencies": {
+    "@aztec/accounts": "5.2.0",
+    "@aztec/aztec.js": "5.2.0",
+    "@aztec/bb.js": "5.2.0",
+    "@aztec/foundation": "5.2.0",
+    "@aztec/noir-contracts.js": "5.2.0",
+    "@aztec/stdlib": "5.2.0",
+    "@aztec/wallets": "5.2.0"
+  },
+  "devDependencies": {
+    "vite": "7.1.12",
+    "vite-plugin-node-polyfills": "0.24.0"
+  }
+}

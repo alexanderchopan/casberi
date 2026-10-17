@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Aztec on this iPhone</title>
+<style>
+  :root { color-scheme: dark; --bg: #000; --text: #fff; --text2: #8e8e93; --pink: #fb3a53; --ok: #30d158; --bad: #ff453a; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/20px -apple-system, system-ui, sans-serif; padding: env(safe-area-inset-top) 16px 40px; }
+  h1 { font: 700 28px/34px ui-rounded, -apple-system, sans-serif; margin: 16px 0 2px; }
+  .sub { color: var(--text2); margin: 0 0 12px; }
+  #mem { font: 600 13px ui-monospace, Menlo, monospace; color: var(--text2); margin-bottom: 8px; }
+  button { all: unset; display: flex; align-items: center; justify-content: space-between; width: 100%; box-sizing: border-box; min-height: 48px; color: var(--pink); font-weight: 600; font-size: 17px; cursor: pointer; }
+  button[disabled] { color: var(--text2); }
+  button .t { font: 600 15px ui-monospace, Menlo, monospace; color: var(--text2); }
+  button .t.ok { color: var(--ok); } button .t.bad { color: var(--bad); }
+  #log { white-space: pre-wrap; font: 12px/16px ui-monospace, Menlo, monospace; color: var(--text2); margin-top: 16px; word-break: break-all; }
+</style>
+</head>
+<body>
+<h1>Aztec on this iPhone</h1>
+<p class="sub" id="sub">Testnet v5 · prover: …</p>
+<div id="mem">memory …</div>
+<div id="steps"></div>
+<div id="log"></div>
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
