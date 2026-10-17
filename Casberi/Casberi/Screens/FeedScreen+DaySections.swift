@@ -445,15 +445,49 @@ extension FeedScreen {
             Section { ledeListRow(ledeThing) }
         } else if source == "All", !heroShown {
             Section {
-                // With nothing connected the box says what fills it and where
-                // to go (prd §1166, user: "we need some explainer in the home
-                // empty card, not just wednesday"); the Settings tile under it
-                // is that door.
-                emptyLeadRow(headline: Text(Date.now.formatted(.dateTime.weekday(.wide))),
-                             words: Text(Date.now.formatted(.dateTime.month(.wide).day())),
-                             note: bridges.connectedCount == 0
-                                 ? Text("Connect apps in Library.") : nil)
+                // **THE WAYS IN, IN THE FEED'S BOX (prd §1365, user: "ok", of
+                // the mockup).** With nothing connected, followed or tracked,
+                // the box is Library's own "Start with any of these" under the
+                // day: "Connect apps in Library." named a door it did not
+                // draw. The first one done gives the box back to the day.
+                if feedStarts {
+                    StartWaysIn(dated: Text(Date.now.formatted(.dateTime.weekday(.wide).month(.wide).day()))) {
+                        startWay($0)
+                    }
+                    .dsRoomLeadListRow()
+                } else {
+                    emptyLeadRow(headline: Text(Date.now.formatted(.dateTime.weekday(.wide))),
+                                 words: Text(Date.now.formatted(.dateTime.month(.wide).day())),
+                                 note: bridges.connectedCount == 0
+                                     ? Text("Connect apps in Library.") : nil)
+                }
             }
+        }
+    }
+
+    /// Nothing connected, no address followed, no subscription or linked
+    /// calendar: Library's box reads the same stores (`startsInBox`).
+    var feedStarts: Bool {
+        bridges.connectedCount == 0 && WalletStore.shared.addresses.isEmpty
+            && SubscriptionsReading.shared.items.isEmpty
+            && CalendarSubscriptionStore.shared.calendars.isEmpty
+    }
+
+    /// What a way in opens from the Feed: what its row in Library opens,
+    /// over the page you are on. A calendar is the phone's (Library's
+    /// first choice); one by link stays in Library.
+    func startWay(_ way: StartWaysIn.Way) {
+        DSHaptic.selection()
+        switch way {
+        case .app:
+            if SettingsHome.bandSearches {
+                withAnimation(DS.Motion.standard) { chrome.roomsTray = true }
+            } else {
+                route.present(.apps)
+            }
+        case .calendar:     route.openSetup(forOffer: "Calendar")
+        case .subscription: feedSheet = .subscriptionAdd
+        case .wallet:       feedSheet = .walletFollow
         }
     }
 

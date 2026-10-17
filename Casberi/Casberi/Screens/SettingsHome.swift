@@ -783,67 +783,22 @@ struct SettingsHome: View {
             && SubscriptionsReading.shared.items.isEmpty && WalletStore.shared.addresses.isEmpty
     }
 
+    /// The four ways in, shared with the empty Feed (`StartWaysIn`, prd
+    /// §1365); each opens this page's own add.
     private var startBox: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s1) {
-            Text("Start with any of these").dsText(.heading20).foregroundStyle(DS.textPrimary)
-                .padding([.top, .horizontal], DS.Space.s2)
-            // Settings' row grammar (user: "what would apple do"): a glyph in
-            // one column, the name, a grey value, the plus. A–Z, as every
-            // room's tiles read, so no row is the first step. The rows share
-            // the box evenly; it keeps its one size.
-            VStack(spacing: 0) {
-                firstRow(String(localized: "App"), glyph: "square.grid.2x2",
-                         value: String(localized: "Your apps"),
-                         verb: String(localized: "Add an app")) {
-                    if Self.bandSearches {
-                        withAnimation(DS.Motion.standard) { chrome.roomsTray = true }
-                    } else {
-                        searchFocused = true
-                    }
+        StartWaysIn { way in
+            switch way {
+            case .app:
+                if Self.bandSearches {
+                    withAnimation(DS.Motion.standard) { chrome.roomsTray = true }
+                } else {
+                    searchFocused = true
                 }
-                firstRow(String(localized: "Calendar"), glyph: "calendar",
-                         value: String(localized: "Your events"),
-                         verb: String(localized: "Add a calendar")) { add(.calendars) }
-                firstRow(String(localized: "Subscription"), glyph: SubscriptionWords.planGlyph,
-                         value: String(localized: "What you pay"),
-                         verb: SubscriptionWords.track) { add(.subscriptions) }
-                firstRow(String(localized: "Wallet"), glyph: "wallet.bifold",
-                         value: String(localized: "Any address"),
-                         verb: String(localized: "Follow a wallet")) { add(.wallets) }
+            case .calendar:     add(.calendars)
+            case .subscription: add(.subscriptions)
+            case .wallet:       add(.wallets)
             }
-            .frame(maxHeight: .infinity)
         }
-        // The counts' own well and one size: the box is the box, whatever
-        // it holds (top-card-fixed-size rule).
-        .padding(DS.Space.s2)
-        .frame(maxWidth: .infinity, minHeight: DSRoomChassis.leadHeight,
-               maxHeight: DSRoomChassis.leadHeight, alignment: .topLeading)
-        .dsWell(cornerRadius: DS.Radius.widget)
-    }
-
-    /// One way in, the whole row one button: the plus says what it does,
-    /// as it will on the count this becomes.
-    private func firstRow(_ label: String, glyph: String, value: String, verb: String,
-                          action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack(spacing: DS.Space.s3) {
-                Image(systemName: glyph)
-                    .dsGlyph(.body, weight: .regular)
-                    .foregroundStyle(DS.brandInk)
-                    .frame(width: DS.Hit.min / 1.5)
-                Text(label).dsText(.body17).foregroundStyle(DS.textPrimary).lineLimit(1)
-                Spacer(minLength: DS.Space.s2)
-                Text(value).dsText(.body17).foregroundStyle(DS.textSecondary).lineLimit(1)
-                Image(systemName: "plus")
-                    .dsGlyph(.body, weight: .regular)
-                    .foregroundStyle(DS.brandInk)
-            }
-            .padding(.horizontal, DS.Space.s2)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(RowPress())
-        .accessibilityLabel(Text(verb))
     }
 
     private var calendarsEmpty: Bool {
