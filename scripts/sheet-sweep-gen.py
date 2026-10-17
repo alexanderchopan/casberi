@@ -232,6 +232,8 @@ EXEMPT = [
        why="MessageCompose.canText and canMail are false on the simulator (no Messages or Mail account), so the rows that raise Apple's composers never draw there"),
   dict(covers=["Shell/NoteCaptureSheet.swift:scanOpen"], why="the document camera needs a camera; the simulator has none, so Attach offers no Scan there"),
   dict(covers=["Screens/ShareTray.swift:activityUp@2"], why="the same ActivitySheet as `share-system`, drawn only when a thing's share card cannot render"),
+  dict(covers=["Screens/ThingContent.swift:tray#new", "Screens/ThingContent.swift:tray#edit"],
+       why="NOT WALKED YET: a watched chart's Alert tile (prd §1363) raises the same price-alert tray Markets does; the journey to a demo chart sheet is not written (2026-10-16)"),
   dict(covers=["Screens/FileverseDocPage.swift:webDoor", "Shell/NoteCaptureSheet.swift:hosted&&chrome.docToRead"],
        why="NOT WALKED YET: a dDoc's page (prd §1355) and a link inside it; the journey to a demo Fileverse doc is not written (2026-10-16)"),
   dict(covers=[RS+"safeAsk", "Screens/SafeScreen.swift:pastedAsk"], why="raised by a live Safe pairing (SafePeer) or a pasted ask from it; there is no Safe on the simulator to ask"),
