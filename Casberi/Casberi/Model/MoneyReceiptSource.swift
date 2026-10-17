@@ -31,6 +31,8 @@ enum MoneyReceiptSource {
         guard thing.isLive,
               thing.kind == .transaction
                 || MoneyReceipt.isReading(source: thing.source, ref: thing.sourceRef)
+                // A Rocket Money bill lands as a note too (prd §1341 amended).
+                || MoneyReceipt.isBill(source: thing.source)
                 // A price rise lands as a note (prd §1357).
                 || (thing.source == "Apple Wallet" && thing.tags.contains("Price rise"))
         else { return nil }
@@ -56,6 +58,7 @@ enum MoneyReceiptSource {
         f.priceCurrency = thing.priceCurrency
         f.tags = thing.tags
         f.authorHandle = thing.authorHandle
+        f.dueAt = thing.dueAt
         f.myLabel = walletLabel(thing.walletAddress)
         // An address with no name goes by its short form (prd §1350), never
         // the lead's "Sent to" standing in for a name.

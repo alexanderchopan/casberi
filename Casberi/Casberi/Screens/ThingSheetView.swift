@@ -586,7 +586,9 @@ struct ThingSheetView: View {
                                     card: moneyCard,
                                     swap: moneySwap,
                                     source: thing.source, cells: moneyCells(moneyReceipt),
-                                    unnamed: moneyUnnamed, onSubject: openAddressCard)
+                                    unnamed: moneyUnnamed,
+                                    hidesDay: MoneyReceipt.isBill(source: thing.source),
+                                    onSubject: openAddressCard)
                         // Read once per open (§628), the spec row's own read.
                         .task(id: "firstSeen:\(thing.counterpartyAddress ?? "")") {
                             readFirstSeen()
@@ -641,7 +643,7 @@ struct ThingSheetView: View {
                                             onAll: { openAddressCard(cp) })
                                 .padding(.top, DS.Space.s6)
                                 .settleIn(delay: 0.12)
-                        } else if moneyCard != nil, moneyMonth.count > 1 {
+                        } else if moneyCard != nil, !moneyMonth.isEmpty {
                             // This month at the shop (prd §1182): each visit as its
                             // day and what it cost, the total in the header.
                             MoneyHistoryRows(title: String(localized: "This month"),
@@ -655,8 +657,9 @@ struct ThingSheetView: View {
                             // **EVERY CHARGE, FOR WHAT RECURS (prd §1354).** A
                             // monthly plan has one charge a month, so "This month"
                             // never drew: the earlier charges and what they come to.
+                            // The EARLIER charges: this one is the box above.
                             MoneyHistoryRows(title: String(localized: "Every charge"),
-                                             rows: ([thing] + moneyHistory).keyed,
+                                             rows: moneyHistory.keyed,
                                              trailing: moneyEveryTotal,
                                              amount: Self.spendAmount,
                                              onOpen: { walkingToScope = .none; walkingToNote = KeyedThing($0) })
@@ -3096,8 +3099,8 @@ struct ThingSheetView: View {
         let token = "\(parts.number) \(parts.unit ?? "")"
         let sell = thing.sourceRef?.hasPrefix("peer:sell:") == true
         return sell
-            ? MoneyReceiptBox.Swap(outAmount: token, inAmount: rail, usd: thing.transferUSD, inApp: true, headline: token)
-            : MoneyReceiptBox.Swap(outAmount: rail, inAmount: token, usd: thing.transferUSD, outApp: true, headline: token)
+            ? MoneyReceiptBox.Swap(outAmount: token, inAmount: rail, usd: thing.transferUSD, inApp: true)
+            : MoneyReceiptBox.Swap(outAmount: rail, inAmount: token, usd: thing.transferUSD, outApp: true)
     }
 
     private var moneyCard: MoneyReceiptBox.Card? {
@@ -3105,7 +3108,10 @@ struct ThingSheetView: View {
         // onchain cards (ether.fi, MetaMask Card, Plasma One) name no account,
         // so the card goes by its app's name, never the plain receipt.
         let cardSources: Set<String> = ["Apple Wallet", "MetaMask Card", "ether.fi", "Privacy", "Plasma One"]
-        guard cardSources.contains(thing.source), moneyReceipt?.mine == nil else { return nil }
+        // A price rise is news about a plan, not a charge on a card (prd
+        // §1357.4): no card, no month of visits.
+        guard cardSources.contains(thing.source), moneyReceipt?.mine == nil,
+              !thing.tags.contains("Price rise") else { return nil }
         let account = (thing.authorHandle?.isEmpty == false ? thing.authorHandle : nil)
             ?? BridgeCatalog.seatName(forSource: thing.source)
         let parts = account.components(separatedBy: ", ending ")
@@ -3133,6 +3139,9 @@ struct ThingSheetView: View {
         // An approval's other side is a contract that can spend, not a person
         // you paid (prd §1357): no transfer header, no year, no Follow.
         thing.source == "Wallet" && MovedStage(thing) == nil
+            // A swap's other side is a router, never a person (prd §1351):
+            // no "This year with", no Save, no Follow.
+            && SwapStage(thing) == nil
             && thing.sourceRef?.hasPrefix("wallet:approval:") != true
             && !(thing.counterpartyAddress ?? "").isEmpty
             && !WalletIngest.isWorldGrantHolder(thing.counterpartyAddress)
@@ -3177,9 +3186,22 @@ struct ThingSheetView: View {
             }
             return out
         }
-        out.append(MoneyReceiptCell(value: r.stamp?.word ?? (r.finality == .open ? String(localized: "Waiting")
-                                                                                 : String(localized: "Settled")),
-                                    label: String(localized: "Status"), wants: r.finality == .open))
+        // A bill states its day, Due or Charged, where a move states its
+        // status (prd §1341 amended).
+        if MoneyReceipt.isBill(source: thing.source) {
+            if let due = thing.dueAt, due > .now {
+                out.append(MoneyReceiptCell(value: FeedScreen.dayWord(due), label: String(localized: "Due")))
+            } else {
+                out.append(MoneyReceiptCell(value: FeedScreen.dayWord(thing.capturedAt), label: String(localized: "Charged")))
+            }
+            return out
+        }
+        // NEVER A DEFAULT "SETTLED" (prd §83): the receipt's own stamp, else
+        // "Waiting" while it is open, else no status cell at all.
+        if let status = r.stamp?.word ?? (r.finality == .open ? String(localized: "Waiting") : nil) {
+            out.append(MoneyReceiptCell(value: status, label: String(localized: "Status"),
+                                        wants: r.finality == .open))
+        }
         if let network = WalletIngest.chainName(forContent: thing.content), !network.isEmpty {
             out.append(MoneyReceiptCell(value: network, label: String(localized: "Network")))
         }
@@ -3189,7 +3211,7 @@ struct ThingSheetView: View {
                                         label: moneyHasPerson ? String(localized: "With \(moneyPartyName(r))")
                                                               : String(localized: "Visit")))
             if !moneyHasPerson, let last = moneyHistory.first?.capturedAt {
-                out.append(MoneyReceiptCell(value: last.formatted(.dateTime.month(.abbreviated).day()),
+                out.append(MoneyReceiptCell(value: FeedScreen.dayWord(last),
                                             label: String(localized: "Last visit")))
             }
         }
@@ -3221,8 +3243,9 @@ struct ThingSheetView: View {
         // Only what looks like a subscription (prd §1352): the same price at
         // least 25 days apart, the Wallet's own test (`Subscriptions.believes`)
         // — three grocery runs at three prices are not a plan to track.
-        guard thing.source != "Wallet", moneyRecurs, bridges != nil,
-              let receipt = moneyReceipt else { return nil }
+        // A bill recurs by what it is (prd §1341 amended): Track it.
+        guard thing.source != "Wallet", moneyRecurs || MoneyReceipt.isBill(source: thing.source),
+              bridges != nil, let receipt = moneyReceipt else { return nil }
         let name = moneyPartyName(receipt)
         return VerbDial.Keep(label: String(localized: "Track"), glyph: SubscriptionWords.planGlyph) {
             faceTarget = .track(name)
@@ -3232,7 +3255,9 @@ struct ThingSheetView: View {
     /// The last three with this party, and how many in all: a Wallet transfer
     /// by its counterparty, a card spend by its merchant in the same source.
     private func readMoneyHistory() {
-        guard thing.isLive else { return }
+        // A price rise lists no charges (prd §1357.4): its box says what it
+        // costs now and what it was.
+        guard thing.isLive, !thing.tags.contains("Price rise") else { return }
         let id = thing.id
         var others: [Thing] = []
         if let cp = thing.counterpartyAddress?.lowercased(), !cp.isEmpty, thing.source == "Wallet" {
@@ -3248,7 +3273,12 @@ struct ThingSheetView: View {
             let d = FetchDescriptor<Thing>(
                 predicate: #Predicate { $0.source == source && $0.transferCounterparty == merchant },
                 sortBy: [SortDescriptor(\Thing.capturedAt, order: .reverse)])
-            others = ((try? modelContext.fetch(d)) ?? []).filter { $0.isLive && $0.id != id }
+            // CHARGES ONLY (prd §1357.4): the shop's price-rise and gone-quiet
+            // notes carry its name and a price too, and listed beside the
+            // charge they restate it ("$12 Oct 6" twice).
+            others = ((try? modelContext.fetch(d)) ?? []).filter {
+                $0.isLive && $0.id != id && $0.kind == .transaction
+            }
         } else {
             let source = thing.source, title = thing.title
             let d = FetchDescriptor<Thing>(
@@ -3282,11 +3312,13 @@ struct ThingSheetView: View {
         // A card spend's month (prd §1182): this visit and the others in the
         // same calendar month, newest first, four at most, and their total.
         if thing.source != "Wallet" {
-            let month = ([thing] + others).filter {
+            // The OTHER visits this month: this charge is the box above, so
+            // the list never opens on it again; the total counts it.
+            let month = others.filter {
                 $0.isLive && cal.isDate($0.capturedAt, equalTo: thing.capturedAt, toGranularity: .month)
             }.sorted { $0.capturedAt > $1.capturedAt }
             moneyMonth = Array(month.prefix(4))
-            let sum = month.compactMap(\.priceValue).map(abs).reduce(0, +)
+            let sum = ([thing] + month).compactMap(\.priceValue).map(abs).reduce(0, +)
             moneyMonthTotal = sum > 0 ? sum.formatted(.currency(code: thing.priceCurrency ?? "USD")) : nil
         }
     }

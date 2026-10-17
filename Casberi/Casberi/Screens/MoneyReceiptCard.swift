@@ -347,7 +347,8 @@ struct ReceiptLadder: View {
 
     private var steps: [(MoneyCommentary.Rung, String, String?)] {
         [(.deposited, String(localized: "You deposited"),
-          since.formatted(.dateTime.weekday(.wide).hour().minute())),
+          // The one day word (prd §1359).
+          FeedScreen.dayWord(since)),
          (rung == .needsProof ? .needsProof : .screening,
           rung == .needsProof ? String(localized: "Proof asked for")
                               : String(localized: "Being screened"),
@@ -468,9 +469,6 @@ struct MoneyReceiptBox: View {
         /// mark is the app's, its caption the app's name.
         var outApp = false
         var inApp = false
-        /// The line drawn large: what came in, or the token side of a trade
-        /// with an app.
-        var headline: String? = nil
     }
     struct Transfer: Equatable {
         let mineAddress: String
@@ -486,6 +484,8 @@ struct MoneyReceiptBox: View {
     let source: String
     let cells: [MoneyReceiptCell]
     var unnamed = false
+    /// A bill's day is a fact cell ("Due", "Charged"), not the eyebrow's.
+    var hidesDay = false
     var onSubject: ((String) -> Void)?
 
     var body: some View {
@@ -534,7 +534,9 @@ struct MoneyReceiptBox: View {
                 steps
             } else {
                 HStack(spacing: DS.Space.s2) {
-                    DSStamp(word: statusWord, weight: statusWeight)
+                    if let statusWord {
+                        DSStamp(word: statusWord, weight: statusWeight)
+                    }
                     if let network = t.network, !network.isEmpty {
                         DSStamp(word: network, weight: .quiet)
                     }
@@ -563,17 +565,13 @@ struct MoneyReceiptBox: View {
                 .accessibilityHidden(true)
                 leg(s.inApp ? s.inAmount : (into.unit ?? ""), amount: s.inAmount, app: s.inApp)
             }
-            Text(verbatim: s.headline ?? s.inAmount)
-                .dsText(.heading34)
-                .monospacedDigit()
-                .foregroundStyle(DS.textPrimary)
-                .lineLimit(1).minimumScaleFactor(0.6)
-                .padding(.top, DS.Space.s3)
+            // THE AMOUNT DRAWN ONCE (prd §1351 amended): each leg carries its
+            // own figure under its mark, so no headline restates one of them.
             Text(verbatim: swapWorthLine(s))
                 .dsText(.body17)
                 .foregroundStyle(DS.textSecondary)
                 .lineLimit(1).minimumScaleFactor(0.8)
-                .padding(.top, 2)
+                .padding(.top, DS.Space.s3)
             Spacer(minLength: DS.Space.s2)
             // The rate and the wallet that traded (prd §1351), as facts.
             HStack(alignment: .top, spacing: DS.Space.s4) {
@@ -591,7 +589,9 @@ struct MoneyReceiptBox: View {
                 }
             }
             .padding(.bottom, DS.Space.s2)
-            DSStamp(word: statusWord, weight: statusWeight)
+            if let statusWord {
+                DSStamp(word: statusWord, weight: statusWeight)
+            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .accessibilityElement(children: .ignore)
@@ -605,12 +605,15 @@ struct MoneyReceiptBox: View {
             } else {
                 AssetMark(name: symbol, size: DS.Face.shelf)
             }
+            // An app's leg is its name; a token's leg is its figure, the
+            // statement of the trade (prd §1351 amended).
             Text(verbatim: amount)
-                .dsText(.label12)
-                .foregroundStyle(DS.textSecondary)
-                .lineLimit(1)
+                .dsText(app ? .label12 : .heading20)
+                .monospacedDigit()
+                .foregroundStyle(app ? DS.textSecondary : DS.textPrimary)
+                .lineLimit(1).minimumScaleFactor(0.6)
         }
-        .frame(width: 96)
+        .frame(width: 128)
     }
 
     private func swapWorthLine(_ s: Swap) -> String {
@@ -644,7 +647,9 @@ struct MoneyReceiptBox: View {
                     .lineLimit(2).minimumScaleFactor(0.8)
                     .padding(.top, 2)
                 Spacer(minLength: DS.Space.s2)
-                DSStamp(word: statusWord, weight: statusWeight)
+                if let statusWord {
+                    DSStamp(word: statusWord, weight: statusWeight)
+                }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         }
@@ -661,9 +666,12 @@ struct MoneyReceiptBox: View {
             // on nothing.
             .fill(c.light ? Color(white: 0.91) : DS.fillStrong)
             .frame(width: 112, height: 176)
-            .overlay(alignment: .topLeading) {
-                BridgeIcon(name: c.source, size: DS.Mark.row)
-                    .padding(DS.Space.s3)
+            .overlay(alignment: c.last4 == nil ? .center : .topLeading) {
+                // A card with no number to show (the onchain cards) is its
+                // issuer's mark, drawn as the card's face rather than a
+                // corner badge on an empty slab (prd §1353 amended).
+                BridgeIcon(name: c.source, size: c.last4 == nil ? DS.Face.shelf : DS.Mark.row)
+                    .padding(c.last4 == nil ? 0 : DS.Space.s3)
             }
             .overlay(alignment: .bottomLeading) {
                 if let last4 = c.last4 {
@@ -690,7 +698,8 @@ struct MoneyReceiptBox: View {
 
     /// Sent → Confirming → Settled, the middle lit while the record is open.
     private var steps: some View {
-        let words = [String(localized: "Sent"), statusWord, String(localized: "Settled")]
+        let words = [String(localized: "Sent"), statusWord ?? String(localized: "Waiting"),
+                     String(localized: "Settled")]
         return VStack(spacing: DS.Space.s1) {
             HStack(spacing: 0) {
                 Circle().fill(DS.textPrimary).frame(width: 10, height: 10)
@@ -755,8 +764,10 @@ struct MoneyReceiptBox: View {
         return "\(usd.formatted(.currency(code: "USD"))) · \(day)"
     }
 
-    private var statusWord: String {
-        receipt.stamp?.word ?? (receipt.finality == .open ? String(localized: "Waiting") : String(localized: "Settled"))
+    /// NEVER A DEFAULT "SETTLED" (prd §83): the receipt's own stamp, else
+    /// "Waiting" for a record still open, else no status at all.
+    private var statusWord: String? {
+        receipt.stamp?.word ?? (receipt.finality == .open ? String(localized: "Waiting") : nil)
     }
 
     private var statusWeight: DSStamp.Weight {
@@ -766,7 +777,7 @@ struct MoneyReceiptBox: View {
     private func spoken(_ t: Transfer) -> String {
         let who = t.sent ? String(localized: "You sent \(t.theirName) \(unsignedStatement)")
                          : String(localized: "\(t.theirName) sent you \(unsignedStatement)")
-        return [who, t.network, statusWord, landed.formatted(.dateTime.weekday(.wide))]
+        return [who, t.network, statusWord, FeedScreen.dayWord(landed)]
             .compactMap { $0 }.joined(separator: ". ")
     }
 
@@ -774,12 +785,16 @@ struct MoneyReceiptBox: View {
         VStack(alignment: .leading, spacing: 0) {
             eyebrow
             VStack(alignment: .leading, spacing: 0) {
-                Text(verbatim: statement)
-                    .dsText(.heading34)
-                    .monospacedDigit()
-                    .contentTransition(roll)
-                    .foregroundStyle(DS.textPrimary)
-                    .lineLimit(1).minimumScaleFactor(0.6)
+                // Nothing to state but the title: no statement, never the
+                // title or the lead again (prd §1360).
+                if !statement.isEmpty {
+                    Text(verbatim: statement)
+                        .dsText(.heading34)
+                        .monospacedDigit()
+                        .contentTransition(roll)
+                        .foregroundStyle(DS.textPrimary)
+                        .lineLimit(1).minimumScaleFactor(0.6)
+                }
                 if let secondary = receipt.secondary {
                     Text(verbatim: secondary)
                         .dsText(.body17)
@@ -823,10 +838,13 @@ struct MoneyReceiptBox: View {
                 .foregroundStyle(unnamed ? DS.tint : DS.textSecondary)
                 .lineLimit(1)
             Spacer(minLength: DS.Space.s2)
-            Text(FeedScreen.dayWord(landed))
-                .dsText(.label12)
-                .foregroundStyle(DS.headInk)
-                .lineLimit(1)
+            // A bill names its day in its own cell (Charged, Due).
+            if !hidesDay {
+                Text(FeedScreen.dayWord(landed))
+                    .dsText(.label12)
+                    .foregroundStyle(DS.headInk)
+                    .lineLimit(1)
+            }
         }
         if let address = openable, let onSubject {
             Button { onSubject(address) } label: { row.contentShape(Rectangle()) }
@@ -860,7 +878,10 @@ struct MoneyReceiptBox: View {
             // An approval with no stated allowance is its token alone (prd §1360).
             return [number.isEmpty ? nil : number, amount.unit].compactMap { $0 }.joined(separator: " ")
         }
-        return receipt.titleFallback ?? receipt.lead
+        // Never the lead or the title the row above already says.
+        guard let fallback = receipt.titleFallback,
+              fallback != Self.title(receipt) else { return "" }
+        return fallback
     }
 }
 

@@ -44,7 +44,8 @@ struct MoneyHistoryRows: View {
                                     // Boards of Canada" a row never says the artist again.
                                     Text(verbatim: TitleSeam.split(thing.title).name)
                                         .dsText(.body17).foregroundStyle(DS.textPrimary).lineLimit(1)
-                                    Text(verbatim: thing.capturedAt.formatted(.dateTime.month(.abbreviated).day()))
+                                    // The one day word (prd §1359).
+                                    Text(verbatim: FeedScreen.dayWord(thing.capturedAt))
                                         .dsText(.subhead12).foregroundStyle(DS.textTertiary).lineLimit(1)
                                 }
                                 Spacer(minLength: DS.Space.s2)

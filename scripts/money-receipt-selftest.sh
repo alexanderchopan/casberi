@@ -38,13 +38,16 @@ cd "$(dirname "$0")/.."
 
 RECEIPT="Casberi/Casberi/Model/MoneyReceipt.swift"
 SAYS="Casberi/Casberi/Model/MoneyCommentary.swift"
+# The one title seam (prd §915), Foundation-only: a price rise's title is
+# its name half (prd §1357.4), read through `TitleSeam.split`, never by hand.
+SEAM="Casberi/Casberi/Model/TitleSeam.swift"
 SOURCE="Casberi/Casberi/Model/MoneyReceiptSource.swift"
 CARD="Casberi/Casberi/Screens/MoneyReceiptCard.swift"
 SHEET="Casberi/Casberi/Screens/ThingSheetView.swift"
 STAGE="Casberi/Casberi/Screens/ThingStage.swift"
 TOKENS="Casberi/Casberi/Design/DesignTokens.swift"
 PROBES="Casberi/Casberi/Shell/ProbeHooks.swift"
-for f in "$RECEIPT" "$SAYS" "$SOURCE" "$CARD" "$SHEET" "$STAGE" "$TOKENS" "$PROBES"; do
+for f in "$RECEIPT" "$SAYS" "$SEAM" "$SOURCE" "$CARD" "$SHEET" "$STAGE" "$TOKENS" "$PROBES"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -465,7 +468,34 @@ do {
     var bare = transfer("received"); bare.direction = nil; bare.amount = nil
     let generic = MoneyReceipt.compose(bare)
     check(generic?.amount == nil, "with no stamped figure there is no headline number")
-    check(generic?.titleFallback != nil, "it leads with its title instead")
+    // Titled by its own sentence (prd §1357.1), never "In your wallet" or the
+    // wallet's name, and the box does not say the sentence again (§1360).
+    check(generic?.party == "Received 0.9962 ETH from maria.eth", "it is titled by its own sentence")
+    check(generic?.titleFallback == nil, "and the box does not restate it")
+
+    // SETTLED ONLY WHEN IT SETTLED (prd §83): a trade with no direction and
+    // no figure states no status; one with a stamped direction does.
+    var trade = MoneyReceipt.Facts(source: "Wallet", title: "Bought SOL")
+    trade.capturedAt = realAt(1)
+    check(MoneyReceipt.compose(trade)?.stamp == nil, "a figureless trade is never stamped settled")
+    check(MoneyReceipt.compose(trade)?.party == "Bought SOL", "and is titled by its sentence")
+    trade.direction = "received"
+    check(MoneyReceipt.compose(trade)?.stamp == .settled, "a past move with a direction is settled")
+    trade.capturedAt = Date().addingTimeInterval(86_400 * 3)
+    check(MoneyReceipt.compose(trade)?.stamp == nil, "a row dated ahead is never settled")
+
+    // Deadlines are moments, not receipts (prd §83).
+    for ref in ["hyperliquid:unlock:0xme:0xv", "wallet:ensexpiry:quillmark.eth",
+                "aerodrome:vote:0xme:4821", "demo:aerodrome:vote:0xme:1"] {
+        var ahead = MoneyReceipt.Facts(source: "Wallet", title: "Staked HYPE unlocks")
+        ahead.sourceRef = ref
+        ahead.capturedAt = realAt(4)
+        check(MoneyReceipt.compose(ahead) == nil, "\(ref) is not a receipt")
+    }
+    var due = MoneyReceipt.Facts(source: "Wallet", title: "Bitcoin halving")
+    due.capturedAt = realAt(4)
+    due.dueAt = Date().addingTimeInterval(86_400 * 30)
+    check(MoneyReceipt.compose(due) == nil, "a wallet row with a due date ahead is not a receipt")
 }
 
 // MARK: Bitcoin
@@ -571,7 +601,8 @@ do {
     // each say where screening stands, so the sentence carries only the date.
     check(screening.sentence.hasPrefix("In since") && !screening.sentence.contains("withdraw"),
           "the sentence gives the date and leaves the state to the stamp")
-    check(screening.subject == .asset("ETH"), "the pool's asset is the subject")
+    check(screening.subject == .named("Privacy Pools") && screening.mine == nil,
+          "the pool's own mark is the subject, with no person badge")
     check(screening.hue == .shield, "and it pours the shield hue")
 
     f.tags = ["Shielded", "Approved"]
@@ -599,10 +630,12 @@ do {
     }
     // The privacy IS the feature. A monogram would read as a face we failed to
     // load, which turns a guarantee into a bug report.
-    check(unshield.subject == .absent(.senderPrivate),
-          "an unshield's sender is a designed absence")
+    // Railgun's own mark, no person badge (prd §1341 amended): the void drew
+    // as an empty disc; the sender's privacy is the line's words.
+    check(unshield.subject == .named("Railgun"), "an unshield wears Railgun's mark")
+    check(unshield.mine == nil, "and no person badge")
     check(unshield.finality == .torn, "the arrival is final — privacy is not incompleteness")
-    check(unshield.stamp == .shielded, "and it is stamped shielded")
+    check(unshield.stamp == .unshielded, "and it is stamped UNshielded, never shielded (prd §83)")
     check(unshield.secondary?.contains("nothing about where it came from") == true,
           "the second line states the ceiling")
 
@@ -611,6 +644,7 @@ do {
     if case .absent = shield?.subject {
         check(false, "a SHIELD has a known sender — it must not draw the void")
     }
+    check(shield?.stamp == .shielded, "a shield is stamped shielded")
 }
 
 // MARK: Wise (prd §1332)
@@ -634,7 +668,16 @@ do {
     f.title = "Sent · £200.00 → €235.00"
     let sent = MoneyReceipt.compose(f)
     check(sent?.stamp == .settled && sent?.finality == .torn, "a sent transfer tears, settled")
-    check(sent?.party == nil, "no reference names nothing")
+    // With no reference, the title is what happened to the money (§1357.1),
+    // never the state word alone.
+    check(sent?.party?.hasPrefix("Sent ") == true && sent?.party?.contains("200") == true,
+          "no reference: titled by what was sent")
+    f.title = "Returned · £300 → €351"
+    f.priceValue = 300
+    f.tags = ["Transfer", "Returned"]
+    let back = MoneyReceipt.compose(f)
+    check(back?.party?.hasSuffix("came back") == true && back?.party?.contains("300") == true,
+          "a returned transfer is titled by the money that came back, never 'Came back'")
 }
 
 // MARK: Safe
@@ -659,11 +702,64 @@ do {
           "one short is said as one short")
     check(waiting.amount == nil, "a multisig payload's value is never parsed out of prose")
 
-    f.signaturesHave = 3
-    let executed = MoneyReceipt.compose(f)
-    check(executed?.finality == .torn, "an executed transaction tears")
     f.signaturesHave = 1
-    check(MoneyReceipt.compose(f)?.secondary == nil, "two short is not 'one more'")
+    check(MoneyReceipt.compose(f)?.secondary?.contains("one more") == false, "two short is not 'one more'")
+    // FULLY SIGNED IS NOT EXECUTED (prd §83): a queue row is waiting until the
+    // bridge lands its outcome.
+    f.signaturesHave = 3
+    f.tags = []
+    let signed = MoneyReceipt.compose(f)
+    check(signed?.stamp == .waiting && signed?.finality == .open, "a fully signed proposal still waits")
+    // The demo, and any open before the live check answers: no counts read,
+    // so the title's own count says who it waits on — never "Settled".
+    var queued = MoneyReceipt.Facts(source: "Safe",
+        title: "1 of 3 signatures collected on an approval for Uniswap to spend 0 USDC — waiting on others")
+    queued.capturedAt = realAt(6)
+    queued.sourceRef = "wallet:safe:eth:demo3"
+    let q = MoneyReceipt.compose(queued)
+    check(q?.stamp == .waiting, "an unsigned proposal is Waiting, never Settled")
+    check(q?.finality == .open, "and never final")
+    check(q?.secondary?.contains("2 more") == true, "it says who it waits on, off the title's count")
+    check(q?.party == "Approve Uniswap", "named by what it does")
+    var done = MoneyReceipt.Facts(source: "Safe",
+        title: "Executed after 2 days — a transfer of 900 USDC to vendor.eth went through")
+    done.capturedAt = realAt(1)
+    done.sourceRef = "wallet:safeoutcome:eth:0xabc"
+    let d = MoneyReceipt.compose(done)
+    check(d?.stamp == .settled && d?.finality == .torn, "only an executed outcome is settled")
+    check(d?.party == "Send 900 USDC" && d?.titleFallback == "to vendor.eth", "an outcome is named by its act")
+    done.title = "Replaced — a transfer of 900 USDC to vendor.eth never executed; a rival transaction went through at the same nonce instead"
+    check(MoneyReceipt.compose(done)?.stamp == .replaced, "a replaced proposal says so, never Settled")
+}
+
+// MARK: price rise (prd §1357.4)
+
+do {
+    var f = MoneyReceipt.Facts(source: "Apple Wallet", title: "Notion went up 20% — $10.00 to $12.00")
+    f.capturedAt = realAt(10)
+    f.sourceRef = "demo:applewallet:creep:notion:1000:1200:20367"
+    f.counterparty = "Notion"
+    f.priceValue = 12
+    f.priceCurrency = "USD"
+    f.tags = ["Price rise"]
+    let r = MoneyReceipt.compose(f)
+    check(r?.party == "Notion went up 20%", "a price rise is titled by its own words, the prices left to the box")
+    check(r?.amount?.number.contains("12.00") == true, "the box says what it costs now")
+    check(r?.secondary?.contains("10.00") == true && r?.secondary?.hasPrefix("was") == true,
+          "and what it was, off the ref")
+    check(r?.stamp == nil, "a price rise is never stamped settled")
+    check(MoneyReceipt.creepWas(ref: "applewallet:creep:x:1549:1799:20000") == 15.49, "the was figure is the ref's")
+}
+
+// MARK: a card charge is read to the cent
+
+do {
+    var f = MoneyReceipt.Facts(source: "Plasma One", title: "Spent $305.80")
+    f.capturedAt = realAt(2)
+    f.priceValue = 305.80
+    f.priceCurrency = "USD"
+    check(MoneyReceipt.compose(f)?.amount?.number.contains("305.80") == true,
+          "a $305.80 day is drawn to the cent, never \"$306\"")
 }
 
 // MARK: sources
@@ -986,12 +1082,16 @@ do {
     check(words?.amount?.number == "$191.40" && words?.amount?.numeric == nil,
           "with no stamped figure the title's money words stand, never parsed into a number")
 
+    // A Rocket Money plan is a BILL (prd §1341 amended): a record, so it
+    // keeps its tiles (Track), its figure, and no status.
     var rm = MoneyReceipt.Facts(source: "Rocket Money", title: "Netflix — $22.99")
     rm.priceValue = 22.99
     rm.priceCurrency = "USD"
     let r = MoneyReceipt.compose(rm)
-    check(r?.form == .reading && r?.party == "Netflix", "a Rocket Money plan is a reading")
-    check(r?.lead.contains("Rocket Money") == true, "its lead names the app")
+    check(r?.form == .record && r?.party == "Netflix", "a Rocket Money plan is a bill, a record")
+    check(r?.amount?.number.contains("22.99") == true, "it states what it charges")
+    check(r?.stamp == nil, "and stamps nothing: a plan does not settle")
+    check(!MoneyReceipt.isReading(source: "Rocket Money", ref: "rocketmoney:1"), "a bill is not a reading")
 
     var acct = MoneyReceipt.Facts(source: "Splits", title: "Treasury", content: "Account")
     acct.sourceRef = "splits:account:0xabc"
@@ -1024,7 +1124,7 @@ echo "money-receipt-selftest: compiling MoneyReceipt + MoneyCommentary WHOLE and
 # so this file was proven equivalent run-for-run by
 # `scripts/support/harness-opt-probe.sh` before the swap (2026-09-05, 5.7x faster).
 # Re-probe before trusting it again after adding mutations.
-swiftc -Onone -o "$TMP/run" "$RECEIPT" "$SAYS" "$TMP/main.swift" \
+swiftc -Onone -o "$TMP/run" "$RECEIPT" "$SAYS" "$SEAM" "$TMP/main.swift" \
   || { echo "✗ the shipped receipt logic does not compile Foundation-only — something reached Thing/SwiftUI"; exit 1; }
 "$TMP/run" || exit 1
 
@@ -1056,7 +1156,7 @@ PY
   if [[ $? -ne 0 ]] || ! grep -qF -- "$to" "$target"; then
     echo "  ✗ $name — the mutation did not apply (the shipped source moved)"; exit 1
   fi
-  if ! swiftc -Onone -o "$TMP/mut" "$a" "$b" "$TMP/main.swift" 2>/dev/null; then
+  if ! swiftc -Onone -o "$TMP/mut" "$a" "$b" "$SEAM" "$TMP/main.swift" 2>/dev/null; then
     echo "  ✓ $name (rejected at compile)"; return
   fi
   if "$TMP/mut" > /dev/null 2>&1; then
@@ -1095,10 +1195,27 @@ mutate "a screening deposit reads as final" receipt \
   'finality: .torn,
             hue: .shield)'
 
-# The privacy guarantee downgraded to "we couldn't read it".
-mutate "an unshield draws a monogram instead of the void" receipt \
-  'subject: unshield ? .absent(.senderPrivate)' \
-  'subject: unshield ? .named("Railgun")'
+# An unshield stamped "Shielded" — the opposite of what happened (prd §83).
+mutate "an unshield is stamped shielded" receipt \
+  'stamp: unshield ? .unshielded : .shielded,' \
+  'stamp: .shielded,'
+
+# A Safe proposal stamped settled before anything moved (prd §83).
+mutate "a waiting Safe proposal is stamped settled" receipt \
+  ': yourTurn ? .yourTurn : .waiting,' \
+  ': yourTurn ? .yourTurn : .settled,'
+
+# A figureless wallet row defaulting to settled (prd §83).
+mutate "a figureless trade is stamped settled" receipt \
+  'stamp: risk ? .openPosition
+                : (!approval' \
+  'stamp: risk ? .openPosition
+                : true ? .settled : (!approval'
+
+# A deadline drawn as a receipt.
+mutate "a deadline ref composes a receipt" receipt \
+  'guard sources.contains(f.source), !isAhead(ref: f.sourceRef) else { return nil }' \
+  'guard sources.contains(f.source) else { return nil }'
 
 # A phishing domain promoted into the currency slot.
 mutate "the unit rule stops checking for letters" receipt \

@@ -89,6 +89,12 @@ struct MoneyReceipt: Equatable {
     enum Stamp: Equatable {
         case settled, pending, settling, filled, yourTurn, shielded, screening
         case needsProof, refund, openPosition, cleared
+        /// A Safe proposal not yet executed (prd §83: never "Settled").
+        case waiting
+        /// Railgun money leaving the pool: the opposite of shielded.
+        case unshielded
+        /// A Safe proposal a rival transaction took the nonce from.
+        case replaced
 
         var word: String {
             switch self {
@@ -105,6 +111,9 @@ struct MoneyReceipt: Equatable {
             case .refund:       return String(localized: "Refund")
             case .openPosition: return String(localized: "Open position")
             case .cleared:      return String(localized: "Clear to withdraw")
+            case .waiting:      return String(localized: "Waiting")
+            case .unshielded:   return String(localized: "Unshielded")
+            case .replaced:     return String(localized: "Replaced")
             }
         }
 
@@ -118,7 +127,9 @@ struct MoneyReceipt: Equatable {
             case .pending, .settling, .screening:        return .waiting
             case .yourTurn, .needsProof, .openPosition:  return .urgent
             case .refund:                                return .quiet
-            case .shielded:                              return .private_
+            case .replaced:                              return .quiet
+            case .waiting:                               return .waiting
+            case .shielded, .unshielded:                 return .private_
             }
         }
     }
@@ -197,8 +208,8 @@ struct MoneyReceipt: Equatable {
     var finality: Finality
     var hue: Hue
     /// A record of something that happened, or a READING of where things
-    /// stand (prd §1341): an Acorns account's balance, a Rocket Money plan's
-    /// price, a Splits account. A reading draws the box and nothing after it:
+    /// stand (prd §1341): an Acorns account's balance or a Splits account (a
+    /// Rocket Money plan is a bill, a record, since §1341's amendment). A reading draws the box and nothing after it:
     /// no tiles, no history, no lock screen. Last, so every record arm keeps
     /// its call as it was.
     var form: Form = .record
@@ -298,6 +309,8 @@ struct MoneyReceipt: Equatable {
         /// fetches once per open, so these ARE real counts.
         var signaturesHave: Int?
         var signaturesNeed: Int?
+        /// The day a deadline or a bill falls due, when the bridge stamped one.
+        var dueAt: Date?
     }
 
     /// Which sources get a receipt. Declared once, and deliberately a SET of
@@ -327,11 +340,26 @@ struct MoneyReceipt: Equatable {
 
     /// The rows a money app lands as a STATE — what it says you have or pay
     /// right now, updated in place — rather than as something that happened
-    /// (prd §1341): an Acorns account and its balance, a Rocket Money plan,
-    /// a Splits account. They open the receipt's calm form (`reading`).
+    /// (prd §1341): an Acorns account and its balance, a Splits account. They open the receipt's calm form (`reading`).
     static func isReading(source: String, ref: String?) -> Bool {
-        source == "Acorns" || source == "Rocket Money"
+        source == "Acorns"
             || (source == "Splits" && ref?.hasPrefix("splits:account:") == true)
+    }
+
+    /// A Rocket Money plan is a BILL, not a balance (prd §1341 amended): what
+    /// it charges and the day it was charged or falls due, with Track beside
+    /// it. It lands as a note, so the source half lets it through by name.
+    static func isBill(source: String) -> Bool { source == "Rocket Money" }
+
+    /// Rows that say what WILL happen — a staked-HYPE unlock, a name's expiry,
+    /// a vote closing (prd §83: a deadline is never "Settled"). They are
+    /// moments, not receipts, and fall to the moment head.
+    static let ahead = ["hyperliquid:unlock:", "wallet:ensexpiry:", "aerodrome:vote:"]
+    static func isAhead(ref: String?) -> Bool {
+        guard let ref else { return false }
+        // A demo row carries its bridge's ref after "demo:".
+        let bare = ref.hasPrefix("demo:") ? String(ref.dropFirst("demo:".count)) : ref
+        return ahead.contains { bare.hasPrefix($0) }
     }
 
     /// A state is never a transaction (prd §1341): an account (Acorns', a
@@ -353,8 +381,9 @@ struct MoneyReceipt: Equatable {
 
     /// The receipt, or nil when this thing isn't one we draw.
     static func compose(_ f: Facts) -> MoneyReceipt? {
-        guard sources.contains(f.source) else { return nil }
+        guard sources.contains(f.source), !isAhead(ref: f.sourceRef) else { return nil }
         if isReading(source: f.source, ref: f.sourceRef) { return reading(f) }
+        if isBill(source: f.source) { return bill(f) }
         switch f.source {
         case "Apple Wallet" where f.tags.contains("Price rise"): return priceRise(f)
         case "Apple Wallet":                 return card(f, hue: .neutral)
@@ -433,6 +462,7 @@ struct MoneyReceipt: Equatable {
                            tone: received ? .gain : .plain),
             secondary: worthLine(f.usd),
             sentence: transferSentence(f, received: received),
+            // A direction and a figure read off the chain: it moved.
             stamp: .settled,
             finality: .torn,
             hue: .wallet)
@@ -447,8 +477,10 @@ struct MoneyReceipt: Equatable {
             mine: f.walletAddress,
             lead: received ? String(localized: "Received into")
                            : String(localized: "Sent from"),
-            party: f.myLabel,
-            titleFallback: parts.number.isEmpty ? f.title : nil,
+            // The row's own sentence ("Received 0.0250 BTC"), never the
+            // wallet's name as the title (prd §1357.1).
+            party: actionTitle(f.title),
+            titleFallback: nil,
             amount: parts.number.isEmpty ? nil
                 : Amount(number: (received ? "+" : "−") + parts.number,
                          unit: parts.unit, tone: received ? .gain : .plain),
@@ -573,13 +605,18 @@ struct MoneyReceipt: Equatable {
     /// up as the title (the row's own words), what it costs now, what it was.
     private static func priceRise(_ f: Facts) -> MoneyReceipt {
         let now = currency(f.priceValue, code: f.priceCurrency)
-        // `AppleWalletRoom.creepLine` writes "$10.00 to $12.00" as the line.
-        let was = f.content.components(separatedBy: " to ").first.flatMap { $0.hasPrefix("$") ? $0 : nil }
+        // What it cost before, off the REF the bridge keyed it by
+        // (`AppleWalletRoom.creepRef`: "…:<was>:<now>:<day>", both in minor
+        // units), never parsed back out of the localized title.
+        let was = creepWas(ref: f.sourceRef).flatMap { currency($0, code: f.priceCurrency) }
+        // The row's own words without the restated prices after the seam:
+        // "Notion went up 20%" (prd §1357.4); the box carries the figures.
+        let words = TitleSeam.split(f.title).name
         return MoneyReceipt(
             subject: f.counterparty.map { Subject.named($0) } ?? .named(f.source),
             mine: nil,
             lead: String(localized: "Price rise"),
-            party: f.title,
+            party: words,
             titleFallback: nil,
             amount: now.map { Amount(number: $0, unit: nil, tone: .warn) },
             secondary: was.map { String(localized: "was \($0)") },
@@ -587,6 +624,14 @@ struct MoneyReceipt: Equatable {
             stamp: nil,
             finality: .torn,
             hue: .neutral)
+    }
+
+    /// "applewallet:creep:notion:1000:1200:20367" → 10.0.
+    static func creepWas(ref: String?) -> Double? {
+        guard let ref, ref.contains("applewallet:creep:") else { return nil }
+        let parts = ref.split(separator: ":")
+        guard parts.count >= 3, let cents = Int(parts[parts.count - 3]) else { return nil }
+        return Double(cents) / 100
     }
 
     // MARK: Wise
@@ -609,6 +654,15 @@ struct MoneyReceipt: Equatable {
         let pending = !returned && f.tags.contains(String(localized: "Pending"))
         let priced = currency(f.priceValue, code: f.priceCurrency)
         let started = dayPhrase(f.capturedAt)
+        // With no reference of yours, the title is what happened to the money
+        // (prd §1357.1), never the state word alone ("Came back").
+        let money = priced ?? (parts.count > 1 ? parts[1] : nil)
+        let said: String? = money.map { m in
+            stuck ? String(localized: "\(m) waits on you")
+                : pending ? String(localized: "Sending \(m)")
+                : returned ? String(localized: "\(m) came back")
+                : String(localized: "Sent \(m)")
+        }
         return MoneyReceipt(
             subject: .named("Wise"),
             mine: nil,
@@ -616,7 +670,7 @@ struct MoneyReceipt: Equatable {
                 : pending ? String(localized: "Sending")
                 : returned ? String(localized: "Came back")
                 : String(localized: "Sent"),
-            party: reference,
+            party: reference ?? said,
             titleFallback: priced == nil ? f.title : nil,
             amount: priced.map {
                 Amount(number: (returned ? "+" : "−") + $0, unit: nil,
@@ -671,10 +725,10 @@ struct MoneyReceipt: Equatable {
     private static func privy(_ f: Facts) -> MoneyReceipt {
         let received = f.direction == "received"
         let parts = split(f.amount)
-        let app = f.authorHandle.flatMap { $0.isEmpty ? nil : $0 }
         return MoneyReceipt(
-            subject: subject(address: f.counterpartyAddress, name: f.partyLabel,
-                             fallbackAsset: parts.unit),
+            // The app's own mark (prd §1341 amended): money in an app's wallet
+            // wears the app, never a stranger's face or a person badge.
+            subject: .named(f.source),
             mine: nil,
             lead: received ? String(localized: "Received into") : String(localized: "Sent from"),
             party: actionTitle(f.title),
@@ -740,12 +794,12 @@ struct MoneyReceipt: Equatable {
     // MARK: Readings (prd §1341)
 
     /// WHERE THINGS STAND, NOT WHAT HAPPENED: an account's balance (Acorns),
-    /// a plan's price (Rocket Money), an account (Splits). The receipt's calm
+    /// an account (Splits). The receipt's calm
     /// form: the account's name, the figure the app read, and when. No sign,
     /// no stamp, no sentence about a move that never happened.
     ///
-    /// Acorns and Rocket Money title a row "<name> — <money>" themselves
-    /// (`AcornsIngest`, `RocketMoneyIngest`), so the name is the part before
+    /// Acorns titles a row "<name> — <money>" itself (`AcornsIngest`), so
+    /// the name is the part before
     /// the seam; the figure is the stamped price when there is one, else the
     /// bridge's own money words after the seam, never a number parsed back.
     private static func reading(_ f: Facts) -> MoneyReceipt {
@@ -766,7 +820,6 @@ struct MoneyReceipt: Equatable {
         let lead: String
         switch f.source {
         case "Acorns":       lead = String(localized: "Balance in Acorns")
-        case "Rocket Money": lead = String(localized: "Recurring charge in Rocket Money")
         default:             lead = String(localized: "Account in \(f.source)")
         }
         return MoneyReceipt(
@@ -790,6 +843,42 @@ struct MoneyReceipt: Equatable {
             form: .reading)
     }
 
+    // MARK: Bills (prd §1341 amended)
+
+    /// A Rocket Money plan as what it is: a bill. Its name (the part of
+    /// `RocketMoneyLive`'s "<name> — <money>" before the seam), what it
+    /// charges, and the day it was charged or falls due — a record with a
+    /// Track tile, never a balance reading. No stamp: a plan has no state to
+    /// settle.
+    private static func bill(_ f: Facts) -> MoneyReceipt {
+        var name = f.title
+        var words: String?
+        if let seam = f.title.range(of: " — ", options: .backwards) {
+            name = String(f.title[..<seam.lowerBound])
+            words = String(f.title[seam.upperBound...])
+        }
+        let priced = currency(f.priceValue, code: f.priceCurrency)
+        let due = f.dueAt.map { $0 > Date.now } == true
+        let figure = priced ?? words
+        return MoneyReceipt(
+            subject: .named(f.source),
+            mine: nil,
+            lead: String(localized: "Bill"),
+            party: name.isEmpty ? nil : name,
+            titleFallback: figure == nil ? f.title : nil,
+            amount: figure.map {
+                Amount(number: $0, unit: nil, tone: .plain,
+                       numeric: priced == nil ? nil : f.priceValue.map(abs))
+            },
+            secondary: nil,
+            sentence: due
+                ? String(localized: "Next charge \(dayPhrase(f.dueAt ?? f.capturedAt)).")
+                : String(localized: "Charged \(dayPhrase(f.capturedAt))."),
+            stamp: nil,
+            finality: .torn,
+            hue: .neutral)
+    }
+
     // MARK: Privacy Pools
 
     private static func pools(_ f: Facts) -> MoneyReceipt {
@@ -802,8 +891,10 @@ struct MoneyReceipt: Equatable {
         // receipt each already say where screening stands.
         let sentence = String(localized: "In since \(dayPhrase(f.capturedAt)).")
         return MoneyReceipt(
-            subject: .asset(parts.unit ?? "ETH"),
-            mine: f.walletAddress,
+            // The pool's own mark, no person badge (prd §1341 amended): the
+            // wallet it came from is the line under the figure.
+            subject: .named(f.source),
+            mine: nil,
             lead: String(localized: "Put into"),
             // Titled by what happened (prd §1357), never the app's name.
             party: actionTitle(f.title),
@@ -825,12 +916,11 @@ struct MoneyReceipt: Equatable {
         let unshield = f.direction == "received"
         let parts = split(f.amount)
         return MoneyReceipt(
-            // The one place a void is the RIGHT subject: an unshield's sender
-            // is absent by design, and a monogram would imply we merely
-            // couldn't read it.
-            subject: unshield ? .absent(.senderPrivate)
-                              : .asset(parts.unit ?? "ETH"),
-            mine: f.walletAddress,
+            // Railgun's own mark both ways (prd §1341 amended). The void drew
+            // as an empty black disc with a person badge — a face that failed
+            // to load; the sender's privacy is said in words, on the line.
+            subject: .named(f.source),
+            mine: nil,
             lead: unshield ? String(localized: "Unshielded into")
                            : String(localized: "Shielded from"),
             party: actionTitle(f.title),
@@ -843,7 +933,9 @@ struct MoneyReceipt: Equatable {
                 : worthLine(f.usd),
             sentence: placeSentence(unshield ? String(localized: "Arrived")
                                              : String(localized: "Shielded"), f),
-            stamp: .shielded,
+            // Out of the pool is UNshielded (prd §83): "Shielded" over an
+            // unshield said the opposite of what happened.
+            stamp: unshield ? .unshielded : .shielded,
             // The arrival genuinely is final. Privacy is not incompleteness.
             finality: .torn,
             hue: .railgun)
@@ -853,39 +945,64 @@ struct MoneyReceipt: Equatable {
 
     private static func safe(_ f: Facts) -> MoneyReceipt {
         let yourTurn = f.tags.contains("Your turn")
-        let have = f.signaturesHave ?? 0
-        let need = f.signaturesNeed ?? 0
-        let waiting = need > 0 && have < need
+        // **A PROPOSAL IS NEVER SETTLED (prd §83).** Only the closing row the
+        // bridge lands when a transaction leaves the queue
+        // (`wallet:safeoutcome:`) is an outcome; every queue row is waiting,
+        // whether or not the sheet's live check has answered.
+        let outcome = f.sourceRef?.contains("wallet:safeoutcome:") == true
+        let executed = outcome && f.title.hasPrefix("Executed")
+        let replaced = outcome && f.title.hasPrefix("Replaced")
+        let counts = f.signaturesNeed.map { (f.signaturesHave ?? 0, $0) } ?? safeCounts(f.title)
+        let have = counts?.0 ?? 0
+        let need = counts?.1 ?? 0
+        let short = need > 0 && have < need ? need - have : 0
         // NAMED BY WHAT IT DOES (prd §1334, user: "ok on B"): the action the
         // row's own sentence carries ("a transfer of 1,500 USDC to
         // payroll.eth") is the title ("Send 1,500 USDC") and its party the
         // box's line ("to payroll.eth"); the Safe's name is the eyebrow.
         let act = safeAct(safeDescription(f.title))
+        // WHO IT WAITS ON, said where the status is.
+        let waitsOn: String? = outcome ? nil
+            : yourTurn && short == 1 ? String(localized: "Waiting on one more signature, yours")
+            : yourTurn ? String(localized: "Waiting on your signature")
+            : short == 1 ? String(localized: "Waiting on one more signature")
+            : short > 1 ? String(localized: "Waiting on \(short) more signatures")
+            : f.title.hasPrefix("Fully signed") || (need > 0 && have >= need)
+                ? String(localized: "Signed, waiting to be executed")
+                : String(localized: "Waiting on its signers")
         return MoneyReceipt(
             // The Safe's own mark, not a blank person (prd §1334).
             subject: .named("Safe"),
             mine: f.counterpartyAddress,
-            lead: waiting ? String(localized: "Waiting to send")
-                          : String(localized: "Sent from"),
-            party: act?.title ?? f.myLabel,
+            lead: outcome ? String(localized: "Sent from")
+                          : String(localized: "Waiting to send"),
+            // The row's own words when the act cannot be read, never the
+            // Safe's name standing in (prd §1357.1).
+            party: act?.title ?? actionTitle(f.title),
             // Safe stamps no amount field, and a multisig payload's value is
             // exactly the kind of number this file will not parse out of prose.
-            // With an act and no line ("Batch of …"), the box says the lead.
-            titleFallback: act == nil ? f.title : act?.line,
+            titleFallback: act?.line,
             amount: nil,
-            secondary: waiting && need - have == 1
-                ? String(localized: "one more signature and it goes")
-                : nil,
-            sentence: waiting
+            secondary: waitsOn,
+            sentence: outcome
+                ? placeSentence(executed ? String(localized: "Executed")
+                                         : String(localized: "Replaced"), f)
                 // Said in words, because an empty "Receipt —" row reads as a bug
                 // where a sentence reads as the truth.
-                ? String(localized: "Proposed \(dayPhrase(f.capturedAt)). Nothing has moved yet, so there's no receipt to show.")
-                : placeSentence(String(localized: "Executed"), f),
-            stamp: yourTurn ? .yourTurn : (waiting ? .pending : .settled),
-            // Yours to sign stays open while the count is unknown (the demo,
-            // or a check that has not answered yet); a met count tears it.
-            finality: waiting || (yourTurn && need == 0) ? .open : .torn,
+                : String(localized: "Proposed \(dayPhrase(f.capturedAt)). Nothing has moved yet, so there's no receipt to show."),
+            stamp: executed ? .settled : replaced ? .replaced : outcome ? nil
+                : yourTurn ? .yourTurn : .waiting,
+            finality: outcome ? .torn : .open,
             hue: .safe)
+    }
+
+    /// "2 of 3 signatures collected on …" → (2, 3), `SafeBridge.rowFace`'s
+    /// own shape; nil for any other sentence.
+    static func safeCounts(_ title: String) -> (Int, Int)? {
+        guard let r = title.range(of: " signatures collected on ") else { return nil }
+        let head = title[..<r.lowerBound].split(separator: " ")
+        guard head.count == 3, head[1] == "of", let have = Int(head[0]), let need = Int(head[2]) else { return nil }
+        return (have, need)
     }
 
     /// The action inside a Safe row's sentence, as `SafeBridge.rowFace`
@@ -897,6 +1014,16 @@ struct MoneyReceipt: Equatable {
         if let r = body.range(of: " signatures collected on ") {
             body = String(body[r.upperBound...])
             if let dash = body.range(of: " — ") { body = String(body[..<dash.lowerBound]) }
+            return body.isEmpty ? nil : body
+        }
+        // The closing row (`SafeBridge.landOutcome`): "Executed[ after …] —
+        // <it> went through", "Replaced[ after …] — <it> never executed; …".
+        if body.hasPrefix("Executed") || body.hasPrefix("Replaced"),
+           let dash = body.range(of: " — ") {
+            body = String(body[dash.upperBound...])
+            for tail in [" went through", " never executed"] {
+                if let t = body.range(of: tail) { body = String(body[..<t.lowerBound]) }
+            }
             return body.isEmpty ? nil : body
         }
         if let r = body.range(of: "Fully signed — ") {
@@ -946,30 +1073,55 @@ struct MoneyReceipt: Equatable {
     /// Hyperliquid open or close, a Morpho supply, a risk crossing. It gets the
     /// pour, the subject, the stamp, the sentence and the tear — everything but
     /// a headline figure it was never given.
-    private static func generic(_ f: Facts, hue: Hue) -> MoneyReceipt {
+    private static func generic(_ f: Facts, hue: Hue) -> MoneyReceipt? {
+        // A row dated ahead (a deadline the bridge stamped `dueAt` on) says
+        // what WILL happen: a moment, never a receipt (prd §83).
+        if f.dueAt.map({ $0 > f.capturedAt }) == true { return nil }
         let risk = f.tags.contains("At risk")
         // An approval says who can spend what (prd §1357): "Uniswap can spend
         // your USDC", never the wallet's name as if it were the other side.
         let approval = f.sourceRef?.hasPrefix("wallet:approval:") == true
+        // A figure the bridge stamped is drawn once, in the box, unsigned —
+        // with no direction it has no sign to wear.
+        let parts = split(f.amount)
+        // **TITLED BY ITS OWN SENTENCE (prd §1357.1).** "Received 500 USDC
+        // from sam.eth", "Bought SOL" — never "In your wallet" or the
+        // wallet's name standing in for what happened.
         return MoneyReceipt(
-            subject: subject(address: f.counterpartyAddress,
-                             name: f.partyLabel ?? f.venue,
-                             fallbackAsset: nil),
-            mine: f.walletAddress,
+            // An approval's other side is a contract that can spend, never a
+            // person (prd §1360): the token it may spend, no face, no badge.
+            subject: approval
+                ? approvalToken(f.title).map { Subject.asset($0) } ?? .named("Wallet")
+                : subject(address: f.counterpartyAddress,
+                          name: f.partyLabel ?? f.venue,
+                          fallbackAsset: nil),
+            mine: approval ? nil : f.walletAddress,
             lead: String(localized: "In your wallet"),
-            party: approval ? f.title : f.myLabel,
+            party: approval ? f.title : actionTitle(f.title),
             // **SAID ONCE (prd §1360, user: "seems silly to repeat the same
-            // thing three times").** An approval's title is its sentence; the
-            // box states what it covers — the token — not the sentence again.
-            titleFallback: approval ? nil : f.title,
-            amount: approval ? approvalToken(f.title).map { Amount(number: f.amount ?? "", unit: $0, tone: .plain) } : nil,
+            // thing three times").** The title is the sentence; the box
+            // states the figure, or nothing, never the sentence again.
+            titleFallback: nil,
+            amount: approval
+                ? approvalToken(f.title).map { Amount(number: f.amount ?? "", unit: $0, tone: .plain) }
+                : (parts.number.isEmpty ? nil : Amount(number: parts.number, unit: parts.unit, tone: .plain)),
             secondary: worthLine(f.usd),
             sentence: placeSentence(String(localized: "Happened"), f),
-            stamp: risk ? .openPosition : nil,
+            // SETTLED ONLY WHEN IT SETTLED (prd §83): a past move the bridge
+            // stamped a direction or a figure on. A trade or a supply with
+            // neither states no status rather than a default one.
+            stamp: risk ? .openPosition
+                : (!approval && isPast(f) && (f.direction == "sent" || f.direction == "received"
+                                              || !parts.number.isEmpty)) ? .settled : nil,
             // An open position is never a finished record and this receipt must
             // never look like history.
             finality: risk ? .open : .torn,
             hue: risk ? .risk : hue)
+    }
+
+    /// Dated now or earlier (a minute's grace for a clock that runs ahead).
+    static func isPast(_ f: Facts, now: Date = .now) -> Bool {
+        f.capturedAt <= now.addingTimeInterval(60)
     }
 
     // MARK: - Sentences
@@ -1041,10 +1193,12 @@ struct MoneyReceipt: Equatable {
     /// A minor-unit amount in its own currency. Returns nil rather than a bare
     /// number when either half is missing — an amount with no currency is not a
     /// figure a receipt may state.
+    ///
+    /// To the currency's own minor unit, whatever the size (a Plasma One day
+    /// of $305.80 drew "$306"): a charge is read, not rounded, as a balance is.
     static func currency(_ value: Double?, code: String?) -> String? {
         guard let value, let code, !code.isEmpty else { return nil }
-        return abs(value).formatted(.currency(code: code)
-            .precision(.fractionLength(abs(value) < 100 ? 2 : 0)))
+        return abs(value).formatted(.currency(code: code))
     }
 
     /// "0.9962 ETH" → ("0.9962", "ETH").
