@@ -529,20 +529,33 @@ extension FeedScreen {
     /// How many rows Newest holds.
     static let newestRows = 5
 
-    /// Today's newest live things across every category, the box's thing
-    /// and the same news again left out (prd §1208j's rule: only the box
-    /// holds the newest).
-    static func newestThings(_ groups: [(String, [FeedRow])], lede: Thing?) -> [Thing] {
+    /// The newest live things across the Feed's own categories, NEVER
+    /// day-bound (prd §1399, user, past midnight: "or is it because it's
+    /// midnight and its reset?" — "make Newest match the box"): the card is
+    /// named Newest, not Today, so the five newest things are its answer at
+    /// 00:05 as at 18:00, as the box always holds the newest thing (§1136i).
+    /// The box's thing and the same news again are left out (prd §1208j);
+    /// `elsewhere` names the categories that are their own place (§1331).
+    /// `.isLive` before any read, the dead-Thing rule; one pass, a bounded
+    /// top-N, never a sort of the whole set.
+    static func newestThings(_ visible: [Thing], lede: Thing?, elsewhere: Set<String>) -> [Thing] {
         let ledeID = lede.flatMap { $0.isLive ? $0.id : nil }
         let ledeTitle = lede.flatMap { $0.isLive ? TitleSeam.split($0.title).0 : nil }
-        let things = groups.flatMap { _, rows in
-            rows.compactMap { row -> Thing? in
-                if case .single(let item) = row.kind { return item.live }
-                return nil
-            }
+        let now = Date.now
+        var top: [Thing] = []
+        top.reserveCapacity(newestRows + 1)
+        for thing in visible {
+            guard thing.isLive, thing.id != ledeID else { continue }
+            let at = thing.capturedAt
+            guard at <= now else { continue }
+            if top.count == newestRows, let last = top.last, at <= last.capturedAt { continue }
+            guard TitleSeam.split(thing.title).0 != ledeTitle,
+                  !elsewhere.contains(BridgeCatalog.category(forSource: thing.source) ?? "") else { continue }
+            let i = top.firstIndex { $0.capturedAt < at } ?? top.count
+            top.insert(thing, at: i)
+            if top.count > newestRows { top.removeLast() }
         }
-        .filter { $0.isLive && $0.id != ledeID && TitleSeam.split($0.title).0 != ledeTitle }
-        return Array(things.sorted { $0.capturedAt > $1.capturedAt }.prefix(newestRows))
+        return top
     }
 }
 
