@@ -67329,3 +67329,10 @@ The mockup that settled it is `design/mockups/wallet-accounts-row.html` (option 
 3. **Not changed, for the user to rule on:** a watched stranger's Safe queue still says "your signature is needed" and lands in Needs you while the watch stands, because the pass names the first watched owner "you" (§1340). Whether a wallet you only watch can ever need you is a ruling, not a fix.
 
 **Guards.** `unfollow-prune-selftest.sh`: the gate under `forgetUnwatched`, the two closing prunes ahead of the flag's clear, both flags read off `running`; four mutations caught. **Seen** on a simulator of its own: the race reproduced on the shipped build (22 Safe rows, Needs you · 4, no wallet watched); on the fixed build the queue stood through the pass and was consumed when it ended, zero rows after. **Not run:** verify.sh, the Mac.
+
+## §1412 — A wallet you watch is yours: its Safe queue needs you, and "you" is any watched owner (closes §1411 item 3; confirms §1340's reading of §1249) (user, 2026-10-18: "we should treat any wallet a user watches as 'mine' basically")
+
+1. **The rule.** The watch list is the list of your wallets. A Safe reached through a watched owner names that owner "you" (`SafeBridge.syncSafe`'s `you`, `knownOwner`), its unsigned transactions wear "Your turn" and lead Needs you, and the Wallet's totals, Spending (§1330) and Security read every watched wallet as yours. No "mine" mark, no stranger tier: watching a wallet you do not control shows you what it would show its owner, and unfollowing takes all of it (§1135, §1330, §1411).
+2. **What this settles.** §1411 item 3 asked whether a watched stranger's queue may say "your signature is needed"; it may, because there is no stranger. The honesty rule (§83) holds: the words describe the watched wallet's turn, which is what the watch asked to see.
+
+**Changed:** nothing in code. **Guards:** none new; the rule is the absence of a tier, and `unfollow-prune-selftest.sh` (§1411) keeps the unfollow whole.
