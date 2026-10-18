@@ -62,7 +62,7 @@ enum TokenIconBook {
 
     /// Every ISO 4217 code the system knows, read once. "USD", "EUR", "GBP",
     /// "SGD" are money at a bank, never a coin with a logo.
-    private static let fiatCodes: Set<String> = Set(Locale.Currency.isoCurrencies.map(\.identifier.uppercased()))
+    private static let fiatCodes: Set<String> = Set(Locale.Currency.isoCurrencies.map { $0.identifier.uppercased() })
 
     /// Whether a URL may enter the book: https, on `host`, nothing else.
     static func accepts(_ urlString: String) -> Bool {
