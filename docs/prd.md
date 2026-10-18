@@ -67193,3 +67193,16 @@ A fired alert lands a Markets row tagged Alert under `alert:<id>:<when>` (§1081
 5. **Deleted, because the app cannot vouch for them (§83):** the yearly tally (`MoneyYearTotals`, "This year · Sent $2,275.94 · 15 transfers"), the ordinal ("With Sam · 15th", "Visit · 2nd") and "Last visit" cells, and the `MoneyYear` state behind them. A count of what was fetched is not a count of what happened. A transfer with a person lists the last three with them under "With <name>" and a More row, "Every transfer", to the address card.
 
 `money-receipt-selftest.sh` holds the head to the column and the state off the rows; `feed-row-skeleton-audit.py` holds the list rows' figures tabular.
+
+## §1397 — The Mac's rail is the tab bar: Feed · Wallet · Library, and Search (amends §273's category rail, §1133f's rail face, §360's ⌘1–⌘9; the Mac half of §1327, §1343, §1347) (design review, 2026-10-17: the Mac is a third of first downloads and its shell was a generation behind the phone — nine categories on the rail, Day twice over)
+
+The phone moved to three tabs — the places you manage — and Day, Notes and every category became sections of the Feed's one scroll. The Mac kept §273's rail: the phone's dock of nine categories turned 90°, listing Day beside a Feed whose first section is Day. The rail is the app's signature and stays (never a sidebar, §875's session); what it lists changes.
+
+1. **Where the shell draws a rail** (`MainSurface.showsRail`: the Mac and a regular iPad) **it lists what `PlaceTabBar` lists**: Feed · Wallet · Library, and Search (`Shell/PlaceRail.swift`). Each tile is the bar's mark over its word, the pick on `DS.fillStrong` in `DS.brandInk`.
+2. **Your face heads the rail and is Library's tile.** Library wears your face on the phone's bar; one door, not a face above a Library tile. The broken-app ring rides it (`LibraryAlarm`).
+3. **One door for a tab press**: `PlaceTab.open(_:chrome:route:)`, taken by the phone's bar, the rail and the keys.
+4. **The rooms tray no longer opens from the rail.** Its Search is ⌘F (`ShellChrome.openFind`) and the rail's Search tile; its places are the rail's tiles; a category's apps are picked from the room (`mergedScope`, the Wallet's account menu).
+5. **⌘1–⌘3 open the places, in the bar's order.** ⌘4–⌘9 are deleted with the strip they addressed (§360: a key may not outlive its control). `mac-parity-audit.py` check 3 holds the run to `PlaceTab.open` and fails a run past the three.
+6. **Every shell ruling names its Mac half before it ships** (RULE, recorded in CLAUDE.md's Mac section): a ruling that moves a control on the phone says where the rail layout draws it, or says it does not apply there.
+
+The phone is untouched: `PlaceTabBar` is the band's, and the rail mounts only where `showsRail`. `SourceChips` keeps its horizontal strip's code for the dock's guards (`dock-selftest.sh`) and no longer mounts on any surface; deleting it is the follow-up (§723).

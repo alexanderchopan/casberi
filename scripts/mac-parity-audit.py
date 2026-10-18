@@ -28,11 +28,14 @@ off within a week, so each one is a mechanical fact with no judgement in it.
        failure this catches is the silent one — a new capability added to iOS
        alone, which nothing notices until a signed Catalyst archive fails.
 
-    3. THE DIGIT SHORTCUTS. ⌘1–⌘9 must stay positional against what you can
-       SEE (`chipOrder`, the folded list) and must resolve a folded category
-       label before writing `FeedFilter.source`. Writing the label raw puts a
-       category name where no predicate matches it: the room is empty forever
-       while the chip lights up as if it worked.
+    3. THE DIGIT SHORTCUTS. ⌘1–⌘3 open the three places the rail shows
+       (`PlaceTab.allCases`, prd §1397) through the one door every tab press
+       takes (`PlaceTab.open`), never by writing `FeedFilter.source` by hand:
+       Library is a place in You, not a source, so a raw write lands a word
+       where no predicate matches it. Until §1397 the run was ⌘1–⌘9 against
+       the chip strip's `chipOrder`; the strip is gone, and a key may not
+       outlive its control (§360), so a run past the three places is a dead
+       key.
 
 Static, self-tested, no build, no network, no simulator. Named `*-audit.py` so
 `verify-mac.sh`'s discovery loop wires it in with no line of its own.
@@ -220,29 +223,33 @@ def check_digit_shortcuts(findings):
         findings.append("%s is missing" % COMMANDS.name)
         return
     body = strip_comments(COMMANDS.read_text())
-    # The ⌘-digit run: a ForEach over 1...9 carrying a .command digit shortcut.
+    # The ⌘-digit run: a ForEach over the places carrying a .command digit
+    # shortcut.
     block = re.search(
-        r"ForEach\(1\.\.\.9.*?keyboardShortcut\(KeyEquivalent.*?modifiers:\s*\.command\)",
+        r"ForEach\(Array\(PlaceTab\.allCases\.enumerated\(\)\).*?"
+        r"keyboardShortcut\(KeyEquivalent.*?modifiers:\s*\.command\)",
         body, re.S)
     if not block:
         findings.append(
-            "the ⌘1–⌘9 command run was not found in CasberiApp.swift — the "
+            "the ⌘1–⌘3 command run was not found in CasberiApp.swift — the "
             "check is broken, or the shortcut grammar changed")
         return
     text = block.group(0)
-    if "chipOrder" not in text:
+    if "PlaceTab.open(" not in text:
         findings.append(
-            "the ⌘1–⌘9 run no longer reads `chipOrder` — it must stay "
-            "positional against what the strip SHOWS (folded). Fed "
-            "`sourceOrder` it counts seats nobody can see, so ⌘3 stops "
-            "meaning the third chip you can point at.")
-    if "CategoryFold.isCategory" not in text:
+            "the ⌘1–⌘3 run no longer goes through `PlaceTab.open` — a key "
+            "must take the door its tile takes, or Library (a place in You, "
+            "not a source) lands a word in `FeedFilter.source` where no "
+            "predicate matches it.")
+    if "filter.source =" in text:
         findings.append(
-            "the ⌘1–⌘9 run no longer resolves a folded category before "
-            "writing `FeedFilter.source` — a chip LABEL is not a source, so "
-            "the raw write lands a category name where no predicate matches "
-            "it: the room is empty forever and the chip lights up as if it "
-            "worked.")
+            "the ⌘1–⌘3 run writes `FeedFilter.source` by hand — the places "
+            "are opened by `PlaceTab.open`, never by a source write.")
+    if re.search(r"ForEach\(1\.\.\.[4-9]", body):
+        findings.append(
+            "a ⌘-digit run past the three places is back — the chip strip "
+            "those keys addressed is gone (prd §1397), and a key may not "
+            "outlive its control (§360).")
 
 
 # ── 4. Copy that teaches a TOUCH gesture (prd §607) ────────────────────────
@@ -341,13 +348,12 @@ FIXTURE_ROUTER = '''
 
 FIXTURE_COMMANDS_GOOD = '''
             CommandGroup(after: .toolbar) {
-                ForEach(1...9, id: \\.self) { n in
-                    let order = focusedChrome?.chipOrder ?? ["All"]
-                    Button("Switch") {
-                        if CategoryFold.isCategory(label) { resolve() }
-                        else { focusedScene?.filter.source = label }
+                ForEach(Array(PlaceTab.allCases.enumerated()), id: \\.element) { i, tab in
+                    Button("Switch to \\(tab.label)") {
+                        guard let chrome = focusedChrome, let scene = focusedScene else { return }
+                        PlaceTab.open(tab, chrome: chrome, route: scene.route)
                     }
-                    .keyboardShortcut(KeyEquivalent(Character("\\(n)")), modifiers: .command)
+                    .keyboardShortcut(KeyEquivalent(Character("\\(i + 1)")), modifiers: .command)
                 }
             }
 '''
@@ -440,17 +446,19 @@ def selftest():
         check_digit_shortcuts(f)
         case("a correct ⌘1–⌘9 run passes", f, [])
 
-        # Mutation A: reads sourceOrder instead of chipOrder.
+        # Mutation A: the run writes the source by hand instead of taking the door.
         f = []
-        tmp.write_text(FIXTURE_COMMANDS_GOOD.replace("chipOrder", "sourceOrder"))
+        tmp.write_text(FIXTURE_COMMANDS_GOOD.replace(
+            "PlaceTab.open(tab, chrome: chrome, route: scene.route)",
+            "scene.filter.source = tab.source"))
         check_digit_shortcuts(f)
-        case("flags ⌘1–⌘9 fed the UNFOLDED order", len(f), 1)
+        case("flags ⌘1–⌘3 writing FeedFilter.source by hand", len(f), 2)
 
-        # Mutation B: writes the label raw, no fold resolution.
+        # Mutation B: a ⌘4–⌘9 run against a strip that no longer exists.
         f = []
-        tmp.write_text(FIXTURE_COMMANDS_GOOD.replace("CategoryFold.isCategory", "alwaysTrue"))
+        tmp.write_text(FIXTURE_COMMANDS_GOOD + "\n ForEach(1...9, id: \\.self) { n in }\n")
         check_digit_shortcuts(f)
-        case("flags a raw label written into FeedFilter.source", len(f), 1)
+        case("flags a ⌘-digit run past the three places", len(f), 1)
 
         # Mutation C: the run is gone entirely — must not pass vacuously.
         f = []

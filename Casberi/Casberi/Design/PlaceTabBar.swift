@@ -46,6 +46,25 @@ enum PlaceTab: String, CaseIterable, Identifiable {
 
     /// The tab a source stands in: Markets is a Wallet tile (prd §1232), and
     /// a room off the five (Testnets) is nobody's tab.
+    /// A tab pressed (prd §1327): the place's own door, the one its tile and
+    /// the face took before. The Feed's, pressed on the Feed, returns to the
+    /// top (§1280's face); Library is Sources' place (§1321). ONE door for
+    /// the phone's bar, the rail (prd §1397) and ⌘1–⌘3.
+    @MainActor static func open(_ tab: PlaceTab, chrome: ShellChrome, route: HomeRoute) {
+        withAnimation(DS.Motion.standard) {
+            chrome.roomsTray = false
+            switch tab {
+            case .feed:
+                chrome.goToFeed()
+            case .wallet:
+                chrome.openWallet()
+            case .library:
+                chrome.settingsPick = .sources
+                route.present(.casberi)
+            }
+        }
+    }
+
     @MainActor static func current(_ source: String) -> PlaceTab? {
         if HomeScope.isMarkets(source) { return .wallet }
         // Day is the Feed's section (prd §1343); the Notes page is Library's
@@ -190,7 +209,7 @@ struct PlaceTabBar: View {
 
 /// Where the capture flight lands (prd §930's seat, the Feed's door since):
 /// the Feed's tab, as the face published it before.
-private struct FeedTabFrame: View {
+struct FeedTabFrame: View {
     @Environment(ShellChrome.self) private var chrome
 
     var body: some View {
@@ -205,7 +224,7 @@ private struct FeedTabFrame: View {
 /// A broken app rings your face, as it rang the face's seat (`DoorAlarm`,
 /// prd §798): Library is where the apps are mended. A leaf, so a landing
 /// sweep's writes to `bridges` rebuild this and not the bar.
-private struct LibraryAlarm: ViewModifier {
+struct LibraryAlarm: ViewModifier {
     let active: Bool
     @Environment(BridgeStore.self) private var bridges
     @Environment(\.accessibilityReduceMotion) private var reduceMotion

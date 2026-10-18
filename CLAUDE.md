@@ -542,6 +542,11 @@ Deep links: `casberi://home`, `casberi://feed`, `casberi://feed/type/<Tag>` (int
 - Product rulings live in docs/prd.md — check it before re-litigating a design decision; record new rulings there.
 - **Current law is `docs/law.md`** — the live rulings by area, each citing the § in force, over a generated index of every live ruling and its amendments; read it before the ledger. `docs/prd.md` stays the record: a new ruling goes there first, then run `python3 scripts/law-digest.py` (`--check` fails when law.md is stale or cites a dead ruling).
 
+## Mac (Catalyst)
+
+- **Every shell ruling names its Mac half before it ships (RULE, prd §1397).** A ruling that moves a control on the phone says where the rail layout (`MainSurface.showsRail`: the Mac and a regular iPad) draws it, or says it does not apply there. The rail is the tab bar — Feed · Wallet · Library, Search, your face as Library's tile (`Shell/PlaceRail.swift`); ⌘1–⌘3 open the places; never a sidebar (§875).
+- Screens are captured headlessly: build Catalyst into `~/Library/Developer/CasberiMacDD` through `scripts/xcb.sh`, launch with `-storeScratch YES -onboarded YES -demoEnter YES -macSnapshot <name> -snapshotDelay 18` (as `scripts/mac-appstore-capture.sh` does), read the PNG from the app group's `HarnessSnapshots`.
+
 ## Website (casberi.app)
 
 - **RULE: every app added to the catalog also lands on the website in the same session** — a hero marquee tile, a `#catalog` shelf cell and an `.ai-<name>` background — then bump the `?v=` cache-busters, zip `website/`, deploy through cPanel, and `rm` then `cp` the zip to `~/Downloads/website-deploy.zip` → docs/website.md

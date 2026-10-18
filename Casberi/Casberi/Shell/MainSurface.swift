@@ -873,7 +873,12 @@ struct MainSurface: View {
     @ViewBuilder
     private var railInset: some View {
         if showsRail {
-            sourceStrip(axis: .vertical)
+            // THE RAIL IS THE TAB BAR (prd §1397): the three places and
+            // Search, your face at its head as Library's tile; the category
+            // strip turned 90° (§273) went with the phone's dock.
+            PlaceRail(current: PlaceTab.current(filter.source),
+                      open: { PlaceTab.open($0, chrome: chrome, route: route) },
+                      search: { chrome.openFind() })
                 // Clearance for the traffic lights (2026-08-17). With the
                 // title bar collapsed (`RootShell.applyMacWindowChrome`) the
                 // content runs to the top edge, and the window buttons float

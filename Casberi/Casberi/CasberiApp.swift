@@ -320,40 +320,20 @@ struct CasberiApp: App {
                 }
                 .keyboardShortcut("[", modifiers: .command)
             }
-            // ⌘1–⌘9 switch the source chip in that position (2026-07-28) —
-            // Safari/Chrome's numbered-tab grammar. Position-based against
-            // `focusedChrome?.chipOrder` (mirrored live from MainSurface's
-            // own chip order, see `ShellChrome.chipOrder`), so a re-sort
-            // never strands the shortcut on a chip that moved. "All" is
-            // always first, so ⌘1 is always valid regardless of what's
-            // connected; later numbers disable themselves once there's no
-            // chip in that position rather than doing nothing silently.
+            // ⌘1–⌘3 open the three places (prd §1397; ⌘1–⌘9 switched the
+            // source chip in that position from 2026-07-28, Safari's
+            // numbered-tab grammar, against `chipOrder`). The rail is the
+            // phone's tab bar now — Feed · Wallet · Library — so the keys
+            // name what the rail shows, in the bar's order, through the one
+            // door every tab press takes (`PlaceTab.open`). A key may not
+            // outlive its control (§360): no chip strip, no ⌘4–⌘9.
             CommandGroup(after: .toolbar) {
-                ForEach(1...9, id: \.self) { n in
-                    let order = focusedChrome?.chipOrder ?? ["All"]
-                    Button(n <= order.count ? "Switch to \(order[n - 1])" : "Switch to Chip \(n)") {
-                        guard n <= order.count else { return }
-                        let label = order[n - 1]
-                        // A folded chip is a LABEL, not a source (prd §351,
-                        // generalizing 2026-08-10, see `CategoryFold`) —
-                        // resolved here the same way the strip's own tap
-                        // resolves it. Written raw it would put a category
-                        // name into `FeedFilter.source`, where no predicate
-                        // matches it and the room is empty forever, while the
-                        // chip lights up as if it worked. This stays
-                        // positional against `chipOrder` on purpose: ⌘3 must
-                        // mean the third chip you can SEE.
-                        if CategoryFold.isCategory(label) {
-                            let venues = focusedChrome?.categoryVenues[label] ?? []
-                            guard let venue = CategoryFold.landing(category: label, present: venues)
-                            else { return }
-                            focusedScene?.filter.source = venue
-                        } else {
-                            focusedScene?.filter.source = label
-                        }
+                ForEach(Array(PlaceTab.allCases.enumerated()), id: \.element) { i, tab in
+                    Button("Switch to \(tab.label)") {
+                        guard let chrome = focusedChrome, let scene = focusedScene else { return }
+                        PlaceTab.open(tab, chrome: chrome, route: scene.route)
                     }
-                    .keyboardShortcut(KeyEquivalent(Character("\(n)")), modifiers: .command)
-                    .disabled(n > order.count)
+                    .keyboardShortcut(KeyEquivalent(Character("\(i + 1)")), modifiers: .command)
                 }
             }
             // ⌘⇧[ / ⌘⇧] — one room left or right INSIDE a folded category

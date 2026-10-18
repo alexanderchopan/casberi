@@ -178,20 +178,7 @@ struct RootShell: View {
     /// the face took before. The Feed's, pressed on the Feed, returns to the
     /// top (§1280's face); Library is Sources' place (§1321).
     private func openPlaceTab(_ tab: PlaceTab) {
-        let chrome = self.chrome
-        let route = sceneState.route
-        withAnimation(DS.Motion.standard) {
-            chrome.roomsTray = false
-            switch tab {
-            case .feed:
-                chrome.goToFeed()
-            case .wallet:
-                chrome.openWallet()
-            case .library:
-                chrome.settingsPick = .sources
-                route.present(.casberi)
-            }
-        }
+        PlaceTab.open(tab, chrome: chrome, route: sceneState.route)
     }
     /// The bar↔surface morph (2026-07-20) — shared between `AgentBar` and
     /// `Composer`'s `glassNamespace`, both keying `matchedGeometryEffect` to
