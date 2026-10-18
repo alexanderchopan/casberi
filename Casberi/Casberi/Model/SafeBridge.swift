@@ -2115,6 +2115,32 @@ enum SafeBridge {
         let seg = parts[2], safeTxHash = parts[3]
         guard let chain = chains.first(where: { $0.seg == seg }) else { return .fail("unknown chain") }
         guard isChainActive(chain) else { return .fail("chain switched off") }
+        // THE DEMO'S QUEUE (prd §1409): a demo ref never reaches the gateway,
+        // so the sheet's Signatures block was unshowable in the demo while the
+        // room's head read the seeded snapshot. The Check is built off that
+        // snapshot: the unsigned owners as seeded, the signed ones the demo's
+        // named people, so the block shows people, as it does live.
+        if DemoMode.isActive, safeTxHash.hasPrefix("demo"),
+           let entry = loadTracking()[ref], let have = entry.have, let required = entry.required {
+            let unsigned = (entry.unsignedOwners ?? []).map { $0.lowercased() }
+            let since = entry.submittedAt ?? .now
+            let signed = ["Sam", "Mia", "Dad"].map(DemoSeedAll.counterpartyAddress(for:))
+                .filter { !unsigned.contains($0.lowercased()) }
+                .prefix(max(0, have))
+            var people: [Signer] = signed.enumerated().map { i, owner in
+                Signer(address: owner, signedAt: since.addingTimeInterval(Double(i) * 5 * 3_600), isYou: false)
+            }
+            people += unsigned.map {
+                Signer(address: $0, signedAt: nil, isYou: $0 == entry.ownerAddress?.lowercased())
+            }
+            let rivals = loadTracking().filter {
+                $0.key != ref && $0.value.safeAddress == entry.safeAddress
+                    && $0.value.nonce != nil && $0.value.nonce == entry.nonce
+            }.count
+            return .ok(Check(status: .pending(have: have, required: required), roster: people,
+                             doorURL: safeAppURL(chain: chain, safeAddress: entry.safeAddress),
+                             conflicts: rivals))
+        }
         let read = await SafeServiceGate.get("\(baseURL(chain))/transactions/\(safeTxHash)")
         if case .throttled = read { return .fail("throttled") }
         guard let root = SafeGatewayShape.txRow(read.json) else { return .fail("unreachable") }
