@@ -80560,6 +80560,34 @@
         }
       }
     },
+    "Demo · Not your things" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Demo · No son tus cosas"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "デモ · あなたのものではありません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "데모 · 당신의 것이 아닙니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "演示 · 不是你的东西"
+          }
+        }
+      }
+    },
     "Demo — not your things" : {
       "localizations" : {
         "es" : {
@@ -85596,6 +85624,34 @@
       }
     },
     "Exit demo" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Salir de la demo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "デモを終了"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "데모 종료"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "退出演示"
+          }
+        }
+      }
+    },
+    "Exit Demo" : {
       "localizations" : {
         "es" : {
           "stringUnit" : {
