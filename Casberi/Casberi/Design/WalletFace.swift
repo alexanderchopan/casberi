@@ -23,6 +23,27 @@ struct WalletFace: View {
     /// the clip shape changes, so a wallet's face is still recognizably itself
     /// in both places.
     var circular = false
+    /// **WHERE NO NAME STANDS BESIDE IT, THE FACE SAYS WHO (prd §1388).**
+    /// §483's one mark depends on a caption; the rooms tray draws its
+    /// wallets as bare discs (§1133c), where four silhouettes read as four
+    /// failed loads. There the glyph gives way to the wallet's monogram on
+    /// the same tinted ground: a named wallet's initials, an unnamed one's
+    /// last four (§1375). Nil everywhere a name is drawn beside the face.
+    var monogram: String? = nil
+
+    /// The monogram for a label, else for the address: "EV" for Everyday,
+    /// "SA" for Savings, "C95F" for a bare 0x…c95f.
+    static func monogram(label: String, address: String) -> String {
+        let words = label.split(whereSeparator: { $0 == " " || $0 == "-" || $0 == "_" })
+            .filter { !$0.isEmpty }
+        if words.count >= 2, let a = words[0].first, let b = words[1].first {
+            return String([a, b]).uppercased()
+        }
+        if let word = words.first, !word.lowercased().hasPrefix("0x"), word.count >= 2 {
+            return String(word.prefix(2)).uppercased()
+        }
+        return String(address.suffix(4)).uppercased()
+    }
 
     private var avatarURL: URL? {
         WalletStore.shared.avatarURL(for: address).flatMap(URL.init(string:))
@@ -168,13 +189,24 @@ struct WalletFace: View {
         let ink = Self.inks[slot]
         return ground
             .overlay {
-                Image(systemName: "person.fill")
-                    .font(.system(size: size * 0.46, weight: .medium))
-                    .foregroundStyle(ink)
-                    // The glyph's own optical centre sits low in its box; without
-                    // this the head crowds the top of the circle and the mark
-                    // reads as cropped rather than as a portrait.
-                    .offset(y: size * 0.03)
+                if let monogram {
+                    // The name, where none stands beside the face (prd §1388):
+                    // two letters at the glyph's size, four a step smaller.
+                    Text(verbatim: monogram)
+                        .font(.system(size: size * (monogram.count > 2 ? 0.3 : 0.4), weight: .semibold,
+                                      design: .rounded))
+                        .foregroundStyle(ink)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                } else {
+                    Image(systemName: "person.fill")
+                        .font(.system(size: size * 0.46, weight: .medium))
+                        .foregroundStyle(ink)
+                        // The glyph's own optical centre sits low in its box; without
+                        // this the head crowds the top of the circle and the mark
+                        // reads as cropped rather than as a portrait.
+                        .offset(y: size * 0.03)
+                }
             }
     }
 

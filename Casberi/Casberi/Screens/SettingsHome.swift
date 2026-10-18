@@ -527,7 +527,10 @@ struct SettingsHome: View {
     /// once a mail app is connected, since the tray reads that mail.
     private func addVerb(_ kind: SettingsScope) -> String? {
         switch kind {
-        case .apps, .cards:  nil
+        // Apps' list below IS the catalogue, so its + would land where you
+        // stand; a card has an add, the app it arrives through (prd §1388).
+        case .apps:          nil
+        case .cards:         String(localized: "Connect a card")
         case .calendars:     String(localized: "Add a calendar")
         case .feeds:         String(localized: "Follow something")
         case .newsletters:

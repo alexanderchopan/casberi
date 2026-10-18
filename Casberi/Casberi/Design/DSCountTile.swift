@@ -226,7 +226,9 @@ struct DSCountGrid<Content: View>: View {
     @ViewBuilder let content: Content
 
     var body: some View {
-        let grid = LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: DS.Space.s1, alignment: .leading), count: 2),
+        // The gutter is s3, not s1 (prd §1388): the left column's + stood
+        // against the right column's figure ("Mail lists +24").
+        let grid = LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: DS.Space.s3, alignment: .leading), count: 2),
                              alignment: .leading, spacing: DS.Space.s1) {
             content
         }

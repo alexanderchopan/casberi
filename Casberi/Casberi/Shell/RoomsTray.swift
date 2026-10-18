@@ -1887,7 +1887,9 @@ struct RoomsTray: View {
                     }
                 }
         case .wallet(let address):
-            WalletFace(address: address, size: Self.icon, circular: true)
+            // No caption in the tray, so the face says who (prd §1388).
+            WalletFace(address: address, size: Self.icon, circular: true,
+                       monogram: WalletFace.monogram(label: item.name, address: address))
                 .overlay { if item.lit { Circle().stroke(DS.brand, lineWidth: 2).padding(-3) } }
         case .place(let glyph):
             roundIcon(glyph, ink: DS.brand, fill: item.lit ? Color.white : DS.surfaceRaised,
