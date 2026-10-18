@@ -3267,6 +3267,49 @@ enum DemoSeedAll {
         return [poisoning, swap, fake]
     }
 
+    /// zk.money's and Tacit's moves (prd §1273, §1281), so the demo shows what
+    /// the Wallet names in a private pool: neither is a seat, both are a
+    /// watched wallet's own Ethereum transfers that live ingest retitles, so
+    /// these carry exactly what `WalletIngest` stamps on such a leg — the
+    /// title from `Tacit.title` and the zk.money venue grammar, the name in
+    /// `transferCounterparty`, the dated note in `enrichedText`, and a
+    /// counterparty only where it is a contract the app knows by address
+    /// (zk.money's v6 portal pays withdrawals; a deposit goes to a
+    /// single-use address no one would recognise, so it carries none).
+    private static func privateMoves() -> [Thing] {
+        let wallet = demoWallets[0].address
+        let zkPortal = "0xdf410ad448a0f7165181fbdb32f8896f4a0d9449"
+        let moves: [(title: String, received: Bool, amount: String, name: String,
+                     counterparty: String?, usd: Double, days: Double, hour: Int)] = [
+            (Tacit.title(.withdrew, amount: "0.15", asset: "ETH"), true, "0.15 ETH",
+             Tacit.name, Tacit.evmPool, 477, 1, 11),
+            ("Withdrew 120 DAI from \(ZkMoney.name)", true, "120 DAI",
+             ZkMoney.name, zkPortal, 120, 2, 16),
+            (Tacit.title(.deposited, amount: "0.40", asset: "ETH"), false, "0.40 ETH",
+             Tacit.name, Tacit.evmPool, 1_272, 8, 20),
+            ("Deposited 500 DAI into \(ZkMoney.name)", false, "500 DAI",
+             ZkMoney.name, nil, 500, 10, 19),
+        ]
+        return moves.enumerated().map { i, m in
+            row(.transaction, m.title, source: "Wallet", ref: "demo:wallet:private:\(i)",
+                days: m.days, hour: m.hour, content: "Ethereum · \(m.name)") { t in
+                t.walletAddress = wallet
+                t.transferDirection = m.received ? "received" : "sent"
+                t.transferAmount = m.amount
+                t.transferCounterparty = m.name
+                t.counterpartyAddress = m.counterparty
+                t.transferUSD = m.usd
+                t.enrichedText = m.name == Tacit.name ? Tacit.note : ZkMoney.note(portal: nil)
+                // Money into a private pool is not money spent: live, the
+                // deposit address is recognised as zk.money's and Spending
+                // skips it as machinery; here, with no address, the read's
+                // own word for the call keeps it out (`Spending` counts only
+                // plain sends).
+                if !m.received, m.counterparty == nil { SpendingSource.stampOperation(t, "deposit") }
+            }
+        }
+    }
+
     private static func walletRoom() -> [Thing] {
         var out: [Thing] = []
         let moves: [(Bool, String, String, Double, Double)] = [
@@ -3341,6 +3384,7 @@ enum DemoSeedAll {
                 t.transferUSD = 1_590
             })
         }
+        out += privateMoves()
         out += flaggedMoves()
         out += trades()
         // An approval, so the wallet room's exposure card has something real.
