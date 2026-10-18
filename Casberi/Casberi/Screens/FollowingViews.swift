@@ -220,7 +220,7 @@ struct FollowingSheet: View {
             // EVERYTHING FROM IT, NEWEST FIRST (prd §1325): a thing's From
             // card leads here, so the page answers "what is this source".
             if !recent.live.isEmpty {
-                SheetCard(name: String(localized: "Recent"), glyph: "clock") {
+                SheetCard(name: String(localized: "Recent")) {
                     ForEach(recent.keyed) { row in
                         if let thing = row.live { recentRow(thing, item: item) }
                     }

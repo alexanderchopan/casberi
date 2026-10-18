@@ -960,23 +960,35 @@ struct SectionPanelGroup<Header: View, Rows: View>: View {
 /// sheet draws through this, so no sheet keeps a grey label over a loose list.
 struct SheetCard<Content: View>: View {
     let name: String
-    let glyph: String
     var trailing: String? = nil
     @ViewBuilder let content: Content
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            SectionPanelName(name: name, glyph: glyph, inset: DS.Space.s4) {
+            // ONE QUIET WORD (prd §1396, user: "super clean and tidy and
+            // minimal and like apple would do"): the group's name at the
+            // 17pt head rung, no glyph — the pink on a sheet means a verb —
+            // and 32pt of air above it (its s2 plus the s6 every caller
+            // already leaves), so the groups read apart. Its rows carry
+            // their own 44pt and stand with no air between them.
+            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                Text(verbatim: name)
+                    .dsText(.heading17)
+                    .foregroundStyle(DS.textPrimary)
+                    .lineLimit(1)
                 if let trailing {
                     Spacer(minLength: DS.Space.s2)
                     Text(verbatim: trailing)
                         .dsText(.heading17)
                         .monospacedDigit()
-                        .foregroundStyle(DS.textPrimary)
+                        .foregroundStyle(DS.textSecondary)
                         .lineLimit(1)
                 }
             }
-            VStack(alignment: .leading, spacing: DS.Space.s3) {
+            .padding(.horizontal, DS.Space.s4)
+            .padding(.top, DS.Space.s2)
+            .padding(.bottom, DS.Space.s1)
+            VStack(alignment: .leading, spacing: 0) {
                 content
             }
             .padding(.horizontal, DS.Space.s4)
@@ -992,9 +1004,8 @@ struct SheetCard<Content: View>: View {
 /// for a builder whose rows end in modifiers of their own.
 struct SheetCardWrap: ViewModifier {
     let name: String
-    let glyph: String
     func body(content: Content) -> some View {
-        SheetCard(name: name, glyph: glyph) { content }
+        SheetCard(name: name) { content }
     }
 }
 

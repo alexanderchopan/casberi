@@ -170,7 +170,7 @@ struct MailSubscriptionSheet: View {
                          facts: facts(item),
                          doors: doors(item)) {
             if !recent.live.isEmpty {
-                SheetCard(name: String(localized: "Recent"), glyph: "clock") {
+                SheetCard(name: String(localized: "Recent")) {
                     ForEach(recent.keyed) { row in
                         if let thing = row.live { recentRow(thing, face: item.name) }
                     }

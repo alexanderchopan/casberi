@@ -118,6 +118,10 @@ struct DSScopeTiles<Scope: DSTileScope>: View {
     /// every glyph pink, every word in the page's ink. A room's own tiles
     /// switch in place and keep their pick.
     var bare: Bool = false
+    /// Centred under a centred head (prd §1396, a money sheet's): fewer
+    /// than a row of tiles stand in the middle at the grid's own column
+    /// width, never flush left under a face in the middle of the sheet.
+    var centered: Bool = false
     let onPick: (Scope) -> Void
 
     /// The verb whose hold just fired. A `Button` still fires on the release
@@ -228,12 +232,22 @@ struct DSScopeTiles<Scope: DSTileScope>: View {
         } else if sections.count > 1 || (!sections.isEmpty && sections.allSatisfy { verbs.contains($0) }) {
             // One VERB still draws (a sheet whose only act is Share, prd §1186);
             // one view alone is no choice, and draws nothing.
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: DS.Space.s2),
-                                     count: Self.columns),
-                      alignment: .leading,
-                      spacing: DS.Space.s2) {
-                ForEach(Self.alphabetical(sections, verbs: verbs)) { section in
-                    tile(section)
+            if centered, sections.count <= Self.columns {
+                HStack(spacing: DS.Space.s2) {
+                    ForEach(Self.alphabetical(sections, verbs: verbs)) { section in
+                        tile(section)
+                            .containerRelativeFrame(.horizontal, count: Self.columns, spacing: DS.Space.s2)
+                    }
+                }
+                .frame(maxWidth: .infinity)
+            } else {
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: DS.Space.s2),
+                                         count: Self.columns),
+                          alignment: .leading,
+                          spacing: DS.Space.s2) {
+                    ForEach(Self.alphabetical(sections, verbs: verbs)) { section in
+                        tile(section)
+                    }
                 }
             }
         }

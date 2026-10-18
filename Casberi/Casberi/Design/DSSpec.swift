@@ -31,9 +31,10 @@ struct DSSpecTable<Rows: View>: View {
     @ViewBuilder var rows: () -> Rows
 
     var body: some View {
+        // Rows carry their own height (prd §1396): 44pt each, no air between.
         Grid(alignment: .leadingFirstTextBaseline,
              horizontalSpacing: DS.Space.s3,
-             verticalSpacing: DS.Space.s3) {
+             verticalSpacing: 0) {
             rows()
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -69,9 +70,15 @@ struct DSSpecRow: View {
 
     var body: some View {
         GridRow {
+            // ONE LINE, ONE SIZE (prd §1396, user: "messy and tight together so
+            // it all bleeds together"): the label grey and the value white at
+            // the body rung, 44pt tall, as Apple's detail rows read. A 12pt
+            // label beside a 17pt value read as fine print.
             label
-                .dsText(.label12)
-                .foregroundStyle(DS.textTertiary)
+                .dsText(.body17)
+                .foregroundStyle(DS.textSecondary)
+                .lineLimit(1)
+                .frame(minHeight: DS.Hit.min)
                 .gridColumnAlignment(.leading)
             HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
                 value
@@ -95,6 +102,7 @@ struct DSSpecRow: View {
                 // row's target reaches the trailing edge.
                 Spacer(minLength: 0)
             }
+            .frame(minHeight: DS.Hit.min)
         }
         .modifier(DSSpecRowTap(action: action))
     }

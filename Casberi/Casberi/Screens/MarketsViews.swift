@@ -168,7 +168,7 @@ struct WatchAlertsSection: View {
         // The Feed's card (prd §1268). Without its Add row, a row with no
         // alerts draws no card at all.
         if adds || !store.alerts(for: ref).isEmpty {
-        SheetCard(name: String(localized: "Alerts"), glyph: "bell") {
+        SheetCard(name: String(localized: "Alerts")) {
             ForEach(store.alerts(for: ref)) { alert in
                 alertRow(alert)
             }

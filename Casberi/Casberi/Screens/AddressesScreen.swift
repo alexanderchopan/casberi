@@ -1204,14 +1204,14 @@ struct ContactSheet: View {
                         }
                     }
                     if !waiting.isEmpty {
-                        SheetCard(name: String(localized: "Replied to you"), glyph: "arrowshape.turn.up.left") {
+                        SheetCard(name: String(localized: "Replied to you")) {
                             VStack(spacing: 0) {
                                 ForEach(waiting) { row in withYouRow(row) }
                             }
                         }
                     }
                     if !withYou.isEmpty {
-                        SheetCard(name: String(localized: "With you"), glyph: "person.2") {
+                        SheetCard(name: String(localized: "With you")) {
                             VStack(spacing: 0) {
                                 ForEach(withYou) { row in withYouRow(row) }
                                 // The door the spec named and the first pass

@@ -437,7 +437,7 @@ struct CheckSection<Rows: View>: View {
     @ViewBuilder let rows: () -> Rows
 
     var body: some View {
-        SheetCard(name: title, glyph: Self.glyph(title)) { rows() }
+        SheetCard(name: title) { rows() }
     }
 
     /// The verdict's own mark: short, passes, not judged.

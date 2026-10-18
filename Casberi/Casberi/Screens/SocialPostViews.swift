@@ -146,7 +146,7 @@ struct SocialThreadRest: View {
 
     var body: some View {
         // The Feed's card (prd §1272).
-        SheetCard(name: String(localized: "The rest of the thread · \(total) posts"), glyph: "text.bubble") {
+        SheetCard(name: String(localized: "The rest of the thread · \(total) posts")) {
             ForEach(Array(parts.enumerated()), id: \.offset) { _, part in
                 Text(ProseLinks.rendered(part))
                     .dsText(.body17).foregroundStyle(DS.textPrimary)
@@ -443,8 +443,7 @@ struct SocialRepliesSection: View {
         // may hold more — say "8+", never a false total (honesty rule).
         SheetCard(name: replies.count < SocialThread.replyCap
                       ? String(localized: "Replies · \(replies.count)")
-                      : String(localized: "Replies · \(replies.count)+"),
-                  glyph: "bubble.left.and.bubble.right") {
+                      : String(localized: "Replies · \(replies.count)+")) {
             ForEach(Array(replies.enumerated()), id: \.element.id) { i, reply in
                 row(reply).staggerIn(index: min(i, 8))
             }

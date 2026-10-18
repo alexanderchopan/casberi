@@ -691,6 +691,8 @@ enum DS {
         /// name under it; a face that leads a profile at the same size as a
         /// face in a row of five reads as a list that lost its list.
         static let profile: CGFloat = 76
+        /// A thing sheet's head, centred (prd §1396): Apple Wallet's transaction face.
+        static let sheet: CGFloat = 64
         /// The rooms tray's discs (prd §1094): the touch floor, because each
         /// is its own door and a row holds four. Between `row` and `seat`,
         /// and smaller than the face button above them (§1093).

@@ -14,6 +14,8 @@ struct MoneyHistoryRows: View {
     /// A row's amount, trailing (prd §1182): a card spend's visits read as
     /// their day and what they cost, never the shop's name again.
     var amount: ((Thing) -> String?)? = nil
+    /// The door to every one of them (prd §1396): a More row under the last.
+    var onAll: (() -> Void)? = nil
     var onOpen: (Thing) -> Void
 
     var body: some View {
@@ -25,9 +27,13 @@ struct MoneyHistoryRows: View {
         }
     }
 
+    /// A list row's height (prd §1396): the name over its day, 60pt, as the
+    /// feed's rows stand (§1017).
+    static let rowHeight: CGFloat = DS.Hit.min + DS.Space.s4
+
     private var card: some View {
         // A list's name on the Feed's card (prd §1258), its figure trailing.
-        SheetCard(name: title, glyph: "clock", trailing: trailing) {
+        SheetCard(name: title, trailing: trailing) {
             ForEach(rows) { row in
                 if let thing = row.live {
                     Button { onOpen(thing) } label: {
@@ -41,6 +47,10 @@ struct MoneyHistoryRows: View {
                             } else if let trade = SwapStage(thing) {
                                 swapRow(trade, at: thing.capturedAt)
                             } else {
+                                // THE NAME OVER ITS DAY, THE FIGURE OVER ITS UNIT
+                                // (prd §1396, user: "all this truncation looks
+                                // like shit"): two short lines each side, one
+                                // baseline, nothing cut.
                                 VStack(alignment: .leading, spacing: 1) {
                                     // The thing alone (§915's seam): under "More from
                                     // Boards of Canada" a row never says the artist again.
@@ -48,24 +58,51 @@ struct MoneyHistoryRows: View {
                                         .dsText(.body17).foregroundStyle(DS.textPrimary).lineLimit(1)
                                     // The one day word (prd §1359).
                                     Text(verbatim: FeedScreen.dayWord(thing.capturedAt))
-                                        .dsText(.subhead12).foregroundStyle(DS.textTertiary).lineLimit(1)
+                                        .dsText(.label12).foregroundStyle(DS.textSecondary).lineLimit(1)
                                 }
                                 Spacer(minLength: DS.Space.s2)
+                                if let figure = Self.figure(thing) {
+                                    VStack(alignment: .trailing, spacing: 1) {
+                                        Text(verbatim: figure.number)
+                                            .dsText(.body17).monospacedDigit().foregroundStyle(DS.textPrimary)
+                                            .lineLimit(1)
+                                        if let unit = figure.unit {
+                                            Text(verbatim: unit)
+                                                .dsText(.label12).foregroundStyle(DS.textSecondary)
+                                                .lineLimit(1)
+                                        }
+                                    }
+                                    .fixedSize(horizontal: true, vertical: false)
+                                }
                             }
                         }
-                        .frame(minHeight: DS.Hit.min)
+                        .frame(minHeight: Self.rowHeight)
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(RowPress())
                 }
             }
+            if let onAll {
+                DSMoreRow(title: Text("Every transfer"), action: onAll)
+            }
         }
         .padding(.horizontal, DSRoomChassis.inset)
     }
 
+    /// A transfer's signed figure and its unit, off the bridge's own stamped
+    /// amount; nil where the row stamped none.
+    static func figure(_ thing: Thing) -> (number: String, unit: String?)? {
+        guard let amount = WalletValue.transferAmount(thing), !amount.isEmpty else { return nil }
+        let parts = MoneyReceipt.split(amount)
+        let bare = parts.number.trimmingCharacters(in: CharacterSet(charactersIn: "+-−"))
+        guard !bare.isEmpty else { return nil }
+        let sign = thing.transferDirection == "received" ? "+" : "−"
+        return (sign + bare, parts.unit)
+    }
+
     /// A trade as a trade (prd §1373): its two marks, "MUSEGOD for MAG7",
-    /// the day and what went out, what came in trailing. Nothing truncates:
-    /// a line wraps, a figure steps down a size.
+    /// the day under it, what came in trailing over its unit. Nothing
+    /// truncates: a figure steps down a size.
     @ViewBuilder
     private func swapRow(_ trade: SwapStage, at day: Date) -> some View {
         let out = MoneyReceipt.split(trade.outAmount), into = MoneyReceipt.split(trade.inAmount)
@@ -87,10 +124,10 @@ struct MoneyHistoryRows: View {
         VStack(alignment: .leading, spacing: 1) {
             Text(verbatim: String(localized: "\(outName) for \(inName)"))
                 .dsText(.body17).foregroundStyle(DS.textPrimary)
-                .lineLimit(2)
-            Text(verbatim: String(localized: "\(FeedScreen.dayWord(day)) · gave \(trade.outAmount)"))
-                .dsText(.subhead12).monospacedDigit().foregroundStyle(DS.textTertiary)
-                .lineLimit(2)
+                .lineLimit(1)
+            Text(verbatim: FeedScreen.dayWord(day))
+                .dsText(.label12).foregroundStyle(DS.textSecondary)
+                .lineLimit(1)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         VStack(alignment: .trailing, spacing: 1) {
@@ -99,52 +136,10 @@ struct MoneyHistoryRows: View {
                 .lineLimit(1).minimumScaleFactor(0.6)
             if let unit = into.unit {
                 Text(verbatim: unit)
-                    .dsText(.subhead12).foregroundStyle(DS.textTertiary)
+                    .dsText(.label12).foregroundStyle(DS.textSecondary)
                     .lineLimit(1).minimumScaleFactor(0.7)
             }
         }
         .fixedSize(horizontal: true, vertical: false)
-    }
-}
-
-/// THIS YEAR WITH THEM (prd §1181): what you sent and what they sent you,
-/// each a total and a count, then the door to every transfer on the address
-/// card — the history as two facts, not a list that repeats the name.
-struct MoneyYearTotals: View {
-    let name: String
-    let sentUSD: Double
-    let sentCount: Int
-    let receivedUSD: Double
-    let receivedCount: Int
-    var onAll: (() -> Void)?
-
-    var body: some View {
-        // NAMED BY ITS PERIOD, NEVER THE PARTY (prd §1375): the title above
-        // already says who, and "This year with 0x2f60…" ran off the card.
-        SheetCard(name: String(localized: "This year"), glyph: "calendar") {
-            HStack(spacing: DS.Space.s2) {
-                total(String(localized: "Sent"), sentUSD, sentCount, gain: false)
-                total(String(localized: "Received"), receivedUSD, receivedCount, gain: true)
-            }
-            if let onAll {
-                DSMoreLink(title: Text("Every transfer"), action: onAll)
-            }
-        }
-        .padding(.horizontal, DSRoomChassis.inset)
-    }
-
-    private func total(_ label: String, _ usd: Double, _ count: Int, gain: Bool) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Text(verbatim: label)
-                .dsText(.label12).foregroundStyle(DS.textSecondary).lineLimit(1)
-            Text(verbatim: usd.formatted(.currency(code: "USD")))
-                .dsText(.heading20).monospacedDigit()
-                .foregroundStyle(gain && usd > 0 ? DS.confirmInk : DS.textPrimary)
-                .lineLimit(1).minimumScaleFactor(0.7)
-            Text(count == 1 ? String(localized: "1 transfer") : String(localized: "\(count) transfers"))
-                .dsText(.label12).foregroundStyle(DS.textSecondary)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .accessibilityElement(children: .combine)
     }
 }

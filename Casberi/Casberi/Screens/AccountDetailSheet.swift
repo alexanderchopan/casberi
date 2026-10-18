@@ -591,7 +591,7 @@ struct AccountDetailSheet: View {
     /// and it does it better than a switch in here can.
     private var notifyCard: some View {
         // The Feed's card (prd §1269), named apart from the sheet's title.
-        SheetCard(name: String(localized: "Alerts"), glyph: "bell") {
+        SheetCard(name: String(localized: "Alerts")) {
             // A fixed accent regardless of what's actually on — the badge
             // previews no state here, so it takes the neutral tone
             // (2026-08-10, was DS.tint).

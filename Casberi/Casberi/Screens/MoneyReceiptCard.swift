@@ -501,21 +501,18 @@ struct MoneySheetHead: View {
     var onSubject: ((String) -> Void)?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            partyRow
-            VStack(alignment: .leading, spacing: 0) {
+        // CENTRED, THREE THINGS (prd §1396, user: "still looks janky and
+        // messy and convoluted"): the face, the name, the amount, then one
+        // grey line — Apple Wallet's transaction head. The sentence title
+        // and the party row that stood over it said the figure twice.
+        VStack(spacing: 0) {
+            head
+            VStack(spacing: 0) {
                 figure
-                if let line, !line.isEmpty {
-                    Text(verbatim: line)
-                        .dsText(.body17)
-                        .monospacedDigit()
-                        .foregroundStyle(DS.textSecondary)
-                        .lineLimit(2).minimumScaleFactor(0.8)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .padding(.top, 2)
-                }
+                    .padding(.top, DS.Space.s2)
+                line
+                    .padding(.top, DS.Space.s1)
             }
-            .padding(.top, DS.Space.s4)
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(Text(receipt.spokenLabel))
             .accessibilityValue(Text(verbatim: receipt.spokenValue))
@@ -533,40 +530,29 @@ struct MoneySheetHead: View {
             }
         }
         .padding(.horizontal, DSRoomChassis.leadInset)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity)
         .animation(DS.Motion.standard, value: receipt.finality)
     }
 
-    // MARK: The party row
+    // MARK: The head
 
-    /// Who and when: the face, the name, the day in the divider's ink with
-    /// the clock beside it. A door when there is an address behind the face.
-    @ViewBuilder private var partyRow: some View {
-        let row = HStack(spacing: DS.Space.s3) {
+    /// The face over the name, a door when there is an address behind it.
+    @ViewBuilder private var head: some View {
+        let stack = VStack(spacing: DS.Space.s3) {
             face
             Text(verbatim: partyName)
                 .dsText(.heading17)
                 .foregroundStyle(unnamed && transfer == nil ? DS.pickInk : DS.textPrimary)
-                .lineLimit(1).truncationMode(.middle)
-            Spacer(minLength: DS.Space.s2)
-            if !hidesDay {
-                HStack(alignment: .firstTextBaseline, spacing: DS.Space.s1) {
-                    Text(FeedScreen.dayWord(landed))
-                        .dsText(.label12)
-                        .foregroundStyle(DS.headInk)
-                    Text(verbatim: landed.formatted(date: .omitted, time: .shortened))
-                        .dsText(.label12)
-                        .foregroundStyle(DS.textSecondary)
-                }
-                .lineLimit(1)
-            }
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
         }
         if let address = door, let onSubject {
-            Button { onSubject(address) } label: { row.contentShape(Rectangle()) }
-                .buttonStyle(RowPress())
+            Button { onSubject(address) } label: { stack.contentShape(Rectangle()) }
+                .buttonStyle(PressSpring())
                 .accessibilityHint(Text("Opens what you know about this address"))
         } else {
-            row
+            stack
         }
     }
 
@@ -575,27 +561,35 @@ struct MoneySheetHead: View {
             // A wallet you watch wears the wallet's mark, never a stranger's
             // person (prd §1349).
             if WalletStore.shared.watches(t.theirAddress) {
-                BridgeIcon(name: "Wallet", size: DS.Face.seat, circular: true)
+                BridgeIcon(name: "Wallet", size: DS.Face.sheet, circular: true)
             } else {
-                WalletFace(address: t.theirAddress, size: DS.Face.seat, circular: true)
+                WalletFace(address: t.theirAddress, size: DS.Face.sheet, circular: true)
             }
         } else if let s = swap {
             swapFaces(s)
         } else if let c = card {
-            BridgeIcon(name: c.source, size: DS.Face.seat, circular: true)
+            BridgeIcon(name: c.source, size: DS.Face.sheet, circular: true)
         } else {
-            MoneySubjectDisc(subject: receipt.subject, mine: receipt.mine, size: DS.Face.seat, onOpen: nil)
+            MoneySubjectDisc(subject: receipt.subject, mine: receipt.mine, size: DS.Face.sheet, onOpen: nil)
         }
     }
 
+    /// Who or what: the other side, the pair a swap traded, the card, else
+    /// the receipt's party (the row's own sentence, §1357.1).
     private var partyName: String {
         if let t = transfer { return t.theirName }
-        if let s = swap { return s.wallet ?? source }
+        if let s = swap {
+            let out = MoneyReceipt.split(s.outAmount), into = MoneyReceipt.split(s.inAmount)
+            let outName = s.outApp ? s.outAmount : (out.unit ?? s.outAmount)
+            let inName = s.inApp ? s.inAmount : (into.unit ?? s.inAmount)
+            return String(localized: "\(outName) for \(inName)")
+        }
         if let c = card { return c.last4.map { "\(c.name) ••\($0)" } ?? c.name }
-        return unnamed ? String(localized: "Tap to name") : source
+        if unnamed { return String(localized: "Tap to name") }
+        return Self.title(receipt)
     }
 
-    /// The address the row opens, where there is one.
+    /// The address the head opens, where there is one.
     private var door: String? {
         if let t = transfer { return t.theirAddress }
         if swap == nil, card == nil, case .address(let a) = receipt.subject, !a.isEmpty { return a }
@@ -606,7 +600,7 @@ struct MoneySheetHead: View {
     /// the back one, so the two separate on any fill without a line.
     private func swapFaces(_ s: Swap) -> some View {
         let out = MoneyReceipt.split(s.outAmount), into = MoneyReceipt.split(s.inAmount)
-        let size = DS.Face.seat
+        let size = DS.Face.sheet
         return ZStack(alignment: .leading) {
             swapMark(s.outApp ? s.outAmount : (out.unit ?? ""), app: s.outApp, size: size)
                 .mask(alignment: .leading) {
@@ -635,6 +629,74 @@ struct MoneySheetHead: View {
         }
     }
 
+    // MARK: The line
+
+    /// One grey line under the figure: what it was worth or the other leg,
+    /// then when — the day in the divider's ink (§882), the clock beside it.
+    @ViewBuilder private var line: some View {
+        let lead = lineLead.flatMap { $0.isEmpty ? nil : $0 }
+        // A figure's worth joins the clock on one line; a SENTENCE (a Safe's
+        // "Waiting on one more signature, yours", a Lightning payment's
+        // "worth about $18.90 when it landed") stands on its own line over
+        // it, wrapping, never cut beside the clock.
+        let sentence = lead.map { $0.count > Self.leadOnLineCap } ?? false
+        VStack(spacing: DS.Space.s1) {
+            if sentence, let lead {
+                Text(verbatim: lead)
+                    .dsText(.body17)
+                    .monospacedDigit()
+                    .foregroundStyle(DS.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s1) {
+                if !sentence, let lead {
+                    Text(verbatim: lead + (hidesDay ? "" : " ·"))
+                        .dsText(.body17)
+                        .monospacedDigit()
+                        .foregroundStyle(DS.textSecondary)
+                }
+                if !hidesDay {
+                    Text(FeedScreen.dayWord(landed))
+                        .dsText(.body17)
+                        .foregroundStyle(DS.headInk)
+                    Text(verbatim: landed.formatted(date: .omitted, time: .shortened))
+                        .dsText(.body17)
+                        .foregroundStyle(DS.textSecondary)
+                }
+            }
+            .lineLimit(1)
+            .minimumScaleFactor(0.8)
+        }
+    }
+
+    /// A lead longer than this is a sentence, not a figure (prd §1396).
+    static let leadOnLineCap = 22
+
+    /// What the line says before the day: a swap's other leg and its worth,
+    /// a transfer's worth, a card's or a receipt's own second line.
+    private var lineLead: String? {
+        if let s = swap {
+            let gave: String
+            if s.outApp {
+                gave = String(localized: "Paid with \(s.outAmount)")
+            } else if s.inApp {
+                gave = String(localized: "Paid out to \(s.inAmount)")
+            } else {
+                gave = "−" + s.outAmount
+            }
+            var parts = [gave]
+            if let usd = s.usd, usd > 0 { parts.append(usd.formatted(.currency(code: "USD"))) }
+            return parts.joined(separator: " · ")
+        }
+        if let t = transfer {
+            guard let usd = t.usd, usd > 0 else { return nil }
+            return usd.formatted(.currency(code: "USD"))
+        }
+        return receipt.secondary
+    }
+
     // MARK: The figure
 
     /// The amount at the price rung, its unit beside it; the two stack when
@@ -647,7 +709,7 @@ struct MoneySheetHead: View {
                 figureNumber(parts.number)
                 if let unit = parts.unit { figureUnit(unit) }
             }
-            VStack(alignment: .leading, spacing: 0) {
+            VStack(spacing: 0) {
                 figureNumber(parts.number)
                 if let unit = parts.unit { figureUnit(unit) }
             }
@@ -712,33 +774,6 @@ struct MoneySheetHead: View {
     private var roll: ContentTransition {
         guard let amount = receipt.amount else { return .numericText() }
         return amount.numeric.map { .numericText(value: $0) } ?? .numericText()
-    }
-
-    // MARK: The line
-
-    /// The other side, in one line: what it was worth and which of your
-    /// wallets, what went out, what the card said, what the receipt said.
-    private var line: String? {
-        if let s = swap {
-            let gave: String
-            if s.outApp {
-                gave = String(localized: "Paid with \(s.outAmount)")
-            } else if s.inApp {
-                gave = String(localized: "Paid out to \(s.inAmount)")
-            } else {
-                gave = "−" + s.outAmount
-            }
-            var parts = [gave]
-            if let usd = s.usd, usd > 0 { parts.append(usd.formatted(.currency(code: "USD"))) }
-            return parts.joined(separator: " · ")
-        }
-        if let t = transfer {
-            var parts: [String] = []
-            if let usd = t.usd, usd > 0 { parts.append(usd.formatted(.currency(code: "USD"))) }
-            parts.append(t.sent ? String(localized: "from \(t.mineLabel)") : String(localized: "into \(t.mineLabel)"))
-            return parts.joined(separator: " · ")
-        }
-        return receipt.secondary
     }
 
     // MARK: The state

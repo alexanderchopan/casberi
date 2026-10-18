@@ -81,7 +81,7 @@ struct SubscriptionPage<Tail: View>: View {
             // The Feed's cards (prd §1268): the facts as Details, the
             // doors as More.
             if !facts.isEmpty {
-                SheetCard(name: String(localized: "Details"), glyph: "list.bullet") {
+                SheetCard(name: String(localized: "Details")) {
                     ForEach(facts) { fact in
                         HStack(alignment: .firstTextBaseline, spacing: DS.Space.s3) {
                             Text(verbatim: fact.label).dsText(.body17).foregroundStyle(DS.textPrimary)
@@ -95,7 +95,7 @@ struct SubscriptionPage<Tail: View>: View {
                 }
             }
             if !doors.isEmpty {
-                SheetCard(name: String(localized: "More"), glyph: "ellipsis.circle") {
+                SheetCard(name: String(localized: "More")) {
                     VStack(spacing: 0) {
                         ForEach(doors) { door in
                             DSDoorRow(icon: door.icon, title: door.title, role: door.role, act: door.act)

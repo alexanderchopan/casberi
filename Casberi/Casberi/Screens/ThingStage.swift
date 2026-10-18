@@ -117,6 +117,8 @@ struct VerbDial: View {
     /// what are we trying to get people to track"): Save a person, Watch a
     /// wallet, Track a charge that repeats. Drawn only where it fits in four.
     var keep: Keep? = nil
+    /// Centred under a centred head (prd §1396): the money sheet's.
+    var centered: Bool = false
     struct Keep {
         let label: String
         let glyph: String
@@ -148,7 +150,7 @@ struct VerbDial: View {
 
     @ViewBuilder private var liveBody: some View {
         let tiles = self.tiles
-        DSScopeTiles(sections: tiles, active: SheetTile.none, verbs: Set(tiles), bare: true) { pick($0) }
+        DSScopeTiles(sections: tiles, active: SheetTile.none, verbs: Set(tiles), bare: true, centered: centered) { pick($0) }
             // In the rows' column, as a room's tiles stand: the discs were
             // centred and needed no inset; a grid does.
             .padding(.horizontal, DSRoomChassis.inset)

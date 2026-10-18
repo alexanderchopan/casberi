@@ -194,10 +194,8 @@ struct ThingSheetView: View {
     /// (prd §1377): read once per open, never in a body.
     @State private var poisonOriginal: String?
     @State private var poisonRealTransfers: [Thing] = []
-    @State private var moneyHistoryTotal = 0
     /// This year with this party (prd §1181): sent and received, in dollars
     /// and counts, this transfer included.
-    @State private var moneyYear = MoneyYear()
     /// The same price charged again at least 25 days apart (prd §1352).
     @State private var moneyRecurs = false
     /// A card spend's visits this month, this one included, and their total
@@ -211,7 +209,6 @@ struct ThingSheetView: View {
     @State private var dayBlocks: [EventDaySlice.Block] = []
     /// More from this artist or channel (prd §1186), read on the task (§628).
     @State private var mediaMore: [Thing] = []
-    struct MoneyYear { var sentUSD = 0.0, sentCount = 0, receivedUSD = 0.0, receivedCount = 0 }
     /// Mirrors `MoneyActivityDriver.isTracking` for this record, so the control
     /// re-labels itself the moment it is used.
     @State private var tracking = false
@@ -588,10 +585,14 @@ struct ThingSheetView: View {
                     // the act that keeps up with it, then the last three with
                     // this party as rows — title, box, tiles, list, a room's order.
                     // The party's name is the sheet's title, a room's own row.
-                    DSRoomTitleRow(title: moneyFlag?.title ?? MoneySheetHead.title(moneyReceipt))
-                        .padding(.horizontal, DSRoomChassis.inset)
-                        .padding(.top, onBack == nil ? DS.Space.s4 : DS.Space.s3)
-                        .settleIn(delay: 0.04)
+                    // The head names the thing itself since prd §1396; only a
+                    // flagged box keeps a title over it (§1377).
+                    if let flag = moneyFlag {
+                        DSRoomTitleRow(title: flag.title)
+                            .padding(.horizontal, DSRoomChassis.inset)
+                            .padding(.top, onBack == nil ? DS.Space.s4 : DS.Space.s3)
+                            .settleIn(delay: 0.04)
+                    }
                     Group {
                         // What fools you says so in its box (prd §1377).
                         if let flag = moneyFlag {
@@ -624,7 +625,7 @@ struct ThingSheetView: View {
                             readMoneyHistory()
                             readPoisonOriginal()
                         }
-                        .padding(.top, DS.Space.s3)
+                        .padding(.top, moneyFlag == nil ? (onBack == nil ? DS.Space.s6 : DS.Space.s4) : DS.Space.s3)
                         .settleIn(delay: 0.06)
                     // A READING ENDS AT ITS BOX (prd §1341, user, of an Acorns
                     // account in Home's Transactions: "this is terrible"): a
@@ -635,7 +636,8 @@ struct ThingSheetView: View {
                         // or Follow for whoever sent it, no copy of its link.
                         VerbDial(thing: thing, verbs: moneyFlag == nil ? walletVerbs : flaggedVerbs,
                                  onVerb: runVerb, onName: nil,
-                                 keep: moneyFlag == nil ? moneyKeep : nil)
+                                 keep: moneyFlag == nil ? moneyKeep : nil,
+                                 centered: moneyFlag == nil)
                             .padding(.top, DSRoomChassis.leadGap)
                             .settleIn(delay: 0.08)
                         dialResult
@@ -682,10 +684,14 @@ struct ThingSheetView: View {
                         // Between your own wallets there is no "them" (prd §1349).
                         } else if moneyHasPerson, !WalletStore.shared.watches(thing.counterpartyAddress),
                            let cp = thing.counterpartyAddress {
-                            MoneyYearTotals(name: moneyPartyName(moneyReceipt),
-                                            sentUSD: moneyYear.sentUSD, sentCount: moneyYear.sentCount,
-                                            receivedUSD: moneyYear.receivedUSD, receivedCount: moneyYear.receivedCount,
-                                            onAll: { openAddressCard(cp) })
+                            // THE LAST THREE WITH THEM, AND THE DOOR TO ALL (prd
+                            // §1396, user: "why do we care about 'this year'"):
+                            // the yearly tally and its count are gone; the list
+                            // shows what the app has without claiming it is all.
+                            MoneyHistoryRows(title: String(localized: "With \(moneyPartyName(moneyReceipt))"),
+                                             rows: moneyHistory.keyed,
+                                             onAll: { openAddressCard(cp) },
+                                             onOpen: { walkingToScope = .none; walkingToNote = KeyedThing($0) })
                                 .padding(.top, DS.Space.s6)
                                 .settleIn(delay: 0.12)
                         } else if moneyCard != nil, !moneyMonth.isEmpty {
@@ -774,7 +780,7 @@ struct ThingSheetView: View {
                     dialResult
                     // What the picture names, under the tiles (§885's facts).
                     if !facts.isEmpty {
-                        SheetCard(name: String(localized: "Found in it"), glyph: "text.viewfinder") {
+                        SheetCard(name: String(localized: "Found in it")) {
                             factRows
                         }
                         .padding(.horizontal, DS.Space.s4)
@@ -1177,7 +1183,7 @@ struct ThingSheetView: View {
                 // fragment, and the others from the same work were already in
                 // the corpus with nothing to reach them.
                 if !siblingPassages.isEmpty {
-                    SheetCard(name: String(localized: "More from this book"), glyph: "book") {
+                    SheetCard(name: String(localized: "More from this book")) {
                         NoteSiblingList(rows: siblingPassages) {
                             walkingToScope = .none
                             walkingToNote = KeyedThing($0)
@@ -1189,7 +1195,7 @@ struct ThingSheetView: View {
                 // THAT DAY (prd §366) — the corpus answering a question the
                 // journal app this entry came from structurally cannot.
                 if !sameDayThings.isEmpty {
-                    SheetCard(name: String(localized: "That day"), glyph: "calendar") {
+                    SheetCard(name: String(localized: "That day")) {
                         NoteSameDayShelf(rows: sameDayThings) {
                             walkingToScope = .none
                             walkingToNote = KeyedThing($0)
@@ -1203,7 +1209,7 @@ struct ThingSheetView: View {
                 // one answers about the date ACROSS the years — the wider
                 // reading, and the one that only exists once a journal is deep.
                 if !otherYears.isEmpty {
-                    SheetCard(name: String(localized: "On this date"), glyph: "clock.arrow.circlepath") {
+                    SheetCard(name: String(localized: "On this date")) {
                         NoteOtherYearsList(rows: otherYears) {
                             walkingToScope = .none
                             walkingToNote = KeyedThing($0)
@@ -2818,7 +2824,7 @@ struct ThingSheetView: View {
             }
             // On the Feed's card since prd §1258, named Details.
             .frame(maxWidth: .infinity, alignment: .leading)
-            .modifier(SheetCardWrap(name: String(localized: "Details"), glyph: "list.bullet"))
+            .modifier(SheetCardWrap(name: String(localized: "Details")))
             // Opening the sheet is the intent that buys the World ID read
             // (§785's rule) — one `eth_call`, cached a week, never from a row.
             .task(id: "firstSeen:\(thing.counterpartyAddress ?? "")") {
@@ -3256,7 +3262,7 @@ struct ThingSheetView: View {
                 out.append(MoneyReceiptCell(value: FeedScreen.dayWord(granted), label: String(localized: "Granted")))
             }
             if let wallet = MoneyReceiptSource.walletLabel(thing.walletAddress) {
-                out.append(MoneyReceiptCell(value: wallet, label: String(localized: "Wallet")))
+                out.append(MoneyReceiptCell(value: wallet, label: String(localized: "Account")))
             }
             return out
         }
@@ -3268,6 +3274,9 @@ struct ThingSheetView: View {
             if let swap = SwapStage(thing),
                case .rate(let rate, _)? = MoneyCommentary.rate(out: swap.outAmount, into: swap.inAmount) {
                 out.append(MoneyReceiptCell(value: rate, label: String(localized: "Rate")))
+            }
+            if let wallet = MoneyReceiptSource.walletLabel(thing.walletAddress) {
+                out.append(MoneyReceiptCell(value: wallet, label: String(localized: "Account")))
             }
             if let network = WalletIngest.chainName(forContent: thing.content), !network.isEmpty {
                 out.append(MoneyReceiptCell(value: network, label: String(localized: "Network")))
@@ -3286,19 +3295,19 @@ struct ThingSheetView: View {
         }
         // The state is the head's word under the figure (prd §1394), never a
         // row: NEVER A DEFAULT "SETTLED" (prd §83) holds there.
+        // A WALLET IS JUST AN APP (user, 2026-10-17): the account it moved
+        // from is a row named Account, as a card's or a bank's would be.
+        if let t = moneyTransfer(r) {
+            out.append(MoneyReceiptCell(value: t.mineLabel, label: String(localized: "Account")))
+        } else if let wallet = MoneyReceiptSource.walletLabel(thing.walletAddress) {
+            out.append(MoneyReceiptCell(value: wallet, label: String(localized: "Account")))
+        }
         if let network = WalletIngest.chainName(forContent: thing.content), !network.isEmpty {
             out.append(MoneyReceiptCell(value: network, label: String(localized: "Network")))
         }
-        if moneyHistoryTotal > 0 {
-            let ordinal = NumberFormatter.localizedOrdinal(moneyHistoryTotal + 1)
-            out.append(MoneyReceiptCell(value: ordinal,
-                                        label: moneyHasPerson ? String(localized: "With \(moneyPartyName(r))")
-                                                              : String(localized: "Visit")))
-            if !moneyHasPerson, let last = moneyHistory.first?.capturedAt {
-                out.append(MoneyReceiptCell(value: FeedScreen.dayWord(last),
-                                            label: String(localized: "Last visit")))
-            }
-        }
+        // No "2nd · With Sam", no "Visit", no "Last visit" (prd §1396, user:
+        // "why do we care about how many times b/c we could be wrong"): a
+        // count of what was fetched is not a count of what happened (§83).
         return out
     }
 
@@ -3459,7 +3468,6 @@ struct ThingSheetView: View {
                 sortBy: [SortDescriptor(\Thing.capturedAt, order: .reverse)])
             others = ((try? modelContext.fetch(d)) ?? []).filter { $0.isLive && $0.id != id }
         }
-        moneyHistoryTotal = others.count
         let every = ([thing] + others).compactMap(\.priceValue).map(abs).reduce(0, +)
         moneyEveryTotal = every > 0 ? every.formatted(.currency(code: thing.priceCurrency ?? "USD")) : nil
         let price = thing.priceValue
@@ -3471,17 +3479,7 @@ struct ThingSheetView: View {
             }
         } ?? false
         moneyHistory = Array(others.prefix(3))
-        // This year with them, this transfer included (prd §1181).
-        var year = MoneyYear()
         let cal = Calendar.current
-        for t in others + [thing] where t.isLive && cal.isDate(t.capturedAt, equalTo: .now, toGranularity: .year) {
-            if t.transferDirection == "received" {
-                year.receivedCount += 1; year.receivedUSD += t.transferUSD ?? 0
-            } else {
-                year.sentCount += 1; year.sentUSD += t.transferUSD ?? 0
-            }
-        }
-        moneyYear = year
         // A card spend's month (prd §1182): this visit and the others in the
         // same calendar month, newest first, four at most, and their total.
         if thing.source != "Wallet" {
@@ -4114,7 +4112,7 @@ struct ThingSheetView: View {
         } else if MediaSheetBox.isVideo(thing),
                   let about = thing.summary?.trimmingCharacters(in: .whitespacesAndNewlines),
                   !about.isEmpty {
-            SheetCard(name: String(localized: "About"), glyph: "info.circle") {
+            SheetCard(name: String(localized: "About")) {
                 Text(verbatim: about).dsText(.body17).foregroundStyle(DS.textSecondary)
                     .lineLimit(6)
             }
@@ -4248,7 +4246,7 @@ struct ThingSheetView: View {
         let follow = fromFollow.flatMap { fresh($0.name) ? $0 : nil }
         Group {
             if follow != nil || person != nil || contact != nil || wallet != nil || list != nil || app != nil {
-                SheetCard(name: String(localized: "From"), glyph: "arrow.right.to.line") {
+                SheetCard(name: String(localized: "From")) {
                     VStack(alignment: .leading, spacing: 0) {
                         if let item = follow, let room = fromRoom { fromFollowRow(item, room) }
                         if let person { fromPersonRow(person) }
@@ -4653,7 +4651,7 @@ struct ThingSheetView: View {
     /// thing's URL. An unlabelled mixed list would make the weaker one look
     /// like the stronger.
     private var pointsAtSection: some View {
-        SheetCard(name: String(localized: "Points at this"), glyph: "arrow.down.left") {
+        SheetCard(name: String(localized: "Points at this")) {
             ForEach(pointingAt, id: \.id) { tie in
                 Button {
                     walkTo(tie)
@@ -4695,7 +4693,7 @@ struct ThingSheetView: View {
     @ViewBuilder
     private func noteLinkList(_ title: String, notes: [KeyedThing],
                               icon: String = "arrow.up.right") -> some View {
-        SheetCard(name: title, glyph: icon) {
+        SheetCard(name: title) {
             ForEach(notes) { note in
                 // `liveLinkedNotes` filters when this view VALUE is made; this
                 // runs again each time the closure is re-evaluated, which is
@@ -4735,7 +4733,7 @@ struct ThingSheetView: View {
             // one row never says it twice (prd §1079).
             if sameObject.isEmpty { keptBeforeRow } else { sameObjectRows }
             if !relatedStream.els.isEmpty {
-                SheetCard(name: NSLocalizedString(relatedTitle, comment: ""), glyph: "square.stack") {
+                SheetCard(name: NSLocalizedString(relatedTitle, comment: "")) {
                     GenRender(id: "root", els: relatedStream.els)
                 }
                 .padding(.horizontal, DS.Space.s4)
