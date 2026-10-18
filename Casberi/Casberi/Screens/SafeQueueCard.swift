@@ -9,7 +9,9 @@ import SwiftUI
 /// bridge is solo. So the queue is drawn as the PEOPLE it's waiting on — each
 /// owner's own `WalletFace`, lit when they've signed and dim when they
 /// haven't, yours marked — instead of the bare fraction "2 of 3", which says
-/// nothing about who to go ask. Names come from `WalletIngest.knownLabel`'s
+/// nothing about who to go ask. Since prd §1409 that is a `SheetCard` named
+/// Signatures, the fraction trailing its name, one row per owner in the From
+/// rows' anatomy; the head sentence and the disc left the sheet. Names come from `WalletIngest.knownLabel`'s
 /// existing chain (address-book name → linked contact → short hex), so a
 /// person who has named their co-signers sees people, not hex.
 ///
@@ -32,95 +34,66 @@ struct SafeQueueCard: View {
     @Environment(\.openURL) private var openURL
 
     var body: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s3) {
+        // ONE BLOCK IN THE SHEET'S COLUMN (prd §1409): the queue is a
+        // `SheetCard` named Signatures, the fraction its trailing figure, and
+        // every owner a row in the From rows' anatomy — so it stands where
+        // Account and From stand, instead of a head and a roster at their own
+        // two sizes one column out.
+        SheetCard(name: String(localized: "Signatures"), trailing: trailing) {
             switch check.status {
-            case .pending(let have, let required):
-                pendingHead(have: have, required: required)
-                if !check.roster.isEmpty { roster }
+            case .pending:
+                if check.readyToExecute {
+                    statusLine(icon: "checkmark.circle", tone: DS.confirmInk,
+                               text: "Fully signed — anyone can execute it now.")
+                }
+                roster
                 if check.conflicts > 0 { conflictNote }
             case .executed:
                 statusLine(icon: "checkmark.circle", tone: DS.confirmInk,
                            text: "Executed.")
-                if !check.roster.isEmpty { roster }
+                roster
             case .replaced:
                 statusLine(icon: "arrow.triangle.2.circlepath", tone: DS.textTertiary,
                            text: "Replaced — another transaction executed at this position.")
             }
             // No "Open in Safe" and no hand-off footnote here (prd §1334):
-            // the sheet's first tile is Safe, and the commentary above says
-            // once that signing happens in the Safe app.
+            // the sheet's first tile is Safe.
         }
-        // No well (prd §782): the block stands in the sheet's column.
-        .frame(maxWidth: .infinity, alignment: .leading)
+        // The sheet pads the column (s4) and the card its rows (s4): the rows
+        // land at 36pt, where Account and From stand.
     }
 
-    // MARK: - Head
-
-    /// The disc carries the count so the sentence doesn't have to, and the
-    /// sentence spends its words on the thing a fraction can't say: who is
-    /// left, or that nobody is.
-    private func pendingHead(have: Int, required: Int) -> some View {
-        HStack(alignment: .center, spacing: DS.Space.s3) {
-            SafeSignatureDisc(have: have, required: required)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(verbatim: headline(have: have, required: required))
-                    .dsText(.body17).foregroundStyle(DS.textPrimary)
-                    .fixedSize(horizontal: false, vertical: true)
-                if let sub = subline(have: have, required: required) {
-                    Text(verbatim: sub)
-                        .dsText(.subhead12).foregroundStyle(DS.textTertiary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
-            Spacer(minLength: 0)
+    /// The figure beside the name: the fraction while it collects, else the
+    /// state word. The disc that carried the fraction is the room's
+    /// (`SafeRoomCard`), not the sheet's, since §1409.
+    private var trailing: String? {
+        switch check.status {
+        case .pending(let have, let required):
+            return required > 0 ? String(localized: "\(have) of \(required)") : nil
+        case .executed: return String(localized: "Executed")
+        case .replaced: return String(localized: "Replaced")
         }
-    }
-
-    private func headline(have: Int, required: Int) -> String {
-        if check.readyToExecute {
-            return String(localized: "Fully signed — ready to execute")
-        }
-        let waiting = check.waitingOn
-        // "Your signature is the one missing" is the whole feature in a
-        // sentence, and it's only sayable when we know which seat is yours.
-        if waiting.count == 1, waiting[0].isYou {
-            return String(localized: "Yours is the last signature needed")
-        }
-        if waiting.contains(where: \.isYou) {
-            return String(localized: "Waiting on you and \(waiting.count - 1) other")
-        }
-        guard !waiting.isEmpty else {
-            return required > 0
-                ? String(localized: "\(have) of \(required) signatures collected")
-                : String(localized: "\(have) signatures collected")
-        }
-        if waiting.count == 1 {
-            return String(localized: "Waiting on \(waiting[0].displayName)")
-        }
-        return String(localized: "Waiting on \(waiting[0].displayName) and \(waiting.count - 1) other")
-    }
-
-    /// The subline says what is LEFT, never the fraction.
-    ///
-    /// `SafeSignatureDisc` beside it already draws "\(have)/\(required)" — its
-    /// own doc says the disc is where that fraction lives — so spelling it here
-    /// too, under a headline that can spell it a third time, printed one number
-    /// pair three ways in one 60pt block.
-    private func subline(have: Int, required: Int) -> String? {
-        guard required > 0 else { return nil }
-        if check.readyToExecute {
-            return String(localized: "Anyone can execute it now")
-        }
-        let short = required - have
-        return String(localized: "\(short) more to go")
     }
 
     // MARK: - The people
 
+    /// One row per owner, in the From rows' anatomy (`DSPushRowLabel`, no
+    /// chevron: a fact, not a door). Yours leads with the ask as its trailing
+    /// fact in the attention ink (§1385), a signed row says when, a waiting
+    /// row is dim.
     private var roster: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s2) {
+        VStack(alignment: .leading, spacing: 0) {
             ForEach(check.roster) { signer in
-                HStack(spacing: DS.Space.s2) {
+                DSPushRowLabel(
+                    title: Text(verbatim: signer.displayName),
+                    subtitle: Text(verbatim: subtitle(signer)),
+                    fact: signer.isYou && !signer.signed
+                        ? Text("Waiting on you") : nil,
+                    factTone: DS.attentionInk,
+                    tint: signer.signed || signer.isYou ? DS.textPrimary : DS.textTertiary,
+                    opens: false,
+                    factFits: true
+                ) {
                     WalletFace(address: signer.address, size: DS.Face.row, circular: true)
                         .opacity(signer.signed ? 1 : 0.38)
                         .overlay(alignment: .bottomTrailing) {
@@ -132,21 +105,16 @@ struct SafeQueueCard: View {
                                     .offset(x: 2, y: 2)
                             }
                         }
-                    Text(verbatim: signer.isYou
-                         ? String(localized: "\(signer.displayName) (you)")
-                         : signer.displayName)
-                        .dsText(.subhead12)
-                        .foregroundStyle(signer.signed ? DS.textPrimary : DS.textTertiary)
-                        .lineLimit(1)
-                    Spacer(minLength: 0)
-                    Text(verbatim: signer.signed
-                         ? signedLabel(signer)
-                         : String(localized: "waiting"))
-                        .dsText(.label12)
-                        .foregroundStyle(signer.signed ? DS.textTertiary : DS.textSecondary)
                 }
+                .padding(.vertical, DS.Space.s2)
+                .frame(minHeight: DS.Hit.min)
             }
         }
+    }
+
+    private func subtitle(_ signer: SafeBridge.Signer) -> String {
+        if signer.signed { return signedLabel(signer) }
+        return signer.isYou ? String(localized: "You") : String(localized: "Waiting")
     }
 
     /// When they signed, relative — "2h ago". A confirmation with an
@@ -154,9 +122,9 @@ struct SafeQueueCard: View {
     /// it just doesn't claim a time it doesn't have.
     private func signedLabel(_ signer: SafeBridge.Signer) -> String {
         guard let at = signer.signedAt, at != .distantPast else {
-            return String(localized: "signed")
+            return String(localized: "Signed")
         }
-        return at.formatted(.relative(presentation: .numeric, unitsStyle: .narrow))
+        return String(localized: "Signed \(at.formatted(.relative(presentation: .numeric, unitsStyle: .narrow)))")
     }
 
     // MARK: - Conflict

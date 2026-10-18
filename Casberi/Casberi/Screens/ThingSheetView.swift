@@ -1140,9 +1140,10 @@ struct ThingSheetView: View {
                         // names only the Enclave owner lands rows now too.
                         return SignerKey.presence() != .none || SafeEnclaveKey.exists
                     }()
+                    // A `SheetCard` (prd §1409): the s6 every card's caller leaves.
                     SafeQueueCard(check: check, signable: signable)
                         .padding(.horizontal, DS.Space.s4)
-                        .padding(.top, DS.Space.s3)
+                        .padding(.top, DS.Space.s6)
                     // The ask (prd §425). Under the queue card because that
                     // card is what says WHO is still waiting; this is the one
                     // seat in it that is yours. Draws nothing until the chain

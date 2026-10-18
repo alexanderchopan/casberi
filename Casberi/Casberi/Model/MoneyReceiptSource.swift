@@ -118,7 +118,9 @@ enum MoneyReceiptSource {
             // Their payoff fact is a sentence the bridge already wrote (prd
             // §237, §268). Shown as itself rather than re-parsed into a chart.
             return storedNote(thing)
-        case "Safe":           return safeCommentary(thing, safe)
+        // A Safe's commentary is DELETED (prd §1409): the Signatures block
+        // lists who signed, and the hand-off line went with §1334.
+        case "Safe":           return nil
         default:               return nil
         }
     }
@@ -206,23 +208,6 @@ enum MoneyReceiptSource {
             to: Calendar.current.startOfDay(for: .now)).day ?? 0
         return MoneyCommentary.ladder(rung: rung, since: thing.capturedAt,
                                       days: max(0, days))
-    }
-
-    @MainActor
-    private static func safeCommentary(_ thing: Thing,
-                                       _ safe: SafeBridge.Check?) -> MoneyCommentary? {
-        guard case .pending(let have, let required)? = safe?.status else { return nil }
-        let signed = safe?.roster.filter(\.signed).map(\.displayName) ?? []
-        let head: String
-        if signed.isEmpty {
-            head = String(localized: "\(have) of \(required) signatures so far.")
-        } else if signed.count == 1 {
-            head = String(localized: "\(signed[0]) has signed.")
-        } else {
-            head = String(localized: "\(signed.dropLast().joined(separator: ", ")) and \(signed[signed.count - 1]) have signed.")
-        }
-        return .note(headline: head,
-                     subline: String(localized: "Signing happens in your Safe app — never here."))
     }
 
     /// The bridge's own sentence, where one exists. `enrichedText` is
