@@ -65,7 +65,7 @@ grep -qF 'case .answered: return .landed(added)' "$B" \
 
 # The ask checks the pass before saying "none" or "nothing pending".
 grep -qF 'if total == 0, let refused = Self.refusedSentence(health)' "$A" \
-  || { echo "✗ SafeAsk can say 'No Safe wallets detected' over a refused pass"; exit 1; }
+  || { echo "✗ SafeAsk can say 'No Safe accounts detected' over a refused pass"; exit 1; }
 
 # The address book does not file a contract while Safe's answer is unknown.
 grep -qF 'guard isSafe != nil else { return }' "$K" \

@@ -216,7 +216,7 @@ enum KeptAskComposers {
             // The corpus sections are local reads, so an unreachable LIVE
             // read still shows what the wallet bridges already landed.
             return Result(delta: "", digest: "unreachable",
-                          doc: walletDoc(line: "Couldn't reach your wallet right now.",
+                          doc: walletDoc(line: "Couldn't reach your accounts right now.",
                                          groups: [], things: things.live))
         }
         // The line itself is the honest digest — it only changes when the
@@ -275,7 +275,7 @@ enum KeptAskComposers {
                 .map { "\(allocSafe($0.label))|\(Int($0.totalUSD))" }
                 .joined(separator: ",")
             ids.append("alloc")
-            sections.append("alloc = AllocBar(\"\(String(localized: "Across your wallets"))\", \"\(segs)\")")
+            sections.append("alloc = AllocBar(\"\(String(localized: "Across your accounts"))\", \"\(segs)\")")
         }
         if !approvals.isEmpty {
             ids.append("ap")

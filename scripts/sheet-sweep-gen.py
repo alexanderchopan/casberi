@@ -68,7 +68,7 @@ ENTRIES = [
   rises("sources-track-subscription", [SH+"sheet#subscriptionAdd"], [D], SRC+[{"tap": "button:=Track a subscription"}],
         "field:?Search, or type any name"),
   rises("sources-track-mail-list", [SH+"sheet#mailAdd"], [D], SRC+[{"tap": "button:=Track a mail list"}], "text:=Uma Patel"),
-  rises("sources-follow-wallet", [SH+"sheet#walletFollow"], [D], SRC+[{"tap": "button:=Follow a wallet"}], "field:?An address or a name"),
+  rises("sources-follow-wallet", [SH+"sheet#walletFollow"], [D], SRC+[{"tap": "button:=Follow an account"}], "field:?An address or a name"),
   rises("sources-new-contact", [SH+"sheet#newContact"], [D], SRC+[{"tap": "button:=Add a contact"}, {"tap": "button:^New contact"}],
         "button:=Save", afterSwipe="button:=Add a contact"),
   rises("sources-track-pick", [SH+"trackPick"], [D], SRC+[{"tap": "button:=Follow something"}, {"tap": "button:^YouTube, A channel"}],

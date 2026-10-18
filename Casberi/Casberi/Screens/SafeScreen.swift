@@ -171,7 +171,7 @@ struct SafeScreen: View {
         } message: {
             Text("It can pair again with a new link. Nothing it asked for is affected.")
         }
-        .confirmationDialog("Stop guarding this wallet?",
+        .confirmationDialog("Stop guarding this account?",
                             isPresented: Binding(get: { confirmForgetGuard != nil },
                                                  set: { if !$0 { confirmForgetGuard = nil } }),
                             titleVisibility: .visible) {
@@ -182,7 +182,7 @@ struct SafeScreen: View {
             }
             Button("Cancel", role: .cancel) { confirmForgetGuard = nil }
         } message: {
-            Text("This forgets the wallet on this phone. The module still lists this phone as a guardian until the wallet's owner revokes it.")
+            Text("This forgets the account on this phone. The module still lists this phone as a guardian until the account's owner revokes it.")
         }
         // The one delete in this app whose undo is somebody ELSE's on-chain
         // transaction, so the confirm says so rather than counting rows.
@@ -229,7 +229,7 @@ struct SafeScreen: View {
             // signing actually happens — in both states.
             DSSlabNote(text: safeCount > 0
                 ? String(localized: "Following \(safeCount) Safe — a pending signature lands in your feed the moment it's proposed.")
-                : String(localized: "Follow a Safe, or a wallet that signs for one."),
+                : String(localized: "Follow a Safe, or an account that signs for one."),
                        plain: true)
         }
     }

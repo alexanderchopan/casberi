@@ -107,7 +107,7 @@ struct PrivyAppSheet<Tiles: View>: View {
         if let made = app.createdAt {
             parts.append(made.formatted(.dateTime.month(.abbreviated).day().year()))
         }
-        if app.wallets.count > 1 { parts.append(String(localized: "\(app.wallets.count) wallets")) }
+        if app.wallets.count > 1 { parts.append(String(localized: "\(app.wallets.count) accounts")) }
         return parts.joined(separator: " · ")
     }
 

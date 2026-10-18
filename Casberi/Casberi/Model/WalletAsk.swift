@@ -45,7 +45,7 @@ enum WalletAsk {
         let store = WalletStore.shared
         guard !store.addresses.isEmpty else { return nil }
         let multi = store.addresses.count > 1
-        let noun = multi ? String(localized: "your wallets") : String(localized: "your wallet")
+        let noun = multi ? String(localized: "your accounts") : String(localized: "your account")
 
         // Live first (records a fresh sample as a side effect), so read the
         // samples AFTER, catching that new point.
@@ -59,8 +59,8 @@ enum WalletAsk {
             return String(localized: "Couldn't read \(noun) right now — check your connection.")
         }
         let head = multi
-            ? String(localized: "\(TokenStats.compact(total)) across your wallets")
-            : String(localized: "\(TokenStats.compact(total)) in your wallet")
+            ? String(localized: "\(TokenStats.compact(total)) across your accounts")
+            : String(localized: "\(TokenStats.compact(total)) in your account")
         if samples.count >= 2, let first = samples.first, first.usd > 0, let last = samples.last {
             let change = (last.usd - first.usd) / first.usd
             let since = first.at.formatted(.dateTime.month(.abbreviated).day())

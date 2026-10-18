@@ -1089,7 +1089,7 @@ struct MoneyReceipt: Equatable {
         // with no direction it has no sign to wear.
         let parts = split(f.amount)
         // **TITLED BY ITS OWN SENTENCE (prd §1357.1).** "Received 500 USDC
-        // from sam.eth", "Bought SOL" — never "In your wallet" or the
+        // from sam.eth", "Bought SOL" — never "In your account" or the
         // wallet's name standing in for what happened.
         return MoneyReceipt(
             // An approval's other side is a contract that can spend, never a
@@ -1100,7 +1100,7 @@ struct MoneyReceipt: Equatable {
                           name: f.partyLabel ?? f.venue,
                           fallbackAsset: nil),
             mine: approval ? nil : f.walletAddress,
-            lead: String(localized: "In your wallet"),
+            lead: String(localized: "In your account"),
             party: approval ? f.title : actionTitle(f.title),
             // **SAID ONCE (prd §1360, user: "seems silly to repeat the same
             // thing three times").** The title is the sentence; the box

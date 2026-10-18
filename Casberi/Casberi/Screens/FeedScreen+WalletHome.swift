@@ -292,7 +292,7 @@ extension FeedScreen {
     /// many for a menu, so the one door to the catalogue (§1234) as Social's
     /// More social apps is (§1303).
     var walletAccountAdds: [SectionAdd] {
-        [SectionAdd(label: String(localized: "Follow a wallet"),
+        [SectionAdd(label: String(localized: "Follow an account"),
                     detail: String(localized: "An address or a name"),
                     glyph: ScopeTileGlyph.wallets) { feedSheet = .walletFollow },
          SectionAdd(label: String(localized: "Connect an app"),

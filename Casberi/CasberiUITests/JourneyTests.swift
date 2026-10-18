@@ -119,7 +119,7 @@ final class JourneyTests: XCTestCase {
         w.finish()
     }
 
-    /// Follow a wallet from Sources' Wallets plus (§1292), by typing its
+    /// Follow an account from Sources' Wallets plus (§1292), by typing its
     /// address (a person would paste; the 42 characters are counted as
     /// typed). Following is refused inside the demo, so this starts where
     /// `connect` does, on Sources after Exit. Done when the row says
@@ -127,9 +127,9 @@ final class JourneyTests: XCTestCase {
     @MainActor func testWallet() {
         let w = Walk("wallet", launch: [], test: self)
         leaveDemo(w)
-        // "Follow a wallet": the Wallets count's plus, or the first box's row in
+        // "Follow an account": the Wallets count's plus, or the first box's row in
         // the box while every count is zero (prd §1314). Both raise the tray.
-        w.tap(w.visible(.button, "label == %@", "Follow a wallet"), "Follow a wallet")
+        w.tap(w.visible(.button, "label == %@", "Follow an account"), "Follow an account")
         w.focus(w.el(.textField, "placeholderValue == %@", "An address or a name"), "address field")
         w.type("0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045", "type an address")
         // The row names the address short ("…6045").

@@ -354,7 +354,7 @@ enum AgentProvider: String, CaseIterable, Identifiable {
         case .venice:
             "Remembers this chat's answers so far, and can search the web when your things fall short — screenshots stay text-only."
         case .bankr:
-            "Remembers this chat's answers so far, and grounds on your wallet and live markets instead of your saved things — screenshots and web search stay off. It can also act, not just answer, once you turn that on in its own setup screen."
+            "Remembers this chat's answers so far, and grounds on your accounts and live markets instead of your saved things — screenshots and web search stay off. It can also act, not just answer, once you turn that on in its own setup screen."
         case .openrouter:
             // Rewritten 2026-08-23 (prd §459). The old sentence's whole second
             // half described refusals that were only true of `openrouter/auto`

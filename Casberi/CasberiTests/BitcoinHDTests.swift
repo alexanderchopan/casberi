@@ -179,9 +179,9 @@ struct BitcoinUnitAccountingTests {
     }
 
     @Test func aKeysKindIsReadOffItsSpelling() {
-        #expect(BitcoinHD.kindWord(BitcoinHDTests.zpub84) == "Bitcoin wallet · Native SegWit")
-        #expect(BitcoinHD.kindWord("tr(\(BitcoinHDTests.xpub86)/<0;1>/*)") == "Bitcoin wallet · Taproot")
-        #expect(BitcoinHD.kindWord(BitcoinHDTests.xpub44) == "Bitcoin wallet")
+        #expect(BitcoinHD.kindWord(BitcoinHDTests.zpub84) == "Bitcoin account · Native SegWit")
+        #expect(BitcoinHD.kindWord("tr(\(BitcoinHDTests.xpub86)/<0;1>/*)") == "Bitcoin account · Taproot")
+        #expect(BitcoinHD.kindWord(BitcoinHDTests.xpub44) == "Bitcoin account")
         #expect(BitcoinHD.kindWord(Self.spender) == nil)
     }
 }

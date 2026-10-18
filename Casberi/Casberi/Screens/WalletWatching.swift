@@ -159,7 +159,7 @@ struct WalletWatchSyncSection: View {
                 ? String(localized: "\(added) new")
                 : String(localized: "Synced just now")
             if store.registerConnected(id: "wallet", name: "Wallet", proof: proof,
-                                       can: ["Reads your wallet's activity.",
+                                       can: ["Reads your accounts' activity.",
                                              "Read-only — never trades or moves funds."]) {
                 DSHaptic.success()
             }

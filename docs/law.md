@@ -128,6 +128,7 @@ Privacy and Reddit. Frames and Logos are the devnets that remain.
 - The money rooms merge into one Wallet; Markets, Frames and Logos stay their own rooms (§1048). The total counts the chains, exchanges, validators, cash (Wise, Apple Wallet's asset accounts, converted at Kraken's six USD pairs; any other currency is left out and named) and Privy's apps. Privy never stands alone, and cash and Privy count only on the combined page (§1048).
 - Zerion goes through one lane: one request a second, 300 a day for every install. A refusal is waited out (§934).
 - Robinhood is read on Alchemy beside Zerion. A DEX-only token is priced off a pool of at least $10K, holding at most 25% of it. A native coin takes the cent floor (§968).
+- The Wallet is the place; what is in it is an account, and the verb is "Follow an account" (§1415). "Wallet" stays for the place and for a wallet app (the software that signs); code identifiers keep their names.
 - Tempo is on, read through Zerion only, with no native balance (§810). Arc rides Alchemy and Zerion (§808a). World Chain is on by default (§788).
 - A transfer with no timestamp is read off its block, and dropped if the block can't be read, never dated now (§790).
 - Holdings is a true-area treemap: the total alone, grey tiles showing mark and share, the tail as Other, blue when pressed (§939). A tile's mark is 0.3 of its shorter side, 16–56pt (§957).
@@ -234,7 +235,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1553 of 1622 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1554 of 1623 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1789,6 +1790,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1412 — A wallet you watch is yours: its Safe queue needs you, and "you" is any watched owner (closes §1411 item 3; confirms…
 - §1413 — Day is dated rows like every section: the week strip and the five weeks that opened in place are deleted, Needs you l…
 - §1414 — A money row's name fits its one line: a swap reads pair · venue with its legs in the column and on the line, a Safe r…
+- §1415 — The Wallet is the place; what is in it is an ACCOUNT, and you follow an account (amends §1410's "Follow a wallet", §1…
 
 ## Dead rulings → what replaced them (generated)
 

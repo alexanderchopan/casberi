@@ -1922,7 +1922,7 @@ struct ThingSheetView: View {
                 .coinFlip(trigger: thing.id)
             // A Privy app row is an app wallet, not an "Event" (prd §803f).
             Text(thing.sourceRef?.hasPrefix(PrivyHomeFeed.refPrefix) == true
-                 ? "App wallet · made \(shortTime(thing.capturedAt)) ago"
+                 ? "App account · made \(shortTime(thing.capturedAt)) ago"
                  : "\(thing.kind.typeTag) · \(shortTime(thing.capturedAt)) ago")
                 .dsText(.label12)
                 .foregroundStyle(DS.textTertiary)
@@ -3033,7 +3033,7 @@ struct ThingSheetView: View {
     private var securityWarning: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             if thing.hasSecurityFlag("poisoning"), moneyFlag?.securityFlag != "poisoning" {
-                warningLine(String(localized: "Looks like a copy of an address you've used — this is a different wallet."))
+                warningLine(String(localized: "Looks like a copy of an address you've used — this is a different account."))
             }
             // The symbol's own sentence, recovered from the text the row
             // shows (`WalletSafety.spoofVerdict`) so the warning can name what
@@ -3505,7 +3505,7 @@ struct ThingSheetView: View {
                 let label = AddressBook.shared.name(for: cp) ?? ""
                 let added = WalletStore.shared.add(cp, label: label)
                 chrome.flash(added ? String(localized: "Following \(label.isEmpty ? WalletStore.shortAddress(cp) : label)")
-                                   : String(localized: "Couldn't follow this wallet"),
+                                   : String(localized: "Couldn't follow this account"),
                              tone: added ? .success : .failure)
             }
         }

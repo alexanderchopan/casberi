@@ -852,7 +852,7 @@ enum PrivacyPoolsBridge {
                         .trimmingCharacters(in: .whitespaces)
                     let title = status == "approved"
                         ? String(localized: "Privacy Pools cleared your \(what) deposit — ready to withdraw privately")
-                        : String(localized: "Privacy Pools declined your \(what) deposit — reclaim it to your wallet")
+                        : String(localized: "Privacy Pools declined your \(what) deposit — reclaim it to your account")
                     let ref = "privacypools:status:\(label)"
                     if !existing.contains(ref) {
                         let thing = Thing(kind: .transaction, title: title,

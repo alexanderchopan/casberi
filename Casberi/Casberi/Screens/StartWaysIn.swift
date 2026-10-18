@@ -43,7 +43,7 @@ struct StartWaysIn: View {
                     verb: SubscriptionWords.track) { pick(.subscription) }
                 row(String(localized: "Wallet"), glyph: "wallet.bifold",
                     value: String(localized: "Any address"),
-                    verb: String(localized: "Follow a wallet")) { pick(.wallet) }
+                    verb: String(localized: "Follow an account")) { pick(.wallet) }
             }
             .frame(maxHeight: .infinity)
         }

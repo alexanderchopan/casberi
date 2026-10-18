@@ -34,7 +34,7 @@ enum SafeAsk {
             return refused
         }
         guard !counts.isEmpty else {
-            return String(localized: "No Safe wallets detected.")
+            return String(localized: "No Safe accounts detected.")
         }
         guard total > 0 else {
             return String(localized: "Nothing pending on your Safe.")

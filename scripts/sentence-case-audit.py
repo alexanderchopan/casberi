@@ -472,7 +472,7 @@ def self_test() -> int:
         ("Address book", False, "the house spelling"),
         ("Copy all as text", False, "the sibling that stayed correct"),
         ("Move to front", False, "the re-cased action"),
-        ("Watch a wallet", False, "an ordinary sentence-case label"),
+        ("Follow an account", False, "an ordinary sentence-case label"),
         # Proper nouns must not be findings, or the lint cries wolf.
         ("Apple Wallet", False, "a catalog seat name, derived not listed"),
         ("Open in Safe", False, "a brand name trailing a verb"),

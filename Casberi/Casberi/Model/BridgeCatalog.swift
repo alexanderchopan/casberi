@@ -226,7 +226,7 @@ enum BridgeCatalog {
         // Privy (prd §803c) — every app that made you a wallet through Privy,
         // with what the chain says is in each. Wallet group: the unit is an
         // app, but the subject is money you hold.
-        Offer(name: "Privy", tagline: "Every app wallet you've made", group: "Wallet", connectable: true,
+        Offer(name: "Privy", tagline: "Every app account you've made", group: "Wallet", connectable: true,
               needsSetup: true, added: day(2026, 9, 17)),
         // Wise (prd §778, 2026-09-16) — balances and transfers over a
         // read-only personal token. The tagline names BOTH halves because the
@@ -1039,7 +1039,7 @@ enum BridgeSetupMode {
         case .noAccount:      return String(localized: "No sign-in")
         case .signIn:         return String(localized: "Sign in on their site")
         case .pasteKey:       return String(localized: "Paste a key")
-        case .watchedWallets: return String(localized: "Reads your wallets")
+        case .watchedWallets: return String(localized: "Reads your accounts")
         case .onThisDevice:   return String(localized: "On this device")
         }
     }

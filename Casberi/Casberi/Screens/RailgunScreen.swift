@@ -88,7 +88,7 @@ struct RailgunScreen: View {
                              proof: lastResult)
         DSSlabNote(text: hasWallets
             ? String(localized: "On automatically — both doors land as they happen.")
-            : String(localized: "Read off the wallets you follow."),
+            : String(localized: "Read off the accounts you follow."),
             plain: true)
     }
 

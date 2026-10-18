@@ -129,7 +129,7 @@ enum WalletActingParties {
             case .safeModule:
                 String(localized: "Can move funds without a signature")
             case .delegate:
-                String(localized: "Runs as your wallet")
+                String(localized: "Runs as your account")
             }
         }
     }

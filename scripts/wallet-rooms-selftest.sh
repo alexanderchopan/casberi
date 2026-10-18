@@ -899,7 +899,7 @@ check("a zero denominator can't divide by zero", PrivacyPoolsRoom.share(count: 2
 print("")
 print("Privacy Pools — words")
 check("a state's line says what it MEANS, not just the verdict",
-      PrivacyPoolsRoom.meaning(.declined) == "reclaim to your wallet")
+      PrivacyPoolsRoom.meaning(.declined) == "reclaim to your account")
 check("cleared says what you can now do",
       PrivacyPoolsRoom.meaning(.cleared) == "ready to withdraw privately")
 check("the note carries the shape of the rest",
@@ -956,7 +956,7 @@ let closed = PrivacyPoolsRoom.compose(rows: [
 ])
 check("a reclaimed deposit stops being declined", closed.lead?.state == .reclaimed)
 check("and the headline stops asking for a reclaim already done",
-      PrivacyPoolsRoom.headline(closed, now: t0) == "Your deposit is back in your wallet")
+      PrivacyPoolsRoom.headline(closed, now: t0) == "Your deposit is back in your account")
 // The double-count the whole room is careful about everywhere else: the
 // ragequit resolved a deposit, so it is reported once, as that deposit.
 check("a joined ragequit is not ALSO counted as its own thing",

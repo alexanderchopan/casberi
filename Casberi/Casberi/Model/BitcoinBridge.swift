@@ -685,7 +685,7 @@ enum BitcoinBridge {
             if days >= 180 {
                 let month = last.formatted(.dateTime.month(.wide).year())
                 land(unit.isWallet
-                        ? String(localized: "This wallet hasn't moved since \(month)")
+                        ? String(localized: "This account hasn't moved since \(month)")
                         : String(localized: "This address hasn't moved since \(month)"),
                      ref: dormantRef)
             }

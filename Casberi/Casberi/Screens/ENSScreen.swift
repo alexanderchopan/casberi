@@ -135,14 +135,14 @@ struct ENSScreen: View {
     /// Names the wallet already found. One tap each — never followed on our
     /// own (§515a: a seat must not light up for work nobody asked for).
     @ViewBuilder private var suggestionsBlock: some View {
-        Text("From your wallets")
+        Text("From your accounts")
             .dsText(.subhead12).foregroundStyle(DS.textTertiary)
             .padding(.top, DS.Space.s2)
         ForEach(suggestions, id: \.self) { name in
             BridgeSearchResultRow(
                 imageURL: nil, fallbackIcon: "ENS",
                 title: name,
-                subtitle: String(localized: "Found on a wallet you follow"),
+                subtitle: String(localized: "Found on an account you follow"),
                 action: { follow(name) })
         }
     }

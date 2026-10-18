@@ -90,7 +90,7 @@ struct FlaggedReceiptBox: View {
             address(copy, ink: DS.destructiveInk)
             Spacer(minLength: DS.Space.s2)
             Text(original == nil ? String(localized: "It ends like an address you've used.")
-                                 : String(localized: "Same last four. A different wallet."))
+                                 : String(localized: "Same last four. A different account."))
                 .dsText(.heading17).foregroundStyle(DS.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
             Text(verbatim: poisonLine)
@@ -236,7 +236,7 @@ struct FlaggedReceiptBox: View {
                 .lineLimit(2).minimumScaleFactor(0.6)
                 .padding(.top, DS.Space.s2)
             Text(verbatim: wallet.map { String(localized: "Nothing left \($0)") }
-                 ?? String(localized: "Nothing left your wallet"))
+                 ?? String(localized: "Nothing left your account"))
                 .dsText(.body17).foregroundStyle(DS.textSecondary)
                 .multilineTextAlignment(.center)
             Spacer(minLength: DS.Space.s2)

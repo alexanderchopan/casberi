@@ -430,8 +430,8 @@ enum PrivyHomeFeed {
 
         var summary: String {
             switch self {
-            case .apps: return String(localized: "Every app that made you a wallet")
-            case .activity: return String(localized: "What moved in your app wallets")
+            case .apps: return String(localized: "Every app that made you an account")
+            case .activity: return String(localized: "What moved in your app accounts")
             }
         }
 
@@ -613,13 +613,13 @@ enum PrivyHomeFeed {
     /// The head's sentence when there is no figure to lead with yet.
     static func headline(_ room: Room) -> String {
         room.appCount == 1
-            ? String(localized: "One app made you a wallet with Privy")
-            : String(localized: "\(room.appCount) apps made you a wallet with Privy")
+            ? String(localized: "One app made you an account with Privy")
+            : String(localized: "\(room.appCount) apps made you an account with Privy")
     }
 
     /// Under the figure.
     static func caption(_ room: Room) -> String {
-        if room.fundedCount == 0 { return String(localized: "in \(room.appCount) app wallets") }
+        if room.fundedCount == 0 { return String(localized: "in \(room.appCount) app accounts") }
         return room.fundedCount == 1
             ? String(localized: "in one app, of \(room.appCount)")
             : String(localized: "across \(room.fundedCount) apps, of \(room.appCount)")

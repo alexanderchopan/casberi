@@ -495,7 +495,7 @@ struct AccountDetailSheet: View {
             // not an `@AppStorage` of its own, because every wallet view reads
             // the same object and a second source of truth for one setting is
             // how the two quietly disagree.
-            toggleRow("Hide wallet balances", "•••• instead of amounts",
+            toggleRow("Hide account balances", "•••• instead of amounts",
                       isOn: Binding(get: { BalancePrivacy.shared.hidden },
                                     set: { BalancePrivacy.shared.hidden = $0; DSHaptic.tap() }))
             // The in-motion half (prd §205): what LEAVES this iPhone. The rows

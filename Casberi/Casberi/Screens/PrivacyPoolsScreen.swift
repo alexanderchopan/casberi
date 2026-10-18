@@ -88,7 +88,7 @@ struct PrivacyPoolsScreen: View {
                              proof: lastResult)
         DSSlabNote(text: hasWallets
             ? String(localized: "On automatically — tells you the moment screening clears a deposit.")
-            : String(localized: "Deposits are read off the wallets you follow."),
+            : String(localized: "Deposits are read off the accounts you follow."),
             plain: true)
     }
 

@@ -256,15 +256,15 @@ final class BridgeStore {
     private static let walletSeats: [WalletSeat] = [
         WalletSeat(id: "peer", name: "Peer",
                    count: { PeerBridge.evidence.count(in: $0) }, noun: "wallet",
-                   can: ["Reads Peer fills for the wallets you follow, from the public chain.",
+                   can: ["Reads Peer fills for the accounts you follow, from the public chain.",
                          "Read-only — never starts, signs, or settles a trade."]),
         WalletSeat(id: "privacypools", name: "0xBow Privacy Pools",
                    count: { PrivacyPoolsBridge.evidence.count(in: $0) }, noun: "wallet",
-                   can: ["Reads Privacy Pools deposits and their screening status for the wallets you follow, from public sources.",
+                   can: ["Reads Privacy Pools deposits and their screening status for the accounts you follow, from public sources.",
                          "Read-only — never deposits, withdraws, or moves funds."]),
         WalletSeat(id: "railgun", name: "Railgun",
                    count: { RailgunBridge.evidence.count(in: $0) }, noun: "wallet",
-                   can: ["Reads what you shield into Railgun and what comes back out, for the wallets you follow, from the public chain.",
+                   can: ["Reads what you shield into Railgun and what comes back out, for the accounts you follow, from the public chain.",
                          "Never sees inside the pool — an unshield never names its sender, and relayer sends leave no public trace.",
                          "Read-only — never shields, unshields, or moves funds."]),
         // Counted in CARDS, not wallets: one watched wallet is
@@ -274,7 +274,7 @@ final class BridgeStore {
         // MetaMask), so a person reading this row must not expect a statement.
         WalletSeat(id: "metamaskcard", name: "MetaMask Card",
                    count: { MetaMaskCardBridge.evidence.count(in: $0) }, noun: "card",
-                   can: ["Reads your MetaMask Card spending from Linea, for the wallets you follow.",
+                   can: ["Reads your MetaMask Card spending from Linea, for the accounts you follow.",
                          "Amounts and timing only — the merchant never reaches the chain.",
                          "Read-only — never spends, tops up, or changes a spending cap."]),
         // Counted in CARDS. The second line is the one this seat cannot leave
@@ -282,7 +282,7 @@ final class BridgeStore {
         // total, never a purchase — a person must not expect one row a tap.
         WalletSeat(id: "plasmaone", name: "Plasma One",
                    count: { PlasmaOneCard.evidence.count(in: $0) }, noun: "card",
-                   can: ["Reads what your Plasma One card settles on Plasma, for the wallets you follow — follow your Plasma One account.",
+                   can: ["Reads what your Plasma One card settles on Plasma, for the accounts you follow — follow your Plasma One account.",
                          "One total a day: the card settles daily, so purchases and merchants never reach the chain.",
                          "Read-only — never spends, tops up, or changes a limit."]),
         WalletSeat(id: "safe", name: "Safe",
@@ -313,7 +313,7 @@ final class BridgeStore {
                            .union(EtherFiCash.evidence.addresses)
                            .filter { watched.contains($0) }.count
                    }, noun: "wallet",
-                   can: ["Reads your unstake requests from Ethereum and your Cash spending from Optimism, for the wallets you follow.",
+                   can: ["Reads your unstake requests from Ethereum and your Cash spending from Optimism, for the accounts you follow.",
                          "Tells you the moment queued ETH becomes claimable.",
                          "Lands each card purchase, and warns when the credit line nears its limit.",
                          "Read-only — never stakes, claims, spends, or borrows."]),
@@ -645,7 +645,7 @@ struct BridgeApp: Identifiable, Codable {
         // a face directly below this row now, so an address here would be a
         // truncated duplicate of something the rail already says better.
         .init(id: "wallet", name: "Wallet", status: .connected, statusLine: "Synced just now",
-              can: ["Reads your wallet's activity.", "Read-only — never trades or moves funds."]),
+              can: ["Reads your accounts' activity.", "Read-only — never trades or moves funds."]),
         // Markets: stock and token watching on public price data. Read-only —
         // no wallet, no keys, no trading.
         .init(id: "tokens", name: "Markets", status: .connected, statusLine: "6 followed",

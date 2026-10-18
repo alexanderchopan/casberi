@@ -59,7 +59,7 @@
      "tap": "button:=Library"
     },
     {
-     "tap": "button:=Follow a wallet"
+     "tap": "button:=Follow an account"
     }
    ],
    "anchor": "field:?An address or a name"

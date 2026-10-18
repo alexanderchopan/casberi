@@ -1018,10 +1018,10 @@ enum DemoSeedAll {
              AgentTurn(question: "What haven't I booked yet?",
                        answer: "The van, and the standing-order cancellation. Both are still unticked.")]
         case .bankr:
-            [AgentTurn(question: "How's my wallet doing this week?",
+            [AgentTurn(question: "How are my accounts doing this week?",
                        answer: "Up 4.1% across the addresses you follow, mostly from ETH. Your largest position is still the Base stablecoin balance, which hasn't moved. One approval you granted in March is still open on a contract you haven't touched since."),
              AgentTurn(question: "What's that open approval?",
-                       answer: "An unlimited USDC spend on a router you last used six months ago. It's the kind of thing worth revoking, and the wallet room's approvals card has the door.")]
+                       answer: "An unlimited USDC spend on a router you last used six months ago. It's the kind of thing worth revoking, and the Wallet's approvals card has the door.")]
         case .openrouter:
             [AgentTurn(question: "Which repos have open pull requests waiting on me?",
                        answer: "Two. One has been open eleven days with a review requested from you on the first day; the other you opened yourself and CI has been red on it since Tuesday."),
@@ -5658,11 +5658,11 @@ enum DemoSeedAll {
         // its second amendment) — the Markets category is deleted, and a
         // demo that claims a seat the catalog does not offer is the fake
         // status check D exists to catch.
-        ("Peer", "Rides your wallet", "Lands settled fills, never trades."),
-        ("Privacy Pools", "Rides your wallet", "Reads your deposits' review status."),
-        ("MetaMask Card", "Rides your wallet", "Reads what the card settled onchain."),
-        ("ether.fi", "Rides your wallet", "Reads what the card settled onchain."),
-        ("Plasma One", "Rides your wallet", "Reads what the card settled each day."),
+        ("Peer", "Rides your accounts", "Lands settled fills, never trades."),
+        ("Privacy Pools", "Rides your accounts", "Reads your deposits' review status."),
+        ("MetaMask Card", "Rides your accounts", "Reads what the card settled onchain."),
+        ("ether.fi", "Rides your accounts", "Reads what the card settled onchain."),
+        ("Plasma One", "Rides your accounts", "Reads what the card settled each day."),
         // (Aave, Morpho, Uniswap, Hyperliquid and Aerodrome were claimed here
         // from §484 until §515 retired their seats. They are not seats any
         // more — all five land under `source: "Wallet"`, so their icons were
@@ -5672,7 +5672,7 @@ enum DemoSeedAll {
         // gives all five a book, and the Positions scope draws it. The demo
         // parity checks moved with them, out of `KNOWN_ROWLESS_SEAT`/check M
         // and into check N, which proves that book directly.)
-        // The four exchanges (2026-08-26, prd §484). NOT "Rides your wallet" —
+        // The four exchanges (2026-08-26, prd §484). NOT "Rides your accounts" —
         // an exchange is a read-only KEY, the one thing the demo will not fake
         // (see `ExchangeBridge.demoBalances`), so the proof line states the
         // verdict that bridge's whole design turns on rather than a watch it
@@ -5696,7 +5696,7 @@ enum DemoSeedAll {
         ("Lightning", "Connected", "Reads your Lightning balance and payments."),
         // Privy (prd §803g) — how many apps made a wallet and how many are
         // funded, what `PrivyScreen.signedInLine` composes.
-        ("Privy", "6 apps · 2 funded", "Reads which apps made you a wallet."),
+        ("Privy", "6 apps · 2 funded", "Reads which apps made you an account."),
         // The three finance seats of §780b/§780c. Each proof line says what
         // that seat really composes: Acorns and Rocket Money count what the
         // last read landed, never money (prd §1111), NerdWallet its sync.
@@ -5730,7 +5730,7 @@ enum DemoSeedAll {
         ("Grok", "Key on this phone", "Answers with your things, on your key."),
         ("NEAR AI", "Key on this phone", "Answers with your things, on your key."),
         ("Muse", "Key on this phone", "Answers with your things, on your key."),
-        ("Railgun", "Synced 45m ago", "Reads your wallet's shielded moves."),
+        ("Railgun", "Synced 45m ago", "Reads your accounts' shielded moves."),
         ("Safe", "Synced 15m ago", "Reads your Safe's pending signatures."),
         ("Linear", "Synced 15m ago", "Reads the work assigned to you."),
         ("Notion", "Synced 25m ago", "Reads your pages."),

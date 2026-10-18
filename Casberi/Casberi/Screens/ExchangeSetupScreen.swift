@@ -213,7 +213,7 @@ struct ExchangeSetupScreen: View {
                 keyDraft = ""
                 secretDraft = ""
                 DSHaptic.success()
-                result = .connected(String(localized: "your \(venue.display) balance now joins your wallets."))
+                result = .connected(String(localized: "your \(venue.display) balance now joins your Wallet."))
                 store.registerConnected(id: venue.rawValue, name: venue.display,
                                         proof: String(localized: "View-only key, verified with \(venue.display)"),
                                         can: [String(localized: "Reads your balances."),

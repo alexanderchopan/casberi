@@ -280,7 +280,7 @@ enum NotifyKind: String, Sendable, CaseIterable {
         case .likesReceived:    return String(localized: "Liked your post")
         case .repliesReceived:  return String(localized: "Someone replied")
         case .followersGained:  return String(localized: "New follower")
-        case .appWalletMade:    return String(localized: "New app wallet")
+        case .appWalletMade:    return String(localized: "New app account")
         case .digest:           return String(localized: "From your apps")
         }
     }
@@ -311,7 +311,7 @@ enum NotifyKind: String, Sendable, CaseIterable {
         case .likesReceived:       return String(localized: "new likes")
         case .repliesReceived:     return String(localized: "new replies")
         case .followersGained:     return String(localized: "new followers")
-        case .appWalletMade:       return String(localized: "new app wallet")
+        case .appWalletMade:       return String(localized: "new app account")
         case .digest:              return String(localized: "updates")
         }
     }
@@ -361,7 +361,7 @@ enum NotifyKind: String, Sendable, CaseIterable {
         case .likesReceived:       (one, many) = (String(localized: "liked post"), String(localized: "liked posts"))
         case .repliesReceived:     (one, many) = (String(localized: "reply"), String(localized: "replies"))
         case .followersGained:     (one, many) = (String(localized: "new follower"), String(localized: "new followers"))
-        case .appWalletMade:       (one, many) = (String(localized: "app wallet"), String(localized: "app wallets"))
+        case .appWalletMade:       (one, many) = (String(localized: "app account"), String(localized: "app accounts"))
         case .digest:              (one, many) = (String(localized: "update"), String(localized: "updates"))
         }
         return n.formatted() + " " + (n == 1 ? one : many)

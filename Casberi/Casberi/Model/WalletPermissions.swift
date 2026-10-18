@@ -71,7 +71,7 @@ enum WalletPermissions {
         /// always called it (§490).
         var phrase: String {
             switch self {
-            case .actsAsWallet:          String(localized: "Can act as your wallet")
+            case .actsAsWallet:          String(localized: "Can act as your account")
             case .movesWithoutSignature: String(localized: "Can spend without a signature")
             case .unlimitedToken:        String(localized: "Can move a token with no limit")
             case .wholeCollection:       String(localized: "Can manage a whole collection")
@@ -92,7 +92,7 @@ enum WalletPermissions {
         /// (when `isUnbounded`).
         var short: String {
             switch self {
-            case .actsAsWallet:          String(localized: "Acts as your wallet")
+            case .actsAsWallet:          String(localized: "Acts as your account")
             case .movesWithoutSignature: String(localized: "Spends unsigned")
             case .unlimitedToken:        String(localized: "No limit")
             case .wholeCollection:       String(localized: "All")

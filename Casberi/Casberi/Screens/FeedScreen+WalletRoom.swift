@@ -278,7 +278,7 @@ extension FeedScreen {
                 onPickAccount: { picked in
                     withAnimation(DS.Motion.standard) { chrome.walletScope = picked }
                 },
-                accountAction: .init(title: String(localized: "Follow a wallet"),
+                accountAction: .init(title: String(localized: "Follow an account"),
                                      symbol: "plus") { feedSheet = .walletFollow },
                 crown: { slot in
                     // **THE BOX IS BACK ON HOME (prd §760, reversing §757's

@@ -18,7 +18,7 @@ Last updated: September 13, 2026
 
 - Read each app's room — Calendar reads as an agenda, Photos as a grid, a wallet leads with its balance.
 - Act on items — From your feed: open, or share, in the app it came from.
-- Watch your wallets — Balances, activity, and what's worth a look. Read-only, always.
+- Follow your accounts — Balances, activity, and what's worth a look. Read-only, always.
 
 ### Take action
 

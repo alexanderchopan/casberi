@@ -1540,9 +1540,9 @@ def self_test():
         # The §515 rule from the demo's side: a demo seat claims the catalog
         # offers the thing, and for these five it does not.
         lambda f: f.__setitem__("DemoSeedAll", f["DemoSeedAll"].replace(
-            '("Peer", "Rides your wallet",',
-            '("Aave", "Rides your wallet", "Reads your collateral and debt."),\n'
-            '        ("Peer", "Rides your wallet",', 1)),
+            '("Peer", "Rides your accounts",',
+            '("Aave", "Rides your accounts", "Reads your collateral and debt."),\n'
+            '        ("Peer", "Rides your accounts",', 1)),
         check_n_retired_protocols_still_draw, True)
 
     ok &= verify_fixture(

@@ -372,7 +372,7 @@ rows_at=$(print -r -- "$tray_bare" | grep -n "cells += folder.items.map(RunCell.
   || fail "drift: the folder no longer leads with its act — Follow sinks under a long list (prd §1107, §1133)"
 grep -q "chrome.walletFollowPending = true" Casberi/Casberi/Shell/RoomsTray.swift \
   && grep -q "chrome.walletFollowPending = false" Casberi/Casberi/Screens/FeedScreen+WalletRoom.swift \
-  || fail "drift: the tray's Follow a wallet no longer reaches the Wallet room (prd §1133)"
+  || fail "drift: the tray's Follow an account no longer reaches the Wallet room (prd §1133)"
 grep -q "rail.action.map" Casberi/Casberi/Shell/RoomsTray.swift \
   || fail "drift: the folder drops a standing room's act — New account is unreachable (prd §1107, §1133)"
 
@@ -563,7 +563,7 @@ guard DSChip.swift "if ranges.count > 1" \
 # feed you can add stuff to follow").** The Wallet's one add door was the
 # accounts menu's first row, in the tray behind the face on the phone. Now
 # Overview's first row counts the accounts, the Accounts list stands under
-# Overview, and its header's + is the Feed's with two rows — Follow a wallet
+# Overview, and its header's + is the Feed's with two rows — Follow an account
 # (the tray) and Connect an app (the catalogue on its Wallet card) — the same
 # two the Feed's Wallet section offers (§1347 grew).
 guard FeedScreen+WalletHome.swift "OverviewLine(name: Self.accountsName, figure:" \
@@ -571,7 +571,7 @@ guard FeedScreen+WalletHome.swift "OverviewLine(name: Self.accountsName, figure:
 guard FeedScreen+WalletHome.swift "walletAccountsSection(accounts)" \
   "the Accounts list left Home (prd §1410)"
 guard FeedScreen+WalletHome.swift "glyph: ScopeTileGlyph.wallets) { feedSheet = .walletFollow }" \
-  "the Accounts header's + no longer raises Follow a wallet (prd §1410, §1090)"
+  "the Accounts header's + no longer raises Follow an account (prd §1410, §1090)"
 guard FeedScreen+WalletHome.swift "route.present(.apps)" \
   "Connect an app no longer lands on the catalogue (prd §1410, §1234)"
 guard FeedScreen+WalletHome.swift "WalletUnwatch.perform(entry, context: modelContext, chrome: chrome)" \

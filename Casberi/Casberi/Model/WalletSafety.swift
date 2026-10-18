@@ -186,9 +186,9 @@ enum WalletSafety {
                     // verified-vendor table; only THEN the honest unknown
                     // case — never a guessed name.
                     if let named = WalletIngest.knownLabel(for: delegate) {
-                        title = String(localized: "Your wallet now delegates to \(named)")
+                        title = String(localized: "Your account now delegates to \(named)")
                     } else if let vendor = knownDelegateImplementations[delegate.lowercased()] {
-                        title = String(localized: "Your wallet now delegates to \(vendor)")
+                        title = String(localized: "Your account now delegates to \(vendor)")
                     } else {
                         // A delegation only exists because the wallet's own
                         // key signed an authorization for it — so an
@@ -198,10 +198,10 @@ enum WalletSafety {
                         // verify, not an accusation against 7702 itself.
                         let short = WalletStore.shortAddress(delegate)
                         title = String(localized:
-                            "Your wallet now delegates to an unknown contract (\(short)) — if that wasn't you, it's phishing")
+                            "Your account now delegates to an unknown contract (\(short)) — if that wasn't you, it's phishing")
                     }
                 } else {
-                    title = String(localized: "Your wallet's delegation was removed")
+                    title = String(localized: "Your account's delegation was removed")
                 }
                 let content = WalletIngest.explorerAddressURL(forNetwork: network, address: address) ?? ""
                 let thing = Thing(kind: .transaction, title: title, content: content,

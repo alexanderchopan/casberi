@@ -585,10 +585,10 @@ struct PrivacyPoolsRoom: Equatable {
     static func meaning(_ state: State) -> String {
         switch state {
         case .needsProof: return String(localized: "waiting on your proof")
-        case .declined:   return String(localized: "reclaim to your wallet")
+        case .declined:   return String(localized: "reclaim to your account")
         case .pending:    return String(localized: "in review")
         case .cleared:    return String(localized: "ready to withdraw privately")
-        case .reclaimed:  return String(localized: "back in your wallet")
+        case .reclaimed:  return String(localized: "back in your account")
         }
     }
 
@@ -726,8 +726,8 @@ struct PrivacyPoolsRoom: Equatable {
             // Every deposit is out. Nothing here needs anybody, so the
             // headline states the standing rather than an action.
             return lead.count == 1
-                ? String(localized: "Your deposit is back in your wallet")
-                : String(localized: "All \(lead.count) deposits are back in your wallet")
+                ? String(localized: "Your deposit is back in your account")
+                : String(localized: "All \(lead.count) deposits are back in your account")
         case .needsProof:
             // Unreachable — `needsYou` above claims this state first. Stated
             // rather than crashed, because a `fatalError` in a card composer

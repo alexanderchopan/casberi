@@ -326,8 +326,8 @@ struct WalletConnectPickerSheet: View {
             return String(localized: "Nothing was added.")
         }
         let core = added == 1
-            ? String(localized: "Following 1 more wallet.")
-            : String(localized: "Following \(added) more addresses.")
+            ? String(localized: "Following 1 more account.")
+            : String(localized: "Following \(added) more accounts.")
         guard refused > 0 else { return core }
         return core + " " + String(localized: "\(refused) wouldn't fit.")
     }

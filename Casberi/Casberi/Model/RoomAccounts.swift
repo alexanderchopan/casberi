@@ -180,7 +180,7 @@ enum RoomAccounts {
     }
 
     private static let safes = String(localized: "Safes")
-    private static let appWallets = String(localized: "App wallets")
+    private static let appWallets = String(localized: "App accounts")
     private static let exchanges = String(localized: "Exchanges and banks")
     private static let staking = String(localized: "Staking")
     private static let cards = String(localized: "Cards")

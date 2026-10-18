@@ -104,7 +104,7 @@ struct PrivyScreen: View {
             : String(localized: "\(room.appCount) apps")
     }
 
-    private static let canLines = ["Reads which apps made you a wallet, with your own sign-in.",
+    private static let canLines = ["Reads which apps made you an account, with your own sign-in.",
                                    "Read-only — can't export keys, add funds or change anything."]
 
     private func register(proof: String) {

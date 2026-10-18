@@ -399,8 +399,8 @@ struct CasberiApp: App {
                     let slot = n <= scopes.count ? scopes[n - 1] : nil
                     Button(n <= scopes.count
                            ? (slot.map { "Scope to \($0.label.isEmpty ? $0.short : $0.label)" }
-                              ?? "Scope to All Wallets")
-                           : "Scope to Wallet \(n)") {
+                              ?? "Scope to All Accounts")
+                           : "Scope to Account \(n)") {
                         guard n <= scopes.count else { return }
                         // Animated, matching the rail's own tap — the lit face
                         // and the room's re-derivation ride one curve either way.

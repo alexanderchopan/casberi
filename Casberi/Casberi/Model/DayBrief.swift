@@ -61,7 +61,7 @@ enum DayBrief {
         /// digest, where there's no room for a second ink color.
         var detail: String {
             guard let walletPct else { return lead }
-            return lead + String(format: ", wallet %+.1f%%", walletPct)
+            return lead + String(format: ", Wallet %+.1f%%", walletPct)
         }
 
         /// The same two facts with the wallet's move painted in its own
@@ -73,7 +73,7 @@ enum DayBrief {
         /// It lives on the model rather than in a view because two surfaces
         /// render it now (the whisper capsule, and the detail pane's resting
         /// state, 2026-07-31). The first cut was a verbatim copy in the second
-        /// place, which put §83's accent rule, the localized `", wallet "`
+        /// place, which put §83's accent rule, the localized `", Wallet "`
         /// fragment and the `%+.1f%%` format in two files — a translator or a
         /// change to the flat-move rule would have fixed one and missed the
         /// other.
@@ -81,7 +81,7 @@ enum DayBrief {
             let base = Text(lead).foregroundStyle(DS.textSecondary)
             guard let walletPct else { return base }
             return base
-                + Text(String(localized: ", wallet ")).foregroundStyle(DS.textSecondary)
+                + Text(String(localized: ", Wallet ")).foregroundStyle(DS.textSecondary)
                 + Text(String(format: "%+.1f%%", walletPct))
                     .foregroundStyle(TokenChartStyle.accent(change: walletPct / 100,
                                                             scheme: scheme))
@@ -105,7 +105,7 @@ enum DayBrief {
     static func whisper(things: [Thing], now: Date = .now,
                         since: Date? = nil) -> Whisper? {
         let move = walletMove(now: now)
-        let wallet = move.map { String(format: "wallet %+.1f%%", $0.pct) }
+        let wallet = move.map { String(format: "Wallet %+.1f%%", $0.pct) }
         guard let subject = lead(landed(things, now: now, since: since))
                 ?? wallet.map({ Lead(full: $0, short: $0) })
         else { return nil }
@@ -219,7 +219,7 @@ enum DayBrief {
     /// direction, so it gets no sign and no mention.
     static func walletFragment(now: Date = .now) -> String? {
         guard let move = walletMove(now: now) else { return nil }
-        return String(format: "wallet %+.1f%%", move.pct)
+        return String(format: "Wallet %+.1f%%", move.pct)
     }
 
     /// The wallet's day move and the sample it's measured FROM — the anchor

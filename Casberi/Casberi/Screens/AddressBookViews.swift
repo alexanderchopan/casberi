@@ -1716,7 +1716,7 @@ struct AddressCard: View {
             // own. A contract or a key never becomes one.
             let isWorldApp = primaryNames.contains { $0.label == NameResolve.worldAppLabel }
                 && current.kind != .contract && current.kind != .key
-            parts.append(isWorldApp ? String(localized: "World App wallet")
+            parts.append(isWorldApp ? String(localized: "World App account")
                          : current.kind.label
                          ?? BitcoinAddress.scriptKind(current.address)
                          ?? BitcoinHD.kindWord(current.address)

@@ -85,7 +85,7 @@ struct PeerScreen: View {
                              proof: lastResult)
         DSSlabNote(text: hasWallets
             ? String(localized: "On automatically.")
-            : String(localized: "Following a wallet is all it takes."),
+            : String(localized: "Following an account is all it takes."),
             plain: true)
     }
 

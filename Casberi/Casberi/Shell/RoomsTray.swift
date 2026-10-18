@@ -1162,7 +1162,7 @@ struct RoomsTray: View {
             }]
         }
         return [Hit(id: "watch:" + words, group: CategoryFold.walletRoom,
-                    name: String(localized: "Follow this wallet"), tier: .add, given: .exact,
+                    name: String(localized: "Follow this account"), tier: .add, given: .exact,
                     line: short, mark: .glyph("plus")) {
             chrome.searchDraft = words
             chrome.walletFollowPending = true
@@ -1736,7 +1736,7 @@ struct RoomsTray: View {
                 let id = RoomAccounts.scopeID(seat)
                 return appItem(seat, id: id, lit: scope == id)
             }
-            let follow = DSRoomAction(title: String(localized: "Follow a wallet"), symbol: "plus") {
+            let follow = DSRoomAction(title: String(localized: "Follow an account"), symbol: "plus") {
                 chrome.walletFollowPending = true
                 pick(CategoryFold.walletRoom)
             }

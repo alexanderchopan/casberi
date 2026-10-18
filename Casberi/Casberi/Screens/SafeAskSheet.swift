@@ -471,11 +471,11 @@ struct SafeRecoveryBlock: View {
         case .versionMismatch(let module):
             return String(localized: "The module says it is version \(module), not the version this request was written for.")
         case .moduleNotEnabled:
-            return String(localized: "The wallet doesn't list this module as enabled, so an approval would change nothing — and a request naming a module the wallet never enabled is not one to sign.")
+            return String(localized: "The account doesn't list this module as enabled, so an approval would change nothing — and a request naming a module the account never enabled is not one to sign.")
         case .notAGuardian:
-            return String(localized: "The module doesn't list this phone as a guardian of this wallet.")
+            return String(localized: "The module doesn't list this phone as a guardian of this account.")
         case .guardianThresholdTooLow(let threshold):
-            return String(localized: "This wallet's recovery needs \(threshold) guardian, so this phone alone could replace its owners. Casberi won't be a lone guardian — ask the owner to set the guardian threshold to 2.")
+            return String(localized: "This account's recovery needs \(threshold) guardian, so this phone alone could replace its owners. Casberi won't be a lone guardian — ask the owner to set the guardian threshold to 2.")
         case .staleNonce(let module):
             return String(localized: "This request is for an earlier round (the module is at nonce \(module)), so the module would reject it.")
         case .hashMismatch, .requesterHashMismatch:

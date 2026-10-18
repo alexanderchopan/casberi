@@ -50,7 +50,7 @@ enum WalletFollow {
             // rather than watch an empty address.
             return .missed(await ZkMoney.resolve(tag: tag) == nil
                 ? String(localized: "No one has claimed \(ZkMoneyWire.display(tag)).")
-                : String(localized: "\(ZkMoneyWire.display(tag)) is a zk.money wallet: its balance and payments are private. Its deposits and withdrawals show on the wallets that make them."))
+                : String(localized: "\(ZkMoneyWire.display(tag)) is a zk.money account: its balance and payments are private. Its deposits and withdrawals show on the accounts that make them."))
         }
         if let family = NameResolve.family(of: input) {
             guard let address = await NameResolve.resolve(input) else {
@@ -68,7 +68,7 @@ enum WalletFollow {
         if let refusal = BitcoinHD.refusal(input) { return .missed(refusal) }
         if BitcoinHD.isWallet(input) {
             let key = input.trimmingCharacters(in: .whitespacesAndNewlines)
-            return .found(Target(address: key, label: String(localized: "Bitcoin wallet"), chain: nil))
+            return .found(Target(address: key, label: String(localized: "Bitcoin account"), chain: nil))
         }
         guard book.looksLikeAddress(input) else { return nil }
         // A legacy/P2SH Bitcoin address is base58-shaped too, the band Solana

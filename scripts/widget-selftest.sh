@@ -156,7 +156,7 @@ done
 # most stood-next-to surface the OS has, and the threat §374 exists for is
 # exactly somebody standing next to you.
 grep -q 'hidden ? nil : last.usd' "$TMP/publish.nc" \
-  || { print -u2 "✗ the wallet payload no longer withholds the total under Hide wallet balances (§374)"; exit 1; }
+  || { print -u2 "✗ the wallet payload no longer withholds the total under Hide account balances (§374)"; exit 1; }
 grep -q 'points: points' "$TMP/publish.nc" \
   || { print -u2 "✗ the wallet payload no longer publishes the curve — §374 rule 3 keeps the SHAPE"; exit 1; }
 

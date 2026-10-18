@@ -518,7 +518,7 @@ struct WalletFlowBand: View {
         // thing instead — that we never learned who this was.
         lanes.map { lane in
             lane.name.isEmpty
-                ? String(localized: "an unnamed wallet, \(WalletValue.money(lane.usd))")
+                ? String(localized: "an unnamed account, \(WalletValue.money(lane.usd))")
                 : "\(lane.name), \(WalletValue.money(lane.usd))"
         }
         .joined(separator: "; ")

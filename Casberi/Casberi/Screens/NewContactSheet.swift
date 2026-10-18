@@ -22,7 +22,7 @@ struct NewContactSheet: View {
             VStack(alignment: .leading, spacing: DS.Space.s3) {
                 DSSlabField(placeholder: String(localized: "Name"), text: $name, actionLabel: "",
                             focus: $nameFocused, autocapitalization: .words, action: {})
-                DSSlabField(placeholder: String(localized: "Email or wallet address"), text: $reach,
+                DSSlabField(placeholder: String(localized: "Email or account address"), text: $reach,
                             actionLabel: String(localized: "Save"), keyboard: .emailAddress,
                             isArmed: !name.trimmingCharacters(in: .whitespaces).isEmpty
                                 && NewContact.reach(reach) != nil,
@@ -42,7 +42,7 @@ struct NewContactSheet: View {
             return
         }
         guard NewContact.save(name: name, reach: reach) else {
-            failure = String(localized: "An email, a wallet address or a name like vitalik.eth.")
+            failure = String(localized: "An email, an account address or a name like vitalik.eth.")
             return
         }
         DSHaptic.success()

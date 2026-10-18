@@ -292,7 +292,7 @@ enum VerbDerivation {
             if let stored = thing.walletAddress,
                let name = WalletStore.shared.displayName(forStored: stored) {
                 out.append(Verb(label: WalletStore.isAutoName(name, for: stored)
-                                    ? "Wallet \(name)" : name,
+                                    ? "Account \(name)" : name,
                                 icon: "wallet.bifold",
                                 action: .openAddress(stored)))
             }

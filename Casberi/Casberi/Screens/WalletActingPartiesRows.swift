@@ -108,7 +108,7 @@ struct WalletActingPartiesRows: View {
         let watched = WalletStore.shared.addresses
         let names = holder.accounts.map { WalletScopeRail.caption(for: $0, in: watched).name }
         let acts = names.isEmpty
-            ? String(localized: "this wallet")
+            ? String(localized: "this account")
             : ListFormatter.localizedString(byJoining: names)
         guard let note = holder.note else { return acts }
         return "\(acts) · \(note)"

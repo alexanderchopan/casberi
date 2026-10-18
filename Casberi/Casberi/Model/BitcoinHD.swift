@@ -73,7 +73,7 @@ enum BitcoinHD {
     static func kindWord(_ raw: String) -> String? {
         let s = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard s.count > 90, s.contains("pub") else { return nil }
-        let wallet = String(localized: "Bitcoin wallet")
+        let wallet = String(localized: "Bitcoin account")
         let script: Script? =
             s.hasPrefix("sh(wpkh(") || s.hasPrefix("ypub") ? .shWpkh
             : s.hasPrefix("wpkh(") || s.hasPrefix("zpub") ? .wpkh
@@ -122,7 +122,7 @@ enum BitcoinHD {
         if lower.contains("multi(") || s.hasPrefix("Ypub") || s.hasPrefix("Zpub")
             || lower.hasPrefix("wsh(") {
             if parse(s) == nil {
-                return String(localized: "Multisig wallets aren't read yet. Paste one of its addresses instead.")
+                return String(localized: "Multisig accounts aren't read yet. Paste one of its addresses instead.")
             }
         }
         for prefix in ["tpub", "upub", "vpub"] where s.contains(prefix) {

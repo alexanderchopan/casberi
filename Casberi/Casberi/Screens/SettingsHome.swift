@@ -579,7 +579,7 @@ struct SettingsHome: View {
                 ? String(localized: "Track a mail list") : nil
         case .people:        String(localized: "Add a contact")
         case .subscriptions: SubscriptionWords.track
-        case .wallets:       String(localized: "Follow a wallet")
+        case .wallets:       String(localized: "Follow an account")
         }
     }
 
@@ -972,7 +972,7 @@ struct SettingsHome: View {
             // The verb is the plus on the count (prd §1292), so a card with
             // no wallets is not drawn at all.
             if !watched.isEmpty {
-            kindCard(String(localized: "Your wallets"), glyph: "wallet.bifold") {
+            kindCard(String(localized: "Your accounts"), glyph: "wallet.bifold") {
                 ForEach(watched) { addr in
                     DSPushRow(title: Text(verbatim: addr.label.isEmpty ? WalletStore.shortAddress(addr.address) : addr.label),
                               subtitle: addr.label.isEmpty ? nil : Text(verbatim: WalletStore.shortAddress(addr.address)),
@@ -1259,7 +1259,7 @@ enum SettingsScope: String, CaseIterable, Identifiable, Hashable, Sendable {
         // user: "when you click plus it says add contact or contacts").
         case .people:        return String(localized: "Contacts")
         case .subscriptions: return String(localized: "Subscriptions")
-        case .wallets:       return String(localized: "Wallets")
+        case .wallets:       return String(localized: "Accounts")
         }
     }
 
@@ -1267,7 +1267,7 @@ enum SettingsScope: String, CaseIterable, Identifiable, Hashable, Sendable {
         switch self {
         case .apps:          return String(localized: "Every app, by category")
         case .cards:         return String(localized: "The cards your card apps read")
-        case .wallets:       return String(localized: "The wallets you follow, and their apps")
+        case .wallets:       return String(localized: "The accounts you follow, and their apps")
         case .calendars:     return String(localized: "Every calendar Casberi reads")
         case .feeds:         return String(localized: "The sites and shows you follow")
         case .newsletters:   return String(localized: "The lists that write to your mail")

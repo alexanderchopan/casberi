@@ -223,7 +223,7 @@ enum NetworkReach {
         // so the row names the chains it really talks to.
         Endpoint(service: "Wallet",
                  reach: .whenConnected(bridge: "Wallet"),
-                 purpose: "Reads the public onchain activity, balances, approvals, and DeFi positions of the wallets you follow — across Ethereum, Base, Arbitrum, Optimism, Polygon, HyperEVM, Monad, World Chain and Solana. Each request carries only a public address you chose to follow. Before you sign a Safe transaction, the call it would make is simulated here from the Safe's public address, to show what it does to the Safe's balances. Block explorers open in your browser, not from here.",
+                 purpose: "Reads the public onchain activity, balances, approvals, and DeFi positions of the accounts you follow — across Ethereum, Base, Arbitrum, Optimism, Polygon, HyperEVM, Monad, World Chain and Solana. Each request carries only a public address you chose to follow. Before you sign a Safe transaction, the call it would make is simulated here from the Safe's public address, to show what it does to the Safe's balances. Block explorers open in your browser, not from here.",
                  hosts: ["api.g.alchemy.com", "eth-mainnet.g.alchemy.com",
                          "base-mainnet.g.alchemy.com", "arb-mainnet.g.alchemy.com",
                          "opt-mainnet.g.alchemy.com", "matic-mainnet.g.alchemy.com",
@@ -299,7 +299,7 @@ enum NetworkReach {
                  // public usernames service, and the host its pictures are
                  // served from. Also asked for a counterparty met on World
                  // Chain, which is the one reach the sentence below adds.
-                 purpose: "Resolves .eth, .sol, .wei and .gwei names, Base and Linea names, World App usernames, and their avatars — for the wallets you follow, for an address when you open it in your address book, for the other side of a World Chain transfer, and for a World App username you type to follow — and reads the Lens and Base names an address has linked to itself. Carries only the name or address being looked up. The .wei and .gwei registries are read directly on Ethereum, through the public nodes listed under “Wallet activity”.",
+                 purpose: "Resolves .eth, .sol, .wei and .gwei names, Base and Linea names, World App usernames, and their avatars — for the accounts you follow, for an address when you open it in your address book, for the other side of a World Chain transfer, and for a World App username you type to follow — and reads the Lens and Base names an address has linked to itself. Carries only the name or address being looked up. The .wei and .gwei registries are read directly on Ethereum, through the public nodes listed under “Wallet activity”.",
                  // web3.bio joined 2026-09-24 (prd §916): one keyless lookup
                  // that answers every name service at once; ensideas is the
                  // fallback. Avatars it returns live on third-party image
@@ -313,7 +313,7 @@ enum NetworkReach {
         // public mainnet node, asked one staked sequencer at a time.
         Endpoint(service: "Aztec staking",
                  reach: .whenConnected(bridge: "Wallet"),
-                 purpose: "Reads the attestation record of each Aztec sequencer that holds AZTEC staked by a wallet you follow, from dRPC's public Aztec mainnet node. Carries the sequencer's address and nothing else about you.",
+                 purpose: "Reads the attestation record of each Aztec sequencer that holds AZTEC staked by an account you follow, from dRPC's public Aztec mainnet node. Carries the sequencer's address and nothing else about you.",
                  hosts: ["aztec-mainnet.drpc.org"],
                  credentialed: false),
         Endpoint(service: "Wallet DeFi & Safe",
@@ -329,7 +329,7 @@ enum NetworkReach {
                  // false the day a second write ships — which is exactly the
                  // sweep this line was found in. What is said now is a fact
                  // about THIS send and holds however many others exist.
-                 purpose: "Reads your Aave, Spark and Morpho lending positions, Hyperliquid perps/spot/staked HYPE, veAERO locks on Aerodrome, and any Safe signatures awaiting you, for the wallets you follow — keyless, public data. Also reads Aave's public rate to compare against a vault you hold. If you make this phone a Safe signer and tap Sign, one 65-byte signature is sent to Safe's own service (its gateway first, its transaction service only if the gateway does not take it) — a signature, never a transaction: it can never execute anything on its own. A statement your Safe signs (a sign-in, a Snapshot vote) is read back from Safe's service by its hash and the signature is sent the same way; a paired Safe app gets its signature over the WalletConnect relay instead. Before an Enclave key signs, Safe's passkey factory on the chain is asked to verify the exact bytes. When a Safe transaction you are asked to sign approves a CoW Protocol order, the order is read from CoW's public API by its id and shown only if it matches that id.",
+                 purpose: "Reads your Aave, Spark and Morpho lending positions, Hyperliquid perps/spot/staked HYPE, veAERO locks on Aerodrome, and any Safe signatures awaiting you, for the accounts you follow — keyless, public data. Also reads Aave's public rate to compare against a vault you hold. If you make this phone a Safe signer and tap Sign, one 65-byte signature is sent to Safe's own service (its gateway first, its transaction service only if the gateway does not take it) — a signature, never a transaction: it can never execute anything on its own. A statement your Safe signs (a sign-in, a Snapshot vote) is read back from Safe's service by its hash and the signature is sent the same way; a paired Safe app gets its signature over the WalletConnect relay instead. Before an Enclave key signs, Safe's passkey factory on the chain is asked to verify the exact bytes. When a Safe transaction you are asked to sign approves a CoW Protocol order, the order is read from CoW's public API by its id and shown only if it matches that id.",
                  hosts: ["blue-api.morpho.org", "app.morpho.org", "app.aave.com", "app.spark.fi",
                          // Safe is TWO hosts since 2026-09-17 (prd §789b): the
                          // Client Gateway answers every READ — what your Safes
@@ -433,7 +433,7 @@ enum NetworkReach {
                  hosts: ["aztec-testnet.drpc.org", "ethereum-sepolia-rpc.publicnode.com"]),
         Endpoint(service: "0xBow Privacy Pools",
                  reach: .whenConnected(bridge: "0xBow Privacy Pools"),
-                 purpose: "Reads your Privacy Pools deposits from the public chain and their review status from 0xBow's public API, for the wallets you follow.",
+                 purpose: "Reads your Privacy Pools deposits from the public chain and their review status from 0xBow's public API, for the accounts you follow.",
                  hosts: ["api.0xbow.io", "rpc.mevblocker.io", "gateway.tenderly.co"]),
         // Reach is WALLET, not "Railgun" — MetaMask Card's reason below: the seat
         // appears only once a shield has been seen, but the read that
@@ -442,11 +442,11 @@ enum NetworkReach {
         // which is false.
         Endpoint(service: "Railgun",
                  reach: .whenConnected(bridge: "Wallet"),
-                 purpose: "Reads what you shield into Railgun and what comes back out, off Ethereum's public chain, for the wallets you follow — the two public doors, never anything inside the pool.",
+                 purpose: "Reads what you shield into Railgun and what comes back out, off Ethereum's public chain, for the accounts you follow — the two public doors, never anything inside the pool.",
                  hosts: ["rpc.mevblocker.io", "gateway.tenderly.co"]),
         Endpoint(service: "Peer",
                  reach: .whenConnected(bridge: "Peer"),
-                 purpose: "Reads your settled Peer trades off Base's public chain, for the wallets you follow.",
+                 purpose: "Reads your settled Peer trades off Base's public chain, for the accounts you follow.",
                  hosts: ["mainnet.base.org", "base-rpc.publicnode.com", "gateway.tenderly.co"]),
         // Gnosis Chain's two public nodes, kept when the Gnosis Pay seat that
         // measured them went (prd §1318): `SafeSigner` asks a Safe on Gnosis
@@ -465,11 +465,11 @@ enum NetworkReach {
         // measured to agree exactly; `rpc.plasma.to` is Plasma's own.
         Endpoint(service: "Plasma One",
                  reach: .whenConnected(bridge: "Wallet"),
-                 purpose: "Reads what your Plasma One card settles on Plasma, for the wallets you follow — one total a day, and what the card still holds. The card settles once a day, so no purchase and no merchant ever reaches the chain. Read-only: nothing here spends, tops up, or changes a limit.",
+                 purpose: "Reads what your Plasma One card settles on Plasma, for the accounts you follow — one total a day, and what the card still holds. The card settles once a day, so no purchase and no merchant ever reaches the chain. Read-only: nothing here spends, tops up, or changes a limit.",
                  hosts: ["rpc.plasma.to", "9745.rpc.thirdweb.com"]),
         Endpoint(service: "MetaMask Card",
                  reach: .whenConnected(bridge: "Wallet"),
-                 purpose: "Reads your MetaMask Card spending off the public chains it settles on — Linea, Base and Monad — for the wallets you follow. Monad is read through Alchemy's index, the same host the Wallet's own reads use. The amount, the token and the moment, which is all the chain carries; the merchant is never on the chain, so it is never read. Read-only: nothing here spends, tops up, or changes a card's spending cap.",
+                 purpose: "Reads your MetaMask Card spending off the public chains it settles on — Linea, Base and Monad — for the accounts you follow. Monad is read through Alchemy's index, the same host the Wallet's own reads use. The amount, the token and the moment, which is all the chain carries; the merchant is never on the chain, so it is never read. Read-only: nothing here spends, tops up, or changes a card's spending cap.",
                  hosts: ["rpc.linea.build", "linea.gateway.tenderly.co",
                          // Base's three: `mainnet.base.org` for the block
                          // number, publicnode and Tenderly for the logs it
@@ -481,15 +481,15 @@ enum NetworkReach {
         // discovers one runs for every watched wallet.
         Endpoint(service: "ether.fi",
                  reach: .whenConnected(bridge: "Wallet"),
-                 purpose: "Reads your ether.fi unstake requests off Ethereum's public chain, for the wallets you follow — how much is queued, and when it becomes claimable. Read-only: claiming happens in ether.fi's own app.",
+                 purpose: "Reads your ether.fi unstake requests off Ethereum's public chain, for the accounts you follow — how much is queued, and when it becomes claimable. Read-only: claiming happens in ether.fi's own app.",
                  hosts: ["rpc.mevblocker.io", "gateway.tenderly.co"]),
         Endpoint(service: "ether.fi Cash",
                  reach: .whenConnected(bridge: "Wallet"),
-                 purpose: "Reads your ether.fi Cash card spending and credit position off Optimism's public chain, for the wallets you follow — the amount and the moment, which is all the chain carries.",
+                 purpose: "Reads your ether.fi Cash card spending and credit position off Optimism's public chain, for the accounts you follow — the amount and the moment, which is all the chain carries.",
                  hosts: ["optimism.gateway.tenderly.co", "mainnet.optimism.io"]),
         Endpoint(service: "Exchange rates",
                  reach: .whenConnected(bridge: "Markets"),
-                 purpose: "Fetches public reference prices to show token and wallet values in your currency. Carries only the pair being priced.",
+                 purpose: "Fetches public reference prices to show token and account values in your currency. Carries only the pair being priced.",
                  hosts: ["api.coinbase.com", "api.kraken.com"]),
         // Binance/Gemini's own hosts, separate from the pricing entry above —
         // neither prices anything (Kraken's public book still does that for
@@ -829,7 +829,7 @@ enum NetworkReach {
         // they ride the wallet holdings read, already declared above.
         Endpoint(service: "Privy",
                  reach: .whenConnected(bridge: "Privy"),
-                 purpose: "Signs you in on Privy Home's own page, then reads which apps made you a wallet. Read-only — nothing here can export a key or move money.",
+                 purpose: "Signs you in on Privy Home's own page, then reads which apps made you an account. Read-only — nothing here can export a key or move money.",
                  hosts: ["home.privy.io", "privy.home.privy.io"]),
         // Fileverse (prd §1346): signs in on Fileverse's own page and keeps
         // each portal's read key; then lists the portal's files off its
