@@ -33,6 +33,15 @@ for f in "$WIRE" "$KECCAK" "$LINK" "$FIX/ownerof-zac.json" "$FIX/userrecord-zac.
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
+# The capture path (app half, not compiled here): a scheme-less payment link
+# is no URL to the detector, so the scrubbed secret must name the link, and
+# the branch must read the ORIGINAL text (seen on a simulator, 2026-10-17:
+# both slips saved a payment link as a note with no Claim).
+grep -q 'scrubbed.secrets.first.flatMap(URL.init(string:))' Casberi/Shared/Capture.swift \
+  || { echo "✗ a scheme-less payment link no longer names its row (it saves as a note)"; exit 1; }
+grep -q 'ZkMoneyLink.capture(url: url, text: original)' Casberi/Shared/Capture.swift \
+  || { echo "✗ the zk.money branch reads the scrubbed text and misses every payment link"; exit 1; }
+
 TMP="$(mktemp -d)"
 WORK="$TMP/work"
 trap 'rm -rf "$TMP"' EXIT

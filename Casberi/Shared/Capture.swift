@@ -15,12 +15,22 @@ enum Capture {
         // Every zk.money payment link's claim secret leaves the text before
         // any branch reads it (prd §1384): only the first is staged, and
         // only a site that inserts the row keeps it (`ZkMoneyClaims.commit`).
-        let scrubbed = ZkMoneyLink.scrub(stripped.trimmingCharacters(in: .whitespacesAndNewlines))
+        // The zk.money branch reads the ORIGINAL text: its payment link is
+        // known by its fragment, and `capture` scrubs the content itself
+        // (seen on a simulator 2026-10-17: reading the scrubbed text titled a
+        // payment link as a plain one).
+        let original = stripped.trimmingCharacters(in: .whitespacesAndNewlines)
+        let scrubbed = ZkMoneyLink.scrub(original)
         let text = scrubbed.text
         guard !text.isEmpty else { return nil }
 
         let thing: Thing
-        if let url = detectURL(in: text), let zk = ZkMoneyLink.capture(url: url, text: text) {
+        // A payment link pasted with no scheme is not a URL to the detector
+        // (`.money` is not a TLD it knows, measured), so the scrubbed secret
+        // names the link instead.
+        let zkURL = detectURL(in: original).flatMap { ZkMoneyLink.link($0.absoluteString) == nil ? nil : $0 }
+            ?? scrubbed.secrets.first.flatMap(URL.init(string:))
+        if let url = zkURL, let zk = ZkMoneyLink.capture(url: url, text: original) {
             // A zk.money link (2026-10-11): a payment link's claim secret is
             // never kept, and a request link says what it asks for.
             thing = Thing(kind: .link, title: zk.title, content: zk.content, source: source)

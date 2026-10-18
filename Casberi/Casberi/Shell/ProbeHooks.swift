@@ -2717,6 +2717,18 @@ enum ProbeHooks {
             Task { @MainActor in
                 if spec == "portal" {
                     let total = await ZkMoney.portalTotal(); NSLog("zkMoney: portal | %@", total.map { "\($0) DAI" } ?? "UNREADABLE")
+                } else if spec.hasPrefix("capture=") {
+                    // `capture=<text>`: what a paste of `text` becomes, step by
+                    // step, and whether this device's Keychain keeps a secret.
+                    let text = String(spec.dropFirst(8))
+                    NSLog("zkMoney: capture | detected=%@", Capture.detectURL(in: text)?.absoluteString ?? "nil")
+                    if let t = Capture.thing(from: text) {
+                        NSLog("zkMoney: capture | title=%@ | content=%@ | kind=%@", t.title, t.content, "\(t.kind)")
+                        let kept = ZkMoneyClaims.commit(t)
+                        NSLog("zkMoney: capture | kept=%@ | has=%@ | readBack=%@", kept ? "YES" : "NO",
+                              ZkMoneyClaims.has(t.id) ? "YES" : "NO", ZkMoneyClaims.link(for: t.id) == nil ? "NO" : "YES")
+                        ZkMoneyClaims.forget(t.id)
+                    }
                 } else if spec.hasPrefix("deposit=") || spec.hasPrefix("escrow=") {
                     // `deposit=` asks as a recipient of a send (a deposit
                     // address or savings escrow), `escrow=` as a sender of a

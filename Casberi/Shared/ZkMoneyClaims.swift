@@ -87,6 +87,9 @@ enum ZkMoneyClaims {
             add.removeValue(forKey: kSecAttrAccessGroup as String)
             status = SecItemAdd(add as CFDictionary, nil)
         }
+        #if DEBUG
+        NSLog("[Casberi] zkMoneyClaims: keep status %d", status)
+        #endif
         guard status == errSecSuccess else { return false }
         var ids = Set(defaults.stringArray(forKey: indexKey) ?? [])
         ids.insert(id.uuidString)
