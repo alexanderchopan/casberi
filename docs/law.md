@@ -234,7 +234,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1539 of 1608 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1540 of 1609 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1775,6 +1775,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1398 — The last frames take the centred head: the figure goes under the tiles (completes §1397; amends §1186's media and pic…
 - §1399 — Newest is never day-bound (amends §1331 item 4, §1256)
 - §1400 — A fiat currency is never in the token icon book (amends §931)
+- §1401 — The connect and setup screens stand bare too (completes §1393)
 
 ## Dead rulings → what replaced them (generated)
 

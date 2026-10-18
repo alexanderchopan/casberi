@@ -447,7 +447,12 @@ struct SectionPanel: View {
     var inset: CGFloat = DS.Space.s2
     /// Off on the Feed and the Wallet (prd §1382): the shape stays, so the
     /// rows keep their column and the gaps their height, and nothing fills it.
-    var filled = true
+    /// Bare by default (prd §1393, then the account pages' caps, user,
+    /// 2026-10-18: "all the connect and set up screens … still have gray
+    /// cards"): a panel's name and its air say where it starts. The middle
+    /// rows read `feedSectionPanelFilled` (false); the top and bottom caps
+    /// took this default, so every connect screen kept its grey card.
+    var filled = false
 
     var body: some View {
         let r = DS.Radius.widget
