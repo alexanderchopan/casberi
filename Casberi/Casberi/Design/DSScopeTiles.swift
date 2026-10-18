@@ -232,7 +232,10 @@ struct DSScopeTiles<Scope: DSTileScope>: View {
         } else if sections.count > 1 || (!sections.isEmpty && sections.allSatisfy { verbs.contains($0) }) {
             // One VERB still draws (a sheet whose only act is Share, prd §1186);
             // one view alone is no choice, and draws nothing.
-            if centered, sections.count <= Self.columns {
+            // A full row needs no centring, and sized against the scroll
+            // view's width it overflowed its inset and the sheet never
+            // settled (a mail's four tiles, 2026-10-17).
+            if centered, sections.count < Self.columns {
                 HStack(spacing: DS.Space.s2) {
                     ForEach(Self.alphabetical(sections, verbs: verbs)) { section in
                         tile(section)

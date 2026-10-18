@@ -370,6 +370,10 @@ enum SheetRepeat {
 
 struct ThingSheetBox: View {
     let thing: Thing
+    /// Under the centred head (prd §1397): the head is the face, the name
+    /// and the app with the day, so the box draws none of them again and
+    /// takes its own height under the tiles.
+    var headed: Bool = false
 
     private static let artHeight: CGFloat = 96
 
@@ -547,7 +551,9 @@ struct ThingSheetBox: View {
         let role = thing.factList.filter { $0.label == "Role" || $0.label == "Company" }
             .map(\.value).joined(separator: " · ")
         return VStack(alignment: .leading, spacing: DS.Space.s3) {
-            PersonFace(name: thing.title, photo: thing.previewImageData, size: 76)
+            if !headed {
+                PersonFace(name: thing.title, photo: thing.previewImageData, size: 76)
+            }
             if !role.isEmpty {
                 Text(verbatim: role)
                     .dsText(.heading20)
@@ -555,13 +561,15 @@ struct ThingSheetBox: View {
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
             }
-            Spacer(minLength: 0)
-            Text(verbatim: "\(thing.source) · \(FeedScreen.dayWord(thing.capturedAt))")
-                .dsText(.label12)
-                .foregroundStyle(DS.textSecondary)
-                .lineLimit(1)
+            if !headed {
+                Spacer(minLength: 0)
+                Text(verbatim: "\(thing.source) · \(FeedScreen.dayWord(thing.capturedAt))")
+                    .dsText(.label12)
+                    .foregroundStyle(DS.textSecondary)
+                    .lineLimit(1)
+            }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .frame(maxWidth: .infinity, maxHeight: headed ? nil : .infinity, alignment: .topLeading)
         .accessibilityElement(children: .combine)
     }
 
@@ -576,10 +584,11 @@ struct ThingSheetBox: View {
                 // under it; a line or words keep it a band.
                 art
                     .frame(minHeight: Self.artHeight,
-                           maxHeight: statement == nil && words == nil ? .infinity : Self.artHeight)
+                           maxHeight: headed ? ThingSheetView.sheetArtHeight
+                               : statement == nil && words == nil ? .infinity : Self.artHeight)
                     .frame(maxWidth: .infinity)
                     .clipShape(RoundedRectangle(cornerRadius: DS.Radius.widget / 2, style: .continuous))
-            } else {
+            } else if !headed {
                 BridgeIcon(name: thing.source, size: DS.Face.seat, circular: true)
             }
             // The row's own sentence at the headline rung: the title's line
@@ -599,17 +608,19 @@ struct ThingSheetBox: View {
                     .lineLimit(statement == nil ? 4 : 2)
                     .fixedSize(horizontal: false, vertical: true)
             }
-            if pictured || statement != nil || words != nil || carries {
-                Spacer(minLength: 0)
+            if !headed {
+                if pictured || statement != nil || words != nil || carries {
+                    Spacer(minLength: 0)
+                }
+                // The title row names the app when the box carries the title.
+                Text(verbatim: carries ? FeedScreen.dayWord(thing.capturedAt)
+                                       : "\(thing.source) · \(FeedScreen.dayWord(thing.capturedAt))")
+                    .dsText(.label12)
+                    .foregroundStyle(DS.textSecondary)
+                    .lineLimit(1)
             }
-            // The title row names the app when the box carries the title.
-            Text(verbatim: carries ? FeedScreen.dayWord(thing.capturedAt)
-                                   : "\(thing.source) · \(FeedScreen.dayWord(thing.capturedAt))")
-                .dsText(.label12)
-                .foregroundStyle(DS.textSecondary)
-                .lineLimit(1)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .frame(maxWidth: .infinity, maxHeight: headed ? nil : .infinity, alignment: .topLeading)
         .accessibilityElement(children: .combine)
     }
 

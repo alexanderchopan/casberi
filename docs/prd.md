@@ -67193,3 +67193,16 @@ A fired alert lands a Markets row tagged Alert under `alert:<id>:<when>` (§1081
 5. **Deleted, because the app cannot vouch for them (§83):** the yearly tally (`MoneyYearTotals`, "This year · Sent $2,275.94 · 15 transfers"), the ordinal ("With Sam · 15th", "Visit · 2nd") and "Last visit" cells, and the `MoneyYear` state behind them. A count of what was fetched is not a count of what happened. A transfer with a person lists the last three with them under "With <name>" and a More row, "Every transfer", to the address card.
 
 `money-receipt-selftest.sh` holds the head to the column and the state off the rows; `feed-row-skeleton-audit.py` holds the list rows' figures tabular.
+
+## §1397 — Every thing sheet wears the centred head (extends §1396 to mail, post, article, event, contact, link and the follow notice; amends §1188's title-and-box frames, §892's shared head, §1187's person box, §1179's moment box) (user, 2026-10-17: "give mail, post, event, contact and the other thing sheets the same centred head")
+
+`SheetPartyHead` — the one head the thing sheets share since §892 — is the centred head now: the face at `DS.Face.sheet`, the name at `heading17`, one grey line (what it is, the day in the divider's ink, the clock beside it), then the tiles centred under it (`VerbDial.centered`; a full row of four takes the grid, since sized against the scroll view it overflowed its inset and the sheet never settled). The title row and the room-box that stood over every kind are gone from these frames:
+
+- **Mail**: the sender's initial, their name, the address; the subject and the attachment stamp under the tiles, then the message. `MailSheetBox` is deleted.
+- **Post**: the author's face, their name, `@handle · network`; the picture (`ThingSheetView.sheetArtHeight`) and the words under the tiles, the counts under the words. `PostSheetBox` keeps its facts and parts (title, face, picture, counts); its box body is deleted.
+- **Article**: the app's mark, the publication, the reading time; the picture and the headline under the tiles (`ArticleSheetBox(headed:)`), then the words.
+- **Event**: the calendar's mark, the event's name, where it is from; the hours around it (`EventDaySlice`) under the head at the box's height, or the clock centred (`MomentSheetBlock.centered`).
+- **Contact and everything plain**: the contact's face or the app's mark, the name, the app; the box's statement, picture and words under the tiles (`ThingSheetBox(headed:)`, which then draws no face and no app-and-day line of its own).
+- **A follow notice**: the face, `@handle`, `network · Followed you` and the day; the Follow tile says the rest. `SocialPersonBox` is deleted.
+
+The reading kinds with a figure of their own (a chart, a work or purchase reading, an agent chat, a note, L2BEAT, Privy, a cited passage, media) keep their frames for now.

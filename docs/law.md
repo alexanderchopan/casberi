@@ -234,7 +234,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1535 of 1604 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1536 of 1605 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1771,6 +1771,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1394 — One anatomy for every money sheet (amends §1181's box, §1182's card body, §1351/§1373's swap body, §1386's fact rows)
 - §1395 — Deleting a price alert clears its Went off rows, and a Went off row deletes from its long press (amends §1081's Alert…
 - §1396 — Under the tiles, one voice; over them, three things (amends §1394's head and fact rows, §1181's history and year, §11…
+- §1397 — Every thing sheet wears the centred head (extends §1396 to mail, post, article, event, contact, link and the follow n…
 
 ## Dead rulings → what replaced them (generated)
 
