@@ -1044,6 +1044,11 @@ struct SettingsHome: View {
                          },
                          onLetters: { peopleLetters = $0 })
         .id(peopleRevision)
+        // In the kind card's column (prd §1265, §1253): the letters and the
+        // faces stand where the Wallet's and every other kind's rows do, the
+        // 12pt a `SectionPanelCard` insets on Library — a list standing 12pt
+        // short of its neighbours read as an error (user, 2026-10-18).
+        .padding(.horizontal, DSRoomChassis.rowInset - DSRoomChassis.inset)
     }
 
     /// No strip at the edge (prd §752, §1392): the letters are group words
