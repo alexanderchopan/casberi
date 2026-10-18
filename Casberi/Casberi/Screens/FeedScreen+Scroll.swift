@@ -323,82 +323,80 @@ extension FeedScreen {
                 // scrolls there (prd §1208l). The Wallet's Home wears the same
                 // pill over its lists (prd §1219).
                 let wallet = shape == .wallet
-                Menu {
-                    ForEach(pillSections, id: \.self) { category in
-                        Button {
-                            if wallet {
-                                walletHomeJump(category)
-                            } else {
-                                chrome.feedJump = category
-                                settleFeedJump(proxy)
-                            }
-                        } label: {
-                            Label {
-                                Text(verbatim: category)
-                            } icon: {
-                                Image(systemName: wallet ? Self.walletHomeGlyph(category) : CategoryFold.glyph(for: category))
-                            }
-                            if !wallet, let n = memo.sectionCounts[category], n > 0 {
-                                Text("\(n) today")
+                let adds = sectionAdds(section)
+                // The list header's row, to its measure: the name's air above
+                // and below (`SectionPanelName`) and its + — a full hit target
+                // tall, which sets where the name sits — so the copy and the
+                // name coincide at the top (`pinLine`), and the + still works
+                // while its name is pinned.
+                HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                    Menu {
+                        ForEach(pillSections, id: \.self) { category in
+                            Button {
+                                if wallet {
+                                    walletHomeJump(category)
+                                } else {
+                                    chrome.feedJump = category
+                                    settleFeedJump(proxy)
+                                }
+                            } label: {
+                                Label {
+                                    Text(verbatim: category)
+                                } icon: {
+                                    Image(systemName: wallet ? Self.walletHomeGlyph(category) : CategoryFold.glyph(for: category))
+                                }
+                                if !wallet, let n = memo.sectionCounts[category], n > 0 {
+                                    Text("\(n) today")
+                                }
                             }
                         }
-                    }
-                } label: {
-                    HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                        Image(systemName: wallet ? Self.walletHomeGlyph(section) : CategoryFold.glyph(for: section))
-                            .dsGlyph(.body)
-                            .foregroundStyle(DS.brandInk)
-                            .accessibilityHidden(true)
-                        // No transition: the name changes where the list's
-                        // own copy stands under it, and the push-off is the
-                        // motion. An animated word here drew two names at once.
-                        Text(verbatim: section)
-                            .dsText(.heading28)
-                            .foregroundStyle(DS.headInk)
-                            .lineLimit(1)
-                            .id(section)
-                        Spacer(minLength: 0)
-                        // The list's header keeps its + on this row, and the
-                        // + is a full hit target tall, which sets where the
-                        // name sits: a hidden place keeps the two at one
-                        // measure (the + itself is the list's, never a dead
-                        // copy here, §83).
-                        if !sectionAdds(section).isEmpty {
-                            Color.clear.frame(width: DS.Hit.min, height: DS.Hit.min)
+                    } label: {
+                        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                            Image(systemName: wallet ? Self.walletHomeGlyph(section) : CategoryFold.glyph(for: section))
+                                .dsGlyph(.body)
+                                .foregroundStyle(DS.brandInk)
                                 .accessibilityHidden(true)
+                            // No transition: the name changes where the list's
+                            // own copy stands under it, and the push-off is the
+                            // motion. An animated word here drew two names at once.
+                            Text(verbatim: section)
+                                .dsText(.heading28)
+                                .foregroundStyle(DS.headInk)
+                                .lineLimit(1)
+                                .id(section)
+                            Spacer(minLength: 0)
                         }
+                        .contentShape(Rectangle())
+                    } primaryAction: {
+                        DSHaptic.tap()
+                        returnToRoomTop(proxy)
                     }
-                    .padding(.horizontal, DSRoomChassis.rowInset)
-                    // `SectionPanelName`'s own air, so the copy and the name
-                    // coincide at the top (`pinLine`).
-                    .padding(.top, DS.Space.s4)
-                    .padding(.bottom, DS.Space.s2)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background {
-                        // The page's own ground, running up under the status
-                        // bar and fading out under the rows that pass beneath.
-                        VStack(spacing: 0) {
-                            DS.page
-                            LinearGradient(colors: [DS.page, DS.page.opacity(0)],
-                                           startPoint: .top, endPoint: .bottom)
-                                .frame(height: DS.Space.s3)
-                        }
-                        .padding(.bottom, -DS.Space.s3)
-                        .ignoresSafeArea(edges: .top)
-                    }
-                    .contentShape(Rectangle())
-                } primaryAction: {
-                    DSHaptic.tap()
-                    returnToRoomTop(proxy)
+                    .buttonStyle(RowPress())
+                    .accessibilityElement(children: .combine)
+                    .accessibilityHint(Text("Scrolls to the top. Hold for the sections."))
+                    if !adds.isEmpty { SectionAddControl(name: section, adds: adds) }
                 }
-                .buttonStyle(RowPress())
+                .padding(.horizontal, DSRoomChassis.rowInset)
+                .padding(.top, DS.Space.s4)
+                .padding(.bottom, DS.Space.s2)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background {
+                    // The page's own ground, running up under the status
+                    // bar and fading out under the rows that pass beneath.
+                    VStack(spacing: 0) {
+                        DS.page
+                        LinearGradient(colors: [DS.page, DS.page.opacity(0)],
+                                       startPoint: .top, endPoint: .bottom)
+                            .frame(height: DS.Space.s3)
+                    }
+                    .padding(.bottom, -DS.Space.s3)
+                    .ignoresSafeArea(edges: .top)
+                }
                 .modifier(PinnedHeaderPushed(push: pinPush))
                 .padding(.top, DSDemoMark.screenClearance)
                 // It appears over the name it copies, at one measure, so it
                 // simply is there: a fade or a slide drew the two apart.
                 .transition(.identity)
-                .accessibilityElement(children: .combine)
-                .accessibilityHint(Text("Scrolls to the top. Hold for the sections."))
             }
         }
         // The pill's own coming and going, and nothing else in the Feed: on
@@ -753,19 +751,7 @@ struct SectionPanelName<Trailing: View>: View {
             }
             trailing
             Spacer(minLength: 0)
-            if let only = adds.first, adds.count == 1 {
-                Button {
-                    DSHaptic.selection()
-                    only.act()
-                } label: { plus }
-                .buttonStyle(PressSpring())
-                .accessibilityLabel(Text(verbatim: only.label))
-            } else if !adds.isEmpty {
-                Menu {
-                    SectionAddMenu(adds: adds)
-                } label: { plus }
-                .accessibilityLabel(Text("Add to \(name)"))
-            }
+            if !adds.isEmpty { SectionAddControl(name: name, adds: adds) }
         }
         .accessibilityElement(children: choices.isEmpty && adds.isEmpty ? .combine : .contain)
         .accessibilityAddTraits(.isHeader)
@@ -776,10 +762,32 @@ struct SectionPanelName<Trailing: View>: View {
     }
 }
 
-extension SectionPanelName {
+/// A section header's + (prd §1293): one add runs at once, two open a menu
+/// of both. Drawn by the header in the list and by its pinned copy, so the +
+/// works wherever the name stands (prd §1386).
+struct SectionAddControl: View {
+    let name: String
+    let adds: [SectionAdd]
+
+    var body: some View {
+        if let only = adds.first, adds.count == 1 {
+            Button {
+                DSHaptic.selection()
+                only.act()
+            } label: { plus }
+            .buttonStyle(PressSpring())
+            .accessibilityLabel(Text(verbatim: only.label))
+        } else if !adds.isEmpty {
+            Menu {
+                SectionAddMenu(adds: adds)
+            } label: { plus }
+            .accessibilityLabel(Text("Add to \(name)"))
+        }
+    }
+
     /// The header's +, pink as every verb's plus, a full target tall and
     /// wide, on the name's baseline row.
-    fileprivate var plus: some View {
+    private var plus: some View {
         Image(systemName: "plus")
             .dsGlyph(.body, weight: .regular)
             .foregroundStyle(DS.brandInk)
