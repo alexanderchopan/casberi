@@ -234,7 +234,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1532 of 1601 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1533 of 1602 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1768,6 +1768,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1391 — Markets' box is the sectors' day; Following and Alerts are the list head's two words; the Follow tray is the packs (a…
 - §1392 — Contacts lists who you deal with, in one anatomy, with no money (amends §1265's Recent card, §1323's Contacts, the 20…
 - §1393 — No grey card anywhere but the Apps page's folders (amends §1258's sheet card, §1227's tray card, §1383's kept panels…
+- §1394 — One anatomy for every money sheet (amends §1181's box, §1182's card body, §1351/§1373's swap body, §1386's fact rows)
 
 ## Dead rulings → what replaced them (generated)
 

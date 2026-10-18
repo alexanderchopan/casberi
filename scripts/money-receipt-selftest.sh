@@ -65,10 +65,11 @@ trap 'rm -rf "$TMP"' EXIT
 # assertion below still passes.
 grep -q 'if let moneyReceipt {' "$SHEET" \
   || { echo "✗ ThingSheetView no longer draws the money receipt as its hero"; exit 1; }
-# The receipt stands in the room's box since prd §1181 (`MoneyReceiptBox`,
-# `.dsRoomBox()`); it asserts the CALL, not one spelling of its argument list.
-grep -q 'MoneyReceiptBox(receipt: moneyReceipt' "$SHEET" \
-  || { echo "✗ ThingSheetView's hero branch no longer builds MoneyReceiptBox"; exit 1; }
+# The receipt is ONE head since prd §1394 (`MoneySheetHead`: party row, figure,
+# line, state, in the lead's column); it asserts the CALL, not one spelling
+# of its argument list.
+grep -q 'MoneySheetHead(receipt: moneyReceipt' "$SHEET" \
+  || { echo "✗ ThingSheetView's hero branch no longer builds MoneySheetHead"; exit 1; }
 
 # --- the §369 amendment (2026-08-16) ----------------------------------------
 # Four changes whose failure mode is, in every case, that the card looks
@@ -82,7 +83,7 @@ grep -q 'accessibilityLabel(Text(receipt.spokenLabel))' "$CARD" \
   || { echo "✗ the receipt is no longer composed into one spoken label"; exit 1; }
 # §1025 joins the first transfer after it, so the value may be a list that
 # LEADS with `receipt.spokenValue`; finality still has to be what is spoken first.
-grep -qE 'accessibilityValue\(Text\((verbatim: \[)?receipt\.spokenValue' "$CARD" \
+grep -qE 'accessibilityValue\(Text\((verbatim: \[?)?receipt\.spokenValue' "$CARD" \
   || { echo "✗ finality is no longer spoken as the receipt's accessibility value"; exit 1; }
 # Both strips play as Audio Graphs. A chart with no descriptor is not silent —
 # it is WORSE: Swift Charts falls back to one element per mark, so a 14-bar
@@ -103,10 +104,15 @@ grep -qE 'accessibilityValue\(Text\((verbatim: \[)?receipt\.spokenValue' "$CARD"
   || { echo "✗ the tear animation is back (prd §583 removed the edge it cut)"; exit 1; }
 ! grep -q 'static let tear = Animation' "$TOKENS" \
   || { echo "✗ DS.Motion.tear is back — a motion token nothing animates"; exit 1; }
-# Since prd §1181 the receipt stands in the room's box, the metrics every
-# room's box and every framed sheet share.
-grep -q 'MoneyReceiptBox(receipt: moneyReceipt' "$SHEET" && grep -q '\.dsRoomBox()' "$SHEET" \
-  || { echo "✗ the receipt no longer stands in the room's box (prd §1181)"; exit 1; }
+# Since prd §1394 the head is content-sized in the lead's column (no box: the
+# air a fixed box held under a three-line receipt was the complaint), and the
+# state is the head's word, never a Details row.
+grep -q 'padding(.horizontal, DSRoomChassis.leadInset)' "$CARD" \
+  || { echo "✗ MoneySheetHead no longer stands in the lead's column (prd §1394)"; exit 1; }
+! grep -q 'label: String(localized: "Status"),$' "$SHEET" \
+  || { echo "✗ the state is a Details row again — the head says it once (prd §1394)"; exit 1; }
+grep -q 'case .settled, .filled: return nil' "$CARD" \
+  || { echo "✗ a settled receipt draws a state word — it says so by saying nothing (prd §1394)"; exit 1; }
 # WHAT THE TEAR SAID, THE STAMP MUST GO ON SAYING. This is the load-bearing
 # half of §583: the edge carried finality, and deleting it was only safe
 # because every state that resolves to `.open` also stamps a word in a

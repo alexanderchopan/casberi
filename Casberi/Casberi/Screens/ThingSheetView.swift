@@ -588,7 +588,7 @@ struct ThingSheetView: View {
                     // the act that keeps up with it, then the last three with
                     // this party as rows — title, box, tiles, list, a room's order.
                     // The party's name is the sheet's title, a room's own row.
-                    DSRoomTitleRow(title: moneyFlag?.title ?? MoneyReceiptBox.title(moneyReceipt))
+                    DSRoomTitleRow(title: moneyFlag?.title ?? MoneySheetHead.title(moneyReceipt))
                         .padding(.horizontal, DSRoomChassis.inset)
                         .padding(.top, onBack == nil ? DS.Space.s4 : DS.Space.s3)
                         .settleIn(delay: 0.04)
@@ -603,15 +603,19 @@ struct ThingSheetView: View {
                                               amount: WalletValue.transferAmount(thing),
                                               happened: flaggedHappened,
                                               priced: (thing.transferUSD ?? 0) > 0)
+                                .dsRoomBox()
                         } else {
-                            MoneyReceiptBox(receipt: moneyReceipt, landed: thing.capturedAt,
-                                            transfer: moneyTransfer(moneyReceipt),
-                                            card: moneyCard,
-                                            swap: moneySwap,
-                                            source: thing.source, cells: moneyCells(moneyReceipt),
-                                            unnamed: moneyUnnamed,
-                                            hidesDay: MoneyReceipt.isBill(source: thing.source),
-                                            onSubject: openAddressCard)
+                            // ONE HEAD FOR EVERY MONEY SHEET (prd §1394): the
+                            // party row, the figure, its line, its state —
+                            // content-sized in the lead's column, no box.
+                            MoneySheetHead(receipt: moneyReceipt, landed: thing.capturedAt,
+                                           transfer: moneyTransfer(moneyReceipt),
+                                           card: moneyCard,
+                                           swap: moneySwap,
+                                           source: thing.source,
+                                           unnamed: moneyUnnamed,
+                                           hidesDay: MoneyReceipt.isBill(source: thing.source),
+                                           onSubject: openAddressCard)
                         }
                     }
                         // Read once per open (§628), the spec row's own read.
@@ -620,7 +624,6 @@ struct ThingSheetView: View {
                             readMoneyHistory()
                             readPoisonOriginal()
                         }
-                        .dsRoomBox()
                         .padding(.top, DS.Space.s3)
                         .settleIn(delay: 0.06)
                     // A READING ENDS AT ITS BOX (prd §1341, user, of an Acorns
@@ -3011,7 +3014,7 @@ struct ThingSheetView: View {
     }
 
     /// The two sides of a wallet transfer, for the box's faces (prd §1181).
-    private func moneyTransfer(_ r: MoneyReceipt) -> MoneyReceiptBox.Transfer? {
+    private func moneyTransfer(_ r: MoneyReceipt) -> MoneySheetHead.Transfer? {
         guard moneyHasPerson, let cp = thing.counterpartyAddress, let mine = thing.walletAddress,
               !mine.isEmpty else { return nil }
         let mineLabel = WalletStore.shared.addresses
@@ -3021,7 +3024,7 @@ struct ThingSheetView: View {
         // "Everyday to Savings" there (prd §1349).
         let theirName = WalletStore.shared.watches(cp)
             ? MoneyReceiptSource.walletLabel(cp) ?? moneyPartyName(r) : moneyPartyName(r)
-        return MoneyReceiptBox.Transfer(
+        return MoneySheetHead.Transfer(
             mineAddress: mine, mineLabel: mineLabel,
             theirAddress: cp, theirName: theirName,
             sent: thing.transferDirection != "received",
@@ -3159,13 +3162,13 @@ struct ThingSheetView: View {
     /// ending 4821").
     /// A trade's two legs, token to token (prd §1351), or a Peer fill's app to
     /// token (prd §1356).
-    private var moneySwap: MoneyReceiptBox.Swap? {
+    private var moneySwap: MoneySheetHead.Swap? {
         if let swap = SwapStage(thing) {
             var rate: String?
             if case .rate(let line, _)? = MoneyCommentary.rate(out: swap.outAmount, into: swap.inAmount) {
                 rate = line
             }
-            return MoneyReceiptBox.Swap(outAmount: swap.outAmount, inAmount: swap.inAmount, usd: thing.transferUSD,
+            return MoneySheetHead.Swap(outAmount: swap.outAmount, inAmount: swap.inAmount, usd: thing.transferUSD,
                                         rate: rate,
                                         wallet: MoneyReceiptSource.walletLabel(thing.walletAddress),
                                         network: WalletIngest.chainName(forContent: thing.content).flatMap { $0.isEmpty ? nil : $0 })
@@ -3177,11 +3180,11 @@ struct ThingSheetView: View {
         let sell = thing.sourceRef?.hasPrefix("peer:sell:") == true
         let wallet = MoneyReceiptSource.walletLabel(thing.walletAddress)
         return sell
-            ? MoneyReceiptBox.Swap(outAmount: token, inAmount: rail, usd: thing.transferUSD, inApp: true, wallet: wallet)
-            : MoneyReceiptBox.Swap(outAmount: rail, inAmount: token, usd: thing.transferUSD, outApp: true, wallet: wallet)
+            ? MoneySheetHead.Swap(outAmount: token, inAmount: rail, usd: thing.transferUSD, inApp: true, wallet: wallet)
+            : MoneySheetHead.Swap(outAmount: rail, inAmount: token, usd: thing.transferUSD, outApp: true, wallet: wallet)
     }
 
-    private var moneyCard: MoneyReceiptBox.Card? {
+    private var moneyCard: MoneySheetHead.Card? {
         // **EVERY CARD SPEND IN THE CARD'S OWN LAYOUT (prd §1353).** The
         // onchain cards (ether.fi, MetaMask Card, Plasma One) name no account,
         // so the card goes by its app's name, never the plain receipt.
@@ -3193,7 +3196,7 @@ struct ThingSheetView: View {
         let account = (thing.authorHandle?.isEmpty == false ? thing.authorHandle : nil)
             ?? BridgeCatalog.seatName(forSource: thing.source)
         let parts = account.components(separatedBy: ", ending ")
-        return MoneyReceiptBox.Card(name: parts[0],
+        return MoneySheetHead.Card(name: parts[0],
                                     last4: parts.count > 1 ? parts[1] : nil,
                                     source: thing.source)
     }
@@ -3266,8 +3269,8 @@ struct ThingSheetView: View {
                case .rate(let rate, _)? = MoneyCommentary.rate(out: swap.outAmount, into: swap.inAmount) {
                 out.append(MoneyReceiptCell(value: rate, label: String(localized: "Rate")))
             }
-            if let wallet = MoneyReceiptSource.walletLabel(thing.walletAddress) {
-                out.append(MoneyReceiptCell(value: wallet, label: String(localized: "Wallet")))
+            if let network = WalletIngest.chainName(forContent: thing.content), !network.isEmpty {
+                out.append(MoneyReceiptCell(value: network, label: String(localized: "Network")))
             }
             return out
         }
@@ -3281,12 +3284,8 @@ struct ThingSheetView: View {
             }
             return out
         }
-        // NEVER A DEFAULT "SETTLED" (prd §83): the receipt's own stamp, else
-        // "Waiting" while it is open, else no status cell at all.
-        if let status = r.stamp?.word ?? (r.finality == .open ? String(localized: "Waiting") : nil) {
-            out.append(MoneyReceiptCell(value: status, label: String(localized: "Status"),
-                                        wants: r.finality == .open))
-        }
+        // The state is the head's word under the figure (prd §1394), never a
+        // row: NEVER A DEFAULT "SETTLED" (prd §83) holds there.
         if let network = WalletIngest.chainName(forContent: thing.content), !network.isEmpty {
             out.append(MoneyReceiptCell(value: network, label: String(localized: "Network")))
         }
@@ -3918,13 +3917,13 @@ struct ThingSheetView: View {
         dialResult
     }
 
-    /// THE RECEIPT'S FACTS ARE ROWS (prd §1386): label beside value under
-    /// the tiles, in the lead's column, for the plain receipt whose box drew
-    /// them as cells with the value over its label ("Needs you" over
-    /// "Status"). A transfer, a swap and a card say theirs in their own box.
+    /// THE RECEIPT'S FACTS ARE ROWS (prd §1386, every kind since §1394):
+    /// Details, label beside value under the tiles, in the lead's column —
+    /// a swap's rate and wallet, a transfer's network and which time this is
+    /// with them, a bill's day. Never the state: the head says it once.
     @ViewBuilder
     private func moneyFactRows(_ r: MoneyReceipt) -> some View {
-        if moneyFlag == nil, moneySwap == nil, moneyCard == nil, moneyTransfer(r) == nil {
+        if moneyFlag == nil {
             let cells = moneyCells(r)
             if !cells.isEmpty {
                 DSSpecTable {
@@ -4287,7 +4286,7 @@ struct ThingSheetView: View {
         if let sender = Self.mailSender(thing) { out.append(SenderInitial.displayName(of: sender)) }
         if let project = workReading?.project { out.append(project) }
         if let r = moneyReceipt {
-            out += [MoneyReceiptBox.title(r), r.lead] + moneyCells(r).map(\.value)
+            out += [MoneySheetHead.title(r), r.lead] + moneyCells(r).map(\.value)
             if let t = moneyTransfer(r) { out += [t.mineLabel, t.theirName] }
         }
         // A tile names where it lands ("Polar" for "Open in Polar").

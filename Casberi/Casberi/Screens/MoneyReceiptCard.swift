@@ -422,10 +422,9 @@ struct ReceiptLadder: View {
     }
 }
 
-// MARK: - The receipt in the room's frame (prd §1181)
+// MARK: - The money sheet's head (prd §1394)
 
-/// One cell of the receipt's grid: a value over its label, as Settings'
-/// counts stand.
+/// One fact of the receipt: a value and its label, a Details row.
 struct MoneyReceiptCell: Identifiable, Equatable {
     let value: String
     let label: String
@@ -433,44 +432,54 @@ struct MoneyReceiptCell: Identifiable, Equatable {
     var id: String { label }
 }
 
-/// The receipt's box (prd §1181, user: "shouldn't this be IN the card?", then
-/// "on the rooms they have a title … but they don't have a logo"): the party's
-/// NAME is the sheet's title above the box, as a room's is, and its FACE leads
-/// inside the box with what happened and when — Today's card anatomy, each
-/// fact said once. Then the statement (the amount, number and token
-/// together), one quiet line (what it was worth), then one row of facts, a
-/// value over its label as Settings' counts stand. The sentence that restated
-/// the party is gone, and the stamp is the Status cell. The face and the name
-/// open the address card, where a name is given; an unnamed address says so.
-struct MoneyReceiptBox: View {
+/// **ONE ANATOMY FOR EVERY MONEY SHEET (prd §1394, user: "they are just
+/// lackluster and don't look like what apple would do").** Seven sheets drew
+/// five shapes — a card picture on the left, a coin pair centred, a Safe box,
+/// a Lightning head, a notice box — with Share standing alone and the status
+/// as a lone row under the tiles. The subscription sheet already had Apple's
+/// shape (a head, a figure, Details, More), and Apple Wallet's own transaction
+/// detail is that shape: merchant, amount, then a list of facts. So every
+/// money sheet is now the sentence as its title, this head, the tiles, then
+/// Details as rows:
+///
+/// - the party row: a face, who or what, and when (the day in the divider's
+///   ink, the clock beside it) — said once, never again as a row;
+/// - the figure: the amount at `price40`, its unit beside it;
+/// - one line under it: the other side of the move (what went out, what it was
+///   worth, which wallet);
+/// - the state, only where there is one to say: the receipt's own stamp in its
+///   ink (`Needs you`, `Screening`, `Clear to withdraw`), the settling ladder
+///   while a chain is confirming, and nothing at all once it settled — a
+///   settled charge says so by saying nothing, as Apple's does.
+///
+/// Content-sized, in the lead's column: the sheet is a page of facts, not a
+/// room with a box, and the air the fixed box held under a three-line receipt
+/// was the complaint.
+struct MoneySheetHead: View {
     let receipt: MoneyReceipt
     let landed: Date
-    /// A transfer between your wallet and someone (prd §1181): the box draws
-    /// the two faces with the arrow between them — the thing itself — the
-    /// amount, its worth and day, and the status and network as stamps.
+    /// A transfer between your wallet and someone (prd §1181): the other side
+    /// is the face, the figure is signed, the line names your wallet.
     var transfer: Transfer? = nil
-    /// A card spend (prd §1182): the card that paid, drawn beside the amount
-    /// — Apple Wallet's own picture of a transaction.
+    /// A card spend (prd §1182): the card's app is the face, the card its name.
     var card: Card? = nil
-    /// A swap's two legs (prd §1351): drawn as the transfer is, token to token.
+    /// A swap's two legs (prd §1351): both marks as the face, what came in as
+    /// the figure, what went out under it.
     var swap: Swap? = nil
     struct Card: Equatable {
         let name: String
         let last4: String?
         let source: String
-        /// Apple Card is titanium; every other card draws on the raised fill.
-        var light: Bool { name.localizedCaseInsensitiveContains("Apple Card") }
     }
     struct Swap: Equatable {
         let outAmount: String
         let inAmount: String
         let usd: Double?
-        /// A leg that is an app, not a token (Peer's Venmo, prd §1356): its
-        /// mark is the app's, its caption the app's name.
+        /// A leg that is an app, not a token (Peer's Venmo, prd §1356).
         var outApp = false
         var inApp = false
         /// "1 MAG7 = 12,177 MUSEGOD", the wallet that traded and its chain
-        /// (prd §1373): the box's two closing lines.
+        /// (prd §1373): Details rows now.
         var rate: String? = nil
         var wallet: String? = nil
         var network: String? = nil
@@ -484,284 +493,272 @@ struct MoneyReceiptBox: View {
         let usd: Double?
         let network: String?
     }
-    /// The app it came from, the eyebrow's word, as Today's card names its
-    /// app (user, of "Spent at · Card": "we can make all this text look better").
+    /// The app it came from, the party row's word for a plain receipt.
     let source: String
-    let cells: [MoneyReceiptCell]
     var unnamed = false
-    /// A bill's day is a fact cell ("Due", "Charged"), not the eyebrow's.
+    /// A bill's day is a Details row ("Due", "Charged"), not the row's.
     var hidesDay = false
     var onSubject: ((String) -> Void)?
 
     var body: some View {
-        if let swap { swapBody(swap) }
-        else if let transfer { transferBody(transfer) }
-        else if let card { cardBody(card) }
-        else { receiptBody }
-    }
-
-    /// Apple Wallet's transaction detail, centred: who to whom, how much,
-    /// worth and when, then the state (prd §1181, the design canvas
-    /// "Thing sheets, the Apple pass").
-    private func transferBody(_ t: Transfer) -> some View {
-        VStack(spacing: 0) {
-            HStack(spacing: DS.Space.s2) {
-                party(address: t.sent ? t.mineAddress : t.theirAddress,
-                      name: t.sent ? t.mineLabel : t.theirName)
-                HStack(spacing: 0) {
-                    Capsule().fill(DS.textTertiary).frame(width: 40, height: 2)
-                    Image(systemName: "chevron.right")
-                        .dsGlyph(.caption, weight: .bold)
-                        .foregroundStyle(DS.textTertiary)
-                }
-                .padding(.bottom, DS.Space.s4)
-                .accessibilityHidden(true)
-                party(address: t.sent ? t.theirAddress : t.mineAddress,
-                      name: t.sent ? t.theirName : t.mineLabel)
-            }
-            Text(verbatim: unsignedStatement)
-                .dsText(.heading34)
-                .monospacedDigit()
-                .contentTransition(roll)
-                .foregroundStyle(DS.textPrimary)
-                .lineLimit(1).minimumScaleFactor(0.6)
-                .padding(.top, DS.Space.s3)
-            Text(verbatim: worthLine(t))
-                .dsText(.body17)
-                .foregroundStyle(DS.textSecondary)
-                .lineLimit(1).minimumScaleFactor(0.8)
-                .padding(.top, 2)
-            Spacer(minLength: DS.Space.s2)
-            if receipt.finality == .open {
-                // LIVE STATE WHERE IT CHANGES (prd §1182): a record still in
-                // the machine shows where it is — sent, confirming, settled —
-                // and re-composes in place as the bridge reads it again.
-                steps
-            } else {
-                HStack(spacing: DS.Space.s2) {
-                    if let statusWord {
-                        DSStamp(word: statusWord, weight: statusWeight)
-                    }
-                    if let network = t.network, !network.isEmpty {
-                        DSStamp(word: network, weight: .quiet)
-                    }
+        VStack(alignment: .leading, spacing: 0) {
+            partyRow
+            VStack(alignment: .leading, spacing: 0) {
+                figure
+                if let line, !line.isEmpty {
+                    Text(verbatim: line)
+                        .dsText(.body17)
+                        .monospacedDigit()
+                        .foregroundStyle(DS.textSecondary)
+                        .lineLimit(2).minimumScaleFactor(0.8)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.top, 2)
                 }
             }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(Text(verbatim: spoken(t)))
-    }
-
-    /// A swap, Apple Wallet's way (prd §1373, amends §1351's two legs): the
-    /// two marks overlapped, what came in as the one figure, what went out and
-    /// when under it, then the rate and the wallet on its chain. Each fact
-    /// once, and nothing truncated: a long figure steps down a size, a long
-    /// symbol or line wraps.
-    private func swapBody(_ s: Swap) -> some View {
-        let out = MoneyReceipt.split(s.outAmount), into = MoneyReceipt.split(s.inAmount)
-        return VStack(spacing: 0) {
-            // The front mark punches its own ring out of the back one, so
-            // the two separate on any fill without a line or a halo.
-            ZStack(alignment: .topLeading) {
-                swapMark(s.outApp ? s.outAmount : (out.unit ?? ""), app: s.outApp)
-                    .mask(alignment: .topLeading) {
-                        ZStack(alignment: .topLeading) {
-                            Rectangle()
-                            Circle().frame(width: 54, height: 54)
-                                .offset(x: 27, y: -1)
-                                .blendMode(.destinationOut)
-                        }
-                        .compositingGroup()
-                    }
-                swapMark(s.inApp ? s.inAmount : (into.unit ?? ""), app: s.inApp)
-                    .offset(x: 30, y: 2)
-            }
-            .frame(width: 78, height: 50, alignment: .topLeading)
-            .accessibilityHidden(true)
-            swapFigure(s, out: out, into: into)
-                .padding(.top, DS.Space.s3)
-            Text(verbatim: swapGaveLine(s, out: out))
-                .dsText(.body17)
-                .monospacedDigit()
-                .foregroundStyle(DS.textSecondary)
-                .multilineTextAlignment(.center)
-                .lineLimit(2).minimumScaleFactor(0.8)
-                .padding(.top, 2)
-            Spacer(minLength: DS.Space.s2)
-            if let rate = s.rate {
-                Text(verbatim: rate)
+            .padding(.top, DS.Space.s4)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(Text(receipt.spokenLabel))
+            .accessibilityValue(Text(verbatim: receipt.spokenValue))
+            // LIVE STATE WHERE IT CHANGES (prd §1182): a record still
+            // confirming on its chain shows where it is, and re-composes in
+            // place as the bridge reads it again.
+            if receipt.finality == .open, receipt.stamp == .settling {
+                steps.padding(.top, DS.Space.s3)
+            } else if let note {
+                Text(verbatim: note.word)
                     .dsText(.heading17)
-                    .monospacedDigit()
-                    .foregroundStyle(DS.textPrimary)
-                    .multilineTextAlignment(.center)
-                    .lineLimit(2).minimumScaleFactor(0.7)
-            }
-            if let place = swapPlace(s) {
-                Text(verbatim: place)
-                    .dsText(.label12)
-                    .foregroundStyle(DS.textSecondary)
-                    .multilineTextAlignment(.center)
-                    .lineLimit(2)
-                    .padding(.top, 2)
+                    .foregroundStyle(note.ink)
+                    .lineLimit(1)
+                    .padding(.top, DS.Space.s2)
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(Text(verbatim: String(localized: "\(s.outAmount) for \(s.inAmount)")))
+        .padding(.horizontal, DSRoomChassis.leadInset)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .animation(DS.Motion.standard, value: receipt.finality)
+    }
+
+    // MARK: The party row
+
+    /// Who and when: the face, the name, the day in the divider's ink with
+    /// the clock beside it. A door when there is an address behind the face.
+    @ViewBuilder private var partyRow: some View {
+        let row = HStack(spacing: DS.Space.s3) {
+            face
+            Text(verbatim: partyName)
+                .dsText(.heading17)
+                .foregroundStyle(unnamed && transfer == nil ? DS.pickInk : DS.textPrimary)
+                .lineLimit(1).truncationMode(.middle)
+            Spacer(minLength: DS.Space.s2)
+            if !hidesDay {
+                HStack(alignment: .firstTextBaseline, spacing: DS.Space.s1) {
+                    Text(FeedScreen.dayWord(landed))
+                        .dsText(.label12)
+                        .foregroundStyle(DS.headInk)
+                    Text(verbatim: landed.formatted(date: .omitted, time: .shortened))
+                        .dsText(.label12)
+                        .foregroundStyle(DS.textSecondary)
+                }
+                .lineLimit(1)
+            }
+        }
+        if let address = door, let onSubject {
+            Button { onSubject(address) } label: { row.contentShape(Rectangle()) }
+                .buttonStyle(RowPress())
+                .accessibilityHint(Text("Opens what you know about this address"))
+        } else {
+            row
+        }
+    }
+
+    @ViewBuilder private var face: some View {
+        if let t = transfer {
+            // A wallet you watch wears the wallet's mark, never a stranger's
+            // person (prd §1349).
+            if WalletStore.shared.watches(t.theirAddress) {
+                BridgeIcon(name: "Wallet", size: DS.Face.seat, circular: true)
+            } else {
+                WalletFace(address: t.theirAddress, size: DS.Face.seat, circular: true)
+            }
+        } else if let s = swap {
+            swapFaces(s)
+        } else if let c = card {
+            BridgeIcon(name: c.source, size: DS.Face.seat, circular: true)
+        } else {
+            MoneySubjectDisc(subject: receipt.subject, mine: receipt.mine, size: DS.Face.seat, onOpen: nil)
+        }
+    }
+
+    private var partyName: String {
+        if let t = transfer { return t.theirName }
+        if let s = swap { return s.wallet ?? source }
+        if let c = card { return c.last4.map { "\(c.name) ••\($0)" } ?? c.name }
+        return unnamed ? String(localized: "Tap to name") : source
+    }
+
+    /// The address the row opens, where there is one.
+    private var door: String? {
+        if let t = transfer { return t.theirAddress }
+        if swap == nil, card == nil, case .address(let a) = receipt.subject, !a.isEmpty { return a }
+        return nil
+    }
+
+    /// The two marks overlapped, the front one punching its own ring out of
+    /// the back one, so the two separate on any fill without a line.
+    private func swapFaces(_ s: Swap) -> some View {
+        let out = MoneyReceipt.split(s.outAmount), into = MoneyReceipt.split(s.inAmount)
+        let size = DS.Face.seat
+        return ZStack(alignment: .leading) {
+            swapMark(s.outApp ? s.outAmount : (out.unit ?? ""), app: s.outApp, size: size)
+                .mask(alignment: .leading) {
+                    ZStack(alignment: .leading) {
+                        Rectangle()
+                        Circle().frame(width: size + 6, height: size + 6)
+                            .offset(x: size * 0.55 - 3)
+                            .blendMode(.destinationOut)
+                    }
+                    .compositingGroup()
+                }
+            swapMark(s.inApp ? s.inAmount : (into.unit ?? ""), app: s.inApp, size: size)
+                .offset(x: size * 0.55)
+        }
+        .frame(width: size * 1.55, height: size, alignment: .leading)
+        .accessibilityHidden(true)
     }
 
     /// One leg's mark: a token's, or an app's for a Peer fill (prd §1356).
     @ViewBuilder
-    private func swapMark(_ name: String, app: Bool) -> some View {
+    private func swapMark(_ name: String, app: Bool, size: CGFloat) -> some View {
         if app {
-            BridgeIcon(name: name, size: DS.Face.shelf, circular: true)
+            BridgeIcon(name: name, size: size, circular: true)
         } else {
-            AssetMark(name: name, size: DS.Mark.tile)
+            AssetMark(name: name, size: size)
         }
     }
 
-    /// The one figure: what came in, signed, its symbol beside it, or under
-    /// it when the two do not fit one line. A Peer sale's figure is what went
-    /// out, since what came in is an app's money, not a token.
-    private func swapFigure(_ s: Swap, out: (number: String, unit: String?),
-                            into: (number: String, unit: String?)) -> some View {
-        let gain = !s.inApp
-        let leg = gain ? into : out
-        let number = (gain ? "+" : "−") + (leg.number.isEmpty ? (gain ? s.inAmount : s.outAmount) : leg.number)
-        let unit = leg.unit ?? ""
+    // MARK: The figure
+
+    /// The amount at the price rung, its unit beside it; the two stack when
+    /// they do not fit one line, and a long figure steps down a size rather
+    /// than truncating.
+    private var figure: some View {
+        let parts = figureParts
         return ViewThatFits(in: .horizontal) {
-            HStack(alignment: .firstTextBaseline, spacing: 6) {
-                swapNumber(number)
-                swapUnit(unit)
+            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                figureNumber(parts.number)
+                if let unit = parts.unit { figureUnit(unit) }
             }
-            VStack(spacing: 0) {
-                swapNumber(number)
-                swapUnit(unit)
+            VStack(alignment: .leading, spacing: 0) {
+                figureNumber(parts.number)
+                if let unit = parts.unit { figureUnit(unit) }
             }
         }
     }
 
-    private func swapNumber(_ number: String) -> some View {
+    /// A figure is a number at the price rung; a receipt with no amount to
+    /// state (a Safe proposal's "to payroll.eth") leads with words, at the
+    /// words' rung.
+    private func figureNumber(_ number: String) -> some View {
         Text(verbatim: number)
-            .dsText(.heading34)
+            .dsText(receipt.amount == nil && swap == nil ? .heading24 : .price40)
             .monospacedDigit()
             .contentTransition(roll)
-            .foregroundStyle(DS.textPrimary)
+            .foregroundStyle(figureInk)
             .lineLimit(1).minimumScaleFactor(0.5)
     }
 
-    private func swapUnit(_ unit: String) -> some View {
+    private func figureUnit(_ unit: String) -> some View {
         Text(verbatim: unit)
             .dsText(.heading17)
             .foregroundStyle(DS.textSecondary)
             .lineLimit(1).minimumScaleFactor(0.6)
     }
 
-    /// "−317.78 MAG7 · $1,204.10 · Today": what went out (or, for a Peer fill,
-    /// the app it went through), its worth when known, and the one day word.
-    private func swapGaveLine(_ s: Swap, out: (number: String, unit: String?)) -> String {
-        let gave: String
-        if s.outApp {
-            gave = String(localized: "Paid with \(s.outAmount)")
-        } else if s.inApp {
-            gave = String(localized: "Paid out to \(s.inAmount)")
-        } else {
-            gave = "−" + s.outAmount
+    /// A refund or money in reads in the confirm ink; everything else plain.
+    private var figureInk: Color {
+        card != nil && receipt.amount?.tone == .gain ? DS.confirmInk : DS.textPrimary
+    }
+
+    /// The number and its unit for each kind: a transfer signed by its
+    /// direction, a swap's leg that came in, a card's unsigned spend (a refund
+    /// keeps its plus), a receipt's own statement.
+    private var figureParts: (number: String, unit: String?) {
+        if let s = swap {
+            let out = MoneyReceipt.split(s.outAmount), into = MoneyReceipt.split(s.inAmount)
+            let gain = !s.inApp
+            let leg = gain ? into : out
+            let number = (gain ? "+" : "−") + (leg.number.isEmpty ? (gain ? s.inAmount : s.outAmount) : leg.number)
+            return (number, leg.unit.flatMap { $0.isEmpty ? nil : $0 })
         }
-        var parts = [gave]
-        if let usd = s.usd, usd > 0 { parts.append(usd.formatted(.currency(code: "USD"))) }
-        parts.append(FeedScreen.dayWord(landed))
-        return parts.joined(separator: " · ")
-    }
-
-    /// "accountless.eth on Base", or the one of the two that is known.
-    private func swapPlace(_ s: Swap) -> String? {
-        switch (s.wallet, s.network) {
-        case let (w?, n?): return String(localized: "\(w) on \(n)")
-        case let (w?, nil): return w
-        case let (nil, n?): return n
-        default: return nil
+        if let t = transfer, let amount = receipt.amount {
+            let bare = amount.number.trimmingCharacters(in: CharacterSet(charactersIn: "+-−"))
+            return ((t.sent ? "−" : "+") + bare, amount.unit)
         }
-    }
-
-    /// The card that paid beside what it paid (prd §1182): the card, then its
-    /// name, the amount, the day and time, the state.
-    private func cardBody(_ c: Card) -> some View {
-        HStack(alignment: .center, spacing: DS.Space.s4) {
-            cardArt(c)
-            VStack(alignment: .leading, spacing: 0) {
-                Text(verbatim: c.name)
-                    .dsText(.label12)
-                    .foregroundStyle(DS.textSecondary)
-                    .lineLimit(1)
-                Text(verbatim: cardStatement)
-                    .dsText(.heading34)
-                    .monospacedDigit()
-                    .foregroundStyle(receipt.amount?.tone == .gain ? DS.confirmInk : DS.textPrimary)
-                    .contentTransition(roll)
-                    .lineLimit(1).minimumScaleFactor(0.6)
-                    .padding(.top, DS.Space.s3)
-                // "Today at 2:31 AM", "Oct 1 at 2:31 AM" (prd §1352), as the
-                // transfers read their day since §1349.
-                Text(verbatim: cardWhen)
-                    .dsText(.body17)
-                    .foregroundStyle(DS.textSecondary)
-                    .lineLimit(2).minimumScaleFactor(0.8)
-                    .padding(.top, 2)
-                Spacer(minLength: DS.Space.s2)
-                if let statusWord {
-                    DSStamp(word: statusWord, weight: statusWeight)
-                }
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        if card != nil, let amount = receipt.amount {
+            let bare = amount.number.trimmingCharacters(in: CharacterSet(charactersIn: "+-−"))
+            return (amount.number.hasPrefix("+") ? amount.number : bare, amount.unit)
         }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(Text(receipt.spokenLabel))
-        .accessibilityValue(Text(verbatim: [receipt.spokenValue, c.name].joined(separator: ", ")))
+        if let amount = receipt.amount {
+            // A typographic minus, never the hyphen the amount was written with.
+            let number = amount.number.hasPrefix("-") ? "−" + amount.number.dropFirst() : amount.number
+            if number.isEmpty, let unit = amount.unit { return (unit, nil) }
+            return (number, amount.unit)
+        }
+        // Never the lead or the title the row above already says.
+        guard let fallback = receipt.titleFallback, fallback != Self.title(receipt) else { return ("", nil) }
+        return (fallback, nil)
     }
 
-    /// A card, portrait as Wallet stacks it: the issuer's mark, the last four.
-    private func cardArt(_ c: Card) -> some View {
-        RoundedRectangle(cornerRadius: DS.Radius.sheet, style: .continuous)
-            // A dark card stands off the box on the strong fill (prd §1353):
-            // on `surfaceRaised` it was the box's own colour, a mark floating
-            // on nothing.
-            .fill(c.light ? Color(white: 0.91) : DS.fillStrong)
-            .frame(width: 112, height: 176)
-            .overlay(alignment: c.last4 == nil ? .center : .topLeading) {
-                // A card with no number to show (the onchain cards) is its
-                // issuer's mark, drawn as the card's face rather than a
-                // corner badge on an empty slab (prd §1353 amended).
-                BridgeIcon(name: c.source, size: c.last4 == nil ? DS.Face.shelf : DS.Mark.row)
-                    .padding(c.last4 == nil ? 0 : DS.Space.s3)
+    /// The amount rolls to a re-read figure rather than cutting (prd §1181).
+    private var roll: ContentTransition {
+        guard let amount = receipt.amount else { return .numericText() }
+        return amount.numeric.map { .numericText(value: $0) } ?? .numericText()
+    }
+
+    // MARK: The line
+
+    /// The other side, in one line: what it was worth and which of your
+    /// wallets, what went out, what the card said, what the receipt said.
+    private var line: String? {
+        if let s = swap {
+            let gave: String
+            if s.outApp {
+                gave = String(localized: "Paid with \(s.outAmount)")
+            } else if s.inApp {
+                gave = String(localized: "Paid out to \(s.inAmount)")
+            } else {
+                gave = "−" + s.outAmount
             }
-            .overlay(alignment: .bottomLeading) {
-                if let last4 = c.last4 {
-                    Text(verbatim: "••\(last4)")
-                        .dsText(.label12)
-                        .monospacedDigit()
-                        .foregroundStyle(c.light ? Color(white: 0.45) : DS.textSecondary)
-                        .padding(DS.Space.s3)
-                }
+            var parts = [gave]
+            if let usd = s.usd, usd > 0 { parts.append(usd.formatted(.currency(code: "USD"))) }
+            return parts.joined(separator: " · ")
+        }
+        if let t = transfer {
+            var parts: [String] = []
+            if let usd = t.usd, usd > 0 { parts.append(usd.formatted(.currency(code: "USD"))) }
+            parts.append(t.sent ? String(localized: "from \(t.mineLabel)") : String(localized: "into \(t.mineLabel)"))
+            return parts.joined(separator: " · ")
+        }
+        return receipt.secondary
+    }
+
+    // MARK: The state
+
+    /// The receipt's own stamp, in its ink — and NEVER a default "Settled"
+    /// (prd §83): a settled or filled record says nothing here, an open one
+    /// with no stamp says it is waiting.
+    private var note: (word: String, ink: Color)? {
+        if let stamp = receipt.stamp {
+            switch stamp {
+            case .settled, .filled: return nil
+            default: return (stamp.word, stamp.weight.stampWeight.ink)
             }
-            .accessibilityHidden(true)
-    }
-
-    private var cardWhen: String {
-        String(localized: "\(FeedScreen.dayWord(landed)) at \(landed.formatted(date: .omitted, time: .shortened))")
-    }
-
-    /// A spend reads unsigned; a refund keeps its plus.
-    private var cardStatement: String {
-        guard let amount = receipt.amount else { return statement }
-        let number = amount.number.hasPrefix("+") ? amount.number : unsignedStatement
-        return number
+        }
+        return receipt.finality == .open ? (String(localized: "Waiting"), DS.attentionInk) : nil
     }
 
     /// Sent → Confirming → Settled, the middle lit while the record is open.
     private var steps: some View {
-        let words = [String(localized: "Sent"), statusWord ?? String(localized: "Waiting"),
+        let words = [String(localized: "Sent"), receipt.stamp?.word ?? String(localized: "Waiting"),
                      String(localized: "Settled")]
         return VStack(spacing: DS.Space.s1) {
             HStack(spacing: 0) {
@@ -780,139 +777,6 @@ struct MoneyReceiptBox: View {
             }
             .dsText(.label12)
         }
-        .padding(.horizontal, DS.Space.s2)
-        .animation(DS.Motion.standard, value: receipt.finality)
-    }
-
-    /// One face and its name, a door to the address card.
-    private func party(address: String, name: String) -> some View {
-        Button { onSubject?(address) } label: {
-            VStack(spacing: DS.Space.s1) {
-                // A wallet you watch wears the wallet's mark, never a stranger's
-                // person (prd §1349).
-                if WalletStore.shared.watches(address) {
-                    BridgeIcon(name: "Wallet", size: DS.Face.shelf, circular: true)
-                } else {
-                    WalletFace(address: address, size: DS.Face.shelf, circular: true)
-                }
-                Text(verbatim: name)
-                    .dsText(.label12)
-                    .foregroundStyle(DS.textSecondary)
-                    .lineLimit(1).truncationMode(.middle)
-            }
-            .frame(width: 72)
-        }
-        .buttonStyle(PressSpring())
-        .disabled(onSubject == nil)
-    }
-
-    /// The amount rolls to a re-read figure rather than cutting (prd §1181,
-    /// item 7 of the design pass: "the amount rolls in digit by digit").
-    private var roll: ContentTransition {
-        guard let amount = receipt.amount else { return .numericText() }
-        return amount.numeric.map { .numericText(value: $0) } ?? .numericText()
-    }
-
-    /// The amount without its sign: the arrow says which way it went.
-    private var unsignedStatement: String {
-        guard let amount = receipt.amount else { return statement }
-        let number = amount.number.trimmingCharacters(in: CharacterSet(charactersIn: "+-−"))
-        return [number, amount.unit].compactMap { $0 }.joined(separator: " ")
-    }
-
-    private func worthLine(_ t: Transfer) -> String {
-        // The one day word (prd §1359).
-        let day = FeedScreen.dayWord(landed)
-        guard let usd = t.usd, usd > 0 else { return day }
-        return "\(usd.formatted(.currency(code: "USD"))) · \(day)"
-    }
-
-    /// NEVER A DEFAULT "SETTLED" (prd §83): the receipt's own stamp, else
-    /// "Waiting" for a record still open, else no status at all.
-    private var statusWord: String? {
-        receipt.stamp?.word ?? (receipt.finality == .open ? String(localized: "Waiting") : nil)
-    }
-
-    private var statusWeight: DSStamp.Weight {
-        receipt.stamp?.weight.stampWeight ?? (receipt.finality == .open ? .waiting : .good)
-    }
-
-    private func spoken(_ t: Transfer) -> String {
-        let who = t.sent ? String(localized: "You sent \(t.theirName) \(unsignedStatement)")
-                         : String(localized: "\(t.theirName) sent you \(unsignedStatement)")
-        return [who, t.network, statusWord, FeedScreen.dayWord(landed)]
-            .compactMap { $0 }.joined(separator: ". ")
-    }
-
-    private var receiptBody: some View {
-        // THE BOX FILLS ITS SLOT (prd §1381, §1386): who and when at the
-        // top, the figure and its line standing in the middle of the slot,
-        // nothing under them. The facts are rows under the tiles now.
-        VStack(alignment: .leading, spacing: 0) {
-            eyebrow
-            Spacer(minLength: DS.Space.s3)
-            VStack(alignment: .leading, spacing: 0) {
-                // Nothing to state but the title: no statement, never the
-                // title or the lead again (prd §1360).
-                if !statement.isEmpty {
-                    Text(verbatim: statement)
-                        .dsText(.heading34)
-                        .monospacedDigit()
-                        .contentTransition(roll)
-                        .foregroundStyle(DS.textPrimary)
-                        .lineLimit(1).minimumScaleFactor(0.6)
-                }
-                if let secondary = receipt.secondary {
-                    Text(verbatim: secondary)
-                        .dsText(.body17)
-                        .foregroundStyle(DS.textSecondary)
-                        .lineLimit(1)
-                        .padding(.top, 2)
-                }
-            }
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel(Text(receipt.spokenLabel))
-            .accessibilityValue(Text(verbatim: receipt.spokenValue))
-            Spacer(minLength: DS.Space.s3)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-    }
-
-    /// Who and when, Today's eyebrow at its rungs: the face, the name, what
-    /// happened, the day in the time's place. A door when there is an address.
-    @ViewBuilder private var eyebrow: some View {
-        let row = HStack(spacing: DS.Space.s2) {
-            MoneySubjectDisc(subject: receipt.subject, mine: receipt.mine, size: DS.Face.list, onOpen: nil)
-            Text(verbatim: unnamed ? String(localized: "Tap to name") : source)
-                .dsText(.label12)
-                .foregroundStyle(unnamed ? DS.pickInk : DS.textSecondary)
-                .lineLimit(1)
-            Spacer(minLength: DS.Space.s2)
-            // A bill names its day in its own cell (Charged, Due).
-            if !hidesDay {
-                Text(FeedScreen.dayWord(landed))
-                    .dsText(.label12)
-                    .foregroundStyle(DS.headInk)
-                    .lineLimit(1)
-            }
-        }
-        if let address = openable, let onSubject {
-            Button { onSubject(address) } label: { row.contentShape(Rectangle()) }
-                .buttonStyle(RowPress())
-                .accessibilityHint(Text("Opens what you know about this address"))
-        } else {
-            row
-        }
-    }
-
-    private var openable: String? {
-        if case .address(let address) = receipt.subject, !address.isEmpty { return address }
-        return nil
-    }
-
-    /// The facts, spoken after the receipt's finality.
-    private var cellsSpoken: String {
-        cells.map { "\($0.label) \($0.value)" }.joined(separator: ", ")
     }
 
     /// The sheet's title: the party, else the receipt's lead.
@@ -920,18 +784,18 @@ struct MoneyReceiptBox: View {
         if let party = receipt.party, !party.isEmpty { return party }
         return receipt.lead
     }
+}
 
-    private var statement: String {
-        if let amount = receipt.amount {
-            // A typographic minus, never the hyphen the amount was written with.
-            let number = amount.number.hasPrefix("-") ? "−" + amount.number.dropFirst() : amount.number
-            // An approval with no stated allowance is its token alone (prd §1360).
-            return [number.isEmpty ? nil : number, amount.unit].compactMap { $0 }.joined(separator: " ")
+extension DSStamp.Weight {
+    /// The ink a state word takes outside a stamp (prd §1004, §1394).
+    var ink: Color {
+        switch self {
+        case .good:     return DS.confirmInk
+        case .waiting:  return DS.attentionInk
+        case .urgent:   return DS.attentionInk
+        case .quiet:    return DS.textTertiary
+        case .shielded: return DS.receiptPour(.shield)
         }
-        // Never the lead or the title the row above already says.
-        guard let fallback = receipt.titleFallback,
-              fallback != Self.title(receipt) else { return "" }
-        return fallback
     }
 }
 
