@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The "Connect a wallet app" row — ONE implementation of the WalletConnect
+/// The "Connect a wallet" row — ONE implementation of the WalletConnect
 /// handshake's UI, for both screens that offer it (prd §462).
 ///
 /// §461 split the wallet manager into the roster and the Address Book, and the
@@ -44,7 +44,7 @@ struct ConnectWalletRow: View {
                 DSHaptic.tap()
                 if connecting { cancelConnect() } else { connectWallet() }
             } label: {
-                DSPushRowLabel(title: Text(connecting ? "Waiting — tap to cancel" : "Connect a wallet app"),
+                DSPushRowLabel(title: Text(connecting ? "Waiting — tap to cancel" : "Connect a wallet"),
                                busy: connecting) {
                     Image(systemName: "wallet.pass.fill")
                         .dsGlyph(.subhead, weight: .medium)
@@ -61,7 +61,7 @@ struct ConnectWalletRow: View {
             }
             .buttonStyle(PressSpring())
             .accessibilityLabel(Text(connecting ? "Waiting for your wallet, tap to cancel"
-                                                : "Connect a wallet app"))
+                                                : "Connect a wallet"))
             // No app claimed `wc:` — the URI, to paste into the wallet
             // directly. The handshake is still listening while this shows.
             if let uri = pairingURI {

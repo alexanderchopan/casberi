@@ -67381,3 +67381,11 @@ The inventory is `design/wallet-helper-text-audit.md`: four passes (Home, Holdin
 5. **Library:** the count tile and its list say "Wallet", not "Accounts" (user, same day: "change it back but just say 'wallet'? singular there is fine"; amends §1415 item 2 for Library only).
 
 **Guards updated:** `footnote-audit.py` (three allowances retired), `wallet-rooms-selftest.sh`, `wallet-permissions-selftest.sh` (now fails if the modules ceiling returns), `wallet-viz-selftest.sh`, `price-chart-selftest.sh`, `privy-selftest.sh`, `money-receipt-selftest.sh`, `safetx-selftest.sh`.
+
+## §1417 — Connect a wallet is back in Follow an account, every time (amends §690's first-run-only rule and §1090's tray) (user, 2026-10-18: "when a user wants to follow a wallet do we still let them connect with walletconnect? i haven't seen that around lately", then "yes for sure it should be there why did we get rid of it that is so odd") — BUILT
+
+**Why it went.** Nobody ruled it out. §690 kept `ConnectWalletRow` to a first run because, as a card, it overlapped the account page's Connection row. Then §1090 moved Follow into its own tray (`WalletFollowSheet`) and the row never came along. So anyone who already followed a wallet had no way to connect another, and the empty Wallet's start figure (`showsConnect: false`) never drew it either.
+
+**Now.** Follow an account draws "Connect a wallet" first (user, same day: "you can just call it 'connect a wallet' don't need to say 'app' there"; the account page's row and the reach registry's entry share the word), before the suggestions, whenever `WalletConnectBridge.isAvailable` and there is room to follow (`canWatchMore`). It is the same row, so the cancel and manual-pairing handling stay in one place (§462). A settled session raises `WalletConnectPickerSheet` from the tray, with the chrome and store passed in explicitly (§872), and the tray reloads its following set when the picker closes. The picker does its own reconcile. In the demo the row is not drawn (§483); following refuses there anyway. The account page's first-run card is unchanged.
+
+**Guard.** `sheet-sweep.json` exempts `WalletFollowSheet.swift:pickerOpen`: the picker rises only after a wallet app approves, and no simulator has one.

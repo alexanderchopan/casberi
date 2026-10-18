@@ -26,6 +26,11 @@ struct WalletFollowSheet: View {
     @State private var searching = false
     @State private var following: Set<String> = []
     @State private var justFollowed: String? = nil
+    /// What a settled WalletConnect session shared, on its way to the picker
+    /// (prd §1417): the tray is where you follow, so connecting is here too.
+    @State private var shared: [WalletConnectBridge.ConnectedAccount] = []
+    @State private var pickerOpen = false
+    @State private var connectNote: String? = nil
     @FocusState private var fieldFocused: Bool
 
     private var book: AddressBook { AddressBook.shared }
@@ -44,6 +49,13 @@ struct WalletFollowSheet: View {
         }
         .task { load() }
         .task(id: trimmed) { await resolve() }
+        // A sheet on Catalyst does not inherit the presenter's environment
+        // (prd §872), and the picker reads both objects unwrapped.
+        .sheet(isPresented: $pickerOpen, onDismiss: load) {
+            WalletConnectPickerSheet(shared: shared) { _ in }
+            .environment(chrome)
+            .environment(store)
+        }
         .onAppear {
             // The words the tray's search was holding (prd §1185).
             if let draft = chrome?.searchDraft { query = draft; chrome?.searchDraft = nil }
@@ -78,6 +90,22 @@ struct WalletFollowSheet: View {
     @ViewBuilder private var before: some View {
         if !wallet.canWatchMore {
             footnote(Text("Following \(WalletStore.watchLimit) of \(WalletStore.watchLimit)."))
+        }
+        // **Connect a wallet, every time (prd §1417).** §690 kept this to
+        // a first run because a card overlapped the page's Connection row,
+        // and §1090 moved Follow here without it — so anyone already
+        // following a wallet had no way to connect another. The demo reaches
+        // nothing (§483), so the row is not drawn there.
+        if WalletConnectBridge.isAvailable, wallet.canWatchMore, !DemoMode.isActive {
+            ConnectWalletRow(onFound: { found in
+                connectNote = nil
+                shared = found
+                pickerOpen = true
+            }, onNote: { text, _ in connectNote = text })
+            .padding(.horizontal, DS.Space.s4)
+            if let connectNote {
+                footnote(Text(verbatim: connectNote))
+            }
         }
         if !near.isEmpty {
             // No heading over them (user: "get rid of 'near your money' that

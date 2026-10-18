@@ -1592,6 +1592,12 @@
   },
   {
    "covers": [
+    "Screens/WalletFollowSheet.swift:pickerOpen"
+   ],
+   "why": "the WalletConnect picker rises only after a wallet app approves a session, and no simulator has a wallet app (the -wcConnectProbe note); the demo does not draw the Connect row (prd §1417)"
+  },
+  {
+   "covers": [
     "Screens/PersonRoomScreen.swift:sheetThing"
    ],
    "why": "a person's room by link shows no rows for any demo person (measured @uma and @sam, 2026-10-15), so there is no row to open"

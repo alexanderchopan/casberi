@@ -235,7 +235,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1555 of 1624 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1556 of 1625 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1002,7 +1002,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §687 — Activity lists transactions, and the "when" follows the list's density (amended by §1089; part superseded by §950)
 - §688 — Holdings, and the tokens nobody had asked the chain for
 - §688b — Holdings on the other two rooms, and the chips nobody budgeted for
-- §690 — The book folds into the Wallet's page; follow lives in the directory; Home is the band, Activity is the chart (amended by §692, §747; part superseded by §1039)
+- §690 — The book folds into the Wallet's page; follow lives in the directory; Home is the band, Activity is the chart (amended by §692, §747, §1417; part superseded by §1039)
 - §691 — Groups are deleted
 - §692 — Permissions is one scope in five rooms, and Wallet's Home draws its flow as rows (amended by §695; part superseded by §942)
 - §693 — A share link left on the automatic button style takes its whole row
@@ -1449,7 +1449,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1086 — Social gets its tiles: All · To you · Follow; what is to you leads All
 - §1087 — Day's box is Box B: the next thing over today's shape
 - §1089 — Frames says what you did, not how it was built: rows titled by who, one word for row and sheet, your own accounts in…
-- §1090 — The Wallet, Markets' way: Follow in the room, Holdings as the day's heat map, one line per move, Needs you leads Comi… (amended by §1090a, §1107)
+- §1090 — The Wallet, Markets' way: Follow in the room, Holdings as the day's heat map, one line per move, Needs you leads Comi… (amended by §1090a, §1107, §1417)
 - §1090a — The wallet makeover's review fixes
 - §1091 — Logos: name an account, and a named one keeps its address in sight (a Logos user, relayed 2026-10-03: "requesting giv…
 - §1092 — Videos play in the sheet: a YouTube link in YouTube's privacy-enhanced player, a Telegram channel's video in Apple's…
@@ -1792,6 +1792,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1414 — A money row's name fits its one line: a swap reads pair · venue with its legs in the column and on the line, a Safe r…
 - §1415 — The Wallet is the place; what is in it is an ACCOUNT, and you follow an account (amends §1410's "Follow a wallet", §1…
 - §1416 — The Wallet says what is, not how it was read: every footnote that narrates freshness, pricing gaps, what Casberi cann…
+- §1417 — Connect a wallet is back in Follow an account, every time
 
 ## Dead rulings → what replaced them (generated)
 

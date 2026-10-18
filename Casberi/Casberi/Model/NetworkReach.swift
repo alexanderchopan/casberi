@@ -279,9 +279,9 @@ enum NetworkReach {
         // lives inside the SDK — so the one gap the audit structurally cannot
         // see is a dependency's own calls. Anything vendored that talks to the
         // network needs an entry written by hand, exactly like this one.
-        Endpoint(service: "Connect a wallet app",
+        Endpoint(service: "Connect a wallet",
                  reach: .whenConnected(bridge: "Wallet"),
-                 purpose: "Only when you tap “Connect a wallet app”. Casberi asks WalletConnect for the list of wallets and their icons, then relays one connection request to the wallet you pick — the relay carries an encrypted handshake it can't read. The request asks for your address and NOTHING else: no signing, no transactions. Once the wallet approves, WalletConnect looks that address up once for its display name and picture, sending the address and which chain it's on. Nothing is sent when you type or paste an address instead.",
+                 purpose: "Only when you tap “Connect a wallet”. Casberi asks WalletConnect for the list of wallets and their icons, then relays one connection request to the wallet you pick — the relay carries an encrypted handshake it can't read. The request asks for your address and NOTHING else: no signing, no transactions. Once the wallet approves, WalletConnect looks that address up once for its display name and picture, sending the address and which chain it's on. Nothing is sent when you type or paste an address instead.",
                  hosts: ["relay.walletconnect.org", "api.web3modal.com",
                          "explorer-api.walletconnect.com", "verify.walletconnect.org",
                          "pulse.walletconnect.com", "rpc.walletconnect.com"]),
