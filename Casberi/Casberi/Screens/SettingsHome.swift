@@ -244,6 +244,7 @@ struct SettingsHome: View {
                let folder = libraryFolders.first(where: { $0.category == category }) {
                 SourcesOpenFolder(folder: folder, has: isYours,
                                   open: { openFromFolder($0) },
+                                  settings: { name in yours(name).map { app in { openPage(app) } } },
                                   close: { withAnimation(DS.Motion.folder) { openFolder = nil } },
                                   // The Notes folder leads with the Notes
                                   // page, pushed beside Library (prd §1347).
@@ -748,17 +749,50 @@ struct SettingsHome: View {
     /// Library's search lists them (prd §1316).
     private var appsSearching: Bool { searchFocused || !query.isEmpty }
 
-    /// An app in an open folder, as its row opens it: yours its page, the
-    /// rest their way in.
+    /// An app in an open folder, as its row opens it: yours goes, the rest
+    /// their way in.
     private func openFromFolder(_ name: String) {
         DSHaptic.selection()
-        if let app = bridges.bridges.first(where: { $0.name == name && $0.status != .paused }) {
-            // A page pushed beside Sources (prd §1321 item 2); only a
-            // connect form rises.
-            route.pushBridge(BridgeRouter.destination(forID: app.id))
+        if let app = yours(name) {
+            openYours(app)
         } else {
             setup(name)
         }
+    }
+
+    private func yours(_ name: String) -> BridgeApp? {
+        bridges.bridges.first { $0.name == name && $0.status != .paused }
+    }
+
+    /// **AN APP YOU HAVE GOES; HOLDING IT MANAGES IT (prd §1418, reverses
+    /// §1050f's tap).** Library draws the App Library, where a tap opens the
+    /// app, so one of yours lands where the tray's icon does: its feed rises
+    /// over Library. Its page is the long press's Settings, or Casberi ›
+    /// Apps. One with nowhere to go (`landsNothing`) or one that needs you
+    /// opens its page, the step it needs next.
+    private func openYours(_ app: BridgeApp) {
+        if app.status == .attention || LiveRoomSources.landsNothing.contains(app.name) {
+            openPage(app)
+        } else {
+            chrome.sourceRequest = Self.landing(forApp: app)
+        }
+    }
+
+    /// An app's own page, pushed beside Library (prd §1321 item 2); only a
+    /// connect form rises.
+    private func openPage(_ app: BridgeApp) {
+        route.pushBridge(BridgeRouter.destination(forID: app.id))
+    }
+
+    /// The source a tap on one of your apps asks for: its seat's in a merged
+    /// room, as the tray's icon asks (`RoomsTray.appItem`), else its own.
+    static func landing(forApp app: BridgeApp) -> String {
+        if let offer = BridgeCatalog.offers.first(where: { $0.name == app.name }),
+           let room = RoomAccounts.room(ofCategory: BridgeCatalog.category(of: offer)),
+           let seat = RoomAccounts.seats(for: room).first(where: { $0.name == app.name }) {
+            return seat.source ?? seat.name
+        }
+        return BridgeRouter.roomSource(forID: app.id) ?? app.name
     }
 
     // MARK: - A–Z (prd §1253, the search's list since §1316)
@@ -1013,9 +1047,10 @@ struct SettingsHome: View {
     @ViewBuilder
     private func appRow(_ app: BridgeApp, card: Bool = false) -> some View {
         let tone = app.status == .attention ? DS.attentionInk : DS.textTertiary
-        // By the seat, as the catalogue's connected row opens (prd §1050f):
-        // an offer with no setup page still has this one.
-        let open = { route.pushBridge(BridgeRouter.destination(forID: app.id)) }
+        // As its folder icon opens (prd §1418): it goes, and its page is the
+        // long press's.
+        let open = { openYours(app) }
+        Group {
         if card {
             DSPushRow(title: Text(verbatim: app.name), subtitle: Text(verbatim: app.statusLine),
                       subtitleTone: tone, opens: false, action: open) {
@@ -1030,6 +1065,8 @@ struct SettingsHome: View {
                 BridgeIcon(name: app.name, size: DS.Mark.notice)
             }
         }
+        }
+        .contextMenu { AppMenu(open: open, settings: { openPage(app) }) }
     }
 
     // MARK: - People

@@ -1866,12 +1866,7 @@ struct RoomsTray: View {
             .accessibilityAddTraits(item.lit ? .isSelected : [])
             .contextMenu {
                 if let settings = item.settings {
-                    Button(action: item.act) {
-                        Label("Open", systemImage: "arrow.up.forward.app")
-                    }
-                    Button(action: settings) {
-                        Label("Settings", systemImage: "slider.horizontal.3")
-                    }
+                    AppMenu(open: item.act, settings: settings)
                 }
             }
         }

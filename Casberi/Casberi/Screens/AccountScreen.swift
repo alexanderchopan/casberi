@@ -33,6 +33,7 @@ struct SettingsRows: View {
     @State private var rungBounce = 0
     @State private var diagnosticsOpen = false
     @State private var languageOpen = false
+    @State private var appsOpen = false
     @State private var detail: AccountDetail?
     /// How the rows draw (prd §1208c): as rows, as the Settings box's grid,
     /// or only the colophon under that box.
@@ -113,6 +114,9 @@ struct SettingsRows: View {
                 presented(AccountDetailSheet(detail: $0))
             }
             .sheet(isPresented: $languageOpen) { presented(LanguagePickerSheet()) }
+            .sheet(isPresented: $appsOpen) {
+                presented(NavigationStack { YourAppsPage().navigationTitle(Text("Apps")) }.dsNavSheet())
+            }
             .photosPicker(isPresented: $avatarPickerOpen,
                           selection: $avatarSelection, matching: .images)
             // A set photo can come off, not just be replaced — every setting
@@ -288,6 +292,13 @@ struct SettingsRows: View {
     /// Group one — your things and their state. A–Z.
     private var primaryRows: [RowSpec] {
         [
+            // YOUR APPS, ONE DOOR EACH (prd §1418, user: "for a connected app
+            // you go to settings / apps"): a tap on an app in Library goes
+            // to it, so its page is here, as iOS keeps Settings › Apps.
+            RowSpec(title: "Apps",
+                    value: yourAppCount == 0 ? String(localized: "None yet") : yourAppCount.formatted(),
+                    badge: ("square.grid.2x2", DS.textPrimary),
+                    action: { open(.apps) { appsOpen = true } }),
             RowSpec(title: "Avatar",
                     // Set, the photo IS the fact — no words needed. It is
                     // also the dock's face (§700), the door to this screen
@@ -329,6 +340,9 @@ struct SettingsRows: View {
                     action: { open(.data) { detail = .data } }),
         ].sorted { $0.title < $1.title }
     }
+
+    /// How many apps Library marks yours (`YourAppsPage.apps`).
+    private var yourAppCount: Int { YourAppsPage.apps(bridgeStore.bridges).count }
 
     /// Group two — the app itself: housekeeping, rarely visited. A–Z.
     private var secondaryRows: [RowSpec] {
@@ -551,6 +565,7 @@ struct SettingsRows: View {
     /// Each setting's glyph in the box.
     private static func glyph(_ title: String) -> String {
         switch title {
+        case "Apps": "square.grid.2x2"
         case "Avatar": "person.crop.circle"
         case "Name": "signature"
         case "Data": "externaldrive"

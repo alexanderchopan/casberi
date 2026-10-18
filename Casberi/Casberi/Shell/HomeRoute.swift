@@ -435,4 +435,6 @@ final class HomeRoute {
 /// always did, and this enum is never read.
 enum SettingsPage: String, Hashable {
     case data, notifications, diagnostics, language
+    /// Your apps, each a door to its page (prd §1418).
+    case apps
 }

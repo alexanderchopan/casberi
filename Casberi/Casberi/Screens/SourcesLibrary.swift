@@ -168,13 +168,16 @@ private struct SourcesFolderWords: View {
 
 /// **A FOLDER SPRINGS OPEN IN PLACE (prd §1316).** Over the page, never a
 /// sheet: the page dims under it, a tap outside closes it, and an app opens
-/// from here as its row would (yours its page, the rest their way in). It
+/// from here as its row would (yours goes, the rest their way in, §1418). It
 /// stays open behind what that raises, so coming back is the folder again.
 /// Yours wear the green dot, the rest the pink plus (§1319).
 struct SourcesOpenFolder: View {
     let folder: SourcesLibrary.Folder
     let has: (String) -> Bool
     let open: (String) -> Void
+    /// An app of yours's page, offered on its long press (prd §1418); nil for
+    /// one you could add.
+    let settings: (String) -> (() -> Void)?
     let close: () -> Void
     /// **THE NOTES FOLDER LEADS WITH YOUR NOTES (prd §1347).** Notes is a
     /// category again, and its folder is where you manage it: the first
@@ -193,7 +196,7 @@ struct SourcesOpenFolder: View {
                 SourcesFolderNotesPage(action: notesPage)
             }
             ForEach(folder.apps, id: \.self) { name in
-                SourcesFolderApp(name: name, yours: has(name)) { open(name) }
+                SourcesFolderApp(name: name, yours: has(name), settings: settings(name)) { open(name) }
             }
         }
         .padding(.top, DS.Space.s2)
@@ -278,6 +281,7 @@ private struct SourcesFolderNotesPage: View {
 private struct SourcesFolderApp: View {
     let name: String
     let yours: Bool
+    let settings: (() -> Void)?
     let action: () -> Void
 
     var body: some View {
@@ -309,9 +313,29 @@ private struct SourcesFolderApp: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(PressSpring())
+        .contextMenu {
+            if let settings { AppMenu(open: action, settings: settings) }
+        }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(yours ? Text(verbatim: name) : Text("\(name), Add"))
         .accessibilityAddTraits(.isButton)
+    }
+}
+
+/// **AN APP'S LONG PRESS, WHEREVER IT IS DRAWN (prd §1159, §1418): Open,
+/// then Settings, its account page.** The tray's icon, Library's folder and
+/// its rows hold the same two, so a tap goes and a hold manages everywhere.
+struct AppMenu: View {
+    let open: () -> Void
+    let settings: () -> Void
+
+    var body: some View {
+        Button(action: open) {
+            Label("Open", systemImage: "arrow.up.forward.app")
+        }
+        Button(action: settings) {
+            Label("Settings", systemImage: "slider.horizontal.3")
+        }
     }
 }
 

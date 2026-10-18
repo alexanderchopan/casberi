@@ -67389,3 +67389,19 @@ The inventory is `design/wallet-helper-text-audit.md`: four passes (Home, Holdin
 **Now.** Follow an account draws "Connect a wallet" first (user, same day: "you can just call it 'connect a wallet' don't need to say 'app' there"; the account page's row and the reach registry's entry share the word), before the suggestions, whenever `WalletConnectBridge.isAvailable` and there is room to follow (`canWatchMore`). It is the same row, so the cancel and manual-pairing handling stay in one place (§462). A settled session raises `WalletConnectPickerSheet` from the tray, with the chrome and store passed in explicitly (§872), and the tray reloads its following set when the picker closes. The picker does its own reconcile. In the demo the row is not drawn (§483); following refuses there anyway. The account page's first-run card is unchanged.
 
 **Guard.** `sheet-sweep.json` exempts `WalletFollowSheet.swift:pickerOpen`: the picker rises only after a wallet app approves, and no simulator has one.
+
+## §1418 — An app you have GOES: a tap in Library lands where the tray's icon does, a long press holds Open and Settings, and Casberi's settings list your apps (reverses §1050f's tap; amends §1316's folder, §1159's menu to every icon, §1234 item 3 for a connected app) (user, 2026-10-18: "there is a dissonance we have in that app library is where you set up your apps, but a person who goes there also thinks they can go tap the app and go to its room. like you do in the tray"; of option A, "so if we put them in settings, can a new user still do the set up in the app library?"; "and then in settings only the apps you are connected to will be there right?"; "yes, i like this. thi sis a huge win. do it") — BUILT
+
+**Why.** Library draws the App Library (§1316), and there a tap opens the app. Its connected icon opened the app's account page instead, while the same icon in the tray went to the app's things, so one mark meant two things. §1050f's reason for the page ("a room is reached by its category in the tray, not app by app") stopped holding once the tray's icons landed in the app again (§1159).
+
+**The ruling.**
+1. **A tap does what the app needs next.** An app you could add opens its way in, as before. One of yours goes: `SettingsHome.openYours` asks `chrome.sourceRequest` for the source the tray's icon asks (`SettingsHome.landing(forApp:)`, its seat's in a merged room), so its feed rises over Library and Library stays under it. One that needs you (`.attention`) or has nowhere to go (`LiveRoomSources.landsNothing`) opens its page.
+2. **A long press holds Open, then Settings** (its account page), on the folder's icons and Library's app rows, through one `AppMenu` the tray's icons now share (§1159).
+3. **Casberi › Apps** (`SettingsPage.apps`, `YourAppsPage`): every app Library marks yours with the green dot (in the catalogue, `SettingsHome.inLibrary`, not paused), A–Z, the state on the line in the attention ink when it needs you, each a door to its page; "None yet" when there are none. iOS keeps the same split: the App Library launches, Settings › Apps manages. Adding an app stays Library's.
+4. A door that NAMES an app (`openOffer`, §1234: Browse apps, @apps, `casberi://apps`) still opens a connected one's page; it asked to manage that app.
+
+**Mac half.** The same code: on the Mac a pick changes the room behind, as the rail's and tray's picks do. Not walked on the Mac.
+
+**Seen** on the iPhone 17 Pro simulator (iOS 27, the demo): Library › Work › GitHub raised GitHub's feed over Library; holding GitHub showed Open and Settings, and Settings opened its page; Casberi's folder drew Apps (`square.grid.2x2`), whose page listed the demo's apps A–Z, and Bluesky's row opened its page. Not seen: an app needing attention, a `landsNothing` seat, the iPad sheet, the Mac.
+
+Mock: the design canvas "Apps: set up vs. go" (option A).
