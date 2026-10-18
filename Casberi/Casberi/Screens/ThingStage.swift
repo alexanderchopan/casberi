@@ -136,6 +136,9 @@ struct VerbDial: View {
     @State private var copied: Verb.ID?
     /// The system share sheet, raised by the Share disc.
     @State private var sharing = false
+    /// In the pane the dial is the pane's header row (prd §1399).
+    @Environment(\.dsInPane) private var inPane
+    @Environment(ShellChrome.self) private var chrome
 
 
     /// Liveness guard (build 188 — see `ThingRowKeying.swift`). SwiftUI
@@ -150,11 +153,23 @@ struct VerbDial: View {
 
     @ViewBuilder private var liveBody: some View {
         let tiles = self.tiles
-        DSScopeTiles(sections: tiles, active: SheetTile.none, verbs: Set(tiles), bare: true, centered: centered) { pick($0) }
-            // In the rows' column, as a room's tiles stand: the discs were
-            // centred and needed no inset; a grid does.
-            .padding(.horizontal, DSRoomChassis.inset)
-            .frame(maxWidth: .infinity)
+        Group {
+            if inPane {
+                // THE PANE'S TOOLBAR ROW (prd §1399): the tiles are published
+                // to the shell, which draws them at the pane's head; nothing
+                // stands here but the share sheet's host.
+                Color.clear.frame(width: 0, height: 0)
+                    .onAppear { publishToPane(tiles) }
+                    .onChange(of: tiles.map(\.id) + tiles.map(\.glyph)) { _, _ in publishToPane(tiles) }
+                    .onDisappear { chrome.clearPaneVerbs(owner: thing.id.uuidString) }
+            } else {
+                DSScopeTiles(sections: tiles, active: SheetTile.none, verbs: Set(tiles), bare: true, centered: centered) { pick($0) }
+                    // In the rows' column, as a room's tiles stand: the discs were
+                    // centred and needed no inset; a grid does.
+                    .padding(.horizontal, DSRoomChassis.inset)
+                    .frame(maxWidth: .infinity)
+            }
+        }
             // The system share sheet rises, a system picker (prd §1238, §1370).
             .sheet(isPresented: $sharing) { ShareTray(thing: thing) }
             // The card is drawn before Share is pressed (prd §1371).
@@ -196,6 +211,15 @@ struct VerbDial: View {
         if let keep { out.append(SheetTile(id: "keep", label: keep.label, glyph: keep.glyph)) }
         out.append(SheetTile(id: "share", label: "Share", glyph: "square.and.arrow.up"))
         return out
+    }
+
+    /// The pane's row (prd §1399): the thing's first act is its own.
+    private func publishToPane(_ tiles: [SheetTile]) {
+        let verbs = tiles.enumerated().map { i, tile in
+            ShellChrome.PaneVerb(id: tile.id, label: tile.label, glyph: tile.glyph,
+                                 primary: i == 0 && tile.id.hasPrefix("verb:")) { pick(tile) }
+        }
+        chrome.publishPaneVerbs(verbs, owner: thing.id.uuidString)
     }
 
     private func pick(_ tile: SheetTile) {

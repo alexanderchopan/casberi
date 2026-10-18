@@ -336,6 +336,20 @@ struct CasberiApp: App {
                     .keyboardShortcut(KeyEquivalent(Character("\(i + 1)")), modifiers: .command)
                 }
             }
+            // ⌘⌥1–⌘⌥4 — the verbs of the thing open in the pane (prd §1399),
+            // the pane's header row from the keyboard. Positional, as the
+            // row reads; disabled past the row's end (§360).
+            CommandGroup(after: .toolbar) {
+                ForEach(1...4, id: \.self) { n in
+                    let verbs = focusedChrome?.paneVerbs ?? []
+                    Button(n <= verbs.count ? verbs[n - 1].label : "Pane Verb \(n)") {
+                        guard n <= verbs.count else { return }
+                        verbs[n - 1].run()
+                    }
+                    .keyboardShortcut(KeyEquivalent(Character("\(n)")), modifiers: [.command, .option])
+                    .disabled(n > verbs.count)
+                }
+            }
             // ⌘⇧[ / ⌘⇧] — one room left or right INSIDE a folded category
             // (prd §360, 2026-08-11). Safari's own adjacent-tab pair, and the
             // grammar ⌘1–⌘9 above already borrowed: those nine reach the chip

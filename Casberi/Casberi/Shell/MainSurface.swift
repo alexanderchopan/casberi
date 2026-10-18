@@ -1843,6 +1843,9 @@ struct MainSurface: View {
                 // stroke.
                 ThingSheetView(thing: thing, walk: detail.walk, onBack: { detail.clear() })
                     .id(thing.id)
+                    // The pane's verbs are its header row (prd §1399).
+                    .environment(\.dsInPane, true)
+                    .safeAreaInset(edge: .top, spacing: 0) { PaneVerbBar() }
                     // Fill the column BEFORE the ink goes on: `dsInk`'s black
                     // is a `.background`, which sizes to its content — without
                     // this the ink stopped at the bottom of a short record and
@@ -1925,6 +1928,8 @@ struct MainSurface: View {
                 if let note = things.first(where: { $0.isLive && Pinboard.inRoom($0) }) {
                     ThingSheetView(thing: note, inlineRest: true)
                         .id(note.id)
+                        .environment(\.dsInPane, true)
+                        .safeAreaInset(edge: .top, spacing: 0) { PaneVerbBar() }
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                         .dsInk()
                 }

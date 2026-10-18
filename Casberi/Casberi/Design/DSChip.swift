@@ -35,6 +35,9 @@ struct Chip: View {
     /// an equal share of the width, the way Stocks' and Health's period
     /// pickers do; a chip on its own still hugs its word.
     var fills = false
+    /// An ink of the caller's in place of the choice's own: the pane's
+    /// toolbar row draws a thing's own act in `DS.pickInk` (prd §1399).
+    var ink: Color? = nil
 
     var body: some View {
         HStack(spacing: DS.Space.s1) {
@@ -56,7 +59,7 @@ struct Chip: View {
                     .opacity(0.7)
             }
         }
-        .foregroundStyle(selected ? DS.textPrimary : DS.textSecondary)
+        .foregroundStyle(ink ?? (selected ? DS.textPrimary : DS.textSecondary))
         .padding(.horizontal, DS.Space.s3)
         .frame(minHeight: 28)
         .frame(maxWidth: fills ? .infinity : nil)

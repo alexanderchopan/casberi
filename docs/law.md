@@ -234,7 +234,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1537 of 1606 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1538 of 1607 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1773,6 +1773,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1396 — Under the tiles, one voice; over them, three things (amends §1394's head and fact rows, §1181's history and year, §11…
 - §1397 — The Mac's rail is the tab bar: Feed · Wallet · Library, and Search (amends §273's category rail, §1133f's rail face,…
 - §1398 — Where there is a pane, the box lives in it; the list is only a list (amends §760's box on regular-width columns, §248…
+- §1399 — The pane's verbs are a toolbar row, and no chevron stands at its top (the Mac half of §1178's tiles and §983's note k…
 
 ## Dead rulings → what replaced them (generated)
 

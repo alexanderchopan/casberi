@@ -67217,3 +67217,13 @@ The pane at rest drew the newest thing in the whole corpus under a "Latest" labe
 4. **Deleted:** "Latest" and the newest thing in the corpus at rest. A sheet risen from either column draws its own box (`.list` restored at `feedSheetHost`).
 
 The phone is untouched: no pane, so the place is `.list` everywhere and `leadHeight` does not change. Library's box (the counts) stays in its list column for now: Library's pane is §876's split, and its box in the pane is the follow-up.
+
+## §1399 — The pane's verbs are a toolbar row, and no chevron stands at its top (the Mac half of §1178's tiles and §983's note keys; amends §876's pane) (design review, 2026-10-17: the pane's verbs were the phone's 88pt thumb discs pinned bottom-right)
+
+A thing open in the pane drew the phone's bottom band: a note's Share and Lock discs and its wide Edit key, 88pt tall, floating over the reading; and a back chevron stood at the pane's top, the one control §752 bans there.
+
+1. **Inside the pane** (`\.dsInPane`, set by `MainSurface.detailPane`) **a thing's verbs publish to the shell** (`ShellChrome.paneVerbs`, owned by the thing's id) **and the pane draws them as one row of 28pt pills at its head** (`PaneVerbBar`, each a `Chip`): the reading sheet's dial (`VerbDial`) and a note's keys (`keptNoteBand`) both publish, so the row is Mail's toolbar, not a second drawing. The thing's own act — Edit on a note, the first verb on a sheet — wears `DS.pickInk`; the rest are grey (§1385). A note's Share rises as the share tray (a `ShareLink` cannot be pressed from a menu).
+2. **The menu bar lists them: ⌘⌥1–⌘⌥4**, positional as the row reads, disabled past its end (§360).
+3. **The back chevron is deleted inside the pane.** Escape, or the open row pressed again, returns to the box (§1398).
+
+The phone is untouched: nothing sets `dsInPane` on a sheet, so the dial's tiles and the note's foot draw as they did. A reading that ends at its box (§1341) still publishes nothing.

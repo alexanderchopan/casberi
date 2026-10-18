@@ -1176,6 +1176,32 @@ final class ShellChrome {
     /// Written by the active `FeedScreen`, which only compiles this on Mac.
     var walkOrder: [String] = []
 
+    /// **THE PANE'S VERBS ARE A TOOLBAR ROW (prd §1399).** A thing open in
+    /// the pane publishes its acts here — the reading sheet's dial, a note's
+    /// Share · Lock · Edit — and the pane draws them as one row of 28pt pills
+    /// at its head (`PaneVerbBar`), the menu bar lists them with ⌘⌥1–⌘⌥4.
+    /// The phone's 88pt thumb discs never draw inside the pane. `owner` is
+    /// the thing's id, so a sheet leaving can only clear its own verbs.
+    struct PaneVerb: Identifiable {
+        let id: String
+        let label: String
+        let glyph: String
+        /// The thing's own act, drawn in the pick's ink (§1385).
+        var primary = false
+        let run: () -> Void
+    }
+    var paneVerbs: [PaneVerb] = []
+    var paneVerbsOwner: String?
+    func publishPaneVerbs(_ verbs: [PaneVerb], owner: String) {
+        paneVerbsOwner = owner
+        paneVerbs = verbs
+    }
+    func clearPaneVerbs(owner: String) {
+        guard paneVerbsOwner == owner else { return }
+        paneVerbs = []
+        paneVerbsOwner = nil
+    }
+
     /// The row the keyboard has landed on. nil = nothing selected yet, which
     /// is the resting state — the first ↓ selects the first row rather than
     /// the app pre-selecting something the person didn't ask for.

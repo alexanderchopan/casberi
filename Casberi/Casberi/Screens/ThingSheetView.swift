@@ -20,6 +20,12 @@ import Translation
 struct ThingSheetView: View {
     /// Inside a sheet's stack the next step pushes (prd §1238).
     @Environment(\.dsInSheetStack) private var inSheetStack
+    /// Drawn in the Mac's pane (prd §1399): the verbs are the pane's header
+    /// row, and no chevron stands at the top.
+    @Environment(\.dsInPane) private var inPane
+    /// A note's Share in the pane rises as the share tray (its key is a
+    /// `ShareLink` on the phone, which a menu item cannot press).
+    @State private var paneNoteSharing = false
     @Bindable var thing: Thing
     /// Set only when this sheet is PUSHED inside another sheet's own
     /// NavigationStack (2026-07-23) — the Worth-a-look tray's flagged rows,
@@ -522,9 +528,11 @@ struct ThingSheetView: View {
                 // Sequenced entrance (delight 2026-07-14): the sheet composes
                 // itself over the pouring wash — eyebrow, then title, then
                 // media, then spec — each a beat behind the last, one-shot.
-                if !ownHead || onBack != nil {
+                if !ownHead || (onBack != nil && !inPane) {
                 HStack(spacing: DS.Space.s3) {
-                    if let onBack {
+                    // NO CHEVRON IN THE PANE (prd §1399, §752): Escape or the
+                    // open row again returns to the box (§1398).
+                    if let onBack, !inPane {
                         Button(action: onBack) {
                             Image(systemName: "chevron.left")
                                 .dsGlyph(.caption)
@@ -1268,7 +1276,17 @@ struct ThingSheetView: View {
         .environment(\.dsTitleWraps, true)
         // A note of yours stands its three keys at the foot (prd §983).
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            if pagedNote { keptNoteBand }
+            if pagedNote, !inPane { keptNoteBand }
+        }
+        // In the pane the note's three keys are the pane's header row (prd
+        // §1399), published as every dial's are.
+        .onAppear { if pagedNote, inPane { publishNoteKeys() } }
+        .onChange(of: NoteLock.isLocked(thing)) { _, _ in if pagedNote, inPane { publishNoteKeys() } }
+        .onChange(of: openedLock != nil) { _, _ in if pagedNote, inPane { publishNoteKeys() } }
+        .onDisappear { if pagedNote, inPane { chrome.clearPaneVerbs(owner: thing.id.uuidString) } }
+        .sheet(isPresented: $paneNoteSharing) { ShareTray(thing: thing) }
+        .background {
+            if pagedNote, inPane { Color.clear.task(id: thing.id) { await ShareCardWarm.warm(thing) } }
         }
         // THE SHEET FITS ITS CONTENT (prd §886). The two fixed heights left a
         // screenshot's sheet half empty: ~540pt of content is too tall for the
@@ -2322,6 +2340,46 @@ struct ThingSheetView: View {
     /// are the room's long press. A voice note keeps its dial and player.
     private var pagedNote: Bool {
         NoteSheetSource.isKeptNote(thing) && thing.kind == .note
+    }
+
+    /// The note's keys as the pane's row (prd §1399): what `keptNoteBand`
+    /// draws as discs, one pill each, Edit the note's own act.
+    private func publishNoteKeys() {
+        var verbs: [ShellChrome.PaneVerb] = []
+        if NoteLock.isLocked(thing) {
+            if let opened = openedLock {
+                verbs.append(.init(id: "unlock", label: String(localized: "Remove lock"), glyph: "lock.open", primary: true) {
+                    NoteLock.unlock(thing, with: opened, context: modelContext)
+                    openedLock = nil
+                    chrome.flash(String(localized: "Lock removed"))
+                })
+            } else {
+                verbs.append(.init(id: "open", label: NoteLock.unlockWord, glyph: "lock.open", primary: true) {
+                    Task { @MainActor in
+                        switch await NoteLock.open(thing) {
+                        case .success(let sealed):
+                            lockFailure = nil
+                            withAnimation(DS.Motion.standard) { openedLock = sealed }
+                        case .failure(let why):
+                            lockFailure = why
+                            if why != .auth { DSHaptic.failure() }
+                        }
+                    }
+                })
+            }
+        } else {
+            let id = thing.id
+            verbs.append(.init(id: "edit", label: String(localized: "Edit"), glyph: "pencil", primary: true) {
+                chrome.editNote(id)
+            })
+            verbs.append(.init(id: "lock", label: String(localized: "Lock"), glyph: "lock") {
+                chrome.lockNote(thing, context: modelContext)
+            })
+            verbs.append(.init(id: "share", label: String(localized: "Share"), glyph: "square.and.arrow.up") {
+                paneNoteSharing = true
+            })
+        }
+        chrome.publishPaneVerbs(verbs, owner: thing.id.uuidString)
     }
 
     /// The note's three keys (prd §983) — the composer's foot: Share and Lock
