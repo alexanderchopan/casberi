@@ -83,7 +83,7 @@ struct AcornsScreen: View {
         HStack(spacing: DS.Space.s3) {
             Image(systemName: "chart.line.uptrend.xyaxis")
                 .dsGlyph(.body, weight: .medium)
-                .foregroundStyle(DS.tint)
+                .foregroundStyle(DS.brandInk)
             Text("Signed in")
                 .dsText(.body17).foregroundStyle(DS.textPrimary)
             Spacer(minLength: 0)

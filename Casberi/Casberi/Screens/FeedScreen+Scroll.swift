@@ -200,7 +200,7 @@ extension FeedScreen {
                                 adds: sectionAdds(category)) {
             if fresh > 0 {
                 HStack(spacing: DS.Space.s1) {
-                    Circle().fill(DS.tint).frame(width: 7, height: 7)
+                    Circle().fill(DS.pickInk).frame(width: 7, height: 7)
                     Text("\(fresh) new")
                         .dsText(.subhead12)
                         .foregroundStyle(DS.textSecondary)
@@ -332,8 +332,8 @@ extension FeedScreen {
             }
         } label: {
             DSPushRowLabel(title: Text("More from \(category)"), fact: nil,
-                           tint: DS.tint, opens: false) {
-                DSGlyphLead(glyph: "arrow.down", tint: DS.tint)
+                           tint: DS.textSecondary, opens: false) {
+                DSGlyphLead(glyph: "arrow.down", tint: DS.textSecondary)
             }
             .padding(.vertical, DS.Space.s2)
             .frame(minHeight: DS.Hit.min)
@@ -465,7 +465,7 @@ struct NewDot: View {
 
     var body: some View {
         Circle()
-            .fill(DS.tint)
+            .fill(DS.pickInk)
             .frame(width: 8, height: 8)
             .opacity(gone ? 0 : 1)
             .onGeometryChange(for: Bool.self) { $0.frame(in: .global).maxY < FeedScreen.whereLine - 40 } action: { past in

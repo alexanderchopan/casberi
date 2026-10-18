@@ -111,7 +111,7 @@ struct NoteProse: View {
                     // won't say what it is hiding repeats it politely.
                     Text("Read the rest — \(NoteSheet.words(in: text).formatted(.number)) words")
                         .dsText(.body17)
-                        .foregroundStyle(DS.tint)
+                        .foregroundStyle(DS.textSecondary)
                 }
                 .buttonStyle(RowPress())
                 .dsHover()
@@ -773,7 +773,7 @@ struct NoteTaskRow: View {
         HStack(alignment: .firstTextBaseline, spacing: DS.Space.s3) {
             Image(systemName: done ? "checkmark.circle.fill" : "circle")
                 .dsGlyph(.body, weight: .regular)
-                .foregroundStyle(done ? DS.tint : DS.textTertiary)
+                .foregroundStyle(done ? DS.pickInk : DS.textTertiary)
                 .dsSymbolSwap(done)
                 .accessibilityHidden(true)
             text

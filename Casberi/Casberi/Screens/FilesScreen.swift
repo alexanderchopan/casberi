@@ -49,7 +49,7 @@ struct FilesScreen: View {
             HStack(spacing: DS.Space.s3) {
                 Image(systemName: "icloud")
                     .dsGlyph(.body, weight: .medium)
-                    .foregroundStyle(DS.tint)
+                    .foregroundStyle(DS.brandInk)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(files.folderName.isEmpty ? "Folder" : files.folderName)
                         .dsText(.body17).foregroundStyle(DS.textPrimary)
@@ -61,7 +61,7 @@ struct FilesScreen: View {
                 Spacer()
                 Button("Change") { picking = true }
                     .dsText(.body17)
-                    .foregroundStyle(DS.tint)
+                    .foregroundStyle(DS.pickInk)
                     .buttonStyle(RowPress())
             }
             .padding(.vertical, DS.Space.s1)

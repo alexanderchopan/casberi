@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Design-template audit (prd §715, 2026-09-13; check C prd §746, 2026-09-15;
-check D prd §965, 2026-09-28).
+check D prd §965, 2026-09-28; check E prd §1385, 2026-10-17).
 
 WHY THIS EXISTS. User: "where if anywhere in the app do we have hand rolled
 things we should be using templates for" → "do all". The sweep found the
@@ -63,6 +63,23 @@ backwards over balanced braces and parens to its head: `Button {…} label: {…
 `Group {…}.buttonStyle(.plain)` do not. A style handed to a container that
 holds Buttons is the stated ceiling — none exists in the tree today.
 
+  E. TWO INKS THAT BOTH MEAN "PICKED" (prd §1385). The 2026-10-17 design
+     audit found `DS.brandInk` (pink) lighting the tab pick, the tiles and
+     the header pluses while `DS.tint` (the theme blue) lit the pick in
+     Library's counts box, Markets' "Following", the Day strip's today disc
+     and the "See all" / "More from" doors. The rule: pink (`DS.pickInk`) is
+     STATE and VERB, a door is grey with its chevron, and `DS.tint` is for
+     the theme's charts and links inside running text only. So a
+     `cond ? DS.tint : …` ternary ANYWHERE in the app is a pick drawn in the
+     wrong ink (a chart's alarm branch is `? DS.destructive : DS.tint`, which
+     is not matched), and a bare `DS.tint` in a file under `Screens/` is a
+     finding unless the file is ratcheted as a chart or an in-text link
+     (`EXEMPT_TINT`, the same two-way ratchet as C and D). `Design/` and
+     `Shell/` keep their bare uses unscanned: the chart templates, the voice
+     band's level bars, the note editor's links and `DSDemoMark` (the Exit
+     demo pill, ruled blue on purpose) live there. `DS.tintDim` and
+     `DS.tint(magnitude:)` are other tokens and are not matched.
+
 A fourth check — a copy capsule's "Copied"/"Copy" state pair → `DSCopyCapsule`
 — was written and REMOVED on 2026-09-13 when its only match was the reusable
 `AddressCopyButton`. `DSCopyCapsule` itself is gone since §746 (`DSCopyRow`).
@@ -118,6 +135,32 @@ EXEMPT = {
 PRESS_WHY = ("a Button styled .plain answers the finger with a flicker — a row or a word "
              "takes RowPress(), a disc, chip, face or tile takes PressSpring()")
 PLAIN_STYLE = re.compile(r"\.buttonStyle\(\s*\.plain\s*\)")
+
+# ── E. The pick in the wrong ink (prd §1385) ─────────────────────────────────
+TINT_WHY = ("DS.tint on something that is not a chart or an in-text link — a pick, a state "
+            "or a verb takes DS.pickInk, a door takes DS.textSecondary with its chevron")
+TINT_TERNARY = re.compile(r"\?\s*DS\.tint\b(?!\s*\()")
+TINT_BARE = re.compile(r"\bDS\.tint\b(?!\s*\()")
+
+# path relative to Casberi/Casberi → (DS.tint lines it may still carry, why).
+# Every entry is a chart or a link inside running text.
+EXEMPT_TINT = {
+    "Screens/KeepableText.swift": (1, "the reading body's link colour"),
+    "Screens/ThingContent.swift": (2, "linkified text, and the voice envelope's bars"),
+    "Screens/NoteSheetViews.swift": (2, "a note's wikilinks and markdown links"),
+    "Screens/FileverseDocPage.swift": (1, "a doc's markdown links, through .tint"),
+    "Screens/WalletRow.swift": (1, "the sparkline's dots"),
+    "Screens/SafeQueueCard.swift": (1, "the signatures ring's unmet arc"),
+    "GenUI/GenRenderer.swift": (3, "a model-emitted bar's segments and a step's next dot — charts"),
+}
+
+
+def tint_lines(src: str, screens: bool):
+    """Lines carrying a pick in the wrong ink: a `? DS.tint` ternary anywhere,
+    and any bare `DS.tint` in a file under Screens/."""
+    rx = TINT_BARE if screens else TINT_TERNARY
+    return [no for no, line in enumerate(src.split("\n"), 1) if rx.search(line)]
+
 
 # The same ratchet as C: path relative to Casberi/Casberi → (plain Buttons it
 # may still carry, why). Each is a control whose press is drawn by something
@@ -297,9 +340,10 @@ def pill_lines(src: str):
     return sorted(lines)
 
 
-def scan(root: Path, exempt=None, exempt_plain=None):
+def scan(root: Path, exempt=None, exempt_plain=None, exempt_tint=None):
     exempt = EXEMPT if exempt is None else exempt
     exempt_plain = EXEMPT_PLAIN if exempt_plain is None else exempt_plain
+    exempt_tint = EXEMPT_TINT if exempt_tint is None else exempt_tint
     findings, notes = [], []
     app = root / APP
     for path in sorted(app.rglob("*.swift")):
@@ -318,6 +362,18 @@ def scan(root: Path, exempt=None, exempt_plain=None):
                                  PRESS_WHY + (f" (allowance {allowed}: {reason})" if key in exempt_plain else "")))
         elif key in exempt_plain and len(plain) < allowed:
             notes.append(f"  note: {APP}/{key} styles {len(plain)} of its {allowed} plain — tighten the allowance")
+        # E reads every file for a ternary, and Screens/ for any bare use.
+        tints = tint_lines(src, screens=bool(rel.parts) and rel.parts[0] == "Screens")
+        allowed, reason = exempt_tint.get(key, (0, ""))
+        if key in exempt_tint and not tints:
+            findings.append(("E", f"{APP}/{key}",
+                             "stale exemption — this file draws no DS.tint now; delete its entry"))
+        elif len(tints) > allowed:
+            for no in tints:
+                findings.append(("E", f"{APP}/{key}:{no}",
+                                 TINT_WHY + (f" (allowance {allowed}: {reason})" if key in exempt_tint else "")))
+        elif key in exempt_tint and len(tints) < allowed:
+            notes.append(f"  note: {APP}/{key} draws {len(tints)} of its {allowed} DS.tint — tighten the allowance")
         if rel.parts and rel.parts[0] == "Design":
             continue
         for no, line in enumerate(src.split("\n"), 1):
@@ -342,14 +398,14 @@ def scan(root: Path, exempt=None, exempt_plain=None):
 def self_test() -> int:
     ok = True
 
-    def run(planted, exempt=None, exempt_plain=None):
+    def run(planted, exempt=None, exempt_plain=None, exempt_tint=None):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             for rel, body in planted.items():
                 p = root / APP / rel
                 p.parent.mkdir(parents=True, exist_ok=True)
                 p.write_text(body)
-            return scan(root, exempt or {}, exempt_plain or {})
+            return scan(root, exempt or {}, exempt_plain or {}, exempt_tint or {})
 
     # A and B, as before.
     got, _ = run({
@@ -399,12 +455,12 @@ def self_test() -> int:
         'struct Drawings: View { var body: some View { VStack {\n'
         '  ZStack(alignment: .leading) {\n'
         '      Capsule().fill(DS.fillFaint)\n'
-        '      Capsule().fill(DS.tint).frame(width: 40)\n'
+        '      Capsule().fill(DS.pickInk).frame(width: 40)\n'
         '  }\n'
-        '  HStack { ForEach(bars, id: \\.self) { h in Capsule().fill(DS.tint).frame(width: 3, height: h) } }\n'
+        '  HStack { ForEach(bars, id: \\.self) { h in Capsule().fill(DS.pickInk).frame(width: 3, height: h) } }\n'
         '  Button { go() } label: { Text("Go").contentShape(Capsule()) }\n'
         '  Text("x").dsTapTarget(Capsule(style: .continuous))\n'
-        '  Circle().fill(DS.tint).background(DS.fillFaint, in: RoundedRectangle(cornerRadius: 8))\n'
+        '  Circle().fill(DS.pickInk).background(DS.fillFaint, in: RoundedRectangle(cornerRadius: 8))\n'
         '} } }\n')
     got, _ = run({
         "Screens/Drawings.swift": clean,
@@ -480,6 +536,41 @@ def self_test() -> int:
     case = (not within and len(over) == 2 and len(stale) == 1
             and "stale" in stale[0][2] and not under and len(notes) == 1)
     print(f"  {'ok  ' if case else 'FAIL'} D's ratchet: within passes, over fails, stale fails, under notes")
+    ok &= case
+
+    # E — a pick in the wrong ink: the ternary anywhere, the bare use in Screens/.
+    dirty_tint = (
+        '// .foregroundStyle(DS.tint) and on ? DS.tint : x in a comment\n'
+        'struct Pick: View { var body: some View { VStack {\n'
+        '  Text("a").foregroundStyle(isOn ? DS.tint : DS.textPrimary)\n'                 # 3
+        '  Image(systemName: "checkmark").foregroundStyle(DS.tint)\n'                      # 4
+        '  Circle().fill(DS.tintDim)\n'
+        '  Rectangle().fill(DS.tint(magnitude: 0.4))\n'
+        '  Capsule().fill(bar.alarm ? DS.destructive : DS.tint)\n'                         # 7
+        '  DSPushRow(title: Text("b"), tint: DS.pickInk) {}\n'
+        '} } }\n')
+    design_tint = (
+        'struct DSX: View { var body: some View { VStack {\n'
+        '  Capsule().fill(DS.tint)\n'                                                      # quiet: bare, Design/
+        '  Text("a").foregroundStyle(armed ? DS.tint : DS.textTertiary)\n'                 # 3
+        '} } }\n')
+    shell_tint = 'struct Sh: View { var body: some View { Circle().fill(DS.tint).overlay(Text("x").foregroundStyle(lit ?  DS.tint : DS.page)) } }\n'
+    got, _ = run({"Screens/Pick.swift": dirty_tint, "Design/DSX.swift": design_tint, "Shell/Sh.swift": shell_tint})
+    e = [(loc.rsplit(":", 1)[0].split("/")[-1], int(loc.rsplit(":", 1)[1])) for t, loc, _ in got if t == "E"]
+    case = sorted(e) == [("DSX.swift", 3), ("Pick.swift", 3), ("Pick.swift", 4), ("Pick.swift", 7), ("Sh.swift", 1)]
+    print(f"  {'ok  ' if case else 'FAIL'} E fires on a ? DS.tint ternary anywhere and a bare DS.tint in Screens/, not on tintDim, tint(magnitude:), comments or a bare use in Design/ ({sorted(e)})")
+    ok &= case
+
+    # E — the ratchet, both directions.
+    one_tint = 'struct One: View { var body: some View { Capsule().fill(DS.tint) } }\n'
+    two_tint = one_tint + 'struct Two: View { var body: some View { Circle().fill(DS.tint) } }\n'
+    within, _ = run({"Screens/Chart.swift": one_tint}, exempt_tint={"Screens/Chart.swift": (1, "a chart")})
+    over, _ = run({"Screens/Chart.swift": two_tint}, exempt_tint={"Screens/Chart.swift": (1, "a chart")})
+    stale, _ = run({"Screens/Chart.swift": none}, exempt_tint={"Screens/Chart.swift": (1, "a chart")})
+    under, notes = run({"Screens/Chart.swift": one_tint}, exempt_tint={"Screens/Chart.swift": (2, "a chart")})
+    case = (not within and len(over) == 2 and len(stale) == 1
+            and "stale" in stale[0][2] and not under and len(notes) == 1)
+    print(f"  {'ok  ' if case else 'FAIL'} E's ratchet: within passes, over fails, stale fails, under notes")
     ok &= case
 
     print(f"ds-template-audit self-test: {'OK' if ok else 'FAIL'}")

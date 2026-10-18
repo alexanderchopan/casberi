@@ -3443,7 +3443,7 @@ struct MainSurface: View {
         // rail is not, and that one line of placement is the whole difference
         // between them.
         .safeAreaInset(edge: .leading, spacing: 0) { railInset }
-        .tint(DS.tint)
+        .tint(DS.pickInk)
     }
 }
 

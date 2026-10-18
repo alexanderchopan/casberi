@@ -166,7 +166,7 @@ struct AgentDestinationKeys: View {
                 // "this is the live one" in the app's own voice, and the two
                 // never compete for the same meaning: the ring says WHO, the
                 // verb says WHAT HAPPENS NEXT.
-                Circle().fill(chosen ? AnyShapeStyle(DS.tint)
+                Circle().fill(chosen ? AnyShapeStyle(DS.pickInk)
                                      : AnyShapeStyle(DS.fillFaint))
                 mark()
             }
@@ -296,7 +296,7 @@ struct AgentWideKey: View {
 
     private var wash: Color {
         switch tone {
-        case .tint:         return DS.tint
+        case .tint:         return DS.pickInk
         case .ink, .quiet:  return DS.surfaceRaised
         }
     }

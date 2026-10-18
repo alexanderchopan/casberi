@@ -51,7 +51,7 @@ struct DevnetExplorerRow: View {
                 VStack(alignment: plain ? .leading : .center, spacing: 1) {
                     Text("Open the explorer")
                         .dsText(.body17)
-                        .foregroundStyle(DS.tint)
+                        .foregroundStyle(DS.textSecondary)
                     Text(host)
                         .dsText(.subhead12)
                         .foregroundStyle(DS.textTertiary)

@@ -153,7 +153,7 @@ struct DSTray<Content: View>: View {
                     Button(String(localized: "Done")) { dismiss() }
                         .buttonStyle(RowPress())
                         .dsText(.body17)
-                        .foregroundStyle(DS.tint)
+                        .foregroundStyle(DS.pickInk)
                 }
                 #endif
             }

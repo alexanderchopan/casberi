@@ -128,7 +128,7 @@ struct WalletCalendar: View {
                                  : (isPast ? DS.textTertiary : DS.textSecondary))
                 .frame(minWidth: Self.faceSize, minHeight: Self.faceSize)
                 .background {
-                    if isToday { Circle().fill(DS.tint) }
+                    if isToday { Circle().fill(DS.pickInk) }
                     else if isPicked { Circle().fill(DS.fillStrong) }
                 }
             Circle()
@@ -184,7 +184,7 @@ struct WalletCalendar: View {
                                      url: first.url)
                         .overlay {
                             if marks.contains(where: \.attention) || isToday {
-                                Circle().strokeBorder(marks.contains(where: \.attention) ? DS.attention : DS.tint,
+                                Circle().strokeBorder(marks.contains(where: \.attention) ? DS.attention : DS.pickInk,
                                                       lineWidth: 2)
                                     .padding(-2)
                             }
@@ -211,7 +211,7 @@ struct WalletCalendar: View {
                     .foregroundStyle(isToday ? Color.white : (isPast ? DS.textTertiary : DS.textSecondary))
                     .frame(minWidth: isToday ? Self.faceSize : nil, minHeight: isToday ? Self.faceSize : nil)
                     .background {
-                        if isToday { Circle().fill(DS.tint) }
+                        if isToday { Circle().fill(DS.pickInk) }
                     }
             }
         }

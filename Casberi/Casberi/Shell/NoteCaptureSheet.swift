@@ -559,7 +559,7 @@ struct NoteCaptureSheet: View {
                     TextField(String(localized: "Title"), text: titleText)
                         .dsText(.heading34)
                         .foregroundStyle(DS.textPrimary)
-                        .tint(DS.tint)
+                        .tint(DS.pickInk)
                         .focused($field, equals: .title)
                         .textFieldStyle(.plain)
                         .submitLabel(.next)
@@ -613,7 +613,7 @@ struct NoteCaptureSheet: View {
     private func barGlyph(_ name: String, lit: Bool = false, live: Bool) -> some View {
         Image(systemName: name)
             .dsGlyph(.title, weight: .regular)
-            .foregroundStyle(!live ? DS.textTertiary : lit ? DS.tint : DS.textPrimary)
+            .foregroundStyle(!live ? DS.textTertiary : lit ? DS.pickInk : DS.textPrimary)
             .frame(width: 48, height: AgentDestinationKeys.side)
             .contentShape(Rectangle())
             .animation(DS.Motion.standard, value: lit)

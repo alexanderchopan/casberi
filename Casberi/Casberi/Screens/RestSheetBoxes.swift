@@ -106,7 +106,7 @@ struct ChatTranscriptBox: View {
                         .padding(.horizontal, DS.Space.s3)
                         .padding(.vertical, DS.Space.s2)
                         .background(RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            .fill(line.mine ? DS.tint : DS.fillStrong))
+                            .fill(line.mine ? DS.pickInk : DS.fillStrong))
                         .frame(maxWidth: .infinity, alignment: line.mine ? .trailing : .leading)
                 }
             }

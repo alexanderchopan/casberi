@@ -98,7 +98,7 @@ struct TikTokImportScreen: View {
                 HStack(spacing: DS.Space.s3) {
                     Image(systemName: "bell.fill")
                         .dsGlyph(.body, weight: .medium)
-                        .foregroundStyle(DS.tint)
+                        .foregroundStyle(DS.brandInk)
                     Text(TikTokLiveAuth.username.map { "Live — signed in as @\($0)" }
                          ?? String(localized: "Live — your own account, signed in"))
                         .dsText(.body17).foregroundStyle(DS.textPrimary)

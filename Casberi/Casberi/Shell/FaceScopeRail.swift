@@ -365,7 +365,7 @@ struct FaceScopeRail: View {
     /// why the embedded pick goes neutral rather than tinted.
     private func allCircleFill(isOn: Bool) -> Color {
         guard isOn else { return DS.fillFaint }
-        return embedded ? DS.fillStrong : DS.tintDim
+        return embedded ? DS.fillStrong : DS.pickDim
     }
 
     /// The picked slot's fill — nothing at all unless this rail is a deck of the
@@ -645,9 +645,9 @@ struct FaceScopeRail: View {
         case .mark:
             RoundedRectangle(cornerRadius: DS.Radius.appIcon(faceSize) + 3,
                              style: .continuous)
-                .strokeBorder(DS.tint, lineWidth: width)
+                .strokeBorder(DS.pickInk, lineWidth: width)
         default:
-            Circle().strokeBorder(DS.tint, lineWidth: width)
+            Circle().strokeBorder(DS.pickInk, lineWidth: width)
         }
     }
 
@@ -666,7 +666,7 @@ struct FaceScopeRail: View {
                 // is not one.
                 Image(systemName: "plus")
                     .dsGlyph(compact ? .tick : .caption)
-                    .foregroundStyle(DS.tint)
+                    .foregroundStyle(DS.pickInk)
                     .frame(width: faceSize, height: faceSize)
                     .background(Circle().fill(DS.tintDim))
                 if drawsCaption { Spacer(minLength: 0) }
@@ -918,7 +918,7 @@ struct SocialFacesTray: View {
                                 title: Text(verbatim: account.title),
                                 subtitle: Text(verbatim: account.subtitle),
                                 tint: scope.map { SocialScopeRail.matches($0, account.key) } == true
-                                    ? DS.tint : DS.textPrimary,
+                                    ? DS.pickInk : DS.textPrimary,
                                 opens: false) {
                                 RailFace(face: .avatar(url: account.avatarURL,
                                                        source: faceSources[account.key] ?? source),

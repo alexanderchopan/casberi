@@ -260,7 +260,7 @@ struct AddressBookRow: View {
                     if watched {
                         Image(systemName: "eye.fill")
                             .dsGlyph(.caption)
-                            .foregroundStyle(DS.tint)
+                            .foregroundStyle(DS.pickInk)
                             .accessibilityLabel(Text("Following"))
                     }
                 }
@@ -271,7 +271,7 @@ struct AddressBookRow: View {
                     Image(systemName: watched ? "star.fill" : "star")
                         .dsSymbolSwap(watched)
                         .dsGlyph(.body, weight: .medium)
-                        .foregroundStyle(watched ? DS.tint : DS.textTertiary)
+                        .foregroundStyle(watched ? DS.pickInk : DS.textTertiary)
                         .frame(width: 32, height: 32)
                         .dsTapTarget()
                 }
@@ -469,7 +469,7 @@ struct CopyAddressButton: View {
     /// and the verb bar wore one identity, and that went with the pour
     /// (2026-08-22). Kept as a parameter rather than hard-wired: it is a
     /// reusable control, and the next caller may have a real reason.
-    var tint: Color = DS.tint
+    var tint: Color = DS.pickInk
     @State private var copied = false
 
     var body: some View {
@@ -1614,7 +1614,7 @@ struct AddressCard: View {
     private var pourHue: Color {
         switch current.kind {
         case .wallet, .unknown, .smartAccount: return WalletFace.tint(for: current.address)
-        case .contract, .safe, .key:  return DS.tint
+        case .contract, .safe, .key:  return DS.brandInk
         // A CONTACT or a SOCIAL profile is a who, so it sits with the faces —
         // but its "address" is a namespaced key rather than a real one, so the
         // hue is derived from the NAME. That keeps the pour behind the paper
@@ -2111,7 +2111,7 @@ struct AddressCard: View {
             } label: {
                 Text("See all \(total)")
                     .dsText(.subhead12)
-                    .foregroundStyle(DS.tint)
+                    .foregroundStyle(DS.textSecondary)
                     .contentShape(Rectangle())
                     .dsTapTarget()
             }
@@ -2316,7 +2316,7 @@ struct AddressCard: View {
                         } label: {
                             Text("Edit")
                                 .dsText(.subhead12)
-                                .foregroundStyle(DS.tint)
+                                .foregroundStyle(DS.pickInk)
                         }
                         .buttonStyle(RowPress())
                         .dsHover()

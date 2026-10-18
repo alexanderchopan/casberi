@@ -106,7 +106,7 @@ struct RoomHoldingsRows: View {
         // the amount pinned to the trailing edge.
         ForEach(cells) { cell in
             WalletRow(mark: .asset(cell.symbol.isEmpty ? cell.name : cell.symbol,
-                                   tint: DS.tint, atRisk: false),
+                                   tint: DS.brandInk, atRisk: false),
                       title: cell.name,
                       subtitleText: nil) {
                 Text(cell.amount)

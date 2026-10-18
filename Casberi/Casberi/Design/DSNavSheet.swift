@@ -94,7 +94,7 @@ private struct DSSheetDismiss: ViewModifier {
                     // treatments here (`body17`, `body17`, untouched) and
                     // all three were answering a question nobody had asked.
                     Button(String(localized: "Done"), action: dismiss)
-                        .tint(DS.tint)
+                        .tint(DS.pickInk)
                 }
             }
         }

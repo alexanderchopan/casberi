@@ -30,7 +30,7 @@ struct WalletAztecStakingCard: View {
 
     private func row(_ stake: AztecStakeWire.Stake) -> some View {
         let needsYou = AztecStakeWire.needsYou(stake)
-        return WalletRow(mark: .asset("Aztec", tint: needsYou ? DS.attention : DS.tint, atRisk: needsYou),
+        return WalletRow(mark: .asset("Aztec", tint: needsYou ? DS.attention : DS.brandInk, atRisk: needsYou),
                          title: String(localized: "Sequencer \(WalletStore.shortAddress(stake.attester))"),
                          subtitleText: line(stake, needsYou: needsYou)) {
             WalletRowValue(value: WalletValue.token(stake.amount, "AZTEC"))
@@ -51,7 +51,7 @@ struct WalletAztecStakingCard: View {
     /// "Token vault …76d1" — "Locked", or what of it can be taken now; no
     /// line when that could not be read, never "Locked" in its place.
     private func vaultRow(_ vault: AztecStakeWire.Vault) -> some View {
-        WalletRow(mark: .asset("Aztec", tint: DS.tint),
+        WalletRow(mark: .asset("Aztec", tint: DS.brandInk),
                   title: String(localized: "Token vault \(WalletStore.shortAddress(vault.atp))"),
                   subtitleText: vaultLine(vault)) {
             WalletRowValue(value: WalletValue.token(vault.held, "AZTEC"))

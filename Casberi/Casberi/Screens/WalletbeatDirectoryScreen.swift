@@ -130,7 +130,7 @@ struct WalletbeatDirectoryScreen: View {
 				if connected.contains(entry.id) {
 					Text(WalletbeatCopy.connectedMarker)
 						.dsText(.label12)
-						.foregroundStyle(DS.tint)
+						.foregroundStyle(DS.pickInk)
 				}
 				HStack(spacing: DS.Space.s2) {
 					// FIRST, and in words. It outranks coverage because coverage
@@ -167,7 +167,7 @@ struct WalletbeatDirectoryScreen: View {
 				Button(action: { watch(entry) }) {
 					Text(String(localized: "Follow"))
 						.dsText(.label12)
-						.foregroundStyle(DS.tint)
+						.foregroundStyle(DS.pickInk)
 						.frame(width: 58, alignment: .trailing)
 				}
 				.buttonStyle(RowPress())

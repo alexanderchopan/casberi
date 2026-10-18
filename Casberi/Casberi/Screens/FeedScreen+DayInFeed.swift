@@ -110,7 +110,7 @@ extension FeedScreen {
                 } label: {
                     Text("Back to today")
                         .dsText(.body17)
-                        .foregroundStyle(DS.tint)
+                        .foregroundStyle(DS.pickInk)
                         .frame(maxWidth: .infinity)
                         .frame(minHeight: DS.Hit.min)
                         .contentShape(Rectangle())

@@ -59,8 +59,8 @@ struct PivotPage: View {
                         withAnimation(DS.Motion.standard) { shown += Self.moreRows }
                     } label: {
                         DSPushRowLabel(title: Text("More"), fact: Text("\(rows.count - shown) more"),
-                                       tint: DS.tint, opens: false) {
-                            DSGlyphLead(glyph: "arrow.down", tint: DS.tint)
+                                       tint: DS.textSecondary, opens: false) {
+                            DSGlyphLead(glyph: "arrow.down", tint: DS.textSecondary)
                         }
                         .padding(.vertical, DS.Space.s2)
                         .frame(minHeight: DS.Hit.min)

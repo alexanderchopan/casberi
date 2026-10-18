@@ -2431,7 +2431,7 @@ struct ThingSheetView: View {
                     Image(systemName: "chevron.right")
                         .dsGlyph(.tick, weight: .semibold)
                 }
-                .foregroundStyle(DS.tint)
+                .foregroundStyle(DS.textSecondary)
                 .frame(minHeight: DS.Hit.min)
                 .contentShape(Rectangle())
             }
@@ -2505,7 +2505,7 @@ struct ThingSheetView: View {
                 Image(systemName: "chevron.right")
                     .dsGlyph(.tick, weight: .semibold)
             }
-            .foregroundStyle(DS.tint)
+            .foregroundStyle(DS.textSecondary)
             .frame(minHeight: DS.Hit.min)
             .contentShape(Rectangle())
         }

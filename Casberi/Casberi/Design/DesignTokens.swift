@@ -5,7 +5,8 @@ import SwiftUI
 ///
 /// Rules this layer enforces (brief §8, §12):
 ///   • Every value routes through a token. Components hold zero raw hex.
-///   • One tint (`DS.tint`). One-line swap changes the whole interactive family.
+///   • One tint (`DS.tint`) for charts and in-text links; one pick ink
+///     (`DS.pickInk`) for state and verbs; a door is grey (prd §1385).
 ///   • One sheet surface token for cards, tiles, trays. Washes are dead.
 ///   • Text ramp: primary (white) / secondary (60%) / tertiary (30%).
 ///   • Color carries identity, state, or magnitude — never decoration.
@@ -265,6 +266,24 @@ enum DS {
     static var tint: Color { themedTint }
     /// Tint at rest-chip opacity.
     static var tintDim: Color { themedTintDim }
+
+    // MARK: - The pick  — one ink (prd §1385)
+
+    /// **THE ONE INK OF A PICK (prd §1385, the 2026-10-17 design audit: two
+    /// inks both meant "picked").** Pink says STATE and VERB: the tab you are
+    /// on, the picked count or tile, today's disc, a tick, a star, a cursor,
+    /// "Follow", "Add", "Change". A DOOR is grey with its chevron (`DSMoreLink`,
+    /// "See all", "Show more", a row that pushes), because a place to go is not
+    /// a thing that is on. `DS.tint` stays for the theme's charts and for links
+    /// inside running text only, plus the Exit demo pill (`DSDemoMark`, ruled
+    /// blue on purpose). Equal to `brandInk` — one hue, one meaning — under its
+    /// own name so the pick can turn in one line. `ds-template-audit.py` check
+    /// E holds `Screens/` to it.
+    static var pickInk: Color { brandInk }
+    /// The pick's wash — `pickInk` at `tintDim`'s opacity — for a ground that
+    /// says picked (the section switcher's slide, a face rail's circle, a verb
+    /// disc's rest).
+    static var pickDim: Color { pickInk.opacity(0.16) }
 
     /// Magnitude fill — tint at opacity scaled by a normalized count `t ∈ [0,1]`.
     /// Treemaps and project fills only (color rule: magnitude, not decoration).

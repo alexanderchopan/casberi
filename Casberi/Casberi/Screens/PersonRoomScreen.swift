@@ -116,7 +116,7 @@ struct PersonRoomScreen: View {
                 } label: {
                     Text("Show older")
                         .dsText(.subhead12)
-                        .foregroundStyle(DS.tint)
+                        .foregroundStyle(DS.textSecondary)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, DS.Space.s4)
                         .contentShape(Rectangle())

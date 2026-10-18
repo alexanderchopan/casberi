@@ -67,7 +67,7 @@ struct PrivyScreen: View {
         HStack(spacing: DS.Space.s3) {
             Image(systemName: "square.stack.3d.up")
                 .dsGlyph(.body, weight: .medium)
-                .foregroundStyle(DS.tint)
+                .foregroundStyle(DS.brandInk)
             Text(signedInLine)
                 .dsText(.body17).foregroundStyle(DS.textPrimary)
                 .lineLimit(1)

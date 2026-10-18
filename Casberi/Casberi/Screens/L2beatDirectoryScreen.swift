@@ -289,7 +289,7 @@ struct L2beatDirectoryScreen: View {
 				Button(action: { watch(project) }) {
 					Text(String(localized: "Follow"))
 						.dsText(.label12)
-						.foregroundStyle(DS.tint)
+						.foregroundStyle(DS.pickInk)
 						.frame(width: 58, alignment: .trailing)
 				}
 				.buttonStyle(RowPress())

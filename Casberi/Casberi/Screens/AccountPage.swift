@@ -491,7 +491,7 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
 
     private var stateTone: Color {
         switch state {
-        case .reading:           DS.tint
+        case .reading:           DS.pickInk
         case .needsReconnecting: DS.attentionInk
         case .notConnected, .paused: DS.textTertiary
         }
@@ -708,7 +708,7 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
             TextField(String(localized: "Add a note"), text: $note, axis: .vertical)
                 .dsText(.body17)
                 .foregroundStyle(DS.textPrimary)
-                .tint(DS.tint)
+                .tint(DS.pickInk)
                 .lineLimit(1...10)
                 .textInputAutocapitalization(.sentences)
                 .frame(minHeight: AccountFactRow.height)
@@ -775,7 +775,7 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
         } label: {
             Text("Show more")
                 .dsText(.subhead12)
-                .foregroundStyle(DS.tint)
+                .foregroundStyle(DS.textSecondary)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, DS.Space.s4)
                 .contentShape(Rectangle())
@@ -1077,7 +1077,7 @@ struct AccountRosterRow: View {
             }
             .overlay {
                 if row.hasNew {
-                    Circle().strokeBorder(DS.tint, lineWidth: 2)
+                    Circle().strokeBorder(DS.pickInk, lineWidth: 2)
                         .padding(-2)
                 }
             }

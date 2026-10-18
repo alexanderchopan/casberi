@@ -318,7 +318,7 @@ struct CheckLadder: View {
                     .foregroundStyle(rung == lit ? DS.inkGround : DS.textSecondary)
                     .frame(maxWidth: .infinity, minHeight: 32)
                     .background(RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(rung == lit ? DS.tint : DS.fillFaint))
+                        .fill(rung == lit ? DS.pickInk : DS.fillFaint))
             }
         }
         .accessibilityHidden(true)

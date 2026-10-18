@@ -135,7 +135,7 @@ struct WalletbeatNewsRow: View {
 					if mine {
 						Text(String(localized: "You use this"))
 							.dsText(.label12)
-							.foregroundStyle(DS.tint)
+							.foregroundStyle(DS.pickInk)
 					}
 					if open {
 						Text(String(localized: "Unresolved"))

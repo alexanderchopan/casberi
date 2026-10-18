@@ -706,7 +706,7 @@ struct AddressesSection: View {
                     } label: {
                         Text("Name")
                             .dsText(.body17)
-                            .foregroundStyle(DS.tint)
+                            .foregroundStyle(DS.pickInk)
                             .frame(minHeight: DS.Hit.min)
                             .contentShape(Rectangle())
                     }

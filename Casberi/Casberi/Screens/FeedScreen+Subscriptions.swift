@@ -294,7 +294,7 @@ struct SubscriptionsSummary: View {
             .padding(.horizontal, DS.Space.s3)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
             .background(RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(isLit ? DS.tint : DS.fillFaint))
+                .fill(isLit ? DS.pickInk : DS.fillFaint))
             .opacity(pick != nil && !isLit ? 0.35 : 1)
             .contentShape(Rectangle())
         }

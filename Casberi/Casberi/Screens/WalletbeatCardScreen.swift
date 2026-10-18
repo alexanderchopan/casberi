@@ -101,7 +101,7 @@ struct WalletbeatReportCard: View {
 				? String(localized: "Following — tap to stop")
 				: String(localized: "Follow this wallet"))
 				.dsText(.subhead12)
-				.foregroundStyle(watching ? DS.textTertiary : DS.tint)
+				.foregroundStyle(watching ? DS.textTertiary : DS.pickInk)
 		}
 		.buttonStyle(RowPress())
 		.dsHover()
@@ -278,7 +278,7 @@ struct WalletbeatReportCard: View {
 				Link(destination: url) {
 					Text(String(localized: "Full review on Walletbeat"))
 						.dsText(.subhead12)
-						.foregroundStyle(DS.tint)
+						.foregroundStyle(DS.textSecondary)
 				}
 			}
 			Text(WalletbeatCopy.attribution)
@@ -401,7 +401,7 @@ struct WalletbeatAttributeRow: View {
 						// this app already keeps for a folded note.
 						Text(String(localized: "Why this matters — \(WalletbeatProse.words(why)) words"))
 							.dsText(.label12)
-							.foregroundStyle(DS.tint)
+							.foregroundStyle(DS.textSecondary)
 					}
 					.buttonStyle(RowPress())
 					.dsHover()

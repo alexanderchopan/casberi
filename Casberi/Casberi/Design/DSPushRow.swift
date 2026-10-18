@@ -178,10 +178,11 @@ extension DSPushRow where Leading == EmptyView {
 
 
 /// A count-link: "See all 128 ›" beside a section label or under a list.
-/// Eight hand-drawn copies at five chevron sizes before §715.
+/// Eight hand-drawn copies at five chevron sizes before §715. A door is grey
+/// with its chevron (prd §1385): the tint it wore read as a pick.
 struct DSMoreLink: View {
     let title: Text
-    var tint: Color = DS.tint
+    var tint: Color = DS.textSecondary
     /// `false` draws no chevron: "Show fewer" folds in place, it goes nowhere.
     var opens = true
     let action: () -> Void

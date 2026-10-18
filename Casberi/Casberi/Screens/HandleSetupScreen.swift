@@ -649,7 +649,7 @@ struct HandleSetupScreen: View {
         if let exportURL {
             ShareLink(item: exportURL) {
                 Text("Export as OPML")
-                    .dsText(.subhead12).foregroundStyle(DS.tint)
+                    .dsText(.subhead12).foregroundStyle(DS.pickInk)
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.plain)

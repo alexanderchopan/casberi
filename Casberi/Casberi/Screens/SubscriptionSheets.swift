@@ -342,7 +342,7 @@ struct SubscriptionAddTray: View {
                 HStack(spacing: DS.Space.s3) {
                     Text(verbatim: mask ?? CardSpendRoom.money(s.amount, code: s.currency))
                         .dsText(.price17).monospacedDigit().foregroundStyle(DS.textPrimary)
-                    Image(systemName: "plus").dsGlyph(.body).foregroundStyle(DS.tint)
+                    Image(systemName: "plus").dsGlyph(.body).foregroundStyle(DS.pickInk)
                 }
             }
             .contentShape(Rectangle())
@@ -363,7 +363,7 @@ struct SubscriptionAddTray: View {
             } trailing: {
                 Image(systemName: tracked ? "checkmark" : "plus")
                     .dsGlyph(.body)
-                    .foregroundStyle(tracked ? DS.textTertiary : DS.tint)
+                    .foregroundStyle(tracked ? DS.textTertiary : DS.pickInk)
                     .dsSymbolSwap(tracked)
             }
             .frame(minHeight: DS.Hit.min)

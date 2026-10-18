@@ -137,7 +137,7 @@ struct DSSlabDisc: View {
             Circle().fill(wash).frame(width: size, height: size)
             if busy {
                 ProgressView().controlSize(.small)
-                    .tint(onFill ? .white : DS.tint)
+                    .tint(onFill ? .white : DS.pickInk)
             } else {
                 Image(systemName: systemImage)
                     .accessibilityHidden(true)
@@ -150,16 +150,16 @@ struct DSSlabDisc: View {
     private var wash: AnyShapeStyle {
         if inert { return AnyShapeStyle(Color.white.opacity(0.10)) }
         // On the fill, a white wash — the only value that reads on every brand
-        // hue a tinted slab can take. Off it, `tintDim`: `fillFaint` is a 4%
+        // hue a tinted slab can take. Off it, `pickDim`: `fillFaint` is a 4%
         // white and disappears entirely against `gray100`, which is the door's
         // own background.
         return onFill ? AnyShapeStyle(Color.white.opacity(0.22))
-                      : AnyShapeStyle(DS.tintDim)
+                      : AnyShapeStyle(DS.pickDim)
     }
 
     private var glyph: AnyShapeStyle {
         if inert { return AnyShapeStyle(DS.textTertiary) }
-        return onFill ? AnyShapeStyle(Color.white) : AnyShapeStyle(DS.tint)
+        return onFill ? AnyShapeStyle(Color.white) : AnyShapeStyle(DS.pickInk)
     }
 }
 
@@ -353,7 +353,7 @@ struct DSSlabField: View {
                 .frame(width: DSActRow.discSize, height: DSActRow.discSize)
                 .background {
                     if armed {
-                        Circle().fill(DS.tint)
+                        Circle().fill(DS.pickInk)
                     } else {
                         Circle().fill(DS.surfaceWell)
                             .overlay { Circle().fill(DS.pourInk) }
@@ -435,7 +435,7 @@ struct DSSlabField: View {
         .labelStyle(.iconOnly)
         .buttonBorderShape(.capsule)
         .controlSize(.small)
-        .tint(DS.tint)
+        .tint(DS.pickInk)
         .transition(.opacity)
     }
 
@@ -487,7 +487,7 @@ struct DSSlabField: View {
                 Button(action: action) {
                     Text(actionLabel)
                         .dsText(.subhead12)
-                        .foregroundStyle(armed ? DS.tint : DS.textTertiary)
+                        .foregroundStyle(armed ? DS.pickInk : DS.textTertiary)
                         .animation(DS.Motion.standard, value: armed)
                 }
                 .buttonStyle(RowPress())
@@ -606,7 +606,7 @@ struct DSSlabField: View {
         }
         .dsText(.body17)
         .foregroundStyle(DS.textPrimary)
-        .tint(DS.tint)
+        .tint(DS.pickInk)
         .keyboardType(keyboard)
         .textInputAutocapitalization(autocapitalization)
         .autocorrectionDisabled()
@@ -722,7 +722,7 @@ struct DSSlabButton: View {
                 }
                 Text(LocalizedStringKey(title))
                     .dsText(.body17)
-                    .foregroundStyle(enabled && !busy ? DS.tint : DS.textTertiary)
+                    .foregroundStyle(enabled && !busy ? DS.pickInk : DS.textTertiary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
                 Spacer(minLength: DS.Space.s2)
@@ -890,7 +890,7 @@ struct DSSlabSwitch: View {
                 }
             }
         }
-        .tint(DS.tint)
+        .tint(DS.pickInk)
     }
 }
 

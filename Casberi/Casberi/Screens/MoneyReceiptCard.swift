@@ -898,7 +898,7 @@ struct MoneyReceiptBox: View {
             MoneySubjectDisc(subject: receipt.subject, mine: receipt.mine, size: DS.Face.list, onOpen: nil)
             Text(verbatim: unnamed ? String(localized: "Tap to name") : source)
                 .dsText(.label12)
-                .foregroundStyle(unnamed ? DS.tint : DS.textSecondary)
+                .foregroundStyle(unnamed ? DS.pickInk : DS.textSecondary)
                 .lineLimit(1)
             Spacer(minLength: DS.Space.s2)
             // A bill names its day in its own cell (Charged, Due).

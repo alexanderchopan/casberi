@@ -143,7 +143,7 @@ struct WalletbeatIncidentHead: View {
 			let label = Text(index == 0 ? String(localized: "Affects") : "")
 			if let entry = WalletbeatDirectory.wallets.first(where: { $0.id == id }) {
 				DSSpecRow(label: label, value: Text(entry.name),
-						  tint: DS.tint, weight: .semibold, lineLimit: nil,
+						  tint: DS.textSecondary, weight: .semibold, lineLimit: nil,
 						  glyph: "chevron.right",
 						  action: {
 							  DSHaptic.tap()
@@ -231,7 +231,7 @@ struct WalletbeatRevisionHead: View {
 			VStack(alignment: .leading, spacing: DS.Space.s2) {
 				Text(String(localized: "Walletbeat revised its review"))
 					.dsText(.label12)
-					.foregroundStyle(DS.brandHue(for: "walletbeat") ?? DS.tint)
+					.foregroundStyle(DS.brandHue(for: "walletbeat") ?? DS.brandInk)
 				Text(attribute?.name ?? thing.title)
 					.dsText(.heading40)
 					.foregroundStyle(DS.textPrimary)

@@ -26,7 +26,7 @@ enum AgentPanelGrid {
         if UIColor(brand).getRed(&r, green: &g, blue: &b, alpha: &a) {
             // Rec. 601 luma — the same weighting the contrast pass used.
             let luma = 0.299 * r + 0.587 * g + 0.114 * b
-            if luma > 0.78 { return DS.tint }
+            if luma > 0.78 { return DS.brandInk }
         }
         #endif
         return brand

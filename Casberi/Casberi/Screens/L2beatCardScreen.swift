@@ -96,7 +96,7 @@ struct L2beatRiskCard: View {
 				? String(localized: "Following — tap to stop")
 				: String(localized: "Follow this chain"))
 				.dsText(.subhead12)
-				.foregroundStyle(watching ? DS.textTertiary : DS.tint)
+				.foregroundStyle(watching ? DS.textTertiary : DS.pickInk)
 		}
 		.buttonStyle(RowPress())
 		.dsHover()
@@ -249,7 +249,7 @@ struct L2beatRiskCard: View {
 							? String(localized: "Hide what these ask")
 							: String(localized: "What these ask"))
 							.dsText(.label12)
-							.foregroundStyle(DS.tint)
+							.foregroundStyle(DS.textSecondary)
 					}
 					.buttonStyle(RowPress())
 					.dsHover()
@@ -280,7 +280,7 @@ struct L2beatRiskCard: View {
 				Link(destination: url) {
 					Text(String(localized: "Full assessment on L2BEAT"))
 						.dsText(.subhead12)
-						.foregroundStyle(DS.tint)
+						.foregroundStyle(DS.textSecondary)
 				}
 			}
 			Text(freshnessLine)

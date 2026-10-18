@@ -222,10 +222,10 @@ struct DSSectionSwitcher<Scope: DSSectionScope>: View {
                 ZStack {
                     Capsule(style: .continuous).fill(DS.fillFaint)
                     if isOn {
-                        // `DS.tintDim` — the token whose documented job is exactly this
-                        // ("tint at rest-chip opacity"), rather than a second
+                        // `DS.pickDim` — the token whose documented job is exactly this
+                        // (the pick's wash, prd §1385), rather than a second
                         // hand-spelled 0.18 that drifts from it.
-                        let fill = pickShape.fill(DS.tintDim)
+                        let fill = pickShape.fill(DS.pickDim)
                         if reduceMotion {
                             fill
                         } else {

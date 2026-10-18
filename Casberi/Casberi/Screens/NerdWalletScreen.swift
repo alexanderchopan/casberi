@@ -51,7 +51,7 @@ struct NerdWalletScreen: View {
                 Spacer()
                 if following {
                     Image(systemName: "checkmark")
-                        .dsText(.body17).foregroundStyle(DS.tint)
+                        .dsText(.body17).foregroundStyle(DS.pickInk)
                 }
             }
             .frame(minHeight: AccountFactRow.height)

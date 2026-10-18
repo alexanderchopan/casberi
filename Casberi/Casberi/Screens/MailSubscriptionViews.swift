@@ -289,7 +289,7 @@ struct MailSubscriptionAddTray: View {
                                                     line: Text(verbatim: Self.line(candidate, searching: searching))) {
                                         Image(systemName: "plus")
                                             .dsGlyph(.body)
-                                            .foregroundStyle(DS.tint)
+                                            .foregroundStyle(DS.pickInk)
                                     }
                                     .contentShape(Rectangle())
                                 }

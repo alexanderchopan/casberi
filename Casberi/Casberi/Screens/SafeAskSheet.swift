@@ -195,7 +195,7 @@ struct SafeStatementBlock: View {
             TextField(String(localized: "Paste the statement itself"), text: $pastedWords, axis: .vertical)
                 .dsText(.body17)
                 .foregroundStyle(DS.textPrimary)
-                .tint(DS.tint)
+                .tint(DS.pickInk)
                 .keyboardType(.asciiCapable)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()

@@ -178,14 +178,14 @@ struct DropGlow: View {
         ZStack {
             if active {
                 // The faint field — the page acknowledging the drag at all.
-                DS.tint.opacity(0.05)
+                DS.pickInk.opacity(0.05)
                 // The edge glow — a wide blurred band hugging the window
                 // bounds, where "into this window" reads strongest.
                 Rectangle()
-                    .strokeBorder(DS.tint.opacity(0.45), lineWidth: 3)
+                    .strokeBorder(DS.pickInk.opacity(0.45), lineWidth: 3)
                     .blur(radius: 8)
                 Rectangle()
-                    .strokeBorder(DS.tint.opacity(0.25), lineWidth: 1.5)
+                    .strokeBorder(DS.pickInk.opacity(0.25), lineWidth: 1.5)
                     .blur(radius: 2)
             }
         }

@@ -196,7 +196,7 @@ struct WalletConnectPickerSheet: View {
                 } else {
                     Image(systemName: "checkmark")
                         .dsGlyph(.subhead, weight: .bold)
-                        .foregroundStyle(DS.tint)
+                        .foregroundStyle(DS.pickInk)
                         .opacity(on ? 1 : 0)
                 }
             }

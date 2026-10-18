@@ -87,7 +87,7 @@ enum DSActRow {
     static func disc(_ glyph: String, tinted: Bool = false) -> some View {
         Image(systemName: glyph)
             .dsGlyph(.body, weight: .medium)
-            .foregroundStyle(tinted ? DS.tint : DS.brandInk)
+            .foregroundStyle(tinted ? DS.pickInk : DS.brandInk)
             .frame(width: discSize, height: discSize)
     }
 }

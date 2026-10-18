@@ -16,7 +16,7 @@ struct DSToggleRow: View {
     var detail: Text? = nil
     var detailTone: Color = DS.textTertiary
     @Binding var isOn: Bool
-    var tint: Color = DS.tint
+    var tint: Color = DS.pickInk
 
     var body: some View {
         Toggle(isOn: $isOn) {

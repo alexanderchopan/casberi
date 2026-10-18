@@ -73,7 +73,7 @@ struct SpotifyLoginWebView: View {
                             loading = true
                             reloadCount += 1
                         }
-                        .dsText(.body17).foregroundStyle(DS.tint)
+                        .dsText(.body17).foregroundStyle(DS.pickInk)
                         // A text-height target was the only retry on this
                         // cover (prd §717): the word stays, the tap grows.
                         .padding(.horizontal, DS.Space.s4)

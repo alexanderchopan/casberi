@@ -116,7 +116,7 @@ struct WatchFace: View {
 
     var body: some View {
         ZStack {
-            Circle().fill(onWhite ? Color.white : DS.tint.opacity(0.85))
+            Circle().fill(onWhite ? Color.white : DS.brandInk.opacity(0.85))
             if let symbol {
                 Image(systemName: symbol)
                     .font(.system(size: size * 0.5, weight: .semibold))
@@ -225,7 +225,7 @@ struct WatchAlertsSection: View {
                         .dsGlyph(.body)
                     Text("Add an alert").dsText(.body17)
                 }
-                .foregroundStyle(DS.tint)
+                .foregroundStyle(DS.pickInk)
                 .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
                 .contentShape(Rectangle())
             }

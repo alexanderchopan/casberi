@@ -94,7 +94,7 @@ struct EventDaySlice: View {
                         .padding(.horizontal, DS.Space.s2)
                         .frame(height: max(22, bottom - top - 4), alignment: .center)
                         .background(RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .fill(block.isThis ? DS.tint : DS.fillFaint))
+                            .fill(block.isThis ? DS.pickInk : DS.fillFaint))
                         .offset(y: top + 2)
                     }
                 }

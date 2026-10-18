@@ -176,7 +176,7 @@ struct SettingsRows: View {
                 }
             }
             #endif
-        .tint(DS.tint)
+        .tint(DS.pickInk)
     }
 
     /// **EVERY SHEET THESE ROWS RAISE CARRIES THE SHELL'S ENVIRONMENT WITH

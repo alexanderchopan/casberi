@@ -51,7 +51,7 @@ struct NoteEditor: UIViewRepresentable {
         view.delegate = context.coordinator
         view.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         view.setContentHuggingPriority(.required, for: .vertical)
-        view.tintColor = UIColor(DS.tint)
+        view.tintColor = UIColor(DS.pickInk)
         view.text = text
         context.coordinator.view = view
         context.coordinator.install(on: view)
@@ -345,7 +345,7 @@ struct NoteEditor: UIViewRepresentable {
             let disc = CAShapeLayer()
             disc.frame = CGRect(x: markRect.midX - side / 2, y: markRect.midY - side / 2, width: side, height: side)
             disc.path = UIBezierPath(ovalIn: disc.bounds).cgPath
-            disc.fillColor = UIColor(DS.tint).cgColor
+            disc.fillColor = UIColor(DS.pickInk).cgColor
             let pop = CAKeyframeAnimation(keyPath: "transform.scale")
             pop.values = [0.55, 1.12, 1]
             pop.keyTimes = [0, 0.6, 1]
@@ -496,7 +496,7 @@ struct NoteEditor: UIViewRepresentable {
             if body.hasPrefix(NoteChecklist.editorMark) || body.hasPrefix(NoteChecklist.doneEditorMark) {
                 let done = body.hasPrefix(NoteChecklist.doneEditorMark)
                 hang(2)
-                storage.addAttributes([.foregroundColor: done ? UIColor(DS.tint) : UIColor(DS.textSecondary),
+                storage.addAttributes([.foregroundColor: done ? UIColor(DS.pickInk) : UIColor(DS.textSecondary),
                                        .font: style.circleFont],
                                       range: NSRange(location: markStart, length: 1))
                 if done {

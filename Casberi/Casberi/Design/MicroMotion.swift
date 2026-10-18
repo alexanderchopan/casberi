@@ -250,7 +250,7 @@ struct LandFlash: ViewModifier {
     let trigger: Int
     /// The glow's hue — a jump lands in the neutral tint; a shelf COMPLETING
     /// lands in its own category color, so the payoff wears the set's identity.
-    var tint: Color = DS.tint
+    var tint: Color = DS.pickInk
     @State private var on = false
     @State private var clear: Task<Void, Never>?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -281,7 +281,7 @@ extension View {
     /// One glow behind this view each time `trigger` bumps — a jump's arrival,
     /// so a scroll-to doesn't land in silence. `tint` colors the glow (a shelf
     /// completing glows in its own category color).
-    func landFlash(_ trigger: Int, tint: Color = DS.tint) -> some View {
+    func landFlash(_ trigger: Int, tint: Color = DS.pickInk) -> some View {
         modifier(LandFlash(trigger: trigger, tint: tint))
     }
 }
@@ -305,7 +305,7 @@ struct ConnectPromote: ViewModifier {
     func body(content: Content) -> some View {
         content
             .scaleEffect(up ? 1.03 : 1)
-            .shadow(color: DS.tint.opacity(up ? 0.28 : 0),
+            .shadow(color: DS.pickInk.opacity(up ? 0.28 : 0),
                     radius: up ? 12 : 0, y: up ? 4 : 0)
             .onChange(of: token) {
                 guard !reduceMotion, token > 0, isTarget else { return }
@@ -425,7 +425,7 @@ extension View {
 /// carried by the row, and this is the flourish that preference exists to drop.
 private struct ArrivalWash: ViewModifier {
     let on: Bool
-    var hue: Color = DS.tint
+    var hue: Color = DS.pickInk
     @State private var washed = false
     @State private var lit = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -450,7 +450,7 @@ private struct ArrivalWash: ViewModifier {
 
 extension View {
     /// One tint pass over a row that has just arrived, then nothing.
-    func arrivalWash(_ on: Bool, hue: Color = DS.tint) -> some View {
+    func arrivalWash(_ on: Bool, hue: Color = DS.pickInk) -> some View {
         modifier(ArrivalWash(on: on, hue: hue))
     }
 }

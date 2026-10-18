@@ -45,7 +45,7 @@ struct ObsidianScreen: View {
             HStack(spacing: DS.Space.s3) {
                 Image(systemName: "folder")
                     .dsGlyph(.body, weight: .medium)
-                    .foregroundStyle(DS.tint)
+                    .foregroundStyle(DS.brandInk)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(obsidian.vaultName.isEmpty ? "Vault" : obsidian.vaultName)
                         .dsText(.body17).foregroundStyle(DS.textPrimary)
@@ -57,7 +57,7 @@ struct ObsidianScreen: View {
                 Spacer()
                 Button("Change") { picking = true }
                     .dsText(.body17)
-                    .foregroundStyle(DS.tint)
+                    .foregroundStyle(DS.pickInk)
                     .buttonStyle(RowPress())
             }
             .padding(.vertical, DS.Space.s1)

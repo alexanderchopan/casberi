@@ -88,7 +88,7 @@ struct SpotifyScreen: View {
         HStack(spacing: DS.Space.s3) {
             Image(systemName: "music.note")
                 .dsGlyph(.body, weight: .medium)
-                .foregroundStyle(DS.tint)
+                .foregroundStyle(DS.brandInk)
             Text(SpotifyAuth.load()?.username.map { String(localized: "Signed in as \($0)") }
                  ?? String(localized: "Signed in"))
                 .dsText(.body17).foregroundStyle(DS.textPrimary)

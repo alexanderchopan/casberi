@@ -45,10 +45,10 @@ struct DSActVerb: View {
     /// something is added.
     var glyph: String = "arrow.up.right"
     /// The fill. The venue's or subject's own colour where it has one,
-    /// `DS.tint` otherwise — the primary is always a filled tile; the ink
+    /// `DS.pickInk` otherwise — the primary is always a filled tile; the ink
     /// (secondary) half of the identity stays `DevnetSendPanel`'s until a
     /// second surface needs a pair.
-    var tint: Color = DS.tint
+    var tint: Color = DS.pickInk
     var busy = false
     var disabled = false
     /// Something to sit beside the disc in the tile's header band — today the

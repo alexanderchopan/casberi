@@ -245,7 +245,7 @@ struct AgentActiveStatusRow: View {
                         AgentKey.activate(provider)
                         tick += 1
                     } label: {
-                        DSPushRowTrail(fact: Text("Make active"), factTone: DS.tint, opens: false)
+                        DSPushRowTrail(fact: Text("Make active"), factTone: DS.pickInk, opens: false)
                             .dsTapTarget()
                     }
                     .buttonStyle(RowPress())

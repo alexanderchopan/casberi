@@ -613,7 +613,7 @@ extension DSRoomChassis {
                             .accessibilityHidden(true)
                     }
                 }
-                .foregroundStyle(DS.tint)
+                .foregroundStyle(DS.textSecondary)
                 .contentShape(Rectangle())
             }
             .buttonStyle(RowPress())

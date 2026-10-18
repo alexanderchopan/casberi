@@ -931,7 +931,7 @@ struct WalletLendingCard: View {
         // The protocol's own mark — Aave ships one, Spark doesn't, and the
         // fallback says so honestly rather than inventing artwork.
         return withLineMenu(
-            WalletRow(mark: .asset(title, tint: atRisk ? DS.attention : DS.tint),
+            WalletRow(mark: .asset(title, tint: atRisk ? DS.attention : DS.brandInk),
                       title: title,
                       subtitleText: Self.line(borrowing: borrowing, health: health, atRisk: atRisk,
                                               fall: borrowing ? falls[title] : nil)) {
@@ -968,7 +968,7 @@ struct WalletLendingCard: View {
             ? Self.line(borrowing: true, health: morphoHealth, atRisk: atRisk, fall: falls["Morpho"])
             : Text("Earning").foregroundStyle(DS.textTertiary)
         return withLineMenu(
-            WalletRow(mark: .asset("Morpho", tint: atRisk ? DS.attention : DS.tint),
+            WalletRow(mark: .asset("Morpho", tint: atRisk ? DS.attention : DS.brandInk),
                       title: "Morpho", subtitleText: subtitle) {
                 WalletRowValue(value: WalletValue.money(borrowing ? morphoDebt : morphoDeposits))
             },
@@ -1438,7 +1438,7 @@ struct WalletWorthALookTray: View {
                 } label: {
                     Text(muted ? String(localized: "Unmute") : String(localized: "Mute"))
                         .dsText(.subhead12)
-                        .foregroundStyle(DS.tint)
+                        .foregroundStyle(DS.pickInk)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(PressSpring())
@@ -1510,7 +1510,7 @@ struct WalletWorthALookTray: View {
                     DSHaptic.selection()
                     door.act()
                 } label: {
-                    DSPushRowTrail(fact: Text(door.label), factTone: DS.tint,
+                    DSPushRowTrail(fact: Text(door.label), factTone: DS.textSecondary,
                                    glyph: door.leaves ? "arrow.up.right" : "arrow.up")
                         .dsTapTarget()
                 }

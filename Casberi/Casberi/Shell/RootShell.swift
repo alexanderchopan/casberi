@@ -2656,13 +2656,11 @@ struct RootShell: View {
                     // feed through its four corners once the rise settled. A
                     // phone hides them behind the display's own ~55pt mask;
                     // the two surfaces this app also ships on do not.
-                    // The ask surface's tint, or the settled ground. Painted
-                    // HERE and not inside the composer (prd §577b) — this view
-                    // already ignores the safe areas, which is the whole
-                    // difference between a screen that turns blue and a blue
-                    // card with black above and below it.
-                    (chrome.askOnTint ? DS.tint : DS.page).ignoresSafeArea()
-                        .animation(DS.Motion.standard, value: chrome.askOnTint)
+                    // Painted HERE and not inside the composer (prd §577b) —
+                    // this view already ignores the safe areas. The ask's blue
+                    // ground that once stood in for it went with the ask
+                    // (§1047, §1385).
+                    DS.page.ignoresSafeArea()
                     // THE MORPH RIDES A SHAPE, NEVER THE CONTENT (2026-08-22,
                     // prd §445, user: "the agent still opens in a janky way").
                     // See `Composer`'s own note at the modifier this replaces
@@ -4741,7 +4739,7 @@ struct RootShell: View {
                         .foregroundStyle(.white)
                         .padding(.horizontal, DS.Space.s3)
                         .frame(minHeight: 28)
-                        .dsGlassProminent(tint: DS.tint, cornerRadius: DS.Radius.pill)
+                        .dsGlassProminent(tint: DS.pickInk, cornerRadius: DS.Radius.pill)
                         .dsTapTarget(Capsule(style: .continuous))
                 }
                 .buttonStyle(PressSpring())

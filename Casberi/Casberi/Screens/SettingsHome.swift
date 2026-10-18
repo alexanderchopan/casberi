@@ -838,7 +838,7 @@ struct SettingsHome: View {
             appRow(app, card: card)
         } else if card {
             DSPushRow(title: Text(verbatim: name), subtitle: Text("Add"),
-                      subtitleTone: DS.tint, opens: false) {
+                      subtitleTone: DS.pickInk, opens: false) {
                 setup(name)
             } leading: {
                 BridgeIcon(name: name, size: DS.Face.row)
@@ -847,7 +847,7 @@ struct SettingsHome: View {
                     .frame(width: DS.Mark.row, height: DS.Mark.row)
             }
         } else {
-            DSPushRow(title: Text(verbatim: name), fact: Text("Add"), factTone: DS.tint) {
+            DSPushRow(title: Text(verbatim: name), fact: Text("Add"), factTone: DS.pickInk) {
                 setup(name)
             } leading: {
                 BridgeIcon(name: name, size: DS.Mark.notice)
@@ -897,7 +897,7 @@ struct SettingsHome: View {
                 // state, no chevron; Add in the tint.
                 DSPushRow(title: Text(verbatim: card.cards),
                           subtitle: Text(verbatim: "\(card.app) · \(app.map { $0.statusLine } ?? String(localized: "Add"))"),
-                          subtitleTone: app == nil ? DS.tint
+                          subtitleTone: app == nil ? DS.pickInk
                                         : app?.status == .attention ? DS.attentionInk : DS.textTertiary,
                           opens: false) {
                     setup(card.app)
@@ -1363,7 +1363,7 @@ struct LetterIndex: View {
             ForEach(letters, id: \.self) { letter in
                 Text(verbatim: letter == "…" ? "•" : letter)
                     .dsText(.dockCaption10)
-                    .foregroundStyle(DS.tint)
+                    .foregroundStyle(DS.pickInk)
                     .frame(width: 20, height: Self.pitch)
             }
         }

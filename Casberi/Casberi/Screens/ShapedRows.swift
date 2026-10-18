@@ -2364,7 +2364,7 @@ struct PostCard: View {
                         .lineLimit(1)
                 }
                 if thing.mark == .doing {
-                    Text("Doing").dsText(.label12).foregroundStyle(DS.tint)
+                    Text("Doing").dsText(.label12).foregroundStyle(DS.pickInk)
                 }
             }
         } below: {

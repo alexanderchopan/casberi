@@ -60,7 +60,7 @@ struct AcornsLoginWebView: View {
                             loading = true
                             reloadCount += 1
                         }
-                        .dsText(.body17).foregroundStyle(DS.tint)
+                        .dsText(.body17).foregroundStyle(DS.pickInk)
                         .padding(.horizontal, DS.Space.s4)
                         .dsTapTarget(Capsule(style: .continuous))
                     }

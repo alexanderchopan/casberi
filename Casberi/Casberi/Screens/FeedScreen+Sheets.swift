@@ -400,7 +400,7 @@ extension FeedScreen {
             DevnetSendSheet(
                 venue: String(localized: "Logos"),
                 seat: LogosRoom.source,
-                tint: DS.tint,
+                tint: DS.pickInk,
                 unit: String(localized: "test coins"),
                 candidates: logosSendCandidates,
                 heldLine: logosHeldLine,

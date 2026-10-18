@@ -1026,7 +1026,7 @@ private struct LinkPreviewCard: View {
                             .multilineTextAlignment(.leading)
                     }
                     Text(url.host() ?? url.absoluteString)
-                        .dsText(.subhead12).foregroundStyle(DS.tint)
+                        .dsText(.subhead12).foregroundStyle(DS.textSecondary)
                         .lineLimit(1)
                 }
             }
@@ -1410,7 +1410,7 @@ struct ChatBubbles: View {
                     withAnimation(DS.Motion.standard) { expanded = true }
                 } label: {
                     Text("Show \(hiddenCount) more")
-                        .dsText(.subhead12).foregroundStyle(DS.tint)
+                        .dsText(.subhead12).foregroundStyle(DS.textSecondary)
                 }
                 .buttonStyle(RowPress())
                 .dsHover()
@@ -1516,7 +1516,7 @@ private struct VoiceContent: View {
                         Image(systemName: playing ? "pause.circle.fill" : "play.circle.fill")
                             .dsSymbolSwap(playing)
                             .dsGlyph(.feature, weight: .regular)
-                            .foregroundStyle(DS.tint)
+                            .foregroundStyle(DS.pickInk)
                             .dsTapTarget(Circle())
                     }
                     .buttonStyle(PressSpring())
@@ -1650,7 +1650,7 @@ private struct VoiceContent: View {
             Text(verbatim: VoiceLength.rateLabel(rate))
                 .dsText(.label12)
                 .monospacedDigit()
-                .foregroundStyle(rate == 1 ? DS.textSecondary : DS.tint)
+                .foregroundStyle(rate == 1 ? DS.textSecondary : DS.pickInk)
                 .contentTransition(.numericText())
                 .frame(minWidth: 28)
                 .dsTapTarget()
@@ -1801,7 +1801,7 @@ private struct TimedTranscript: View {
     private func ink(_ i: Int) -> Color {
         guard playing, let current else { return DS.textSecondary }
         if i < current { return DS.textPrimary }
-        return i == current ? DS.tint : DS.textSecondary
+        return i == current ? DS.pickInk : DS.textSecondary
     }
 }
 
@@ -2032,7 +2032,7 @@ private struct FileChip: View {
                     Image(systemName: "doc")
                         .accessibilityHidden(true)
                         .dsGlyph(.body, weight: .medium)
-                        .foregroundStyle(DS.tint)
+                        .foregroundStyle(DS.brandInk)
                 }
                 VStack(alignment: .leading, spacing: 1) {
                     Text(name)
@@ -2280,7 +2280,7 @@ private struct MomentStub: View {
         VStack(spacing: 0) {
             Text(start.formatted(.dateTime.weekday(.abbreviated)))
                 .dsText(.label12)
-                .foregroundStyle(overdue ? DS.destructiveInk : DS.tint)
+                .foregroundStyle(overdue ? DS.destructiveInk : DS.pickInk)
             Text(start.formatted(.dateTime.day()))
                 .dsText(.stat24)
                 .foregroundStyle(overdue ? DS.destructiveInk : DS.textPrimary)
@@ -2332,7 +2332,7 @@ struct FactRows: View {
                 let actionable = url.map { UIApplication.shared.canOpenURL($0) } ?? false
                 DSSpecRow(label: Text(verbatim: fact.label),
                           value: Text(verbatim: fact.value),
-                          tint: actionable ? DS.tint : DS.textPrimary,
+                          tint: actionable ? DS.textSecondary : DS.textPrimary,
                           glyph: actionable ? "chevron.right" : nil,
                           action: actionable ? { url.map { openURL($0) } } : nil)
             }

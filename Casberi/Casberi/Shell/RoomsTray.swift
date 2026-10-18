@@ -1535,7 +1535,7 @@ struct RoomsTray: View {
                     recentSearches = []
                     TraySearchHistory.clear()
                 } label: {
-                    Text("Clear").dsText(.label12).foregroundStyle(DS.tint)
+                    Text("Clear").dsText(.label12).foregroundStyle(DS.pickInk)
                 }
                 .buttonStyle(RowPress())
                 .dsTapTarget()
@@ -2010,7 +2010,7 @@ private struct IdleCaret: View {
             let on = reduceMotion
                 || Int(context.date.timeIntervalSinceReferenceDate / 0.53) % 2 == 0
             RoundedRectangle(cornerRadius: 1)
-                .fill(DS.tint)
+                .fill(DS.pickInk)
                 .frame(width: 2, height: 22)
                 .opacity(on ? 1 : 0)
         }

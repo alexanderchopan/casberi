@@ -14,7 +14,7 @@ struct DSFollowMark: View {
     var body: some View {
         Image(systemName: on ? "checkmark" : "plus")
             .dsGlyph(.title, weight: .regular)
-            .foregroundStyle(on || dimmed ? DS.textTertiary : DS.tint)
+            .foregroundStyle(on || dimmed ? DS.textTertiary : DS.pickInk)
             .symbolEffect(.bounce, value: bounce)
             .frame(minWidth: 44, minHeight: 44)
             .contentShape(Rectangle())

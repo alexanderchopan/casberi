@@ -70,7 +70,7 @@ struct WalletPerpsCard: View {
         // is and says nothing about which position you're looking at — the
         // exact reasoning that retired `WalletLiquidityCard`'s "UN" monogram.
         WalletRow(mark: .asset(position.coin,
-                               tint: position.isNearLiquidation ? DS.attention : DS.tint,
+                               tint: position.isNearLiquidation ? DS.attention : DS.brandInk,
                                atRisk: position.isNearLiquidation),
                   title: Self.title(position),
                   subtitleText: Self.line(position)) {

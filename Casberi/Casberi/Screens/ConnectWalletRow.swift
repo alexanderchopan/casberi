@@ -48,7 +48,7 @@ struct ConnectWalletRow: View {
                                busy: connecting) {
                     Image(systemName: "wallet.pass.fill")
                         .dsGlyph(.subhead, weight: .medium)
-                        .foregroundStyle(DS.tint)
+                        .foregroundStyle(DS.brandInk)
                         .frame(width: 34, height: 34)
                         .background(DS.tintDim, in: RoundedRectangle(
                             cornerRadius: DS.Radius.appIcon(34), style: .continuous))

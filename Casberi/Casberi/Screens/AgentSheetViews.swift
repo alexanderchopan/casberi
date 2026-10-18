@@ -61,7 +61,7 @@ struct AgentTurnsView: View {
                 } label: {
                     Text("Show all \(turns.count) turns")
                         .dsText(.subhead12)
-                        .foregroundStyle(DS.tint)
+                        .foregroundStyle(DS.textSecondary)
                 }
                 .buttonStyle(RowPress())
                 .dsHover()

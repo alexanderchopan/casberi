@@ -117,7 +117,7 @@ struct XArchiveImportScreen: View {
                 HStack(spacing: DS.Space.s3) {
                     Image(systemName: "bell.fill")
                         .dsGlyph(.body, weight: .medium)
-                        .foregroundStyle(DS.tint)
+                        .foregroundStyle(DS.brandInk)
                     Text("Live — notifications arrive as they happen")
                         .dsText(.body17).foregroundStyle(DS.textPrimary)
                         .lineLimit(1)

@@ -49,7 +49,7 @@ enum RowVerb {
 
     var ink: Color {
         switch self {
-        case .connect, .watch, .allow, .signIn, .addKey, .importFile: DS.tint
+        case .connect, .watch, .allow, .signIn, .addKey, .importFile: DS.pickInk
         case .automatic: DS.textSecondary
         case .fix:       DS.attentionInk
         case .soon:      DS.textTertiary

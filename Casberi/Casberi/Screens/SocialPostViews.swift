@@ -376,7 +376,7 @@ struct SocialPostThread: View {
                 if let url = post.url.flatMap(URL.init) {
                     Button { openURL(url) } label: {
                         Text("Open on \(source)")
-                            .dsText(.body17).foregroundStyle(DS.tint)
+                            .dsText(.body17).foregroundStyle(DS.textSecondary)
                     }
                     .buttonStyle(RowPress())
                 }

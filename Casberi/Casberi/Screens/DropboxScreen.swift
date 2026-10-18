@@ -90,7 +90,7 @@ struct DropboxScreen: View {
         HStack(spacing: DS.Space.s3) {
             Image(systemName: "folder")
                 .dsGlyph(.body, weight: .medium)
-                .foregroundStyle(DS.tint)
+                .foregroundStyle(DS.brandInk)
             Text(folderIdentity)
                 .dsText(.body17).foregroundStyle(DS.textPrimary)
                 .lineLimit(1).truncationMode(.middle)

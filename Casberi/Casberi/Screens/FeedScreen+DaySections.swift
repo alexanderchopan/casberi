@@ -1275,9 +1275,9 @@ extension FeedScreen {
         } label: {
             DSPushRowLabel(title: Text("Show older"),
                            fact: hidden > 0 ? Text("\(hidden) more") : nil,
-                           tint: DS.tint,
+                           tint: DS.textSecondary,
                            opens: false) {
-                DSGlyphLead(glyph: "arrow.down", tint: DS.tint)
+                DSGlyphLead(glyph: "arrow.down", tint: DS.textSecondary)
             }
             .padding(.vertical, DS.Space.s2)
             .frame(minHeight: DS.Hit.min)

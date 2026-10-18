@@ -117,7 +117,7 @@ extension FeedScreen {
                         Text(TokenWatchOrder.shared.mode.short).dsText(.body17)
                         Image(systemName: "chevron.down").dsGlyph(.caption)
                     }
-                    .foregroundStyle(DS.tint)
+                    .foregroundStyle(DS.pickInk)
                     .frame(minHeight: 44)
                     .contentShape(Rectangle())
                 }
@@ -318,7 +318,7 @@ extension FeedScreen {
                             watchAllCompanies(unwatched)
                         } label: {
                             Text("Follow all \(unwatched.count)").dsText(.body17)
-                                .foregroundStyle(DS.tint)
+                                .foregroundStyle(DS.pickInk)
                                 .frame(minHeight: 44)
                                 .contentShape(Rectangle())
                         }

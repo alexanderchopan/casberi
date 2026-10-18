@@ -182,7 +182,7 @@ struct WalletApprovalExposureCard: View {
                 .frame(width: DS.Face.list, height: DS.Face.list)
                 Text(String(localized: "Review the oldest grant"))
                     .dsText(.body17)
-                    .foregroundStyle(DS.tint)
+                    .foregroundStyle(DS.textSecondary)
                 Spacer(minLength: 0)
             }
             .contentShape(Rectangle())

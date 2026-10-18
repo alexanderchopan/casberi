@@ -84,7 +84,7 @@ struct AvatarChip: View {
             .dsGlassDoor(doorUnion)
             .overlay {
                 if lit {
-                    Circle().strokeBorder(DS.tint, lineWidth: 1.5)
+                    Circle().strokeBorder(DS.pickInk, lineWidth: 1.5)
                         .transition(.opacity)
                 }
             }

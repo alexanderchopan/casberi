@@ -89,7 +89,7 @@ struct WatchAddSheet: View {
                                     .dsText(.subhead12).foregroundStyle(DS.textTertiary)
                             }
                             Spacer(minLength: 0)
-                            Image(systemName: "magnifyingglass").dsGlyph(.subhead).foregroundStyle(DS.tint)
+                            Image(systemName: "magnifyingglass").dsGlyph(.subhead).foregroundStyle(DS.pickInk)
                         }
                         .frame(minHeight: 60)
                         .contentShape(Rectangle())
@@ -210,7 +210,7 @@ struct WatchAddSheet: View {
                     .dsText(.body17)
                 Image(systemName: "chevron.down").dsGlyph(.caption)
             }
-            .foregroundStyle(DS.tint)
+            .foregroundStyle(DS.pickInk)
             .frame(minHeight: 44)
         }
     }

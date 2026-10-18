@@ -76,7 +76,7 @@ struct DuolingoScreen: View {
         HStack(spacing: DS.Space.s3) {
             Image(systemName: "flame.fill")
                 .dsGlyph(.body, weight: .medium)
-                .foregroundStyle(DS.tint)
+                .foregroundStyle(DS.brandInk)
             Text(signedInLine)
                 .dsText(.body17).foregroundStyle(DS.textPrimary)
                 .lineLimit(1).truncationMode(.middle)

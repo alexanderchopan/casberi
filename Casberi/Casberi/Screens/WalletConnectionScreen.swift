@@ -48,7 +48,7 @@ struct WalletConnectionScreen: View {
                         Spacer()
                         if chainStore.isSelected(chain.id) {
                             Image(systemName: "checkmark")
-                                .dsGlyph(.body).foregroundStyle(DS.tint)
+                                .dsGlyph(.body).foregroundStyle(DS.pickInk)
                         }
                     }
                     .frame(minHeight: AccountFactRow.height)

@@ -808,11 +808,7 @@ struct Composer: View {
         // all this blue". The terminal retires the last of it: the wait is a
         // white stopwatch on ink, so the ONE saturated block on this surface is
         // the armed verb in the foot, which is §563's budget spent where it
-        // says something you can act on. `askOnTint` stays wired and is written
-        // false, because RootShell still reads it and a stale true would leave
-        // a blue screen behind a surface that no longer paints one.
-        .onAppear { if embedded { chrome.askOnTint = false } }
-        .onDisappear { if embedded { chrome.askOnTint = false } }
+        // says something you can act on.
         .background(embedded ? Color.clear : DS.inkGround, in: bubbleShape)
         .clipShape(embedded ? AnyShape(Rectangle()) : AnyShape(bubbleShape))
         .scaleEffect(embedded ? 1 : (isOpen ? 1 : 0.3), anchor: .bottomTrailing)
@@ -2509,7 +2505,7 @@ struct Composer: View {
                 }
                 .dsText(embedded ? .heading24 : .body17)
                 .foregroundStyle(DS.textPrimary)
-                .tint(DS.tint)
+                .tint(DS.pickInk)
                 .focused($fieldFocused)
                 .onChange(of: draft) { old, new in
                     // Return SENDS (chat grammar). A vertical-axis field's

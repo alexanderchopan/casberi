@@ -57,7 +57,7 @@ struct CategoryOrderSheet: View {
                 if CategoryOrder.isCustom {
                     Button("Reset order") { reset() }
                         .dsText(.body17)
-                        .foregroundStyle(DS.tint)
+                        .foregroundStyle(DS.pickInk)
                         .frame(minHeight: 44)
                 }
             }

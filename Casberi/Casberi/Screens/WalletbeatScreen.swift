@@ -237,7 +237,7 @@ struct WalletbeatScreen: View {
 						// exists to stop.
 						Text(String(localized: "Follow"))
 							.dsText(.label12)
-							.foregroundStyle(DS.tint)
+							.foregroundStyle(DS.pickInk)
 					}
 					.frame(minHeight: AccountFactRow.height)
 					.contentShape(Rectangle())

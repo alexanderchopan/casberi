@@ -186,7 +186,7 @@ struct L2beatRevisionHead: View {
 					? String(localized: "L2BEAT moved this chain's stage")
 					: String(localized: "L2BEAT revised its assessment"))
 					.dsText(.label12)
-					.foregroundStyle(DS.brandHue(for: "l2beat") ?? DS.tint)
+					.foregroundStyle(DS.brandHue(for: "l2beat") ?? DS.brandInk)
 				Text(headline)
 					.dsText(.heading40)
 					.foregroundStyle(DS.textPrimary)

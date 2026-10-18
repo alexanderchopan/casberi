@@ -49,7 +49,7 @@ struct NoteRemindTray: View {
                         DatePicker(String(localized: "When"), selection: $picked, in: Date.now...,
                                    displayedComponents: [.date, .hourAndMinute])
                             .datePickerStyle(.graphical)
-                            .tint(DS.tint)
+                            .tint(DS.pickInk)
                         DSDoorRow(icon: "bell", title: Text(String(localized: "Set for \(NoteReminders.label(picked))"))) {
                             set(picked)
                         }
@@ -96,7 +96,7 @@ struct NoteRemindTray: View {
                         .foregroundStyle(DS.textTertiary)
                 }
             }
-            .foregroundStyle(tinted ? DS.tint : DS.textPrimary)
+            .foregroundStyle(tinted ? DS.pickInk : DS.textPrimary)
             .frame(minHeight: DS.Hit.min)
             .contentShape(Rectangle())
         }

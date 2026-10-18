@@ -1095,7 +1095,7 @@ struct SourceChips: View {
                 // just pressed.
                 if !isActive, standing != "All", !standing.isEmpty, label == standing {
                     chipShape(tile: isWord, outer: true)
-                        .strokeBorder(DS.tint.opacity(0.55), lineWidth: 2)
+                        .strokeBorder(DS.pickInk.opacity(0.55), lineWidth: 2)
                 }
                 if isActive, !isWord {
                     // The active ring is always tint now — the feed sits on the
@@ -1109,7 +1109,7 @@ struct SourceChips: View {
                     // not rebuild to draw it.
                     SelectionTravel(ns: selectionNS) {
                         chipShape(tile: false, outer: true)
-                            .strokeBorder(DS.tint, lineWidth: 2.5)
+                            .strokeBorder(DS.pickInk, lineWidth: 2.5)
                     }
                 }
             }
@@ -1284,7 +1284,7 @@ private struct NotesChipMark: View {
             // would break the strip's rhythm — the same reason "All" stops at
             // its circle instead of spilling over the door beside it.
             .font(.system(size: size * 0.42, weight: .semibold))
-            .foregroundStyle(DS.tint)
+            .foregroundStyle(DS.pickInk)
             .frame(width: size, height: size)
             .clipShape(Circle())
     }
@@ -1422,7 +1422,7 @@ private struct WordChipFill: ViewModifier {
         content.background {
             if active {
                 SelectionTravel(ns: ns) {
-                    shape.fill(DS.tint)
+                    shape.fill(DS.pickInk)
                 }
             }
         }

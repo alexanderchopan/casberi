@@ -228,7 +228,7 @@ private struct MarkdownBlockView: View {
                 case .task(let done):
                     Image(systemName: done ? "checkmark.circle.fill" : "circle")
                         .dsGlyph(.body, weight: .regular)
-                        .foregroundStyle(done ? DS.tint : DS.textTertiary)
+                        .foregroundStyle(done ? DS.pickInk : DS.textTertiary)
                 }
                 prose(text)
             }

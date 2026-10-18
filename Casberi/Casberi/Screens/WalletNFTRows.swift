@@ -72,7 +72,7 @@ struct WalletNFTCollectionRows: View {
                 Button(action: onEdit) {
                     Text(String(localized: "Choose collections"))
                         .dsText(.subhead12)
-                        .foregroundStyle(DS.tint)
+                        .foregroundStyle(DS.pickInk)
                         .padding(.vertical, DS.Space.s3)
                         .contentShape(Rectangle())
                 }

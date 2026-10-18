@@ -178,7 +178,7 @@ struct WalletNFTPickerSheet: View {
                     Image(systemName: "checkmark.circle.fill")
                         .dsGlyph(.title)
                         .symbolRenderingMode(.palette)
-                        .foregroundStyle(.white, DS.tint)
+                        .foregroundStyle(.white, DS.pickInk)
                         .padding(DS.Space.s1)
                         .accessibilityHidden(true)
                         .transition(.scale.combined(with: .opacity))

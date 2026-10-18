@@ -136,7 +136,7 @@ struct L2beatNewsRow: View {
 					if mine {
 						Text(String(localized: "You follow this"))
 							.dsText(.label12)
-							.foregroundStyle(DS.tint)
+							.foregroundStyle(DS.pickInk)
 					}
 					if isIncident {
 						Text(String(localized: "Incident"))

@@ -799,7 +799,7 @@ struct FeedLedeCard: View {
                             Image(systemName: done ? "checkmark.circle.fill" : "circle")
                                 .dsSymbolSwap(done)
                                 .dsGlyph(.body, weight: .regular)
-                                .foregroundStyle(done ? DS.tint : DS.textSecondary)
+                                .foregroundStyle(done ? DS.pickInk : DS.textSecondary)
                                 .frame(width: 22, height: 22)
                                 // 44pt for the hand, 22 in the line.
                                 .dsTapTarget(Circle())

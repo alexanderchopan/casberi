@@ -64,7 +64,7 @@ struct WalletFollowSheet: View {
                 } label: {
                     Image(systemName: "doc.on.clipboard")
                         .dsGlyph(.body)
-                        .foregroundStyle(DS.tint)
+                        .foregroundStyle(DS.pickInk)
                         .frame(minWidth: 44, minHeight: 44)
                 }
                 .buttonStyle(PressSpring())

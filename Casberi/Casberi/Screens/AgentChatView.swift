@@ -109,7 +109,7 @@ struct AgentChatThread: View {
                     } label: {
                         Text("Start a new conversation")
                             .dsText(.subhead12)
-                            .foregroundStyle(DS.tint)
+                            .foregroundStyle(DS.pickInk)
                     }
                     .buttonStyle(RowPress())
                     // The pending state is keyed to THIS room (§841): a global
@@ -172,7 +172,7 @@ struct AgentChatEntry: View {
             TextField(String(localized: "Ask \(source)"), text: $draft, axis: .vertical)
                 .dsText(.body17)
                 .foregroundStyle(DS.textPrimary)
-                .tint(DS.tint)
+                .tint(DS.pickInk)
                 .lineLimit(1...6)
                 .textInputAutocapitalization(.sentences)
                 .onSubmit(send)
@@ -191,7 +191,7 @@ struct AgentChatEntry: View {
                     .dsGlyph(.feature)
                     // A hand-painted control swaps its face when it cannot act
                     // (§83) — it never just ignores the tap.
-                    .foregroundStyle(canSend ? DS.tint : DS.textTertiary)
+                    .foregroundStyle(canSend ? DS.pickInk : DS.textTertiary)
             }
             .buttonStyle(PressSpring())
             .disabled(!canSend)

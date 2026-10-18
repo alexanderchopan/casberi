@@ -47,12 +47,8 @@ struct DSCountTile: View {
     /// The lead column's floor, inline: a two-digit figure's width.
     static let leadFigure = 99
 
-    /// THE INLINE PICK IS A WASH (prd §1198, user: "lets do A w/ the lighter
-    /// tint"): the place tile under the box keeps the solid tint, so the box's
-    /// pick steps down a level instead of competing with it. The ink is the
-    /// Increase Contrast blue in dark and one notch deeper in light, ≥4.5:1 on
-    /// the wash over the well in both (the shipped blue is 3.4:1 there).
-    static let pickInk = Color.adaptive(dark: "#62a1ee", light: "#0f5bb8")
+    // The pick wears `DS.pickInk` (prd §1385): it was a blue wash of its own
+    // (§1198, "the lighter tint") while the tab pick beside it was pink.
 
     /// The inline pick's corner, concentric with `DSCountGrid`'s well: the
     /// well's corner less the box's inset (§1198).
@@ -148,21 +144,21 @@ struct DSCountTile: View {
                             Image(systemName: glyph)
                                 .dsGlyph(.body, weight: .regular)
                                 // Pink, as every glyph is (prd §1252, §1266).
-                                .foregroundStyle(isOn ? Self.pickInk : DS.brandInk)
+                                .foregroundStyle(isOn ? DS.pickInk : DS.brandInk)
                         } else {
                             Text((count ?? 0).formatted())
                                 .dsText(.heading24)
                                 .monospacedDigit()
                                 .contentTransition(countRoll)
                                 .animation(countAnimation, value: count)
-                                .foregroundStyle(isOn ? Self.pickInk : zero ? DS.textTertiary : DS.textPrimary)
+                                .foregroundStyle(isOn ? DS.pickInk : zero ? DS.textTertiary : DS.textPrimary)
                         }
                     }
                     Text(label)
                         .dsText(.body17)
                         .lineLimit(1)
                         .minimumScaleFactor(0.8)
-                        .foregroundStyle(isOn ? Self.pickInk : wants ? DS.attentionInk : DS.textPrimary)
+                        .foregroundStyle(isOn ? DS.pickInk : wants ? DS.attentionInk : DS.textPrimary)
                 }
                 // s2, not s3: the figure column leaves "Subscriptions" room to
                 // stand whole beside a two-digit count. The row is the box's
@@ -183,7 +179,7 @@ struct DSCountTile: View {
                     Image(systemName: glyph)
                         .dsGlyph(.body, weight: .regular)
                         .frame(height: 20)
-                        .foregroundStyle(isOn ? DS.tint : zero ? DS.textTertiary : DS.brandInk)
+                        .foregroundStyle(isOn ? DS.pickInk : zero ? DS.textTertiary : DS.brandInk)
                 }
                 if let count {
                     Text(count.formatted())
@@ -191,13 +187,13 @@ struct DSCountTile: View {
                         .monospacedDigit()
                         .contentTransition(countRoll)
                         .animation(countAnimation, value: count)
-                        .foregroundStyle(isOn ? DS.tint : zero ? DS.textTertiary : DS.textPrimary)
+                        .foregroundStyle(isOn ? DS.pickInk : zero ? DS.textTertiary : DS.textPrimary)
                 }
                 Text(label)
                     .dsText(.label12)
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
-                    .foregroundStyle(isOn ? DS.tint : wants ? DS.attentionInk : DS.textSecondary)
+                    .foregroundStyle(isOn ? DS.pickInk : wants ? DS.attentionInk : DS.textSecondary)
             }
             .padding(.horizontal, glyph == nil ? DS.Space.s2 : 2)
             .padding(.vertical, DS.Space.s2)

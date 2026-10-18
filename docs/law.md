@@ -41,6 +41,7 @@ Privacy and Reddit. Frames and Logos are the devnets that remain.
 - Every `Button` wears `RowPress` (a row or a word) or `PressSpring` (a disc, chip, face, tile or slab), never `.plain`. Exceptions are ratcheted in the audit (§965).
 - Becoming the pick is a crossfade on `DS.Motion.standard`, built into the template (§966).
 - A status word takes the ink (`attentionInk`/`confirmInk`/`destructiveInk`). A glyph, dot or fill keeps the hue (§1004).
+- One ink for the pick: `DS.pickInk` (pink) says state and verb, a door is `textSecondary` with its chevron, and `DS.tint` (the theme blue) is for charts and in-text links only, plus the Exit demo pill. `ds-template-audit.py` check E (§1385).
 - The brand is pink; orange was declined (§899). The day header and the category's name are the two lines of type in `DS.brandInk` (§740, §742, §1129), the day header at `heading20` (§1006).
 - Every pour is ink (`DS.pourInk`); hue never says where something came from (§524).
 - A mark packs, a word tiles: source maps are circle packs (§917). Wallet holdings are §939's treemap (Wallet section below).
@@ -233,7 +234,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1523 of 1592 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1524 of 1593 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1560,7 +1561,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1195 — A checklist's last tick says "All done"
 - §1196 — Every account page stands in the room's frame: Apps, the app's card, its tiles (amended by §1197)
 - §1197 — Every account page's ways in are its tiles, and every app with a site has a Website tile
-- §1198 — Settings' and Markets' boxes fill the well, and the box's pick is a wash
+- §1198 — Settings' and Markets' boxes fill the well, and the box's pick is a wash (amended by §1385)
 - §1199 — Things move when they change
 - §1200 — A share lands where you would look for it, and the pill names the place
 - §1201 — The Wallet's Home is four short lists, Spending is one of them, and Needs you holds what waits off chain too
@@ -1758,6 +1759,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1382 — The Feed's and the Wallet's sections stand bare: the panel keeps its air and its column, and draws no fill
 - §1383 — Library's pages stand bare too
 - §1384 — zk.money, round two: today's withdrawals named, USDC/USDT and savings, claim links kept on this device, requests date…
+- §1385 — One ink for the pick: pink is state and verb, a door is grey with its chevron, blue is charts and in-text links
 
 ## Dead rulings → what replaced them (generated)
 
