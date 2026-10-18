@@ -372,6 +372,10 @@ enum WalletIngest {
     }
 
     @MainActor private static var running = false
+    /// Whether a transfer pass is in flight — read by `FollowPrune`, which
+    /// keeps an unwatched wallet's tombstone standing until the pass that
+    /// may still be landing its rows has ended (prd §1411).
+    @MainActor static var isRefreshing: Bool { running }
 
     /// The USD floor a holding must clear to count (ruling 2026-07-15, up from
     /// $1). Airdrop-spam tokens that carry a fake price were sneaking past the
@@ -403,6 +407,18 @@ enum WalletIngest {
         let watched = WalletStore.shared.addresses.map(\.address)
         guard !watched.isEmpty, !running else { return watched.isEmpty ? nil : 0 }
         running = true
+        // **THE PASS ENDS WITH ITS OWN PRUNE (prd §1411).** This pass read
+        // `watched` once, above; a wallet unfollowed while it runs keeps
+        // landing through every arm below until the pass is over. The
+        // unfollow's own prune took what had landed by then and, because
+        // the pass was running, left the unwatched queue standing
+        // (`FollowPrune.pruneUnwatchedWallets` consumes it only between
+        // passes) — so this closing prune, declared first to run LAST, after
+        // `running` is cleared, takes the late rows and consumes the queue.
+        // Measured 2026-10-18: a follow of vitalik.eth, an unfollow two
+        // minutes in, and 22 Safe rows (four "Your turn") landed after it
+        // and stood in Needs you under no wallet at all.
+        defer { FollowPrune.pruneUnwatchedWallets(context: context) }
         defer { running = false }
 
         // Watched entries can be ENS or `.sol` names; the APIs need an address —

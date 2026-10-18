@@ -1296,6 +1296,12 @@ enum SafeBridge {
         let detected = ((UserDefaults.standard.array(forKey: detectedKey) as? [String]) ?? []).sorted()
         guard !detected.isEmpty else { return 0 }
         running = true
+        // The sweep ends with its own prune, for the same reason the
+        // foreground pass does (prd §1411): `watched` is read once below, and
+        // a wallet unfollowed mid-sweep keeps filing until the sweep is over.
+        // Declared first, so it runs after `running` is cleared and consumes
+        // the queue.
+        defer { FollowPrune.pruneUnwatchedWallets(context: context) }
         defer { running = false }
         // Resolved, so an owner followed by name still reaches its Safe
         // (prd §1330): the arm below forgets a Safe nobody reaches.
@@ -1815,6 +1821,9 @@ enum SafeBridge {
     }
 
     @MainActor private static var running = false
+    /// Whether the background sweep is in flight — `FollowPrune` reads it
+    /// beside `WalletIngest.isRefreshing` (prd §1411).
+    @MainActor static var isSweeping: Bool { running }
 
     /// A standalone sync for `SafeScreen`'s on-appear, matching
     /// `PeerBridge.syncNow`/`PrivacyPoolsBridge.syncNow`'s shape: resolves the

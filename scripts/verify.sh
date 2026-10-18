@@ -2884,6 +2884,7 @@ harness "Account-page self-test" "6 mutations, 12 drift guards — the account p
 # `git status`, because the post-commit hook only ever integrated on a REJECTED
 # push and skipped even that whenever the tree was dirty.
 harness "Repo-sync self-test" "6 checks, 2 mutations — the working copy catches up when it is safe, and never when a session is mid-edit" "scripts/repo-sync-selftest.sh" "the repo-sync self-test failed — run scripts/repo-sync-selftest.sh"
+harness "Unfollow-prune self-test" "3 drift guards, 4 mutations — an unwatch's tombstone outlives the pass still landing its rows, and every pass ends with its own prune (prd §1411)" "scripts/unfollow-prune-selftest.sh" "the unfollow-prune self-test failed — run scripts/unfollow-prune-selftest.sh"
 
 # The design system's first mechanical check (prd §299). Every other rule in
 # this file is enforced by a script; the design system was enforced by memory,

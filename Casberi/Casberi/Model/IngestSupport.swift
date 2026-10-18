@@ -767,7 +767,18 @@ enum FollowPrune {
                 context.delete(thing)
             }
         }
-        store.forgetUnwatched(forms)
+        // **THE TOMBSTONE OUTLIVES THE PASS THAT MAY STILL BE LANDING (prd
+        // §1411).** `forgetUnwatched` ends the memory of an unwatch — the
+        // queue and the name's resolution — and before §1411 the unfollow's
+        // own prune ended it at once. A transfer pass or the Safe sweep that
+        // began before the unfollow read its watch list once and keeps
+        // landing until it is over, so rows filed after that prune stood
+        // forever, under no wallet: nothing remembered the address. The
+        // memory is consumed only between passes; the passes end with a
+        // prune of their own, which is the one that consumes it.
+        if !WalletIngest.isRefreshing && !SafeBridge.isSweeping {
+            store.forgetUnwatched(forms)
+        }
         guard !removedIDs.isEmpty else { return 0 }
         context.saveHonestly()
         SpotlightIndex.remove(ids: removedIDs)
