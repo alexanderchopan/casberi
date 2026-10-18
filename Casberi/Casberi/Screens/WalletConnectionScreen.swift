@@ -80,12 +80,6 @@ struct WalletConnectionScreen: View {
             // gone (prd §748): the row above says Bitcoin is read when you
             // watch one, and where the app reaches is stated once, in
             // Settings (§702).
-            // The promise, and the only thing left on this page that is not a
-            // chain — the Disconnect that used to sit under it belongs to the
-            // account page's exits (see this file's doc).
-            DSFootnote("Activity is public, read directly on \(DS.device).")
-                .padding(.top, DS.Space.s3)
-                .plainAccountRow()
         }
         .listStyle(.plain)
         .listSectionSpacing(.compact)

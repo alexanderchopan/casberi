@@ -46,7 +46,6 @@ struct ApprovalPrepareCard: View {
                         copy(json)
                     }
                 }
-                DSFootnote("A transaction you sign there — never here.")
             } else {
                 // The closed loop, from reads alone: the person revoked in
                 // their wallet or on Revoke.cash, and the chain now says so.

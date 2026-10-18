@@ -52,8 +52,6 @@ struct SubscriptionSheet: View {
                 if let manualID = item?.manualID { SubscriptionStore.shared.remove(manualID) }
                 dismiss()
             }
-        } message: {
-            Text("Only what you added goes. A charge a card shows stays.")
         }
         // Renamed in the editor, the plan is under another id: this page has
         // nothing left to show, so it closes onto the list that holds it.
@@ -105,8 +103,6 @@ struct SubscriptionSheet: View {
             out.append(.init(String(localized: "Paid so far"), money(paid, item.currency, mask)))
         }
         if let pays = item.paysWith { out.append(.init(String(localized: "Pays with"), pays)) }
-        out.append(.init(String(localized: "Found in"),
-                         ListFormatter.localizedString(byJoining: item.foundIn.map(foundName))))
         return out
     }
 
@@ -158,11 +154,6 @@ struct SubscriptionSheet: View {
         if (25...35).contains(days) { return String(localized: "a month") }
         if (6...8).contains(days) { return String(localized: "a week") }
         return String(localized: "every \(days) days")
-    }
-
-    /// "You" reads as what it is in a list of places.
-    private func foundName(_ source: String) -> String {
-        source == Subscriptions.byYou ? String(localized: "Added by you") : source
     }
 }
 

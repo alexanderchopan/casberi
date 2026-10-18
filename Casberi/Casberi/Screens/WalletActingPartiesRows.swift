@@ -31,10 +31,6 @@ struct WalletActingPartiesRows: View {
     /// unbounded first, one row per thing however many of your wallets it acts
     /// for.
     let holders: [WalletPermissions.Holder]
-    /// The raw read, for the two ceilings a holder list structurally cannot
-    /// state: an account whose modules cannot be enumerated has NO holders to
-    /// show, so an empty list is exactly what a silent ceiling looks like.
-    let acting: [WalletActingParties.Account]
     /// **FIVE ROWS, THEN ONE DOOR (prd §1408).** `cap` holds the list to that
     /// many until `open`; the door under the rows (`DSMoreRow`) calls `more`.
     /// Nil draws every row, for a caller with no fold.
@@ -48,7 +44,7 @@ struct WalletActingPartiesRows: View {
         let all = WalletPermissions.actingHolders(holders)
         let folded = cap.map { all.count > $0 } ?? false
         let rows = (folded && !open) ? Array(all.prefix(cap ?? all.count)) : all
-        if !rows.isEmpty || !ceilings.isEmpty {
+        if !rows.isEmpty {
             VStack(alignment: .leading, spacing: 0) {
                 ForEach(Array(rows.enumerated()), id: \.offset) { index, holder in
                     row(holder)
@@ -58,13 +54,6 @@ struct WalletActingPartiesRows: View {
                     DSMoreRow(title: open ? Text("Show fewer")
                                           : Text(verbatim: String(localized: "See all \(all.count)")),
                               opens: !open, action: more)
-                }
-                ForEach(ceilings, id: \.self) { note in
-                    Text(note)
-                        .dsText(.label12)
-                        .foregroundStyle(DS.textTertiary)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .padding(.top, DS.Space.s2)
                 }
             }
             .padding(.bottom, DS.Space.s4)
@@ -112,23 +101,5 @@ struct WalletActingPartiesRows: View {
             : ListFormatter.localizedString(byJoining: names)
         guard let note = holder.note else { return acts }
         return "\(acts) · \(note)"
-    }
-
-    /// What this scope CANNOT see, said out loud (§293's ceiling rule: a
-    /// surface that listed nothing and looked complete is worse than one that
-    /// says it cannot look).
-    ///
-    /// Counted rather than named per account, because the reason is the same
-    /// for every one of them and five copies of one sentence is not five
-    /// facts.
-    private var ceilings: [String] {
-        var out: [String] = []
-        let unreadable = acting.filter(\.modulesUnreadable).count
-        if unreadable == 1 {
-            out.append(String(localized: "One of your accounts is a smart account whose installed modules can't be listed — this app can see that it is one, not what is in it."))
-        } else if unreadable > 1 {
-            out.append(String(localized: "\(unreadable) of your accounts are smart accounts whose installed modules can't be listed — this app can see that they are, not what is in them."))
-        }
-        return out
     }
 }

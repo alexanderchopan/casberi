@@ -195,7 +195,7 @@ check(room.recent.map(\.name) == ["emptyRecent"], "an empty app used lately is l
 check(room.quietCount == 2, "everything else is one count, never a row each")
 check(abs(room.totalUSD - 1.37) < 0.0001, "the total sums what was read")
 check(room.recentCount == 1, "recent is by last use")
-check(PrivyHomeFeed.footnote(room)?.contains("1 not read yet") == true, "an unread wallet is said, not hidden")
+check(PrivyHomeFeed.footnote(room) == "2 more apps", "the foot counts what it does not list, and narrates no reading (prd §1416)")
 check(PrivyHomeFeed.lastUsed(now.addingTimeInterval(-3 * 86_400), now: now) == "Used 3 days ago", "a row says when the app was last used")
 
 // ── What the feed shows, and where the doors go ─────────────────────────

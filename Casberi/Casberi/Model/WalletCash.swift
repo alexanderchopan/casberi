@@ -24,15 +24,6 @@ enum WalletCash {
 
     static let holderPrefix = "cash:"
 
-    /// Every stored cash reading, by the place it joins (prd §1078).
-    static func readings() -> [WalletPortfolio.PlaceReading] {
-        held().compactMap { cash in
-            cash.readAt.map { WalletPortfolio.PlaceReading(holderID: cash.holderID, label: cash.label, at: $0) }
-        }
-        .reduce(into: [WalletPortfolio.PlaceReading]()) { out, reading in
-            if !out.contains(where: { $0.holderID == reading.holderID }) { out.append(reading) }
-        }
-    }
 
     /// Every card balance owed, in words ("$812 owed on Apple Card"), for the
     /// crown's note. Never counted (prd §1078).

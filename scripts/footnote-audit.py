@@ -94,21 +94,9 @@ ALLOWANCE = {
     # (a), the budget control's three conditional lines (a)(b), and the Mac
     # MCP row's one sentence — four separate components in one file.
     "AgentKeyDetail.swift": (5, "four components; (a)(b)"),
-    # The rename field's destructive consequence, the empty card, and the name
-    # nudge's consequence are three different surfaces of the address book.
-    "AddressBookViews.swift": (3, "three surfaces; consequence of an edit (b)"),
-    # The quote's two lines never show together: "sign there" is the ready
-    # state, the price drift is the quote.
-    "ENSRenewCard.swift": (2, "exclusive states; signing and money (b)"),
     # The reach screen (§967): Private Relay does not cover an app's own
     # requests (a), and what the ledger does not record (a).
     "NetworkReachScreen.swift": (2, "relay line and the ledger's ceiling; (a)"),
-    # A Safe you cannot sign vs one you just signed — exclusive states (b).
-    # The third (prd §1249) qualifies the balance simulation above the calls:
-    # "Simulated as the Safe's call, before signatures and gas" — an honesty
-    # guard on a figure (a), drawn only when a simulation answered, beside the
-    # sign block's signing disclosure (b). Both kept categories.
-    "SafeQueueCard.swift": (2, "exclusive states; signing (b) — the Open in Safe footnote went with §1334"),
     # The watch form and the co-signer block: the second is the one place the
     # app says a key has no recovery phrase (b).
     "SafeScreen.swift": (2, "watch form + co-signer key custody (b)"),

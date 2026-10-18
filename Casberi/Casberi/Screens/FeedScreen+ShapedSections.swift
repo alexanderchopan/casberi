@@ -451,7 +451,6 @@ extension FeedScreen {
                     // it; then the apps that hold a wallet for you (§1124); NFTs
                     // still read under them (prd §1048).
                     walletTokenListSection
-                    walletStaleReadingsSection
                     walletPositionsSections
                     // What an app holds for you, as it read it (prd §1341): a
                     // balance is a holding, never a transaction.

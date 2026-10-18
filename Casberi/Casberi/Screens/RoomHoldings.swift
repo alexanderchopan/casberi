@@ -69,32 +69,18 @@ struct RoomHoldingsFigure: View {
         let holdings: [HoldingsTreemap.Holding] = priced.isEmpty
             ? cells.map { .init(id: $0.symbol.isEmpty ? $0.name : $0.symbol, usd: 1, route: nil, display: $0.amount) }
             : priced.map { .init(id: $0.mainnet.uppercased(), usd: $0.usd, route: nil, display: $0.cell.amount) }
-        let unpriced = priced.isEmpty ? [] : cells.filter { c in !priced.contains { $0.cell.id == c.id } }
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             HoldingsTreemap(total: String(cells.count),
                             caption: cells.count == 1 ? String(localized: "asset")
                                                       : String(localized: "assets"),
                             holdings: holdings,
                             showsShares: !priced.isEmpty)
-            if read, !unpriced.isEmpty {
-                Text(unpricedLine(unpriced))
-                    .dsText(.label12)
-                    .foregroundStyle(DS.textTertiary)
-                    .lineLimit(1)
-            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .task(id: cells.map(\.symbol).joined(separator: "|")) {
             prices = await MainnetPrices.prices(for: cells.map(\.symbol))
             read = true
         }
-    }
-
-    private func unpricedLine(_ unpriced: [RoomHoldings.Cell]) -> String {
-        if unpriced.count == 1, let one = unpriced.first {
-            return String(localized: "\(one.name) isn't on mainnet, so it isn't sized")
-        }
-        return String(localized: "\(String(unpriced.count)) aren't on mainnet, so they aren't sized")
     }
 }
 

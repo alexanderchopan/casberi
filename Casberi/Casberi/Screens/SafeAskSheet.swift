@@ -220,7 +220,7 @@ struct SafeStatementBlock: View {
             SafeSignVerb(verb: String(localized: "Sign"), signing: signing) {
                 Task { await sign(ready) }
             }
-            DSFootnote("A statement, not a transaction — nothing moves. Casberi signs only what it can name.")
+            DSFootnote("Nothing moves.")
         }
     }
 
@@ -295,7 +295,7 @@ struct SafeStatementBlock: View {
         case .messageMismatch:
             return String(localized: "The words Casberi found don't hash to what this request names, so it won't sign them.")
         case .unreadable(let why):
-            return why + " " + String(localized: "Casberi signs only what it can name.")
+            return why
         case .serviceThrottled:
             return String(localized: "Safe paused reads right now, so Casberi couldn't fetch the statement.")
         case .nothingToDo:
@@ -424,7 +424,7 @@ struct SafeRecoveryBlock: View {
             SafeSignVerb(verb: String(localized: "Approve"), signing: signing) {
                 Task { await sign(ready) }
             }
-            DSFootnote("An approval, not a transaction. The module waits out its delay, and the current owners can cancel until then.")
+            DSFootnote("The owners can cancel until it runs.")
         }
     }
 

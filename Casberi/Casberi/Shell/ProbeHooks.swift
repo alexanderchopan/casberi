@@ -3778,7 +3778,6 @@ enum ProbeHooks {
                 if let target = e.oldestWorthReviewing {
                     NSLog("exposureProbe| button→ %@ (%@)", target.spender, target.stateLine)
                 }
-                if let note = e.unpricedNote { NSLog("exposureProbe| note: %@", note) }
             }
         },
         // `-connectPickerProbe "<addr[,addr]>"` — the connect picker's plan

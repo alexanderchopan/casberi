@@ -1147,10 +1147,6 @@ struct AddressCard: View {
                     .frame(minHeight: DS.Hit.min)
                     .dsWell(cornerRadius: DS.Radius.control, recessed: true)
                     .padding(.horizontal, DS.Space.s4)
-                // The one consequence a field cannot state by its shape. It
-                // sat in the alert's message; without a container to carry it
-                // the field has to, and only while the field is open.
-                DSFootnote("A blank name removes it from your book.")
             }
             .onAppear {
                 // One turn later: a `@FocusState` set in the same turn the
@@ -2250,12 +2246,6 @@ struct AddressCard: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text("Give them a name")
                     .dsText(.heading17).foregroundStyle(DS.textPrimary)
-                // A young card already says what lands here (prd §462), so
-                // the reason to name it is said only once something has.
-                if hasThings {
-                    DSFootnote("It rewrites every transaction you have with this address, everywhere in the app.",
-                               scale: .page)
-                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(DS.Space.s4)

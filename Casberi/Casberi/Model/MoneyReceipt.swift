@@ -488,10 +488,7 @@ struct MoneyReceipt: Equatable {
             amount: parts.number.isEmpty ? nil
                 : Amount(number: (received ? "+" : "−") + parts.number,
                          unit: parts.unit, tone: received ? .gain : .plain),
-            // Said out loud rather than left blank: this bridge reads a chain,
-            // and a blank where every other receipt shows a dollar figure reads
-            // as a number we failed to fetch.
-            secondary: String(localized: "Read from the chain, not a market — so there's no dollar figure."),
+            secondary: nil,
             sentence: bitcoinSentence(f),
             stamp: settling ? .settling : .settled,
             finality: settling ? .open : .torn,

@@ -559,9 +559,9 @@ extension FeedScreen {
             case .privy(let room):
                 return room.funded.isEmpty && room.readCount == 0 ? PrivyHomeFeed.headline(room) : nil
             case .safe(let room):
-                // A module or a guard is a fact about money that keeps the card.
+                // A module is a fact about money that keeps the card.
                 return room.entries.isEmpty && SafeRoom.note(room) == nil
-                    && SafeRoom.guardNote(room) == nil && SafeRoom.stateNote(room) == nil
+                    && SafeRoom.stateNote(room) == nil
                     ? SafeRoom.headline(room) : nil
             case .cardSpend(let room, _):
                 return room.months.isEmpty && room.currencies.count <= 1

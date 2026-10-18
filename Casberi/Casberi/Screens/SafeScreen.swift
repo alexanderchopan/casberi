@@ -109,18 +109,6 @@ struct SafeScreen: View {
                 pairBlock
                 guardsBlock
                 requestBlock
-                // THE TWO LIMITS THAT MAKE THE SIGNING CLAIM SAFE TO PRINT
-                // (prd §641b, caught by `safetx-selftest.sh` after §641).
-                // They lived in the offer's `features` list, which the product
-                // page drew and which went with it — so the tagline went on
-                // claiming "this phone as a signer" with nothing carrying the
-                // limit. `NetworkReach` states it, but that is a sheet you
-                // tap into, not the screen where you make the key.
-                // Unnumbered: facts, not steps (§220).
-                BridgeStepLines(steps: [
-                    String(localized: "Signs behind Face ID. It can never execute."),
-                    String(localized: "This phone holds no funds."),
-                ], numbered: false)
             },
             more: { EmptyView() },
             keySheet: { EmptyView() }
@@ -228,7 +216,7 @@ struct SafeScreen: View {
             // lede says the same thing with the part that matters — where
             // signing actually happens — in both states.
             DSSlabNote(text: safeCount > 0
-                ? String(localized: "Following \(safeCount) Safe — a pending signature lands in your feed the moment it's proposed.")
+                ? String(localized: "Following \(safeCount) Safe")
                 : String(localized: "Follow a Safe, or an account that signs for one."),
                        plain: true)
         }
@@ -377,14 +365,13 @@ struct SafeScreen: View {
     }
 
     private func signsForLine(_ report: SafeSigner.StandingReport) -> String {
-        let spare = report.safes.map(\.spareOwners).min() ?? 0
         // Two strings so English agrees with its own number (prd §855): the
         // one this replaced had no English localization, so it fell back to
         // the key and read "Signing for 2 Safe."
         let count = report.safes.count
         return count == 1
-            ? String(localized: "Signing for one Safe. Losing this phone would still leave enough owners to change that (\(spare) to spare).")
-            : String(localized: "Signing for \(count) Safes. Losing this phone would still leave enough owners to change that (\(spare) to spare).")
+            ? String(localized: "Signing for one Safe")
+            : String(localized: "Signing for \(count) Safes")
     }
 
     private func makeSigner() {
@@ -711,13 +698,10 @@ struct SafeScreen: View {
 
     // MARK: - Actions
 
-    /// Safe's keyless reads share one monthly pool across every app that uses
-    /// them, so the line names Safe's limit, not the person's usage.
+    /// Safe's keyless reads share one monthly pool; when it refuses, the line
+    /// says only that Safe didn't answer (prd §1416).
     static func throttledLine(until: Date?) -> String {
-        guard let until else {
-            return String(localized: "Safe paused reads, so the queue wasn't checked.")
-        }
-        return String(localized: "Safe paused reads, so the queue wasn't checked. It reopens \(until.formatted(.relative(presentation: .named))).")
+        String(localized: "Couldn't reach Safe")
     }
 
     /// Refresh the queue for the watched wallets. The catalog seat is kept

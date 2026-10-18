@@ -65,16 +65,10 @@ struct SafeRoomCard: View {
                 // bridge can state that isn't merely informational (a module
                 // can move funds WITHOUT a signature).
                 .alert(SafeRoom.note(room), glyph: "exclamationmark.triangle.fill"),
-                // The guard line, in a plainer register (2026-09-07). A guard is
-                // a rule the owners CHOSE, not a way out for funds.
-                .note(SafeRoom.guardNote(room), glyph: "shield.lefthalf.filled"),
                 // The state line — a nonce collision, or the fully-signed count
                 // the headline couldn't carry. Deliberately NOT attention ink:
                 // §238 ruled a rival pair is stated plainly.
                 .note(SafeRoom.stateNote(room)),
-                // What the counts above are as of, while Safe refuses reads
-                // (prd §789). Plain register: nothing is wrong with the Safe.
-                .note(SafeRoom.readLimitNote(room), glyph: "clock"),
             ],
             footnotes: [.quiet(SafeRoom.footnote(room, drawn: drawn.count))]) {
             if !drawn.isEmpty {

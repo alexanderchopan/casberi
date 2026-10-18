@@ -123,7 +123,7 @@ struct PriceObjectCard<Evidence: View>: View {
     @ViewBuilder private var freshnessStamp: some View {
         switch object.freshness {
         case .live:
-            DSStamp(word: String(localized: "Live"), weight: .good)
+            EmptyView()
         case .aged(let when):
             DSStamp(word: when.formatted(.relative(presentation: .named)), weight: .quiet)
         }

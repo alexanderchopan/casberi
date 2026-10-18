@@ -100,7 +100,6 @@ struct WalletScreen: View {
                 wallet.remove(at: IndexSet(wallet.addresses.indices))
                 FollowPrune.pruneUnwatchedWallets(context: modelContext)
             },
-            disconnectNote: String(localized: "The names you filed stay."),
             sheet: $sheet,
             act: { actBlock },
             more: { moreBlock },
@@ -181,8 +180,6 @@ struct WalletScreen: View {
                    systemImage: "network") {
             route.pushBridge(.walletConnection)
         }
-        DSSlabNote(text: String(localized: "Read-only — following can never move funds."),
-                   plain: true)
     }
 
     /// Land in the room the first address just made real (`RoomDoor`'s own

@@ -1525,8 +1525,6 @@ struct ThingSheetView: View {
             TextField("Name (e.g. Mom)", text: $counterpartyDraft)
             Button("Save") { nameCounterparty() }
             Button("Cancel", role: .cancel) { counterpartyTarget = nil }
-        } message: {
-            Text("It rides every future transfer. Blank clears it.")
         }
         // Name anyone else a thing is from (prd §916 amendment — user: "any
         // address or whatever a person should be able to save easily"): the
@@ -1544,8 +1542,6 @@ struct ThingSheetView: View {
                 identityTarget = nil
             }
             Button("Cancel", role: .cancel) { identityTarget = nil }
-        } message: {
-            Text("It names them everywhere in the app. Blank removes the name.")
         }
         // Walking the thread in-app (2026-07-16) — the parent this post
         // answers, or a reply under it. A read: no consent gate, the standing
@@ -3033,7 +3029,7 @@ struct ThingSheetView: View {
     private var securityWarning: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             if thing.hasSecurityFlag("poisoning"), moneyFlag?.securityFlag != "poisoning" {
-                warningLine(String(localized: "Looks like a copy of an address you've used — this is a different account."))
+                warningLine(String(localized: "A copy of an address you've used"))
             }
             // The symbol's own sentence, recovered from the text the row
             // shows (`WalletSafety.spoofVerdict`) so the warning can name what
@@ -3047,7 +3043,7 @@ struct ThingSheetView: View {
             // asserts "Sent", in the app's own voice, and the correction has
             // to land before any explanation of the mechanism.
             if thing.hasSecurityFlag("spam"), moneyFlag?.securityFlag != "spam" {
-                warningLine(String(localized: "You didn't send this. A spam token can announce any transfer it likes — it's advertising, not money that moved."))
+                warningLine(String(localized: "You didn't send this"))
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

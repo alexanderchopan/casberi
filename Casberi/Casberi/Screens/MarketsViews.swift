@@ -256,11 +256,9 @@ struct WatchAlertsSection: View {
             return String(localized: "Went off \(fired.formatted(.relative(presentation: .named)))")
         }
         switch alert.kind {
-        case .move:     return String(localized: "Up or down, once a day at most")
-        case .volume:   return String(localized: "The last 24 hours, once a day at most")
+        case .move, .volume: return String(localized: "Once a day")
         case .gasBelow:
-            let chain = GasPrice.network(fromRef: alert.ref).flatMap(GasPrice.chain)?.name
-            return chain.map { String(localized: "On \($0), once") }
+            return GasPrice.network(fromRef: alert.ref).flatMap(GasPrice.chain)?.name
         case .above, .below:
             guard let price, let distance = alert.distance(from: price) else { return nil }
             return String(localized: "\(TokenChartStyle.changeText(distance)) from here")
@@ -437,9 +435,8 @@ struct WatchAlertTray: View {
             return "\(title) · \(sub)"
         }
         switch measure {
-        case .price:  return String(localized: "Higher than now alerts on the way up, lower on the way down. Once.")
-        case .move:   return String(localized: "Up or down, once a day at most")
-        case .volume: return String(localized: "When the last 24 hours trade more than this, once a day at most.")
+        case .price:  return String(localized: "Once")
+        case .move, .volume: return String(localized: "Once a day")
         }
     }
 

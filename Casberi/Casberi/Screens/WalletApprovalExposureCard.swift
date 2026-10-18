@@ -94,17 +94,6 @@ struct WalletApprovalExposureCard: View {
                     reviewButton(target)
                 }
 
-                // The one footnote (prd §748): what a revoke costs.
-                DSFootnote(prose: String(localized: "Revoking is free apart from gas."))
-                    .padding(.top, DS.Space.s3)
-
-                if let note = exposure.unpricedNote {
-                    Text(note)
-                        .dsText(.label12)
-                        .foregroundStyle(DS.textTertiary)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .padding(.top, DS.Space.s2)
-                }
             }
             // **HEADERS, NO CARD (user ruling, prd §493: "Lets do headers no
             // cards").** Applied to EVERY scope list in both rooms, not to this

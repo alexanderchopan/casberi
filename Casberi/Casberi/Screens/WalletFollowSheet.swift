@@ -77,11 +77,9 @@ struct WalletFollowSheet: View {
 
     @ViewBuilder private var before: some View {
         if !wallet.canWatchMore {
-            footnote(Text("You follow \(WalletStore.watchLimit) addresses, the most there is. Stop following one on its account page first."))
+            footnote(Text("Following \(WalletStore.watchLimit) of \(WalletStore.watchLimit)."))
         }
-        if near.isEmpty {
-            footnote(Text("0x, Solana or Bitcoin, or a name like casberi.eth."))
-        } else {
+        if !near.isEmpty {
             // No heading over them (user: "get rid of 'near your money' that
             // is so weird"): each row's line already says why it is here.
             ForEach(near, id: \.address) { s in
@@ -130,8 +128,6 @@ struct WalletFollowSheet: View {
             }
             .padding(.horizontal, DS.Space.s4)
             .padding(.top, DS.Space.s4)
-        } else {
-            footnote(Text("Not an address or a name yet."))
         }
     }
 
@@ -204,7 +200,7 @@ struct WalletFollowSheet: View {
         case .alreadyWatching:
             following.insert(WalletFollowSuggest.key(target.address))
         case .limitReached:
-            chrome?.flash(String(localized: "You follow \(WalletStore.watchLimit) addresses, the most there is."))
+            chrome?.flash(String(localized: "Following \(WalletStore.watchLimit) of \(WalletStore.watchLimit)."))
         case .invalid:
             chrome?.flash(String(localized: "That doesn't look like an address."))
         }

@@ -62,14 +62,6 @@ enum TokenChartStyle {
         now.timeIntervalSince(fetchedAt) < freshWindow
     }
 
-    /// "read just now" / "read 12 min ago" — the price surface's own version of
-    /// the wallet's "as of Xh ago".
-    static func readLine(_ fetchedAt: Date, now: Date = .now) -> String {
-        let age = now.timeIntervalSince(fetchedAt)
-        if age < 60 { return String(localized: "read just now") }
-        return String(localized: "read \(fetchedAt.formatted(.relative(presentation: .named)))")
-    }
-
     /// The delta's ink, flat included — the up/down reading of a change is
     /// only honest once the change survives rounding.
     static func accent(change: Double, scheme: ColorScheme) -> Color {
@@ -804,7 +796,6 @@ struct TokenChartView<R: PriceRange, Fallback: View>: View {
                                    value: awaitingRange)
                     chipsOrCoarseLabel(chart)
                         .frame(maxWidth: .infinity)
-                    readLine(chart)
                     if let note {
                         Text(note)
                             .dsText(.subhead12).foregroundStyle(DS.textTertiary)
@@ -825,7 +816,6 @@ struct TokenChartView<R: PriceRange, Fallback: View>: View {
                                value: awaitingRange)
                 if hero { heroFooter(chart) }
                 sinceWatchedLine(chart)
-                readLine(chart)
                 if let note {
                     Text(note)
                         .dsText(.subhead12).foregroundStyle(DS.textTertiary)
@@ -850,18 +840,6 @@ struct TokenChartView<R: PriceRange, Fallback: View>: View {
             // somebody else's number.
             window: range.label, fetchedAt: chart.fetchedAt,
             watched: since, coarse: chart.coarse)
-    }
-
-    /// When this price was read (2026-08-16, §83). Always drawn, never
-    /// conditional on the answer being old: a freshness line that appears only
-    /// when something is stale teaches people to read its ABSENCE as
-    /// "current", which is the same overclaim one level up.
-    @ViewBuilder private func readLine(_ chart: TokenChart) -> some View {
-        Text(TokenChartStyle.readLine(chart.fetchedAt))
-            .dsText(.label12)
-            .foregroundStyle(DS.textTertiary)
-            .frame(maxWidth: .infinity, alignment: hero ? .center : .leading)
-            .accessibilityLabel(Text("Price \(TokenChartStyle.readLine(chart.fetchedAt))"))
     }
 
     /// "+41.2% · since Jul 2 — you watched at $0.0031". The change is the
@@ -955,7 +933,7 @@ struct TokenChartView<R: PriceRange, Fallback: View>: View {
     /// so the two layouts can't drift on the same honesty copy.
     @ViewBuilder private func chipsOrCoarseLabel(_ chart: TokenChart) -> some View {
         if chart.coarse {
-            Text("24h · 5 price points")
+            Text("24h")
                 .dsText(.label12).foregroundStyle(DS.textTertiary)
         } else {
             rangeChips

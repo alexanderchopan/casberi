@@ -65,7 +65,7 @@ struct TokenQuickSheet: View {
                 DSSheetHead(disc: {
                     BridgeIcon(name: TokenWatch.source, size: DS.Face.shelf, circular: true)
                 },
-                            lead: String(localized: "Token · held in a followed account"),
+                            lead: String(localized: "Token"),
                             title: headerTitle)
                 TokenChartView(chain: route.chain, address: route.address) {
                     // No pool anywhere (dead/illiquid) — say so; the door out

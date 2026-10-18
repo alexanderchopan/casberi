@@ -340,18 +340,11 @@ struct CardSpendRoom: Equatable {
         start.formatted(.dateTime.month(.abbreviated).locale(locale))
     }
 
-    /// What the strip is: which currency, how many months, and what that choice
-    /// left out. Nil when there is no strip to caption.
+    /// What the strip is: which currency and how many months (prd §1416: what
+    /// the strip left out is not narrated). Nil when there is no strip.
     static func historyNote(_ room: CardSpendRoom) -> String? {
         guard !room.months.isEmpty, let code = room.lead?.code else { return nil }
-        var line = String(localized: "\(code) · \(room.months.count) months")
-        if room.monthsHidden > 0 {
-            line += " · " + String(localized: "\(room.monthsHidden) earlier not drawn")
-        }
-        if room.monthsOtherCurrency > 0 {
-            line += " · " + String(localized: "\(room.monthsOtherCurrency) in other currencies")
-        }
-        return line
+        return String(localized: "\(code) · \(room.months.count) months")
     }
 
     /// The start of the window `back` windows ago — 1 is the current one.
@@ -546,39 +539,16 @@ struct CardSpendRoom: Equatable {
             return String(localized: "\(spendsLabel(room.allTime, unit: room.unit)) before that")
         }
         if let change = deltaLabel(lead) { return change }
-        if lead.prior == nil {
-            // Said out loud rather than left blank: "no comparison" and "no
-            // change" look identical on a card, and only one of them is a
-            // measurement.
-            return String(localized: "\(spendsLabel(lead.spends, unit: room.unit)) · not following long enough to compare")
-        }
+        // No prior window: the count alone (prd §1416).
+        if lead.prior == nil { return spendsLabel(lead.spends, unit: room.unit) }
         return String(localized: "\(spendsLabel(lead.spends, unit: room.unit)) · about the same as the 30 days before")
     }
 
-    /// The quiet line at the foot: spends we could not price, and how long the
-    /// card has been unused. The unpriced clause is not politeness — such a
-    /// spend is money missing from the total directly above it.
+    /// The quiet line at the foot: how long the card has been unused. What
+    /// could not be priced and when a daily card settles are not narrated
+    /// (prd §1416).
     static func footnote(_ room: CardSpendRoom, now: Date = .now) -> String? {
-        var parts: [String] = []
-        if room.unpriced > 0 {
-            switch room.unit {
-            case .spend:
-                parts.append(room.unpriced == 1
-                             ? String(localized: "1 spend has no readable amount")
-                             : String(localized: "\(room.unpriced) spends have no readable amount"))
-            case .settledDay:
-                parts.append(room.unpriced == 1
-                             ? String(localized: "1 day has no readable amount")
-                             : String(localized: "\(room.unpriced) days have no readable amount"))
-            }
-        }
-        // The one thing a daily card must say that the controls cannot: the
-        // newest day on the card is yesterday's, not today's (prd §1311).
-        if room.unit == .settledDay {
-            parts.append(String(localized: "Settles once a day, so today's spending lands tomorrow"))
-        }
-        if let idle = idleNote(newest: room.newest, now: now) { parts.append(idle) }
-        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+        idleNote(newest: room.newest, now: now)
     }
 
     /// "unused for 40 days" — only once the gap outruns the window itself, so

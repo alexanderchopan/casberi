@@ -972,7 +972,7 @@ struct SettingsHome: View {
             // The verb is the plus on the count (prd §1292), so a card with
             // no wallets is not drawn at all.
             if !watched.isEmpty {
-            kindCard(String(localized: "Your accounts"), glyph: "wallet.bifold") {
+            kindCard(String(localized: "Wallet"), glyph: "wallet.bifold") {
                 ForEach(watched) { addr in
                     DSPushRow(title: Text(verbatim: addr.label.isEmpty ? WalletStore.shortAddress(addr.address) : addr.label),
                               subtitle: addr.label.isEmpty ? nil : Text(verbatim: WalletStore.shortAddress(addr.address)),
@@ -1259,7 +1259,7 @@ enum SettingsScope: String, CaseIterable, Identifiable, Hashable, Sendable {
         // user: "when you click plus it says add contact or contacts").
         case .people:        return String(localized: "Contacts")
         case .subscriptions: return String(localized: "Subscriptions")
-        case .wallets:       return String(localized: "Accounts")
+        case .wallets:       return String(localized: "Wallet")
         }
     }
 

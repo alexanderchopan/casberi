@@ -413,10 +413,10 @@ grep -qE 'holder\.power\.(phrase|short)' "$ROWS" \
 # rather than tidied one.
 grep -q 'holder.accounts.map' "$ROWS" \
   || fail "a merged holder no longer names the wallets it acts for"
-# §293's ceiling: an account whose modules cannot be listed says so, because an
-# empty list and an unreadable one look identical.
+# §293's ceiling sentence is cut (prd §1416): the list names who can act, and
+# narrates nothing about what it could not read.
 grep -q 'modulesUnreadable' "$ROWS" \
-  || fail "the unreadable-modules ceiling is no longer stated in the list"
+  && fail "the list narrates unreadable modules again — §1416 cut it"
 
 # THE PAIR, BOTH DIRECTIONS (2026-08-31, amended by prd §1272). The two
 # Permissions lists sit one above the other and must never behave alike: the

@@ -523,8 +523,8 @@ do {
     // A transfer that can still be reorganized out of the chain is not history.
     check(settling.finality == .open, "and is NOT torn off")
     check(settling.sentence.contains("Block 959,701"), "the block is the sentence's subject")
-    check(settling.secondary?.contains("not a market") == true,
-          "it says out loud that there is no dollar figure")
+    check(settling.secondary == nil,
+          "no line narrates the missing dollar figure (prd §1416)")
 
     f.settling = false
     check(MoneyReceipt.compose(f)?.finality == .torn, "once settled, it tears")

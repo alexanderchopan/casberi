@@ -19,9 +19,6 @@ import SwiftUI
 struct WalletSecurityCounts: Equatable {
     var signatures = 0
     var delegations = 0
-    /// A delegate read whose modules could not be read: the section says so,
-    /// so the scope is not empty, though nothing is counted.
-    var delegationsUnreadable = false
     var approvals = 0
     var unlimited = 0
     var poisoning = 0
@@ -30,7 +27,7 @@ struct WalletSecurityCounts: Equatable {
 
     var flagged: Int { poisoning + fakeTokens + fakeTransfers }
     var isEmpty: Bool {
-        signatures + delegations + approvals + flagged == 0 && !delegationsUnreadable
+        signatures + delegations + approvals + flagged == 0
     }
 }
 
@@ -46,7 +43,6 @@ extension FeedScreen {
         return WalletSecurityCounts(
             signatures: walletSignatureWarnings.count,
             delegations: WalletPermissions.actingHolders(holders).count,
-            delegationsUnreadable: walletLive.acting.contains(where: { $0.modulesUnreadable }),
             approvals: grants.count,
             unlimited: grants.filter(\.unlimited).count,
             poisoning: warnings.filter { $0.kind == .poisoning }.count,

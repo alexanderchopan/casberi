@@ -72,20 +72,20 @@ extension FeedScreen {
         Set(bridges.bridges.filter { $0.status != .paused }.map(\.name))
     }
 
-    /// WHAT IS NOT IN THE WALLET TOTAL, in words (prd §827, §828) — nil when
-    /// every followed chain answered and priced.
+    /// WHAT IS NOT IN THE WALLET TOTAL, named and nothing more (prd §827,
+    /// §828, §1416) — nil when every followed chain answered and priced.
     var walletTotalNote: String? {
         var parts: [String] = []
         if !unreadableChains.isEmpty {
-            parts.append(String(localized: "No answer from \(unreadableChains.joined(separator: ", "))"))
+            parts.append(unreadableChains.joined(separator: ", "))
         }
         if !unpricedChains.isEmpty {
-            parts.append(String(localized: "Couldn't price \(unpricedChains.joined(separator: ", "))"))
+            parts.append(unpricedChains.joined(separator: ", "))
         }
         // Cash in a currency Kraken can't price (prd §1048). Combined read
         // only, so a scoped page never carries it.
         if selectedWallet == nil, let cash = portfolio?.unpricedCash, !cash.isEmpty {
-            parts.append(String(localized: "Couldn't price \(cash.joined(separator: ", "))"))
+            parts.append(cash.joined(separator: ", "))
         }
         // A card balance owed (prd §1078): money the total leaves out on
         // purpose, named beside it. The combined page only.
@@ -93,7 +93,7 @@ extension FeedScreen {
             parts.append(owed.joined(separator: ", "))
         }
         guard !parts.isEmpty else { return nil }
-        return String(localized: "\(parts.joined(separator: "; ")) — not in this total")
+        return String(localized: "Not counting \(parts.joined(separator: ", "))")
     }
 
     /// The portfolio's own value-history line (2026-07-18), leading the
@@ -316,7 +316,6 @@ extension FeedScreen {
                             // the word leaves its row behind — a 20pt gap under
                             // the venue rail with nothing in it.
                             hidesEmptyCaption: true,
-                            awaitsLine: selectedSeat.map(seatKeepsLine) ?? true,
                             // No mover line and a shorter chart — see the
                             // parameters' own docs (prd §483).
                             mover: nil,

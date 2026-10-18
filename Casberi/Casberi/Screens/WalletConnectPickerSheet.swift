@@ -91,14 +91,9 @@ struct WalletConnectPickerSheet: View {
 
     private var blurb: String {
         let n = shared.count
-        if mode == .name {
-            return n == 1
-                ? String(localized: "Your wallet shared 1 address. Saving names it in your book — nothing is followed or read.")
-                : String(localized: "Your wallet shared \(n) addresses. Saving names them in your book — nothing is followed or read.")
-        }
         return n == 1
-            ? String(localized: "Your wallet shared 1 address. Following is read-only — it can never trade or move funds.")
-            : String(localized: "Your wallet shared \(n) addresses. Following is read-only — it can never trade or move funds.")
+            ? String(localized: "Your wallet shared 1 address.")
+            : String(localized: "Your wallet shared \(n) addresses.")
     }
 
     /// The cap, in words, whenever it constrains anything. Nil the rest of the
@@ -106,7 +101,7 @@ struct WalletConnectPickerSheet: View {
     private var capLine: String? {
         let plan = self.plan
         if plan.roomLeft == 0 {
-            return String(localized: "You're following \(WalletStore.watchLimit) already — the cap. Unfollow one first; naming an address stays free.")
+            return String(localized: "Following \(WalletStore.watchLimit) of \(WalletStore.watchLimit).")
         }
         if plan.overflow > 0 {
             return String(localized: "Room for \(plan.roomLeft) more — \(plan.overflow) of these can't be followed until you unfollow something.")
@@ -137,7 +132,6 @@ struct WalletConnectPickerSheet: View {
                     Text("Also found")
                         .dsText(.heading17).foregroundStyle(DS.textPrimary)
                         .padding(.top, DS.Space.s3)
-                    if let line = foundNote { note(line) }
                     ForEach(foundRows) { row(_: $0, plan: plan) }
                 }
             }
@@ -154,16 +148,6 @@ struct WalletConnectPickerSheet: View {
         return !lookup.reachable || lookup.truncated
     }
 
-    private var foundNote: String? {
-        guard let lookup else { return nil }
-        if !lookup.reachable {
-            return String(localized: "Couldn't check whether you sign on any Safes just now.")
-        }
-        if lookup.truncated {
-            return String(localized: "This address is named as an owner on more Safes than we checked — these are the ones confirmed live.")
-        }
-        return nil
-    }
 
     private func row(_ row: WalletConnectPlan.Row, plan: WalletConnectPlan.Plan) -> some View {
         let on = picked.contains(row.key)

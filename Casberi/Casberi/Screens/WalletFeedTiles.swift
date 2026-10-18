@@ -97,10 +97,6 @@ struct WalletBalanceHeadline: View {
     /// `Text` still draws a line box, so without this the room shows a gap
     /// where the words used to be.
     var hidesEmptyCaption: Bool = false
-    /// Whether a line can ever come (prd §1048b). An app the Wallet's menu
-    /// picked has no recorded samples of its own, so "the line starts once a
-    /// second reading lands" would promise a line that never lands.
-    var awaitsLine: Bool = true
     /// "Mostly ETH · +$310" — WHY the line moved, from the same per-token
     /// snapshots the combined sheet's "What moved" reads. nil when the record
     /// can't attribute the move yet.
@@ -371,17 +367,6 @@ struct WalletBalanceHeadline: View {
                     .onChange(of: chart.closes) { draw(redraw: true) }
                     .padding(.top, DS.Space.s1)
                 if ranges.count > 1 { rangeChips }
-            } else if chart == nil, awaitsLine {
-                // No line yet — say why, rather than leaving the number
-                // hanging over empty space. The total above it is already
-                // real; this is only about the SHAPE not existing yet.
-                //
-                // `chart == nil` rather than `else`: a scope that deliberately
-                // hands its slot to another drawing has a chart and simply is
-                // not showing it, so explaining an absence there would describe
-                // a line that exists.
-                DSFootnote("The line starts at the next reading.")
-                    .padding(.top, 2)
             }
         }
     }
@@ -1416,10 +1401,11 @@ struct WalletWorthALookTray: View {
                                 .dsText(.body17)
                                 .foregroundStyle(DS.textPrimary)
                                 .multilineTextAlignment(.leading)
-                            Text(muted ? String(localized: "Muted — won't badge your feed")
-                                       : String(localized: "Nothing to do"))
-                                .dsText(.subhead12).foregroundStyle(DS.textSecondary)
-                                .lineLimit(1)
+                            if muted {
+                                Text(String(localized: "Muted"))
+                                    .dsText(.subhead12).foregroundStyle(DS.textSecondary)
+                                    .lineLimit(1)
+                            }
                         }
                         Spacer(minLength: 0)
                     }
@@ -1630,7 +1616,7 @@ struct WalletWorthALookTray: View {
         // you. Without one (a queue spanning Safes) the old sentence is still
         // the honest thing to say.
         actionRow(icon: "signature", hot: false, title: w.title,
-                  subtitle: w.action == nil ? String(localized: "Sign in the Safe app") : nil,
+                  subtitle: nil,
                   door: door(w))
     }
 

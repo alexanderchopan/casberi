@@ -625,20 +625,9 @@ enum PrivyHomeFeed {
             : String(localized: "across \(room.fundedCount) apps, of \(room.appCount)")
     }
 
-    /// The one line for everything the head does not list, and what has not
-    /// been read yet.
+    /// The one line for everything the head does not list — a count, never
+    /// what is still being read (prd §1416).
     static func footnote(_ room: Room) -> String? {
-        let unread = room.appCount - room.readCount
-        let quiet = room.quietCount
-        switch (quiet > 0, unread > 0) {
-        case (true, true):
-            return String(localized: "\(quiet) more apps, empty or not used lately · \(unread) not read yet")
-        case (true, false):
-            return String(localized: "\(quiet) more apps, empty and not used lately")
-        case (false, true):
-            return String(localized: "\(unread) apps not read yet — they fill in over the next syncs")
-        case (false, false):
-            return nil
-        }
+        room.quietCount > 0 ? String(localized: "\(room.quietCount) more apps") : nil
     }
 }

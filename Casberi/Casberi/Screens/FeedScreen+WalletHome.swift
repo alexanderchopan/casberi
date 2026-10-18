@@ -293,10 +293,8 @@ extension FeedScreen {
     /// More social apps is (§1303).
     var walletAccountAdds: [SectionAdd] {
         [SectionAdd(label: String(localized: "Follow an account"),
-                    detail: String(localized: "An address or a name"),
                     glyph: ScopeTileGlyph.wallets) { feedSheet = .walletFollow },
          SectionAdd(label: String(localized: "Connect an app"),
-                    detail: String(localized: "Apple Wallet, Wise and more"),
                     glyph: ScopeTileGlyph.apps) {
             route.openCategory = CategoryFold.walletRoom
             route.present(.apps)

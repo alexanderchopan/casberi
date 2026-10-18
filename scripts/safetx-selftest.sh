@@ -330,7 +330,8 @@ printf '%s' "$SAFE_OFFER" | grep -qi 'sign' \
 # never carry a limit again. The RULING is unchanged — the limit travels with
 # the pitch — so this reads the screen the tagline's claim leads to. Checking
 # the offer here would be checking a file that structurally cannot pass.
-for claim in 'never execute' 'Face ID'; do
+# §1416 cut "It can never execute" from the page; Face ID still travels with it.
+for claim in 'Face ID'; do
   grep -qi "$claim" "$SCREEN" \
     || { echo "✗ SafeScreen claims signing without saying '$claim' — the limit has to travel with the pitch"; exit 1; }
 done

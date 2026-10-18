@@ -569,24 +569,6 @@ extension FeedScreen {
         }
     }
 
-    /// **A STORED READING SAYS HOW OLD IT IS (prd §1078).** Privy's apps,
-    /// Wise and Apple Wallet join the total from what their seats last read,
-    /// beside chains read this pass; one line under the tokens names each
-    /// place whose reading is past an hour ("Zora 3h ago, Wise yesterday").
-    @ViewBuilder
-    var walletStaleReadingsSection: some View {
-        if let stale = portfolioShown?.staleReadings(), !stale.isEmpty {
-            let list = ListFormatter.localizedString(
-                byJoining: stale.map { "\($0.label) \(AccountPageShape.ago($0.at))" })
-            Section {
-                DSFootnote(prose: String(localized: "Last read: \(list)"))
-                    .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DSRoomChassis.inset,
-                                              bottom: 0, trailing: DSRoomChassis.inset))
-                    .feedRowBackground()
-                    .listRowSeparator(.hidden)
-            }
-        }
-    }
 
     /// **THE SCOPES AN APP PICK CANNOT FILL (prd §1078, §1107).** Security is
     /// an address's reading, and an app pick clears it (§1067), so it is inert
@@ -858,10 +840,9 @@ extension FeedScreen {
     var walletActingSection: some View {
         let holders = WalletPermissionsSource.holders(exposure: walletLive.exposure,
                                                       acting: walletLive.acting)
-        if !WalletPermissions.actingHolders(holders).isEmpty
-            || walletLive.acting.contains(where: { $0.modulesUnreadable }) {
+        if !WalletPermissions.actingHolders(holders).isEmpty {
             walletCard(String(localized: "Delegations"), glyph: WalletWarning.Kind.delegation.glyph, anchor: SecurityAnchor.delegations.id) {
-                WalletActingPartiesRows(holders: holders, acting: walletLive.acting,
+                WalletActingPartiesRows(holders: holders,
                                         cap: Self.walletHomeCap, open: walletSecurityOpen(.delegations),
                                         more: { walletSecurityToggle(.delegations) })
                     .modifier(rowEntrance(2))

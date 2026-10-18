@@ -740,7 +740,6 @@ do {
     eq(e.total, 8_840, "the total sums only the priced rows")
     check(e.spenderCount == 3, "the count is of spenders, not of rows")
     check(e.all.count == 4, "unpriced rows still appear, after the priced ones")
-    check(e.unpricedNote != nil, "an unpriced grant earns its footnote")
 }
 // One spender holding three grants is ONE party who can move your money.
 do {
@@ -751,9 +750,6 @@ do {
     check(WalletApprovalExposure.headline(spenders: e.spenderCount, total: e.total)
             .hasPrefix("1 spender can move"), "and the headline says so, singular")
 }
-// Nothing unpriced, no footnote — the card grows the line only when it owes one.
-check(WalletApprovalExposure(priced: [g("Uniswap", usd: 10)]).unpricedNote == nil,
-      "a fully priced card owes no footnote")
 check(WalletApprovalExposure().isEmpty, "an empty exposure is empty")
 
 // ── the button ─────────────────────────────────────────────────────────────

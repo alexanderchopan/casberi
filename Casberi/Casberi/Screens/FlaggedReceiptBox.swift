@@ -101,14 +101,15 @@ struct FlaggedReceiptBox: View {
         .accessibilityElement(children: .combine)
     }
 
-    /// "It sent Savings 0 USDC to sit in your history · Oct 10". The day word
-    /// stands apart (prd §1359): "Today" and "Oct 10" take no one preposition.
+    /// "Sent Savings 0 USDC · Oct 10" — the Security row's own words. The day
+    /// word stands apart (prd §1359); what the copy is for is not narrated
+    /// (§1416).
     private var poisonLine: String {
         let day = FeedScreen.dayWord(landed)
         switch (wallet, amount) {
-        case let (w?, a?): return String(localized: "It sent \(w) \(a) to sit in your history · \(day)")
-        case let (nil, a?): return String(localized: "It sent you \(a) to sit in your history · \(day)")
-        default: return String(localized: "It wrote itself into your history · \(day)")
+        case let (w?, a?): return String(localized: "Sent \(w) \(a) · \(day)")
+        case let (nil, a?): return String(localized: "Sent you \(a) · \(day)")
+        default: return day
         }
     }
 
@@ -181,11 +182,13 @@ struct FlaggedReceiptBox: View {
                     .multilineTextAlignment(.center)
                     .lineLimit(2).minimumScaleFactor(0.8)
             }
-            Text(verbatim: footLine(priced: priced))
-                .dsText(.label12).foregroundStyle(DS.textSecondary)
-                .multilineTextAlignment(.center)
-                .lineLimit(2)
-                .padding(.top, 2)
+            if let place {
+                Text(verbatim: place)
+                    .dsText(.label12).foregroundStyle(DS.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+                    .padding(.top, 2)
+            }
         }
         .frame(maxWidth: .infinity)
     }
@@ -196,13 +199,6 @@ struct FlaggedReceiptBox: View {
                       : String(localized: "\(n) letters borrowed to look like \(real)")
     }
 
-    /// "No market prices it · Everyday on Base", the price half only when true.
-    private func footLine(priced: Bool) -> String {
-        var parts: [String] = []
-        if !priced { parts.append(String(localized: "No market prices it")) }
-        if let place = place { parts.append(place) }
-        return parts.joined(separator: " · ")
-    }
 
     /// Where a letter that is not plain Latin came from: "Cyrillic", "Greek",
     /// "Accent", else "Look-alike"; nil for an ordinary letter or digit.

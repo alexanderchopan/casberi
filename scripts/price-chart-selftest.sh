@@ -55,10 +55,8 @@ grep -q 'pulses: fresh' "$CHART" \
 grep -q 'TokenChartStyle.isFresh(chart.fetchedAt)' "$CHART" \
   || { echo "✗ the freshness test is gone"; exit 1; }
 
-# 3. The read line is UNCONDITIONAL. A freshness line that appears only when
-#    something is stale teaches people to read its absence as "current".
-grep -q 'readLine(chart)' "$CHART" \
-  || { echo "✗ the sheet no longer states when the price was read"; exit 1; }
+# 3. No read line (prd §1416): the halo carries freshness. The chart still
+#    refetches on foreground, so it never goes stale in silence.
 grep -q 'onChange(of: scenePhase)' "$CHART" \
   || { echo "✗ the chart no longer refetches on foreground — it would go stale in silence"; exit 1; }
 
@@ -147,7 +145,7 @@ import re, sys
 src = open(sys.argv[1]).read()
 out = ["import Foundation\n"]
 # TokenChartStyle's pure half — everything that does not touch Color.
-for name in ["isFlat", "readsAsWipeout", "isFresh", "readLine", "priceText", "grouped", "changeText"]:
+for name in ["isFlat", "readsAsWipeout", "isFresh", "priceText", "grouped", "changeText"]:
     m = re.search(r"\n    static (?:let|func) " + name + r"\b", src)
     if not m:
         sys.stderr.write("could not extract %s\n" % name)
@@ -197,17 +195,6 @@ check(!TokenChartStyle.isFresh(now.addingTimeInterval(-121), now: now),
 // The case the whole rail exists for: the sheet left open.
 check(!TokenChartStyle.isFresh(now.addingTimeInterval(-3600), now: now),
       "an hour-old price never wears the live mark")
-
-// MARK: the read line — always says something
-
-check(TokenChartStyle.readLine(now.addingTimeInterval(-5), now: now)
-        .contains("just now"),
-      "a moments-old read says so plainly")
-check(!TokenChartStyle.readLine(now.addingTimeInterval(-7200), now: now)
-        .contains("just now"),
-      "a two-hour-old read does not claim to be recent")
-check(!TokenChartStyle.readLine(now.addingTimeInterval(-7200), now: now).isEmpty,
-      "the line is never empty — an absent line reads as 'current'")
 
 // MARK: flat — a change that rounds away has no direction (§83)
 
@@ -409,11 +396,6 @@ mutate "the freshness window is widened past a glance" \
 mutate "the freshness test is inverted" \
   "now.timeIntervalSince(fetchedAt) < freshWindow" \
   "now.timeIntervalSince(fetchedAt) > freshWindow"
-
-# Everything claims to be current.
-mutate "every read claims to be just now" \
-  'if age < 60 { return String(localized: "read just now") }' \
-  'return String(localized: "read just now")'
 
 # The flat rule dropped: "-0.0%" in red, a loss the number itself denies.
 mutate "a change that rounds to zero is given a direction" \

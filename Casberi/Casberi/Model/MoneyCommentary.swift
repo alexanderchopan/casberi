@@ -145,8 +145,7 @@ enum MoneyCommentary: Equatable {
         subline: String(localized: "Spending it with your other coins links them together. It's safest left where it is."))
 
     static func settling(need: Int) -> MoneyCommentary {
-        .note(headline: String(localized: "Still settling."),
-              subline: String(localized: "You'll be told when it reaches \(need) confirmations."))
+        .note(headline: String(localized: "Still settling."), subline: nil)
     }
 
     /// The screening ladder — the reason this seat exists, and a status the
@@ -166,7 +165,7 @@ enum MoneyCommentary: Equatable {
                 ? String(localized: "Waiting on screening.")
                 : String(localized: "Waiting on screening, \(days) days in.")
             return .ladder(headline: head,
-                           subline: String(localized: "Checked every sync — you'll be told the day it clears."),
+                           subline: nil,
                            rung: .screening, since: since)
         }
     }

@@ -143,18 +143,6 @@ struct WalletApprovalExposure: Equatable, Sendable {
         grants.min { ($0.grantedAt ?? .distantFuture) < ($1.grantedAt ?? .distantFuture) }
     }
 
-    /// The footnote naming what the total leaves out. nil when nothing is
-    /// unpriced, so the card grows the line only when it owes one.
-    var unpricedNote: String? {
-        guard !unpriced.isEmpty else { return nil }
-        // The row above already says what it reaches ("All · Field Notes"),
-        // so the note says only what the row can't: it is left out.
-        if unpriced.count == 1, let g = unpriced.first {
-            return String(localized: "\(g.spender)'s grant couldn't be priced, so it isn't counted.")
-        }
-        return String(localized: "\(unpriced.count) more grants couldn't be priced, so they aren't counted.")
-    }
-
     // MARK: - The arithmetic
 
     /// `min(allowance, balance) × price`, expressed against a holding already

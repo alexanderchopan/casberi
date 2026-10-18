@@ -33,15 +33,12 @@ struct WalletSubscriptionsFigure: View {
         .accessibilityElement(children: .combine)
     }
 
-    /// One 12pt line: how many, what they cost a year, and any left out of
-    /// the sum by name — never counted at zero (§1078).
+    /// One 12pt line: how many and what they cost a year (§1078; what the sum
+    /// leaves out is not narrated, §1416).
     private func line(mask: String?) -> some View {
         var parts = [String(localized: "\(subscriptions.count) subscriptions")]
         if monthly.counted > 0 {
             parts.append(String(localized: "\(mask ?? CardSpendRoom.money(monthly.yearly, code: "USD")) a year"))
-        }
-        if !monthly.uncounted.isEmpty {
-            parts.append(String(localized: "not counted: \(ListFormatter.localizedString(byJoining: monthly.uncounted))"))
         }
         return Text(verbatim: parts.joined(separator: " · "))
             .foregroundStyle(DS.textTertiary)

@@ -63,8 +63,6 @@ struct ENSRenewCard: View {
                     copy(json)
                 }
             }
-
-            DSFootnote("A transaction you sign there — never here.")
         }
         // No well (prd §782): the block stands in the sheet's column.
         .frame(maxWidth: .infinity, alignment: .leading)

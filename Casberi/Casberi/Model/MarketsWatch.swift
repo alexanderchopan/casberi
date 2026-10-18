@@ -71,7 +71,7 @@ enum MarketsWatch {
 
         var message: String {
             switch self {
-            case .notTraded: String(localized: "Not traded, so there's nothing to follow")
+            case .notTraded: String(localized: "Not traded")
             case .already:   String(localized: "Already on your watchlist")
             case .demo:      String(localized: "Following works once you leave the demo")
             }

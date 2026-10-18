@@ -56,7 +56,6 @@ enum SafeAsk {
         // with no signature at all, and a rule sitting in front of every
         // transaction. Both are free off the same persisted config snapshots.
         if let note = SafeRoom.note(room) { out += " " + note + "." }
-        if let guardNote = SafeRoom.guardNote(room) { out += " " + guardNote + "." }
         return out
     }
 

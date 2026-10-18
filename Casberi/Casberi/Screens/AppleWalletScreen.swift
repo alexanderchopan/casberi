@@ -69,10 +69,9 @@ struct AppleWalletScreen: View {
                 }
             },
             more: {
-                // The entitlement's own terms stay on the page once connected
-                // too — they are what this seat promised, and a promise that
-                // disappears the moment it is kept is one nobody can check.
-                if isConnected { promiseBlock }
+                // The entitlement's terms are said before Connect, once
+                // (prd §1416).
+                EmptyView()
             },
             keySheet: { EmptyView() }
         )
@@ -139,9 +138,6 @@ struct AppleWalletScreen: View {
             }
             .frame(minHeight: AccountFactRow.height)
         }
-        Text("Never added together.")
-            .dsText(.subhead12)
-            .foregroundStyle(DS.textTertiary)
     }
 
     // MARK: - Actions

@@ -61,11 +61,6 @@ struct WalletNFTPickerSheet: View {
                height: 520,
                detents: [.height(520), .large]) {
             VStack(alignment: .leading, spacing: DS.Space.s3) {
-                Text(intro)
-                    .dsText(.subhead12)
-                    .foregroundStyle(DS.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-
                 if !loaded {
                     loading
                 } else if collections.isEmpty {
@@ -82,12 +77,6 @@ struct WalletNFTPickerSheet: View {
             collections = await WalletNFTShelf.collections(for: wallet)
             loaded = true
         }
-    }
-
-    /// One sentence, and it states the thing worth knowing before the first tap:
-    /// picking is what causes anything to be fetched at all.
-    private var intro: String {
-        String(localized: "Only the ones you pick are loaded.")
     }
 
     private var loading: some View {
@@ -109,10 +98,7 @@ struct WalletNFTPickerSheet: View {
         // API 400s there, so it is not a chain we looked at and found
         // nothing on, and listing it would claim a read we never made.
         DSEmptyState(headline: DSProse.text("Nothing to show yet"),
-                     words: Text(String(localized: "No collections were found on Ethereum, Base, Arbitrum, Optimism, Polygon, Monad or Robinhood.")),
-                     // Honesty, not decoration: an empty picker must not read
-                     // as "you hold none" for the chains nothing can read.
-                     note: Text(String(localized: "Solana and HyperEVM NFTs can't be read yet.")))
+                     words: Text(String(localized: "No collections were found on Ethereum, Base, Arbitrum, Optimism, Polygon, Monad or Robinhood.")))
             .padding(.top, DS.Space.s4)
     }
 

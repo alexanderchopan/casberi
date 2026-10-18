@@ -214,18 +214,6 @@ struct SafeRoom: Equatable {
     /// somebody reading this room should not have to remember.
     let guardSafes: [String]
 
-    /// Set while Safe's service is refusing reads (prd §789). Every count on
-    /// this card comes off the tracking snapshot the last ANSWERED sync left,
-    /// and a refused sync leaves it untouched — so "Your signature is needed"
-    /// may already be executed, and "Nothing pending" may not be true. The
-    /// card keeps drawing what it last knew and says how old that is.
-    struct ReadLimit: Equatable {
-        /// Safe's own reset, when it sent one.
-        let until: Date?
-        /// When the service last answered anything.
-        let lastAnswer: Date?
-    }
-    var readLimit: ReadLimit? = nil
 
     var moduleCount: Int { moduleSafes.reduce(0) { $0 + $1.count } }
     var guardCount: Int { guardSafes.count }
@@ -441,29 +429,6 @@ struct SafeRoom: Equatable {
             : String(localized: "\(total) modules on \(only.label) can move funds without a signature")
     }
 
-    /// The guard line — the standing fact, in the register a normal setting
-    /// deserves.
-    ///
-    /// It NAMES the Safe on the same rule `note` uses: with more than one Safe
-    /// watched, "a guard checks every transaction" says a thing is true and
-    /// not where, which sends somebody to open all of them.
-    ///
-    /// Deliberately NOT tinted like the module line. A module is a way funds
-    /// leave without a signature; a guard is a rule the owners chose. Drawing
-    /// them in one colour would say they are one kind of news, and the module
-    /// line would lose the urgency that is its whole point.
-    static func guardNote(_ room: SafeRoom) -> String? {
-        guard !room.guardSafes.isEmpty else { return nil }
-        if room.guardSafes.count > 1 {
-            return String(localized:
-                "\(room.guardSafes.count) of your Safes run a guard that checks every transaction")
-        }
-        guard room.safeCount > 1, let only = room.guardSafes.first else {
-            return String(localized: "A guard checks every transaction on this Safe")
-        }
-        return String(localized: "A guard checks every transaction on \(only)")
-    }
-
     /// The third line: the highest-priority state fact the headline could not
     /// carry. Nil whenever the headline already covers everything, so this
     /// slot can never restate what is already on screen.
@@ -472,16 +437,6 @@ struct SafeRoom: Equatable {
     /// is discoverable from its own full ring; a nonce collision is visible
     /// nowhere else in this app, and the cost of not knowing is a signature
     /// spent on a transaction that can never execute.
-    /// The age of what the card draws, while Safe refuses reads — nil
-    /// otherwise.
-    static func readLimitNote(_ room: SafeRoom, now: Date = .now) -> String? {
-        guard let limit = room.readLimit else { return nil }
-        guard let lastAnswer = limit.lastAnswer else {
-            return String(localized: "Safe paused reads — this may be out of date")
-        }
-        return String(localized: "Safe paused reads — last checked \(lastAnswer.formatted(.relative(presentation: .named, unitsStyle: .wide)))")
-    }
-
     static func stateNote(_ room: SafeRoom) -> String? {
         if room.contestedCount > 1 {
             let groups = room.contestedKeys.count

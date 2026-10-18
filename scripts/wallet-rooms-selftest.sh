@@ -576,12 +576,6 @@ grep -q 'if let destination {' "$CARD_SAFE" \
 # The pick ink since prd §1385 (pink: state and verb; confirm green for executable).
 grep -q 'entry.awaitsYou ? DS.pickInk : entry.isExecutable ? DS.confirmInk' "$CARD_SAFE" \
   || { echo "✗ the Safe row's state tint no longer keys on isExecutable — a blocked transaction would read as green while its own words say it cannot be sent"; exit 1; }
-# …and the row must draw the guard line the room now composes, or the standing
-# fact is computed and never seen (the §311 failure: a reading nothing renders
-# is indistinguishable from being fine).
-grep -q 'SafeRoom.guardNote(room)' "$CARD_SAFE" \
-  || { echo "✗ the Safe room card no longer draws the guard line — a guard would be read, diffed and never stated"; exit 1; }
-
 grep -q 'SafeRoom.stateNote(room)' "$CARD_SAFE" \
   || { echo "✗ the Safe card no longer draws the state note — rival transactions would be detected and never mentioned"; exit 1; }
 grep -q 'room.isContested(entry)' "$CARD_SAFE" \
@@ -1198,8 +1192,8 @@ check("the prior total is carried when it is knowable",
       abs((cardRoom.lead?.prior ?? 0) - 20.00) < 0.0001)
 let young = CardSpendRoom.compose(spends: [spend(10, "EUR", at: day(-2))], now: t0)
 check("a young room carries no prior at all", young.lead?.prior == nil)
-check("and says so out loud rather than leaving a blank",
-      CardSpendRoom.note(young).contains("not following long enough to compare"))
+check("and says the count alone, no comparison (prd §1416)",
+      CardSpendRoom.note(young) == "1 spend")
 // Plasma One (prd §1311): a row is a DAY's settlement, so every count says
 // days and the footnote says the newest day is yesterday's — while the money
 // is summed exactly as a spend's would be.
@@ -1209,10 +1203,8 @@ check("a daily card counts days, never spends",
       CardSpendRoom.note(daily).hasPrefix("2 days of spending")
       && !CardSpendRoom.note(daily).contains("spends"))
 check("a daily card's money sums like any card's", abs((daily.lead?.total ?? 0) - 15.5) < 0.0001)
-check("a daily card says today's spending lands tomorrow",
-      (CardSpendRoom.footnote(daily, now: t0) ?? "").contains("Settles once a day"))
-check("a per-purchase card never says it",
-      !(CardSpendRoom.footnote(young, now: t0) ?? "").contains("Settles once a day"))
+check("a used card's foot says nothing (prd §1416)",
+      CardSpendRoom.footnote(daily, now: t0) == nil)
 var dailyHeld = daily
 dailyHeld.balance = .init(amount: 3850.84, code: "USD", at: t0)
 check("the balance is a line of its own, never in the window's total",
@@ -1280,8 +1272,8 @@ check("spends in another currency are counted, not folded in",
       mixed.monthsOtherCurrency == 4)
 check("the caption names the currency it drew",
       (CardSpendRoom.historyNote(mixed) ?? "").contains("EUR"))
-check("and says what it left out",
-      (CardSpendRoom.historyNote(mixed) ?? "").contains("in other currencies"))
+check("and narrates nothing it left out (prd §1416)",
+      !(CardSpendRoom.historyNote(mixed) ?? "").contains("other currencies"))
 check("no strip, no caption",
       CardSpendRoom.historyNote(CardSpendRoom.compose(spends: monthsOf(1), now: t0)) == nil)
 // Scaled against the biggest DRAWN month: scaling to one off the end of the
@@ -1332,9 +1324,6 @@ check("an unused card is stated once the gap outruns the window",
 check("a card used inside the window is never called unused",
       CardSpendRoom.idleNote(newest: day(-3), now: t0) == nil)
 check("a room with no spends at all is no card", CardSpendRoom.compose(spends: [], now: t0).isEmpty)
-let gpFoot = CardSpendRoom.footnote(cardRoom, now: t0) ?? ""
-check("unreadable spends are named — that is money missing from the total above",
-      gpFoot.contains("2 spends have no readable amount"))
 
 print("")
 print("Railgun — reading a row")
@@ -1586,33 +1575,6 @@ check("the state note counts only what can actually be sent",
         entries: [safeEntry("a", have: 1, required: 3, yourTurn: true, nonce: 42, safeNonce: 42),
                   safeEntry("b", have: 3, required: 3, nonce: 44, safeNonce: 42)],
         safeCount: 1)) == nil)
-
-print("")
-print("Safe — the guard, stated at last (2026-09-07)")
-// `SafeConfig` has read `guardAddr` since 2026-07-30 and only ever alerted
-// when it CHANGED. An alert scrolls away; nothing said a guard was in place.
-// Same finding §292/§293 made about modules and delegates, one field over.
-check("a guard on the only Safe needs no name",
-      SafeRoom.guardNote(SafeRoom.compose(entries: [], safeCount: 1,
-                                          guardSafes: ["Treasury"]))
-        == "A guard checks every transaction on this Safe")
-check("…and IS named once more than one Safe is followed",
-      SafeRoom.guardNote(SafeRoom.compose(entries: [], safeCount: 3,
-                                          guardSafes: ["Treasury"]))?
-        .contains("Treasury") == true)
-check("two guards are counted rather than listed",
-      SafeRoom.guardNote(SafeRoom.compose(entries: [], safeCount: 3,
-                                          guardSafes: ["Treasury", "Payroll"]))?
-        .contains("2 of your Safes") == true)
-check("no guard says nothing at all",
-      SafeRoom.guardNote(SafeRoom.compose(entries: [], safeCount: 2)) == nil)
-// NOT AN ALARM, and the words carry that. A guard is a rule the owners chose;
-// a module is a way funds leave with no signature. Wording them alike would
-// cost the module line the urgency that is its whole point.
-check("the guard line never borrows the module line's language",
-      SafeRoom.guardNote(SafeRoom.compose(entries: [], safeCount: 1,
-                                          guardSafes: ["Treasury"]))?
-        .contains("without a signature") == false)
 
 print("")
 print("Safe — rival transactions at one nonce (2026-08-17)")

@@ -460,7 +460,6 @@ struct SafeSignBlock: View {
                       busy: signing) {
                 Task { await sign(ready) }
             }
-            DSFootnote("Casberi signs; it can't execute. Another owner sends it.")
         }
     }
 
@@ -527,10 +526,6 @@ struct SafeSignBlock: View {
                 DSProse.text("\(hidden) more values aren't shown here. Open it in your Safe app before signing.")
                     .dsText(.subhead12).foregroundStyle(DS.attentionInk)
                     .fixedSize(horizontal: false, vertical: true)
-            }
-            if let owner = described.owner {
-                Text(verbatim: String(localized: "Described by \(owner)"))
-                    .dsText(.subhead12).foregroundStyle(DS.textTertiary)
             }
         }
     }
@@ -718,9 +713,6 @@ struct SafeSignBlock: View {
                     .dsText(.subhead12).foregroundStyle(DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
-            if case .simulated = outcome {
-                DSFootnote("Simulated as the Safe's call, before signatures and gas.")
-            }
         }
     }
 
@@ -751,19 +743,9 @@ struct SafeSignBlock: View {
         abs(amount) < 0.00005
     }
 
+    /// One line whatever the reason (prd §1416).
     static func notSimulatedLine(_ why: SafeSimulation.Skip) -> String {
-        switch why {
-        case .chainNotServed:
-            return String(localized: "Not simulated — Casberi can't simulate on this chain.")
-        case .delegateCall:
-            return String(localized: "Not simulated — it runs another contract's code as the Safe, which a simulation of the call can't reproduce.")
-        case .tooManyCalls(let count):
-            return String(localized: "Not simulated — \(count) calls is more than the simulator takes at once.")
-        case .unreadable:
-            return String(localized: "Not simulated — Casberi couldn't read the call well enough to send it.")
-        case .failed:
-            return String(localized: "Not simulated — the simulator didn't answer.")
-        }
+        String(localized: "Not simulated")
     }
 
     private func sentence(for refusal: SafeSigner.Refusal) -> String? {
