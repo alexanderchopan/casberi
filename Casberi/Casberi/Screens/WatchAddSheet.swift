@@ -1,15 +1,18 @@
 import SwiftUI
 import SwiftData
 
-/// MARKETS' ADD (prd §1081): find a token or a stock and keep it, one tap a
-/// star, without leaving the room.
+/// MARKETS' FOLLOW (prd §1081, §1391): keep a company, a coin or a stock, one
+/// tap a star, without leaving the room.
 ///
-/// Before you type, what the app already knows you care about: what your
-/// Wallet holds that you don't watch yet, the tickers your feed keeps saying,
-/// and what you searched for last. As you type, tokens (each naming its chain
-/// and its liquidity, so the real one stands out from a copy wearing its
-/// name) and then stocks. The field sits at the bottom, on glass, where the
-/// thumb is (prd §752). The sheet stays open, so you can keep several.
+/// **THE TRAY IS THE PACKS (prd §1391, user: "we don't need search b/c we
+/// have a tab bar w/ search").** It opens on what your Wallet holds that you
+/// don't follow yet, then the eight packs as groups, the companies behind
+/// your apps first in each, every traded one a row with its star; the
+/// untraded are not listed, since there is nothing to follow. It has no
+/// field: the tab bar's Search is the one place to look anything up (§1171,
+/// §1185), and when Search hands a query over (`searchDraft`, `.lookUp`) the
+/// tray shows that query's tokens, stocks and index hits instead. The sheet
+/// stays open, so you can keep several.
 ///
 /// Optional environment only: on Mac Catalyst a sheet's content is evaluated
 /// where the presenter's `.environment` has not reached (prd §872).
@@ -27,110 +30,73 @@ struct WatchAddSheet: View {
     @State private var watched: Set<String> = []
     @State private var watchedSymbols: Set<String> = []
     @State private var fromWallet: [TokenWatch.Resolved] = []
-    @State private var mentioned: [(symbol: String, count: Int)] = []
-    @State private var recents: [String] = []
     @State private var justStarred: String? = nil
-    @FocusState private var fieldFocused: Bool
-
-    private static let recentsKey = "markets.add.recents"
 
     var body: some View {
-        DSTray(title: String(localized: "Follow a company"), height: 640, detents: [.large], scrollsItself: true) {
+        DSTray(title: String(localized: "Follow"), height: 640, detents: [.large], scrollsItself: true) {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 0) {
                     if query.trimmingCharacters(in: .whitespaces).isEmpty {
-                        suggestions
+                        packs
                     } else {
                         results
                     }
                 }
                 .padding(.bottom, 96)
             }
-            .scrollDismissesKeyboard(.interactively)
-            .dsFindField { field }
         }
         .task { await loadSuggestions() }
         .task(id: query) { await search() }
         .onAppear {
-            // The words the tray's search was holding (prd §1185).
+            // The words the tab bar's Search was holding (prd §1185).
             if let draft = chrome?.searchDraft { query = draft; chrome?.searchDraft = nil }
-            fieldFocused = true
         }
     }
 
-    // MARK: - The field, at the bottom on glass
+    // MARK: - The packs
 
-    private var field: some View {
-        DSTraySearchField(placeholder: String(localized: "Name, ticker or address"),
-                          text: $query, focus: $fieldFocused, searching: searching)
+    /// The apps you connected, by catalogue name: a company behind one leads
+    /// its pack (`MarketsIndex.sections`).
+    private var connected: Set<String> {
+        Set(store?.bridges.filter { $0.status != .paused }.map(\.name) ?? [])
     }
 
-    // MARK: - Before you type
-
-    @ViewBuilder private var suggestions: some View {
+    @ViewBuilder private var packs: some View {
         let wallet = fromWallet.filter { !watched.contains(ref(of: $0)) }
         if !wallet.isEmpty {
             DSTrayGroup(String(localized: "From your Wallet"), glyph: "wallet.bifold") {
                 ForEach(wallet) { token in tokenRow(token) }
             }
         }
-        if !mentioned.isEmpty {
-            DSTrayGroup(String(localized: "In your feed"), glyph: "tray") {
-                ForEach(mentioned, id: \.symbol) { item in
-                    Button {
-                        query = item.symbol
-                    } label: {
-                        HStack(spacing: DS.Space.s3) {
-                            WatchFace(url: nil, lettered: item.symbol)
-                            VStack(alignment: .leading, spacing: 1) {
-                                Text(verbatim: "$\(item.symbol)").dsText(.body17).foregroundStyle(DS.textPrimary)
-                                Text(item.count == 1 ? String(localized: "In 1 post this week")
-                                                     : String(localized: "In \(item.count) posts this week"))
-                                    .dsText(.subhead12).foregroundStyle(DS.textTertiary)
-                            }
-                            Spacer(minLength: 0)
-                            Image(systemName: "magnifyingglass").dsGlyph(.subhead).foregroundStyle(DS.pickInk)
-                        }
-                        .frame(minHeight: 60)
-                        .contentShape(Rectangle())
+        let connected = self.connected
+        ForEach(TokensScope.box) { scope in
+            let pack = scope.pack
+            let byName = Dictionary(pack.map { ($0.name, $0) }, uniquingKeysWith: { a, _ in a })
+            let split = MarketsIndex.sections(pack.map(MarketsWatch.entry), connected: connected)
+            // Yours first, then the rest; nothing untraded, since there is
+            // nothing to follow there.
+            let companies = (split.yours + split.rest).compactMap { byName[$0.name] }
+            if !companies.isEmpty {
+                DSTrayGroup(scope.label, glyph: scope.glyph) {
+                    ForEach(companies) { company in
+                        let on = company.listing.ticker.map { watchedSymbols.contains($0.uppercased()) } ?? false
+                        IndexRow(company: company,
+                                 apps: MarketsIndex.appsLine(MarketsWatch.entry(company), connected: connected),
+                                 quote: CompanyQuotes.shared.quote(company.listing), watched: on,
+                                 star: company.listing == .unlisted ? nil : { toggle(company: company, on: on) })
+                            .padding(.horizontal, DS.Space.s4)
                     }
-                    .buttonStyle(RowPress())
-                    .padding(.horizontal, DS.Space.s4)
                 }
+                .task { await CompanyQuotes.shared.load(companies) }
             }
-        }
-        if !recents.isEmpty {
-            DSTrayGroup(String(localized: "Recent"), glyph: "clock") {
-                ForEach(recents, id: \.self) { recent in
-                    Button {
-                        query = recent
-                    } label: {
-                        HStack(spacing: DS.Space.s3) {
-                            Image(systemName: "clock.arrow.circlepath")
-                                .dsGlyph(.subhead).foregroundStyle(DS.brandInk)
-                                .frame(width: DS.Face.rowCircle)
-                            Text(verbatim: recent).dsText(.body17).foregroundStyle(DS.textPrimary)
-                            Spacer(minLength: 0)
-                        }
-                        .frame(minHeight: 48)
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(RowPress())
-                    .padding(.horizontal, DS.Space.s4)
-                }
-            }
-        }
-        if wallet.isEmpty && mentioned.isEmpty && recents.isEmpty {
-            footnote
         }
     }
 
-    /// The sheet's one explaining sentence (prd §748), whichever it is now.
+    /// The sheet's one explaining sentence (prd §748), for a query that
+    /// found nothing.
     private var footnote: some View {
-        let text: Text = if DemoMode.isActive && !query.isEmpty {
+        let text: Text = if DemoMode.isActive {
             Text("Search works once you leave the demo.")
-        } else if query.isEmpty {
-            Text("Contract addresses work on any chain.")
         } else {
             Text("Nothing by that name. Try a ticker, or paste the contract address.")
         }
@@ -340,7 +306,6 @@ struct WatchAddSheet: View {
         watched.insert(key)
         justStarred = key
         DSHaptic.success()
-        remember(query)
         if let store { TokenWatch.registerBridge(store: store, context: modelContext) }
         let name = TokensAsk.name(of: thing.title)
         chrome?.flash(String(localized: "Following \(name)"),
@@ -400,9 +365,6 @@ struct WatchAddSheet: View {
         let live = all.filter(\.isLive)
         watched = Set(live.compactMap(\.sourceRef))
         watchedSymbols = Set(live.compactMap { $0.authorHandle?.uppercased() })
-        recents = UserDefaults.standard.data(forKey: Self.recentsKey)
-            .flatMap { try? JSONDecoder().decode([String].self, from: $0) } ?? []
-        mentioned = mentionedInFeed()
         // What the Wallet holds and you don't watch: the three biggest,
         // resolved by contract to the exact token on its chain.
         guard !DemoMode.isActive else { return }
@@ -418,40 +380,6 @@ struct WatchAddSheet: View {
             if let match, !watched.contains(ref(of: match)) { found.append(match) }
         }
         fromWallet = found
-    }
-
-    /// The tickers your feed said this week (`$PEPE`), most said first, not
-    /// counting what you already watch. A ticker is only a name, so a tap
-    /// searches it rather than watching a guess.
-    private func mentionedInFeed() -> [(symbol: String, count: Int)] {
-        var d = FetchDescriptor<Thing>(sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
-        d.fetchLimit = 400
-        let weekAgo = Date.now.addingTimeInterval(-7 * 86_400)
-        let recent = ((try? modelContext.fetch(d)) ?? []).filter {
-            $0.isLive && $0.capturedAt > weekAgo && $0.source != TokenWatch.source
-        }
-        var counts: [String: Int] = [:]
-        let pattern = /\$([A-Za-z][A-Za-z0-9]{1,9})\b/
-        for thing in recent {
-            let text = [thing.title, thing.postText ?? ""].joined(separator: " ")
-            var seen = Set<String>()
-            for match in text.matches(of: pattern) {
-                let symbol = String(match.1).uppercased()
-                guard seen.insert(symbol).inserted, !watchedSymbols.contains(symbol) else { continue }
-                counts[symbol, default: 0] += 1
-            }
-        }
-        return counts.sorted { $0.value != $1.value ? $0.value > $1.value : $0.key < $1.key }
-            .prefix(3).map { ($0.key, $0.value) }
-    }
-
-    private func remember(_ raw: String) {
-        let q = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !q.isEmpty else { return }
-        recents = Array(([q] + recents.filter { $0.caseInsensitiveCompare(q) != .orderedSame }).prefix(5))
-        if let data = try? JSONEncoder().encode(recents) {
-            DefaultsWrite.set(data, forKey: Self.recentsKey)
-        }
     }
 
     static func chainName(_ id: String) -> String {

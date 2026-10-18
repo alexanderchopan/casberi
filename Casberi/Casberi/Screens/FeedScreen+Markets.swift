@@ -22,21 +22,19 @@ extension FeedScreen {
     /// Security's checkup stands there: the Wallet's row stays under it with
     /// Markets lit, and pressing a tile lists it below.
     var walletMarketsFigure: some View {
-        let tiles = [TokensScope.watchlist, .alerts] + TokensScope.box
-        return DSCountGrid(items: tiles.count, bare: true) {
-            ForEach(tiles) { tile in
-                DSCountTile(count: nil, label: tile.label, glyph: tile.glyph,
-                            isOn: tile == chrome.tokensScope, inline: true) { pickTokensScope(tile) }
-            }
-        }
+        // THE BOX IS THE SECTORS' DAY (prd §1391): the eight packs four
+        // across, each its day move; Following and Alerts are the list
+        // head's two words, not tiles.
+        MarketsSectorsBox(packs: TokensScope.box, picked: chrome.tokensScope) { pickTokensScope($0) }
         // Markets' rows are a different source from the Wallet's, so the
         // tile reads them here, keyed on their own count and the corpus
         // signal (a SQL COUNT, no model built), never in a body (§628).
         .task(id: walletMarketsKey) { loadWalletMarkets() }
-        // A category's quotes, read when its tile is pressed (prd §1082).
-        .task(id: chrome.tokensScope.id) {
-            let pack = chrome.tokensScope.pack
-            if !pack.isEmpty { await CompanyQuotes.shared.load(pack) }
+        // Every pack's quotes, one pack at a time so the burst is a pack's
+        // (prd §1391): the box's moves fill in as each lands; a pack read
+        // in the last ten minutes costs nothing (`CompanyQuotes.freshFor`).
+        .task {
+            for scope in TokensScope.box { await CompanyQuotes.shared.load(scope.pack) }
         }
         // The tray's search can open a company or New from any room (prd
         // §1185), so it asks; the tile raises once it stands, whichever of
@@ -90,40 +88,35 @@ extension FeedScreen {
     /// the three chips on the account page became this).
     var marketsListHead: some View {
         Section {
-            HStack(spacing: DS.Space.s2) {
+            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s3) {
                 // The Feed's section name (prd §1268): a pink glyph first.
                 Image(systemName: ScopeTileGlyph.watch)
                     .dsGlyph(.body)
                     .foregroundStyle(DS.brandInk)
                     .accessibilityHidden(true)
-                Text("Following")
-                    .dsText(.heading20)
-                    .foregroundStyle(DS.headInk)
-                Spacer(minLength: 0)
-                Menu {
-                    ForEach(TokenWatchSortMode.allCases, id: \.self) { mode in
-                        Button {
-                            withAnimation(DS.Motion.standard) { TokenWatchOrder.shared.setMode(mode) }
-                        } label: {
-                            if TokenWatchOrder.shared.mode == mode {
-                                Label(mode.label, systemImage: "checkmark")
-                            } else {
-                                Text(mode.label)
-                            }
-                        }
+                // **FOLLOWING · ALERTS ARE THE HEAD'S TWO WORDS (prd §1391):**
+                // the Feed's choice grammar (§1251), the picked word in the
+                // head ink, the other grey; an alert is one more place to
+                // go, in no colour of its own. The Movers menu is deleted:
+                // the box says who moved, the list keeps your order.
+                ForEach([TokensScope.watchlist, .alerts]) { choice in
+                    let on = chrome.tokensScope == choice
+                    Button {
+                        DSHaptic.selection()
+                        withAnimation(DS.Motion.standard) { chrome.tokensScope = choice }
+                    } label: {
+                        Text(verbatim: choice.label)
+                            .dsText(.heading20)
+                            .foregroundStyle(on ? DS.headInk : DS.textTertiary)
+                            .lineLimit(1)
                     }
-                } label: {
-                    HStack(spacing: 4) {
-                        Text(TokenWatchOrder.shared.mode.short).dsText(.body17)
-                        Image(systemName: "chevron.down").dsGlyph(.caption)
-                    }
-                    .foregroundStyle(DS.pickInk)
-                    .frame(minHeight: 44)
-                    .contentShape(Rectangle())
+                    .buttonStyle(RowPress())
+                    .accessibilityAddTraits(on ? [.isSelected] : [])
                 }
-                .accessibilityLabel(Text("Order: \(TokenWatchOrder.shared.mode.label)"))
-                // Follow a company from the head's + (prd §1386), as every
-                // Feed section adds from its header.
+                Spacer(minLength: 0)
+                // Follow, from the head's + (prd §1386), the one word (prd
+                // §1391, user: "could we just say follow? its follow a
+                // market regardless").
                 Button {
                     DSHaptic.selection()
                     feedSheet = .watchAdd
@@ -135,7 +128,7 @@ extension FeedScreen {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(PressSpring())
-                .accessibilityLabel(Text("Follow a company"))
+                .accessibilityLabel(Text("Follow"))
             }
             .feedRowBackground()
             .listRowInsets(.init(top: DS.Space.s2, leading: DSRoomChassis.rowInset,
@@ -208,6 +201,8 @@ extension FeedScreen {
     /// newest first, then the ones that went off, as the rows they landed.
     @ViewBuilder
     func marketsAlertsSections(_ visible: [Thing], nextEventID: UUID?) -> some View {
+        // The same head, Alerts picked (prd §1391).
+        marketsListHead
         let watches = marketsWatches(visible)
         let byRef = Dictionary(watches.compactMap { t in t.sourceRef.map { ($0, t) } },
                                uniquingKeysWith: { a, _ in a })

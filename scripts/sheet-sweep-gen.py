@@ -173,7 +173,7 @@ ENTRIES = [
         "field:?Search, or type any name"),
   # The history is a page pushed on the pager; a row's thing rises over it.
   rises("wallet-history-thing", ["Screens/WalletHistoryScreen.swift:sheetThing"], [D], HISTORY+[{"tap": "button:^Sent to Savings, "}], "button:=Share, Share"),
-  rises("markets-follow-company", [FS+"watchAdd"], [D], MARKETS+[{"tap": "button:=Follow a company"}], GRAB),
+  rises("markets-follow-company", [FS+"watchAdd"], [D], MARKETS+[{"tap": "button:=Follow"}], GRAB),
   rises("markets-company", [FS+"company"], [D], MARKETS+[{"tap": "button:=Work"}, {"tap": "button:^Amazon, AMZN"}], GRAB),
   # ---- Notes, a page (prd §1321) ----
   dict(id="notes-trash", covers=["Screens/FeedScreen.swift:open"], launch=[D, "-openRoom", "Your notes"],
