@@ -35,7 +35,7 @@ struct MarketsSectorsBox: View {
                 Text("Today").dsText(.heading20).foregroundStyle(DS.textPrimary)
                 if read {
                     Text("\(up) sectors up, \(down) down")
-                        .dsText(.body17).foregroundStyle(DS.textSecondary)
+                        .dsText(.body17).monospacedDigit().foregroundStyle(DS.textSecondary)
                         .contentTransition(.numericText())
                 }
             }

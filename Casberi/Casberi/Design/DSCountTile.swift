@@ -182,8 +182,11 @@ struct DSCountTile: View {
                 // fills the well instead of floating in it.
                 // With a plus beside it the plus's own width is the gap, so
                 // "Subscriptions" keeps its room (prd §1292).
+                // A reserved slot is the plus's own width too (user, 2026-10-17:
+                // "why is 13 not aligned w the other numbers"): the pad stays
+                // only where nothing stands beside the count.
                 .padding(.leading, DS.Space.s1)
-                .padding(.trailing, add == nil ? DS.Space.s2 : 0)
+                .padding(.trailing, add == nil && addMenu.isEmpty && !reservesPlus ? DS.Space.s2 : 0)
                 .frame(maxWidth: .infinity, minHeight: cellHeight, alignment: .leading)
                 // No backing (prd §1268, user: "no backing"): the pick says
                 // itself in the tint of its figure and word.
