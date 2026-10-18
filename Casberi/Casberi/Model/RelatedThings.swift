@@ -39,7 +39,12 @@ enum RelatedThings {
         // shares its app's title month after month ("Quillmark Pro · $29.00"),
         // so a same-title match there is a different record (the sweep's P6).
         let account = readsAccount(thing.source)
-        let title = account ? nil : normalizedTitle(thing.title)
+        // A dated thing — an event, anything with a due date — repeats by
+        // design: tomorrow's "Dinner with Sam" and Friday's standup are other
+        // occurrences, not an earlier save (prd §1413, user: "what does this
+        // mean this is some fluff"). It matches by link alone.
+        let dated = thing.kind == .event || thing.dueAt != nil
+        let title = account || dated ? nil : normalizedTitle(thing.title)
         let link = objectLink(thing)
         // A thing with neither a distinctive title nor an object link can't be
         // matched honestly — a wall of untitled screenshots is not a pile of

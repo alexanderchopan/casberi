@@ -5,73 +5,46 @@ import SwiftData
 // section, and we remove the 'coming up' filter bc we can have 'see more' in
 // the card"; "A expands in place … if you click 'see all' in a section it
 // expands in place, and also each category header has a + sign").** Not a
-// tab: tabs are places you manage. The section rests on this week as a strip
-// of dots and the next thing; a tapped day opens the five weeks in place and
-// stands in for the section's rows; Needs you leads the rows, by place; then
-// today and what follows, capped like every section, with its More. Its + is
-// in its header (`sectionAdds`): an event, a reminder, an email, a plan.
+// tab: tabs are places you manage. **And it is dated rows like every section
+// (prd §1413, user: "its like the odd man in the feed"; "i say we just get
+// rid of the grid"; "that way we aren't conflating needs you w/ day").** The
+// week strip, the five weeks that opened in place, the picked day, the
+// next-thing row under the strip and the Needs you it gathered from every
+// place are deleted: today and what follows under their day labels, in the
+// Feed's grouped row, capped like every section, and More walks forward
+// through the five weeks the rows are read for. Needs you lives in its place
+// (`FeedScreen+WalletNeeds.swift`, Work's own section). Its + is in its
+// header (`sectionAdds`): an event, a reminder, an email, a plan.
 extension FeedScreen {
 
     /// `rows` is Day's room's own list on iPad and the Mac (prd §1344);
     /// in the Feed, nil: the section reads its own (`dayFeedRows`).
     @ViewBuilder
     func dayFeedSections(nextEventID: UUID?, rows: [Thing]? = nil) -> some View {
-        let all = (rows ?? dayFeedRows).live
-        let visible = all
-        let marks = dayCalendarMarks(all)
-        let now = Date.now
-        let next = all.filter { $0.isLive && Self.dayWhen($0) >= now }
-            .min { Self.dayWhen($0) < Self.dayWhen($1) }
-        dayFeedCalendarRow(marks: marks)
-            // The renewals on the calendar read the Wallet's own reading, from
-            // here, since the Feed may open before the Wallet has; the rows and
-            // Needs you are read by the Feed's own list (prd §1343).
-            .task(id: walletSubscriptionsKey) { await SubscriptionsReading.shared.refresh(modelContext) }
-        // The next thing is a row (prd §1386): the Feed's one anatomy, its
-        // app and when over the title, never a bare line under the strip.
-        if !dayCalendarOpen, daySelected == nil, let next {
-            shapedListRow(next, index: 0, nextEventID: nextEventID,
-                          grouped: true, app: (source: next.source, date: Self.dayWhen(next)))
-                .environment(\.dsGroupedSource, next.source)
-        }
-        if let picked = daySelected {
-            dayPickedSection(picked, visible, nextEventID: nextEventID)
-        } else {
-            // At rest the strip shows this week, so the rows end with it;
-            // a tapped day opens the five weeks (2026-10-16, user: "ones
-            // into the next month").
-            let window = dayFeedWindow(visible, through: dayCalendarOpen ? nil : Self.dayFeedWeekEnd())
-            dayNeedsRows(nextEventID: nextEventID, limit: window.needs)
-            // The window is the section's own (needs and days counted
-            // together); the days draw uncapped inside it, then More.
-            let _ = { Self.sectionCapNow = (RoomAccounts.dayRoom, Int.max) }()
-            groupedSections(window.days, nextEventID: nextEventID, renewals: window.renewals)
-            let _ = { Self.sectionCapNow = (RoomAccounts.dayRoom, window.cap) }()
-            if window.more { sectionMoreRow(RoomAccounts.dayRoom) }
-        }
+        let visible = (rows ?? dayFeedRows).live
+        let window = dayFeedWindow(visible)
+        // The window is the section's own (things and renewals counted
+        // together); the days draw uncapped inside it, then More.
+        let _ = { Self.sectionCapNow = (RoomAccounts.dayRoom, Int.max) }()
+        groupedSections(window.days, nextEventID: nextEventID, renewals: window.renewals)
+        let _ = { Self.sectionCapNow = (RoomAccounts.dayRoom, window.cap) }()
+        if window.more { sectionMoreRow(RoomAccounts.dayRoom) }
     }
 
-    /// **ONE CAP FOR THE WHOLE SECTION (prd §1343).** Needs you first, then
-    /// days — their things and renewals together — while the cap lasts;
-    /// More adds ten, as every section's does. The cap counts ROWS: a day
-    /// fuller than what is left is cut at the cap, never drawn whole past
-    /// it (2026-10-16, user: "it's also showing me more than five items").
-    /// `end`, when set, drops what falls on or after it.
-    func dayFeedWindow(_ visible: [Thing], through end: Date? = nil)
-        -> (needs: Int, days: [(String, [Thing])], renewals: [String: [Subscriptions.Item]], more: Bool, cap: Int) {
+    /// **ONE CAP FOR THE WHOLE SECTION (prd §1343).** The days — their
+    /// things and renewals together — while the cap lasts; More adds ten,
+    /// as every section's does. The cap counts ROWS: a day fuller than what
+    /// is left is cut at the cap, never drawn whole past it (2026-10-16,
+    /// user: "it's also showing me more than five items"). Nothing but the
+    /// cap bounds it (prd §1413): More reaches to the end of the five weeks
+    /// the rows are read for, and no Needs you stands in the window.
+    func dayFeedWindow(_ visible: [Thing])
+        -> (days: [(String, [Thing])], renewals: [String: [Subscriptions.Item]], more: Bool, cap: Int) {
         let cap = sectionCaps[RoomAccounts.dayRoom] ?? Self.sectionFirstRows
-        let waiting = dayNeeds.live.count
-        // Needs you takes three on the first page, so today still shows
-        // under it; More opens the rest.
-        let needs = min(waiting, cap == Self.sectionFirstRows ? 3 : cap)
-        var budget = max(cap - needs, 0)
-        var more = waiting > needs
-        var renewals = dayRenewals()
-        var rows = visible
-        if let end {
-            renewals = renewals.filter { ($0.next ?? .distantFuture) < end }
-            rows = visible.filter { Self.dayWhen($0) < end }
-        }
+        var budget = cap
+        var more = false
+        let renewals = dayRenewals()
+        let rows = visible
         let byDay = Dictionary(grouping: renewals) {
             dayLabel(Self.groupingCalendar.startOfDay(for: $0.next ?? .now))
         }
@@ -89,47 +62,7 @@ extension FeedScreen {
             if !keptPlans.isEmpty { shown[label] = keptPlans }
             budget -= keptThings.count + keptPlans.count
         }
-        return (needs, days, shown, more, cap)
-    }
-
-    /// The end of the week the strip shows at rest (`WalletCalendar`'s first
-    /// week).
-    static func dayFeedWeekEnd(now: Date = .now) -> Date {
-        let cal = groupingCalendar
-        let start = WalletCalendar.start(now: now, calendar: cal)
-        return cal.date(byAdding: .day, value: 7, to: start) ?? start
-    }
-
-    /// The week, its dots, and the next thing under it; open, all five
-    /// weeks and the way back to today.
-    private func dayFeedCalendarRow(marks: [WalletCalendar.Mark]) -> some View {
-        VStack(alignment: .leading, spacing: DS.Space.s2) {
-            WalletCalendar(marks: marks, dots: true, selected: daySelected,
-                           onDay: pickFeedDay,
-                           shownWeeks: dayCalendarOpen ? WalletCalendar.weeks : 1)
-            if dayCalendarOpen {
-                Button {
-                    DSHaptic.selection()
-                    withAnimation(DS.Motion.standard) {
-                        dayCalendarOpen = false
-                        daySelected = nil
-                    }
-                } label: {
-                    Text("Back to today")
-                        .dsText(.body17)
-                        .foregroundStyle(DS.pickInk)
-                        .frame(maxWidth: .infinity)
-                        .frame(minHeight: DS.Hit.min)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(RowPress())
-            }
-        }
-        .animation(DS.Motion.standard, value: dayCalendarOpen)
-        .listRowInsets(EdgeInsets(top: DS.Space.s1, leading: DSRoomChassis.rowInset,
-                                  bottom: DS.Space.s2, trailing: DSRoomChassis.rowInset))
-        .feedRowBackground()
-        .listRowSeparator(.hidden)
+        return (days, shown, more, cap)
     }
 
     /// Day's rows for the section: its apps' events and due things from
@@ -155,33 +88,6 @@ extension FeedScreen {
             .filter { seen.insert($0.id).inserted }
         guard rows.map(\.id) != dayFeedRows.map(\.id) else { return }
         dayFeedRows = rows
-    }
-
-    /// A day tapped in the section: the calendar opens in place on it; the
-    /// same day again lets it go, the calendar staying open.
-    func pickFeedDay(_ day: Date) {
-        let cal = Self.groupingCalendar
-        withAnimation(DS.Motion.standard) {
-            dayCalendarOpen = true
-            if let picked = daySelected, cal.isDate(picked, inSameDayAs: day) {
-                daySelected = nil
-            } else {
-                daySelected = cal.startOfDay(for: day)
-            }
-        }
-    }
-
-    /// "9:30 AM", "Tomorrow", "Oct 22" — when the next thing is, as its row
-    /// would say it; an all-day thing has no clock (prd §1264).
-    static func dayFeedWhen(_ thing: Thing) -> String {
-        let start = dayWhen(thing)
-        let cal = groupingCalendar
-        let allDay = thing.factList.contains { $0.action == .allDay }
-        if cal.isDateInToday(start) {
-            return allDay ? String(localized: "Today") : start.formatted(date: .omitted, time: .shortened)
-        }
-        if cal.isDateInTomorrow(start) { return String(localized: "Tomorrow") }
-        return start.formatted(.dateTime.month(.abbreviated).day())
     }
 
     /// The + menu's marks for Day's makes.

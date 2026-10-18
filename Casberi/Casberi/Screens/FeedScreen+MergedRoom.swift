@@ -327,30 +327,9 @@ extension FeedScreen {
 }
 
 extension FeedScreen {
-    /// The calendar's marks (prd §1229): every event and due to-do the Day
-    /// holds in the calendar's five weeks, each as its app's face, then each
-    /// subscription's renewal as its plan's face (prd §1260), never its price.
-    /// Events come first; a renewal on an event's day stands beside it
-    /// (`pairs`, prd §1263).
-    func dayCalendarMarks(_ visible: [Thing]) -> [WalletCalendar.Mark] {
-        let cal = Calendar.current
-        let start = WalletCalendar.start(now: .now, calendar: cal)
-        guard let end = cal.date(byAdding: .day, value: WalletCalendar.weeks * 7, to: start) else { return [] }
-        let events: [WalletCalendar.Mark] = visible.compactMap { thing in
-            guard thing.isLive, thing.kind == .event || thing.dueAt != nil else { return nil }
-            let day = Self.dayWhen(thing)
-            guard day >= start, day < end else { return nil }
-            return .init(id: thing.id.uuidString, day: day, face: thing.source)
-        }
-        let renewals: [WalletCalendar.Mark] = SubscriptionsReading.shared.items.compactMap { item in
-            guard let day = item.next, day >= start, day < end else { return nil }
-            return .init(id: "subscription:\(item.id)", day: day, face: item.name, pairs: true)
-        }
-        return events + renewals
-    }
-
     /// The renewals Day's list draws (prd §1261): from today to the end of
-    /// the calendar's five weeks, so the list and the calendar agree.
+    /// the five weeks its rows are read for (the strip that drew them as
+    /// marks is gone, prd §1413).
     func dayRenewals(now: Date = .now) -> [Subscriptions.Item] {
         let today = Self.groupingCalendar.startOfDay(for: now)
         let end = WalletCalendar.window(now: now, calendar: Self.groupingCalendar).end
@@ -380,41 +359,6 @@ extension FeedScreen {
                                   bottom: Self.rowAir, trailing: DSRoomChassis.rowInset))
         .feedRowBackground()
         .listRowSeparator(.hidden)
-    }
-
-    /// The picked day's list: what the calendar drew a dot for on it, its
-    /// events and due things, then the renewals on it; empty, one line.
-    @ViewBuilder
-    func dayPickedSection(_ day: Date, _ visible: [Thing], nextEventID: UUID?) -> some View {
-        let cal = Self.groupingCalendar
-        let things = visible.filter { thing in
-            thing.isLive && (thing.kind == .event || thing.dueAt != nil)
-                && cal.isDate(Self.dayWhen(thing), inSameDayAs: day)
-        }
-        .sorted { Self.dayWhen($0) < Self.dayWhen($1) }
-        let renewals = SubscriptionsReading.shared.items.filter { item in
-            item.next.map { cal.isDate($0, inSameDayAs: day) } ?? false
-        }
-        let label = dayLabel(day)
-        if things.isEmpty && renewals.isEmpty {
-            Section {
-                Text(label).dsText(.heading20).foregroundStyle(DS.headInk)
-                    .padding(.leading, DSRoomChassis.rowInset)
-                    .padding(.top, DS.Space.s6)
-                    .listRowInsets(EdgeInsets())
-                    .feedRowBackground()
-                    .listRowSeparator(.hidden)
-                Text("Nothing on this day")
-                    .dsText(.body17).foregroundStyle(DS.textSecondary)
-                    .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DSRoomChassis.rowInset,
-                                              bottom: DS.Space.s2, trailing: DSRoomChassis.rowInset))
-                    .feedRowBackground()
-                    .listRowSeparator(.hidden)
-            }
-        } else {
-            groupedSections([(label, things)], nextEventID: nextEventID,
-                            renewals: renewals.isEmpty ? [:] : [label: renewals])
-        }
     }
 }
 

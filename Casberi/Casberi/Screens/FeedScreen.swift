@@ -771,20 +771,13 @@ struct FeedScreen: View {
     /// New was tapped in the Agents room with no agent picked and several
     /// that can answer (prd §1054).
     @State var askingWhichAgent = false
-    /// Day's Needs you (prd §1327 item 9): every place's, gathered in the
-    /// screen's `.task` (`loadDayNeeds`), never in a body (§628). The items
-    /// carry the place each row names; the things are those items, resolved.
-    @State var dayNeedsItems: [DayNeeds.Item] = []
-    /// The day picked on Day's calendar (prd §1340): its list stands in for
-    /// the section's own until the day is tapped again or Back to today.
-    @State var daySelected: Date? = nil
-    /// The Feed's Day section shows its five weeks (prd §1343): opened by a
-    /// tapped day, closed by Back to today.
-    @State var dayCalendarOpen = false
+    /// The Wallet's Needs you (prd §1413): what the Feed's Wallet section
+    /// leads with, read in the screen's `.task` (`loadWalletNeeds`), never in
+    /// a body (§628). Raw model refs, so every reader takes `.live` first.
+    @State var walletNeeds: [Thing] = []
     /// The Feed's Day section reads its own rows (prd §1343): the Feed's
-    /// list carries none of what is ahead, and the calendar is all ahead.
+    /// list carries none of what is ahead, and the section is all ahead.
     @State var dayFeedRows: [Thing] = []
-    @State var dayNeeds: [Thing] = []
     /// The Feed's Notes section reads its own rows too (prd §1347): the
     /// Feed's list is the newest `allRoomFetchLimit` things and drops the
     /// apps you write in, so a note older than that window, or any journal
@@ -1540,14 +1533,21 @@ struct FeedScreen: View {
                 #endif
             }
             .onChange(of: chrome.feedJump) { _, _ in settleFeedJump(proxy) }
-            // Day's rows and Needs you, read by the Feed itself (prd §1343):
-            // the Wallet's section subtracts Needs you even when a jump
-            // passes Day's section before its row has appeared. Day's room
-            // on iPad and the Mac reads Needs you here too, over its own
-            // rows (prd §1344).
-            .task(id: dayNeedsKey) {
+            // Day's rows, Notes' rows and the Wallet's Needs you, read by the
+            // Feed itself (prd §1343, §1347, §1413): the Wallet's section
+            // subtracts its Needs you even when a jump passes it before its
+            // row has appeared.
+            .task(id: feedSectionsKey) {
                 if source == "All" { loadDayFeedRows(); loadNotesFeedRows() }
-                await loadDayNeeds()
+                await loadWalletNeeds()
+            }
+            // The renewals under Day's days read the Wallet's own reading,
+            // from here, since the Feed may open before the Wallet has (prd
+            // §1343; the strip that carried this task is gone, §1413).
+            .task(id: walletSubscriptionsKey) {
+                if source == "All" || source == RoomAccounts.dayRoom {
+                    await SubscriptionsReading.shared.refresh(modelContext)
+                }
             }
             // The face pressed on the Feed (prd §1280): back to its top.
             .onChange(of: chrome.feedTop) { _, _ in

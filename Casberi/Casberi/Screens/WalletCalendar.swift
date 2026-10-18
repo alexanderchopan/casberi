@@ -38,16 +38,9 @@ struct WalletCalendar: View {
     /// Reading draws none (prd §1144, user: "i don't think we need to count
     /// the number of feeds per day").
     var counts = true
-    /// Day's box (prd §1340, user: "day gets 1 dot ok but you should be able
-    /// to tap it and see what is there"): every day keeps its number, a day
-    /// with something on it wears one dot under it, and a tap hands the day
-    /// to `onDay`. The faces stay on the Wallet's and the lists' calendars.
-    var dots = false
-    var selected: Date? = nil
-    var onDay: ((Date) -> Void)? = nil
-    /// How many weeks draw: the Feed's Day section rests on this one week
-    /// and opens into all five in place (prd §1343).
-    var shownWeeks: Int? = nil
+    // The dot cells, the picked day and the one-week form that the Feed's
+    // Day strip wore are deleted with it (prd §1413): every calendar draws
+    // its five weeks of faces, and none takes a tap.
 
     static let weeks = 5
     static let rowHeight: CGFloat = 27
@@ -60,8 +53,7 @@ struct WalletCalendar: View {
         let cal = Calendar.current
         let start = Self.start(now: now, calendar: cal, looksBack: looksBack)
         let today = cal.startOfDay(for: now)
-        let weekCount = shownWeeks ?? Self.weeks
-        let days = (0..<(weekCount * 7)).compactMap { cal.date(byAdding: .day, value: $0, to: start) }
+        let days = (0..<(Self.weeks * 7)).compactMap { cal.date(byAdding: .day, value: $0, to: start) }
         let byDay = Dictionary(grouping: marks) { cal.startOfDay(for: $0.day) }
         VStack(spacing: 2) {
             HStack(spacing: 0) {
@@ -72,91 +64,23 @@ struct WalletCalendar: View {
                 }
             }
             Grid(horizontalSpacing: 0, verticalSpacing: 0) {
-                ForEach(0..<weekCount, id: \.self) { week in
+                ForEach(0..<Self.weeks, id: \.self) { week in
                     GridRow {
                         ForEach(0..<7, id: \.self) { weekday in
                             let index = week * 7 + weekday
                             if index < days.count {
                                 let day = days[index]
-                                if dots {
-                                    dotCell(day, index: index, today: today,
-                                            marks: byDay[day] ?? [], calendar: cal)
-                                } else {
-                                    cell(day, index: index, today: today,
-                                         marks: byDay[day] ?? [], calendar: cal)
-                                }
+                                cell(day, index: index, today: today,
+                                     marks: byDay[day] ?? [], calendar: cal)
                             }
                         }
                     }
                 }
             }
         }
-        .modifier(SpokenWhole(enabled: onDay == nil, label: spoken(start: start, calendar: cal)))
-    }
-
-    /// A figure reads as one sentence; a calendar you can tap keeps its days.
-    private struct SpokenWhole: ViewModifier {
-        let enabled: Bool
-        let label: String
-        func body(content: Content) -> some View {
-            if enabled {
-                content.accessibilityElement(children: .ignore).accessibilityLabel(Text(label))
-            } else {
-                content
-            }
-        }
-    }
-
-    /// A day as a number with one dot under it when anything stands on it;
-    /// today filled in the tint, the picked day in the strong fill.
-    private func dotCell(_ day: Date, index: Int, today: Date, marks: [Mark],
-                         calendar cal: Calendar) -> some View {
-        let isToday = day == today
-        let isPicked = selected.map { cal.isDate($0, inSameDayAs: day) } ?? false
-        let isPast = day < today
-        let number = cal.component(.day, from: day)
-        let label = number == 1 && index > 0
-            ? day.formatted(.dateTime.month(.abbreviated).day())
-            : "\(number)"
-        let face = VStack(spacing: 2) {
-            Text(verbatim: label)
-                .dsText(.dockCaption10)
-                .monospacedDigit()
-                .lineLimit(1)
-                .foregroundStyle(isToday ? Color.white
-                                 : isPicked ? DS.textPrimary
-                                 : (isPast ? DS.textTertiary : DS.textSecondary))
-                .frame(minWidth: Self.faceSize, minHeight: Self.faceSize)
-                .background {
-                    if isToday { Circle().fill(DS.pickInk) }
-                    else if isPicked { Circle().fill(DS.fillStrong) }
-                }
-            Circle()
-                .fill(marks.contains(where: \.attention) ? DS.attention : DS.brandInk)
-                .frame(width: 4, height: 4)
-                .opacity(marks.isEmpty ? 0 : 1)
-        }
-        .frame(maxWidth: .infinity, minHeight: Self.rowHeight, maxHeight: Self.rowHeight)
-        .contentShape(Rectangle())
-        return Group {
-            if let onDay {
-                Button {
-                    DSHaptic.selection()
-                    onDay(day)
-                } label: { face }
-                .buttonStyle(PressSpring())
-                .accessibilityLabel(Text(spokenDay(day, marks: marks)))
-                .accessibilityAddTraits(isPicked ? .isSelected : [])
-            } else {
-                face
-            }
-        }
-    }
-
-    private func spokenDay(_ day: Date, marks: [Mark]) -> String {
-        let date = day.formatted(.dateTime.weekday(.wide).month(.wide).day())
-        guard !marks.isEmpty else { return date }
-        return "\(date), " + String(localized: "\(marks.count) things")
+        // A figure reads as one sentence.
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(spoken(start: start, calendar: cal)))
     }
 
     private func cell(_ day: Date, index: Int, today: Date, marks: [Mark],

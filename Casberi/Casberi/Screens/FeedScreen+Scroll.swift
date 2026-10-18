@@ -109,9 +109,9 @@ extension FeedScreen {
         // **THE WALLET'S SECTION IS WHAT MOVED (prd §1343, user: "wallet
         // section skip what needs you shows … feed is a feed, not the entire
         // source").** Its moves, never a state (`walletMoves`), and nothing
-        // Day's Needs you already holds.
+        // its own Needs you already leads with (prd §1413).
         if let wallet = byCategory[CategoryFold.walletRoom] {
-            let waiting = Set(dayNeeds.map(\.id))
+            let waiting = Set(walletNeeds.live.map(\.id))
             byCategory[CategoryFold.walletRoom] = Self.walletMoves(wallet).filter { !waiting.contains($0.id) }
         }
         return byCategory
@@ -139,9 +139,21 @@ extension FeedScreen {
         let cap = sectionCaps[category] ?? Self.sectionFirstRows
         panelSection(category, glyph: CategoryFold.glyph(for: category), things: things,
                      choices: sectionChoices(category)) {
+            // The Wallet's section leads with its Needs you (prd §1413):
+            // three on the first page, outside the section's cap, then its
+            // moves; More opens the rest of both.
+            let needsLimit = category == CategoryFold.walletRoom
+                ? (cap == Self.sectionFirstRows ? Self.walletNeedsFirstRows : cap) : 0
+            let needsWaiting = category == CategoryFold.walletRoom ? walletNeeds.live.count : 0
+            if needsLimit > 0 {
+                walletNeedsRows(nextEventID: nextEventID, limit: needsLimit)
+            }
             let _ = { Self.sectionCapNow = (category, cap) }()
             categorySections(category, things, nextEventID: nextEventID)
             let _ = { Self.sectionCapNow = nil }()
+            if needsWaiting > needsLimit, things.count <= cap {
+                sectionMoreRow(category)
+            }
         }
     }
 

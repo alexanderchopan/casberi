@@ -1,39 +1,33 @@
 #!/bin/zsh
-# Casberi day-needs self-test — Day gathers every place's Needs you
-# (prd §1327 item 9):
+# Casberi needs-you self-test — Needs you lives in its place, and Day is dated
+# rows (prd §1413; was day-needs-selftest.sh, prd §1327 item 9):
 #
-#   Casberi/Casberi/Model/DayNeeds.swift        (compiled whole: the gather,
-#                                                and Work's fold-then-ask)
 #   Casberi/Casberi/Model/WalletNeedsYou.swift  (compiled whole against stubs
 #                                                of the names it reads)
-#   Casberi/Casberi/Model/ObjectFold.swift, ThingLinks.swift, WorkAsk.swift, WorkStage.swift
 #
-# WHY A HARNESS. Every failure here renders as a calm list. A gather that
-# drops its dedupe draws one stuck transfer twice; one that sorts by place
-# buries this morning's review under last month's price rise; a Work read that
-# asks BEFORE it folds lists an incident that has since resolved; a Wallet rule
-# Day copied instead of shared drifts from the Wallet's own list, and the two
-# places disagree about what needs you (§837). Only a case-by-case statement
-# can say the merge is right, and the drift guards say both places still ask
-# the one rule. Since prd §1344 it also holds Day's own page deleted: its
-# tiles, Coming up and the page's Needs you card, model included.
+# WHY A HARNESS. Every failure here renders as a calm list. A Wallet rule the
+# Feed copied instead of shared drifts from the Wallet's own list, and the two
+# places disagree about what needs you (§837); a Day section that gathers
+# Needs you again conflates what waits on you with what is dated (§1413); a
+# Work ask gathered into Day stands twice in one Feed, because Work's section
+# draws its own (§1080). Only a case-by-case statement can say the Wallet's
+# rule is right, and the drift guards say every reader still asks that one
+# rule. Since prd §1344 it also holds Day's own page deleted: its tiles,
+# Coming up, the page's Needs you card, and since §1413 the week strip and the
+# gather, model included.
 #
 # Pure, local, deterministic. Exit non-zero on failure. `--self-test` (and
 # every plain run) also proves each check can fail: plausible mutations of the
-# two files must be CAUGHT.
+# rule must be CAUGHT.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-DAY="Casberi/Casberi/Model/DayNeeds.swift"
 WALLET="Casberi/Casberi/Model/WalletNeedsYou.swift"
-FOLD="Casberi/Casberi/Model/ObjectFold.swift"
-ASK="Casberi/Casberi/Model/WorkAsk.swift"
-LINKS="Casberi/Casberi/Model/ThingLinks.swift"
-STAGE="Casberi/Casberi/Model/WorkStage.swift"
-SOURCE="Casberi/Casberi/Model/DayNeedsSource.swift"
-SCREEN="Casberi/Casberi/Screens/FeedScreen+DayNeeds.swift"
+SOURCE="Casberi/Casberi/Model/WalletNeedsSource.swift"
+SCREEN="Casberi/Casberi/Screens/FeedScreen+WalletNeeds.swift"
 ROOM="Casberi/Casberi/Screens/FeedScreen+MergedRoom.swift"
 WROOM="Casberi/Casberi/Screens/FeedScreen+WalletRoom.swift"
+WHOME="Casberi/Casberi/Screens/FeedScreen+WalletHome.swift"
 TABS="Casberi/Casberi/Design/PlaceTabBar.swift"
 INFEED="Casberi/Casberi/Screens/FeedScreen+DayInFeed.swift"
 FEED="Casberi/Casberi/Screens/FeedScreen.swift"
@@ -45,35 +39,41 @@ GLYPHS="Casberi/Casberi/Screens/ScopeTileGlyphs.swift"
 CHROME="Casberi/Casberi/Shell/ShellChrome.swift"
 RSHELL="Casberi/Casberi/Shell/RootShell.swift"
 SURFACE="Casberi/Casberi/Shell/MainSurface.swift"
-for f in "$DAY" "$WALLET" "$FOLD" "$LINKS" "$ASK" "$STAGE" "$SOURCE" "$SCREEN" "$ROOM" "$WROOM" "$TABS" \
-         "$INFEED" "$FEED" "$MAKE" "$SECTIONS" "$SCROLL" "$SHAPED" "$GLYPHS" "$CHROME" "$RSHELL" "$SURFACE"; do
+CAL="Casberi/Casberi/Screens/WalletCalendar.swift"
+HOME_SCOPE="Casberi/Casberi/Model/HomeScope.swift"
+for f in "$WALLET" "$SOURCE" "$SCREEN" "$ROOM" "$WROOM" "$WHOME" "$TABS" "$INFEED" "$FEED" "$MAKE" \
+         "$SECTIONS" "$SCROLL" "$SHAPED" "$GLYPHS" "$CHROME" "$RSHELL" "$SURFACE" "$CAL" "$HOME_SCOPE"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
-# --- Day's own page stays deleted (prd §1344) -------------------------------
+# --- Day's page, its strip and its gather stay deleted (prd §1344, §1413) ----
 # Day is the Feed's section (§1343); its page, its All · Coming up · New tiles,
-# Coming up (and the DayDated entries only it drew), the page's calendar box
-# and its Needs you card are gone, model included (CLAUDE.md: a feature
-# deleted from the surface is deleted from the model). A file coming back, or
-# a file that would wire it back naming it, fails here. Paths are literal so
-# verify.sh's skip cache re-runs this the moment one of them exists again.
+# Coming up (and the DayDated entries only it drew), the page's calendar box,
+# its Needs you card, the week strip that opened five weeks in place and the
+# gather of every place's Needs you are gone, model included (CLAUDE.md: a
+# feature deleted from the surface is deleted from the model). A file coming
+# back, or a file that would wire it back naming it, fails here. Paths are
+# literal so verify.sh's skip cache re-runs this the moment one exists again.
 DELETED_FILES=(
   "Casberi/Casberi/Model/DayScope.swift"
   "Casberi/Casberi/Model/DayDated.swift"
+  "Casberi/Casberi/Model/DayNeeds.swift"
+  "Casberi/Casberi/Model/DayNeedsSource.swift"
   "Casberi/Casberi/Screens/FeedScreen+ComingUp.swift"
   "Casberi/Casberi/Screens/FeedScreen+DayDated.swift"
+  "Casberi/Casberi/Screens/FeedScreen+DayNeeds.swift"
   "Casberi/Casberi/Screens/DayCalendarFigure.swift"
 )
-WATCHED=("$ROOM" "$SCREEN" "$INFEED" "$FEED" "$SECTIONS" "$SCROLL" "$SHAPED" "$GLYPHS" "$CHROME" "$RSHELL" "$SURFACE" "$MAKE")
-GONE='DayScope|dayScope|dayComingUp|ComingUpWeek|DayDated|dayDatedRow|DayCalendarFigure|dayAheadRow|dayNeedsSection|DayMakeDialog|dayMakeOpen|dayHasApp|func pickDay[(]'
+WATCHED=("$ROOM" "$SCREEN" "$INFEED" "$FEED" "$SECTIONS" "$SCROLL" "$SHAPED" "$GLYPHS" "$CHROME" "$RSHELL" "$SURFACE" "$MAKE" "$CAL")
+GONE='DayScope|dayScope|dayComingUp|ComingUpWeek|DayDated|dayDatedRow|DayCalendarFigure|dayAheadRow|dayNeedsSection|DayMakeDialog|dayMakeOpen|dayHasApp|func pickDay[(]|DayNeeds|dayNeeds|dayNeedsRows|dayNeedsKey|loadDayNeeds|dayCalendarOpen|daySelected|pickFeedDay|dayPickedSection|dayCalendarMarks|dayFeedCalendarRow|dayFeedWeekEnd|shownWeeks|dotCell|onDay|Back to today'
 day_page_gone() { # $1 a root holding the paths above; prints the breach and fails
   local root="$1" f
   for f in "${DELETED_FILES[@]}"; do
-    [[ -e "$root/$f" ]] && { echo "✗ $f is back — Day has no page, no tiles and no Coming up (prd §1344)"; return 1; }
+    [[ -e "$root/$f" ]] && { echo "✗ $f is back — Day has no page, no tiles, no Coming up, no strip and no gather (prd §1344, §1413)"; return 1; }
   done
   for f in "${WATCHED[@]}"; do
-    if grep -v '^[[:space:]]*//' "$root/$f" | grep -Eq "$GONE"; then
-      echo "✗ $f names Day's deleted page again ($(grep -v '^[[:space:]]*//' "$root/$f" | grep -Eo "$GONE" | head -1)) — prd §1344"
+    if grep -v '^[[:space:]]*//' "$root/$f" | grep -Ewq "$GONE"; then
+      echo "✗ $f names Day's deleted page, strip or gather again ($(grep -v '^[[:space:]]*//' "$root/$f" | grep -Ewo "$GONE" | head -1)) — prd §1344, §1413"
       return 1
     fi
   done
@@ -84,24 +84,36 @@ day_page_gone . || exit 1
 # --- drift guards -----------------------------------------------------------
 # Wiring the compiled functions cannot prove about themselves.
 grep -q 'WalletNeedsYou.waiting(' "$WROOM" \
-  || { echo "✗ the Wallet's Home no longer asks WalletNeedsYou — Day and the Wallet can disagree"; exit 1; }
+  || { echo "✗ the Wallet's Home no longer asks WalletNeedsYou — the Feed and the Wallet can disagree"; exit 1; }
 grep -q 'WalletNeedsYou.waiting(' "$SOURCE" \
-  || { echo "✗ Day no longer asks the Wallet's own rule"; exit 1; }
-grep -q 'DayNeeds.workAsks(' "$SOURCE" \
-  || { echo "✗ Day no longer reads Work's asks through the fold"; exit 1; }
-grep -q 'DayNeeds.gather(' "$SCREEN" \
-  || { echo "✗ Day no longer gathers the places into one list"; exit 1; }
-grep -q 'dayNeedsRows(nextEventID: nextEventID, limit: window.needs)' "$INFEED" \
-  || { echo "✗ Day's section no longer leads with Needs you (prd §1343)"; exit 1; }
-grep -q '.task(id: dayNeedsKey)' "$FEED" \
-  || { echo "✗ Day's Needs you is no longer read in a task (prd §628)"; exit 1; }
+  || { echo "✗ the Feed's Wallet section no longer asks the Wallet's own rule (prd §1413)"; exit 1; }
+grep -q 'WalletNeedsSource.waiting(' "$SCREEN" \
+  || { echo "✗ the Feed no longer reads the Wallet's Needs you through WalletNeedsSource (prd §1413)"; exit 1; }
+grep -q 'walletNeedsRows(nextEventID: nextEventID, limit: needsLimit)' "$SCROLL" \
+  || { echo "✗ the Feed's Wallet section no longer leads with Needs you (prd §1413)"; exit 1; }
+grep -q 'static let walletNeedsFirstRows = 3' "$SCREEN" \
+  || { echo "✗ the Wallet's Needs you no longer takes three on the first page (prd §1413)"; exit 1; }
+grep -q '.task(id: feedSectionsKey)' "$FEED" \
+  || { echo "✗ the Wallet's Needs you is no longer read in a task (prd §628)"; exit 1; }
+grep -q 'Set(walletNeeds.live.map(\\.id))' "$SCROLL" \
+  || { echo "✗ the Wallet's moves no longer skip what its Needs you leads with (prd §1343 item 7)"; exit 1; }
+# Day is dated rows (prd §1413): nothing in its section names Needs you, and
+# its window is bounded by the cap alone.
+grep -v '^[[:space:]]*//' "$INFEED" | grep -Eq 'needsYou|Needs you|needsYouGroup' \
+  && { echo "✗ Day's section draws Needs you again — it lives in its place (prd §1413)"; exit 1; }
+grep -q 'let window = dayFeedWindow(visible)' "$INFEED" \
+  || { echo "✗ Day's window is bounded by something other than the cap again (prd §1413)"; exit 1; }
+# One shape per section (prd §1413 item 7): the Wallet's asks take the row
+# the moves under them take, never the grouped one.
+grep -v '^[[:space:]]*//' "$SCREEN" | grep -q 'grouped: true' \
+  && { echo "✗ the Wallet's Needs you rows took the grouped shape beside plain moves (prd §1413 item 7)"; exit 1; }
 # Every door to Day lands on its section (prd §1344): on the phone a door
 # naming Day is a Feed section, and Day's room on iPad and the Mac draws that
 # one section, never a page of its own.
 grep -q 'scrollSection(RoomAccounts.dayRoom, visible, nextEventID: nextEventID)' "$ROOM" \
   || { echo "✗ Day's room on iPad and the Mac no longer draws the Feed's Day section (prd §1344)"; exit 1; }
-grep -q 'source != CategoryFold.walletRoom && source != RoomAccounts.testnetsRoom' "Casberi/Casberi/Model/HomeScope.swift" \
-  && ! grep -q 'source != RoomAccounts.dayRoom' "Casberi/Casberi/Model/HomeScope.swift" \
+grep -q 'source != CategoryFold.walletRoom && source != RoomAccounts.testnetsRoom' "$HOME_SCOPE" \
+  && ! grep -q 'source != RoomAccounts.dayRoom' "$HOME_SCOPE" \
   || { echo "✗ a door naming Day no longer lands on its Feed section (HomeScope.isFeedSection, prd §1343)"; exit 1; }
 # Day's + (prd §1343): Track a subscription, in the verb's own word, raising
 # the Wallet's own tray (moved here from day-dated-selftest.sh, §1344).
@@ -109,16 +121,16 @@ grep -q 'case .subscription: return SubscriptionWords.track' "$MAKE" \
   || { echo "✗ Day's + lost Track a subscription, or its verb is not SubscriptionWords.track"; exit 1; }
 grep -q 'feedSheet = .subscriptionAdd' "$ROOM" \
   || { echo "✗ Day's Track a subscription no longer raises the Wallet's own tray"; exit 1; }
+# Each place keeps its own Needs you (prd §1329, §1413).
 grep -q 'WorkAsk.needsYou(' "$ROOM" \
-  || { echo "✗ Work's own Coming up lost its Needs you — each place keeps its own"; exit 1; }
-grep -q 'walletDaySections(\[(Self.needsYouGroup' "Casberi/Casberi/Screens/FeedScreen+WalletHome.swift" \
+  || { echo "✗ Work's own section lost its Needs you — each place keeps its own"; exit 1; }
+grep -q 'walletDaySections(\[(Self.needsYouGroup' "$WHOME" \
   || { echo "✗ the Wallet's Home lost its Needs you — each place keeps its own"; exit 1; }
 grep -qi 'badge' "$TABS" \
   && { echo "✗ the tab bar wears a badge — the Day tab does not (user, prd §1327 item 9)"; exit 1; }
 
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
-cp "$FOLD" "$LINKS" "$ASK" "$STAGE" "$TMP/"
 
 # Stubs of the names WalletNeedsYou reads, at their shipped spellings.
 cat > "$TMP/stubs.swift" <<'SWIFT'
@@ -155,41 +167,6 @@ func check(_ ok: Bool, _ what: String) {
 }
 let now = Date(timeIntervalSince1970: 2_000_000_000)
 func ago(_ h: Double) -> Date { now.addingTimeInterval(-h * 3_600) }
-func id(_ n: Int) -> UUID { UUID(uuidString: String(format: "00000000-0000-0000-0000-%012d", n))! }
-func item(_ n: Int, _ place: String, _ h: Double) -> DayNeeds.Item { .init(id: id(n), place: place, at: ago(h)) }
-
-// ── The gather ───────────────────────────────────────────────────────
-let wallet = [item(1, "Wallet", 2), item(2, "Wallet", 30)]
-let work = [item(3, "Work", 1), item(4, "Work", 5)]
-let all = DayNeeds.gather([wallet, work])
-check(all.map(\.id) == [id(3), id(1), id(4), id(2)], "every place's rows stand newest first, not place by place")
-check(all.count == 4, "nothing is dropped")
-check(DayNeeds.gather([[], []]).isEmpty, "nothing waiting gathers nothing — Day draws no section")
-let twice = DayNeeds.gather([[item(9, "Wallet", 3)], [item(9, "Work", 3)]])
-check(twice.count == 1, "a thing two places hold stands once")
-check(twice.first?.place == "Wallet", "under the first place to name it")
-let tie = DayNeeds.gather([[item(5, "Wallet", 4)], [item(6, "Work", 4)]])
-check(tie.map(\.id) == [id(5), id(6)], "a tie on time keeps Day's place order")
-check(DayNeeds.gather([wallet]).map(\.place) == ["Wallet", "Wallet"], "each row keeps the place it came from")
-
-// ── Work: fold, then ask ─────────────────────────────────────────────
-func row(_ n: Int, _ source: String, tags: [String] = [], ref: String? = nil, key: String? = nil,
-         _ h: Double) -> DayNeeds.WorkRow {
-    .init(id: id(n), at: ago(h), key: key,
-          row: .init(source: source, sourceRef: ref, title: "x", tags: tags))
-}
-let rows = [
-    row(10, "PagerDuty", tags: ["Incident", "Resolved"], key: "pd:1", 1),   // newest state of incident 1
-    row(11, "PagerDuty", tags: ["Incident"], key: "pd:1", 3),               // folded: it resolved
-    row(12, "GitHub", tags: ["Notifications", "Review"], 2),
-    row(13, "GitHub", tags: ["Notifications"], 4),                          // asks nothing
-    row(14, "GitHub", tags: ["Review"], 24 * 8),                            // older than a week
-    row(15, "Vercel", tags: ["Build failure"], 0.5),
-]
-let asks = DayNeeds.workAsks(rows, place: "Work", now: now)
-check(asks.map(\.id) == [id(15), id(12)], "Work's asks: the fold first, then WorkAsk, newest first")
-check(!asks.contains { $0.id == id(11) }, "an incident since resolved has left — the fold runs before the ask")
-check(asks.allSatisfy { $0.place == "Work" }, "Work's rows name Work")
 
 // ── The Wallet's one rule ────────────────────────────────────────────
 func waits(_ source: String, ref: String?, tags: [String] = [], at: Date = ago(1),
@@ -215,17 +192,16 @@ check(!waits("Safe", ref: nil, safe: ["x"]), "a row with no ref never waits")
 check(WalletNeedsYou.readsBook(ref: "zfi:reclaim:b:1") && !WalletNeedsYou.readsBook(ref: "wise:transfer:1"),
       "the zFi book is read for reclaim rows only")
 
-if failures > 0 { print("✗ day needs: \(failures) failing"); exit(1) }
-print("✓ day needs self-test passed")
+if failures > 0 { print("✗ needs you: \(failures) failing"); exit(1) }
+print("✓ needs you self-test passed")
 SWIFT
 
-build() { # $1 DayNeeds.swift, $2 WalletNeedsYou.swift, $3 binary
-  swiftc -Onone -o "$3" "$1" "$2" "$TMP/ObjectFold.swift" "$TMP/ThingLinks.swift" "$TMP/WorkAsk.swift" "$TMP/WorkStage.swift" \
-    "$TMP/stubs.swift" "$TMP/main.swift" 2>&1 | grep -v '^ *$' || true
+build() { # $1 WalletNeedsYou.swift, $2 binary
+  swiftc -Onone -o "$2" "$1" "$TMP/stubs.swift" "$TMP/main.swift" 2>&1 | grep -v '^ *$' || true
 }
 
-build "$DAY" "$WALLET" "$TMP/run"
-[[ -x "$TMP/run" ]] || { echo "✗ day needs harness did not compile — DayNeeds or WalletNeedsYou no longer builds Foundation-only"; exit 1; }
+build "$WALLET" "$TMP/run"
+[[ -x "$TMP/run" ]] || { echo "✗ needs-you harness did not compile — WalletNeedsYou no longer builds Foundation-only"; exit 1; }
 "$TMP/run" || exit 1
 
 # --- mutation pass ----------------------------------------------------------
@@ -242,8 +218,7 @@ if old not in src:
 open(sys.argv[2], "w").write(src.replace(old, new, 1))
 PY
   rm -f "$TMP/mrun"
-  if [[ "$file" == "$DAY" ]]; then build "$TMP/mutated.swift" "$WALLET" "$TMP/mrun" >/dev/null
-  else build "$DAY" "$TMP/mutated.swift" "$TMP/mrun" >/dev/null; fi
+  build "$TMP/mutated.swift" "$TMP/mrun" >/dev/null
   if [[ -x "$TMP/mrun" ]] && "$TMP/mrun" >/dev/null 2>&1; then
     echo "  ✗ mutation SURVIVED: $label"
     return 1
@@ -251,18 +226,8 @@ PY
   echo "  ✓ mutation caught: $label"
 }
 
-echo "day-needs-selftest: mutation pass…"
+echo "needs-you-selftest: mutation pass…"
 mfail=0
-mutate "the gather keeps a thing twice" "$DAY" \
-  'where seen.insert(item.id).inserted {|||{' || mfail=1
-mutate "the gather stands place by place instead of newest first" "$DAY" \
-  'a.item.at != b.item.at ? a.item.at > b.item.at : a.order < b.order|||a.order < b.order' || mfail=1
-mutate "a tie on time loses Day's place order" "$DAY" \
-  ': a.order < b.order|||: a.order > b.order' || mfail=1
-mutate "Work asks before it folds" "$DAY" \
-  '!hidden.contains($0.id) && WorkAsk|||WorkAsk' || mfail=1
-mutate "Work's asks come oldest first" "$DAY" \
-  '.sorted { $0.at > $1.at }|||.sorted { $0.at < $1.at }' || mfail=1
 mutate "a price rise stands forever" "$WALLET" \
   'return now.timeIntervalSince(capturedAt) < priceRiseWindow|||return true' || mfail=1
 mutate "an executed Safe transaction still waits" "$WALLET" \
@@ -274,9 +239,10 @@ mutate "a deposit under review is called waiting" "$WALLET" \
 mutate "a Safe transaction waiting on others still waits on you" "$WALLET" \
   'safePending.contains(ref) && tags.contains("Your turn")|||safePending.contains(ref)' || mfail=1
 
-# The stays-deleted guard (prd §1344), over a copy of the watched files: a
-# deleted file brought back, and a watched file naming the page again, must
-# each be caught; the untouched copy must pass, or the two catches prove nothing.
+# The stays-deleted guard (prd §1344, §1413), over a copy of the watched
+# files: a deleted file brought back, and a watched file naming the page, the
+# strip or the gather again, must each be caught; the untouched copy must
+# pass, or the catches prove nothing.
 guard_root() { # a fresh copy of every watched file under $TMP/root
   rm -rf "$TMP/root"
   local f
@@ -299,10 +265,16 @@ guard_mutate "Coming up's file comes back" \
   'mkdir -p Casberi/Casberi/Screens && echo "extension FeedScreen {}" > Casberi/Casberi/Screens/FeedScreen+ComingUp.swift' || mfail=1
 guard_mutate "DayScope comes back" \
   'echo "enum DayScope { case all, comingUp, new }" >> Casberi/Casberi/Model/DayMake.swift' || mfail=1
+guard_mutate "the gather comes back" \
+  'mkdir -p Casberi/Casberi/Model && echo "enum DayNeeds {}" > Casberi/Casberi/Model/DayNeeds.swift' || mfail=1
 guard_mutate "the chrome holds Day's tile again" \
   'echo "    var dayScope = 0" >> Casberi/Casberi/Shell/ShellChrome.swift' || mfail=1
-guard_mutate "the page's Needs you card comes back" \
-  'echo "    func dayNeedsSection(nextEventID: UUID?) {}" >> Casberi/Casberi/Screens/FeedScreen+DayNeeds.swift' || mfail=1
+guard_mutate "Day's section gathers Needs you again" \
+  'echo "    func dayNeedsRows(nextEventID: UUID?) {}" >> Casberi/Casberi/Screens/FeedScreen+DayInFeed.swift' || mfail=1
+guard_mutate "the strip's picked day comes back" \
+  'echo "    @State var daySelected: Date? = nil" >> Casberi/Casberi/Screens/FeedScreen.swift' || mfail=1
+guard_mutate "the calendar takes a tap again" \
+  'echo "    var onDay: ((Date) -> Void)? = nil" >> Casberi/Casberi/Screens/WalletCalendar.swift' || mfail=1
 
-[[ $mfail -eq 0 ]] || { echo "day-needs-selftest: a mutation SURVIVED — a check above proves nothing"; exit 1; }
-echo "day-needs-selftest: OK — the gather, Work's fold-then-ask, the Wallet's one rule and Day's deleted page all pinned."
+[[ $mfail -eq 0 ]] || { echo "needs-you-selftest: a mutation SURVIVED — a check above proves nothing"; exit 1; }
+echo "needs-you-selftest: OK — the Wallet's one rule, the Feed's Wallet section leading with it, Work's own, and Day's deleted page, strip and gather all pinned."

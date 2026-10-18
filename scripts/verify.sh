@@ -2055,7 +2055,7 @@ harness "Work ask self-test" "work ask self-test" "scripts/work-ask-selftest.sh"
 # once, Work folded before it asks, and the Wallet's one rule shared with Home.
 # It also holds Day's own page, its tiles and Coming up deleted (prd §1344;
 # Coming up's DayDated and its self-test went with them).
-harness "Day needs self-test" "day needs self-test" "scripts/day-needs-selftest.sh" "the day needs self-test failed — run scripts/day-needs-selftest.sh"
+harness "Needs-you self-test" "needs-you self-test" "scripts/needs-you-selftest.sh" "the needs-you self-test failed — run scripts/needs-you-selftest.sh"
 harness "Reading room self-test" "reading room self-test" "scripts/reading-room-selftest.sh" "the reading room self-test failed — run scripts/reading-room-selftest.sh"
 harness "Social to-you self-test" "social to-you self-test" "scripts/social-toyou-selftest.sh" "the social to-you self-test failed — run scripts/social-toyou-selftest.sh"
 harness "Wallet makeover self-test" "wallet makeover self-test" "scripts/wallet-makeover-selftest.sh" "the wallet makeover self-test failed — run scripts/wallet-makeover-selftest.sh"
