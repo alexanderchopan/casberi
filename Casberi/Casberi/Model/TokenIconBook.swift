@@ -25,6 +25,16 @@ import Foundation
 /// wallet that has touched ten thousand airdrops does not grow a defaults
 /// blob forever. Persisted through `DefaultsWrite` (§721 — never a defaults
 /// write under a lock the main thread can contend).
+///
+/// **A fiat currency is never in the book (prd §1400).** The book is keyed
+/// by symbol alone, and the Wallet's cash tiles (`WalletCash`: Apple Cash,
+/// Wise) are keyed by their currency code — so an airdropped junk token
+/// whose symbol was "USD" handed its pyramid-and-eye logo to the Apple
+/// Wallet page's dollars (user, 2026-10-18: "wtf is this pyramid w an
+/// eyeball"). Cash is not a token and has no token logo: an ISO 4217 code
+/// is refused at `note` and answered nil at `url`, so a book already
+/// carrying one draws the monogram. The rule stands in the book, not in a
+/// caller, so `AssetMark` and `BridgeIcon` both keep it.
 enum TokenIconBook {
     static let key = "tokenIconBook.v1"
     static let capacity = 600
@@ -50,6 +60,10 @@ enum TokenIconBook {
         symbol.trimmingCharacters(in: .whitespaces).uppercased()
     }
 
+    /// Every ISO 4217 code the system knows, read once. "USD", "EUR", "GBP",
+    /// "SGD" are money at a bank, never a coin with a logo.
+    private static let fiatCodes: Set<String> = Set(Locale.Currency.isoCurrencies.map(\.identifier.uppercased()))
+
     /// Whether a URL may enter the book: https, on `host`, nothing else.
     static func accepts(_ urlString: String) -> Bool {
         guard let url = URL(string: urlString), url.scheme == "https",
@@ -60,7 +74,7 @@ enum TokenIconBook {
     /// The picture for a symbol, or nil — the caller then draws its monogram.
     static func url(for symbol: String) -> String? {
         let k = normalized(symbol)
-        guard !k.isEmpty else { return nil }
+        guard !k.isEmpty, !fiatCodes.contains(k) else { return nil }
         lock.lock(); defer { lock.unlock() }
         return loaded().last { $0.count == 2 && $0[0] == k }?[1]
     }
@@ -70,7 +84,7 @@ enum TokenIconBook {
     static func note(_ found: [(symbol: String, url: String)]) {
         let clean = found.compactMap { pair -> [String]? in
             let k = normalized(pair.symbol)
-            guard !k.isEmpty, accepts(pair.url) else { return nil }
+            guard !k.isEmpty, !fiatCodes.contains(k), accepts(pair.url) else { return nil }
             return [k, pair.url]
         }
         guard !clean.isEmpty else { return }
