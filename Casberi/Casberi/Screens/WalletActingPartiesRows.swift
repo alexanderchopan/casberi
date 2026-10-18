@@ -35,16 +35,29 @@ struct WalletActingPartiesRows: View {
     /// state: an account whose modules cannot be enumerated has NO holders to
     /// show, so an empty list is exactly what a silent ceiling looks like.
     let acting: [WalletActingParties.Account]
+    /// **FIVE ROWS, THEN ONE DOOR (prd §1408).** `cap` holds the list to that
+    /// many until `open`; the door under the rows (`DSMoreRow`) calls `more`.
+    /// Nil draws every row, for a caller with no fold.
+    var cap: Int? = nil
+    var open = false
+    var more: (() -> Void)? = nil
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        let rows = WalletPermissions.actingHolders(holders)
+        let all = WalletPermissions.actingHolders(holders)
+        let folded = cap.map { all.count > $0 } ?? false
+        let rows = (folded && !open) ? Array(all.prefix(cap ?? all.count)) : all
         if !rows.isEmpty || !ceilings.isEmpty {
             VStack(alignment: .leading, spacing: 0) {
                 ForEach(Array(rows.enumerated()), id: \.offset) { index, holder in
                     row(holder)
                         .chartArrival(index: index, reduceMotion: reduceMotion)
+                }
+                if folded, let more {
+                    DSMoreRow(title: open ? Text("Show fewer")
+                                          : Text(verbatim: String(localized: "See all \(all.count)")),
+                              opens: !open, action: more)
                 }
                 ForEach(ceilings, id: \.self) { note in
                     Text(note)

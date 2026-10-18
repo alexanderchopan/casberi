@@ -49,6 +49,12 @@ import SwiftUI
 /// `Thing` lookup happens at the tap, in the section that owns the sheet.
 struct WalletApprovalExposureCard: View {
     let exposure: WalletApprovalExposure
+    /// **FIVE ROWS, THEN ONE DOOR (prd §1408).** `cap` holds the list to that
+    /// many until `open`; the door under the rows (`DSMoreRow`) calls `more`.
+    /// Nil draws every grant, for a caller with no fold.
+    var cap: Int? = nil
+    var open = false
+    var more: (() -> Void)? = nil
     /// Opens a grant's own prepare card (live allowance, revoke calldata, fee
     /// quote, Revoke.cash door). Reads and previews only — prd §112.
     var onOpen: (WalletApprovalExposure.Grant) -> Void
@@ -71,9 +77,17 @@ struct WalletApprovalExposureCard: View {
                 // so the grant worth revoking first is also the row that lands
                 // first — the treemap's largest-first rule, and the exact
                 // instruction the subhead above gives ("Start at the top").
-                ForEach(Array(exposure.all.enumerated()), id: \.element.id) { index, grant in
+                let all = exposure.all
+                let folded = cap.map { all.count > $0 } ?? false
+                let shown = (folded && !open) ? Array(all.prefix(cap ?? all.count)) : all
+                ForEach(Array(shown.enumerated()), id: \.element.id) { index, grant in
                     row(grant)
                         .chartArrival(index: index, reduceMotion: reduceMotion)
+                }
+                if folded, let more {
+                    DSMoreRow(title: open ? Text("Show fewer")
+                                          : Text(verbatim: String(localized: "See all \(all.count)")),
+                              opens: !open, action: more)
                 }
 
                 if let target = exposure.oldestWorthReviewing {

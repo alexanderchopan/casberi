@@ -99,8 +99,7 @@ extension FeedScreen {
             kind.securityFlag.map { thing.hasSecurityFlag($0) } ?? false
         }
         if !things.isEmpty {
-            let key = "security.\(anchor.rawValue)"
-            let open = walletOpenSections.contains(key)
+            let open = walletSecurityOpen(anchor)
             let shown = open ? things : Array(things.prefix(Self.walletHomeCap))
             walletCard(word, glyph: kind.glyph, anchor: anchor.id) {
                 VStack(alignment: .leading, spacing: 0) {
@@ -113,20 +112,39 @@ extension FeedScreen {
                             }
                         }
                     }
-                    if things.count > Self.walletHomeCap {
-                        DSMoreRow(title: open ? Text("Show fewer")
-                                              : Text(verbatim: String(localized: "See all \(things.count)")),
-                                  opens: !open) {
-                            withAnimation(DS.Motion.standard) {
-                                if open { walletOpenSections.remove(key) } else { walletOpenSections.insert(key) }
-                            }
-                        }
-                    }
+                    walletSecurityDoor(anchor, total: things.count)
                 }
                 .listRowInsets(WalletCardStyle.rowInsets)
                 .feedRowBackground()
                 .listRowSeparator(.hidden)
             }
+        }
+    }
+
+    /// **EVERY SECURITY SECTION SHOWS FIVE ROWS, THEN ONE DOOR (prd §1408,
+    /// user: "approvals signatures and delegations also should be capped").**
+    /// The fold is Home's set (`walletOpenSections`), keyed by the section.
+    func walletSecurityOpen(_ anchor: SecurityAnchor) -> Bool {
+        walletOpenSections.contains("security.\(anchor.rawValue)")
+    }
+
+    func walletSecurityToggle(_ anchor: SecurityAnchor) {
+        let key = "security.\(anchor.rawValue)"
+        withAnimation(DS.Motion.standard) {
+            if walletOpenSections.contains(key) { walletOpenSections.remove(key) }
+            else { walletOpenSections.insert(key) }
+        }
+    }
+
+    /// "See all N" under a capped section, "Show fewer" once it is open; no
+    /// door when five is everything (`DSMoreRow`, §1386).
+    @ViewBuilder
+    func walletSecurityDoor(_ anchor: SecurityAnchor, total: Int) -> some View {
+        if total > Self.walletHomeCap {
+            let open = walletSecurityOpen(anchor)
+            DSMoreRow(title: open ? Text("Show fewer")
+                                  : Text(verbatim: String(localized: "See all \(total)")),
+                      opens: !open) { walletSecurityToggle(anchor) }
         }
     }
 

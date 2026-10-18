@@ -424,9 +424,12 @@ extension FeedScreen {
     var walletSignaturesSection: some View {
         let waiting = walletSignatureWarnings
         if !waiting.isEmpty {
+            // Five rows, then one door (prd §1408).
+            let open = walletSecurityOpen(.signatures)
+            let shown = open ? waiting : Array(waiting.prefix(Self.walletHomeCap))
             walletCard(String(localized: "Signatures"), glyph: WalletWarning.Kind.safe.glyph, anchor: SecurityAnchor.signatures.id) {
                 VStack(alignment: .leading, spacing: 0) {
-                    ForEach(waiting) { warning in
+                    ForEach(shown) { warning in
                         needsYouRow(glyph: warning.kind.glyph, critical: false,
                                     title: warning.rowName ?? warning.title,
                                     line: warning.rowLine ?? warning.subtitle) {
@@ -437,6 +440,7 @@ extension FeedScreen {
                             }
                         }
                     }
+                    walletSecurityDoor(.signatures, total: waiting.count)
                 }
                 .listRowInsets(WalletCardStyle.rowInsets)
                 .feedRowBackground()
@@ -857,7 +861,9 @@ extension FeedScreen {
         if !WalletPermissions.actingHolders(holders).isEmpty
             || walletLive.acting.contains(where: { $0.modulesUnreadable }) {
             walletCard(String(localized: "Delegations"), glyph: WalletWarning.Kind.delegation.glyph, anchor: SecurityAnchor.delegations.id) {
-                WalletActingPartiesRows(holders: holders, acting: walletLive.acting)
+                WalletActingPartiesRows(holders: holders, acting: walletLive.acting,
+                                        cap: Self.walletHomeCap, open: walletSecurityOpen(.delegations),
+                                        more: { walletSecurityToggle(.delegations) })
                     .modifier(rowEntrance(2))
                     .feedRowBackground()
                     .listRowSeparator(.hidden)
@@ -881,7 +887,9 @@ extension FeedScreen {
     var walletApprovalsSection: some View {
         if !walletLive.exposure.isEmpty {
             walletCard(String(localized: "Approvals"), glyph: WalletWarning.Kind.approval.glyph, anchor: SecurityAnchor.approvals.id) {
-                WalletApprovalExposureCard(exposure: walletLive.exposure) { grant in
+                WalletApprovalExposureCard(exposure: walletLive.exposure,
+                                           cap: Self.walletHomeCap, open: walletSecurityOpen(.approvals),
+                                           more: { walletSecurityToggle(.approvals) }) { grant in
                     guard let thing = walletLive.activeApprovals
                         .first(where: { $0.isLive && $0.id == grant.thingID })
                     else {
