@@ -126,8 +126,13 @@ present "the rail still asks the feed whether this is a social room" \
 # reader appearing is the drift returning.
 present "the room's roster reads the one dispatch" \
   'SocialRoomSource\.accounts\(for: source\)' "$TMP/feed.nc"
-present "the rail above it reads the same one" \
-  'SocialRoomSource\.accounts\(for: filter\.source\)' "$TMP/shell.nc"
+# AMENDED 2026-10-18 (prd §1407): the people stand in a menu on the room's
+# title, not a rail in the shell's band; the menu reads the same dispatch,
+# in the room's own file, so the roster and the menu still cannot disagree.
+present "the people menu on the title reads the same one" \
+  'SocialRoomSource\.accounts\(for: source\)' "Casberi/Casberi/Screens/FeedScreen+RoomTitle.swift"
+absent "a social rail is back in the shell's band (§1407)" \
+  'SocialScopeRail\.items\(' "$TMP/shell.nc"
 absent "FeedScreen reaches a network store directly again" \
   '(Farcaster|Bluesky)Store\.shared\.socialAccounts' "$TMP/feed.nc"
 absent "MainSurface reaches a network store directly again" \
