@@ -30,7 +30,16 @@ extension FeedScreen {
     /// The categories the Feed stacks: every one with a room, in the dock's
     /// order, the Wallet (its own place) and Testnets (the tray's) excepted.
     var scrollCategories: [String] {
-        HomeScope.feedCategories(chips: chrome.chipOrder)
+        let all = HomeScope.feedCategories(chips: chrome.chipOrder)
+        // THE PANE CARRIES DAY (prd §1398): beside a pane the Feed's Day
+        // section — the week, the next thing, Needs you, the days — stands
+        // under the Feed's box in the pane, and the list column lists the
+        // rest; the pane's own instance draws Day and nothing else.
+        switch roomBoxPlace {
+        case .list: return all
+        case .listWithoutBox: return all.filter { $0 != RoomAccounts.dayRoom }
+        case .paneBox: return all.filter { $0 == RoomAccounts.dayRoom }
+        }
     }
 
     /// **THE FEED'S ROW IS ITS CATEGORIES (prd §1328, user: "the fix isn't
@@ -170,6 +179,9 @@ extension FeedScreen {
         case RoomAccounts.dayRoom:
             dayFeedSections(nextEventID: nextEventID,
                             rows: source == RoomAccounts.dayRoom ? things : nil)
+                // The pane's rows (prd §1398): drawn there, never in a list
+                // column beside one.
+                .environment(\.dsPaneBoxRow, true)
         case RoomAccounts.lifeRoom:
             lifeRoomSections(things, nextEventID: nextEventID)
         case RoomAccounts.workRoom:
@@ -914,10 +926,24 @@ struct SectionPanelGroup<Header: View, Rows: View>: View {
     var lit = false
     @Environment(\.feedSectionPanelInset) private var panelInset
     @Environment(\.feedSectionPanelFilled) private var panelFilled
+    @Environment(\.dsRoomBoxPlace) private var place
+    @Environment(\.dsPaneBoxRow) private var paneRow
     @ViewBuilder let header: Header
     @ViewBuilder let rows: Rows
 
+    @ViewBuilder
     var body: some View {
+        // A panel stands where its rows stand (prd §1398): the list's in the
+        // list column, the pane's in the pane.
+        if (place == .paneBox && !paneRow) || (place == .listWithoutBox && paneRow) {
+            EmptyView()
+        } else {
+            panel
+        }
+    }
+
+    @ViewBuilder
+    private var panel: some View {
         Section {
             ForEach([anchor ?? ""], id: \.self) { _ in
                 // A chapter's air stands between panels, never inside one:

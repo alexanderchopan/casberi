@@ -57,6 +57,10 @@ struct DSRoomScopeChrome<Scope: DSTileScope, Crown: View, Figure: View>: View {
     /// The section's own drawing, off Home. Drawn HERE, in the box the crown
     /// takes on Home, never as a sibling `Section` above the chrome (prd §765).
     @ViewBuilder let figure: (Scope) -> Figure
+    /// Where the box draws (prd §1398): the lead stands in the pane where
+    /// there is one, the tiles and the menu in the list; the pane's instance
+    /// publishes no rail.
+    @Environment(\.dsRoomBoxPlace) private var boxPlace
 
     /// The slot the crown draws: the one in scope, else the "All" slot, else
     /// the only one.
@@ -66,13 +70,16 @@ struct DSRoomScopeChrome<Scope: DSTileScope, Crown: View, Figure: View>: View {
             ?? accounts.first
     }
 
+    /// Whether this instance owns the published rail: never the pane's box.
+    private var publishes: Bool { !pinned && boxPlace != .paneBox }
+
     var body: some View {
         content
-            .onAppear { if !pinned { publish() } }
-            .onChange(of: accounts) { _, _ in if !pinned { publish() } }
-            .onChange(of: scope) { _, _ in if !pinned { publish() } }
+            .onAppear { if publishes { publish() } }
+            .onChange(of: accounts) { _, _ in if publishes { publish() } }
+            .onChange(of: scope) { _, _ in if publishes { publish() } }
             .onDisappear {
-                if !pinned, chrome.accountRail?.source == source { chrome.accountRail = nil }
+                if publishes, chrome.accountRail?.source == source { chrome.accountRail = nil }
             }
     }
 
@@ -104,11 +111,12 @@ struct DSRoomScopeChrome<Scope: DSTileScope, Crown: View, Figure: View>: View {
         // (`ledeListRow`), while this row started at 0 with `contentGap`.
         // The same two numbers here, so the tiles land at one y everywhere.
         VStack(alignment: .leading, spacing: DSRoomChassis.leadGap) {
-            lead
+            // THE BOX IS THE PANE'S where there is one (prd §1398).
+            if boxPlace != .listWithoutBox { lead }
             // **THE TILES, THEN THE MENU, ON EVERY PAGE (prd §1039).** Home
             // drew Actions and the Overview rows under these until the merge;
             // the room's own list follows the chrome now, as in every room.
-            if !pinned {
+            if !pinned, boxPlace != .paneBox {
                 VStack(alignment: .leading, spacing: DS.Space.s2) {
                     DSScopeTiles(sections: sections, active: active,
                                  attention: attention, inert: inert, bare: bare, onPick: onPick)

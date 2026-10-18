@@ -71,8 +71,6 @@ Or just run `scripts/verify.sh` (build + install + screen sweep + answer probe).
 **The checks themselves** — one line each; what each catches, why it exists and what it
 deliberately does not check are in `docs/verify.md`.
 
-- **Mac parity gate (verify.sh step 1b)** → docs/verify.md
-- **verify.sh runs verify-mac.sh IN PARALLEL and gates on it (user rule, 2026-08-21 — the split was discovered, not chosen)** → docs/verify.md
 - **Mac parity audit (scripts/mac-parity-audit.py)** → docs/verify.md
 - **Account-detail sheet gate (verify-mac.sh step 2d, 2026-09-21) — a Catalyst sheet does NOT inherit the presenter's environment, and the shipped Mac build died on every Accounts → Settings row that raises one** → docs/verify.md · prd §872
 - **Both verify scripts are provably complete** → docs/verify.md
@@ -166,7 +164,6 @@ deliberately does not check are in `docs/verify.md`.
 - **Mac verify (scripts/verify-mac.sh)** → docs/verify.md
 - **The Mac verify's cleanup is BOUNDED — a fix, not a precaution** → docs/verify.md
 - **iCloud sync on the Mac, and the four things no check could see** → docs/verify.md · prd §607
-- **The Mac nightly was red ELEVEN of TWELVE nights, and every one resolves green on today's tree** → docs/verify.md
 - **Mac nightly (scripts/nightly-mac.sh), a step of the nightly audit task** → docs/verify.md
 
 - Test device: **iPhone 17 Pro** sim, BY UDID — `scripts/sim-device.py`, never `name=` → docs/verify.md
@@ -228,7 +225,7 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - `-openAddresses YES` — land Library on Contacts (the Addresses screen is deleted, prd §1323).
 - `-openAddressCard <0x…>` — raise the address card for a book entry when the Wallet page appears (`Screens/WalletScreen.swift`; pair with `-openSetup "Wallet"` and `casberi://account`; NSLogs `openAddressCard:`).
 - `-openReach YES` `-seedReceipts YES` `-reachScope "<Category>"` — present What this app reaches (`HomeRoute.Node.reach`, the registry and the ledger on one screen since prd §967; its door is the Data tray's one row); `-seedReceipts` records five hosts through `NetworkLedger`, one undeclared, and `-reachScope` jumps to a category's card (prd §1222). `simctl spawn defaults write` does not reach the ledger reliably; seed through this hook → prd §967
-- **Two controls (prd §1133): the face says WHERE, the tiles say WHAT.** No pill in any room; the title is a label, `DSRoomTitleRow(title:pick:)` ("Wallet · Savings", "You · Settings"), the category pink. The rooms tray's Search (a capsule beside the face on the phone, §1176) filters the tray as you type and hands the words to Find (`ShellChrome.openFind`, §1133e), You is a row named like the screen title, your name else You (`HomeScope.title`, §1133d), and every row shows ALL its apps and accounts (§1133b, §1133c: the name on its own line, the icons under it six across), the room's act second (`DSRoomAction`); the Wallet's is read off the store, Follow a wallet raised through `walletFollowPending`. Apps, Addresses and Settings are places in You (`HomeScope.Place`, `YouHead`), never pushed; the rail's face opens the same tray on iPad and Mac, hung from the top-left (`RoomsTray.railInset`, §1133f) → prd §1127 · §1129 · §1133
+- **Two controls (prd §1133): the face says WHERE, the tiles say WHAT.** No pill in any room; the title is a label, `DSRoomTitleRow(title:pick:)` ("Wallet · Savings", "You · Settings"), the category pink. The rooms tray's Search (a capsule beside the face on the phone, §1176) filters the tray as you type and hands the words to Find (`ShellChrome.openFind`, §1133e), You is a row named like the screen title, your name else You (`HomeScope.title`, §1133d), and every row shows ALL its apps and accounts (§1133b, §1133c: the name on its own line, the icons under it six across), the room's act second (`DSRoomAction`); the Wallet's is read off the store, Follow a wallet raised through `walletFollowPending`. Apps, Addresses and Settings are places in You (`HomeScope.Place`, `YouHead`), never pushed; the rail is the tab bar since §1397 (§1133f retired) → prd §1127 · §1129 · §1133
 - **Pages, not sheets, on the phone (prd §1321, retiring §1132/§1208m/§1220): Notes, Sources, Markets and Wallet tiles are pages under the band; a step deeper pushes (`HomeRoute.pushes`, one `path.append`); titles "Feed Sources", "Wallet · Holdings", "Sources · Data" (`DSTitleBack`); settings are Casberi's folder tiles; a tray app still rises** → prd §1321
 - **Tabs (prd §1327, §1343, §1347): Feed · Wallet · Library (your face) + Search (`Design/PlaceTabBar.swift`); Day and Notes are Feed sections and catalogue categories; Notes' folders are in Library; folds on scroll**
 - `-openTray YES` — raise the rooms tray at mount, no tap (`Shell/RoomsTray.swift`; NSLogs `openTray:`), prd §1008.
@@ -544,8 +541,7 @@ Deep links: `casberi://home`, `casberi://feed`, `casberi://feed/type/<Tag>` (int
 
 ## Mac (Catalyst)
 
-- **Every shell ruling names its Mac half before it ships (RULE, prd §1397).** A ruling that moves a control on the phone says where the rail layout (`MainSurface.showsRail`: the Mac and a regular iPad) draws it, or says it does not apply there. The rail is the tab bar — Feed · Wallet · Library, Search, your face as Library's tile (`Shell/PlaceRail.swift`); ⌘1–⌘3 open the places; never a sidebar (§875).
-- Screens are captured headlessly: build Catalyst into `~/Library/Developer/CasberiMacDD` through `scripts/xcb.sh`, launch with `-storeScratch YES -onboarded YES -demoEnter YES -macSnapshot <name> -snapshotDelay 18` (as `scripts/mac-appstore-capture.sh` does), read the PNG from the app group's `HarnessSnapshots`.
+- **Every shell ruling names its Mac half before it ships (RULE, prd §1397).** The rail is the tab bar — Feed · Wallet · Library, Search, your face as Library's tile (`Shell/PlaceRail.swift`); ⌘1–⌘3 open the places; never a sidebar (§875).
 
 ## Website (casberi.app)
 

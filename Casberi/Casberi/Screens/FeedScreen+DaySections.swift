@@ -288,6 +288,15 @@ extension FeedScreen {
         // the day's empty state while there is anything to show.
         let homeCover = ledeThing ?? fallbackCover
         homeLead(homeCover, heroShown: heroShown)
+        // THE PANE'S FEED BOX CARRIES THE DAY (prd §1398): under today's
+        // cover, the week, the next thing, Needs you and the days ahead —
+        // the phone's Day section — in the pane's instance only. The list
+        // column's Feed on a regular surface groups by category (§1152) and
+        // has no Day section to lose.
+        if roomBoxPlace == .paneBox, source == "All" {
+            dayFeedSections(nextEventID: nextEventID)
+                .environment(\.dsPaneBoxRow, true)
+        }
         // THE FEED'S ROW IS ITS CATEGORIES (prd §1328): the places' row went
         // to the tab bar (§1327), and the slot under the box holds the
         // sections below it, a tap landing on one.
@@ -701,9 +710,12 @@ extension FeedScreen {
     /// `DSRoomChassis.Head`'s geometry when it has tiles. The cover holds the
     /// box in every room since prd §904, so the tiles never move and no
     /// flag has to say so here.
+    @ViewBuilder
     func ledeListRow(_ thing: Thing,
                              top: CGFloat = DS.Space.s2,
                              bottom: CGFloat = DSRoomChassis.leadGap) -> some View {
+        // The cover is the box (prd §1398): the pane's where there is one.
+        if roomBoxPlace != .listWithoutBox {
         Button {
             openThing(thing)
         } label: {
@@ -728,7 +740,7 @@ extension FeedScreen {
         .dsHover()
         .macHoverLift()
         .id(thing.id.uuidString)
-        .feedRowBackground()
+        .feedRowBackground(box: true)
         // A wider gap below than above: the cover is its own object, and the
         // day's run begins under it rather than continuing from it. The
         // chassis's own numbers (prd §763), which every other lead now wears.
@@ -739,6 +751,7 @@ extension FeedScreen {
                              bottom: bottom,
                              trailing: DSRoomChassis.inset))
         .listRowSeparator(.hidden)
+        }
     }
 
     /// An app's header in the All feed (prd §1103, §1103a): a LABEL over its

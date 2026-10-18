@@ -10,6 +10,41 @@ import SwiftUI
 /// drifted by a few points the moment the title's length changed. Through
 /// these the rows are the SAME rows, so the box and the tiles stand at one y
 /// on every screen by construction, never by measurement.
+/// **WHERE THE ROOM'S BOX DRAWS (prd §1398).** On the phone the box leads the
+/// list (`.list`). Where the shell draws a pane the two parts take one column
+/// each: the list column draws no box (`.listWithoutBox`: title, tiles,
+/// sections, rows) and the pane at rest hosts the same room told to draw its
+/// box alone (`.paneBox`). Every box template reads it; a row that is part of
+/// the box says so (`feedRowBackground(box: true)`, or `dsPaneBoxRow` set on
+/// a run of rows the pane carries — the Feed's Day section).
+enum RoomBoxPlace { case list, listWithoutBox, paneBox }
+
+extension EnvironmentValues {
+    @Entry var dsRoomBoxPlace: RoomBoxPlace = .list
+    /// The rows under this flag belong to the pane's box (prd §1398).
+    @Entry var dsPaneBoxRow: Bool = false
+}
+
+/// The box's row (prd §1398): nothing where the pane holds the box, the box
+/// itself in the pane. One modifier, so no caller spells the rule.
+private struct RoomLeadListRow: ViewModifier {
+    @Environment(\.dsRoomBoxPlace) private var place
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if place == .listWithoutBox {
+            EmptyView()
+        } else {
+            // Every box arrives with its room (prd §1379).
+            content.roomBoxArrival()
+                .listRowInsets(.init(top: DS.Space.s2, leading: DSRoomChassis.inset,
+                                     bottom: DSRoomChassis.leadGap, trailing: DSRoomChassis.inset))
+                .feedRowBackground(box: true)
+                .listRowSeparator(.hidden)
+        }
+    }
+}
+
 extension View {
     /// The list every room draws in.
     func dsRoomList() -> some View {
@@ -33,14 +68,7 @@ extension View {
 
     /// The box's row: the lead at its one size (prd §760), the box's gap under
     /// it (prd §1102: an empty room's tiles stand where a full room's do).
-    func dsRoomLeadListRow() -> some View {
-        // Every box arrives with its room (prd §1379).
-        roomBoxArrival()
-            .listRowInsets(.init(top: DS.Space.s2, leading: DSRoomChassis.inset,
-                            bottom: DSRoomChassis.leadGap, trailing: DSRoomChassis.inset))
-            .feedRowBackground()
-            .listRowSeparator(.hidden)
-    }
+    func dsRoomLeadListRow() -> some View { modifier(RoomLeadListRow()) }
 
     /// THE ROOM'S BOX OUTSIDE A LIST (prd §1179): a thing sheet's card at a
     /// room's one size — `leadBox` inside the head's well, in the rows'
@@ -95,12 +123,25 @@ extension EnvironmentValues {
 /// A room row's background: bare, as every room's rows stand (prd §749),
 /// or the section panel's fill inside the Feed's scroll (§1208d).
 struct FeedRowBackground: ViewModifier {
+    /// The row is the room's box, or part of it (prd §1398).
+    var box: Bool = false
+    /// The row holds parts for BOTH columns and gates them itself (the
+    /// wallet family's chrome: the box and the tiles on one row).
+    var splits: Bool = false
     @Environment(\.feedSectionPanel) private var panel
     @Environment(\.feedSectionPanelInset) private var panelInset
     @Environment(\.feedSectionPanelFilled) private var panelFilled
+    @Environment(\.dsRoomBoxPlace) private var place
+    @Environment(\.dsPaneBoxRow) private var paneRow
 
+    @ViewBuilder
     func body(content: Content) -> some View {
-        if panel {
+        // WHERE THE BOX DRAWS (prd §1398): a box row stands in the pane and
+        // not in the list beside it; every other row the other way round.
+        let boxRow = box || paneRow
+        if !splits, (place == .paneBox && !boxRow) || (place == .listWithoutBox && boxRow) {
+            EmptyView()
+        } else if panel {
             content.listRowBackground(SectionPanel(part: .middle, inset: panelInset, filled: panelFilled))
         } else {
             content.listRowBackground(Color.clear)
@@ -111,7 +152,11 @@ struct FeedRowBackground: ViewModifier {
 extension View {
     /// `.feedRowBackground()`, unless the row stands on a Feed
     /// section's panel (§1208d).
-    func feedRowBackground() -> some View { modifier(FeedRowBackground()) }
+    /// `box`: the row is the room's box, or part of it (prd §1398) — drawn
+    /// in the pane, never in a list column beside one.
+    func feedRowBackground(box: Bool = false, splits: Bool = false) -> some View {
+        modifier(FeedRowBackground(box: box, splits: splits))
+    }
 }
 
 /// A row's own background, or the section panel's fill inside the Feed's
@@ -120,10 +165,17 @@ struct FeedRunBackground<Base: View>: ViewModifier {
     @Environment(\.feedSectionPanel) private var panel
     @Environment(\.feedSectionPanelInset) private var panelInset
     @Environment(\.feedSectionPanelFilled) private var panelFilled
+    @Environment(\.dsRoomBoxPlace) private var place
+    @Environment(\.dsPaneBoxRow) private var paneRow
     let base: Base
 
+    @ViewBuilder
     func body(content: Content) -> some View {
-        if panel {
+        // The same rule as `FeedRowBackground` (prd §1398): a list row is the
+        // list column's, a row the pane carries is the pane's.
+        if (place == .paneBox && !paneRow) || (place == .listWithoutBox && paneRow) {
+            EmptyView()
+        } else if panel {
             content.listRowBackground(SectionPanel(part: .middle, inset: panelInset, filled: panelFilled))
         } else {
             content.listRowBackground(base)

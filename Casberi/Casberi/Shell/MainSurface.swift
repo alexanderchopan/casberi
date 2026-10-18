@@ -1910,21 +1910,31 @@ struct MainSurface: View {
     /// The nothing-landed branch (a fresh install) is UNCHANGED — no ink, no
     /// strip, the centered mark on the shell's own poured page.
     @ViewBuilder private var paneRest: some View {
-        if let latest = latestArrival {
-            VStack(alignment: .leading, spacing: 0) {
-                Text("Latest")
-                    .dsText(.label12)
-                    .foregroundStyle(DS.textTertiary)
-                    .padding(.horizontal, DS.Space.s4)
-                    .padding(.top, DS.Space.s4)
-                // `.id` so switching to a newer arrival rebuilds the record
-                // rather than re-theming the old one in place — the same
-                // reason the selection branch above carries one.
-                ThingSheetView(thing: latest, inlineRest: true)
-                    .id(latest.id)
+        // **THE PANE AT REST IS THE ROOM'S BOX (prd §1398, user: "we don't
+        // use the side panel on the right well, it always looks kind of
+        // empty").** "Latest" — the newest thing in the whole corpus, a note
+        // beside the Wallet and the same note the Feed already led with — is
+        // deleted. The phone draws every room as a box over a list; the Mac
+        // has two columns, so the box takes this one: the same `FeedScreen`,
+        // told it IS the box (`.paneBox`), draws its lead at the box's one
+        // size and, for the Feed, the Day section under it (the week, the
+        // next thing, Needs you, the days). Notes' box is the newest note,
+        // open. Nothing landed keeps the mark below.
+        if latestArrival != nil, HomeScope.Place(source: filter.source) == nil {
+            if Pinboard.isPinnedRoom(filter.source) {
+                if let note = things.first(where: { $0.isLive && Pinboard.inRoom($0) }) {
+                    ThingSheetView(thing: note, inlineRest: true)
+                        .id(note.id)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                        .dsInk()
+                }
+            } else {
+                FeedScreen(source: filter.source, isActive: false, nearActive: true)
+                    .equatable()
+                    .environment(\.dsRoomBoxPlace, .paneBox)
+                    .id("paneBox:" + filter.source)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-            .dsInk()
         } else {
             VStack(spacing: DS.Space.s3) {
                 CasberiMark(size: 44)
@@ -3010,6 +3020,10 @@ struct MainSurface: View {
                             // MainSurface render from rebuilding the whole feed
                             // (measured 15 body builds → 2).
                             .equatable()
+                            // WHERE THE BOX DRAWS (prd §1398): beside a pane
+                            // this column is title, tiles, sections, rows; the
+                            // box is the pane's at rest (`paneRest`).
+                            .environment(\.dsRoomBoxPlace, showsPane ? .listWithoutBox : .list)
                     }
                 }
                     // A pick that changes the screen a merged room shows

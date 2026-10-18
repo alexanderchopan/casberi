@@ -31,7 +31,7 @@ extension FeedScreen {
             await ServiceLinks.shared.refresh(modelContext, seats: bridges.bridges.map(\.name))
             FollowingReading.shared.refresh(room, context: modelContext)
         }
-        .feedRowBackground()
+        .feedRowBackground(box: true)
         .listRowSeparator(.hidden)
         .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DSRoomChassis.inset,
                                   bottom: DSRoomChassis.leadGap, trailing: DSRoomChassis.inset))

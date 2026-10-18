@@ -103,6 +103,9 @@ struct FeedScreen: View {
     let pinnedWalletSection: WalletSection?
     /// In a sheet a push draws the seat's back door and its clearance (prd §1304).
     @Environment(\.dsInSheet) var inPresentedSheet
+    /// Where this room's box draws (prd §1398): in this list, in the pane
+    /// beside it, or this instance IS the pane's box.
+    @Environment(\.dsRoomBoxPlace) var roomBoxPlace
 
     /// Latches true the first time this page is active/near, so a page already
     /// assembled once stays assembled — the built set only ever grows, spread
@@ -1644,7 +1647,7 @@ struct FeedScreen: View {
         // lands under the demo's pill and the section pill below it, so the
         // floating title no longer covers the section's first row (user:
         // "3 yes fix", of the Wallet's Subscriptions and Track a subscription).
-        .safeAreaPadding(.top, inSheet ? 0 : DSDemoMark.screenClearance)
+        .safeAreaPadding(.top, inSheet || roomBoxPlace == .paneBox ? 0 : DSDemoMark.screenClearance)
         .listStyle(.plain)
         // The List adds nothing between Sections (prd §1386): a panel is
         // three of them, and the gap is `DSRoomChassis.sectionGap`, once.
@@ -2010,6 +2013,9 @@ struct FeedScreen: View {
             }
             #endif
             if isActive { land() }
+            // The pane's box is nobody's landing, but it draws the Wallet's
+            // balance and its line (prd §1398), so it reads them.
+            else if roomBoxPlace == .paneBox { streamBlock(); loadWalletLive() }
             resolveRoomAgent()
         }
         // A key added from Accounts must light the Chat tile without leaving
@@ -2040,13 +2046,15 @@ struct FeedScreen: View {
                 }) {
                 selectedWallet = nil
             }
-            if isActive { streamBlock(); loadWalletLive() }
+            // The pane's box reads the Wallet too (prd §1398): it draws the
+            // balance and its line, and nothing else loads them for it.
+            if isActive || roomBoxPlace == .paneBox { streamBlock(); loadWalletLive() }
         }
         // Scoping to a wallet (or back to All) re-paints the treemap/NFT strip
         // AND re-reads the live tiles for that scope; the rows and balance
         // re-derive from state.
         .onChange(of: chrome.walletScope) {
-            if isActive {
+            if isActive || roomBoxPlace == .paneBox {
                 streamBlock(); loadWalletLive()
                 // A scope switch retints the crown mid-flight with the
                 // switcher capsule (prd §159).

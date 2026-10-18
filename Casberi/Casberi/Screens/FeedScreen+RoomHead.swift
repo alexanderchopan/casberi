@@ -656,11 +656,14 @@ extension FeedScreen {
     /// separator, edge-to-edge — the card owns its own padding).
     @ViewBuilder
     func insightSection<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
+        // A hero is the box (prd §1398): the pane's where there is one.
+        if roomBoxPlace != .listWithoutBox {
         Section {
             content()
-                .feedRowBackground()
+                .feedRowBackground(box: true)
                 .listRowSeparator(.hidden)
                 .listRowInsets(EdgeInsets())
+        }
         }
     }
 }

@@ -105,9 +105,11 @@ extension FeedScreen {
     /// geometry — the box inside `dsRoomHeadBlock`, the pinned foot, `s2`
     /// above and `leadGap` below — so Tokens and Bitrefill open at the same
     /// height as every other room.
+    @ViewBuilder
     func ledeSection(_ content: some View) -> some View {
         let box = DSRoomChassis.leadBox
-        return Section {
+        if roomBoxPlace != .listWithoutBox {
+        Section {
             VStack(alignment: .leading, spacing: 0) {
                 content
                 Spacer(minLength: 0)
@@ -115,12 +117,13 @@ extension FeedScreen {
             .frame(maxWidth: .infinity, minHeight: box, maxHeight: box, alignment: .topLeading)
             .clipped()
             .dsRoomHeadBlock()
-            .feedRowBackground()
+            .feedRowBackground(box: true)
             .listRowInsets(.init(top: DS.Space.s2,
                                  leading: DSRoomChassis.inset,
                                  bottom: DSRoomChassis.leadGap,
                                  trailing: DSRoomChassis.inset))
             .listRowSeparator(.hidden)
+        }
         }
     }
 

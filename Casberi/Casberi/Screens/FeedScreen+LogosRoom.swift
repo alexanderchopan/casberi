@@ -75,7 +75,7 @@ extension FeedScreen {
             )
             .listRowInsets(EdgeInsets(top: 0, leading: 0,
                                       bottom: DSRoomChassis.contentGap, trailing: 0))
-            .feedRowBackground()
+            .feedRowBackground(splits: true)
             .listRowSeparator(.hidden)
         }
         if active == .chat { logosChatSection }

@@ -222,8 +222,11 @@ extension FeedScreen {
     /// `.sheet` modifiers made the first tap self-dismiss).
     /// The screen's one presentation: risen, or pushed inside an app sheet.
     var feedSheetHost: some ViewModifier {
+        // A sheet draws its own box wherever it rose from (prd §1398): the
+        // column's place is the column's.
         DSOneSheet(route: $feedSheet, pushes: pushesInSheet,
-                   raised: { raisedSheetContent($0) }, pushed: { pushedSheetContent($0) })
+                   raised: { raisedSheetContent($0).environment(\.dsRoomBoxPlace, .list) },
+                   pushed: { pushedSheetContent($0).environment(\.dsRoomBoxPlace, .list) })
     }
 
     /// A route risen over a page. A subscription's, a list's or a follow's
