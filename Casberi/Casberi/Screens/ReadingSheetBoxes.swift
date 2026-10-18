@@ -50,12 +50,14 @@ import SwiftUI
     }
 
     /// What the network counted, only where it counted something.
-    /// The author's face at a size (prd §1397): the centred head's.
-    @ViewBuilder static func face(_ thing: Thing, size: CGFloat) -> some View {
+    /// The author's face at the centred head's size (prd §1397): the ramp's
+    /// own tier, named here, so the face-ramp audit can read it (a `size`
+    /// parameter resolves to no tier in this file).
+    @ViewBuilder static func face(_ thing: Thing) -> some View {
         if let avatar = thing.authorAvatarURL, !avatar.isEmpty {
-            RemoteThumb(urlString: avatar, size: size, fallback: thing.source, circular: true)
+            RemoteThumb(urlString: avatar, size: DS.Face.sheet, fallback: thing.source, circular: true)
         } else {
-            BridgeIcon(name: thing.source, size: size, circular: true)
+            BridgeIcon(name: thing.source, size: DS.Face.sheet, circular: true)
         }
     }
 

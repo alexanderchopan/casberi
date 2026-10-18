@@ -3906,7 +3906,7 @@ struct ThingSheetView: View {
                                displayName: nil, bio: nil,
                                avatarURL: thing.authorAvatarURL))
                        }) {
-            PostSheetBox.face(thing, size: DS.Face.sheet)
+            PostSheetBox.face(thing)
         }
             .dsRoomBox()
             .padding(.top, DS.Space.s3)
@@ -4020,7 +4020,7 @@ struct ThingSheetView: View {
         SheetPartyHead(name: TitleSeam.split(thing.title).name, day: thing.capturedAt,
                        line: "@\(SocialThread.shortHandle(thing.authorHandle ?? "")) · \(thing.source)",
                        onFace: facesAreDoors ? openAuthorProfile : nil) {
-            PostSheetBox.face(thing, size: DS.Face.sheet)
+            PostSheetBox.face(thing)
         }
             .padding(.top, onBack == nil ? DS.Space.s6 : DS.Space.s4)
             .settleIn(delay: 0.06)
@@ -4107,7 +4107,7 @@ struct ThingSheetView: View {
         SheetPartyHead(name: PostSheetBox.title(thing), day: thing.capturedAt,
                        line: "@\(SocialThread.shortHandle(thing.authorHandle ?? "")) · \(thing.source)",
                        onFace: facesAreDoors ? openAuthorProfile : nil) {
-            PostSheetBox.face(thing, size: DS.Face.sheet)
+            PostSheetBox.face(thing)
         }
             .padding(.top, onBack == nil ? DS.Space.s6 : DS.Space.s4)
             .settleIn(delay: 0.06)

@@ -100,7 +100,8 @@ struct PlaceRail: View {
                         .dsText(.label12)
                         .foregroundStyle(DS.pickInk)
                         .frame(width: Self.tileWidth, height: 28)
-                        .contentShape(Rectangle())
+                        // DRAWN 28, TARGETED 44.
+                        .dsTapTarget(Rectangle())
                 }
                 .buttonStyle(RowPress())
                 .dsHover()
