@@ -411,7 +411,8 @@ extension FeedScreen {
                             onUnwatch: drawsMarketsRow(thing) ? { unwatch($0) } : nil,
                             onMoveToTop: drawsMarketsRow(thing) ? { moveToTop($0, in: walletMarketsRows) } : nil,
                             onReorder: drawsMarketsRow(thing) ? { startReorder() } : nil,
-                            onPin: drawsMarketsRow(thing) ? { pinToLockScreen($0) } : nil)
+                            onPin: drawsMarketsRow(thing) ? { pinToLockScreen($0) } : nil,
+                            onRemoveAlertRow: drawsMarketsRow(thing) ? { removeAlertRow($0) } : nil)
             } preview: {
                 // What the band could not fit (prd §412a) — the full title, the
                 // picture at a size worth looking at, the opening words. Until
@@ -745,6 +746,8 @@ struct RowVerbMenu: View {
     /// to the Lock Screen.
     var onReorder: (() -> Void)? = nil
     var onPin: ((Thing) -> Void)? = nil
+    /// A Went off row in Markets (user, 2026-10-17): Delete, the row alone.
+    var onRemoveAlertRow: ((Thing) -> Void)? = nil
     @Environment(ShellChrome.self) private var chrome
     @Environment(\.modelContext) private var modelContext
 
@@ -795,6 +798,15 @@ struct RowVerbMenu: View {
             }
         } else {
             standardMenu(note: note)
+            // A row an alert landed is history, not a thing that lands again
+            // (the alert is gone or has fired its day), so it may be deleted.
+            if let onRemoveAlertRow, PriceAlertStore.isAlertRow(thing) {
+                Button(role: .destructive) {
+                    onRemoveAlertRow(thing)
+                } label: {
+                    Label("Delete", systemImage: "trash")
+                }
+            }
         }
     }
 

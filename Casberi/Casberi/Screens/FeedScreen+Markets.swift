@@ -263,7 +263,7 @@ extension FeedScreen {
         }
         .contextMenu {
             Button(role: .destructive) {
-                PriceAlertStore.shared.remove(alert.id)
+                PriceAlertStore.shared.remove(alert.id, context: modelContext)
             } label: {
                 Label("Delete alert", systemImage: "trash")
             }
@@ -501,6 +501,14 @@ extension FeedScreen {
         return nil
     }
 
+    /// Deletes a Went off row from its long press (user, 2026-10-17): the
+    /// row alone, never the alert that landed it.
+    func removeAlertRow(_ thing: Thing) {
+        guard thing.isLive, PriceAlertStore.isAlertRow(thing) else { return }
+        PriceAlertStore.deleteRow(thing, context: modelContext)
+        DSHaptic.tap()
+    }
+
     /// Unwatches a row from its long press: its alerts go with it, and the
     /// toast can put it back (prd §1081).
     func unwatch(_ thing: Thing) {
@@ -509,7 +517,7 @@ extension FeedScreen {
         let title = TokensAsk.name(of: thing.title)
         if let ref {
             TokenWatchOrder.shared.remove(ref)
-            PriceAlertStore.shared.removeAll(ref: ref)
+            PriceAlertStore.shared.removeAll(ref: ref, context: modelContext)
         }
         SpotlightIndex.remove(ids: [thing.id])
         modelContext.delete(thing)

@@ -160,6 +160,8 @@ struct WatchAlertsSection: View {
     @State private var tray: WatchAlertTray.Route?
     /// Inside the thing sheet's stack, the alert tray pushes (prd §1315).
     @Environment(\.dsInSheetStack) private var inSheetStack
+    // `ThingContent` reads it inside the same sheet: a value, not an Observable (§872).
+    @Environment(\.modelContext) private var modelContext
     private var store: PriceAlertStore { .shared }
 
     var body: some View {
@@ -207,7 +209,7 @@ struct WatchAlertsSection: View {
         .frame(minHeight: 52)
         .contextMenu {
             Button(role: .destructive) {
-                store.remove(alert.id)
+                store.remove(alert.id, context: modelContext)
             } label: {
                 Label("Delete alert", systemImage: "trash")
             }
@@ -306,6 +308,7 @@ struct WatchAlertTray: View {
     let volume: Bool
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
     @State private var measure: Measure
     @State private var text: String
     @FocusState private var focused: Bool
@@ -392,7 +395,7 @@ struct WatchAlertTray: View {
                                  enabled: made != nil) { commit() }
                     if let editing {
                         DSDoorRow(icon: "trash", label: "Delete alert", role: .destructive) {
-                            store.remove(editing.id)
+                            store.remove(editing.id, context: modelContext)
                             DSHaptic.selection()
                             dismiss()
                         }
@@ -471,9 +474,17 @@ struct WatchAlertTray: View {
     }
 
     private func commit() {
-        guard let made else { return }
-        if let editing { store.remove(editing.id) }
-        store.add(made)
+        guard var made else { return }
+        if let editing {
+            // An edit is the same alert at a new level (2026-10-17): it keeps
+            // its id, so the rows it landed stay its history, and its
+            // `changedAt` wins the sync over a copy that fired.
+            made.id = editing.id
+            made.changedAt = .now
+            store.replace(editing.id, with: made)
+        } else {
+            store.add(made)
+        }
         DSHaptic.success()
         dismiss()
     }

@@ -59,7 +59,7 @@ enum MarketsWatch {
         guard let thing = watchedThing(company, context: context) else { return }
         if let ref = thing.sourceRef {
             TokenWatchOrder.shared.remove(ref)
-            PriceAlertStore.shared.removeAll(ref: ref)
+            PriceAlertStore.shared.removeAll(ref: ref, context: context)
         }
         SpotlightIndex.remove(ids: [thing.id])
         context.delete(thing)

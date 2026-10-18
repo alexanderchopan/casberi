@@ -43,8 +43,19 @@ grep -q 'MarketsIndex.sections(' Casberi/Casberi/Screens/FeedScreen+Markets.swif
   || { echo "✗ the index no longer splits into your apps, everything else and not traded"; exit 1; }
 grep -q 'MarketsIndex.search(' Casberi/Casberi/Screens/WatchAddSheet.swift \
   || { echo "✗ Search no longer finds a company by an app it makes"; exit 1; }
-grep -q 'PriceAlertStore.shared.removeAll(ref: ref)' Casberi/Casberi/Screens/FeedScreen+Markets.swift \
+grep -q 'PriceAlertStore.shared.removeAll(ref: ref, context: modelContext)' Casberi/Casberi/Screens/FeedScreen+Markets.swift \
   || { echo "✗ unwatching no longer takes the row's alerts with it — they would fire for a row you cannot see"; exit 1; }
+# 2026-10-17: deleting an alert clears its Went off rows, and a Went off row
+# deletes from its long press (user: "it should clear … i should be able to
+# remove that").
+grep -q 'func remove(_ id: UUID, context: ModelContext)' Casberi/Casberi/Model/MarketsAlerts.swift \
+  && grep -q 'Self.deleteLanded(by: \[id\], context: context)' Casberi/Casberi/Model/MarketsAlerts.swift \
+  || { echo "✗ deleting an alert no longer deletes the rows it landed — Went off keeps a history for an alert that is gone"; exit 1; }
+grep -q 'PriceAlertStore.shared.remove(alert.id, context: modelContext)' Casberi/Casberi/Screens/FeedScreen+Markets.swift \
+  || { echo "✗ the Alerts tile's Delete alert no longer hands the store a context"; exit 1; }
+grep -q 'onRemoveAlertRow: drawsMarketsRow(thing) ? { removeAlertRow(\$0) } : nil' Casberi/Casberi/Screens/FeedScreen+Rows.swift \
+  && grep -q 'if let onRemoveAlertRow, PriceAlertStore.isAlertRow(thing)' Casberi/Casberi/Screens/FeedScreen+Rows.swift \
+  || { echo "✗ a Went off row no longer offers Delete from its long press"; exit 1; }
 # §1250: the sweep runs every launch, the coin's sheet charts it, the alerts
 # ride the merge, a household coin is followed as the coin wherever it is
 # followed, and the index follows a coin by its id.

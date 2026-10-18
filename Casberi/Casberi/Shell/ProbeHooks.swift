@@ -2905,6 +2905,34 @@ enum ProbeHooks {
                       PriceAlertStore.shared.alerts(for: thing.sourceRef ?? "").count)
             }
         },
+        // `-alertFireProbe fire|delete|row` — fire an alert on the first
+        // followed row with no price read (2026-10-17), so Went off has a
+        // row: `fire` lands one and logs its count; `delete` fires one and
+        // deletes the ALERT, which must take the row with it; `row` fires one
+        // and deletes the ROW alone, which must leave the alert standing.
+        Hook(key: "alertFireProbe") { spec, context in
+            let source = TokenWatch.source
+            let rows = ((try? context.fetch(FetchDescriptor<Thing>(
+                predicate: #Predicate { $0.source == source }))) ?? [])
+                .filter { $0.isLive && !PriceAlertStore.isAlertRow($0) && $0.sourceRef != nil }
+            guard let watched = rows.first, let alert = PriceAlertStore.shared.fireNow(on: watched, context: context) else {
+                NSLog("alertFire| no followed row to fire on"); return
+            }
+            let before = PriceAlertStore.landedRows(by: alert.id, context: context).count
+            switch spec {
+            case "delete":
+                PriceAlertStore.shared.remove(alert.id, context: context)
+            case "row":
+                for row in PriceAlertStore.landedRows(by: alert.id, context: context) {
+                    PriceAlertStore.deleteRow(row, context: context)
+                }
+            default: break
+            }
+            let after = PriceAlertStore.landedRows(by: alert.id, context: context).count
+            let stands = PriceAlertStore.shared.alerts.contains { $0.id == alert.id }
+            NSLog("alertFire| %@ | %@ | rows before=%d after=%d | alert %@", spec, alert.name,
+                  before, after, stands ? "stands" : "gone")
+        },
         // `-gasProbe YES` — the Watchlist head's gas (prd §1250): one line a
         // chain, the gwei, and whether the head would stamp it.
         Hook(key: "gasProbe") { _, _ in

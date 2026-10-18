@@ -76,6 +76,16 @@ final class PriceAlertStore {
         persist()
     }
 
+    /// An edit (2026-10-17): the alert at a new level under the SAME id, so
+    /// the rows it landed stay its history; `remove` would take them.
+    func replace(_ id: UUID, with alert: PriceAlert) {
+        guard let i = alerts.firstIndex(where: { $0.id == id }) else { add(alert); return }
+        var next = alert
+        next.id = id
+        alerts[i] = next
+        persist()
+    }
+
     /// A switch by hand. It stamps `changedAt`, which is what lets a re-armed
     /// alert win the sync over the copy that fired (`PriceAlert.merged`).
     func set(_ id: UUID, on: Bool) {
@@ -86,19 +96,56 @@ final class PriceAlertStore {
         persist()
     }
 
-    func remove(_ id: UUID) {
+    /// Deleting an alert takes the rows it landed with it (user, 2026-10-17:
+    /// "i deleted an alert but 'went off' and its history remained. it
+    /// should clear"): a Went off row names an alert that no longer exists.
+    func remove(_ id: UUID, context: ModelContext) {
         mirror.noteRemoval(id.uuidString)
         alerts.removeAll { $0.id == id }
         persist()
+        Self.deleteLanded(by: [id], context: context)
     }
 
     /// Unwatching a row takes its alerts with it: an alert on something you
-    /// no longer watch has no row to name and no price that is read.
-    func removeAll(ref: String) {
-        guard alerts.contains(where: { $0.ref == ref }) else { return }
-        for alert in alerts where alert.ref == ref { mirror.noteRemoval(alert.id.uuidString) }
+    /// no longer watch has no row to name and no price that is read. Their
+    /// Went off rows go too, as `remove`'s do.
+    func removeAll(ref: String, context: ModelContext) {
+        let gone = alerts.filter { $0.ref == ref }
+        guard !gone.isEmpty else { return }
+        for alert in gone { mirror.noteRemoval(alert.id.uuidString) }
         alerts.removeAll { $0.ref == ref }
         persist()
+        Self.deleteLanded(by: gone.map(\.id), context: context)
+    }
+
+    /// The rows these alerts landed (`alert:<id>:<when>`), deleted. Not an
+    /// absence-driven prune (`delete-guard-audit.py`): somebody deleted the
+    /// alert, and nothing lands a row for an alert that is gone.
+    static func deleteLanded(by ids: [UUID], context: ModelContext) {
+        guard !ids.isEmpty else { return }
+        let prefixes = ids.map { "alert:\($0.uuidString):" }
+        let source = TokenWatch.source
+        let descriptor = FetchDescriptor<Thing>(predicate: #Predicate { $0.source == source })
+        let rows = ((try? context.fetch(descriptor)) ?? []).filter { row in
+            guard row.isLive, isAlertRow(row), let ref = row.sourceRef else { return false }
+            return prefixes.contains { ref.hasPrefix($0) }
+        }
+        deleteRows(rows, context: context)
+    }
+
+    /// One Went off row, from its long press (user: "i should be able to
+    /// remove that"). The alert stands: a repeating alert's day is its own
+    /// row, and deleting the day is not switching the alert off.
+    static func deleteRow(_ row: Thing, context: ModelContext) {
+        guard row.isLive, isAlertRow(row) else { return }
+        deleteRows([row], context: context)
+    }
+
+    private static func deleteRows(_ rows: [Thing], context: ModelContext) {
+        guard !rows.isEmpty else { return }
+        SpotlightIndex.remove(ids: rows.map(\.id))
+        for row in rows { context.delete(row) }
+        context.saveHonestly()
     }
 
     /// The launch sweep renamed followed rows (prd §1250, `CoinWatch.converge`):
@@ -190,6 +237,31 @@ final class PriceAlertStore {
         }
         if pinned { await PriceActivityDriver.sync(context: context) }
     }
+
+    #if DEBUG
+    /// `-alertFireProbe` (2026-10-17): fire an alert on one watched row with
+    /// no price read, so the Went off row and its deletion can be proven on
+    /// a simulator. Returns the alert it set and fired.
+    @discardableResult
+    func fireNow(on watched: Thing, context: ModelContext) -> PriceAlert? {
+        guard let ref = watched.sourceRef else { return nil }
+        let price = watched.watchPriceUsd ?? 1
+        let alert = PriceAlert(ref: ref, name: TokensAsk.name(of: watched.title), kind: .above, target: price / 2)
+        land(alert, price: price, change: 0.01, volume: nil, watched: watched, context: context)
+        alerts.append(alert.afterFiring())
+        persist()
+        context.saveHonestly()
+        return alert
+    }
+
+    /// The Went off rows one alert landed, for the probe's count.
+    static func landedRows(by id: UUID, context: ModelContext) -> [Thing] {
+        let source = TokenWatch.source
+        let prefix = "alert:\(id.uuidString):"
+        return ((try? context.fetch(FetchDescriptor<Thing>(predicate: #Predicate { $0.source == source }))) ?? [])
+            .filter { $0.isLive && isAlertRow($0) && ($0.sourceRef?.hasPrefix(prefix) ?? false) }
+    }
+    #endif
 
     static let alertTag = "Alert"
 

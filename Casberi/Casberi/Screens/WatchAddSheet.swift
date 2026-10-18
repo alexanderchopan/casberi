@@ -323,7 +323,7 @@ struct WatchAddSheet: View {
         }
         modelContext.saveHonestly()
         TokenWatchOrder.shared.remove(key)
-        PriceAlertStore.shared.removeAll(ref: key)
+        PriceAlertStore.shared.removeAll(ref: key, context: modelContext)
         watched.remove(key)
         DSHaptic.tap()
     }
