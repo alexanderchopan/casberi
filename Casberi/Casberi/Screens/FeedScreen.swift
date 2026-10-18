@@ -2196,10 +2196,11 @@ struct FeedScreen: View {
     @State var sectionCaps: [String: Int] = [:]
     /// The Feed section you are in, for the pill above the scroll (§1208d).
     @State var feedSection: String?
-    /// Whether the section the pill names came from below (prd §1208l).
-    @State var feedSectionForward = true
     /// The section a tile's jump just landed on, brightened once (§1208l).
     @State var landedSection: String?
+    /// How far the next section's name has pushed the pinned header up,
+    /// read by the header alone so a push redraws one row, not the Feed.
+    @State var pinPush = PinnedHeaderPush()
 }
 
 /// Which agent New talks to, when the Agents room has no pick (prd §1054).

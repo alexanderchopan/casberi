@@ -248,14 +248,24 @@ extension FeedScreen {
     /// How far above the line a name starts handing off to the pill.
     static let handoffSpan: CGFloat = 56
 
-    /// The line a section's name passes to become "where you are": the
-    /// pinned header's foot (prd §1386), so the name goes under its pinned
-    /// copy and never stands beside it. The demo's band moves the header
-    /// down, so the line moves with it (prd §1297).
+    /// The pinned header's foot (prd §1386): a row whose bottom has passed it
+    /// is under the header, out of sight (`NewDot` marks it seen there). The
+    /// demo's band moves the header down, so the line moves with it (§1297).
     static var whereLine: CGFloat { topInset + pinnedHeaderHeight + DSDemoMark.screenClearance }
 
-    /// The pinned header's own height: its air, one `heading28` line, its air.
-    static let pinnedHeaderHeight: CGFloat = 52
+    /// Where the pinned header's top stands, which is where a section's own
+    /// name stands when its row reaches the top. The pinned copy is drawn to
+    /// the same measure as the name in the list (`SectionPanelName`'s air,
+    /// its + kept as a hidden place), so the two coincide there and the
+    /// handover cannot be seen: the name pins as it reaches this line, never
+    /// earlier. Pinned at the header's foot, it left the name's lower half
+    /// showing under its own copy wherever a scroll or a jump came to rest
+    /// (two "Spending"s, two "Accounts", 2026-10-18).
+    static var pinLine: CGFloat { topInset + DSDemoMark.screenClearance }
+
+    /// The pinned header's height before it has measured itself: the name's
+    /// air above (`s4`), one `heading28` line, its air below (`s2`).
+    static let pinnedHeaderHeight: CGFloat = 57
 
     /// The window's top inset, read once: the overlay stands at the list's
     /// top, which is the safe area's.
@@ -270,18 +280,28 @@ extension FeedScreen {
     private static var cachedTopInset: CGFloat?
 
     /// A name moved: the section you are in is the last whose name has
-    /// passed the line. Written only when it changes, so a scroll costs one
-    /// dictionary write per frame and a body pass per section crossed.
+    /// reached the top. Written only when it changes, so a scroll costs one
+    /// dictionary write per frame and a body pass per section crossed; the
+    /// push below is the pinned header's own state and redraws it alone.
     private func noteSectionTop(_ category: String, _ y: CGFloat) {
         memo.sectionTops[category] = y
-        let current = pillSections.last { (memo.sectionTops[$0] ?? .infinity) < Self.whereLine }
-        guard feedSection != current else { return }
-        // The word pushes in from the way you are going, and a section
-        // crossed is felt once (prd §1208l) — a change of place, never a tap.
         let order = pillSections
-        let from = feedSection.flatMap { order.firstIndex(of: $0) } ?? -1
-        let to = current.flatMap { order.firstIndex(of: $0) } ?? -1
-        feedSectionForward = to >= from
+        let line = Self.pinLine + 0.5
+        let current = order.last { (memo.sectionTops[$0] ?? .infinity) <= line }
+        // THE NEXT NAME PUSHES THE PINNED ONE OFF (prd §1386's "until the
+        // next section's pushes it off", built): as the next section's name
+        // rises into the header's height, the header rises with it, so the
+        // two never overlap and the next one arrives exactly where its copy
+        // takes over.
+        var push: CGFloat = 0
+        if let current, let i = order.firstIndex(of: current), i + 1 < order.count,
+           let next = memo.sectionTops[order[i + 1]] {
+            push = min(max(Self.pinLine + pinPush.height - next, 0), pinPush.height)
+        }
+        if abs(pinPush.offset - push) > 0.25 { pinPush.offset = push }
+        guard feedSection != current else { return }
+        // A section crossed is felt once (prd §1208l) — a change of place,
+        // never a tap.
         if feedSection != nil, current != nil { DSHaptic.selection() }
         feedSection = current
     }
@@ -329,19 +349,30 @@ extension FeedScreen {
                             .dsGlyph(.body)
                             .foregroundStyle(DS.brandInk)
                             .accessibilityHidden(true)
+                        // No transition: the name changes where the list's
+                        // own copy stands under it, and the push-off is the
+                        // motion. An animated word here drew two names at once.
                         Text(verbatim: section)
                             .dsText(.heading28)
                             .foregroundStyle(DS.headInk)
                             .lineLimit(1)
                             .id(section)
-                            .transition(reduceMotion ? .opacity
-                                        : .push(from: feedSectionForward ? .bottom : .top))
-                            .animation(DS.Motion.standard, value: section)
-                            .clipped()
                         Spacer(minLength: 0)
+                        // The list's header keeps its + on this row, and the
+                        // + is a full hit target tall, which sets where the
+                        // name sits: a hidden place keeps the two at one
+                        // measure (the + itself is the list's, never a dead
+                        // copy here, §83).
+                        if !sectionAdds(section).isEmpty {
+                            Color.clear.frame(width: DS.Hit.min, height: DS.Hit.min)
+                                .accessibilityHidden(true)
+                        }
                     }
                     .padding(.horizontal, DSRoomChassis.rowInset)
-                    .padding(.vertical, DS.Space.s2)
+                    // `SectionPanelName`'s own air, so the copy and the name
+                    // coincide at the top (`pinLine`).
+                    .padding(.top, DS.Space.s4)
+                    .padding(.bottom, DS.Space.s2)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .background {
                         // The page's own ground, running up under the status
@@ -361,8 +392,11 @@ extension FeedScreen {
                     returnToRoomTop(proxy)
                 }
                 .buttonStyle(RowPress())
+                .modifier(PinnedHeaderPushed(push: pinPush))
                 .padding(.top, DSDemoMark.screenClearance)
-                .transition(reduceMotion ? .opacity : .opacity.combined(with: .move(edge: .top)))
+                // It appears over the name it copies, at one measure, so it
+                // simply is there: a fade or a slide drew the two apart.
+                .transition(.identity)
                 .accessibilityElement(children: .combine)
                 .accessibilityHint(Text("Scrolls to the top. Hold for the sections."))
             }
@@ -1110,4 +1144,26 @@ struct FeedSectionTile: DSTileScope {
     /// "re A: its discoverable").** The last tile, a verb.
     static let reorder = FeedSectionTile(name: "feedSection.reorder")
     var isReorder: Bool { name == Self.reorder.name }
+}
+
+/// The pinned header's push (prd §1386): how far the next section's name has
+/// pushed it up, and its own height, which sets where the push begins. Its
+/// own observable, read only by `PinnedHeaderPushed`, so a frame of push
+/// redraws the header, never the Feed around it.
+@MainActor @Observable final class PinnedHeaderPush {
+    var offset: CGFloat = 0
+    var height: CGFloat = FeedScreen.pinnedHeaderHeight
+}
+
+/// Rises with the push and reports the header's height.
+struct PinnedHeaderPushed: ViewModifier {
+    let push: PinnedHeaderPush
+
+    func body(content: Content) -> some View {
+        content
+            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { h in
+                if abs(push.height - h) > 0.25 { push.height = h }
+            }
+            .offset(y: -push.offset)
+    }
 }
