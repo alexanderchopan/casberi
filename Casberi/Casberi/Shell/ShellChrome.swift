@@ -1191,6 +1191,9 @@ final class ShellChrome {
         let run: () -> Void
     }
     var paneVerbs: [PaneVerb] = []
+    /// Exit Demo from the Casberi menu (prd §1400): `RootShell` runs
+    /// `DemoLeave` on the bump, as the pill's Exit did.
+    var demoExitRequest = 0
     var paneVerbsOwner: String?
     func publishPaneVerbs(_ verbs: [PaneVerb], owner: String) {
         paneVerbsOwner = owner

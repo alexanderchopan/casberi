@@ -305,6 +305,12 @@ struct CasberiApp: App {
                 }
                 .keyboardShortcut("r", modifiers: .command)
             }
+            // The demo's way out on the Mac (prd §1400): its mark is the
+            // window title, which cannot be pressed.
+            CommandGroup(after: .appInfo) {
+                Button("Exit Demo") { focusedChrome?.demoExitRequest += 1 }
+                    .disabled(!DemoMode.isActive || focusedChrome == nil)
+            }
             CommandGroup(replacing: .appSettings) {
                 Button("Settings…") {
                     // Casberi's own settings (prd §1111).

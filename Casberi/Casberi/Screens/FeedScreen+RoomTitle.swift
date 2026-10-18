@@ -53,8 +53,48 @@ extension FeedScreen {
     /// same through `roomPick`, and `walkNeighbours`, `DSWalkTitleRow` and
     /// the walk's arms went with it.
     var roomTitle: some View {
-        DSRoomTitleRow(title: roomName, pick: roomPick, onTitle: clearRoomPick)
-            .demoTagOnTitle()
+        HStack(spacing: DS.Space.s3) {
+            DSRoomTitleRow(title: roomName, pick: roomPick, onTitle: clearRoomPick)
+                .demoTagOnTitle()
+            // THE ACCOUNTS ARE A MENU ON THE TITLE where the rail stands (prd
+            // §1400): the strip that floated over the rows in the band is
+            // gone, and the Mac has no tray to pick from (§1397).
+            accountTitleMenu
+        }
+    }
+
+    /// The wallet family's accounts beside the title (prd §1400): every slot
+    /// the room published, the act it leads with (Follow a wallet), the one
+    /// showing ticked. Regular width only; the phone picks from the tray.
+    @ViewBuilder
+    var accountTitleMenu: some View {
+        if roomSizeClass == .regular, !HomeScope.contains(source),
+           let rail = chrome.accountRail, rail.source == source, rail.slots.count > 1 {
+            let showing = rail.slots.first { $0.isShowing(rail.scope) }
+            Menu {
+                if let action = rail.action {
+                    Button(action: action.run) { Label(action.title, systemImage: action.symbol) }
+                    Divider()
+                }
+                ForEach(rail.slots) { slot in
+                    Button {
+                        DSHaptic.selection()
+                        rail.onPick(slot.id.isEmpty ? nil : slot.id)
+                    } label: {
+                        if slot.isShowing(rail.scope) {
+                            Label(slot.name, systemImage: "checkmark")
+                        } else {
+                            Text(verbatim: slot.name)
+                        }
+                    }
+                }
+            } label: {
+                Chip(text: showing?.name ?? String(localized: "All accounts"), glyph: "chevron.down")
+            }
+            .buttonStyle(PressSpring())
+            .fixedSize()
+            .accessibilityLabel(Text("Accounts"))
+        }
     }
 
     /// The title's category word pressed: drop the pick `roomPick` names and

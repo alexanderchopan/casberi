@@ -68,6 +68,16 @@ struct SettingsHome: View {
     @State private var peopleRevision = 0
 
 
+    /// Casberi's folder: a card of tiles over the page on the phone (§1321),
+    /// a list in the pane beside Library where there is one (prd §1400).
+    private func openCasberiFolder() {
+        if route.paneHostsPushes {
+            route.fromAccountsList { route.push(.settingsFolder) }
+        } else {
+            withAnimation(DS.Motion.folder) { casberiOpen = true }
+        }
+    }
+
     var body: some View {
         // THE ROOM'S FRAME (prd §1136f): title, box and tiles as the same
         // three list rows every room draws, so they stand where Home's,
@@ -126,9 +136,7 @@ struct SettingsHome: View {
                                                open: { category in
                                                    withAnimation(DS.Motion.folder) { openFolder = category }
                                                },
-                                               openCasberi: {
-                                                   withAnimation(DS.Motion.folder) { casberiOpen = true }
-                                               })
+                                               openCasberi: { openCasberiFolder() })
                                 .padding(.horizontal, DSRoomChassis.rowInset - DSRoomChassis.inset - DS.Space.s1)
                             }
                         // EACH KIND IS THE FEED'S CARD (prd §1265): its act
@@ -241,7 +249,19 @@ struct SettingsHome: View {
         // behind the pinned Casberi row since prd §1136, so the hook opens it
         // first and `SettingsRows`' own hook raises the sheet.
         .onAppear {
-            if UserDefaults.standard.string(forKey: "accountDetail") != nil { casberiOpen = true }
+            // A beat after mount: the pane's split is written by the shell
+            // after its first layout, and the folder goes where the split is.
+            if UserDefaults.standard.string(forKey: "accountDetail") != nil {
+                Task { @MainActor in
+                    // The split is written after the shell's first layout;
+                    // wait for it, bounded, so the folder goes where it would
+                    // on a tap. A narrow window never splits and falls through.
+                    for _ in 0..<30 where !route.paneHostsPushes {
+                        try? await Task.sleep(for: .milliseconds(100))
+                    }
+                    openCasberiFolder()
+                }
+            }
             // `-settingsScope <kind>` lands on one of the box's counts (prd
             // §1138) with no tap, for the store captures the Mac cannot tap.
             if let raw = UserDefaults.standard.string(forKey: "settingsScope"),

@@ -22,6 +22,8 @@ struct SettingsRows: View {
     /// Re-injected into every sheet these rows raise — see `presented(_:)`.
     @Environment(ShellChrome.self) private var chrome
     @Environment(\.scenePhase) private var scenePhase
+    /// These rows ARE the pane's folder (prd §1400): a page stacks on it.
+    @Environment(\.dsInPane) private var inPane
     /// Drives the Data tile's badge: a green lock on device, a blue cloud once
     /// the person turns iCloud sync on.
     @AppStorage("icloud.sync") private var icloudSync = false
@@ -60,7 +62,10 @@ struct SettingsRows: View {
     private func open(_ page: SettingsPage, sheet: () -> Void) {
         if route.paneHostsPushes {
             DSHaptic.tap()
-            route.fromAccountsList { route.push(.settingsPage(page)) }
+            // From the folder in the pane a page STACKS, so Back returns to
+            // the folder (prd §1400); from the list it replaces (§876).
+            if inPane { route.push(.settingsPage(page)) }
+            else { route.fromAccountsList { route.push(.settingsPage(page)) } }
         } else if route.sheet != nil || SettingsHome.bandSearches {
             // On the phone a setting is a page pushed beside Sources (prd
             // §1321), never a sheet over it.

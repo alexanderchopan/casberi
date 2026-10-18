@@ -251,6 +251,12 @@ extension FeedScreen {
         // inside the crown's closure, the head's arrival never re-drew the box
         // (measured: computed, then the box stayed on "No balance yet").
         let seatHead = selectedSeat != nil ? heads?.seatHead : nil
+        // READ HERE TOO (prd §1398): the crown below runs inside the chrome's
+        // body, and a `@State` read only from a child's body does not
+        // re-evaluate this one — the active page churns for other reasons,
+        // but the pane's box is quiet, and its balance landed (logged) while
+        // the crown kept drawing "No balance yet" (measured 2026-10-18).
+        let _ = portfolioShown?.totalUSD
         Section {
             DSRoomScopeChrome(
                 source: "Wallet",
@@ -330,6 +336,14 @@ extension FeedScreen {
             .listRowInsets(EdgeInsets(top: 0, leading: 0,
                                       bottom: DSRoomChassis.contentGap, trailing: 0))
             .feedRowBackground(splits: true)
+            // THE PANE'S BOX IS KEYED ON ITS BALANCE (prd §1398, measured
+            // 2026-10-18): this body re-evaluated with the total in hand
+            // (logged) and the chrome's crown still drew the figure it had at
+            // mount — the row's content was not rebuilt. The active page is
+            // never caught by this because its landing and pull remount the
+            // row for other reasons; the pane's instance keys the row on the
+            // one value the box exists to show, so a landed total is a new row.
+            .id(roomBoxPlace == .paneBox ? "paneBalance:\(portfolioShown?.totalUSD ?? 0)" : "walletChrome")
             .listRowSeparator(.hidden)
             .task { walletFollowProbe() }
             // The tray's Wallet folder leads with Follow a wallet (prd §1133)

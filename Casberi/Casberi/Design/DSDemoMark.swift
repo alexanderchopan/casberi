@@ -50,9 +50,21 @@ enum DSDemoMark {
         #endif
     }
 
+    /// **ON THE MAC THE MARK IS THE WINDOW TITLE (prd §1400).** "Demo · Not
+    /// your things" in the title bar, drawn visible for the demo's length,
+    /// and Exit Demo in the Casberi menu; no pill floats over the list and
+    /// no screen reserves a band.
+    static var inWindowTitle: Bool {
+        #if targetEnvironment(macCatalyst)
+        true
+        #else
+        false
+        #endif
+    }
+
     /// The band a screen reserves at its top edge while the pill is up.
     static var screenClearance: CGFloat {
-        marking && !inBand ? pillTop + pillHeight + gap : 0
+        marking && !inBand && !inWindowTitle ? pillTop + pillHeight + gap : 0
     }
 }
 

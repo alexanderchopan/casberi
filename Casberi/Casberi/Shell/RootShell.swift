@@ -201,6 +201,18 @@ struct RootShell: View {
     /// (`RoomDoor`'s own distinction): the two differ wherever the catalog
     /// brands a seat more fully than its bridge stamps it, and the wrong one
     /// lands on a room that can never hold a row.
+    /// The librarian probe's two counts, out of the body's expression: the
+    /// filter inline was the line the type-checker gave up on once the shell's
+    /// chain grew (2026-10-18).
+    private static func librarianCounts(_ all: [Thing]) -> (weak: Int, threads: Int) {
+        var weak = 0, threads = 0
+        for t in all where t.isLive {
+            if t.kind == .screenshot, t.ocrAt != nil, !t.content.isEmpty, ScreenshotNaming.isWeak(t.title) { weak += 1 }
+            if ThreadDigest.wants(t) { threads += 1 }
+        }
+        return (weak, threads)
+    }
+
     @MainActor
     private func openRoomIfRequested() {
         guard let room = UserDefaults.standard.string(forKey: "openRoom"),
@@ -405,6 +417,10 @@ struct RootShell: View {
         .onChange(of: filter.source, initial: true) { _, _ in
             updateMacWindowTitle()
         }
+        // The demo's mark is the window title (prd §1400), and the Casberi
+        // menu's Exit Demo leaves it the way the pill's Exit did.
+        .modifier(MacDemoWatch(demoActive: demoActive, exitRequest: chrome.demoExitRequest,
+                               onTitle: updateMacWindowTitle, onExit: exitDemoFromMenu))
         #endif
         // The grammar is heard by a LEAF, not by this body (2026-09-06) —
         // `.sensoryFeedback(trigger:)` reads its counter wherever it is
@@ -1537,11 +1553,7 @@ struct RootShell: View {
             if let mode = UserDefaults.standard.string(forKey: "librarianProbe") {
                 Task { @MainActor in
                     let all = (try? modelContext.fetch(FetchDescriptor<Thing>())) ?? []
-                    let weak = all.filter {
-                        $0.isLive && $0.kind == .screenshot && $0.ocrAt != nil
-                            && !$0.content.isEmpty && ScreenshotNaming.isWeak($0.title)
-                    }.count
-                    let threads = all.filter { $0.isLive && ThreadDigest.wants($0) }.count
+                    let (weak, threads) = Self.librarianCounts(all)
                     NSLog("[Casberi] librarianProbe: onDevice=%d keyed=%d enabled=%d provider=%@ weakTitles=%d undigested=%d",
                           AgentLibrarian.deviceCanDoIt ? 1 : 0, AgentLibrarian.canRun ? 1 : 0,
                           AgentLibrarian.isEnabled ? 1 : 0,
@@ -2574,7 +2586,7 @@ struct RootShell: View {
             // `rootPresented` for the cover's reason, plus the route and the
             // filter the exit resets.
             // `DemoCapture` is the one capture door (§864).
-            if demoActive && !DemoCapture.hidesMarking && !DSDemoMark.inBand {
+            if demoActive && !DemoCapture.hidesMarking && !DSDemoMark.inBand && !DSDemoMark.inWindowTitle {
                 rootPresented(DemoBanner())
                     .environment(sceneState.route)
                     .environment(sceneState.filter)
@@ -4673,12 +4685,28 @@ struct RootShell: View {
     /// `nil` reverts the title bar to the app's own display name (Info.plist
     /// `CFBundleDisplayName`) — the "All" case, so an unscoped feed reads as
     /// plain "Casberi" exactly as it always has.
+    /// Exit Demo, from the Casberi menu (prd §1400).
+    private func exitDemoFromMenu() {
+        DemoLeave.run(context: modelContext, store: bridges, route: sceneState.route,
+                      filter: sceneState.filter, chrome: chrome)
+    }
+
     private func updateMacWindowTitle() {
         // THIS window's scene (multi-window, 2026-08-02). The old
         // `connectedScenes.first(where: .foregroundActive)` lookup answered
         // "whichever window is frontmost", so with two open, one window
         // changing source retitled the other.
-        windowScene?.title = filter.source == "All" ? nil : filter.source
+        let room = filter.source == "All" ? nil : filter.source
+        // THE DEMO'S MARK (prd §1400): the title bar is drawn for the demo's
+        // length and says what the pill said; Exit Demo is in the Casberi menu.
+        if DSDemoMark.inWindowTitle, DSDemoMark.marking {
+            windowScene?.title = [room, String(localized: "Demo · Not your things")]
+                .compactMap { $0 }.joined(separator: " — ")
+            windowScene?.titlebar?.titleVisibility = .visible
+        } else {
+            windowScene?.title = room
+            windowScene?.titlebar?.titleVisibility = .hidden
+        }
     }
     #endif
 
@@ -4941,3 +4969,23 @@ struct AztecSignAsk: Identifiable {
     let id = UUID()
     let request: AztecSignRequest.Request
 }
+
+#if targetEnvironment(macCatalyst)
+/// The demo's two Mac hooks (prd §1400), as ONE modifier on the shell's
+/// chain: the window title follows the demo in and out, and the Casberi
+/// menu's Exit Demo leaves it. A struct of its own because the shell's chain
+/// is at the type-checker's budget — two more `onChange` closures on it
+/// tipped an unrelated DEBUG probe over (2026-10-18).
+private struct MacDemoWatch: ViewModifier {
+    let demoActive: Bool
+    let exitRequest: Int
+    let onTitle: () -> Void
+    let onExit: () -> Void
+
+    func body(content: Content) -> some View {
+        content
+            .onChange(of: demoActive) { _, _ in onTitle() }
+            .onChange(of: exitRequest) { _, _ in onExit() }
+    }
+}
+#endif

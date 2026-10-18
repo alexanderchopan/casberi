@@ -949,6 +949,13 @@ struct FeedScreen: View {
         // root of the app's deepest view tree, the one the 8MB main-stack
         // history is about, and neither iPhone nor iPad gains anything here.
         #if targetEnvironment(macCatalyst)
+        // THE PANE'S BOX READS ITS OWN STATE HERE (prd §1398, measured
+        // 2026-10-18): the Wallet's balance is read inside the chrome's crown,
+        // a closure a CHILD's body runs, and a `@State` read only there never
+        // re-evaluated this body — the pane's instance logged its balance
+        // landing three times and kept drawing "No balance yet". The active
+        // page churns for other reasons; the quiet pane needs the read here.
+        let _ = roomBoxPlace == .paneBox ? (portfolio != nil, blockStream.els.count, walletLive == WalletLiveState()) : (false, 0, false)
         return ScrollViewReader { proxy in
             page
                 .modifier(KeyboardWalk(isActive: isActive, chrome: chrome,
@@ -2015,7 +2022,20 @@ struct FeedScreen: View {
             if isActive { land() }
             // The pane's box is nobody's landing, but it draws the Wallet's
             // balance and its line (prd §1398), so it reads them.
-            else if roomBoxPlace == .paneBox { streamBlock(); loadWalletLive() }
+            else if roomBoxPlace == .paneBox {
+                streamBlock(); loadWalletLive()
+                // A store that lands after the mount (a demo poured in the
+                // same launch, a first sync): read twice more, bounded — the
+                // active page has its pull and landing for this; the pane's
+                // box has nothing else.
+                Task { @MainActor in
+                    for delay in [3, 8] {
+                        try? await Task.sleep(for: .seconds(delay))
+                        guard !Task.isCancelled else { return }
+                        streamBlock(); loadWalletLive()
+                    }
+                }
+            }
             resolveRoomAgent()
         }
         // A key added from Accounts must light the Chat tile without leaving

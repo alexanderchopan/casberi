@@ -67227,3 +67227,19 @@ A thing open in the pane drew the phone's bottom band: a note's Share and Lock d
 3. **The back chevron is deleted inside the pane.** Escape, or the open row pressed again, returns to the box (§1398).
 
 The phone is untouched: nothing sets `dsInPane` on a sheet, so the dial's tiles and the note's foot draw as they did. A reading that ends at its box (§1341) still publishes nothing.
+
+## §1400 — On the Mac: Casberi's folder is a list in the pane, the accounts are a menu on the title, and the demo's mark is the window title (the Mac half of §1321 item 6, §1133's account pick and §919/§1322's mark; amends §876, §1107's account strip on the rail layout) (design review, 2026-10-17)
+
+1. **Casberi's settings folder opens in the pane as a list** (`HomeRoute.Node.settingsFolder`, `SettingsFolderPage`: one row per setting, the colophon under them) where Library has a pane; a row's page stacks on it, so Back returns to the folder (`SettingsRows.open` under `dsInPane`). On the phone the folder still springs open as tiles (§1321). Library (`.settings`, since §1321) is the place that hosts the pane's pushes (`paneHostsPushes`); it was Apps, which nothing lands on since §1234.
+2. **The wallet family's accounts are a menu on the room's title** (`FeedScreen.accountTitleMenu`, a `Chip` beside the title: the account showing, else "All accounts"; the list leads with the room's act, Follow a wallet, and ticks the pick) on regular width. The account strip that floated over the rows in the band (`accountRail` in `roomFaces`) is deleted; the social rooms' faces stay in the band for now.
+3. **The demo's mark is the window title on the Mac** (`DSDemoMark.inWindowTitle`): the title bar is drawn for the demo's length and reads "<room> — Demo · Not your things"; **Exit Demo is in the Casberi menu** (`ShellChrome.demoExitRequest`, run by `RootShell` through `DemoLeave`). No pill floats over the list, and no screen reserves a band (`screenClearance` is 0 there).
+
+The phone is untouched: no pane, `inBand` keeps its band tag, and the title menu draws only on regular width.
+
+## §1401 — The Mac's type goes one notch down, measured: `macScale` 0.88 → 0.76 (amends §631) (design review, 2026-10-17: "type one notch down, measured")
+
+Measured on the Catalyst build at the default 1120pt window: the Feed's title (`heading34`) drew at 30pt and a row's title (`body17`) at 15pt. Mail's and Notes' column titles sit at 24–26pt and their rows at the system's 13pt.
+
+**The ruling: `DSTextStyle.macScale` is 0.76.** One lever, as §631 made it: 34→26, 28→21, 24→18, 17→13, 12→9. The title sits where Mail's does and the rows at the system's size. **Not 0.72**, which would put the title at 24 exactly: it takes the reading band to 12pt, under the 13pt §211 raised it above, and §631's own note refused 0.76 for the same reason when the rows were the only thing being compared — the title is being compared now, and 0.76 is the lowest the lever goes without the rows undershooting the system. `DS.Face`, `DS.Mark` and the `widget*` rungs still opt out (`design-ramp-audit.py` check 5).
+
+The phone is untouched: the scale applies under `targetEnvironment(macCatalyst)` only.

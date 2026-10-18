@@ -604,8 +604,9 @@ struct MainSurface: View {
         // under the cover (`FeedScreen.roomScopeControl`). The rail keeps all
         // of them, where no seat shares the band's edge.
         guard showsRail else { return false }
+        // THE ACCOUNT STRIP LEFT THE BAND (prd §1400): the wallet family's
+        // accounts are a menu on the room's title (`FeedScreen.roomTitle`).
         return SocialScopeRail.shows(source: filter.source, accounts: socialAccounts.count)
-            || accountRailItems.count > 1
     }
 
     /// The faces the folder row carries after its venues (prd §753). At most
@@ -616,7 +617,6 @@ struct MainSurface: View {
         // On the phone every one of these moved into the room (§959).
         if showsRail {
             socialScopeRail
-            accountRail
         }
     }
 
@@ -788,6 +788,8 @@ struct MainSurface: View {
             NetworkReachScreen()
         case .settingsPage(let page):
             SettingsPageView(page: page)
+        case .settingsFolder:
+            SettingsFolderPage()
         case .bridge(let dest):
             // Mac's connect form is PUSHED, not raised (see
             // `Destination.raisedByConnect`), and the phone's can stack inside
@@ -1923,7 +1925,13 @@ struct MainSurface: View {
         // size and, for the Feed, the Day section under it (the week, the
         // next thing, Needs you, the days). Notes' box is the newest note,
         // open. Nothing landed keeps the mark below.
-        if latestArrival != nil, HomeScope.Place(source: filter.source) == nil {
+        if HomeScope.Place(source: filter.source) == .settings, let node = route.accountsPane.last {
+            // LIBRARY'S PANE (prd §876, §1400): Casberi's folder, or the
+            // setting it opened.
+            leafRoom(node)
+                .id(node)
+                .transition(.opacity)
+        } else if latestArrival != nil, HomeScope.Place(source: filter.source) == nil {
             if Pinboard.isPinnedRoom(filter.source) {
                 if let note = things.first(where: { $0.isLive && Pinboard.inRoom($0) }) {
                     ThingSheetView(thing: note, inlineRest: true)

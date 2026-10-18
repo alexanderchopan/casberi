@@ -80,6 +80,11 @@ final class HomeRoute {
         /// ever placed in `accountsPane`: on a layout with no pane the same
         /// rows raise their sheets, as they always have.
         case settingsPage(SettingsPage)
+        /// CASBERI'S SETTINGS FOLDER, AS A LIST IN THE PANE (prd §1400, the
+        /// Mac half of §1321's folder tiles): where Library has a pane the
+        /// folder opens beside it, each setting a row, and a row's page
+        /// stacks on it so Back returns to the folder.
+        case settingsFolder
         /// THE NOTES PAGE, PUSHED FROM LIBRARY (prd §1347): the Notes folder
         /// is where Notes is managed, and its first cell opens the room
         /// (`Pinboard.room`: All · Folders · Voice · New) beside Library, as
@@ -126,7 +131,7 @@ final class HomeRoute {
     /// source it shows. Leaving Apps takes its pane with it, so the next
     /// visit opens on the list rather than on a page chosen last week.
     var shownPlace: HomeScope.Place? {
-        didSet { if shownPlace != .apps { accountsPane = [] } }
+        didSet { if shownPlace != .settings { accountsPane = [] } }
     }
 
     /// A place asked for (or "All", Home, to leave one), handed to
@@ -179,7 +184,8 @@ final class HomeRoute {
     var accountsSplit = false
 
     /// True while pushes land in the Accounts pane rather than on `path`.
-    var paneHostsPushes: Bool { accountsSplit && path.isEmpty && sheet == nil && shownPlace == .apps }
+    /// Library (`.settings` since §1321; it was Apps) hosts the pane's pushes.
+    var paneHostsPushes: Bool { accountsSplit && path.isEmpty && sheet == nil && shownPlace == .settings }
 
     /// The frame the person is actually looking at: the pane's top while it
     /// hosts pushes, else the stack's. `ConnectPushWatcher` asks this, so a
