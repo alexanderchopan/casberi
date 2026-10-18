@@ -598,15 +598,9 @@ struct MainSurface: View {
     /// test each rail makes, asked once so the folder row can decide to mount
     /// with no venues in it (prd §753).
     private var roomFacesShow: Bool {
-        // **THE PHONE'S BAND CARRIES NO FACES (prd §936, §959).** The wallet
-        // family picks its account from the menu under its tiles; the social
-        // rooms from a row of faces
-        // under the cover (`FeedScreen.roomScopeControl`). The rail keeps all
-        // of them, where no seat shares the band's edge.
-        guard showsRail else { return false }
-        // THE ACCOUNT STRIP LEFT THE BAND (prd §1405): the wallet family's
-        // accounts are a menu on the room's title (`FeedScreen.roomTitle`).
-        return SocialScopeRail.shows(source: filter.source, accounts: socialAccounts.count)
+        // THE BAND CARRIES NO FACES (prd §1407): the wallet family's accounts
+        // (§1405) and a social room's people are menus on the room's title.
+        false
     }
 
     /// The faces the folder row carries after its venues (prd §753). At most
@@ -614,10 +608,7 @@ struct MainSurface: View {
     /// family, never both.
     @ViewBuilder
     private var roomFaces: some View {
-        // On the phone every one of these moved into the room (§959).
-        if showsRail {
-            socialScopeRail
-        }
+        EmptyView()
     }
 
     /// The category the room you are STANDING IN belongs to, if any.
@@ -627,69 +618,12 @@ struct MainSurface: View {
 
 
 
-    @ViewBuilder
-    private var socialScopeRail: some View {
-        let accounts = socialAccounts
-        if SocialScopeRail.shows(source: filter.source, accounts: accounts.count) {
-            // At most `railCap` faces, most recent poster first, the rest
-            // behind `+N` (prd §824).
-            let visible = SocialScopeRail.visible(accounts, recent: chrome.recentHandles,
-                                                  scope: chrome.personScope)
-            FaceScopeRail(
-                items: SocialScopeRail.items(visible.shown, source: filter.source,
-                                             fresh: chrome.freshHandles),
-                scope: chrome.personScope,
-                compact: chrome.minimized && !showsRail,
-                inFolder: true,
-                matches: SocialScopeRail.matches,
-                onPick: { picked in
-                    withAnimation(DS.Motion.standard) { chrome.personScope = picked }
-                },
-                // Re-tapping the lit face opens that person's own room — the
-                // door the first tap used to be, kept one tap away now that the
-                // first tap filters instead. `RootShell` presents it through the
-                // same sheet `casberi://person/…` opens.
-                onReTap: { item in
-                    chrome.personRequest = SocialProfile(
-                        source: filter.source, handle: item.id,
-                        displayName: item.caption, bio: nil,
-                        avatarURL: {
-                            if case .avatar(let url, _) = item.face { return url }
-                            return nil
-                        }())
-                },
-                more: visible.hidden,
-                onMore: { allFacesShown = true })
-            .sheet(isPresented: $allFacesShown) {
-                SocialFacesTray(accounts: accounts, source: filter.source,
-                                scope: chrome.personScope) { picked in
-                    withAnimation(DS.Motion.standard) { chrome.personScope = picked }
-                }
-            }
-        }
-    }
-
-    /// The social rail's `+N` list is up (prd §824).
-    @State private var allFacesShown = false
+    // THE SOCIAL FACES LEFT THE BAND TOO (prd §1407): `FeedScreen.peopleTitleMenu`.
 
     // THE ACCOUNT RAIL LEFT THE BAND (prd §1405): the wallet family's accounts
     // are a menu on the room's title (`FeedScreen.accountTitleMenu`), read off
     // the rail the chrome still publishes (`ShellChrome.accountRail`).
 
-    /// The watched accounts behind whichever social room is showing.
-    ///
-    /// Read straight off the network's store — no corpus walk, so this costs
-    /// nothing on the body path, which matters because `topInset` is evaluated on
-    /// every body pass and is already this surface's most expensive property
-    /// (see `chipSnapshot`).
-    private var socialAccounts: [SocialAccount] {
-        // ONE DISPATCH, shared with the room itself (2026-08-26, prd §489).
-        // This was a two-case switch that failed CLOSED — which is why Nostr's
-        // rail simply never drew, silently, for as long as that seat has
-        // existed, while `HandleSetupScreen` had the complete three-case
-        // version all along. See `SocialRoomSource.accounts(for:)`.
-        SocialRoomSource.accounts(for: filter.source)
-    }
 
     /// One pushed room. Split out of the `navigationDestination` closure only
     /// so that closure can reserve the rail's column around it (see there) —
@@ -717,7 +651,8 @@ struct MainSurface: View {
         // The master list of everything connected (prd §1136 item 3). It
         // draws through the room's frame (prd §1136f), whose title row
         // already reserves the demo's band, as every room's does.
-        case .settings: SettingsHome()
+        // Beside a pane the box is the pane's (prd §1407, as §1403).
+        case .settings: SettingsHome().environment(\.dsRoomBoxPlace, showsPane ? .listWithoutBox : .list)
         }
     }
 
@@ -1891,12 +1826,22 @@ struct MainSurface: View {
         // size and, for the Feed, the Day section under it (the week, the
         // next thing, Needs you, the days). Notes' box is the newest note,
         // open. Nothing landed keeps the mark below.
-        if HomeScope.Place(source: filter.source) == .settings, let node = route.accountsPane.last {
-            // LIBRARY'S PANE (prd §876, §1405): Casberi's folder, or the
-            // setting it opened.
-            leafRoom(node)
-                .id(node)
-                .transition(.opacity)
+        if HomeScope.Place(source: filter.source) == .settings {
+            // LIBRARY'S PANE (prd §876, §1405, §1407): Casberi's folder or the
+            // setting it opened; at rest, Library's own box — the counts.
+            if let node = route.accountsPane.last {
+                leafRoom(node)
+                    .id(node)
+                    .transition(.opacity)
+            } else {
+                SettingsHome(boxOnly: true)
+                    .environment(\.dsRoomBoxPlace, .paneBox)
+                    .id("paneBox:Library")
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                    // The pane is ink at rest as it is with a thing open (prd
+                    // §1407): no seam at its top, no change when a row opens.
+                    .dsInk()
+            }
         } else if latestArrival != nil, HomeScope.Place(source: filter.source) == nil {
             if Pinboard.isPinnedRoom(filter.source) {
                 if let note = things.first(where: { $0.isLive && Pinboard.inRoom($0) }) {
@@ -1913,6 +1858,9 @@ struct MainSurface: View {
                     .environment(\.dsRoomBoxPlace, .paneBox)
                     .id("paneBox:" + filter.source)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                    // Ink at rest as with a thing open (prd §1407): the box
+                    // column paints from its top edge, no seam.
+                    .dsInk()
             }
         } else {
             VStack(spacing: DS.Space.s3) {
@@ -2718,7 +2666,9 @@ struct MainSurface: View {
             let atEnd = isRegular
                 ? (delta > 0 || HomeScope.contains(filter.source))
                 : true
-            if atEnd, route.path.isEmpty, !chrome.roomsTray {
+            // No tray where the rail stands (prd §1402, §1407): the rail is
+            // the tab bar, and a swipe past the end stops.
+            if atEnd, route.path.isEmpty, !chrome.roomsTray, !isRegular {
                 DSHaptic.selection()
                 withAnimation(DS.Motion.folder) { chrome.roomsTray = true }
             }
@@ -3185,6 +3135,18 @@ struct MainSurface: View {
             .background {
                 ZStack(alignment: .top) {
                     DS.themedPage
+                    // THE PANE'S COLUMN IS INK TO THE WINDOW'S EDGE (prd
+                    // §1407): the pane rides a trailing safe-area inset, which
+                    // cannot reach above the top safe area (the title bar's
+                    // band in the demo), so the lighter page showed through
+                    // there as a seam across the pane. The shell's own coat
+                    // paints the column, which does reach the edge.
+                    if showsPane {
+                        HStack(spacing: 0) {
+                            Spacer(minLength: 0)
+                            DS.inkGround.frame(width: PadLayout.paneWidth(for: surfaceWidth))
+                        }
+                    }
                     // The table a swipe is dealt on (prd §898) — here, on
                     // the shell's own coat, so it reaches the status bar
                     // and the band, not just the pager's frame: the whole

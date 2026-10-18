@@ -645,14 +645,25 @@ extension View {
 
 private struct DSSoftScrollEdges: ViewModifier {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    /// The pane's box (prd §1403) paints from its top edge: the soft top
+    /// edge drew a lighter band over the shell's page above its first row,
+    /// a seam across the pane (prd §1407).
+    @Environment(\.dsRoomBoxPlace) private var boxPlace
 
     func body(content: Content) -> some View {
         if #available(iOS 26.0, *) {
-            let edges: Edge.Set = horizontalSizeClass == .regular
-                ? [.top, .bottom, .leading]
-                : [.top, .bottom]
-            content.scrollEdgeEffectStyle(.soft, for: edges.subtracting(.bottom))
-                .scrollEdgeEffectHidden(true, for: .bottom)
+            if boxPlace == .paneBox {
+                // The pane's box: no edge effect at all. The system's own
+                // top effect under the window's safe area drew the band
+                // the hidden title bar leaves (the traffic lights' 28pt).
+                content.scrollEdgeEffectHidden(true, for: .all)
+            } else {
+                let edges: Edge.Set = horizontalSizeClass == .regular
+                    ? [.top, .bottom, .leading]
+                    : [.top, .bottom]
+                content.scrollEdgeEffectStyle(.soft, for: edges.subtracting(.bottom))
+                    .scrollEdgeEffectHidden(true, for: .bottom)
+            }
         } else {
             content
         }

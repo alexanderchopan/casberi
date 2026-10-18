@@ -598,11 +598,16 @@ grep -q 'guard roomTakesWalletScope' "$FEED" \
 # AMENDED 2026-09-05: the category switcher is no longer a room control at all
 # — the folder opens inside the strip — so `roomControls` carries the social
 # rail alone, and that one must stay pinned here for §357's reason.
-grep -q 'roomControls' "$MAIN" \
-  && grep -qE '^\s*socialScopeRail$' "$MAIN" \
-  || { echo "✗ MainSurface.roomControls no longer carries the social rail — a rail"; \
-       echo "  rail mounted anywhere else either scrolls away or (back on FeedScreen) is"; \
-       echo "  destroyed by every venue change, the §357 bug returned."; exit 1; }
+# AMENDED 2026-10-18 (prd §1407): the social faces are a MENU on the room's
+# title (`FeedScreen.peopleTitleMenu`), which reads `chrome.personScope` —
+# shell state — so a venue change rebuilding the room loses nothing, which
+# is the whole of §357's reason. No rail rides the band any more.
+grep -q 'var peopleTitleMenu: some View' Casberi/Casberi/Screens/FeedScreen+RoomTitle.swift \
+  && grep -q 'chrome.personScope = account.key' Casberi/Casberi/Screens/FeedScreen+RoomTitle.swift \
+  || { echo "✗ the people menu on the title is gone or no longer writes the shell's personScope"; \
+       echo "  (§1407, §357): a pick held in the room is destroyed by every venue change."; exit 1; }
+grep -qE '^\s*socialScopeRail$' "$MAIN" \
+  && { echo "✗ the social rail is back in the band (§1407 moved the people to the title's menu)"; exit 1; }
 # …AND IN THIS ORDER: THE FOLDER TOUCHES THE DOCK, THE FACES SIT ABOVE IT
 # (prd §649, 2026-09-08, user: "on socials we can't have the avatars in between
 # rows! the rows of sources need to be by the doc and the faces can be above
@@ -643,10 +648,11 @@ _controls=$(awk '/private var roomControls: some View/{f=1;print;next} f&&(/^   
   && { echo "✗ roomControls emits a face rail as its own strip again (§753) — the faces"; \
        echo "  ride the folder capsule, after the venues."; exit 1; }
 _inFolder=$(grep -c 'inFolder: true' "$TMP/main.nc" || true)
-# One rail since the accounts became a menu on the title (prd §1405; two
-# since GitHub's and Pinterest's left with their rooms, §1060): social.
-[[ "$_inFolder" -eq 1 ]] \
-  || { echo "✗ the shell passes inFolder: true $_inFolder times, not 1 (§753, §1405) — a rail drawn"; \
+# No rail in the band since the people joined the accounts on the title
+# (prd §1407; one since §1405, two since §1060): a face rail back in the
+# band is the floating strip those rulings deleted.
+[[ "$_inFolder" -eq 0 ]] \
+  || { echo "✗ the shell passes inFolder: true $_inFolder times, not 0 (§753, §1407) — a rail drawn"; \
        echo "  in the capsule without it brings its own glass, scroll view and captions."; exit 1; }
 # --- the capsule always says WHERE YOU ARE (prd §754) ------------------------
 # The closed capsule carried the faces ALONE for a day (user: "this isn't how we
@@ -981,14 +987,18 @@ grep -qE '\.opacity\(isOn \? 1 : 0\.[0-9]' "$TMP/rail.nc" \
 # So each is checked where its own ruling put it. The scroll-away cost §357
 # named is real and is now carried by §495's return-to-head on a scope change,
 # with pinning left as its own open ruling rather than assumed here.
-socialRail=$(grep -c 'socialScopeRail' "$TMP/main.nc" || true)
+# AMENDED 2026-10-18 (prd §1407): the person filter is a menu on the room's
+# title, and the title row is the room's first row — the pick it shows reads
+# `chrome.personScope`, shell state, so a venue change loses nothing, and the
+# way out (Everyone) is one tap on the same menu. The rail no longer rides
+# the band; see the §1407 guard above.
+socialRail=$(grep -c 'peopleTitleMenu' Casberi/Casberi/Screens/FeedScreen+RoomTitle.swift || true)
 # Since §747 the wallet's scope control is the account deck in
 # `walletScopeChromeSection`, in the room's content where §483 put the rail.
 walletRail=$(grep -c 'walletScopeChromeSection(' "$TMP/feed.nc" || true)
 [[ "$socialRail" -gt 0 ]] \
-  || { echo "✗ the social rail is gone from MainSurface.roomControls — it is pinned chrome"; \
-       echo "  (§357/§362): a person filter you are standing in that scrolls away is a"; \
-       echo "  filter with no visible way out."; exit 1; }
+  || { echo "✗ the people menu is gone from the room's title (§1407, §357/§362): a person"; \
+       echo "  filter you are standing in with no visible way out."; exit 1; }
 [[ "$walletRail" -gt 0 ]] \
   || { echo "✗ the wallet's account deck is gone from the room's content — §483 moved the"; \
        echo "  scope control OUT of roomControls deliberately, and since §747 its home is"; \

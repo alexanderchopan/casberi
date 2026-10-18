@@ -45,9 +45,14 @@ extension FeedScreen {
             if let card = cards.first { lines.append(Self.cardGlance(card)) }
         }()
 
+        // THE PANE'S WALLET BOX CARRIES OVERVIEW, THEN COMING UP (prd
+        // §1407): under the balance and its line, where the mockup draws
+        // them; beside a pane the list column keeps Needs you and the
+        // transactions. `dsPaneBoxRow` is the one mechanism (§1403).
         Group {
             walletOverview(lines)
         }
+        .environment(\.dsPaneBoxRow, true)
         // The Spending reading (and the cards it reads) starts here, whatever
         // Home shows; Subscriptions reads its own.
         .task(id: walletSpendingKey) { await SpendingReading.shared.refresh(modelContext) }
@@ -60,7 +65,16 @@ extension FeedScreen {
         // waits on you, undated, leads; the dated rows follow under their
         // days. Five rows across both, then the door.
         let restNeeds = needs
-        let restDated = dated
+        // Beside a pane the dated rows are the pane's Coming up (prd §1407).
+        let paned = roomBoxPlace != .list
+        let restDated = paned ? [] : dated
+        if paned, !dated.isEmpty {
+            walletPanel(Self.comingUpName, glyph: ScopeTileGlyph.comingUp, things: Self.things(dated)) {
+                walletDaySections(walletRowDays(dated), boundary: nil, panelled: true,
+                                  nextEventID: nextEventID)
+            }
+            .environment(\.dsPaneBoxRow, true)
+        }
         if !restNeeds.isEmpty || !restDated.isEmpty {
             let open = walletOpenSections.contains("needs")
             let total = restNeeds.count + restDated.count
@@ -180,6 +194,8 @@ extension FeedScreen {
     }
 
     static var overviewName: String { String(localized: "Overview") }
+    /// The pane's dated group beside a pane (prd §1407).
+    static var comingUpName: String { String(localized: "Coming up") }
 
     // MARK: - Subscriptions
 

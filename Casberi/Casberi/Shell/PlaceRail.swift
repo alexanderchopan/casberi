@@ -37,6 +37,7 @@ struct PlaceRail: View {
             tile(.wallet)
             searchTile
             Spacer(minLength: 0)
+            demoFoot
         }
         .padding(.top, DS.Space.s2)
         .frame(width: PadLayout.railWidth)
@@ -69,7 +70,8 @@ struct PlaceRail: View {
         }
         .buttonStyle(PressSpring())
         .dsHover()
-        .dsTooltip(tab.label)
+        // The key with the word (prd §1407): ⌘1–⌘3 in the bar's order (§1402).
+        .dsTooltip("\(tab.label)  ⌘\((PlaceTab.allCases.firstIndex(of: tab) ?? 0) + 1)")
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text(verbatim: tab.label))
         .accessibilityAddTraits(on ? [.isButton, .isSelected] : .isButton)
@@ -77,6 +79,38 @@ struct PlaceRail: View {
         // The capture flight lands on the Feed's tile, as it lands on the
         // phone's Feed tab.
         .background { if tab == .feed { FeedTabFrame() } }
+    }
+
+    /// THE DEMO'S MARK ON THE MAC (prd §1407): the rail's foot says Demo and
+    /// offers Exit, in the pick's ink; the window title says it too. No pill
+    /// over the list, no band at the top, nothing the pane's column has to
+    /// paint around.
+    @ViewBuilder
+    private var demoFoot: some View {
+        if DSDemoMark.inWindowTitle, DSDemoMark.marking {
+            VStack(spacing: 2) {
+                Text("Demo")
+                    .dsText(.label12)
+                    .foregroundStyle(DS.textSecondary)
+                Button {
+                    DSHaptic.tap()
+                    chrome.demoExitRequest += 1
+                } label: {
+                    Text("Exit")
+                        .dsText(.label12)
+                        .foregroundStyle(DS.pickInk)
+                        .frame(width: Self.tileWidth, height: 28)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(RowPress())
+                .dsHover()
+                .dsTooltip(String(localized: "Exit demo"))
+                .accessibilityLabel(Text("Exit demo"))
+            }
+            .padding(.bottom, DS.Space.s4)
+            .opacity(chrome.demoLeaving ? 0 : 1)
+            .animation(DS.Motion.standard, value: chrome.demoLeaving)
+        }
     }
 
     private var searchTile: some View {
@@ -99,7 +133,7 @@ struct PlaceRail: View {
         }
         .buttonStyle(PressSpring())
         .dsHover()
-        .dsTooltip(String(localized: "Search"))
+        .dsTooltip(String(localized: "Search") + "  ⌘F")
         .accessibilityLabel(Text("Search"))
         .accessibilityHint(Text("Find anything, or make a page of it"))
     }

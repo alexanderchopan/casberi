@@ -118,8 +118,31 @@ struct DSRoomScopeChrome<Scope: DSTileScope, Crown: View, Figure: View>: View {
             // the room's own list follows the chrome now, as in every room.
             if !pinned, boxPlace != .paneBox {
                 VStack(alignment: .leading, spacing: DS.Space.s2) {
-                    DSScopeTiles(sections: sections, active: active,
-                                 attention: attention, inert: inert, bare: bare, onPick: onPick)
+                    if boxPlace == .listWithoutBox {
+                        // BESIDE A PANE THE SCOPES ARE PILLS UNDER THE TITLE
+                        // (prd §1407): the phone's 52pt tiles spread across a
+                        // 560pt column; Mail's shape is a row of 28pt chips,
+                        // the pick in the pick's ink, the rest grey (§1385).
+                        HStack(spacing: DS.Space.s2) {
+                            ForEach(sections) { section in
+                                Button {
+                                    DSHaptic.selection()
+                                    onPick(section)
+                                } label: {
+                                    Chip(text: section.label, selected: section == active,
+                                         ink: section == active ? DS.pickInk : DS.textSecondary)
+                                        .opacity(inert.contains(section) ? 0.4 : 1)
+                                }
+                                .buttonStyle(PressSpring())
+                                .disabled(inert.contains(section))
+                                .accessibilityAddTraits(section == active ? [.isButton, .isSelected] : .isButton)
+                            }
+                            Spacer(minLength: 0)
+                        }
+                    } else {
+                        DSScopeTiles(sections: sections, active: active,
+                                     attention: attention, inert: inert, bare: bare, onPick: onPick)
+                    }
                     accountLine
                 }
                 .padding(.horizontal, DSRoomChassis.inset)

@@ -197,7 +197,20 @@ extension DS {
 /// INSIDE each screen because NavigationStack's UIKit backing is opaque: a
 /// layer behind the nav stack can never show through it.
 struct DSPageBackground: View {
+    /// The pane's box (prd §1403) stands on the pane's ink: its own page
+    /// coat painted a lighter band above its first row, under the title
+    /// bar, where the ink below could not reach (prd §1407).
+    @Environment(\.dsRoomBoxPlace) private var boxPlace
+
     var body: some View {
+        if boxPlace == .paneBox {
+            Color.clear
+        } else {
+            coat
+        }
+    }
+
+    private var coat: some View {
         ZStack {
             DS.themedPage
             if let photo = ThemeStore.shared.backgroundPhoto {

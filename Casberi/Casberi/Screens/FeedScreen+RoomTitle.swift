@@ -60,6 +60,48 @@ extension FeedScreen {
             // §1405): the strip that floated over the rows in the band is
             // gone, and the Mac has no tray to pick from (§1402).
             accountTitleMenu
+            peopleTitleMenu
+        }
+    }
+
+    /// A social room's people beside the title (prd §1407), where the rail
+    /// stands: Everyone, then each account the room is made of, the one
+    /// showing ticked; a pick narrows the room as the band's faces did
+    /// (§362). Regular width only; the phone keeps its faces under the cover.
+    @ViewBuilder
+    var peopleTitleMenu: some View {
+        if roomSizeClass == .regular {
+            let accounts = SocialRoomSource.accounts(for: source)
+            if SocialScopeRail.shows(source: source, accounts: accounts.count) {
+                let showing = accounts.first { chrome.personScope == $0.key }
+                Menu {
+                    Button {
+                        DSHaptic.selection()
+                        withAnimation(DS.Motion.standard) { chrome.personScope = nil }
+                    } label: {
+                        if chrome.personScope == nil { Label("Everyone", systemImage: "checkmark") }
+                        else { Text("Everyone") }
+                    }
+                    Divider()
+                    ForEach(accounts, id: \.key) { account in
+                        Button {
+                            DSHaptic.selection()
+                            withAnimation(DS.Motion.standard) { chrome.personScope = account.key }
+                        } label: {
+                            if chrome.personScope == account.key {
+                                Label(account.title, systemImage: "checkmark")
+                            } else {
+                                Text(verbatim: account.title)
+                            }
+                        }
+                    }
+                } label: {
+                    Chip(text: showing?.title ?? String(localized: "Everyone"), glyph: "chevron.down")
+                }
+                .buttonStyle(PressSpring())
+                .fixedSize()
+                .accessibilityLabel(Text("People"))
+            }
         }
     }
 

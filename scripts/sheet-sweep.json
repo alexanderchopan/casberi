@@ -1555,8 +1555,7 @@
   },
   {
    "covers": [
-    "Screens/FeedScreen+Sheets.swift:feedSheet#socialFaces",
-    "Shell/MainSurface.swift:allFacesShown"
+    "Screens/FeedScreen+Sheets.swift:feedSheet#socialFaces"
    ],
    "why": "the More face needs more than eight people (the demo has two); allFacesShown is also iPad/Mac only (showsRail)"
   },

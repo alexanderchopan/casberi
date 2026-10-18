@@ -4699,13 +4699,15 @@ struct RootShell: View {
         let room = filter.source == "All" ? nil : filter.source
         // THE DEMO'S MARK (prd §1405): the title bar is drawn for the demo's
         // length and says what the pill said; Exit Demo is in the Casberi menu.
+        // The bar stays hidden (prd §1407): drawn, it gave the window a top
+        // safe area the pane's column could not paint, a seam across the
+        // pane. The title still names the demo everywhere the system names
+        // a window; the mark you see is the rail's foot (`PlaceRail`).
         if DSDemoMark.inWindowTitle, DSDemoMark.marking {
             windowScene?.title = [room, String(localized: "Demo · Not your things")]
                 .compactMap { $0 }.joined(separator: " — ")
-            windowScene?.titlebar?.titleVisibility = .visible
         } else {
             windowScene?.title = room
-            windowScene?.titlebar?.titleVisibility = .hidden
         }
     }
     #endif

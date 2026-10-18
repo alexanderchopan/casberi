@@ -2,14 +2,16 @@
 
 Catalyst screenshots, taken headlessly (`-macSnapshot`, the demo poured into a
 scratch store), before and after prd §1402–§1406. The before set is the harness's
-1024×768 at 2×; the after set is the default 1120×760 window (`-macWindowSize 1120x760`).
+1024×768 at 2×; the after set is the harness's window too (the size override did not take on these runs).
 
-| Screen   | Before                   | After                    |
+| Screen   | Before                   | After (§1402–§1407)      |
 |----------|--------------------------|--------------------------|
 | Feed     | `before-feed.png`        | `after-feed.png`         |
 | Wallet   | `before-wallet.png`      | `after-wallet.png`       |
+| Markets  | —                        | `after-markets.png`      |
 | Notes    | `before-notes.png`       | `after-notes.png`        |
-| Settings | `before-settings.png`    | `after-settings.png`     |
+| Library  | `before-settings.png`    | `after-library.png`      |
+| Social   | —                        | `after-social.png`       |
 
 What changed, by ruling:
 
@@ -26,3 +28,7 @@ What changed, by ruling:
   Exit Demo in the Casberi menu.
 - **§1406** — `macScale` 0.88 → 0.76: the title at Mail's size, rows at the
   system's 13pt.
+- **§1407** — Library's box in the pane; the Wallet's Overview and Coming up
+  under its balance; scope pills under the title beside a pane; people as a
+  title menu; no tray and no seam on the Mac; the demo's mark at the rail's
+  foot.

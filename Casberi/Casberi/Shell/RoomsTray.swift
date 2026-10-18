@@ -155,6 +155,10 @@ struct RoomsTray: View {
         .task {
             guard UserDefaults.standard.bool(forKey: "openTray") else { return }
             try? await Task.sleep(for: .seconds(1))
+            // No tray where the rail stands (prd §1402, §1407): the rail is
+            // the tab bar and its Search is ⌘F, so the hook says so rather
+            // than photographing a door with no handle.
+            guard railInset == 0 else { NSLog("[Casberi] openTray: no tray where the rail stands"); return }
             NSLog("[Casberi] openTray: raised")
             withAnimation(liftMotion) { chrome.roomsTray = true }
             // `-traySearch "<words>"` types into the field (prd §1171): a

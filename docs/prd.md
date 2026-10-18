@@ -67278,3 +67278,16 @@ Measured on the Catalyst build at the default 1120pt window: the Feed's title (`
 **The ruling: `DSTextStyle.macScale` is 0.76.** One lever, as §631 made it: 34→26, 28→21, 24→18, 17→13, 12→9. The title sits where Mail's does and the rows at the system's size. **Not 0.72**, which would put the title at 24 exactly: it takes the reading band to 12pt, under the 13pt §211 raised it above, and §631's own note refused 0.76 for the same reason when the rows were the only thing being compared — the title is being compared now, and 0.76 is the lowest the lever goes without the rows undershooting the system. `DS.Face`, `DS.Mark` and the `widget*` rungs still opt out (`design-ramp-audit.py` check 5).
 
 The phone is untouched: the scale applies under `targetEnvironment(macCatalyst)` only.
+
+## §1407 — The Mac pane, finished: Library's box, the Wallet's Overview and Coming up, pills for the scopes, people on the title, no tray, no seam (amends §1403's pane, §1405's title menu, §1402's rail; the Mac half of §1166's Library box, §1107's Wallet Home, §752's tiles, §362's faces) (user, 2026-10-18: "ask yourself how else you would improve the mac experience, then apply those changes"; the parent review of the branch against the mockups)
+
+1. **Library's box is the pane's at rest** (`SettingsHome(boxOnly:)`, the counts or the ways in; the list column draws no box), as every room's is (§1403). Casberi's folder and a setting's page still replace it.
+2. **The Wallet's pane carries Overview, then Coming up**, under the balance and its line (`dsPaneBoxRow` on `walletOverview` and a Coming up panel of the dated rows); beside a pane the list column keeps Needs you and the transactions. Markets' pane is its map.
+3. **Beside a pane a wallet-family room's scopes are 28pt pills under the title** (`DSRoomScopeChrome`, each a `Chip`, the pick in `DS.pickInk`, the rest grey, §1385), not the phone's 52pt tiles spread over 560pt. The phone and an iPad without a pane keep the tiles.
+4. **A social room's people are a menu on the title** (`FeedScreen.peopleTitleMenu`: Everyone, then each account, the pick ticked), as the wallet family's accounts are (§1405). **The band carries no faces** on the rail layout; `roomFaces` is empty.
+5. **No rooms tray where the rail stands**: a swipe past the walk's end stops on regular width, and `-openTray YES` logs `openTray: no tray where the rail stands`. ⌘F is Find.
+6. **No seam at the pane's top**: the pane's box hides every scroll-edge effect (`DSSoftScrollEdges` reads the box place) and paints no page coat of its own (`DSPageBackground`), standing on the pane's ink — the system's top edge effect under the window's safe area (the traffic lights' band, title bar or not) drew a lighter 28pt band across the pane. Measured: the pane's top reads the ink now.
+7. **The rail's tiles say their keys** in their tooltips ("Feed  ⌘1", "Search  ⌘F").
+8. **The demo's mark on the Mac is the rail's foot** (amends §1405 item 3): "Demo" and an Exit word in the pick's ink under the rail's tiles, beside the Casberi menu's Exit Demo. The title bar stays hidden: drawn for the demo, it gave the window a top safe area and the seam above; the window title still names the demo wherever the system names a window.
+
+The phone is untouched: every change reads `RoomBoxPlace` or `roomSizeClass == .regular`.

@@ -439,8 +439,8 @@ grep -q 'AddressBookScreen()' "$SHELL_MAIN" \
 # The wallet rail itself left the band for a menu on the title (prd §1405),
 # so the shell holds no rail to carry an add slot; the menu LEADS with the
 # room's act (Follow a wallet), which is the roster's own door, once.
-[[ "$(grep -c 'FaceScopeRail(' "$SHELL_MAIN")" -eq 1 ]] \
-  || { echo "✗ the shell mounts more than the social face rail — a wallet rail back in the band would carry its add slot again (§466, §1405)"; exit 1; }
+[[ "$(grep -c 'FaceScopeRail(' "$SHELL_MAIN")" -eq 0 ]] \
+  || { echo "✗ the shell mounts a face rail in the band again — a wallet rail there would carry its add slot again (§466, §1405, §1407)"; exit 1; }
 grep -q 'if let action = rail.action' Casberi/Casberi/Screens/FeedScreen+RoomTitle.swift \
   || { echo "✗ the title's account menu no longer leads with the room's act (§1405, §1107)"; exit 1; }
 grep -q 'addTitle: wallet.canWatchMore ? String(localized: "Add a wallet") : nil' "$SHELL_MAIN" \

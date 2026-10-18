@@ -15,6 +15,10 @@ import EventKit
 /// title, box, You's four tiles, list — and its own filters ride the
 /// floating bar at the bottom (§1136 item 2).
 struct SettingsHome: View {
+    /// **THE PANE'S LIBRARY BOX (prd §1407):** this instance draws the counts
+    /// box alone, in the pane at rest beside Library, as a room's pane
+    /// instance draws its box (§1403); the list column's instance draws no box.
+    var boxOnly = false
     @Environment(BridgeStore.self) private var bridges
     @Environment(ShellChrome.self) private var chrome
     @Environment(HomeRoute.self) private var route
@@ -99,9 +103,11 @@ struct SettingsHome: View {
             // stood in the content because §752 kept the top clear.
             // LIBRARY IS A TAB (prd §1327 items 2, 5): its name alone, as
             // every tab's page reads; the bar says where the others are.
-            DSRoomTitleRow(title: String(localized: "Library"))
-                .demoTagOnTitle()
-                .dsRoomTitleListRow(inSheet: route.sheet != nil)
+            if !boxOnly {
+                DSRoomTitleRow(title: String(localized: "Library"))
+                    .demoTagOnTitle()
+                    .dsRoomTitleListRow(inSheet: route.sheet != nil)
+            }
             Section {
                 // The kinds you connected; Casberi's own settings are its
                 // folder's tiles since prd §1321, never the box.
@@ -111,6 +117,7 @@ struct SettingsHome: View {
                 }
                 .dsRoomLeadListRow()
             }
+            if !boxOnly {
             // The places' row is gone (prd §1327 item 1): they are tabs.
             Section {
                 VStack(alignment: .leading, spacing: DS.Space.s6) {
@@ -187,6 +194,7 @@ struct SettingsHome: View {
             Color.clear.frame(height: ShellMetrics.bottomInset - 40)
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
+            }
         }
         // The page's wave (prd §1379): the box arrives with the page and
         // stands at rest when scrolled back to, as a feed page's does.
@@ -225,14 +233,14 @@ struct SettingsHome: View {
         // Casberi's folder springs open on its settings, each a tile like an
         // app (prd §1321).
         .overlay {
-            if casberiOpen {
+            if casberiOpen, !boxOnly {
                 SourcesSettingsFolder(close: { withAnimation(DS.Motion.folder) { casberiOpen = false } })
                     .transition(.scale(scale: 0.7).combined(with: .opacity))
             }
         }
         // A folder springs open over the page (prd §1316).
         .overlay {
-            if let category = openFolder, !casberiOpen, scope == .apps,
+            if let category = openFolder, !casberiOpen, !boxOnly, scope == .apps,
                let folder = libraryFolders.first(where: { $0.category == category }) {
                 SourcesOpenFolder(folder: folder, has: isYours,
                                   open: { openFromFolder($0) },
@@ -349,7 +357,7 @@ struct SettingsHome: View {
             openOffer(name)
         }
         .onChange(of: chrome.settingsPick, initial: true) { _, pick in
-            guard let pick else { return }
+            guard let pick, !boxOnly else { return }
             // Every door to the folder takes the same one (prd §1405): the
             // pane where Library has one, the card over the page elsewhere.
             if pick == .casberi { openCasberiFolder() }
@@ -357,6 +365,7 @@ struct SettingsHome: View {
             chrome.settingsPick = nil
         }
         .onChange(of: chrome.settingsLanding, initial: true) { _, landing in
+            if boxOnly { return }
             // The tray's search found something Settings holds (prd §1171):
             // a person lands on People with their name in the field, a kind
             // on its list, a feed, list or plan on its own sheet.
