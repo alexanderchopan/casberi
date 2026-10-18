@@ -78,7 +78,9 @@ struct DSRoomTitleRow: View {
             ViewThatFits(in: .horizontal) {
                 pickedTitle(title, pick: pick, onTitle: onTitle, rung: .heading34)
                 pickedTitle(title, pick: pick, onTitle: onTitle, rung: .heading28)
-                pickedTitle(title, pick: pick, onTitle: onTitle, rung: .heading24)
+                // The last rung never overflows: a pair longer than even this
+                // ("Wallet · Subscriptions" beside the pill) shrinks in place.
+                pickedTitle(title, pick: pick, onTitle: onTitle, rung: .heading24, fits: true)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .frame(height: Self.height, alignment: .leading)
@@ -100,7 +102,7 @@ struct DSRoomTitleRow: View {
     /// pick after the dot in the head ink. `fixedSize` so `ViewThatFits`
     /// measures the pair whole.
     private func pickedTitle(_ title: String, pick: String, onTitle: @escaping () -> Void,
-                             rung: DSTextStyle) -> some View {
+                             rung: DSTextStyle, fits: Bool = false) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 0) {
             // The word that goes back is grey, where you stand is the
             // head ink (user, 2026-10-15: "is sources supposed to be
@@ -118,7 +120,8 @@ struct DSRoomTitleRow: View {
         }
         .dsText(rung)
         .lineLimit(1)
-        .fixedSize(horizontal: true, vertical: false)
+        .minimumScaleFactor(fits ? 0.6 : 1)
+        .fixedSize(horizontal: !fits, vertical: false)
     }
 
     /// The rung's line at its full size, scaled for Dynamic Type as the

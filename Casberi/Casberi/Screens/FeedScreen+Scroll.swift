@@ -429,9 +429,11 @@ extension FeedScreen {
 extension EnvironmentValues {
     /// `SectionPanel`'s distance from the list's edge (prd §1320).
     @Entry var feedSectionPanelInset: CGFloat = DS.Space.s2
-    /// Whether the panel draws its fill (prd §1382): the Feed's sections and
-    /// the Wallet's stand bare, keeping every point of the panel's air.
-    @Entry var feedSectionPanelFilled: Bool = true
+    /// Whether the panel draws its fill: nowhere, since prd §1393 (the
+    /// Feed's and the Wallet's since §1382, Library's since §1383). The
+    /// shape stays, so rows keep their column and the gaps their height;
+    /// the only fills left are the Apps page's folders, which are not panels.
+    @Entry var feedSectionPanelFilled: Bool = false
 }
 
 struct SectionPanel: View {
@@ -948,11 +950,14 @@ struct SectionPanelGroup<Header: View, Rows: View>: View {
     }
 }
 
-/// **A THING SHEET'S NAMED BLOCK IS THE FEED'S CARD (prd §1258, user: "ya
-/// do it. but make sure you do ALL thing sheets").** The panel's fill, a pink
-/// glyph and the name in the head ink, a figure trailing when the block has
-/// one, the rows in the card's column. Every titled block on every sheet
-/// draws through this, so no sheet keeps a grey label over a loose list.
+/// **A THING SHEET'S NAMED BLOCK IS THE FEED'S SECTION (prd §1258, bare
+/// since prd §1393, user: "we still have gray cards in places like on the
+/// wallet thing sheets. they need to be removed from the app everywhere
+/// except on the apps page where they are folders").** A pink glyph and the
+/// name in the head ink, a figure trailing when the block has one, the rows
+/// in the column under it, and no fill: the air between blocks is the seam,
+/// as it is between the Feed's sections (§1382). Every titled block on every
+/// sheet draws through this, so no sheet keeps a grey label over a loose list.
 struct SheetCard<Content: View>: View {
     let name: String
     let glyph: String
@@ -975,10 +980,11 @@ struct SheetCard<Content: View>: View {
                 content
             }
             .padding(.horizontal, DS.Space.s4)
-            .padding(.bottom, DS.Space.s4)
+            .padding(.bottom, DS.Space.s2)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(SectionPanel.fill, in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+        // No fill (prd §1393): the block's name and its air say where it
+        // starts, as a section's do.
     }
 }
 

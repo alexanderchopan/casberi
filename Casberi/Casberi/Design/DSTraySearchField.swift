@@ -126,7 +126,8 @@ struct DSTrayGroup<Content: View, Trailing: View>: View {
         }
         .padding(.bottom, DS.Space.s2)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(SectionPanel.fill, in: RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+        // No fill (prd §1393): a tray's group is a named block, bare, as a
+        // sheet's and a section's are.
         .padding(.horizontal, DS.Space.s3)
         .padding(.top, DS.Space.s3)
     }
