@@ -643,10 +643,10 @@ _controls=$(awk '/private var roomControls: some View/{f=1;print;next} f&&(/^   
   && { echo "✗ roomControls emits a face rail as its own strip again (§753) — the faces"; \
        echo "  ride the folder capsule, after the venues."; exit 1; }
 _inFolder=$(grep -c 'inFolder: true' "$TMP/main.nc" || true)
-# Two rails since GitHub's and Pinterest's left with their rooms (prd §1060):
-# social and accounts.
-[[ "$_inFolder" -eq 2 ]] \
-  || { echo "✗ the shell passes inFolder: true $_inFolder times, not 2 (§753) — a rail drawn"; \
+# One rail since the accounts became a menu on the title (prd §1400; two
+# since GitHub's and Pinterest's left with their rooms, §1060): social.
+[[ "$_inFolder" -eq 1 ]] \
+  || { echo "✗ the shell passes inFolder: true $_inFolder times, not 1 (§753, §1400) — a rail drawn"; \
        echo "  in the capsule without it brings its own glass, scroll view and captions."; exit 1; }
 # --- the capsule always says WHERE YOU ARE (prd §754) ------------------------
 # The closed capsule carried the faces ALONE for a day (user: "this isn't how we
