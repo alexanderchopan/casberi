@@ -145,7 +145,8 @@ Privacy and Reddit. Frames and Logos are the devnets that remain.
 - Onchain cards share one head, `CardSpendRoom`. `CardSpendSeat` alone decides which rows are spends (§858, §868). MetaMask Card reads Monad through an index (§860).
 - Markets' Watchlist follows a coin by its CoinPaprika id, never a DEX symbol match; wrapped-native and pre-cutoff index follows converge every launch. A stock row draws its day line. Alerts: price, custom move %, token day volume, gas below N gwei, synced through iCloud with fired winning. Reorder in My order; gas heads the list; one price pins to the Lock Screen as a Live Activity, stamped past 15 minutes (§1250).
 
-- zk.money is a Wallet LABEL, not a seat: a deposit (to a recognised deposit address) and a withdrawal (from a portal) are titled "Deposited … into zk.money" / "Withdrew … from zk.money" with a dated note; tags resolve off its registry (never its payment gateway) and refuse a follow; a payment link's claim secret is never kept, anywhere (§1273).
+- zk.money is a Wallet LABEL, not a seat. A deposit is titled "Deposited … into zk.money": to a recognised deposit address or a savings escrow. A withdrawal is titled "Withdrew … from zk.money": DAI from a portal or a withdrawal executor, or USDC/USDT from a swap escrow. Each row carries a dated note. Tags resolve off its registry (never its payment gateway) and refuse a follow (§1273, §1384).
+- A zk.money payment link's claim secret never reaches the row; it is kept in this device's Keychain only, never synced, and "Claim in zk.money" reads it on tap and opens it in Safari. A request link (`/pay/<tag>#` or `/request#`) is dated by its expiry (§1384, amending §1273).
 
 ### 11. Signing and Safe
 - Reads and previews happen in the app. Signatures happen elsewhere, everywhere except the Safe co-signer surfaces (§112, narrowed by §425 and §913).
@@ -232,7 +233,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1522 of 1591 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1523 of 1592 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1756,6 +1757,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1381 — One slot, no fill: the box keeps its size and place on every screen and draws no well; the thing fills it on sheets a…
 - §1382 — The Feed's and the Wallet's sections stand bare: the panel keeps its air and its column, and draws no fill
 - §1383 — Library's pages stand bare too
+- §1384 — zk.money, round two: today's withdrawals named, USDC/USDT and savings, claim links kept on this device, requests date…
 
 ## Dead rulings → what replaced them (generated)
 

@@ -123,10 +123,13 @@ final class ShareViewController: UIViewController {
     /// app's share, or a non-web source), same as any other link.
     private func linkThing(for url: URL, home: ShareHome, item: NSExtensionItem, pageInfo: [String: Any]?) -> Thing {
         // A zk.money link (2026-10-11): a payment link's claim secret never
-        // leaves this extension, and nothing of the page is kept beside it.
+        // reaches the row, only this device's Keychain (prd §1384), and
+        // nothing of the page is kept beside it.
         if let zk = ZkMoneyLink.capture(url: url, text: url.absoluteString) {
             let thing = Thing(kind: .link, title: zk.title, content: zk.content, source: home.source)
             thing.enrichedText = zk.note
+            thing.dueAt = zk.expires
+            if let secret = zk.secret { ZkMoneyClaims.stage(secret, for: thing.id) }
             return thing
         }
         let selectedText = (item.attributedContentText?.string).flatMap { $0.isEmpty ? nil : $0 }
@@ -182,6 +185,9 @@ final class ShareViewController: UIViewController {
         }
         let context = ModelContext(container)
         context.insert(thing)
+        // A payment link's secret is kept only for a row that is a link and
+        // is being saved (prd §1384); a note holding one keeps it scrubbed.
+        if thing.kind == .link { ZkMoneyClaims.commit(thing) }
         // `saveHonestly` is a Bool; the `!= nil` this replaced compared an
         // Optional-promoted Bool and passed every failed save as "Saved".
         guard context.saveHonestly() else { return false }

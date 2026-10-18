@@ -174,6 +174,10 @@ extension FeedScreen {
                 do { try await HandOff.showInFiles(thing) }
                 catch { chrome.flash(error.localizedDescription, tone: .failure) }
             }
+        case .claimZkMoney:
+            // The whole link, read from this device's Keychain on tap (prd §1384).
+            if let url = ZkMoneyClaims.link(for: thing.id) { UIApplication.shared.open(url) }
+            else { chrome.flash(String(localized: "The claim link is no longer on this device."), tone: .failure) }
         case .openAddress:
             // An in-app destination the feed cannot present itself opens the
             // sheet that can. The address card is a `FaceTarget` on

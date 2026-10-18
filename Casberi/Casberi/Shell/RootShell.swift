@@ -589,6 +589,15 @@ struct RootShell: View {
                 // the unwatched queue, and every detected Safe no follow
                 // reaches any more, with its rows and its tracked queue.
                 FollowPrune.sweepUnfollowed(context: modelContext)
+                // A zk.money claim secret whose row is gone leaves this
+                // device's Keychain (prd §1384). One fetch per kept secret: a
+                // handful at most.
+                var liveClaims = Set<UUID>()
+                for id in ZkMoneyClaims.keptIDs
+                where (try? modelContext.fetchCount(FetchDescriptor<Thing>(predicate: #Predicate { $0.id == id }))) ?? 1 > 0 {
+                    liveClaims.insert(id)
+                }
+                ZkMoneyClaims.prune(keeping: liveClaims)
                 // Every voice note's length, and a few notes' words read back
                 // with their times (prd §987). Its own task: a read is seconds
                 // of on-device work, and nothing below waits on it.
@@ -931,8 +940,9 @@ struct RootShell: View {
                 let content = thing.content
                 var d = FetchDescriptor<Thing>(predicate: #Predicate { $0.content == content })
                 d.fetchLimit = 1
-                if ((try? modelContext.fetch(d)) ?? []).isEmpty {
+                if ((try? modelContext.fetch(d)) ?? []).isEmpty || ZkMoneyLink.scrub(raw).secrets.first != nil {
                     modelContext.insert(thing)
+                    if thing.kind == .link { ZkMoneyClaims.commit(thing) }   // prd §1384
                     modelContext.saveHonestly()
                 }
                 NSLog("[Casberi] saveLink: %@ (%@)", thing.title, content)
@@ -3106,6 +3116,7 @@ struct RootShell: View {
     private func saveDropped(_ text: String) {
         guard let thing = Capture.thing(from: text) else { return }
         modelContext.insert(thing)
+        if thing.kind == .link { ZkMoneyClaims.commit(thing) }   // prd §1384
         modelContext.saveHonestly()
         SpotlightIndex.index([thing])
         land(thing, undoable: true)

@@ -39,22 +39,28 @@ enum ZkMoney {
     /// zk.money's name for an address the app already knows to be zk.money's.
     static func knownName(for address: String) -> String? {
         let a = address.lowercased()
-        return ZkMoneyWire.isPortal(a) || depositsSnapshot().contains(a) ? name : nil
+        return ZkMoneyWire.paysWithdrawals(a) || depositsSnapshot().contains(a) ? name : nil
     }
 
-    /// Of `candidates` (the unnamed counterparties of SENT legs on Ethereum),
-    /// which are zk.money deposit addresses — one `eth_getCode` each, at most
-    /// `budget` a pass, the newest first. Positives are remembered.
-    static func recognize(_ candidates: [String], budget: Int = 8) async -> Set<String> {
+    /// Of the unnamed counterparties on Ethereum, which are zk.money's own
+    /// single-use contracts — one `eth_getCode` each, at most `budget` a
+    /// pass, the newest first. `sends` are recipients of what a watched
+    /// wallet sent (a deposit address or a savings escrow); `receipts` are
+    /// senders of what it received (a swap escrow paying out USDC or USDT,
+    /// 2026-10-17). Each is named only in the role it was asked in, and
+    /// positives are remembered.
+    static func recognize(sends: [String], receipts: [String] = [], budget: Int = 8) async -> Set<String> {
         var found = Set<String>()
         var asked = 0
         let known = depositsSnapshot()
-        for a in candidates.map({ $0.lowercased() }) where !known.contains(a) {
+        let asks = sends.map { ($0.lowercased(), ZkMoneyWire.Role.deposit) }
+            + receipts.map { ($0.lowercased(), ZkMoneyWire.Role.swapOut) }
+        for (a, role) in asks where !known.contains(a) && !found.contains(a) {
             guard asked < budget else { break }
             asked += 1
             let code = await WalletApprovals.rpcRead(network: network, method: "eth_getCode",
                                                      params: [a, "latest"]) as? String
-            if ZkMoneyWire.isDepositAddress(code: code) { found.insert(a) }
+            if ZkMoneyWire.role(code: code) == role { found.insert(a) }
         }
         if !found.isEmpty {
             lock.lock()

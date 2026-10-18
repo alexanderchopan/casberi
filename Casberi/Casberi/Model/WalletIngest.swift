@@ -1258,7 +1258,16 @@ enum WalletIngest {
                   ["DAI", "USDC", "USDT"].contains(f.asset.uppercased()) else { return nil }
             return counterparty(of: f.t, received: false)
         })
-        for a in await ZkMoney.recognize(unknown.filter { stableSends.contains($0) }) {
+        // …and its SWAP escrows (2026-10-17): a withdrawal taken as USDC or
+        // USDT is paid by a single-use escrow, asked only for the unnamed
+        // senders of stablecoins RECEIVED on Ethereum.
+        let stableReceipts = Set(transfers.compactMap { f -> String? in
+            guard f.received, f.chain.network == "eth-mainnet",
+                  ["USDC", "USDT"].contains(f.asset.uppercased()) else { return nil }
+            return counterparty(of: f.t, received: true)
+        })
+        for a in await ZkMoney.recognize(sends: unknown.filter { stableSends.contains($0) },
+                                         receipts: unknown.filter { stableReceipts.contains($0) }) {
             names[a] = ZkMoney.name
         }
         unknown.removeAll { names[$0] != nil }

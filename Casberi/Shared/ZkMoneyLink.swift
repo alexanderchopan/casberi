@@ -6,12 +6,15 @@ import Foundation
 ///
 /// - **A payment link** (`…/link#…`, `…/claim#…`) HOLDS funds: everything
 ///   after the `#` is the claim secret, and whoever has it can take the
-///   money. It is a bearer credential, so it is never kept — the row keeps
-///   the bare URL and says the secret was not kept. A library row syncs to
-///   iCloud and lives in Spotlight; a secret there is a secret everywhere.
-/// - **A request link** (`…/request#<fragment>`) asks for money and holds
-///   none: base64url CBOR (front-core `requestInlineCodec.ts`) naming the
-///   tag, amount, token, note and expiry, which titles the row.
+///   money. It is a bearer credential, so it never reaches the row — the row
+///   keeps the bare URL. A library row syncs to iCloud and lives in
+///   Spotlight; a secret there is a secret everywhere. Since prd §1384 the
+///   whole link goes to this device's Keychain instead (`ZkMoneyClaims`).
+/// - **A request link** asks for money and holds none: base64url CBOR
+///   (front-core `requestInlineCodec.ts`) naming the tag, amount, token, note
+///   and expiry, which titles the row and dates it. zk.money writes them as
+///   `…/pay/<tag>#<fragment>` now (`requestLinkMint.ts`, measured
+///   2026-10-17); `…/request#` is the older spelling, read too.
 enum ZkMoneyLink {
 
     static func display(_ tag: String) -> String { "\(tag).zk.money" }
@@ -40,7 +43,9 @@ enum ZkMoneyLink {
             parts?.fragment = nil
             return .payment(kept: parts?.string ?? "https://\(url.host ?? "zk.money")\(url.path)")
         }
-        guard path.hasSuffix("/request"), let packet = requestPacket(fragment) else { return nil }
+        let isRequest = path.hasSuffix("/request")
+            || (path.hasPrefix("/pay/") && path.split(separator: "/").count == 2)
+        guard isRequest, let packet = requestPacket(fragment) else { return nil }
         return packet
     }
 
@@ -94,27 +99,74 @@ enum ZkMoneyLink {
     }
 
 
-    /// A captured link's (content, title, note) after this rule: a payment
-    /// link loses its fragment everywhere it appears in `text`, and its note
-    /// (the row's body) says so; a request link keeps its text and gains a
-    /// title. nil when `url` is not zk.money's.
-    static func capture(url: URL, text: String) -> (content: String, title: String, note: String?)? {
+    /// Every zk.money payment link in `text`, wherever it stands and however
+    /// it is spelled (with or without a scheme, `www.`, `wallet.`), with its
+    /// fragment removed; the whole links come back as `secrets`, each with a
+    /// scheme. Run over ANY captured text, not only one whose first URL is
+    /// zk.money's (review, 2026-10-17): `NSDataDetector` adds a scheme a
+    /// pasted `zk.money/link#…` does not have, so a replace keyed on the
+    /// detected URL left the secret in the row, and a link after another URL
+    /// was never looked at.
+    static func scrub(_ text: String) -> (text: String, secrets: [String]) {
+        let pattern = #"(?i)\b((?:https?://)?(?:[a-z0-9-]+\.)*zk\.money(?:/[^\s#]*)?/(?:link|claim))#([^\s]+)"#
+        guard let regex = try? NSRegularExpression(pattern: pattern) else { return (text, []) }
+        let ns = text as NSString
+        var secrets: [String] = []
+        var out = text
+        for m in regex.matches(in: text, range: NSRange(location: 0, length: ns.length)).reversed() {
+            let base = ns.substring(with: m.range(at: 1))
+            let whole = ns.substring(with: m.range)
+            let withScheme = base.lowercased().hasPrefix("http") ? whole : "https://" + whole
+            if case .payment? = link(withScheme) { secrets.insert(withScheme, at: 0) }
+            out = (out as NSString).replacingCharacters(in: m.range, with: base)
+        }
+        return (out, secrets)
+    }
+
+    /// What a capture keeps of a zk.money link.
+    struct Captured: Equatable {
+        /// The row's content: for a payment link, the text with every copy of
+        /// the link's fragment removed.
+        let content: String
+        let title: String
+        let note: String?
+        /// A payment link whole, for `ZkMoneyClaims` alone. Never a row field.
+        let secret: String?
+        /// A request's expiry: the row's `dueAt`.
+        let expires: Date?
+    }
+
+    /// A captured link after this rule: a payment link loses its fragment
+    /// everywhere it appears in `text` and hands the whole link back as
+    /// `secret` for the Keychain; a request link keeps its text, gains a
+    /// title and is dated by its expiry. nil when `url` is not zk.money's.
+    /// A payment row's note is the caller's: it depends on whether the
+    /// secret was kept (`paymentNote(kept:)`).
+    static func capture(url: URL, text: String) -> Captured? {
         guard let link = link(url.absoluteString) else { return nil }
         switch link {
-        case .payment(let kept):
-            return (text.replacingOccurrences(of: url.absoluteString, with: kept), title(link), paymentNote)
+        case .payment:
+            let clean = scrub(text)
+            return Captured(content: clean.text, title: title(link), note: paymentNote(kept: false),
+                            secret: clean.secrets.first ?? url.absoluteString, expires: nil)
         case .request(_, _, _, let note, let expires):
             // The requester's own words and the expiry are the row's body:
             // a title carries one seam (`title-seam-audit.py`).
             var lines: [String] = []
             if let note { lines.append("“\(note)”") }
             if let expires { lines.append("Asks until \(expires.formatted(.dateTime.month(.abbreviated).day()))") }
-            return (text, title(link), lines.isEmpty ? nil : lines.joined(separator: "\n"))
+            let clean = scrub(text)
+            return Captured(content: clean.text, title: title(link), note: lines.isEmpty ? nil : lines.joined(separator: "\n"),
+                            secret: clean.secrets.first, expires: expires)
         }
     }
 
-    /// Why a saved payment link cannot be opened from here.
-    static let paymentNote = "The claim secret after the # was not kept: whoever holds it can take the money, and this library syncs to iCloud. Claim it from where it was sent to you."
+    /// A payment row's body: where its secret is, or that it was not kept.
+    static func paymentNote(kept: Bool) -> String {
+ kept
+            ? "The claim secret is kept on the device it was saved on, never synced: Claim in zk.money opens it there."
+            : "The claim secret after the # was not kept: whoever holds it can take the money, and this library syncs to iCloud. Claim it from where it was sent to you."
+    }
 }
 
 // MARK: - CBOR, the slice a request link uses

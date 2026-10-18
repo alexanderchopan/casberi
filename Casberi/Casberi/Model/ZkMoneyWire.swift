@@ -75,6 +75,19 @@ enum ZkMoneyWire {
         deployments.contains { $0.operationExecutor == address.lowercased() }
     }
 
+    /// The contracts that PAY a DAI withdrawal now (2026-10-17, prd §1384): the
+    /// manifest's `plainWithdrawalExecutor` for v6 and v6-sky. MEASURED over
+    /// 14 days: the v6 portal paid DAI to its executor 186 times and to people
+    /// 9 times; the executor then paid 175 addresses. So "DAI from a portal",
+    /// §1273's whole rule, named almost no withdrawal after September.
+    static let withdrawalExecutors: Set<String> = ["0xc2363b7155ee8391c5395b72c46a6d22bf49151c",   // v6
+                                                   "0x63e6cd9ff886cff198eaaab01cec2b707e7f5475"]   // v6-sky
+
+    static func paysWithdrawals(_ address: String) -> Bool {
+        let a = address.lowercased()
+        return isPortal(a) || withdrawalExecutors.contains(a)
+    }
+
     // MARK: - Deposit addresses
 
     /// An EIP-1167 minimal proxy's runtime code names its implementation
@@ -83,14 +96,34 @@ enum ZkMoneyWire {
     /// `363d3d373d3d3d363d73` + `f714…461b` on v6).
     private static let proxyPrefix = "363d3d373d3d3d363d73"
 
-    static func isDepositAddress(code: String?) -> Bool {
-        guard let code else { return false }
+    /// What a zk.money single-use contract is for, read off the
+    /// implementation its proxy code names (2026-10-17, prd §1384). Every one is an
+    /// EIP-1167 proxy, some with immutable arguments appended (205 and 269
+    /// bytes, measured), so the implementation sits right after the prefix:
+    /// - a DEPOSIT address, or a SAVINGS escrow (v6-sky: DAI sent to it is
+    ///   converted to sUSDS and deposited into the savings portal), is where
+    ///   the person's money goes IN;
+    /// - a SWAP escrow is where a withdrawal comes OUT as USDC or USDT: it
+    ///   swaps the person's DAI on Curve and pays them (12 of 12 sampled).
+    enum Role: Equatable { case deposit, swapOut }
+
+    static let savingsEscrowImplementations: Set<String> = ["0x5c412ba5b338f3e5e2a1332069bdd3aae6ae6b8a"]
+    static let swapEscrowImplementations: Set<String> = ["0xf16fd140036925e3a0630d0f743204a4c7d8ccaf",   // v6
+                                                         "0xcfaf1dfc22ce92cf3f2b534b3b5c1f116028fb95"]   // v6, second factory
+
+    static func role(code: String?) -> Role? {
+        guard let code else { return nil }
         let body = (code.hasPrefix("0x") ? String(code.dropFirst(2)) : code).lowercased()
-        guard body.hasPrefix(proxyPrefix), body.count >= proxyPrefix.count + 40 else { return false }
+        guard body.hasPrefix(proxyPrefix), body.count >= proxyPrefix.count + 40 else { return nil }
         let start = body.index(body.startIndex, offsetBy: proxyPrefix.count)
         let implementation = "0x" + body[start..<body.index(start, offsetBy: 40)]
-        return deployments.contains { $0.depositImplementation == implementation }
+        if deployments.contains(where: { $0.depositImplementation == implementation })
+            || savingsEscrowImplementations.contains(implementation) { return .deposit }
+        if swapEscrowImplementations.contains(implementation) { return .swapOut }
+        return nil
     }
+
+    static func isDepositAddress(code: String?) -> Bool { role(code: code) == .deposit }
 
     // MARK: - Tags
 
@@ -171,9 +204,11 @@ enum ZkMoneyWire {
 
     // MARK: - Moves on Ethereum
 
-    /// What a watched wallet's ERC-20 transfer means, if it is zk.money's:
-    /// DAI in from a portal is a withdrawal; a transfer out to a deposit
-    /// address (the caller has its code) is a deposit.
+    /// What a watched wallet's transfer means, if it is zk.money's: DAI in
+    /// from a portal or a withdrawal executor is a withdrawal, and so is
+    /// anything in from a swap escrow (USDC, USDT); a transfer out to a
+    /// deposit address or a savings escrow is a deposit. The caller has the
+    /// counterparty's code.
     enum Move: Equatable {
         case withdrawal, deposit
     }
@@ -181,8 +216,9 @@ enum ZkMoneyWire {
     static func move(token: String?, from: String, to: String, watched: String,
                      counterpartyCode: String?) -> Move? {
         let me = watched.lowercased()
-        if to.lowercased() == me, isPortal(from), token?.lowercased() == dai { return .withdrawal }
-        if from.lowercased() == me, isDepositAddress(code: counterpartyCode) { return .deposit }
+        if to.lowercased() == me, paysWithdrawals(from), token?.lowercased() == dai { return .withdrawal }
+        if to.lowercased() == me, role(code: counterpartyCode) == .swapOut { return .withdrawal }
+        if from.lowercased() == me, role(code: counterpartyCode) == .deposit { return .deposit }
         return nil
     }
 

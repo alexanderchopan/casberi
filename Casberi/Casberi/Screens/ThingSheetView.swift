@@ -4963,6 +4963,16 @@ struct ThingSheetView: View {
                 verbResult = error.localizedDescription
                 verbResultIsError = true
             }
+        case .claimZkMoney:
+            // The whole link, read from this device's Keychain now, opened in
+            // Safari where the person's zk.money wallet lives (prd §1384).
+            if let url = ZkMoneyClaims.link(for: thing.id) {
+                verbResult = nil
+                await UIApplication.shared.open(url)
+            } else {
+                verbResult = String(localized: "The claim link is no longer on this device.")
+                verbResultIsError = true
+            }
         case .openAddress(let address):
             // In-app, so there is nothing to report and no way to fail: the
             // card is either on screen or the address was not a watched

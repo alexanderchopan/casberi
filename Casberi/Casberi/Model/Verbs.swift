@@ -27,6 +27,10 @@ struct Verb: Identifiable {
         /// the field (prd §981). In-app, like `.openAddress`: the sheet is
         /// the editor, and closing it keeps the change.
         case edit
+        /// Open a saved zk.money payment link WHOLE (prd §1384). A case, not
+        /// `.openURL`, because the secret must not sit in a derived verb: it
+        /// is read from this device's Keychain on tap (`ZkMoneyClaims`).
+        case claimZkMoney
     }
     let label: String
     let icon: String
@@ -51,6 +55,7 @@ struct Verb: Identifiable {
         case .showInFiles:    return "Files"
         case .openAddress:    return "Wallet"
         case .edit:           return "Edit"
+        case .claimZkMoney:   return "Claim"
         }
     }
     var id: String { label }
@@ -133,6 +138,12 @@ enum VerbDerivation {
             if !ownApps.contains(thing.source),
                let v = externalVerb(for: thing, apps: [.todoist]) { out.append(v) }
         case .link:
+            // A zk.money payment link whose secret this device kept (prd
+            // §1384): the money's way home leads. The index alone is read
+            // here, never the Keychain (prd §628).
+            if ZkMoneyClaims.has(thing.id) {
+                out.append(Verb(label: "Claim in zk.money", icon: "arrow.down.circle", action: .claimZkMoney))
+            }
             // Music rows open the exact track in their app — the stored content
             // is a music.apple.com / open.spotify.com universal link. Named and
             // iconed by the app (like "Open in Calendar"), with the app scheme

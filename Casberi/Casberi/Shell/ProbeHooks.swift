@@ -2717,15 +2717,19 @@ enum ProbeHooks {
             Task { @MainActor in
                 if spec == "portal" {
                     let total = await ZkMoney.portalTotal(); NSLog("zkMoney: portal | %@", total.map { "\($0) DAI" } ?? "UNREADABLE")
-                } else if spec.hasPrefix("deposit=") {
-                    let address = String(spec.dropFirst(8))
-                    let found = await ZkMoney.recognize([address])
-                    NSLog("zkMoney: deposit | %@ | %@ | knownName=%@", address,
-                          found.isEmpty ? "NOT a deposit address" : "deposit address",
-                          ZkMoney.knownName(for: address) ?? "-")
+                } else if spec.hasPrefix("deposit=") || spec.hasPrefix("escrow=") {
+                    // `deposit=` asks as a recipient of a send (a deposit
+                    // address or savings escrow), `escrow=` as a sender of a
+                    // receipt (a swap escrow paying out USDC/USDT).
+                    let address = String(spec.split(separator: "=", maxSplits: 1).last ?? "")
+                    let asSender = spec.hasPrefix("escrow=")
+                    let found = await ZkMoney.recognize(sends: asSender ? [] : [address], receipts: asSender ? [address] : [])
+                    NSLog("zkMoney: %@ | %@ | %@ | knownName=%@", asSender ? "escrow" : "deposit", address,
+                          found.isEmpty ? "NOT zk.money's" : "zk.money's", ZkMoney.knownName(for: address) ?? "-")
                 } else if let url = URL(string: spec), let kept = ZkMoneyLink.capture(url: url, text: spec) {
-                    NSLog("zkMoney: link | title=%@ | kept=%@ | secretGone=%@", kept.title, kept.content,
-                          kept.content.contains("#") && spec.contains("/link") ? "NO" : "YES")
+                    NSLog("zkMoney: link | title=%@ | kept=%@ | secretGone=%@ | due=%@", kept.title, kept.content,
+                          kept.content.contains("#") && spec.contains("/link") ? "NO" : "YES",
+                          kept.expires.map { "\($0)" } ?? "-")
                 } else if let tag = ZkMoneyWire.tag(spec) {
                     let record = await ZkMoney.resolve(tag: tag)
                     NSLog("zkMoney: tag | %@ | account=%@ | aztec=%@ | mainnet=%@", ZkMoneyWire.display(tag),

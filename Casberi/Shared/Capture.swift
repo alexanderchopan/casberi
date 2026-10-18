@@ -12,7 +12,11 @@ enum Capture {
     /// and keeps the text clean.
     static func thing(from raw: String, source: String = "You") -> Thing? {
         let (stripped, tags) = extractTags(from: raw)
-        let text = stripped.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Every zk.money payment link's claim secret leaves the text before
+        // any branch reads it (prd §1384): only the first is staged, and
+        // only a site that inserts the row keeps it (`ZkMoneyClaims.commit`).
+        let scrubbed = ZkMoneyLink.scrub(stripped.trimmingCharacters(in: .whitespacesAndNewlines))
+        let text = scrubbed.text
         guard !text.isEmpty else { return nil }
 
         let thing: Thing
@@ -21,6 +25,7 @@ enum Capture {
             // never kept, and a request link says what it asks for.
             thing = Thing(kind: .link, title: zk.title, content: zk.content, source: source)
             thing.enrichedText = zk.note
+            thing.dueAt = zk.expires
         } else if let url = detectURL(in: text) {
             thing = Thing(
                 kind: .link,
@@ -37,6 +42,10 @@ enum Capture {
             )
         }
         thing.tags.append(contentsOf: tags.filter { !thing.tags.contains($0) })
+        if let secret = scrubbed.secrets.first {
+            if thing.enrichedText == nil { thing.enrichedText = ZkMoneyLink.paymentNote(kept: false) }
+            ZkMoneyClaims.stage(secret, for: thing.id)
+        }
         return thing
     }
 

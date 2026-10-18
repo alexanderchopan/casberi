@@ -44,6 +44,7 @@ struct SaveThingIntent: AppIntent {
         let container = try SharedStore.extensionContainer()
         let context = ModelContext(container)
         context.insert(thing)
+        if thing.kind == .link { ZkMoneyClaims.commit(thing) }   // prd §1384
         try context.save()
         SpotlightIndex.index([thing])
         return .result(dialog: "Saved. It's in your feed.")
