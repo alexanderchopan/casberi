@@ -217,13 +217,7 @@ extension FeedScreen {
     func walletHomeSubscriptionsSection(_ plans: [Subscriptions.Item]) -> some View {
         walletPanel(Self.subscriptionsName, glyph: Self.walletHomeGlyph(Self.subscriptionsName), things: []) {
             Section {
-                DSDoorRow(icon: "plus", title: Text(SubscriptionWords.track)) {
-                    feedSheet = .subscriptionAdd
-                }
-                .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.rowInset,
-                                          bottom: 0, trailing: DSRoomChassis.rowInset))
-                .feedRowBackground()
-                .listRowSeparator(.hidden)
+                // Track leads from the header's + (prd §1386), not a row.
                 ForEach(Array(plans.prefix(Self.walletHomeCap))) { item in
                     Button {
                         feedSheet = .subscription(item.id)
@@ -244,13 +238,14 @@ extension FeedScreen {
             if !plans.isEmpty {
                 Section {
                     // The count only when the list holds back some.
-                    DSMoreLink(title: plans.count > Self.walletHomeCap
-                                   ? Text(verbatim: String(localized: "See all \(plans.count)"))
-                                   : Text("See all"), opens: true) {
+                    // The one More row (prd §1386), never centred.
+                    DSMoreRow(title: plans.count > Self.walletHomeCap
+                                  ? Text(verbatim: String(localized: "See all \(plans.count)"))
+                                  : Text("See all"), opens: true) {
                         chrome.walletSection = .subscriptions
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, DS.Space.s1)
+                    .listRowInsets(.init(top: Self.rowAir, leading: DSRoomChassis.rowInset,
+                                         bottom: Self.rowAir, trailing: DSRoomChassis.rowInset))
                     .listRowSeparator(.hidden)
                     .feedRowBackground()
                 }
@@ -397,15 +392,17 @@ extension FeedScreen {
         if total > Self.walletHomeCap {
             let open = walletOpenSections.contains(key)
             Section {
-                DSMoreLink(title: open ? Text("Show fewer")
-                                       : Text(verbatim: noun ?? String(localized: "See all \(total)")),
-                            opens: !open) {
+                // The one More row (prd §1386): at the rows' inset, grey,
+                // a chevron; never centred.
+                DSMoreRow(title: open ? Text("Show fewer")
+                                      : Text(verbatim: noun ?? String(localized: "See all \(total)")),
+                          opens: !open) {
                     withAnimation(DS.Motion.standard) {
                         if open { walletOpenSections.remove(key) } else { walletOpenSections.insert(key) }
                     }
                 }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, DS.Space.s1)
+                .listRowInsets(.init(top: Self.rowAir, leading: DSRoomChassis.rowInset,
+                                     bottom: Self.rowAir, trailing: DSRoomChassis.rowInset))
                 .listRowSeparator(.hidden)
                 .feedRowBackground()
             }

@@ -120,9 +120,9 @@ struct MomentSheetBlock: View {
         VStack(alignment: .leading, spacing: 0) {
             if part != .rows { clock }
             if part != .box, !rows.isEmpty {
+                // Rows in the lead's column, no card (prd §1381, §1386).
                 FactRows(facts: rows)
-                    .modifier(SheetCardWrap(name: String(localized: "Details"), glyph: "list.bullet"))
-                    .padding(.horizontal, DS.Space.s4)
+                    .padding(.horizontal, DSRoomChassis.leadInset)
                     .padding(.top, part == .rows ? 0 : DS.Space.s4)
             }
         }

@@ -113,7 +113,10 @@ struct BandRow: View {
     private var moneyAmount: (text: String, received: Bool)? {
         guard moneyColumn, let direction = thing.transferDirection,
               let amount = thing.transferAmount, !amount.isEmpty,
-              direction == "received" || direction == "sent" else { return nil }
+              direction == "received" || direction == "sent",
+              // A title that carries the figure keeps it (prd §1386): the
+              // column said it twice and truncated the title to do so.
+              !thing.title.contains(amount) else { return nil }
         let received = direction == "received"
         return ("\(received ? "+" : "−")\(amount)", received)
     }
@@ -513,10 +516,6 @@ struct BandRow: View {
     }
 
     private var titleText: String {
-        if moneyAmount != nil, let amount = thing.transferAmount,
-           let range = thing.title.range(of: " \(amount)") {
-            return thing.title.replacingCharacters(in: range, with: "")
-        }
         if let money = titleMoney { return money.title }
         return thing.title
     }

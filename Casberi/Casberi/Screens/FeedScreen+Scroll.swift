@@ -195,7 +195,6 @@ extension FeedScreen {
         let fresh = newSince.map { since in
             things.filter { $0.isLive && $0.capturedAt > since && !seen.contains($0.id) }.count
         } ?? 0
-        let calm = reduceMotion
         return SectionPanelName(name: category, glyph: glyph, choices: choices,
                                 adds: sectionAdds(category)) {
             if fresh > 0 {
@@ -211,16 +210,8 @@ extension FeedScreen {
             }
         }
         .animation(DS.Motion.standard, value: fresh)
-        // THE HANDOFF (prd §1208l): tied to where the name stands, never a
-        // timer — between a little under the line and the line it shrinks
-        // toward the pill and fades; under Reduce Motion it only fades.
-        .visualEffect { [line = Self.whereLine] content, proxy in
-            let y = proxy.frame(in: .global).minY
-            let t = min(max((line + Self.handoffSpan - y) / Self.handoffSpan, 0), 1)
-            return content
-                .scaleEffect(calm ? 1 : 1 - 0.25 * t, anchor: .leading)
-                .opacity(1 - t)
-        }
+        // NO HANDOFF (prd §1386): the name scrolls under the pinned copy of
+        // itself, as a List's section header does; nothing shrinks or fades.
         // Where you are (prd §1208d): each name reports where it stands,
         // so the pill above the scroll names the section you are in.
         .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).minY } action: { y in
@@ -233,11 +224,26 @@ extension FeedScreen {
     /// How far above the line a name starts handing off to the pill.
     static let handoffSpan: CGFloat = 56
 
-    /// The line a section's name passes to become "where you are".
-    /// The demo's band moves the pill down (`feedSectionPill`'s top), so the
-    /// line moves with it (prd §1297): a landed name hands off where the
-    /// pill is, in the demo as out of it.
-    static var whereLine: CGFloat { 150 + DSDemoMark.screenClearance }
+    /// The line a section's name passes to become "where you are": the
+    /// pinned header's foot (prd §1386), so the name goes under its pinned
+    /// copy and never stands beside it. The demo's band moves the header
+    /// down, so the line moves with it (prd §1297).
+    static var whereLine: CGFloat { topInset + pinnedHeaderHeight + DSDemoMark.screenClearance }
+
+    /// The pinned header's own height: its air, one `heading28` line, its air.
+    static let pinnedHeaderHeight: CGFloat = 52
+
+    /// The window's top inset, read once: the overlay stands at the list's
+    /// top, which is the safe area's.
+    private static var topInset: CGFloat {
+        if let cached = cachedTopInset { return cached }
+        let top = UIApplication.shared.connectedScenes
+            .compactMap { ($0 as? UIWindowScene)?.keyWindow }
+            .first?.safeAreaInsets.top
+        if let top, top > 0 { cachedTopInset = top; return top }
+        return 59
+    }
+    private static var cachedTopInset: CGFloat?
 
     /// A name moved: the section you are in is the last whose name has
     /// passed the line. Written only when it changes, so a scroll costs one
@@ -256,10 +262,14 @@ extension FeedScreen {
         feedSection = current
     }
 
-    /// THE TITLE SAYS WHERE YOU ARE (prd §1208d): once a section's name has
-    /// scrolled past, a floating pill names it — "Feed · Social" — the way
-    /// Music and Settings keep a page's name with you. A press takes the
-    /// Feed back to its top (prd §1212), the way the status bar does.
+    /// **THE SECTION'S HEADER PINS (prd §1386, amends §1208d's pill).** Once
+    /// a section's name has scrolled past, the same header — its pink glyph
+    /// and its name at the rows' inset, on the page's ground — holds the top
+    /// edge until the next section's pushes it off, as a List's section
+    /// headers do. No capsule, no glass, no "Feed ·": nothing new stands at
+    /// the top (§752), and the eye reads the header it already knows. A
+    /// press still takes the page to its top (prd §1212), a hold still
+    /// lists the sections (§1208l).
     @ViewBuilder
     func feedSectionPill(_ proxy: ScrollViewProxy) -> some View {
         Group {
@@ -290,28 +300,44 @@ extension FeedScreen {
                         }
                     }
                 } label: {
-                    HStack(spacing: DS.Space.s1) {
-                        (wallet ? Text("Wallet") : Text("Feed")).foregroundStyle(DS.textSecondary)
-                        Text(verbatim: "·").foregroundStyle(DS.textTertiary)
+                    HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                        Image(systemName: wallet ? Self.walletHomeGlyph(section) : CategoryFold.glyph(for: section))
+                            .dsGlyph(.body)
+                            .foregroundStyle(DS.brandInk)
+                            .accessibilityHidden(true)
                         Text(verbatim: section)
+                            .dsText(.heading28)
                             .foregroundStyle(DS.headInk)
+                            .lineLimit(1)
                             .id(section)
                             .transition(reduceMotion ? .opacity
                                         : .push(from: feedSectionForward ? .bottom : .top))
                             .animation(DS.Motion.standard, value: section)
                             .clipped()
+                        Spacer(minLength: 0)
                     }
-                    .dsText(.heading17)
-                    .padding(.horizontal, DS.Space.s4)
+                    .padding(.horizontal, DSRoomChassis.rowInset)
                     .padding(.vertical, DS.Space.s2)
-                    .dsGlass(cornerRadius: 999)
-                    .contentShape(Capsule())
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background {
+                        // The page's own ground, running up under the status
+                        // bar and fading out under the rows that pass beneath.
+                        VStack(spacing: 0) {
+                            DS.page
+                            LinearGradient(colors: [DS.page, DS.page.opacity(0)],
+                                           startPoint: .top, endPoint: .bottom)
+                                .frame(height: DS.Space.s3)
+                        }
+                        .padding(.bottom, -DS.Space.s3)
+                        .ignoresSafeArea(edges: .top)
+                    }
+                    .contentShape(Rectangle())
                 } primaryAction: {
                     DSHaptic.tap()
                     returnToRoomTop(proxy)
                 }
-                .buttonStyle(PressSpring())
-                .padding(.top, DSDemoMark.screenClearance + DS.Space.s1)
+                .buttonStyle(RowPress())
+                .padding(.top, DSDemoMark.screenClearance)
                 .transition(reduceMotion ? .opacity : .opacity.combined(with: .move(edge: .top)))
                 .accessibilityElement(children: .combine)
                 .accessibilityHint(Text("Scrolls to the top. Hold for the sections."))
@@ -325,20 +351,13 @@ extension FeedScreen {
     /// More (prd §1208 item 4): ten more rows in place; the scroll goes on
     /// into the next category.
     func sectionMoreRow(_ category: String) -> some View {
-        Button {
-            DSHaptic.tap()
+        // The one More row (prd §1386, `DSMoreRow`): grey words and a
+        // chevron at the rows' inset, never a disc, never centred.
+        DSMoreRow(title: Text("More from \(category)")) {
             withAnimation(DS.Motion.standard) {
                 sectionCaps[category] = (sectionCaps[category] ?? Self.sectionFirstRows) + Self.sectionMoreRows
             }
-        } label: {
-            DSPushRowLabel(title: Text("More from \(category)"), fact: nil,
-                           tint: DS.textSecondary, opens: false) {
-                DSGlyphLead(glyph: "arrow.down", tint: DS.textSecondary)
-            }
-            .padding(.vertical, DS.Space.s2)
-            .frame(minHeight: DS.Hit.min)
         }
-        .buttonStyle(RowPress())
         .feedRowBackground()
         .listRowInsets(.init(top: Self.rowAir,
                              leading: DSRoomChassis.rowInset,
@@ -778,6 +797,14 @@ extension FeedScreen {
         // a reminder, an email, a subscription to track.
         // Then what Day follows by name — a calendar to subscribe to, now
         // that Calendar is Day's (prd §1347) — set apart under the makes.
+        // THE WALLET'S SUBSCRIPTIONS ADDS FROM ITS HEADER (prd §1386): the
+        // "+ Track a subscription" row that led its list is deleted; a list
+        // with a head adds from its head.
+        if shape == .wallet, category == Self.subscriptionsName {
+            adds = [SectionAdd(label: SubscriptionWords.track, glyph: SubscriptionWords.planGlyph) {
+                feedSheet = .subscriptionAdd
+            }]
+        }
         if category == RoomAccounts.dayRoom {
             var follows = adds
             if !follows.isEmpty { follows[0].apart = true }
@@ -891,9 +918,10 @@ struct SectionPanelGroup<Header: View, Rows: View>: View {
     var body: some View {
         Section {
             ForEach([anchor ?? ""], id: \.self) { _ in
-                // A chapter's air stands between panels, never inside one.
+                // A chapter's air stands between panels, never inside one:
+                // the one section gap (prd §1386), less the header's own top.
                 Color.clear
-                    .frame(height: DS.Space.s6)
+                    .frame(height: DSRoomChassis.sectionGap - DS.Space.s4)
                     .listRowInsets(EdgeInsets())
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
@@ -909,8 +937,9 @@ struct SectionPanelGroup<Header: View, Rows: View>: View {
         }
         .environment(\.feedSectionPanel, true)
         Section {
+            // A bare panel has no foot (prd §1386): its air is the gap's.
             Color.clear
-                .frame(height: DS.Space.s4)
+                .frame(height: panelFilled ? DS.Space.s4 : 0)
                 .listRowInsets(EdgeInsets())
                 .listRowSeparator(.hidden)
                 .listRowBackground(SectionPanel(part: .bottom, inset: panelInset, filled: panelFilled))

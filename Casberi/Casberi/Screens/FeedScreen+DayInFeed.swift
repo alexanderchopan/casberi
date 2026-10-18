@@ -22,11 +22,18 @@ extension FeedScreen {
         let now = Date.now
         let next = all.filter { $0.isLive && Self.dayWhen($0) >= now }
             .min { Self.dayWhen($0) < Self.dayWhen($1) }
-        dayFeedCalendarRow(marks: marks, next: next)
+        dayFeedCalendarRow(marks: marks)
             // The renewals on the calendar read the Wallet's own reading, from
             // here, since the Feed may open before the Wallet has; the rows and
             // Needs you are read by the Feed's own list (prd §1343).
             .task(id: walletSubscriptionsKey) { await SubscriptionsReading.shared.refresh(modelContext) }
+        // The next thing is a row (prd §1386): the Feed's one anatomy, its
+        // app and when over the title, never a bare line under the strip.
+        if !dayCalendarOpen, daySelected == nil, let next {
+            shapedListRow(next, index: 0, nextEventID: nextEventID,
+                          grouped: true, app: (source: next.source, date: Self.dayWhen(next)))
+                .environment(\.dsGroupedSource, next.source)
+        }
         if let picked = daySelected {
             dayPickedSection(picked, visible, nextEventID: nextEventID)
         } else {
@@ -95,7 +102,7 @@ extension FeedScreen {
 
     /// The week, its dots, and the next thing under it; open, all five
     /// weeks and the way back to today.
-    private func dayFeedCalendarRow(marks: [WalletCalendar.Mark], next: Thing?) -> some View {
+    private func dayFeedCalendarRow(marks: [WalletCalendar.Mark]) -> some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             WalletCalendar(marks: marks, dots: true, selected: daySelected,
                            onDay: pickFeedDay,
@@ -114,25 +121,6 @@ extension FeedScreen {
                         .frame(maxWidth: .infinity)
                         .frame(minHeight: DS.Hit.min)
                         .contentShape(Rectangle())
-                }
-                .buttonStyle(RowPress())
-            } else if let next {
-                Button {
-                    openThing(next)
-                } label: {
-                    HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                        Text(verbatim: next.title)
-                            .dsText(.body17).fontWeight(.semibold)
-                            .foregroundStyle(DS.textPrimary)
-                            .lineLimit(1)
-                        Text(verbatim: Self.dayFeedWhen(next))
-                            .dsText(.subhead12)
-                            .foregroundStyle(DS.textSecondary)
-                            .lineLimit(1)
-                        Spacer(minLength: 0)
-                    }
-                    .frame(minHeight: DS.Hit.min)
-                    .contentShape(Rectangle())
                 }
                 .buttonStyle(RowPress())
             }

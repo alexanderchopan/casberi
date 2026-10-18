@@ -636,6 +636,7 @@ struct ThingSheetView: View {
                             .padding(.top, DSRoomChassis.leadGap)
                             .settleIn(delay: 0.08)
                         dialResult
+                        moneyFactRows(moneyReceipt)
                         // The poisoning flag rides EVERY wallet stage, and a record
                         // still in the machine can be watched from the lock screen
                         // (prd §369 amendment) — both under the tiles now.
@@ -971,6 +972,8 @@ struct ThingSheetView: View {
                     mediaFrame
                 } else if articleHead {
                     articleFrame
+                } else if socialShape == .notice {
+                    noticeFrame
                 } else {
                     plainFrame
                 }
@@ -3894,6 +3897,49 @@ struct ThingSheetView: View {
         dialResult
     }
 
+    /// A NOTICE IN THE ONE FRAME (prd §1386, the 2026-10-17 design audit:
+    /// the sheet was titled "X", drew X three times and a lone "Today"). Its
+    /// sentence is its name (§915), the box is the person it is from — face,
+    /// handle, the app and when, the post box's own person shape — then the
+    /// tiles, and the post it is about stands under them as the content.
+    @ViewBuilder
+    private var noticeFrame: some View {
+        DSRoomTitleRow(title: TitleSeam.split(thing.title).name)
+            .padding(.horizontal, DSRoomChassis.inset)
+            .padding(.top, onBack == nil ? DS.Space.s4 : DS.Space.s3)
+            .settleIn(delay: 0.04)
+        PostSheetBox(thing: thing, onFace: facesAreDoors ? openAuthorProfile : nil)
+            .dsRoomBox()
+            .padding(.top, DS.Space.s3)
+            .settleIn(delay: 0.06)
+        VerbDial(thing: thing, verbs: sheetVerbs, onVerb: runVerb, onName: nil, keep: sheetKeep)
+            .padding(.top, DSRoomChassis.leadGap)
+            .settleIn(delay: 0.08)
+        dialResult
+    }
+
+    /// THE RECEIPT'S FACTS ARE ROWS (prd §1386): label beside value under
+    /// the tiles, in the lead's column, for the plain receipt whose box drew
+    /// them as cells with the value over its label ("Needs you" over
+    /// "Status"). A transfer, a swap and a card say theirs in their own box.
+    @ViewBuilder
+    private func moneyFactRows(_ r: MoneyReceipt) -> some View {
+        if moneyFlag == nil, moneySwap == nil, moneyCard == nil, moneyTransfer(r) == nil {
+            let cells = moneyCells(r)
+            if !cells.isEmpty {
+                DSSpecTable {
+                    ForEach(cells) { cell in
+                        DSSpecRow(label: Text(verbatim: cell.label), value: Text(verbatim: cell.value),
+                                  tint: cell.wants ? DS.attentionInk : DS.textPrimary)
+                    }
+                }
+                .padding(.horizontal, DSRoomChassis.leadInset)
+                .padding(.top, DSRoomChassis.leadGap)
+                .settleIn(delay: 0.1)
+            }
+        }
+    }
+
     /// What the title said after its seam (§915), under a title row that
     /// shows the name alone — a framed picture's, whose box is all picture.
     @ViewBuilder private var seamLine: some View {
@@ -4765,27 +4811,17 @@ struct ThingSheetView: View {
     @ViewBuilder
     private var keptBeforeRow: some View {
         if let earlier = keptBefore, let copy = earlier.live {
-            Button {
-                walkingToScope = .none
-                walkingToNote = earlier
-            } label: {
-                HStack(spacing: DS.Space.s2) {
-                    Image(systemName: "arrow.triangle.2.circlepath")
-                        .accessibilityHidden(true)
-                        .dsGlyph(.caption)
-                        .foregroundStyle(DS.textTertiary)
-                    // The one day word (prd §1359), never an age to work out.
-                    Text("You kept this before · \(FeedScreen.dayWord(copy.capturedAt)) · \(copy.source)")
-                        .dsText(.body17)
-                        .foregroundStyle(DS.textSecondary)
-                        .lineLimit(1)
-                    Spacer(minLength: 0)
+            // A fact row, as every fact on a sheet is (prd §1386): the label,
+            // the one day word (prd §1359) and the app, a door.
+            DSSpecTable {
+                DSSpecRow(label: Text("Kept before"),
+                          value: Text(verbatim: "\(FeedScreen.dayWord(copy.capturedAt)) · \(copy.source)"),
+                          tint: DS.textSecondary, glyph: "chevron.right") {
+                    walkingToScope = .none
+                    walkingToNote = earlier
                 }
-                .contentShape(Rectangle())
             }
-            .buttonStyle(RowPress())
-            .dsHover()
-            .padding(.horizontal, DS.Space.s4)
+            .padding(.horizontal, DSRoomChassis.leadInset)
             .padding(.bottom, DS.Space.s2)
         }
     }

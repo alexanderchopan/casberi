@@ -1468,6 +1468,11 @@ extension FeedScreen {
         let quantity = amount.dollars && (thing.transferAmount ?? "").contains(where: { ("1"..."9").contains($0) })
             ? WalletValue.transferAmount(thing) : nil
         let line = [account, quantity].compactMap { $0 }.joined(separator: " · ")
+        // A title that carries the figure keeps it (prd §1386): "Put 0.3000
+        // ETH into Privacy Pools" beside "−0.3000 ETH" said it twice and
+        // truncated the title to do so. The column stays for dollars.
+        let trailing = !amount.dollars && amount.known && who.contains(thing.transferAmount ?? "\u{0}")
+            ? "" : amount.text
         Button {
             openThing(thing)
         } label: {
@@ -1510,7 +1515,7 @@ extension FeedScreen {
                     }
                 }
                 Spacer(minLength: DS.Space.s2)
-                Text(amount.text)
+                Text(trailing)
                     .dsText(.price17)
                     .foregroundStyle(amount.known ? DS.textPrimary : DS.textTertiary)
                     .monospacedDigit()
@@ -1521,7 +1526,7 @@ extension FeedScreen {
         .buttonStyle(RowPress())
         .dsHover()
         .modifier(rowEntrance(index))
-        .accessibilityLabel(Text("\(received ? String(localized: "Received from") : String(localized: "Sent to")) \(who), \(amount.text)"))
+        .accessibilityLabel(Text("\(received ? String(localized: "Received from") : String(localized: "Sent to")) \(who), \(trailing)"))
         .listRowInsets(EdgeInsets(top: DS.Space.s2,
                                   leading: DSRoomChassis.rowInset(forMark: DS.Face.list),
                                   bottom: DS.Space.s2, trailing: DSRoomChassis.rowInset))

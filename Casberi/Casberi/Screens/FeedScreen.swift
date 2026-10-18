@@ -1646,6 +1646,9 @@ struct FeedScreen: View {
         // "3 yes fix", of the Wallet's Subscriptions and Track a subscription).
         .safeAreaPadding(.top, inSheet ? 0 : DSDemoMark.screenClearance)
         .listStyle(.plain)
+        // The List adds nothing between Sections (prd §1386): a panel is
+        // three of them, and the gap is `DSRoomChassis.sectionGap`, once.
+        .listSectionSpacing(0)
         // Markets' reorder (prd §1250): the list's own drag handles, never a
         // drag gesture in scroll content. nil leaves every other room as it was.
         .environment(\.editMode, marketsEditMode)

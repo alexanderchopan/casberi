@@ -196,6 +196,16 @@ enum DSRoomChassis {
     /// rest.
     static let leadGap: CGFloat = DS.Space.s4
 
+    /// **ONE GAP BETWEEN SECTIONS (prd §1386, the 2026-10-17 design audit,
+    /// finding 6).** When §1382 dropped the panels' fill, their air stayed on
+    /// both sides of every seam, and the List's own section spacing stood
+    /// between each of the three Sections a panel is made of: about 190pt of
+    /// nothing between "More from Notes" and "Social". The gap is this one
+    /// number, from the last row's bottom to the next header's cap, carried
+    /// by the header's own air; the List's section spacing is zero and the
+    /// panel's foot has no height while it draws no fill.
+    static let sectionGap: CGFloat = DS.Space.s8
+
     /// **THE ONE PICTURE HEIGHT INSIDE A LEAD (prd §766).** The cover's art was
     /// 176pt, which left a two-line title and nothing else once the box had a
     /// footer to hold. At 120 the eyebrow, the title and the foot all fit, and

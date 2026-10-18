@@ -84,7 +84,13 @@ extension FeedScreen {
             // Keyed by value, read live (`ThingRowKeying`, the liveness rule).
             ForEach(Array(keyed(mine).enumerated()), id: \.element.id) { i, item in
                 if let thing = item.live {
-                    shapedListRow(thing, index: i, nextEventID: nextEventID)
+                    // ONE ROW (prd §1386, §744): the Feed's row, its app and
+                    // time over the title as Newest's; the heading says it
+                    // waits on you, so the row does not (prd §1378).
+                    shapedListRow(thing, index: i, nextEventID: nextEventID,
+                                  grouped: true, app: (source: thing.source, date: thing.capturedAt))
+                        .environment(\.dsGroupedSource, thing.source)
+                        .environment(\.dsUnderNeedsYou, true)
                 }
             }
         }

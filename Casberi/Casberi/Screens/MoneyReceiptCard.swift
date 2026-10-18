@@ -845,8 +845,12 @@ struct MoneyReceiptBox: View {
     }
 
     private var receiptBody: some View {
+        // THE BOX FILLS ITS SLOT (prd §1381, §1386): who and when at the
+        // top, the figure and its line standing in the middle of the slot,
+        // nothing under them. The facts are rows under the tiles now.
         VStack(alignment: .leading, spacing: 0) {
             eyebrow
+            Spacer(minLength: DS.Space.s3)
             VStack(alignment: .leading, spacing: 0) {
                 // Nothing to state but the title: no statement, never the
                 // title or the lead again (prd §1360).
@@ -865,30 +869,13 @@ struct MoneyReceiptBox: View {
                         .lineLimit(1)
                         .padding(.top, 2)
                 }
-                HStack(alignment: .top, spacing: DS.Space.s2) {
-                    ForEach(cells.prefix(3)) { cell in
-                        VStack(alignment: .leading, spacing: 0) {
-                            Text(verbatim: cell.value)
-                                .dsText(.heading20)
-                                .monospacedDigit()
-                                .foregroundStyle(cell.wants ? DS.attentionInk : DS.textPrimary)
-                                .lineLimit(1).minimumScaleFactor(0.7)
-                            Text(verbatim: cell.label)
-                                .dsText(.label12)
-                                .foregroundStyle(DS.textSecondary)
-                                .lineLimit(1).minimumScaleFactor(0.8)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                }
-                .padding(.top, DS.Space.s4)
             }
-            .padding(.top, DS.Space.s4)
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(Text(receipt.spokenLabel))
-            .accessibilityValue(Text(verbatim: [receipt.spokenValue, cellsSpoken]
-                .filter { !$0.isEmpty }.joined(separator: ", ")))
+            .accessibilityValue(Text(verbatim: receipt.spokenValue))
+            Spacer(minLength: DS.Space.s3)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
     }
 
     /// Who and when, Today's eyebrow at its rungs: the face, the name, what

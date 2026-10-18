@@ -122,6 +122,20 @@ extension FeedScreen {
                     .contentShape(Rectangle())
                 }
                 .accessibilityLabel(Text("Order: \(TokenWatchOrder.shared.mode.label)"))
+                // Follow a company from the head's + (prd §1386), as every
+                // Feed section adds from its header.
+                Button {
+                    DSHaptic.selection()
+                    feedSheet = .watchAdd
+                } label: {
+                    Image(systemName: "plus")
+                        .dsGlyph(.body, weight: .regular)
+                        .foregroundStyle(DS.brandInk)
+                        .frame(width: DS.Hit.min, height: DS.Hit.min)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(PressSpring())
+                .accessibilityLabel(Text("Follow a company"))
             }
             .feedRowBackground()
             .listRowInsets(.init(top: DS.Space.s2, leading: DSRoomChassis.rowInset,
@@ -135,18 +149,9 @@ extension FeedScreen {
     @ViewBuilder
     func marketsWatchlistSections(_ visible: [Thing], nextEventID: UUID?) -> some View {
         let watches = marketsWatches(visible)
-        if watches.count > 1 { marketsListHead }
-        // THE VERB LEADS THE LIST (prd §1230), as every Following and
-        // Subscriptions list's does: under the list's head, not above it.
-        Section {
-            DSDoorRow(icon: "plus", title: Text("Follow a company")) {
-                feedSheet = .watchAdd
-            }
-            .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.rowInset,
-                                      bottom: 0, trailing: DSRoomChassis.rowInset))
-            .feedRowBackground()
-            .listRowSeparator(.hidden)
-        }
+        // The head always stands: it carries the + (prd §1386), so the
+        // "Follow a company" row that led the list (§1230) is deleted.
+        marketsListHead
         // Gas at the head of the list (prd §1250): Ethereum and Base, stamped
         // by age as a price is, its menu the gas alerts.
         Section {

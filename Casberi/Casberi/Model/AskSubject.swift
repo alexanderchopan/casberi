@@ -121,7 +121,9 @@ enum AskSubject {
     static func invitation(ground: Ground) -> String {
         switch ground {
         case .ownAccount: return String(localized: "Ask, or tell it what to do")
-        case .corpus, .search: return String(localized: "Ask or search")
+        case .corpus: return String(localized: "Ask or search")
+        // Find alone (prd §1047: the ask is deleted) says so (prd §1386).
+        case .search: return String(localized: "Search")
         }
     }
 }
