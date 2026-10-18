@@ -27,7 +27,7 @@ final class FirstRun {
         MailSubscriptionsReading.shared.refresh(context)
         for room in Following.Room.allCases { FollowingReading.shared.refresh(room, context: context) }
         people = ContactIndexSources.rebuild(context: context)
-            .filter { !ContactIndexSources.isYours($0) }.count
+            .filter(ContactIndexSources.isListed).count
     }
 
     /// Nothing added: no app (Markets is a place, not an app, prd §1123), no

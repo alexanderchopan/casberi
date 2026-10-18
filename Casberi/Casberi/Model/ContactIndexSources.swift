@@ -291,6 +291,23 @@ enum ContactIndexSources {
         contact.identities.contains { yourKeys.contains($0.key) }
     }
 
+    /// **CONTACTS IS WHO YOU DEAL WITH (prd §1392, user: "not everyone is a
+    /// people, may be a contract address").** A person, a company or a
+    /// contract on the other side of something of yours. Not you (`isYours`),
+    /// not a wallet you follow as your own (it is Wallets' count), and not a
+    /// biller (it is Subscriptions'): each already has its own place in
+    /// Library, and Contacts listed them a second time under faces that
+    /// were not theirs. The index still builds every one, so a transfer
+    /// between your own wallets keeps its name.
+    static func isListed(_ contact: Contact) -> Bool {
+        if isYours(contact) { return false }
+        if contact.lead.kind == .biller { return false }
+        if contact.identities.contains(where: { $0.kind == .wallet && WalletStore.shared.watches($0.body) }) {
+            return false
+        }
+        return true
+    }
+
     /// The keys of every account marked yours, read live from the stores.
     private static var yourKeys: Set<String> {
         var out = Set<String>()

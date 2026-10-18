@@ -181,8 +181,9 @@ struct AddressesSection: View {
         // You are not an address you deal with (`ContactIndexSources.isYours`):
         // Manage holds your accounts, and a sheet offering to unfollow
         // yourself is a dead verb.
+        // Who you deal with, and nothing of yours (prd §1392).
         contacts = ContactIndexSources.rebuild(context: modelContext)
-            .filter { !ContactIndexSources.isYours($0) }
+            .filter(ContactIndexSources.isListed)
         extras = Dictionary(uniqueKeysWithValues: contacts.map {
             ($0.id, RowExtras(marks: Self.marks(of: $0), arrival: Self.arrival(of: $0),
                               line: Self.line(of: $0)))
@@ -509,21 +510,24 @@ struct AddressesSection: View {
                 }
             } else {
                 if !recent.isEmpty {
-                    // RECENT IS THE FEED'S CARD (prd §1265), the letters
-                    // under it. Its OWN ids: a recent contact is filed under
-                    // its letter too, and one id twice in a lazy stack draws
-                    // the second as an empty row (the S group under a recent
-                    // Sam stood blank).
-                    SectionPanelCard(name: String(localized: "Recent"), glyph: "clock", inset: DS.Space.s3) {
+                    // RECENT IS A GROUP WORD (prd §1392, amends §1265's card):
+                    // the one group header every list wears (§1387), bare
+                    // since §1383. Its OWN ids: a recent contact is filed
+                    // under its letter too, and one id twice in a lazy stack
+                    // draws the second as an empty row.
+                    Section {
                         ForEach(recent, id: \.recentKey) { contact in row(contact) }
+                    } header: {
+                        groupWord(Text("Recent"))
                     }
-                    .padding(.bottom, DS.Space.s4)
                 }
+                // A letter is the same word (prd §1392): no pinned head of
+                // its own, no strip at the edge (§752).
                 ForEach(Self.lettered(everyone), id: \.letter) { section in
                     Section {
                         ForEach(section.rows) { contact in row(contact) }
                     } header: {
-                        LetterHead(text: Self.title(for: section.letter), tone: DS.headInk)
+                        groupWord(Self.title(for: section.letter))
                             .id(Self.letterID(section.letter))
                     }
                 }
@@ -541,6 +545,19 @@ struct AddressesSection: View {
             FeedSeam.set(dragging: phase == .tracking || phase == .interacting)
         }
         .onDisappear { FeedSeam.set(dragging: false) }
+    }
+
+    /// A group's word, the Feed's own (`DSGroupHeader`'s rung and inset,
+    /// prd §1387), on the page's ground so the rows slide under it.
+    private func groupWord(_ word: Text) -> some View {
+        word
+            .dsText(.heading24)
+            .foregroundStyle(DS.textPrimary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.top, DS.Space.s6)
+            .padding(.bottom, DS.Space.s1)
+            .background(Self.ground)
+            .accessibilityAddTraits(.isHeader)
     }
 
     /// The word a group wears: its letter, `#` for a digit or a symbol, and
@@ -604,10 +621,11 @@ struct AddressesSection: View {
     /// addresses they carry that the name does not already say (never a
     /// card ref, never the name itself), at most three. Nil draws one line.
     static func line(of contact: Contact) -> String? {
-        // A biller's newest thing is a charge, and its title carries the
-        // figure; an address draws how it bills, never money (prd §1106, §1113).
+        // **THE LINE SAYS WHO, NEVER WHAT MOVED (prd §1392; the 2026-08-21
+        // rule: no balances in the address book).** The newest thing read
+        // "Sent 0.15 ETH to Sam" under every row, a ledger wearing faces;
+        // the line is the contact's identities, a biller's how it bills.
         if contact.lead.kind == .biller { return billerLine(contact) }
-        if let thing = contact.lastThing, !thing.isEmpty { return thing }
         let labels = contact.identities
             .filter { $0.kind != .contact
                    && fold($0.label) != fold(contact.name) && fold($0.body) != fold(contact.name) }

@@ -234,7 +234,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1530 of 1599 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1531 of 1600 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1766,6 +1766,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1389 — The Holdings map is not painted and leads with the money; Exit demo stands on the title's line (amends §1081's fill r…
 - §1390 — In a counts box the name leads and the count trails (amends §1180's figure column, §1166's "each figure and its whole…
 - §1391 — Markets' box is the sectors' day; Following and Alerts are the list head's two words; the Follow tray is the packs (a…
+- §1392 — Contacts lists who you deal with, in one anatomy, with no money (amends §1265's Recent card, §1323's Contacts, the 20…
 
 ## Dead rulings → what replaced them (generated)
 

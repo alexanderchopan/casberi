@@ -1006,9 +1006,9 @@ struct SettingsHome: View {
         .id(peopleRevision)
     }
 
-    private var showsLetterIndex: Bool {
-        scope == .people && query.isEmpty && !casberiOpen && peopleLetters.count > 3
-    }
+    /// No strip at the edge (prd §752, §1392): the letters are group words
+    /// in the list, and nothing else stands beside it.
+    private var showsLetterIndex: Bool { false }
 
     // MARK: - Subscriptions, feeds, newsletters, calendars
 
