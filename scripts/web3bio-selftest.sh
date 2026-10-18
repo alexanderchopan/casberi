@@ -125,6 +125,14 @@ check(Web3Bio.record(row("ENS", "vitalik.eth", "0xD8DA6BF26964AF9D7EED9E03E53415
       "platform case folded and an EVM address lowercased")
 check(Web3Bio.record(row("sns", "toly.sol", "86xCnPeV69n6t3DnyGvkKobf9FdN2H9oiVDdaMpo2MMY"))?.address
       == "86xCnPeV69n6t3DnyGvkKobf9FdN2H9oiVDdaMpo2MMY", "a Solana address keeps its case")
+check(Web3Bio.record(row("sns", "bonfida.sns", "Fw1ETanDZafof7xEULsnq9UY6o71Tpds89tNwPkWLb1v",
+                         display: "bonfida.sns"))?.identity == "bonfida.sol",
+      "web3.bio's .sns spelling reads as the .sol name (MEASURED 2026-10-18)")
+check(Web3Bio.forwardAddress([Web3Bio.record(row("sns", "bonfida.sns",
+                                                 "Fw1ETanDZafof7xEULsnq9UY6o71Tpds89tNwPkWLb1v"))!],
+                             for: "bonfida.sol") == "Fw1ETanDZafof7xEULsnq9UY6o71Tpds89tNwPkWLb1v",
+      "a .sol name resolves through a .sns record")
+check(Web3Bio.record(row("ens", "x.sns", V))?.identity == "x.sns", "only an SNS record is refolded")
 check(Web3Bio.record(row("ens", "", V)) == nil, "an empty identity is dropped")
 check(Web3Bio.record(row("ens", "x.eth", "")) == nil, "an empty address is dropped")
 check(Web3Bio.record(row("ens", "x.eth", V, avatar: "eip155:1/erc721:0xabc/1"))?.avatar == nil,

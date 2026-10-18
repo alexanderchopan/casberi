@@ -154,6 +154,7 @@ enum Web3Bio {
         let folded = platform == .sns ? address : address.lowercased()
         let avatar = (row["avatar"] as? String).flatMap { $0.hasPrefix("http") ? $0 : nil }
         let display = (row["displayName"] as? String).flatMap { $0.isEmpty ? nil : $0 }
+            .map { platform == .sns ? solName($0) : $0 }
         let bio = (row["description"] as? String).flatMap {
             let t = $0.trimmingCharacters(in: .whitespacesAndNewlines); return t.isEmpty ? nil : t
         }
@@ -162,8 +163,19 @@ enum Web3Bio {
             guard let handle = (value as? [String: Any])?["handle"] as? String, !handle.isEmpty else { continue }
             links[platform.lowercased()] = handle
         }
-        return Record(platform: platform, identity: identity, address: folded,
+        // web3.bio answers a `.sol` question with the name spelled `.sns`
+        // (MEASURED 2026-10-18: `bonfida.sol` → identity `bonfida.sns`), and
+        // every reader here — the forward match, the card's row, the verify
+        // query — speaks `.sol`, the name a person types and Solana shows.
+        // Unfolded, every `.sol` lookup came back unresolved.
+        let name = platform == .sns ? solName(identity) : identity
+        return Record(platform: platform, identity: name, address: folded,
                       displayName: display, avatar: avatar, bio: bio, links: links)
+    }
+
+    /// An SNS name as people write it: `.sol`, where web3.bio writes `.sns`.
+    static func solName(_ name: String) -> String {
+        name.lowercased().hasSuffix(".sns") ? String(name.dropLast(4)) + ".sol" : name
     }
 
     /// The records that name THIS address — the first half of §599. A hex
