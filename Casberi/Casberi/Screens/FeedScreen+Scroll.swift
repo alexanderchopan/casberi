@@ -862,11 +862,11 @@ extension FeedScreen {
             ]
         }
         // **THE WALLET FOLLOWS FROM ITS HEADER (prd §1347, user: "wallet
-        // category will have a plus too to follow more wallets").**
-        if category == CategoryFold.walletRoom {
-            adds = [SectionAdd(label: String(localized: "Watch a wallet"), glyph: ScopeTileGlyph.wallets) {
-                feedSheet = .walletFollow
-            }]
+        // category will have a plus too to follow more wallets")**, and the
+        // Wallet's own Accounts list adds from its header the same two ways
+        // (prd §1410): the one menu, in both places.
+        if category == CategoryFold.walletRoom || category == Self.accountsName {
+            adds = walletAccountAdds
         }
         if category == RoomAccounts.socialRoom {
             if !adds.isEmpty { adds[0].apart = true }
@@ -898,7 +898,7 @@ extension FeedScreen {
         }
     }
 
-    private func openAppPage(_ app: String) {
+    func openAppPage(_ app: String) {
         if let destination = BridgeRouter.destination(forOffer: app) { route.openAccount(destination) }
     }
 

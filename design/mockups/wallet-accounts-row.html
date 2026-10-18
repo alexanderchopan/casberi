@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Wallet accounts, two doors</title><style>
+:root{--page:#000;--ink:#fff;--ink2:#8e8e93;--ink3:#636366;--pink:#ff2d55;--green:#30d158;--blue:#0a84ff;--fill:#1c1c1e;--rounded:ui-rounded,"SF Pro Rounded",-apple-system,sans-serif}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#e4e3ea;color:#15141a;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;-webkit-font-smoothing:antialiased;padding:32px 16px 64px}
+header{max-width:1240px;margin:0 auto 22px} h1{font:700 28px/34px var(--rounded)}
+.desc{font-size:15px;line-height:22px;color:#56535f;max-width:900px;margin-top:6px}
+h2{max-width:1240px;margin:30px auto 0;font:700 20px/26px var(--rounded)}
+.stage{max-width:1240px;margin:14px auto 0;display:flex;flex-wrap:wrap;gap:30px 34px;align-items:flex-start}
+figure{width:362px} figcaption{font-size:13px;line-height:19px;color:#56535f;margin:14px 4px 0} figcaption b{color:#15141a}
+.ph{width:402px;height:874px;zoom:.9;border-radius:56px;overflow:hidden;position:relative;background:var(--page);box-shadow:0 24px 70px #00000033;color:var(--ink);font-family:-apple-system,"SF Pro Text",sans-serif}
+.status{display:flex;justify-content:space-between;padding:22px 34px 0;font:600 17px/22px var(--rounded)}
+.title{display:flex;justify-content:space-between;align-items:center;padding:34px 20px 0}
+.title h3{font:700 44px/50px var(--rounded);letter-spacing:-.5px}
+.title .back{font:500 17px/22px var(--rounded);color:var(--ink2);display:flex;align-items:center;gap:4px}
+.demo{background:var(--blue);color:#fff;font:600 19px/24px var(--rounded);padding:10px 22px;border-radius:30px}
+.box{padding:24px 46px 0;height:300px}
+.box .n{font:700 34px/40px var(--rounded)} .box .d{font:400 19px/24px var(--rounded);color:var(--ink2);margin-top:4px} .box .d b{color:var(--green);font-weight:400}
+.box svg{display:block;margin-top:12px}
+.tiles{display:flex;justify-content:space-around;padding:0 20px;margin-top:4px}
+.tile{display:flex;flex-direction:column;align-items:center;gap:8px;font:600 17px/20px var(--rounded);color:var(--ink2)} .tile.on{color:var(--ink)}
+.tile i{width:36px;height:36px;display:block;background:var(--pink);-webkit-mask:var(--m) center/contain no-repeat;mask:var(--m) center/contain no-repeat}
+.panel{padding:34px 34px 0}
+.ph .h{display:flex;align-items:center;gap:12px;font:700 24px/30px var(--rounded)}
+.ph .h i{width:22px;height:22px;background:var(--pink);-webkit-mask:var(--m) center/contain no-repeat;mask:var(--m) center/contain no-repeat}
+.ph .h .plus{margin-left:auto;color:var(--pink);font:400 22px/22px var(--rounded)}
+.row{display:flex;align-items:center;gap:20px;height:56px;font:400 19px/24px var(--rounded)}
+.row i{width:24px;height:24px;flex:none;background:var(--pink);-webkit-mask:var(--m) center/contain no-repeat;mask:var(--m) center/contain no-repeat}
+.row .f{margin-left:auto;font:600 19px/24px var(--rounded);font-variant-numeric:tabular-nums}
+.row.new{color:var(--pink)}
+.row .face{width:36px;height:36px;border-radius:50%;flex:none;background:linear-gradient(135deg,#ff9f0a,#ff375f)} .row .face.b{background:linear-gradient(135deg,#5e5ce6,#64d2ff)} .row .face.c{background:linear-gradient(135deg,#30d158,#0a84ff)}
+.row .face.app{border-radius:9px;background:#2c2c2e;display:flex;align-items:center;justify-content:center;font:700 14px var(--rounded);color:#fff}
+.row .face.app.w{background:#9fe870;color:#163300} .row .face.app.p{background:#5b2fd6}
+.row .two{display:flex;flex-direction:column;line-height:22px} .row .two small{font-size:15px;color:var(--ink2)}
+.row .tick{margin-left:auto;color:var(--pink);font:600 19px var(--rounded)}
+.grp{font:400 15px/20px var(--rounded);color:var(--ink2);margin:14px 0 2px}
+.tab{position:absolute;left:20px;right:20px;bottom:26px;display:flex;align-items:center;gap:14px}
+.tab .bar{flex:1;height:64px;border-radius:40px;background:#2a2a2d;display:flex;justify-content:space-around;align-items:center;font:500 13px var(--rounded);color:#fff}
+.tab .bar b{color:var(--pink);font-weight:500;background:#3a3a3d;border-radius:30px;padding:8px 24px}
+.tab .s{width:64px;height:64px;border-radius:50%;background:#2a2a2d}
+.menu{position:absolute;right:28px;background:#2c2c2eee;backdrop-filter:blur(20px);border-radius:14px;width:290px;padding:4px 0;box-shadow:0 10px 40px #000000aa;font:400 17px/22px var(--rounded)}
+.menu .m{display:flex;align-items:center;padding:10px 16px;gap:10px} .menu .m+.m{border-top:1px solid #ffffff14}
+.menu .m .t{display:flex;flex-direction:column} .menu .m small{font-size:13px;color:var(--ink2)}
+.menu .m .ic{margin-left:auto;width:24px;height:24px;flex:none;background:#fff;-webkit-mask:var(--m) center/contain no-repeat;mask:var(--m) center/contain no-repeat}
+.menu .m .ic.app{border-radius:6px;background:#9fe870;-webkit-mask:none;mask:none}
+.dim{position:absolute;inset:0;background:#00000066}
+.scrim{position:absolute;left:0;right:0;bottom:0;height:160px;background:linear-gradient(#0000,#000c)}
+</style></head><body>
+<header>
+<h1>Wallet accounts, two doors</h1>
+<p class="desc">The Feed's sections each wear a + that lists what you can follow. The Wallet has nothing on screen: "Follow a wallet" is the accounts menu's first row, and on the phone that menu lives in the tray behind the face. These are the three places the door could stand. Figures and faces are the demo's; every part is one the app already draws (the Overview row, the Feed's + and its menu, the title's pick, the accounts menu's rows).</p>
+</header>
+
+<h2>A — An Accounts row in Overview, and a page behind it (recommended)</h2>
+<div class="stage">
+
+<figure><div class="ph">
+<div class="status"><span>3:22</span><span>●●● ▮</span></div>
+<div class="title"><h3>Wallet</h3><span class="demo">Exit demo ⎋</span></div>
+<div class="box"><div class="n">$33K</div><div class="d"><b>+$2,211</b> · since Oct 15</div>
+<svg width="310" height="120" viewBox="0 0 310 120" fill="none" stroke="#30d158" stroke-width="3" stroke-linecap="round"><path d="M2 110 C30 112 40 100 60 80 S90 70 110 60 S150 30 170 40 S200 20 230 18 S280 12 308 8"/></svg></div>
+<div class="tiles">
+<div class="tile on"><i style="--m:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22><rect x=%223%22 y=%2212%22 width=%225%22 height=%229%22 rx=%221.5%22/><rect x=%229.5%22 y=%227%22 width=%225%22 height=%2214%22 rx=%221.5%22/><rect x=%2216%22 y=%223%22 width=%225%22 height=%2218%22 rx=%221.5%22/></svg>')"></i>Home</div>
+<div class="tile"><i style="--m:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222.2%22><circle cx=%2212%22 cy=%2212%22 r=%229%22/><path d=%22M12 3v9l7 5%22/></svg>')"></i>Holdings</div>
+<div class="tile"><i style="--m:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222.2%22><path d=%22M3 4v16h18M6 15l4-5 4 3 5-6%22/></svg>')"></i>Markets</div>
+<div class="tile"><i style="--m:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222.2%22><path d=%22M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z%22/><rect x=%229%22 y=%2211%22 width=%226%22 height=%225%22 rx=%221%22/></svg>')"></i>Security</div>
+</div>
+<div class="panel">
+<div class="h"><i style="--m:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22><rect x=%223%22 y=%2212%22 width=%225%22 height=%229%22 rx=%221.5%22/><rect x=%229.5%22 y=%227%22 width=%225%22 height=%2214%22 rx=%221.5%22/><rect x=%2216%22 y=%223%22 width=%225%22 height=%2218%22 rx=%221.5%22/></svg>')"></i>Overview</div>
+<div class="row"><i style="--m:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22><circle cx=%229%22 cy=%228%22 r=%224%22/><path d=%22M2 20c0-4 3-6 7-6s7 2 7 6M17 8a4 4 0 010 8M22 20c0-3-2-5-5-5.5%22/></svg>')"></i>Accounts<span class="f">4</span></div>
+<div class="row"><i style="--m:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22><path d=%22M6 17V11a6 6 0 0112 0v6l2 2H4zM10 21h4%22/></svg>')"></i>Needs you<span class="f">12</span></div>
+<div class="row"><i style="--m:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22><path d=%22M4 10a8 8 0 0114-4l2 2M20 14a8 8 0 01-14 4l-2-2M20 4v4h-4M4 20v-4h4%22/></svg>')"></i>Subscriptions<span class="f">$10.00</span></div>
+<div class="row"><i style="--m:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22><path d=%22M2 4h3l2 11h11l2-7H6%22/><circle cx=%229%22 cy=%2220%22 r=%221.5%22/><circle cx=%2217%22 cy=%2220%22 r=%221.5%22/></svg>')"></i>Spending<span class="f">$3,589</span></div>
+<div class="row"><i style="--m:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22><rect x=%222%22 y=%225%22 width=%2220%22 height=%2214%22 rx=%222%22/><path d=%22M2 10h20%22/></svg>')"></i>Cards<span class="f">2 offers</span></div>
+</div>
+<div class="scrim"></div>
+<div class="tab"><div class="bar"><span>Feed</span><b>Wallet</b><span>Library</span></div><div class="s"></div></div>
+</div><figcaption><b>Home.</b> Overview gains one row, first: <b>Accounts</b> and how many the balance is made of (addresses you follow plus the apps folded in — 4 here). The rest of the card is as shipped. A press lands on the Accounts page, as every Overview row lands on its list.</figcaption></figure>
+
+<figure><div class="ph">
+<div class="status"><span>3:22</span><span>●●● ▮</span></div>
+<div class="title"><h3 style="font-size:34px;line-height:40px">Wallet <span style="color:var(--pink)">· Accounts</span></h3></div>
+<div class="panel" style="padding-top:28px">
+<div class="h"><i style="--m:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22><circle cx=%229%22 cy=%228%22 r=%224%22/><path d=%22M2 20c0-4 3-6 7-6s7 2 7 6M17 8a4 4 0 010 8M22 20c0-3-2-5-5-5.5%22/></svg>')"></i>Accounts<span class="plus">＋</span></div>
+<div class="row"><div class="face" style="background:conic-gradient(#ff375f,#ff9f0a,#30d158,#0a84ff,#ff375f)"></div><div class="two">All accounts<small>$33K</small></div><span class="tick">✓</span></div>
+<div class="grp">Addresses</div>
+<div class="row"><div class="face"></div><div class="two">vitalik.eth<small>0xd8dA…6045</small></div></div>
+<div class="row"><div class="face b"></div><div class="two">Savings<small>0x3f1c…9a2e</small></div></div>
+<div class="row"><div class="face c"></div><div class="two">0x9b2a…41fd<small>Followed Oct 12</small></div></div>
+<div class="grp">Apps</div>
+<div class="row"><div class="face app w">W</div><div class="two">Wise<small>$1,204 · 3 currencies</small></div></div>
+<div class="row"><div class="face app p">P</div><div class="two">Privy<small>2 app wallets</small></div></div>
+</div>
+<div class="dim"></div>
+<div class="menu" style="top:244px">
+<div class="m"><div class="t">Follow a wallet<small>An address or a name</small></div><span class="ic" style="--m:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22><rect x=%222%22 y=%226%22 width=%2220%22 height=%2213%22 rx=%222%22/><path d=%22M16 12h6%22/><circle cx=%2217%22 cy=%2212.5%22 r=%221.5%22/></svg>')"></span></div>
+<div class="m"><div class="t">Connect an app<small>Wise, Kraken, Apple Wallet and more</small></div><span class="ic" style="--m:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22><rect x=%223%22 y=%223%22 width=%227%22 height=%227%22 rx=%221.5%22/><rect x=%2214%22 y=%223%22 width=%227%22 height=%227%22 rx=%221.5%22/><rect x=%223%22 y=%2214%22 width=%227%22 height=%227%22 rx=%221.5%22/><rect x=%2214%22 y=%2214%22 width=%227%22 height=%227%22 rx=%221.5%22/></svg>')"></span></div>
+</div>
+<div class="scrim"></div>
+<div class="tab"><div class="bar"><span>Feed</span><b>Wallet</b><span>Library</span></div><div class="s"></div></div>
+</div><figcaption><b>The Accounts page</b> (a page under the band, like Holdings). The accounts menu's rows, drawn as a list: All accounts ticked, then Addresses and Apps. A tap scopes the Wallet to one, as the menu does; a hold on an address offers Stop following (§1302's rule). The header's + is the Feed's, and its menu is Social's shape (§1303): <b>Follow a wallet</b> opens the tray that exists; <b>Connect an app</b> lands Sources › Apps on the Wallet card — the catalogue has 24 Wallet apps, too many for a menu.</figcaption></figure>
+
+</div>
+
+<h2>B — Only the Feed's + on Overview's header, no row</h2>
+<div class="stage">
+<figure><div class="ph">
+<div class="status"><span>3:22</span><span>●●● ▮</span></div>
+<div class="title"><h3>Wallet</h3><span class="demo">Exit demo ⎋</span></div>
+<div class="box"><div class="n">$33K</div><div class="d"><b>+$2,211</b> · since Oct 15</div>
+<svg width="310" height="120" viewBox="0 0 310 120" fill="none" stroke="#30d158" stroke-width="3" stroke-linecap="round"><path d="M2 110 C30 112 40 100 60 80 S90 70 110 60 S150 30 170 40 S200 20 230 18 S280 12 308 8"/></svg></div>
+<div class="tiles">
+<div class="tile on"><i style="--m:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22><rect x=%223%22 y=%2212%22 width=%225%22 height=%229%22 rx=%221.5%22/><rect x=%229.5%22 y=%227%22 width=%225%22 height=%2214%22 rx=%221.5%22/><rect x=%2216%22 y=%223%22 width=%225%22 height=%2218%22 rx=%221.5%22/></svg>')"></i>Home</div>
+<div class="tile"><i style="--m:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222.2%22><circle cx=%2212%22 cy=%2212%22 r=%229%22/><path d=%22M12 3v9l7 5%22/></svg>')"></i>Holdings</div>
+<div class="tile"><i style="--m:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222.2%22><path d=%22M3 4v16h18M6 15l4-5 4 3 5-6%22/></svg>')"></i>Markets</div>
+<div class="tile"><i style="--m:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222.2%22><path d=%22M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z%22/><rect x=%229%22 y=%2211%22 width=%226%22 height=%225%22 rx=%221%22/></svg>')"></i>Security</div>
+</div>
+<div class="panel">
+<div class="h"><i style="--m:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22><rect x=%223%22 y=%2212%22 width=%225%22 height=%229%22 rx=%221.5%22/><rect x=%229.5%22 y=%227%22 width=%225%22 height=%2214%22 rx=%221.5%22/><rect x=%2216%22 y=%223%22 width=%225%22 height=%2218%22 rx=%221.5%22/></svg>')"></i>Overview<span class="plus">＋</span></div>
+<div class="row"><i style="--m:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22><path d=%22M6 17V11a6 6 0 0112 0v6l2 2H4zM10 21h4%22/></svg>')"></i>Needs you<span class="f">12</span></div>
+<div class="row"><i style="--m:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22><path d=%22M4 10a8 8 0 0114-4l2 2M20 14a8 8 0 01-14 4l-2-2M20 4v4h-4M4 20v-4h4%22/></svg>')"></i>Subscriptions<span class="f">$10.00</span></div>
+<div class="row"><i style="--m:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22><path d=%22M2 4h3l2 11h11l2-7H6%22/><circle cx=%229%22 cy=%2220%22 r=%221.5%22/><circle cx=%2217%22 cy=%2220%22 r=%221.5%22/></svg>')"></i>Spending<span class="f">$3,589</span></div>
+<div class="row"><i style="--m:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22><rect x=%222%22 y=%225%22 width=%2220%22 height=%2214%22 rx=%222%22/><path d=%22M2 10h20%22/></svg>')"></i>Cards<span class="f">2 offers</span></div>
+</div>
+<div class="dim"></div>
+<div class="menu" style="top:596px">
+<div class="m"><div class="t">Follow a wallet<small>An address or a name</small></div><span class="ic" style="--m:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22><rect x=%222%22 y=%226%22 width=%2220%22 height=%2213%22 rx=%222%22/><path d=%22M16 12h6%22/><circle cx=%2217%22 cy=%2212.5%22 r=%221.5%22/></svg>')"></span></div>
+<div class="m"><div class="t">Connect an app<small>Wise, Kraken, Apple Wallet and more</small></div><span class="ic" style="--m:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22><rect x=%223%22 y=%223%22 width=%227%22 height=%227%22 rx=%221.5%22/><rect x=%2214%22 y=%223%22 width=%227%22 height=%227%22 rx=%221.5%22/><rect x=%223%22 y=%2214%22 width=%227%22 height=%227%22 rx=%221.5%22/><rect x=%2214%22 y=%2214%22 width=%227%22 height=%227%22 rx=%221.5%22/></svg>')"></span></div>
+</div>
+<div class="scrim"></div>
+<div class="tab"><div class="bar"><span>Feed</span><b>Wallet</b><span>Library</span></div><div class="s"></div></div>
+</div><figcaption><b>The smallest change.</b> Overview's header wears the Feed's + with the same two-row menu, exactly as the Feed's Wallet section does (§1347). Nothing says how many accounts there are, and nothing on the phone lists them or lets you stop following one — that stays in the tray.</figcaption></figure>
+</div>
+
+<h2>What is the same in both</h2>
+<p class="desc" style="max-width:1240px;margin:10px auto 0">The + menu is Social's shape from §1300/§1303: two rows, each with what it adds under it. "Follow a wallet" is the tray that ships today. "Connect an app" is the one door to the catalogue (§1234), landed on the Wallet card as "More social apps" lands on Social. The Feed's Wallet section + (§1347) takes the same two rows, so the two places agree. Neither option adds a verb tile (§1107, §1108).</p>
+</body></html>

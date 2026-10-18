@@ -35,7 +35,15 @@ extension FeedScreen {
         // jump to its list, where the tiles stood (§1219). The lists under it
         // keep every row: a row here names a list, it does not show its items.
         var lines: [OverviewLine] = []
+        // **ACCOUNTS LEADS OVERVIEW (prd §1410, user: "a line that says
+        // 'accounts' and has how many you are tracking").** What the balance
+        // is made of: the addresses you follow and the apps folded in, as the
+        // accounts menu lists them, never the All slot.
+        let accounts = walletAccountSlots.filter { !$0.id.isEmpty }
         let _ = {
+            if !accounts.isEmpty {
+                lines.append(OverviewLine(name: Self.accountsName, figure: "\(accounts.count)"))
+            }
             let waiting = Self.things(needs + dated).filter(\.isLive)
             if !waiting.isEmpty {
                 lines.append(OverviewLine(name: Self.needsYouGroup, figure: "\(waiting.count)"))
@@ -59,6 +67,13 @@ extension FeedScreen {
         .task(id: walletSubscriptionsKey) {
             guard tracks else { return }
             await ServiceLinks.shared.refresh(modelContext, seats: bridges.bridges.map(\.name))
+        }
+
+        // The Accounts list stands first, where its Overview row points
+        // (prd §1410): a state, not news, so it does not displace Needs you
+        // from leading what happened.
+        if !accounts.isEmpty {
+            walletAccountsSection(accounts)
         }
 
         // **NEEDS YOU, THEN WHAT IS DATED (prd §1232).** One list: what
@@ -127,11 +142,15 @@ extension FeedScreen {
 
     /// Home's lists in order, for the pill (prd §1219, §1232).
     static var walletHomeNames: [String] {
-        [overviewName, needsYouGroup, subscriptionsName, spendingName, cardsName, transactionsName]
+        [overviewName, accountsName, needsYouGroup, subscriptionsName, spendingName, cardsName, transactionsName]
     }
 
     static func walletHomeGlyph(_ name: String) -> String {
         switch name {
+        // The pinned copy of Overview's name asks here too, so it wears the
+        // card's own glyph, not the default.
+        case overviewName: return ScopeTileGlyph.home
+        case accountsName: return ScopeTileGlyph.accounts
         case needsYouGroup: return ScopeTileGlyph.alerts
         case subscriptionsName: return ScopeTileGlyph.subscriptions
         case spendingName: return ScopeTileGlyph.spending
@@ -140,6 +159,7 @@ extension FeedScreen {
         }
     }
 
+    static var accountsName: String { String(localized: "Accounts") }
     static var subscriptionsName: String { String(localized: "Subscriptions") }
     static var spendingName: String { String(localized: "Spending") }
     static var cardsName: String { String(localized: "Cards") }
@@ -191,6 +211,96 @@ extension FeedScreen {
                 }
             }
         }
+    }
+
+    // MARK: - Accounts (prd §1410)
+
+    /// **THE WALLET ADDS ACCOUNTS WHERE THE FEED ADDS FOLLOWS (prd §1410,
+    /// user: "we need a way while in wallet to be able to add accounts there
+    /// same way like in feed you can add stuff to follow").** Until now the
+    /// one door was the accounts menu's first row, which on the phone lives
+    /// in the tray behind the face. Accounts is a list on Home like the
+    /// others: the accounts menu's rows — the addresses you follow, then the
+    /// apps folded in — five then a door, and its header wears the Feed's +
+    /// (`walletAccountAdds`). A tap scopes the Wallet to one as the menu does,
+    /// the one showing ticked, a second tap back to All; a hold on an address
+    /// offers Stop following (§1302's rule) and on an app its settings.
+    @ViewBuilder
+    func walletAccountsSection(_ slots: [DSAccountSlot]) -> some View {
+        let open = walletOpenSections.contains("accounts")
+        let shown = open ? slots : Array(slots.prefix(Self.walletHomeCap))
+        walletPanel(Self.accountsName, glyph: Self.walletHomeGlyph(Self.accountsName), things: []) {
+            ForEach(shown) { slot in walletAccountRow(slot) }
+            walletHomeDoor("accounts", total: slots.count)
+        }
+    }
+
+    /// One account: its face, its name over the line the menu gives it, the
+    /// pick ticked in the pick's ink.
+    @ViewBuilder
+    func walletAccountRow(_ slot: DSAccountSlot) -> some View {
+        let picked = slot.isShowing(chrome.walletScope)
+        DSPushRow(title: Text(verbatim: slot.name),
+                  subtitle: slot.sub.map { Text(verbatim: $0) },
+                  fact: picked ? Text(Image(systemName: "checkmark")) : nil,
+                  factTone: DS.pickInk, opens: false) {
+            DSHaptic.selection()
+            withAnimation(DS.Motion.standard) { chrome.walletScope = picked ? nil : slot.id }
+        } leading: {
+            // A face keeps its own ramp, centred in the Feed's column (§1170).
+            Group {
+                switch slot.faces.first {
+                case .wallet(let address)?:
+                    WalletFace(address: address, size: DS.Face.row, circular: true)
+                case .mark(_, let source)?, .avatar(_, let source)?:
+                    BridgeIcon(name: source, size: DS.Face.row)
+                case nil:
+                    BridgeIcon(name: slot.name, size: DS.Face.row)
+                }
+            }
+            .frame(width: DS.Mark.row, height: DS.Mark.row)
+        }
+        .accessibilityLabel(Text(verbatim: picked ? "\(slot.name), showing" : slot.name))
+        // The air the Subscriptions rows take, so the two lists read alike.
+        .listRowInsets(EdgeInsets(top: Self.rowAir, leading: DSRoomChassis.rowInset,
+                                  bottom: Self.rowAir, trailing: DSRoomChassis.rowInset))
+        .feedRowBackground()
+        .listRowSeparator(.hidden)
+        .contextMenu {
+            if case .wallet(let address)? = slot.faces.first {
+                // What you follow goes from a hold on its row (prd §1302),
+                // through the book row's own unwatch, Undo included.
+                if let entry = AddressBook.shared.entry(for: address) {
+                    Button(role: .destructive) {
+                        WalletUnwatch.perform(entry, context: modelContext, chrome: chrome)
+                    } label: {
+                        Label(String(localized: "Stop following"), systemImage: "trash")
+                    }
+                }
+            } else {
+                // An app's page, as the tray's hold offers it (prd §1159).
+                Button { openAppPage(slot.name) } label: {
+                    Label(String(localized: "Settings"), systemImage: "slider.horizontal.3")
+                }
+            }
+        }
+    }
+
+    /// The two ways in, on the Accounts header and the Feed's Wallet section
+    /// alike (prd §1410; §1347's one row grew): the tray that follows an
+    /// address, and the catalogue landed on its Wallet card — 24 apps, too
+    /// many for a menu, so the one door to the catalogue (§1234) as Social's
+    /// More social apps is (§1303).
+    var walletAccountAdds: [SectionAdd] {
+        [SectionAdd(label: String(localized: "Follow a wallet"),
+                    detail: String(localized: "An address or a name"),
+                    glyph: ScopeTileGlyph.wallets) { feedSheet = .walletFollow },
+         SectionAdd(label: String(localized: "Connect an app"),
+                    detail: String(localized: "Apple Wallet, Wise and more"),
+                    glyph: ScopeTileGlyph.apps) {
+            route.openCategory = CategoryFold.walletRoom
+            route.present(.apps)
+        }]
     }
 
     static var overviewName: String { String(localized: "Overview") }
