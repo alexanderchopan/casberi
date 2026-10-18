@@ -575,7 +575,9 @@ print "  ok   both retired picker files stay deleted"
 # spent on something you can act on.
 guard_absent "nothing paints the surface blue" "$WORK/composer.nc" \
       'chrome.askOnTint = (now|true)'
-guard "the tint flag is written false so no stale blue is left behind" \
-      "$WORK/composer.nc" 'chrome.askOnTint = false'
+# The flag itself went with the ask's blue ground (prd §1385): nothing reads or
+# writes it, so there is no stale blue to clear.
+guard_absent "the tint flag is gone with the blue ground (prd §1385)" \
+      "$WORK/composer.nc" 'askOnTint'
 
 print "  ok   AskDestination — 16 mutations, 61 drift guards"

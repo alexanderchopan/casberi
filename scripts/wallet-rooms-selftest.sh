@@ -573,7 +573,8 @@ grep -q 'if let destination {' "$CARD_SAFE" \
 # confirm-green says "all good" in colour while the sentence beside it says the
 # opposite — the encoding-versus-words failure `stateLabel`'s own doc exists to
 # prevent, arriving from the other direction. Green is for what can be acted on.
-grep -q 'entry.awaitsYou ? DS.tint : entry.isExecutable ? DS.confirm' "$CARD_SAFE" \
+# The pick ink since prd §1385 (pink: state and verb; confirm green for executable).
+grep -q 'entry.awaitsYou ? DS.pickInk : entry.isExecutable ? DS.confirmInk' "$CARD_SAFE" \
   || { echo "✗ the Safe row's state tint no longer keys on isExecutable — a blocked transaction would read as green while its own words say it cannot be sent"; exit 1; }
 # …and the row must draw the guard line the room now composes, or the standing
 # fact is computed and never seen (the §311 failure: a reading nothing renders

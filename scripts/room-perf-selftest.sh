@@ -729,8 +729,10 @@ checkm "the matched view is a shape fill, not the risen surface" \
 #     ternary that resolves to one, and still demands `.ignoresSafeArea()`
 #     immediately before the `RoundedRectangle` — which is the whole of what
 #     the corners depend on.
+#     AMENDED 2026-10-17 (prd §1385): the ask's blue tint went with the ask, so
+#     the ground is the bare page token again — flat, full-bleed, underneath.
 checkm "a flat ground still sits under the matched shape" \
-       "$ROOT" '\(chrome\.askOnTint \? DS\.tint : DS\.page\)\.ignoresSafeArea\(\)\s*\.animation\([^)]*\)\s*RoundedRectangle' yes
+       "$ROOT" 'DS\.page\.ignoresSafeArea\(\)\s*RoundedRectangle' yes
 
 # C5. THERE IS NO BOTTOM FADE, and this check is INVERTED (prd §586a).
 #
@@ -894,7 +896,7 @@ mutate "the morph moves off the shape onto the risen surface"  root \
   's/\.modifier\(MorphMatch\(ns: agentMorph\)\)\n                    agentSurface/\n                    agentSurface\n                        .modifier(MorphMatch(ns: agentMorph))/' \
   || mfails=$((mfails + 1))
 mutate "the flat ground under the matched shape is dropped (corners leak on iPad and Mac)"  root \
-  's/                    \(chrome\.askOnTint \? DS\.tint : DS\.page\)\.ignoresSafeArea\(\)\n\s*\.animation\(DS\.Motion\.standard, value: chrome\.askOnTint\)\n(?=\s*\/\/ THE MORPH RIDES)//' \
+  's/                    DS\.page\.ignoresSafeArea\(\)\n(?=\s*\/\/ THE MORPH RIDES)//' \
   || mfails=$((mfails + 1))
 # INVERTED with C5 (prd §586a): the old mutation DELETED the fade, and there is
 # no longer one to delete — so it was a no-op that "survived" every run, which
