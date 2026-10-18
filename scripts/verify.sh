@@ -2593,6 +2593,12 @@ harness "Subscriptions pure-logic self-test" "subscriptions" "scripts/subscripti
 # there, the Safe count stays, and the Feed keeps them all.
 harness "Needs-you words self-test" "needs-you words" "scripts/needs-you-words-selftest.sh" "the needs-you words self-test failed — run scripts/needs-you-words-selftest.sh"
 
+# A money row's name fits its one line (prd §1414): a swap reads pair · venue,
+# in on the right, out on the line; a Safe row names the act and counts on the
+# line; an ABI method keeps a run of capitals whole ("deposit ETH", never
+# "deposit e t h"). Four mutations.
+harness "Wallet-row words self-test" "wallet-row words" "scripts/wallet-row-words-selftest.sh" "the wallet-row words self-test failed — run scripts/wallet-row-words-selftest.sh"
+
 # Subscriptions by category, the tile's map (prd §1112): which category each
 # subscription's monthly cost lands in, and what a pressed tile reads. Every
 # failure is an ordinary-looking map: a "Wallet" tile for merchants the

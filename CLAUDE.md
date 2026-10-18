@@ -74,10 +74,8 @@ deliberately does not check are in `docs/verify.md`.
 - **Mac parity audit (scripts/mac-parity-audit.py)** → docs/verify.md
 - **Account-detail sheet gate (verify-mac.sh step 2d, 2026-09-21) — a Catalyst sheet does NOT inherit the presenter's environment, and the shipped Mac build died on every Accounts → Settings row that raises one** → docs/verify.md · prd §872
 - **Both verify scripts are provably complete** → docs/verify.md
-- **The pure-logic harnesses run at once, and an unchanged one is not re-run (PERF, 2026-08-19). Full green passes: 32.8min → 15.2min → 3.6min** → docs/verify.md
-- **The pass ran every harness TWICE for eleven days (PERF, 2026-09-01)** → docs/verify.md
-
-- **The pass was mostly IDLE CORES — time every step before optimising it (PERF)** → docs/verify.md · prd §612
+- **The pure-logic harnesses run at once, and an unchanged one is not re-run (PERF, 2026-08-19)** → docs/verify.md
+- **PERF: the pass ran every harness TWICE for eleven days (2026-09-01), and was mostly IDLE CORES — time every step before optimising it** → docs/verify.md · prd §612
 
 - `-refusedForget YES` — clear every learned Alchemy chain refusal and drop the holdings window, so the next read asks every selected chain again (prd §827b). A refusal stands a WEEK: right in the field, a trap at a desk → prd §827b
 - **Every `seeded` key is `.v2`, because the `.v1` flags are POISONED (prd §827a).** The old loop recorded the flag BEFORE the guard that adds the chain, and the add could not persist from `init`. → docs/hooks/wallet.md · prd §827a
@@ -214,7 +212,7 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - **The folded rooms' own views are deleted (prd §1059): the kind tiles (`RoomKindTiles`), Reminders' and Mail's tiles, the Calendar agenda and every room-level arm only a folded app reached; `FeedScreen.Shape` and `rowShape` stay for the rows. A mail's `Attached` fact stays (`MailIngest.attachedLabel`): the sheet and search read it** → prd §1059
 - `-connectReminders YES` — the real Reminders connect, seat included (relaunch to see it; `simctl privacy … grant reminders` first, `-demo.corpusAllowed NO` on a fresh install or the dev seed pours four) → prd §993
 - **Shares file by kind (`ShareHome`)** → prd §1200
-- **The Wallet's Home lists, five rows and a door (`FeedScreen+WalletHome.swift`); Spending is this month by place (`Spending`, `SpendingSource`), never a move of your own, a swap or a contract; Needs you takes a stuck Wise transfer and a price rise** → prd §1201
+- **The Wallet's Home lists, five rows and a door (`FeedScreen+WalletHome.swift`); Spending is this month by place (`Spending`, `SpendingSource`), never a move of your own, a swap or a contract; Needs you takes a stuck Wise transfer and a price rise; a swap or Safe row's name fits its line (`WalletRowWords`)** → prd §1201 · §1414
 - `-saveLink "<url>"` — keep a link as a paste would, once per URL (prd §1092; NSLogs `saveLink:`); pair with `-openThing`
 - `-openThing "<title prefix>"` — open the newest thing whose title starts with the prefix (NSLogs `openThing:`). It runs at mount, before ingest hooks land anything, so land first and relaunch.
 - `-answerProbe "<query>"` — run the answer path headless, NSLog the result (`-probeDelay <s>` to wait first). Deterministic unless the Apple Intelligence seat answers (prd §833).

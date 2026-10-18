@@ -1003,20 +1003,12 @@ enum SafeBridge {
         return String(localized: "a batch of \(calls.count) \(humanize(verb)) calls")
     }
 
-    /// "multiSend" → "multi send", "changeThreshold" → "change threshold" —
-    /// splits an ABI method's camelCase on capitals. Purely cosmetic; never
-    /// changes WHICH method is named, only how it reads.
+    /// "multiSend" → "multi send", "depositETH" → "deposit ETH" — an ABI
+    /// method's camelCase as words, through `WalletRowWords.method` (prd
+    /// §1414: splitting on every capital read "deposit e t h"). Purely
+    /// cosmetic; never changes WHICH method is named, only how it reads.
     private static func humanize(_ method: String) -> String {
-        var out = ""
-        for (i, ch) in method.enumerated() {
-            if ch.isUppercase {
-                if i > 0 { out += " " }
-                out.append(contentsOf: ch.lowercased())
-            } else {
-                out.append(ch)
-            }
-        }
-        return out
+        WalletRowWords.method(method)
     }
 
     private static func hasSigned(_ tx: [String: Any], owner: String) -> Bool {

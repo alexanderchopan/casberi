@@ -699,9 +699,16 @@ struct BandRow: View {
         // put two marks in the lead.
         // THE TITLE'S SEAM (prd §915): the object is the name, and the
         // qualifier the bridge appended after ` — ` is the line's first clause.
-        let seam = TitleSeam.split(titleText)
+        // THE MONEY ROW'S WORDS (prd §1414): a swap or a Safe sentence is
+        // read into the three slots — the pair or the act as the name, what
+        // came in on the right, what went out or the count on the line — so
+        // the one-line name is not cut. Any other title keeps its seam.
+        let words = moneyColumn ? WalletRowWords.read(titleText) : nil
+        let seam = words.map { (name: $0.name, line: $0.qualifier) } ?? TitleSeam.split(titleText)
         let name = underNeedsYou ? NeedsYouWords.name(seam.name) : seam.name
-        let qualifier = underNeedsYou ? NeedsYouWords.qualifier(seam.line) : seam.line
+        let said = underNeedsYou ? NeedsYouWords.qualifier(seam.line) : seam.line
+        let lead = [words?.clause, said].compactMap { $0 }
+        let qualifier = lead.isEmpty ? nil : lead.joined(separator: " · ")
         DSFeedRow(name: imageOnly ? thing.source : name,
                   emphasized: emphasized, done: done, ripple: rippleIndex,
                   line: imageOnly ? nil
@@ -735,6 +742,14 @@ struct BandRow: View {
                         .monospacedDigit()
                         .foregroundStyle(money.received && !thing.hasSecurityFlag("symbol")
                                          ? DS.confirmInk : DS.textPrimary)
+                        .lineLimit(1)
+                } else if let figure = words?.figure {
+                    // A swap's incoming leg (prd §1414), in the received ink
+                    // unless the symbol is flagged a look-alike.
+                    Text(figure)
+                        .dsText(.price17)
+                        .monospacedDigit()
+                        .foregroundStyle(thing.hasSecurityFlag("symbol") ? DS.textPrimary : DS.confirmInk)
                         .lineLimit(1)
                 } else if let figure = titleFigure {
                     Text(figure)

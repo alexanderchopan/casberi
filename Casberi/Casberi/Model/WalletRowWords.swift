@@ -1,0 +1,145 @@
+import Foundation
+
+/// **A MONEY ROW'S NAME FITS ITS ONE LINE (prd §1414).** The Wallet's rows
+/// draw a one-line name (§902, "don't wrap them"), and two bridges store a
+/// whole sentence as the title, so the row cut its tail: "Swapped 0.0136 ETH
+/// → 32.55 USDC on…" and "1 of 2 signatures collected on deposit e t h". The
+/// sentence stays in the store — `SwapStage`, `MoneyReceipt` and the sheet
+/// parse it — and the row reads it into the anatomy's three slots instead:
+///
+/// - **A swap** names the pair, the venue on the name ("ETH → USDC on
+///   Uniswap"), what came in on the right ("+32.55 USDC"), what went out on
+///   the line ("−0.0136 ETH") — the move row's own grammar (§1090: who, then
+///   the figure, then the quantity on the line).
+/// - **A Safe row** names the act ("Deposit ETH", "Transfer of 1,500 USDC to
+///   payroll.eth") and puts the count on the line ("1 of 2 signed"), ahead
+///   of the clause the seam carried ("your signature is needed"), which
+///   `NeedsYouWords` still drops under the heading that says it.
+///
+/// The stored shapes are `WalletIngest.swapThing`'s, `SolanaActivity.story`'s
+/// and `SafeBridge.rowFace`'s; any other title reads nil and the row draws
+/// the seam as before. Foundation-only; `wallet-row-words-selftest.sh`
+/// compiles it whole.
+enum WalletRowWords {
+    struct Words: Equatable {
+        /// The row's name.
+        var name: String
+        /// The signed figure for the trailing column, nil when the title
+        /// carries no amount in.
+        var figure: String? = nil
+        /// The line's first clause.
+        var clause: String? = nil
+        /// What the title's seam said, for the row's own Needs-you trim.
+        var qualifier: String? = nil
+    }
+
+    /// The row's words off a stored title; nil for a title in another shape.
+    static func read(_ title: String) -> Words? {
+        swap(title) ?? safe(title)
+    }
+
+    // MARK: - Swaps
+
+    /// "Swapped <out> → <in>[ on <venue>]". A leg is "<amount> <SYMBOL>" or
+    /// a bare symbol; the venue is the last " on " after the arrow, so a
+    /// symbol holding the word keeps it.
+    static func swap(_ title: String) -> Words? {
+        let seam = TitleSeam.split(title)
+        let prefix = "Swapped "
+        guard seam.name.hasPrefix(prefix),
+              let arrow = seam.name.range(of: " → ") else { return nil }
+        let start = seam.name.index(seam.name.startIndex, offsetBy: prefix.count)
+        let out = leg(String(seam.name[start..<arrow.lowerBound]))
+        var rest = String(seam.name[arrow.upperBound...])
+        var venue: String?
+        if let on = rest.range(of: " on ", options: .backwards) {
+            venue = String(rest[on.upperBound...]).trimmingCharacters(in: .whitespaces)
+            rest = String(rest[..<on.lowerBound])
+        }
+        let inn = leg(rest)
+        guard !out.symbol.isEmpty, !inn.symbol.isEmpty else { return nil }
+        var name = "\(out.symbol) → \(inn.symbol)"
+        if let venue, !venue.isEmpty { name += " on \(venue)" }
+        return Words(name: name,
+                     figure: inn.amount.map { "+\($0) \(inn.symbol)" },
+                     clause: out.amount.map { "−\($0) \(out.symbol)" },
+                     qualifier: seam.line)
+    }
+
+    /// "0.0136 ETH" → (0.0136, ETH); "ETH" → (nil, ETH). An amount starts
+    /// with a digit; everything after the first space is the symbol.
+    private static func leg(_ text: String) -> (amount: String?, symbol: String) {
+        let text = text.trimmingCharacters(in: .whitespaces)
+        guard let first = text.first, first.isNumber,
+              let space = text.firstIndex(of: " ") else { return (nil, text) }
+        let symbol = String(text[text.index(after: space)...]).trimmingCharacters(in: .whitespaces)
+        guard !symbol.isEmpty else { return (nil, text) }
+        return (String(text[..<space]), symbol)
+    }
+
+    // MARK: - Safe
+
+    /// "N of M signatures collected on <act>[ — <clause>]" and "Fully signed
+    /// — <act> is ready to execute | is behind N earlier transaction(s)".
+    static func safe(_ title: String) -> Words? {
+        let seam = TitleSeam.split(title)
+        if let r = seam.name.range(of: " signatures collected on ") {
+            let head = seam.name[..<r.lowerBound].split(separator: " ")
+            guard head.count == 3, head[1] == "of",
+                  let have = Int(head[0]), let need = Int(head[2]) else { return nil }
+            let act = String(seam.name[r.upperBound...])
+            guard !act.isEmpty else { return nil }
+            return Words(name: actName(act),
+                         clause: String(localized: "\(have) of \(need) signed"),
+                         qualifier: seam.line)
+        }
+        guard seam.name == "Fully signed", let line = seam.line else { return nil }
+        let tails = [" is ready to execute": String(localized: "ready to execute"),
+                     " is behind ": String(localized: "behind ")]
+        for (tail, word) in tails {
+            guard let t = line.range(of: tail) else { continue }
+            let act = String(line[..<t.lowerBound])
+            guard !act.isEmpty else { return nil }
+            let rest = String(line[t.upperBound...])
+            return Words(name: actName(act),
+                         clause: "\(seam.name) · \(word)\(rest)")
+        }
+        return nil
+    }
+
+    /// The act as a name: the article goes, the first letter stands up.
+    /// "a transfer of 1,500 USDC to payroll.eth" → "Transfer of 1,500 USDC to
+    /// payroll.eth"; "deposit ETH" → "Deposit ETH".
+    static func actName(_ act: String) -> String {
+        var act = act.trimmingCharacters(in: .whitespaces)
+        for article in ["an ", "a "] where act.lowercased().hasPrefix(article) && act.count > article.count {
+            act = String(act.dropFirst(article.count))
+            break
+        }
+        guard let first = act.first else { return act }
+        return first.uppercased() + act.dropFirst()
+    }
+
+    // MARK: - ABI methods
+
+    /// An ABI method's camelCase as words, a run of capitals kept whole:
+    /// "multiSend" → "multi send", "depositETH" → "deposit ETH",
+    /// "swapExactETHForTokens" → "swap exact ETH for tokens". Splitting on
+    /// every capital read "deposit e t h". Cosmetic only: never changes WHICH
+    /// method is named.
+    static func method(_ method: String) -> String {
+        let chars = Array(method)
+        var out = ""
+        for (i, ch) in chars.enumerated() {
+            guard ch.isUppercase else { out.append(ch); continue }
+            let prevLower = i > 0 && chars[i - 1].isLowercase
+            let prevUpper = i > 0 && chars[i - 1].isUppercase
+            let nextLower = i + 1 < chars.count && chars[i + 1].isLowercase
+            let nextUpper = i + 1 < chars.count && chars[i + 1].isUppercase
+            if prevLower || (prevUpper && nextLower) { out += " " }
+            let acronym = (prevUpper || nextUpper) && !nextLower
+            out += acronym ? String(ch) : ch.lowercased()
+        }
+        return out
+    }
+}
