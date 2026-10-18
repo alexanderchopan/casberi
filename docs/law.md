@@ -234,7 +234,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1546 of 1615 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1547 of 1616 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1782,6 +1782,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1405 — On the Mac: Casberi's folder is a list in the pane, the accounts are a menu on the title, and the demo's mark is the…
 - §1406 — The Mac's type goes one notch down, measured: `macScale` 0.88 → 0.76 (amends §631)
 - §1407 — The Mac pane, finished: Library's box, the Wallet's Overview and Coming up, pills for the scopes, people on the title…
+- §1408 — The Security tile's flagged sections show five rows, then one door (amends §1107's Security list; applies §1386's one…
 
 ## Dead rulings → what replaced them (generated)
 

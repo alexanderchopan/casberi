@@ -86,6 +86,12 @@ extension FeedScreen {
     /// look" group, §947). **Each row is ONE transfer and opens its own sheet
     /// (prd §1377)**, which says what it is in its box; the pile it opened
     /// (`.flagged`) repeated the section's name over "Nothing to do".
+    ///
+    /// **FIVE ROWS, THEN ONE DOOR (prd §1408, user: "my list of 'fake
+    /// transfers' shows tons, it should show 5 and then 'see more'").** A
+    /// spammed wallet holds hundreds of these; the section shows Home's cap
+    /// (`walletHomeCap`) and ends in the one More row (`DSMoreRow`, §1386):
+    /// "See all N" opens the rest in place, "Show fewer" folds it back.
     @ViewBuilder
     func walletFlaggedSection(_ kind: WalletWarning.Kind, anchor: SecurityAnchor,
                               word: String) -> some View {
@@ -93,14 +99,26 @@ extension FeedScreen {
             kind.securityFlag.map { thing.hasSecurityFlag($0) } ?? false
         }
         if !things.isEmpty {
+            let key = "security.\(anchor.rawValue)"
+            let open = walletOpenSections.contains(key)
+            let shown = open ? things : Array(things.prefix(Self.walletHomeCap))
             walletCard(word, glyph: kind.glyph, anchor: anchor.id) {
                 VStack(alignment: .leading, spacing: 0) {
-                    ForEach(things.keyed) { row in
+                    ForEach(shown.keyed) { row in
                         if let thing = row.live {
                             let words = Self.flaggedRowWords(thing, kind: kind)
                             needsYouRow(glyph: kind.glyph, critical: kind != .fakeTransfer,
                                         title: words.title, line: words.line) {
                                 feedSheet = .thing(thing, walk: .none)
+                            }
+                        }
+                    }
+                    if things.count > Self.walletHomeCap {
+                        DSMoreRow(title: open ? Text("Show fewer")
+                                              : Text(verbatim: String(localized: "See all \(things.count)")),
+                                  opens: !open) {
+                            withAnimation(DS.Motion.standard) {
+                                if open { walletOpenSections.remove(key) } else { walletOpenSections.insert(key) }
                             }
                         }
                     }

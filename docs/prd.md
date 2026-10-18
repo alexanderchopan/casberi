@@ -67291,3 +67291,9 @@ The phone is untouched: the scale applies under `targetEnvironment(macCatalyst)`
 8. **The demo's mark on the Mac is the rail's foot** (amends §1405 item 3): "Demo" and an Exit word in the pick's ink under the rail's tiles, beside the Casberi menu's Exit Demo. The title bar stays hidden: drawn for the demo, it gave the window a top safe area and the seam above; the window title still names the demo wherever the system names a window.
 
 The phone is untouched: every change reads `RoomBoxPlace` or `roomSizeClass == .regular`.
+
+## §1408 — The Security tile's flagged sections show five rows, then one door (amends §1107's Security list; applies §1386's one More row) (user, 2026-10-18: "my list of 'fake transfers' shows tons, it should show 5 and then 'see more' or whatever. same for the fake tokens section")
+
+A spammed wallet holds hundreds of fake transfers and dozens of look-alike tokens, and the Security tile listed every one, so the three flagged sections (Address poisoning, Fake tokens, Fake transfers) ran the page for screens.
+
+**Ruling.** Each flagged section shows Home's cap, five rows (`walletHomeCap`), and ends in the one More row (`DSMoreRow`, §1386): "See all N" opens the rest in place, "Show fewer" folds it back; no door when five is everything. The fold is `walletOpenSections`, the same set Home's sections fold with, keyed `security.<anchor>`. Each row still opens its own sheet (§1377); the count in the checkup box is unchanged (it counts everything, not what is shown). `FeedScreen+WalletSecurity.swift`.
