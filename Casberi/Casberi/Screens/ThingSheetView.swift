@@ -751,13 +751,21 @@ struct ThingSheetView: View {
                     // the box — a screenshot cropped from its top, as the picture
                     // grid crops one (§910) — a tap or the corner key to see it
                     // whole, the tiles, then what was found in it.
-                    DSRoomTitleRow(title: TitleSeam.split(thing.title).name)
-                        .padding(.horizontal, DSRoomChassis.inset)
-                        .padding(.top, onBack == nil ? DS.Space.s4 : DS.Space.s3)
-                        .settleIn(delay: 0.04)
-                    // The title's line half (§915) under the name: the
-                    // picture fills the box, so it is said here or nowhere.
-                    seamLine
+                    // THE CENTRED HEAD (prd §1398): the app's mark, the name,
+                    // the title's line half (§915) with the day; the tiles;
+                    // then the picture at the box's size under them.
+                    SheetPartyHead(name: TitleSeam.split(thing.title).name, day: thing.capturedAt,
+                                   line: TitleSeam.split(thing.title).line.flatMap { $0.isEmpty ? nil : $0 }
+                                       ?? BridgeCatalog.seatName(forSource: thing.source)) {
+                        BridgeIcon(name: thing.source, size: DS.Face.sheet, circular: true)
+                    }
+                        .padding(.top, onBack == nil ? DS.Space.s6 : DS.Space.s4)
+                        .settleIn(delay: 0.06)
+                    VerbDial(thing: thing, verbs: sheetVerbs,
+                             onVerb: runVerb, onName: nil, centered: true)
+                        .padding(.top, DSRoomChassis.leadGap)
+                        .settleIn(delay: 0.08)
+                    dialResult
                     Button {
                         if thing.sourceRef != nil || thing.previewImageData != nil { zoomPhoto() }
                     } label: {
@@ -776,16 +784,11 @@ struct ThingSheetView: View {
                     .buttonStyle(PressSpring())
                     .dsTapTarget()
                     .dsRoomBox(bleed: true)
-                    .padding(.top, DS.Space.s3)
+                    .padding(.top, DS.Space.s6)
                     .accessibilityLabel(Text(verbatim: TitleSeam.split(thing.title).name))
                     .accessibilityHint(Text("Opens the photo full screen"))
                     .dsTooltip(String(localized: "Opens the photo full screen"))
-                    .settleIn(delay: 0.06)
-                    VerbDial(thing: thing, verbs: sheetVerbs,
-                             onVerb: runVerb, onName: nil)
-                        .padding(.top, DSRoomChassis.leadGap)
-                        .settleIn(delay: 0.08)
-                    dialResult
+                    .settleIn(delay: 0.1)
                     // What the picture names, under the tiles (§885's facts).
                     if !facts.isEmpty {
                         SheetCard(name: String(localized: "Found in it")) {
@@ -810,23 +813,24 @@ struct ThingSheetView: View {
                     // A PURCHASE takes the money sheet's shape (prd §895, §887):
                     // the merchant leads, the amount is the head rung.
                     if purchaseReading.archetype != .watch {
-                        // The merchant is the room's title (prd §1190).
-                        DSRoomTitleRow(title: purchaseReading.subject)
-                            .padding(.horizontal, DSRoomChassis.inset)
-                            .padding(.top, onBack == nil ? DS.Space.s4 : DS.Space.s3)
-                            .settleIn(delay: 0.04)
-                    }
-                    if purchaseReading.archetype != .watch {
-                        // The room's frame (prd §1179): the receipt in the box.
+                        // THE CENTRED HEAD (prd §1398): the app's mark, the
+                        // merchant, the app with the day; the tiles; the
+                        // receipt at the box's size under them.
+                        SheetPartyHead(name: purchaseReading.subject, day: thing.capturedAt,
+                                       line: BridgeCatalog.seatName(forSource: thing.source)) {
+                            BridgeIcon(name: thing.source, size: DS.Face.sheet, circular: true)
+                        }
+                            .padding(.top, onBack == nil ? DS.Space.s6 : DS.Space.s4)
+                            .settleIn(delay: 0.06)
+                        VerbDial(thing: thing, verbs: sheetVerbs, onVerb: runVerb, onName: nil, centered: true)
+                            .padding(.top, DSRoomChassis.leadGap)
+                            .settleIn(delay: 0.08)
+                        dialResult
                         PurchaseStageView(thing: thing, reading: purchaseReading,
                                           recurrence: purchaseRecurrence, headDrawn: true)
                             .dsRoomBox()
-                            .padding(.top, DS.Space.s4)
-                            .settleIn(delay: 0.06)
-                    VerbDial(thing: thing, verbs: sheetVerbs, onVerb: runVerb, onName: nil)
-                        .padding(.top, DSRoomChassis.leadGap)
-                        .settleIn(delay: 0.08)
-                    dialResult
+                            .padding(.top, DS.Space.s6)
+                            .settleIn(delay: 0.1)
                     } else {
                         PurchaseStageView(thing: thing, reading: purchaseReading,
                                           recurrence: purchaseRecurrence, headDrawn: false)
@@ -848,11 +852,20 @@ struct ThingSheetView: View {
                     // their rooms. The project goes small in the box; a row
                     // whose subject is only money is titled by its amount.
                     let workHead = WorkStage.head(workRow, reading: workReading)
-                    DSRoomTitleRow(title: workHead.title ?? workMoneyTitle ?? workReading.subject)
-                        .padding(.horizontal, DSRoomChassis.inset)
-                        .padding(.top, onBack == nil ? DS.Space.s4 : DS.Space.s3)
-                        .settleIn(delay: 0.04)
-                    // The room's frame (prd §1179): the status in the box.
+                    // THE CENTRED HEAD (prd §1398): the app's mark, the item's
+                    // name, the app with the day; the tiles; the status at the
+                    // box's size under them.
+                    SheetPartyHead(name: workHead.title ?? workMoneyTitle ?? workReading.subject,
+                                   day: thing.capturedAt,
+                                   line: BridgeCatalog.seatName(forSource: thing.source)) {
+                        BridgeIcon(name: thing.source, size: DS.Face.sheet, circular: true)
+                    }
+                        .padding(.top, onBack == nil ? DS.Space.s6 : DS.Space.s4)
+                        .settleIn(delay: 0.06)
+                    VerbDial(thing: thing, verbs: sheetVerbs, onVerb: runVerb, onName: nil, centered: true)
+                        .padding(.top, DSRoomChassis.leadGap)
+                        .settleIn(delay: 0.08)
+                    dialResult
                     WorkStageView(thing: thing, reading: workReading,
                                   detail: WorkStage.statusDetail(
                                     workRow, clause: workReading.statusWord),
@@ -860,14 +873,10 @@ struct ThingSheetView: View {
                                   titleDrawn: true,
                                   moneyInTitle: workHead.title == nil,
                                   line: workLine(workHead.line))
-                        .dsRoomBox()
-                        .padding(.top, DS.Space.s4)
-                        .settleIn(delay: 0.06)
+                        .padding(.horizontal, DSRoomChassis.inset)
+                        .padding(.top, DS.Space.s6)
+                        .settleIn(delay: 0.1)
                         .task(id: thing.id) { readIncidentResolved() }
-                    VerbDial(thing: thing, verbs: sheetVerbs, onVerb: runVerb, onName: nil)
-                        .padding(.top, DSRoomChassis.leadGap)
-                        .settleIn(delay: 0.08)
-                    dialResult
                 } else if let agentConversation {
                     agentFrame(agentConversation)
                 } else if drawsFramedCheck {
@@ -904,10 +913,15 @@ struct ThingSheetView: View {
                     // name and symbol and takes the head rung.
                     // In the room's frame since prd §1188: the asset is the
                     // title; the content boxes the price and seats the tiles.
-                    DSRoomTitleRow(title: Self.chartParts(thing.title).name)
-                        .padding(.horizontal, DSRoomChassis.inset)
-                        .padding(.top, onBack == nil ? DS.Space.s4 : DS.Space.s3)
-                        .settleIn(delay: 0.04)
+                    // THE CENTRED HEAD (prd §1398): the asset's mark, its
+                    // name, the app with the day; the content boxes the price
+                    // and seats the tiles (§1188).
+                    SheetPartyHead(name: Self.chartParts(thing.title).name, day: thing.capturedAt,
+                                   line: BridgeCatalog.seatName(forSource: thing.source)) {
+                        AssetMark(name: Self.chartParts(thing.title).name, size: DS.Face.sheet)
+                    }
+                        .padding(.top, onBack == nil ? DS.Space.s6 : DS.Space.s4)
+                        .settleIn(delay: 0.06)
                 } else if mailHead {
                     mailFrame
                 } else if transcriptHead {
@@ -921,18 +935,24 @@ struct ThingSheetView: View {
                           let start = momentStart {
                     // AN EVENT AS A SLICE OF ITS DAY (prd §1182): the title a
                     // room's, the box the hours around it, the tiles, the facts.
-                    DSRoomTitleRow(title: TitleSeam.split(thing.title).name)
-                        .padding(.horizontal, DSRoomChassis.inset)
-                        .padding(.top, onBack == nil ? DS.Space.s4 : DS.Space.s3)
-                        .settleIn(delay: 0.04)
+                    // THE CENTRED HEAD (prd §1397): the calendar's mark, the
+                    // event's name, where it is from; the hours around it
+                    // under the head at the box's height; the tiles.
+                    SheetPartyHead(name: TitleSeam.split(thing.title).name, day: nil,
+                                   line: momentSourceLine) {
+                        BridgeIcon(name: thing.source, size: DS.Face.sheet, circular: true)
+                    }
+                        .padding(.top, onBack == nil ? DS.Space.s6 : DS.Space.s4)
+                        .settleIn(delay: 0.06)
                     EventDaySlice(start: start, end: thing.endAt,
                                   allDay: thing.factList.contains { $0.action == .allDay },
                                   blocks: dayBlocks)
-                        .dsRoomBox()
-                        .padding(.top, DS.Space.s3)
-                        .settleIn(delay: 0.06)
+                        .frame(height: DSRoomChassis.leadBox)
+                        .padding(.horizontal, DSRoomChassis.inset)
+                        .padding(.top, DS.Space.s4)
+                        .settleIn(delay: 0.07)
                         .task(id: thing.id) { readDayBlocks(around: start) }
-                    VerbDial(thing: thing, verbs: sheetVerbs, onVerb: runVerb, onName: nil)
+                    VerbDial(thing: thing, verbs: sheetVerbs, onVerb: runVerb, onName: nil, centered: true)
                         .padding(.top, DSRoomChassis.leadGap)
                         .settleIn(delay: 0.08)
                     dialResult
@@ -948,30 +968,29 @@ struct ThingSheetView: View {
                     // A workout's distance is its box's figure, so the
                     // title keeps the sport alone ("Swim", not "Swim ·
                     // 1,200 m" over "1.20 km", sheet sweep 2026-10-16).
-                    DSRoomTitleRow(title: MomentSheetBlock.title(TitleSeam.split(thing.title).name,
-                                                                 facts: thing.factList))
-                        .padding(.horizontal, DSRoomChassis.inset)
-                        .padding(.top, onBack == nil ? DS.Space.s4 : DS.Space.s3)
-                        .settleIn(delay: 0.04)
-                    VStack(alignment: .leading, spacing: DS.Space.s4) {
-                        Text(verbatim: momentSourceLine)
-                            .dsText(.label12)
-                            .foregroundStyle(DS.textSecondary)
-                            .lineLimit(1)
-                        if let start = momentStart {
-                            MomentSheetBlock(start: start, end: thing.endAt,
-                                             overdue: (thing.kind == .reminder || isWalletMoment)
-                                                && start < .now,
-                                             isReminder: thing.kind == .reminder || isWalletMoment,
-                                             facts: momentFacts, part: .box,
-                                             dueWord: thing.source == "CardPointers" ? .ends
-                                                : isWalletMoment ? .on : .due)
-                        }
+                    // THE CENTRED HEAD (prd §1397): where it is from, its
+                    // name, then the clock in the middle, then the tiles.
+                    SheetPartyHead(name: MomentSheetBlock.title(TitleSeam.split(thing.title).name,
+                                                                facts: thing.factList),
+                                   day: nil, line: momentSourceLine) {
+                        BridgeIcon(name: thing.source, size: DS.Face.sheet, circular: true)
                     }
-                    .dsRoomBox()
-                    .padding(.top, DS.Space.s4)
-                    .settleIn(delay: 0.06)
-                    VerbDial(thing: thing, verbs: sheetVerbs, onVerb: runVerb, onName: nil)
+                        .padding(.top, onBack == nil ? DS.Space.s6 : DS.Space.s4)
+                        .settleIn(delay: 0.06)
+                    if let start = momentStart {
+                        MomentSheetBlock(start: start, end: thing.endAt,
+                                         overdue: (thing.kind == .reminder || isWalletMoment)
+                                            && start < .now,
+                                         isReminder: thing.kind == .reminder || isWalletMoment,
+                                         facts: momentFacts, part: .box,
+                                         dueWord: thing.source == "CardPointers" ? .ends
+                                            : isWalletMoment ? .on : .due,
+                                         centered: true)
+                            .padding(.horizontal, DSRoomChassis.leadInset)
+                            .padding(.top, DS.Space.s4)
+                            .settleIn(delay: 0.07)
+                    }
+                    VerbDial(thing: thing, verbs: sheetVerbs, onVerb: runVerb, onName: nil, centered: true)
                         .padding(.top, DSRoomChassis.leadGap)
                         .settleIn(delay: 0.08)
                     dialResult
@@ -2080,15 +2099,21 @@ struct ThingSheetView: View {
     private func newsFrame<Detail: View>(title: String, label: String, urgent: Bool,
                                          headline: String,
                                          @ViewBuilder detail: () -> Detail) -> some View {
-        DSRoomTitleRow(title: title)
-            .padding(.horizontal, DSRoomChassis.inset)
-        ReviewNewsBox(label: label, urgent: urgent,
-                      meta: FeedScreen.dayWord(thing.capturedAt), headline: headline)
-            .dsRoomBox()
-            .padding(.top, DS.Space.s3)
-        VerbDial(thing: thing, verbs: sheetVerbs, onVerb: runVerb, onName: nil)
+        // THE CENTRED HEAD (prd §1398): the reviewer's mark, the chain or
+        // the wallet, the reviewer with the day; the tiles; the news at the
+        // box's size under them.
+        SheetPartyHead(name: title, day: thing.capturedAt,
+                       line: BridgeCatalog.seatName(forSource: thing.source)) {
+            BridgeIcon(name: thing.source, size: DS.Face.sheet, circular: true)
+        }
+            .padding(.top, DS.Space.s6)
+        VerbDial(thing: thing, verbs: sheetVerbs, onVerb: runVerb, onName: nil, centered: true)
             .padding(.top, DSRoomChassis.leadGap)
         dialResult
+        ReviewNewsBox(label: label, urgent: urgent,
+                      meta: FeedScreen.dayWord(thing.capturedAt), headline: headline)
+            .padding(.horizontal, DSRoomChassis.inset)
+            .padding(.top, DS.Space.s6)
         detail()
             .padding(.horizontal, DSRoomChassis.leadInset)
             .padding(.top, DS.Space.s6)
@@ -2147,12 +2172,23 @@ struct ThingSheetView: View {
                 // then the tiles, then the words after the first line.
                 let body = tickedBody ?? NoteSheetSource.prose(for: thing).text
                 let split = Self.keptTitleLine(Self.entrySplit(body), kept: false)
-                DSRoomTitleRow(title: split.first ?? TitleSeam.name(thing.title))
-                    .padding(.horizontal, DSRoomChassis.inset)
-                JournalEntryBox(thing: thing, sameDay: sameDayThings.count) { zoomPhoto() }
-                    .dsRoomBox()
-                    .padding(.top, DS.Space.s3)
+                // THE CENTRED HEAD (prd §1398): the app's mark, the entry's
+                // first line, the app with the day; the dial; the entry's
+                // box under it.
+                SheetPartyHead(name: split.first ?? TitleSeam.name(thing.title), day: thing.capturedAt,
+                               line: BridgeCatalog.seatName(forSource: thing.source)) {
+                    BridgeIcon(name: thing.source, size: DS.Face.sheet, circular: true,
+                               symbol: BridgeIcon.noteSymbol(for: thing))
+                }
+                    .padding(.top, DS.Space.s6)
                 noteDial
+                // The head says the app and the day; the box stays only for
+                // the entry's photograph.
+                if thing.previewImageData != nil {
+                    JournalEntryBox(thing: thing, sameDay: sameDayThings.count) { zoomPhoto() }
+                        .dsRoomBox()
+                        .padding(.top, DS.Space.s6)
+                }
                 if !split.rest.isEmpty {
                     noteProse(text: split.rest)
                         .padding(.horizontal, DSRoomChassis.leadInset)
@@ -2228,12 +2264,16 @@ struct ThingSheetView: View {
                 // A VAULT NOTE IN THE ROOM'S FRAME (prd §1191): its name is the
                 // title, the box where it lives, when it was edited and its
                 // tags, then the tiles and the words.
-                DSRoomTitleRow(title: TitleSeam.name(thing.title))
-                    .padding(.horizontal, DSRoomChassis.inset)
-                VaultNoteBox(thing: thing, tags: tags)
-                    .dsRoomBox()
-                    .padding(.top, DS.Space.s3)
+                SheetPartyHead(name: TitleSeam.name(thing.title), day: thing.capturedAt,
+                               line: BridgeCatalog.seatName(forSource: thing.source)) {
+                    BridgeIcon(name: thing.source, size: DS.Face.sheet, circular: true,
+                               symbol: BridgeIcon.noteSymbol(for: thing))
+                }
+                    .padding(.top, DS.Space.s6)
                 noteDial
+                VaultNoteBox(thing: thing, tags: tags)
+                    .padding(.horizontal, DSRoomChassis.inset)
+                    .padding(.top, DS.Space.s6)
                 // A vault note's body opens with its own title line; the head
                 // just set it, so the prose starts after it (prd §893).
                 noteProse(text: Self.droppingTitleLine(NoteSheetSource.prose(for: thing).text,
@@ -2250,17 +2290,19 @@ struct ThingSheetView: View {
                 // A PASSAGE IN THE ROOM'S FRAME (prd §1191): the book is the
                 // title, the passage the box, who wrote it and where under it.
                 let passage = NoteSheetSource.passage(for: thing)
-                DSRoomTitleRow(title: cite.work)
-                    .padding(.horizontal, DSRoomChassis.inset)
-                PassageBox(passage: passage, author: cite.author,
-                           line: [cite.author, thing.source,
-                                  locator.count <= 24 && !locator.isEmpty ? locator : nil,
-                                  FeedScreen.dayWord(thing.capturedAt)]
-                               .compactMap { $0 }
-                               .joined(separator: " · "))
-                    .dsRoomBox()
-                    .padding(.top, DS.Space.s3)
+                // THE CENTRED HEAD (prd §1398): the app's mark, the work, the
+                // author and the locator with the day; the dial; the passage
+                // at the box's size under it.
+                SheetPartyHead(name: cite.work, day: thing.capturedAt,
+                               line: [cite.author, locator.count <= 24 && !locator.isEmpty ? locator : nil]
+                                   .compactMap { $0 }.joined(separator: " · ")) {
+                    BridgeIcon(name: thing.source, size: DS.Face.sheet, circular: true)
+                }
+                    .padding(.top, DS.Space.s6)
                 noteDial
+                PassageBox(passage: passage, author: cite.author, line: thing.source)
+                    .padding(.horizontal, DSRoomChassis.inset)
+                    .padding(.top, DS.Space.s6)
                 if PassageBox.cuts(passage) {
                     Text("\u{201C}\(passage)\u{201D}")
                         .dsText(.reading17)
@@ -3854,23 +3896,18 @@ struct ThingSheetView: View {
         // title, the face leads the box, then the tiles and what
         // of theirs you already have.
         let handle = thing.authorHandle ?? ""
-        DSRoomTitleRow(title: SocialThread.shortHandle(handle))
-            .padding(.horizontal, DSRoomChassis.inset)
-            .padding(.top, onBack == nil ? DS.Space.s4 : DS.Space.s3)
-            .settleIn(delay: 0.04)
-        SocialPersonBox(
-            handle: handle,
-            displayName: nil,
-            avatarURL: thing.authorAvatarURL,
-            source: thing.source,
-            since: thing.capturedAt,
-            following: SocialPeople.isWatched(handle: handle, source: thing.source),
-            onOpenProfile: {
-                faceTarget = .person(SocialProfile(
-                    source: thing.source, handle: handle,
-                    displayName: nil, bio: nil,
-                    avatarURL: thing.authorAvatarURL))
-            })
+        // THE CENTRED HEAD (prd §1397): the face, the handle, the network
+        // and the day they followed you; the Follow tile says the rest.
+        SheetPartyHead(name: "@\(SocialThread.shortHandle(handle))", day: thing.capturedAt,
+                       line: String(localized: "\(thing.source) · Followed you"), clock: false,
+                       onFace: {
+                           faceTarget = .person(SocialProfile(
+                               source: thing.source, handle: handle,
+                               displayName: nil, bio: nil,
+                               avatarURL: thing.authorAvatarURL))
+                       }) {
+            PostSheetBox.face(thing, size: DS.Face.sheet)
+        }
             .dsRoomBox()
             .padding(.top, DS.Space.s3)
             .settleIn(delay: 0.06)
@@ -3892,37 +3929,46 @@ struct ThingSheetView: View {
     /// fourth), then the turns.
     @ViewBuilder
     private func agentFrame(_ reading: AgentSheet.Conversation) -> some View {
-        DSRoomTitleRow(title: reading.hero)
-            .padding(.horizontal, DSRoomChassis.inset)
-            .padding(.top, onBack == nil ? DS.Space.s4 : DS.Space.s3)
-            .settleIn(delay: 0.04)
-        AgentChatBox(thing: thing, reading: reading)
-            .dsRoomBox()
-            .padding(.top, DS.Space.s3)
+        // THE CENTRED HEAD (prd §1398): the agent's mark, the conversation's
+        // name, the app with the day; the tiles; the opening turns under them.
+        SheetPartyHead(name: reading.hero, day: thing.capturedAt,
+                       line: BridgeCatalog.seatName(forSource: thing.source)) {
+            BridgeIcon(name: thing.source, size: DS.Face.sheet, circular: true)
+        }
+            .padding(.top, onBack == nil ? DS.Space.s6 : DS.Space.s4)
             .settleIn(delay: 0.06)
         VerbDial(thing: thing, verbs: sheetVerbs, onVerb: runVerb, onName: nil,
-                 keep: continueKeep(reading))
+                 keep: continueKeep(reading), centered: true)
             .padding(.top, DSRoomChassis.leadGap)
             .settleIn(delay: 0.08)
         dialResult
+        AgentChatBox(thing: thing, reading: reading)
+            .padding(.horizontal, DSRoomChassis.inset)
+            .padding(.top, DS.Space.s6)
+            .settleIn(delay: 0.1)
     }
 
     /// A chat with a person in the room's frame (prd §1191): the person, the
     /// box of how much and the last exchange, the tiles, then the chat.
     @ViewBuilder
     private var transcriptFrame: some View {
-        DSRoomTitleRow(title: Self.chatName(thing.title))
-            .padding(.horizontal, DSRoomChassis.inset)
-            .padding(.top, onBack == nil ? DS.Space.s4 : DS.Space.s3)
-            .settleIn(delay: 0.04)
-        ChatTranscriptBox(thing: thing)
-            .dsRoomBox()
-            .padding(.top, DS.Space.s3)
+        // THE CENTRED HEAD (prd §1398): the app's mark, the chat's name, the
+        // app with the day; the tiles; the last exchange under them.
+        SheetPartyHead(name: Self.chatName(thing.title), day: thing.capturedAt,
+                       line: BridgeCatalog.seatName(forSource: thing.source)) {
+            BridgeIcon(name: thing.source, size: DS.Face.sheet, circular: true)
+        }
+            .padding(.top, onBack == nil ? DS.Space.s6 : DS.Space.s4)
             .settleIn(delay: 0.06)
-        VerbDial(thing: thing, verbs: sheetVerbs, onVerb: runVerb, onName: nil, keep: sheetKeep)
+        VerbDial(thing: thing, verbs: sheetVerbs, onVerb: runVerb, onName: nil, keep: sheetKeep,
+                 centered: true)
             .padding(.top, DSRoomChassis.leadGap)
             .settleIn(delay: 0.08)
         dialResult
+        ChatTranscriptBox(thing: thing)
+            .padding(.horizontal, DSRoomChassis.inset)
+            .padding(.top, DS.Space.s6)
+            .settleIn(delay: 0.1)
     }
 
     /// Anything else in the room's frame (prd §1191): its title, the box of
@@ -3933,23 +3979,33 @@ struct ThingSheetView: View {
         // A file's name is whole ("Contract — joinery.pdf"): its dash is the
         // file's own, never §915's seam. A row with nothing but its title
         // puts the title in the box and names its app here (the sweep's P10).
-        DSRoomTitleRow(title: ThingSheetBox.frameTitle(thing))
-            .padding(.horizontal, DSRoomChassis.inset)
-            .padding(.top, onBack == nil ? DS.Space.s4 : DS.Space.s3)
-            .settleIn(delay: 0.04)
-        ThingSheetBox(thing: thing)
-            .dsRoomBox()
-            .padding(.top, DS.Space.s3)
+        // THE CENTRED HEAD (prd §1397): the app's mark (a contact's face),
+        // the name, the app and the day; then the tiles; then what the box
+        // drew — its picture, its statement, its words — under them.
+        SheetPartyHead(name: ThingSheetBox.frameTitle(thing), day: thing.capturedAt,
+                       line: ThingSheetBox.carriesTitle(thing) ? nil
+                           : BridgeCatalog.seatName(forSource: thing.source)) {
+            if thing.kind == .contact {
+                PersonFace(name: thing.title, photo: thing.previewImageData, size: DS.Face.sheet)
+            } else {
+                BridgeIcon(name: thing.source, size: DS.Face.sheet, circular: true)
+            }
+        }
+            .padding(.top, onBack == nil ? DS.Space.s6 : DS.Space.s4)
             .settleIn(delay: 0.06)
+        VerbDial(thing: thing, verbs: plainVerbs, onVerb: runVerb, onName: nil, keep: sheetKeep,
+                 centered: true)
+            .padding(.top, DSRoomChassis.leadGap)
+            .settleIn(delay: 0.08)
+        dialResult
+        ThingSheetBox(thing: thing, headed: true)
+            .padding(.horizontal, DSRoomChassis.leadInset)
+            .padding(.top, DS.Space.s6)
             // A document's first page, read once and kept (prd §1192).
             .task(id: thing.id) {
                 guard FileFirstPage.applies(thing) else { return }
                 _ = await FileFirstPage.readAndKeep(thing)
             }
-        VerbDial(thing: thing, verbs: plainVerbs, onVerb: runVerb, onName: nil, keep: sheetKeep)
-            .padding(.top, DSRoomChassis.leadGap)
-            .settleIn(delay: 0.08)
-        dialResult
     }
 
     /// A NOTICE IN THE ONE FRAME (prd §1386, the 2026-10-17 design audit:
@@ -3959,15 +4015,17 @@ struct ThingSheetView: View {
     /// tiles, and the post it is about stands under them as the content.
     @ViewBuilder
     private var noticeFrame: some View {
-        DSRoomTitleRow(title: TitleSeam.split(thing.title).name)
-            .padding(.horizontal, DSRoomChassis.inset)
-            .padding(.top, onBack == nil ? DS.Space.s4 : DS.Space.s3)
-            .settleIn(delay: 0.04)
-        PostSheetBox(thing: thing, onFace: facesAreDoors ? openAuthorProfile : nil)
-            .dsRoomBox()
-            .padding(.top, DS.Space.s3)
+        // THE CENTRED HEAD (prd §1397): the person it is from, the
+        // sentence as the name, the handle and the app with the day.
+        SheetPartyHead(name: TitleSeam.split(thing.title).name, day: thing.capturedAt,
+                       line: "@\(SocialThread.shortHandle(thing.authorHandle ?? "")) · \(thing.source)",
+                       onFace: facesAreDoors ? openAuthorProfile : nil) {
+            PostSheetBox.face(thing, size: DS.Face.sheet)
+        }
+            .padding(.top, onBack == nil ? DS.Space.s6 : DS.Space.s4)
             .settleIn(delay: 0.06)
-        VerbDial(thing: thing, verbs: sheetVerbs, onVerb: runVerb, onName: nil, keep: sheetKeep)
+        VerbDial(thing: thing, verbs: sheetVerbs, onVerb: runVerb, onName: nil, keep: sheetKeep,
+                 centered: true)
             .padding(.top, DSRoomChassis.leadGap)
             .settleIn(delay: 0.08)
         dialResult
@@ -3992,21 +4050,6 @@ struct ThingSheetView: View {
                 .padding(.top, DSRoomChassis.leadGap)
                 .settleIn(delay: 0.1)
             }
-        }
-    }
-
-    /// What the title said after its seam (§915), under a title row that
-    /// shows the name alone — a framed picture's, whose box is all picture.
-    @ViewBuilder private var seamLine: some View {
-        if let line = TitleSeam.split(thing.title).line, !line.isEmpty {
-            Text(verbatim: line)
-                .dsText(.body17)
-                .foregroundStyle(DS.textSecondary)
-                .lineLimit(2)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.horizontal, DSRoomChassis.inset)
-                .padding(.top, DS.Space.s1)
-                .settleIn(delay: 0.05)
         }
     }
 
@@ -4045,9 +4088,13 @@ struct ThingSheetView: View {
 
     @ViewBuilder
     private func chartTiles(keep: VerbDial.Keep?) -> some View {
-        VerbDial(thing: thing, verbs: sheetVerbs, onVerb: runVerb, onName: nil, keep: keep ?? sheetKeep)
+        VerbDial(thing: thing, verbs: sheetVerbs, onVerb: runVerb, onName: nil, keep: keep ?? sheetKeep,
+                 centered: true)
         dialResult
     }
+
+    /// A picture under the tiles (prd §1397): a post's, an article's.
+    static let sheetArtHeight: CGFloat = 200
 
     /// A post in the room's frame (prd §1188, §1192): the person is the
     /// title, the box its picture or the person, then the tiles, what it
@@ -4055,18 +4102,28 @@ struct ThingSheetView: View {
     @ViewBuilder
     private var postFrame: some View {
         let pictured = PostSheetBox.picturesTheBox(thing)
-        DSRoomTitleRow(title: PostSheetBox.title(thing))
-            .padding(.horizontal, DSRoomChassis.inset)
-            .padding(.top, onBack == nil ? DS.Space.s4 : DS.Space.s3)
-            .settleIn(delay: 0.04)
-        PostSheetBox(thing: thing, onFace: facesAreDoors ? openAuthorProfile : nil)
-            .dsRoomBox(bleed: pictured)
-            .padding(.top, DS.Space.s3)
+        // THE CENTRED HEAD (prd §1397): the person, then the tiles, then
+        // the picture and the words.
+        SheetPartyHead(name: PostSheetBox.title(thing), day: thing.capturedAt,
+                       line: "@\(SocialThread.shortHandle(thing.authorHandle ?? "")) · \(thing.source)",
+                       onFace: facesAreDoors ? openAuthorProfile : nil) {
+            PostSheetBox.face(thing, size: DS.Face.sheet)
+        }
+            .padding(.top, onBack == nil ? DS.Space.s6 : DS.Space.s4)
             .settleIn(delay: 0.06)
-        VerbDial(thing: thing, verbs: sheetVerbs, onVerb: runVerb, onName: nil, keep: sheetKeep)
+        VerbDial(thing: thing, verbs: sheetVerbs, onVerb: runVerb, onName: nil, keep: sheetKeep,
+                 centered: true)
             .padding(.top, DSRoomChassis.leadGap)
             .settleIn(delay: 0.08)
         dialResult
+        if pictured {
+            PostSheetBox.picture(thing)
+                .frame(height: Self.sheetArtHeight)
+                .frame(maxWidth: .infinity)
+                .clipShape(RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous))
+                .padding(.horizontal, DSRoomChassis.leadInset)
+                .padding(.top, DS.Space.s6)
+        }
         if let parent = thing.parent {
             replyingToRow(parent)
                 .padding(.horizontal, DSRoomChassis.leadInset)
@@ -4079,9 +4136,9 @@ struct ThingSheetView: View {
             .fixedSize(horizontal: false, vertical: true)
             .padding(.horizontal, DSRoomChassis.leadInset)
             .padding(.top, DS.Space.s6)
-        // The counts stand in the person's box; with a picture there, here.
+        // The counts under the words (prd §1397): the head holds no stamps.
         let counts = PostSheetBox.counts(thing)
-        if pictured, !counts.isEmpty {
+        if !counts.isEmpty {
             Text(verbatim: counts.joined(separator: " · "))
                 .dsText(.subhead12)
                 .foregroundStyle(DS.textSecondary)
@@ -4096,18 +4153,37 @@ struct ThingSheetView: View {
     @ViewBuilder
     private var mailFrame: some View {
         let sender = Self.mailSender(thing)
-        DSRoomTitleRow(title: sender.map { SenderInitial.displayName(of: $0) } ?? thing.source)
-            .padding(.horizontal, DSRoomChassis.inset)
-            .padding(.top, onBack == nil ? DS.Space.s4 : DS.Space.s3)
-            .settleIn(delay: 0.04)
-        MailSheetBox(thing: thing, sender: sender, address: sender.flatMap(Self.mailAddress))
-            .dsRoomBox()
-            .padding(.top, DS.Space.s3)
+        // THE CENTRED HEAD (prd §1397): the sender, then the tiles, then
+        // the subject and the message.
+        SheetPartyHead(name: sender.map { SenderInitial.displayName(of: $0) } ?? thing.source,
+                       day: thing.capturedAt,
+                       // The address alone — the face is the sender, and the
+                       // app beside it ran the line off the clock.
+                       line: sender.flatMap(Self.mailAddress) ?? thing.source) {
+            if let sender {
+                SenderInitial(sender: sender, size: DS.Face.sheet)
+            } else {
+                BridgeIcon(name: thing.source, size: DS.Face.sheet, circular: true)
+            }
+        }
+            .padding(.top, onBack == nil ? DS.Space.s6 : DS.Space.s4)
             .settleIn(delay: 0.06)
-        VerbDial(thing: thing, verbs: sheetVerbs, onVerb: runVerb, onName: nil, keep: mailKeep)
+        VerbDial(thing: thing, verbs: sheetVerbs, onVerb: runVerb, onName: nil, keep: mailKeep,
+                 centered: true)
             .padding(.top, DSRoomChassis.leadGap)
             .settleIn(delay: 0.08)
         dialResult
+        Text(verbatim: thing.title)
+            .dsText(.heading20)
+            .foregroundStyle(DS.textPrimary)
+            .fixedSize(horizontal: false, vertical: true)
+            .padding(.horizontal, DSRoomChassis.leadInset)
+            .padding(.top, DS.Space.s6)
+        if let attached = thing.factList.first(where: { $0.label == MailIngest.attachedLabel })?.value {
+            DSStamp(word: attached, glyph: "paperclip")
+                .padding(.horizontal, DSRoomChassis.leadInset)
+                .padding(.top, DS.Space.s2)
+        }
     }
 
     /// Track a subscription (prd §1115, the fourth tile since §1188): only
@@ -4128,18 +4204,22 @@ struct ThingSheetView: View {
     /// words.
     @ViewBuilder
     private var articleFrame: some View {
-        DSRoomTitleRow(title: ArticleSheetBox.publication(thing))
-            .padding(.horizontal, DSRoomChassis.inset)
-            .padding(.top, onBack == nil ? DS.Space.s4 : DS.Space.s3)
-            .settleIn(delay: 0.04)
-        ArticleSheetBox(thing: thing)
-            .dsRoomBox()
-            .padding(.top, DS.Space.s3)
+        // THE CENTRED HEAD (prd §1397): the publication, then the tiles,
+        // then the picture, the headline and the words.
+        SheetPartyHead(name: ArticleSheetBox.publication(thing), day: thing.capturedAt,
+                       line: ArticleSheetHead.readingMinutes(thing).map { String(localized: "\($0) min read") }) {
+            BridgeIcon(name: thing.source, size: DS.Face.sheet, circular: true)
+        }
+            .padding(.top, onBack == nil ? DS.Space.s6 : DS.Space.s4)
             .settleIn(delay: 0.06)
-        VerbDial(thing: thing, verbs: sheetVerbs, onVerb: runVerb, onName: nil, keep: sheetKeep)
+        VerbDial(thing: thing, verbs: sheetVerbs, onVerb: runVerb, onName: nil, keep: sheetKeep,
+                 centered: true)
             .padding(.top, DSRoomChassis.leadGap)
             .settleIn(delay: 0.08)
         dialResult
+        ArticleSheetBox(thing: thing, headed: true)
+            .padding(.horizontal, DSRoomChassis.leadInset)
+            .padding(.top, DS.Space.s6)
     }
 
     /// A track, a video or an episode in the room's frame (prd §1186).
@@ -4148,20 +4228,25 @@ struct ThingSheetView: View {
         // THE ROOM'S FRAME (prd §1186): the title, the box (a video's
         // frame, or the cover beside who and when), the tiles, then
         // more from the artist or the channel.
-        DSRoomTitleRow(title: MediaSheetBox.title(thing))
-            .padding(.horizontal, DSRoomChassis.inset)
-            .padding(.top, onBack == nil ? DS.Space.s4 : DS.Space.s3)
-            .settleIn(delay: 0.04)
-        MediaSheetBox(thing: thing, onOpen: mediaOpen)
-            .dsRoomBox(bleed: MediaSheetBox.isVideo(thing))
-            .padding(.top, DS.Space.s3)
+        // THE CENTRED HEAD (prd §1398): the app's mark, the track's or the
+        // video's name, the app with the day; the tiles; the cover or the
+        // frame at the box's size under them.
+        SheetPartyHead(name: MediaSheetBox.title(thing), day: thing.capturedAt,
+                       line: BridgeCatalog.seatName(forSource: thing.source)) {
+            BridgeIcon(name: thing.source, size: DS.Face.sheet, circular: true)
+        }
+            .padding(.top, onBack == nil ? DS.Space.s6 : DS.Space.s4)
             .settleIn(delay: 0.06)
-            .task(id: thing.id) { readMediaMore() }
         VerbDial(thing: thing, verbs: mediaVerbs, onVerb: runVerb, onName: nil,
-                 keep: mediaKeep)
+                 keep: mediaKeep, centered: true)
             .padding(.top, DSRoomChassis.leadGap)
             .settleIn(delay: 0.08)
         dialResult
+        MediaSheetBox(thing: thing, onOpen: mediaOpen)
+            .dsRoomBox(bleed: MediaSheetBox.isVideo(thing))
+            .padding(.top, DS.Space.s6)
+            .settleIn(delay: 0.1)
+            .task(id: thing.id) { readMediaMore() }
         if !mediaMore.isEmpty {
             MoneyHistoryRows(title: mediaMoreTitle, rows: mediaMore.keyed,
                              onOpen: { walkingToScope = .none; walkingToNote = KeyedThing($0) })

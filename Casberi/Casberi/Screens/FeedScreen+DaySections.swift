@@ -315,9 +315,12 @@ extension FeedScreen {
         // Feed's rows on one card, where the glance tiles stood (§1208d).
         // Only the Feed's own categories (prd §1331): the Wallet and the
         // testnets are their own place, so their moves never stand here,
-        // as they never stand in the sections under it.
+        // as they never stand in the sections under it. Never day-bound
+        // (prd §1399): it reads what the box's fallback reads, so past
+        // midnight Home is the box, "Nothing yet today", then last night's
+        // five — never a box alone.
         let elsewhere: Set<String> = [CategoryFold.walletRoom, RoomAccounts.testnetsRoom, HomeScope.markets]
-        let newest = scroll ? Self.newestThings(groups.filter { !elsewhere.contains($0.0) }, lede: homeCover) : []
+        let newest = scroll ? Self.newestThings(visible, lede: homeCover, elsewhere: elsewhere) : []
         if scroll { newestCard(newest, nextEventID: nextEventID) }
         ForEach(scroll ? [] : groups, id: \.0) { label, rows in
             // Bundles merge into the day card like any row-shaped thing —

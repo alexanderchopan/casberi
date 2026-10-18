@@ -12,12 +12,20 @@ struct SheetPartyHead<Face: View>: View {
     let name: String
     let day: Date?
     let line: String?
+    /// The clock beside the day (prd §1397); off where the day is the fact.
+    var clock: Bool = true
     /// The face's door, where it has one (a person's profile, a room).
     var onFace: (() -> Void)? = nil
     @ViewBuilder let face: () -> Face
 
+    /// **CENTRED, THREE THINGS (prd §1397, user: "give mail, post, event,
+    /// contact and the other thing sheets the same centred head").** The
+    /// face at `DS.Face.sheet`, the name at the head rung, one grey line —
+    /// what it is and when, the day in the divider's ink with the clock
+    /// beside it — as the money sheet's head stands (§1396). The title row
+    /// and the box that stood over every other kind said the name twice.
     var body: some View {
-        HStack(alignment: .center, spacing: DS.Space.s3) {
+        VStack(spacing: DS.Space.s3) {
             if let onFace {
                 Button {
                     DSHaptic.tap()
@@ -28,31 +36,33 @@ struct SheetPartyHead<Face: View>: View {
             } else {
                 face()
             }
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                    // A name is words here (a show, a book, a sender), so it
-                    // wraps rather than losing its middle (prd §897).
-                    Text(verbatim: name)
-                        .dsText(.heading17).foregroundStyle(DS.textPrimary)
-                        .lineLimit(2)
-                        .fixedSize(horizontal: false, vertical: true)
-                    Spacer(minLength: DS.Space.s2)
+            VStack(spacing: DS.Space.s1) {
+            Text(verbatim: name)
+                .dsText(.heading17).foregroundStyle(DS.textPrimary)
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
+            if line?.isEmpty == false || day != nil {
+                HStack(alignment: .firstTextBaseline, spacing: DS.Space.s1) {
+                    if let line, !line.isEmpty {
+                        Text(verbatim: day == nil ? line : line + " ·")
+                            .dsText(.body17).foregroundStyle(DS.textSecondary)
+                    }
                     if let day {
                         Text(FeedScreen.dayWord(day))
-                            .dsText(.label12)
+                            .dsText(.body17)
                             .foregroundStyle(DS.headInk)
-                            .lineLimit(1)
+                        if clock {
+                            Text(verbatim: day.formatted(date: .omitted, time: .shortened))
+                                .dsText(.body17).foregroundStyle(DS.textSecondary)
+                        }
                     }
                 }
-                if let line, !line.isEmpty {
-                    Text(verbatim: line)
-                        .dsText(.subhead12).foregroundStyle(DS.textTertiary)
-                        .lineLimit(1)
-                }
+                .lineLimit(1)
+            }
             }
         }
         .padding(.horizontal, DSRoomChassis.leadInset)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity)
     }
 }
 
@@ -82,6 +92,8 @@ struct MomentSheetBlock: View {
     /// ("Staked HYPE unlocks" — the line is just the day and the hour).
     enum DueWord { case due, ends, on }
     var dueWord: DueWord = .due
+    /// Under the centred head (prd §1397): the clock stands in the middle.
+    var centered: Bool = false
 
     /// Inside the card the well gives the inset; outside, the lead's column.
     private var inset: CGFloat { part == .box ? 0 : DSRoomChassis.leadInset }
@@ -117,8 +129,8 @@ struct MomentSheetBlock: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            if part != .rows { clock }
+        VStack(alignment: centered ? .center : .leading, spacing: 0) {
+            if part != .rows { clock.multilineTextAlignment(centered ? .center : .leading) }
             if part != .box, !rows.isEmpty {
                 // Rows in the lead's column, no card (prd §1381, §1386).
                 FactRows(facts: rows)
@@ -126,7 +138,7 @@ struct MomentSheetBlock: View {
                     .padding(.top, part == .rows ? 0 : DS.Space.s4)
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, alignment: centered ? .center : .leading)
     }
 
     /// Whether the rows half has anything to draw.

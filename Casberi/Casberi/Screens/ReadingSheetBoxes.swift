@@ -14,9 +14,10 @@ import SwiftUI
 /// person stands in it — their face, handle, network and time, and what the
 /// network counted. The words are never in the box: they stand whole, once,
 /// under the tiles.
-struct PostSheetBox: View {
-    let thing: Thing
-    var onFace: (() -> Void)? = nil
+/// The post sheet's facts and parts (prd §1397): its title, its face, its
+/// picture, its counts. The box that drew them stood over the tiles until
+/// the centred head took the person and the picture went under them.
+@MainActor enum PostSheetBox {
 
     /// The title row's name: the author's own name, else the handle.
     static func title(_ thing: Thing) -> String {
@@ -49,6 +50,28 @@ struct PostSheetBox: View {
     }
 
     /// What the network counted, only where it counted something.
+    /// The author's face at a size (prd §1397): the centred head's.
+    @ViewBuilder static func face(_ thing: Thing, size: CGFloat) -> some View {
+        if let avatar = thing.authorAvatarURL, !avatar.isEmpty {
+            RemoteThumb(urlString: avatar, size: size, fallback: thing.source, circular: true)
+        } else {
+            BridgeIcon(name: thing.source, size: size, circular: true)
+        }
+    }
+
+    /// The post's picture, filling whatever frame it is given (prd §1397):
+    /// under the tiles, since the head is the person.
+    @ViewBuilder static func picture(_ thing: Thing) -> some View {
+        if let url = leadPicture(thing) {
+            GeometryReader { geo in
+                RemoteArt(urlString: url, width: geo.size.width,
+                          height: geo.size.height, cornerRadius: 0)
+            }
+        } else {
+            PhotoWell(thing: thing)
+        }
+    }
+
     static func counts(_ thing: Thing) -> [String] {
         var out: [String] = []
         if let likes = thing.likeCount, likes > 0 {
@@ -60,148 +83,15 @@ struct PostSheetBox: View {
         return out
     }
 
-    var body: some View {
-        if thing.isLive {
-            if Self.picturesTheBox(thing) { pictureBox } else { personBox }
-        }
-    }
-
-    private var whereLine: String {
-        ["@\(SocialThread.shortHandle(thing.authorHandle ?? ""))", thing.source,
-         FeedScreen.dayWord(thing.capturedAt)].joined(separator: " · ")
-    }
-
-    private var pictureBox: some View {
-        ZStack(alignment: .bottomLeading) {
-            Group {
-                if let url = Self.leadPicture(thing) {
-                    GeometryReader { geo in
-                        RemoteArt(urlString: url, width: geo.size.width,
-                                  height: geo.size.height, cornerRadius: 0)
-                    }
-                } else {
-                    PhotoWell(thing: thing)
-                }
-            }
-            LinearGradient(colors: [.clear, .black.opacity(0.55)], startPoint: .top, endPoint: .bottom)
-                .frame(height: 64)
-                .frame(maxHeight: .infinity, alignment: .bottom)
-                .allowsHitTesting(false)
-            Text(verbatim: whereLine)
-                .dsText(.label12)
-                .fontWeight(.semibold)
-                .foregroundStyle(Color.white)
-                .lineLimit(1)
-                .padding(DS.Space.s3)
-        }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(Text(verbatim: "\(Self.title(thing)), \(whereLine)"))
-    }
-
-    private var personBox: some View {
-        VStack(spacing: DS.Space.s2) {
-            face.padding(.top, DS.Space.s1)
-            Text(verbatim: "@\(SocialThread.shortHandle(thing.authorHandle ?? ""))")
-                .dsText(.heading20)
-                .foregroundStyle(DS.textPrimary)
-                .lineLimit(1)
-            Text(verbatim: "\(thing.source) · \(FeedScreen.dayWord(thing.capturedAt)), \(thing.capturedAt.formatted(date: .omitted, time: .shortened))")
-                .dsText(.subhead12)
-                .foregroundStyle(DS.textSecondary)
-                .lineLimit(1)
-            Spacer(minLength: 0)
-            let counts = Self.counts(thing)
-            if !counts.isEmpty {
-                HStack(spacing: DS.Space.s2) {
-                    ForEach(counts, id: \.self) { DSStamp(word: $0) }
-                }
-            }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .accessibilityElement(children: .combine)
-    }
-
-    @ViewBuilder private var face: some View {
-        let mark = Group {
-            if let avatar = thing.authorAvatarURL, !avatar.isEmpty {
-                RemoteThumb(urlString: avatar, size: DS.Face.profile,
-                            fallback: thing.source, circular: true)
-            } else {
-                BridgeIcon(name: thing.source, size: DS.Face.profile, circular: true)
-            }
-        }
-        if let onFace {
-            Button {
-                DSHaptic.tap()
-                onFace()
-            } label: { mark }
-                .buttonStyle(PressSpring())
-                .accessibilityLabel(Text("Open profile"))
-        } else {
-            mark
-        }
-    }
 }
 
 // MARK: - A mail
 
-struct MailSheetBox: View {
-    let thing: Thing
-    let sender: String?
-    let address: String?
-
-    var body: some View {
-        if thing.isLive {
-            VStack(alignment: .leading, spacing: DS.Space.s3) {
-                HStack(spacing: DS.Space.s2) {
-                    if let sender {
-                        SenderInitial(sender: sender, size: DS.Face.seat)
-                    } else {
-                        BridgeIcon(name: thing.source, size: DS.Face.seat, circular: true)
-                    }
-                    VStack(alignment: .leading, spacing: 0) {
-                        if let address {
-                            Text(verbatim: address)
-                                .dsText(.label12)
-                                .foregroundStyle(DS.textSecondary)
-                                .lineLimit(1)
-                        }
-                        Text(verbatim: "\(thing.source) · \(when)")
-                            .dsText(.label12)
-                            .foregroundStyle(DS.textSecondary)
-                            .lineLimit(1)
-                    }
-                }
-                Text(verbatim: thing.title)
-                    .dsText(.heading20)
-                    .foregroundStyle(DS.textPrimary)
-                    .lineLimit(3)
-                    .fixedSize(horizontal: false, vertical: true)
-                Spacer(minLength: 0)
-                if let attached {
-                    DSStamp(word: attached, glyph: "paperclip")
-                }
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            .accessibilityElement(children: .combine)
-        }
-    }
-
-    /// "Today, 2:54 PM".
-    private var when: String {
-        "\(FeedScreen.dayWord(thing.capturedAt)), \(thing.capturedAt.formatted(date: .omitted, time: .shortened))"
-    }
-
-    /// What came with it, as the mail's own fact names it (`MailIngest`).
-    private var attached: String? {
-        thing.factList.first { $0.label == MailIngest.attachedLabel }?.value
-    }
-}
-
-// MARK: - An article
-
 struct ArticleSheetBox: View {
     let thing: Thing
+    /// Under the centred head (prd §1397): the picture and the headline
+    /// under the tiles, at their own height; the head said the rest.
+    var headed: Bool = false
 
     /// The title row: who published it.
     static func publication(_ thing: Thing) -> String {
@@ -217,23 +107,26 @@ struct ArticleSheetBox: View {
             VStack(alignment: .leading, spacing: DS.Space.s3) {
                 if ArticleSheetHead.hasArt(thing) {
                     art
-                        .frame(height: Self.artHeight)
+                        .frame(height: headed ? ThingSheetView.sheetArtHeight : Self.artHeight)
                         .frame(maxWidth: .infinity)
-                        .clipShape(RoundedRectangle(cornerRadius: DS.Radius.widget / 2, style: .continuous))
+                        .clipShape(RoundedRectangle(cornerRadius: headed ? DS.Radius.widget : DS.Radius.widget / 2,
+                                                    style: .continuous))
                 }
                 Text(verbatim: TitleSeam.split(thing.title).name)
-                    .dsText(ArticleSheetHead.hasArt(thing) ? .heading20 : .heading24)
+                    .dsText(ArticleSheetHead.hasArt(thing) && !headed ? .heading20 : .heading24)
                     .foregroundStyle(DS.textPrimary)
-                    .lineLimit(ArticleSheetHead.hasArt(thing) ? 2 : 4)
+                    .lineLimit(headed ? 4 : ArticleSheetHead.hasArt(thing) ? 2 : 4)
                     .minimumScaleFactor(0.85)
                     .fixedSize(horizontal: false, vertical: true)
-                Spacer(minLength: 0)
-                Text(verbatim: metaLine)
-                    .dsText(.label12)
-                    .foregroundStyle(DS.textSecondary)
-                    .lineLimit(1)
+                if !headed {
+                    Spacer(minLength: 0)
+                    Text(verbatim: metaLine)
+                        .dsText(.label12)
+                        .foregroundStyle(DS.textSecondary)
+                        .lineLimit(1)
+                }
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .frame(maxWidth: .infinity, maxHeight: headed ? nil : .infinity, alignment: .topLeading)
             .accessibilityElement(children: .combine)
         }
     }

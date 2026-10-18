@@ -67194,6 +67194,41 @@ A fired alert lands a Markets row tagged Alert under `alert:<id>:<when>` (§1081
 
 `money-receipt-selftest.sh` holds the head to the column and the state off the rows; `feed-row-skeleton-audit.py` holds the list rows' figures tabular.
 
+## §1397 — Every thing sheet wears the centred head (extends §1396 to mail, post, article, event, contact, link and the follow notice; amends §1188's title-and-box frames, §892's shared head, §1187's person box, §1179's moment box) (user, 2026-10-17: "give mail, post, event, contact and the other thing sheets the same centred head")
+
+`SheetPartyHead` — the one head the thing sheets share since §892 — is the centred head now: the face at `DS.Face.sheet`, the name at `heading17`, one grey line (what it is, the day in the divider's ink, the clock beside it), then the tiles centred under it (`VerbDial.centered`; a full row of four takes the grid, since sized against the scroll view it overflowed its inset and the sheet never settled). The title row and the room-box that stood over every kind are gone from these frames:
+
+- **Mail**: the sender's initial, their name, the address; the subject and the attachment stamp under the tiles, then the message. `MailSheetBox` is deleted.
+- **Post**: the author's face, their name, `@handle · network`; the picture (`ThingSheetView.sheetArtHeight`) and the words under the tiles, the counts under the words. `PostSheetBox` keeps its facts and parts (title, face, picture, counts); its box body is deleted.
+- **Article**: the app's mark, the publication, the reading time; the picture and the headline under the tiles (`ArticleSheetBox(headed:)`), then the words.
+- **Event**: the calendar's mark, the event's name, where it is from; the hours around it (`EventDaySlice`) under the head at the box's height, or the clock centred (`MomentSheetBlock.centered`).
+- **Contact and everything plain**: the contact's face or the app's mark, the name, the app; the box's statement, picture and words under the tiles (`ThingSheetBox(headed:)`, which then draws no face and no app-and-day line of its own).
+- **A follow notice**: the face, `@handle`, `network · Followed you` and the day; the Follow tile says the rest. `SocialPersonBox` is deleted.
+
+The reading kinds with a figure of their own (a chart, a work or purchase reading, an agent chat, a note, L2BEAT, Privy, a cited passage, media) keep their frames for now.
+
+## §1398 — The last frames take the centred head: the figure goes under the tiles (completes §1397; amends §1186's media and picture frames, §1188's chart, §1190's purchase and work, §1191's news, the note sheets' §399 heads) (user, 2026-10-18: "yes" to the face, the name and one line on top for all of them, the figure under the tiles)
+
+A price chart, a work item, a purchase, an agent chat, a chat transcript, a journal entry, a vault note, a kept passage, a track or video, a screenshot and a review notice open on `SheetPartyHead` — the app's mark (an asset's mark for a chart), the name, the app with the day — then the centred tiles, then the thing's own figure under them. A picture, a player and a receipt keep the room box's size there (`dsRoomBox`); a figure made of words (a work item's status, a passage, a chat's turns, a review's headline, a vault note) takes its own height in the rows' column, since the box's fixed height stood it in air. A journal entry draws its box only for its photograph; the head already says the app and the day. The picture frame's seam line is deleted: the title's line half is the head's line. `DSRoomTitleRow` stands on one sheet now, the flagged transfer's (§1377).
+
+## §1399 — Newest is never day-bound (amends §1331 item 4, §1256) (user, 2026-10-18, past midnight: "did we get rid of the 'newest' category in feed? it's not showing up for me" — "or is it because it's midnight and its reset?"; asked what is best, "ok.")
+
+It was midnight. Newest (§1256) read today's rows, so past midnight, before anything arrived, the card had nothing and hid itself; Home was the box and "Nothing yet today". The box never does that: it falls back to the newest kept thing (§1136i, "this needs to be populated w/ the newest thing").
+
+**Ruling.** Newest matches the box: the five newest live things across the Feed's own categories, whatever day they came from. The card is named Newest, not Today, so the five newest things are its answer at 00:05 as at 18:00. `FeedScreen.newestThings` reads the whole visible set the box's fallback reads (one bounded pass, no sort), with the standing exclusions: the box's thing and the same news again (§1208j), the Wallet, the testnets and Markets (§1331's `elsewhere`), nothing dated ahead. The category sections under it keep their own promise — today, by category — and are unchanged.
+
+On screen: past midnight, box, "Nothing yet today", then Newest listing last night's five; a thin day with two things shows those two and the three before them; a busy day changes nothing. One difference accepted: Newest reads things, not today's folded rows, so two moves on one object can both stand (the fold is the day sections' rule, §1079).
+
+## §1400 — A fiat currency is never in the token icon book (amends §931) (user, 2026-10-18, on the Apple Wallet page: "wtf is this pyramid w an eyeball"; "but i'm on the apple wallet page so why would some scam coin be there"; "ok")
+
+The Apple Wallet page's one tile, the cash balance, wore a green pyramid with an eye. The tile is keyed by its currency code, "USD" (`WalletCash.priced`, §1048). No bundled mark exists for a fiat code, so `AssetMark` asked `TokenIconBook` (§931), which is keyed by symbol alone and filled by every Zerion holdings read — and one watched wallet held an airdropped junk token whose symbol was "USD", with that logo. The page is scoped; the book is not. Cash on one page wore a scam coin's picture read off another.
+
+**Ruling.** Cash is not a token and has no token logo. An ISO 4217 code (`Locale.Currency.isoCurrencies`) is refused at `TokenIconBook.note` and answered nil at `TokenIconBook.url`, so a book already carrying one draws the monogram ("US") until a mark of its own is shipped. The rule lives in the book, not in a caller, so `AssetMark` and `BridgeIcon` keep it alike. A token that spells a fiat code loses its picture and keeps its monogram, which is honest: a thing named "USD" that is not dollars should not look like anything in particular.
+
+## §1401 — The connect and setup screens stand bare too (completes §1393) (user, 2026-10-18: "you need to go through all the connect and set up screens bc they still have gray cards")
+
+`SectionPanel` is bare by default (`filled = false`). §1393 switched the panel's middle rows off through `feedSectionPanelFilled`, but every account page's Connect and More cards drew their top cap and bottom cap on the panel's own default, which was still a fill — so every connect screen kept a grey card with bare rows inside it. Now the name and its air say where a block starts, on the account pages as on every sheet. The entry well keeps its box (§708, §1027); the Apps page's folders keep theirs (§1393).
+
 ## §1402 — The Mac's rail is the tab bar: Feed · Wallet · Library, and Search (amends §273's category rail, §1133f's rail face, §360's ⌘1–⌘9; the Mac half of §1327, §1343, §1347) (design review, 2026-10-17: the Mac is a third of first downloads and its shell was a generation behind the phone — nine categories on the rail, Day twice over)
 
 The phone moved to three tabs — the places you manage — and Day, Notes and every category became sections of the Feed's one scroll. The Mac kept §273's rail: the phone's dock of nine categories turned 90°, listing Day beside a Feed whose first section is Day. The rail is the app's signature and stays (never a sidebar, §875's session); what it lists changes.
