@@ -65,7 +65,9 @@ guard "the Notes room, and the Feed's Notes section, ask a note of yours for its
   'notePreview: \(Pinboard\.isPinnedRoom\(source\) \|\| source == "All"\) && Pinboard\.isNote\(thing\)' "$FEED"
 guard "a note of yours draws no dial; its keys stand at the foot (prd §983)" \
   'if !pagedNote \{ noteDial \}' "$VIEW"
-guard "the keys ride the sheet's foot" 'if pagedNote \{ keptNoteBand \}' "$VIEW"
+# In the Mac's pane the keys are the pane's header row instead (prd §1399).
+guard "the keys ride the sheet's foot, off the pane" 'if pagedNote, !inPane \{ keptNoteBand \}' "$VIEW"
+guard "in the pane the keys publish as the pane's row (prd §1399)" 'if pagedNote, inPane \{ publishNoteKeys\(\) \}' "$VIEW"
 [[ $fail -eq 0 ]] || { echo "note-checklist-selftest: ✗ drift guard(s) failed"; exit 1; }
 
 TMP=$(mktemp -d)

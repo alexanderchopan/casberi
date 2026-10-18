@@ -183,11 +183,14 @@ grep -q 'CategoryFold.isCategory(label)' "$TMP/main.nc" \
 # protects is the `roomFigure` lesson wearing the other face — not a guard that
 # cannot pass, but one that passes while proving nothing.
 #
-# What SURVIVES is the half that was never about the tray: Mac's ⌘1–⌘9 must
-# still resolve a folded label before writing a source, or the same dead room
-# arrives by a different door. That check is below and is unchanged.
-grep -q 'CategoryFold.isCategory(label)' "$TMP/app.nc" \
-  || { echo "✗ ⌘1–⌘9 no longer resolves a folded label — it would write the category name"; \
+# What SURVIVES is the half that was never about the tray. Until prd §1397
+# Mac's ⌘1–⌘9 addressed the chip strip and had to resolve a folded label
+# before writing a source; the strip is gone and the keys are ⌘1–⌘3, the
+# three places, taken through the one door every tab press takes
+# (`PlaceTab.open`). A key that wrote `filter.source` by hand would land
+# Library — a place, not a source — in the same dead room.
+grep -q 'PlaceTab.open(tab, chrome: chrome, route: scene.route)' "$TMP/app.nc" \
+  || { echo "✗ ⌘1–⌘3 no longer take PlaceTab.open — a key must take the door its tile takes (prd §1397)"; \
        echo "  into FeedFilter.source and open a permanently empty room."; exit 1; }
 
 # The catch-bob and coin-flip key on the chip that is actually SHOWING. Keyed

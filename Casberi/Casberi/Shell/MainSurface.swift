@@ -672,43 +672,9 @@ struct MainSurface: View {
     /// The social rail's `+N` list is up (prd §824).
     @State private var allFacesShown = false
 
-    /// THE WALLET FAMILY'S ACCOUNTS, where the social faces are (prd §750,
-    /// user: "should we put the wallets row of accounts on a third row above
-    /// the tab bar like we do for socials? … like on farcaster and bluesky").
-    ///
-    /// Published by the room's `DSRoomScopeChrome` and keyed by source, so the
-    /// rail belongs to the room on screen and nothing else. It draws only with
-    /// two or more real accounts — "All" beside one face picks nothing. The
-    /// head names the picked account in full, so the rail's caption is a label.
-    private var accountRailItems: [FaceScopeRail.Item] {
-        guard let rail = chrome.accountRail, rail.source == filter.source else { return [] }
-        return rail.slots.compactMap { slot in
-            guard !slot.id.isEmpty, let face = slot.faces.first else { return nil }
-            return FaceScopeRail.Item(id: slot.id, caption: slot.name, face: face,
-                                      tooltip: slot.sub.map { "\(slot.name) · \($0)" })
-        }
-    }
-
-    @ViewBuilder
-    private var accountRail: some View {
-        if let rail = chrome.accountRail, rail.source == filter.source {
-            let items = accountRailItems
-            if items.count > 1 {
-                FaceScopeRail(
-                    items: items,
-                    scope: rail.scope.flatMap { $0.isEmpty ? nil : $0 },
-                    compact: chrome.minimized && !showsRail,
-                    inFolder: true,
-                    matches: { a, b in a.caseInsensitiveCompare(b) == .orderedSame },
-                    onPick: { picked in
-                        withAnimation(DS.Motion.standard) { rail.onPick(picked) }
-                    },
-                    onReTap: nil,
-                    addTitle: nil,
-                    onAdd: nil)
-            }
-        }
-    }
+    // THE ACCOUNT RAIL LEFT THE BAND (prd §1400): the wallet family's accounts
+    // are a menu on the room's title (`FeedScreen.accountTitleMenu`), read off
+    // the rail the chrome still publishes (`ShellChrome.accountRail`).
 
     /// The watched accounts behind whichever social room is showing.
     ///
