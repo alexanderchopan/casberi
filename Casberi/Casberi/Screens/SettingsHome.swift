@@ -598,10 +598,14 @@ struct SettingsHome: View {
         return DSCountGrid(items: counts.count) {
             ForEach(counts, id: \.0) { kind, n, label in
                 let verb = addVerb(kind)
+                let menu = addMenu(kind)
                 DSCountTile(count: n, label: label, isOn: kind == scope && !casberiOpen,
                             wants: troubled.contains(kind), inline: true, widest: widest,
                             add: verb == nil ? nil : { add(kind) }, addLabel: verb,
-                            addMenu: addMenu(kind)) {
+                            addMenu: menu,
+                            // Apps has no add (prd §1388); its count still ends
+                            // where the others do (prd §1390).
+                            reservesPlus: verb == nil && menu.isEmpty) {
                     // EVERY COUNT PICKS WHAT STANDS UNDER THE BOX (prd §1317,
                     // user: "why doesn't it open in the screen below like cards
                     // and apps do"): no count opens a page over Sources.

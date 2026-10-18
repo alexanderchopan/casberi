@@ -234,7 +234,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1528 of 1597 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1529 of 1598 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1764,6 +1764,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1387 — Day's Needs you keeps its places, each as the one group word (amends §1340's "Needs you · Wallet" eyebrow; closes §13…
 - §1388 — Where no name stands beside it, a wallet's face says who; the counts box takes one gutter and a card gets its add (am…
 - §1389 — The Holdings map is not painted and leads with the money; Exit demo stands on the title's line (amends §1081's fill r…
+- §1390 — In a counts box the name leads and the count trails (amends §1180's figure column, §1166's "each figure and its whole…
 
 ## Dead rulings → what replaced them (generated)
 

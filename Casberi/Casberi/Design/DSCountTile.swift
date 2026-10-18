@@ -35,6 +35,9 @@ struct DSCountTile: View {
     /// A plus that lists its kind's apps (prd §1300), as a Feed section's
     /// does: a menu of rows, each its app over what it follows.
     var addMenu: [SectionAdd] = []
+    /// A count with no add in a box where others have one keeps the plus's
+    /// column empty (prd §1390), so every count ends at one edge.
+    var reservesPlus: Bool = false
     let action: () -> Void
 
     /// How far the plus's 44pt target reaches over the tile (prd §1292):
@@ -101,6 +104,11 @@ struct DSCountTile: View {
                     .accessibilityLabel(Text(addLabel ?? label))
                 }
             }
+        } else if inline, reservesPlus {
+            HStack(spacing: -Self.plusOverlap) {
+                tile
+                Color.clear.frame(width: DS.Hit.min, height: 1)
+            }
         } else {
             tile
         }
@@ -128,37 +136,45 @@ struct DSCountTile: View {
         } label: {
             if inline {
                 HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                    // ONE lead column for figures and glyphs alike (prd
-                    // §1180, user: "THE TEXT IN THESE SHOULD BE IN THE SAME
-                    // PLACE … SAME SIZE same positions etc so its seamless"):
-                    // as wide and as tall as a two-digit figure, so Settings'
-                    // and Markets' words start at one edge on one baseline,
-                    // and their rows are one height.
-                    // The column is the unseen figure; what shows rides it,
-                    // so the baseline is always the figure's.
-                    Text(max(widest ?? 0, Self.leadFigure).formatted())
-                        .dsText(.heading24).monospacedDigit().hidden()
-                        .overlay(alignment: glyph == nil ? .trailing : .center) {
-                        if let glyph {
-                            // Markets' tiles: a glyph where Settings' figure stands.
-                            Image(systemName: glyph)
-                                .dsGlyph(.body, weight: .regular)
-                                // Pink, as every glyph is (prd §1252, §1266).
-                                .foregroundStyle(isOn ? DS.pickInk : DS.brandInk)
-                        } else {
-                            Text((count ?? 0).formatted())
-                                .dsText(.heading24)
-                                .monospacedDigit()
-                                .contentTransition(countRoll)
-                                .animation(countAnimation, value: count)
-                                .foregroundStyle(isOn ? DS.pickInk : zero ? DS.textTertiary : DS.textPrimary)
-                        }
+                    if let glyph {
+                        // Markets' tiles: the glyph leads, in the column a
+                        // two-digit figure took (prd §1180), so its words
+                        // start where Settings' did.
+                        Text(Self.leadFigure.formatted())
+                            .dsText(.heading24).monospacedDigit().hidden()
+                            .overlay {
+                                Image(systemName: glyph)
+                                    .dsGlyph(.body, weight: .regular)
+                                    // Pink, as every glyph is (prd §1252, §1266).
+                                    .foregroundStyle(isOn ? DS.pickInk : DS.brandInk)
+                            }
+                        Text(label)
+                            .dsText(.body17)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                            .foregroundStyle(isOn ? DS.pickInk : wants ? DS.attentionInk : DS.textPrimary)
+                    } else {
+                        // **THE NAME LEADS, THE COUNT TRAILS (prd §1390, user:
+                        // "B looked cleaner").** The row the first-run box
+                        // already drew (a name, a grey value, the plus), with
+                        // the count where the value stood: the name is what
+                        // you scan, the count the fact beside it, and the
+                        // counts and pluses end at one edge. The figure that
+                        // led in bold read as a report card.
+                        Text(label)
+                            .dsText(.body17)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                            .foregroundStyle(isOn ? DS.pickInk : wants ? DS.attentionInk : DS.textPrimary)
+                        Spacer(minLength: DS.Space.s2)
+                        Text((count ?? 0).formatted())
+                            .dsText(.body17)
+                            .fontWeight(.semibold)
+                            .monospacedDigit()
+                            .contentTransition(countRoll)
+                            .animation(countAnimation, value: count)
+                            .foregroundStyle(isOn ? DS.pickInk : zero ? DS.textTertiary : DS.textSecondary)
                     }
-                    Text(label)
-                        .dsText(.body17)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.8)
-                        .foregroundStyle(isOn ? DS.pickInk : wants ? DS.attentionInk : DS.textPrimary)
                 }
                 // s2, not s3: the figure column leaves "Subscriptions" room to
                 // stand whole beside a two-digit count. The row is the box's
