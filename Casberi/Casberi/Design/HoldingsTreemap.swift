@@ -242,10 +242,30 @@ struct HoldingsTreemap: View {
     /// flat or unread move keeps the plain fill (§83).
     private func fill(_ id: String, lit isLit: Bool, widest: Double) -> Color {
         if isLit { return DS.tint }
+        // THE MAP IS NOT PAINTED (prd §1389): the only box in the app with a
+        // saturated fill was this one. The move's hue is a faint wash, and
+        // the edge carries its strength (`edge`); a flat or unread move keeps
+        // the plain fill (§83).
         guard let m = move(id), abs(m) >= 0.0005, widest > 0 else { return DS.fillFaint }
-        // The move's hue at its strength: the biggest move is the full colour.
+        return (m > 0 ? DS.confirm : DS.destructive).opacity(0.14)
+    }
+
+    /// A tile's edge: the move's hue at its strength against the board's
+    /// biggest move (Markets' rule, §1081); none when flat, unread or lit.
+    private func edge(_ id: String, lit isLit: Bool, widest: Double) -> Color? {
+        guard !isLit, let m = move(id), abs(m) >= 0.0005, widest > 0 else { return nil }
         let strength = min(1, abs(m) / widest)
-        return (m > 0 ? DS.confirm : DS.destructive).opacity(0.22 + 0.58 * strength)
+        return (m > 0 ? DS.confirm : DS.destructive).opacity(0.45 + 0.55 * strength)
+    }
+
+    /// What a tile is worth: the holding's money, or Other's true share of
+    /// the sum; test money states its quantity (§949).
+    private func worth(_ tile: HoldingsTreemapLayout.Tile) -> String? {
+        if tile.id == HoldingsTreemapLayout.otherID {
+            return showsShares && sum > 0 ? WalletValue.money(tile.share * sum) : nil
+        }
+        guard let holding = holdings.first(where: { $0.id == tile.id }) else { return nil }
+        return holding.display ?? (sum > 0 ? WalletValue.money(holding.usd) : nil)
     }
 
     @ViewBuilder
@@ -270,34 +290,44 @@ struct HoldingsTreemap: View {
                 Spacer(minLength: 0)
                 // **A TILE SAYS WHAT AND HOW MUCH, NEVER THE DAY (prd §1338,
                 // amends §1090's tile text).** The day's move is the tile's
-                // colour and the row's number; written on the tile beside a
-                // share it read as a second measure. "Other" names itself.
+                // edge and the row's number. **THE MONEY LEADS (prd §1389):**
+                // the dollars at the tile's rung, the share under them in
+                // grey; a small tile keeps the dollars alone. "Other" names
+                // itself.
+                if isOther {
+                    Text("Other")
+                        .dsText(.label12)
+                        .foregroundStyle(isLit ? Color.white : DS.textSecondary)
+                        .lineLimit(1)
+                }
                 if showsShares {
-                    if large, !isOther, let holding = holdings.first(where: { $0.id == tile.id }) {
-                        Text(holding.display ?? WalletValue.money(holding.usd))
+                    if let worth = worth(tile) {
+                        Text(verbatim: worth)
+                            .dsText(large ? .stat24 : (small ? .label12 : .price17))
+                            .monospacedDigit()
+                            .foregroundStyle(isLit ? Color.white : DS.textPrimary)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.6)
+                    }
+                    if !small || worth(tile) == nil {
+                        Text(HoldingsTreemapLayout.percent(tile.share))
                             .dsText(.label12)
                             .monospacedDigit()
-                            .foregroundStyle(isLit ? Color.white : DS.textPrimary.opacity(0.9))
+                            .foregroundStyle(isLit ? Color.white.opacity(0.85) : DS.textSecondary)
                             .lineLimit(1)
                     }
-                    if isOther {
-                        Text("Other")
-                            .dsText(.label12)
-                            .foregroundStyle(isLit ? Color.white : DS.textSecondary)
-                            .lineLimit(1)
-                    }
-                    Text(HoldingsTreemapLayout.percent(tile.share))
-                        .dsText(large ? .stat24 : (small ? .label12 : .price17))
-                        .monospacedDigit()
-                        .foregroundStyle(isOther && !isLit ? DS.textSecondary : (isLit ? Color.white : DS.textPrimary))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.6)
                 }
             }
             .padding(small ? DS.Space.s2 : DS.Space.s3)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .background(RoundedRectangle(cornerRadius: small ? 12 : 14, style: .continuous)
                 .fill(fill(tile.id, lit: isLit, widest: widest)))
+            .overlay {
+                if let edge = edge(tile.id, lit: isLit, widest: widest) {
+                    RoundedRectangle(cornerRadius: small ? 12 : 14, style: .continuous)
+                        .strokeBorder(edge, lineWidth: 1.5)
+                }
+            }
             .opacity(lit != nil && !isLit ? 0.35 : 1)
             .contentShape(Rectangle())
         }

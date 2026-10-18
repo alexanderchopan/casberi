@@ -82,6 +82,7 @@ struct SettingsHome: View {
             // LIBRARY IS A TAB (prd §1327 items 2, 5): its name alone, as
             // every tab's page reads; the bar says where the others are.
             DSRoomTitleRow(title: String(localized: "Library"))
+                .demoTagOnTitle()
                 .dsRoomTitleListRow(inSheet: route.sheet != nil)
             Section {
                 // The kinds you connected; Casberi's own settings are its

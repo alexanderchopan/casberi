@@ -74,6 +74,8 @@ struct DSDemoPill<Label: View>: View {
                 .frame(minHeight: height)
                 .background(DS.tint, in: Capsule(style: .continuous))
                 .contentShape(Capsule(style: .continuous))
+                // Drawn at its height, targeted at the floor (prd §1389).
+                .dsTapTarget(Capsule(style: .continuous))
                 // The floating layer casts; content does not (§759). Without
                 // it a flat blue pill reads as painted onto the well.
                 .shadow(color: DS.cardShadow, radius: 12, x: 0, y: 8)

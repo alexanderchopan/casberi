@@ -18,6 +18,7 @@ struct YouHead: View {
 
     var body: some View {
         DSRoomTitleRow(title: place.name)
+            .demoTagOnTitle()
     }
 }
 
@@ -53,6 +54,7 @@ extension FeedScreen {
     /// the walk's arms went with it.
     var roomTitle: some View {
         DSRoomTitleRow(title: roomName, pick: roomPick, onTitle: clearRoomPick)
+            .demoTagOnTitle()
     }
 
     /// The title's category word pressed: drop the pick `roomPick` names and

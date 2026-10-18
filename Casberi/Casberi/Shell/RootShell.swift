@@ -2455,16 +2455,9 @@ struct RootShell: View {
                     // pushed page keeps the seat as its way back (prd §767).
                     if padShell.railInset == 0, sceneState.route.path.isEmpty {
                         VStack(alignment: .trailing, spacing: DS.Space.s3) {
-                            // The demo's mark stands on its own row above the
-                            // bar's trailing end (prd §1322's place, moved up).
-                            if demoActive && !DemoCapture.hidesMarking && !chrome.roomsTray {
-                                rootPresented(DemoTag())
-                                    .environment(sceneState.route)
-                                    .environment(sceneState.filter)
-                                    .opacity(chrome.demoLeaving ? 0 : 1)
-                                    .animation(DS.Motion.standard, value: chrome.demoLeaving)
-                                    .transition(.opacity)
-                            }
+                            // The demo's mark rides the page's title row now
+                            // (`demoTagOnTitle`, prd §1389), never the band:
+                            // the bar unfolds into three tabs and would meet it.
                             PlaceTabBar(current: PlaceTab.current(sceneState.filter.source),
                                         open: openPlaceTab,
                                         search: { withAnimation(DS.Motion.standard) { chrome.roomsTray = true } })

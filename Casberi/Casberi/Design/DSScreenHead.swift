@@ -72,24 +72,14 @@ struct DSRoomTitleRow: View {
         if let pick, let onTitle {
             // The category's word presses (prd §1262); the pick after the
             // dot stays a label. Same rung, ink and height as the label row.
-            HStack(alignment: .firstTextBaseline, spacing: 0) {
-                // The word that goes back is grey, where you stand is the
-                // head ink (user, 2026-10-15: "is sources supposed to be
-                // gray, eg only one is white"), as the walk's title greys
-                // its neighbours (§1207).
-                Button(action: onTitle) {
-                    Text(verbatim: title)
-                        .foregroundStyle(DS.textTertiary)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(RowPress())
-                .accessibilityHint(Text("Shows everything in \(title)"))
-                (Text(verbatim: " · ").foregroundStyle(DS.textTertiary)
-                    + Text(verbatim: pick).foregroundStyle(DS.textPrimary))
+            // THE PAIR STEPS DOWN TOGETHER (prd §1389): beside the demo's
+            // pill the two words share the room, so the whole title takes
+            // the next rung rather than the pick alone shrinking and cutting.
+            ViewThatFits(in: .horizontal) {
+                pickedTitle(title, pick: pick, onTitle: onTitle, rung: .heading34)
+                pickedTitle(title, pick: pick, onTitle: onTitle, rung: .heading28)
+                pickedTitle(title, pick: pick, onTitle: onTitle, rung: .heading24)
             }
-            .dsText(.heading34)
-            .lineLimit(1)
-            .minimumScaleFactor(0.6)
             .frame(maxWidth: .infinity, alignment: .leading)
             .frame(height: Self.height, alignment: .leading)
             .accessibilityAddTraits(.isHeader)
@@ -104,6 +94,31 @@ struct DSRoomTitleRow: View {
                 .frame(height: Self.height, alignment: .leading)
                 .accessibilityLabel(Text(verbatim: pick.map { "\(title), \($0)" } ?? title))
         }
+    }
+
+    /// The picked title at one rung: the category's word a grey button, the
+    /// pick after the dot in the head ink. `fixedSize` so `ViewThatFits`
+    /// measures the pair whole.
+    private func pickedTitle(_ title: String, pick: String, onTitle: @escaping () -> Void,
+                             rung: DSTextStyle) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 0) {
+            // The word that goes back is grey, where you stand is the
+            // head ink (user, 2026-10-15: "is sources supposed to be
+            // gray, eg only one is white"), as the walk's title greys
+            // its neighbours (§1207).
+            Button(action: onTitle) {
+                Text(verbatim: title)
+                    .foregroundStyle(DS.textTertiary)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(RowPress())
+            .accessibilityHint(Text("Shows everything in \(title)"))
+            (Text(verbatim: " · ").foregroundStyle(DS.textTertiary)
+                + Text(verbatim: pick).foregroundStyle(DS.textPrimary))
+        }
+        .dsText(rung)
+        .lineLimit(1)
+        .fixedSize(horizontal: true, vertical: false)
     }
 
     /// The rung's line at its full size, scaled for Dynamic Type as the

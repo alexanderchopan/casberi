@@ -109,6 +109,9 @@ struct DemoBanner: View {
 /// blue, between the search pill and the Wallet; the tap exits, as the top
 /// pill's Exit always did (§919).
 struct DemoTag: View {
+    /// The title's line is shorter than a control's floor (prd §1389); the
+    /// pill's target still reaches it.
+    var height: CGFloat = DS.Hit.min
     @Environment(\.modelContext) private var modelContext
     @Environment(BridgeStore.self) private var store
     @Environment(HomeRoute.self) private var route
@@ -122,7 +125,7 @@ struct DemoTag: View {
         // say … 'exit demo'"): the verb names what the tap does, so the tap
         // does it, no question first (§919; user, of a confirm box: "we don't
         // do that anymore").
-        DSDemoPill(height: DS.Hit.min) {
+        DSDemoPill(height: height) {
             HStack(spacing: DS.Space.s2) {
                 Text("Exit demo")
                     .dsText(.heading17)
@@ -141,6 +144,39 @@ struct DemoTag: View {
         }
         .accessibilityLabel(Text("Exit demo"))
     }
+}
+
+/// **EXIT DEMO STANDS ON THE TITLE'S LINE (prd §1389, user: "that won't
+/// work for exit the demo b/c the tab bar expands. we could put it back in
+/// the header area").** On the phone the pill sits at the trailing end of
+/// the page's title row — "Feed", "Wallet · Holdings", "Library" — in the
+/// air the title leaves, so nothing is pushed down (§1322's reason stands)
+/// and nothing floats over rows (the audit's finding 10). It scrolls away
+/// with the title and comes back at the top. The band is the tab bar and
+/// Search alone; a pushed page carries no mark, as before.
+struct DemoTagOnTitle: ViewModifier {
+    @Environment(HomeRoute.self) private var route
+    @Environment(ShellChrome.self) private var chrome
+
+    func body(content: Content) -> some View {
+        // Beside the title, never over it: a long title ("Wallet · Holdings")
+        // shrinks to fit the room the pill leaves, as it does for a long name.
+        HStack(spacing: DS.Space.s2) {
+            content
+            if DSDemoMark.marking, DSDemoMark.inBand, route.path.isEmpty, !chrome.roomsTray {
+                DemoTag(height: 34)
+                    .fixedSize()
+                    .opacity(chrome.demoLeaving ? 0 : 1)
+                    .animation(DS.Motion.standard, value: chrome.demoLeaving)
+                    .transition(.opacity)
+            }
+        }
+    }
+}
+
+extension View {
+    /// The page's title row carries the demo's way out (prd §1389).
+    func demoTagOnTitle() -> some View { modifier(DemoTagOnTitle()) }
 }
 
 /// The way out.
