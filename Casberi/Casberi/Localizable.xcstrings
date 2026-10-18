@@ -6639,6 +6639,62 @@
         }
       }
     },
+    "Aztec testnet proposal %lld is open for votes until %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "La propuesta %1$lld de la testnet de Aztec está abierta a votación hasta el %2$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztecテストネット提案%1$lldは%2$@まで投票受付中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec 테스트넷 제안 %1$lld 투표가 %2$@까지 진행 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec 测试网提案 %1$lld 开放投票至 %2$@"
+          }
+        }
+      }
+    },
+    "Aztec testnet proposal %lld opens for votes %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "La propuesta %1$lld de la testnet de Aztec abre a votación el %2$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztecテストネット提案%1$lldの投票は%2$@に開始"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec 테스트넷 제안 %1$lld 투표는 %2$@에 시작"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec 测试网提案 %1$lld 将于 %2$@ 开放投票"
+          }
+        }
+      }
+    },
     "Back to %@" : {
       "localizations" : {
         "es" : {
@@ -7391,6 +7447,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "在 iOS 允许 Casberi 刷新时于本机检查，没有服务器替你盯盘。"
+          }
+        }
+      }
+    },
+    "Checking Aztec's testnet" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Comprobando la testnet de Aztec"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztecテストネットを確認中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec 테스트넷 확인 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在检查 Aztec 测试网"
           }
         }
       }
@@ -16133,6 +16217,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "等待你的签名"
+          }
+        }
+      }
+    },
+    "What its apps bring in lands here." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Lo que traen sus apps aparece aquí."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アプリが取り込んだものがここに表示されます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "앱이 가져온 항목이 여기에 표시됩니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "它的应用带来的内容会出现在这里。"
           }
         }
       }
