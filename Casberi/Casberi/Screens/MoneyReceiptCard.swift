@@ -615,9 +615,9 @@ struct MoneyReceiptBox: View {
     @ViewBuilder
     private func swapMark(_ name: String, app: Bool) -> some View {
         if app {
-            BridgeIcon(name: name, size: 48, circular: true)
+            BridgeIcon(name: name, size: DS.Mark.tile, circular: true)
         } else {
-            AssetMark(name: name, size: 48)
+            AssetMark(name: name, size: DS.Mark.tile)
         }
     }
 
