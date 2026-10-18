@@ -67114,3 +67114,7 @@ The audit (the design canvas "Casberi Design Audit") found the same idea drawn t
 9. **The invitation says what it does.** With Find alone as the ground (the ask is deleted, §1047), the composer's field says "Search"; "Ask or search" stays for a ground that can answer.
 
 **Open from the audit, awaiting the user:** finding 3 (the "Needs you · Work" eyebrow: one group word, or one list now that every row names its app) and finding 10 (the Holdings treemap's fill, the tray's faceless wallets, the Exit demo pill over rows).
+
+## §1387 — Day's Needs you keeps its places, each as the one group word (amends §1340's "Needs you · Wallet" eyebrow; closes §1386's open finding 3) (user, 2026-10-17: "For 3 go with A: keep the per-place split, but as the one group header word")
+
+The rows that need you stay gathered by the place they came from, so the Wallet's and Work's do not mix into one list. The word over each group is `DSGroupHeader` — "Needs you · Wallet", "Needs you · Work" — at the rung "Today" and "Tuesday" wear in the same section, never a grey `label12` eyebrow of its own: one subhead voice in the Feed. The rows under it are the Feed's row (§1386 item 5).

@@ -73,14 +73,12 @@ extension FeedScreen {
         }
         ForEach(order, id: \.self) { place in
             let mine = rows.filter { placeOf[$0.id] == place }
-            Text(verbatim: "\(Self.needsYouGroup) · \(place)")
-                .dsText(.label12)
-                .foregroundStyle(DS.textSecondary)
-                .padding(.top, place == order.first ? 0 : DS.Space.s3)
-                .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DSRoomChassis.rowInset,
-                                          bottom: 0, trailing: DSRoomChassis.rowInset))
+            // THE PLACE IS THE ONE GROUP WORD (prd §1387, user: "keep the
+            // per-place split, but as the one group header word"): "Needs
+            // you · Wallet" at the rung "Today" and "Tuesday" wear, never a
+            // grey eyebrow of its own (§1386's finding 3).
+            DSGroupHeader(word: "\(Self.needsYouGroup) · \(place)")
                 .feedRowBackground()
-                .listRowSeparator(.hidden)
             // Keyed by value, read live (`ThingRowKeying`, the liveness rule).
             ForEach(Array(keyed(mine).enumerated()), id: \.element.id) { i, item in
                 if let thing = item.live {

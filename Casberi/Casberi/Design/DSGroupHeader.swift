@@ -12,7 +12,8 @@ struct DSGroupHeader: View {
             .dsText(.heading24)
             .foregroundStyle(DS.textPrimary)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.leading, DSRoomChassis.inset)
+            // The rows' own column (prd §1387): "Today" and the marks stand there.
+            .padding(.leading, DSRoomChassis.rowInset)
             .padding(.top, DS.Space.s6)
             .padding(.bottom, DS.Space.s1)
             .listRowInsets(EdgeInsets())
