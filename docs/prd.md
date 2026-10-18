@@ -67206,3 +67206,15 @@ A fired alert lands a Markets row tagged Alert under `alert:<id>:<when>` (§1081
 - **A follow notice**: the face, `@handle`, `network · Followed you` and the day; the Follow tile says the rest. `SocialPersonBox` is deleted.
 
 The reading kinds with a figure of their own (a chart, a work or purchase reading, an agent chat, a note, L2BEAT, Privy, a cited passage, media) keep their frames for now.
+
+## §1398 — The last frames take the centred head: the figure goes under the tiles (completes §1397; amends §1186's media and picture frames, §1188's chart, §1190's purchase and work, §1191's news, the note sheets' §399 heads) (user, 2026-10-18: "yes" to the face, the name and one line on top for all of them, the figure under the tiles)
+
+A price chart, a work item, a purchase, an agent chat, a chat transcript, a journal entry, a vault note, a kept passage, a track or video, a screenshot and a review notice open on `SheetPartyHead` — the app's mark (an asset's mark for a chart), the name, the app with the day — then the centred tiles, then the thing's own figure under them. A picture, a player and a receipt keep the room box's size there (`dsRoomBox`); a figure made of words (a work item's status, a passage, a chat's turns, a review's headline, a vault note) takes its own height in the rows' column, since the box's fixed height stood it in air. A journal entry draws its box only for its photograph; the head already says the app and the day. The picture frame's seam line is deleted: the title's line half is the head's line. `DSRoomTitleRow` stands on one sheet now, the flagged transfer's (§1377).
+
+## §1398 — Newest is never day-bound (amends §1331 item 4, §1256) (user, 2026-10-18, past midnight: "did we get rid of the 'newest' category in feed? it's not showing up for me" — "or is it because it's midnight and its reset?"; asked what is best, "ok.")
+
+It was midnight. Newest (§1256) read today's rows, so past midnight, before anything arrived, the card had nothing and hid itself; Home was the box and "Nothing yet today". The box never does that: it falls back to the newest kept thing (§1136i, "this needs to be populated w/ the newest thing").
+
+**Ruling.** Newest matches the box: the five newest live things across the Feed's own categories, whatever day they came from. The card is named Newest, not Today, so the five newest things are its answer at 00:05 as at 18:00. `FeedScreen.newestThings` reads the whole visible set the box's fallback reads (one bounded pass, no sort), with the standing exclusions: the box's thing and the same news again (§1208j), the Wallet, the testnets and Markets (§1331's `elsewhere`), nothing dated ahead. The category sections under it keep their own promise — today, by category — and are unchanged.
+
+On screen: past midnight, box, "Nothing yet today", then Newest listing last night's five; a thin day with two things shows those two and the three before them; a busy day changes nothing. One difference accepted: Newest reads things, not today's folded rows, so two moves on one object can both stand (the fold is the day sections' rule, §1079).

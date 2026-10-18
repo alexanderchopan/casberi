@@ -234,7 +234,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1536 of 1605 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1538 of 1607 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1772,6 +1772,8 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1395 — Deleting a price alert clears its Went off rows, and a Went off row deletes from its long press (amends §1081's Alert…
 - §1396 — Under the tiles, one voice; over them, three things (amends §1394's head and fact rows, §1181's history and year, §11…
 - §1397 — Every thing sheet wears the centred head (extends §1396 to mail, post, article, event, contact, link and the follow n…
+- §1398 — The last frames take the centred head: the figure goes under the tiles (completes §1397; amends §1186's media and pic…
+- §1398 — Newest is never day-bound (amends §1331 item 4, §1256)
 
 ## Dead rulings → what replaced them (generated)
 
