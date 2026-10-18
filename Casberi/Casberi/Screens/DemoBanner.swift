@@ -164,10 +164,12 @@ struct DemoTagOnTitle: ViewModifier {
         HStack(spacing: DS.Space.s2) {
             content
             if DSDemoMark.marking, DSDemoMark.inBand, route.path.isEmpty, !chrome.roomsTray {
+                // The tag stands on the surface the shell already drains
+                // (`MainSurface`'s own `demoLeaving` opacity), so it reads no
+                // drain of its own: the pill's opacity is its entrance alone
+                // (`demo-marking-audit.py`).
                 DemoTag(height: 34)
                     .fixedSize()
-                    .opacity(chrome.demoLeaving ? 0 : 1)
-                    .animation(DS.Motion.standard, value: chrome.demoLeaving)
                     .transition(.opacity)
             }
         }
