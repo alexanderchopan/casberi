@@ -1867,6 +1867,34 @@
         }
       }
     },
+    "%@ · Followed you" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ · Te siguió"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ · あなたをフォローしました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ · 회원님을 팔로우했습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ · 关注了你"
+          }
+        }
+      }
+    },
     "%@ · Renews %@" : {
       "localizations" : {
         "es" : {
