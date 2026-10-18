@@ -31,7 +31,7 @@ extension FeedScreen {
     /// order, the Wallet (its own place) and Testnets (the tray's) excepted.
     var scrollCategories: [String] {
         let all = HomeScope.feedCategories(chips: chrome.chipOrder)
-        // THE PANE CARRIES DAY (prd §1398): beside a pane the Feed's Day
+        // THE PANE CARRIES DAY (prd §1403): beside a pane the Feed's Day
         // section — the week, the next thing, Needs you, the days — stands
         // under the Feed's box in the pane, and the list column lists the
         // rest; the pane's own instance draws Day and nothing else.
@@ -179,7 +179,7 @@ extension FeedScreen {
         case RoomAccounts.dayRoom:
             dayFeedSections(nextEventID: nextEventID,
                             rows: source == RoomAccounts.dayRoom ? things : nil)
-                // The pane's rows (prd §1398): drawn there, never in a list
+                // The pane's rows (prd §1403): drawn there, never in a list
                 // column beside one.
                 .environment(\.dsPaneBoxRow, true)
         case RoomAccounts.lifeRoom:
@@ -933,7 +933,7 @@ struct SectionPanelGroup<Header: View, Rows: View>: View {
 
     @ViewBuilder
     var body: some View {
-        // A panel stands where its rows stand (prd §1398): the list's in the
+        // A panel stands where its rows stand (prd §1403): the list's in the
         // list column, the pane's in the pane.
         if (place == .paneBox && !paneRow) || (place == .listWithoutBox && paneRow) {
             EmptyView()

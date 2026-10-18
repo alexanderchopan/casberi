@@ -283,16 +283,16 @@ guard DSRoomScopeChrome.swift "chrome.accountRail = rail" \
 # so the rail mounts only where the iPad/Mac rail stands (`showsRail`).
 # §959 moved the social, GitHub and Pinterest rails under the same `if
 # showsRail {` block, so the mount is read inside `roomFaces`, not off one line.
-# **THE ACCOUNT STRIP LEFT THE BAND (prd §1400).** On the rail layout the
+# **THE ACCOUNT STRIP LEFT THE BAND (prd §1405).** On the rail layout the
 # accounts are a menu on the room's title (`FeedScreen.accountTitleMenu`,
 # read off the rail the chrome publishes); the band keeps the social faces
-# only. A strip back in `roomFaces` is the floating band §1400 deleted.
+# only. A strip back in `roomFaces` is the floating band §1405 deleted.
 awk '/private var roomFaces: some View/{on=1} on&&/^    }$/{exit} on' Casberi/Casberi/Shell/MainSurface.swift \
        | grep -qE '^ +accountRail$' \
-  && fail "the account rail is back in the band's faces (prd §1400 moved it to the title's menu)"
+  && fail "the account rail is back in the band's faces (prd §1405 moved it to the title's menu)"
 grep -q "var accountTitleMenu: some View" Casberi/Casberi/Screens/FeedScreen+RoomTitle.swift \
   && grep -q "chrome.accountRail, rail.source == source, rail.slots.count > 1" Casberi/Casberi/Screens/FeedScreen+RoomTitle.swift \
-  || fail "the title's account menu no longer reads the rail the chrome publishes (prd §1400)"
+  || fail "the title's account menu no longer reads the rail the chrome publishes (prd §1405)"
 deny DSRoomScopeChrome.swift "DSAccountDeck(" \
   "the account deck is back — the faces over the figure read as a contacts header (§750)"
 # THE SWIPE IS THE ROOM'S, NOT THE SCOPES' (user ruling, prd §747: "inside can't
@@ -306,7 +306,7 @@ deny DSScopeTiles.swift "DragGesture" \
 # above the chrome takes its own insets and the List's section spacing, and the
 # tiles walk up and down as you pick (user, 2026-09-15).
 chrome_bare=$(sed -e 's://.*$::' Casberi/Casberi/Design/DSRoomScopeChrome.swift)
-# The lead stands only where the box draws (prd §1398): beside a pane the
+# The lead stands only where the box draws (prd §1403): beside a pane the
 # column leaves it to the pane, so the line is gated — same place, one gate.
 lead_at=$(print -r -- "$chrome_bare" | grep -nE "^            (lead|if boxPlace != \.listWithoutBox \{ lead \})$" | head -1 | cut -d: -f1 || true)
 tiles_at=$(print -r -- "$chrome_bare" | grep -n "DSScopeTiles(" | head -1 | cut -d: -f1 || true)

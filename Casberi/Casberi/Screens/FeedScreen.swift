@@ -103,7 +103,7 @@ struct FeedScreen: View {
     let pinnedWalletSection: WalletSection?
     /// In a sheet a push draws the seat's back door and its clearance (prd §1304).
     @Environment(\.dsInSheet) var inPresentedSheet
-    /// Where this room's box draws (prd §1398): in this list, in the pane
+    /// Where this room's box draws (prd §1403): in this list, in the pane
     /// beside it, or this instance IS the pane's box.
     @Environment(\.dsRoomBoxPlace) var roomBoxPlace
 
@@ -949,7 +949,7 @@ struct FeedScreen: View {
         // root of the app's deepest view tree, the one the 8MB main-stack
         // history is about, and neither iPhone nor iPad gains anything here.
         #if targetEnvironment(macCatalyst)
-        // THE PANE'S BOX READS ITS OWN STATE HERE (prd §1398, measured
+        // THE PANE'S BOX READS ITS OWN STATE HERE (prd §1403, measured
         // 2026-10-18): the Wallet's balance is read inside the chrome's crown,
         // a closure a CHILD's body runs, and a `@State` read only there never
         // re-evaluated this body — the pane's instance logged its balance
@@ -2021,7 +2021,7 @@ struct FeedScreen: View {
             #endif
             if isActive { land() }
             // The pane's box is nobody's landing, but it draws the Wallet's
-            // balance and its line (prd §1398), so it reads them.
+            // balance and its line (prd §1403), so it reads them.
             else if roomBoxPlace == .paneBox {
                 streamBlock(); loadWalletLive()
                 // A store that lands after the mount (a demo poured in the
@@ -2066,7 +2066,7 @@ struct FeedScreen: View {
                 }) {
                 selectedWallet = nil
             }
-            // The pane's box reads the Wallet too (prd §1398): it draws the
+            // The pane's box reads the Wallet too (prd §1403): it draws the
             // balance and its line, and nothing else loads them for it.
             if isActive || roomBoxPlace == .paneBox { streamBlock(); loadWalletLive() }
         }

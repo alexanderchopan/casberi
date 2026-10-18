@@ -69,7 +69,7 @@ struct SettingsHome: View {
 
 
     /// Casberi's folder: a card of tiles over the page on the phone (§1321),
-    /// a list in the pane beside Library where there is one (prd §1400).
+    /// a list in the pane beside Library where there is one (prd §1405).
     private func openCasberiFolder() {
         #if DEBUG
         NSLog("[Casberi] casberiFolder| split=%d path=%d sheet=%d place=%@ hosts=%d",
@@ -350,7 +350,7 @@ struct SettingsHome: View {
         }
         .onChange(of: chrome.settingsPick, initial: true) { _, pick in
             guard let pick else { return }
-            // Every door to the folder takes the same one (prd §1400): the
+            // Every door to the folder takes the same one (prd §1405): the
             // pane where Library has one, the card over the page elsewhere.
             if pick == .casberi { openCasberiFolder() }
             else { withAnimation(DS.Motion.standard) { casberiOpen = false } }

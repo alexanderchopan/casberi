@@ -57,13 +57,13 @@ extension FeedScreen {
             DSRoomTitleRow(title: roomName, pick: roomPick, onTitle: clearRoomPick)
                 .demoTagOnTitle()
             // THE ACCOUNTS ARE A MENU ON THE TITLE where the rail stands (prd
-            // §1400): the strip that floated over the rows in the band is
-            // gone, and the Mac has no tray to pick from (§1397).
+            // §1405): the strip that floated over the rows in the band is
+            // gone, and the Mac has no tray to pick from (§1402).
             accountTitleMenu
         }
     }
 
-    /// The wallet family's accounts beside the title (prd §1400): every slot
+    /// The wallet family's accounts beside the title (prd §1405): every slot
     /// the room published, the act it leads with (Follow a wallet), the one
     /// showing ticked. Regular width only; the phone picks from the tray.
     @ViewBuilder

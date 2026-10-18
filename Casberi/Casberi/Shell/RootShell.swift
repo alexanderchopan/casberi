@@ -417,7 +417,7 @@ struct RootShell: View {
         .onChange(of: filter.source, initial: true) { _, _ in
             updateMacWindowTitle()
         }
-        // The demo's mark is the window title (prd §1400), and the Casberi
+        // The demo's mark is the window title (prd §1405), and the Casberi
         // menu's Exit Demo leaves it the way the pill's Exit did.
         .modifier(MacDemoWatch(demoActive: demoActive, exitRequest: chrome.demoExitRequest,
                                onTitle: updateMacWindowTitle, onExit: exitDemoFromMenu))
@@ -4685,7 +4685,7 @@ struct RootShell: View {
     /// `nil` reverts the title bar to the app's own display name (Info.plist
     /// `CFBundleDisplayName`) — the "All" case, so an unscoped feed reads as
     /// plain "Casberi" exactly as it always has.
-    /// Exit Demo, from the Casberi menu (prd §1400).
+    /// Exit Demo, from the Casberi menu (prd §1405).
     private func exitDemoFromMenu() {
         DemoLeave.run(context: modelContext, store: bridges, route: sceneState.route,
                       filter: sceneState.filter, chrome: chrome)
@@ -4697,7 +4697,7 @@ struct RootShell: View {
         // "whichever window is frontmost", so with two open, one window
         // changing source retitled the other.
         let room = filter.source == "All" ? nil : filter.source
-        // THE DEMO'S MARK (prd §1400): the title bar is drawn for the demo's
+        // THE DEMO'S MARK (prd §1405): the title bar is drawn for the demo's
         // length and says what the pill said; Exit Demo is in the Casberi menu.
         if DSDemoMark.inWindowTitle, DSDemoMark.marking {
             windowScene?.title = [room, String(localized: "Demo · Not your things")]
@@ -4971,7 +4971,7 @@ struct AztecSignAsk: Identifiable {
 }
 
 #if targetEnvironment(macCatalyst)
-/// The demo's two Mac hooks (prd §1400), as ONE modifier on the shell's
+/// The demo's two Mac hooks (prd §1405), as ONE modifier on the shell's
 /// chain: the window title follows the demo in and out, and the Casberi
 /// menu's Exit Demo leaves it. A struct of its own because the shell's chain
 /// is at the type-checker's budget — two more `onChange` closures on it

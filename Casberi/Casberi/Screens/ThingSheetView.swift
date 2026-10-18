@@ -20,7 +20,7 @@ import Translation
 struct ThingSheetView: View {
     /// Inside a sheet's stack the next step pushes (prd §1238).
     @Environment(\.dsInSheetStack) private var inSheetStack
-    /// Drawn in the Mac's pane (prd §1399): the verbs are the pane's header
+    /// Drawn in the Mac's pane (prd §1404): the verbs are the pane's header
     /// row, and no chevron stands at the top.
     @Environment(\.dsInPane) private var inPane
     /// A note's Share in the pane rises as the share tray (its key is a
@@ -530,8 +530,8 @@ struct ThingSheetView: View {
                 // media, then spec — each a beat behind the last, one-shot.
                 if !ownHead || (onBack != nil && !inPane) {
                 HStack(spacing: DS.Space.s3) {
-                    // NO CHEVRON IN THE PANE (prd §1399, §752): Escape or the
-                    // open row again returns to the box (§1398).
+                    // NO CHEVRON IN THE PANE (prd §1404, §752): Escape or the
+                    // open row again returns to the box (§1403).
                     if let onBack, !inPane {
                         Button(action: onBack) {
                             Image(systemName: "chevron.left")
@@ -1279,7 +1279,7 @@ struct ThingSheetView: View {
             if pagedNote, !inPane { keptNoteBand }
         }
         // In the pane the note's three keys are the pane's header row (prd
-        // §1399), published as every dial's are.
+        // §1404), published as every dial's are.
         .onAppear { if pagedNote, inPane { publishNoteKeys() } }
         .onChange(of: NoteLock.isLocked(thing)) { _, _ in if pagedNote, inPane { publishNoteKeys() } }
         .onChange(of: openedLock != nil) { _, _ in if pagedNote, inPane { publishNoteKeys() } }
@@ -2342,7 +2342,7 @@ struct ThingSheetView: View {
         NoteSheetSource.isKeptNote(thing) && thing.kind == .note
     }
 
-    /// The note's keys as the pane's row (prd §1399): what `keptNoteBand`
+    /// The note's keys as the pane's row (prd §1404): what `keptNoteBand`
     /// draws as discs, one pill each, Edit the note's own act.
     private func publishNoteKeys() {
         var verbs: [ShellChrome.PaneVerb] = []

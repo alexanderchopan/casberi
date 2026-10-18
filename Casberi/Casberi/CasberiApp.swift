@@ -305,7 +305,7 @@ struct CasberiApp: App {
                 }
                 .keyboardShortcut("r", modifiers: .command)
             }
-            // The demo's way out on the Mac (prd §1400): its mark is the
+            // The demo's way out on the Mac (prd §1405): its mark is the
             // window title, which cannot be pressed.
             CommandGroup(after: .appInfo) {
                 Button("Exit Demo") { focusedChrome?.demoExitRequest += 1 }
@@ -326,7 +326,7 @@ struct CasberiApp: App {
                 }
                 .keyboardShortcut("[", modifiers: .command)
             }
-            // ⌘1–⌘3 open the three places (prd §1397; ⌘1–⌘9 switched the
+            // ⌘1–⌘3 open the three places (prd §1402; ⌘1–⌘9 switched the
             // source chip in that position from 2026-07-28, Safari's
             // numbered-tab grammar, against `chipOrder`). The rail is the
             // phone's tab bar now — Feed · Wallet · Library — so the keys
@@ -342,7 +342,7 @@ struct CasberiApp: App {
                     .keyboardShortcut(KeyEquivalent(Character("\(i + 1)")), modifiers: .command)
                 }
             }
-            // ⌘⌥1–⌘⌥4 — the verbs of the thing open in the pane (prd §1399),
+            // ⌘⌥1–⌘⌥4 — the verbs of the thing open in the pane (prd §1404),
             // the pane's header row from the keyboard. Positional, as the
             // row reads; disabled past the row's end (§360).
             CommandGroup(after: .toolbar) {

@@ -183,14 +183,14 @@ grep -q 'CategoryFold.isCategory(label)' "$TMP/main.nc" \
 # protects is the `roomFigure` lesson wearing the other face — not a guard that
 # cannot pass, but one that passes while proving nothing.
 #
-# What SURVIVES is the half that was never about the tray. Until prd §1397
+# What SURVIVES is the half that was never about the tray. Until prd §1402
 # Mac's ⌘1–⌘9 addressed the chip strip and had to resolve a folded label
 # before writing a source; the strip is gone and the keys are ⌘1–⌘3, the
 # three places, taken through the one door every tab press takes
 # (`PlaceTab.open`). A key that wrote `filter.source` by hand would land
 # Library — a place, not a source — in the same dead room.
 grep -q 'PlaceTab.open(tab, chrome: chrome, route: scene.route)' "$TMP/app.nc" \
-  || { echo "✗ ⌘1–⌘3 no longer take PlaceTab.open — a key must take the door its tile takes (prd §1397)"; \
+  || { echo "✗ ⌘1–⌘3 no longer take PlaceTab.open — a key must take the door its tile takes (prd §1402)"; \
        echo "  into FeedFilter.source and open a permanently empty room."; exit 1; }
 
 # The catch-bob and coin-flip key on the chip that is actually SHOWING. Keyed
@@ -643,10 +643,10 @@ _controls=$(awk '/private var roomControls: some View/{f=1;print;next} f&&(/^   
   && { echo "✗ roomControls emits a face rail as its own strip again (§753) — the faces"; \
        echo "  ride the folder capsule, after the venues."; exit 1; }
 _inFolder=$(grep -c 'inFolder: true' "$TMP/main.nc" || true)
-# One rail since the accounts became a menu on the title (prd §1400; two
+# One rail since the accounts became a menu on the title (prd §1405; two
 # since GitHub's and Pinterest's left with their rooms, §1060): social.
 [[ "$_inFolder" -eq 1 ]] \
-  || { echo "✗ the shell passes inFolder: true $_inFolder times, not 1 (§753, §1400) — a rail drawn"; \
+  || { echo "✗ the shell passes inFolder: true $_inFolder times, not 1 (§753, §1405) — a rail drawn"; \
        echo "  in the capsule without it brings its own glass, scroll view and captions."; exit 1; }
 # --- the capsule always says WHERE YOU ARE (prd §754) ------------------------
 # The closed capsule carried the faces ALONE for a day (user: "this isn't how we

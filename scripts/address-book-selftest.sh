@@ -436,13 +436,13 @@ grep -q 'AddressBookScreen()' "$SHELL_MAIN" \
 # choice; the same move a devnet rail made the same day). The arithmetic
 # that motivated the original cap-only rule still applies at fewer slots: two
 # trailing doors plus five faces plus All is 402pt against a 393pt phone.
-# The wallet rail itself left the band for a menu on the title (prd §1400),
+# The wallet rail itself left the band for a menu on the title (prd §1405),
 # so the shell holds no rail to carry an add slot; the menu LEADS with the
 # room's act (Follow a wallet), which is the roster's own door, once.
 [[ "$(grep -c 'FaceScopeRail(' "$SHELL_MAIN")" -eq 1 ]] \
-  || { echo "✗ the shell mounts more than the social face rail — a wallet rail back in the band would carry its add slot again (§466, §1400)"; exit 1; }
+  || { echo "✗ the shell mounts more than the social face rail — a wallet rail back in the band would carry its add slot again (§466, §1405)"; exit 1; }
 grep -q 'if let action = rail.action' Casberi/Casberi/Screens/FeedScreen+RoomTitle.swift \
-  || { echo "✗ the title's account menu no longer leads with the room's act (§1400, §1107)"; exit 1; }
+  || { echo "✗ the title's account menu no longer leads with the room's act (§1405, §1107)"; exit 1; }
 grep -q 'addTitle: wallet.canWatchMore ? String(localized: "Add a wallet") : nil' "$SHELL_MAIN" \
   && { echo "✗ the wallet rail's add slot came back cap-gated — §466 removed it outright, not just at five of five"; exit 1; }
 # THE WAY ONWARD (§460). The roster is a connect page and was the one screen in

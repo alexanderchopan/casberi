@@ -1,12 +1,12 @@
 import SwiftUI
 
-/// **THE PANE'S HEADER ROW (prd §1399).** The verbs a thing open in the pane
+/// **THE PANE'S HEADER ROW (prd §1404).** The verbs a thing open in the pane
 /// published (`ShellChrome.paneVerbs`), as 28pt pills on one line: the
 /// thing's own act in the pick's ink, the rest grey (§1385), each a `Chip`
 /// so the pane's toolbar and the app's one choice pill are one drawing.
 /// Mail's and Notes' shape: the acts beside the reading, never thumb discs
 /// floating over it, and no chevron at the top (§752; Escape or the open
-/// row again returns to the box, §1398).
+/// row again returns to the box, §1403).
 struct PaneVerbBar: View {
     @Environment(ShellChrome.self) private var chrome
 

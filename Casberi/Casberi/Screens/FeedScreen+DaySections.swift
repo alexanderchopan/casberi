@@ -288,7 +288,7 @@ extension FeedScreen {
         // the day's empty state while there is anything to show.
         let homeCover = ledeThing ?? fallbackCover
         homeLead(homeCover, heroShown: heroShown)
-        // THE PANE'S FEED BOX CARRIES THE DAY (prd §1398): under today's
+        // THE PANE'S FEED BOX CARRIES THE DAY (prd §1403): under today's
         // cover, the week, the next thing, Needs you and the days ahead —
         // the phone's Day section — in the pane's instance only. The list
         // column's Feed on a regular surface groups by category (§1152) and
@@ -714,7 +714,7 @@ extension FeedScreen {
     func ledeListRow(_ thing: Thing,
                              top: CGFloat = DS.Space.s2,
                              bottom: CGFloat = DSRoomChassis.leadGap) -> some View {
-        // The cover is the box (prd §1398): the pane's where there is one.
+        // The cover is the box (prd §1403): the pane's where there is one.
         if roomBoxPlace != .listWithoutBox {
         Button {
             openThing(thing)

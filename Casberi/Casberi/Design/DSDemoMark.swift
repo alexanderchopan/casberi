@@ -50,7 +50,7 @@ enum DSDemoMark {
         #endif
     }
 
-    /// **ON THE MAC THE MARK IS THE WINDOW TITLE (prd §1400).** "Demo · Not
+    /// **ON THE MAC THE MARK IS THE WINDOW TITLE (prd §1405).** "Demo · Not
     /// your things" in the title bar, drawn visible for the demo's length,
     /// and Exit Demo in the Casberi menu; no pill floats over the list and
     /// no screen reserves a band.

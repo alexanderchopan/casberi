@@ -136,7 +136,7 @@ struct VerbDial: View {
     @State private var copied: Verb.ID?
     /// The system share sheet, raised by the Share disc.
     @State private var sharing = false
-    /// In the pane the dial is the pane's header row (prd §1399).
+    /// In the pane the dial is the pane's header row (prd §1404).
     @Environment(\.dsInPane) private var inPane
     @Environment(ShellChrome.self) private var chrome
 
@@ -155,7 +155,7 @@ struct VerbDial: View {
         let tiles = self.tiles
         Group {
             if inPane {
-                // THE PANE'S TOOLBAR ROW (prd §1399): the tiles are published
+                // THE PANE'S TOOLBAR ROW (prd §1404): the tiles are published
                 // to the shell, which draws them at the pane's head; nothing
                 // stands here but the share sheet's host.
                 Color.clear.frame(width: 0, height: 0)
@@ -213,7 +213,7 @@ struct VerbDial: View {
         return out
     }
 
-    /// The pane's row (prd §1399): the thing's first act is its own.
+    /// The pane's row (prd §1404): the thing's first act is its own.
     private func publishToPane(_ tiles: [SheetTile]) {
         let verbs = tiles.enumerated().map { i, tile in
             ShellChrome.PaneVerb(id: tile.id, label: tile.label, glyph: tile.glyph,

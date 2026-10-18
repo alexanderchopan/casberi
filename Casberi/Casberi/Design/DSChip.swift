@@ -36,7 +36,7 @@ struct Chip: View {
     /// pickers do; a chip on its own still hugs its word.
     var fills = false
     /// An ink of the caller's in place of the choice's own: the pane's
-    /// toolbar row draws a thing's own act in `DS.pickInk` (prd §1399).
+    /// toolbar row draws a thing's own act in `DS.pickInk` (prd §1404).
     var ink: Color? = nil
 
     var body: some View {

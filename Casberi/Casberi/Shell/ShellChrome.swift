@@ -1176,7 +1176,7 @@ final class ShellChrome {
     /// Written by the active `FeedScreen`, which only compiles this on Mac.
     var walkOrder: [String] = []
 
-    /// **THE PANE'S VERBS ARE A TOOLBAR ROW (prd §1399).** A thing open in
+    /// **THE PANE'S VERBS ARE A TOOLBAR ROW (prd §1404).** A thing open in
     /// the pane publishes its acts here — the reading sheet's dial, a note's
     /// Share · Lock · Edit — and the pane draws them as one row of 28pt pills
     /// at its head (`PaneVerbBar`), the menu bar lists them with ⌘⌥1–⌘⌥4.
@@ -1191,7 +1191,7 @@ final class ShellChrome {
         let run: () -> Void
     }
     var paneVerbs: [PaneVerb] = []
-    /// Exit Demo from the Casberi menu (prd §1400): `RootShell` runs
+    /// Exit Demo from the Casberi menu (prd §1405): `RootShell` runs
     /// `DemoLeave` on the bump, as the pill's Exit did.
     var demoExitRequest = 0
     var paneVerbsOwner: String?

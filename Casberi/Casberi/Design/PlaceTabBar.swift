@@ -49,7 +49,7 @@ enum PlaceTab: String, CaseIterable, Identifiable {
     /// A tab pressed (prd §1327): the place's own door, the one its tile and
     /// the face took before. The Feed's, pressed on the Feed, returns to the
     /// top (§1280's face); Library is Sources' place (§1321). ONE door for
-    /// the phone's bar, the rail (prd §1397) and ⌘1–⌘3.
+    /// the phone's bar, the rail (prd §1402) and ⌘1–⌘3.
     @MainActor static func open(_ tab: PlaceTab, chrome: ShellChrome, route: HomeRoute) {
         withAnimation(DS.Motion.standard) {
             chrome.roomsTray = false

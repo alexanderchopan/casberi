@@ -274,7 +274,7 @@ final class PadDetailSelection {
     @discardableResult
     func present(_ thing: Thing, walk: WalkScope = .none) -> Bool {
         guard paneActive, thing.isLive else { return false }
-        // The open row pressed again gives the box back (prd §1398), as
+        // The open row pressed again gives the box back (prd §1403), as
         // Escape does.
         if let open = self.thing, open.id == thing.id { clear(); return true }
         withAnimation(DS.Motion.standard) { self.thing = thing; self.walk = walk }

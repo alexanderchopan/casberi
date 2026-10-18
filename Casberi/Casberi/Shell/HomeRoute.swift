@@ -80,7 +80,7 @@ final class HomeRoute {
         /// ever placed in `accountsPane`: on a layout with no pane the same
         /// rows raise their sheets, as they always have.
         case settingsPage(SettingsPage)
-        /// CASBERI'S SETTINGS FOLDER, AS A LIST IN THE PANE (prd §1400, the
+        /// CASBERI'S SETTINGS FOLDER, AS A LIST IN THE PANE (prd §1405, the
         /// Mac half of §1321's folder tiles): where Library has a pane the
         /// folder opens beside it, each setting a row, and a row's page
         /// stacks on it so Back returns to the folder.

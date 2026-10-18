@@ -57,7 +57,7 @@ struct DSRoomScopeChrome<Scope: DSTileScope, Crown: View, Figure: View>: View {
     /// The section's own drawing, off Home. Drawn HERE, in the box the crown
     /// takes on Home, never as a sibling `Section` above the chrome (prd §765).
     @ViewBuilder let figure: (Scope) -> Figure
-    /// Where the box draws (prd §1398): the lead stands in the pane where
+    /// Where the box draws (prd §1403): the lead stands in the pane where
     /// there is one, the tiles and the menu in the list; the pane's instance
     /// publishes no rail.
     @Environment(\.dsRoomBoxPlace) private var boxPlace
@@ -111,7 +111,7 @@ struct DSRoomScopeChrome<Scope: DSTileScope, Crown: View, Figure: View>: View {
         // (`ledeListRow`), while this row started at 0 with `contentGap`.
         // The same two numbers here, so the tiles land at one y everywhere.
         VStack(alignment: .leading, spacing: DSRoomChassis.leadGap) {
-            // THE BOX IS THE PANE'S where there is one (prd §1398).
+            // THE BOX IS THE PANE'S where there is one (prd §1403).
             if boxPlace != .listWithoutBox { lead }
             // **THE TILES, THEN THE MENU, ON EVERY PAGE (prd §1039).** Home
             // drew Actions and the Overview rows under these until the merge;

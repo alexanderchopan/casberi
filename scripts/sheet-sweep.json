@@ -1726,7 +1726,7 @@
    "covers": [
     "Screens/ThingSheetView.swift:paneNoteSharing"
    ],
-   "why": "the Mac pane's Share pill on a note (prd §1399): the note's phone key is a ShareLink a menu item cannot press, so inside the pane Share rises as the share tray; a phone sweep never stands in a pane, and the Mac sweep has no pointer to press the pill"
+   "why": "the Mac pane's Share pill on a note (prd §1404): the note's phone key is a ShareLink a menu item cannot press, so inside the pane Share rises as the share tray; a phone sweep never stands in a pane, and the Mac sweep has no pointer to press the pill"
   }
  ]
 }

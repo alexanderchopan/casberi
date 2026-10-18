@@ -29,10 +29,10 @@ off within a week, so each one is a mechanical fact with no judgement in it.
        alone, which nothing notices until a signed Catalyst archive fails.
 
     3. THE DIGIT SHORTCUTS. ⌘1–⌘3 open the three places the rail shows
-       (`PlaceTab.allCases`, prd §1397) through the one door every tab press
+       (`PlaceTab.allCases`, prd §1402) through the one door every tab press
        takes (`PlaceTab.open`), never by writing `FeedFilter.source` by hand:
        Library is a place in You, not a source, so a raw write lands a word
-       where no predicate matches it. Until §1397 the run was ⌘1–⌘9 against
+       where no predicate matches it. Until §1402 the run was ⌘1–⌘9 against
        the chip strip's `chipOrder`; the strip is gone, and a key may not
        outlive its control (§360), so a run past the three places is a dead
        key.
@@ -246,13 +246,13 @@ def check_digit_shortcuts(findings):
             "the ⌘1–⌘3 run writes `FeedFilter.source` by hand — the places "
             "are opened by `PlaceTab.open`, never by a source write.")
     # A ⌘-digit run past the three: a ForEach from 1 to 4–9 whose shortcut is
-    # the bare command key. The pane's ⌘⌥1–⌘⌥4 (prd §1399) is another run and
+    # the bare command key. The pane's ⌘⌥1–⌘⌥4 (prd §1404) is another run and
     # another modifier, so the match reads the modifiers.
     if re.search(r"ForEach\(1\.\.\.[4-9].*?keyboardShortcut\(KeyEquivalent[^\n]*modifiers:\s*\.command\)",
                  body, re.S):
         findings.append(
             "a ⌘-digit run past the three places is back — the chip strip "
-            "those keys addressed is gone (prd §1397), and a key may not "
+            "those keys addressed is gone (prd §1402), and a key may not "
             "outlive its control (§360).")
 
 

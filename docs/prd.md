@@ -67194,7 +67194,7 @@ A fired alert lands a Markets row tagged Alert under `alert:<id>:<when>` (§1081
 
 `money-receipt-selftest.sh` holds the head to the column and the state off the rows; `feed-row-skeleton-audit.py` holds the list rows' figures tabular.
 
-## §1397 — The Mac's rail is the tab bar: Feed · Wallet · Library, and Search (amends §273's category rail, §1133f's rail face, §360's ⌘1–⌘9; the Mac half of §1327, §1343, §1347) (design review, 2026-10-17: the Mac is a third of first downloads and its shell was a generation behind the phone — nine categories on the rail, Day twice over)
+## §1402 — The Mac's rail is the tab bar: Feed · Wallet · Library, and Search (amends §273's category rail, §1133f's rail face, §360's ⌘1–⌘9; the Mac half of §1327, §1343, §1347) (design review, 2026-10-17: the Mac is a third of first downloads and its shell was a generation behind the phone — nine categories on the rail, Day twice over)
 
 The phone moved to three tabs — the places you manage — and Day, Notes and every category became sections of the Feed's one scroll. The Mac kept §273's rail: the phone's dock of nine categories turned 90°, listing Day beside a Feed whose first section is Day. The rail is the app's signature and stays (never a sidebar, §875's session); what it lists changes.
 
@@ -67207,7 +67207,7 @@ The phone moved to three tabs — the places you manage — and Day, Notes and e
 
 The phone is untouched: `PlaceTabBar` is the band's, and the rail mounts only where `showsRail`. `SourceChips` keeps its horizontal strip's code for the dock's guards (`dock-selftest.sh`) and no longer mounts on any surface; deleting it is the follow-up (§723).
 
-## §1398 — Where there is a pane, the box lives in it; the list is only a list (amends §760's box on regular-width columns, §248's and 2026-08-02's resting pane, §873's two columns) (user, 2026-10-17: "we don't use the side panel on the right well, it always looks kind of empty")
+## §1403 — Where there is a pane, the box lives in it; the list is only a list (amends §760's box on regular-width columns, §248's and 2026-08-02's resting pane, §873's two columns) (user, 2026-10-17: "we don't use the side panel on the right well, it always looks kind of empty")
 
 The pane at rest drew the newest thing in the whole corpus under a "Latest" label — a note beside the Wallet, and beside the Feed the same note the list already led with — while the list column drew the phone's fixed box and ~350pt of air under it. The phone draws every room as a box over a list, one screen. The Mac has two columns, so the same two parts take one each. Nothing new is designed; the parts are rearranged, and the box stays the fixed-size template §760 made it (user, 2026-09-26): the pane is 400–560pt wide, the phone's width, so the template fits it unchanged.
 
@@ -67218,17 +67218,17 @@ The pane at rest drew the newest thing in the whole corpus under a "Latest" labe
 
 The phone is untouched: no pane, so the place is `.list` everywhere and `leadHeight` does not change. Library's box (the counts) stays in its list column for now: Library's pane is §876's split, and its box in the pane is the follow-up.
 
-## §1399 — The pane's verbs are a toolbar row, and no chevron stands at its top (the Mac half of §1178's tiles and §983's note keys; amends §876's pane) (design review, 2026-10-17: the pane's verbs were the phone's 88pt thumb discs pinned bottom-right)
+## §1404 — The pane's verbs are a toolbar row, and no chevron stands at its top (the Mac half of §1178's tiles and §983's note keys; amends §876's pane) (design review, 2026-10-17: the pane's verbs were the phone's 88pt thumb discs pinned bottom-right)
 
 A thing open in the pane drew the phone's bottom band: a note's Share and Lock discs and its wide Edit key, 88pt tall, floating over the reading; and a back chevron stood at the pane's top, the one control §752 bans there.
 
 1. **Inside the pane** (`\.dsInPane`, set by `MainSurface.detailPane`) **a thing's verbs publish to the shell** (`ShellChrome.paneVerbs`, owned by the thing's id) **and the pane draws them as one row of 28pt pills at its head** (`PaneVerbBar`, each a `Chip`): the reading sheet's dial (`VerbDial`) and a note's keys (`keptNoteBand`) both publish, so the row is Mail's toolbar, not a second drawing. The thing's own act — Edit on a note, the first verb on a sheet — wears `DS.pickInk`; the rest are grey (§1385). A note's Share rises as the share tray (a `ShareLink` cannot be pressed from a menu).
 2. **The menu bar lists them: ⌘⌥1–⌘⌥4**, positional as the row reads, disabled past its end (§360).
-3. **The back chevron is deleted inside the pane.** Escape, or the open row pressed again, returns to the box (§1398).
+3. **The back chevron is deleted inside the pane.** Escape, or the open row pressed again, returns to the box (§1403).
 
 The phone is untouched: nothing sets `dsInPane` on a sheet, so the dial's tiles and the note's foot draw as they did. A reading that ends at its box (§1341) still publishes nothing.
 
-## §1400 — On the Mac: Casberi's folder is a list in the pane, the accounts are a menu on the title, and the demo's mark is the window title (the Mac half of §1321 item 6, §1133's account pick and §919/§1322's mark; amends §876, §1107's account strip on the rail layout) (design review, 2026-10-17)
+## §1405 — On the Mac: Casberi's folder is a list in the pane, the accounts are a menu on the title, and the demo's mark is the window title (the Mac half of §1321 item 6, §1133's account pick and §919/§1322's mark; amends §876, §1107's account strip on the rail layout) (design review, 2026-10-17)
 
 1. **Casberi's settings folder opens in the pane as a list** (`HomeRoute.Node.settingsFolder`, `SettingsFolderPage`: one row per setting, the colophon under them) where Library has a pane; a row's page stacks on it, so Back returns to the folder (`SettingsRows.open` under `dsInPane`). On the phone the folder still springs open as tiles (§1321). Library (`.settings`, since §1321) is the place that hosts the pane's pushes (`paneHostsPushes`); it was Apps, which nothing lands on since §1234.
 2. **The wallet family's accounts are a menu on the room's title** (`FeedScreen.accountTitleMenu`, a `Chip` beside the title: the account showing, else "All accounts"; the list leads with the room's act, Follow a wallet, and ticks the pick) on regular width. The account strip that floated over the rows in the band (`accountRail` in `roomFaces`) is deleted; the social rooms' faces stay in the band for now.
@@ -67236,7 +67236,7 @@ The phone is untouched: nothing sets `dsInPane` on a sheet, so the dial's tiles 
 
 The phone is untouched: no pane, `inBand` keeps its band tag, and the title menu draws only on regular width.
 
-## §1401 — The Mac's type goes one notch down, measured: `macScale` 0.88 → 0.76 (amends §631) (design review, 2026-10-17: "type one notch down, measured")
+## §1406 — The Mac's type goes one notch down, measured: `macScale` 0.88 → 0.76 (amends §631) (design review, 2026-10-17: "type one notch down, measured")
 
 Measured on the Catalyst build at the default 1120pt window: the Feed's title (`heading34`) drew at 30pt and a row's title (`body17`) at 15pt. Mail's and Notes' column titles sit at 24–26pt and their rows at the system's 13pt.
 

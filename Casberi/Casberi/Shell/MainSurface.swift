@@ -604,7 +604,7 @@ struct MainSurface: View {
         // under the cover (`FeedScreen.roomScopeControl`). The rail keeps all
         // of them, where no seat shares the band's edge.
         guard showsRail else { return false }
-        // THE ACCOUNT STRIP LEFT THE BAND (prd §1400): the wallet family's
+        // THE ACCOUNT STRIP LEFT THE BAND (prd §1405): the wallet family's
         // accounts are a menu on the room's title (`FeedScreen.roomTitle`).
         return SocialScopeRail.shows(source: filter.source, accounts: socialAccounts.count)
     }
@@ -672,7 +672,7 @@ struct MainSurface: View {
     /// The social rail's `+N` list is up (prd §824).
     @State private var allFacesShown = false
 
-    // THE ACCOUNT RAIL LEFT THE BAND (prd §1400): the wallet family's accounts
+    // THE ACCOUNT RAIL LEFT THE BAND (prd §1405): the wallet family's accounts
     // are a menu on the room's title (`FeedScreen.accountTitleMenu`), read off
     // the rail the chrome still publishes (`ShellChrome.accountRail`).
 
@@ -841,7 +841,7 @@ struct MainSurface: View {
     @ViewBuilder
     private var railInset: some View {
         if showsRail {
-            // THE RAIL IS THE TAB BAR (prd §1397): the three places and
+            // THE RAIL IS THE TAB BAR (prd §1402): the three places and
             // Search, your face at its head as Library's tile; the category
             // strip turned 90° (§273) went with the phone's dock.
             PlaceRail(current: PlaceTab.current(filter.source),
@@ -1811,7 +1811,7 @@ struct MainSurface: View {
                 // stroke.
                 ThingSheetView(thing: thing, walk: detail.walk, onBack: { detail.clear() })
                     .id(thing.id)
-                    // The pane's verbs are its header row (prd §1399).
+                    // The pane's verbs are its header row (prd §1404).
                     .environment(\.dsInPane, true)
                     .safeAreaInset(edge: .top, spacing: 0) { PaneVerbBar() }
                     // Fill the column BEFORE the ink goes on: `dsInk`'s black
@@ -1881,7 +1881,7 @@ struct MainSurface: View {
     /// The nothing-landed branch (a fresh install) is UNCHANGED — no ink, no
     /// strip, the centered mark on the shell's own poured page.
     @ViewBuilder private var paneRest: some View {
-        // **THE PANE AT REST IS THE ROOM'S BOX (prd §1398, user: "we don't
+        // **THE PANE AT REST IS THE ROOM'S BOX (prd §1403, user: "we don't
         // use the side panel on the right well, it always looks kind of
         // empty").** "Latest" — the newest thing in the whole corpus, a note
         // beside the Wallet and the same note the Feed already led with — is
@@ -1892,7 +1892,7 @@ struct MainSurface: View {
         // next thing, Needs you, the days). Notes' box is the newest note,
         // open. Nothing landed keeps the mark below.
         if HomeScope.Place(source: filter.source) == .settings, let node = route.accountsPane.last {
-            // LIBRARY'S PANE (prd §876, §1400): Casberi's folder, or the
+            // LIBRARY'S PANE (prd §876, §1405): Casberi's folder, or the
             // setting it opened.
             leafRoom(node)
                 .id(node)
@@ -2999,7 +2999,7 @@ struct MainSurface: View {
                             // MainSurface render from rebuilding the whole feed
                             // (measured 15 body builds → 2).
                             .equatable()
-                            // WHERE THE BOX DRAWS (prd §1398): beside a pane
+                            // WHERE THE BOX DRAWS (prd §1403): beside a pane
                             // this column is title, tiles, sections, rows; the
                             // box is the pane's at rest (`paneRest`).
                             .environment(\.dsRoomBoxPlace, showsPane ? .listWithoutBox : .list)

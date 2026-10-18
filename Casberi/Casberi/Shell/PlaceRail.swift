@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// **THE RAIL IS THE TAB BAR (prd §1397, step 1 of the Mac shell pass).**
+/// **THE RAIL IS THE TAB BAR (prd §1402, step 1 of the Mac shell pass).**
 ///
 /// Where the shell draws a rail (`MainSurface.showsRail`: the Mac and a
 /// regular iPad) it lists what the phone's bar lists (`PlaceTabBar`, prd

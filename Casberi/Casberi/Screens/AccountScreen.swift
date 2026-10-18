@@ -22,7 +22,7 @@ struct SettingsRows: View {
     /// Re-injected into every sheet these rows raise — see `presented(_:)`.
     @Environment(ShellChrome.self) private var chrome
     @Environment(\.scenePhase) private var scenePhase
-    /// These rows ARE the pane's folder (prd §1400): a page stacks on it.
+    /// These rows ARE the pane's folder (prd §1405): a page stacks on it.
     @Environment(\.dsInPane) private var inPane
     /// Drives the Data tile's badge: a green lock on device, a blue cloud once
     /// the person turns iCloud sync on.
@@ -63,7 +63,7 @@ struct SettingsRows: View {
         if route.paneHostsPushes {
             DSHaptic.tap()
             // From the folder in the pane a page STACKS, so Back returns to
-            // the folder (prd §1400); from the list it replaces (§876).
+            // the folder (prd §1405); from the list it replaces (§876).
             if inPane { route.push(.settingsPage(page)) }
             else { route.fromAccountsList { route.push(.settingsPage(page)) } }
         } else if route.sheet != nil || SettingsHome.bandSearches {
