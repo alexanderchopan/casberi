@@ -245,7 +245,11 @@ def check_digit_shortcuts(findings):
         findings.append(
             "the ⌘1–⌘3 run writes `FeedFilter.source` by hand — the places "
             "are opened by `PlaceTab.open`, never by a source write.")
-    if re.search(r"ForEach\(1\.\.\.[4-9]", body):
+    # A ⌘-digit run past the three: a ForEach from 1 to 4–9 whose shortcut is
+    # the bare command key. The pane's ⌘⌥1–⌘⌥4 (prd §1399) is another run and
+    # another modifier, so the match reads the modifiers.
+    if re.search(r"ForEach\(1\.\.\.[4-9].*?keyboardShortcut\(KeyEquivalent[^\n]*modifiers:\s*\.command\)",
+                 body, re.S):
         findings.append(
             "a ⌘-digit run past the three places is back — the chip strip "
             "those keys addressed is gone (prd §1397), and a key may not "
@@ -456,7 +460,8 @@ def selftest():
 
         # Mutation B: a ⌘4–⌘9 run against a strip that no longer exists.
         f = []
-        tmp.write_text(FIXTURE_COMMANDS_GOOD + "\n ForEach(1...9, id: \\.self) { n in }\n")
+        tmp.write_text(FIXTURE_COMMANDS_GOOD + "\n ForEach(1...9, id: \\.self) { n in Button(\"x\") {}"
+                       ".keyboardShortcut(KeyEquivalent(Character(\"\\(n)\")), modifiers: .command) }\n")
         check_digit_shortcuts(f)
         case("flags a ⌘-digit run past the three places", len(f), 1)
 

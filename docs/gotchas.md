@@ -140,3 +140,15 @@ Verbatim. CLAUDE.md keeps a one-line index for each, pointing here.
 - **`HomeRoute` is ONE ordered array bound to `NavigationStack(path:)` and resolved by one `navigationDestination(for: HomeRoute.Node.self)`.** Sibling `navigationDestination(item:)` bindings don't nest. A plain valueless `NavigationLink` pushes a frame `path` doesn't track, so a screen that may have something pushed on it enters through `route.path` → docs/gotchas.md
 - **The first frame walks a deep SwiftUI tree and has overflowed the main stack three times.** `OTHER_LDFLAGS -Wl,-stack_size,0x800000` and `ENABLE_DEBUG_DYLIB = NO` are load-bearing. If it recurs, FLATTEN the composition tree, not more stack — a card at an eager screen head renders flat → docs/gotchas.md
 - **A container that has not been sized proposes a PLACEHOLDER, not zero, and a `List` cell born there keeps it (the ~0.3s narrow feed at launch).** The `NavigationStack` hands its root 36pt on the first pass; the room is pinned to a width read by a `GeometryReader` in that same pass, never to `@State` written during it → docs/gotchas.md · prd §805
+
+## A `@State` read only inside a child's body does not rebuild the row that drew it (2026-10-18, prd §1398)
+
+The pane's Wallet box is a second `FeedScreen` told it is the box. Its `portfolio` landed (logged three times) and the chrome's crown — a closure `DSRoomScopeChrome`'s body runs — kept drawing "No balance yet". Reading the state in `FeedScreen.body` made the body re-evaluate, and the `List` row holding the chrome still was not rebuilt. The active page never shows this because its landing and pull remount the row for other reasons. The fix keys the chrome row on the balance in the pane (`.id("paneBalance:…")`). When a quiet instance of a shared view draws a value that lands late, key the row on the value.
+
+## The shell's modifier chain is at the type-checker's budget (2026-10-18)
+
+Two more `.onChange` closures on `RootShell`'s chain made the compiler give up on an UNRELATED DEBUG probe's `filter` closure ("unable to type-check this expression in reasonable time"), and moving that closure out moved the error to the next one. Add a hook to the chain as ONE `ViewModifier` struct (`MacDemoWatch`), never as two closures.
+
+## `-macSnapshot` renders the `UIWindow`, not the title bar (2026-10-18)
+
+The demo's mark is the window title on the Mac (prd §1400); it is not in the PNG, and nothing headless can see it. Check it by eye once, or read `windowScene.title` in a probe.

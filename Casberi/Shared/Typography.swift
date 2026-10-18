@@ -117,7 +117,15 @@ struct DSTextStyle {
     /// `dsGlyph` takes the same factor (see below) — a glyph that held its
     /// size while its label shrank would break the icon↔label pairing §359's
     /// ramp exists to hold.
-    static let macScale: CGFloat = 0.88
+    ///
+    /// **0.76 since prd §1401 (2026-10-18), measured against Mail and Notes
+    /// at the default window:** the Feed's title drew at 30pt and a row at
+    /// 15pt; Mail's and Notes' column titles sit at 24–26 and their rows at
+    /// the system's 13. 0.76 takes 34→26 and 17→13 — the lowest the lever
+    /// goes without the rows undershooting the system, which is the line the
+    /// paragraph above drew. 0.72 would put the title at 24 exactly and the
+    /// rows at 12, under it.
+    static let macScale: CGFloat = 0.76
 
     /// This rung's point size on THIS platform, before Dynamic Type. Rounded
     /// to a whole point: fractional sizes render, but the ramp's own rungs are

@@ -1,8 +1,8 @@
 # The Mac shell pass (2026-10-17 → 18)
 
 Catalyst screenshots, taken headlessly (`-macSnapshot`, the demo poured into a
-scratch store), before and after prd §1397–§1401. The window is the harness's
-1024×768 at 2×.
+scratch store), before and after prd §1397–§1401. The before set is the harness's
+1024×768 at 2×; the after set is the default 1120×760 window (`-macWindowSize 1120x760`).
 
 | Screen   | Before                   | After                    |
 |----------|--------------------------|--------------------------|
