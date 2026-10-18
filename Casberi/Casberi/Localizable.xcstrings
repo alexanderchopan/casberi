@@ -6331,6 +6331,34 @@
         }
       }
     },
+    "An email, an account address or a name like vitalik.eth." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Un correo, una dirección de cuenta o un nombre como vitalik.eth."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "メールアドレス、アカウントのアドレス、またはvitalik.ethのような名前。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이메일, 계정 주소 또는 vitalik.eth 같은 이름."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "电子邮件、账户地址或像 vitalik.eth 这样的名称。"
+          }
+        }
+      }
+    },
     "An event" : {
       "localizations" : {
         "es" : {
@@ -7559,6 +7587,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "连接卡片"
+          }
+        }
+      }
+    },
+    "Connect a wallet" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Conectar una cartera"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ウォレットを接続"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "지갑 연결"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "连接钱包"
           }
         }
       }
@@ -10167,6 +10223,34 @@
         }
       }
     },
+    "Follow a Safe, or an account that signs for one." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Sigue una Safe, o una cuenta que firma por ella."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Safe、またはSafeの署名者であるアカウントをフォローします。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Safe 또는 Safe에 서명하는 계정을 팔로우하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "关注一个 Safe，或为其签名的账户。"
+          }
+        }
+      }
+    },
     "Follow a channel or show" : {
       "localizations" : {
         "es" : {
@@ -10695,6 +10779,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "关注你使用的钱包应用"
+          }
+        }
+      }
+    },
+    "Follow this account" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Seguir esta cuenta"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "このアカウントをフォロー"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 계정 팔로우"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "关注此账户"
           }
         }
       }
@@ -12235,6 +12347,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "新提醒"
+          }
+        }
+      }
+    },
+    "New app account" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Nueva cuenta de app"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "新しいアプリのアカウント"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "새 앱 계정"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "新的应用账户"
           }
         }
       }
@@ -14227,6 +14367,34 @@
         }
       }
     },
+    "Runs as your account" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Se ejecuta como tu cuenta"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "あなたのアカウントとして実行されます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "내 계정으로 실행됩니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "以你的账户身份运行"
+          }
+        }
+      }
+    },
     "Same last four. A different wallet." : {
       "localizations" : {
         "es" : {
@@ -14391,6 +14559,40 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "向你发送了%@"
+          }
+        }
+      }
+    },
+    "Sent you %@ · %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Sent you %1$@ · %2$@"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Te envió %1$@ · %2$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@が届きました・%2$@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@을(를) 보냈습니다 · %2$@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "向你发送了 %1$@ · %2$@"
           }
         }
       }
@@ -14979,6 +15181,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "先取消关注一个；其名称仍保留在你的通讯录中。"
+          }
+        }
+      }
+    },
+    "Stop guarding this account?" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "¿Dejar de proteger esta cuenta?"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "このアカウントの保護をやめますか？"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 계정 보호를 중단할까요?"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "停止守护此账户？"
           }
         }
       }
@@ -17335,6 +17565,40 @@
         }
       }
     },
+    "Following %lld of %lld." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Following %1$lld of %2$lld."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Siguiendo %1$lld de %2$lld."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%2$lld件中%1$lld件をフォロー中。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%2$lld개 중 %1$lld개 팔로우 중."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已关注 %1$lld/%2$lld。"
+          }
+        }
+      }
+    },
     "Following %lld/%lld" : {
       "localizations" : {
         "es" : {
@@ -17499,6 +17763,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "只需关注一个钱包即可。"
+          }
+        }
+      }
+    },
+    "Following an account is all it takes." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Basta con seguir una cuenta."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アカウントをフォローするだけです。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "계정을 팔로우하기만 하면 됩니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "只需关注一个账户。"
           }
         }
       }
@@ -17807,6 +18099,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "来自你的 Wallet"
+          }
+        }
+      }
+    },
+    "From your accounts" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "De tus cuentas"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "あなたのアカウントから"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "내 계정에서"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "来自你的账户"
           }
         }
       }
@@ -19319,6 +19639,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "1 次"
+          }
+        }
+      }
+    },
+    "Once a day" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Una vez al día"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1日1回"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "하루에 한 번"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "每天一次"
           }
         }
       }
@@ -24196,6 +24544,34 @@
         }
       }
     },
+    "%@ across your accounts" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ en tus cuentas"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "あなたのアカウント全体で%@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "내 계정 전체 %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你所有账户中的 %@"
+          }
+        }
+      }
+    },
     "%@ across your wallets" : {
       "localizations" : {
         "es" : {
@@ -24248,6 +24624,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "%@ 个操作"
+          }
+        }
+      }
+    },
+    "%@ acts on its own account — not the accounts you follow here." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ actúa en su propia cuenta, no en las cuentas que sigues aquí."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@は独自のアカウントで動作します。ここでフォローしているアカウントではありません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@은(는) 자체 계정에서 작동하며, 여기서 팔로우하는 계정에서는 작동하지 않습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 在自己的账户上操作，而不是你在这里关注的账户。"
           }
         }
       }
@@ -27632,6 +28036,34 @@
         }
       }
     },
+    "%@ in your account" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ en tu cuenta"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アカウント内の%@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "계정에 %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你账户中的 %@"
+          }
+        }
+      }
+    },
     "%@ in your wallet" : {
       "localizations" : {
         "es" : {
@@ -27758,6 +28190,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "%@ 占全部的 %lld%%"
+          }
+        }
+      }
+    },
+    "%@ is a zk.money account: its balance and payments are private. Its deposits and withdrawals show on the accounts that make them." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ es una cuenta de zk.money: su saldo y sus pagos son privados. Sus depósitos y retiros aparecen en las cuentas que los hacen."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@はzk.moneyのアカウントです。残高と支払いは非公開です。入金と出金は、それを行うアカウントに表示されます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@은(는) zk.money 계정입니다. 잔액과 결제는 비공개이며, 입금과 출금은 이를 실행한 계정에 표시됩니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 是一个 zk.money 账户：其余额和付款是私密的。其存款和取款显示在发起它们的账户上。"
           }
         }
       }
@@ -37740,6 +38200,34 @@
         }
       }
     },
+    "%lld apps made you an account with Privy" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld apps te crearon una cuenta con Privy"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld個のアプリがPrivyであなたのアカウントを作成しました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld개의 앱이 Privy로 계정을 만들었습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld 个应用通过 Privy 为你创建了账户"
+          }
+        }
+      }
+    },
     "%lld apps not read yet — they fill in over the next syncs" : {
       "localizations" : {
         "es" : {
@@ -43364,6 +43852,40 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "目前已有 %lld/%lld 个签名。"
+          }
+        }
+      }
+    },
+    "%lld of %lld signed" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld of %2$lld signed"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$lld de %2$lld firmadas"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%2$lld件中%1$lld件署名済み"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%2$lld개 중 %1$lld개 서명됨"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已签署 %1$lld/%2$lld"
           }
         }
       }
@@ -49641,6 +50163,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "，"
+          }
+        }
+      }
+    },
+    ", Wallet " : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : ", Cartera "
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "、ウォレット "
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : ", 지갑 "
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "，钱包 "
           }
         }
       }
@@ -58414,6 +58964,34 @@
         }
       }
     },
+    "Acts as your account" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Actúa como tu cuenta"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "あなたのアカウントとして動作します"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "내 계정으로 작동합니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "以你的账户身份操作"
+          }
+        }
+      }
+    },
     "Acts as your wallet" : {
       "localizations" : {
         "es" : {
@@ -60380,6 +60958,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "%lld 条全部为 Stage 0 — 运营方仍可更改规则。"
+          }
+        }
+      }
+    },
+    "All %lld deposits are back in your account" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Los %lld depósitos han vuelto a tu cuenta"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld件の入金がすべてアカウントに戻りました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld건의 입금이 모두 계정으로 돌아왔습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "全部 %lld 笔存款已退回你的账户"
           }
         }
       }
@@ -62964,6 +63570,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "App Store 审核"
+          }
+        }
+      }
+    },
+    "App account · made %@ ago" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cuenta de app · creada hace %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アプリのアカウント・%@前に作成"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "앱 계정 · %@ 전에 생성됨"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "应用账户 · 创建于 %@前"
+          }
+        }
+      }
+    },
+    "App accounts" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cuentas de apps"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アプリのアカウント"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "앱 계정"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "应用账户"
           }
         }
       }
@@ -66921,6 +67583,34 @@
         }
       }
     },
+    "Bitcoin account" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cuenta de Bitcoin"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Bitcoinアカウント"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "비트코인 계정"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "比特币账户"
+          }
+        }
+      }
+    },
     "Bitrefill" : {
       "localizations" : {
         "es" : {
@@ -68374,6 +69064,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "收入 · %@"
+          }
+        }
+      }
+    },
+    "Can act as your account" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Puede actuar como tu cuenta"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "あなたのアカウントとして動作できます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "내 계정으로 작동할 수 있습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "可以以你的账户身份操作"
           }
         }
       }
@@ -75186,6 +75904,34 @@
         }
       }
     },
+    "Couldn't follow this account" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se pudo seguir esta cuenta"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "このアカウントをフォローできませんでした"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 계정을 팔로우할 수 없습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "无法关注此账户"
+          }
+        }
+      }
+    },
     "Couldn't keep access to that folder — try picking it again." : {
       "localizations" : {
         "es" : {
@@ -76386,6 +77132,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "无法打开 Rocket Money 的登录页面 — 请检查网络后点按重试。"
+          }
+        }
+      }
+    },
+    "Couldn't reach Safe" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se pudo conectar con Safe"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Safeに接続できませんでした"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Safe에 연결할 수 없습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "无法连接 Safe"
           }
         }
       }
@@ -80958,6 +81732,34 @@
         }
       }
     },
+    "Deposits are read off the accounts you follow." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Los depósitos se leen de las cuentas que sigues."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "入金はフォローしているアカウントから読み取ります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "입금은 팔로우하는 계정에서 읽어옵니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "存款从你关注的账户中读取。"
+          }
+        }
+      }
+    },
     "Deposits are read off the wallets you watch." : {
       "localizations" : {
         "es" : {
@@ -83143,6 +83945,34 @@
         }
       }
     },
+    "Email or account address" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Correo o dirección de cuenta"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "メールアドレスまたはアカウントのアドレス"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이메일 또는 계정 주소"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "电子邮件或账户地址"
+          }
+        }
+      }
+    },
     "Email us" : {
       "localizations" : {
         "es" : {
@@ -83899,6 +84729,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "所有为你创建钱包的应用"
+          }
+        }
+      }
+    },
+    "Every app that made you an account" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cada app que te creó una cuenta"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "あなたのアカウントを作成したすべてのアプリ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "계정을 만든 모든 앱"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "为你创建过账户的所有应用"
           }
         }
       }
@@ -89489,6 +90347,34 @@
         }
       }
     },
+    "Found on an account you follow" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Encontrado en una cuenta que sigues"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "フォロー中のアカウントで見つかりました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "팔로우하는 계정에서 발견됨"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在你关注的账户中发现"
+          }
+        }
+      }
+    },
     "Frame transactions" : {
       "localizations" : {
         "es" : {
@@ -94287,6 +95173,34 @@
         }
       }
     },
+    "In your account" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "En tu cuenta"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アカウント内"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "계정에 있음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在你的账户中"
+          }
+        }
+      }
+    },
     "In your addresses" : {
       "localizations" : {
         "es" : {
@@ -95123,6 +96037,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "无法恢复。"
+          }
+        }
+      }
+    },
+    "It can't see the accounts you follow here." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No puede ver las cuentas que sigues aquí."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ここでフォローしているアカウントは見えません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "여기서 팔로우하는 계정은 볼 수 없습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "它看不到你在这里关注的账户。"
           }
         }
       }
@@ -97707,6 +98649,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "未计入：%@"
+          }
+        }
+      }
+    },
+    "Not counting %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Sin contar %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@は含めていません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 제외"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "不计入 %@"
           }
         }
       }
@@ -108161,6 +109131,34 @@
         }
       }
     },
+    "Multisig accounts aren't read yet. Paste one of its addresses instead." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Las cuentas multifirma aún no se leen. Pega una de sus direcciones."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "マルチシグのアカウントはまだ読み取れません。代わりにそのアドレスの1つを貼り付けてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "다중 서명 계정은 아직 읽을 수 없습니다. 대신 주소 중 하나를 붙여 넣으세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "暂不支持读取多签账户。请改为粘贴它的其中一个地址。"
+          }
+        }
+      }
+    },
     "mining ticket ready" : {
       "localizations" : {
         "es" : {
@@ -108325,6 +109323,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "静音——不再在我的订阅流上显示角标"
+          }
+        }
+      }
+    },
+    "Muted" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Silenciado"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ミュート中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "음소거됨"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已静音"
           }
         }
       }
@@ -110980,6 +112006,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "尚未设置 Bankr 密钥 — 请在其设置界面中粘贴。"
+          }
+        }
+      }
+    },
+    "No Safe accounts detected." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se detectaron cuentas Safe."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Safeアカウントは見つかりませんでした。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Safe 계정이 감지되지 않았습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "未检测到 Safe 账户。"
           }
         }
       }
@@ -115134,6 +116188,34 @@
         }
       }
     },
+    "Not simulated" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No simulada"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "シミュレーションなし"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "시뮬레이션되지 않음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "未模拟"
+          }
+        }
+      }
+    },
     "Not staged" : {
       "localizations" : {
         "es" : {
@@ -116710,6 +117792,34 @@
         }
       }
     },
+    "Nothing in your Wallet yet — follow an account from Apps → Wallet." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aún no hay nada en tu Cartera: sigue una cuenta desde Apps → Cartera."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ウォレットにはまだ何もありません。アプリ → ウォレットからアカウントをフォローしてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "아직 지갑에 아무것도 없습니다. 앱 → 지갑에서 계정을 팔로우하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的钱包中还没有内容 — 请从“应用 → 钱包”关注一个账户。"
+          }
+        }
+      }
+    },
     "Nothing in your wallet yet — watch an address from Apps → Wallet." : {
       "localizations" : {
         "es" : {
@@ -116878,6 +117988,34 @@
         }
       }
     },
+    "Nothing left your account" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No salió nada de tu cuenta"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アカウントから出たものはありません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "계정에서 빠져나간 것이 없습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的账户没有任何支出"
+          }
+        }
+      }
+    },
     "Nothing leveraged" : {
       "localizations" : {
         "es" : {
@@ -117014,6 +118152,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "今天没有任何变动"
+          }
+        }
+      }
+    },
+    "Nothing moves." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Nada se mueve."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "何も動きません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "아무것도 이동하지 않습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "不会有任何资金变动。"
           }
         }
       }
@@ -118140,6 +119306,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "暂时还没有可排名的内容。"
+          }
+        }
+      }
+    },
+    "Nothing to read yet — follow an account from Apps → Wallet." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aún no hay nada que leer: sigue una cuenta desde Apps → Cartera."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "まだ読み取るものはありません。アプリ → ウォレットからアカウントをフォローしてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "아직 읽을 것이 없습니다. 앱 → 지갑에서 계정을 팔로우하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "还没有可读取的内容 — 请从“应用 → 钱包”关注一个账户。"
           }
         }
       }
@@ -120001,6 +121195,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "一个应用通过 Privy 为你创建了钱包"
+          }
+        }
+      }
+    },
+    "One app made you an account with Privy" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Una app te creó una cuenta con Privy"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1つのアプリがPrivyであなたのアカウントを作成しました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "앱 하나가 Privy로 계정을 만들었습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "一个应用通过 Privy 为你创建了账户"
           }
         }
       }
@@ -128946,6 +130168,34 @@
         }
       }
     },
+    "Privacy Pools declined your %@ deposit — reclaim it to your account" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Privacy Pools rechazó tu depósito de %@: recupéralo en tu cuenta"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Privacy Poolsが%@の入金を拒否しました。アカウントに取り戻してください"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Privacy Pools가 %@ 입금을 거절했습니다. 계정으로 회수하세요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Privacy Pools 拒绝了你的 %@ 存款 — 请将其取回到你的账户"
+          }
+        }
+      }
+    },
     "Privacy Pools declined your %@ deposit — reclaim it to your wallet" : {
       "localizations" : {
         "es" : {
@@ -130627,6 +131877,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "刚刚读过"
+          }
+        }
+      }
+    },
+    "Read off the accounts you follow." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Leído de las cuentas que sigues."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "フォローしているアカウントから読み取ります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "팔로우하는 계정에서 읽어옵니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "从你关注的账户中读取。"
           }
         }
       }
@@ -133442,6 +134720,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "读取你玩过的内容。"
+          }
+        }
+      }
+    },
+    "Reads your accounts" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Lee tus cuentas"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "あなたのアカウントを読み取ります"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "내 계정을 읽습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "读取你的账户"
           }
         }
       }
@@ -139312,6 +140618,34 @@
         }
       }
     },
+    "Same last four. A different account." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Mismos últimos cuatro. Otra cuenta."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "末尾4桁は同じ。別のアカウントです。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "끝 네 자리는 같지만 다른 계정입니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "末四位相同，但是另一个账户。"
+          }
+        }
+      }
+    },
     "Same model as your questions — a cheaper one usually names a screenshot just as well." : {
       "localizations" : {
         "es" : {
@@ -140387,6 +141721,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "限定为 %@"
+          }
+        }
+      }
+    },
+    "Scope to Account %lld" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Limitar a la cuenta %lld"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アカウント%lldに絞り込む"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "계정 %lld(으)로 범위 지정"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "限定到账户 %lld"
+          }
+        }
+      }
+    },
+    "Scope to All Accounts" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Mostrar todas las cuentas"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "すべてのアカウントを表示"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "모든 계정 표시"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "显示所有账户"
           }
         }
       }
@@ -141906,6 +143296,40 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "已发送 %@"
+          }
+        }
+      }
+    },
+    "Sent %@ %@ · %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Sent %1$@ %2$@ · %3$@"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Enviaste %1$@ %2$@ · %3$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ %2$@を送信・%3$@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ %2$@ 보냄 · %3$@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已发送 %1$@ %2$@ · %3$@"
           }
         }
       }
@@ -145574,6 +146998,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "正在为 %lld 个 Safe 签名。即使丢失这台手机，剩余所有者仍足以做出更改（余量 %lld 位）。"
+          }
+        }
+      }
+    },
+    "Signing for one Safe" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Firmando para una Safe"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1つのSafeに署名中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Safe 1개에 서명 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在为一个 Safe 签名"
           }
         }
       }
@@ -152347,6 +153799,34 @@
         }
       }
     },
+    "The account doesn't list this module as enabled, so an approval would change nothing — and a request naming a module the account never enabled is not one to sign." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "La cuenta no tiene este módulo activado, así que una aprobación no cambiaría nada, y una solicitud que nombra un módulo que la cuenta nunca activó no debe firmarse."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "このアカウントではこのモジュールが有効になっていないため、承認しても何も変わりません。アカウントが有効にしていないモジュールを指定する依頼には署名すべきではありません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 계정은 이 모듈을 활성화하지 않았으므로 승인해도 아무것도 바뀌지 않습니다. 계정이 활성화한 적 없는 모듈을 지정한 요청에는 서명하면 안 됩니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "该账户未启用此模块，因此批准不会改变任何事情 — 而且指定账户从未启用的模块的请求不应签署。"
+          }
+        }
+      }
+    },
     "The account keeps its address and its test ETH, and nothing can sign for it again." : {
       "localizations" : {
         "es" : {
@@ -152399,6 +153879,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你关注的账户，以及与之关联的账户"
+          }
+        }
+      }
+    },
+    "The accounts you follow, and their apps" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Las cuentas que sigues y sus apps"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "フォローしているアカウントとそのアプリ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "팔로우하는 계정과 그 앱"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你关注的账户及其应用"
           }
         }
       }
@@ -152567,6 +154075,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "始终开启的基础功能，以及你已连接的应用。每个应用只会访问其自身的服务。"
+          }
+        }
+      }
+    },
+    "The apps you add in Library list here." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Las apps que añades en Biblioteca aparecen aquí."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ライブラリで追加したアプリがここに表示されます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "보관함에서 추가한 앱이 여기에 표시됩니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你在资料库中添加的应用会显示在这里。"
           }
         }
       }
@@ -153747,6 +155283,34 @@
         }
       }
     },
+    "The module doesn't list this phone as a guardian of this account." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "El módulo no tiene este teléfono como guardián de esta cuenta."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "このモジュールでは、この電話はこのアカウントのガーディアンとして登録されていません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 모듈에는 이 전화가 이 계정의 가디언으로 등록되어 있지 않습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "该模块未将此手机列为此账户的守护者。"
+          }
+        }
+      }
+    },
     "The module doesn't list this phone as a guardian of this wallet." : {
       "localizations" : {
         "es" : {
@@ -154197,6 +155761,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "该笔支出创建的唯一 UTXO。"
+          }
+        }
+      }
+    },
+    "The owners can cancel until it runs." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Los propietarios pueden cancelarla hasta que se ejecute."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "実行されるまでは所有者がキャンセルできます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "실행되기 전까지 소유자가 취소할 수 있습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在执行之前，所有者可以取消。"
           }
         }
       }
@@ -156366,6 +157958,34 @@
         }
       }
     },
+    "This account hasn't moved since %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Esta cuenta no se ha movido desde %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "このアカウントは%@以降動いていません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 계정은 %@ 이후 움직임이 없습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "此账户自 %@ 以来没有变动"
+          }
+        }
+      }
+    },
     "This account needs %@ to send that, the fee included." : {
       "localizations" : {
         "es" : {
@@ -156390,6 +158010,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "此账户需要 %@（含手续费）才能发送。"
+          }
+        }
+      }
+    },
+    "This account's recovery needs %lld guardian, so this phone alone could replace its owners. Casberi won't be a lone guardian — ask the owner to set the guardian threshold to 2." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "La recuperación de esta cuenta necesita %lld guardián, así que solo este teléfono podría reemplazar a sus propietarios. Casberi no será un guardián único: pide al propietario que fije el umbral de guardianes en 2."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "このアカウントの復旧に必要なガーディアンは%lld人のため、この電話だけで所有者を置き換えられてしまいます。Casberiは単独のガーディアンにはなりません。所有者にガーディアンのしきい値を2に設定するよう依頼してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 계정의 복구에는 가디언 %lld명이 필요하므로 이 전화 하나만으로 소유자를 교체할 수 있습니다. Casberi는 단독 가디언이 되지 않습니다. 소유자에게 가디언 임계값을 2로 설정해 달라고 요청하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "此账户的恢复只需要 %lld 位守护者，因此仅凭这部手机就能替换其所有者。Casberi 不会担任唯一的守护者 — 请让所有者将守护者阈值设为 2。"
           }
         }
       }
@@ -156956,6 +158604,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "在 %@ 成交。"
+          }
+        }
+      }
+    },
+    "This forgets the account on this phone. The module still lists this phone as a guardian until the account's owner revokes it." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Esto olvida la cuenta en este teléfono. El módulo seguirá teniendo este teléfono como guardián hasta que el propietario de la cuenta lo revoque."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "この電話からアカウントを削除します。アカウントの所有者が取り消すまで、モジュールにはこの電話がガーディアンとして残ります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 전화에서 계정을 지웁니다. 계정 소유자가 취소할 때까지 모듈에는 이 전화가 가디언으로 남아 있습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "这会在此手机上忘记该账户。在账户所有者撤销之前，该模块仍将此手机列为守护者。"
           }
         }
       }
@@ -167225,6 +168901,34 @@
         }
       }
     },
+    "What moved in your app accounts" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Lo que se movió en tus cuentas de apps"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アプリのアカウントで動いたもの"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "앱 계정에서 이동한 내역"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的应用账户中的变动"
+          }
+        }
+      }
+    },
     "What moved in your app wallets" : {
       "localizations" : {
         "es" : {
@@ -170173,6 +171877,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "World App"
+          }
+        }
+      }
+    },
+    "World App account" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cuenta de World App"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "World Appのアカウント"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "World App 계정"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "World App 账户"
           }
         }
       }
@@ -174263,6 +175995,62 @@
         }
       }
     },
+    "Your account now delegates to %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu cuenta ahora delega en %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "あなたのアカウントは現在%@に委任しています"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이제 내 계정이 %@에 위임합니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的账户现在委托给 %@"
+          }
+        }
+      }
+    },
+    "Your account now delegates to an unknown contract (%@) — if that wasn't you, it's phishing" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu cuenta ahora delega en un contrato desconocido (%@): si no fuiste tú, es phishing"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "あなたのアカウントは不明なコントラクト（%@）に委任しています。心当たりがなければフィッシングです"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이제 내 계정이 알 수 없는 컨트랙트(%@)에 위임합니다. 본인이 한 것이 아니라면 피싱입니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的账户现在委托给一个未知合约（%@）— 如果不是你操作的，这就是钓鱼"
+          }
+        }
+      }
+    },
     "Your account on this phone" : {
       "localizations" : {
         "es" : {
@@ -174287,6 +176075,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "此手机上的你的账户"
+          }
+        }
+      }
+    },
+    "Your account's delegation was removed" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Se eliminó la delegación de tu cuenta"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "あなたのアカウントの委任が解除されました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "내 계정의 위임이 제거되었습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的账户委托已移除"
           }
         }
       }
@@ -174881,6 +176697,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你的部署记录 — 什么发布了，什么出了问题。该令牌无法限定为只读，但绝不会读取你的环境变量。"
+          }
+        }
+      }
+    },
+    "Your deposit is back in your account" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu depósito ha vuelto a tu cuenta"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "入金がアカウントに戻りました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "입금이 계정으로 돌아왔습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的存款已退回你的账户"
           }
         }
       }
@@ -177151,6 +178995,34 @@
         }
       }
     },
+    "Your wallet shared %lld addresses." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu cartera compartió %lld direcciones."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ウォレットが%lld件のアドレスを共有しました。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "지갑이 주소 %lld개를 공유했습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的钱包共享了 %lld 个地址。"
+          }
+        }
+      }
+    },
     "Your wallet shared %lld addresses. Saving names them in your book — nothing is watched or read." : {
       "localizations" : {
         "es" : {
@@ -177203,6 +179075,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你的钱包共享了 %lld 个地址。关注为只读 — 永远无法交易或转移资金。"
+          }
+        }
+      }
+    },
+    "Your wallet shared 1 address." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu cartera compartió 1 dirección."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ウォレットが1件のアドレスを共有しました。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "지갑이 주소 1개를 공유했습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的钱包共享了 1 个地址。"
           }
         }
       }
@@ -179417,6 +181317,34 @@
         }
       }
     },
+    "an unnamed account, %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "una cuenta sin nombre, %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "名前のないアカウント、%@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이름 없는 계정, %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "一个未命名的账户，%@"
+          }
+        }
+      }
+    },
     "an unnamed wallet, %@" : {
       "localizations" : {
         "es" : {
@@ -179699,6 +181627,62 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "回答现在会提供 Venice 的“用你的密钥试试”。"
+          }
+        }
+      }
+    },
+    "app account" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "cuenta de app"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アプリのアカウント"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "앱 계정"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "应用账户"
+          }
+        }
+      }
+    },
+    "app accounts" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "cuentas de apps"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アプリのアカウント"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "앱 계정"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "应用账户"
           }
         }
       }
@@ -180516,6 +182500,34 @@
         }
       }
     },
+    "back in your account" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "de vuelta en tu cuenta"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アカウントに戻りました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "계정으로 돌아옴"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已退回你的账户"
+          }
+        }
+      }
+    },
     "back in your wallet" : {
       "localizations" : {
         "es" : {
@@ -180569,6 +182581,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "由你收藏"
+          }
+        }
+      }
+    },
+    "behind " : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "detrás de "
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "背後: "
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "뒤에 "
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "背后："
           }
         }
       }
@@ -183231,6 +185271,34 @@
         }
       }
     },
+    "in %lld app accounts" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "en %lld cuentas de apps"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld個のアプリのアカウント内"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "앱 계정 %lld개에"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 %lld 个应用账户中"
+          }
+        }
+      }
+    },
     "in %lld app wallets" : {
       "localizations" : {
         "es" : {
@@ -185305,6 +187373,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "新 Space"
+          }
+        }
+      }
+    },
+    "new app account" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "nueva cuenta de app"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "新しいアプリのアカウント"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "새 앱 계정"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "新的应用账户"
           }
         }
       }
@@ -189166,6 +191262,34 @@
         }
       }
     },
+    "ready to execute" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "lista para ejecutar"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "実行可能"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "실행 준비됨"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "可以执行"
+          }
+        }
+      }
+    },
     "ready to withdraw privately" : {
       "localizations" : {
         "es" : {
@@ -189246,6 +191370,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "已收到"
+          }
+        }
+      }
+    },
+    "reclaim to your account" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "recuperar en tu cuenta"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アカウントに取り戻す"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "계정으로 회수"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "取回到你的账户"
           }
         }
       }
@@ -192366,6 +194518,34 @@
         }
       }
     },
+    "this account" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "esta cuenta"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "このアカウント"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 계정"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "此账户"
+          }
+        }
+      }
+    },
     "this afternoon" : {
       "localizations" : {
         "es" : {
@@ -194649,6 +196829,34 @@
         }
       }
     },
+    "your %@ balance now joins your Wallet." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "tu saldo de %@ ahora se suma a tu Cartera."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@の残高がウォレットに加わりました。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이제 %@ 잔액이 지갑에 합쳐집니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的 %@ 余额现已计入你的钱包。"
+          }
+        }
+      }
+    },
     "your %@ balance now joins your wallets." : {
       "localizations" : {
         "es" : {
@@ -194673,6 +196881,62 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "你的 %@ 余额现在会计入钱包。"
+          }
+        }
+      }
+    },
+    "your account" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "tu cuenta"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "あなたのアカウント"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "내 계정"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的账户"
+          }
+        }
+      }
+    },
+    "your accounts" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "tus cuentas"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "あなたのアカウント"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "내 계정"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的账户"
           }
         }
       }
@@ -198819,6 +201083,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "已签名。签名已复制——请粘贴到你的电脑上。"
+          }
+        }
+      }
+    },
+    "Signing for %lld Safes" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Firmando para %lld Safes"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld個のSafeに署名中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Safe %lld개에 서명 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在为 %lld 个 Safe 签名"
           }
         }
       }
