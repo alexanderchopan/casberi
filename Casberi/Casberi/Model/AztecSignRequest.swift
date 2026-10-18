@@ -53,7 +53,21 @@ enum AztecSignRequest {
     /// v5 (the previous testnet, which aztec.js 5.2 reaches) and v6.
     static let l1ChainID = 11_155_111
     static let testnetRollups: [Int: String] = [1_821_665_230: "Aztec testnet (v5)",
-                                                2_914_217_885: "Aztec testnet (v6)"]
+                                                2_914_217_885: "Aztec testnet (v6)",
+                                                3_409_706_519: "Aztec testnet (v6)"]
+
+    /// Aztec mainnet's rollup version: refused even if a node calls it a
+    /// testnet (a lie, or a misconfigured host), because it is real money.
+    static let mainnetRollup = 4_248_422_647
+
+    /// What Aztec's testnet node reports right now (`node_getNodeInfo`,
+    /// 2026-10-18, prd §1419): the testnet is reset onto a new rollup version
+    /// several times a season (rc.3 moved it to 3409706519 between two
+    /// sessions), and a fixed list refused every request after each one.
+    struct LiveTestnet: Equatable {
+        let rollupVersion: Int
+        let l1ChainID: Int
+    }
 
     // MARK: - The link
 
@@ -91,11 +105,14 @@ enum AztecSignRequest {
     /// Whether this request may be offered for signing: on an Aztec testnet,
     /// at most five calls (the entrypoint's limit), and its hash rebuilt from
     /// its own calls equals the hash it asks for.
-    static func check(_ r: Request) -> Verdict {
+    static func check(_ r: Request, live: LiveTestnet? = nil) -> Verdict {
         guard int(r.chainId) == l1ChainID else {
             return .refused("This request is not for an Aztec testnet. Casberi signs for test money only.")
         }
-        guard let version = int(r.version), let network = testnetRollups[version] else {
+        guard let version = int(r.version), version != mainnetRollup,
+              let network = testnetRollups[version]
+                ?? live.flatMap({ $0.rollupVersion == version && $0.l1ChainID == l1ChainID ? "Aztec testnet" : nil })
+        else {
             return .refused("This request names a rollup that is not one of Aztec's testnets.")
         }
         guard !r.calls.isEmpty, r.calls.count <= 5 else {

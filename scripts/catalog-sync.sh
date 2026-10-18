@@ -100,9 +100,6 @@ awk '/class="rain">/{f=1} /rain-target/{f=0} f' "$INDEX" \
 awk '/landers *= *\[/{f=1} f{print} f&&/\]/{exit}' "$ONBOARD" \
   | grep -oE '"[^"]+"' | tr -d '"' | sort -u > "$tmp/onb_marquee"
 
-# --- 5. Empty-feed pile names (EmptyFeedPile.pileApps array) --------------
-awk '/pileApps *= *\[/{f=1} f{print} f&&/\]/{exit}' "$FEED" \
-  | grep -oE '"[^"]+"' | tr -d '"' | sort -u > "$tmp/feed_pile"
 
 fail=0
 say()  { printf '%s\n' "$*"; }
@@ -196,7 +193,6 @@ check_marquee_validity "onboarding landing tiles"  "$tmp/onb_marquee"
 # drift this check existed to catch.
 grep -q 'BridgeCatalog.offers.filter' "$ONBOARD" \
   || bad "the onboarding rain no longer derives its names from the catalog"
-check_marquee_validity "empty-feed pile"  "$tmp/feed_pile"
 [ "$fail" -eq 0 ] && say "  ✓ all marquee names valid"
 
 # === Check 3: store-copy CONNECTS WITH names are connectable =============

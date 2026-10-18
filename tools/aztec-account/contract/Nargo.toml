@@ -1,0 +1,10 @@
+[package]
+name = "casberi_key_account"
+authors = ["casberi spike"]
+compiler_version = ">=1.0.0"
+type = "contract"
+
+[dependencies]
+aztec = { git = "https://github.com/AztecProtocol/aztec-packages", tag = "v5.2.0", directory = "noir-projects/aztec-nr/aztec" }
+ecdsa_public_key_note = { git = "https://github.com/AztecProtocol/aztec-packages", tag = "v5.2.0", directory = "noir-projects/noir-contracts/contracts/libs/ecdsa_public_key_note" }
+sha256 = { tag = "v0.3.0", git = "https://github.com/noir-lang/sha256" }

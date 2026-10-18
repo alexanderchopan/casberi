@@ -17,14 +17,16 @@
 //   node signer.mjs status                           the account and its balances
 //
 // Handoff: --sim <udid> drives a simulator (openurl + pbpaste); otherwise the
-// link is copied to this Mac's clipboard (Universal Clipboard carries it to the
-// phone: paste it on the Aztec page) and the tool waits for the signature to
-// come back on the clipboard.
+// link is shown as a QR code for the iPhone's camera (prd §1419) AND copied to
+// this Mac's clipboard (Universal Clipboard carries it to the phone: paste it
+// on the Aztec page), and the tool waits for the signature to come back on the
+// clipboard.
 import { execFileSync } from 'node:child_process';
 import { createPublicKey, verify } from 'node:crypto';
 import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
+import QRCode from 'qrcode';
 
 import { NO_FROM } from '@aztec/aztec.js/account';
 import { SponsoredFeePaymentMethod } from '@aztec/aztec.js/fee/testing';
@@ -81,7 +83,13 @@ async function askPhone(request, publicKeyHex) {
     say('sent to the simulator; waiting for its signature…');
   } else {
     execFileSync('pbcopy', { input: link });
-    say('the request is on your clipboard — paste it on the Aztec page in Casberi, then Sign.');
+    // The same link as a QR code, opened in Preview: the camera hands it to
+    // Casberi, which shows the request before anything is signed.
+    const png = join(HOME, 'request.png');
+    mkdirSync(HOME, { recursive: true, mode: 0o700 });
+    await QRCode.toFile(png, link, { errorCorrectionLevel: 'L', margin: 2, scale: 6 });
+    try { execFileSync('open', [png]); } catch {}
+    say(`scan the QR code (${png}) with the iPhone camera, or paste the link from your clipboard on the Aztec page in Casberi, then Sign.`);
   }
   const deadline = Date.now() + 5 * 60_000;
   while (Date.now() < deadline) {

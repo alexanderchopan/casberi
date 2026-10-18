@@ -332,6 +332,12 @@ enum AztecIngest {
 
         await readEthereum(chain: chain, current: current, land: land)
 
+        // The testnet's own votes (prd §1419): quiet rows, as the Wallet
+        // lands mainnet's (§1279), read off Governance on Sepolia.
+        if let governance = chain.governance {
+            added += await readVotes(governance: governance, existing: &existing, context: context)
+        }
+
         for account in store.accounts {
             guard let slot = AztecWire.feeJuiceSlot(account) else { continue }
             if let value = AztecWire.feeJuice(await call("node_getPublicStorageAt",
@@ -409,6 +415,44 @@ enum AztecIngest {
             read[address] = .init(nextProposal: next, onCommittee: committee.contains(address))
         }
         store.remember(schedule: read)
+    }
+
+    /// The newest three testnet proposals still pending or open, landed once
+    /// each and retitled in place when one opens. Returns how many landed.
+    @MainActor
+    private static func readVotes(governance: String, existing: inout Set<String>,
+                                  context: ModelContext) async -> Int {
+        let countReply = await l1([AztecWire.ethCall(to: governance, selector: String(AztecStakeWire.proposalCount.dropFirst(2)), id: 1)])
+        guard let count = AztecStakeWire.count(reply: countReply[1]), count > 0 else { return 0 }
+        let ids = Array(max(0, count - 3)..<count)
+        var calls: [[String: Any]] = []
+        for (i, id) in ids.enumerated() {
+            calls.append(AztecWire.ethCall(to: governance, selector: String(AztecStakeWire.getProposal.dropFirst(2)),
+                                           args: [AztecStakeWire.word(id)], id: 10 + i * 2))
+            calls.append(AztecWire.ethCall(to: governance, selector: String(AztecStakeWire.getProposalState.dropFirst(2)),
+                                           args: [AztecStakeWire.word(id)], id: 11 + i * 2))
+        }
+        let replies = await l1(calls)
+        var added = 0
+        for (i, id) in ids.enumerated() {
+            guard let p = AztecStakeWire.proposal(id: id, view: replies[10 + i * 2], state: replies[11 + i * 2]) else { continue }
+            let ref = "aztec:testvote:\(governance.lowercased()):\(id)"
+            let title = AztecStakeWire.voteTitle(p, testnet: true)
+            if existing.contains(ref) {
+                if let row = try? context.fetch(FetchDescriptor<Thing>(predicate: #Predicate { $0.sourceRef == ref })).first,
+                   row.title != title { row.title = title }
+                continue
+            }
+            let thing = Thing(kind: .note, title: title,
+                              content: "https://sepolia.etherscan.io/address/\(governance)",
+                              source: AztecRoom.source, capturedAt: .now, sourceRef: ref)
+            thing.dueAt = p.closes
+            context.insert(thing)
+            SpotlightIndex.index([thing])
+            existing.insert(ref)
+            added += 1
+        }
+        return added
     }
 
     @MainActor

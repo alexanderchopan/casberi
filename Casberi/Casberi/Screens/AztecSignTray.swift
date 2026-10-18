@@ -11,9 +11,17 @@ struct AztecSignTray: View {
     @State private var busy = false
     @State private var outcome: String?
     @State private var failure: String?
+    /// What Aztec's testnet node reports (prd §1419), read once on open; nil
+    /// until it answers. A request on an unknown rollup waits for it rather
+    /// than being refused for a reset the phone has not heard of.
+    @State private var live: AztecSignRequest.LiveTestnet?
+    @State private var askedLive = false
 
     var body: some View {
-        let verdict = AztecSignRequest.check(request)
+        let verdict = AztecSignRequest.check(request, live: live)
+        // A Sepolia request the fixed list refuses may be on a rollup the
+        // testnet moved to since; it waits for the node before it is refused.
+        let waiting = !askedLive && AztecSignRequest.int(request.chainId) == AztecSignRequest.l1ChainID
         DSTray(title: String(localized: "Sign for Aztec"), height: 640, detents: [.height(640), .large]) {
             ScrollView {
                 VStack(alignment: .leading, spacing: DS.Space.s3) {
@@ -37,6 +45,14 @@ struct AztecSignTray: View {
                         }
                     }
                     switch verdict {
+                    case .refused where waiting:
+                        HStack(spacing: DS.Space.s2) {
+                            DSSpinner()
+                            Text("Checking Aztec's testnet")
+                                .dsText(.body17)
+                                .foregroundStyle(DS.textSecondary)
+                        }
+                        .padding(.top, DS.Space.s2)
                     case .refused(let why):
                         Text(why)
                             .dsText(.body17)
@@ -51,8 +67,12 @@ struct AztecSignTray: View {
                         if let outcome {
                             Text(outcome).dsText(.body17).foregroundStyle(DS.confirmInk)
                         } else {
-                            DSSlabButton(title: String(localized: "Sign"), busy: busy,
-                                         enabled: !busy && AztecSignerKey.publicKey() != nil, action: sign)
+                            // The Safe ask sheet's verb (prd §1419): the faceid
+                            // disc says how it confirms — the Secure Enclave key
+                            // asks for Face ID on every signature.
+                            DSActVerb(title: busy ? String(localized: "Signing…") : String(localized: "Sign"),
+                                      glyph: "faceid", busy: busy,
+                                      disabled: AztecSignerKey.publicKey() == nil, act: sign)
                                 .padding(.top, DS.Space.s2)
                             if AztecSignerKey.publicKey() == nil {
                                 Text("Make a signing key on the Aztec page first.")
@@ -65,10 +85,15 @@ struct AztecSignTray: View {
             }
             .scrollBounceBehavior(.basedOnSize)
         }
-        .onAppear {
+        .task {
+            if let chain = AztecWire.chain(await AztecIngest.call("node_getNodeInfo", on: .testnet)) {
+                live = AztecSignRequest.LiveTestnet(rollupVersion: chain.version, l1ChainID: chain.l1ChainID)
+            }
+            askedLive = true
             #if DEBUG
             // `-aztecAutoSign YES`: sign without a tap, for a headless run.
-            if UserDefaults.standard.bool(forKey: "aztecAutoSign"), case .sign = verdict { sign() }
+            if UserDefaults.standard.bool(forKey: "aztecAutoSign"),
+               case .sign = AztecSignRequest.check(request, live: live) { sign() }
             #endif
         }
     }
@@ -87,6 +112,12 @@ struct AztecSignTray: View {
                     try AztecSignerKey.sign(messageHash: hash, reason: reason)
                 }.value
                 let line = AztecSignRequest.signatureLine(r: sig.r, s: sig.s)
+                // The signer's own record, and the account followed so its
+                // public Fee Juice stands in Holdings (prd §1419).
+                if case .sign(let network) = AztecSignRequest.check(request, live: live) {
+                    AztecSignedLog.record(AztecSignedLog.entry(for: request, network: network))
+                }
+                AztecStore.shared.add(request.account)
                 UIPasteboard.general.string = line
                 NSLog("[Casberi] aztecSign: signed %@", request.messageHash)
                 DSHaptic.tap()

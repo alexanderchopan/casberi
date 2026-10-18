@@ -402,9 +402,15 @@ enum AztecStakeWire {
         String(localized: "Your Aztec sequencer \(shortAddress(stake.attester)) stopped attesting")
     }
 
-    static func voteTitle(_ p: Proposal, now: Date = .now) -> String {
+    static func voteTitle(_ p: Proposal, now: Date = .now, testnet: Bool = false) -> String {
         let day: (Date) -> String = { $0.formatted(.dateTime.month(.abbreviated).day()) }
-        return p.state == 1 || p.opens <= now
+        let open = p.state == 1 || p.opens <= now
+        if testnet {
+            return open
+                ? String(localized: "Aztec testnet proposal \(p.id) is open for votes until \(day(p.closes))")
+                : String(localized: "Aztec testnet proposal \(p.id) opens for votes \(day(p.opens))")
+        }
+        return open
             ? String(localized: "Aztec proposal \(p.id) is open for votes until \(day(p.closes))")
             : String(localized: "Aztec proposal \(p.id) opens for votes \(day(p.opens))")
     }

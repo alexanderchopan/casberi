@@ -49,6 +49,9 @@ KNOWN_NON_REACH=(
   # sequencer page (a stopped sequencer), Nethermind's governance page (a
   # vote). The app reads Aztec through the hosts NetworkReach discloses.
   stake.aztec.network aztecscan.xyz aztecgov.nethermind.io
+  # The Aztec testnet's Governance contract on Sepolia's explorer (prd §1419):
+  # the page a testnet vote row opens. Read through the declared Sepolia node.
+  sepolia.etherscan.io
   # **A denylist entry is a claim about CONDUCT** (prd §531, 2026-08-30): a
   # devnet faucet sat here for a day after a Claim button began POSTing to it,
   # and the audit stayed green because nothing re-reads an entry's REASON when

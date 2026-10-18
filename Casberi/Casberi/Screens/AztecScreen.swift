@@ -29,6 +29,8 @@ struct AztecScreen: View {
     @State private var pastedSign: AztecSignAsk?
     @State private var confirmRemoveKey = false
     @State private var signerKey = AztecSignerKey.publicKeyHex()
+    /// What this phone signed, read on appear (never in a body, prd §628).
+    @State private var signedLog: [AztecSignedLog.Entry] = []
 
     /// The roster row for the network itself.
     private static let networkRowID = "network"
@@ -79,7 +81,7 @@ struct AztecScreen: View {
         } message: {
             Text("Blank shows the address instead.")
         }
-        .sheet(item: $pastedSign) { ask in AztecSignTray(request: ask.request) }
+        .sheet(item: $pastedSign, onDismiss: { signedLog = AztecSignedLog.entries() }) { ask in AztecSignTray(request: ask.request) }
         .alert("Remove the signing key?", isPresented: $confirmRemoveKey) {
             Button("Remove", role: .destructive) {
                 AztecSignerKey.delete()
@@ -91,6 +93,7 @@ struct AztecScreen: View {
         }
         .onAppear {
             countWeek()
+            signedLog = AztecSignedLog.entries()
             if aztec.connected { Task { await sync() } }
         }
         .onChange(of: aztec.sequencers) { _, _ in countWeek() }
@@ -184,6 +187,20 @@ struct AztecScreen: View {
     @ViewBuilder private var signingRows: some View {
         if let key = signerKey {
             DSCopyRow(value: key, label: "Copy signing key", sensitive: false)
+            // What this phone signed (prd §1419): the signer's own record,
+            // newest first, as the sheet showed each one.
+            ForEach(signedLog.prefix(5)) { entry in
+                VStack(alignment: .leading, spacing: DS.Space.s1) {
+                    Text(verbatim: entry.lines.joined(separator: ", "))
+                        .dsText(.body17)
+                        .foregroundStyle(DS.textPrimary)
+                        .lineLimit(2)
+                    Text(verbatim: "\(entry.network) · \(entry.at.formatted(.dateTime.month(.abbreviated).day().hour().minute()))")
+                        .dsText(.subhead12)
+                        .foregroundStyle(DS.textSecondary)
+                }
+                .padding(.vertical, DS.Space.s1)
+            }
             DSDoorRow(icon: "trash", label: "Remove signing key", role: .destructive) { confirmRemoveKey = true }
         } else {
             DSDoorRow(icon: "key", label: "Make a testnet signing key") {

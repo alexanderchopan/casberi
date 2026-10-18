@@ -22,12 +22,13 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 REQ="Casberi/Casberi/Model/AztecSignRequest.swift"
+LOG="Casberi/Casberi/Model/AztecSignedLog.swift"
 P2="Casberi/Casberi/Model/AztecPoseidon2.swift"
 FIX="scripts/fixtures/aztec/sign-request-v5.json"
-for f in "$REQ" "$P2" "$FIX"; do [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }; done
+for f in "$REQ" "$P2" "$FIX" "$LOG"; do [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }; done
 # Conduct: the signing key is reached only through the checked tray, and the
 # phone never submits anything itself (no Aztec node write here).
-grep -q 'AztecSignRequest.check(request)' Casberi/Casberi/Screens/AztecSignTray.swift \
+grep -q 'AztecSignRequest.check(request, live: live)' Casberi/Casberi/Screens/AztecSignTray.swift \
   || { echo "✗ the sign tray no longer checks the request before offering Sign"; exit 1; }
 if grep -rn 'AztecSignerKey.sign(' Casberi/Casberi --include='*.swift' | grep -v 'Screens/AztecSignTray.swift' | grep -q .; then
   echo "✗ AztecSignerKey.sign is called outside the checked tray"; exit 1
@@ -106,6 +107,41 @@ check(AztecSignRequest.check(with { o in var c = o["calls"] as! [[String: Any]];
 check(AztecSignRequest.request(fromLink: "https://evil.example/aztec/sign#" + AztecSignRequest.link(real)!.split(separator: "#")[1]) == nil,
       "only the app's own scheme")
 
+print("a testnet that moved")
+func onVersion(_ v: Int, chain: String = "0x" + String(11_155_111, radix: 16)) -> AztecSignRequest.Request {
+    let hex = "0x" + String(v, radix: 16)
+    let hash = AztecSignRequest.outerHash(with { $0["version"] = hex; $0["chainId"] = chain })!
+    return with { $0["version"] = hex; $0["chainId"] = chain; $0["messageHash"] = hash }
+}
+check(AztecSignRequest.check(onVersion(3_409_706_519)) == .sign(network: "Aztec testnet (v6)"), "rc.3's rollup is known")
+let moved = onVersion(1_234_567)
+check(AztecSignRequest.check(moved) == .refused("This request names a rollup that is not one of Aztec's testnets."),
+      "an unknown rollup is refused with no live reading")
+check(AztecSignRequest.check(moved, live: .init(rollupVersion: 1_234_567, l1ChainID: 11_155_111)) == .sign(network: "Aztec testnet"),
+      "…and signed when Aztec's testnet node reports it, on Sepolia")
+check(AztecSignRequest.check(moved, live: .init(rollupVersion: 1_234_567, l1ChainID: 1)) != .sign(network: "Aztec testnet"),
+      "a node reporting it on Ethereum mainnet is not a testnet")
+check(AztecSignRequest.check(moved, live: .init(rollupVersion: 7, l1ChainID: 11_155_111)) != .sign(network: "Aztec testnet"),
+      "a live reading of another rollup does not vouch for this one")
+let mainnetLie = onVersion(4_248_422_647)
+check(AztecSignRequest.check(mainnetLie, live: .init(rollupVersion: 4_248_422_647, l1ChainID: 11_155_111))
+      == .refused("This request names a rollup that is not one of Aztec's testnets."),
+      "Aztec mainnet's rollup is refused even if a node calls it a testnet")
+
+print("the signed log")
+let suite = "aztec.sign.selftest.\(ProcessInfo.processInfo.processIdentifier)"
+let defaults = UserDefaults(suiteName: suite)!
+defer { defaults.removePersistentDomain(forName: suite) }
+AztecSignedLog.record(AztecSignedLog.entry(for: real, network: "Aztec testnet (v5)", at: Date(timeIntervalSince1970: 1)), defaults)
+AztecSignedLog.record(AztecSignedLog.entry(for: real, network: "Aztec testnet (v5)", at: Date(timeIntervalSince1970: 2)), defaults)
+let logged = AztecSignedLog.entries(defaults)
+check(logged.count == 1 && logged[0].at == Date(timeIntervalSince1970: 2), "the same hash signed twice is one entry, the newer")
+check(logged[0].lines == real.calls.map(AztecSignRequest.line) && logged[0].account == real.account.lowercased(),
+      "it keeps what the sheet showed")
+for i in 0..<40 { AztecSignedLog.record(.init(at: .now, network: "t", account: "a", messageHash: "0x\(i)", lines: []), defaults) }
+check(AztecSignedLog.entries(defaults).count == AztecSignedLog.cap && AztecSignedLog.entries(defaults).first?.messageHash == "0x39",
+      "capped, newest first")
+
 print("words")
 let mintLine = AztecSignRequest.line(real.calls[1])
 check(mintLine.hasPrefix("mint_to_public(0x") && mintLine.hasSuffix(", 1)") && mintLine.count == "mint_to_public(".count + 66 + ", 1)".count,
@@ -126,7 +162,7 @@ if failures > 0 { print("✗ \(failures) failed"); exit(1) }
 SWIFT
 
 echo "AztecSignRequest, compiled whole"
-if ! swiftc -Onone -o "$TMP/run" "$REQ" "$P2" "$TMP/main.swift" > "$TMP/build.log" 2>&1; then
+if ! swiftc -Onone -o "$TMP/run" "$REQ" "$P2" "$LOG" "$TMP/main.swift" > "$TMP/build.log" 2>&1; then
   echo "✗ the harness did not compile:"; sed -n '1,30p' "$TMP/build.log"; exit 1
 fi
 SIGN_FIX="$PWD/$FIX" "$TMP/run" || exit 1
@@ -145,7 +181,7 @@ open(p, "w").write(s.replace(f, t, 1))
 PY
   then echo "  ✗ $name — the mutation did not apply"; exit 1; fi
   if cmp -s "$REQ" "$WORK/AztecSignRequest.swift"; then echo "  ✗ $name — changed nothing"; exit 1; fi
-  if ! swiftc -Onone -o "$TMP/mut" "$WORK/AztecSignRequest.swift" "$P2" "$TMP/main.swift" 2>/dev/null; then
+  if ! swiftc -Onone -o "$TMP/mut" "$WORK/AztecSignRequest.swift" "$P2" "$LOG" "$TMP/main.swift" 2>/dev/null; then
     echo "  ✓ $name (rejected at compile)"; return
   fi
   if SIGN_FIX="$PWD/$FIX" "$TMP/mut" > /dev/null 2>&1; then
@@ -158,8 +194,14 @@ mutate "a mainnet request offered" \
   'guard int(r.chainId) == l1ChainID else {' \
   'guard int(r.chainId) != nil else {'
 mutate "any rollup accepted" \
-  'guard let version = int(r.version), let network = testnetRollups[version] else {' \
-  'guard let version = int(r.version), let network = testnetRollups[version] ?? Optional("any") else {'
+  '              let network = testnetRollups[version]' \
+  '              let network = testnetRollups[version] ?? Optional("any")'
+mutate "Aztec mainnet's rollup trusted when a node vouches" \
+  'guard let version = int(r.version), version != mainnetRollup,' \
+  'guard let version = int(r.version),'
+mutate "a live reading trusted off Sepolia" \
+  '$0.rollupVersion == version && $0.l1ChainID == l1ChainID ? "Aztec testnet" : nil' \
+  '$0.rollupVersion == version ? "Aztec testnet" : nil'
 mutate "the hash trusted, not rebuilt" \
   'guard let rebuilt = outerHash(r), rebuilt == normalized(r.messageHash) else {' \
   'guard outerHash(r) != nil || true else {'

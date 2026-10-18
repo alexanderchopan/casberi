@@ -83,6 +83,8 @@ enum AztecWire {
         let nodeVersion: String
         /// The ERC-20 a sequencer stakes (STK on the testnet, AZTEC on Alpha).
         var stakingAsset: String? = nil
+        /// The Governance contract on Ethereum, as the node lists it (prd §1419).
+        var governance: String? = nil
         var key: String { "\(rollup.lowercased()):\(version)" }
     }
 
@@ -94,7 +96,8 @@ enum AztecWire {
               let chainID = int(r["l1ChainId"]) else { return nil }
         return Chain(rollup: rollup, version: version, l1ChainID: chainID,
                      nodeVersion: r["nodeVersion"] as? String ?? "",
-                     stakingAsset: l1["stakingAssetAddress"] as? String)
+                     stakingAsset: l1["stakingAssetAddress"] as? String,
+                     governance: l1["governanceAddress"] as? String)
     }
 
     /// The three heads (`node_getChainTips`): proposed is what sequencers

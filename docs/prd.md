@@ -67405,3 +67405,32 @@ The inventory is `design/wallet-helper-text-audit.md`: four passes (Home, Holdin
 **Seen** on the iPhone 17 Pro simulator (iOS 27, the demo): Library › Work › GitHub raised GitHub's feed over Library; holding GitHub showed Open and Settings, and Settings opened its page; Casberi's folder drew Apps (`square.grid.2x2`), whose page listed the demo's apps A–Z, and Bluesky's row opened its page. Not seen: an app needing attention, a `landsNothing` seat, the iPad sheet, the Mac.
 
 Mock: the design canvas "Apps: set up vs. go" (option A).
+
+## §1419 — Aztec's testnet, round three: the signer follows a reset testnet, keeps a log of what it signed, follows the account it signs for, wears Face ID on its verb; testnet proposals land as rows; the computer shows its request as a QR; our own no-deploy account contract, measured (amends §1276, §1277, §1384) (user, 2026-10-18: "what else could we build on aztec testnet now" → "YES LETS DO ALL"; of the sign verb, "faceID is cool to have" — "just not some wide pill" — "lets do that ofc") — BUILT
+
+**Why.** Aztec reset its testnet (node 6.0.0-rc.3, rollup version 3409706519, L1 Sepolia), and the signer's fixed allowlist refused every request from it. What the phone signed was never recorded anywhere the person could read. The sheet's verb was a plain slab while the Secure Enclave key already asked for Face ID on every signature, so the screen did not say how it confirms.
+
+**The ruling.**
+1. **A testnet that moved is still a testnet.** `AztecSignRequest.check(_:live:)` accepts the fixed allowlist (v5 1821665230, v6 3409706519) or the rollup version the live testnet node reports (`node_getNodeInfo`), only when the request's L1 is Sepolia. Mainnet's rollup (4248422647) is refused by number before anything else. The tray says "Checking Aztec's testnet" while it asks.
+2. **The signed log** (`Model/AztecSignedLog.swift`): each signature keeps the network, the account, the message hash and the call lines (never the signature), newest first, 30 at most, one per hash. Aztec's page lists the newest five. Signing for an account follows it (`AztecStore.add`).
+3. **The verb is the Safe ask sheet's** (`DSActVerb`, glyph `faceid`), not a slab: the disc says the key asks for Face ID. `NSFaceIDUsageDescription` now says "signs a transaction", Safe or Aztec.
+4. **Testnet proposals** land as quiet rows (`aztec:testvote:<governance>:<id>`, dated when voting closes, the governance contract on Sepolia Etherscan as the door), read off the live node's `governanceAddress`. `sepolia.etherscan.io` is a door, not a reach.
+5. **The computer shows a QR** (`tools/aztec-signer`, `qrcode` 1.5.4): `~/.casberi-aztec-signer/request.png`, opened, and the link still on the clipboard. A 1,417-character link is QR version 27; Vision read it back exactly.
+6. **Our own account contract, measured, not in the app** (`tools/aztec-account`): `CasberiKeyAccount` signs with P-256 like `EcdsaRAccount`, keeps the current key in a private note (`rotate_signing_key`, from the account itself) and a recovery key fixed in the address (`recover(new, nonce)`). It has no public functions, so it is never deployed (Aztec, 2026-10-17). On the v5 testnet, account `0x0f536d9d…f7f0` was used, rotated and recovered (blocks 123630–123636). Limits: recovery also needs the account's secret and salt; the recovery key can never change; an old approval stays valid up to ten minutes after a rotation; gas estimation needs a stub artifact; the compiled artifact is pinned (aztec-nr v5.2.0).
+7. **Proving on the phone, measured by a peer** (`tools/aztec-phone-spike`, 5d6a4d5a): Aztec's own iOS `bbapi` proves in 2.1 s (309 MB), a private send in 10.5 s. Splitting "the computer prepares, the phone proves" is declined: the inputs carry the whole witness.
+
+**Mac half.** The tray, page and verb are shared code. Not walked on the Mac.
+
+**Seen** on the iPhone 17 Pro simulator (iOS 27): the tray accepted the reset testnet ("Aztec testnet (v6)"), auto-sign signed `0x1179…`, Aztec's page showed the entry under the call lines with "Aztec testnet (v6) · Oct 18 at 4:33 PM", and the room read the reset testnet (block 7,901). Face ID itself is not seen on a simulator (the DEBUG stand-in key never asks).
+
+Mock: the design canvas "Aztec experience".
+
+## §1420 — The generic empty start screen is deleted: an app's page with nothing yet says so in one line (user, 2026-10-18, of "One inbox for all your apps / Browse apps" on the Testnets page: "what is this screen!" — "it should not exist why does it always come up") — BUILT
+
+**Why.** `FeedScreen.roomBody` swapped any room with no rows for `invitationState`, a falling pile of app tiles (`EmptyFeedPile`) under "One inbox for all your apps" and Browse apps. It was the first run's pitch drawn on every empty app page, so a testnet app you had just added told you to go add apps.
+
+**The ruling.** `invitationState` is `DSEmptyState` "Nothing here yet" with "What its apps bring in lands here." over three empty rows (§769: an empty state draws what would fill it). `EmptyFeedPile` and the `-pileTap` hook are deleted.
+
+**Mac half.** The same view. Not walked on the Mac.
+
+**Seen:** built for the iPhone 17 Pro simulator; the empty page itself not yet seen on screen.
