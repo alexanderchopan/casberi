@@ -431,8 +431,9 @@ Decided (user, 2026-10-19):
 - **Free**, not Pro-only.
 - **The bar is Feed · Wallet · Move · Library · Search** (prd §1422, the label decided the same day); Move is a page; the Wallet's + leads with Create an account.
 
+- **One account of your own in v1** ("lets go w/ 1 for v1"). Create an account leads the Wallet's + only until it exists; the Move page's head names the account and its menu holds its addresses (your address, the fresh ones, New address), with no account switcher. Joint and Savings are later, each its own kind.
+
 Still open:
-1. **One account of your own in v1, or several.**
 3. **§112.** Spending from the app amends "signatures happen elsewhere"; record it as a ruling.
 5. **Guardians' delay** (section 2a, open 4), and whether Add a signer offers "two must sign" or a joint account is only ever made through New account.
 7. **The stack**, before the first screen is built: the bundler, the RPC for P-256 verification, and whether CoW's keyless API is enough (section 7).
