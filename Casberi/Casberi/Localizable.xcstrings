@@ -5429,34 +5429,6 @@
         }
       }
     },
-    "Add · Receive" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Añadir · Recibir"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "追加・受け取る"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "추가 · 받기"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "添加 · 接收"
-          }
-        }
-      }
-    },
     "Added" : {
       "localizations" : {
         "es" : {
@@ -7451,6 +7423,34 @@
         }
       }
     },
+    "Check the address" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Revisa la dirección"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アドレスを確認してください"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "주소를 확인하세요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "请核对地址"
+          }
+        }
+      }
+    },
     "CI activity" : {
       "localizations" : {
         "es" : {
@@ -7867,6 +7867,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "关闭应用"
+          }
+        }
+      }
+    },
+    "Coinbase, Kraken or another wallet" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Coinbase, Kraken u otra billetera"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Coinbase、Kraken、または別のウォレット"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Coinbase, Kraken 또는 다른 지갑"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Coinbase、Kraken 或其他钱包"
           }
         }
       }
@@ -11483,30 +11511,30 @@
         }
       }
     },
-    "From an exchange or another wallet" : {
+    "From an exchange" : {
       "localizations" : {
         "es" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Desde un exchange u otra billetera"
+            "value" : "Desde un exchange"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "取引所や別のウォレットから"
+            "value" : "取引所から"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "거래소나 다른 지갑에서"
+            "value" : "거래소에서"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "从交易所或其他钱包"
+            "value" : "从交易所"
           }
         }
       }
@@ -18177,6 +18205,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "X、Instagram、TikTok 等"
+          }
+        }
+      }
+    },
+    "Your address" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu dirección"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "あなたのアドレス"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "내 주소"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的地址"
           }
         }
       }

@@ -117,11 +117,13 @@ struct MoveScreen: View {
         creating = false
     }
 
-    // MARK: Add · Receive
+    // MARK: Receive
 
+    /// Money coming in (prd §1425): from an exchange, or to your address.
+    /// Send's Add is the page's one Add — it batches.
     private func receive(_ address: String) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("Add · Receive")
+            Text("Receive")
                 .dsText(.heading20)
                 .foregroundStyle(DS.headInk)
                 .frame(minHeight: 44, alignment: .leading)
@@ -131,12 +133,12 @@ struct MoveScreen: View {
                 Button { addFrom("https://www.kraken.com", address) } label: { Text(verbatim: "Kraken") }
                 Button("Another wallet") { copy(address) }
             } label: {
-                row(title: "Add", line: "From an exchange or another wallet")
+                row(title: "From an exchange", line: "Coinbase, Kraken or another wallet")
             }
             .buttonStyle(RowPress())
             HStack(spacing: DS.Space.s3) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Receive").dsText(.body17).foregroundStyle(DS.textPrimary)
+                    Text("Your address").dsText(.body17).foregroundStyle(DS.textPrimary)
                     Text(verbatim: YourAccount.short(address) + " · Base · Ethereum")
                         .dsText(.subhead12)
                         .foregroundStyle(DS.textSecondary)

@@ -67476,3 +67476,15 @@ Mock: the design canvas "Aztec experience".
 9. **What Face ID approves is computed on the phone** (`YourAccountOp.safeOpHash`, EIP-712 over the op's fields) and must equal Safe's module's `getOperationHash`, or nothing is signed: no single node chooses the bytes a person signs. The send's id (`userOpHash`, EntryPoint v0.7's) is computed too, so an unclear bundler answer is followed to whether it landed — the receipt, or the account's nonce moving — before anything is called a failure; a refusal stands only once the chain shows nothing moved (an invalid operation, AA20–AA24 or AA3x, at once). Taken and unseen after two minutes is "Sent, and not yet seen… Check before sending again", and the send leaves the page either way, so a second tap cannot pay twice.
 10. **Every key inherits key 0's Face ID policy** (a key made while Face ID is locked out never becomes a key with no prompt), a Keychain item left by a crash or a reinstall is adopted rather than refused or deleted, and a reinstall takes the account back from this phone's Keychain (`YourAccountKey.create`). Totals are checked per token across the batch; a gas number that would overflow refuses the send.
 
+
+## §1425 — The Move page has one Add: Send's, which batches; money coming in is Receive (amends §1422's and the 2026-10-18 canvas's "Add · Receive") (user, 2026-10-19: "send has 'add' b/c you can add batch"; of the section, "should we just say deposit? or In and for send have Out?"; "ok" to Send and Receive)
+
+1. **Receive** heads money coming in, two rows: **From an exchange** (Coinbase, Kraken or another wallet: the address copied, the exchange opened) and **Your address** with its Copy.
+2. **Send's Add** is the page's only Add, and it means one thing: this payment joins the transaction and another starts.
+3. **Not Deposit** (a bank's word, and only half of what comes in: a person paying you is not a deposit) **and not In/Out** (accounting words that no Apple or wallet header uses). Send and Receive are the pair Apple Cash and the wallets use.
+
+## §1426 — An empty Feed draws no preview (retires §1169's preview; its All glyph stands) (user, 2026-10-19: "we don't need these empty states on feed b/c we already showed someone what it looks like in demo")
+
+1. **With nothing connected, the Feed is its start box alone** ("Start with any of these", §1166): the grey category names over one grey row each are deleted, view and model (`todayPreview`). The demo is where a full Feed is shown.
+2. **"Nothing yet today."** stays for a Feed with apps connected and nothing today.
+3. §1169's other half stands: every room's All tile is `square.stack`, the inbox tray is Today's alone.

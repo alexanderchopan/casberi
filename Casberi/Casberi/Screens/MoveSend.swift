@@ -31,6 +31,9 @@ struct MoveSend: View {
     @State private var amount = ""
     @State private var to = ""
     @State private var resolved: Recipient?
+    /// To holds something shaped like an address that is not one: too short,
+    /// a stray character, or a mixed-case checksum one letter off.
+    @State private var malformed = false
     @State private var items: [Op.Payment] = []
     @State private var stage: YourAccountChain.Stage?
 
@@ -64,7 +67,7 @@ struct MoveSend: View {
                 Spacer(minLength: DS.Space.s2)
                 Button("Add") { add() }
                     .dsText(.body17)
-                    .foregroundStyle(pending == nil ? DS.textTertiary : DS.pickInk)
+                    .foregroundStyle(pending == nil || stage != nil ? DS.textTertiary : DS.pickInk)
                     .buttonStyle(RowPress())
                     .disabled(pending == nil || stage != nil)
                     .accessibilityHint(Text("Adds this to the transaction and starts another"))
@@ -111,7 +114,19 @@ struct MoveSend: View {
 
             if !items.isEmpty { batch }
         }
-        .task { await readHoldings() }
+        .task {
+            #if DEBUG
+            // `-moveSendDraft "<amount>|<to>"`: the fields filled, because a
+            // `simctl`-booted simulator drops typed characters (prd §1424).
+            if let draft = UserDefaults.standard.string(forKey: "moveSendDraft"), amount.isEmpty, to.isEmpty {
+                let parts = draft.split(separator: "|", maxSplits: 1).map(String.init)
+                amount = parts.first ?? ""
+                to = parts.count > 1 ? parts[1] : ""
+                NSLog("moveSendDraft: amount=%@ to=%@", amount, to)
+            }
+            #endif
+            await readHoldings()
+        }
     }
 
     // MARK: - The token
@@ -165,6 +180,7 @@ struct MoveSend: View {
     // MARK: - The recipient
 
     private var hint: (text: String, warns: Bool)? {
+        if malformed { return (String(localized: "Check the address"), true) }
         guard let r = resolved else { return nil }
         if let imitates = r.imitates { return (String(localized: "Looks like \(imitates)'s — check it"), true) }
         if let name = r.name, name.caseInsensitiveCompare(to.trimmingCharacters(in: .whitespaces)) != .orderedSame {
@@ -176,9 +192,15 @@ struct MoveSend: View {
     private func resolve() async {
         let text = to.trimmingCharacters(in: .whitespacesAndNewlines)
         resolved = nil
+        malformed = false
         guard !text.isEmpty else { return }
-        if ENS.isHexAddress(text) {
-            guard AddressSafety.checksum(text) != .failed else { return }
+        if text.lowercased().hasPrefix("0x") {
+            guard ENS.isHexAddress(text), AddressSafety.checksum(text) != .failed else {
+                // Said once the typing pauses, so it never flickers mid-word.
+                try? await Task.sleep(for: .milliseconds(600))
+                if !Task.isCancelled { malformed = true }
+                return
+            }
             let address = EIP55.checksum(text)
             let book = AddressBook.shared
             let imitates = book.name(for: address) == nil ? book.lookalikes(of: address).first?.name : nil
