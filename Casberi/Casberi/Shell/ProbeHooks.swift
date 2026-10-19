@@ -3878,6 +3878,32 @@ enum ProbeHooks {
                 }
             }
         },
+        // `-yourAccountProbe <network>` — your account's send (prd §1424),
+        // run to the bundler's door and no further: the estimate, Safe's
+        // module hash, the Enclave's signature, the passkey factory's check.
+        // A 1-wei send to the account itself, so even the bytes it signs
+        // move nothing. Creates the account on this phone first if it has
+        // none. Logs `yourAccount|` lines; never the signature.
+        Hook(key: "yourAccountProbe") { raw, _ in
+            Task { @MainActor in
+                let net = YourAccountOp.networks.first { $0.name.caseInsensitiveCompare(raw) == .orderedSame }
+                    ?? YourAccountOp.baseSepolia
+                do {
+                    let account = try YourAccountKey.create()
+                    let pay = YourAccountOp.Payment(network: net, token: YourAccountOp.eth, amount: "1",
+                                                    to: account, toName: nil)
+                    let sent = try await YourAccountChain.send([pay], reason: "Probe", dryRun: true,
+                                                               report: { NSLog("yourAccount| %@", $0) }) { stage in
+                        NSLog("yourAccount| stage=%@", String(describing: stage))
+                    }
+                    NSLog("yourAccount| ok network=%@ result=%@", sent.network.name, String(describing: sent.outcome))
+                } catch let failure as YourAccountChain.Failure {
+                    NSLog("yourAccount| refused: %@", failure.message)
+                } catch {
+                    NSLog("yourAccount| error: %@", String(describing: error))
+                }
+            }
+        },
         // `-signerProbe YES` — this phone as a Safe co-signer (prd §425),
         // one NSLog per fact (the `-todayProbe` truncation lesson).
         //

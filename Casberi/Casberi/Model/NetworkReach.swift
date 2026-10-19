@@ -452,6 +452,20 @@ enum NetworkReach {
         // measured them went (prd §1318): `SafeSigner` asks a Safe on Gnosis
         // Chain for its own transaction hash through them (`GnosisChainRPC`),
         // and that is now their only use. Reach WALLET with the Safe reads.
+        // Your account (prd §1424): the Move page's reads and its one send.
+        // Public nodes for balances and the chain's checks, public ERC-4337
+        // bundlers (Pimlico's, then Candide's: keyless) for the send. Reach
+        // WALLET: the account is one of the Wallet's, and nothing is reached
+        // until it exists on this phone. Base Sepolia's hosts are DEBUG's
+        // only (`YourAccountOp.networks`).
+        Endpoint(service: "Your account",
+                 reach: .whenConnected(bridge: "Wallet"),
+                 purpose: "Reads what your account holds on Base and Ethereum, and when you tap Send, sends the transaction you signed to a public bundler that puts it on chain. Carries your account's public address and the signed transaction, nothing else about you.",
+                 hosts: ["public.pimlico.io", "api.candide.dev",
+                         "mainnet.base.org", "base-rpc.publicnode.com",
+                         "rpc.mevblocker.io", "ethereum-rpc.publicnode.com",
+                         "sepolia.base.org", "base-sepolia-rpc.publicnode.com"],
+                 credentialed: false),
         Endpoint(service: "Gnosis Chain",
                  reach: .whenConnected(bridge: "Wallet"),
                  purpose: "Asks a Safe on Gnosis Chain for its own hash of a transaction before this phone will sign it, through Gnosis Chain's public nodes. Carries the Safe's address and the transaction, nothing else about you.",

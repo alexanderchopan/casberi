@@ -3,21 +3,29 @@ import Foundation
 import LocalAuthentication
 import Security
 
-/// **YOUR ACCOUNT'S KEY (prd §1421): a P-256 key born in this phone's Secure
-/// Enclave.** Key 0 created the account, so the address comes from it
-/// forever (`YourAccount.address`); the key the account answers to later
-/// changes with every send (the wallet spec, section 3b), which is the send's own work.
+/// **YOUR ACCOUNT'S KEYS (prd §1421, §1424): P-256 keys born in this phone's
+/// Secure Enclave.** Key 0 created the account, so the address comes from it
+/// forever (`YourAccount.address`). Every send moves the account to a new key
+/// (the wallet spec, section 3b), so there are as many keys as sends — and
+/// each NETWORK keeps its own: a send on Base moves Base's, Ethereum's stays.
+/// Which key a network answers to is read from the chain at each send
+/// (`YourAccountChain.configuredX`), never remembered here; a retired key is
+/// refused by the chain, so keeping its wrapped blob costs nothing.
 ///
 /// The shape of `SafeEnclaveKey` (§913) under its own service, never that
-/// file's item: the Enclave-wrapped `dataRepresentation` in a device-only
-/// generic password, `.privateKeyUsage` with `.biometryCurrentSet`, so
-/// re-enrolling Face ID destroys it (§427) and recovery is the way back. The
-/// public half and the address are cached in UserDefaults, where drawing
-/// them costs nothing and needs no prompt.
+/// file's item: each Enclave-wrapped `dataRepresentation` a device-only
+/// generic password (`key-<n>`), `.privateKeyUsage` with `.biometryCurrentSet`
+/// where Face ID is enrolled, so re-enrolling Face ID destroys them (§427) and
+/// recovery is the way back. The public halves and the address are cached in
+/// UserDefaults, where drawing and matching them needs no prompt.
 enum YourAccountKey {
     private static let service = "com.casberi.app.account.enclave"
     private static let addressKey = "yourAccount.address"
-    private static let publicKeyKey = "yourAccount.key0.public"
+    /// Step 1's single key's public half (prd §1422), read as key 0.
+    private static let key0Key = "yourAccount.key0.public"
+    private static let publicKeysKey = "yourAccount.publicKeys"
+    /// A key made for a send that has not landed yet, reused by the next one.
+    private static let pendingKey = "yourAccount.pendingNext"
 
     /// The account's address, once created on this device.
     static var address: String? { UserDefaults.standard.string(forKey: addressKey) }
@@ -27,18 +35,83 @@ enum YourAccountKey {
         case enclaveRefused
         case keychainRefused(OSStatus)
         case noAddress
+        case noKey
     }
 
-    /// Make key 0 and the account's address. Nothing reaches the network:
-    /// the account can receive at once and exists on chain at its first send.
-    @discardableResult
-    static func create() throws -> String {
-        if let address { return address }
+    // MARK: - The public halves
+
+    /// Every key's `x ‖ y`, hex, by index.
+    private static var publicKeys: [String] {
+        get {
+            if let all = UserDefaults.standard.stringArray(forKey: publicKeysKey) { return all }
+            return UserDefaults.standard.string(forKey: key0Key).map { [$0] } ?? []
+        }
+        set { UserDefaults.standard.set(newValue, forKey: publicKeysKey) }
+    }
+
+    static var keyCount: Int { publicKeys.count }
+
+    static func publicKey(_ index: Int) -> (x: [UInt8], y: [UInt8])? {
+        guard publicKeys.indices.contains(index),
+              let xy = SafeABI.hexBytes(publicKeys[index]), xy.count == 64 else { return nil }
+        return (Array(xy[0..<32]), Array(xy[32..<64]))
+    }
+
+    /// The key whose x the chain holds.
+    static func index(matchingX x: [UInt8]) -> Int? {
+        publicKeys.indices.first { publicKey($0)?.x == x }
+    }
+
+    // MARK: - Making keys
+
+    /// Whether key 0 was made behind Face ID (or Touch ID). Every later key
+    /// takes the same policy, never a weaker one: a key made while Face ID
+    /// was locked out must not quietly become the account's next key with no
+    /// prompt on it.
+    private static let biometricKey = "yourAccount.biometric"
+
+    /// Biometrics set up on this phone, locked out or not.
+    private static var biometryEnrolled: Bool {
+        var error: NSError?
+        if LAContext().canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &error) { return true }
+        return error.map { LAError.Code(rawValue: $0.code) == .biometryLockout } ?? false
+    }
+
+    /// Key 0's policy, as recorded; for an account made before it was
+    /// recorded, what this phone can do now.
+    private static var biometric: Bool {
+        (UserDefaults.standard.object(forKey: biometricKey) as? Bool) ?? biometryEnrolled
+    }
+
+    private static func item(_ index: Int) -> [String: Any] {
+        [kSecClass as String: kSecClassGenericPassword,
+         kSecAttrService as String: service,
+         kSecAttrAccount as String: "key-\(index)"]
+    }
+
+    /// The public half of the key already stored as `key-<index>`, if any —
+    /// read without a prompt (only signing needs one).
+    private static func stored(_ index: Int) -> [UInt8]? {
+        var query = item(index)
+        query[kSecReturnData as String] = true
+        query[kSecMatchLimit as String] = kSecMatchLimitOne
+        var out: CFTypeRef?
+        guard SecItemCopyMatching(query as CFDictionary, &out) == errSecSuccess, let blob = out as? Data,
+              let key = try? SecureEnclave.P256.Signing.PrivateKey(dataRepresentation: blob) else { return nil }
+        let xy = [UInt8](key.publicKey.rawRepresentation)
+        return xy.count == 64 ? xy : nil
+    }
+
+    /// A new Enclave key stored as `key-<index>`; or, when that item already
+    /// exists (the app was killed between storing a key and recording it, or
+    /// reinstalled, which keeps the Keychain), that key — never a duplicate
+    /// error that would stop every send, and never a deletion of a key the
+    /// account might answer to.
+    private static func make(index: Int, biometric: Bool) throws -> [UInt8] {
+        if let existing = stored(index) { return existing }
         guard SecureEnclave.isAvailable else { throw Failure.noEnclave }
         var flags: SecAccessControlCreateFlags = [.privateKeyUsage]
-        if LAContext().canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: nil) {
-            flags.insert(.biometryCurrentSet)
-        }
+        if biometric { flags.insert(.biometryCurrentSet) }
         guard let control = SecAccessControlCreateWithFlags(
             nil, kSecAttrAccessibleWhenPasscodeSetThisDeviceOnly, flags, nil) else {
             throw Failure.keychainRefused(errSecParam)
@@ -46,23 +119,90 @@ enum YourAccountKey {
         let key: SecureEnclave.P256.Signing.PrivateKey
         do { key = try SecureEnclave.P256.Signing.PrivateKey(accessControl: control) }
         catch { throw Failure.enclaveRefused }
-        let xy = [UInt8](key.publicKey.rawRepresentation)
-        guard xy.count == 64,
-              let account = YourAccount.address(x: Array(xy[0..<32]), y: Array(xy[32..<64])) else {
-            throw Failure.noAddress
-        }
-        let add: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: "key-0",
-            kSecValueData as String: key.dataRepresentation,
-            kSecAttrAccessible as String: kSecAttrAccessibleWhenPasscodeSetThisDeviceOnly,
-            kSecAttrSynchronizable as String: false,
-        ]
+        var add = item(index)
+        add[kSecValueData as String] = key.dataRepresentation
+        add[kSecAttrAccessible as String] = kSecAttrAccessibleWhenPasscodeSetThisDeviceOnly
+        add[kSecAttrSynchronizable as String] = false
         let status = SecItemAdd(add as CFDictionary, nil)
         guard status == errSecSuccess else { throw Failure.keychainRefused(status) }
-        UserDefaults.standard.set(Keccak256.hexString(xy), forKey: publicKeyKey)
+        let xy = [UInt8](key.publicKey.rawRepresentation)
+        guard xy.count == 64 else { throw Failure.noKey }
+        return xy
+    }
+
+    /// Make key 0 and the account's address — or, when key 0 is already in
+    /// this phone's Keychain (a reinstall keeps it), take the account back
+    /// with every key after it. Nothing reaches the network: the account can
+    /// receive at once and exists on chain at its first send.
+    @discardableResult
+    static func create() throws -> String {
+        if let address { return address }
+        let restoring = stored(0) != nil
+        let bio = restoring ? biometric : biometryEnrolled
+        let xy = try make(index: 0, biometric: bio)
+        guard let account = YourAccount.address(x: Array(xy[0..<32]), y: Array(xy[32..<64])) else {
+            throw Failure.noAddress
+        }
+        var keys = [Keccak256.hexString(xy)]
+        if restoring {
+            var i = 1
+            while let more = stored(i) { keys.append(Keccak256.hexString(more)); i += 1 }
+        } else {
+            UserDefaults.standard.set(bio, forKey: biometricKey)
+        }
+        publicKeys = keys
+        UserDefaults.standard.set(Keccak256.hexString(xy), forKey: key0Key)
         UserDefaults.standard.set(account, forKey: addressKey)
         return account
     }
+
+    /// The key a send moves the account to: the one an unlanded send made,
+    /// or a new one. Never the key that signs it, nor key 0.
+    static func nextKey(after signer: Int) throws -> Int {
+        let pending = UserDefaults.standard.object(forKey: pendingKey) as? Int
+        if let pending, pending != signer, pending != 0, publicKey(pending) != nil { return pending }
+        let index = publicKeys.count
+        let xy = try make(index: index, biometric: biometric)
+        publicKeys = publicKeys + [Keccak256.hexString(xy)]
+        UserDefaults.standard.set(index, forKey: pendingKey)
+        return index
+    }
+
+    /// A send landed and the chain holds `index`: the next send makes a new key.
+    static func used(_ index: Int) {
+        if (UserDefaults.standard.object(forKey: pendingKey) as? Int) == index {
+            UserDefaults.standard.removeObject(forKey: pendingKey)
+        }
+    }
+
+    // MARK: - Signing
+
+    /// Sign 32 pre-hashed bytes with key `index`, behind Face ID with
+    /// `reason`: `r ‖ s`, `s` low.
+    static func sign(_ digest: [UInt8], with index: Int, reason: String) async throws -> (r: [UInt8], s: [UInt8]) {
+        var query = item(index)
+        query[kSecReturnData as String] = true
+        query[kSecMatchLimit as String] = kSecMatchLimitOne
+        var out: CFTypeRef?
+        let status = SecItemCopyMatching(query as CFDictionary, &out)
+        guard status == errSecSuccess, let blob = out as? Data else { throw Failure.keychainRefused(status) }
+        let context = LAContext()
+        context.localizedReason = reason
+        let key = try SecureEnclave.P256.Signing.PrivateKey(dataRepresentation: blob, authenticationContext: context)
+        let raw = [UInt8](try key.signature(for: AccountDigest(Data(digest))).rawRepresentation)
+        return (Array(raw[0..<32]), SafeWebAuthn.lowS(Array(raw[32..<64])))
+    }
+}
+
+/// 32 already-hashed bytes, so CryptoKit signs them as they are — the
+/// pre-hashed overload; `signature(for: Data)` would hash them again.
+private struct AccountDigest: Digest {
+    let bytes: Data
+    init(_ bytes: Data) { self.bytes = bytes }
+    static var byteCount: Int { 32 }
+    func withUnsafeBytes<R>(_ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R { try bytes.withUnsafeBytes(body) }
+    func makeIterator() -> Array<UInt8>.Iterator { [UInt8](bytes).makeIterator() }
+    var description: String { "AccountDigest" }
+    static func == (a: AccountDigest, b: AccountDigest) -> Bool { a.bytes == b.bytes }
+    func hash(into hasher: inout Hasher) { hasher.combine(bytes) }
 }

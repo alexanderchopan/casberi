@@ -19,8 +19,8 @@ enum MoveTab {
 /// account's face, its name, its address. Then the modules, bare on the page
 /// (§1382, §1393), a 32pt seam between them (§1386).
 ///
-/// **Built so far: create and receive.** Send · Swap and Security are not
-/// drawn until they work (§83: no dead controls). No balance: the Wallet,
+/// **Built so far: create, send (`MoveSend`, prd §1424) and receive.** Swap
+/// and Security are not drawn until they work (§83: no dead controls). No balance: the Wallet,
 /// where the account is followed from the moment it exists, shows it.
 struct MoveScreen: View {
     @Environment(ShellChrome.self) private var chrome
@@ -33,6 +33,8 @@ struct MoveScreen: View {
             VStack(spacing: 0) {
                 head
                 if let address {
+                    MoveSend(account: address)
+                        .padding(.top, DSRoomChassis.sectionGap)
                     receive(address)
                         .padding(.top, DSRoomChassis.sectionGap)
                 } else {

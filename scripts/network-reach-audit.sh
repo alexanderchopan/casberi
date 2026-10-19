@@ -106,6 +106,10 @@ KNOWN_NON_REACH=(
   # door (prd §803e). Opened, never fetched: the balances come from the
   # wallet holdings read already disclosed.
   blockscan.com
+  # www.coinbase.com — the Move page's Add › Coinbase (prd §1422): the
+  # address is copied and the exchange opens in the browser to withdraw to
+  # it. Never fetched.
+  www.coinbase.com
   venice.ai bankr.bot www.kraken.com portal.cdp.coinbase.com
   www.binance.com exchange.gemini.com console.x.ai
   # www.binance.us — Binance.US's key page, the door for a US person
