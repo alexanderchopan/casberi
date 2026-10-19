@@ -13,7 +13,6 @@ struct DSGroupHeader: View {
     var body: some View {
         Text(word)
             .dsText(.heading20)
-            .fontWeight(.semibold)
             .foregroundStyle(DS.textPrimary)
             .frame(maxWidth: .infinity, alignment: .leading)
             // The rows' own column (prd §1387): "Today" and the marks stand there.

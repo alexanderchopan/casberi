@@ -126,7 +126,7 @@ mutate "the incoming leg lands on the line" \
     'figure: nil,'
 mutate "the article stays" \
     'act = String(act.dropFirst(article.count))' \
-    'act = act'
+    'act = String(act)'
 
 # The shapes this reads are the ones the bridges write.
 grep -q 'let head = "Swapped \\(out) → \\(inn)"' "$INGEST" \
