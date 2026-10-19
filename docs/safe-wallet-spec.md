@@ -421,6 +421,7 @@ Decided (user, 2026-10-17):
 - **Signers are not guardians**; the recovery key is a signer (section 2a).
 
 Decided (user, 2026-10-19):
+- **Safe, reaffirmed** ("ok so Safe it is then") after comparing Aztec (mainnet Alpha 5.2.0, a critical v5 proving flaw until v6, state that does not migrate between releases, no stock account that rotates) and Miden (mainnet set for 2026-10-26; account IDs survive key changes and a post-quantum Falcon signer, but no P-256 so no Secure Enclave, and a private account's state needs a backup server or is lost). Both stay candidates for a later "Private" account; Miden's questions for its team: a stock auth component that rotates, P-256/WebAuthn, and backing private state to iCloud with no Guardian.
 - **No phrase** ("there are many problems with a phrase and most important is single point of failure"). Recovery is your other devices plus an iCloud-synced recovery passkey; every signer is a passkey; a phrase exists only as a later opt-in export. Fresh addresses are the account's set-up with another salt (section 3a), so no secret is derived anywhere.
 
 Still open:
