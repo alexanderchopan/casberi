@@ -16,7 +16,7 @@ is still open.
 5. **Real money runs only on what is live and proven.** Safe on Base and Ethereum today. New technology (Bermuda, 8130, Tempo, Aztec) is layered on once it is on mainnet and measured on an iPhone, never load-bearing before.
 6. **Honest privacy.** Every privacy feature says exactly what it hides and what it doesn't ("sweeping links this address to your account").
 7. **Read before you sign.** Every transaction is shown in plain words, with balances before and after (clear signing and simulation).
-8. **Always a way out.** The recovery passkey opens the account in Safe's own app (app.safe.global signs with passkeys) without Casberi. A phrase can be exported later as an opt-in verb for leaving to a wallet that speaks no passkeys; it is never made at creation.
+8. **Always a way out.** A passkey signs only where it was made, so the way out is a key you hold outside Casberi (a Ledger or another wallet), added as an owner: from then on Rabby, Safe's app or the contract itself can move the money. Casberi nudges for it (section 6). Export a phrase is the opt-in fallback for someone with no other wallet; it is never made at creation.
 9. **No contract of our own, ever** (prd §1380, user, 2026-10-17: "i do not and will not create our own contracts", "we can't afford audits"). Every contract the account touches is someone else's, already deployed and audited: Safe's, CoW's, the 4337 module's. A feature that would need a contract we wrote is not built.
 10. **Nothing permanent behind the address.** Every key that can move money rotates — the device key with every transaction, the recovery key on "New phrase" — so no leaked secret works for long. This is what rules Aztec out for now (§1380): its accounts keep a fixed key and a fixed privacy secret.
 
@@ -157,11 +157,12 @@ launch**. Casberi runs no server and pays no gas.
   spend: this is a spending account, not savings.
 - **Your other devices are owners too** (moved up from v1.1): a new phone is
   approved from the Mac or iPad you have, and a lost one's key is swapped out.
-- **The way out** is the same passkey: Safe's own app (app.safe.global) signs
-  with passkeys, so the account opens there without Casberi. **Export a
-  phrase** is a later, opt-in verb (Face ID, shown once) for leaving to a wallet
-  that speaks no passkeys, and the one backup that survives losing every device
-  and the Apple ID together; it is never made at creation.
+- **The way out** is a key you hold outside Casberi (a Ledger or another
+  wallet), added as an owner and nudged for in Needs you: a passkey signs only
+  where it was made, so neither ours nor the iCloud one opens the account in
+  Safe's app. **Export a phrase** is a later, opt-in verb (Face ID, shown once)
+  for someone with no other wallet, and a backup that survives losing every
+  device and the Apple ID together; it is never made at creation.
 - **Gas** comes from the Safe's own balance (Safe's 4337 module and a commodity
   bundler). Fees are shown in dollars.
 - **Chains: Base and Ethereum** (user, 2026-10-12). **Same address on both.** It can receive money before it
@@ -177,8 +178,8 @@ It is the Pro tier's "writing wallet" in the business model.
 
 | Need | Existing place | Rule |
 |---|---|---|
-| Create one | Wallet › Accounts menu, first row **New account** | §1108: a verb that adds an account is that menu's first row |
-| Send, Swap, Receive, Add money | **An Actions screen of their own**, opened by **one button in the bottom band beside Search** | Amends §774/§1108, which put money verbs as rows leading Holdings (user, 2026-10-12). No fifth tile: the Wallet keeps four (§1107) |
+| Create one | **The Wallet's + menu, first row "Create an account"**, above Follow an account and Connect an app (user, 2026-10-19); and the Actions page itself, before any account exists | §1410's one menu wherever the Wallet adds |
+| Send, Swap, Receive, Add money, Security | **The Actions tab**: the bar is Feed · Wallet · Actions · Library · Search, five equal tabs (prd §1422) | Swapping is a key action, not a Wallet corner (user, 2026-10-19). Amends §774/§1108 |
 | Activity | **Home** list (sends, receives, fees) | §1039 |
 | Something needs you | **Home › Needs you** (a recovery in progress, a stuck send) | §1111 |
 | Recovery, devices | **The account sheet**, as sections under its tiles | Security keeps its checkup (§1107) |
@@ -187,9 +188,9 @@ It is the Pro tier's "writing wallet" in the business model.
 
 Trays are `DSTray`; verbs are rows (`DSDoorRow`); nothing at the top of a screen (§752).
 
-## 2a. The account sheet: a page of live modules
+## 2a. The Actions page: a page of live modules
 
-**The sheet the Wallet button raises IS the account** (user, 2026-10-13). It is not a menu of tiles that open trays: it is a stack of **modules you act in directly**, so sending is typing into Move, not tapping Send first ("if the tray or sheet has a send and swap module already there … that is easier. same for signing, rotating keys"). The same idea as the tray's page of modules (§1207 item 5).
+**Called the actions tray in design talk (user, 2026-10-19); since §1422 it is the Actions tab's page, not a tray.** **The page IS the account** (user, 2026-10-13). It is not a menu of tiles that open trays: it is a stack of **modules you act in directly**, so sending is typing into Move, not tapping Send first ("if the tray or sheet has a send and swap module already there … that is easier. same for signing, rotating keys"). The same idea as the tray's page of modules (§1207 item 5).
 
 - **No balance** (user: "we already have that on the wallet"): the Wallet behind the sheet shows it.
 - **The account is one line, not a module** (user, 2026-10-13: "it needs to be one line"): a disc, the name, a pink ⌄ and the short address, **+ New** on the right. Tapped, it opens in place: the accounts (pick one, a check on the current), then **Addresses** with **+ New address**: your address and every fresh address with what it holds. Fresh addresses live here, under the account, not under Receive (user: "those would be under my account … a selection there").
@@ -220,8 +221,8 @@ No balance and **no Activity module** (user: "we have that in the wallet already
 
 ### v1 — the first release
 
-**The Actions screen** (the tiles below are superseded by section 2a's modules, 2026-10-13; the door stands). Send, Swap, Receive and Add money live together on one sheet of their own, not as rows in Holdings (user, 2026-10-12).
-- **Its door: the Wallet button**, the band's trailing seat on every page (face · Search · Wallet, §1278, §1280, shipped in 3.0.4). Today it opens the Wallet on Home. Once you have an account of your own it opens the Wallet **with the account sheet on top**, so it always lands in the Wallet. After a key change you didn't make it carries the attention dot.
+**The Actions screen** (superseded twice: the tiles by section 2a's modules, 2026-10-13; the door and the sheet by prd §1422, 2026-10-19). Send, Swap, Receive and Add money live together, not as rows in Holdings (user, 2026-10-12).
+- **Its door is the Actions tab** (§1422), a page like the other four. The band's Wallet button (§1278, §1280) is deleted; after a key change you didn't make, the Actions tab carries the attention dot.
 - **The sheet:** the Holdings sheet's anatomy. Your account's box, then **four tiles: Send · Swap · Receive · Add money** (a sheet's acts are tiles, four at most, §1178), then sections: **Recovery** (recovery key, Show recovery phrase, New recovery phrase), **Devices** (each owner, Add a device), **Account** (address, name, notifications, activity) and one footnote on who holds the keys.
 - Mockup: `design/mockups/wallet-account-button.html`. Frames 1 and 7 predate §1278 (the button there is Wallet-only) and frames 6 and 7 draw the 3-day recovery the no-delay ruling removed; the sheet, Send, Review and Swap frames stand.
 - Each action opens its own tray, below.
@@ -424,20 +425,23 @@ Decided (user, 2026-10-19):
 - **Safe, reaffirmed** ("ok so Safe it is then") after comparing Aztec (mainnet Alpha 5.2.0, a critical v5 proving flaw until v6, state that does not migrate between releases, no stock account that rotates) and Miden (mainnet set for 2026-10-26; account IDs survive key changes and a post-quantum Falcon signer, but no P-256 so no Secure Enclave, and a private account's state needs a backup server or is lost). Both stay candidates for a later "Private" account; Miden's questions for its team: a stock auth component that rotates, P-256/WebAuthn, and backing private state to iCloud with no Guardian.
 - **No phrase** ("there are many problems with a phrase and most important is single point of failure"). Recovery is your other devices plus an iCloud-synced recovery passkey; every signer is a passkey; a phrase exists only as a later opt-in export. Fresh addresses are the account's set-up with another salt (section 3a), so no secret is derived anywhere.
 
+- **The outside key is nudged**: the account works alone; "Add a key you hold outside Casberi" (a Ledger or another wallet) stands in Needs you until done, so nothing, Casberi included, is the only way in. Export a phrase stays the opt-in fallback.
+- **The look is the Apple pass** (row two of the 2026-10-18 canvas): the centred head, no glyph on the blocks, verbs as words, a count before each chevron.
+- **Add money in v1 is "Add from an exchange"**: Coinbase, Kraken, another wallet; the address copied and the app opened. A card or Apple Pay onramp needs a vendor's server, so it waits.
+- **Free**, not Pro-only.
+- **The bar is Feed · Wallet · Actions · Library · Search** (prd §1422); Actions is a page; the Wallet's + leads with Create an account.
+
 Still open:
-0. **The sheet's look**: row one (bare) or row two (the Apple pass) of the 2026-10-18 canvas, and with it whether this sheet's blocks wear a glyph.
-1. **Card and Apple Pay top-up.** Skip in v1, or accept one vendor's server.
-2. **Pro-only, or free.** The business model puts the writing wallet in Pro ($20).
+1. **The tab's label**: Actions or Trade.
+2. **One account of your own in v1, or several.**
 3. **§112.** Spending from the app amends "signatures happen elsewhere"; record it as a ruling.
-4. **The account button's glyph.** Proposed `wallet.bifold`, no word, because the sheet holds more than money moves. Decided: the door is this button, not a fifth tile (user, 2026-10-12).
 5. **Guardians' delay** (section 2a, open 4), and whether Add a signer offers "two must sign" or a joint account is only ever made through New account.
-6. **Where New account lives now that §1410 gives the Wallet's + two rows** (Follow an account, Connect an app): a third row there, the sheet's account line, or both.
 7. **The stack**, before the first screen is built: the bundler, the RPC for P-256 verification, and whether CoW's keyless API is enough (section 7).
 
 ## 7. Technical notes (for the build, not the design)
 
 - **Contracts:** Safe 1.4.1 L2, `Safe4337Module`, `SafeWebAuthnSharedSigner` for the first passkey (4337 deployment rules), and the recovery passkey as a second owner at threshold 1 through Safe's own `SafeWebAuthnSignerFactory` (one signer proxy per passkey, Safe's audited contract, deployed by the factory — none of ours, principle 9). No recovery module.
-- **The recovery passkey:** a `SecureEnclave`-free CryptoKit P-256 key stored with `kSecAttrSynchronizable` in the app-id Keychain group (the same channel `TokenVault.syncs` uses, §1162), so iCloud Keychain carries it to every device; or an `ASAuthorization` platform passkey on the app's associated domain, which iCloud syncs natively and Safe's app can use directly. Decide at build (the second is the way out; the first needs no domain).
+- **The recovery passkey:** a `SecureEnclave`-free CryptoKit P-256 key stored with `kSecAttrSynchronizable` in the app-id Keychain group (the same channel `TokenVault.syncs` uses, §1162), so iCloud Keychain carries it to every device; or an `ASAuthorization` platform passkey on casberi.app, which iCloud syncs natively. A passkey is bound to its domain, so neither can sign in Safe's app; the way out is the nudged outside key (section 6). Decide at build: the first needs no domain, the second gives Apple's passkey sheet.
 - **Address:** CREATE2 from `SafeProxyFactory` with a fixed set-up and salt, so it is identical on every chain.
 - **Swap:** CoW Protocol (`api.cow.fi`, keyless). An order is signed, not sent: the Safe signs it through `isValidSignature` (EIP-1271), and CoW's solvers settle it and take the fee from the sell token. Needs the Safe on chain and a one-time approval of each sell token to CoW's vault relayer, batched with the first swap. `api.cow.fi` goes in `NetworkReach` (§205).
 - **P-256 verification:** the RIP-7212 precompile on L2s, EIP-7951 on Ethereum mainnet.

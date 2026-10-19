@@ -67442,3 +67442,15 @@ Mock: the design canvas "Aztec experience".
 3. **Fresh addresses derive nothing**: a fresh receiving address is the account's set-up with another CREATE2 salt and the same owners (§3a revised). Private while it only receives; linkable once two have spent, which the app says. Full unlinkability stays v2's Bermuda.
 4. **Honest limit** (principle 6): losing every device and the Apple ID at once loses the account unless a phrase was exported.
 5. Only Safe's contracts, per §1380: the second passkey owner is a `SafeWebAuthnSignerFactory` proxy.
+
+## §1422 — Five equal tabs: Feed · Wallet · Actions · Library · Search; Actions is a page (amends §1327's three tabs and Search apart, §1374's bar that hugs its tabs, §1278/§1280's band Wallet button, §1421 item 2) (user, 2026-10-19: "swapping is going to be a key action we want users to do b/c feed alone isn't enough"; "we have to accept and push that actions tray, search, feed and wallet are all critical choices for user not secondary"; of Apple Music and the App Store, "they each have five in the tab bar and search is one of them. it is connected"; "feed wallet actions library search")
+
+1. **One bar, five equal tabs, in that order.** Search leaves its separate circle and stands in the bar as the fifth; the bar spans the width. A control that changes shape by page (Search's pill growing a second circle in the Wallet) is refused ("confusing frankenstein").
+2. **Actions is a page, not a tray**: your account — the centred head with its accounts menu, Send · Swap, Add · Receive, Security (`docs/safe-wallet-spec.md` §2a, the Apple pass of the 2026-10-18 canvas). A half-typed send keeps its state across tabs. Before you have an account it is the creation page.
+3. **The band's Wallet button is deleted**, including its last appearance beside the face while the rooms tray is up (`WalletDoor`). The Wallet tab is the Wallet; the Actions tab carries the attention dot after a key change you didn't make.
+4. **The Wallet's + leads with Create an account**, above Follow an account and Connect an app (§1410's one menu).
+5. **The fold stays**: scrolled down, the bar is the current tab's circle (§1327).
+6. **Mac half (§1402):** the rail lists the same five; ⌘1–⌘5 open them; Actions is the pane's page.
+7. **Amends §1421 item 2:** a passkey signs only where it was made, so the way out is a key you hold outside Casberi, nudged in Needs you; Export a phrase stays the opt-in fallback.
+
+Open: the tab's label (Actions or Trade). Canvas: https://claude.ai/artifact/2HbVMQfk1MP4bLuU6teKTX, option E.

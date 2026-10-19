@@ -235,7 +235,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1560 of 1629 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1561 of 1630 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1797,6 +1797,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1419 — Aztec's testnet, round three: the signer follows a reset testnet, keeps a log of what it signed, follows the account…
 - §1420 — The generic empty start screen is deleted: an app's page with nothing yet says so in one line
 - §1421 — Your account has no phrase: recovery is your other devices and an iCloud-synced passkey (amends `docs/safe-wallet-spe…
+- §1422 — Five equal tabs: Feed · Wallet · Actions · Library · Search; Actions is a page (amends §1327's three tabs and Search…
 
 ## Dead rulings → what replaced them (generated)
 
