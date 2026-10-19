@@ -82,12 +82,36 @@ enum SafeAccount {
         sel("createProxyWithNonce(address,bytes,uint256)") + w(safeL2) + w(96) + w(salt) + dynamic(initializer(key))
     }
 
-    /// The account's address, before it exists: the factory's own answer to
-    /// a simulated create, so nothing about CREATE2 is re-derived here.
+    /// The account's address, whether or not it exists yet: SafeProxyFactory
+    /// 1.4.1's own CREATE2 — salt `keccak(keccak(initializer) ‖ saltNonce)`,
+    /// code `proxyCreationCode ‖ singleton` — with the creation code read
+    /// from the factory itself. (Simulating a create answers only until the
+    /// account exists: after that the factory reverts "Create2 call failed".)
     static func address(_ net: Chain.Network, _ key: Key, salt: Int = 0) async throws -> String {
+        let creation = try await proxyCreationCode(net)
+        let saltHash = Keccak256.hash(Keccak256.hash(initializer(key)) + w(salt))
+        let codeHash = Keccak256.hash(creation + w(safeL2))
+        let digest = Keccak256.hash([0xff] + addressBytes(proxyFactory) + saltHash + codeHash)
+        return EIP55.checksum("0x" + Keccak256.hexString(Array(digest.suffix(20))))
+    }
+
+    /// The factory's answer by simulation — the check `address` is held to
+    /// while an account does not exist yet.
+    static func simulatedAddress(_ net: Chain.Network, _ key: Key, salt: Int = 0) async throws -> String {
         let answer = try await Chain.ethCall(net, to: proxyFactory, data: hex(factoryData(key, salt: salt)))
         guard let a = SafeWebAuthn.decodeAddress(answer) else { throw Chain.RPCError(message: "factory gave no address: \(answer)") }
         return a
+    }
+
+    nonisolated(unsafe) private static var creationCode: [UInt8]?
+    static func proxyCreationCode(_ net: Chain.Network) async throws -> [UInt8] {
+        if let creationCode { return creationCode }
+        let answer = try await Chain.ethCall(net, to: proxyFactory, data: hex(sel("proxyCreationCode()")))
+        guard let bytes = SafeABI.hexBytes(answer), bytes.count >= 64 else { throw Chain.RPCError(message: "no creation code") }
+        let length = Int(UInt64(Keccak256.hexString(Array(bytes[56..<64])), radix: 16) ?? 0)
+        guard bytes.count >= 64 + length else { throw Chain.RPCError(message: "short creation code") }
+        creationCode = Array(bytes[64..<(64 + length)])
+        return creationCode!
     }
 
     /// `executeUserOp(to, value, data, operation)`, the only call the module runs.

@@ -41,3 +41,16 @@ address: send it about **0.001 Base Sepolia ETH** from a faucet, then:
 4. **Try the previous key**: must be refused by the bundler.
 
 `-autocheck YES` runs step 1 at launch for a console-only run.
+
+## Measured (2026-10-19, iPhone 17 Pro Max, Base Sepolia)
+
+Account `0x4CC2193e5FA29b10ee4DEBC982e09125c79a78D9`, funded with 0.0001 ETH from QuickNode's faucet.
+
+| Step | Result |
+|---|---|
+| Check | the chain verified the Enclave signature over the module's SafeOp hash, 2.9 s |
+| Send (creates the account) | mined in 3.9 s, block 48,334,858, tx `0x07f2b216…50ce`, 517,604 gas, ~0.00001 ETH paid by the account itself |
+| Send with a new key | mined in 3.7 s, tx `0x30e51b1b…c123`: paid and moved the account to key 2 in one transaction |
+| Try the previous key | key 0's valid signature refused by the bundler: `AA24 signature error`, 1.7 s |
+
+Found on the way: asking the factory to simulate a create gives the address only until the account exists ("Create2 call failed"); the address is now computed with the factory's own CREATE2, the creation code read from the factory, and checked against the simulation while one exists.

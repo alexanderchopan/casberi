@@ -51,6 +51,13 @@ enum EnclaveKeys {
         }
     }
 
+    /// The key the account answered to before the last rotation: the one
+    /// that must now be refused.
+    static var retiredIndex: Int? {
+        get { UserDefaults.standard.object(forKey: "safe-spike.retired") as? Int }
+        set { UserDefaults.standard.set(newValue, forKey: "safe-spike.retired") }
+    }
+
     static func forgetAll() {
         UserDefaults.standard.removeObject(forKey: blobsKey)
         UserDefaults.standard.removeObject(forKey: currentKey)

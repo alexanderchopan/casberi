@@ -28,6 +28,10 @@ struct Check {
         let nxy = [UInt8](next.publicKey.rawRepresentation)
         let nextKey = SafeAccount.Key(x: Array(nxy[0..<32]), y: Array(nxy[32..<64])) { _ in throw Chain.RPCError(message: "unused") }
         do {
+            let computed = try await SafeAccount.address(net, key)
+            let simulated = try await SafeAccount.simulatedAddress(net, key)
+            print("address: computed \(computed) · factory \(simulated) · \(computed == simulated ? "match ✓" : "MISMATCH ✗")")
+            if computed != simulated { exit(1) }
             for rotate in [false, true] {
                 print("— \(rotate ? "send + rotate" : "plain send") —")
                 let me = try await SafeAccount.address(net, key)

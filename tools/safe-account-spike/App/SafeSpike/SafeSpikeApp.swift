@@ -89,7 +89,11 @@ final class Spike: ObservableObject {
             let prepared = try await SafeAccount.prepare(net, origin: try EnclaveKeys.key(0), callData: call, log: log)
             let signed = try await SafeAccount.sign(net, prepared, with: try EnclaveKeys.key(signerIndex), log: log)
             _ = try await SafeAccount.send(net, signed, log: log)
-            if let nextIndex { EnclaveKeys.currentIndex = nextIndex; log("the account now answers to key \(nextIndex); key \(signerIndex) is retired") }
+            if let nextIndex {
+                EnclaveKeys.currentIndex = nextIndex
+                EnclaveKeys.retiredIndex = signerIndex
+                log("the account now answers to key \(nextIndex); key \(signerIndex) is retired")
+            }
         }
     }
 
@@ -97,8 +101,7 @@ final class Spike: ObservableObject {
     /// (AA24): the proof that a used key never works again.
     func tryOldKey() {
         run("Try the previous key") { [self] in
-            let old = EnclaveKeys.currentIndex - 1
-            guard old >= 0 else { log("no previous key yet: send with a new key first"); return }
+            guard let old = EnclaveKeys.retiredIndex else { log("no retired key yet: send with a new key first"); return }
             let call = SafeAccount.sendCall(to: address, value: 1, rotateTo: nil)
             let prepared = try await SafeAccount.prepare(net, origin: try EnclaveKeys.key(0), callData: call, log: log)
             let signed = try await SafeAccount.sign(net, prepared, with: try EnclaveKeys.key(old), log: log)
