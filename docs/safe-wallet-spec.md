@@ -440,6 +440,20 @@ Still open:
 
 ## 7. Technical notes (for the build, not the design)
 
+**The stack, measured 2026-10-19** (read-only, keyless, from this Mac; addresses from Safe's own `safe-deployments` and `safe-modules-deployments` records, not memory):
+
+| Piece | Base | Base Sepolia | Ethereum | Sepolia |
+|---|---|---|---|---|
+| SafeL2 1.4.1 `0x29fc…C762`, SafeProxyFactory `0x4e1D…ec67`, MultiSendCallOnly `0x9641…02e2` | deployed | deployed | deployed | deployed |
+| Safe4337Module 0.3.0 `0x75cf…c226`, SafeModuleSetup `0x2dd6…5b47` | deployed | deployed | deployed | deployed |
+| SafeWebAuthnSharedSigner `0x94a4…55c2`, SafeWebAuthnSignerFactory `0x1d31…1195`, DaimoP256Verifier `0xc2b7…4De4` (passkey module 0.2.1) | deployed | deployed | deployed | deployed |
+| EntryPoint v0.7 `0x0000…a032` | deployed | deployed | deployed | deployed |
+| P-256 precompile `0x100`, a fresh CryptoKit signature | valid | valid | valid | valid |
+| Bundler, keyless, EntryPoint v0.7: Pimlico public, Candide public | both | both | both | both |
+| CoW quote, keyless, from a smart account (`eip1271` and `presign`) | 200 (fee ≈ $0.003 on a $24 sell) | **no CoW** | 200 (fee ≈ $0.48 on $240) | 200 |
+
+So every piece is someone else's, audited or interchangeable, on both chains, with nothing of ours (principles 1 and 9). Two consequences: **swaps are tested on Sepolia** (CoW has no Base Sepolia), and the per-transaction rotation can verify P-256 natively on both chains (the Daimo verifier stays as the fallback the passkey module names). Not yet run: a real UserOp end to end, which needs testnet ETH in a counterfactual Safe.
+
 - **Contracts:** Safe 1.4.1 L2, `Safe4337Module`, `SafeWebAuthnSharedSigner` for the first passkey (4337 deployment rules), and the recovery passkey as a second owner at threshold 1 through Safe's own `SafeWebAuthnSignerFactory` (one signer proxy per passkey, Safe's audited contract, deployed by the factory — none of ours, principle 9). No recovery module.
 - **The recovery passkey:** a `SecureEnclave`-free CryptoKit P-256 key stored with `kSecAttrSynchronizable` in the app-id Keychain group (the same channel `TokenVault.syncs` uses, §1162), so iCloud Keychain carries it to every device; or an `ASAuthorization` platform passkey on casberi.app, which iCloud syncs natively. A passkey is bound to its domain, so neither can sign in Safe's app; the way out is the nudged outside key (section 6). Decide at build: the first needs no domain, the second gives Apple's passkey sheet.
 - **Address:** CREATE2 from `SafeProxyFactory` with a fixed set-up and salt, so it is identical on every chain.
