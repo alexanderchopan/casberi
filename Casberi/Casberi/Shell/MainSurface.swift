@@ -653,6 +653,8 @@ struct MainSurface: View {
         // already reserves the demo's band, as every room's does.
         // Beside a pane the box is the pane's (prd §1407, as §1403).
         case .settings: SettingsHome().environment(\.dsRoomBoxPlace, showsPane ? .listWithoutBox : .list)
+        // Your account (prd §1422): a page of its own, never a room.
+        case .move: MoveScreen()
         }
     }
 
@@ -685,6 +687,8 @@ struct MainSurface: View {
             SettingsHome()
         case .casberi:
             SettingsHome()
+        case .move:
+            MoveScreen()
         case .reach:
             NetworkReachScreen()
         case .settingsPage(let page):
@@ -3309,6 +3313,13 @@ struct MainSurface: View {
             // hit-testing is off inside TileRain.
             .overlay { TileRain(trigger: chrome.refreshPulse,
                                  roster: chrome.refreshRoster) }
+            // Library's tab is a pull (`ShellChrome.libraryPull`): the
+            // foreground sweep, not a deliberate pull's cache-clearing one,
+            // and the shower names what it asked.
+            .onChange(of: chrome.libraryPull) { _, _ in
+                BridgeRefresh.refreshAllConnected(context: modelContext, store: store)
+                chrome.rain(sources: BridgeRefresh.roster(store: store))
+            }
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
             // The nav bar itself is hidden now (2026-07-20) — nothing lives
@@ -3646,6 +3657,7 @@ private struct PagerCover: View {
                     // (prd §1327): named, never "Feed".
                     Text(Pinboard.isPinnedRoom(label) ? String(localized: "Notes")
                          : HomeScope.Place(source: label) == .settings ? String(localized: "Library")
+                         : HomeScope.Place(source: label) == .move ? String(localized: "Move")
                          : String(localized: "Feed"))
                         .dsText(.heading40).foregroundStyle(DS.headInk)
                 } else {

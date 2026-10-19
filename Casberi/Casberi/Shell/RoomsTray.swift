@@ -1715,8 +1715,7 @@ struct RoomsTray: View {
     }
 
     /// What a category's folder holds. The Wallet's is read off the store,
-    /// so it is whole from any room: your addresses, then its apps, and
-    /// Follow a wallet. A room standing on screen that publishes its
+    /// so it is whole from any room: your addresses, then its apps. A room standing on screen that publishes its
     /// accounts (a devnet's) shows those; otherwise a category's apps.
     private func folder(for category: String) -> Folder {
         let standing = standingCategory == category
@@ -1736,11 +1735,10 @@ struct RoomsTray: View {
                 let id = RoomAccounts.scopeID(seat)
                 return appItem(seat, id: id, lit: scope == id)
             }
-            let follow = DSRoomAction(title: String(localized: "Follow an account"), symbol: "plus") {
-                chrome.walletFollowPending = true
-                pick(CategoryFold.walletRoom)
-            }
-            return Folder(items: addresses + apps, action: follow)
+            // No act on the Wallet's row (user, 2026-10-19: "the others do
+            // not"): Follow an account is the Wallet's own + menu, and a typed
+            // address still offers it from the field.
+            return Folder(items: addresses + apps, action: nil)
         }
         if standing, let rail = chrome.accountRail,
            rail.source == filter.source || filter.source == RoomAccounts.testnetsRoom {

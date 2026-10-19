@@ -67454,3 +67454,11 @@ Mock: the design canvas "Aztec experience".
 7. **Amends §1421 item 2:** a passkey signs only where it was made, so the way out is a key you hold outside Casberi, nudged in Needs you; Export a phrase stays the opt-in fallback.
 
 **The label is Move**: Actions collides with the app's actions everywhere; Account with the Wallet's Accounts list and iOS's profile meaning; Money and Trade with the Wallet and a brokerage's reading. Each tab answers one question — Feed what's happening, Wallet what I have, Move what I do with it, Library my apps and me, Search anything — and the glyph is ⇅. Canvas: https://claude.ai/artifact/2HbVMQfk1MP4bLuU6teKTX, option E.
+
+## §1423 — Move wears the dollar sign; the Wallet category takes its tab's wallet; the tabs answer the hand (amends §1063's dollar sign for the Wallet, §1422's arrows) (user, 2026-10-19: of the glyph, "i wish it was a dollar sign or a key"; of the circled sign, "too small and hard to see the dollar sign"; "i think we just use the dollar sign"; of the bar, "do our tab bar icons animate when touched? for feed wallet move search and library they should. for library we could make it so whenever you tap it it does the same pull to refresh w/ rain tiles")
+
+1. **Move's glyph is `dollarsign`**, bare: the arrows read as a verb (and ⇅ is Reorder's), a key as Passwords, and inside a circle the sign is too small to read at tab size.
+2. **The Wallet category wears `wallet.bifold`**, the glyph its tab already wore, so one glyph keeps one meaning (`tile-glyph-audit.py`: `dollarsign` is reserved for Move; `wallets` and `wallet` are one meaning).
+3. **Every tab's glyph bounces when pressed** (`.symbolEffect(.bounce)`), on the phone's bar and the Mac's rail.
+4. **Library's tap is a pull**: the foreground sweep (each seat's own throttle, the holdings cache kept, because a tap is not a deliberate pull and Zerion's day is shared), the tiles rain what it asked, and your face turns (`ShellChrome.libraryPull`, `MainSurface`).
+5. **The tray's Wallet row draws no +** (user: "the tray for wallet shouldn't have the plus sign b/c the others do not"): Follow an account is the Wallet's own + menu, and a typed address offers Follow this account from the field.

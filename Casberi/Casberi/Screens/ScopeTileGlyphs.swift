@@ -106,6 +106,10 @@ enum ScopeTileGlyph {
     static let spending     = "cart"
     /// Settings' Wallets (prd §1166): the wallets you watch.
     static let wallets      = "wallet.bifold"
+    /// The Move tab (prd §1422): money moving — send, swap, add, receive.
+    /// The dollar sign alone (user, 2026-10-19): the arrows read as a verb,
+    /// a key as Passwords, and inside a circle the sign was too small to read.
+    static let move         = "dollarsign"
 }
 
 /// The Work room's tiles (prd §1057).

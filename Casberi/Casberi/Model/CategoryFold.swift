@@ -125,7 +125,8 @@ enum CategoryFold {
     }
 
     private static let glyphs: [String: String] = [
-        "Wallet":   "dollarsign",
+        // The wallet its tab wears (prd §1423); the dollar sign went to Move.
+        "Wallet":   "wallet.bifold",
         // Markets wears its seat's own glyph (`KindGlyph`, prd §1050);
         // Testnets a flask (prd §1050a).
         "Markets":  "chart.line.uptrend.xyaxis",

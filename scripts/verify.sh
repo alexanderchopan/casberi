@@ -2689,6 +2689,7 @@ harness "Safe co-signer self-test" "safetx self-test" "scripts/safetx-selftest.s
 # above: fixtures derived, not recalled; every refusal mutation-proven; the
 # writes counted and their hosts pinned to Safe's own.
 harness "Safe signer §913 self-test" "safe-signer self-test" "scripts/safe-signer-selftest.sh" "the §913 signer self-test failed — run scripts/safe-signer-selftest.sh"
+harness "Your account self-test" "your-account self-test" "scripts/your-account-selftest.sh" "your account's address arithmetic or the Move gate drifted — run scripts/your-account-selftest.sh"
 
 harness "Money-receipt pure-logic self-test" "money-receipt self-test" "scripts/money-receipt-selftest.sh" "the money-receipt logic self-test failed — run scripts/money-receipt-selftest.sh"
 

@@ -11,26 +11,46 @@ import SwiftUI
 ///
 /// Each tab is the place's own `filter.source`, so the tab you are on is
 /// derived from the one switch the shell already has, and the swipe walks the
-/// same five in the same order (`HomeScope.phoneWalk`).
-enum PlaceTab: String, CaseIterable, Identifiable {
-    case feed, wallet, library
+/// same places in the same order (`HomeScope.phoneWalk`).
+///
+/// **FIVE EQUAL TABS IN ONE BAR (prd §1422, user: "feed wallet actions
+/// library search"; of the label, "ok lets go w/ Move").** Feed · Wallet ·
+/// Move · Library · Search, Search in the bar as Music and the App Store draw
+/// it, not a circle of its own. Move is your account's page. Search is a tab
+/// with no place: it raises the tray's search on the phone, Find elsewhere,
+/// and it is never in the swipe.
+///
+/// **Move is DEBUG-only until its account can send** (`MoveTab.enabled`):
+/// before Send and recovery ship, a release build would give out an address
+/// money could reach and nothing could move.
+enum PlaceTab: String, Identifiable, CaseIterable {
+    case feed, wallet, move, library, search
 
     var id: String { rawValue }
+
+    /// The tabs this build draws, in the bar's order.
+    static var allCases: [PlaceTab] {
+        MoveTab.enabled ? [.feed, .wallet, .move, .library, .search] : [.feed, .wallet, .library, .search]
+    }
 
     var label: String {
         switch self {
         case .feed:    String(localized: "Feed")
         case .wallet:  String(localized: "Wallet")
+        case .move:    String(localized: "Move")
         case .library: String(localized: "Library")
+        case .search:  String(localized: "Search")
         }
     }
 
-    /// The place's `filter.source`.
-    @MainActor var source: String {
+    /// The place's `filter.source`; nil for Search, which is no place.
+    @MainActor var source: String? {
         switch self {
         case .feed:    "All"
         case .wallet:  CategoryFold.walletRoom
+        case .move:    HomeScope.Place.move.source
         case .library: HomeScope.Place.settings.source
+        case .search:  nil
         }
     }
 
@@ -40,7 +60,9 @@ enum PlaceTab: String, CaseIterable, Identifiable {
         switch self {
         case .feed:    ScopeTileGlyph.feed
         case .wallet:  ScopeTileGlyph.wallets
+        case .move:    ScopeTileGlyph.move
         case .library: ScopeTileGlyph.apps
+        case .search:  "magnifyingglass"
         }
     }
 
@@ -49,8 +71,16 @@ enum PlaceTab: String, CaseIterable, Identifiable {
     /// A tab pressed (prd §1327): the place's own door, the one its tile and
     /// the face took before. The Feed's, pressed on the Feed, returns to the
     /// top (§1280's face); Library is Sources' place (§1321). ONE door for
-    /// the phone's bar, the rail (prd §1402) and ⌘1–⌘3.
+    /// the phone's bar, the rail (prd §1402) and the ⌘-digits.
     @MainActor static func open(_ tab: PlaceTab, chrome: ShellChrome, route: HomeRoute) {
+        // Search is no place: the tray's field on the phone (as the circle
+        // was), Find where the shell has a rail (as ⌘F is).
+        if tab == .search {
+            withAnimation(DS.Motion.standard) {
+                if UIDevice.current.userInterfaceIdiom == .phone { chrome.roomsTray = true } else { chrome.openFind() }
+            }
+            return
+        }
         withAnimation(DS.Motion.standard) {
             chrome.roomsTray = false
             switch tab {
@@ -58,9 +88,17 @@ enum PlaceTab: String, CaseIterable, Identifiable {
                 chrome.goToFeed()
             case .wallet:
                 chrome.openWallet()
+            case .move:
+                route.present(.move)
             case .library:
                 chrome.settingsPick = .sources
                 route.present(.casberi)
+                // Library's tap is a pull (user, 2026-10-19): your apps are
+                // asked, the tiles rain and your face turns. The shell runs
+                // it, where the store and the context are.
+                chrome.libraryPull &+= 1
+            case .search:
+                break
             }
         }
     }
@@ -75,17 +113,22 @@ enum PlaceTab: String, CaseIterable, Identifiable {
     }
 }
 
-/// The bar itself, with Search beside it (prd §1327 items 1, 4 and 7). Read
-/// down, it folds into one circle for the tab you are on, Search's beside it
-/// (`ShellChrome.minimized`, the scroll fold the band already had); that
-/// circle, or a scroll back up, unfolds it. While the tray is up the bar is
-/// that one circle too, and it closes the tray: the tray's own field stands
-/// where Search was.
+/// The bar itself: every tab in one glass bar across the width, Search the
+/// last (prd §1422, amending §1327's circle beside it and §1374's bar that
+/// hugged three tabs). Read down, it folds into one circle for the tab you
+/// are on (`ShellChrome.minimized`, the scroll fold the band already had);
+/// that circle, or a scroll back up, unfolds it. While the tray is up the bar
+/// is that one circle too, and it closes the tray: the tray's own field
+/// stands where the bar was.
 struct PlaceTabBar: View {
     @Environment(ShellChrome.self) private var chrome
     let current: PlaceTab?
     let open: (PlaceTab) -> Void
     let search: () -> Void
+    /// Each tab's presses, for the glyph's bounce (user, 2026-10-19: "they
+    /// should" animate when touched). Library's face spins instead, on the
+    /// shower its tap deals (`PlaceTab.open`).
+    @State private var taps: [PlaceTab: Int] = [:]
 
     private var folded: Bool { chrome.minimized || chrome.roomsTray }
     /// **THE LABELS WIN OVER THE PAGE (user, 2026-10-15: "it is hard to see
@@ -95,23 +138,13 @@ struct PlaceTabBar: View {
     /// fill, a lighter pill, as iOS 26's bar draws its selected tab.
     static var lens: Color { DS.page }
     private var size: CGFloat { DSDock.agentSize(fold: chrome.fold) }
-    /// **THE BAR HUGS ITS TABS (prd §1374, user: "does it have to [span the
-    /// bottom]? … i like the way C looks").** Each tab is one width, the bar
-    /// stands at the leading edge and Search at the trailing one, which is
-    /// where the fold already puts the tab's circle and Search's: the bar
-    /// folds and unfolds in place, never sliding sideways.
-    static let tabWidth: CGFloat = 74
-
     var body: some View {
         HStack(spacing: DS.Space.s2) {
             if folded {
                 foldedCircle
                 Spacer(minLength: 0)
-                if !chrome.roomsTray { searchCircle }
             } else {
                 bar
-                Spacer(minLength: 0)
-                searchCircle
             }
         }
         .animation(DS.Motion.standard, value: folded)
@@ -121,11 +154,17 @@ struct PlaceTabBar: View {
         HStack(spacing: 0) {
             ForEach(PlaceTab.allCases) { tab in
                 Button {
-                    DSHaptic.selection()
-                    open(tab)
+                    taps[tab, default: 0] &+= 1
+                    if tab == .search {
+                        DSHaptic.tap()
+                        search()
+                    } else {
+                        DSHaptic.selection()
+                        open(tab)
+                    }
                 } label: {
                     VStack(spacing: 2) {
-                        mark(tab, on: tab == current, glyphSize: .body)
+                        mark(tab, on: tab == current, glyphSize: .body, taps: taps[tab] ?? 0)
                             .frame(height: 26)
                         Text(verbatim: tab.label)
                             .dsText(.label12)
@@ -133,8 +172,7 @@ struct PlaceTabBar: View {
                             .lineLimit(1)
                             .minimumScaleFactor(0.8)
                     }
-                    .frame(width: Self.tabWidth)
-                    .frame(maxHeight: .infinity)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .background {
                         if tab == current {
                             Capsule().fill(DS.fillStrong).padding(.vertical, DS.Space.s1)
@@ -146,11 +184,13 @@ struct PlaceTabBar: View {
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel(Text(verbatim: tab.label))
                 .accessibilityAddTraits(tab == current ? [.isButton, .isSelected] : .isButton)
+                .accessibilityHint(tab == .search ? Text("Find anything, or make a page of it") : Text(verbatim: ""))
                 .modifier(LibraryAlarm(active: tab == .library))
                 .background { if tab == .feed { FeedTabFrame() } }
             }
         }
         .padding(.horizontal, DS.Space.s1)
+        .frame(maxWidth: .infinity)
         .frame(height: size)
         .dsGlass(cornerRadius: size / 2, tint: Self.lens)
     }
@@ -177,32 +217,15 @@ struct PlaceTabBar: View {
         .background { if tab == .feed { FeedTabFrame() } }
     }
 
-    private var searchCircle: some View {
-        Button {
-            DSHaptic.tap()
-            search()
-        } label: {
-            Image(systemName: "magnifyingglass")
-                .dsGlyph(.body, weight: .semibold)
-                .foregroundStyle(DS.textPrimary)
-                .frame(width: size, height: size)
-                .dsGlass(cornerRadius: size / 2, tint: Self.lens)
-                .dsTapTarget(Circle())
-                .dsHover()
-        }
-        .buttonStyle(PressSpring())
-        .accessibilityLabel(Text("Search"))
-        .accessibilityHint(Text("Find anything, or make a page of it"))
-    }
-
     @ViewBuilder
-    private func mark(_ tab: PlaceTab, on: Bool, glyphSize: DSGlyph) -> some View {
+    private func mark(_ tab: PlaceTab, on: Bool, glyphSize: DSGlyph, taps: Int = 0) -> some View {
         if tab == .library {
             LibraryFace()
         } else {
             Image(systemName: tab.glyph)
                 .dsGlyph(glyphSize, weight: on ? .semibold : .regular)
                 .foregroundStyle(on ? DS.brandInk : DS.textPrimary)
+                .symbolEffect(.bounce, value: taps)
         }
     }
 }

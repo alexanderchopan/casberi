@@ -67,10 +67,15 @@ ALIASES = {
 }
 
 # Symbols the user named as one meaning's own (2026-09-18; the Wallet's
-# moved from the credit card to the dollar sign, prd §1063).
-RESERVED = [("building.columns", "positions"), ("dollarsign", "wallet"),
+# moved from the credit card to the dollar sign, prd §1063, and the dollar
+# sign to Move, prd §1423, when the Wallet took its tab's wallet).
+RESERVED = [("building.columns", "positions"), ("dollarsign", "move"),
             ("checkmark.shield", "review"),
             ("shield", "risk"), ("key", "permissions")]
+
+# Two names for one meaning: the Wallet category and the Wallet tab's (and
+# Settings' Wallets count's) constant are one place (prd §1423).
+SAME = {"wallets": "wallet"}
 
 # Today reads the dock's All (prd §1168, §1169); every room's All is a stack.
 ALL_READ = 'static var feed: String { CategoryFold.glyph(for: "All") }'
@@ -202,9 +207,9 @@ def audit(root: Path):
         fails.append("D a glyph table read empty - this audit is blind")
     meanings = {}
     for name, sym in constants:
-        meanings.setdefault(sym, set()).add(name.lower())
+        meanings.setdefault(sym, set()).add(SAME.get(name.lower(), name.lower()))
     for cat, sym in dock:
-        meanings.setdefault(sym, set()).add(cat.lower())
+        meanings.setdefault(sym, set()).add(SAME.get(cat.lower(), cat.lower()))
     for sym, names in sorted(meanings.items()):
         if len(names) > 1:
             fails.append(f'D "{sym}" means {sorted(names)} - one glyph may carry one meaning')
@@ -282,7 +287,7 @@ enum PlaceTab { static let feedGlyph = ScopeTileGlyph.feed }
 CLEAN_FOLD = '''import Foundation
 enum CategoryFold {
     private static let glyphs: [String: String] = [
-        "Wallet":   "dollarsign",
+        "Wallet":   "wallet.bifold",
         "Work":     "laptopcomputer",
         "All":      "tray.full",
     ]

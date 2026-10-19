@@ -364,7 +364,9 @@ grep -q "if let showing { crown(showing) }" "$CHROME" \
   || fail "drift: the wallet hands the chrome verb tiles again — Watch is the Accounts list's first row (prd §1107)"
 # Since prd §1133 the pill is deleted and the act leads the room's run in
 # the rooms tray (its folder until §1133b): drawn before every account, and the Wallet's raised from any
-# room through `walletFollowPending`, which the Wallet room answers.
+# room through `walletFollowPending`, which the Wallet room answers. The
+# Wallet's row lost its + (prd §1423: no other row draws one); a typed
+# address's "Follow this account" is the tray's way in now.
 tray_bare=$(sed -e 's://.*$::' Casberi/Casberi/Shell/RoomsTray.swift)
 act_at=$(print -r -- "$tray_bare" | grep -n "if let action = folder.action { cells.append(.action(action)) }" | head -1 | cut -d: -f1 || true)
 rows_at=$(print -r -- "$tray_bare" | grep -n "cells += folder.items.map(RunCell.item)" | head -1 | cut -d: -f1 || true)
@@ -372,7 +374,7 @@ rows_at=$(print -r -- "$tray_bare" | grep -n "cells += folder.items.map(RunCell.
   || fail "drift: the folder no longer leads with its act — Follow sinks under a long list (prd §1107, §1133)"
 grep -q "chrome.walletFollowPending = true" Casberi/Casberi/Shell/RoomsTray.swift \
   && grep -q "chrome.walletFollowPending = false" Casberi/Casberi/Screens/FeedScreen+WalletRoom.swift \
-  || fail "drift: the tray's Follow an account no longer reaches the Wallet room (prd §1133)"
+  || fail "drift: the tray's Follow this account no longer reaches the Wallet room (prd §1133, §1423)"
 grep -q "rail.action.map" Casberi/Casberi/Shell/RoomsTray.swift \
   || fail "drift: the folder drops a standing room's act — New account is unreachable (prd §1107, §1133)"
 

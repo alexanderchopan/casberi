@@ -184,8 +184,6 @@ struct RootShell: View {
     /// `Composer`'s `glassNamespace`, both keying `matchedGeometryEffect` to
     /// the same `"agentMorph"` id.
     @Namespace private var agentMorph
-    /// The band's left pill (prd §1295): the face and Search, one glass.
-    @Namespace private var bandGlass
 
 
     /// `-openRoom "<Source>"` scopes the feed to one source's room.
@@ -2456,7 +2454,7 @@ struct RootShell: View {
                         VStack(alignment: .trailing, spacing: DS.Space.s3) {
                             // The demo's mark rides the page's title row now
                             // (`demoTagOnTitle`, prd §1389), never the band:
-                            // the bar unfolds into three tabs and would meet it.
+                            // the bar unfolds across the width and would meet it.
                             PlaceTabBar(current: PlaceTab.current(sceneState.filter.source),
                                         open: openPlaceTab,
                                         search: { withAnimation(DS.Motion.standard) { chrome.roomsTray = true } })
@@ -2476,63 +2474,11 @@ struct RootShell: View {
                                           chrome.goToFeed()
                                       }
                                   },
-                                  onBack: seatBack,
-                                  // One glass with Search beside it (prd §1295),
-                                  // only where Search stands: not on a push.
-                                  union: padShell.railInset == 0 && sceneState.route.path.isEmpty && !chrome.roomsTray
-                                      ? DSGlassUnion(id: "band.left", namespace: bandGlass) : nil)
+                                  onBack: seatBack)
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            // THE BAND IS FACE · SEARCH · WALLET (prd §1207 item
-                            // 7, built §1209a; the Wallet took ✎'s seat in
-                            // §1278): the bar is always there, one tap from
-                            // search, and the Wallet is one tap from any page;
-                            // never over the tray, whose own bar takes this
-                            // place.
-                            .overlay(alignment: .trailing) {
-                                if padShell.railInset == 0, sceneState.route.path.isEmpty {
-                                    HStack(spacing: DS.Space.s2) {
-                                        // The tray's bar takes this one's place
-                                        // exactly (prd §1208l): it leaves at once,
-                                        // the Wallet fades.
-                                        if !chrome.roomsTray {
-                                            // The tray's one door on the phone
-                                            // (prd §1280): it rises with the
-                                            // keyboard down, so its contents
-                                            // are in view; a tap on its field
-                                            // types. Beside the face, one pill with it
-                                            // (prd §1295): the tray grows out of
-                                            // this corner and closes back into it.
-                                            BandSearchBar(union: DSGlassUnion(id: "band.left", namespace: bandGlass)) {
-                                                withAnimation(DS.Motion.standard) { chrome.roomsTray = true }
-                                            }
-                                            .transition(.identity)
-                                            Spacer(minLength: 0)
-                                            // The demo's mark, between the band's
-                                            // two ends (prd §1322).
-                                            if demoActive && !DemoCapture.hidesMarking {
-                                                rootPresented(DemoTag())
-                                                    .environment(sceneState.route)
-                                                    .environment(sceneState.filter)
-                                                    .opacity(chrome.demoLeaving ? 0 : 1)
-                                                    .animation(DS.Motion.standard, value: chrome.demoLeaving)
-                                                    .transition(.opacity)
-                                                Spacer(minLength: 0)
-                                            }
-                                        } else {
-                                            // The tray's capsule holds the bar's
-                                            // place; the Wallet keeps its own.
-                                            Spacer(minLength: 0)
-                                        }
-                                        // The Wallet stays with the face while
-                                        // the tray is up (prd §1280): the band's
-                                        // two places never leave it.
-                                        WalletDoor {
-                                            withAnimation(DS.Motion.standard) { chrome.openWallet() }
-                                        }
-                                    }
-                                    .padding(.leading, DSDock.agentSize(fold: chrome.fold) + DS.Space.s1)
-                                }
-                            }
+                            // The band's Search bar and Wallet button went
+                            // with prd §1422: Search is a tab and the Wallet is
+                            // one, so the face alone stands here, as the way back.
                     }
                 }
                 }

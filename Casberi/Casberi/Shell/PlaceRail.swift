@@ -25,6 +25,8 @@ struct PlaceRail: View {
     let current: PlaceTab?
     let open: (PlaceTab) -> Void
     let search: () -> Void
+    /// Each tile's presses, for the glyph's bounce — the bar's (`PlaceTabBar`).
+    @State private var taps: [PlaceTab: Int] = [:]
 
     /// A tile's size: the rail's column less the air either side.
     static let tileWidth: CGFloat = PadLayout.railWidth - 2 * DS.Space.s3
@@ -35,6 +37,7 @@ struct PlaceRail: View {
             tile(.library)
             tile(.feed)
             tile(.wallet)
+            if MoveTab.enabled { tile(.move) }
             searchTile
             Spacer(minLength: 0)
             demoFoot
@@ -47,11 +50,12 @@ struct PlaceRail: View {
     private func tile(_ tab: PlaceTab) -> some View {
         let on = tab == current
         return Button {
+            taps[tab, default: 0] &+= 1
             DSHaptic.selection()
             open(tab)
         } label: {
             VStack(spacing: 2) {
-                mark(tab, on: on)
+                mark(tab, on: on, taps: taps[tab] ?? 0)
                     .frame(height: 26)
                 Text(verbatim: tab.label)
                     .dsText(.label12)
@@ -70,7 +74,7 @@ struct PlaceRail: View {
         }
         .buttonStyle(PressSpring())
         .dsHover()
-        // The key with the word (prd §1407): ⌘1–⌘3 in the bar's order (§1402).
+        // The key with the word (prd §1407): the ⌘-digit in the bar's order (§1402, §1422).
         .dsTooltip("\(tab.label)  ⌘\((PlaceTab.allCases.firstIndex(of: tab) ?? 0) + 1)")
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text(verbatim: tab.label))
@@ -116,6 +120,7 @@ struct PlaceRail: View {
 
     private var searchTile: some View {
         Button {
+            taps[.search, default: 0] &+= 1
             DSHaptic.tap()
             search()
         } label: {
@@ -123,6 +128,7 @@ struct PlaceRail: View {
                 Image(systemName: "magnifyingglass")
                     .dsGlyph(.body, weight: .regular)
                     .foregroundStyle(DS.textPrimary)
+                    .symbolEffect(.bounce, value: taps[.search] ?? 0)
                     .frame(height: 26)
                 Text("Search")
                     .dsText(.label12)
@@ -140,7 +146,7 @@ struct PlaceRail: View {
     }
 
     @ViewBuilder
-    private func mark(_ tab: PlaceTab, on: Bool) -> some View {
+    private func mark(_ tab: PlaceTab, on: Bool, taps: Int) -> some View {
         if tab == .library {
             YouFace(size: 26)
                 .modifier(DoorSpin(trigger: chrome.refreshPulse, tension: chrome.pullTension))
@@ -148,6 +154,7 @@ struct PlaceRail: View {
             Image(systemName: tab.glyph)
                 .dsGlyph(.body, weight: on ? .semibold : .regular)
                 .foregroundStyle(on ? DS.brandInk : DS.textPrimary)
+                .symbolEffect(.bounce, value: taps)
         }
     }
 }

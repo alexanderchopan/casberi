@@ -44,6 +44,9 @@ final class HomeRoute {
         /// this app reaches, Diagnostics), the tray's Settings door and
         /// `casberi://settings` (prd §933, again since §1111).
         case casberi
+        /// MOVE: your account (prd §1422) — a place, cut to like Settings,
+        /// never pushed.
+        case move
         /// What this app reaches and what it reached — one pushed directory
         /// of the registry and the ledger (prd §967), so its category tiles
         /// can ride the seat's capsule like Accounts' and Addresses' (§960).
@@ -144,6 +147,7 @@ final class HomeRoute {
         switch place {
         case .apps: .apps
         case .settings: .casberi
+        case .move: .move
         }
     }
 
@@ -167,6 +171,7 @@ final class HomeRoute {
         // it rises as a sheet over Settings, so a swipe down is the way back
         // (prd §1142, user: "there is no way to get back").
         case .casberi: .settings
+        case .move: .move
         default: nil
         }
     }

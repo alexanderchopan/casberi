@@ -22,7 +22,8 @@ enum HomeScope {
     /// prefix no seat or catalogue category can spell ("Notes" taught that,
     /// prd §975).
     enum Place: String, CaseIterable {
-        case apps, settings
+        /// `move`: your account's page, the Move tab (prd §1422).
+        case apps, settings, move
 
         var source: String { "you:" + rawValue }
 
@@ -78,7 +79,8 @@ enum HomeScope {
     /// **THE FIVE TABS SINCE prd §1327 item 6**: a swipe on a tab's own page
     /// walks the bar's order, Feed · Day · Wallet · Notes · Library.
     @MainActor static func phoneWalk(chips: [String]) -> [String] {
-        PlaceTab.allCases.map(\.source)
+        // Search is a tab with no place, so the swipe never lands on it.
+        PlaceTab.allCases.compactMap(\.source)
     }
 
     /// The categories the Feed stacks (prd §1208 item 2): every one with a

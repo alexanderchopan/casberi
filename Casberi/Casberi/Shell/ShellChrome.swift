@@ -940,6 +940,13 @@ final class ShellChrome {
     var refreshRequest = 0
     func requestRefresh() { refreshRequest += 1 }
 
+    /// Library's tab pressed (user, 2026-10-19): the pull's other door.
+    /// `MainSurface` asks every connected app through the foreground sweep,
+    /// which keeps each seat's own throttle and the holdings cache (a held
+    /// finger is not a deliberate pull, and Zerion's day is shared), and
+    /// rains what it asked.
+    var libraryPull = 0
+
     /// The chip strip's CURRENT order, mirrored here so Mac's ⌘1–⌘9 can read
     /// it (2026-07-28) — `MainSurface.chipLabels` depends on the live corpus
     /// (`@Query`) and `ChipMemory`'s tap-learning, neither of which the

@@ -1676,6 +1676,12 @@
   },
   {
    "covers": [
+    "Shell/MainSurface.swift:route.sheet#node.move"
+   ],
+   "why": "Move is a place (HomeRoute.place(.move), prd §1422): present(.move) cuts to the Move tab on every device and never raises a sheet; the case is the leaf a NavigationStack resolves"
+  },
+  {
+   "covers": [
     "Screens/AddressesScreen.swift:composer#messages",
     "Screens/AddressesScreen.swift:composer#mail"
    ],

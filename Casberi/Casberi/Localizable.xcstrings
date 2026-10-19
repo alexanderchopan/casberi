@@ -5065,6 +5065,34 @@
         }
       }
     },
+    "A wallet only you control. Its key never leaves this iPhone, and it can receive before its first send." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Una billetera que solo tú controlas. Su clave nunca sale de este iPhone y puede recibir antes de su primer envío."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "あなただけが管理するウォレット。鍵がこのiPhoneから出ることはなく、最初の送金の前から受け取れます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "나만 관리하는 지갑입니다. 키는 이 iPhone을 떠나지 않으며, 처음 보내기 전에도 받을 수 있습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "只有你能控制的钱包。它的密钥从不离开这台 iPhone，在第一次发送之前就能接收。"
+          }
+        }
+      }
+    },
     "About monthly" : {
       "localizations" : {
         "es" : {
@@ -5317,6 +5345,34 @@
         }
       }
     },
+    "Add · Receive" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Añadir · Recibir"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "追加・受け取る"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "추가 · 받기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "添加 · 接收"
+          }
+        }
+      }
+    },
     "Added" : {
       "localizations" : {
         "es" : {
@@ -5397,6 +5453,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "退出演示后即可添加。"
+          }
+        }
+      }
+    },
+    "Address %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Dirección %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アドレス %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "주소 %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "地址 %@"
           }
         }
       }
@@ -6383,6 +6467,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "一个事件"
+          }
+        }
+      }
+    },
+    "Another wallet" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Otra billetera"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "別のウォレット"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "다른 지갑"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "其他钱包"
           }
         }
       }
@@ -7871,6 +7983,34 @@
         }
       }
     },
+    "Couldn't create the account on this device" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se pudo crear la cuenta en este dispositivo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "このデバイスでアカウントを作成できませんでした"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 기기에서 계정을 만들 수 없습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "无法在此设备上创建账户"
+          }
+        }
+      }
+    },
     "Couldn't find %@'s price to follow." : {
       "localizations" : {
         "es" : {
@@ -8287,6 +8427,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "无法保存提醒事项"
+          }
+        }
+      }
+    },
+    "Create your account" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Crear tu cuenta"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アカウントを作成"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "계정 만들기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "创建你的账户"
+          }
+        }
+      }
+    },
+    "Creating…" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Creando…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "作成中…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "만드는 중…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在创建…"
           }
         }
       }
@@ -11063,6 +11259,34 @@
         }
       }
     },
+    "From an exchange or another wallet" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Desde un exchange u otra billetera"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "取引所や別のウォレットから"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "거래소나 다른 지갑에서"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "从交易所或其他钱包"
+          }
+        }
+      }
+    },
     "GIF" : {
       "localizations" : {
         "es" : {
@@ -12207,6 +12431,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "仅显示最近的内容 — 打开某个来源查看更早的"
+          }
+        }
+      }
+    },
+    "Move" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Mover"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "移動"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이동"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "转账"
           }
         }
       }
@@ -14227,6 +14479,34 @@
         }
       }
     },
+    "Receive" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Recibir"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "受け取る"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "받기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "接收"
+          }
+        }
+      }
+    },
     "Recurring charge in Rocket Money" : {
       "localizations" : {
         "es" : {
@@ -14531,6 +14811,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "保存到提醒事项中名为 Casberi 的列表。"
+          }
+        }
+      }
+    },
+    "Secured by Safe" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Protegida por Safe"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Safeで保護"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Safe로 보호됨"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "由 Safe 保护"
           }
         }
       }

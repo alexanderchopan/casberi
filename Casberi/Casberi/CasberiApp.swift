@@ -326,13 +326,14 @@ struct CasberiApp: App {
                 }
                 .keyboardShortcut("[", modifiers: .command)
             }
-            // ⌘1–⌘3 open the three places (prd §1402; ⌘1–⌘9 switched the
+            // ⌘1–⌘5 open the tabs (prd §1402, §1422; ⌘1–⌘9 switched the
             // source chip in that position from 2026-07-28, Safari's
             // numbered-tab grammar, against `chipOrder`). The rail is the
-            // phone's tab bar now — Feed · Wallet · Library — so the keys
-            // name what the rail shows, in the bar's order, through the one
-            // door every tab press takes (`PlaceTab.open`). A key may not
-            // outlive its control (§360): no chip strip, no ⌘4–⌘9.
+            // phone's tab bar — Feed · Wallet · Move · Library · Search — so
+            // the keys name what the rail shows, in the bar's order, through
+            // the one door every tab press takes (`PlaceTab.open`). A key may
+            // not outlive its control (§360): no chip strip, no key past the
+            // last tab.
             CommandGroup(after: .toolbar) {
                 ForEach(Array(PlaceTab.allCases.enumerated()), id: \.element) { i, tab in
                     Button("Switch to \(tab.label)") {

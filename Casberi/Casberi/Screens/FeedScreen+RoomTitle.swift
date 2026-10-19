@@ -28,6 +28,7 @@ extension HomeScope.Place {
         switch self {
         case .apps: String(localized: "Apps")
         case .settings: String(localized: "Settings")
+        case .move: String(localized: "Move")
         }
     }
 }
