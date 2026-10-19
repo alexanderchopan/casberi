@@ -19,6 +19,7 @@ enum SafeAccount {
     static let moduleSetup = "0x2dd68b007B46fBe91B9A7c3EDa5A7a1063cB5b47"
     static let sharedSigner = "0x94a4F6affBd8975951142c3999aEAB7ecee555c2"
     static let entryPoint = "0x0000000071727De22E5E9d8BAf0edAc6f37da032"
+    static let signerFactory = SafeWebAuthn.factory
 
     struct Key: Sendable {
         let x: [UInt8]
@@ -177,15 +178,15 @@ enum SafeAccount {
 
     /// 12 bytes of no time bounds, then Safe's contract-signature envelope
     /// around the WebAuthn assertion.
-    static func signature(r: [UInt8], s: [UInt8]) -> [UInt8] {
+    static func signature(r: [UInt8], s: [UInt8], owner: String = sharedSigner) -> [UInt8] {
         let assertion = SafeWebAuthn.signatureBytes(r: r, s: s)!
-        return [UInt8](repeating: 0, count: 12) + SafeWebAuthn.contractSignature(signer: sharedSigner, data: assertion)!
+        return [UInt8](repeating: 0, count: 12) + SafeWebAuthn.contractSignature(signer: owner, data: assertion)!
     }
 
     /// A signature the right shape and length that verifies nothing — for
     /// gas estimation, where a real one cannot exist yet (it signs the gas).
-    static var dummySignature: [UInt8] {
-        signature(r: [UInt8](repeating: 0x11, count: 32), s: [UInt8](repeating: 0x22, count: 32))
+    static func dummySignature(owner: String = sharedSigner) -> [UInt8] {
+        signature(r: [UInt8](repeating: 0x11, count: 32), s: [UInt8](repeating: 0x22, count: 32), owner: owner)
     }
 
     static func nonce(_ net: Chain.Network, _ sender: String) async throws -> UInt64 {
@@ -211,12 +212,12 @@ enum SafeAccount {
     /// key the account was created with: the address and the creation bytes
     /// come from it forever, whichever key signs now (a rotation changes the
     /// signer, never the address).
-    static func prepare(_ net: Chain.Network, origin: Key, callData: [UInt8], log: (String) -> Void) async throws -> Prepared {
+    static func prepare(_ net: Chain.Network, origin: Key, callData: [UInt8], owner: String = sharedSigner, log: (String) -> Void) async throws -> Prepared {
         let sender = try await address(net, origin)
         let deployed = try await Chain.codeExists(net, sender)
         var op = Op(sender: sender, nonce: deployed ? try await nonce(net, sender) : 0,
                     factory: deployed ? nil : proxyFactory, factoryData: deployed ? [] : factoryData(origin), callData: callData)
-        op.signature = dummySignature
+        op.signature = dummySignature(owner: owner)
         // Fees first: estimation reads them for the prefund check.
         if let price = try? await Chain.bundler(net, "pimlico_getUserOperationGasPrice", []) as? [String: Any],
            let fast = price["fast"] as? [String: Any],
@@ -250,7 +251,7 @@ enum SafeAccount {
     /// Sign the prepared operation with `key`, have the chain check the exact
     /// bytes first (the factory verifies a WebAuthn signature for a key with
     /// no contract deployed — the §913 rail), and return it signed.
-    static func sign(_ net: Chain.Network, _ prepared: Prepared, with key: Key, log: (String) -> Void) async throws -> Op {
+    static func sign(_ net: Chain.Network, _ prepared: Prepared, with key: Key, as owner: String = sharedSigner, log: (String) -> Void) async throws -> Op {
         guard let digest = SafeWebAuthn.signingDigest(challenge: prepared.hash) else { throw Chain.RPCError(message: "no digest") }
         let (r, s) = try await key.sign(digest)
         let assertion = SafeWebAuthn.signatureBytes(r: r, s: s)!
@@ -258,7 +259,7 @@ enum SafeAccount {
         let answer = try await Chain.ethCall(net, to: SafeWebAuthn.factory, data: check)
         log(SafeWebAuthn.isMagic(answer) ? "the signature verifies for the key that made it ✓ (whether the account answers to that key is the bundler's call)" : "the chain REFUSES this signature: \(answer)")
         var op = prepared.op
-        op.signature = signature(r: r, s: s)
+        op.signature = signature(r: r, s: s, owner: owner)
         return op
     }
 
@@ -277,6 +278,40 @@ enum SafeAccount {
             }
         }
         throw Chain.RPCError(message: "no receipt after 90 s (hash \(hash))")
+    }
+
+    // MARK: - A second owner: the recovery key
+
+    /// The recovery key's own signer contract — Safe's `SafeWebAuthnSignerFactory`
+    /// proxy for that public key, its address read from the factory.
+    static func signerAddress(_ net: Chain.Network, _ key: Key) async throws -> String {
+        let answer = try await Chain.ethCall(net, to: signerFactory, data: SafeWebAuthn.getSignerCalldata(x: key.x, y: key.y)!)
+        guard let a = SafeWebAuthn.decodeAddress(answer) else { throw Chain.RPCError(message: "factory gave no signer") }
+        return a
+    }
+
+    /// One transaction, signed by the device key: deploy the recovery key's
+    /// signer proxy (Safe's factory) and add it as an owner at threshold 1 —
+    /// the no-delay second owner of prd §1421.
+    static func addOwnerCall(account: String, key: Key, owner: String) -> [UInt8] {
+        let create = sel("createSigner(uint256,uint256,uint176)") + key.x + key.y + verifiers
+        let add = sel("addOwnerWithThreshold(address,uint256)") + w(owner) + w(1)
+        let batch = multiSend([
+            Call(operation: 0, to: signerFactory, value: 0, data: create),
+            Call(operation: 0, to: account, value: 0, data: add),
+        ])
+        return execute(Call(operation: 1, to: multiSend, value: 0, data: batch))
+    }
+
+    /// Recovery: re-configure the shared signer to a new device key. Signed
+    /// by the recovery key alone; the lost device's key stops working with it.
+    static func recoverCall(to next: Key) -> [UInt8] {
+        execute(Call(operation: 1, to: sharedSigner, value: 0, data: configure(next)))
+    }
+
+    static func owners(_ net: Chain.Network, _ account: String) async throws -> [String] {
+        let answer = try await Chain.ethCall(net, to: account, data: hex(sel("getOwners()")))
+        return SafeCall.decodeAddressArray(answer) ?? []
     }
 
     /// The shared signer's stored key for `account`: the chain's own word on

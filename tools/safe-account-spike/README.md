@@ -54,3 +54,15 @@ Account `0x4CC2193e5FA29b10ee4DEBC982e09125c79a78D9`, funded with 0.0001 ETH fro
 | Try the previous key | key 0's valid signature refused by the bundler: `AA24 signature error`, 1.7 s |
 
 Found on the way: asking the factory to simulate a create gives the address only until the account exists ("Create2 call failed"); the address is now computed with the factory's own CREATE2, the creation code read from the factory, and checked against the simulation while one exists.
+
+### Recovery with no phrase (same day, same account)
+
+| Step | Result |
+|---|---|
+| Make the recovery key | a P-256 key in iCloud Keychain (synchronizable); its Safe signer `0x87Ec…91D7`, read from Safe's `SafeWebAuthnSignerFactory` |
+| Add it as an owner | one transaction signed by the device key: the factory deploys the signer, `addOwnerWithThreshold(signer, 1)`; mined in 6.1 s, tx `0x9cd5bb30…e2b0`. `getOwners()` now lists it beside the shared signer |
+| Recover onto a new key | a fresh Enclave key stands in for a new phone; the **recovery key alone** signs the shared signer's re-configure; mined in 3.9 s, tx `0xb812750b…0b76` |
+| The lost device's key | its valid signature refused: `AA24 signature error` |
+| The recovered key | sent, mined in 3.8 s, tx `0x14513dd8…b9a5` |
+
+Not shown here: a second physical device. The recovery key is in iCloud Keychain, so a new phone signed in to the same Apple ID has it; this run used one phone for both roles.

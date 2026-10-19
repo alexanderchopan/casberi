@@ -39,6 +39,16 @@ struct Check {
                 let prepared = try await SafeAccount.prepare(net, origin: key, callData: call) { print("  " + $0) }
                 _ = try await SafeAccount.sign(net, prepared, with: key) { print("  " + $0) }
             }
+            print("— add a recovery owner —")
+            let recovery = P256.Signing.PrivateKey()
+            let rxy = [UInt8](recovery.publicKey.rawRepresentation)
+            let rk = SafeAccount.Key(x: Array(rxy[0..<32]), y: Array(rxy[32..<64])) { _ in throw Chain.RPCError(message: "unused") }
+            let me = try await SafeAccount.address(net, key)
+            let owner = try await SafeAccount.signerAddress(net, rk)
+            print("  recovery signer \(owner)")
+            let call = SafeAccount.addOwnerCall(account: me, key: rk, owner: owner)
+            let prepared = try await SafeAccount.prepare(net, origin: key, callData: call) { print("  " + $0) }
+            _ = try await SafeAccount.sign(net, prepared, with: key) { print("  " + $0) }
         } catch {
             print("✗ \(error)")
             exit(1)
