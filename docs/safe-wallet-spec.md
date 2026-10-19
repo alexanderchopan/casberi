@@ -1,7 +1,9 @@
-# Your account (a Safe) — design spec (draft, 2026-10-12)
+# Your account (a Safe) — design spec (2026-10-12, revised 2026-10-19)
 
-**Status: draft for the user's design pass. Nothing is built.** Building waits
-for Apple to confirm the developer account as an organization (3.1.5(i)).
+**Status: the user's spec; nothing is built yet.** Apple approved the switch to
+an organization account on 2026-10-19 (3.1.5(i); the paperwork is still
+finalising), so building can start. Section 6 lists what is decided and what
+is still open.
 
 ## 0. Principles and goals
 
@@ -15,6 +17,8 @@ for Apple to confirm the developer account as an organization (3.1.5(i)).
 6. **Honest privacy.** Every privacy feature says exactly what it hides and what it doesn't ("sweeping links this address to your account").
 7. **Read before you sign.** Every transaction is shown in plain words, with balances before and after (clear signing and simulation).
 8. **Always a way out.** The 12-word phrase opens the account in Safe's own app without Casberi.
+9. **No contract of our own, ever** (prd §1380, user, 2026-10-17: "i do not and will not create our own contracts", "we can't afford audits"). Every contract the account touches is someone else's, already deployed and audited: Safe's, CoW's, the 4337 module's. A feature that would need a contract we wrote is not built.
+10. **Nothing permanent behind the address.** Every key that can move money rotates — the device key with every transaction, the recovery key on "New phrase" — so no leaked secret works for long. This is what rules Aztec out for now (§1380): its accounts keep a fixed key and a fixed privacy secret.
 
 ### Goals
 
@@ -32,7 +36,7 @@ Each goal: how every option does it **today**, the problem with that, and our an
 | Bermuda | Each owner registers its own Bermuda key; rotation not documented |
 
 **Problem:** where rotation exists, nobody does it routinely, and a key that leaked works until someone notices.
-**Our answer (v1):** a **new Secure Enclave key for every transaction**, batched atomically with the transaction itself; the old key never works again (section 3b).
+**Our answer (v1):** a **new Secure Enclave key for every transaction**, batched atomically with the transaction itself; the old key never works again (section 3b). The recovery key rotates too ("New phrase"). Safe does both with its own audited `swapOwner`, so principle 9 holds; Aztec's stock accounts can do neither, and a contract of ours is ruled out, so Aztec waits (§1380; the phone itself is proven: `tools/aztec-phone-spike`, 2.1 s a proof).
 
 #### 2. Rotate keys, keep the same address
 
@@ -200,6 +204,8 @@ Trays are `DSTray`; verbs are rows (`DSDoorRow`); nothing at the top of a screen
 No balance and **no Activity module** (user: "we have that in the wallet already"). **Needs you stays on the Wallet** as the one list of what waits across every app; your account's items appear there and open this sheet at Security.
 
 **Direction set** (user, 2026-10-13: "directionally this is what we want"): the dark design canvas, https://claude.ai/artifact/8gcCuMvJHWVk4eq4Zob5Qv (private to the owner). No backings on buttons or row glyphs; the coloured circles are avatars.
+
+**Redrawn bare after the 2026-10-17/18 redesign** (§1382, §1393, §1396, §1385, §1386): https://claude.ai/artifact/2HbVMQfk1MP4bLuU6teKTX. Row one: no panels or boxes, 32pt seams, 60pt rows, pink for state and verb, grey chevrons for doors (user, 2026-10-18: "i like what you did"). Row two, "the Apple pass", for the user to rule on: the centred head (§1397: face, name as the title's menu, address), no glyph on the blocks (§1396), verbs as words with no "+", a row's trailing value a count. Not yet picked.
 
 **Open:**
 1. ~~Module order~~ **Decided: fixed** (user, 2026-10-13): Send · Swap, Add · Receive, Security. Something waiting shows inside its module, never by moving it.
@@ -404,11 +410,20 @@ Decided (user, 2026-10-12):
 - **Recovery:** no delay; the recovery key is a second owner. A hot wallet, not savings (was 3 days, fixed).
 - **Swap fee:** none at launch; only CoW's own.
 
+Decided (user, 2026-10-17):
+- **Safe stays the account** ("ya this is what we want this safe model"): owners rotate at will with Safe's own `swapOwner`, nothing permanent behind the address.
+- **No contract of our own, ever; Aztec accounts parked** (prd §1380).
+- **Signers are not guardians**; the recovery key is a signer (section 2a).
+
 Still open:
+0. **The sheet's look**: row one (bare) or row two (the Apple pass) of the 2026-10-18 canvas, and with it whether this sheet's blocks wear a glyph.
 1. **Card and Apple Pay top-up.** Skip in v1, or accept one vendor's server.
 2. **Pro-only, or free.** The business model puts the writing wallet in Pro ($20).
 3. **§112.** Spending from the app amends "signatures happen elsewhere"; record it as a ruling.
 4. **The account button's glyph.** Proposed `wallet.bifold`, no word, because the sheet holds more than money moves. Decided: the door is this button, not a fifth tile (user, 2026-10-12).
+5. **Guardians' delay** (section 2a, open 4), and whether Add a signer offers "two must sign" or a joint account is only ever made through New account.
+6. **Where New account lives now that §1410 gives the Wallet's + two rows** (Follow an account, Connect an app): a third row there, the sheet's account line, or both.
+7. **The stack**, before the first screen is built: the bundler, the RPC for P-256 verification, and whether CoW's keyless API is enough (section 7).
 
 ## 7. Technical notes (for the build, not the design)
 
