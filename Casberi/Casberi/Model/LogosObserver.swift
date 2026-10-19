@@ -439,8 +439,14 @@ final class PinnedSession: NSObject, URLSessionDelegate, @unchecked Sendable {
 /// Quillmark launch, a node on the testnet — dated from now so they stay fresh.
 /// Only while the demo is on; never stored.
 enum DemoChat {
+    /// Dated from one moment per launch, not from each read: the open
+    /// conversation asks for what is newer every few seconds (prd §1368),
+    /// and a message re-dated by every read was newer every time, so the
+    /// thread drew it again and again.
+    private static let now = Date().timeIntervalSince1970
+
     private static func ago(_ minutes: Double) -> Int64 {
-        Int64((Date().timeIntervalSince1970 - minutes * 60) * 1000)
+        Int64((now - minutes * 60) * 1000)
     }
 
     /// The names the demo person gave (`LogosChatNames`), so the demo shows

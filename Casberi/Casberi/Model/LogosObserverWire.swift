@@ -381,16 +381,29 @@ enum LogosObserverWire {
         /// same words. A direct conversation is titled by its person: the
         /// name you gave them, else their short address. `names` is the
         /// person's own naming (`LogosChatNames.name`).
+        ///
+        /// **A conversation nobody is known in can still be named.** With no
+        /// `peer` and no message from the other side yet (a chat you started),
+        /// there is no address to hang a name on, so the name you give hangs
+        /// on the conversation (`nameKey`) until the person turns up; a name
+        /// you gave the person wins once they do.
         func title(names: (String) -> String?) -> String {
             if let nickname { return nickname }
+            let given = names(nameKey)
             if direct {
-                if let peer { return names(peer) ?? LogosWire.short(peer) }
+                if let peer { return names(peer) ?? given ?? LogosWire.short(peer) }
+                if let given { return given }
                 if let name, !Self.isGeneric(name) { return name }
                 return String(localized: "Direct conversation")
             }
+            if let given { return given }
             if let name, !Self.isGeneric(name) { return name }
             return String(localized: "Group conversation")
         }
+
+        /// Where a name given to the conversation itself is kept, apart from
+        /// the addresses people are named under.
+        var nameKey: String { "convo:\(id)" }
 
         /// The row's line: the newest message with its author ("You: …", and
         /// in a group "Mira: …"), else the Observer's preview.

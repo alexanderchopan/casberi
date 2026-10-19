@@ -16,8 +16,16 @@ struct LogosChatTray: View {
     let title: String
     @State private var messages: [LogosObserverWire.ChatMessage]?
     @State private var failed = false
-    @State private var naming = false
+    /// What the name being typed is kept under: a person's address, or the
+    /// conversation's own key when nobody in it is known yet.
+    @State private var naming: Naming?
     @State private var draft = ""
+
+    private struct Naming: Identifiable {
+        let key: String
+        let person: Bool
+        var id: String { key }
+    }
 
     private var names: LogosChatNames { LogosChatNames.shared }
 
@@ -74,19 +82,24 @@ struct LogosChatTray: View {
                 if merged.count != held.count { messages = merged }
             }
         }
-        .alert(String(localized: "Name this person"), isPresented: $naming) {
+        .alert(naming?.person == false ? String(localized: "Name this conversation")
+                                       : String(localized: "Name this person"),
+               isPresented: Binding(get: { naming != nil }, set: { if !$0 { naming = nil } }),
+               presenting: naming) { pick in
             TextField(String(localized: "Name"), text: $draft)
-            Button(String(localized: "Save")) {
-                if let peer = known?.peer { names.set(draft, for: peer) }
-            }
+            Button(String(localized: "Save")) { names.set(draft, for: pick.key) }
             Button(String(localized: "Cancel"), role: .cancel) {}
-        } message: {
-            Text("Only on this phone. Their address changes when they restart Basecamp.")
+        } message: { pick in
+            Text(pick.person
+                 ? String(localized: "Only on this phone. Their address changes when they restart Basecamp.")
+                 : String(localized: "Only on this phone. Once they write, a name you give them takes over."))
         }
     }
 
     /// A direct conversation's person — the address under a given name, and
-    /// the verb that names them; a group's people.
+    /// the verb that names them; otherwise a group's people, and the verb
+    /// that names the conversation itself, so no conversation is left with
+    /// a name nobody can change.
     @ViewBuilder private func header(_ known: LogosObserverWire.Conversation?) -> some View {
         if let known, known.direct, let peer = known.peer {
             let given = names.name(peer)
@@ -98,25 +111,38 @@ struct LogosChatTray: View {
                         .monospaced()
                 }
                 Spacer(minLength: 0)
-                Button {
+                nameButton(given == nil ? String(localized: "Name this person") : String(localized: "Rename")) {
                     draft = given ?? ""
-                    naming = true
-                } label: {
-                    Text(given == nil ? String(localized: "Name this person") : String(localized: "Rename"))
-                        .dsText(.body17)
-                        .foregroundStyle(DS.textPrimary)
-                        .frame(minHeight: 44)
+                    naming = Naming(key: peer, person: true)
                 }
-                .buttonStyle(RowPress())
             }
             .padding(.bottom, DS.Space.s2)
-        } else if let known, let people = known.people(names: names.name) {
-            Text(people)
-                .dsText(.subhead12)
-                .foregroundStyle(DS.textSecondary)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.bottom, DS.Space.s2)
+        } else if let known {
+            let given = names.name(known.nameKey)
+            HStack(spacing: DS.Space.s2) {
+                if let people = known.people(names: names.name) {
+                    Text(people)
+                        .dsText(.subhead12)
+                        .foregroundStyle(DS.textSecondary)
+                }
+                Spacer(minLength: 0)
+                nameButton(given == nil ? String(localized: "Name this conversation") : String(localized: "Rename")) {
+                    draft = given ?? ""
+                    naming = Naming(key: known.nameKey, person: false)
+                }
+            }
+            .padding(.bottom, DS.Space.s2)
         }
+    }
+
+    private func nameButton(_ words: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(words)
+                .dsText(.body17)
+                .foregroundStyle(DS.textPrimary)
+                .frame(minHeight: 44)
+        }
+        .buttonStyle(RowPress())
     }
 
     private func thread(_ messages: [LogosObserverWire.ChatMessage], group: Bool) -> some View {

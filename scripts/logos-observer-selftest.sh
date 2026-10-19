@@ -230,6 +230,13 @@ check(dms[1].peer == "0xfeedbeefcafe0001" && dms[1].title(names: none) == LogosW
       "an Observer's peer titles the conversation by its address")
 check(dms[1].title(names: { $0 == "0xfeedbeefcafe0001" ? "Ana" : nil }) == "Ana", "a name you gave wins over the address")
 check(dms[2].title(names: none) == "Group conversation", "a generic group name names nobody either")
+let given: (String) -> String? = { ["convo:a": "Terricola", "convo:b": "Old name", "convo:g": "Testers"][$0] }
+check(dms[0].nameKey == "convo:a" && dms[0].title(names: given) == "Terricola",
+      "a conversation nobody is known in takes the name given to it")
+check(dms[1].title(names: given) == "Old name", "with the person unnamed, the conversation's name beats their address")
+check(dms[1].title(names: { $0 == "0xfeedbeefcafe0001" ? "Ana" : given($0) }) == "Ana",
+      "once the person is named, their name wins over the conversation's")
+check(dms[2].title(names: given) == "Testers", "a group can be named too")
 let thread: [W.ChatMessage] = [
     .init(fromSelf: false, sender: "0xaaaa1111bbbb2222", content: "hi", timestampMs: 0),
     .init(fromSelf: true, sender: nil, content: "hey", timestampMs: 60_000, delivery: W.delivery("pending")),
