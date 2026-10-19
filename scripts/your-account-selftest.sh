@@ -16,7 +16,8 @@
 # answered a29a… for (2026-10-19); and the hash the phone signs, computed from
 # the op's fields by EIP-712 (`safeOpHash`), to that same answer, so a field
 # moved inside the packed tuple fails even when both encoders move together.
-# The send's id (`userOpHash`) is pinned to EntryPoint v0.7's own answer. It also holds the Move tab to DEBUG until the
+# The send's id (`userOpHash`) is pinned to EntryPoint v0.7's own answer, and
+# the recovery key's two operations (prd §1427) to the spike's landed ones. It also holds the Move tab to DEBUG until the
 # account can recover, and Base Sepolia to DEBUG always.
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -82,6 +83,20 @@ check(YourAccountOp.callData([eth], rotateTo: nil) == YourAccountOp.execute(Your
       "a lone payment with no key change is not a plain executeUserOp")
 let stray = YourAccountOp.Payment(network: YourAccountOp.base, token: YourAccountOp.eth, amount: "1", to: "0xnope", toName: nil)
 check(YourAccountOp.callData([eth, stray], rotateTo: nil) == nil, "a batch with a bad address still wrote calldata")
+
+// Recovery (prd §1427): adding the recovery key and recovering onto a new
+// key, byte for byte what the spike's encoder wrote for the two operations
+// it landed on Base Sepolia (owner added, then the shared signer moved).
+let recoverySigner = "0x87Ec95Af16F72bF4282C9E029884361cd79a91D7"
+check(Keccak256.hexString(k(YourAccountOp.callData(calls: YourAccountOp.addRecoveryCalls(account: want, x: x, y: y, signer: recoverySigner), rotateTo: nil)!))
+      == "60088496eb09e42870575c66360c1b73653df9a819bb5d174dd602f627a21d6e",
+      "adding the recovery key is not the spike's operation (deploy its signer, addOwnerWithThreshold(signer, 1))")
+check(Keccak256.hexString(k(YourAccountOp.callData(calls: [YourAccountOp.recoverCall(to: (x, y))], rotateTo: nil)!))
+      == "678cded4304811761e84978325558234f4c0f857bb42266b1aa265c6894b0512",
+      "recovery is not the spike's operation (a delegate call re-configuring the shared signer)")
+check(YourAccountOp.dummySignature(owner: recoverySigner) != YourAccountOp.dummySignature,
+      "the recovery key's estimate signs as the shared signer")
+check(YourAccount.short(want) == "…29Ce", "an address is its last four or the whole of it (prd §495)")
 
 // Amounts: base units in, readable out, rounded down, never invented.
 check(YourAccountOp.baseUnits("0.01", decimals: 18) == "10000000000000000", "0.01 ETH")

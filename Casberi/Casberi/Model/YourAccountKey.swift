@@ -27,8 +27,29 @@ enum YourAccountKey {
     /// A key made for a send that has not landed yet, reused by the next one.
     private static let pendingKey = "yourAccount.pendingNext"
 
-    /// The account's address, once created on this device.
+    /// The account's address, once created on — or recovered to — this device.
     static var address: String? { UserDefaults.standard.string(forKey: addressKey) }
+
+    /// Key 0's `x ‖ y`, hex: the key the address comes from, wherever it is
+    /// now. On the phone that made the account it is this phone's key 0; on
+    /// a phone the account was recovered to (`adopt`) it is the first
+    /// phone's, read from the recovery key's item, and no key here matches it.
+    private static let originKey = "yourAccount.origin"
+    static var originHex: String? {
+        UserDefaults.standard.string(forKey: originKey) ?? UserDefaults.standard.string(forKey: key0Key)
+    }
+    static var origin: (x: [UInt8], y: [UInt8])? {
+        guard let hex = originHex, let xy = SafeABI.hexBytes(hex), xy.count == 64 else { return nil }
+        return (Array(xy[0..<32]), Array(xy[32..<64]))
+    }
+
+    /// Whether this phone holds the key the account was made with — false
+    /// on a phone it was recovered to, which can therefore never be the one
+    /// to create it on a network where it does not exist yet.
+    static var holdsOrigin: Bool {
+        guard let o = origin else { return false }
+        return publicKey(0).map { $0.x == o.x && $0.y == o.y } ?? false
+    }
 
     enum Failure: Error, Equatable {
         case noEnclave
@@ -125,36 +146,156 @@ enum YourAccountKey {
         add[kSecAttrSynchronizable as String] = false
         let status = SecItemAdd(add as CFDictionary, nil)
         guard status == errSecSuccess else { throw Failure.keychainRefused(status) }
+        let context = LAContext()
+        if biometric, context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: nil),
+           let state = context.domainState.biometry.stateHash {
+            UserDefaults.standard.set(state, forKey: domainKey(index))
+        }
         let xy = [UInt8](key.publicKey.rawRepresentation)
         guard xy.count == 64 else { throw Failure.noKey }
         return xy
     }
 
-    /// Make key 0 and the account's address — or, when key 0 is already in
-    /// this phone's Keychain (a reinstall keeps it), take the account back
-    /// with every key after it. Nothing reaches the network: the account can
-    /// receive at once and exists on chain at its first send.
+    // MARK: - The record a reinstall reads
+
+    /// Which account this phone's keys belong to, and the key its address
+    /// comes from: a device-only item beside the keys, because a reinstall
+    /// (or a restore) loses UserDefaults and keeps the Keychain. Without it a
+    /// reinstalled phone could only guess — and a phone the account was
+    /// recovered to would guess a wrong, empty address from its own key 0.
+    private struct Record: Codable { let address: String; let origin: String }
+
+    private static var recordItem: [String: Any] {
+        [kSecClass as String: kSecClassGenericPassword,
+         kSecAttrService as String: service,
+         kSecAttrAccount as String: "record"]
+    }
+
+    private static func readRecord() -> Record? {
+        var q = recordItem
+        q[kSecReturnData as String] = true
+        q[kSecMatchLimit as String] = kSecMatchLimitOne
+        var out: CFTypeRef?
+        guard SecItemCopyMatching(q as CFDictionary, &out) == errSecSuccess, let data = out as? Data else { return nil }
+        return try? JSONDecoder().decode(Record.self, from: data)
+    }
+
+    private static func writeRecord(_ record: Record) {
+        guard let data = try? JSONEncoder().encode(record) else { return }
+        SecItemDelete(recordItem as CFDictionary)
+        var add = recordItem
+        add[kSecValueData as String] = data
+        add[kSecAttrAccessible as String] = kSecAttrAccessibleWhenPasscodeSetThisDeviceOnly
+        add[kSecAttrSynchronizable as String] = false
+        SecItemAdd(add as CFDictionary, nil)
+    }
+
+    /// Every key stored here, in order, until the first gap.
+    private static func storedKeys() -> [String] {
+        var keys: [String] = []
+        while let xy = stored(keys.count) { keys.append(Keccak256.hexString(xy)) }
+        return keys
+    }
+
+    /// Restore this phone's account from its record and its keys.
+    private static func restore(_ record: Record) -> String {
+        publicKeys = storedKeys()
+        UserDefaults.standard.set(publicKeys.first, forKey: key0Key)
+        UserDefaults.standard.set(record.origin, forKey: originKey)
+        UserDefaults.standard.set(record.address, forKey: addressKey)
+        return record.address
+    }
+
+    /// Make key 0 and the account's address — or take this phone's own
+    /// account back after a reinstall: from its record when it has one; from
+    /// a key 0 left with no record (an account made before the record) only
+    /// by that key's own address, never for a phone it was recovered to,
+    /// which always has a record. Nothing reaches the network: the account
+    /// can receive at once and exists on chain at its first send.
     @discardableResult
     static func create() throws -> String {
         if let address { return address }
+        if let record = readRecord() { return restore(record) }
         let restoring = stored(0) != nil
         let bio = restoring ? biometric : biometryEnrolled
         let xy = try make(index: 0, biometric: bio)
         guard let account = YourAccount.address(x: Array(xy[0..<32]), y: Array(xy[32..<64])) else {
             throw Failure.noAddress
         }
-        var keys = [Keccak256.hexString(xy)]
-        if restoring {
-            var i = 1
-            while let more = stored(i) { keys.append(Keccak256.hexString(more)); i += 1 }
-        } else {
-            UserDefaults.standard.set(bio, forKey: biometricKey)
-        }
-        publicKeys = keys
+        publicKeys = restoring ? storedKeys() : [Keccak256.hexString(xy)]
+        if !restoring { UserDefaults.standard.set(bio, forKey: biometricKey) }
         UserDefaults.standard.set(Keccak256.hexString(xy), forKey: key0Key)
         UserDefaults.standard.set(account, forKey: addressKey)
+        writeRecord(Record(address: account, origin: Keccak256.hexString(xy)))
         return account
     }
+
+    /// Take an account back onto this phone (prd §1427). When this phone's
+    /// own record names it (the app was reinstalled), the keys here already
+    /// sign and nothing needs recovering: nil. Otherwise a NEW key, after
+    /// every key already stored here (never over one), that the recovery key
+    /// then moves the account to, network by network
+    /// (`YourAccountChain.recover`); returns its index.
+    static func adopt(address account: String, origin: String) throws -> Int? {
+        let account = EIP55.checksum(account)
+        if let record = readRecord(), record.address.caseInsensitiveCompare(account) == .orderedSame {
+            _ = restore(record)
+            return nil
+        }
+        let existing = storedKeys()
+        let bio = biometryEnrolled
+        let xy = try make(index: existing.count, biometric: bio)
+        publicKeys = existing + [Keccak256.hexString(xy)]
+        UserDefaults.standard.set(bio, forKey: biometricKey)
+        if let first = publicKeys.first { UserDefaults.standard.set(first, forKey: key0Key) }
+        UserDefaults.standard.set(origin, forKey: originKey)
+        UserDefaults.standard.set(account, forKey: addressKey)
+        writeRecord(Record(address: account, origin: origin))
+        return existing.count
+    }
+
+    /// A key made now, after every other, for the recovery key to move a
+    /// network to — never one that might be dead or already in use.
+    static func freshKey() throws -> Int {
+        let index = publicKeys.count
+        let xy = try make(index: index, biometric: biometric)
+        publicKeys = publicKeys + [Keccak256.hexString(xy)]
+        return index
+    }
+
+    /// An account made before the record existed gets one, once.
+    static func ensureRecord() {
+        guard readRecord() == nil, let address, let origin = originHex else { return }
+        writeRecord(Record(address: address, origin: origin))
+    }
+
+    /// Whether this phone can still sign with key `index`: its blob is here,
+    /// and — for a key behind Face ID — Face ID has not been re-enrolled
+    /// since it was made (`.biometryCurrentSet` destroys it, §427). A key the
+    /// chain answers to that this phone can no longer use is recovery's job.
+    static func holds(_ index: Int) -> Bool {
+        guard stored(index) != nil else { return false }
+        guard let made = UserDefaults.standard.data(forKey: domainKey(index)) else { return true }
+        let context = LAContext()
+        guard context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: nil),
+              let now = context.domainState.biometry.stateHash else { return true }
+        return now == made
+    }
+
+    private static func domainKey(_ index: Int) -> String { "yourAccount.domainState.\(index)" }
+
+    #if DEBUG
+    /// `-yourAccountForgetDevice YES`: this phone loses its keys and its
+    /// record of the account, as a lost phone does; the recovery key in
+    /// iCloud Keychain stays. The simulator's stand-in for a second iPhone.
+    static func forgetDevice() {
+        for i in 0..<max(publicKeys.count, 1) + 8 { SecItemDelete(item(i) as CFDictionary) }
+        SecItemDelete(recordItem as CFDictionary)
+        for k in [addressKey, key0Key, publicKeysKey, pendingKey, biometricKey, originKey] {
+            UserDefaults.standard.removeObject(forKey: k)
+        }
+    }
+    #endif
 
     /// The key a send moves the account to: the one an unlanded send made,
     /// or a new one. Never the key that signs it, nor key 0.

@@ -235,7 +235,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1565 of 1634 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1567 of 1636 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1802,6 +1802,8 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1424 — Your account sends: ETH and USDC on Base and Ethereum, several in one transaction, a new key with every send (builds…
 - §1425 — The Move page has one Add: Send's, which batches; money coming in is Receive (amends §1422's and the 2026-10-18 canva…
 - §1426 — An empty Feed draws no preview (retires §1169's preview; its All glyph stands)
+- §1427 — Your account recovers with no phrase: a recovery key in iCloud Keychain, on Base and Ethereum at once; Security on th…
+- §1428 — The Feed's quiet day is the day alone; your account's whole address heads Move; To shows an address end to end (exten…
 
 ## Dead rulings → what replaced them (generated)
 

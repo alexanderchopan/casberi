@@ -23,6 +23,9 @@ struct DSEmptyState: View {
     enum Scale: Equatable {
         case room(DSSkeleton.Figure)
         case list(rows: Int)
+        /// The words alone, no skeleton: the Feed's quiet day (prd §1428),
+        /// where the demo, not a drawing, shows what a full Feed holds.
+        case bare
     }
 
     var headline: Text? = nil
@@ -48,6 +51,10 @@ struct DSEmptyState: View {
             }
             .frame(maxWidth: .infinity)
             .modifier(Spoken(headline: headline, words: words, note: note))
+        case .bare:
+            statement
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .modifier(Spoken(headline: headline, words: words, note: note))
         }
     }
 

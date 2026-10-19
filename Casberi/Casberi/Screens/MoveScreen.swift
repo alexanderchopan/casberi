@@ -19,14 +19,18 @@ enum MoveTab {
 /// account's face, its name, its address. Then the modules, bare on the page
 /// (§1382, §1393), a 32pt seam between them (§1386).
 ///
-/// **Built so far: create, send (`MoveSend`, prd §1424) and receive.** Swap
-/// and Security are not drawn until they work (§83: no dead controls). No balance: the Wallet,
-/// where the account is followed from the moment it exists, shows it.
+/// **Built so far: create, send (`MoveSend`, prd §1424), receive, and
+/// security with recovery (`MoveSecurity`, prd §1427).** Swap is not drawn
+/// until it works (§83: no dead controls). No balance: the Wallet, where the
+/// account is followed from the moment it exists, shows it.
 struct MoveScreen: View {
     @Environment(ShellChrome.self) private var chrome
     @Environment(\.openURL) private var openURL
     @State private var address: String? = YourAccountKey.address
     @State private var creating = false
+    /// An account whose recovery key this phone's iCloud Keychain holds,
+    /// when this phone has none of its own yet (prd §1427).
+    @State private var recoverable: (address: String, origin: String)?
 
     var body: some View {
         ScrollView {
@@ -36,6 +40,11 @@ struct MoveScreen: View {
                     MoveSend(account: address)
                         .padding(.top, DSRoomChassis.sectionGap)
                     receive(address)
+                        .padding(.top, DSRoomChassis.sectionGap)
+                    MoveSecurity(account: address)
+                        .padding(.top, DSRoomChassis.sectionGap)
+                } else if let recoverable {
+                    recoverRow(recoverable)
                         .padding(.top, DSRoomChassis.sectionGap)
                 } else {
                     createRow
@@ -48,6 +57,9 @@ struct MoveScreen: View {
         }
         .scrollContentBackground(.hidden)
         .dsPageBackground()
+        .task {
+            if address == nil { recoverable = YourAccountRecovery.accounts().first } else { YourAccountKey.ensureRecord() }
+        }
     }
 
     // MARK: The head
@@ -71,10 +83,19 @@ struct MoveScreen: View {
                 .dsText(.heading24)
                 .foregroundStyle(DS.headInk)
             if let address {
-                Text(verbatim: YourAccount.short(address))
-                    .dsText(.mono17)
-                    .foregroundStyle(DS.textSecondary)
-                    .accessibilityLabel(Text("Address \(address)"))
+                // The whole address, always (user, 2026-10-19: "show entire
+                // address here so user can always see and copy it"): one
+                // line of mono, and a tap copies it.
+                Button { copy(address) } label: {
+                    Text(verbatim: address)
+                        .dsText(.mono12)
+                        .foregroundStyle(DS.textSecondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                }
+                .buttonStyle(RowPress())
+                .accessibilityLabel(Text("Address \(address)"))
+                .accessibilityHint(Text("Copies your address"))
                 Text("Secured by Safe")
                     .dsText(.subhead12)
                     .foregroundStyle(DS.textTertiary)
@@ -100,6 +121,68 @@ struct MoveScreen: View {
             .disabled(creating)
         }
         .frame(maxWidth: .infinity)
+    }
+
+    /// A phone with no account of its own, whose iCloud Keychain holds one's
+    /// recovery key: the account, and one verb that brings it here.
+    private func recoverRow(_ found: (address: String, origin: String)) -> some View {
+        VStack(spacing: DS.Space.s3) {
+            Text(verbatim: found.address)
+                .dsText(.mono12)
+                .foregroundStyle(DS.textSecondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+            DSFootnote("Your recovery key is in iCloud Keychain. It can move your account to this iPhone; the old one stops signing.", centered: true)
+            Button {
+                recover(found)
+            } label: {
+                Text(creating ? "Moving…" : "Move it to this iPhone")
+                    .dsText(.heading17)
+                    .foregroundStyle(DS.pickInk)
+                    .frame(minHeight: 44)
+            }
+            .buttonStyle(RowPress())
+            .disabled(creating)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    /// Take the account onto this phone: a new key here, then the recovery
+    /// key moves each network the account is on to it.
+    private func recover(_ found: (address: String, origin: String)) {
+        guard !creating else { return }
+        creating = true
+        Task {
+            do {
+                // This phone's own account, reinstalled: its keys already sign.
+                guard let index = try YourAccountKey.adopt(address: found.address, origin: found.origin) else {
+                    withAnimation(DS.Motion.standard) { address = found.address }
+                    chrome.flash(String(localized: "Your account is back on this iPhone"), tone: .success)
+                    creating = false
+                    return
+                }
+                var targets: [YourAccountOp.Network] = []
+                var failed: [String] = []
+                for net in YourAccountOp.networks {
+                    do {
+                        if try await YourAccountChain.isDeployed(net, found.address) { targets.append(net) }
+                    } catch {
+                        failed.append(String(localized: "\(net.name) did not answer"))
+                    }
+                }
+                failed += await MoveRecovery.move(targets, to: index)
+                WalletStore.shared.add(found.address, label: String(localized: "Your account"))
+                withAnimation(DS.Motion.standard) { address = found.address }
+                if failed.isEmpty {
+                    chrome.flash(String(localized: "Your account signs on this iPhone"), tone: .success)
+                } else {
+                    chrome.flash(failed.joined(separator: " · "), tone: .failure, seconds: 6)
+                }
+            } catch {
+                chrome.flash(String(localized: "Couldn't make a key on this device"), tone: .failure)
+            }
+            creating = false
+        }
     }
 
     private func create() {

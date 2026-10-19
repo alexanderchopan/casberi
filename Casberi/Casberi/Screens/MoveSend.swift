@@ -85,22 +85,27 @@ struct MoveSend: View {
             }
             .frame(minHeight: 64)
 
-            HStack(spacing: DS.Space.s3) {
+            // The whole address, end to end (user, 2026-10-19: "we should be
+            // able to see it end to end"): the field wraps instead of
+            // truncating, and the hint stands under it.
+            HStack(alignment: .top, spacing: DS.Space.s3) {
                 Text("To").dsText(.body17).foregroundStyle(DS.textSecondary)
-                TextField("a name or address", text: $to)
-                    .disabled(stage != nil)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .dsText(.body17)
-                    .foregroundStyle(DS.textPrimary)
-                if let hint {
-                    Text(verbatim: hint.text)
-                        .dsText(.subhead12)
-                        .foregroundStyle(hint.warns ? DS.attentionInk : DS.textSecondary)
-                        .lineLimit(1)
+                VStack(alignment: .leading, spacing: 2) {
+                    TextField("a name or address", text: $to, axis: .vertical)
+                        .lineLimit(1...3)
+                        .disabled(stage != nil)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .dsText(.body17)
+                        .foregroundStyle(DS.textPrimary)
+                    if let hint {
+                        Text(verbatim: hint.text)
+                            .dsText(.subhead12)
+                            .foregroundStyle(hint.warns ? DS.attentionInk : DS.textSecondary)
+                    }
                 }
             }
-            .frame(minHeight: 44)
+            .padding(.vertical, DS.Space.s3)
             .task(id: to) { await resolve() }
 
             Button { send() } label: {

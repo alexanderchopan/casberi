@@ -112,6 +112,13 @@ enum YourAccountOp {
     static func callData(_ payments: [Payment], rotateTo next: (x: [UInt8], y: [UInt8])?) -> [UInt8]? {
         let calls = payments.compactMap(call(for:))
         guard calls.count == payments.count, !calls.isEmpty else { return nil }
+        return callData(calls: calls, rotateTo: next)
+    }
+
+    /// Any calls, then the key change, as one operation; one call alone is a
+    /// plain `executeUserOp` (a delegate call when its operation says so).
+    static func callData(calls: [Call], rotateTo next: (x: [UInt8], y: [UInt8])?) -> [UInt8]? {
+        guard !calls.isEmpty || next != nil else { return nil }
         if next == nil, calls.count == 1 { return execute(calls[0]) }
         var batch = calls
         if let next {
@@ -241,8 +248,26 @@ enum YourAccountOp {
 
     /// The right shape and length, verifying nothing: for gas estimation,
     /// where a real signature cannot exist yet (it signs the gas).
-    static var dummySignature: [UInt8] {
-        signature(r: [UInt8](repeating: 0x11, count: 32), s: [UInt8](repeating: 0x22, count: 32))!
+    static var dummySignature: [UInt8] { dummySignature(owner: YourAccount.sharedSigner) }
+    static func dummySignature(owner: String) -> [UInt8] {
+        signature(r: [UInt8](repeating: 0x11, count: 32), s: [UInt8](repeating: 0x22, count: 32), owner: owner)!
+    }
+
+    // MARK: - The recovery key's calls (prd §1427)
+
+    /// Deploy the recovery key's Safe passkey signer (idempotent: the
+    /// factory returns the existing one) and make it an owner at threshold 1.
+    static func addRecoveryCalls(account: String, x: [UInt8], y: [UInt8], signer: String) -> [Call] {
+        let create = YourAccount.sel("createSigner(uint256,uint256,uint176)") + x + y + SafeWebAuthn.verifiersWord!
+        let add = YourAccount.sel("addOwnerWithThreshold(address,uint256)") + w(signer) + w(1)
+        return [Call(operation: 0, to: SafeWebAuthn.factory, value: w(0), data: create),
+                Call(operation: 0, to: account, value: w(0), data: add)]
+    }
+
+    /// Recovery itself: the shared signer moved to this phone's new key, by a
+    /// delegate call the recovery key signs. The lost phone's key stops with it.
+    static func recoverCall(to next: (x: [UInt8], y: [UInt8])) -> Call {
+        Call(operation: 1, to: YourAccount.sharedSigner, value: w(0), data: YourAccount.configure(x: next.x, y: next.y))
     }
 
     // MARK: - Amounts, as decimal strings (uint256 has no Swift integer)

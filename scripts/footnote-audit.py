@@ -85,6 +85,10 @@ MIN_SENTENCE_WORDS = 4
 # Files allowed more than one footnote. {file: (count, reason)}. The count is
 # exact: a file drawing fewer is a stale entry and fails check 1.
 ALLOWANCE = {
+    # The Move page before an account stands on this phone (prd §1422,
+    # §1427): Create's line, or — when iCloud Keychain holds a recovery key —
+    # Move it to this iPhone's. Exclusive states, never on screen together.
+    "MoveScreen.swift": (2, "create or recover, exclusive states (prd §1427)"),
     # Three settings cards in one file (Data, Agent key, Notifications). Data
     # holds the librarian disclosure (two exclusive branches, (c)), the ADP
     # line (a) and the redaction line (c); notifications its no-push ceiling (a).

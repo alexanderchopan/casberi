@@ -40,7 +40,9 @@ LOOSE = re.compile(
     r"kSecAttrAccessible(?:AfterFirstUnlock|WhenUnlocked|WhenPasscodeSet|Always)"
     r"(?!ThisDeviceOnly)")
 DEVICE_ONLY = re.compile(r"kSecAttrAccessible\w*ThisDeviceOnly")
-ADDS = re.compile(r"\bSecItemAdd\s*\(")
+# `TokenVault.addNamingGroup` is a SecItemAdd too: a file adding through it
+# is audited like one calling SecItemAdd itself, never skipped.
+ADDS = re.compile(r"\b(?:SecItemAdd|addNamingGroup)\s*\(")
 SYNC = re.compile(r"\bkSecAttrSynchronizable\b")
 
 # Files that add keychain items on someone else's behalf and are exempt with a
@@ -54,6 +56,13 @@ KNOWN_EXEMPT: dict[str, str] = {
     # AfterFirstUnlock, because a synchronizable item cannot be ThisDeviceOnly.
     # Opening a note is gated by device-owner authentication in the app.
     "NoteLock.swift": "the locked-note key syncs through iCloud Keychain by ruling (prd §982)",
+    # Your account's recovery key (prd §1421, §1427): its whole job is to be
+    # on the person's next iPhone when this one is lost, so it is
+    # synchronizable through iCloud Keychain (end-to-end encrypted),
+    # AfterFirstUnlock (a synchronizable item cannot be ThisDeviceOnly), in the
+    # app id's shared group so the Mac reads it, and every signature asks for
+    # the device owner first. It only ever moves the account to a new key.
+    "YourAccountRecovery.swift": "the recovery key syncs through iCloud Keychain by ruling (prd §1421, §1427)",
 }
 
 # Files that write BOTH kinds by a stated rule (prd §1162, user 2026-10-07:

@@ -468,10 +468,13 @@ extension FeedScreen {
                     }
                     .dsRoomLeadListRow()
                 } else {
+                    // A quiet day is the day, said once: no grey rows and no
+                    // note (prd §1428, user: "we don't need these empty
+                    // states on feed b/c we already showed someone what it
+                    // looks like in demo").
                     emptyLeadRow(headline: Text(Date.now.formatted(.dateTime.weekday(.wide))),
                                  words: Text(Date.now.formatted(.dateTime.month(.wide).day())),
-                                 note: bridges.connectedCount == 0
-                                     ? Text("Connect apps in Library.") : nil)
+                                 bare: true)
                 }
             }
             // What a body cannot read (the phone's calendars, the people), so

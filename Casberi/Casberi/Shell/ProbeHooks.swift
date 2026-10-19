@@ -3904,6 +3904,13 @@ enum ProbeHooks {
                 }
             }
         },
+        // `-yourAccountForgetDevice YES` — this phone forgets its keys and the
+        // account, as a lost phone does; the recovery key in iCloud Keychain
+        // stays (prd §1427). The simulator's stand-in for a second iPhone.
+        Hook(key: "yourAccountForgetDevice") { _, _ in
+            YourAccountKey.forgetDevice()
+            NSLog("yourAccountForgetDevice: done, recoverable=%d", YourAccountRecovery.accounts().count)
+        },
         // `-signerProbe YES` — this phone as a Safe co-signer (prd §425),
         // one NSLog per fact (the `-todayProbe` truncation lesson).
         //

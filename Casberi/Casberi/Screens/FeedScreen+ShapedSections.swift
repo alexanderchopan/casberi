@@ -579,9 +579,9 @@ extension FeedScreen {
     /// unheld, because an empty state over a full list is the §83 lie. The
     /// honest fix for that case is a cover, not a skeleton.
     func emptyLeadRow(headline: Text, words: Text, note: Text? = nil,
-                              figure: DSSkeleton.Figure? = nil) -> some View {
+                              figure: DSSkeleton.Figure? = nil, bare: Bool = false) -> some View {
         DSEmptyState(headline: headline, words: words,
-                     scale: figure.map { .room($0) } ?? .list(rows: 3), note: note)
+                     scale: bare ? .bare : figure.map { .room($0) } ?? .list(rows: 3), note: note)
             .frame(maxWidth: .infinity,
                    minHeight: DSRoomChassis.leadBox,
                    maxHeight: DSRoomChassis.leadBox)

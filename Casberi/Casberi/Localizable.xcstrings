@@ -2573,6 +2573,90 @@
         }
       }
     },
+    "%@: not moved" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@: no se movió"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@: 移動していません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@: 이동하지 않음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@：未移动"
+          }
+        }
+      }
+    },
+    "%@: not sent" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@: no enviado"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@: 送信していません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@: 보내지 않음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@：未发送"
+          }
+        }
+      }
+    },
+    "%@: sent, not yet seen" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@: enviado, aún no visto"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@: 送信済み、まだ確認できません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@: 보냈지만 아직 확인되지 않음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@：已发送，尚未看到"
+          }
+        }
+      }
+    },
     "%lld added by you" : {
       "localizations" : {
         "es" : {
@@ -4645,6 +4729,62 @@
         }
       }
     },
+    "A new key with every send" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Una clave nueva con cada envío"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "送るたびに新しい鍵"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "보낼 때마다 새 키"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "每次发送都换新密钥"
+          }
+        }
+      }
+    },
+    "A new key with every send · key %lld" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Una clave nueva con cada envío · clave %lld"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "送るたびに新しい鍵 · 鍵 %lld"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "보낼 때마다 새 키 · 키 %lld"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "每次发送都换新密钥 · 第 %lld 把"
+          }
+        }
+      }
+    },
     "A newsletter" : {
       "localizations" : {
         "es" : {
@@ -5425,6 +5565,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "添加到 %@"
+          }
+        }
+      }
+    },
+    "Add your recovery key on %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Añadir tu clave de recuperación en %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ に復旧キーを追加"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@에 복구 키 추가"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 %@ 上添加你的恢复密钥"
           }
         }
       }
@@ -6551,6 +6719,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "一个事件"
+          }
+        }
+      }
+    },
+    "Another device signs on %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Otro dispositivo firma en %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ では別のデバイスが署名します"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@에서는 다른 기기가 서명합니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 上由另一台设备签名"
           }
         }
       }
@@ -8151,6 +8347,34 @@
         }
       }
     },
+    "Copies your address" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Copia tu dirección"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アドレスをコピーします"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "주소를 복사합니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "复制你的地址"
+          }
+        }
+      }
+    },
     "Couldn't create the account on this device" : {
       "localizations" : {
         "es" : {
@@ -8315,6 +8539,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "无法关注此钱包"
+          }
+        }
+      }
+    },
+    "Couldn't make a key on this device" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se pudo crear una clave en este dispositivo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "このデバイスで鍵を作成できませんでした"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 기기에서 키를 만들 수 없습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "无法在此设备上创建密钥"
           }
         }
       }
@@ -10587,6 +10839,34 @@
         }
       }
     },
+    "Finish" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Terminar"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "完了する"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "마치기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "完成"
+          }
+        }
+      }
+    },
     "First seen" : {
       "localizations" : {
         "es" : {
@@ -11875,6 +12155,34 @@
         }
       }
     },
+    "iCloud Keychain · on %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Llavero de iCloud · en %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "iCloudキーチェーン · %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "iCloud 키체인 · %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "iCloud 钥匙串 · 在 %@ 上"
+          }
+        }
+      }
+    },
     "Import your address book" : {
       "localizations" : {
         "es" : {
@@ -12799,6 +13107,90 @@
         }
       }
     },
+    "Move here" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Traer aquí"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ここに移す"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "여기로 옮기기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "移到这里"
+          }
+        }
+      }
+    },
+    "Move it to this iPhone" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Traerla a este iPhone"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "このiPhoneに移す"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 iPhone으로 옮기기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "移到这台 iPhone"
+          }
+        }
+      }
+    },
+    "Move your account to this iPhone on %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Traer tu cuenta a este iPhone en %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ でアカウントをこのiPhoneに移す"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@에서 계정을 이 iPhone으로 옮기기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 %@ 上把你的账户移到这台 iPhone"
+          }
+        }
+      }
+    },
     "Moves %@ in a day" : {
       "localizations" : {
         "es" : {
@@ -12823,6 +13215,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "一天内涨跌 %@"
+          }
+        }
+      }
+    },
+    "Moving…" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Moviendo…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "移動中…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "옮기는 중…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在移动…"
           }
         }
       }
@@ -13555,6 +13975,34 @@
         }
       }
     },
+    "Not set up · for a new iPhone" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Sin configurar · para un iPhone nuevo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "未設定 · 新しいiPhoneのため"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "설정 안 됨 · 새 iPhone을 위해"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "未设置 · 用于新 iPhone"
+          }
+        }
+      }
+    },
     "Not simulated — %lld calls is more than the simulator takes at once." : {
       "localizations" : {
         "es" : {
@@ -13971,6 +14419,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "现为 %@。涨跌提醒会关注上涨和下跌。"
+          }
+        }
+      }
+    },
+    "On %@ · not yet on %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "En %1$@ · aún no en %2$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ に設定済み · %2$@ はまだ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@에 있음 · %2$@에는 아직"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已在 %1$@ · 尚未在 %2$@"
           }
         }
       }
@@ -15067,6 +15543,62 @@
         }
       }
     },
+    "Recovery key" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Clave de recuperación"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "復旧キー"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "복구 키"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "恢复密钥"
+          }
+        }
+      }
+    },
+    "Recovery key on %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Clave de recuperación en %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ に復旧キーを設定しました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@에 복구 키 설정됨"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "恢复密钥已在 %@ 上"
+          }
+        }
+      }
+    },
     "Recurring charge in Rocket Money" : {
       "localizations" : {
         "es" : {
@@ -15287,6 +15819,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "检查并签名"
+          }
+        }
+      }
+    },
+    "Rotate" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Rotar"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "鍵の交換"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "키 교체"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "轮换"
           }
         }
       }
@@ -15717,6 +16277,62 @@
         }
       }
     },
+    "Set up" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Configurar"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "設定"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "설정"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "设置"
+          }
+        }
+      }
+    },
+    "Setting up…" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Configurando…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "設定中…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "설정 중…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在设置…"
+          }
+        }
+      }
+    },
     "Settings, data and notifications" : {
       "localizations" : {
         "es" : {
@@ -16077,6 +16693,90 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "已签名，等待执行"
+          }
+        }
+      }
+    },
+    "Signs on %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Firma en %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ で署名します"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@에서 서명합니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 %@ 上签名"
+          }
+        }
+      }
+    },
+    "Signs on %@ · another device on %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Firma en %1$@ · otro dispositivo en %2$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ で署名 · %2$@ は別のデバイス"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@에서 서명 · %2$@에서는 다른 기기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 %1$@ 上签名 · %2$@ 上由另一台设备签名"
+          }
+        }
+      }
+    },
+    "Signs your first send, Face ID each time" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Firma tu primer envío, con Face ID cada vez"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "最初の送金に署名します。毎回Face IDで"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "첫 송금에 서명합니다. 매번 Face ID로"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "为你的第一笔发送签名，每次都用面容 ID"
           }
         }
       }
@@ -16921,6 +17621,34 @@
         }
       }
     },
+    "The recovery key has no signer" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "La clave de recuperación no tiene firmante"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "復旧キーに署名者がありません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "복구 키에 서명자가 없습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "恢复密钥没有签名者"
+          }
+        }
+      }
+    },
     "The sequencers you follow: duty, stake and schedule" : {
       "localizations" : {
         "es" : {
@@ -17113,6 +17841,90 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "Casberi 一发现就送达，每个应用一条。"
+          }
+        }
+      }
+    },
+    "This iPhone" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Este iPhone"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "このiPhone"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 iPhone"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "这台 iPhone"
+          }
+        }
+      }
+    },
+    "This iPhone holds no recovery key for this account" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Este iPhone no tiene clave de recuperación para esta cuenta"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "このiPhoneにはこのアカウントの復旧キーがありません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 iPhone에는 이 계정의 복구 키가 없습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "这台 iPhone 没有此账户的恢复密钥"
+          }
+        }
+      }
+    },
+    "This iPhone's key for %@ no longer works. Move here with your recovery key" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "La clave de este iPhone para %@ ya no funciona. Tráela aquí con tu clave de recuperación"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "このiPhoneの %@ 用の鍵はもう使えません。復旧キーでここに移してください"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 iPhone의 %@ 키가 더 이상 작동하지 않습니다. 복구 키로 여기로 옮기세요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "这台 iPhone 在 %@ 上的密钥已失效。请用恢复密钥移到这里"
           }
         }
       }
@@ -18205,6 +19017,90 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "X、Instagram、TikTok 等"
+          }
+        }
+      }
+    },
+    "Your account is back on this iPhone" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu cuenta vuelve a estar en este iPhone"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アカウントがこのiPhoneに戻りました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "계정이 이 iPhone으로 돌아왔습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的账户已回到这台 iPhone"
+          }
+        }
+      }
+    },
+    "Your account is not on %@ yet, and only the iPhone that made it can put it there" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu cuenta aún no está en %@, y solo el iPhone que la creó puede llevarla allí"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アカウントはまだ %@ にありません。作成したiPhoneだけがそこに置けます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "계정이 아직 %@에 없으며, 계정을 만든 iPhone만 거기에 둘 수 있습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的账户尚未在 %@ 上，只有创建它的 iPhone 能把它放到那里"
+          }
+        }
+      }
+    },
+    "Your account signs on this iPhone" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu cuenta firma en este iPhone"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アカウントはこのiPhoneで署名します"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "계정이 이 iPhone에서 서명합니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的账户在这台 iPhone 上签名"
           }
         }
       }
@@ -23615,6 +24511,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你的笔记"
+          }
+        }
+      }
+    },
+    "Your recovery key is in iCloud Keychain. It can move your account to this iPhone; the old one stops signing." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu clave de recuperación está en el llavero de iCloud. Puede traer tu cuenta a este iPhone; el anterior deja de firmar."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "復旧キーはiCloudキーチェーンにあります。アカウントをこのiPhoneに移せます。前のiPhoneは署名できなくなります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "복구 키가 iCloud 키체인에 있습니다. 계정을 이 iPhone으로 옮길 수 있으며, 이전 기기는 더 이상 서명하지 않습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的恢复密钥在 iCloud 钥匙串中。它可以把你的账户移到这台 iPhone；旧设备将不再签名。"
+          }
+        }
+      }
+    },
+    "Your recovery key is not on %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu clave de recuperación no está en %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "復旧キーは %@ にありません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "복구 키가 %@에 없습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的恢复密钥不在 %@ 上"
           }
         }
       }
