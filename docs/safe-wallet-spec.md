@@ -178,8 +178,8 @@ It is the Pro tier's "writing wallet" in the business model.
 
 | Need | Existing place | Rule |
 |---|---|---|
-| Create one | **The Wallet's + menu, first row "Create an account"**, above Follow an account and Connect an app (user, 2026-10-19); and the Actions page itself, before any account exists | §1410's one menu wherever the Wallet adds |
-| Send, Swap, Receive, Add money, Security | **The Actions tab**: the bar is Feed · Wallet · Actions · Library · Search, five equal tabs (prd §1422) | Swapping is a key action, not a Wallet corner (user, 2026-10-19). Amends §774/§1108 |
+| Create one | **The Wallet's + menu, first row "Create an account"**, above Follow an account and Connect an app (user, 2026-10-19); and the Move page itself, before any account exists | §1410's one menu wherever the Wallet adds |
+| Send, Swap, Receive, Add money, Security | **The Move tab**: the bar is Feed · Wallet · Move · Library · Search, five equal tabs (prd §1422) | Swapping is a key action, not a Wallet corner (user, 2026-10-19). Amends §774/§1108 |
 | Activity | **Home** list (sends, receives, fees) | §1039 |
 | Something needs you | **Home › Needs you** (a recovery in progress, a stuck send) | §1111 |
 | Recovery, devices | **The account sheet**, as sections under its tiles | Security keeps its checkup (§1107) |
@@ -188,9 +188,9 @@ It is the Pro tier's "writing wallet" in the business model.
 
 Trays are `DSTray`; verbs are rows (`DSDoorRow`); nothing at the top of a screen (§752).
 
-## 2a. The Actions page: a page of live modules
+## 2a. The Move page: a page of live modules
 
-**Called the actions tray in design talk (user, 2026-10-19); since §1422 it is the Actions tab's page, not a tray.** **The page IS the account** (user, 2026-10-13). It is not a menu of tiles that open trays: it is a stack of **modules you act in directly**, so sending is typing into Move, not tapping Send first ("if the tray or sheet has a send and swap module already there … that is easier. same for signing, rotating keys"). The same idea as the tray's page of modules (§1207 item 5).
+**Called the actions tray in design talk (user, 2026-10-19); since §1422 it is the Move tab's page, not a tray.** **The page IS the account** (user, 2026-10-13). It is not a menu of tiles that open trays: it is a stack of **modules you act in directly**, so sending is typing into Move, not tapping Send first ("if the tray or sheet has a send and swap module already there … that is easier. same for signing, rotating keys"). The same idea as the tray's page of modules (§1207 item 5).
 
 - **No balance** (user: "we already have that on the wallet"): the Wallet behind the sheet shows it.
 - **The account is one line, not a module** (user, 2026-10-13: "it needs to be one line"): a disc, the name, a pink ⌄ and the short address, **+ New** on the right. Tapped, it opens in place: the accounts (pick one, a check on the current), then **Addresses** with **+ New address**: your address and every fresh address with what it holds. Fresh addresses live here, under the account, not under Receive (user: "those would be under my account … a selection there").
@@ -221,8 +221,8 @@ No balance and **no Activity module** (user: "we have that in the wallet already
 
 ### v1 — the first release
 
-**The Actions screen** (superseded twice: the tiles by section 2a's modules, 2026-10-13; the door and the sheet by prd §1422, 2026-10-19). Send, Swap, Receive and Add money live together, not as rows in Holdings (user, 2026-10-12).
-- **Its door is the Actions tab** (§1422), a page like the other four. The band's Wallet button (§1278, §1280) is deleted; after a key change you didn't make, the Actions tab carries the attention dot.
+**The Move page** (was the Actions screen; superseded twice: the tiles by section 2a's modules, 2026-10-13; the door and the sheet by prd §1422, 2026-10-19). Send, Swap, Receive and Add money live together, not as rows in Holdings (user, 2026-10-12).
+- **Its door is the Move tab** (§1422), a page like the other four. The band's Wallet button (§1278, §1280) is deleted; after a key change you didn't make, the Move tab carries the attention dot.
 - **The sheet:** the Holdings sheet's anatomy. Your account's box, then **four tiles: Send · Swap · Receive · Add money** (a sheet's acts are tiles, four at most, §1178), then sections: **Recovery** (recovery key, Show recovery phrase, New recovery phrase), **Devices** (each owner, Add a device), **Account** (address, name, notifications, activity) and one footnote on who holds the keys.
 - Mockup: `design/mockups/wallet-account-button.html`. Frames 1 and 7 predate §1278 (the button there is Wallet-only) and frames 6 and 7 draw the 3-day recovery the no-delay ruling removed; the sheet, Send, Review and Swap frames stand.
 - Each action opens its own tray, below.
@@ -235,7 +235,7 @@ No balance and **no Activity module** (user: "we have that in the wallet already
 - Nothing goes on chain and nothing is paid until the first send.
 
 **2. Receive**
-- Actions › **Receive** → tray
+- Move › **Receive** → tray
   - Address, large, with a QR code
   - The chains it works on, as a line of icons ("Base · Ethereum")
   - **Copy** · **Share**
@@ -243,13 +243,13 @@ No balance and **no Activity module** (user: "we have that in the wallet already
   - One footnote: send only on the chains listed
 
 **3. Add money**
-- Actions › **Add money** → tray
+- Move › **Add money** → tray
   - **From an exchange**: the address and the chain to pick
   - **From another wallet**: the same, plus a QR code
   - Card or Apple Pay is **open question 1**: every major onramp now needs a signed session from a server
 
 **4. Send**
-- Actions › **Send** → tray, one step at a time:
+- Move › **Send** → tray, one step at a time:
   1. **To:** search field (an address, ENS name, or someone in Addresses), **Paste**, **Scan**
   2. **Amount:** token picker, an amount field in dollars or token, **Max**
   3. **Review**: the existing sign block, with recipient, amount, fee in dollars, the balance change, and warnings (first send to this address, a lookalike of a saved address, a contract)
@@ -258,7 +258,7 @@ No balance and **no Activity module** (user: "we have that in the wallet already
 - No gas: Send stays drawn, and Review says "Add about $0.05 of ETH on Base to pay fees" with **Add money** (no dead control, §83).
 
 **5. Swap**
-- Actions › **Swap** → tray, one screen:
+- Move › **Swap** → tray, one screen:
   - **From:** a token you hold (defaults to the largest), an amount field, **Max**
   - **To:** a token picker; your holdings first, then a search over a token list. A token Security calls fake is never offered; an unlisted one asks you to confirm
   - The quote, live: "You get about 1,204 USDC", minimum received, the fee in dollars, price impact once it passes 1%
@@ -315,7 +315,7 @@ No balance and **no Activity module** (user: "we have that in the wallet already
 - What this gives up against the phrase-derived design: one-time owners that never link. What it gains: no secret anywhere, and recovery of every fresh address with the account itself.
 
 **Buttons.**
-- Actions › **Receive** → tray gains **New address** beside your main one: an optional "For" name (Ana, rent), then the address, its QR, Copy · Share. Each one is new.
+- Move › **Receive** → tray gains **New address** beside your main one: an optional "For" name (Ana, rent), then the address, its QR, Copy · Share. Each one is new.
 - Your account sheet gains a **Fresh addresses** section: one row per address, "From Ana · $120", newest first, with its own Send.
 - The account's box counts them in the total, so they're one balance to you and separate on chain.
 
@@ -378,14 +378,14 @@ Bermuda fits your account (same chains, Safe, normal DeFi through one-time accou
 | New account | Accounts menu, first row | — | No |
 | Wallet button (raises the account sheet) | Band's trailing seat, every page | — | No |
 | Create | New account tray | Yes | No |
-| Receive | Actions screen | — | No |
+| Receive | Move page | — | No |
 | Copy · Share | Receive tray | — | No |
-| Add money | Actions screen | — | No |
-| Send | Actions screen | — | No |
+| Add money | Move page | — | No |
+| Send | Move page | — | No |
 | New address | Receive tray | — | No (it exists on chain at its first spend) |
 | Send from a fresh address | Account sheet › Fresh addresses | Yes | Yes (creates that Safe; gas in USDC) |
 | Paste · Scan · Max | Send tray | — | No |
-| Swap | Actions screen | — | No |
+| Swap | Move page | — | No |
 | Max · token pickers | Swap tray | — | No |
 | Swap (confirm) | Review | Yes | Yes (an off-chain order, settled by CoW) |
 | Send (confirm) | Review | Yes | Yes (creates the Safe the first time) |
@@ -399,7 +399,7 @@ Bermuda fits your account (same chains, Safe, normal DeFi through one-time accou
 
 ## 5. States to design
 
-- **Empty**: just created, $0. The Actions screen leads with Receive and Add money; the box reads "$0.00", never a fake chart (§769).
+- **Empty**: just created, $0. The Move page leads with Receive and Add money; the box reads "$0.00", never a fake chart (§769).
 - **Not yet on chain**: has money, never sent. Nothing to say; the first send creates it.
 - **No ETH for fees**: as in Send step 4. Swap still works for any token sold before.
 - **Swap waiting**: Home row until the order fills; an order that expires says so and costs nothing.
@@ -429,11 +429,10 @@ Decided (user, 2026-10-19):
 - **The look is the Apple pass** (row two of the 2026-10-18 canvas): the centred head, no glyph on the blocks, verbs as words, a count before each chevron.
 - **Add money in v1 is "Add from an exchange"**: Coinbase, Kraken, another wallet; the address copied and the app opened. A card or Apple Pay onramp needs a vendor's server, so it waits.
 - **Free**, not Pro-only.
-- **The bar is Feed · Wallet · Actions · Library · Search** (prd §1422); Actions is a page; the Wallet's + leads with Create an account.
+- **The bar is Feed · Wallet · Move · Library · Search** (prd §1422, the label decided the same day); Move is a page; the Wallet's + leads with Create an account.
 
 Still open:
-1. **The tab's label**: Actions or Trade.
-2. **One account of your own in v1, or several.**
+1. **One account of your own in v1, or several.**
 3. **§112.** Spending from the app amends "signatures happen elsewhere"; record it as a ruling.
 5. **Guardians' delay** (section 2a, open 4), and whether Add a signer offers "two must sign" or a joint account is only ever made through New account.
 7. **The stack**, before the first screen is built: the bundler, the RPC for P-256 verification, and whether CoW's keyless API is enough (section 7).
