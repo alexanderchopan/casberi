@@ -10,13 +10,13 @@ is still open.
 ### Design principles
 
 1. **Yours, with no server of ours.** Casberi never holds a key, runs no backend for the account, and never stands between you and your money. Third parties we use (a bundler, an RPC, CoW) are interchangeable and hold nothing.
-2. **Keys never leave the device.** The key that signs lives in the Secure Enclave and can't be exported. The one exception is the recovery key, and it is a standard phrase you can take elsewhere.
+2. **Keys never leave the device, and there is no phrase** (user, 2026-10-19: "i want w/o a phrase … single point of failure"). Every key that signs is a passkey: the daily one in the Secure Enclave, the recovery one synced by iCloud Keychain. Nothing is ever shown as words, so nothing can be photographed, typed into a phishing page, or lost in a drawer.
 3. **One address, keys that change underneath.** Your address is permanent; the keys behind it rotate freely.
 4. **A spending account, not a vault.** Fast over fortified: no recovery delay, one signature. Savings, with delays and two keys, is a separate account later.
 5. **Real money runs only on what is live and proven.** Safe on Base and Ethereum today. New technology (Bermuda, 8130, Tempo, Aztec) is layered on once it is on mainnet and measured on an iPhone, never load-bearing before.
 6. **Honest privacy.** Every privacy feature says exactly what it hides and what it doesn't ("sweeping links this address to your account").
 7. **Read before you sign.** Every transaction is shown in plain words, with balances before and after (clear signing and simulation).
-8. **Always a way out.** The 12-word phrase opens the account in Safe's own app without Casberi.
+8. **Always a way out.** The recovery passkey opens the account in Safe's own app (app.safe.global signs with passkeys) without Casberi. A phrase can be exported later as an opt-in verb for leaving to a wallet that speaks no passkeys; it is never made at creation.
 9. **No contract of our own, ever** (prd §1380, user, 2026-10-17: "i do not and will not create our own contracts", "we can't afford audits"). Every contract the account touches is someone else's, already deployed and audited: Safe's, CoW's, the 4337 module's. A feature that would need a contract we wrote is not built.
 10. **Nothing permanent behind the address.** Every key that can move money rotates — the device key with every transaction, the recovery key on "New phrase" — so no leaked secret works for long. This is what rules Aztec out for now (§1380): its accounts keep a fixed key and a fixed privacy secret.
 
@@ -78,7 +78,7 @@ Each goal: how every option does it **today**, the problem with that, and our an
 | Bermuda | Its key can derive from any seed (supported, not in their UI yet) |
 
 **Problem:** the phrase is either lost or stored somewhere unsafe, and recovery is slow when you need money now.
-**Our answer (v1):** the 12-word recovery key in iCloud Keychain is a **second owner with no delay**: Recover, Face ID, done. Hot-wallet tradeoff: whoever gets into your iCloud can spend (section 1).
+**Our answer (v1):** no phrase. Two lines of recovery, both Safe's own owners: **your other devices** (each device's Enclave key is an owner; a new phone is approved from a device you have) and a **recovery passkey synced by iCloud Keychain**, a second owner with no delay: new phone, sign in to iCloud, Face ID, done. Hot-wallet tradeoff: whoever gets into your iCloud can spend (section 1). Honest limit (principle 6): losing every device AND the Apple ID at once loses the account; the opt-in phrase export is the backup for that, chosen later, never forced.
 
 #### 5. Gas
 
@@ -105,7 +105,7 @@ Each goal: how every option does it **today**, the problem with that, and our an
 | Bermuda | A fresh address that **shields on arrival** in one gasless transaction (mainnet Q4) |
 
 **Problem:** one public address is a public bank statement.
-**Our answer (v1):** fresh addresses derived from your phrase, one per payer; **sweep** into the account when you spend, and the app says that sweeping links that address (section 3a). v2: Bermuda's shield on arrival.
+**Our answer (v1):** fresh addresses that are Safes with another salt and the same owners, one per payer (section 3a; nothing derived from a secret); **sweep** into the account when you spend, and the app says that sweeping links that address (section 3a). v2: Bermuda's shield on arrival.
 
 #### 7. Private balance and spending
 
@@ -149,16 +149,19 @@ launch**. Casberi runs no server and pays no gas.
 
 - **Daily key:** a Secure Enclave key on each of your devices, unlocked with
   Face ID or Touch ID, never exportable (`SafeEnclaveKey`).
-- **Recovery key:** a 12-word key synced through iCloud Keychain. It is a
-  **second owner, with no delay** (user, 2026-10-12: "lets do no delay. this is
-  a hot wallet"): one signature from either key moves money, so a new phone
-  recovers at once. It never signs day to day; the app uses it only to replace
-  a device key. Whoever holds your iCloud Keychain or the phrase can spend:
-  this is a spending account, not savings.
-- **The phrase is standard** (BIP-39, 12 words, the owner key on
-  `m/44'/60'/0'/0/0`), so it is also **the way out**: imported into MetaMask
-  or any wallet, that key owns your Safe in Safe's own app (app.safe.global),
-  without Casberi.
+- **Recovery key:** a passkey synced through iCloud Keychain (user, 2026-10-19:
+  no phrase). It is a **second owner, with no delay** (user, 2026-10-12: "lets
+  do no delay. this is a hot wallet"): one signature from either key moves
+  money, so a new phone recovers at once. It never signs day to day; the app
+  uses it only to replace a device key. Whoever holds your iCloud Keychain can
+  spend: this is a spending account, not savings.
+- **Your other devices are owners too** (moved up from v1.1): a new phone is
+  approved from the Mac or iPad you have, and a lost one's key is swapped out.
+- **The way out** is the same passkey: Safe's own app (app.safe.global) signs
+  with passkeys, so the account opens there without Casberi. **Export a
+  phrase** is a later, opt-in verb (Face ID, shown once) for leaving to a wallet
+  that speaks no passkeys, and the one backup that survives losing every device
+  and the Apple ID together; it is never made at creation.
 - **Gas** comes from the Safe's own balance (Safe's 4337 module and a commodity
   bundler). Fees are shown in dollars.
 - **Chains: Base and Ethereum** (user, 2026-10-12). **Same address on both.** It can receive money before it
@@ -178,7 +181,7 @@ It is the Pro tier's "writing wallet" in the business model.
 | Send, Swap, Receive, Add money | **An Actions screen of their own**, opened by **one button in the bottom band beside Search** | Amends §774/§1108, which put money verbs as rows leading Holdings (user, 2026-10-12). No fifth tile: the Wallet keeps four (§1107) |
 | Activity | **Home** list (sends, receives, fees) | §1039 |
 | Something needs you | **Home › Needs you** (a recovery in progress, a stuck send) | §1111 |
-| Recovery, devices, phrase | **The account sheet**, as sections under its tiles | Security keeps its checkup (§1107) |
+| Recovery, devices | **The account sheet**, as sections under its tiles | Security keeps its checkup (§1107) |
 | Signing | The existing Safe **sign block**: clear signing, simulation, net changes | §834, §1249 |
 | Alerts | Wallet notification switch; a recovery **stands alone** | §1237 |
 
@@ -275,9 +278,10 @@ No balance and **no Activity module** (user: "we have that in the wallet already
 
 **8. The account sheet's Recovery section**
 - Rows:
-  - **Recovery key**: "In iCloud Keychain · on 3 devices"
-  - **Show recovery phrase** (Face ID → the 12 words, blurred until held, **Copy** off by default)
-- One footnote: the phrase restores the recovery key, and anyone holding it can spend from this account
+  - **Recovery key**: "A passkey in iCloud Keychain · on 3 devices"
+  - **Devices**: each owner device, with Replace this key and Remove
+  - **Export a phrase** (later, opt-in: Face ID → 12 words shown once, blurred until held, **Copy** off by default; adds that key as an owner only when you choose it)
+- One footnote: anyone signed in to your iCloud can spend from this account
 
 ### v1.1 — next
 
@@ -301,13 +305,13 @@ No balance and **no Activity module** (user: "we have that in the wallet already
 
 **In v1 (user, 2026-10-12: "yes" to fresh receiving addresses in v1).** Receiving at a fresh address, spending from it, and its gas. **In v2:** spending privately through Bermuda (below), waiting on their mainnet and answers.
 
-**What it is.** A new address for each payer or each request, so payments can't be linked to each other or to your account on chain. Each fresh address is a **stealth Safe**: a Safe that doesn't exist on chain until it first spends, owned by a one-time key derived for that address alone.
+**What it is.** A new address for each payer or each request, so payments can't be linked to each other on chain. Each fresh address is a **counterfactual Safe**: a Safe that doesn't exist on chain until it first spends.
 
-**How the keys work (no server).**
-- Every fresh address's owner key is derived from the **12-word phrase** on its own path (index 0, 1, 2…), as an HD wallet does. Recovering the phrase recovers every fresh address; the app walks the indexes with a gap limit, as the Bitcoin reader already does (§1097).
-- The app makes each address itself (Fluidkey's approach), so it already knows every address it handed out: **nothing to scan**, no viewing key to share.
-- Owners are derived secp256k1 keys, **not the Secure Enclave key**: Enclave keys can't be derived, and reusing your one Enclave owner with a different salt would link every address the moment the first one is created on chain.
-- **No shared recovery owner on a fresh Safe.** Owners are written into the Safe at creation, so one recovery key on every fresh Safe would link them all. The phrase is the recovery: it re-derives every fresh owner.
+**How the keys work (no server, no phrase — revised 2026-10-19).**
+- A fresh address is **your account's own set-up with another salt**: the same owners (this device's passkey, the recovery passkey), a different CREATE2 salt, so a different address. Nothing is derived from any secret; the app keeps the salt list in `KeyValueMirror` and iCloud Keychain, and can rebuild it by walking salts with a gap limit, as the Bitcoin reader does (§1097).
+- The app makes each address itself (Fluidkey's approach), so it knows every address it handed out: **nothing to scan**, no viewing key to share.
+- **The honest limit (principle 6):** two fresh addresses share owners, so once both have spent, their owners are visible on chain and they are linkable. Before they spend, nothing links them: a counterfactual Safe reveals no owner. So a fresh address is private **while it only receives**, and the sweep (below) is the moment it links — which the app already says. Full unlinkability is v2's Bermuda, not this.
+- What this gives up against the phrase-derived design: one-time owners that never link. What it gains: no secret anywhere, and recovery of every fresh address with the account itself.
 
 **Buttons.**
 - Actions › **Receive** → tray gains **New address** beside your main one: an optional "For" name (Ana, rent), then the address, its QR, Copy · Share. Each one is new.
@@ -349,12 +353,12 @@ Bermuda fits your account (same chains, Safe, normal DeFi through one-time accou
 
 **When a key rotates.**
 - **A new phone, or Face ID re-enrolled:** the old Enclave key is gone (§427), so recovery or another device swaps in the new one. This is rotation already, built into recovery and Devices.
-- **On purpose:** you think a device or the phrase was exposed.
+- **On purpose:** you think a device or your iCloud was exposed.
 - **On a schedule** (open question below): e.g. the device key every year.
 
 **Buttons** (the account sheet).
 - Devices › a device's row › **Replace this key** (Face ID): a new Enclave key on this device, `swapOwner` old → new, one transaction.
-- Recovery › **New recovery phrase** (Face ID): a new 12-word key replaces the old one as owner (`swapOwner`), the old phrase stops working on chain, and the new words show once. Fresh addresses derived from the old phrase keep their owners (section 3a), so this asks first: keep the old phrase for them, or move each one's funds (which links them).
+- Recovery › **New recovery key** (Face ID): a new iCloud passkey replaces the old one as owner (`swapOwner`); the old one stops working on chain. A fresh address that has not yet spent follows (its set-up is recomputed with the new owners); one that has spent needs its own swap, batched.
 - History: each rotation is a row on Home, "Replaced this iPhone's key", dated.
 
 **A new key for every transaction (user, 2026-10-12: "everywhere. rotate at will. user should see it").**
@@ -362,9 +366,9 @@ Bermuda fits your account (same chains, Safe, normal DeFi through one-time accou
 - **Everywhere**, Base and Ethereum. With Safe's shared passkey signer the change is the stored public key (`SafeWebAuthnSharedSigner.configure`), a couple of storage writes rather than an owner swap; a second device rotates its own signer with `swapOwner`.
 - A CoW order is approved on chain (`setPreSignature`) in the same batch, so a rotation can't void an order still waiting to fill.
 - **The user sees it**: each transaction's row and receipt say "New key", and the account sheet's Devices section shows this device's key count ("Key 42 · changed with your last send").
-- **The recovery phrase does not rotate with it.** The device key and the recovery key are separate: the recovery key is its own owner, untouched when the device key changes, so the phrase keeps working through every rotation. It changes only when you ask (New recovery phrase, "rotate at will").
+- **The recovery key does not rotate with it.** The device key and the recovery key are separate owners; the recovery passkey is untouched when the device key changes. It changes only when you ask (New recovery key, "rotate at will").
 
-**No delay anywhere** (user, 2026-10-12): New recovery phrase is Face ID on a device that owns the account, effective at once.
+**No delay anywhere** (user, 2026-10-12): New recovery key is Face ID on a device that owns the account, effective at once.
 
 ## 4. Every button, in one table
 
@@ -387,9 +391,10 @@ Bermuda fits your account (same chains, Safe, normal DeFi through one-time accou
 | Recover "My account" | Accounts menu, new device | — | No |
 | Recover | Recovery tray, new device | Yes | Yes |
 | Move your money | Needs you, after a key change you didn't make | Yes | Yes |
-| Show recovery phrase | Account sheet › Recovery | Yes | No |
-| Add a device · Approve | Account sheet › Devices (v1.1) | Yes | Yes |
-| Remove device | Account sheet › Devices (v1.1) | Yes | Yes |
+| New recovery key | Account sheet › Recovery | Yes | Yes |
+| Export a phrase | Account sheet › Recovery (later, opt-in) | Yes | Yes (adds that key as an owner) |
+| Add a device · Approve | Account sheet › Devices | Yes | Yes |
+| Remove device | Account sheet › Devices | Yes | Yes |
 
 ## 5. States to design
 
@@ -415,6 +420,9 @@ Decided (user, 2026-10-17):
 - **No contract of our own, ever; Aztec accounts parked** (prd §1380).
 - **Signers are not guardians**; the recovery key is a signer (section 2a).
 
+Decided (user, 2026-10-19):
+- **No phrase** ("there are many problems with a phrase and most important is single point of failure"). Recovery is your other devices plus an iCloud-synced recovery passkey; every signer is a passkey; a phrase exists only as a later opt-in export. Fresh addresses are the account's set-up with another salt (section 3a), so no secret is derived anywhere.
+
 Still open:
 0. **The sheet's look**: row one (bare) or row two (the Apple pass) of the 2026-10-18 canvas, and with it whether this sheet's blocks wear a glyph.
 1. **Card and Apple Pay top-up.** Skip in v1, or accept one vendor's server.
@@ -427,7 +435,8 @@ Still open:
 
 ## 7. Technical notes (for the build, not the design)
 
-- **Contracts:** Safe 1.4.1 L2, `Safe4337Module`, `SafeWebAuthnSharedSigner` for the first passkey (4337 deployment rules), and the recovery key as a second owner at threshold 1 (no recovery module).
+- **Contracts:** Safe 1.4.1 L2, `Safe4337Module`, `SafeWebAuthnSharedSigner` for the first passkey (4337 deployment rules), and the recovery passkey as a second owner at threshold 1 through Safe's own `SafeWebAuthnSignerFactory` (one signer proxy per passkey, Safe's audited contract, deployed by the factory — none of ours, principle 9). No recovery module.
+- **The recovery passkey:** a `SecureEnclave`-free CryptoKit P-256 key stored with `kSecAttrSynchronizable` in the app-id Keychain group (the same channel `TokenVault.syncs` uses, §1162), so iCloud Keychain carries it to every device; or an `ASAuthorization` platform passkey on the app's associated domain, which iCloud syncs natively and Safe's app can use directly. Decide at build (the second is the way out; the first needs no domain).
 - **Address:** CREATE2 from `SafeProxyFactory` with a fixed set-up and salt, so it is identical on every chain.
 - **Swap:** CoW Protocol (`api.cow.fi`, keyless). An order is signed, not sent: the Safe signs it through `isValidSignature` (EIP-1271), and CoW's solvers settle it and take the fee from the sell token. Needs the Safe on chain and a one-time approval of each sell token to CoW's vault relayer, batched with the first swap. `api.cow.fi` goes in `NetworkReach` (§205).
 - **P-256 verification:** the RIP-7212 precompile on L2s, EIP-7951 on Ethereum mainnet.

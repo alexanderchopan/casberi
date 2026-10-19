@@ -67434,3 +67434,11 @@ Mock: the design canvas "Aztec experience".
 **Mac half.** The same view. Not walked on the Mac.
 
 **Seen:** built for the iPhone 17 Pro simulator; the empty page itself not yet seen on screen.
+
+## §1421 — Your account has no phrase: recovery is your other devices and an iCloud-synced passkey (amends `docs/safe-wallet-spec.md` §1, §3a, §3b; the 2026-10-12 "12-word recovery key as a second owner") (user, 2026-10-19: "i want w/o a phrase. there are many problems with a phrase and most important is single point of failure")
+
+1. **Every signer is a passkey.** The daily key is this device's Secure Enclave key; the recovery key is a P-256 key synced by iCloud Keychain, a second Safe owner with no delay (the 10-12 ruling stands); each other device's Enclave key is an owner too (moved up from v1.1). Nothing is ever shown as words.
+2. **The way out is the passkey**: Safe's own app signs with passkeys, so the account opens there without Casberi. "Export a phrase" is a later, opt-in verb (Face ID, shown once, adds that key as an owner only then) — the one backup that survives losing every device and the Apple ID together, chosen, never made at creation.
+3. **Fresh addresses derive nothing**: a fresh receiving address is the account's set-up with another CREATE2 salt and the same owners (§3a revised). Private while it only receives; linkable once two have spent, which the app says. Full unlinkability stays v2's Bermuda.
+4. **Honest limit** (principle 6): losing every device and the Apple ID at once loses the account unless a phrase was exported.
+5. Only Safe's contracts, per §1380: the second passkey owner is a `SafeWebAuthnSignerFactory` proxy.
