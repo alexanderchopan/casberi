@@ -55,7 +55,8 @@ extension FeedScreen {
     /// the walk's arms went with it.
     var roomTitle: some View {
         HStack(spacing: DS.Space.s3) {
-            DSRoomTitleRow(title: roomName, pick: roomPick, onTitle: clearRoomPick)
+            DSRoomTitleRow(title: roomName, pick: roomPick, onTitle: clearRoomPick,
+                           onSettings: appSettings)
                 .demoTagOnTitle()
             // THE ACCOUNTS ARE A MENU ON THE TITLE where the rail stands (prd
             // §1405): the strip that floated over the rows in the band is
@@ -179,6 +180,43 @@ extension FeedScreen {
                     chrome.mergedScope[room] = nil
                 }
             }
+        }
+    }
+
+    /// **AN APP'S SETTINGS ARE ON ITS PAGE (prd §1444, user: "the settings
+    /// should be in the library somehow or on the apps actual feed page").**
+    /// The app the title names, pressed, opens its account page, the one its long
+    /// press's Settings opens (`RoomsTray.appItem`, `AppMenu`). Nil unless
+    /// it IS an app: a category, an address, a Notes folder or a Wallet tile
+    /// keeps the title a label.
+    var appSettings: (() -> Void)? {
+        let name: String
+        let seatSource: String
+        if let pick = roomPick {
+            if let seat = selectedSeat, seat.name == pick, openNotesFolderName == nil {
+                name = seat.name
+                seatSource = seat.source ?? seat.name
+            } else if let host = hostRoom, host != source,
+                      pick == BridgeCatalog.seatName(forSource: source) {
+                name = pick
+                seatSource = source
+            } else {
+                return nil
+            }
+        } else {
+            // An app's own page: the room IS the app (Library's tap, §1418).
+            guard hostRoom == nil, pinnedWalletSection == nil, !HomeScope.contains(source),
+                  !Pinboard.isPinnedRoom(source), !RoomAccounts.mergedRooms.contains(source)
+            else { return nil }
+            name = roomName
+            seatSource = source
+        }
+        guard let id = bridges.bridges.first(where: { $0.name == name || $0.id == seatSource })?.id
+                ?? BridgeRouter.id(forOffer: name) else { return nil }
+        return {
+            DSHaptic.selection()
+            route.settingsFromApp = name
+            route.openAccount(BridgeRouter.destination(forID: id))
         }
     }
 

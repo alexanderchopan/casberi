@@ -148,6 +148,9 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
     @Environment(\.openURL) private var openURL
 
     @State private var today = 0
+    /// Opened from the app's own page (prd §1444): the title is "<App> ·
+    /// Settings" with the app the way back, not "Library".
+    @State private var fromApp = false
     /// The verbs the act slot's slabs hand up as tiles (prd §1197).
     @State private var board = AccountTileBoard()
     @State private var week = 0
@@ -307,6 +310,10 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
         // own record (Stripe's account name) as it registers.
         .onChange(of: seat?.statusLine) { _, _ in identity = AccountIdentity.name(for: seatID) }
         .onAppear {
+            if let asked = route.settingsFromApp, asked == name {
+                fromApp = true
+                route.settingsFromApp = nil
+            }
             identity = AccountIdentity.name(for: seatID)
             note = AccountNotes.note(for: seatID) ?? ""
             onScreen = true
@@ -366,7 +373,16 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
     @ViewBuilder private var roomFrame: some View {
         // Sources since prd §1254: the Apps screen is deleted (§1234), and
         // every app's page is reached from Sources.
-        DSRoomTitleRow(title: String(localized: "Library"))
+        Group {
+            if fromApp {
+                // Where you stand is the app's settings; the app's name goes
+                // back to its page (prd §1444).
+                DSRoomTitleRow(title: name, pick: String(localized: "Settings"),
+                               onTitle: { route.goBack() })
+            } else {
+                DSRoomTitleRow(title: String(localized: "Library"))
+            }
+        }
             .padding(.horizontal, DSRoomChassis.inset)
             .padding(.top, DS.Space.s2)
             .frameRow()

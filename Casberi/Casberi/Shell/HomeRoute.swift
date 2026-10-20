@@ -380,6 +380,12 @@ final class HomeRoute {
     /// door opens a CONNECTED seat's page (`destination(forID:)`), which for
     /// Peer and the pools is their own screen rather than the wallet manager
     /// their Connect leads to.
+    /// The app whose own page asked for its settings (prd §1444), so the
+    /// account page names where you came from: "GitHub · Settings", the app
+    /// a grey way back. Read once by that page and cleared; nil from
+    /// Library's long press and every other door, which keep "Library".
+    @ObservationIgnored var settingsFromApp: String?
+
     @MainActor func openAccount(_ dest: BridgeRouter.Destination) {
         // A connect asked for from inside a sheet stacks in it rather than
         // raising a second sheet over the first, which SwiftUI drops.
@@ -440,6 +446,4 @@ final class HomeRoute {
 /// always did, and this enum is never read.
 enum SettingsPage: String, Hashable {
     case data, notifications, diagnostics, language
-    /// Your apps, each a door to its page (prd §1418).
-    case apps
 }

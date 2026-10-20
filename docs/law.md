@@ -107,7 +107,7 @@ Privacy and Reddit. Frames and Logos are the devnets that remain.
 - A key is connected in one place, the seat's own page. Settings holds no key (§871).
 
 ### 8. Catalogue (Apps)
-- Apps is the whole catalogue, with no Manage and no switcher. A tap on an app you have goes where the tray's icon does, its feed rising over Library; one that needs you or has nowhere to go opens its page; a long press holds Open and Settings, and Casberi › Apps lists your apps, each a door to its page (§1418). Apps and Settings are two doors: Apps is one A–Z list of every app, what you have marked, with one filter, Added · N, beside the search field and no prices; Settings is Casberi's own options and nothing else (§1111). A connected seat with no room keeps its door (§1033, §1036).
+- Apps is the whole catalogue, with no Manage and no switcher. A tap on an app you have goes where the tray's icon does, its feed rising over Library; one that needs you or has nowhere to go opens its page; a long press holds Open and Settings (§1418), and the app's name in its page's title wears the sliders disc and opens its settings, titled "<App> · Settings" with the app the way back; Casberi › Apps is deleted (§1444). Apps and Settings are two doors: Apps is one A–Z list of every app, what you have marked, with one filter, Added · N, beside the search field and no prices; Settings is Casberi's own options and nothing else (§1111). A connected seat with no room keeps its door (§1033, §1036).
 - The catalogue is a sectioned list with All (§518). X is under Social, Slack under Work (§59). Acorns, Rocket Money and NerdWallet are on the Wallet shelf (§780c).
 - Markets is one app: Tokens plus Stocktwits' watched stocks. Every catalogue category is a company pack: Nasdaq for a stock, CoinPaprika for a coin, n/a for anything unlisted (§1000).
 - Apple Notes is out of the catalogue. A note shared in still lands under You (§1036).
@@ -235,7 +235,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1582 of 1651 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1583 of 1652 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1403,7 +1403,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1050c — Life is one list by day, with no tiles
 - §1050d — Reading's menu lists apps, and the music shelf's orders are dropped
 - §1050e — The tray is the doors and the categories; an app's settings open from its room only when the room is scoped to it (part superseded by §1050f)
-- §1050f — An app's settings live in Apps: a connected row opens its account page, and no room draws a sliders disc; the tray's… (amended by §1050g, §1159)
+- §1050f — An app's settings live in Apps: a connected row opens its account page, and no room draws a sliders disc; the tray's… (amended by §1050g, §1159; part superseded by §1444)
 - §1050h — Settings is one list: Casberi first, then every app in its category, connected or not (amended by §1119; part superseded by §1111)
 - §1050i — Settings as one door and one list, built
 - §1050j — The rooms tray is a list of rooms with no counts and no Recent, and every glass category bar follows Dock order (amended by §1050l)
@@ -1793,7 +1793,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1415 — The Wallet is the place; what is in it is an ACCOUNT, and you follow an account (amends §1410's "Follow a wallet", §1…
 - §1416 — The Wallet says what is, not how it was read: every footnote that narrates freshness, pricing gaps, what Casberi cann…
 - §1417 — Connect a wallet is back in Follow an account, every time
-- §1418 — An app you have GOES: a tap in Library lands where the tray's icon does, a long press holds Open and Settings, and Ca…
+- §1418 — An app you have GOES: a tap in Library lands where the tray's icon does, a long press holds Open and Settings, and Ca… (amended by §1444)
 - §1419 — Aztec's testnet, round three: the signer follows a reset testnet, keeps a log of what it signed, follows the account…
 - §1420 — The generic empty start screen is deleted: an app's page with nothing yet says so in one line
 - §1421 — Your account has no phrase: recovery is your other devices and an iCloud-synced passkey (amends `docs/safe-wallet-spe…
@@ -1819,6 +1819,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1441 — Robinhood Chain joins the account: three live networks, each with send, receive and swap [+1 sub-entries]
 - §1442 — Move is a tray, raised from its tab over wherever you are (amends §1422's place) [+3 sub-entries]
 - §1443 — The toast draws above every sheet [+9 sub-entries]
+- §1444 — An app's settings are on its page: the name in the title wears the sliders disc and opens them; Casberi › Apps is del…
 
 ## Dead rulings → what replaced them (generated)
 

@@ -25,8 +25,6 @@ struct SettingsPageView: View {
                 LanguagePickerSheet()
             case .diagnostics:
                 headed("Diagnostics") { DiagnosticsScreen() }
-            case .apps:
-                headed("Apps") { YourAppsPage() }
             }
         }
         .environment(\.dsInPane, true)

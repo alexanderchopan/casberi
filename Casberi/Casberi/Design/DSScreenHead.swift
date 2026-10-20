@@ -46,6 +46,12 @@ struct DSRoomTitleRow: View {
     /// tray, which is fine but shouldn't be the only way"). Nil keeps the
     /// row a label.
     var onTitle: (() -> Void)? = nil
+    /// The app the row names, pressed: its settings, its account page (prd
+    /// §1444, user: "the sliders is the absolute clearest hands down"). Draws
+    /// the sliders disc after the pick, or after the title on an app's own
+    /// page, the glyph the long press's Settings wears, so what an app's page
+    /// manages is found on the page. Nil keeps the words labels.
+    var onSettings: (() -> Void)? = nil
     @Environment(\.sizeCategory) private var sizeCategory
     /// In a thing sheet the title is the thing's, and wraps (prd §1258).
     @Environment(\.dsTitleWraps) private var wraps
@@ -69,21 +75,40 @@ struct DSRoomTitleRow: View {
 
     @ViewBuilder
     private var roomTitle: some View {
-        if let pick, let onTitle {
+        if let pick, onTitle != nil || onSettings != nil {
             // The category's word presses (prd §1262); the pick after the
             // dot stays a label. Same rung, ink and height as the label row.
             // THE PAIR STEPS DOWN TOGETHER (prd §1389): beside the demo's
             // pill the two words share the room, so the whole title takes
             // the next rung rather than the pick alone shrinking and cutting.
             ViewThatFits(in: .horizontal) {
-                pickedTitle(title, pick: pick, onTitle: onTitle, rung: .heading34)
-                pickedTitle(title, pick: pick, onTitle: onTitle, rung: .heading28)
+                pickedTitle(title, pick: pick, rung: .heading34)
+                pickedTitle(title, pick: pick, rung: .heading28)
                 // The last rung never overflows: a pair longer than even this
                 // ("Wallet · Subscriptions" beside the pill) shrinks in place.
-                pickedTitle(title, pick: pick, onTitle: onTitle, rung: .heading24, fits: true)
+                pickedTitle(title, pick: pick, rung: .heading24, fits: true)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .frame(height: Self.height, alignment: .leading)
+            .accessibilityAddTraits(.isHeader)
+        } else if pick == nil, let onSettings {
+            // An app's own page ("GitHub", Library's tap): the name is the
+            // door, its disc after it (prd §1444).
+            Button(action: onSettings) {
+                HStack(alignment: .center, spacing: DS.Space.s2) {
+                    Text(verbatim: title)
+                        .dsText(.heading34)
+                        .foregroundStyle(DS.headInk)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
+                    settingsDisc
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(RowPress())
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(height: Self.height, alignment: .leading)
+            .accessibilityLabel(Text("\(title) settings"))
             .accessibilityAddTraits(.isHeader)
         } else {
             DSScreenHead(title: label, ink: DS.headInk)
@@ -99,29 +124,59 @@ struct DSRoomTitleRow: View {
     }
 
     /// The picked title at one rung: the category's word a grey button, the
-    /// pick after the dot in the head ink. `fixedSize` so `ViewThatFits`
+    /// pick after the dot in the head ink, and with `onSettings` the pick a
+    /// button too, its sliders disc after it. `fixedSize` so `ViewThatFits`
     /// measures the pair whole.
-    private func pickedTitle(_ title: String, pick: String, onTitle: @escaping () -> Void,
+    private func pickedTitle(_ title: String, pick: String,
                              rung: DSTextStyle, fits: Bool = false) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 0) {
             // The word that goes back is grey, where you stand is the
             // head ink (user, 2026-10-15: "is sources supposed to be
             // gray, eg only one is white"), as the walk's title greys
             // its neighbours (§1207).
-            Button(action: onTitle) {
-                Text(verbatim: title)
-                    .foregroundStyle(DS.textTertiary)
-                    .contentShape(Rectangle())
+            if let onTitle {
+                Button(action: onTitle) {
+                    Text(verbatim: title)
+                        .foregroundStyle(DS.textTertiary)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(RowPress())
+                .accessibilityHint(Text("Shows everything in \(title)"))
+            } else {
+                Text(verbatim: title).foregroundStyle(DS.textTertiary)
             }
-            .buttonStyle(RowPress())
-            .accessibilityHint(Text("Shows everything in \(title)"))
-            (Text(verbatim: " · ").foregroundStyle(DS.textTertiary)
-                + Text(verbatim: pick).foregroundStyle(DS.textPrimary))
+            Text(verbatim: " · ").foregroundStyle(DS.textTertiary)
+            if let onSettings {
+                Button(action: onSettings) {
+                    HStack(alignment: .center, spacing: DS.Space.s2) {
+                        Text(verbatim: pick).foregroundStyle(DS.textPrimary)
+                        settingsDisc
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(RowPress())
+                .accessibilityLabel(Text("\(pick) settings"))
+            } else {
+                Text(verbatim: pick).foregroundStyle(DS.textPrimary)
+            }
         }
         .dsText(rung)
         .lineLimit(1)
         .minimumScaleFactor(fits ? 0.6 : 1)
         .fixedSize(horizontal: !fits, vertical: false)
+    }
+
+    /// The pick's settings door (prd §1444): grey, never the pick's pink
+    /// (§1385, a door is grey), on the faint disc a lead's glyph stands on.
+    private var settingsDisc: some View {
+        ZStack {
+            Circle().fill(DS.fillFaint)
+                .frame(width: DS.Face.row, height: DS.Face.row)
+            Image(systemName: "slider.horizontal.3")
+                .dsGlyph(.caption, weight: .semibold)
+                .foregroundStyle(DS.textSecondary)
+        }
+        .accessibilityHidden(true)
     }
 
     /// The rung's line at its full size, scaled for Dynamic Type as the
