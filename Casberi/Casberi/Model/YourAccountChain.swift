@@ -156,7 +156,7 @@ enum YourAccountChain {
             // The chain answers to a key this phone made but can no longer
             // use (Face ID re-enrolled, a restore without its keys).
             guard YourAccountKey.holds(i) else {
-                throw Failure(message: String(localized: "This iPhone's key for \(net.name) no longer works. Move here with your recovery key"))
+                throw Failure(message: String(localized: "This device's key for \(net.name) no longer works. Use your account here again from Security"))
             }
             index = i
         } else {

@@ -46,8 +46,8 @@ struct MoveSecurity: View {
                 .foregroundStyle(DS.headInk)
                 .frame(minHeight: 44, alignment: .leading)
                 .accessibilityAddTraits(.isHeader)
-            row(title: String(localized: "This iPhone"), line: deviceLine,
-                verb: canMoveHere ? (String(localized: "Move here"), moveHere) : nil)
+            row(title: ThisDevice.title, line: deviceLine,
+                verb: canMoveHere ? (ThisDevice.use, moveHere) : nil)
             row(title: String(localized: "Recovery key"), line: recoveryLine,
                 verb: recoveryVerb.map { ($0, setUp) })
             row(title: String(localized: "Outside key"), line: outsideLine,
@@ -118,8 +118,8 @@ struct MoveSecurity: View {
         let elsewhere = live.filter { $0.keyIndex == nil }
         if live.isEmpty { return String(localized: "Signs your first send, Face ID each time") }
         if elsewhere.isEmpty { return String(localized: "Signs on \(names(here))") }
-        if here.isEmpty { return String(localized: "Another device signs on \(names(elsewhere))") }
-        return String(localized: "Signs on \(names(here)) · another device on \(names(elsewhere))")
+        if here.isEmpty { return String(localized: "Your other device signs for it now") }
+        return String(localized: "Signs on \(names(here)) · your other device on \(names(elsewhere))")
     }
 
     /// Networks another device signs on that the recovery key can move here.
@@ -339,7 +339,7 @@ struct MoveSecurity: View {
     private func moveHere() {
         guard working == nil else { return }
         let targets = movable.map(\.network)
-        working = (String(localized: "This iPhone"), String(localized: "Moving…"))
+        working = (ThisDevice.title, String(localized: "Setting up…"))
         Task {
             // A key made now: never one that might be dead or in use.
             guard let index = try? YourAccountKey.freshKey() else {
@@ -351,7 +351,7 @@ struct MoveSecurity: View {
             working = nil
             await read()
             if failed.isEmpty {
-                chrome.flash(String(localized: "Your account signs on this iPhone"), tone: .success)
+                chrome.flash(ThisDevice.ready, tone: .success)
             } else {
                 chrome.flash(failed.joined(separator: " · "), tone: .failure, seconds: 6)
             }
@@ -368,7 +368,7 @@ enum MoveRecovery {
         for net in networks {
             do {
                 let sent = try await YourAccountChain.recover(
-                    on: net, to: index, reason: String(localized: "Move your account to this iPhone on \(net.name)")) { _ in }
+                    on: net, to: index, reason: ThisDevice.reason(net.name)) { _ in }
                 if case .pending = sent.outcome { failed.append(String(localized: "\(net.name): sent, not yet seen")) }
             } catch let failure as YourAccountChain.Failure {
                 failed.append(worded(failure.message, on: net))
@@ -434,5 +434,25 @@ struct OutsideKeyNudge: View {
                                       bottom: DS.Space.s2, trailing: DSRoomChassis.rowInset))
             .feedRowBackground()
             .listRowSeparator(.hidden)
+    }
+}
+
+/// **THIS DEVICE, BY ITS NAME (prd §1434, user: "say your other 'device' …
+/// what if it is ipad")**: the account's words name the device they run on
+/// — iPhone, iPad, Mac — and the one that signed before is "your other
+/// device", whatever it was.
+enum ThisDevice {
+    static var name: String {
+        #if targetEnvironment(macCatalyst)
+        return "Mac"
+        #else
+        return UIDevice.current.userInterfaceIdiom == .pad ? "iPad" : "iPhone"
+        #endif
+    }
+    static var title: String { String(localized: "This \(name)") }
+    static var use: String { String(localized: "Use on this \(name)") }
+    static var ready: String { String(localized: "Your account works on this \(name)") }
+    static func reason(_ network: String) -> String {
+        String(localized: "Use your account on this \(name) · \(network)")
     }
 }

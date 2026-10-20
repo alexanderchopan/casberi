@@ -134,17 +134,20 @@ struct MoveScreen: View {
                 .foregroundStyle(DS.textSecondary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
-            DSFootnote("Your recovery key is in iCloud Keychain. It can move your account to this iPhone; the old one stops signing.", centered: true)
+            // What a person needs (prd §1434, user: "nobody will understand
+            // that"): their account is here; say yes and it works on this
+            // device. The one consequence worth saying is the real one.
             Button {
                 recover(found)
             } label: {
-                Text(creating ? "Moving…" : "Move it to this iPhone")
+                Text(verbatim: creating ? String(localized: "Setting up…") : ThisDevice.use)
                     .dsText(.heading17)
                     .foregroundStyle(DS.pickInk)
                     .frame(minHeight: 44)
             }
             .buttonStyle(RowPress())
             .disabled(creating)
+            DSFootnote("Your other device won't be able to send from it anymore.", centered: true)
         }
         .frame(maxWidth: .infinity)
     }
@@ -159,7 +162,7 @@ struct MoveScreen: View {
                 // This phone's own account, reinstalled: its keys already sign.
                 guard let index = try YourAccountKey.adopt(address: found.address, origin: found.origin) else {
                     withAnimation(DS.Motion.standard) { address = found.address }
-                    chrome.flash(String(localized: "Your account is back on this iPhone"), tone: .success)
+                    chrome.flash(ThisDevice.ready, tone: .success)
                     creating = false
                     return
                 }
@@ -176,7 +179,7 @@ struct MoveScreen: View {
                 WalletStore.shared.add(found.address, label: String(localized: "Your account"))
                 withAnimation(DS.Motion.standard) { address = found.address }
                 if failed.isEmpty {
-                    chrome.flash(String(localized: "Your account signs on this iPhone"), tone: .success)
+                    chrome.flash(ThisDevice.ready, tone: .success)
                 } else {
                     chrome.flash(failed.joined(separator: " · "), tone: .failure, seconds: 6)
                 }

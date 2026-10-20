@@ -67540,3 +67540,10 @@ Mock: the design canvas "Aztec experience".
 
 1. **Create an account** is the first row of the Wallet's one + menu (`walletAccountAdds`: the Accounts header and the Feed's Wallet section), above Follow an account and Connect an app, wearing Move's dollar sign. It opens Move, where the account is made — or, on a phone whose iCloud Keychain holds one's recovery key, taken back (§1427).
 2. **Only while this phone has no account of its own**, and only where Move is offered (DEBUG until release). With an account, the menu is the two it was.
+
+## §1434 — Recovery says what it means: "Use on this iPhone", and the other one is "your other device" (rewords §1427's "Move it to this iPhone" and "Move here") (user, 2026-10-19: "what does 'move it to this iphone' even mean"; "nobody will understand that. what are we trying to say?"; "yes. say your other 'device' not other iphone b/c what if it is ipad or something")
+
+1. **What we are saying**: you already have an account; use it on this device. Keys, recovery and signing are mechanics nobody needs to read.
+2. **The restore screen**: the account and its address, **Use on this iPhone**, then the one consequence that is real — "Your other device won't be able to send from it anymore."
+3. **Security**: the row is **This iPhone**; when another device signs, its line is "Your other device signs for it now" and its verb **Use on this iPhone**. The prompt reads "Use your account on this iPhone · Base"; the toast, "Your account works on this iPhone".
+4. **The device is named as what it is** — iPhone, iPad or Mac (`ThisDevice`); the one before is always "your other device", whatever it was.

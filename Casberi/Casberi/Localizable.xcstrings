@@ -17257,6 +17257,34 @@
         }
       }
     },
+    "Signs on %@ · your other device on %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Firma en %1$@ · tu otro dispositivo en %2$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ で署名 · %2$@ はもう一台のデバイス"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@에서 서명 · %2$@에서는 다른 기기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 %1$@ 上签名 · %2$@ 上由你的另一台设备签名"
+          }
+        }
+      }
+    },
     "Signs your first send, Face ID each time" : {
       "localizations" : {
         "es" : {
@@ -18545,6 +18573,34 @@
         }
       }
     },
+    "This device's key for %@ no longer works. Use your account here again from Security" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "La clave de este dispositivo para %@ ya no funciona. Vuelve a usar tu cuenta aquí desde Seguridad"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "このデバイスの %@ 用の鍵はもう使えません。セキュリティからここでアカウントを再び使えるようにしてください"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 기기의 %@ 키가 더 이상 작동하지 않습니다. 보안에서 이 기기에서 계정을 다시 사용하세요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "此设备在 %@ 上的密钥已失效。请在“安全”中重新在此使用你的账户"
+          }
+        }
+      }
+    },
     "This iPhone" : {
       "localizations" : {
         "es" : {
@@ -18849,6 +18905,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "已解除屏蔽"
+          }
+        }
+      }
+    },
+    "Use on this %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Usar en este %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "この%@で使う"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 %@에서 사용"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在这台 %@ 上使用"
+          }
+        }
+      }
+    },
+    "Use your account on this %@ · %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Usar tu cuenta en este %1$@ · %2$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "この%1$@でアカウントを使う · %2$@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 %1$@에서 계정 사용 · %2$@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在这台 %1$@ 上使用你的账户 · %2$@"
           }
         }
       }
@@ -19885,6 +19997,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你的账户在这台 iPhone 上签名"
+          }
+        }
+      }
+    },
+    "Your account works on this %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu cuenta funciona en este %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アカウントがこの%@で使えます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "계정이 이 %@에서 작동합니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的账户已可在这台 %@ 上使用"
           }
         }
       }
@@ -25295,6 +25435,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你的笔记"
+          }
+        }
+      }
+    },
+    "Your other device signs for it now" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ahora firma tu otro dispositivo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "今はもう一台のデバイスが署名しています"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "지금은 다른 기기가 서명합니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "现在由你的另一台设备签名"
+          }
+        }
+      }
+    },
+    "Your other device won't be able to send from it anymore." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu otro dispositivo ya no podrá enviar desde ella."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "もう一台のデバイスからは送金できなくなります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "다른 기기에서는 더 이상 보낼 수 없습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的另一台设备将无法再从中发送。"
           }
         }
       }
