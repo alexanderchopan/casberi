@@ -67692,3 +67692,9 @@ Mock: the design canvas "Aztec experience".
 3. **The grey line shows the other unit, live, as a reading** ("≈ $24.50"). It is no longer a door: the switch changes which unit you type in.
 4. **The foot reads Add, then the verb.** That is the order you use them in, and the act that signs stands at the trailing edge under the thumb, where iOS puts a screen's main act. "Done" after a receipt stands in the same place.
 5. **The network does not come first, and the sentence keeps its order.** Picking a token picks its network (§1442a), so "on Base." stays last, where it reads naturally.
+
+### §1442e — Two lines under the sentence, and the swap says it is powered by Relay (amends §1442d item 3, §1442a item 5) (user, 2026-10-20: "this is confusing"; "we need to show that this is processed by relay"; "why do we need to say you have N eth if user already chose from drop down menu"; "seems redundant"; "do we want to show the relay logo"; "or just 'powered by relay'")
+
+1. **The line under the sentence is two lines, one thing each.** First the other unit ("≈ $24.50"), then for a swap Relay's own line ("Powered by Relay · fee $0.04").
+2. **What you have is not restated.** The token list showed it when you picked, the slider is your share of it and its end spends all of it, and going over says "More than you have".
+3. **A swap names Relay wherever one is drawn**, behind Relay's mark (`brand-relay`). Only the star is used, cut from Relay's wordmark, because the wordmark's black letters vanish on the dark tray and the words already say the name.

@@ -654,29 +654,38 @@ struct MoveSentence: View {
         } else if let note = lineNote {
             Text(verbatim: note).dsText(.body17).foregroundStyle(DS.attentionInk)
         } else if let with {
-            // Its parts wrap between them, never inside one.
-            FlowLayout(spacing: 0, lineSpacing: 2) {
+            // One thing a line (§1442e, user: "this is confusing"): the other
+            // unit, what you have, and who does the swap and for how much.
+            VStack(alignment: .leading, spacing: DS.Space.s1) {
                 // The other unit, live as you type; the switch on the amount
                 // line is what changes which one you type in (§1442d).
                 if let other = otherUnit(with) {
-                    Text(verbatim: "≈ " + other).dsText(.body17).foregroundStyle(DS.textSecondary).fixedSize()
-                    Text(verbatim: " · ").dsText(.body17).foregroundStyle(DS.textSecondary).fixedSize()
+                    Text(verbatim: "≈ " + other).dsText(.body17).foregroundStyle(DS.textSecondary)
                 }
-                // What you have is a door: a tap spends all of it.
-                Button {
-                    shareBinding(with).wrappedValue = 100
-                    DSHaptic.snap()
-                } label: {
-                    Text(verbatim: haveLine(with)).dsText(.body17).foregroundStyle(DS.textSecondary).fixedSize()
-                }
-                .buttonStyle(RowPress())
-                .accessibilityHint(Text("Fills in all of it"))
-                if let fee = feeLine(with) {
-                    Text(verbatim: " · " + fee).dsText(.body17).foregroundStyle(DS.textSecondary).fixedSize()
+                // What you have is not restated (§1442e, user: "why do we
+                // need to say you have N eth if user already chose from drop
+                // down menu"): the list showed it, the slider is your share
+                // of it and its end spends all of it, and going over says so.
+                // Who does the swap, said wherever one is drawn (§1442e,
+                // user: "we need to show that this is processed by relay").
+                // Relay's own mark leads it, as every service's does (user,
+                // 2026-10-20: "do we want to show the relay logo"): the star
+                // alone, because the wordmark's black letters vanish on the
+                // tray, and the words already say the name.
+                if verb == .swap, buy != nil {
+                    HStack(spacing: DS.Space.s2) {
+                        Image("brand-relay")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 18, height: 18)
+                            .accessibilityHidden(true)
+                        Text(verbatim: [String(localized: "Powered by Relay"), feeLine(with)].compactMap { $0 }.joined(separator: " · "))
+                            .dsText(.body17).foregroundStyle(DS.textSecondary)
+                    }
                 }
                 // A test network says so wherever it is picked (prd §1439).
                 if network.isTest {
-                    Text(verbatim: " · " + String(localized: "test coins")).dsText(.body17).foregroundStyle(DS.attentionInk)
+                    Text("test coins").dsText(.body17).foregroundStyle(DS.attentionInk)
                 }
             }
             .fixedSize(horizontal: false, vertical: true)
@@ -708,13 +717,6 @@ struct MoveSentence: View {
             return Self.figure(u, decimals: h.token.decimals) + " " + h.token.symbol
         }
         return Self.money(Op.dollars(units ?? "0", decimals: h.token.decimals, price: price))
-    }
-
-    private func haveLine(_ h: Tokens.Held) -> String {
-        let have = inDollars && h.price != nil
-            ? Self.money(Op.dollars(left(h), decimals: h.token.decimals, price: h.price!))
-            : Self.figure(left(h), decimals: h.token.decimals) + " " + h.token.symbol
-        return String(localized: "of \(have)")
     }
 
     /// A swap's fee; under a cent it says so rather than a string of zeros.

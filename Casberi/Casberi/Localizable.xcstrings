@@ -5177,6 +5177,34 @@
         }
       }
     },
+    "Powered by Relay" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Con tecnología de Relay"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Relay を利用"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Relay 제공"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "由 Relay 提供支持"
+          }
+        }
+      }
+    },
     "Type an amount first" : {
       "localizations" : {
         "es" : {
