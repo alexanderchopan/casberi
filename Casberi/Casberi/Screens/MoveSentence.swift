@@ -35,7 +35,7 @@ struct MoveSentence: View {
     typealias Tokens = YourAccountTokens
 
     enum Verb: CaseIterable { case swap, send, receive }
-    enum Blank: Equatable { case with, buy, to, network }
+    enum Blank: Equatable { case with, buy, to, network, exchange }
     enum Field: Hashable { case amount, search, to }
 
     struct Recipient: Equatable {
@@ -850,6 +850,7 @@ struct MoveSentence: View {
                             case .buy: buyList
                             case .to: toList
                             case .network: networkList
+                            case .exchange: exchangeList
                             }
                         }
                         .id(open)
@@ -928,19 +929,27 @@ struct MoveSentence: View {
             }
             .buttonStyle(RowPress())
         } else if verb == .receive {
+            // **RECEIVE (§1442i, user: "when we show 'at' show …xxxx or complete
+            // address. and somewhere on the page complete address should be
+            // displayed. also with a copy button").** The sentence says
+            // "…9f12"; the whole address stands here, readable, with its own
+            // copy; the exchange door is a line, and opens a list like
+            // every blank's (the system menu was the one control on Move that
+            // matched nothing else).
             VStack(alignment: .leading, spacing: DS.Space.s3) {
                 Text(verbatim: account)
                     .dsText(.mono12)
                     .foregroundStyle(DS.textSecondary)
                     .textSelection(.enabled)
-                Menu {
-                    Button { addFrom("https://www.coinbase.com") } label: { Text(verbatim: "Coinbase") }
-                    Button { addFrom("https://www.kraken.com") } label: { Text(verbatim: "Kraken") }
-                    Button("Another wallet") { copy() }
+                    .fixedSize(horizontal: false, vertical: true)
+                DSCopyRow(value: account, label: "Copy address", sensitive: false)
+                Button {
+                    withAnimation(DS.Motion.standard) { open = .exchange }
+                    DSHaptic.selection()
                 } label: {
                     Text("From an exchange")
                         .dsText(.body17)
-                        .foregroundStyle(DS.textSecondary)
+                        .foregroundStyle(DS.pickInk)
                         .frame(minHeight: 44, alignment: .leading)
                 }
                 .buttonStyle(RowPress())
@@ -1238,6 +1247,22 @@ struct MoveSentence: View {
         }
     }
 
+    /// Where the money comes from (§1442i): each row says what it does.
+    /// Coinbase and any other wallet; not a directory of every exchange
+    /// the app reads (user: "just use coinbase and another wallet").
+    private var exchangeList: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            listRow("Coinbase", sub: String(localized: "Copies your address, opens Coinbase"), image: "brand-coinbase") {
+                pick {}
+                addFrom("https://www.coinbase.com")
+            }
+            listRow(String(localized: "Another wallet"), sub: String(localized: "Copies your address"), mark: "W") {
+                pick {}
+                copy()
+            }
+        }
+    }
+
     private var networkList: some View {
         VStack(alignment: .leading, spacing: 0) {
             ForEach(networksByWorth) { n in
@@ -1415,7 +1440,19 @@ struct MoveSentence: View {
             // act that signs at the trailing edge under the thumb, where iOS
             // puts a screen's main act.
             HStack(alignment: .firstTextBaseline) {
-                if verb != .receive {
+                if verb == .receive {
+                    // Copying is beside the address (§1442i); the foot's one
+                    // act hands it to someone.
+                    Spacer(minLength: 0)
+                    ShareLink(item: account) {
+                        Text("Share")
+                            .dsText(.heading28)
+                            .foregroundStyle(DS.pickInk)
+                            .frame(minHeight: 48, alignment: .trailing)
+                    }
+                    .buttonStyle(RowPress())
+                    .accessibilityHint(Text("Shares your address"))
+                } else {
                     Button { add() } label: {
                         // Pink is the values' and the signing verb's alone
                         // (§1442f): Add is white when ready, grey when not.
@@ -1429,15 +1466,17 @@ struct MoveSentence: View {
                     .disabled(stage != nil)
                     .accessibilityHint(Text("Keeps this in the transaction and starts the next one"))
                 }
-                Spacer(minLength: DS.Space.s3)
-                Button { verb == .receive ? copy() : sign() } label: {
-                    Text(verbatim: footVerb)
-                        .dsText(.heading28)
-                        .foregroundStyle(footOn ? DS.pickInk : DS.textTertiary)
-                        .frame(minHeight: 48, alignment: .trailing)
+                if verb != .receive {
+                    Spacer(minLength: DS.Space.s3)
+                    Button { sign() } label: {
+                        Text(verbatim: footVerb)
+                            .dsText(.heading28)
+                            .foregroundStyle(footOn ? DS.pickInk : DS.textTertiary)
+                            .frame(minHeight: 48, alignment: .trailing)
+                    }
+                    .buttonStyle(RowPress())
+                    .disabled(!footOn)
                 }
-                .buttonStyle(RowPress())
-                .disabled(!footOn)
             }
             }
             // Relay's credit signs the foot, small and centred, as Apple

@@ -4981,6 +4981,34 @@
         }
       }
     },
+    "Copies your address, opens Coinbase" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Copia tu dirección y abre Coinbase"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アドレスをコピーして Coinbase を開きます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "주소를 복사하고 Coinbase를 엽니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "复制你的地址并打开 Coinbase"
+          }
+        }
+      }
+    },
     "Edits this line" : {
       "localizations" : {
         "es" : {
@@ -5369,6 +5397,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "同上"
+          }
+        }
+      }
+    },
+    "Shares your address" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Comparte tu dirección"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アドレスを共有します"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "주소를 공유합니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "分享你的地址"
           }
         }
       }

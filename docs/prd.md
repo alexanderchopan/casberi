@@ -67726,3 +67726,11 @@ Mock: the design canvas "Aztec experience".
 3. **The unfilled recipient is "address"**, never "someone" (user).
 4. **To opens like a token list (§1442b): keyboard down, a search row inside it** ("Name, ENS or address"), the book under it, Paste last. The sentence's "to" word never turns into a field. Done takes what resolved. The first tap used to open and shut the list because the keyboard swapped mid-tap; opening with the keyboard down ends that.
 5. A kept sent line is tapped to edit in place and carries its person back into the sentence; held, it offers Remove. The slider and the $ · token switch work on the line being filled. The look-alike check (§1438b) runs on every recipient.
+
+### §1442i — Receive: the short address in the sentence, the whole one with its copy under it, Share as the act (amends §1438's receive, §1442f) (user, 2026-10-20: "next lets move to receive"; "do n and o, but when we show 'at' show …xxxx or complete address. and somewhere on the page complete address should be displayed. also with a copy button"; "kraken is ghetto imo")
+
+1. **The sentence reads "at …3416 / on Base, Ethereum and Robinhood Chain."** in the gutter grammar. The short address is pink and copies on a tap. The networks are white: on Receive they are fixed, and pink means you can change it.
+2. **The whole address stands under the sentence**, in grey monospace, selectable, with its own Copy row (`DSCopyRow`, "Copied" for two seconds).
+3. **The foot's one act is Share**, pink at the trailing edge: copying is beside the address, so the foot does not say it twice.
+4. **"From an exchange" is a pink line that opens the same glass list every blank does**, in place of a system menu: Coinbase ("Copies your address, opens Coinbase") and Another wallet ("Copies your address"). Not a directory of every exchange the app reads; Kraken is gone (user).
+5. Asking for an amount (board P, a payment link) is not built.
