@@ -210,6 +210,9 @@ struct WalletApprovalExposure: Equatable, Sendable {
     /// ranking is made of. A card that ranks should show what it ranked on.
     static func money(_ v: Double) -> String {
         guard v.isFinite else { return "$0" }
+        // Under a dollar keeps its cents, and a grant that can move anything
+        // never reads "$0" (prd §1442l): a 0.01 USDC grant drew "$0".
+        if v > 0, v < 1 { return v < 0.005 ? "<$0.01" : String(format: "$%.2f", v) }
         return "$" + number(v.rounded())
     }
 

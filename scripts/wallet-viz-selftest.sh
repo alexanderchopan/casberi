@@ -804,6 +804,8 @@ check(g("A", usd: 1, unlimited: false, cap: nil).stateLine == "Limited USDC",
 check(WalletApprovalExposure.money(8_924) == "$8,924", "dollars group and keep their resolution")
 check(WalletApprovalExposure.money(84) == "$84", "small amounts stay small")
 check(WalletApprovalExposure.money(0) == "$0", "zero is zero")
+check(WalletApprovalExposure.money(0.01) == "$0.01", "a cent is a cent, never $0")
+check(WalletApprovalExposure.money(0.004) == "<$0.01", "under a cent says so, never $0")
 check(WalletApprovalExposure.money(.nan) == "$0", "a NaN total never renders as NaN")
 
 // ═══════════════════════════════════════════════════════════════════════════

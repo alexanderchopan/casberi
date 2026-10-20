@@ -215,8 +215,9 @@ struct WalletSecurityFigure: View {
             // The tile's short word; the list under it keeps the full name.
             (.poisoning, counts.poisoning, String(localized: "Poisoning"), counts.poisoning > 0),
             (.fakeTokens, counts.fakeTokens, String(localized: "Fake tokens"), counts.fakeTokens > 0),
-            // Spam is noise to recognise, not an act: it never wants you.
-            (.fakeTransfers, counts.fakeTransfers, String(localized: "Fake transfers"), false),
+            // Spam, as much as a fake token is (user, 2026-10-20: "fake
+            // tokens are just as much spam as fake transfers"): the same ink.
+            (.fakeTransfers, counts.fakeTransfers, String(localized: "Fake transfers"), counts.fakeTransfers > 0),
         ]
         let widest = cells.map(\.1).max()
         DSCountGrid(items: cells.count, bare: true) {
