@@ -299,10 +299,10 @@ extension FeedScreen {
     ///
     /// **Create an account leads (prd §1422 item 4, §1433)** while this phone
     /// has no account of its own: Move, where it is made — or, when iCloud
-    /// Keychain holds one's recovery key, taken back. With Move, DEBUG-only.
+    /// Keychain holds one's recovery key, taken back.
     var walletAccountAdds: [SectionAdd] {
         var adds: [SectionAdd] = []
-        if MoveTab.enabled, YourAccountKey.address == nil {
+        if YourAccountKey.address == nil {
             adds.append(SectionAdd(label: String(localized: "Create an account"),
                                    glyph: ScopeTileGlyph.move) { route.present(.move) })
         }

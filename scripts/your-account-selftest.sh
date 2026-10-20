@@ -18,8 +18,9 @@
 # moved inside the packed tuple fails even when both encoders move together.
 # The send's id (`userOpHash`) is pinned to EntryPoint v0.7's own answer, and
 # the recovery key's two operations (prd §1427) to the spike's landed ones,
-# and a swap's order id (prd §1430) to the one CoW's API answered for it. It also holds the Move tab to DEBUG until the
-# account can recover, and Base Sepolia to DEBUG always.
+# and a swap's order id (prd §1430) to the one CoW's API answered for it. It
+# also holds Move to every build — no hidden or dormant feature in a release
+# (prd §1435, App Review 2.3.1) — and Base Sepolia to DEBUG always.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -161,10 +162,11 @@ xcrun swiftc -O -o "$TMP/t" "$ACCOUNT" "$OP" "$SWAP" "$COW" "$TX" "$KECCAK" "$CL
   || { cat "$TMP/err"; echo "✗ YourAccount.swift and YourAccountOp.swift do not compile alone (Foundation and the Safe encoders only)"; exit 1; }
 "$TMP/t" || { echo "✗ your account's arithmetic drifted — see above"; exit 1; }
 
-# The gates: the Move tab is DEBUG-only, the bar's cases follow it, and a
+# The gates: Move is a tab in every build, with no switch to hide it, and a
 # release build never offers a test network.
-grep -q '#if DEBUG' "$MOVE" || { echo "✗ MoveTab.enabled is no longer DEBUG-only — release builds would offer an account that cannot recover yet (prd §1422, §1424)"; exit 1; }
-grep -q 'MoveTab.enabled ?' "$TABS" || { echo "✗ PlaceTab.allCases no longer reads MoveTab.enabled"; exit 1; }
+grep -rq 'MoveTab' Casberi/Casberi --include='*.swift' && { echo "✗ a switch hides Move again — a dormant feature in a release build is App Review 2.3.1 (prd §1435)"; exit 1; }
+grep -q 'case feed, wallet, move, library, search' "$TABS" || { echo "✗ Move is not one of the five tabs (prd §1422)"; exit 1; }
+grep -q 'static var allCases' "$TABS" && { echo "✗ PlaceTab.allCases is overridden — a build could drop a tab (prd §1435)"; exit 1; }
 grep -A3 'static var networks' "$OP" | grep -q '#if DEBUG' || { echo "✗ YourAccountOp.networks offers Base Sepolia outside DEBUG"; exit 1; }
 
-echo "✓ your account: the address is the factory's, the send's bytes are the module's, amounts add up, Move stays DEBUG-only"
+echo "✓ your account: the address is the factory's, the send's bytes are the module's, amounts add up, Move is in every build"

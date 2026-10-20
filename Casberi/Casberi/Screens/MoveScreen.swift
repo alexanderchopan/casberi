@@ -1,19 +1,6 @@
 import SwiftUI
 import UIKit
 
-/// The Move tab ships in DEBUG builds only until your account can send and
-/// recover (prd §1422): before then a release build would hand out an
-/// address money could reach and nothing could move.
-enum MoveTab {
-    static var enabled: Bool {
-        #if DEBUG
-        true
-        #else
-        false
-        #endif
-    }
-}
-
 /// **MOVE (prd §1422): your account's page** — the Apple pass of the
 /// 2026-10-18 canvas (docs/safe-wallet-spec.md, section 2a). Centred head: your
 /// account's face, its name, its address. Then the modules, bare on the page

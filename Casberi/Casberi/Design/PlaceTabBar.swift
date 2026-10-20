@@ -20,18 +20,13 @@ import SwiftUI
 /// with no place: it raises the tray's search on the phone, Find elsewhere,
 /// and it is never in the swipe.
 ///
-/// **Move is DEBUG-only until its account can send** (`MoveTab.enabled`):
-/// before Send and recovery ship, a release build would give out an address
-/// money could reach and nothing could move.
+/// **Move is in every build** (prd §1435): no feature is hidden or dormant
+/// in a release (App Review 2.3.1), so the tab that was DEBUG-only while its
+/// account learned to send and recover is simply one of the five.
 enum PlaceTab: String, Identifiable, CaseIterable {
     case feed, wallet, move, library, search
 
     var id: String { rawValue }
-
-    /// The tabs this build draws, in the bar's order.
-    static var allCases: [PlaceTab] {
-        MoveTab.enabled ? [.feed, .wallet, .move, .library, .search] : [.feed, .wallet, .library, .search]
-    }
 
     var label: String {
         switch self {

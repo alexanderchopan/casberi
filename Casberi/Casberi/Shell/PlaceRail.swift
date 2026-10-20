@@ -37,7 +37,7 @@ struct PlaceRail: View {
             tile(.library)
             tile(.feed)
             tile(.wallet)
-            if MoveTab.enabled { tile(.move) }
+            tile(.move)
             searchTile
             Spacer(minLength: 0)
             demoFoot

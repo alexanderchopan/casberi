@@ -403,8 +403,8 @@ private extension Optional {
 struct OutsideKeyNudge: View {
     @Environment(HomeRoute.self) private var route
 
-    /// Drawn at all: Move is offered, and the account needs the key.
-    static var shown: Bool { MoveTab.enabled && YourAccountKey.needsOutsideKey }
+    /// Drawn at all: the account needs the key.
+    static var shown: Bool { YourAccountKey.needsOutsideKey }
 
     var body: some View {
         Button {

@@ -67547,3 +67547,9 @@ Mock: the design canvas "Aztec experience".
 2. **The restore screen**: the account and its address, **Use on this iPhone**, then the one consequence that is real — "Your other device won't be able to send from it anymore."
 3. **Security**: the row is **This iPhone**; when another device signs, its line is "Your other device signs for it now" and its verb **Use on this iPhone**. The prompt reads "Use your account on this iPhone · Base"; the toast, "Your account works on this iPhone".
 4. **The device is named as what it is** — iPhone, iPad or Mac (`ThisDevice`); the one before is always "your other device", whatever it was.
+
+## §1435 — Move is in every build: no hidden or dormant feature in a release (retires §1422's DEBUG gate) (user, 2026-10-19: "we can't have hidden features in apple")
+
+1. **The switch is gone, not set to on.** `MoveTab.enabled` hid the tab, the Wallet's Create an account and the outside-key nudge in a Release build while the code shipped in it anyway — a dormant feature, App Review 2.3.1. Move is one of the five tabs in every build, the rail lists it, and `your-account-selftest.sh` fails if a switch to hide it returns or `PlaceTab.allCases` is overridden.
+2. **What stays DEBUG is what is compiled out of a release, not hidden in it**: Base Sepolia (`YourAccountOp.networks`) and the probe and draft hooks (`ProbeHooks`, `-moveSendDraft`, `-moveOutsideDraft`), all under `#if DEBUG`.
+3. **Before TestFlight: the full `verify.sh`** (user, 2026-10-19). App Review's notes must describe the account plainly — a self-custody Safe the person controls, sending, swapping through CoW, recovery through iCloud Keychain — since guideline 3.1.5 has been raised against the app before.
