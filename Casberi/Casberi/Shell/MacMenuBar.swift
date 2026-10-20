@@ -76,7 +76,7 @@ extension AppDelegate {
         //     com.apple.menu.sidebar → Show Sidebar
         //                              · Next/Previous/Open/Close Item
         //
-        // So `remove(menu: .toolbar)` would take ⌘R, ⌘[, ⌘1–⌘9 and ⌥1–⌥6 with
+        // So `remove(menu: .toolbar)` would take ⌘R, ⌘[, ⌘1–⌘9 and ⌥1–⌥7 with
         // it, and `remove(menu: .sidebar)` the entire keyboard walk — a silent
         // regression of every shortcut this app has, to delete three items.
         // `CommandGroup(after:)` lands siblings INSIDE the group it names, not

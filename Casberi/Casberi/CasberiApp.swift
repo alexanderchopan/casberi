@@ -386,9 +386,10 @@ struct CasberiApp: App {
                 .keyboardShortcut("]", modifiers: [.command, .shift])
                 .disabled(venueNeighbour(1) == nil)
             }
-            // ⌥1–⌥6 — the wallet the room is scoped to (prd §360). "All" is
+            // ⌥1–⌥7 — the wallet the room is scoped to (prd §360). "All" is
             // always ⌥1, then one key per watched wallet in rail order, so the
-            // run is `WalletStore.watchLimit + 1` long and never grows.
+            // run is `WalletStore.watchLimit + 2` long (your account rides
+            // outside the limit, prd §1442l) and never grows.
             //
             // OPTION, not command: ⌘1–⌘9 is spent on the chip strip, and these
             // two runs must not be the same key doing different things
@@ -398,7 +399,7 @@ struct CasberiApp: App {
             // `shellChromeClear` — a disabled item's key equivalent falls
             // through to the responder chain, so the composer keeps its keys.
             CommandGroup(after: .toolbar) {
-                ForEach(1...(WalletStore.watchLimit + 1), id: \.self) { n in
+                ForEach(1...(WalletStore.watchLimit + 2), id: \.self) { n in
                     let scopes = focusedWalletScopes
                     let slot = n <= scopes.count ? scopes[n - 1] : nil
                     Button(n <= scopes.count

@@ -82,7 +82,7 @@ struct WalletConnectPickerSheet: View {
         WalletConnectPlan.make(
             shared: shared.map { (address: $0.address, namespace: $0.namespace) },
             safes: lookup?.safes ?? [],
-            watched: mode == .watch ? wallet.addresses.map(\.address)
+            watched: mode == .watch ? wallet.followed.map(\.address)
                                     : book.all.map(\.address),
             limit: mode == .watch ? WalletStore.watchLimit : Int.max)
     }

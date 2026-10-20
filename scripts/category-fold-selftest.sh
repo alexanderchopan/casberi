@@ -1042,7 +1042,7 @@ grep -A2 'var shellChromeClear' "$TMP/chrome.nc" \
        echo "  a flag dropped here takes ↑/↓/Return with it."; exit 1; }
 grep -c 'shellChromeClear' "$TMP/app.nc" | grep -qE '^[2-9]|^[0-9]{2}' \
   || { echo "✗ fewer than two menu commands gate on shellChromeClear — both the venue pair"; \
-       echo "  (⌘⇧[ / ⌘⇧]) and the wallet run (⌥1–⌥6) must, or one of them drives a control"; \
+       echo "  (⌘⇧[ / ⌘⇧]) and the wallet run (⌥1–⌥7) must, or one of them drives a control"; \
        echo "  that is not on screen (§360)."; exit 1; }
 
 # --- glassEffectID may never decorate a shape with no glass (prd §360) -------

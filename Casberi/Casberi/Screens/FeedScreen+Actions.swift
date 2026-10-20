@@ -294,7 +294,8 @@ extension FeedScreen {
         let pending = Set(SafeBridge.pendingSnapshot().map(\.ref))
         if pending != walletSafePending { walletSafePending = pending }
         Task { @MainActor in
-            let state = await WalletWatch.liveState(scopeTo: scope, context: modelContext)
+            var state = await WalletWatch.liveState(scopeTo: scope, context: modelContext)
+            state.dropJustRevoked()
             // The scope may have moved while the reads were in flight — a late
             // answer for a wallet we've since left must not paint.
             guard scope == selectedWallet else { return }

@@ -232,6 +232,28 @@ struct WalletSecurityFigure: View {
     }
 }
 
+/// Grants this phone just took back (prd §1442l). A public node a block
+/// behind still answers the old allowance, so the re-read after a revoke drew
+/// the grant again with a live Revoke (measured on Base, 2026-10-20). Held two
+/// minutes, by when every node agrees.
+@MainActor
+enum JustRevoked {
+    private static var at: [UUID: Date] = [:]
+    static func mark(_ ids: [UUID]) { for id in ids { at[id] = .now } }
+    static func contains(_ id: UUID) -> Bool {
+        at[id].map { Date.now.timeIntervalSince($0) < 120 } ?? false
+    }
+}
+
+extension WalletLiveState {
+    @MainActor
+    mutating func dropJustRevoked() {
+        activeApprovals.removeAll { JustRevoked.contains($0.id) }
+        exposure.priced.removeAll { JustRevoked.contains($0.thingID) }
+        exposure.unpriced.removeAll { JustRevoked.contains($0.thingID) }
+    }
+}
+
 extension FeedScreen {
     // MARK: - Revoke (prd §1437)
 
@@ -268,6 +290,7 @@ extension FeedScreen {
                 var networks: [YourAccountOp.Network] = []
                 var revokes: [Int: [(to: String, data: String)]] = [:]
                 var names: [Int: [String]] = [:]
+                var ids: [Int: [UUID]] = [:]
                 for thing in things {
                     guard let check = await WalletPrepare.check(for: thing) else {
                         throw YourAccountChain.Failure(message: String(localized: "That grant could not be read"))
@@ -276,6 +299,7 @@ extension FeedScreen {
                           let net = YourAccountOp.network(appName: check.network ?? "") else { continue }
                     if !networks.contains(net) { networks.append(net) }
                     revokes[net.chainId, default: []].append((to, data))
+                    ids[net.chainId, default: []].append(thing.id)
                     names[net.chainId, default: []].append(walletLive.exposure.all.first { $0.thingID == thing.id }?.spender ?? thing.title)
                 }
                 var landed: [String] = []
@@ -288,7 +312,9 @@ extension FeedScreen {
                         await MainActor.run { walletRevoking = (inFlight, Self.stageWord(s)) }
                     }
                     switch sent.outcome {
-                    case .landed: landed.append(net.name)
+                    case .landed:
+                        landed.append(net.name)
+                        JustRevoked.mark(ids[net.chainId] ?? [])
                     case .pending:
                         chrome.flash(String(localized: "Sent, and not yet seen on \(net.name). Check before sending again"), seconds: 6)
                     case .dryRun: break
@@ -300,8 +326,9 @@ extension FeedScreen {
                 } else if networks.isEmpty {
                     chrome.flash(String(localized: "That grant is no longer here."))
                 }
-                // The list re-reads every allowance live, so what was taken
-                // back drops out of it.
+                // What landed leaves the list now; the live re-read confirms
+                // the rest, and cannot draw a revoked grant back (§1442l).
+                withAnimation(DS.Motion.standard) { walletLive.dropJustRevoked() }
                 loadWalletLive()
                 chrome.refreshRooms()
             } catch let failure as YourAccountChain.Failure {

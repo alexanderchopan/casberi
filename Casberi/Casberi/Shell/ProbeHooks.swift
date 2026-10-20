@@ -3951,6 +3951,36 @@ enum ProbeHooks {
                 }
             }
         },
+        // `-yourAccountApproveProbe "<network>|<token>|<spender>|<units>"` —
+        // grant ONE small ERC-20 approval from your account, so Revoke
+        // (prd §1437, §1442l) has a real grant to take back. Rides
+        // `YourAccountChain.revoke`, which signs any value-0 calls in one
+        // operation; an approve is the same call with a non-zero amount.
+        // Spends the account's own gas. Logs `yourAccountApprove|` lines.
+        Hook(key: "yourAccountApproveProbe") { raw, _ in
+            Task { @MainActor in
+                func log(_ line: String) { NSLog("yourAccountApprove| %@", line) }
+                let p = raw.split(separator: "|").map(String.init)
+                guard p.count == 4,
+                      let net = YourAccountOp.networks.first(where: { $0.name.caseInsensitiveCompare(p[0]) == .orderedSame }),
+                      ENS.isHexAddress(p[1]), let spender = SafeABI.word(address: p[2]),
+                      let amount = SafeABI.word(uint256: p[3]) else {
+                    log("expected <network>|<token>|<spender>|<units>"); return
+                }
+                let data = "0x095ea7b3" + SafeABI.hex(spender).dropFirst(2) + SafeABI.hex(amount).dropFirst(2)
+                do {
+                    let sent = try await YourAccountChain.revoke([(to: p[1], data: data)], on: net,
+                                                                 reason: "Probe: approve \(p[3]) units") { stage in
+                        log("stage=\(stage)")
+                    }
+                    log("result=\(sent.outcome)")
+                } catch let failure as YourAccountChain.Failure {
+                    log("refused: \(failure.message)")
+                } catch {
+                    log("error: \(String(describing: error))")
+                }
+            }
+        },
         // `-yourAccountForgetDevice YES` — this phone forgets its keys and the
         // account, as a lost phone does; the recovery key in iCloud Keychain
         // stays (prd §1427). The simulator's stand-in for a second iPhone.

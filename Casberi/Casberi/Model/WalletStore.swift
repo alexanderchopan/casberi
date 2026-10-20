@@ -836,7 +836,26 @@ final class WalletStore {
         // reads `WalletStore.shared`, which does not exist until this
         // initializer returns. `AddressBook`'s own init does the same for the
         // same reason.
-        DispatchQueue.main.async { WalletStoreSync.shared.attach() }
+        DispatchQueue.main.async {
+            WalletStoreSync.shared.attach()
+            WalletStore.shared.keepYourAccount()
+        }
+    }
+
+    /// **YOUR ACCOUNT IS ALWAYS FOLLOWED (prd §1442l).** Create and recover
+    /// add it, but a full list refused the add and nothing said so: its
+    /// balance, moves and approvals never reached the Wallet, so Security had
+    /// nothing to revoke. Every launch puts it back if it is missing.
+    func keepYourAccount() {
+        guard let account = YourAccountKey.address,
+              !addresses.contains(where: { WalletWatch.sameAddress($0.address, account) }) else { return }
+        outcome(ofAdding: account, label: String(localized: "Your account"))
+    }
+
+    /// Your own account is not a wallet you follow: the limit never counts it
+    /// and never refuses it.
+    private func isYourAccount(_ address: String) -> Bool {
+        YourAccountKey.address.map { WalletWatch.sameAddress($0, address) } ?? false
     }
 
     /// The form two watched addresses are COMPARED in — never the form one is
@@ -871,7 +890,10 @@ final class WalletStore {
     /// Room for another watch? False when the list is full — the doors read
     /// this to STATE the limit up front rather than letting a person fill in a
     /// field that will refuse them (the §83 dead-control rule).
-    var canWatchMore: Bool { addresses.count < Self.watchLimit }
+    var canWatchMore: Bool { followed.count < Self.watchLimit }
+
+    /// The wallets the limit counts: every watch but your own account.
+    var followed: [WatchedAddress] { addresses.filter { !isYourAccount($0.address) } }
 
     /// Why an add didn't take, so a door can say the true thing.
     enum AddOutcome: Equatable {
@@ -913,7 +935,7 @@ final class WalletStore {
         guard !addresses.contains(where: {
             Self.dedupeKey(resolvedForm(of: $0.address) ?? $0.address) == key
         }) else { return .alreadyWatching }
-        guard canWatchMore else { return .limitReached }
+        guard canWatchMore || isYourAccount(addr) else { return .limitReached }
         addresses.append(WatchedAddress(label: label, address: addr, updatedAt: .now))
         // A watched wallet is ALWAYS a book entry too (2026-07-24, user: "if
         // you watch one, it should automatically be in your address book").

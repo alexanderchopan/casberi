@@ -209,7 +209,31 @@ enum WalletApprovals {
                 active.append((thing, check))
             }
         }
-        return active
+        return newestPerGrant(active)
+    }
+
+    /// **ONE GRANT, ONE ROW (prd §1442l).** Every `Approval` event lands as
+    /// its own thing — the grant, a revoke (an approval of 0), the grant
+    /// again — and each reads the SAME live allowance, so one grant drew three
+    /// rows with three Revokes (measured on Base, 2026-10-20). A grant is its
+    /// network, owner, token, spender and mechanism; its newest event stands.
+    static func newestPerGrant(_ active: [(thing: Thing, check: WalletPrepare.Check)])
+        -> [(thing: Thing, check: WalletPrepare.Check)] {
+        var newest: [String: (thing: Thing, check: WalletPrepare.Check)] = [:]
+        var order: [String] = []
+        for entry in active {
+            let mechanism = (entry.thing.sourceRef ?? "").split(separator: ":").dropFirst().first.map(String.init) ?? ""
+            let key = [entry.check.network ?? "", (entry.thing.walletAddress ?? "").lowercased(),
+                       (entry.check.contract ?? "").lowercased(),
+                       (entry.thing.counterpartyAddress ?? "").lowercased(), mechanism].joined(separator: "|")
+            if let kept = newest[key] {
+                if entry.thing.capturedAt > kept.thing.capturedAt { newest[key] = entry }
+            } else {
+                newest[key] = entry
+                order.append(key)
+            }
+        }
+        return order.compactMap { newest[$0] }
     }
 
     /// The prepare path (`WalletPrepare`, prd §112) rides this same measured
@@ -366,10 +390,17 @@ enum WalletApprovals {
     /// pass rather than reporting a misleading 0.
     @MainActor
     static func probe(context: ModelContext, blocksBack: Int?) async -> Int {
-        for _ in 0..<60 where running {
+        // A launch's own wallet refresh holds the pass for a minute or more
+        // with live reads on, so the probe waits it out (DEBUG only caller).
+        for _ in 0..<360 where running {
             try? await Task.sleep(nanoseconds: 500_000_000)
         }
-        guard !running else { return 0 }
+        guard !running else {
+            #if DEBUG
+            NSLog("approvalProbe| a refresh still holds the pass after 3 minutes")
+            #endif
+            return 0
+        }
         running = true
         defer { running = false }
         // Resolve names the way the real refresh does — a wallet watched as
@@ -388,6 +419,11 @@ enum WalletApprovals {
         }
         let held = await WalletIngest.heldPricedContractsByOwner(addresses: addresses)
         let owned = await WalletIngest.ownedNFTContracts(addresses: addresses)
+        #if DEBUG
+        for a in addresses {
+            NSLog("approvalProbe| %@ held=%d", a, held == nil ? -2 : (held?[a.lowercased()]?.count ?? held?[a]?.count ?? -1))
+        }
+        #endif
         return await syncLocked(context: context, addresses: addresses,
                                 existing: IngestSupport.existingSourceRefs(context, source: "Wallet"),
                                 heldByOwner: held, ownedNFTs: owned)
