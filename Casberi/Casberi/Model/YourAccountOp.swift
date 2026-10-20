@@ -22,7 +22,10 @@ enum YourAccountOp {
         let rpcs: [String]
         /// ERC-4337 v0.7 bundlers, public and keyless, tried in order.
         let bundlers: [String]
-        let usdc: String
+        /// The network's dollar: USDC on Base and Ethereum, USDG (Global
+        /// Dollar, Paxos) on Robinhood Chain, which has no native USDC.
+        let dollar: String
+        var dollarSymbol = "USDC"
         /// A test network: free money, offered in DEBUG builds only.
         let isTest: Bool
         var id: Int { chainId }
@@ -32,18 +35,27 @@ enum YourAccountOp {
         name: "Base", chainId: 8453,
         rpcs: ["https://mainnet.base.org", "https://base-rpc.publicnode.com"],
         bundlers: ["https://public.pimlico.io/v2/8453/rpc", "https://api.candide.dev/public/v3/8453"],
-        usdc: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", isTest: false)
+        dollar: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", isTest: false)
     static let ethereum = Network(
         name: "Ethereum", chainId: 1,
         rpcs: ["https://rpc.mevblocker.io", "https://ethereum-rpc.publicnode.com"],
         bundlers: ["https://public.pimlico.io/v2/1/rpc", "https://api.candide.dev/public/v3/1"],
-        usdc: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", isTest: false)
+        dollar: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", isTest: false)
+    /// Robinhood Chain (prd §1441): every contract the account uses is at the
+    /// same address there (measured 2026-10-19), so the account has the same
+    /// address; Pimlico's public bundler serves it, Candide's does not.
+    static let robinhood = Network(
+        name: "Robinhood Chain", chainId: 4663,
+        rpcs: ["https://rpc.mainnet.chain.robinhood.com", "https://robinhood-rpc.publicnode.com"],
+        bundlers: ["https://public.pimlico.io/v2/4663/rpc"],
+        dollar: "0x5fc5360d0400a0fd4f2af552add042d716f1d168", dollarSymbol: "USDG", isTest: false)
     /// The network behind one of this app's own chain names ("base-mainnet",
     /// the approvals' and receipts' spelling), when the account can act there.
     static func network(appName: String) -> Network? {
         switch appName {
         case "base-mainnet": base
         case "eth-mainnet": ethereum
+        case "robinhood-mainnet": robinhood
         default: nil
         }
     }
@@ -52,9 +64,10 @@ enum YourAccountOp {
         name: "Base Sepolia", chainId: 84532,
         rpcs: ["https://sepolia.base.org", "https://base-sepolia-rpc.publicnode.com"],
         bundlers: ["https://public.pimlico.io/v2/84532/rpc", "https://api.candide.dev/public/v3/84532"],
-        usdc: "0x036CbD53842c5426634e7929541eC2318f3dCF7e", isTest: true)
+        dollar: "0x036CbD53842c5426634e7929541eC2318f3dCF7e", isTest: true)
 
-    /// The two live networks, Base and Ethereum, in every build. Base Sepolia
+    /// The live networks, Base, Ethereum and Robinhood Chain (§1441), in every
+    /// build: each with send, receive and swap. Base Sepolia
     /// only in a DEBUG build, compiled out of every shipped one (prd §1439a,
     /// reverting §1439): a test network in the hands of the public confuses
     /// more than it teaches, and a Sepolia-only public build would ship the
@@ -62,9 +75,9 @@ enum YourAccountOp {
     /// "test coins".
     static var networks: [Network] {
         #if DEBUG
-        [base, ethereum, baseSepolia]
+        [base, ethereum, robinhood, baseSepolia]
         #else
-        [base, ethereum]
+        [base, ethereum, robinhood]
         #endif
     }
 
@@ -76,8 +89,9 @@ enum YourAccountOp {
     }
 
     static let eth = Token(symbol: "ETH", decimals: 18, contract: nil)
-    static func usdc(on network: Network) -> Token { Token(symbol: "USDC", decimals: 6, contract: network.usdc) }
-    static func tokens(on network: Network) -> [Token] { [eth, usdc(on: network)] }
+    /// The network's dollar, read off the chain with ETH every time.
+    static func dollar(on network: Network) -> Token { Token(symbol: network.dollarSymbol, decimals: 6, contract: network.dollar) }
+    static func tokens(on network: Network) -> [Token] { [eth, dollar(on: network)] }
 
     /// Which network a `Payment`'s chain is in this app's own spelling
     /// ("base-mainnet"), for reading the Wallet's last holdings.
@@ -85,6 +99,7 @@ enum YourAccountOp {
         switch network.chainId {
         case 8453: "base-mainnet"
         case 1: "eth-mainnet"
+        case 4663: "robinhood-mainnet"
         case 84532: "base-sepolia"
         default: nil
         }

@@ -214,7 +214,7 @@ struct MoveSentence: View {
                 }
                 // A line of words, so it wraps between them.
                 FlowLayout(spacing: 10, lineSpacing: 0) {
-                    ForEach(Array(String(localized: "on Base and Ethereum.").split(separator: " ").enumerated()), id: \.offset) { _, w in
+                    ForEach(Array(String(localized: "on \(Op.networks.filter { !$0.isTest }.map(\.name).formatted(.list(type: .and))).").split(separator: " ").enumerated()), id: \.offset) { _, w in
                         word(String(w), ink: DS.textPrimary)
                     }
                 }
@@ -966,7 +966,7 @@ struct MoveSentence: View {
         let sent = done.sent
         let tx: String? = { if case .landed(let t, _) = sent.outcome { return t } else { return nil } }()
         let link = tx.flatMap { explorer($0, on: net) }
-        let linkName: String? = net.chainId == 1 ? "Etherscan" : "Basescan"
+        let linkName: String? = net.chainId == 1 ? "Etherscan" : net.chainId == 4663 ? "Blockscout" : "Basescan"
         let on = String(localized: "on \(net.name).")
         if case .pending = sent.outcome {
             return Receipt(past: String(localized: "Sent,"), lines: [String(localized: "not yet seen"), on],
@@ -1022,6 +1022,7 @@ struct MoveSentence: View {
         switch network.chainId {
         case 8453: host = "basescan.org"
         case 1: host = "etherscan.io"
+        case 4663: host = "robinhoodchain.blockscout.com"
         case 84532: host = "sepolia.basescan.org"
         default: return nil
         }
@@ -1035,7 +1036,7 @@ struct MoveSentence: View {
     }
 
     /// The address on the clipboard, then the exchange: paste it as the
-    /// destination of a withdrawal there, on Base or Ethereum.
+    /// destination of a withdrawal there, on any network the account is on.
     private func addFrom(_ site: String) {
         copy()
         if let url = URL(string: site) { openURL(url) }

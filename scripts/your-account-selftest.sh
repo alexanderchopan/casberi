@@ -63,7 +63,7 @@ check(YourAccount.address(x: Array(x.prefix(31)), y: y) == nil, "a short key gav
 // The send: one batch, ETH and USDC on Base, the key moved, the account created.
 let to = "0x4CC2193e5FA29b10ee4DEBC982e09125c79a78D9"
 let eth = YourAccountOp.Payment(network: YourAccountOp.base, token: YourAccountOp.eth, amount: "1000000000000000", to: to, toName: nil)
-let usdc = YourAccountOp.Payment(network: YourAccountOp.base, token: YourAccountOp.usdc(on: YourAccountOp.base), amount: "2500000", to: to, toName: nil)
+let usdc = YourAccountOp.Payment(network: YourAccountOp.base, token: YourAccountOp.dollar(on: YourAccountOp.base), amount: "2500000", to: to, toName: nil)
 let cd = YourAccountOp.callData([eth, usdc], rotateTo: (x, y))!
 var op = YourAccountOp.Op(sender: want, nonce: 0, factory: YourAccount.proxyFactory,
                           factoryData: YourAccountOp.factoryData(x: x, y: y), callData: cd)
@@ -110,7 +110,7 @@ func fixture(_ name: String) -> [String: Any] {
     let url = URL(fileURLWithPath: ProcessInfo.processInfo.environment["FIXTURES"]! + "/" + name)
     return try! JSONSerialization.jsonObject(with: Data(contentsOf: url)) as! [String: Any]
 }
-let usdcBase = YourAccountOp.usdc(on: YourAccountOp.base)
+let usdcBase = YourAccountOp.dollar(on: YourAccountOp.base)
 let ethJSON = fixture("relay-quote-eth-base.json"), usdcJSON = fixture("relay-quote-usdc-base.json")
 let ethQuote = YourAccountSwap.quote(from: ethJSON, chainId: 8453, sell: YourAccountOp.eth)!
 check(ethQuote.sellAmount == "1000000000000000" && ethQuote.minimumBuy == "2367794", "Relay's ETH quote reads its amounts")
@@ -153,7 +153,11 @@ let summed = YourAccountSwap.approvalCalls([(usdcChecked!.approvals[0].token, us
 check(summed.count == 1 && summed[0].data == YourAccountSwap.approveSelector + YourAccount.w(usdcChecked!.approvals[0].spender) + SafeABI.word(uint256: "350000")!,
       "two swaps selling one token approve their sum once (an approval replaces, never adds)")
 check(YourAccountSwap.supported(YourAccountOp.base) && YourAccountSwap.supported(YourAccountOp.ethereum)
-      && !YourAccountSwap.supported(YourAccountOp.baseSepolia), "Relay swaps on Base and Ethereum, never a test network")
+      && YourAccountSwap.supported(YourAccountOp.robinhood)
+      && !YourAccountSwap.supported(YourAccountOp.baseSepolia), "Relay swaps on every live network the account is on, never a test network")
+check(YourAccountOp.networks.filter { !$0.isTest }.allSatisfy(YourAccountSwap.supported),
+      "a live network without swaps — send, receive and swap arrive together (prd §1441)")
+check(YourAccountOp.dollar(on: YourAccountOp.robinhood).symbol == "USDG", "Robinhood Chain's dollar is USDG")
 
 // The outside key (prd §1432): an owner at threshold 1; a wallet upgraded by
 // EIP-7702 is still a wallet (the user's own, measured on Base), a contract is not.
@@ -210,7 +214,7 @@ grep -q 'static var allCases' "$TABS" && { echo "✗ PlaceTab.allCases is overri
 # The live networks ship; Base Sepolia is compiled out of every shipped
 # build (prd §1439a) and marked a test network where it exists.
 grep -A3 'static var networks' "$OP" | grep -q '#if DEBUG' || { echo "✗ YourAccountOp.networks offers Base Sepolia outside DEBUG (prd §1439a)"; exit 1; }
-grep -A6 'static var networks' "$OP" | grep -q '\[base, ethereum\]$' || { echo "✗ a shipped build does not offer Base and Ethereum (prd §1439a)"; exit 1; }
+grep -A6 'static var networks' "$OP" | grep -q '\[base, ethereum, robinhood\]$' || { echo "✗ a shipped build does not offer Base, Ethereum and Robinhood Chain (prd §1439a, §1441)"; exit 1; }
 grep -A4 'static let baseSepolia' "$OP" | grep -q 'isTest: true' || { echo "✗ Base Sepolia is not marked a test network"; exit 1; }
 
 echo "✓ your account: the address is the factory's, the send's bytes are the module's, amounts add up, Move is in every build"
