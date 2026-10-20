@@ -304,7 +304,7 @@ extension FeedScreen {
         var adds: [SectionAdd] = []
         if YourAccountKey.address == nil {
             adds.append(SectionAdd(label: String(localized: "Create an account"),
-                                   glyph: ScopeTileGlyph.move) { route.present(.move) })
+                                   glyph: ScopeTileGlyph.move) { chrome.moveTray = true })
         }
         return adds + [SectionAdd(label: String(localized: "Follow an account"),
                     glyph: ScopeTileGlyph.wallets) { feedSheet = .walletFollow },

@@ -4882,6 +4882,8 @@ private struct AppSheetHost: ViewModifier {
             }
         }
         #endif
+        // Move, as a tray (prd §1442).
+        .modifier(MoveTrayPresenter(chrome: chrome, route: sceneState.route, bridges: bridges, context: modelContext))
         .sheet(item: Binding(get: { chrome.appSheet }, set: { chrome.appSheet = $0 })) { app in
             // A stack, so the next step pushes inside the sheet rather than
             // rising over it (prd §1238); the root draws no bar.

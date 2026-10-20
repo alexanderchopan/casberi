@@ -870,6 +870,24 @@
    "anchor": "text:=Feed order"
   },
   {
+   "id": "move-tray",
+   "covers": [
+    "Screens/MoveScreen.swift:chrome.moveTray"
+   ],
+   "launch": [
+    "demo"
+   ],
+   "steps": [
+    {
+     "wait": 2
+    },
+    {
+     "tap": "button:=Move"
+    }
+   ],
+   "anchor": "text:=Your account"
+  },
+  {
    "id": "person-by-link",
    "covers": [
     "Shell/RootShell.swift:deepLinkPerson"
@@ -1678,7 +1696,7 @@
    "covers": [
     "Shell/MainSurface.swift:route.sheet#node.move"
    ],
-   "why": "Move is a place (HomeRoute.place(.move), prd §1422): present(.move) cuts to the Move tab on every device and never raises a sheet; the case is the leaf a NavigationStack resolves"
+   "why": "nothing presents .move since prd §1442: the Move tab raises MoveTray (swept as move-tray); the case is the leaf a NavigationStack resolves"
   },
   {
    "covers": [

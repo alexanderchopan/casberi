@@ -35,6 +35,12 @@ struct DSTray<Content: View>: View {
     /// lands under the last row, off screen (prd §1292, the Track tray
     /// opened inside Sources).
     var scrollsItself: Bool = false
+    /// No title row: the content's own first line is its head (Move's verbs,
+    /// prd §1442). The Mac's Done stays, on a row of its own.
+    var titled: Bool = true
+    /// The detent the caller moves, for a tray that grows when its content
+    /// does (Move's choices, prd §1442). Nil keeps the sheet's own.
+    var selection: Binding<PresentationDetent>? = nil
     @ViewBuilder var content: () -> Content
 
     /// **THE MAC'S WAY OUT (2026-09-22, user: "when i click language in
@@ -125,7 +131,19 @@ struct DSTray<Content: View>: View {
         let tray = VStack(alignment: .leading, spacing: DS.Space.s4) {
             // The title doubles as its own catalog key — a title that isn't a
             // key just renders verbatim, so dynamic titles stay safe.
-            if inPane, let back = titleBack {
+            if !titled {
+                #if targetEnvironment(macCatalyst)
+                if !inPane {
+                    HStack {
+                        Spacer(minLength: 0)
+                        Button(String(localized: "Done")) { dismiss() }
+                            .buttonStyle(RowPress())
+                            .dsText(.body17)
+                            .foregroundStyle(DS.pickInk)
+                    }
+                }
+                #endif
+            } else if inPane, let back = titleBack {
                 DSRoomTitleRow(title: back.word, pick: String(localized: String.LocalizationValue(title)),
                                onTitle: back.action)
             } else {
@@ -249,9 +267,9 @@ struct DSTray<Content: View>: View {
         // must not set the HOST sheet's detents, or the whole sheet shrinks
         // to the pushed tray's height.
         .modifier(DSTrayPresentation(active: !inPane,
-                                     detents: detents ?? [.height(height + titleOverflow)],
-                                     height: height + titleOverflow,
-                                     scrolls: detents != nil))
+                                     detents: detents ?? [.height(height + (titled ? titleOverflow : 0))],
+                                     height: height + (titled ? titleOverflow : 0),
+                                     scrolls: detents != nil, selection: selection))
         .dsSensoryFeedback()
 
         if inPane && scrollsItself {
@@ -282,9 +300,17 @@ private struct DSTrayPresentation: ViewModifier {
     let detents: Set<PresentationDetent>
     let height: CGFloat
     let scrolls: Bool
+    var selection: Binding<PresentationDetent>? = nil
 
     func body(content: Content) -> some View {
-        if active {
+        if active, let selection {
+            content
+                .presentationDetents(detents, selection: selection)
+                .dsSizedSheet(height)
+                .presentationDragIndicator(.visible)
+                .dsSheetCorner()
+                .presentationContentInteraction(scrolls ? .scrolls : .automatic)
+        } else if active {
             content
                 .presentationDetents(detents)
                 .dsSizedSheet(height)

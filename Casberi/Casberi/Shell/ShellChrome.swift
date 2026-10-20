@@ -228,6 +228,8 @@ final class ShellChrome {
     /// `RootShell`'s stack (`RoomsTray`), so the seat stays above it and the
     /// same tap that opened it closes it (§705's toggle, one size up).
     var roomsTray = false
+    /// Move, raised as a tray from its tab (prd §1442): an act, not a place.
+    var moveTray = false
     /// Which face of the Settings screen a You tile asked for (prd §1207
     /// item 9): Sources or Casberi's own options. Read and cleared there.
     var settingsPick: SettingsFace?

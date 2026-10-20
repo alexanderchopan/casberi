@@ -84,7 +84,9 @@ enum PlaceTab: String, Identifiable, CaseIterable {
             case .wallet:
                 chrome.openWallet()
             case .move:
-                route.present(.move)
+                // Move is an act, not a place (prd §1442): its tab raises
+                // the tray over wherever you are, as Search raises its own.
+                chrome.moveTray = true
             case .library:
                 chrome.settingsPick = .sources
                 route.present(.casberi)

@@ -23,6 +23,10 @@ import UIKit
 /// tokens to one person, is Add and a number each time.
 struct MoveSentence: View {
     let account: String
+    /// In `MoveTray` (prd §1442): the tray brings its own side padding and
+    /// there is no tab bar to clear.
+    var inTray = false
+    var onChoices: ((Bool) -> Void)? = nil
     @Environment(ShellChrome.self) private var chrome
     @Environment(\.openURL) private var openURL
     @Environment(\.horizontalSizeClass) private var sizeClass
@@ -149,8 +153,8 @@ struct MoveSentence: View {
                     space
                         .padding(.top, open == nil ? DS.Space.s6 : DS.Space.s4)
                 }
-                .padding(.horizontal, DSRoomChassis.leadInset)
-                .padding(.top, DS.Space.s6)
+                .padding(.horizontal, inTray ? DSRoomChassis.leadInset - DS.Space.s4 : DSRoomChassis.leadInset)
+                .padding(.top, inTray ? 0 : DS.Space.s6)
                 .padding(.bottom, DS.Space.s4)
                 .frame(maxWidth: .infinity, minHeight: geo.size.height, alignment: .bottomLeading)
             }
@@ -171,6 +175,7 @@ struct MoveSentence: View {
             // on arrival covers the tab bar until it is swiped away (user,
             // 2026-10-19). A tap on the amount, or a token picked, raises it.
         }
+        .onChange(of: open) { _, now in onChoices?(now != nil) }
         .onChange(of: focus) { _, field in
             // A field left by the hand closes its list.
             if field == nil, open == .with || open == .buy || open == .to {
@@ -913,17 +918,17 @@ struct MoveSentence: View {
             }
             }
         }
-        .padding(.horizontal, DSRoomChassis.leadInset)
+        .padding(.horizontal, inTray ? DSRoomChassis.leadInset - DS.Space.s4 : DSRoomChassis.leadInset)
         .padding(.bottom, footClearance)
         // The page's own ground, so a long list scrolls under the foot.
-        .background { DSPageBackground() }
+        .background { if inTray { DS.surfaceSheet } else { DSPageBackground() } }
     }
 
     /// The phone's tab bar floats over the page's bottom edge and reserves
     /// nothing, so the foot clears it by the bar's own geometry; a keyboard
     /// covers the bar (prd §865), and the foot rides on the keys.
     private var footClearance: CGFloat {
-        guard sizeClass == .compact, !chrome.keyboardUp else { return DS.Space.s2 }
+        guard !inTray, sizeClass == .compact, !chrome.keyboardUp else { return DS.Space.s2 }
         return DSDock.agentSize(fold: chrome.fold) + DSDock.agentBottomInset(fold: chrome.fold) + DS.Space.s2
     }
 

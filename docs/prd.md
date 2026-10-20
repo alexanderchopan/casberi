@@ -67640,3 +67640,12 @@ Mock: the design canvas "Aztec experience".
 3. **The choices sit on their own glass**, the rooms tray's card (`RoomsTray.radius`): a layer that floats for a moment, so glass, while the sentence itself stays bare (glass on the floating layer only). As tall as its rows up to about six (340pt), then it scrolls inside; 220pt while the keyboard is up, so the sentence and the word being typed stay in view.
 4. **Each network row wears its mark** from the brand set the Wallet already draws (`brand-l2b-base`, `brand-eth`, `brand-l2b-robinhood`).
 
+
+## §1442 — Move is a tray, raised from its tab over wherever you are (amends §1422's place) (user, 2026-10-20: "why not make the move button be a tray or sheet or whatever and not a page?"; "yes")
+
+1. **The Move tab raises a tray** (`MoveTray`, through `ShellChrome.moveTray`); it never cuts to a page, so the Feed, the Wallet or Library stays under it. Moving money is an act, not a place. The Wallet's "Create an account" row raises the same tray.
+2. **The tray is untitled**, because Swap · Send · Receive are its head (`DSTray(titled: false)`; the Mac keeps its Done row).
+3. **It rests at the sentence's height (360pt) and grows to the full sheet while a blank's choices are open**, then settles back when they close (`MoveSentence.onChoices`, `DSTray(selection:)`).
+4. **No tab-bar clearance inside the tray**; the foot stands on the sheet's own bottom edge.
+5. **The tray re-injects the shell's environment** (`MoveTrayPresenter`): a sheet is built in its own host and inherits none of it.
+6. **The Mac half (§1402):** the rail's Move tile and its key go through the same `PlaceTab.open`, so the Mac raises the same tray, with DSTray's Done row as its way out.
