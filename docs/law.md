@@ -1813,10 +1813,10 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1435 — Move is in every build: no hidden or dormant feature in a release (retires §1422's DEBUG gate)
 - §1436 — Move does, the Wallet keeps: Send · Swap and Receive are Move's two sections, the keys live in Wallet › Security, and…
 - §1437 — Revoke in the app: your account takes back what it let others spend, in Wallet › Security (builds §1436 item 2; the p…
-- §1438 — Move is a sentence you fill in: Swap · Send · Receive as words, the choices opening under it, Add for the next line (… [+2 sub-entries]
+- §1438 — Move is a sentence you fill in: Swap · Send · Receive as words, the choices opening under it, Add for the next line (… [+3 sub-entries]
 - §1439 — Base Sepolia ships: one test network and two live ones in every build (amends §1435 item 2) [+1 sub-entries]
 - §1440 — Swaps go through Relay, one provider everywhere, proven by simulation before Face ID (supersedes §1430's CoW; keeps §…
-- §1441 — Robinhood Chain joins the account: three live networks, each with send, receive and swap
+- §1441 — Robinhood Chain joins the account: three live networks, each with send, receive and swap [+1 sub-entries]
 
 ## Dead rulings → what replaced them (generated)
 

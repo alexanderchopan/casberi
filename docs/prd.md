@@ -67594,6 +67594,12 @@ Mock: the design canvas "Aztec experience".
 4. **The small ones.** "of 0.007948" is a door: a tap spends all of it. A swap's fee under a cent says "fee under a cent". A pasted address in your book becomes its name with a `snap`; one imitating a name you know turns orange and shakes once, with the failure haptic. While CoW prices, the For word breathes. With nothing anywhere, the sentence says "Nothing to send yet." and "Receive something first" opens Receive, its verb pink.
 5. **Not built: the QR on Receive** (user's call).
 
+### §1438c — Nothing is picked for you: the sentence starts "0 token for token on network." and the network comes first (amends §1438 item 6) (user, 2026-10-20: "on swap, i think it should start out saying 0 token for token on network"; 2026-10-19: "user needs to pick the network first then the token")
+
+1. **Every blank starts empty and pink**: "0 token / for token / on network." (Send: "0 token / to someone / on network."). No network or token is chosen on the person's behalf.
+2. **The network comes first**: a token tapped before a network is picked opens the networks, then that token's list once one is picked. The network list leads with where the account holds the most.
+3. Nothing in the network list reads as chosen until something is.
+
 ## §1439 — Base Sepolia ships: one test network and two live ones in every build (amends §1435 item 2) (user, 2026-10-19: "this adds base testnet, base mainnet, and ethereum mainnet; one developer network, and two live networks for cryptocurrency")
 
 1. **Every build offers Base, Ethereum and Base Sepolia** (`YourAccountOp.networks`, no `#if DEBUG`). Base Sepolia's coins come from a faucet and carry no value; it is there so the account can be tried without real money.
@@ -67626,3 +67632,11 @@ Mock: the design canvas "Aztec experience".
 2. **Parity is the rule** (user): a network joins only when send, receive and swap all work on it; Relay swaps on all three, and `your-account-selftest.sh` fails a live network without swaps.
 3. **Its dollar is USDG** (Global Dollar, Paxos, `0x5fc5…d168`, verified by Relay): Robinhood Chain has no native USDC, and its token search is full of tokens calling themselves USDG and USDC, which "Not verified by Relay" marks. `YourAccountOp.dollar(on:)` replaces `usdc(on:)`; each network names its own.
 4. **Measured for the chains not taken**: Arbitrum, Optimism, Polygon, BNB, Gnosis and Sonic are ready the same way; Celo, Avalanche and Scroll lack simulation on the first node tried; Unichain, World Chain, Linea, Ink, Zora, Blast, Berachain and zkSync lack Safe's passkey signer factory; HyperEVM has none of Safe's contracts. Recovery and the outside key are added network by network today, and each costs gas there; folding them into the operation that first creates the account on a network is the work to do before more networks join.
+
+### §1441a — Base Sepolia out of DEBUG too; the sentence stands at the bottom; a blank's choices on glass, networks wearing their marks (amends §1439a item 2, §1438 items 1–2) (user, 2026-10-20: "we got rid of sepolia"; "is there a way to have the sentence be closer to the tab bar? and it move up accordingly?"; "we need the icons for base ethereum and robinhood chain to show in the drop down"; "perhaps we should have those in a glass thing like we do our tray")
+
+1. **The account's networks are Base, Ethereum and Robinhood Chain in every build**, DEBUG included; `YourAccountOp.baseSepolia` stays only for the dry-run probe. `your-account-selftest.sh` holds the one list.
+2. **The sentence stands at the bottom of the page**, over the foot, in reach of the thumb; a blank's choices open under it and the sentence rises above them.
+3. **The choices sit on their own glass**, the rooms tray's card (`RoomsTray.radius`): a layer that floats for a moment, so glass, while the sentence itself stays bare (glass on the floating layer only). As tall as its rows up to about six (340pt), then it scrolls inside; 220pt while the keyboard is up, so the sentence and the word being typed stay in view.
+4. **Each network row wears its mark** from the brand set the Wallet already draws (`brand-l2b-base`, `brand-eth`, `brand-l2b-robinhood`).
+

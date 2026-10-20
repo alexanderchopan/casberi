@@ -44,6 +44,11 @@ struct MoveSentence: View {
 
     @State private var verb: Verb = .swap
     @State private var network: Op.Network = Op.base
+    /// The network is a blank too until it is picked (§1438c): the sentence
+    /// starts "0 token for token on network." and the network comes first.
+    @State private var networkPicked = false
+    /// The token blank tapped before a network was picked, opened once it is.
+    @State private var afterNetwork: Blank?
     @State private var heldBy: [Int: [Tokens.Held]] = [:]
     @State private var listed: [Tokens.Listed] = []
     /// Relay's matches for what is typed in For (prd §1440).
@@ -131,18 +136,25 @@ struct MoveSentence: View {
     // MARK: - The page
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 0) {
-                if !items.isEmpty { kept }
-                sentence
-                    .padding(.top, items.isEmpty ? 0 : DS.Space.s4)
-                space
-                    .padding(.top, DS.Space.s6)
+        // The sentence stands at the bottom, over the foot and in reach of
+        // the thumb, and rises as its choices open under it (user,
+        // 2026-10-20: "closer to the tab bar? and it move up accordingly").
+        GeometryReader { geo in
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    Spacer(minLength: 0)
+                    if !items.isEmpty { kept }
+                    sentence
+                        .padding(.top, items.isEmpty ? 0 : DS.Space.s4)
+                    space
+                        .padding(.top, open == nil ? DS.Space.s6 : DS.Space.s4)
+                }
+                .padding(.horizontal, DSRoomChassis.leadInset)
+                .padding(.top, DS.Space.s6)
+                .padding(.bottom, DS.Space.s4)
+                .frame(maxWidth: .infinity, minHeight: geo.size.height, alignment: .bottomLeading)
             }
-            .padding(.horizontal, DSRoomChassis.leadInset)
-            .padding(.top, DS.Space.s6)
-            .padding(.bottom, DS.Space.s8)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .defaultScrollAnchor(.bottom)
         }
         .scrollContentBackground(.hidden)
         .scrollDismissesKeyboard(.interactively)
@@ -264,6 +276,13 @@ struct MoveSentence: View {
                 chrome.flash(String(localized: "One transaction is one network. Sign this one first"))
                 return
             }
+            // The network comes first (user, 2026-10-20): a token tapped before
+            // one is picked opens the networks, then that token's list.
+            if (which == .with || which == .buy), !networkPicked {
+                withAnimation(DS.Motion.standard) { open = .network; afterNetwork = which }
+                DSHaptic.selection()
+                return
+            }
             withAnimation(DS.Motion.standard) {
                 if open == which { open = nil } else {
                     open = which
@@ -348,7 +367,7 @@ struct MoveSentence: View {
         if open == .with {
             searchField(String(localized: "a token you have"))
         } else {
-            blank(with?.token.symbol ?? String(localized: "a token"), ink: with == nil ? DS.pickInk : DS.textPrimary,
+            blank(with?.token.symbol ?? String(localized: "token"), ink: with == nil ? DS.pickInk : DS.textPrimary,
                   .with, label: Text("Spend \(with?.token.symbol ?? ""), change"))
         }
     }
@@ -366,7 +385,7 @@ struct MoveSentence: View {
                 word
             }
         } else {
-            blank(String(localized: "a token"), ink: DS.pickInk, .buy, label: Text("Pick what you want"))
+            blank(String(localized: "token"), ink: DS.pickInk, .buy, label: Text("Pick what you want"))
         }
     }
 
@@ -409,7 +428,13 @@ struct MoveSentence: View {
     }
 
     private var networkWord: some View {
-        blank(network.name + ".", ink: DS.textSecondary, .network, label: Text("On \(network.name), change"))
+        Group {
+            if networkPicked {
+                blank(network.name + ".", ink: DS.textSecondary, .network, label: Text("On \(network.name), change"))
+            } else {
+                blank(String(localized: "network."), ink: DS.pickInk, .network, label: Text("Pick a network"))
+            }
+        }
     }
 
     private func searchField(_ prompt: String) -> some View {
@@ -430,10 +455,10 @@ struct MoveSentence: View {
     private var space: some View {
         Group {
             switch open {
-            case .with: withList
-            case .buy: buyList
-            case .to: toList
-            case .network: networkList
+            case .with: choices { withList }
+            case .buy: choices { buyList }
+            case .to: choices { toList }
+            case .network: choices { networkList }
             case nil: line
             }
         }
@@ -441,6 +466,26 @@ struct MoveSentence: View {
         // A list rises into the space and sinks away as its pick lands.
         .transition(.asymmetric(insertion: .offset(y: 24).combined(with: .opacity),
                                 removal: .offset(y: 40).combined(with: .opacity)))
+    }
+
+    /// A blank's choices on their own glass, the rooms tray's card (§1203):
+    /// a layer that floats for a moment, so glass, while the sentence stays
+    /// bare. As tall as its rows, up to about six, then it scrolls inside;
+    /// shorter while the keyboard is up, so the sentence above stays in view.
+    @State private var choicesHeight: CGFloat = 0
+
+    private func choices<Rows: View>(@ViewBuilder _ rows: () -> Rows) -> some View {
+        let cap: CGFloat = chrome.keyboardUp ? 220 : 340
+        return ScrollView {
+            rows()
+                .padding(.vertical, DS.Space.s2)
+                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { choicesHeight = $0 }
+        }
+        .scrollIndicators(.hidden)
+        .frame(height: min(max(choicesHeight, 56), cap))
+        .padding(.horizontal, DS.Space.s4)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .dsGlass(cornerRadius: RoomsTray.radius)
     }
 
     /// The other unit (tap to type in it), what you have, the fee.
@@ -516,9 +561,11 @@ struct MoveSentence: View {
                 }
             }
             .fixedSize(horizontal: false, vertical: true)
+        } else if !networkPicked {
+            EmptyView()
         } else if heldBy.isEmpty {
             Text("Reading…").dsText(.body17).foregroundStyle(DS.textSecondary)
-        } else {
+        } else if held.isEmpty {
             Text("Nothing on \(network.name) yet").dsText(.body17).foregroundStyle(DS.textSecondary)
         }
     }
@@ -583,10 +630,20 @@ struct MoveSentence: View {
     // MARK: - The choices
 
     private func listRow(_ title: String, sub: String? = nil, trailing: String? = nil,
-                         mark: String? = nil, dim: Bool = false, act: @escaping () -> Void) -> some View {
+                         mark: String? = nil, image: String? = nil, dim: Bool = false,
+                         act: @escaping () -> Void) -> some View {
         Button(action: act) {
             HStack(spacing: DS.Space.s3) {
-                if let mark { AssetMark(name: mark, size: DS.Face.list) }
+                if let image {
+                    Image(image)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: DS.Face.list, height: DS.Face.list)
+                        .clipShape(Circle())
+                        .accessibilityHidden(true)
+                } else if let mark {
+                    AssetMark(name: mark, size: DS.Face.list)
+                }
                 VStack(alignment: .leading, spacing: 1) {
                     Text(verbatim: title).dsText(.body17).foregroundStyle(DS.textPrimary).lineLimit(1)
                     if let sub { Text(verbatim: sub).dsText(.subhead12).foregroundStyle(DS.textSecondary).lineLimit(1) }
@@ -667,14 +724,38 @@ struct MoveSentence: View {
 
     private var networkList: some View {
         VStack(alignment: .leading, spacing: 0) {
-            ForEach(Op.networks) { n in
+            ForEach(networksByWorth) { n in
                 let total = (heldBy[n.chainId] ?? []).compactMap(\.usd).reduce(0, +)
                 listRow(n.name, sub: n.isTest ? String(localized: "Test network · its coins have no value") : nil,
-                        trailing: total > 0 ? Self.money(total) : nil, dim: n == network) {
+                        trailing: total > 0 ? Self.money(total) : nil, image: Self.networkMark(n),
+                        dim: networkPicked && n == network) {
                     pick { switchNetwork(n) }
+                    if let next = afterNetwork {
+                        afterNetwork = nil
+                        withAnimation(DS.Motion.standard) { open = next; search = "" }
+                        focus = .search
+                    }
                 }
             }
         }
+    }
+
+    /// Each network's own mark, from the brand set the Wallet already draws.
+    static func networkMark(_ n: Op.Network) -> String? {
+        switch n.chainId {
+        case 8453: "brand-l2b-base"
+        case 1: "brand-eth"
+        case 4663: "brand-l2b-robinhood"
+        default: nil
+        }
+    }
+
+    /// Where you hold the most first; the test network last.
+    private var networksByWorth: [Op.Network] {
+        func worth(_ n: Op.Network) -> Double { (heldBy[n.chainId] ?? []).compactMap(\.usd).reduce(0, +) }
+        return Op.networks.enumerated()
+            .sorted { ($0.element.isTest ? 1 : 0, -worth($0.element), $0.offset) < ($1.element.isTest ? 1 : 0, -worth($1.element), $1.offset) }
+            .map(\.element)
     }
 
     private func pasteRow(_ put: @escaping (String) -> Void) -> some View {
@@ -712,6 +793,7 @@ struct MoveSentence: View {
     }
 
     private func switchNetwork(_ n: Op.Network) {
+        networkPicked = true
         guard n != network else { return }
         network = n
         with = nil
@@ -1056,26 +1138,15 @@ struct MoveSentence: View {
             for await (id, held) in group { found[id] = held }
         }
         heldBy = found
-        func worth(_ n: Op.Network) -> Double { (found[n.chainId] ?? []).compactMap(\.usd).reduce(0, +) }
-        // The most dollars; with none priced (test coins), the first network
-        // holding anything at all.
-        if items.isEmpty, with == nil {
-            if let best = Op.networks.max(by: { worth($0) < worth($1) }), worth(best) > 0 {
-                network = best
-            } else if let any = Op.networks.first(where: { !(found[$0.chainId] ?? []).isEmpty }) {
-                network = any
-            }
-        }
-        if with == nil { with = held.first }
-        // CoW settles on neither test network: there the sentence starts on Send.
-        if verb == .swap, items.isEmpty, !YourAccountSwap.supported(network) { verb = .send }
+        // Nothing is picked for you (§1438c): the network list leads with
+        // where you hold the most, and the sentence waits for your picks.
         listed = await Tokens.list(network)
     }
 
     private func readNetwork() async {
         let now = await Tokens.held(account, on: network)
         heldBy[network.chainId] = now
-        if let w = with { with = now.first { $0.id == w.id } ?? now.first } else { with = now.first }
+        if let w = with { with = now.first { $0.id == w.id } }
         listed = await Tokens.list(network)
     }
 
@@ -1180,6 +1251,7 @@ struct MoveSentence: View {
         if let swap = d.string(forKey: "moveSwapDraft"), !swap.isEmpty {
             let parts = swap.split(separator: "|").map(String.init)
             verb = .swap
+            networkPicked = true
             if parts.count > 1, let h = held.first(where: { $0.token.symbol == parts[1] }) { with = h }
             let buyName = parts.count > 2 ? parts[2] : (with?.token.symbol == "ETH" ? "USDC" : "ETH")
             buy = listed.first { $0.token.symbol == buyName && $0.onList }
@@ -1195,6 +1267,8 @@ struct MoveSentence: View {
     private func sendDraft() {
         guard let draft = UserDefaults.standard.string(forKey: "moveSendDraft"), !draft.isEmpty else { return }
         let parts = draft.split(separator: "|", maxSplits: 1).map(String.init)
+        networkPicked = true
+        if with == nil { with = held.first }
         amount = parts.first ?? ""
         to = parts.count > 1 ? parts[1] : ""
         NSLog("moveSendDraft: amount=%@ to=%@", amount, to)

@@ -66,20 +66,11 @@ enum YourAccountOp {
         bundlers: ["https://public.pimlico.io/v2/84532/rpc", "https://api.candide.dev/public/v3/84532"],
         dollar: "0x036CbD53842c5426634e7929541eC2318f3dCF7e", isTest: true)
 
-    /// The live networks, Base, Ethereum and Robinhood Chain (§1441), in every
-    /// build: each with send, receive and swap. Base Sepolia
-    /// only in a DEBUG build, compiled out of every shipped one (prd §1439a,
-    /// reverting §1439): a test network in the hands of the public confuses
-    /// more than it teaches, and a Sepolia-only public build would ship the
-    /// live networks dormant (§1435). Where it is picked, the sentence says
-    /// "test coins".
-    static var networks: [Network] {
-        #if DEBUG
-        [base, ethereum, robinhood, baseSepolia]
-        #else
-        [base, ethereum, robinhood]
-        #endif
-    }
+    /// The account's networks, the same in every build: Base, Ethereum and
+    /// Robinhood Chain (§1441), each with send, receive and swap. Base Sepolia
+    /// is in none, DEBUG included (prd §1441a, user: "we got rid of
+    /// sepolia"); its constant stays for the dry-run probe alone.
+    static let networks: [Network] = [base, ethereum, robinhood]
 
     struct Token: Equatable, Hashable, Sendable {
         let symbol: String
