@@ -67521,3 +67521,9 @@ Mock: the design canvas "Aztec experience".
 2. **The order is built on the phone** from CoW's quote (`YourAccountSwap`): the account as owner and receiver, the whole amount sold (the quote's amount plus its fee; CoW takes its fee from the surplus), at least 0.5% under the quote back, thirty minutes to fill. Its id is computed here with §1285's `CowOrder.digest`; CoW's API must answer with that id, or nothing is signed. Measured 2026-10-19 on Base: the id CoW answered equals the one computed here, byte for byte, and `your-account-selftest.sh` pins it.
 3. **One operation pre-signs it**: wrap exactly the ETH sold (CoW trades WETH), approve exactly the amount sold to CoW's vault relayer (never an unlimited approval), `setPreSignature(uid, true)` on the settlement contract, and the key change every operation carries. CoW's solvers then fill it; the page says "Swapped" when CoW reports it filled within two minutes, else "Order placed".
 4. **Hosts**: `api.cow.fi` under "Your account" in `NetworkReach`; the quote and the order carry the account's address and the order, nothing else.
+
+## §1431 — Swap, measured on Base mainnet (proves §1430) (user, 2026-10-19: "just do a smaller swap")
+
+1. From the Move page on the test account (`0xb91a…3416`): 0.000005 ETH for USDC, quoted ≈ 0.009135, at least 0.008956 after the re-quote at signing.
+2. One operation wrapped the ETH, approved exactly that WETH to CoW's vault relayer and pre-signed the order (nonce 4 → 5); CoW moved the order from "presignaturePending" to "open", and a solver filled it in about a minute: **0.011949 USDC delivered** (CoW's surplus over the quote), tx `0xf42d151d…549e07`.
+3. The order id CoW stored is the one this phone computed. ~$0.05 of ETH and USDC stays in the test account.

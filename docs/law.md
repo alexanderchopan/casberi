@@ -235,7 +235,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1569 of 1638 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1570 of 1639 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1806,6 +1806,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1428 — The Feed's quiet day is the day alone; your account's whole address heads Move; To shows an address end to end (exten…
 - §1429 — Your account, measured on Base mainnet (proves §1424 and §1427 with real money; Move stays DEBUG-only until the whole…
 - §1430 — Your account swaps through CoW: a pre-signed order this phone builds and CoW must name back (builds the canvas's Send…
+- §1431 — Swap, measured on Base mainnet (proves §1430)
 
 ## Dead rulings → what replaced them (generated)
 
