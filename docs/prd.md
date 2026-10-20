@@ -67675,3 +67675,12 @@ Mock: the design canvas "Aztec experience".
 6. **The sentence is the verbs' size** (`MoveSentence.size`, `heading28`). In a token's own units, the token stands beside the figure ("20 USDC"). In dollars it takes its own line ("$25 / of ETH").
 7. **Move says things in its own lines, never a toast.** A toast draws under the tray, so what is missing, what failed and "Address copied" appear in the sentence's line, or atop an open list, for a few seconds. The account set-up page says its outcome under its verb.
 8. Re-quoting at Swap was already the rule: `YourAccountChain.transact` asks Relay afresh for every swap at signing and checks each against its minimum.
+
+## §1443 — The toast draws above every sheet (user, 2026-10-20: "Do this task here: Show toasts above sheets, not under them")
+
+1. **A flash raised inside a sheet or tray is seen.** `ShellChrome.flash` set `chrome.toast`, and only `RootShell`'s own ZStack drew it. A SwiftUI sheet is presented above that tree, so every flash from a sheet drew under it (measured 2026-10-20 in the Move tray, §1442c). The toast now stands in its own clear window per scene (`Shell/ToastWindow.swift`).
+2. **That window sits above the app's window and its sheets, and below the privacy cover** (`.alert - 1` against `PrivacyCover`'s `.alert + 1`). It is shown and never key, so the keyboard and focus stay with the app's window.
+3. **It takes no touch of its own.** `hitTest` answers only inside the pill, and only while the pill carries an action such as Undo or Update. Measured on the simulator: Share on a thing sheet opened through a standing toast, and a tap on Update was delivered to the toast's view.
+4. **The pill is one view, `ToastPill`, inside `ToastLayer`.** The window draws it on the phone and the iPad. The window re-applies the person's mode and language, the two things the shell applies to its tree.
+5. **The Mac half (§1402): the Mac keeps the toast in the shell** (`ToastWindow.usesWindow` is false on Catalyst). A second UIWindow in a Catalyst scene is not measured. Whether a Mac sheet covers the toast is an open question, to be measured on the Mac before it changes.
+6. Move keeps saying its messages in its own lines (§1442c). That is the sentence's way, not a workaround.

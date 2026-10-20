@@ -235,7 +235,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1581 of 1650 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1582 of 1651 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1818,6 +1818,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1440 — Swaps go through Relay, one provider everywhere, proven by simulation before Face ID (supersedes §1430's CoW; keeps §…
 - §1441 — Robinhood Chain joins the account: three live networks, each with send, receive and swap [+1 sub-entries]
 - §1442 — Move is a tray, raised from its tab over wherever you are (amends §1422's place) [+3 sub-entries]
+- §1443 — The toast draws above every sheet
 
 ## Dead rulings → what replaced them (generated)
 

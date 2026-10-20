@@ -440,6 +440,7 @@ struct RootShell: View {
         .background(WindowSceneReader { scene in
             windowScene = scene
             applyMacWindowChrome(to: scene)
+            ToastWindow.install(on: scene, chrome: chrome)
         })
         // The app-language override, applied to the whole tree: reading the
         // observable store here means picking a language repaints every `Text`
@@ -2306,7 +2307,9 @@ struct RootShell: View {
                     DropGlow(active: dropTargetedURL || dropTargetedText)
                 }
 
-            if let toast = chrome.toast { toastView(toast) }
+            // The phone and the iPad draw the toast in its own window, above
+            // every sheet (`ToastWindow`, prd §1443); the Mac draws it here.
+            if !ToastWindow.usesWindow { ToastLayer(chrome: chrome) }
 
             // The capture flight (§1): a proxy card glides from the capture
             // point to the "All" chip, then it pulses once.
@@ -4658,75 +4661,8 @@ struct RootShell: View {
     }
     #endif
 
-    // MARK: - Toast (commit feedback — state lives in ShellChrome.flash)
+    // The toast is `ToastPill` / `ToastLayer` (Shell/ToastWindow.swift, prd §1443).
 
-    /// Transient chrome floating over content — it wears glass.
-    ///
-    /// The pill and its one action are concentric glass — a tinted prominent
-    /// capsule (the drop-capture Undo) riding inside the clear glass pill —
-    /// so they live in a `DSGlassContainer`: the container is what lets the
-    /// inner button lens against the SAME backdrop sample as the pill instead
-    /// of compositing as an unrelated glass layer stacked on top (2026-07-23,
-    /// the first real use of the container the design system already shipped).
-    private func toastView(_ text: String) -> some View {
-        DSGlassContainer(spacing: DS.Space.s2) {
-        HStack(spacing: DS.Space.s2) {
-            // The first thing ever gets the mark (§8). Once. The first-ever
-            // kept ask (composer delight, 2026-07-21) shares the treatment —
-            // both are "your first standing X with Casberi" moments.
-            if text == "Your first thing" || text.hasPrefix("Your first standing question") {
-                CasberiMark(size: 18)
-            } else if let mark = chrome.toastMark {
-                // A moment's toast wears the brand it's about (prd §384) —
-                // whose news this is, said before a word is read.
-                BridgeIcon(name: mark, size: DS.Face.badge, circular: true)
-            }
-            Text(DSProse.unorphaned(text))
-                .dsText(.body17)
-                .foregroundStyle(DS.textPrimary)
-            if let action = chrome.toastAction {
-                // The pane's one action reads as ITS interactive part —
-                // a tinted glass capsule riding the glass pill.
-                // DRAWN 28, TARGETED 44: the glass rides the label so it keeps
-                // the capsule's size, and the floor goes on after it.
-                Button(action: action.run) {
-                    Text(action.label)
-                        .dsText(.label12)
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, DS.Space.s3)
-                        .frame(minHeight: 28)
-                        .dsGlassProminent(tint: DS.pickInk, cornerRadius: DS.Radius.pill)
-                        .dsTapTarget(Capsule(style: .continuous))
-                }
-                .buttonStyle(PressSpring())
-            }
-        }
-        .padding(.horizontal, DS.Space.s4)
-        .padding(.vertical, DS.Space.s2)
-        .dsGlass(cornerRadius: DS.Radius.pill)
-        // It MATERIALIZES (2026-08-06). A toast is the one piece of chrome here
-        // that exists ONLY as an arrival — it has no resting state to return to,
-        // it appears because something just happened and then it's gone. The
-        // move-and-fade below still carries it up from the bottom edge; this is
-        // the glass itself forming rather than a finished pane cross-dissolving
-        // into place. Applied inside the container so the pill and its Undo
-        // capsule form together, as the one substance they already lens as.
-        .dsGlassMaterialize()
-        }
-        .padding(.bottom, 140)
-        // A replacing flash swaps identity — crossfade, never a stack (§12).
-        // The `.id` rides the container so the whole glass unit swaps as one,
-        // preserving the crossfade (a shared `glassEffectID` would morph the
-        // shapes instead — deliberately not done, the crossfade ruling stands).
-        .id(text)
-        .transition(.move(edge: .bottom).combined(with: .opacity))
-        // The toast floats ABOVE content in the shell ZStack. A plain outcome
-        // pill must let taps fall through to what's under it — only a toast
-        // carrying an action (the drop-capture Undo) stays interactive, so its
-        // button still works without the pill swallowing taps on content
-        // beneath it (perf/hit-test pass 2026-07-13).
-        .allowsHitTesting(chrome.toastAction != nil)
-    }
 }
 
 /// The §1 proxy card: KindGlyph + truncated title, gliding from above the
