@@ -222,13 +222,6 @@ struct MoveSentence: View {
             // on arrival covers the tab bar until it is swiped away (user,
             // 2026-10-19). A tap on the amount, or a token picked, raises it.
         }
-        .onChange(of: focus) { _, field in
-            // The To field left by the hand closes its list. A token list
-            // stays open with the keyboard down: its search is a row in it.
-            if field == nil, open == .to {
-                withAnimation(DS.Motion.standard) { open = nil }
-            }
-        }
     }
 
     // MARK: - The sentence
@@ -258,7 +251,7 @@ struct MoveSentence: View {
                 .padding(.bottom, DS.Space.s4)
             // What Add kept stands under the verbs, numbered, quieter than the
             // sentence being filled (§1442c, §1442f).
-            if !items.isEmpty, receipt == nil, verb != .swap || items.contains(where: { if case .send = $0 { true } else { false } }) {
+            if receipt == nil, !keptLines.filter(showsKept).isEmpty {
                 kept
                     .padding(.bottom, DS.Space.s4)
             }
@@ -298,19 +291,49 @@ struct MoveSentence: View {
                 }
                 row(String(localized: "on")) { FlowLayout(spacing: 7, lineSpacing: 0) { networkWord } }
             case .send:
-                // The amount is a line of its own, and can come first (§1442a).
-                // In dollars the token is a line of its own ("$25 / of ETH");
-                // in its own units it stands beside the figure ("20 USDC").
-                row(items.isEmpty ? nil : "\(items.count + 1)", ink: DS.textTertiary) {
-                    amountLine(trailing: nil)
+                // **THE SAME RECEIPT, GROUPED BY WHO IT GOES TO (§1442h, user:
+                // "send more than one token to a recipient"; "send multiple
+                // tokens to multiple recipients").** Each person's tokens,
+                // then "to <them>"; a little air between people.
+                let groups = sendGroups
+                ForEach(Array(groups.enumerated()), id: \.element.id) { n, group in
+                    VStack(alignment: .leading, spacing: DS.Space.s1) {
+                        ForEach(group.lines, id: \.self) { line in
+                            switch line {
+                            case .kept(let id): keptSellRow(id)
+                            case .current: currentSellRows
+                            }
+                        }
+                        row(String(localized: "to")) {
+                            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                                if group.hasCurrent {
+                                    toWord
+                                } else {
+                                    word(group.name ?? "", ink: DS.pickInk)
+                                }
+                                Spacer(minLength: 0)
+                                // One person and two lines: the sum is theirs.
+                                if groups.count == 1, group.lines.count > 1, let sum = dollars(of: group) {
+                                    Text(verbatim: Self.money(sum))
+                                        .dsText(.body17).foregroundStyle(DS.textPrimary).monospacedDigit()
+                                }
+                            }
+                        }
+                    }
+                    .padding(.top, n == 0 ? 0 : DS.Space.s3)
                 }
-                .contentShape(Rectangle())
-                .onTapGesture { if stage == nil { focus = .amount } }
-                if inDollars {
-                    row(String(localized: "of")) { withWord }
+                row(String(localized: "on")) {
+                    HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                        FlowLayout(spacing: 7, lineSpacing: 0) { networkWord }
+                        Spacer(minLength: 0)
+                        // Several people: the whole send's total closes it.
+                        if groups.count > 1, let total = soldDollarsTotal {
+                            Text(verbatim: Self.money(total))
+                                .dsText(.body17).foregroundStyle(DS.textPrimary).monospacedDigit()
+                        }
+                    }
                 }
-                row(String(localized: "to")) { toWord }
-                row(String(localized: "on")) { FlowLayout(spacing: 7, lineSpacing: 0) { networkWord } }
+                .padding(.top, groups.count > 1 ? DS.Space.s3 : 0)
             case .receive:
                 row(String(localized: "at")) {
                     Button { copy() } label: { word(YourAccount.short(account), ink: DS.pickInk) }
@@ -387,9 +410,16 @@ struct MoveSentence: View {
                 if open == which { open = nil } else {
                     open = which
                     search = ""
-                    // A token list opens with the keyboard down, so it has the
+                    // To opens on the whole book, the person above first
+                    // ("Same as above", §1442h): what the line carried is a
+                    // choice there, not a filter.
+                    if which == .to {
+                        to = ""
+                        resolved = nil
+                    }
+                    // Every list opens with the keyboard down, so it has the
                     // room to the foot; its search row raises the keys (§1442b).
-                    focus = which == .to ? .to : nil
+                    focus = nil
                 }
             }
             DSHaptic.selection()
@@ -411,11 +441,90 @@ struct MoveSentence: View {
         items.compactMap { if case .swap(let s) = $0 { s } else { nil } }
     }
 
+    private var keptSends: [Op.Payment] {
+        items.compactMap { if case .send(let p) = $0 { p } else { nil } }
+    }
+
+    /// The numbered kept lines show only the other verb's: this verb's are
+    /// the receipt's own lines.
+    private func showsKept(_ line: (id: String, words: String, ids: [UUID])) -> Bool {
+        switch verb {
+        case .swap: line.id.hasPrefix("to|")
+        case .send: line.id.hasPrefix("for|")
+        case .receive: true
+        }
+    }
+
     /// The kept swaps in order, the line being filled at its slot.
     private var sellOrder: [SellLine] {
         var lines = keptSwaps.map { SellLine.kept($0.id) }
         lines.insert(.current, at: min(slot, lines.count))
         return lines
+    }
+
+    /// One person's part of a send: their lines, in order, together.
+    struct SendGroup: Identifiable {
+        let id: String
+        var lines: [SellLine]
+        let address: String?
+        let name: String?
+        var hasCurrent: Bool
+    }
+
+    /// The send's lines, the one being filled at its slot, gathered into
+    /// runs that go to the same address (§1442h). The line being filled
+    /// joins the run before it when it goes to the same person; a new
+    /// person, or none yet, starts a group of its own.
+    private var sendGroups: [SendGroup] {
+        let sends = keptSends
+        var order = sends.map { SellLine.kept($0.id) }
+        order.insert(.current, at: min(slot, order.count))
+        var groups: [SendGroup] = []
+        for line in order {
+            let address: String?
+            let name: String?
+            switch line {
+            case .kept(let id):
+                guard let p = sends.first(where: { $0.id == id }) else { continue }
+                address = p.to.lowercased()
+                name = p.toName ?? YourAccount.short(p.to)
+            case .current:
+                address = resolved?.address.lowercased()
+                name = nil
+            }
+            if let last = groups.last, let address, last.address == address {
+                groups[groups.count - 1].lines.append(line)
+                if line == .current { groups[groups.count - 1].hasCurrent = true }
+            } else {
+                let key: String
+                switch line {
+                case .kept(let id): key = id.uuidString
+                case .current: key = "current"
+                }
+                groups.append(SendGroup(id: key, lines: [line], address: address, name: name, hasCurrent: line == .current))
+            }
+        }
+        return groups
+    }
+
+    private func dollars(of group: SendGroup) -> Double? {
+        let parts: [Double] = group.lines.compactMap { line in
+            switch line {
+            case .kept(let id): keptSends.first { $0.id == id }.flatMap(sentDollars)
+            case .current: currentDollars
+            }
+        }
+        let sum = parts.reduce(0, +)
+        return sum > 0 ? sum : nil
+    }
+
+    private func sentDollars(_ p: Op.Payment) -> Double? {
+        price(of: p.token).map { Op.dollars(p.amount, decimals: p.token.decimals, price: $0) }
+    }
+
+    /// How many people a send goes to, once it is more than one.
+    private var peopleCount: Int {
+        Set(sendGroups.compactMap(\.address)).count
     }
 
     private func price(of token: Op.Token) -> Double? {
@@ -431,9 +540,11 @@ struct MoveSentence: View {
         return Op.dollars(units, decimals: with.token.decimals, price: p)
     }
 
-    /// What the whole swap sells, in dollars: the receipt's total.
+    /// What the whole swap sells, or the whole send sends, in dollars: the
+    /// receipt's total.
     private var soldDollarsTotal: Double? {
-        let parts = keptSwaps.compactMap(soldDollars) + (currentDollars.map { [$0] } ?? [])
+        let kept = verb == .send ? keptSends.compactMap(sentDollars) : keptSwaps.compactMap(soldDollars)
+        let parts = kept + (currentDollars.map { [$0] } ?? [])
         let sum = parts.reduce(0, +)
         return sum > 0 ? sum : nil
     }
@@ -484,12 +595,17 @@ struct MoveSentence: View {
 
     /// A kept line: tap it to edit it in place, hold it to remove it.
     @ViewBuilder private func keptSellRow(_ id: UUID) -> some View {
-        if let s = keptSwaps.first(where: { $0.id == id }) {
+        let line: (amount: String, token: Op.Token, usd: Double?)? = {
+            if let s = keptSwaps.first(where: { $0.id == id }) { return (s.amount, s.sell, soldDollars(s)) }
+            if let p = keptSends.first(where: { $0.id == id }) { return (p.amount, p.token, sentDollars(p)) }
+            return nil
+        }()
+        if let s = line {
             row(nil) {
                 HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                    word(Self.figure(s.amount, decimals: s.sell.decimals) + " " + s.sell.symbol, ink: DS.pickInk)
+                    word(Self.figure(s.amount, decimals: s.token.decimals) + " " + s.token.symbol, ink: DS.pickInk)
                     Spacer(minLength: 0)
-                    if let d = soldDollars(s) {
+                    if let d = s.usd {
                         Text(verbatim: Self.money(d))
                             .dsText(.body17).foregroundStyle(DS.textSecondary).monospacedDigit()
                     }
@@ -511,8 +627,13 @@ struct MoveSentence: View {
     /// A kept line tapped: it becomes the line being filled, where it stands;
     /// a finished line that was being filled is kept in its place.
     private func edit(_ id: UUID) {
-        guard stage == nil, let at = items.firstIndex(where: { $0.id == id }),
-              case .swap(let s) = items[at] else { return }
+        guard stage == nil, let at = items.firstIndex(where: { $0.id == id }) else { return }
+        let token: Op.Token, units: String
+        switch items[at] {
+        case .swap(let s): token = s.sell; units = s.amount
+        case .send(let p): token = p.token; units = p.amount
+        }
+        let sent: Op.Payment? = { if case .send(let p) = items[at] { return p } else { return nil } }()
         withAnimation(DS.Motion.standard) {
             var index = at
             if let pending = pendingItem {
@@ -522,9 +643,14 @@ struct MoveSentence: View {
             }
             items.remove(at: index)
             slot = index
-            if let h = held.first(where: { $0.token == s.sell }) { with = h }
+            if let h = held.first(where: { $0.token == token }) { with = h }
             inDollars = false
-            amount = Op.display(s.amount, decimals: s.sell.decimals, places: s.sell.decimals)
+            amount = Op.display(units, decimals: token.decimals, places: token.decimals)
+            // A sent line carries its person back into the sentence.
+            if let sent {
+                to = sent.toName ?? sent.to
+                resolved = Recipient(address: sent.to, name: sent.toName, imitates: nil)
+            }
             open = nil
         }
         DSHaptic.selection()
@@ -638,23 +764,10 @@ struct MoveSentence: View {
         verb == .swap && buy != nil && units != nil && !over && quote == nil && quoteNote == nil
     }
 
-    @ViewBuilder private var toWord: some View {
-        if open == .to {
-            TextField(String(localized: "someone"), text: $to)
-                .focused($focus, equals: .to)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-                .submitLabel(.done)
-                .onSubmit { withAnimation(DS.Motion.standard) { open = nil } }
-                .dsText(Self.size)
-                .foregroundStyle(DS.pickInk)
-                .frame(minWidth: 120)
-                .fixedSize()
-                .accessibilityLabel(Text("Who it goes to"))
-        } else {
-            let shown = resolved?.name ?? (resolved.map { YourAccount.short($0.address) })
-                ?? (to.isEmpty ? String(localized: "someone") : to)
-            blank(shown, ink: resolved?.imitates != nil ? DS.attentionInk : resolved == nil ? DS.textTertiary : DS.pickInk,
+    private var toWord: some View {
+        let shown = resolved?.name ?? (resolved.map { YourAccount.short($0.address) })
+            ?? (to.isEmpty ? String(localized: "address") : to)
+        return blank(shown, ink: resolved?.imitates != nil ? DS.attentionInk : resolved == nil ? DS.textTertiary : DS.pickInk,
                   .to, label: Text("To \(shown), change"))
                 // A look-alike shakes once: a refusal you feel.
                 .keyframeAnimator(initialValue: 0.0, trigger: shake) { content, x in
@@ -668,7 +781,6 @@ struct MoveSentence: View {
                         LinearKeyframe(0, duration: 0.06)
                     }
                 }
-        }
     }
 
     private var networkWord: some View {
@@ -683,21 +795,35 @@ struct MoveSentence: View {
 
     /// A token list's search, its first row: the sentence's word never turns
     /// into a field, so the line never reflows (§1442b).
-    private var searchRow: some View {
+    private func searchRow(for which: Blank) -> some View {
         HStack(spacing: DS.Space.s3) {
             Image(systemName: "magnifyingglass")
                 .dsGlyph(.body, weight: .medium)
                 .foregroundStyle(DS.textSecondary)
                 .frame(width: DS.Face.list)
                 .accessibilityHidden(true)
-            TextField(String(localized: "Search"), text: $search)
-                .focused($focus, equals: .search)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-                .submitLabel(.done)
-                .dsText(.body17)
-                .foregroundStyle(DS.textPrimary)
-                .task(id: search) { await lookUpPasted() }
+            if which == .to {
+                // To opens like a token list (§1442b, §1442h): keyboard down,
+                // the book in reach, and this row for a name, an ENS name or
+                // an address; Done takes what resolved.
+                TextField(String(localized: "Name, ENS or address"), text: $to)
+                    .focused($focus, equals: .to)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .submitLabel(.done)
+                    .onSubmit { if resolved != nil, resolved?.imitates == nil { pick {} } }
+                    .dsText(.body17)
+                    .foregroundStyle(DS.textPrimary)
+            } else {
+                TextField(String(localized: "Search"), text: $search)
+                    .focused($focus, equals: .search)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .submitLabel(.done)
+                    .dsText(.body17)
+                    .foregroundStyle(DS.textPrimary)
+                    .task(id: search) { await lookUpPasted() }
+            }
         }
         .frame(minHeight: 52)
         .padding(.horizontal, DS.Space.s4)
@@ -716,7 +842,7 @@ struct MoveSentence: View {
     private func space(room: CGFloat) -> some View {
         ZStack(alignment: .topLeading) {
             if let open {
-                choices(room: choicesRoom(room), searches: open == .with || open == .buy) {
+                choices(room: choicesRoom(room), searches: open == .with || open == .buy || open == .to, which: open) {
                     ZStack(alignment: .topLeading) {
                         Group {
                             switch open {
@@ -753,7 +879,7 @@ struct MoveSentence: View {
     /// bare. As tall as its rows, up to the room under the sentence, then
     /// they scroll inside it. It grows downward only: the sentence above
     /// never moves (§1442b). A token list leads with its search.
-    private func choices<Rows: View>(room: CGFloat, searches: Bool,
+    private func choices<Rows: View>(room: CGFloat, searches: Bool, which: Blank,
                                      @ViewBuilder _ rows: () -> Rows) -> some View {
         let head: CGFloat = searches ? 52 : 0
         return VStack(alignment: .leading, spacing: 0) {
@@ -762,7 +888,7 @@ struct MoveSentence: View {
                     .padding(.horizontal, DS.Space.s4)
                     .padding(.top, DS.Space.s3)
             }
-            if searches { searchRow }
+            if searches { searchRow(for: which) }
             ScrollView {
                 rows()
                     .padding(.vertical, DS.Space.s2)
@@ -828,8 +954,11 @@ struct MoveSentence: View {
             VStack(alignment: .leading, spacing: DS.Space.s6) {
                 // Swapping, the other unit is the receipt's column; the fee is
                 // the whole swap's (§1442g).
-                let print = verb == .swap ? [feeTotal].compactMap { $0 }
-                    : [otherUnit(with).map { "≈ " + $0 }, feeLine(with)].compactMap { $0 }
+                let print: [String] = switch verb {
+                case .swap: [feeTotal].compactMap { $0 }
+                case .send: peopleCount > 1 ? [String(localized: "to \(peopleCount) people")] : []
+                case .receive: []
+                }
                 if !print.isEmpty {
                     Text(verbatim: print.joined(separator: " · "))
                         .dsText(.body17).foregroundStyle(DS.textSecondary)
@@ -1082,13 +1211,23 @@ struct MoveSentence: View {
         let book = AddressBook.shared.all.filter { e in
             ENS.isHexAddress(e.address) && (q.isEmpty || e.name.lowercased().contains(q) || e.address.lowercased().hasPrefix(q))
         }
+        // The person the line above goes to leads, said so (§1442h).
+        let above = keptSends.last.flatMap { p in WalletWatch.sameAddress(p.to, resolved?.address ?? "") ? nil : p }
         return VStack(alignment: .leading, spacing: 0) {
+            if let above, q.isEmpty {
+                listRow(above.toName ?? YourAccount.short(above.to), sub: String(localized: "Same as above"),
+                        mark: above.toName ?? "") {
+                    to = above.toName ?? above.to
+                    resolved = Recipient(address: above.to, name: above.toName, imitates: nil)
+                    pick {}
+                }
+            }
             if let r = resolved, r.imitates == nil, !book.contains(where: { WalletWatch.sameAddress($0.address, r.address) }) {
                 listRow(r.name ?? YourAccount.short(r.address), sub: r.name == nil ? nil : YourAccount.short(r.address)) {
                     pick {}
                 }
             }
-            ForEach(Array(book.prefix(20)), id: \.address) { e in
+            ForEach(Array(book.filter { e in above.map { !(q.isEmpty && WalletWatch.sameAddress($0.to, e.address)) } ?? true }.prefix(20)), id: \.address) { e in
                 listRow(e.name, sub: YourAccount.short(e.address), mark: e.name) {
                     to = e.name
                     resolved = Recipient(address: EIP55.checksum(e.address), name: e.name, imitates: nil)
@@ -1228,7 +1367,7 @@ struct MoveSentence: View {
 
     private var kept: some View {
         VStack(alignment: .leading, spacing: 0) {
-            ForEach(Array(keptLines.filter { verb != .swap || $0.id.hasPrefix("to|") }.enumerated()), id: \.element.id) { n, line in
+            ForEach(Array(keptLines.filter(showsKept).enumerated()), id: \.element.id) { n, line in
                 row("\(n + 1)", ink: DS.textTertiary) {
                     Text(verbatim: line.words)
                         .dsText(.heading17)
@@ -1431,9 +1570,15 @@ struct MoveSentence: View {
         // network; it moves to the next token with something left.
         amount = ""
         quote = nil
+        // The next line takes a token with something left that this swap
+        // has not sold, or this person has not been sent (§1442h).
+        let goingTo = resolved?.address
         if let next = held.first(where: { h in
             h.id != with?.id && left(h) != "0" && h.token != buy?.token && !items.contains { item in
-                if case .swap(let s) = item { return s.sell == h.token } else { return false }
+                switch item {
+                case .swap(let s): s.sell == h.token
+                case .send(let p): p.token == h.token && goingTo.map { WalletWatch.sameAddress($0, p.to) } == true
+                }
             }
         }) {
             with = next

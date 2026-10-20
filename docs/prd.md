@@ -67718,3 +67718,11 @@ Mock: the design canvas "Aztec experience".
 4. **The slider and the $ · token switch share one row under the sentence**, working on the line being filled. Swapping, the small print is the whole swap's fee alone; the other unit is the column's.
 5. The total stays pink: it is the swap's result. Locked by a kept swap, a tap on it says "One token for the whole swap".
 6. The mock underlined the line being filled. Nothing draws a line (design law), so its grey 0 and pink token mark it.
+
+### §1442h — Send is the same receipt, grouped by who it goes to (amends §1438's send, §1442g) (user, 2026-10-20: "lets move to send and apply our learnings so far to it. user needs to be able to do 1) send more than one token to a recipient, 2) send multiple tokens to multiple recipients"; "on 'm' don't say to 'someone' just say to 'address'")
+
+1. **A send is a list of tokens, and one "to <person>" line closes each person's group**, with a little air between groups. One person and two lines: the sum stands on their line. Several people: the whole send's total stands on the "on" line, and the small print says "to N people".
+2. **One Add.** It starts a new line for the same person, the common case, with the next token that person has not been sent. **To send to someone else, tap the new line's "to" word:** it empties to "address" and splits the line into a group of its own; the whole book opens, the person above first, said as "Same as above"; picking them merges the line back.
+3. **The unfilled recipient is "address"**, never "someone" (user).
+4. **To opens like a token list (§1442b): keyboard down, a search row inside it** ("Name, ENS or address"), the book under it, Paste last. The sentence's "to" word never turns into a field. Done takes what resolved. The first tap used to open and shut the list because the keyboard swapped mid-tap; opening with the keyboard down ends that.
+5. A kept sent line is tapped to edit in place and carries its person back into the sentence; held, it offers Remove. The slider and the $ · token switch work on the line being filled. The look-alike check (§1438b) runs on every recipient.

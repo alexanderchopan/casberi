@@ -5121,6 +5121,34 @@
         }
       }
     },
+    "Name, ENS or address" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Nombre, ENS o dirección"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "名前、ENS、またはアドレス"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이름, ENS 또는 주소"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "名字、ENS 或地址"
+          }
+        }
+      }
+    },
     "No dollar price for %@" : {
       "localizations" : {
         "es" : {
@@ -5313,6 +5341,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "由 Relay 提供支持"
+          }
+        }
+      }
+    },
+    "Same as above" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Igual que arriba"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "上と同じ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "위와 같음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "同上"
           }
         }
       }
@@ -20109,6 +20165,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "至 %@"
+          }
+        }
+      }
+    },
+    "to %lld people" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "a %lld personas"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld 人へ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld명에게"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "发给 %lld 人"
           }
         }
       }
