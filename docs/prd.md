@@ -67585,3 +67585,11 @@ Mock: the design canvas "Aztec experience".
 1. **Swap · Send · Receive is the first line**, `heading28`, the picked verb bright and the other two grey, each a tap. The sentence under it starts with the amount: "0.004 USDC / for ≈ 12.1 AERO / on Base." The verb is no longer a blank with a list.
 2. **Move raises no keyboard on its own.** It is a page, a tab, and a keyboard raised on arrival covered the tab bar until it was swiped away. The keypad comes up when the amount is tapped or a token is picked.
 
+
+### §1438b — The sentence answers the hand: a pick lands, digits roll, the sentence becomes the receipt (builds §1438; the 2026-10-19 delight canvas, all but the QR) (user, 2026-10-19: "do all except the qr")
+
+1. **A pick lands.** A tapped token or name rises into its blank from the list under it while the list sinks away (`DS.Motion.standard`, a `snap`). Lists rise into the space and sink out of it.
+2. **Digits roll.** Every figure in the sentence wears `numericText`: the quote landing, and the amount under the slider (drawn over the field when it is not being typed in, so the field still takes the tap). The slider's thumb grows under the finger; each quarter ticks, all of it lands with a `snap`.
+3. **The sentence becomes the receipt — no toast.** The verb turns past tense ("Sent", "Swapped", "Signed 2 in one transaction"), a filled swap says what CoW actually paid out (`executedBuyAmount`, `YourAccountChain.orderState`) and how it went — "Filled in 41 seconds · 0.2 AERO more than quoted" when the solvers found more — with "View on Basescan" and **Done**. A landed transaction rains once over the Wallet (`ShellChrome.rain`). Measured: a test-ETH send on Base Sepolia from the simulator, 2026-10-19.
+4. **The small ones.** "of 0.007948" is a door: a tap spends all of it. A swap's fee under a cent says "fee under a cent". A pasted address in your book becomes its name with a `snap`; one imitating a name you know turns orange and shakes once, with the failure haptic. While CoW prices, the For word breathes. With nothing anywhere, the sentence says "Nothing to send yet." and "Receive something first" opens Receive, its verb pink.
+5. **Not built: the QR on Receive** (user's call).

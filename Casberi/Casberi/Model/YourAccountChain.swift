@@ -372,9 +372,16 @@ enum YourAccountChain {
 
     /// Where a placed order stands, CoW's word.
     static func swapStatus(_ net: Network, uid: [UInt8]) async -> String? {
+        await orderState(net, uid: uid)?.status
+    }
+
+    /// CoW's word on an order and, once filled, what it actually paid out
+    /// (`executedBuyAmount`, base units) — the receipt's real figure (§1438b).
+    static func orderState(_ net: Network, uid: [UInt8]) async -> (status: String?, bought: String?)? {
         guard let url = cowURL(net, "orders/" + SafeABI.hex(uid)),
               let root = await cow(url, body: nil).json as? [String: Any] else { return nil }
-        return root["status"] as? String
+        let bought = (root["executedBuyAmount"] as? String).flatMap { $0.allSatisfy(\.isNumber) && $0 != "0" ? $0 : nil }
+        return (root["status"] as? String, bought)
     }
 
     /// A swap the page describes: what is sold, for what, on one network.
@@ -411,6 +418,10 @@ enum YourAccountChain {
         /// CoW's last word on each order, in the swaps' order: "fulfilled",
         /// or still "open".
         let orders: [String?]
+        /// What each order actually paid out, once filled (base units).
+        var bought: [String?] = []
+        /// From the operation landing to the last order filling.
+        var filledIn: TimeInterval? = nil
     }
 
     /// **EVERY SEND AND SWAP IN ONE OPERATION (prd §1436).** Each swap is
@@ -480,14 +491,20 @@ enum YourAccountChain {
             return Transacted(sent: sent, orders: placed.map { _ in nil })
         }
         var last: [String?] = placed.map { _ in nil }
+        var bought: [String?] = placed.map { _ in nil }
+        let landedAt = Date()
         for _ in 0..<40 {
             for (i, p) in placed.enumerated() where !Self.settled(last[i]) {
-                last[i] = await swapStatus(net, uid: p.uid)
+                let state = await orderState(net, uid: p.uid)
+                last[i] = state?.status
+                bought[i] = state?.bought
             }
             if last.allSatisfy(Self.settled) { break }
             try await Task.sleep(nanoseconds: 3_000_000_000)
         }
-        return Transacted(sent: sent, orders: last)
+        let filled = last.allSatisfy { $0 == "fulfilled" }
+        return Transacted(sent: sent, orders: last, bought: bought,
+                          filledIn: filled ? Date().timeIntervalSince(landedAt) : nil)
     }
 
     private static func settled(_ status: String?) -> Bool {

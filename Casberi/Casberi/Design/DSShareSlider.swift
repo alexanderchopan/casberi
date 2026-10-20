@@ -11,6 +11,8 @@ import SwiftUI
 struct DSShareSlider: View {
     @Binding var percent: Int
     var enabled = true
+    /// The thumb grows under the finger (§1438b).
+    @State private var holding = false
 
     private static let notches = [0, 25, 50, 75, 100]
 
@@ -30,9 +32,10 @@ struct DSShareSlider: View {
                 Capsule().fill(enabled ? DS.pickInk : DS.textTertiary).frame(width: x, height: 6)
                 Circle()
                     .fill(enabled ? Color.white : DS.textTertiary)
-                    .frame(width: 28, height: 28)
-                    .shadow(color: .black.opacity(0.4), radius: 4, y: 2)
-                    .offset(x: x - 14)
+                    .frame(width: holding ? 40 : 28, height: holding ? 40 : 28)
+                    .shadow(color: .black.opacity(holding ? 0.55 : 0.4), radius: holding ? 8 : 4, y: 2)
+                    .offset(x: x - (holding ? 20 : 14))
+                    .animation(DS.Motion.standard, value: holding)
             }
             .frame(height: 44)
             .contentShape(Rectangle())
@@ -40,13 +43,16 @@ struct DSShareSlider: View {
                 DragGesture(minimumDistance: 0)
                     .onChanged { value in
                         guard enabled else { return }
+                        if !holding { holding = true }
                         var p = Int((value.location.x / width * 100).rounded())
                         p = min(max(p, 0), 100)
                         if let near = Self.notches.first(where: { abs($0 - p) <= 3 }) { p = near }
                         guard p != percent else { return }
-                        if Self.notches.contains(p) { DSHaptic.selection() }
-                        percent = p
+                        // A quarter ticks; all of it lands.
+                        if p == 100 { DSHaptic.snap() } else if Self.notches.contains(p) { DSHaptic.selection() }
+                        withAnimation(.snappy(duration: 0.18)) { percent = p }
                     }
+                    .onEnded { _ in holding = false }
             )
         }
         .frame(height: 44)

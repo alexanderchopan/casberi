@@ -60,7 +60,20 @@ struct MoveSentence: View {
     @State private var quote: YourAccountSwap.Quote?
     @State private var quoteNote: String?
     @State private var stage: Chain.Stage?
+    /// What a signed transaction became, said in the sentence's place (§1438b).
+    @State private var receipt: Receipt?
+    /// Bumped to shake the To word once: an address that imitates a book entry.
+    @State private var shake = 0
     @FocusState private var focus: Field?
+
+    /// The sentence in the past tense, and how it went.
+    struct Receipt: Equatable {
+        let past: String
+        let lines: [String]
+        let detail: String
+        var link: URL? = nil
+        var linkName: String? = nil
+    }
     #if DEBUG
     @State private var drafted = false
     #endif
@@ -68,6 +81,11 @@ struct MoveSentence: View {
     // MARK: - What the sentence says
 
     private var held: [Tokens.Held] { heldBy[network.chainId] ?? [] }
+
+    /// Read, and nothing anywhere: there is nothing to spend yet.
+    private var emptyEverywhere: Bool {
+        !heldBy.isEmpty && heldBy.values.allSatisfy(\.isEmpty)
+    }
 
     /// What is left of a holding once the transaction's earlier lines are
     /// taken from it.
@@ -153,6 +171,16 @@ struct MoveSentence: View {
         VStack(alignment: .leading, spacing: 0) {
             verbs
                 .padding(.bottom, DS.Space.s3)
+            if let receipt {
+                receiptLines(receipt)
+            } else if emptyEverywhere, verb != .receive {
+                FlowLayout(spacing: 10, lineSpacing: 0) {
+                    ForEach(Array((verb == .swap ? String(localized: "Nothing to swap yet.") : String(localized: "Nothing to send yet."))
+                        .split(separator: " ").enumerated()), id: \.offset) { _, w in
+                        word(String(w), ink: DS.textSecondary)
+                    }
+                }
+            } else {
             switch verb {
             case .swap, .send:
                 FlowLayout(spacing: 10, lineSpacing: 0) {
@@ -189,12 +217,40 @@ struct MoveSentence: View {
                     }
                 }
             }
+            }
         }
         .animation(DS.Motion.standard, value: verb)
+        .animation(DS.Motion.standard, value: receipt)
+    }
+
+    /// "Swapped 0.004 USDC / for 12.3 AERO / on Base." — the verb rolls to the
+    /// past, the ≈ resolves to what was paid out.
+    private func receiptLines(_ r: Receipt) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            FlowLayout(spacing: 10, lineSpacing: 0) {
+                word(r.past, ink: DS.textSecondary)
+                if let first = r.lines.first { word(first, ink: DS.textPrimary) }
+            }
+            ForEach(Array(r.lines.dropFirst().enumerated()), id: \.offset) { _, line in
+                FlowLayout(spacing: 10, lineSpacing: 0) {
+                    ForEach(Array(line.split(separator: " ").enumerated()), id: \.offset) { _, w in
+                        word(String(w), ink: DS.textPrimary)
+                    }
+                }
+            }
+        }
+        .transition(.opacity.combined(with: .offset(y: 8)))
     }
 
     private func word(_ text: String, ink: Color) -> some View {
-        Text(verbatim: text).dsText(.heading40).foregroundStyle(ink).fixedSize()
+        Text(verbatim: text)
+            .dsText(.heading40)
+            .foregroundStyle(ink)
+            // Digits roll as a figure changes: the quote landing, a slider
+            // drag — tabular, so the line holds still while they do.
+            .monospacedDigit()
+            .contentTransition(.numericText())
+            .fixedSize()
     }
 
     /// A word that opens its choices under the sentence.
@@ -220,6 +276,8 @@ struct MoveSentence: View {
         .buttonStyle(RowPress())
         .disabled(stage != nil)
         .accessibilityLabel(label)
+        // A pick rises into its blank from the list under it (§1438b).
+        .transition(.asymmetric(insertion: .offset(y: 28).combined(with: .opacity), removal: .opacity))
     }
 
     /// The three verbs on their own line, the picked one bright (user:
@@ -229,16 +287,18 @@ struct MoveSentence: View {
         HStack(alignment: .firstTextBaseline, spacing: DS.Space.s3) {
             ForEach(Verb.allCases, id: \.self) { v in
                 Button {
-                    guard v != verb else { return }
+                    guard v != verb || receipt != nil else { return }
                     withAnimation(DS.Motion.standard) {
                         verb = v
                         open = nil
+                        receipt = nil
                     }
                     DSHaptic.selection()
                 } label: {
                     Text(verbatim: title(v))
                         .dsText(.heading28)
-                        .foregroundStyle(v == verb ? DS.textPrimary : DS.textTertiary)
+                        .foregroundStyle(v == verb ? DS.textPrimary
+                                         : v == .receive && emptyEverywhere ? DS.pickInk : DS.textTertiary)
                 }
                 .buttonStyle(RowPress())
                 .disabled(stage != nil)
@@ -257,11 +317,25 @@ struct MoveSentence: View {
     }
 
     private var amountField: some View {
-        TextField("0", text: $amount)
+        let typing = focus == .amount
+        return TextField("0", text: $amount)
             .keyboardType(.decimalPad)
             .focused($focus, equals: .amount)
             .dsText(.heading40)
-            .foregroundStyle(DS.textPrimary)
+            // Not typing, the figure is drawn over the field so its digits
+            // roll as the slider moves (§1438b); the field still takes the tap.
+            .foregroundStyle(typing || amount.isEmpty ? DS.textPrimary : .clear)
+            .overlay(alignment: .leading) {
+                if !typing, !amount.isEmpty {
+                    Text(verbatim: amount)
+                        .dsText(.heading40)
+                        .foregroundStyle(DS.textPrimary)
+                        .monospacedDigit()
+                        .contentTransition(.numericText())
+                        .fixedSize()
+                        .allowsHitTesting(false)
+                }
+            }
             .fixedSize()
             .disabled(stage != nil || with == nil)
             .accessibilityLabel(Text(inDollars ? "Amount in dollars" : "Amount"))
@@ -282,10 +356,21 @@ struct MoveSentence: View {
             searchField(String(localized: "a token"))
         } else if let buy {
             let back = quote.map { "≈ " + Op.spoken($0.buyAmount, decimals: buy.token.decimals) + " " }
-            blank((back ?? "") + buy.token.symbol, ink: DS.textPrimary, .buy, label: Text("For \(buy.token.symbol), change"))
+            let word = blank((back ?? "") + buy.token.symbol, ink: DS.textPrimary, .buy, label: Text("For \(buy.token.symbol), change"))
+            if pricing {
+                // While CoW thinks, the word breathes: working, not stuck.
+                word.phaseAnimator([1.0, 0.4]) { content, phase in content.opacity(phase) } animation: { _ in .easeInOut(duration: 0.9) }
+            } else {
+                word
+            }
         } else {
             blank(String(localized: "a token"), ink: DS.pickInk, .buy, label: Text("Pick what you want"))
         }
+    }
+
+    /// A swap is being priced: everything is there but CoW's answer.
+    private var pricing: Bool {
+        verb == .swap && buy != nil && units != nil && quote == nil && quoteNote == nil
     }
 
     @ViewBuilder private var toWord: some View {
@@ -304,7 +389,20 @@ struct MoveSentence: View {
         } else {
             let shown = resolved?.name ?? (resolved.map { YourAccount.short($0.address) })
                 ?? (to.isEmpty ? String(localized: "someone") : to)
-            blank(shown, ink: resolved == nil ? DS.pickInk : DS.textPrimary, .to, label: Text("To \(shown), change"))
+            blank(shown, ink: resolved?.imitates != nil ? DS.attentionInk : resolved == nil ? DS.pickInk : DS.textPrimary,
+                  .to, label: Text("To \(shown), change"))
+                // A look-alike shakes once: a refusal you feel.
+                .keyframeAnimator(initialValue: 0.0, trigger: shake) { content, x in
+                    content.offset(x: x)
+                } keyframes: { _ in
+                    KeyframeTrack {
+                        LinearKeyframe(-10, duration: 0.06)
+                        LinearKeyframe(10, duration: 0.08)
+                        LinearKeyframe(-6, duration: 0.08)
+                        LinearKeyframe(6, duration: 0.08)
+                        LinearKeyframe(0, duration: 0.06)
+                    }
+                }
         }
     }
 
@@ -327,19 +425,45 @@ struct MoveSentence: View {
 
     // MARK: - The space under it
 
-    @ViewBuilder private var space: some View {
-        switch open {
-        case .with: withList
-        case .buy: buyList
-        case .to: toList
-        case .network: networkList
-        case nil: line
+    private var space: some View {
+        Group {
+            switch open {
+            case .with: withList
+            case .buy: buyList
+            case .to: toList
+            case .network: networkList
+            case nil: line
+            }
         }
+        .id(open)
+        // A list rises into the space and sinks away as its pick lands.
+        .transition(.asymmetric(insertion: .offset(y: 24).combined(with: .opacity),
+                                removal: .offset(y: 40).combined(with: .opacity)))
     }
 
     /// The other unit (tap to type in it), what you have, the fee.
     @ViewBuilder private var line: some View {
-        if verb == .receive {
+        if let receipt {
+            VStack(alignment: .leading, spacing: DS.Space.s2) {
+                if !receipt.detail.isEmpty {
+                    Text(verbatim: receipt.detail).dsText(.body17).foregroundStyle(DS.textSecondary)
+                }
+                if let link = receipt.link, let name = receipt.linkName {
+                    Button { openURL(link) } label: {
+                        Text("View on \(name)").dsText(.body17).foregroundStyle(DS.pickInk).frame(minHeight: 44)
+                    }
+                    .buttonStyle(RowPress())
+                }
+            }
+        } else if emptyEverywhere, verb != .receive {
+            Button {
+                withAnimation(DS.Motion.standard) { verb = .receive }
+                DSHaptic.selection()
+            } label: {
+                Text("Receive something first").dsText(.body17).foregroundStyle(DS.pickInk).frame(minHeight: 44)
+            }
+            .buttonStyle(RowPress())
+        } else if verb == .receive {
             VStack(alignment: .leading, spacing: DS.Space.s3) {
                 Text(verbatim: account)
                     .dsText(.mono12)
@@ -372,7 +496,18 @@ struct MoveSentence: View {
                     .accessibilityHint(Text(inDollars ? "Type in \(with.token.symbol) instead" : "Type in dollars instead"))
                     Text(verbatim: " · ").dsText(.body17).foregroundStyle(DS.textSecondary)
                 }
-                Text(verbatim: restOfLine(with)).dsText(.body17).foregroundStyle(DS.textSecondary)
+                // What you have is a door: a tap spends all of it.
+                Button {
+                    shareBinding(with).wrappedValue = 100
+                    DSHaptic.snap()
+                } label: {
+                    Text(verbatim: haveLine(with)).dsText(.body17).foregroundStyle(DS.textSecondary)
+                }
+                .buttonStyle(RowPress())
+                .accessibilityHint(Text("Fills in all of it"))
+                if let fee = feeLine(with) {
+                    Text(verbatim: " · " + fee).dsText(.body17).foregroundStyle(DS.textSecondary)
+                }
             }
             .fixedSize(horizontal: false, vertical: true)
         } else if heldBy.isEmpty {
@@ -402,15 +537,20 @@ struct MoveSentence: View {
         return Self.money(Op.dollars(units ?? "0", decimals: h.token.decimals, price: price))
     }
 
-    private func restOfLine(_ h: Tokens.Held) -> String {
+    private func haveLine(_ h: Tokens.Held) -> String {
         let have = inDollars && h.price != nil
             ? Self.money(Op.dollars(left(h), decimals: h.token.decimals, price: h.price!))
             : Op.spoken(left(h), decimals: h.token.decimals)
-        var parts = [String(localized: "of \(have)")]
-        if verb == .swap, let quote {
-            parts.append(String(localized: "fee ≈ \(Op.spoken(quote.fee, decimals: h.token.decimals)) \(h.token.symbol)"))
+        return String(localized: "of \(have)")
+    }
+
+    /// A swap's fee; under a cent it says so rather than a string of zeros.
+    private func feeLine(_ h: Tokens.Held) -> String? {
+        guard verb == .swap, let quote else { return nil }
+        if let price = h.price, Op.dollars(quote.fee, decimals: h.token.decimals, price: price) < 0.01 {
+            return String(localized: "fee under a cent")
         }
-        return parts.joined(separator: " · ")
+        return String(localized: "fee ≈ \(Op.spoken(quote.fee, decimals: h.token.decimals)) \(h.token.symbol)")
     }
 
     private func flipUnit(_ h: Tokens.Held) {
@@ -552,7 +692,7 @@ struct MoveSentence: View {
             open = nil
         }
         search = ""
-        DSHaptic.selection()
+        DSHaptic.snap()
         if focus == .search || focus == .to { focus = nil }
     }
 
@@ -644,9 +784,21 @@ struct MoveSentence: View {
 
     private var foot: some View {
         VStack(spacing: DS.Space.s2) {
-            if verb != .receive, open == nil, let with {
+            if verb != .receive, open == nil, receipt == nil, let with {
                 DSShareSlider(percent: shareBinding(with), enabled: stage == nil)
             }
+            if receipt != nil {
+                HStack {
+                    Button {
+                        withAnimation(DS.Motion.standard) { receipt = nil }
+                        DSHaptic.selection()
+                    } label: {
+                        Text("Done").dsText(.heading28).foregroundStyle(DS.textSecondary).frame(minHeight: 48, alignment: .leading)
+                    }
+                    .buttonStyle(RowPress())
+                    Spacer()
+                }
+            } else {
             HStack(alignment: .firstTextBaseline) {
                 Button { verb == .receive ? copy() : sign() } label: {
                     Text(verbatim: footVerb)
@@ -668,6 +820,7 @@ struct MoveSentence: View {
                     .disabled(pendingItem == nil || stage != nil)
                     .accessibilityHint(Text("Keeps this in the transaction and starts the next one"))
                 }
+            }
             }
         }
         .padding(.horizontal, DSRoomChassis.leadInset)
@@ -774,26 +927,18 @@ struct MoveSentence: View {
                 stage = nil
                 chrome.refreshRooms()
                 // Landed or still on its way, the transaction is gone from the
-                // page, so a second tap cannot pay it twice.
-                items = []
-                amount = ""
-                quote = nil
-                let swaps = !done.orders.isEmpty
-                switch sent.outcome {
-                case .landed(let tx, _) where !swaps:
-                    let link = tx.flatMap { Self.explorer($0, on: net) }
-                    chrome.flash(String(localized: "Sent on \(net.name)"), tone: .success,
-                                 action: link.map { url in .init(label: String(localized: "View")) { openURL(url) } },
-                                 seconds: 4)
-                case .landed where done.orders.allSatisfy({ $0 == "fulfilled" }):
-                    chrome.flash(String(localized: "Swapped on \(net.name)"), tone: .success, seconds: 4)
-                case .landed:
-                    chrome.flash(String(localized: "Order placed. CoW fills it at the best price it finds"), seconds: 5)
-                case .pending:
-                    chrome.flash(String(localized: "Sent, and not yet seen on \(net.name). Check before sending again"),
-                                 seconds: 6)
-                case .dryRun:
-                    break
+                // page, so a second tap cannot pay it twice. The sentence
+                // turns past tense in its place (§1438b): no toast.
+                let made = Self.receipt(for: batch, done: done, on: net)
+                withAnimation(DS.Motion.standard) {
+                    items = []
+                    amount = ""
+                    quote = nil
+                    receipt = made
+                }
+                if case .landed = sent.outcome {
+                    DSHaptic.success()
+                    chrome.rain(sources: ["Wallet"])
                 }
                 await readNetwork()
             } catch let failure as Chain.Failure {
@@ -805,6 +950,56 @@ struct MoveSentence: View {
                 chrome.flash(String(localized: "Not sent"), tone: .failure)
             }
         }
+    }
+
+    /// The sentence in the past tense: what was sent or swapped, what a filled
+    /// order actually paid out, and how it went.
+    static func receipt(for batch: [Chain.Item], done: Chain.Transacted, on net: Op.Network) -> Receipt {
+        let sent = done.sent
+        let tx: String? = { if case .landed(let t, _) = sent.outcome { return t } else { return nil } }()
+        let link = tx.flatMap { explorer($0, on: net) }
+        let linkName: String? = net.chainId == 1 ? "Etherscan" : "Basescan"
+        let on = String(localized: "on \(net.name).")
+        if case .pending = sent.outcome {
+            return Receipt(past: String(localized: "Sent,"), lines: [String(localized: "not yet seen"), on],
+                           detail: String(localized: "Check before sending again"))
+        }
+        let swaps = batch.compactMap { if case .swap(let s) = $0 { s } else { nil } }
+        let filled = !swaps.isEmpty && done.orders.allSatisfy { $0 == "fulfilled" }
+        var detail: [String] = []
+        if !swaps.isEmpty {
+            if filled, let seconds = done.filledIn {
+                detail.append(String(localized: "Filled in \(Int(seconds.rounded())) seconds"))
+            } else if !filled {
+                detail.append(String(localized: "Order placed. CoW fills it at the best price it finds"))
+            }
+        }
+        if batch.count == 1, let item = batch.first {
+            switch item {
+            case .send(let p):
+                let who = p.toName ?? YourAccount.short(p.to)
+                return Receipt(past: String(localized: "Sent"),
+                               lines: [Op.spoken(p.amount, decimals: p.token.decimals) + " " + p.token.symbol,
+                                       String(localized: "to \(who)"), on],
+                               detail: detail.joined(separator: " · "), link: link, linkName: link == nil ? nil : linkName)
+            case .swap(let s):
+                let bought = done.bought.first.flatMap { $0 }
+                let back = bought.map { Op.spoken($0, decimals: s.buy.decimals) }
+                    ?? "≈ " + Op.spoken(s.quote.buyAmount, decimals: s.buy.decimals)
+                // More than quoted is the honest surprise: CoW's solvers found it.
+                if let bought, Op.atMost(s.quote.buyAmount, bought), bought != s.quote.buyAmount {
+                    let more = Op.spoken(Op.difference(bought, s.quote.buyAmount), decimals: s.buy.decimals)
+                    detail.append(String(localized: "\(more) \(s.buy.symbol) more than quoted"))
+                }
+                return Receipt(past: filled ? String(localized: "Swapped") : String(localized: "Swapping"),
+                               lines: [Op.spoken(s.amount, decimals: s.sell.decimals) + " " + s.sell.symbol,
+                                       String(localized: "for \(back) \(s.buy.symbol)"), on],
+                               detail: detail.joined(separator: " · "), link: link, linkName: link == nil ? nil : linkName)
+            }
+        }
+        return Receipt(past: String(localized: "Signed"),
+                       lines: [String(localized: "\(batch.count) in one transaction"), on],
+                       detail: detail.joined(separator: " · "), link: link, linkName: link == nil ? nil : linkName)
     }
 
     /// What Face ID says: the whole sentence, the least a swap returns.
@@ -893,7 +1088,7 @@ struct MoveSentence: View {
         do {
             let q = try await Chain.swapQuote(network, sell: with.token, buy: buy.token, amount: units, account: account)
             guard !Task.isCancelled else { return }
-            quote = q
+            withAnimation(DS.Motion.standard) { quote = q }
             #if DEBUG
             draftAddsTheSwap()
             #endif
@@ -928,7 +1123,17 @@ struct MoveSentence: View {
             let address = EIP55.checksum(text)
             let book = AddressBook.shared
             let imitates = book.name(for: address) == nil ? book.lookalikes(of: address).first?.name : nil
-            resolved = Recipient(address: address, name: book.name(for: address), imitates: imitates)
+            withAnimation(DS.Motion.standard) {
+                resolved = Recipient(address: address, name: book.name(for: address), imitates: imitates)
+            }
+            // A pasted address you know becomes its name with a snap; one that
+            // imitates a name you know shakes once (§1438b).
+            if imitates != nil {
+                shake += 1
+                DSHaptic.failure()
+            } else if book.name(for: address) != nil {
+                DSHaptic.snap()
+            }
             return
         }
         // A name in your book, then a name a resolver knows.
