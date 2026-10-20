@@ -67601,3 +67601,10 @@ Mock: the design canvas "Aztec experience".
 3. **`your-account-selftest.sh`** now holds the opposite gate: the three networks in every build, and Base Sepolia marked `isTest`. The probe and draft hooks stay `#if DEBUG`.
 4. **The account sends and swaps**, so "Casberi can read, never spend" is no longer true of the app. The App Store description and the website's Wallet page are redrafted in `docs/store-copy.md` and `website/wallet.html`; the live store text changes with the next App Store submission, the website with its next deploy. Following someone else's wallet stays read-only.
 
+### §1439a — Base Sepolia out of shipped builds again: the two live networks ship, the test network stays DEBUG's (reverts §1439 items 1–3; item 4 stands) (user, 2026-10-19: "a sepolia only build but then we have the dormant problem so ya ok we can wait but we may as well ship w/o sepolia")
+
+1. **A shipped build offers Base and Ethereum**; Base Sepolia is compiled out of it, as §1435 had it. The reasons, in the user's review: mainnet is the product and the only place swaps exist; a test network in public hands confuses (worthless coins, exchanges that will not withdraw to it); and a Sepolia-only public build while the organisation account is processed would ship the live networks dormant (§1435, App Review 2.3.1). So the public build waits for the organisation account rather than shipping a cut-down one.
+2. **DEBUG keeps Base Sepolia** for rehearsing sends, batches and recovery with faucet coins; §1439 item 2's "test coins" line and network-list note stay, and draw only there.
+3. **`your-account-selftest.sh`** holds the gate again: Sepolia inside `#if DEBUG`, Base and Ethereum in the shipped list, Sepolia marked `isTest`.
+4. **§1439 item 4 stands**: the account sends and swaps, so the store and website copy are redrafted (`docs/store-copy.md`, `website/wallet.html`).
+

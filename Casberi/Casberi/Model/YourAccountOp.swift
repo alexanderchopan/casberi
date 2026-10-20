@@ -54,11 +54,19 @@ enum YourAccountOp {
         bundlers: ["https://public.pimlico.io/v2/84532/rpc", "https://api.candide.dev/public/v3/84532"],
         usdc: "0x036CbD53842c5426634e7929541eC2318f3dCF7e", isTest: true)
 
-    /// Two live networks, Base and Ethereum, and one test network, Base
-    /// Sepolia, in every build (prd §1439, amends §1435 item 2): a send can be
-    /// tried with a faucet's coins, which carry no value, and the sentence
-    /// says "test network" wherever Base Sepolia is picked.
-    static let networks: [Network] = [base, ethereum, baseSepolia]
+    /// The two live networks, Base and Ethereum, in every build. Base Sepolia
+    /// only in a DEBUG build, compiled out of every shipped one (prd §1439a,
+    /// reverting §1439): a test network in the hands of the public confuses
+    /// more than it teaches, and a Sepolia-only public build would ship the
+    /// live networks dormant (§1435). Where it is picked, the sentence says
+    /// "test coins".
+    static var networks: [Network] {
+        #if DEBUG
+        [base, ethereum, baseSepolia]
+        #else
+        [base, ethereum]
+        #endif
+    }
 
     struct Token: Equatable, Hashable, Sendable {
         let symbol: String
