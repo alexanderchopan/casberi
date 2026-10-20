@@ -338,6 +338,19 @@ enum YourAccountChain {
         return (await relay("currencies/v2", body: body).json as? [[String: Any]]) ?? []
     }
 
+    /// Relay's dollar price for one whole `token` on `net`, keyless (its
+    /// `currencies/token/price`): the sentence's dollars when the Wallet has
+    /// not read the account yet (user, 2026-10-20: a dollar value typed
+    /// before the token is picked).
+    static func relayPrice(_ net: Network, _ token: YourAccountOp.Token) async -> Double? {
+        let address = YourAccountSwap.currency(token)
+        guard YourAccountSwap.supported(net),
+              let json = await relay("currencies/token/price?address=\(address)&chainId=\(net.chainId)", body: nil).json
+                as? [String: Any],
+              let price = json["price"] as? Double, price > 0, price.isFinite else { return nil }
+        return price
+    }
+
     private static func relayRefusal(_ json: Any?, _ net: Network) -> Failure {
         let said = (json as? [String: Any])?["message"] as? String
         return Failure(message: said.map { String(localized: "Relay said: \($0)") }

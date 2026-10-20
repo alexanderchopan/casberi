@@ -12,7 +12,7 @@ import UIKit
 /// The verbs stand on their own line, the picked one bright (§1438a); under
 /// them every blank is a word: the amount, the token you spend, what you
 /// want or who it goes to, the network. Tap a word and its choices open in the space under
-/// the sentence — what you hold, CoW's list, your addresses — and typing only
+/// the sentence — what you hold, Relay's list, your addresses — and typing only
 /// narrows them; nothing slides over the page. One grey line says the rest:
 /// the other unit (tap it to type in it), what you have, the fee.
 ///
@@ -26,7 +26,6 @@ struct MoveSentence: View {
     /// In `MoveTray` (prd §1442): the tray brings its own side padding and
     /// there is no tab bar to clear.
     var inTray = false
-    var onChoices: ((Bool) -> Void)? = nil
     @Environment(ShellChrome.self) private var chrome
     @Environment(\.openURL) private var openURL
     @Environment(\.horizontalSizeClass) private var sizeClass
@@ -51,22 +50,25 @@ struct MoveSentence: View {
     /// The network is a blank too until it is picked (§1438c): the sentence
     /// starts "0 token for token on network." and the network comes first.
     @State private var networkPicked = false
-    /// The token blank tapped before a network was picked, opened once it is.
-    @State private var afterNetwork: Blank?
     @State private var heldBy: [Int: [Tokens.Held]] = [:]
-    @State private var listed: [Tokens.Listed] = []
-    /// Relay's matches for what is typed in For (prd §1440).
-    @State private var found: [Tokens.Listed] = []
+    /// Relay's list for each network, read at once.
+    @State private var listedBy: [Int: [Tokens.Listed]] = [:]
+    /// Relay's matches for what is typed in For (prd §1440), per network:
+    /// every network until one is picked (§1442a).
+    @State private var found: [Int: [Tokens.Listed]] = [:]
     @State private var with: Tokens.Held?
     @State private var buy: Tokens.Listed?
     @State private var amount = ""
-    @State private var inDollars = false
+    /// Dollars first (§1442a, user: "user may want to say a dollar value
+    /// before they choose token"): the amount can be typed before anything
+    /// is picked, and the token it buys is worked out once one is.
+    @State private var inDollars = true
     @State private var to = ""
     @State private var resolved: Recipient?
     @State private var malformed = false
     @State private var open: Blank?
     @State private var search = ""
-    @State private var pasted: Tokens.Listed?
+    @State private var pasted: [Int: Tokens.Listed] = [:]
     @State private var items: [Chain.Item] = []
     @State private var quote: YourAccountSwap.Quote?
     @State private var quoteNote: String?
@@ -92,6 +94,11 @@ struct MoveSentence: View {
     // MARK: - What the sentence says
 
     private var held: [Tokens.Held] { heldBy[network.chainId] ?? [] }
+    private var listed: [Tokens.Listed] { listedBy[network.chainId] ?? [] }
+    /// Where a token list looks: the picked network, or all of them, the
+    /// one holding the most first (§1442a: a token is tapped before a
+    /// network as often as after).
+    private var lookIn: [Op.Network] { networkPicked ? [network] : networksByWorth }
 
     /// Read, and nothing anywhere: there is nothing to spend yet.
     private var emptyEverywhere: Bool {
@@ -147,10 +154,13 @@ struct MoveSentence: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
                     Spacer(minLength: 0)
-                    if !items.isEmpty { kept }
-                    sentence
-                        .padding(.top, items.isEmpty ? 0 : DS.Space.s4)
-                    space
+                    VStack(alignment: .leading, spacing: 0) {
+                        if !items.isEmpty { kept }
+                        sentence
+                            .padding(.top, items.isEmpty ? 0 : DS.Space.s4)
+                    }
+                    .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { sentenceHeight = $0 }
+                    space(room: geo.size.height)
                         .padding(.top, open == nil ? DS.Space.s6 : DS.Space.s4)
                 }
                 .padding(.horizontal, inTray ? DSRoomChassis.leadInset - DS.Space.s4 : DSRoomChassis.leadInset)
@@ -162,7 +172,9 @@ struct MoveSentence: View {
         }
         .scrollContentBackground(.hidden)
         .scrollDismissesKeyboard(.interactively)
-        .safeAreaInset(edge: .bottom, spacing: 0) { foot }
+        // While a blank is open the foot steps aside: its verb cannot sign a
+        // half-picked sentence, and the list takes its room (§1442a).
+        .safeAreaInset(edge: .bottom, spacing: 0) { if open == nil { foot.transition(.opacity) } }
         .task(id: network.chainId) { await readNetwork() }
         .task(id: quoteKey) { await requote() }
         .task(id: to) { await resolve() }
@@ -175,7 +187,6 @@ struct MoveSentence: View {
             // on arrival covers the tab bar until it is swiped away (user,
             // 2026-10-19). A tap on the amount, or a token picked, raises it.
         }
-        .onChange(of: open) { _, now in onChoices?(now != nil) }
         .onChange(of: focus) { _, field in
             // A field left by the hand closes its list.
             if field == nil, open == .with || open == .buy || open == .to {
@@ -188,8 +199,13 @@ struct MoveSentence: View {
 
     private var sentence: some View {
         VStack(alignment: .leading, spacing: 0) {
-            verbs
-                .padding(.bottom, DS.Space.s3)
+            // While a blank is open the verbs step aside, and its list takes
+            // their room above the keyboard (§1442a).
+            if open == nil {
+                verbs
+                    .padding(.bottom, DS.Space.s3)
+                    .transition(.opacity)
+            }
             if let receipt {
                 receiptLines(receipt)
             } else if emptyEverywhere, verb != .receive {
@@ -202,9 +218,16 @@ struct MoveSentence: View {
             } else {
             switch verb {
             case .swap, .send:
-                FlowLayout(spacing: 10, lineSpacing: 0) {
+                // The amount is a line of its own, and can come first (§1442a).
+                HStack(alignment: .firstTextBaseline, spacing: 0) {
                     if inDollars { word("$", ink: amount.isEmpty ? DS.textTertiary : DS.textPrimary) }
                     amountField
+                    Spacer(minLength: 0)
+                }
+                // The whole line takes the tap, not only the narrow field.
+                .contentShape(Rectangle())
+                .onTapGesture { if stage == nil { focus = .amount } }
+                FlowLayout(spacing: 10, lineSpacing: 0) {
                     if inDollars { word(String(localized: "of"), ink: DS.textPrimary) }
                     withWord
                 }
@@ -239,6 +262,7 @@ struct MoveSentence: View {
             }
         }
         .animation(DS.Motion.standard, value: verb)
+        .animation(DS.Motion.standard, value: open == nil)
         .animation(DS.Motion.standard, value: receipt)
     }
 
@@ -281,13 +305,9 @@ struct MoveSentence: View {
                 chrome.flash(String(localized: "One transaction is one network. Sign this one first"))
                 return
             }
-            // The network comes first (user, 2026-10-20): a token tapped before
-            // one is picked opens the networks, then that token's list.
-            if (which == .with || which == .buy), !networkPicked {
-                withAnimation(DS.Motion.standard) { open = .network; afterNetwork = which }
-                DSHaptic.selection()
-                return
-            }
+            // A token tapped before a network opens the tokens of every
+            // network, each row naming its own; picking one picks both
+            // (§1442a, user: "i clicked token and network came up").
             withAnimation(DS.Motion.standard) {
                 if open == which { open = nil } else {
                     open = which
@@ -363,14 +383,14 @@ struct MoveSentence: View {
                 }
             }
             .fixedSize()
-            .disabled(stage != nil || with == nil)
+            .disabled(stage != nil)
             .accessibilityLabel(Text(inDollars ? "Amount in dollars" : "Amount"))
             .onChange(of: amount) { _, _ in if open != nil, focus == .amount { open = nil } }
     }
 
     @ViewBuilder private var withWord: some View {
         if open == .with {
-            searchField(String(localized: "a token you have"))
+            searchField(String(localized: "token"))
         } else {
             blank(with?.token.symbol ?? String(localized: "token"), ink: with == nil ? DS.pickInk : DS.textPrimary,
                   .with, label: Text("Spend \(with?.token.symbol ?? ""), change"))
@@ -379,12 +399,12 @@ struct MoveSentence: View {
 
     @ViewBuilder private var buyWord: some View {
         if open == .buy {
-            searchField(String(localized: "a token"))
+            searchField(String(localized: "token"))
         } else if let buy {
-            let back = quote.map { "≈ " + Op.spoken($0.buyAmount, decimals: buy.token.decimals) + " " }
+            let back = quote.map { "≈ " + Self.figure($0.buyAmount, decimals: buy.token.decimals) + " " }
             let word = blank((back ?? "") + buy.token.symbol, ink: DS.textPrimary, .buy, label: Text("For \(buy.token.symbol), change"))
             if pricing {
-                // While CoW thinks, the word breathes: working, not stuck.
+                // While Relay prices it, the word breathes: working, not stuck.
                 word.phaseAnimator([1.0, 0.4]) { content, phase in content.opacity(phase) } animation: { _ in .easeInOut(duration: 0.9) }
             } else {
                 word
@@ -394,7 +414,7 @@ struct MoveSentence: View {
         }
     }
 
-    /// A swap is being priced: everything is there but CoW's answer.
+    /// A swap is being priced: everything is there but Relay's answer.
     private var pricing: Bool {
         verb == .swap && buy != nil && units != nil && quote == nil && quoteNote == nil
     }
@@ -442,52 +462,73 @@ struct MoveSentence: View {
         }
     }
 
+    /// The blank's own word stays as the prompt, so turning it into a field
+    /// moves nothing on the line (§1442a).
     private func searchField(_ prompt: String) -> some View {
-        TextField(prompt, text: $search)
+        TextField(text: $search, prompt: Text(verbatim: prompt).foregroundStyle(DS.textTertiary)) { Text(verbatim: prompt) }
             .focused($focus, equals: .search)
             .textInputAutocapitalization(.never)
             .autocorrectionDisabled()
             .submitLabel(.done)
             .dsText(.heading40)
             .foregroundStyle(DS.textPrimary)
-            .frame(minWidth: 160)
             .fixedSize()
             .task(id: search) { await lookUpPasted() }
     }
 
     // MARK: - The space under it
 
-    private var space: some View {
-        Group {
-            switch open {
-            case .with: choices { withList }
-            case .buy: choices { buyList }
-            case .to: choices { toList }
-            case .network: choices { networkList }
-            case nil: line
+    /// The sentence's own height, so the list under it takes what is left.
+    @State private var sentenceHeight: CGFloat = 0
+
+    /// Under the sentence: the line, or a blank's choices. One box for every
+    /// blank, the same size whichever is open, its lists crossfading inside
+    /// it — so moving between blanks moves nothing (§1442a, user: "it is very
+    /// jittery. needs to be stable"). Line and box overlap while they swap,
+    /// rather than stacking for the length of the animation.
+    private func space(room: CGFloat) -> some View {
+        ZStack(alignment: .topLeading) {
+            if let open {
+                choices(height: choicesHeight(room)) {
+                    ZStack(alignment: .topLeading) {
+                        Group {
+                            switch open {
+                            case .with: withList
+                            case .buy: buyList
+                            case .to: toList
+                            case .network: networkList
+                            }
+                        }
+                        .id(open)
+                        .transition(.opacity)
+                    }
+                }
+                // The box rises into the space and fades as its pick lands.
+                .transition(.asymmetric(insertion: .offset(y: 24).combined(with: .opacity), removal: .opacity))
+            } else {
+                line.transition(.opacity)
             }
         }
-        .id(open)
-        // A list rises into the space and sinks away as its pick lands.
-        .transition(.asymmetric(insertion: .offset(y: 24).combined(with: .opacity),
-                                removal: .offset(y: 40).combined(with: .opacity)))
+    }
+
+    /// What the page has under the sentence, up to about six rows: a fixed
+    /// figure for a given page, never the rows' own height.
+    private func choicesHeight(_ room: CGFloat) -> CGFloat {
+        let under = room - sentenceHeight - DS.Space.s4 * 2 - (inTray ? 0 : DS.Space.s6)
+        return min(360, max(140, under))
     }
 
     /// A blank's choices on their own glass, the rooms tray's card (§1203):
     /// a layer that floats for a moment, so glass, while the sentence stays
-    /// bare. As tall as its rows, up to about six, then it scrolls inside;
-    /// shorter while the keyboard is up, so the sentence above stays in view.
-    @State private var choicesHeight: CGFloat = 0
-
-    private func choices<Rows: View>(@ViewBuilder _ rows: () -> Rows) -> some View {
-        let cap: CGFloat = chrome.keyboardUp ? 220 : 340
-        return ScrollView {
+    /// bare. The rows scroll inside it.
+    private func choices<Rows: View>(height: CGFloat, @ViewBuilder _ rows: () -> Rows) -> some View {
+        ScrollView {
             rows()
                 .padding(.vertical, DS.Space.s2)
-                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { choicesHeight = $0 }
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
         .scrollIndicators(.hidden)
-        .frame(height: min(max(choicesHeight, 56), cap))
+        .frame(height: height)
         .padding(.horizontal, DS.Space.s4)
         .frame(maxWidth: .infinity, alignment: .leading)
         .dsGlass(cornerRadius: RoomsTray.radius)
@@ -536,29 +577,30 @@ struct MoveSentence: View {
         } else if let note = lineNote {
             Text(verbatim: note).dsText(.body17).foregroundStyle(DS.attentionInk)
         } else if let with {
-            HStack(spacing: 0) {
+            // Its parts wrap between them, never inside one.
+            FlowLayout(spacing: 0, lineSpacing: 2) {
                 if let other = otherUnit(with) {
                     Button {
                         withAnimation(DS.Motion.standard) { flipUnit(with) }
                         DSHaptic.selection()
                     } label: {
-                        Text(verbatim: other).dsText(.body17).foregroundStyle(DS.pickInk)
+                        Text(verbatim: other).dsText(.body17).foregroundStyle(DS.pickInk).fixedSize()
                     }
                     .buttonStyle(RowPress())
                     .accessibilityHint(Text(inDollars ? "Type in \(with.token.symbol) instead" : "Type in dollars instead"))
-                    Text(verbatim: " · ").dsText(.body17).foregroundStyle(DS.textSecondary)
+                    Text(verbatim: " · ").dsText(.body17).foregroundStyle(DS.textSecondary).fixedSize()
                 }
                 // What you have is a door: a tap spends all of it.
                 Button {
                     shareBinding(with).wrappedValue = 100
                     DSHaptic.snap()
                 } label: {
-                    Text(verbatim: haveLine(with)).dsText(.body17).foregroundStyle(DS.textSecondary)
+                    Text(verbatim: haveLine(with)).dsText(.body17).foregroundStyle(DS.textSecondary).fixedSize()
                 }
                 .buttonStyle(RowPress())
                 .accessibilityHint(Text("Fills in all of it"))
                 if let fee = feeLine(with) {
-                    Text(verbatim: " · " + fee).dsText(.body17).foregroundStyle(DS.textSecondary)
+                    Text(verbatim: " · " + fee).dsText(.body17).foregroundStyle(DS.textSecondary).fixedSize()
                 }
                 // A test network says so wherever it is picked (prd §1439).
                 if network.isTest {
@@ -590,7 +632,7 @@ struct MoveSentence: View {
         guard let price = h.price else { return nil }
         if inDollars {
             let u = units ?? "0"
-            return Op.spoken(u, decimals: h.token.decimals) + " " + h.token.symbol
+            return Self.figure(u, decimals: h.token.decimals) + " " + h.token.symbol
         }
         return Self.money(Op.dollars(units ?? "0", decimals: h.token.decimals, price: price))
     }
@@ -598,17 +640,18 @@ struct MoveSentence: View {
     private func haveLine(_ h: Tokens.Held) -> String {
         let have = inDollars && h.price != nil
             ? Self.money(Op.dollars(left(h), decimals: h.token.decimals, price: h.price!))
-            : Op.spoken(left(h), decimals: h.token.decimals)
+            : Self.figure(left(h), decimals: h.token.decimals) + " " + h.token.symbol
         return String(localized: "of \(have)")
     }
 
     /// A swap's fee; under a cent it says so rather than a string of zeros.
     private func feeLine(_ h: Tokens.Held) -> String? {
         guard verb == .swap, let quote else { return nil }
-        if let price = h.price, Op.dollars(quote.fee, decimals: h.token.decimals, price: price) < 0.01 {
-            return String(localized: "fee under a cent")
+        if let price = h.price {
+            let usd = Op.dollars(quote.fee, decimals: h.token.decimals, price: price)
+            return usd < 0.01 ? String(localized: "fee under a cent") : String(localized: "fee \(Self.money(usd))")
         }
-        return String(localized: "fee ≈ \(Op.spoken(quote.fee, decimals: h.token.decimals)) \(h.token.symbol)")
+        return String(localized: "fee ≈ \(Self.figure(quote.fee, decimals: h.token.decimals)) \(h.token.symbol)")
     }
 
     private func flipUnit(_ h: Tokens.Held) {
@@ -619,6 +662,17 @@ struct MoveSentence: View {
         amount = inDollars
             ? String(format: "%.2f", Op.dollars(current, decimals: h.token.decimals, price: price))
             : Op.display(current, decimals: h.token.decimals, places: min(h.token.decimals, 8))
+    }
+
+    /// A token figure for the sentence: whole above a thousand, two places
+    /// above one, four significant figures under it — so "≈ 28.96 AERO" fits
+    /// the line (§1442a). Face ID and the receipt's link say the exact units.
+    static func figure(_ units: String, decimals: Int) -> String {
+        let v = Double(Op.display(units, decimals: decimals, places: min(decimals, 12))) ?? 0
+        if v == 0 { return "0" }
+        if v >= 1_000 { return v.formatted(.number.precision(.fractionLength(0))) }
+        if v >= 1 { return v.formatted(.number.precision(.fractionLength(0...2))) }
+        return v.formatted(.number.precision(.significantDigits(1...4)))
     }
 
     /// Dollars, with cents; under a cent, two significant figures.
@@ -667,38 +721,72 @@ struct MoveSentence: View {
 
     private var withList: some View {
         let q = search.trimmingCharacters(in: .whitespaces).lowercased()
-        let rows = held.filter { q.isEmpty || $0.token.symbol.lowercased().hasPrefix(q) }
+        let rows: [(key: String, net: Op.Network, held: Tokens.Held)] = lookIn.flatMap { n in
+            (heldBy[n.chainId] ?? []).map { ("\(n.chainId)|\($0.id)", n, $0) }
+        }
+        .filter { q.isEmpty || $0.held.token.symbol.lowercased().hasPrefix(q) }
+        // Biggest first, whichever network it is on.
+        .sorted { ($0.held.usd ?? -1) > ($1.held.usd ?? -1) }
         return VStack(alignment: .leading, spacing: 0) {
-            ForEach(rows) { h in
-                listRow(h.token.symbol, sub: h.usd.map { Self.money($0) },
+            ForEach(rows, id: \.key) { row in
+                let h = row.held
+                let worth = h.usd.map { Self.money($0) }
+                listRow(h.token.symbol,
+                        sub: networkPicked ? worth : [worth, row.net.name].compactMap { $0 }.joined(separator: " · "),
                         trailing: Op.spoken(left(h), decimals: h.token.decimals), mark: h.token.symbol) {
-                    pick { choose(h) }
+                    pick {
+                        if !networkPicked || row.net != network { switchNetwork(row.net) }
+                        choose(h)
+                    }
                 }
             }
             if rows.isEmpty {
-                Text(heldBy.isEmpty ? "Reading…" : "Nothing on \(network.name) yet")
+                Text(verbatim: heldBy.isEmpty ? String(localized: "Reading…")
+                     : !q.isEmpty ? String(localized: "You have no \(search.trimmingCharacters(in: .whitespaces).uppercased())")
+                     : networkPicked ? String(localized: "Nothing on \(network.name) yet")
+                     : String(localized: "Nothing to spend yet"))
                     .dsText(.body17).foregroundStyle(DS.textSecondary).frame(minHeight: 44)
             }
         }
     }
 
-    private var buyList: some View {
+    /// What For offers, on the picked network or on each, a network's head
+    /// of five when none is picked and nothing is typed.
+    private var buyRows: [(key: String, net: Op.Network, listed: Tokens.Listed)] {
         let typed = !search.trimmingCharacters(in: .whitespaces).isEmpty
-        var rows = Tokens.matches(search, in: typed ? found + listed : listed, held: held)
-        if let pasted, !rows.contains(where: { $0.id == pasted.id }) { rows.insert(pasted, at: 0) }
-        rows.removeAll { $0.token == with?.token }
-        return VStack(alignment: .leading, spacing: 0) {
-            ForEach(rows) { l in
-                let mine = held.first { $0.id == l.id }
+        var out: [(key: String, net: Op.Network, listed: Tokens.Listed)] = []
+        var seen: Set<String> = []
+        for n in lookIn {
+            let pool = (typed ? (found[n.chainId] ?? []) : []) + (listedBy[n.chainId] ?? [])
+            var rows = Tokens.matches(search, in: pool, held: heldBy[n.chainId] ?? [])
+            if let p = pasted[n.chainId], !rows.contains(where: { $0.id == p.id }) { rows.insert(p, at: 0) }
+            if !networkPicked, !typed { rows = Array(rows.prefix(5)) }
+            for l in rows where !(n == network && networkPicked && l.token == with?.token) {
+                let key = "\(n.chainId)|\(l.id)"
+                if seen.insert(key).inserted { out.append((key, n, l)) }
+            }
+        }
+        return out
+    }
+
+    private var buyList: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ForEach(buyRows, id: \.key) { row in
+                let l = row.listed
+                let mine = (heldBy[row.net.chainId] ?? []).first { $0.id == l.id }
+                let about = l.onList ? (l.name == l.token.symbol ? nil : l.name) : String(localized: "Not verified by Relay")
                 listRow(l.token.symbol,
-                        sub: l.onList ? (l.name == l.token.symbol ? nil : l.name) : String(localized: "Not verified by Relay"),
+                        sub: networkPicked ? about : [about, row.net.name].compactMap { $0 }.joined(separator: " · "),
                         trailing: mine.map { Op.spoken($0.units, decimals: $0.token.decimals) },
                         mark: l.token.symbol, dim: !l.onList) {
-                    pick { buy = l }
+                    pick {
+                        if !networkPicked || row.net != network { switchNetwork(row.net) }
+                        buy = l
+                    }
                     if amount.isEmpty { focus = .amount }
                 }
             }
-            if !YourAccountSwap.supported(network) {
+            if networkPicked, !YourAccountSwap.supported(network) {
                 Text("Swaps are not on \(network.name)").dsText(.body17).foregroundStyle(DS.textSecondary).frame(minHeight: 44)
             }
             pasteRow { search = $0 }
@@ -735,11 +823,6 @@ struct MoveSentence: View {
                         trailing: total > 0 ? Self.money(total) : nil, image: Self.networkMark(n),
                         dim: networkPicked && n == network) {
                     pick { switchNetwork(n) }
-                    if let next = afterNetwork {
-                        afterNetwork = nil
-                        withAnimation(DS.Motion.standard) { open = next; search = "" }
-                        focus = .search
-                    }
                 }
             }
         }
@@ -790,11 +873,22 @@ struct MoveSentence: View {
         if focus == .search || focus == .to { focus = nil }
     }
 
+    /// A token picked: dollars typed before it stay, and become its units;
+    /// an amount in another token's units does not carry over.
     private func choose(_ h: Tokens.Held) {
-        if with?.id != h.id { amount = ""; if h.price == nil { inDollars = false } }
+        if with?.id != h.id {
+            if inDollars, h.price != nil {
+                // The dollars stand.
+            } else if inDollars {
+                inDollars = false
+                amount = ""
+            } else {
+                amount = ""
+            }
+        }
         with = h
         if buy?.token == h.token { buy = nil }
-        focus = .amount
+        if amount.isEmpty { focus = .amount }
     }
 
     private func switchNetwork(_ n: Op.Network) {
@@ -803,7 +897,7 @@ struct MoveSentence: View {
         network = n
         with = nil
         buy = nil
-        amount = ""
+        if !inDollars { amount = "" }
         quote = nil
     }
 
@@ -827,8 +921,8 @@ struct MoveSentence: View {
             let group = groups[key] ?? []
             let spent = group.map { item -> String in
                 switch item {
-                case .send(let p): return Op.spoken(p.amount, decimals: p.token.decimals) + " " + p.token.symbol
-                case .swap(let s): return Op.spoken(s.amount, decimals: s.sell.decimals) + " " + s.sell.symbol
+                case .send(let p): return Self.figure(p.amount, decimals: p.token.decimals) + " " + p.token.symbol
+                case .swap(let s): return Self.figure(s.amount, decimals: s.sell.decimals) + " " + s.sell.symbol
                 }
             }.formatted(.list(type: .and))
             let words: String
@@ -840,7 +934,7 @@ struct MoveSentence: View {
                     if case .swap(let x) = item { return Op.sum(sum, x.quote.buyAmount) }
                     return sum
                 }
-                words = String(localized: "\(spent) for ≈ \(Op.spoken(back, decimals: s.buy.decimals)) \(s.buy.symbol)")
+                words = String(localized: "\(spent) for ≈ \(Self.figure(back, decimals: s.buy.decimals)) \(s.buy.symbol)")
             case nil:
                 words = ""
             }
@@ -1074,7 +1168,7 @@ struct MoveSentence: View {
                 let filled = bought != nil
                 let back = bought.map { Op.spoken($0, decimals: s.buy.decimals) }
                     ?? "≈ " + Op.spoken(s.quote.buyAmount, decimals: s.buy.decimals)
-                // More than quoted is the honest surprise: CoW's solvers found it.
+                // More than quoted is the honest surprise: the route paid more.
                 if let bought, Op.atMost(s.quote.buyAmount, bought), bought != s.quote.buyAmount {
                     let more = Op.spoken(Op.difference(bought, s.quote.buyAmount), decimals: s.buy.decimals)
                     detail.append(String(localized: "\(more) \(s.buy.symbol) more than quoted"))
@@ -1143,16 +1237,23 @@ struct MoveSentence: View {
             for await (id, held) in group { found[id] = held }
         }
         heldBy = found
-        // Nothing is picked for you (§1438c): the network list leads with
-        // where you hold the most, and the sentence waits for your picks.
-        listed = await Tokens.list(network)
+        // Nothing is picked for you (§1438c): the lists lead with where you
+        // hold the most, and the sentence waits for your picks.
+        var lists: [Int: [Tokens.Listed]] = [:]
+        await withTaskGroup(of: (Int, [Tokens.Listed]).self) { group in
+            for net in Op.networks {
+                group.addTask { @MainActor in (net.chainId, await Tokens.list(net)) }
+            }
+            for await (id, list) in group { lists[id] = list }
+        }
+        listedBy = lists
     }
 
     private func readNetwork() async {
         let now = await Tokens.held(account, on: network)
         heldBy[network.chainId] = now
         if let w = with { with = now.first { $0.id == w.id } }
-        listed = await Tokens.list(network)
+        listedBy[network.chainId] = await Tokens.list(network)
     }
 
     /// The quote is asked again whenever what would be swapped changes.
@@ -1180,24 +1281,33 @@ struct MoveSentence: View {
         } catch {}
     }
 
+    /// Relay's matches as you type, after a pause, on every network the list
+    /// looks in; a pasted contract is read off each.
     private func lookUpPasted() async {
-        pasted = nil
+        pasted = [:]
         let text = search.trimmingCharacters(in: .whitespacesAndNewlines)
-        // Relay's matches as you type, after a pause.
-        if open == .buy, !text.isEmpty, !ENS.isHexAddress(text) {
-            try? await Task.sleep(for: .milliseconds(250))
-            guard !Task.isCancelled else { return }
-            let net = network
-            let matches = await Tokens.list(net, term: text)
-            guard !Task.isCancelled, net == network else { return }
-            found = matches
-            return
-        }
-        found = []
-        guard open == .buy, ENS.isHexAddress(text) else { return }
-        try? await Task.sleep(for: .milliseconds(300))
+        guard open == .buy, !text.isEmpty else { found = [:]; return }
+        try? await Task.sleep(for: .milliseconds(ENS.isHexAddress(text) ? 300 : 250))
         guard !Task.isCancelled else { return }
-        pasted = await Tokens.lookUp(text, on: network)
+        let nets = lookIn
+        let isAddress = ENS.isHexAddress(text)
+        var matches: [Int: [Tokens.Listed]] = [:]
+        var looked: [Int: Tokens.Listed] = [:]
+        await withTaskGroup(of: (Int, [Tokens.Listed], Tokens.Listed?).self) { group in
+            for net in nets {
+                group.addTask { @MainActor in
+                    isAddress ? (net.chainId, [], await Tokens.lookUp(text, on: net))
+                              : (net.chainId, await Tokens.list(net, term: text), nil)
+                }
+            }
+            for await (id, list, one) in group {
+                matches[id] = list
+                if let one { looked[id] = one }
+            }
+        }
+        guard !Task.isCancelled, nets == lookIn else { return }
+        found = matches
+        pasted = looked
     }
 
     private func resolve() async {
@@ -1250,7 +1360,7 @@ struct MoveSentence: View {
     /// `-moveSwapDraft "<amount>|<SELL>[|<BUY>]"` and `-moveSendDraft
     /// "<amount>|<to>"`: the sentence filled, because a `simctl`-booted
     /// simulator drops typed characters (prd §1424, §1438). Both given: the
-    /// swap is Added once CoW prices it, and the send fills the next sentence.
+    /// swap is Added once Relay prices it, and the send fills the next sentence.
     private func draft() {
         let d = UserDefaults.standard
         if let swap = d.string(forKey: "moveSwapDraft"), !swap.isEmpty {
@@ -1262,6 +1372,7 @@ struct MoveSentence: View {
             buy = listed.first { $0.token.symbol == buyName && $0.onList }
                 ?? held.first { $0.token.symbol == buyName }.map { Tokens.Listed(token: $0.token, name: $0.token.symbol, onList: true) }
             amount = parts.first ?? ""
+            inDollars = false
             NSLog("moveSwapDraft: %@ %@ for %@", amount, with?.token.symbol ?? "-", buy?.token.symbol ?? "-")
         } else if d.string(forKey: "moveSendDraft")?.isEmpty == false {
             verb = .send
@@ -1275,6 +1386,7 @@ struct MoveSentence: View {
         networkPicked = true
         if with == nil { with = held.first }
         amount = parts.first ?? ""
+        inDollars = false
         to = parts.count > 1 ? parts[1] : ""
         NSLog("moveSendDraft: amount=%@ to=%@", amount, to)
     }

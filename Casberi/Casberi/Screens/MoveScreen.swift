@@ -13,19 +13,15 @@ import UIKit
 /// before the account exists.
 /// **MOVE IS A TRAY (prd §1442)**, raised from its tab over wherever you
 /// are (user, 2026-10-20: "why not make the move button be a tray or sheet
-/// or whatever and not a page?"): an act, not a place. It rests at the
-/// sentence's height and grows to the full sheet when a blank's choices
-/// open; untitled, because the verbs are its head.
+/// or whatever and not a page?"): an act, not a place. It is one height,
+/// the full sheet, and never changes shape (§1442a, user: "it is very
+/// jittery. needs to be stable"): the sentence stands at its foot and rises
+/// as a blank's choices open under it. Untitled, because the verbs are its
+/// head.
 struct MoveTray: View {
-    static let rest: CGFloat = 360
-    @State private var detent: PresentationDetent = .height(MoveTray.rest)
-
     var body: some View {
-        DSTray(title: "Move", height: Self.rest, detents: [.height(Self.rest), .large],
-               titled: false, selection: $detent) {
-            MoveScreen(inTray: true) { choicesOpen in
-                withAnimation(DS.Motion.standard) { detent = choicesOpen ? .large : .height(Self.rest) }
-            }
+        DSTray(title: "Move", height: 600, detents: [.large], titled: false) {
+            MoveScreen(inTray: true)
         }
     }
 }
@@ -54,8 +50,6 @@ struct MoveTrayPresenter: ViewModifier {
 struct MoveScreen: View {
     /// Drawn in `MoveTray` rather than as a page.
     var inTray = false
-    /// Told when a blank's choices open or close, so the tray can grow.
-    var onChoices: ((Bool) -> Void)? = nil
     @Environment(ShellChrome.self) private var chrome
     @State private var address: String? = YourAccountKey.address
     @State private var creating = false
@@ -68,7 +62,7 @@ struct MoveScreen: View {
             if let address {
                 // The account exists: the page is the sentence (prd §1438),
                 // no head — it is this phone's account, there is no other.
-                MoveSentence(account: address, inTray: inTray, onChoices: onChoices)
+                MoveSentence(account: address, inTray: inTray)
             } else {
                 ScrollView {
                     VStack(spacing: 0) {

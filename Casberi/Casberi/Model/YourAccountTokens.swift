@@ -157,8 +157,51 @@ enum YourAccountTokens {
             }
             for await h in group { if let h { found.append(h) } }
         }
-        return found
-            .map { Held(token: $0.token, units: $0.units, price: price($0.token)) }
+        #if DEBUG
+        let samples = await sampleHoldings(on: net)
+        found = found.filter { h in !samples.contains { $0.token == h.token } } + samples
+        #endif
+        // A token the Wallet has not priced asks Relay, so dollars always work.
+        var priced: [Held] = []
+        await withTaskGroup(of: Held.self) { group in
+            for h in found {
+                let known = price(h.token)
+                group.addTask {
+                    let p: Double? = if let known { known } else { await YourAccountChain.relayPrice(net, h.token) }
+                    return Held(token: h.token, units: h.units, price: p)
+                }
+            }
+            for await h in group { priced.append(h) }
+        }
+        return priced
             .sorted { ($0.usd ?? -1, $0.token.symbol) > ($1.usd ?? -1, $1.token.symbol) }
     }
+
+    #if DEBUG
+    /// `-moveHoldings "<chainId>:<SYMBOL>:<amount>[,…]"` (DEBUG): pretend the
+    /// account holds these, in place of what it really holds of each, so the sentence's lists, dollars, quotes and Add
+    /// can be tried on a simulator with no funded account (user, 2026-10-20:
+    /// "i can't try a batch swap b/c we don't have tokens"). Relay quotes an
+    /// account that cannot pay; the simulation before Face ID refuses to sign
+    /// one, so nothing pretended can leave.
+    @MainActor
+    private static func sampleHoldings(on net: Op.Network) async -> [Held] {
+        guard let spec = UserDefaults.standard.string(forKey: "moveHoldings"), !spec.isEmpty else { return [] }
+        var out: [Held] = []
+        for part in spec.split(separator: ",") {
+            let f = part.split(separator: ":").map { $0.trimmingCharacters(in: .whitespaces) }
+            guard f.count == 3, Int(f[0]) == net.chainId else { continue }
+            let symbol = f[1].uppercased()
+            var token = Op.tokens(on: net).first { $0.symbol.uppercased() == symbol }
+            if token == nil {
+                token = (await list(net)).first { $0.token.symbol.uppercased() == symbol && $0.onList }?.token
+            }
+            guard let token,
+                  let units = Op.baseUnits(f[2], decimals: token.decimals), units != "0" else { continue }
+            out.append(Held(token: token, units: units, price: nil))
+        }
+        NSLog("moveHoldings: %d on %@", out.count, net.name)
+        return out
+    }
+    #endif
 }
