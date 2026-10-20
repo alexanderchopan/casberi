@@ -67684,3 +67684,11 @@ Mock: the design canvas "Aztec experience".
 4. **The pill is one view, `ToastPill`, inside `ToastLayer`.** The window draws it on the phone and the iPad. The window re-applies the person's mode and language, the two things the shell applies to its tree.
 5. **The Mac half (§1402): the Mac keeps the toast in the shell** (`ToastWindow.usesWindow` is false on Catalyst). A second UIWindow in a Catalyst scene is not measured. Whether a Mac sheet covers the toast is an open question, to be measured on the Mac before it changes.
 6. Move keeps saying its messages in its own lines (§1442c). That is the sentence's way, not a workaround.
+
+### §1442d — A $ · token switch on the amount line; Add before the verb (amends §1438 item 4's foot, §1442a item 1) (user, 2026-10-20: "a user needs to be able to change token value from tokens to dollars if they want. this is something i do frequently in one transaction"; "should the order be switched? why is add second"; "does user have to pick network first?"; "decide and make the changes")
+
+1. **Two choices end the amount line, `$` and the token's symbol, the one typed in selected** (`Chip`). The other converts the figure and keeps its value. The token's own word is not the switch, because it opens the token list. The switch is drawn once a token is picked: before then there is nothing to convert to, and a lone `$` would be a control that does nothing (§83). A token with no dollar price says so.
+2. **Dollars take cents. A token takes as many places as it has.** The figure in the sentence rounds for reading; the exact units are what is signed. A flip back with nothing typed in between returns exactly the figure it replaced, so $24.50 never comes back as 0.009998 ETH.
+3. **The grey line shows the other unit, live, as a reading** ("≈ $24.50"). It is no longer a door: the switch changes which unit you type in.
+4. **The foot reads Add, then the verb.** That is the order you use them in, and the act that signs stands at the trailing edge under the thumb, where iOS puts a screen's main act. "Done" after a receipt stands in the same place.
+5. **The network does not come first, and the sentence keeps its order.** Picking a token picks its network (§1442a), so "on Base." stays last, where it reads naturally.

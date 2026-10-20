@@ -259,9 +259,10 @@ struct MoveSentence: View {
                     if inDollars { word("$", ink: amount.isEmpty ? DS.textTertiary : DS.pickInk) }
                     amountField
                     if !inDollars {
-                        withWord.padding(.leading, 7)
+                        withWord.padding(.leading, 10)
                     }
-                    Spacer(minLength: 0)
+                    Spacer(minLength: DS.Space.s2)
+                    unitSwitch
                 }
                 // The whole line takes the tap, not only the narrow field.
                 .contentShape(Rectangle())
@@ -435,7 +436,15 @@ struct MoveSentence: View {
             .fixedSize()
             .disabled(stage != nil)
             .accessibilityLabel(Text(inDollars ? "Amount in dollars" : "Amount"))
-            .onChange(of: amount) { _, _ in if open != nil, focus == .amount { open = nil } }
+            .onChange(of: amount) { _, now in
+                if open != nil, focus == .amount { open = nil }
+                // Dollars take cents; a token takes as many places as it has.
+                let places = inDollars ? 2 : (with?.token.decimals ?? 18)
+                if let dot = now.firstIndex(where: { $0 == "." || $0 == "," }),
+                   now.distance(from: dot, to: now.endIndex) - 1 > places {
+                    amount = String(now[...now.index(dot, offsetBy: places)])
+                }
+            }
     }
 
     private var withWord: some View {
@@ -647,15 +656,10 @@ struct MoveSentence: View {
         } else if let with {
             // Its parts wrap between them, never inside one.
             FlowLayout(spacing: 0, lineSpacing: 2) {
+                // The other unit, live as you type; the switch on the amount
+                // line is what changes which one you type in (§1442d).
                 if let other = otherUnit(with) {
-                    Button {
-                        withAnimation(DS.Motion.standard) { flipUnit(with) }
-                        DSHaptic.selection()
-                    } label: {
-                        Text(verbatim: other).dsText(.body17).foregroundStyle(DS.pickInk).fixedSize()
-                    }
-                    .buttonStyle(RowPress())
-                    .accessibilityHint(Text(inDollars ? "Type in \(with.token.symbol) instead" : "Type in dollars instead"))
+                    Text(verbatim: "≈ " + other).dsText(.body17).foregroundStyle(DS.textSecondary).fixedSize()
                     Text(verbatim: " · ").dsText(.body17).foregroundStyle(DS.textSecondary).fixedSize()
                 }
                 // What you have is a door: a tap spends all of it.
@@ -723,14 +727,62 @@ struct MoveSentence: View {
         return String(localized: "fee ≈ \(Self.figure(quote.fee, decimals: h.token.decimals)) \(h.token.symbol)")
     }
 
+    /// **$ · ETH (§1442d, user: "a user needs to be able to change token
+    /// value from tokens to dollars ... something i do frequently in one
+    /// transaction").** Two choices at the end of the amount line, the one
+    /// typed in selected; the other converts the figure, keeping its value.
+    /// Drawn once a token is picked: before that there is nothing to convert
+    /// to, and a lone "$" would be a control that does nothing (§83).
+    @ViewBuilder private var unitSwitch: some View {
+        if let with, verb != .receive {
+            HStack(spacing: DS.Space.s1) {
+                unitChip("$", on: inDollars, label: Text("Type in dollars")) { setDollars(true, with) }
+                unitChip(with.token.symbol, on: !inDollars, label: Text("Type in \(with.token.symbol)")) { setDollars(false, with) }
+            }
+            .alignmentGuide(.firstTextBaseline) { $0[VerticalAlignment.center] + 8 }
+        }
+    }
+
+    private func unitChip(_ text: String, on: Bool, label: Text, act: @escaping () -> Void) -> some View {
+        Button(action: act) {
+            Chip(text: text, selected: on)
+        }
+        .buttonStyle(PressSpring())
+        .disabled(stage != nil)
+        .accessibilityLabel(label)
+        .accessibilityAddTraits(on ? [.isSelected] : [])
+    }
+
+    private func setDollars(_ dollars: Bool, _ h: Tokens.Held) {
+        guard dollars != inDollars else { return }
+        guard h.price != nil else {
+            say(String(localized: "No dollar price for \(h.token.symbol)"))
+            return
+        }
+        withAnimation(DS.Motion.standard) { flipUnit(h) }
+        DSHaptic.selection()
+    }
+
+    /// The figure a flip replaced and the figure it wrote, so flipping back
+    /// with nothing typed between returns exactly what was there: cents
+    /// round, and $24.50 must not come back as 0.009998 ETH (§1442d).
+    @State private var flipped: (before: String, after: String, token: String)?
+
     private func flipUnit(_ h: Tokens.Held) {
         guard let price = h.price else { return }
         let current = units
+        let before = amount
         inDollars.toggle()
+        if let f = flipped, f.after == amount, f.token == h.id {
+            amount = f.before
+            flipped = nil
+            return
+        }
         guard let current else { amount = ""; return }
         amount = inDollars
             ? String(format: "%.2f", Op.dollars(current, decimals: h.token.decimals, price: price))
             : Op.display(current, decimals: h.token.decimals, places: min(h.token.decimals, 8))
+        flipped = (before, amount, h.id)
     }
 
     /// A token figure for the sentence: whole above a thousand, two places
@@ -1052,26 +1104,20 @@ struct MoveSentence: View {
             }
             if receipt != nil {
                 HStack {
+                    Spacer()
                     Button {
                         withAnimation(DS.Motion.standard) { receipt = nil }
                         DSHaptic.selection()
                     } label: {
-                        Text("Done").dsText(.heading28).foregroundStyle(DS.textSecondary).frame(minHeight: 48, alignment: .leading)
+                        Text("Done").dsText(.heading28).foregroundStyle(DS.textSecondary).frame(minHeight: 48, alignment: .trailing)
                     }
                     .buttonStyle(RowPress())
-                    Spacer()
                 }
             } else {
+            // Add, then the verb (§1442d): the order you use them in, and the
+            // act that signs at the trailing edge under the thumb, where iOS
+            // puts a screen's main act.
             HStack(alignment: .firstTextBaseline) {
-                Button { verb == .receive ? copy() : sign() } label: {
-                    Text(verbatim: footVerb)
-                        .dsText(.heading28)
-                        .foregroundStyle(footOn ? DS.pickInk : DS.textTertiary)
-                        .frame(minHeight: 48, alignment: .leading)
-                }
-                .buttonStyle(RowPress())
-                .disabled(!footOn)
-                Spacer(minLength: DS.Space.s3)
                 if verb != .receive {
                     Button { add() } label: {
                         Text("Add")
@@ -1084,6 +1130,15 @@ struct MoveSentence: View {
                     .disabled(stage != nil)
                     .accessibilityHint(Text("Keeps this in the transaction and starts the next one"))
                 }
+                Spacer(minLength: DS.Space.s3)
+                Button { verb == .receive ? copy() : sign() } label: {
+                    Text(verbatim: footVerb)
+                        .dsText(.heading28)
+                        .foregroundStyle(footOn ? DS.pickInk : DS.textTertiary)
+                        .frame(minHeight: 48, alignment: .trailing)
+                }
+                .buttonStyle(RowPress())
+                .disabled(!footOn)
             }
             }
         }
