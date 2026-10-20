@@ -62,6 +62,8 @@ struct MoveScreen: View {
     /// Made or brought here in this tray: the sentence finishes itself
     /// ("Your account" → "Created …3416", §1442j).
     @State private var arrival: MoveSentence.Arrival?
+    /// Recovering: the networks the recovery key can bring it to (§1442k).
+    @State private var recoverableOn: [YourAccountOp.Network]?
 
     #if DEBUG
     /// `-movePreview create|recover|created|ready` (DEBUG): draw a screen
@@ -94,6 +96,10 @@ struct MoveScreen: View {
         .background { if !inTray { DSPageBackground() } }
         .task {
             if address == nil { recoverable = YourAccountRecovery.accounts().first } else { YourAccountKey.ensureRecord() }
+        }
+        .task(id: recoverable?.address) {
+            guard let found = recoverable?.address else { return }
+            recoverableOn = await YourAccountReach.recoverable(found)
         }
     }
 
@@ -131,8 +137,13 @@ struct MoveScreen: View {
                     }
                 }
                 line(String(localized: "on")) {
-                    Text(verbatim: YourAccountOp.networks.filter { !$0.isTest }.map(\.name).formatted(.list(type: .and)) + ".")
-                        .dsText(MoveSentence.size).foregroundStyle(DS.textPrimary)
+                    // Creating, every network; recovering, only where the
+                    // recovery key can bring it (§1442k).
+                    Text(verbatim: recoverable == nil
+                         ? YourAccountReach.words(YourAccountOp.networks.filter { !$0.isTest })
+                         : recoverableOn.map(YourAccountReach.words) ?? "…")
+                        .dsText(MoveSentence.size)
+                        .foregroundStyle(recoverable != nil && recoverableOn == nil ? DS.textTertiary : DS.textPrimary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 VStack(alignment: .leading, spacing: DS.Space.s3) {

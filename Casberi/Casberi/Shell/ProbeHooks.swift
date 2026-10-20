@@ -3904,6 +3904,53 @@ enum ProbeHooks {
                 }
             }
         },
+        // `-yourAccountRecoverProbe <network>` — recovery, for real, on one
+        // network (prd §1442j): when the recovery key is not on it yet, the
+        // device key puts it there (creating the account there if need be);
+        // then the recovery key moves the network to a FRESH key on this same
+        // phone — a second iPhone without a second iPhone. Spends the
+        // account's own gas on that network. Logs `yourAccountRecover|` lines,
+        // never a signature.
+        Hook(key: "yourAccountRecoverProbe") { raw, _ in
+            Task { @MainActor in
+                func log(_ line: String) { NSLog("yourAccountRecover| %@", line) }
+                guard let net = YourAccountOp.networks.first(where: { $0.name.caseInsensitiveCompare(raw) == .orderedSame }),
+                      let account = YourAccountKey.address else {
+                    log("no such network, or no account on this phone"); return
+                }
+                do {
+                    // Only the recovery key this phone already holds: never a
+                    // new one, which would add a second recovery key.
+                    guard let key = YourAccountRecovery.publicKey(for: account) else {
+                        log("stopped: this phone holds no recovery key for \(account)"); return
+                    }
+                    let signer = try await YourAccountChain.recoverySigner(x: key.x, y: key.y)
+                    let before = try await YourAccountChain.recoveryState(net, account, signer: signer)
+                    log("network=\(net.name) account=\(account) recoverySigner=\(signer) state=\(before)")
+                    if before != .added {
+                        let added = try await YourAccountChain.addRecovery(on: net, reason: "Probe: add the recovery key") { stage in
+                            log("add stage=\(stage)")
+                        }
+                        log("add result=\(added.outcome)")
+                        let after = try await YourAccountChain.recoveryState(net, account, signer: signer)
+                        log("state after add=\(after)")
+                        guard after == .added else { log("stopped: the recovery key is not on \(net.name)"); return }
+                    }
+                    let fresh = try YourAccountKey.freshKey()
+                    log("fresh key index=\(fresh) of \(YourAccountKey.keyCount)")
+                    let moved = try await YourAccountChain.recover(on: net, to: fresh, reason: "Probe: recover") { stage in
+                        log("recover stage=\(stage)")
+                    }
+                    log("recover result=\(moved.outcome)")
+                    let owners = try await YourAccountChain.owners(net, account)
+                    log("owners after=\(owners.joined(separator: ","))")
+                } catch let failure as YourAccountChain.Failure {
+                    log("refused: \(failure.message)")
+                } catch {
+                    log("error: \(String(describing: error))")
+                }
+            }
+        },
         // `-yourAccountForgetDevice YES` — this phone forgets its keys and the
         // account, as a lost phone does; the recovery key in iCloud Keychain
         // stays (prd §1427). The simulator's stand-in for a second iPhone.

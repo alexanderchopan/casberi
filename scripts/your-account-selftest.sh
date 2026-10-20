@@ -216,4 +216,13 @@ grep -q 'static var allCases' "$TABS" && { echo "✗ PlaceTab.allCases is overri
 grep -q 'static let networks: \[Network\] = \[base, ethereum, robinhood\]$' "$OP" || { echo "✗ YourAccountOp.networks is not Base, Ethereum and Robinhood Chain in every build (prd §1441a)"; exit 1; }
 grep -A4 'static let baseSepolia' "$OP" | grep -q 'isTest: true' || { echo "✗ Base Sepolia is not marked a test network"; exit 1; }
 
-echo "✓ your account: the address is the factory's, the send's bytes are the module's, amounts add up, Move is in every build"
+# Where the account can be used is read, never assumed (prd §1442k): Move
+# names its networks only through YourAccountReach, and Receive reads it.
+REACH=Casberi/Casberi/Model/YourAccountReach.swift
+grep -q 'if YourAccountKey.holdsOrigin { return live }' "$REACH" || { echo "✗ YourAccountReach no longer limits a recovered phone to the networks the account exists on (prd §1442k)"; exit 1; }
+for f in Casberi/Casberi/Screens/MoveSentence.swift Casberi/Casberi/Screens/MoveScreen.swift; do
+  grep -q 'isTest }.map(\\.name)' "$f" && { echo "✗ $f names every network outright — a recovered phone would be told to receive where it cannot (prd §1442k)"; exit 1; }
+done
+grep -q 'reach = await YourAccountReach.usable(account)' Casberi/Casberi/Screens/MoveSentence.swift || { echo "✗ the sentence no longer reads where the account can be used (prd §1442k)"; exit 1; }
+
+echo "✓ your account: the address is the factory's, the send's bytes are the module's, amounts add up, Move is in every build, and it names only networks this phone can use"

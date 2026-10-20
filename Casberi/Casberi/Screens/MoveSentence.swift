@@ -71,6 +71,9 @@ struct MoveSentence: View {
     /// starts "0 token for token on network." and the network comes first.
     @State private var networkPicked = false
     @State private var heldBy: [Int: [Tokens.Held]] = [:]
+    /// The networks this phone can use the account on (§1442k); nil until
+    /// read, and every network on the phone that made the account.
+    @State private var reach: [Op.Network]?
     /// Relay's list for each network, read at once.
     @State private var listedBy: [Int: [Tokens.Listed]] = [:]
     /// Relay's matches for what is typed in For (prd §1440), per network:
@@ -387,11 +390,7 @@ struct MoveSentence: View {
                     }
                 }
                 row(String(localized: "on")) {
-                    FlowLayout(spacing: 7, lineSpacing: 0) {
-                        ForEach(Array((Op.networks.filter { !$0.isTest }.map(\.name).formatted(.list(type: .and)) + ".").split(separator: " ").enumerated()), id: \.offset) { _, w in
-                            word(String(w), ink: DS.textPrimary)
-                        }
-                    }
+                    receiveNetworks
                 }
             case .receive:
                 row(String(localized: "at")) {
@@ -402,11 +401,7 @@ struct MoveSentence: View {
                 }
                 row(String(localized: "on")) {
                     // A line of words, so it wraps between them.
-                    FlowLayout(spacing: 7, lineSpacing: 0) {
-                        ForEach(Array((Op.networks.filter { !$0.isTest }.map(\.name).formatted(.list(type: .and)) + ".").split(separator: " ").enumerated()), id: \.offset) { _, w in
-                            word(String(w), ink: DS.textPrimary)
-                        }
-                    }
+                    receiveNetworks
                 }
             }
             }
@@ -490,6 +485,20 @@ struct MoveSentence: View {
         .accessibilityLabel(label)
         // A pick rises into its blank from the list under it (§1438b).
         .transition(.asymmetric(insertion: .offset(y: 28).combined(with: .opacity), removal: .opacity))
+    }
+
+    /// Where this phone can receive (§1442k): only the networks it can use
+    /// the account on, a line of words so it wraps between them.
+    @ViewBuilder private var receiveNetworks: some View {
+        if let reach {
+            FlowLayout(spacing: 7, lineSpacing: 0) {
+                ForEach(Array(YourAccountReach.words(reach).split(separator: " ").enumerated()), id: \.offset) { _, w in
+                    word(String(w), ink: DS.textPrimary)
+                }
+            }
+        } else {
+            word("…", ink: DS.textTertiary)
+        }
     }
 
     // MARK: - The receipt (§1442g)
@@ -1002,6 +1011,14 @@ struct MoveSentence: View {
                     .textSelection(.enabled)
                     .fixedSize(horizontal: false, vertical: true)
                 DSCopyRow(value: account, label: "Copy address", sensitive: false)
+                // Never an address the account cannot follow (§1442k).
+                if let reach, !YourAccountReach.isAll(reach) {
+                    Text(reach.isEmpty
+                         ? "Not on any network on this \(ThisDevice.name) yet. The \(ThisDevice.name) that made this account can open it."
+                         : "Send to it only on \(reach.map(\.name).formatted(.list(type: .or))). The \(ThisDevice.name) that made this account can open the others.")
+                        .dsText(.body17).foregroundStyle(DS.attentionInk)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
                 if fresh, arrived, emptyEverywhere {
                     Text("Nothing in it yet.")
                         .dsText(.body17).foregroundStyle(DS.textSecondary)
@@ -1353,7 +1370,8 @@ struct MoveSentence: View {
     /// Where you hold the most first; the test network last.
     private var networksByWorth: [Op.Network] {
         func worth(_ n: Op.Network) -> Double { (heldBy[n.chainId] ?? []).compactMap(\.usd).reduce(0, +) }
-        return Op.networks.enumerated()
+        let usable = reach.map { r in Op.networks.filter { r.contains($0) } } ?? Op.networks
+        return usable.enumerated()
             .sorted { ($0.element.isTest ? 1 : 0, -worth($0.element), $0.offset) < ($1.element.isTest ? 1 : 0, -worth($1.element), $1.offset) }
             .map(\.element)
     }
@@ -1828,6 +1846,7 @@ struct MoveSentence: View {
             for await (id, held) in group { found[id] = held }
         }
         heldBy = found
+        reach = await YourAccountReach.usable(account)
         // Nothing is picked for you (§1438c): the lists lead with where you
         // hold the most, and the sentence waits for your picks.
         var lists: [Int: [Tokens.Listed]] = [:]
