@@ -70,6 +70,9 @@ struct MoveSentence: View {
     @State private var search = ""
     @State private var pasted: [Int: Tokens.Listed] = [:]
     @State private var items: [Chain.Item] = []
+    /// Where the line being filled stands among the kept swaps (§1442g): a
+    /// kept line tapped to edit takes its own place, not the bottom.
+    @State private var slot = 0
     @State private var quote: YourAccountSwap.Quote?
     @State private var quoteNote: String?
     @State private var stage: Chain.Stage?
@@ -255,7 +258,7 @@ struct MoveSentence: View {
                 .padding(.bottom, DS.Space.s4)
             // What Add kept stands under the verbs, numbered, quieter than the
             // sentence being filled (§1442c, §1442f).
-            if !items.isEmpty, receipt == nil {
+            if !items.isEmpty, receipt == nil, verb != .swap || items.contains(where: { if case .send = $0 { true } else { false } }) {
                 kept
                     .padding(.bottom, DS.Space.s4)
             }
@@ -272,32 +275,41 @@ struct MoveSentence: View {
                 }
             } else {
             switch verb {
-            case .swap, .send:
+            case .swap:
+                // **A RECEIPT (§1442g, user: "lets move to swapping multiple
+                // tokens"; "build it").** What you sell is a list, one line a
+                // token, each with its dollars at the end; what you get is
+                // said once, with the sum. No "and": a stack already says it.
+                ForEach(sellOrder, id: \.self) { line in
+                    switch line {
+                    case .kept(let id): keptSellRow(id)
+                    case .current: currentSellRows
+                    }
+                }
+                row(String(localized: "for")) {
+                    HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                        FlowLayout(spacing: 7, lineSpacing: 0) { buyWord }
+                        Spacer(minLength: 0)
+                        if !keptSwaps.isEmpty, let total = soldDollarsTotal {
+                            Text(verbatim: Self.money(total))
+                                .dsText(.body17).foregroundStyle(DS.textPrimary).monospacedDigit()
+                        }
+                    }
+                }
+                row(String(localized: "on")) { FlowLayout(spacing: 7, lineSpacing: 0) { networkWord } }
+            case .send:
                 // The amount is a line of its own, and can come first (§1442a).
                 // In dollars the token is a line of its own ("$25 / of ETH");
                 // in its own units it stands beside the figure ("20 USDC").
                 row(items.isEmpty ? nil : "\(items.count + 1)", ink: DS.textTertiary) {
-                    HStack(alignment: .firstTextBaseline, spacing: 0) {
-                        if inDollars { word("$", ink: amount.isEmpty ? DS.textTertiary : DS.pickInk) }
-                        amountField
-                        if !inDollars {
-                            withWord.padding(.leading, 8)
-                        }
-                        Spacer(minLength: DS.Space.s2)
-                        unitSwitch
-                    }
+                    amountLine(trailing: nil)
                 }
-                // The whole line takes the tap, not only the narrow field.
                 .contentShape(Rectangle())
                 .onTapGesture { if stage == nil { focus = .amount } }
                 if inDollars {
                     row(String(localized: "of")) { withWord }
                 }
-                if verb == .swap {
-                    row(String(localized: "for")) { FlowLayout(spacing: 7, lineSpacing: 0) { buyWord } }
-                } else {
-                    row(String(localized: "to")) { toWord }
-                }
+                row(String(localized: "to")) { toWord }
                 row(String(localized: "on")) { FlowLayout(spacing: 7, lineSpacing: 0) { networkWord } }
             case .receive:
                 row(String(localized: "at")) {
@@ -391,6 +403,143 @@ struct MoveSentence: View {
         .transition(.asymmetric(insertion: .offset(y: 28).combined(with: .opacity), removal: .opacity))
     }
 
+    // MARK: - The receipt (§1442g)
+
+    enum SellLine: Hashable { case kept(UUID), current }
+
+    private var keptSwaps: [Chain.Swap] {
+        items.compactMap { if case .swap(let s) = $0 { s } else { nil } }
+    }
+
+    /// The kept swaps in order, the line being filled at its slot.
+    private var sellOrder: [SellLine] {
+        var lines = keptSwaps.map { SellLine.kept($0.id) }
+        lines.insert(.current, at: min(slot, lines.count))
+        return lines
+    }
+
+    private func price(of token: Op.Token) -> Double? {
+        held.first { $0.token == token }?.price
+    }
+
+    private func soldDollars(_ s: Chain.Swap) -> Double? {
+        price(of: s.sell).map { Op.dollars(s.amount, decimals: s.sell.decimals, price: $0) }
+    }
+
+    private var currentDollars: Double? {
+        guard let with, let units, let p = with.price else { return nil }
+        return Op.dollars(units, decimals: with.token.decimals, price: p)
+    }
+
+    /// What the whole swap sells, in dollars: the receipt's total.
+    private var soldDollarsTotal: Double? {
+        let parts = keptSwaps.compactMap(soldDollars) + (currentDollars.map { [$0] } ?? [])
+        let sum = parts.reduce(0, +)
+        return sum > 0 ? sum : nil
+    }
+
+    /// What the whole swap buys: every kept quote plus the line being filled.
+    private var buyTotal: String? {
+        let amounts = keptSwaps.map(\.quote.buyAmount) + (quote.map { [$0.buyAmount] } ?? [])
+        guard !amounts.isEmpty else { return nil }
+        return amounts.reduce("0") { Op.sum($0, $1) }
+    }
+
+    /// Every swap's fee, in dollars where the sold token is priced.
+    private var feeTotal: String? {
+        var usd = keptSwaps.compactMap { s in price(of: s.sell).map { Op.dollars(s.quote.fee, decimals: s.sell.decimals, price: $0) } }.reduce(0, +)
+        if let with, let quote, let p = with.price { usd += Op.dollars(quote.fee, decimals: with.token.decimals, price: p) }
+        guard !keptSwaps.isEmpty || quote != nil else { return nil }
+        return usd < 0.01 ? String(localized: "fee under a cent") : String(localized: "fee \(Self.money(usd))")
+    }
+
+    /// The amount, its token beside it in its own units, and what it is
+    /// worth at the trailing end.
+    private func amountLine(trailing: String?) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 0) {
+            if inDollars { word("$", ink: amount.isEmpty ? DS.textTertiary : DS.pickInk) }
+            amountField
+            if !inDollars {
+                withWord.padding(.leading, 8)
+            }
+            Spacer(minLength: DS.Space.s2)
+            if let trailing {
+                Text(verbatim: trailing)
+                    .dsText(.body17).foregroundStyle(DS.textSecondary).monospacedDigit()
+            }
+        }
+    }
+
+    /// The line being filled: the amount, then in dollars "of <token>".
+    @ViewBuilder private var currentSellRows: some View {
+        row(nil) {
+            amountLine(trailing: with.flatMap { units == nil ? nil : otherUnit($0) })
+        }
+        .contentShape(Rectangle())
+        .onTapGesture { if stage == nil { focus = .amount } }
+        if inDollars {
+            row(String(localized: "of")) { withWord }
+        }
+    }
+
+    /// A kept line: tap it to edit it in place, hold it to remove it.
+    @ViewBuilder private func keptSellRow(_ id: UUID) -> some View {
+        if let s = keptSwaps.first(where: { $0.id == id }) {
+            row(nil) {
+                HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                    word(Self.figure(s.amount, decimals: s.sell.decimals) + " " + s.sell.symbol, ink: DS.pickInk)
+                    Spacer(minLength: 0)
+                    if let d = soldDollars(s) {
+                        Text(verbatim: Self.money(d))
+                            .dsText(.body17).foregroundStyle(DS.textSecondary).monospacedDigit()
+                    }
+                }
+            }
+            .contentShape(Rectangle())
+            .onTapGesture { edit(id) }
+            .contextMenu {
+                Button(role: .destructive) { remove(id) } label: { Label("Remove", systemImage: "trash") }
+            }
+            .accessibilityElement(children: .combine)
+            .accessibilityAddTraits(.isButton)
+            .accessibilityHint(Text("Edits this line"))
+            .accessibilityAction(named: Text("Remove")) { remove(id) }
+            .transition(.opacity.combined(with: .offset(y: -8)))
+        }
+    }
+
+    /// A kept line tapped: it becomes the line being filled, where it stands;
+    /// a finished line that was being filled is kept in its place.
+    private func edit(_ id: UUID) {
+        guard stage == nil, let at = items.firstIndex(where: { $0.id == id }),
+              case .swap(let s) = items[at] else { return }
+        withAnimation(DS.Motion.standard) {
+            var index = at
+            if let pending = pendingItem {
+                let into = min(slot, items.count)
+                items.insert(pending, at: into)
+                if into <= index { index += 1 }
+            }
+            items.remove(at: index)
+            slot = index
+            if let h = held.first(where: { $0.token == s.sell }) { with = h }
+            inDollars = false
+            amount = Op.display(s.amount, decimals: s.sell.decimals, places: s.sell.decimals)
+            open = nil
+        }
+        DSHaptic.selection()
+        focus = .amount
+    }
+
+    private func remove(_ id: UUID) {
+        guard stage == nil, let at = items.firstIndex(where: { $0.id == id }) else { return }
+        withAnimation(DS.Motion.standard) {
+            items.remove(at: at)
+            if slot > at { slot -= 1 }
+        }
+        DSHaptic.selection()
+    }
+
     /// The three verbs on their own line, the picked one bright (user:
     /// "send swap receive should be its own line user chooses which"). The
     /// sentence under it is what that verb does.
@@ -468,9 +617,10 @@ struct MoveSentence: View {
 
     @ViewBuilder private var buyWord: some View {
         if let buy {
-            let back = quote.map { "≈ " + Self.figure($0.buyAmount, decimals: buy.token.decimals) + " " }
-            // Locked by a kept swap (§1442c), it reads as settled, not a pick.
-            let word = blank((back ?? "") + buy.token.symbol, ink: lockedBuy == nil ? DS.pickInk : DS.textSecondary,
+            let back = buyTotal.map { "≈ " + Self.figure($0, decimals: buy.token.decimals) + " " }
+            // The whole swap's result, pink like every value; locked by a
+            // kept swap (§1442c), a tap says so (§1442g).
+            let word = blank((back ?? "") + buy.token.symbol, ink: DS.pickInk,
                              .buy, label: Text("For \(buy.token.symbol), change"))
             if pricing {
                 // While Relay prices it, the word breathes: working, not stuck.
@@ -676,7 +826,10 @@ struct MoveSentence: View {
             // Relay's credit is the foot's, and the slider, the amount's own
             // control, stands under it here rather than stranded at the foot.
             VStack(alignment: .leading, spacing: DS.Space.s6) {
-                let print = [otherUnit(with).map { "≈ " + $0 }, feeLine(with)].compactMap { $0 }
+                // Swapping, the other unit is the receipt's column; the fee is
+                // the whole swap's (§1442g).
+                let print = verb == .swap ? [feeTotal].compactMap { $0 }
+                    : [otherUnit(with).map { "≈ " + $0 }, feeLine(with)].compactMap { $0 }
                 if !print.isEmpty {
                     Text(verbatim: print.joined(separator: " · "))
                         .dsText(.body17).foregroundStyle(DS.textSecondary)
@@ -685,8 +838,13 @@ struct MoveSentence: View {
                 if network.isTest {
                     Text("test coins").dsText(.body17).foregroundStyle(DS.attentionInk)
                 }
+                // The slider and the $ · token switch work on the line being
+                // filled, so they share a row under the sentence (§1442g).
                 if verb != .receive, receipt == nil {
-                    DSShareSlider(percent: shareBinding(with), enabled: stage == nil, tint: DS.textPrimary)
+                    HStack(spacing: DS.Space.s4) {
+                        DSShareSlider(percent: shareBinding(with), enabled: stage == nil, tint: DS.textPrimary)
+                        unitSwitch
+                    }
                 }
             }
             .fixedSize(horizontal: false, vertical: true)
@@ -1070,7 +1228,7 @@ struct MoveSentence: View {
 
     private var kept: some View {
         VStack(alignment: .leading, spacing: 0) {
-            ForEach(Array(keptLines.enumerated()), id: \.element.id) { n, line in
+            ForEach(Array(keptLines.filter { verb != .swap || $0.id.hasPrefix("to|") }.enumerated()), id: \.element.id) { n, line in
                 row("\(n + 1)", ink: DS.textTertiary) {
                     Text(verbatim: line.words)
                         .dsText(.heading17)
@@ -1078,7 +1236,10 @@ struct MoveSentence: View {
                         .fixedSize(horizontal: false, vertical: true)
                     Spacer(minLength: DS.Space.s2)
                     Button {
-                        withAnimation(DS.Motion.standard) { items.removeAll { line.ids.contains($0.id) } }
+                        withAnimation(DS.Motion.standard) {
+                            items.removeAll { line.ids.contains($0.id) }
+                            slot = min(slot, items.count)
+                        }
                         DSHaptic.selection()
                     } label: {
                         Image(systemName: "xmark")
@@ -1261,7 +1422,10 @@ struct MoveSentence: View {
             say(String(localized: "One transaction sends on one network"), failure: true)
             return
         }
-        withAnimation(DS.Motion.standard) { items.append(item) }
+        withAnimation(DS.Motion.standard) {
+            items.insert(item, at: min(slot, items.count))
+            slot = items.count
+        }
         DSHaptic.tap()
         // The next sentence keeps what it is for or who it is to, and the
         // network; it moves to the next token with something left.
@@ -1299,6 +1463,7 @@ struct MoveSentence: View {
                 let made = Self.receipt(for: batch, done: done, on: net)
                 withAnimation(DS.Motion.standard) {
                     items = []
+                    slot = 0
                     amount = ""
                     quote = nil
                     receipt = made

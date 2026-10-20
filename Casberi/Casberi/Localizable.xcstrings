@@ -4981,6 +4981,34 @@
         }
       }
     },
+    "Edits this line" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Edita esta línea"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "この行を編集します"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 줄을 편집합니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "编辑这一行"
+          }
+        }
+      }
+    },
     "Fee %@" : {
       "localizations" : {
         "es" : {

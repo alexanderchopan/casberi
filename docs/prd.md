@@ -67709,3 +67709,12 @@ Mock: the design canvas "Aztec experience".
 5. **Kept lines are numbered in the gutter**, `heading17`, with their ×. The line being filled takes the next number. "In this transaction" is gone: the numbers say it.
 6. **"Powered by Relay" signs the foot, small and centred under Add and the verb**, with Relay's mark on its white disc. A credit, not a fact about this swap.
 7. The $ · token switch stays two `Chip`s. The mock drew one pill with two segments, the grammar §686 retired.
+
+### §1442g — Several for one is a receipt (amends §1442c items 1–2, §1442f items 4–5) (user, 2026-10-20: "lets move to swapping multiple tokens"; "how would you improve this design"; "build it")
+
+1. **What you sell is a list, one line a token at the sentence's size, and what you get is said once.** The For word carries the whole swap's total, every kept quote plus the line being filled. No "and": a stack already says it. The gutter holds only "for" and "on".
+2. **One dollar column.** Each sold line ends with its dollars in grey. The For line ends with the sum in white once a second line exists, so the column reads as a receipt.
+3. **A kept line is tapped to edit it in place** (`MoveSentence.slot`): it becomes the line being filled where it stands, and a finished line that was being filled is kept in its place. **Held, it offers Remove.** A swipe was drawn in the mock, but a drag inside the scroll view beats its scrolling (gotchas), so the hold menu does it.
+4. **The slider and the $ · token switch share one row under the sentence**, working on the line being filled. Swapping, the small print is the whole swap's fee alone; the other unit is the column's.
+5. The total stays pink: it is the swap's result. Locked by a kept swap, a tap on it says "One token for the whole swap".
+6. The mock underlined the line being filled. Nothing draws a line (design law), so its grey 0 and pink token mark it.
