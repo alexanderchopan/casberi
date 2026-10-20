@@ -235,7 +235,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1576 of 1645 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1577 of 1646 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1813,6 +1813,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1435 — Move is in every build: no hidden or dormant feature in a release (retires §1422's DEBUG gate)
 - §1436 — Move does, the Wallet keeps: Send · Swap and Receive are Move's two sections, the keys live in Wallet › Security, and…
 - §1437 — Revoke in the app: your account takes back what it let others spend, in Wallet › Security (builds §1436 item 2; the p…
+- §1438 — Move is a sentence you fill in: Swap · Send · Receive as words, the choices opening under it, Add for the next line (…
 
 ## Dead rulings → what replaced them (generated)
 

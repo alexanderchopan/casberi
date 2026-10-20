@@ -75,6 +75,17 @@ enum YourAccountOp {
     static func usdc(on network: Network) -> Token { Token(symbol: "USDC", decimals: 6, contract: network.usdc) }
     static func tokens(on network: Network) -> [Token] { [eth, usdc(on: network)] }
 
+    /// Which network a `Payment`'s chain is in this app's own spelling
+    /// ("base-mainnet"), for reading the Wallet's last holdings.
+    static func appName(_ network: Network) -> String? {
+        switch network.chainId {
+        case 8453: "base-mainnet"
+        case 1: "eth-mainnet"
+        case 84532: "base-sepolia"
+        default: nil
+        }
+    }
+
     /// One payment: `amount` in the token's base units, as a decimal string.
     struct Payment: Equatable, Identifiable, Sendable {
         var id = UUID()
@@ -364,5 +375,78 @@ enum YourAccountOp {
     static func decimal(hexQuantity hex: String) -> String? {
         guard let word = SafeABI.word(uint256: hex) else { return nil }
         return SafeCalldata.decimal(word)
+    }
+
+    // MARK: - The sentence's arithmetic (prd §1438)
+
+    /// a − b, both decimal strings; "0" when b is the larger (what is left
+    /// of a holding once the transaction's earlier lines are taken from it).
+    static func difference(_ a: String, _ b: String) -> String {
+        guard !atMost(a, b) else { return "0" }
+        var out: [Character] = []
+        var borrow = 0
+        let x = Array(a.reversed()), y = Array(b.reversed())
+        for i in 0..<x.count {
+            var d = Int(String(x[i]))! - (i < y.count ? Int(String(y[i]))! : 0) - borrow
+            borrow = d < 0 ? 1 : 0
+            if d < 0 { d += 10 }
+            out.append(Character(String(d)))
+        }
+        let s = String(out.reversed()).drop { $0 == "0" }
+        return s.isEmpty ? "0" : String(s)
+    }
+
+    /// `percent` of `units`, rounded down: the slider's quarter, half, all.
+    static func share(_ units: String, percent: Int) -> String {
+        let p = min(max(percent, 0), 100)
+        guard p < 100 else { return units.drop { $0 == "0" }.isEmpty ? "0" : String(units.drop { $0 == "0" }) }
+        // units × p, then ÷ 100, by long arithmetic.
+        var product: [Int] = []
+        var carry = 0
+        for c in units.reversed() {
+            let v = Int(String(c))! * p + carry
+            product.append(v % 10)
+            carry = v / 10
+        }
+        while carry > 0 { product.append(carry % 10); carry /= 10 }
+        let digits = String(product.reversed().map { Character(String($0)) }).drop { $0 == "0" }
+        guard digits.count > 2 else { return "0" }
+        return String(digits.dropLast(2))
+    }
+
+    /// Dollars typed in the sentence → the token's base units at `price`
+    /// dollars a whole token, rounded down. nil for anything not an amount.
+    static func baseUnits(dollars text: String, price: Double, decimals: Int) -> String? {
+        let s = text.trimmingCharacters(in: .whitespaces).replacingOccurrences(of: ",", with: ".")
+        guard price > 0, let usd = Decimal(string: s, locale: Locale(identifier: "en_US_POSIX")), usd > 0 else { return nil }
+        var tokens = usd / Decimal(price)
+        var rounded = Decimal()
+        NSDecimalRound(&rounded, &tokens, min(decimals, 18), .down)
+        let text = NSDecimalNumber(decimal: rounded).stringValue
+        return baseUnits(text, decimals: decimals)
+    }
+
+    /// Base units → dollars at `price` a whole token.
+    static func dollars(_ units: String, decimals: Int, price: Double) -> Double {
+        (Double(display(units, decimals: decimals, places: min(decimals, 12))) ?? 0) * price
+    }
+
+    /// An ERC-20 `symbol()` answer: an ABI string, or the bytes32 some old
+    /// tokens return. nil for anything else, or a symbol no one could read.
+    static func abiString(_ hex: String) -> String? {
+        guard let bytes = SafeABI.hexBytes(hex), !bytes.isEmpty else { return nil }
+        var raw: [UInt8]
+        if bytes.count >= 96, bytes[0..<31].allSatisfy({ $0 == 0 }), bytes[31] == 32 {
+            let length = bytes[32..<64].reduce(0) { $0 * 256 + Int($1) }
+            guard length > 0, length <= 64, bytes.count >= 64 + length else { return nil }
+            raw = Array(bytes[64..<(64 + length)])
+        } else if bytes.count == 32 {
+            raw = Array(bytes.prefix { $0 != 0 })
+        } else {
+            return nil
+        }
+        guard let s = String(bytes: raw, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !s.isEmpty, s.count <= 16, !s.contains(where: \.isNewline) else { return nil }
+        return s
     }
 }

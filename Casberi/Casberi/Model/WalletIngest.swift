@@ -2717,6 +2717,15 @@ enum WalletIngest {
         return merged.values.filter { $0.usd >= 1 }.sorted { $0.usd > $1.usd }
     }
 
+    /// One address's last reading, unmerged: what Move's sentence offers to
+    /// spend (prd §1438). Never a network read.
+    static func lastKnownHoldings(owner: String) async -> [(symbol: String, contract: String?, network: String, usd: Double, amount: Double?)] {
+        let key = owner.lowercased()
+        return await HoldingsCache.shared.lastKnown()
+            .filter { $0.owner.lowercased() == key }
+            .map { ($0.symbol, $0.contract, $0.network, $0.usd, $0.amount) }
+    }
+
     static func lastKnownHeld() async -> (byContract: [String: Double], bySymbol: [String: Double]) {
         var byContract: [String: Double] = [:]
         var bySymbol: [String: Double] = [:]

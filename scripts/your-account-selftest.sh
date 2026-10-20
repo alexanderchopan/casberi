@@ -183,6 +183,23 @@ check(YourAccountOp.spoken("314172465981", decimals: 18) == "0.000000314" && You
 check(YourAccountOp.atMost("999", "1000") && !YourAccountOp.atMost("1001", "1000") && YourAccountOp.atMost("0100", "100"), "atMost")
 check(YourAccountOp.sum("999999999999999999999", "1") == "1000000000000000000000", "sum carries past UInt64")
 check(YourAccountOp.decimal(hexQuantity: "0xde0b6b3a7640000") == "1000000000000000000", "hex quantity")
+
+// The sentence's arithmetic (prd §1438): what is left, the slider's share,
+// dollars typed, and a token's symbol as its contract answers it.
+check(YourAccountOp.difference("1000", "1") == "999" && YourAccountOp.difference("5", "7") == "0"
+      && YourAccountOp.difference("1000000000000000000000", "1") == "999999999999999999999", "what is left of a holding")
+check(YourAccountOp.share("7948", percent: 50) == "3974" && YourAccountOp.share("7948", percent: 25) == "1987"
+      && YourAccountOp.share("7948", percent: 100) == "7948" && YourAccountOp.share("3", percent: 25) == "0"
+      && YourAccountOp.share("123456789012345678901234567890", percent: 75) == "92592591759259259175925925917", "the slider's share rounds down, past UInt64")
+check(YourAccountOp.baseUnits(dollars: "5", price: 2.5, decimals: 6) == "2000000"
+      && YourAccountOp.baseUnits(dollars: "1", price: 3, decimals: 6) == "333333"
+      && YourAccountOp.baseUnits(dollars: "0", price: 3, decimals: 6) == nil
+      && YourAccountOp.baseUnits(dollars: "5", price: 0, decimals: 6) == nil, "dollars typed become the token's units, rounded down")
+let usdcSymbol = "0x" + String(repeating: "0", count: 62) + "20" + String(repeating: "0", count: 63) + "4"
+    + "5553444300000000000000000000000000000000000000000000000000000000"
+check(YourAccountOp.abiString(usdcSymbol) == "USDC", "an ABI string symbol")
+check(YourAccountOp.abiString("0x4d4b520000000000000000000000000000000000000000000000000000000000") == "MKR", "a bytes32 symbol")
+check(YourAccountOp.abiString("0x") == nil, "no answer is no symbol")
 exit(bad == 0 ? 0 : 1)
 SWIFT
 xcrun swiftc -O -o "$TMP/t" "$ACCOUNT" "$OP" "$SWAP" "$COW" "$TX" "$KECCAK" "$CLEARSIGN" "$WEBAUTHN" "$TMP/main.swift" 2>"$TMP/err" \

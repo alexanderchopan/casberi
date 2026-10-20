@@ -110,9 +110,6 @@ enum ScopeTileGlyph {
     /// The dollar sign alone (user, 2026-10-19): the arrows read as a verb,
     /// a key as Passwords, and inside a circle the sign was too small to read.
     static let move         = "dollarsign"
-    /// Move's two sections (prd §1436): money out, money in.
-    static let send         = "arrow.up"
-    static let receive      = "arrow.down"
 }
 
 /// The Work room's tiles (prd §1057).

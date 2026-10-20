@@ -1,0 +1,159 @@
+import Foundation
+
+/// **WHAT THE SENTENCE OFFERS (prd §1438)** — the tokens Move's sentence
+/// picks from.
+///
+/// *With* is what the account holds on one network: ETH and USDC, read off
+/// the chain every time, and every other token the Wallet's last reading saw
+/// at this address (`WalletIngest.lastKnownHoldings(owner:)`), each read back
+/// off the chain for its exact balance before it is offered. A token is
+/// priced only by that reading (dollars over amount); one it never priced
+/// offers no dollars.
+///
+/// *For* is CoW's own lists, from `files.cow.fi`: the CoinGecko list it
+/// publishes per chain (by market size, so its head is what people hold) and
+/// its curated list, a day at a time. A pasted address
+/// outside them is read off the chain (`symbol()`, `decimals()`) and says it
+/// is "not on CoW's list", so a look-alike never passes as the real one.
+enum YourAccountTokens {
+    typealias Op = YourAccountOp
+
+    struct Listed: Equatable, Identifiable, Sendable {
+        let token: Op.Token
+        let name: String
+        /// On one of CoW's lists. A pasted address that is not, is still
+        /// offered, and said to be not.
+        let onList: Bool
+        var id: String { token.contract?.lowercased() ?? token.symbol }
+    }
+
+    struct Held: Equatable, Identifiable, Sendable {
+        let token: Op.Token
+        /// Exact, in base units, as the chain answered.
+        let units: String
+        /// Dollars for one whole token, from the Wallet's last reading.
+        let price: Double?
+        var id: String { token.contract?.lowercased() ?? token.symbol }
+        var usd: Double? { price.map { Op.dollars(units, decimals: token.decimals, price: $0) } }
+    }
+
+    // MARK: - CoW's lists
+
+    @MainActor private static var lists: [Int: (tokens: [Listed], at: Date)] = [:]
+
+    /// The tokens CoW lists on `net`, ETH first. Empty where CoW does not
+    /// settle (Base Sepolia).
+    @MainActor
+    static func list(_ net: Op.Network) async -> [Listed] {
+        guard YourAccountSwap.supported(net) else { return [] }
+        if let cached = lists[net.chainId], cached.at.timeIntervalSinceNow > -86_400 { return cached.tokens }
+        var seen: Set<String> = []
+        var out: [Listed] = [Listed(token: Op.eth, name: "Ether", onList: true)]
+        // CoinGecko's list first: it comes by market size, so with nothing
+        // typed the head of it is what people hold. CoW's own after it.
+        for url in ["https://files.cow.fi/token-lists/CoinGecko.\(net.chainId).json",
+                    "https://files.cow.fi/tokens/CowSwap.json"] {
+            guard let root = await YourAccountChain.fetchJSON(url) as? [String: Any],
+                  let tokens = root["tokens"] as? [[String: Any]] else { continue }
+            for t in tokens {
+                guard (t["chainId"] as? Int) == net.chainId,
+                      let address = t["address"] as? String, ENS.isHexAddress(address),
+                      let symbol = t["symbol"] as? String, !symbol.isEmpty, symbol.count <= 16,
+                      let decimals = t["decimals"] as? Int, (0...36).contains(decimals),
+                      seen.insert(address.lowercased()).inserted else { continue }
+                out.append(Listed(token: Op.Token(symbol: symbol, decimals: decimals, contract: EIP55.checksum(address)),
+                                  name: (t["name"] as? String) ?? symbol, onList: true))
+            }
+        }
+        if out.count > 1 { lists[net.chainId] = (out, .now) }
+        return out
+    }
+
+    /// A pasted contract: CoW's entry when it lists it, else what the chain
+    /// says its symbol and decimals are, marked not on the list.
+    @MainActor
+    static func lookUp(_ address: String, on net: Op.Network) async -> Listed? {
+        guard ENS.isHexAddress(address) else { return nil }
+        if let known = await list(net).first(where: { $0.token.contract?.lowercased() == address.lowercased() }) {
+            return known
+        }
+        guard let token = await readToken(address, on: net) else { return nil }
+        return Listed(token: token, name: token.symbol, onList: false)
+    }
+
+    private static func readToken(_ address: String, on net: Op.Network) async -> Op.Token? {
+        async let symbolHex = try? YourAccountChain.ethCall(net, to: address, data: YourAccount.sel("symbol()"))
+        async let decimalsHex = try? YourAccountChain.ethCall(net, to: address, data: YourAccount.sel("decimals()"))
+        guard let s = await symbolHex, let symbol = Op.abiString(s),
+              let d = await decimalsHex, let decimals = Op.decimal(hexQuantity: d).flatMap({ Int($0) }),
+              (0...36).contains(decimals) else { return nil }
+        return Op.Token(symbol: symbol, decimals: decimals, contract: EIP55.checksum(address))
+    }
+
+    /// What a search in For shows: with nothing typed, what you hold then
+    /// the list's head; typed, symbols that start with it, then names that
+    /// hold it, what you hold first in each. Forty at most.
+    static func matches(_ query: String, in list: [Listed], held: [Held]) -> [Listed] {
+        let q = query.trimmingCharacters(in: .whitespaces).lowercased()
+        let heldIDs = Set(held.map(\.id))
+        let mine = held.map { h in list.first { $0.id == h.id } ?? Listed(token: h.token, name: h.token.symbol, onList: false) }
+        guard !q.isEmpty else {
+            return Array((mine + list.filter { !heldIDs.contains($0.id) }).prefix(40))
+        }
+        func rank(_ l: Listed) -> Int? {
+            let symbol = l.token.symbol.lowercased(), name = l.name.lowercased()
+            if symbol == q { return 0 }
+            if symbol.hasPrefix(q) { return 1 }
+            if name.hasPrefix(q) { return 2 }
+            if name.contains(q) || symbol.contains(q) { return 3 }
+            return nil
+        }
+        let pool = mine + list.filter { !heldIDs.contains($0.id) }
+        return pool.compactMap { l in rank(l).map { (l, $0, heldIDs.contains(l.id) ? 0 : 1) } }
+            .sorted { ($0.1, $0.2) < ($1.1, $1.2) }
+            .prefix(40)
+            .map(\.0)
+    }
+
+    // MARK: - What you hold
+
+    /// The account's tokens on `net` with something in them, biggest first.
+    @MainActor
+    static func held(_ account: String, on net: Op.Network) async -> [Held] {
+        let reading = await WalletIngest.lastKnownHoldings(owner: account)
+            .filter { $0.network == Op.appName(net) }
+        func price(_ token: Op.Token) -> Double? {
+            let row = reading.first { r in
+                token.contract.map { r.contract?.lowercased() == $0.lowercased() }
+                    ?? (r.contract == nil && r.symbol.uppercased() == token.symbol.uppercased())
+            }
+            guard let row, let amount = row.amount, amount > 0, row.usd > 0 else { return nil }
+            return row.usd / amount
+        }
+        var candidates = Op.tokens(on: net)
+        let listed = await list(net)
+        for r in reading.prefix(30) {
+            guard let contract = r.contract, ENS.isHexAddress(contract),
+                  !candidates.contains(where: { $0.contract?.lowercased() == contract.lowercased() }) else { continue }
+            if let known = listed.first(where: { $0.token.contract?.lowercased() == contract.lowercased() }) {
+                candidates.append(known.token)
+            } else if let token = await readToken(contract, on: net) {
+                candidates.append(token)
+            }
+        }
+        let tokens = candidates
+        var found: [Held] = []
+        await withTaskGroup(of: Held?.self) { group in
+            for token in tokens {
+                group.addTask {
+                    guard let units = await YourAccountChain.balance(net, token, of: account), units != "0" else { return nil }
+                    return Held(token: token, units: units, price: nil)
+                }
+            }
+            for await h in group { if let h { found.append(h) } }
+        }
+        return found
+            .map { Held(token: $0.token, units: $0.units, price: price($0.token)) }
+            .sorted { ($0.usd ?? -1, $0.token.symbol) > ($1.usd ?? -1, $1.token.symbol) }
+    }
+}

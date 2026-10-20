@@ -220,6 +220,9 @@ KNOWN_PHRASES: tuple[str, ...] = (
 )
 
 KNOWN_PROPER: set[str] = {
+    # CoW Protocol, which settles Move's swaps (prd §1430, §1438): "Not on
+    # CoW's list" names its token lists.
+    "CoW's",
     # Aztec's fee token (prd §1270, §1271): "Fee Juice" is the name Aztec
     # gives it, as "Optic ID" is Apple's.
     "Fee", "Juice",

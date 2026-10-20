@@ -56,7 +56,7 @@ struct MoveSecurity: View {
                 })
             if addingOutside { outsideField }
         }
-        // Read again whenever a send lands (`MoveSend` bumps the rooms'
+        // Read again whenever a send lands (`MoveSentence` bumps the rooms'
         // revision): a first send creates the account and moves its key.
         .task(id: "\(account)·\(chrome.roomRevision)") { await read() }
         .task {

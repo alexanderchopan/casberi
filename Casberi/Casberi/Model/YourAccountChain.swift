@@ -334,6 +334,14 @@ enum YourAccountChain {
         return (try? JSONSerialization.jsonObject(with: data, options: .fragmentsAllowed), http.statusCode)
     }
 
+    /// One keyless GET (CoW's token lists, prd §1438), as JSON.
+    static func fetchJSON(_ url: String) async -> Any? {
+        guard let u = URL(string: url),
+              let (data, http) = await IngestSupport.sendRequest(URLRequest(url: u), service: service),
+              http.statusCode == 200 else { return nil }
+        return try? JSONSerialization.jsonObject(with: data)
+    }
+
     private static func cowRefusal(_ json: Any?, _ net: Network) -> Failure {
         let said = (json as? [String: Any])?["description"] as? String
         return Failure(message: said.map { String(localized: "CoW said: \($0)") }
@@ -581,8 +589,11 @@ enum YourAccountChain {
             guard dryRun else { throw Failure(message: String(localized: "Needs \(need) ETH on \(net.name), with the fee")) }
             report("short: needs \(need) ETH with the fee")
         }
-        for token in YourAccountOp.tokens(on: net) where token.contract != nil && !dryRun {
-            guard let total = out[token.contract!] else { continue }
+        // Every token the transaction moves, whatever list it came from
+        // (prd §1438: the sentence sends and swaps any token you hold).
+        var checked = Set<String>()
+        for token in payments.map(\.token) where token.contract != nil && !dryRun {
+            guard checked.insert(token.contract!.lowercased()).inserted, let total = out[token.contract!] else { continue }
             guard let tokenHeld = await balance(net, token, of: account), YourAccountOp.atMost(total, tokenHeld) else {
                 throw Failure(message: String(localized: "Not enough \(token.symbol) on \(net.name)"))
             }

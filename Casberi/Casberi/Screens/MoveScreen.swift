@@ -6,14 +6,12 @@ import UIKit
 /// account's face, its name, its address. Then the modules, bare on the page
 /// (§1382, §1393), a 32pt seam between them (§1386).
 ///
-/// **Move is the acts alone (prd §1436)**: Send · Swap (`MoveSend`, §1424,
-/// §1430) and Receive, each under the Wallet's own section head
-/// (`SectionPanelName`: a pink glyph, `heading28`), so a scan reads two
-/// places and never one form. Security's rows went to the Wallet's Security
-/// tile (`MoveSecurity`, §1427). No balance: the Wallet shows it.
+/// **Move is the acts alone (prd §1436)**, and since §1438 one sentence you
+/// fill in (`MoveSentence`): Swap · Send · Receive. Security's rows went to
+/// the Wallet's Security tile (`MoveSecurity`, §1427). The head stands only
+/// before the account exists.
 struct MoveScreen: View {
     @Environment(ShellChrome.self) private var chrome
-    @Environment(\.openURL) private var openURL
     @State private var address: String? = YourAccountKey.address
     @State private var creating = false
     /// An account whose recovery key this phone's iCloud Keychain holds,
@@ -21,29 +19,30 @@ struct MoveScreen: View {
     @State private var recoverable: (address: String, origin: String)?
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 0) {
-                head
-                if let address {
-                    MoveSend(account: address)
-                        .padding(.top, DSRoomChassis.sectionGap)
-                    receive(address)
-                        .padding(.top, DSRoomChassis.sectionGap)
-                } else if let recoverable {
-                    recoverRow(recoverable)
-                        .padding(.top, DSRoomChassis.sectionGap)
-                } else {
-                    createRow
-                        .padding(.top, DSRoomChassis.sectionGap)
+        Group {
+            if let address {
+                // The account exists: the page is the sentence (prd §1438),
+                // no head — it is this phone's account, there is no other.
+                MoveSentence(account: address)
+            } else {
+                ScrollView {
+                    VStack(spacing: 0) {
+                        head
+                        if let recoverable {
+                            recoverRow(recoverable)
+                                .padding(.top, DSRoomChassis.sectionGap)
+                        } else {
+                            createRow
+                                .padding(.top, DSRoomChassis.sectionGap)
+                        }
+                    }
+                    .padding(.horizontal, DSRoomChassis.leadInset)
+                    .padding(.top, DS.Space.s6)
+                    .padding(.bottom, DS.Space.s8 * 3)
                 }
+                .scrollContentBackground(.hidden)
             }
-            .padding(.horizontal, DSRoomChassis.leadInset)
-            .padding(.top, DS.Space.s6)
-            .padding(.bottom, DS.Space.s8 * 3)
         }
-        .scrollContentBackground(.hidden)
-        // The address fields wrap (§1428), so a drag is how a keyboard goes.
-        .scrollDismissesKeyboard(.interactively)
         .dsPageBackground()
         .task {
             if address == nil { recoverable = YourAccountRecovery.accounts().first } else { YourAccountKey.ensureRecord() }
@@ -52,42 +51,17 @@ struct MoveScreen: View {
 
     // MARK: The head
 
-    /// Centred, as every sheet's head is since prd §1397: the face, the name,
-    /// the address in grey; before the account exists, the move mark.
+    /// Before the account exists: the move mark, centred, and its name.
     private var head: some View {
         VStack(spacing: DS.Space.s2) {
-            Group {
-                if let address {
-                    WalletFace(address: address, size: DS.Face.sheet, circular: true)
-                } else {
-                    Image(systemName: ScopeTileGlyph.move)
-                        .dsGlyph(.title, weight: .semibold)
-                        .foregroundStyle(DS.brandInk)
-                        .frame(width: DS.Face.sheet, height: DS.Face.sheet)
-                }
-            }
-            .accessibilityHidden(true)
+            Image(systemName: ScopeTileGlyph.move)
+                .dsGlyph(.title, weight: .semibold)
+                .foregroundStyle(DS.brandInk)
+                .frame(width: DS.Face.sheet, height: DS.Face.sheet)
+                .accessibilityHidden(true)
             Text("Your account")
                 .dsText(.heading24)
                 .foregroundStyle(DS.headInk)
-            if let address {
-                // The whole address, always (user, 2026-10-19: "show entire
-                // address here so user can always see and copy it"): one
-                // line of mono, and a tap copies it.
-                Button { copy(address) } label: {
-                    Text(verbatim: address)
-                        .dsText(.mono12)
-                        .foregroundStyle(DS.textSecondary)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.7)
-                }
-                .buttonStyle(RowPress())
-                .accessibilityLabel(Text("Address \(address)"))
-                .accessibilityHint(Text("Copies your address"))
-                Text("Secured by Safe")
-                    .dsText(.subhead12)
-                    .foregroundStyle(DS.textTertiary)
-            }
         }
         .frame(maxWidth: .infinity)
     }
@@ -189,68 +163,5 @@ struct MoveScreen: View {
             chrome.flash(String(localized: "Couldn't create the account on this device"), tone: .failure)
         }
         creating = false
-    }
-
-    // MARK: Receive
-
-    /// Money coming in (prd §1425): from an exchange, or to your address.
-    /// Send's Add is the page's one Add — it batches.
-    private func receive(_ address: String) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
-            SectionPanelName(name: String(localized: "Receive"), glyph: ScopeTileGlyph.receive, inset: 0) { EmptyView() }
-                .frame(minHeight: 44, alignment: .leading)
-            Menu {
-                Button { addFrom("https://www.coinbase.com", address) } label: { Text(verbatim: "Coinbase") }
-                Button { addFrom("https://www.kraken.com", address) } label: { Text(verbatim: "Kraken") }
-                Button("Another wallet") { copy(address) }
-            } label: {
-                row(title: "From an exchange", line: "Coinbase, Kraken or another wallet")
-            }
-            .buttonStyle(RowPress())
-            HStack(spacing: DS.Space.s3) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Your address").dsText(.body17).foregroundStyle(DS.textPrimary)
-                    Text(verbatim: YourAccount.short(address) + " · Base · Ethereum")
-                        .dsText(.subhead12)
-                        .foregroundStyle(DS.textSecondary)
-                }
-                Spacer(minLength: DS.Space.s2)
-                Button("Copy") { copy(address) }
-                    .dsText(.body17)
-                    .foregroundStyle(DS.pickInk)
-                    .buttonStyle(RowPress())
-                    .frame(minHeight: 44)
-            }
-            .frame(minHeight: 60)
-        }
-    }
-
-    private func row(title: LocalizedStringKey, line: LocalizedStringKey) -> some View {
-        HStack(spacing: DS.Space.s3) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title).dsText(.body17).foregroundStyle(DS.textPrimary)
-                Text(line).dsText(.subhead12).foregroundStyle(DS.textSecondary)
-            }
-            Spacer(minLength: DS.Space.s2)
-            Image(systemName: "chevron.right")
-                .dsGlyph(.caption, weight: .semibold)
-                .foregroundStyle(DS.textTertiary)
-                .accessibilityHidden(true)
-        }
-        .frame(minHeight: 60)
-        .contentShape(Rectangle())
-    }
-
-    private func copy(_ address: String) {
-        UIPasteboard.general.string = address
-        DSHaptic.tap()
-        chrome.flash(String(localized: "Address copied"))
-    }
-
-    /// The address on the clipboard, then the exchange: paste it as the
-    /// destination of a withdrawal there, on Base or Ethereum.
-    private func addFrom(_ site: String, _ address: String) {
-        copy(address)
-        if let url = URL(string: site) { openURL(url) }
     }
 }
