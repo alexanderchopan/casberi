@@ -570,8 +570,14 @@ enum IngestSupport {
     private static func send(_ request: URLRequest,
                              service: String? = nil) async -> (Data, HTTPURLResponse)? {
         NetworkLedger.shared.record(request, as: service)
+        // Alchemy's key is one pool for every install: a 429 there brakes
+        // every Alchemy request on this phone, not just the one refused
+        // (`AlchemyBrake`, 2026-10-20).
+        let braked = AlchemyBrake.brakes(host: request.url?.host)
+        if braked { await AlchemyBrake.shared.waitForTurn() }
         guard let (data, response) = try? await session.data(for: request),
               let http = response as? HTTPURLResponse else { return nil }
+        if braked { await AlchemyBrake.shared.note(status: http.statusCode) }
         // Whether the bridge is still being let in (2026-08-10). This funnel
         // already held the status and handed it only to the immediate caller,
         // who almost always maps it to nil and loses it — so a revoked key was

@@ -2798,6 +2798,7 @@ harness "Figure-voice pure-logic self-test" "figure-voice self-test" "scripts/fi
 harness "Wallet Permissions rungs self-test" "11 mutations, 10 drift guards" "scripts/wallet-permissions-selftest.sh" "the wallet Permissions self-test failed — run scripts/wallet-permissions-selftest.sh"
 
 harness "Zerion lane self-test" "one request at a time, spaced, a 429 waited out on schedule, 4 mutations" "scripts/zerion-lane-selftest.sh" "the zerion lane self-test failed — run scripts/zerion-lane-selftest.sh"
+harness "Alchemy brake self-test" "a 429 holds every Alchemy request, then lets them go spaced, 5 mutations" "scripts/alchemy-brake-selftest.sh" "the alchemy brake self-test failed — run scripts/alchemy-brake-selftest.sh"
 # The ask capsule (prd §543) — the one control that says who will answer, and
 # the deletions that made it the only one. Every failure renders as a perfectly
 # ordinary capsule: an agent silently missing (a stale recency entry outranking
