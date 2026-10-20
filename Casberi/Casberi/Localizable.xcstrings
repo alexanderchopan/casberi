@@ -1951,6 +1951,62 @@
         }
       }
     },
+    "%@ · not yet on %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ · aún no en %2$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ · %2$@ はまだ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ · %2$@에는 아직"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ · 尚未在 %2$@ 上"
+          }
+        }
+      }
+    },
+    "%@ · on %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ · en %2$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ · %2$@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ · %2$@에 있음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ · 在 %2$@ 上"
+          }
+        }
+      }
+    },
     "%@ · Renews %@" : {
       "localizations" : {
         "es" : {
@@ -3861,6 +3917,34 @@
         }
       }
     },
+    "0x… of a wallet you hold" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "0x… de una billetera que controlas"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "あなたが持つウォレットの0x…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "보유한 지갑의 0x…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你持有的钱包的 0x…"
+          }
+        }
+      }
+    },
     "1 address followed" : {
       "localizations" : {
         "es" : {
@@ -5485,6 +5569,62 @@
         }
       }
     },
+    "Add %@ as a key on %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Añadir %1$@ como clave en %2$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%2$@ で %1$@ を鍵として追加"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%2$@에서 %1$@를 키로 추가"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 %2$@ 上将 %1$@ 添加为密钥"
+          }
+        }
+      }
+    },
+    "Add a key you hold outside Casberi" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Añade una clave que tengas fuera de Casberi"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberiの外で持つ鍵を追加"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberi 밖에서 보유한 키 추가"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "添加一个你在 Casberi 之外持有的密钥"
+          }
+        }
+      }
+    },
     "Add an alert" : {
       "localizations" : {
         "es" : {
@@ -5537,6 +5677,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "添加应用"
+          }
+        }
+      }
+    },
+    "Add as a key" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Añadir como clave"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "鍵として追加"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "키로 추가"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "添加为密钥"
           }
         }
       }
@@ -5677,6 +5845,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "退出演示后即可添加。"
+          }
+        }
+      }
+    },
+    "Adding…" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Añadiendo…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "追加中…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "추가 중…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在添加…"
           }
         }
       }
@@ -13919,6 +14115,34 @@
         }
       }
     },
+    "None · a wallet of yours, so the account never depends on this app" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ninguna · una billetera tuya, para que la cuenta nunca dependa de esta app"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "なし · あなたのウォレット。アカウントがこのアプリに依存しないように"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "없음 · 내 지갑으로, 계정이 이 앱에 의존하지 않도록"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "无 · 你自己的钱包，让账户永不依赖本应用"
+          }
+        }
+      }
+    },
     "Not enough %@ on %@" : {
       "localizations" : {
         "es" : {
@@ -14899,6 +15123,34 @@
         }
       }
     },
+    "Opens your account's page" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Abre la página de tu cuenta"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アカウントのページを開きます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "계정 페이지를 엽니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "打开你的账户页面"
+          }
+        }
+      }
+    },
     "Or a move in a day, in %" : {
       "localizations" : {
         "es" : {
@@ -15007,6 +15259,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "已超出范围 1 天"
+          }
+        }
+      }
+    },
+    "Outside key" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Clave externa"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "外部の鍵"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "외부 키"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "外部密钥"
+          }
+        }
+      }
+    },
+    "Outside key on %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Clave externa en %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ に外部の鍵を追加しました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@에 외부 키 설정됨"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "外部密钥已在 %@ 上"
           }
         }
       }
@@ -17033,6 +17341,34 @@
         }
       }
     },
+    "So your account never depends on this app" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Para que tu cuenta nunca dependa de esta app"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アカウントがこのアプリに依存しないように"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "계정이 이 앱에 의존하지 않도록"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "让你的账户永不依赖本应用"
+          }
+        }
+      }
+    },
     "Sold %@ %@" : {
       "localizations" : {
         "es" : {
@@ -17533,6 +17869,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "测试手续费没有价值，Aztec 发布主要版本时测试网会被替换。"
+          }
+        }
+      }
+    },
+    "That address is a contract on %@, not a wallet whose key you hold" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Esa dirección es un contrato en %@, no una billetera cuya clave tengas"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "そのアドレスは %@ のコントラクトで、あなたが鍵を持つウォレットではありません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "그 주소는 %@의 컨트랙트이며, 키를 보유한 지갑이 아닙니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "该地址在 %@ 上是合约，而不是你持有密钥的钱包"
+          }
+        }
+      }
+    },
+    "That is your account's own address" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Esa es la dirección de tu propia cuenta"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "それはあなたのアカウント自身のアドレスです"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "그것은 계정 자신의 주소입니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "那是你账户自己的地址"
           }
         }
       }
@@ -18289,6 +18681,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "这不是%@"
+          }
+        }
+      }
+    },
+    "This key alone can move everything in your account. Use a wallet whose key only you hold, like a Ledger, never an exchange's deposit address." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Esta clave por sí sola puede mover todo lo de tu cuenta. Usa una billetera cuya clave solo tengas tú, como una Ledger, nunca la dirección de depósito de un exchange."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "この鍵だけでアカウントのすべてを動かせます。Ledgerのように鍵をあなただけが持つウォレットを使い、取引所の入金アドレスは使わないでください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 키 하나로 계정의 모든 것을 옮길 수 있습니다. Ledger처럼 키를 나만 보유한 지갑을 사용하고, 거래소의 입금 주소는 절대 사용하지 마세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "仅凭此密钥即可转走你账户中的一切。请使用只有你持有密钥的钱包（如 Ledger），切勿使用交易所的充值地址。"
           }
         }
       }

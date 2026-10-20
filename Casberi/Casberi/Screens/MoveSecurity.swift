@@ -23,6 +23,9 @@ struct MoveSecurity: View {
         /// another device's key signs there (or it is not there yet).
         let keyIndex: Int?
         let recovery: Chain.RecoveryState
+        /// Owners that are plain addresses: keys the person holds outside
+        /// Casberi (the shared signer and the recovery key are contracts).
+        let outside: [String]
         var id: Int { network.chainId }
     }
 
@@ -31,6 +34,10 @@ struct MoveSecurity: View {
     /// The row acting and what its verb says meanwhile; every other row's
     /// verb waits, in its own word.
     @State private var working: (row: String, label: String)?
+    /// The outside key's field, open after Add.
+    @State private var addingOutside = false
+    @State private var outsideText = ""
+    @FocusState private var outsideFocused: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -43,11 +50,30 @@ struct MoveSecurity: View {
                 verb: canMoveHere ? (String(localized: "Move here"), moveHere) : nil)
             row(title: String(localized: "Recovery key"), line: recoveryLine,
                 verb: recoveryVerb.map { ($0, setUp) })
+            row(title: String(localized: "Outside key"), line: outsideLine,
+                verb: addingOutside ? nil : outsideVerb.map { word in
+                    // Add opens the field; Finish puts the key already on one
+                    // network on the rest.
+                    (word, { if live.allSatisfy({ $0.outside.isEmpty }) {
+                        withAnimation(DS.Motion.standard) { addingOutside = true }
+                    } else { addOutside() } })
+                })
+            if addingOutside { outsideField }
             row(title: String(localized: "Rotate"), line: rotateLine, verb: nil)
         }
         // Read again whenever a send lands (`MoveSend` bumps the rooms'
         // revision): a first send creates the account and moves its key.
         .task(id: "\(account)·\(chrome.roomRevision)") { await read() }
+        .task {
+            #if DEBUG
+            // `-moveOutsideDraft "<address>"`: the outside key's field open and
+            // filled, because a `simctl`-booted simulator drops typed characters.
+            if let draft = UserDefaults.standard.string(forKey: "moveOutsideDraft"), outsideText.isEmpty {
+                addingOutside = true
+                outsideText = draft
+            }
+            #endif
+        }
     }
 
     private func row(title: String, line: String, verb: (String, () -> Void)?) -> some View {
@@ -74,6 +100,8 @@ struct MoveSecurity: View {
             }
         }
         .frame(minHeight: 60)
+        // A line that wraps to two keeps the air between rows.
+        .padding(.vertical, DS.Space.s1)
     }
 
     // MARK: - The lines
@@ -143,13 +171,134 @@ struct MoveSecurity: View {
                     }
                     var state: Chain.RecoveryState = deployed ? .missing : .notThere
                     if deployed, let signer, let s = try? await Chain.recoveryState(net, account, signer: signer) { state = s }
-                    return Standing(network: net, deployed: deployed, keyIndex: index, recovery: state)
+                    var outside: [String] = []
+                    if deployed, let all = try? await Chain.owners(net, account) {
+                        for owner in all where owner.caseInsensitiveCompare(YourAccount.sharedSigner) != .orderedSame {
+                            if (try? await Chain.isContract(net, owner)) == false { outside.append(owner) }
+                        }
+                    }
+                    return Standing(network: net, deployed: deployed, keyIndex: index, recovery: state, outside: outside)
                 }
             }
             for await s in group { if let s { found.append(s) } }
         }
         let order = Op.networks.map(\.chainId)
         standings = found.sorted { (order.firstIndex(of: $0.network.chainId) ?? 0) < (order.firstIndex(of: $1.network.chainId) ?? 0) }
+        // The Wallet's Needs you asks for an outside key until every network
+        // the account is on has one (prd §1432).
+        let live = standings.filter(\.deployed)
+        YourAccountKey.noteOutsideKey(held: !live.isEmpty && live.allSatisfy { !$0.outside.isEmpty })
+    }
+
+    // MARK: - The outside key (prd §1432)
+
+    private var outsideLine: String {
+        if standings.isEmpty { return String(localized: "Reading…") }
+        let keys = Set(live.flatMap(\.outside).map { $0.lowercased() })
+        let on = live.filter { !$0.outside.isEmpty }
+        let missing = standings.filter { $0.outside.isEmpty }
+        guard let one = keys.first else {
+            return String(localized: "None · a wallet of yours, so the account never depends on this app")
+        }
+        let who = keys.count == 1 ? YourAccount.short(one) : String(localized: "\(keys.count) keys")
+        if missing.isEmpty { return String(localized: "\(who) · on \(names(on))") }
+        return String(localized: "\(who) · not yet on \(names(missing))")
+    }
+
+    private var outsideVerb: String? {
+        guard !standings.isEmpty else { return nil }
+        if live.allSatisfy({ $0.outside.isEmpty }) { return String(localized: "Add") }
+        return standings.contains { $0.outside.isEmpty } ? String(localized: "Finish") : nil
+    }
+
+    /// The address to add, the one warning that matters, and the verb.
+    private var outsideField: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            TextField("0x… of a wallet you hold", text: $outsideText, axis: .vertical)
+                .lineLimit(1...2)
+                .focused($outsideFocused)
+                .submitLabel(.done)
+                // A wrapping field takes Return as a line break: here it is
+                // Done, and no address holds one.
+                .onChange(of: outsideText) { _, text in
+                    guard text.contains("\n") else { return }
+                    outsideText = text.replacingOccurrences(of: "\n", with: "")
+                    outsideFocused = false
+                }
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .dsText(.body17)
+                .foregroundStyle(DS.textPrimary)
+                .disabled(working != nil)
+            if outsideCandidate == nil, outsideText.trimmingCharacters(in: .whitespacesAndNewlines).count >= 40 {
+                Text("Check the address")
+                    .dsText(.subhead12)
+                    .foregroundStyle(DS.attentionInk)
+            }
+            DSFootnote("This key alone can move everything in your account. Use a wallet whose key only you hold, like a Ledger, never an exchange's deposit address.")
+            HStack {
+                Button { addOutside() } label: {
+                    Text("Add as a key")
+                        .dsText(.heading17)
+                        .foregroundStyle(outsideCandidate == nil || working != nil ? DS.textTertiary : DS.pickInk)
+                        .frame(minHeight: 44)
+                }
+                .buttonStyle(RowPress())
+                .disabled(outsideCandidate == nil || working != nil)
+                Spacer()
+                Button { withAnimation(DS.Motion.standard) { addingOutside = false; outsideText = "" } } label: {
+                    Text("Cancel").dsText(.body17).foregroundStyle(DS.textSecondary).frame(minHeight: 44)
+                }
+                .buttonStyle(RowPress())
+                .disabled(working != nil)
+            }
+        }
+        .padding(.bottom, DS.Space.s3)
+    }
+
+    /// A whole, correctly checksummed address that is not the account, nor
+    /// one imitating an address in the book.
+    private var outsideCandidate: String? {
+        let text = outsideText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard ENS.isHexAddress(text), AddressSafety.checksum(text) != .failed else { return nil }
+        let address = EIP55.checksum(text)
+        guard address.caseInsensitiveCompare(account) != .orderedSame else { return nil }
+        let book = AddressBook.shared
+        if book.name(for: address) == nil, !book.lookalikes(of: address).isEmpty { return nil }
+        return address
+    }
+
+    /// The outside key on every network it is missing from — the account
+    /// created where it is not there yet (§1427's rule: nothing stuck).
+    private func addOutside() {
+        guard working == nil, let owner = addingOutside ? outsideCandidate : live.flatMap(\.outside).first else { return }
+        let targets = standings.filter { $0.outside.isEmpty }.map(\.network)
+        working = (String(localized: "Outside key"), String(localized: "Adding…"))
+        Task {
+            var done: [String] = []
+            var failed: [String] = []
+            for net in targets {
+                do {
+                    let sent = try await Chain.addOutsideKey(
+                        owner, on: net, reason: String(localized: "Add \(YourAccount.short(owner)) as a key on \(net.name)")) { _ in }
+                    if case .pending = sent.outcome { failed.append(String(localized: "\(net.name): sent, not yet seen")) }
+                    else { done.append(net.name) }
+                } catch let failure as Chain.Failure {
+                    failed.append(MoveRecovery.worded(failure.message, on: net))
+                } catch {
+                    failed.append(String(localized: "\(net.name): not sent"))
+                }
+            }
+            working = nil
+            addingOutside = false
+            outsideText = ""
+            await read()
+            if failed.isEmpty {
+                chrome.flash(String(localized: "Outside key on \(done.formatted(.list(type: .and)))"), tone: .success)
+            } else {
+                chrome.flash(failed.joined(separator: " · "), tone: done.isEmpty ? .failure : .neutral, seconds: 6)
+            }
+        }
     }
 
     // MARK: - Acting
@@ -241,5 +390,49 @@ private extension Optional {
     func asyncMap<T>(_ transform: (Wrapped) async throws -> T) async rethrows -> T? {
         guard let self else { return nil }
         return try await transform(self)
+    }
+}
+
+/// **THE OUTSIDE-KEY NUDGE (prd §1432, §1422 item 7): one row under Needs
+/// you** — the Wallet's Home and the Feed's Wallet section — while your
+/// account answers only to keys inside Casberi. A passkey signs only where
+/// it was made, so the way out is a key the person holds elsewhere; the row
+/// stands until every network the account is on has one, and opens Move,
+/// where Security's Outside key adds it. Same anatomy as the rows around it
+/// (§1413 item 7): the account's face, a name, one line.
+struct OutsideKeyNudge: View {
+    @Environment(HomeRoute.self) private var route
+
+    /// Drawn at all: Move is offered, and the account needs the key.
+    static var shown: Bool { MoveTab.enabled && YourAccountKey.needsOutsideKey }
+
+    var body: some View {
+        Button {
+            DSHaptic.selection()
+            route.present(.move)
+        } label: {
+            DSFeedRow(name: String(localized: "Add a key you hold outside Casberi"),
+                      line: Text("So your account never depends on this app")) {
+                if let address = YourAccountKey.address {
+                    WalletFace(address: address, size: DS.Face.seat, circular: true)
+                }
+            } trailing: {
+                EmptyView()
+            } below: {
+                EmptyView()
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(RowPress())
+        .accessibilityHint(Text("Opens your account's page"))
+    }
+
+    /// As a row of a `List`, in the feed's insets.
+    var listRow: some View {
+        self
+            .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DSRoomChassis.rowInset,
+                                      bottom: DS.Space.s2, trailing: DSRoomChassis.rowInset))
+            .feedRowBackground()
+            .listRowSeparator(.hidden)
     }
 }

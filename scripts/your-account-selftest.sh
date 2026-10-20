@@ -133,6 +133,15 @@ check(YourAccountSwap.minus(basisPoints: 50, of: "1000") == "995" && YourAccount
       "slippage arithmetic")
 check(!YourAccountSwap.supported(YourAccountOp.baseSepolia), "CoW does not settle on Base Sepolia")
 
+// The outside key (prd §1432): an owner at threshold 1; a wallet upgraded by
+// EIP-7702 is still a wallet (the user's own, measured on Base), a contract is not.
+check(YourAccountOp.addOwnerCall(account: want, owner: to).data
+      == YourAccount.sel("addOwnerWithThreshold(address,uint256)") + YourAccount.w(to) + YourAccount.w(1)
+      && YourAccountOp.addOwnerCall(account: want, owner: to).to == want, "the outside key is not addOwnerWithThreshold(key, 1) on the account")
+check(!YourAccountOp.isContractCode("0x") && !YourAccountOp.isContractCode("0xef0100d6cedde84be40893d153be9d467cd6ad37875b28")
+      && YourAccountOp.isContractCode("0x6080604052") && YourAccountOp.isContractCode("0xef0100d6cedde84be40893d153be9d467cd6ad37875b2800"),
+      "a 7702-delegated wallet must read as a wallet, any other code as a contract")
+
 // Amounts: base units in, readable out, rounded down, never invented.
 check(YourAccountOp.baseUnits("0.01", decimals: 18) == "10000000000000000", "0.01 ETH")
 check(YourAccountOp.baseUnits("1,5", decimals: 6) == "1500000", "a comma is a decimal point")

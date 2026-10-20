@@ -62,9 +62,12 @@ extension FeedScreen {
     @ViewBuilder
     func walletNeedsRows(nextEventID: UUID?, limit: Int) -> some View {
         let rows = Array(walletNeeds.live.prefix(limit))
-        if !rows.isEmpty {
+        // Your account's outside key, while it has none (prd §1432).
+        let nudge = OutsideKeyNudge.shown
+        if !rows.isEmpty || nudge {
             DSGroupHeader(word: Self.needsYouGroup)
                 .feedRowBackground()
+            if nudge { OutsideKeyNudge().listRow }
             // Keyed by value, read live (`ThingRowKeying`, the liveness rule).
             ForEach(Array(keyed(rows).enumerated()), id: \.element.id) { i, item in
                 if let thing = item.live {

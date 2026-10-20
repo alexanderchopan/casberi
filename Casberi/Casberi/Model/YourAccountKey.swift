@@ -263,6 +263,21 @@ enum YourAccountKey {
         return index
     }
 
+    // MARK: - The outside-key nudge (prd §1432)
+
+    private static let outsideHeldKey = "yourAccount.outsideKeyHeld"
+
+    /// Whether the Wallet's Needs you asks for a key held outside Casberi:
+    /// an account exists here and not every network it is on has one. Read
+    /// in a body, so a stored flag (`MoveSecurity` writes it from the chain).
+    static var needsOutsideKey: Bool {
+        address != nil && !UserDefaults.standard.bool(forKey: outsideHeldKey)
+    }
+
+    static func noteOutsideKey(held: Bool) {
+        UserDefaults.standard.set(held, forKey: outsideHeldKey)
+    }
+
     /// An account made before the record existed gets one, once.
     static func ensureRecord() {
         guard readRecord() == nil, let address, let origin = originHex else { return }

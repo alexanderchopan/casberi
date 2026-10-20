@@ -45,8 +45,9 @@ extension FeedScreen {
                 lines.append(OverviewLine(name: Self.accountsName, figure: "\(accounts.count)"))
             }
             let waiting = Self.things(needs + dated).filter(\.isLive)
-            if !waiting.isEmpty {
-                lines.append(OverviewLine(name: Self.needsYouGroup, figure: "\(waiting.count)"))
+            let asks = waiting.count + (OutsideKeyNudge.shown ? 1 : 0)
+            if asks > 0 {
+                lines.append(OverviewLine(name: Self.needsYouGroup, figure: "\(asks)"))
             }
             if let plan = plans.first { lines.append(Self.planGlance(plan)) }
             if onAll, let s = Self.spendingGlance(SpendingReading.shared.reading) { lines.append(s) }
@@ -90,13 +91,17 @@ extension FeedScreen {
             }
             .environment(\.dsPaneBoxRow, true)
         }
-        if !restNeeds.isEmpty || !restDated.isEmpty {
+        // Your account's outside key leads Needs you while it has none
+        // (prd §1432), on All, where the account stands among the rest.
+        let nudge = onAll && OutsideKeyNudge.shown
+        if !restNeeds.isEmpty || !restDated.isEmpty || nudge {
             let open = walletOpenSections.contains("needs")
             let total = restNeeds.count + restDated.count
             let firstNeeds = open ? restNeeds : Array(restNeeds.prefix(Self.walletHomeCap))
             let firstDated = open ? restDated : Array(restDated.prefix(max(0, Self.walletHomeCap - firstNeeds.count)))
             walletPanel(Self.needsYouGroup, glyph: Self.walletHomeGlyph(Self.needsYouGroup),
                         things: Self.things(restNeeds + restDated)) {
+                if nudge { OutsideKeyNudge().listRow }
                 if !firstNeeds.isEmpty {
                     walletDaySections([(Self.needsYouGroup, firstNeeds)],
                                       boundary: nil, named: [Self.needsYouGroup], headless: true,

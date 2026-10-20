@@ -264,6 +264,22 @@ enum YourAccountOp {
                 Call(operation: 0, to: account, value: w(0), data: add)]
     }
 
+    /// A key held outside Casberi (prd §1432): an address of the person's own
+    /// — a Ledger, MetaMask — made an owner at threshold 1, so the account
+    /// answers to it with no app of ours (Safe's own web app signs for it).
+    static func addOwnerCall(account: String, owner: String) -> Call {
+        Call(operation: 0, to: account, value: w(0),
+             data: YourAccount.sel("addOwnerWithThreshold(address,uint256)") + w(owner) + w(1))
+    }
+
+    /// Whether `code` (`eth_getCode`'s answer) is a contract's: anything but
+    /// nothing, or an EIP-7702 delegation of a key-held wallet.
+    static func isContractCode(_ code: String) -> Bool {
+        let c = code.lowercased()
+        if c.count <= 2 { return false }
+        return !(c.hasPrefix("0xef0100") && c.count == 2 + 46)
+    }
+
     /// Recovery itself: the shared signer moved to this phone's new key, by a
     /// delegate call the recovery key signs. The lost phone's key stops with it.
     static func recoverCall(to next: (x: [UInt8], y: [UInt8])) -> Call {

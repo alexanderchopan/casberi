@@ -56,6 +56,8 @@ struct MoveScreen: View {
             .padding(.bottom, DS.Space.s8 * 3)
         }
         .scrollContentBackground(.hidden)
+        // The address fields wrap (§1428), so a drag is how a keyboard goes.
+        .scrollDismissesKeyboard(.interactively)
         .dsPageBackground()
         .task {
             if address == nil { recoverable = YourAccountRecovery.accounts().first } else { YourAccountKey.ensureRecord() }

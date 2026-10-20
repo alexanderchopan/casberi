@@ -88,6 +88,16 @@ enum YourAccountChain {
         return code.count > 2
     }
 
+    /// A contract, as opposed to an address someone holds a key to. An
+    /// EIP-7702 delegation (`0xef0100` ‖ the delegate, 23 bytes: MetaMask's
+    /// and Coinbase's smart-account upgrade of an ordinary wallet) is still a
+    /// key-held wallet — its key signs, and Safe takes that signature (prd
+    /// §1432, measured on the user's own wallet).
+    static func isContract(_ net: Network, _ address: String) async throws -> Bool {
+        let code = (try await rpc(net, "eth_getCode", [address, "latest"]) as? String ?? "0x").lowercased()
+        return YourAccountOp.isContractCode(code)
+    }
+
     static func nonce(_ net: Network, _ account: String) async throws -> UInt64 {
         let data = YourAccount.sel("getNonce(address,uint192)") + YourAccount.w(account) + YourAccount.w(0)
         let word = try await ethCall(net, to: YourAccount.entryPoint, data: data)
@@ -255,6 +265,39 @@ enum YourAccountChain {
         }
         let outcome = try await operate(net, account: account, deployed: deployed,
                                         calls: YourAccountOp.addRecoveryCalls(account: account, x: key.x, y: key.y, signer: signer),
+                                        rotateTo: nextKey, payments: [], signer: device,
+                                        reason: reason, stage: stage)
+        return Sent(outcome: await settle(outcome, net, account, next: next, x: nextKey.x), network: net)
+    }
+
+    /// Add a key held outside Casberi on `net` (prd §1432): one operation,
+    /// signed by this iPhone, creating the account there when it is not there
+    /// yet, that makes `owner` an owner at threshold 1 and moves to the next
+    /// key. Refused for anything but a plain address — a contract (an
+    /// exchange's deposit address is often one) cannot sign for a Safe.
+    static func addOutsideKey(_ owner: String, on net: Network, reason: String,
+                              stage: @escaping @Sendable (Stage) async -> Void) async throws -> Sent {
+        guard let account = YourAccountKey.address else {
+            throw Failure(message: String(localized: "There is no account on this iPhone"))
+        }
+        guard owner.caseInsensitiveCompare(account) != .orderedSame else {
+            throw Failure(message: String(localized: "That is your account's own address"))
+        }
+        await stage(.preparing)
+        if try await isContract(net, owner) {
+            throw Failure(message: String(localized: "That address is a contract on \(net.name), not a wallet whose key you hold"))
+        }
+        let deployed = try await isDeployed(net, account)
+        if deployed, try await owners(net, account).contains(where: { $0.caseInsensitiveCompare(owner) == .orderedSame }) {
+            return Sent(outcome: .landed(transaction: nil, rotated: false), network: net)
+        }
+        let (signerIndex, device) = try await deviceSigner(net, account, deployed: deployed)
+        let next = try YourAccountKey.nextKey(after: signerIndex)
+        guard let nextKey = YourAccountKey.publicKey(next) else {
+            throw Failure(message: String(localized: "This send could not be written"))
+        }
+        let outcome = try await operate(net, account: account, deployed: deployed,
+                                        calls: [YourAccountOp.addOwnerCall(account: account, owner: owner)],
                                         rotateTo: nextKey, payments: [], signer: device,
                                         reason: reason, stage: stage)
         return Sent(outcome: await settle(outcome, net, account, next: next, x: nextKey.x), network: net)

@@ -39,6 +39,7 @@ struct MoveSend: View {
     /// To holds something shaped like an address that is not one: too short,
     /// a stray character, or a mixed-case checksum one letter off.
     @State private var malformed = false
+    @FocusState private var toFocused: Bool
     @State private var items: [Op.Payment] = []
     @State private var stage: YourAccountChain.Stage?
     /// Swap, not Send (the header's second word).
@@ -119,6 +120,14 @@ struct MoveSend: View {
                 VStack(alignment: .leading, spacing: 2) {
                     TextField("a name or address", text: $to, axis: .vertical)
                         .lineLimit(1...3)
+                        .focused($toFocused)
+                        .submitLabel(.done)
+                        // Return is Done in a wrapping field; no address holds a line break.
+                        .onChange(of: to) { _, text in
+                            guard text.contains("\n") else { return }
+                            to = text.replacingOccurrences(of: "\n", with: "")
+                            toFocused = false
+                        }
                         .disabled(stage != nil)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
