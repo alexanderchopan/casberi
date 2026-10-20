@@ -67535,3 +67535,8 @@ Mock: the design canvas "Aztec experience".
 3. **Needs you asks** — the Wallet's Home and the Feed's Wallet section, the rows' own anatomy, the account's face — "Add a key you hold outside Casberi · So your account never depends on this app", until every network the account is on has one; a tap opens Move (`OutsideKeyNudge`). DEBUG-only with Move.
 4. **Measured 2026-10-19 on Base mainnet**: the user's wallet `0x3f07…d6fc` added as the test account's third owner (beside the shared signer and the recovery key's signer), read back from `getOwners`; the nudge cleared.
 5. **Found on the way**: a wrapping address field took Return as a line break and nothing dismissed the keyboard — Return is Done in both address fields now and a drag on the page dismisses it.
+
+## §1433 — The Wallet's + leads with Create an account (builds §1422 item 4) (user, 2026-10-19: "yes" to the Wallet's + row next)
+
+1. **Create an account** is the first row of the Wallet's one + menu (`walletAccountAdds`: the Accounts header and the Feed's Wallet section), above Follow an account and Connect an app, wearing Move's dollar sign. It opens Move, where the account is made — or, on a phone whose iCloud Keychain holds one's recovery key, taken back (§1427).
+2. **Only while this phone has no account of its own**, and only where Move is offered (DEBUG until release). With an account, the menu is the two it was.

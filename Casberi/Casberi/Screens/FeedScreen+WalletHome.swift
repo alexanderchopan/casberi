@@ -296,8 +296,17 @@ extension FeedScreen {
     /// address, and the catalogue landed on its Wallet card — 24 apps, too
     /// many for a menu, so the one door to the catalogue (§1234) as Social's
     /// More social apps is (§1303).
+    ///
+    /// **Create an account leads (prd §1422 item 4, §1433)** while this phone
+    /// has no account of its own: Move, where it is made — or, when iCloud
+    /// Keychain holds one's recovery key, taken back. With Move, DEBUG-only.
     var walletAccountAdds: [SectionAdd] {
-        [SectionAdd(label: String(localized: "Follow an account"),
+        var adds: [SectionAdd] = []
+        if MoveTab.enabled, YourAccountKey.address == nil {
+            adds.append(SectionAdd(label: String(localized: "Create an account"),
+                                   glyph: ScopeTileGlyph.move) { route.present(.move) })
+        }
+        return adds + [SectionAdd(label: String(localized: "Follow an account"),
                     glyph: ScopeTileGlyph.wallets) { feedSheet = .walletFollow },
          SectionAdd(label: String(localized: "Connect an app"),
                     glyph: ScopeTileGlyph.apps) {
