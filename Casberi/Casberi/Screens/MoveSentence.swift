@@ -46,6 +46,8 @@ struct MoveSentence: View {
     @State private var network: Op.Network = Op.base
     @State private var heldBy: [Int: [Tokens.Held]] = [:]
     @State private var listed: [Tokens.Listed] = []
+    /// Relay's matches for what is typed in For (prd §1440).
+    @State private var found: [Tokens.Listed] = []
     @State private var with: Tokens.Held?
     @State private var buy: Tokens.Listed?
     @State private var amount = ""
@@ -619,14 +621,15 @@ struct MoveSentence: View {
     }
 
     private var buyList: some View {
-        var rows = Tokens.matches(search, in: listed, held: held)
+        let typed = !search.trimmingCharacters(in: .whitespaces).isEmpty
+        var rows = Tokens.matches(search, in: typed ? found + listed : listed, held: held)
         if let pasted, !rows.contains(where: { $0.id == pasted.id }) { rows.insert(pasted, at: 0) }
         rows.removeAll { $0.token == with?.token }
         return VStack(alignment: .leading, spacing: 0) {
             ForEach(rows) { l in
                 let mine = held.first { $0.id == l.id }
                 listRow(l.token.symbol,
-                        sub: l.onList ? (l.name == l.token.symbol ? nil : l.name) : String(localized: "Not on CoW's list"),
+                        sub: l.onList ? (l.name == l.token.symbol ? nil : l.name) : String(localized: "Not verified by Relay"),
                         trailing: mine.map { Op.spoken($0.units, decimals: $0.token.decimals) },
                         mark: l.token.symbol, dim: !l.onList) {
                     pick { buy = l }
@@ -969,16 +972,8 @@ struct MoveSentence: View {
             return Receipt(past: String(localized: "Sent,"), lines: [String(localized: "not yet seen"), on],
                            detail: String(localized: "Check before sending again"))
         }
-        let swaps = batch.compactMap { if case .swap(let s) = $0 { s } else { nil } }
-        let filled = !swaps.isEmpty && done.orders.allSatisfy { $0 == "fulfilled" }
+        // Relay settles in the operation itself: landed is swapped.
         var detail: [String] = []
-        if !swaps.isEmpty {
-            if filled, let seconds = done.filledIn {
-                detail.append(String(localized: "Filled in \(Int(seconds.rounded())) seconds"))
-            } else if !filled {
-                detail.append(String(localized: "Order placed. CoW fills it at the best price it finds"))
-            }
-        }
         if batch.count == 1, let item = batch.first {
             switch item {
             case .send(let p):
@@ -989,6 +984,7 @@ struct MoveSentence: View {
                                detail: detail.joined(separator: " · "), link: link, linkName: link == nil ? nil : linkName)
             case .swap(let s):
                 let bought = done.bought.first.flatMap { $0 }
+                let filled = bought != nil
                 let back = bought.map { Op.spoken($0, decimals: s.buy.decimals) }
                     ?? "≈ " + Op.spoken(s.quote.buyAmount, decimals: s.buy.decimals)
                 // More than quoted is the honest surprise: CoW's solvers found it.
@@ -1050,9 +1046,13 @@ struct MoveSentence: View {
     /// Every network's holdings at once; the sentence starts on the one
     /// holding the most, and spends its biggest token.
     private func readAll() async {
+        // Every network at once: one slow node holds none of the others.
         var found: [Int: [Tokens.Held]] = [:]
-        for net in Op.networks {
-            found[net.chainId] = await Tokens.held(account, on: net)
+        await withTaskGroup(of: (Int, [Tokens.Held]).self) { group in
+            for net in Op.networks {
+                group.addTask { @MainActor in (net.chainId, await Tokens.held(account, on: net)) }
+            }
+            for await (id, held) in group { found[id] = held }
         }
         heldBy = found
         func worth(_ n: Op.Network) -> Double { (found[n.chainId] ?? []).compactMap(\.usd).reduce(0, +) }
@@ -1106,6 +1106,17 @@ struct MoveSentence: View {
     private func lookUpPasted() async {
         pasted = nil
         let text = search.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Relay's matches as you type, after a pause.
+        if open == .buy, !text.isEmpty, !ENS.isHexAddress(text) {
+            try? await Task.sleep(for: .milliseconds(250))
+            guard !Task.isCancelled else { return }
+            let net = network
+            let matches = await Tokens.list(net, term: text)
+            guard !Task.isCancelled, net == network else { return }
+            found = matches
+            return
+        }
+        found = []
         guard open == .buy, ENS.isHexAddress(text) else { return }
         try? await Task.sleep(for: .milliseconds(300))
         guard !Task.isCancelled else { return }

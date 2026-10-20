@@ -460,11 +460,11 @@ enum NetworkReach {
         // only (`YourAccountOp.networks`, prd §1439a).
         Endpoint(service: "Your account",
                  reach: .whenConnected(bridge: "Wallet"),
-                 purpose: "Reads what your account holds on Base and Ethereum, and when you tap Send, sends the transaction you signed to a public bundler that puts it on chain. A swap reads CoW's public token lists to find what you want, asks CoW Protocol's public API for a price, then gives it the order this phone built (CoW must answer with the same order id, or nothing is signed). Carries your account's public address, the order and the signed transaction, nothing else about you.",
+                 purpose: "Reads what your account holds on Base and Ethereum, and when you tap Send, sends the transaction you signed to a public bundler that puts it on chain. A swap asks Relay's public API for tokens and a price; this phone checks that every call it hands back goes only to Relay's own contracts for exactly the amount sold, then has the network's node simulate it and signs nothing unless you would receive at least the quoted minimum. Carries your account's public address, the swap and the signed transaction, nothing else about you.",
                  hosts: ["public.pimlico.io", "api.candide.dev",
                          "mainnet.base.org", "base-rpc.publicnode.com",
                          "rpc.mevblocker.io", "ethereum-rpc.publicnode.com",
-                         "sepolia.base.org", "base-sepolia-rpc.publicnode.com", "api.cow.fi", "files.cow.fi"],
+                         "sepolia.base.org", "base-sepolia-rpc.publicnode.com", "api.relay.link"],
                  credentialed: false),
         Endpoint(service: "Gnosis Chain",
                  reach: .whenConnected(bridge: "Wallet"),

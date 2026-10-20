@@ -314,16 +314,12 @@ enum YourAccountChain {
         return .landed(transaction: tx, rotated: await rotated(net, account, to: next, x: x))
     }
 
-    // MARK: - Swap (prd §1430)
+    // MARK: - Swap, through Relay (prd §1440)
 
-    private static func cowURL(_ net: Network, _ path: String) -> String? {
-        CowOrder.apiNetwork[net.chainId].map { "https://api.cow.fi/\($0)/api/v1/\(path)" }
-    }
-
-    /// One CoW call, the body kept whatever the status: CoW's refusals carry
-    /// their reason (`description`), and its order id answers as a bare string.
-    private static func cow(_ url: String, body: [String: Any]?) async -> (json: Any?, status: Int) {
-        guard let u = URL(string: url) else { return (nil, 0) }
+    /// One Relay call, the body kept whatever the status: Relay's refusals
+    /// carry their reason (`message`).
+    private static func relay(_ path: String, body: [String: Any]?) async -> (json: Any?, status: Int) {
+        guard let u = URL(string: "https://api.relay.link/" + path) else { return (nil, 0) }
         var request = URLRequest(url: u)
         if let body, let payload = try? JSONSerialization.data(withJSONObject: body) {
             request.httpMethod = "POST"
@@ -334,7 +330,42 @@ enum YourAccountChain {
         return (try? JSONSerialization.jsonObject(with: data, options: .fragmentsAllowed), http.statusCode)
     }
 
-    /// One keyless GET (CoW's token lists, prd §1438), as JSON.
+    /// Relay's token search for the sentence's For (prd §1440): its default
+    /// list with nothing typed, matches as you type; verified tokens marked.
+    static func relayCurrencies(_ net: Network, term: String) async -> [[String: Any]] {
+        var body: [String: Any] = ["chainIds": [net.chainId], "limit": 40]
+        if term.isEmpty { body["defaultList"] = true } else { body["term"] = term }
+        return (await relay("currencies/v2", body: body).json as? [[String: Any]]) ?? []
+    }
+
+    private static func relayRefusal(_ json: Any?, _ net: Network) -> Failure {
+        let said = (json as? [String: Any])?["message"] as? String
+        return Failure(message: said.map { String(localized: "Relay said: \($0)") }
+                       ?? String(localized: "Relay did not answer on \(net.name)"))
+    }
+
+    /// Relay's price and calls for selling `amount` of `sell` for `buy`, the
+    /// account as sender and receiver, on one network.
+    static func swapQuote(_ net: Network, sell: YourAccountOp.Token, buy: YourAccountOp.Token,
+                          amount: String, account: String) async throws -> YourAccountSwap.Quote {
+        guard YourAccountSwap.supported(net) else {
+            throw Failure(message: String(localized: "Swaps are not on \(net.name)"))
+        }
+        let body: [String: Any] = [
+            "user": account, "recipient": account,
+            "originChainId": net.chainId, "destinationChainId": net.chainId,
+            "originCurrency": YourAccountSwap.currency(sell), "destinationCurrency": YourAccountSwap.currency(buy),
+            "amount": amount, "tradeType": "EXACT_INPUT",
+        ]
+        let (json, status) = await relay("quote", body: body)
+        guard status == 200, let root = json as? [String: Any],
+              let quote = YourAccountSwap.quote(from: root, chainId: net.chainId, sell: sell) else {
+            throw relayRefusal(json, net)
+        }
+        return quote
+    }
+
+    /// One keyless GET, as JSON.
     static func fetchJSON(_ url: String) async -> Any? {
         guard let u = URL(string: url),
               let (data, http) = await IngestSupport.sendRequest(URLRequest(url: u), service: service),
@@ -342,46 +373,71 @@ enum YourAccountChain {
         return try? JSONSerialization.jsonObject(with: data)
     }
 
-    private static func cowRefusal(_ json: Any?, _ net: Network) -> Failure {
-        let said = (json as? [String: Any])?["description"] as? String
-        return Failure(message: said.map { String(localized: "CoW said: \($0)") }
-                       ?? String(localized: "CoW did not answer on \(net.name)"))
-    }
-
-    /// CoW's price for selling `amount` of `sell` for `buy` from the account.
-    static func swapQuote(_ net: Network, sell: YourAccountOp.Token, buy: YourAccountOp.Token,
-                          amount: String, account: String) async throws -> YourAccountSwap.Quote {
-        guard YourAccountSwap.supported(net), let url = cowURL(net, "quote"),
-              let sellToken = YourAccountSwap.cowToken(sell, on: net, selling: true),
-              let buyToken = YourAccountSwap.cowToken(buy, on: net, selling: false) else {
-            throw Failure(message: String(localized: "Swaps are not on \(net.name)"))
+    /// The account's balance of `token` as a call a simulation can make
+    /// mid-sequence: `balanceOf`, or Multicall3's `getEthBalance` for ETH
+    /// (deployed at one address on every chain the account is on).
+    private static func balanceCall(_ token: YourAccountOp.Token, of account: String) -> [String: Any] {
+        if let contract = token.contract {
+            return ["from": account, "to": contract,
+                    "data": SafeABI.hex(YourAccount.sel("balanceOf(address)") + YourAccount.w(account))]
         }
-        let body: [String: Any] = [
-            "sellToken": sellToken, "buyToken": buyToken, "from": account, "receiver": account,
-            "sellAmountBeforeFee": amount, "kind": "sell", "signingScheme": "presign", "onchainOrder": false,
-            "sellTokenBalance": "erc20", "buyTokenBalance": "erc20", "priceQuality": "verified",
-            "appData": YourAccountSwap.appData, "appDataHash": SafeABI.hex(YourAccountSwap.appDataHash),
-            "validFor": 1800,
-        ]
-        let (json, status) = await cow(url, body: body)
-        guard status == 200, let root = json as? [String: Any], let quote = YourAccountSwap.quote(from: root) else {
-            throw cowRefusal(json, net)
+        return ["from": account, "to": "0xcA11bde05977b3631167028862bE2a173976CA11",
+                "data": SafeABI.hex(YourAccount.sel("getEthBalance(address)") + YourAccount.w(account))]
+    }
+
+    /// **WHAT COMES BACK, PROVEN BEFORE FACE ID (prd §1440).** The account's
+    /// calls, run in order by the network's own node (`eth_simulateV1`, as
+    /// the account, against the real state), with the bought token's balance
+    /// read around each swap. Refused unless every call succeeds and every
+    /// swap pays at least its quoted minimum. Returns what each swap paid.
+    private static func simulate(_ net: Network, account: String, approvals: [YourAccountOp.Call],
+                                 steps: [(calls: [YourAccountOp.Call], swap: (buy: YourAccountOp.Token, minimum: String)?)])
+        async throws -> [String?] {
+        func json(_ c: YourAccountOp.Call) -> [String: Any] {
+            // The value word as a JSON-RPC quantity: hex, no leading zeros.
+            let digits = SafeABI.hex(c.value).dropFirst(2).drop { $0 == "0" }
+            return ["from": account, "to": c.to, "value": "0x" + (digits.isEmpty ? "0" : String(digits)),
+                    "data": SafeABI.hex(c.data)]
         }
-        return quote
-    }
-
-    /// Where a placed order stands, CoW's word.
-    static func swapStatus(_ net: Network, uid: [UInt8]) async -> String? {
-        await orderState(net, uid: uid)?.status
-    }
-
-    /// CoW's word on an order and, once filled, what it actually paid out
-    /// (`executedBuyAmount`, base units) — the receipt's real figure (§1438b).
-    static func orderState(_ net: Network, uid: [UInt8]) async -> (status: String?, bought: String?)? {
-        guard let url = cowURL(net, "orders/" + SafeABI.hex(uid)),
-              let root = await cow(url, body: nil).json as? [String: Any] else { return nil }
-        let bought = (root["executedBuyAmount"] as? String).flatMap { $0.allSatisfy(\.isNumber) && $0 != "0" ? $0 : nil }
-        return (root["status"] as? String, bought)
+        var calls: [[String: Any]] = approvals.map(json)
+        var reads: [(before: Int, after: Int, minimum: String)?] = []
+        for step in steps {
+            if let swap = step.swap {
+                let before = calls.count
+                calls.append(balanceCall(swap.buy, of: account))
+                calls += step.calls.map(json)
+                let after = calls.count
+                calls.append(balanceCall(swap.buy, of: account))
+                reads.append((before, after, swap.minimum))
+            } else {
+                calls += step.calls.map(json)
+                reads.append(nil)
+            }
+        }
+        let params: [Any] = [["blockStateCalls": [["calls": calls]], "validation": false], "latest"]
+        guard let blocks = try await rpc(net, "eth_simulateV1", params) as? [[String: Any]],
+              let results = blocks.first?["calls"] as? [[String: Any]], results.count == calls.count else {
+            throw Failure(message: String(localized: "\(net.name) could not check this swap, so nothing was signed"))
+        }
+        if results.contains(where: { ($0["status"] as? String) != "0x1" }) {
+            throw Failure(message: String(localized: "This would fail on \(net.name), so nothing was signed"))
+        }
+        func value(_ i: Int) -> String? {
+            (results[i]["returnData"] as? String).flatMap { YourAccountOp.decimal(hexQuantity: String($0.prefix(66))) }
+        }
+        var paid: [String?] = []
+        for read in reads {
+            guard let read else { paid.append(nil); continue }
+            guard let before = value(read.before), let after = value(read.after) else {
+                throw Failure(message: String(localized: "\(net.name) could not check this swap, so nothing was signed"))
+            }
+            let got = YourAccountOp.difference(after, before)
+            guard YourAccountOp.atMost(read.minimum, got) else {
+                throw Failure(message: String(localized: "Relay's route would pay less than it quoted, so nothing was signed"))
+            }
+            paid.append(got)
+        }
+        return paid
     }
 
     /// A swap the page describes: what is sold, for what, on one network.
@@ -391,7 +447,7 @@ enum YourAccountChain {
         let sell: YourAccountOp.Token
         let buy: YourAccountOp.Token
         let amount: String
-        /// The quote the page showed; the order is quoted afresh at signing.
+        /// The quote the page showed; Relay is asked afresh at signing.
         let quote: YourAccountSwap.Quote
     }
 
@@ -415,20 +471,19 @@ enum YourAccountChain {
 
     struct Transacted: Equatable {
         let sent: Sent
-        /// CoW's last word on each order, in the swaps' order: "fulfilled",
-        /// or still "open".
-        let orders: [String?]
-        /// What each order actually paid out, once filled (base units).
+        /// What each swap paid the account, in the batch's order (nil for a
+        /// send): measured after landing when one swap bought that token,
+        /// else the simulation's figure.
         var bought: [String?] = []
-        /// From the operation landing to the last order filling.
-        var filledIn: TimeInterval? = nil
     }
 
-    /// **EVERY SEND AND SWAP IN ONE OPERATION (prd §1436).** Each swap is
-    /// quoted afresh, built here, and taken by CoW under the id this phone
-    /// computed; then one operation — the sends, one wrap, one approval per
-    /// sold token, each pre-signature, the key change — signed once, and the
-    /// orders followed until they fill (two minutes).
+    /// **EVERY SEND AND SWAP IN ONE OPERATION (prd §1436, §1440).** Each swap
+    /// is quoted afresh by Relay and its calls checked (`YourAccountSwap.
+    /// checked`: Relay's own contracts, exactly the amount sold); approvals
+    /// go first, once per token for the sum; then the sends and swaps in the
+    /// page's order and the key change. Before Face ID the whole of it is
+    /// simulated and refused unless every swap pays its minimum. Relay settles
+    /// in the same transaction, so a landed operation is a finished swap.
     static func transact(_ items: [Item], reason: String, dryRun: Bool = false,
                          report: @escaping @Sendable (String) -> Void = { _ in },
                          stage: @escaping @Sendable (Stage) async -> Void) async throws -> Transacted {
@@ -440,8 +495,8 @@ enum YourAccountChain {
         }
         await stage(.preparing)
         var payments: [YourAccountOp.Payment] = []
-        var calls: [YourAccountOp.Call] = []
-        var placed: [YourAccountSwap.Placed] = []
+        var approvals: [(token: String, spender: String, amount: String)] = []
+        var steps: [(calls: [YourAccountOp.Call], swap: (buy: YourAccountOp.Token, minimum: String)?)] = []
         for item in items {
             switch item {
             case .send(let p):
@@ -449,32 +504,36 @@ enum YourAccountChain {
                     throw Failure(message: String(localized: "This send could not be written"))
                 }
                 payments.append(p)
-                calls.append(call)
+                steps.append(([call], nil))
             case .swap(let s):
                 let quote = try await swapQuote(net, sell: s.sell, buy: s.buy, amount: s.amount, account: account)
-                guard let order = YourAccountSwap.order(sell: s.sell, buy: s.buy, on: net, account: account, quote: quote),
-                      let uid = YourAccountSwap.uid(order, owner: account, chainId: net.chainId),
-                      let url = cowURL(net, "orders") else {
+                guard let checked = YourAccountSwap.checked(quote, sell: s.sell, amount: s.amount) else {
+                    throw Failure(message: String(localized: "Relay asked for something other than this swap, so nothing was signed"))
+                }
+                let calls = checked.calls.compactMap(YourAccountSwap.accountCall)
+                guard calls.count == checked.calls.count else {
                     throw Failure(message: String(localized: "This swap could not be written"))
                 }
-                let (json, status) = await cow(url, body: YourAccountSwap.orderBody(order, owner: account, quoteId: quote.id))
-                guard status == 201 || status == 200 else { throw cowRefusal(json, net) }
-                // CoW must name the order this phone built, or nothing is signed.
-                guard let said = json as? String, SafeABI.hexBytes(said) == uid else {
-                    throw Failure(message: String(localized: "CoW named a different order, so nothing was signed"))
-                }
-                placed.append(.init(order: order, uid: uid, sellingETH: s.sell.contract == nil))
+                approvals += checked.approvals
+                steps.append((calls, (s.buy, quote.minimumBuy)))
                 // What leaves the account, for the balance check before any prompt.
-                payments.append(.init(network: net, token: s.sell, amount: quote.sellAmount,
-                                      to: CowOrder.settlement, toName: nil))
+                payments.append(.init(network: net, token: s.sell, amount: s.amount,
+                                      to: YourAccountSwap.routers.first ?? account, toName: nil))
             }
         }
-        if !placed.isEmpty {
-            guard let swapCalls = YourAccountSwap.calls(orders: placed, network: net) else {
-                throw Failure(message: String(localized: "This swap could not be written"))
-            }
-            calls += swapCalls
+        guard let approvalCalls = YourAccountSwap.approvalCalls(approvals) else {
+            throw Failure(message: String(localized: "This swap could not be written"))
         }
+        let calls = approvalCalls + steps.flatMap(\.calls)
+        let swaps = steps.compactMap(\.swap)
+
+        // What the bought tokens hold now, to measure what landed.
+        var before: [String: String] = [:]
+        for buy in swaps.map(\.buy) where before[buy.contract ?? ""] == nil {
+            before[buy.contract ?? ""] = await balance(net, buy, of: account) ?? "0"
+        }
+        let simulated = swaps.isEmpty ? [] : try await simulate(net, account: account, approvals: approvalCalls, steps: steps)
+        report("simulated: \(simulated.compactMap { $0 }.joined(separator: ", "))")
 
         let deployed = try await isDeployed(net, account)
         let (signerIndex, signer) = try await deviceSigner(net, account, deployed: deployed)
@@ -482,33 +541,25 @@ enum YourAccountChain {
         guard let nextKey = YourAccountKey.publicKey(next) else {
             throw Failure(message: String(localized: "This send could not be written"))
         }
-        report("account=\(account) deployed=\(deployed) signer=key\(signerIndex) next=key\(next) orders=\(placed.count)")
+        report("account=\(account) deployed=\(deployed) signer=key\(signerIndex) next=key\(next) swaps=\(swaps.count)")
         let outcome = try await operate(net, account: account, deployed: deployed, calls: calls,
                                         rotateTo: nextKey, payments: payments, signer: signer,
                                         reason: reason, dryRun: dryRun, report: report, stage: stage)
         let sent = Sent(outcome: await settle(outcome, net, account, next: next, x: nextKey.x), network: net)
-        guard case .landed = sent.outcome, !placed.isEmpty else {
-            return Transacted(sent: sent, orders: placed.map { _ in nil })
+        guard case .landed = sent.outcome, !swaps.isEmpty else {
+            return Transacted(sent: sent, bought: simulated)
         }
-        var last: [String?] = placed.map { _ in nil }
-        var bought: [String?] = placed.map { _ in nil }
-        let landedAt = Date()
-        for _ in 0..<40 {
-            for (i, p) in placed.enumerated() where !Self.settled(last[i]) {
-                let state = await orderState(net, uid: p.uid)
-                last[i] = state?.status
-                bought[i] = state?.bought
-            }
-            if last.allSatisfy(Self.settled) { break }
-            try await Task.sleep(nanoseconds: 3_000_000_000)
+        // A token bought by one swap alone: what actually arrived.
+        var bought = simulated
+        for (i, step) in steps.enumerated() {
+            guard let swap = step.swap else { continue }
+            let key = swap.buy.contract ?? ""
+            guard swaps.filter({ ($0.buy.contract ?? "") == key }).count == 1,
+                  let then = before[key], let now = await balance(net, swap.buy, of: account) else { continue }
+            let arrived = YourAccountOp.difference(now, then)
+            if arrived != "0" { bought[i] = arrived }
         }
-        let filled = last.allSatisfy { $0 == "fulfilled" }
-        return Transacted(sent: sent, orders: last, bought: bought,
-                          filledIn: filled ? Date().timeIntervalSince(landedAt) : nil)
-    }
-
-    private static func settled(_ status: String?) -> Bool {
-        status == "fulfilled" || status == "expired" || status == "cancelled"
+        return Transacted(sent: sent, bought: bought)
     }
 
     // MARK: - Revoke (prd §1437)

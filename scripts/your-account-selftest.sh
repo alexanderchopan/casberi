@@ -18,8 +18,8 @@
 # moved inside the packed tuple fails even when both encoders move together.
 # The send's id (`userOpHash`) is pinned to EntryPoint v0.7's own answer, and
 # the recovery key's two operations (prd §1427) to the spike's landed ones,
-# and a swap's order id (prd §1430) to the one CoW's API answered for it, and
-# two orders' calls to one approval of their sum (prd §1436). It
+# and a swap's calls (prd §1440) checked against two real Relay quotes, with
+# every way of tampering with them refused. It
 # also holds Move to every build — no hidden or dormant feature in a release
 # (prd §1435, App Review 2.3.1) — and Base Sepolia to DEBUG always.
 set -euo pipefail
@@ -28,14 +28,14 @@ cd "$(dirname "$0")/.."
 ACCOUNT="Casberi/Casberi/Model/YourAccount.swift"
 OP="Casberi/Casberi/Model/YourAccountOp.swift"
 SWAP="Casberi/Casberi/Model/YourAccountSwap.swift"
-COW="Casberi/Casberi/Model/CowOrder.swift"
+FIXTURES="$PWD/scripts/fixtures/your-account"
 TX="Casberi/Casberi/Model/SafeTransaction.swift"
 KECCAK="Casberi/Casberi/Model/Keccak256.swift"
 CLEARSIGN="Casberi/Casberi/Model/ClearSign.swift"
 WEBAUTHN="Casberi/Casberi/Model/SafeWebAuthnSignature.swift"
 MOVE="Casberi/Casberi/Screens/MoveScreen.swift"
 TABS="Casberi/Casberi/Design/PlaceTabBar.swift"
-for f in "$ACCOUNT" "$OP" "$SWAP" "$COW" "$TX" "$KECCAK" "$CLEARSIGN" "$WEBAUTHN" "$MOVE" "$TABS"; do
+for f in "$ACCOUNT" "$OP" "$SWAP" "$TX" "$KECCAK" "$CLEARSIGN" "$WEBAUTHN" "$MOVE" "$TABS"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -103,61 +103,57 @@ check(YourAccountOp.dummySignature(owner: recoverySigner) != YourAccountOp.dummy
       "the recovery key's estimate signs as the shared signer")
 check(YourAccount.short(want) == "…29Ce", "an address is its last four or the whole of it (prd §495)")
 
-// Swap (prd §1430): a real CoW quote on Base (2026-10-19) built into the
-// order HERE gives the id CoW's own API answered when that order was posted
-// — 0x32fa…bab2 — so this phone and CoW agree on every byte the person
-// pre-signs. The pre-sign call reads back through §1285's parser.
-let quoteJSON: [String: Any] = ["id": 417304251, "quote": [
-    "sellAmount": "198563874188220", "buyAmount": "476693", "feeAmount": "1436125811780",
-    "validTo": 1792457394] as [String: Any]]
-let cowAccount = "0xb91a38aA11C903bf5A465326b9c0cf8680F43416"
-let swapQuote = YourAccountSwap.quote(from: quoteJSON)!
-check(swapQuote.sellAmount == "200000000000000", "the order sells what was asked (the quote's amount plus its fee)")
-check(swapQuote.minimumBuy == "474309", "the minimum is 0.5% under the quote, rounded down")
-let cowOrder = YourAccountSwap.order(sell: YourAccountOp.eth, buy: YourAccountOp.usdc(on: YourAccountOp.base),
-                                     on: YourAccountOp.base, account: cowAccount, quote: swapQuote)!
-let cowUID = YourAccountSwap.uid(cowOrder, owner: cowAccount, chainId: 8453)!
-check(SafeABI.hex(cowUID) == "0x32fa77466b4b4845779d6546e6d5a61cec74725646d688962d71c16db94ab24cb91a38aa11c903bf5a465326b9c0cf8680f434166ad6bab2",
-      "the order's id is not the one CoW's API answered for it")
-check(SafeABI.hex(YourAccountSwap.appDataHash) == "0x868db1f7ba62a9708787a6ce366c687ddc6a32e22b6722aebbc0e8bd0c00da59",
-      "the app data hash is not CoW's")
-let swapCalls = YourAccountSwap.calls(order: cowOrder, uid: cowUID, sellingETH: true, network: YourAccountOp.base)!
-check(swapCalls.count == 3 && swapCalls[0].to == YourAccountSwap.weth(chainId: 8453)! && swapCalls[0].value == cowOrder.sellAmount,
-      "selling ETH wraps exactly what is sold first")
-check(swapCalls[1].data == YourAccount.sel("approve(address,uint256)") + YourAccount.w(YourAccountSwap.vaultRelayer) + cowOrder.sellAmount,
-      "the approval is exactly what is sold, to CoW's vault relayer only")
-check(CowOrder.preSignature(swapCalls[2].data).map { $0.uid == cowUID && $0.signed } == true && swapCalls[2].to == CowOrder.settlement,
-      "the pre-signature is not setPreSignature(uid, true) on the settlement contract")
-check(YourAccountSwap.calls(order: cowOrder, uid: cowUID, sellingETH: false, network: YourAccountOp.base)!.count == 2,
-      "selling a token wraps nothing")
-// Two orders in one operation (prd §1436): one wrap for all the ETH they
-// sell, ONE approval for the sum — `approve` replaces an allowance, so two
-// would leave the first order unfillable — then each pre-signature.
-var laterJSON = quoteJSON
-laterJSON["quote"] = ["sellAmount": "198563874188220", "buyAmount": "476693", "feeAmount": "1436125811780", "validTo": 1792457395] as [String: Any]
-let laterOrder = YourAccountSwap.order(sell: YourAccountOp.eth, buy: YourAccountOp.usdc(on: YourAccountOp.base),
-                                       on: YourAccountOp.base, account: cowAccount, quote: YourAccountSwap.quote(from: laterJSON)!)!
-let laterUID = YourAccountSwap.uid(laterOrder, owner: cowAccount, chainId: 8453)!
-check(laterUID != cowUID, "a later expiry is another order")
-let two = YourAccountSwap.calls(orders: [.init(order: cowOrder, uid: cowUID, sellingETH: true),
-                                         .init(order: laterOrder, uid: laterUID, sellingETH: true)], network: YourAccountOp.base)!
-let doubled = SafeABI.word(uint256: "400000000000000")!
-check(two.count == 4 && two[0].value == doubled && two[0].to == YourAccountSwap.weth(chainId: 8453)!,
-      "two ETH orders wrap their sum once")
-check(two[1].data == YourAccount.sel("approve(address,uint256)") + YourAccount.w(YourAccountSwap.vaultRelayer) + doubled
-      && two.filter { $0.data.starts(with: YourAccount.sel("approve(address,uint256)")) }.count == 1, "two orders selling one token approve its SUM, once")
-check(CowOrder.preSignature(two[2].data)?.uid == cowUID && CowOrder.preSignature(two[3].data)?.uid == laterUID,
-      "each order is pre-signed, in order")
-let usdcOrder = YourAccountSwap.order(sell: YourAccountOp.usdc(on: YourAccountOp.base), buy: YourAccountOp.eth,
-                                      on: YourAccountOp.base, account: cowAccount, quote: swapQuote)!
-let mixed = YourAccountSwap.calls(orders: [.init(order: cowOrder, uid: cowUID, sellingETH: true),
-                                           .init(order: usdcOrder, uid: laterUID, sellingETH: false)], network: YourAccountOp.base)!
-check(mixed.count == 5 && mixed[0].value == cowOrder.sellAmount && mixed[1].to == cowOrder.sellToken && mixed[2].to == usdcOrder.sellToken,
-      "two tokens sold are two approvals, the ETH wrapped for its own order only")
-check(YourAccountSwap.minus(basisPoints: 50, of: "1000") == "995" && YourAccountSwap.minus(basisPoints: 50, of: "1") == "0"
-      && YourAccountSwap.minus(basisPoints: 50, of: "123456789012345678901234567890") == "122839505067283950506728395050",
-      "slippage arithmetic")
-check(!YourAccountSwap.supported(YourAccountOp.baseSepolia), "CoW does not settle on Base Sepolia")
+// Swap, through Relay (prd §1440): two real Relay quotes on Base
+// (2026-10-19), one selling ETH, one selling USDC, read and checked as the
+// phone does — and every way of tampering with them refused.
+func fixture(_ name: String) -> [String: Any] {
+    let url = URL(fileURLWithPath: ProcessInfo.processInfo.environment["FIXTURES"]! + "/" + name)
+    return try! JSONSerialization.jsonObject(with: Data(contentsOf: url)) as! [String: Any]
+}
+let usdcBase = YourAccountOp.usdc(on: YourAccountOp.base)
+let ethJSON = fixture("relay-quote-eth-base.json"), usdcJSON = fixture("relay-quote-usdc-base.json")
+let ethQuote = YourAccountSwap.quote(from: ethJSON, chainId: 8453, sell: YourAccountOp.eth)!
+check(ethQuote.sellAmount == "1000000000000000" && ethQuote.minimumBuy == "2367794", "Relay's ETH quote reads its amounts")
+let ethChecked = YourAccountSwap.checked(ethQuote, sell: YourAccountOp.eth, amount: "1000000000000000")
+check(ethChecked != nil && ethChecked!.approvals.isEmpty && ethChecked!.calls.count == 1
+      && YourAccountSwap.routers.contains(ethChecked!.calls[0].to) && ethChecked!.calls[0].value == "1000000000000000",
+      "selling ETH is one call to Relay's router carrying exactly the amount sold")
+check(YourAccountSwap.checked(ethQuote, sell: YourAccountOp.eth, amount: "999") == nil, "a quote for another amount is refused")
+check(YourAccountSwap.quote(from: ethJSON, chainId: 1, sell: YourAccountOp.eth) == nil, "a quote for another chain is refused")
+var elsewhere = ethQuote.calls; elsewhere[0] = .init(to: "0x000000000000000000000000000000000000dead", value: elsewhere[0].value, data: elsewhere[0].data)
+check(YourAccountSwap.checked(.init(sellAmount: ethQuote.sellAmount, buyAmount: ethQuote.buyAmount, minimumBuy: ethQuote.minimumBuy,
+                                    fee: "0", requestId: nil, calls: elsewhere), sell: YourAccountOp.eth, amount: "1000000000000000") == nil,
+      "a call to anything but Relay's contracts is refused")
+var more = ethQuote.calls; more[0] = .init(to: more[0].to, value: "2000000000000000", data: more[0].data)
+check(YourAccountSwap.checked(.init(sellAmount: ethQuote.sellAmount, buyAmount: ethQuote.buyAmount, minimumBuy: ethQuote.minimumBuy,
+                                    fee: "0", requestId: nil, calls: more), sell: YourAccountOp.eth, amount: "1000000000000000") == nil,
+      "more ETH than is sold is refused")
+var signed = ethJSON; var steps = signed["steps"] as! [[String: Any]]; steps[0]["kind"] = "signature"; signed["steps"] = steps
+check(YourAccountSwap.quote(from: signed, chainId: 8453, sell: YourAccountOp.eth) == nil, "a step asking for a signature is refused")
+
+let usdcQuote = YourAccountSwap.quote(from: usdcJSON, chainId: 8453, sell: usdcBase)!
+let usdcChecked = YourAccountSwap.checked(usdcQuote, sell: usdcBase, amount: "100000")
+check(usdcChecked != nil && usdcChecked!.approvals.count == 1 && usdcChecked!.approvals[0].amount == "100000"
+      && YourAccountSwap.approvalProxies.contains(usdcChecked!.approvals[0].spender)
+      && usdcChecked!.calls.count == 1 && usdcChecked!.calls[0].value == "0",
+      "selling a token approves exactly the amount sold to Relay's proxy, then one call")
+check(usdcQuote.fee == "59", "Relay's fee in the sold token is read")
+var wider = usdcQuote.calls
+wider[0] = .init(to: wider[0].to, value: "0", data: Array(wider[0].data.prefix(36)) + SafeABI.word(uint256: "100001")!)
+check(YourAccountSwap.checked(.init(sellAmount: "100000", buyAmount: usdcQuote.buyAmount, minimumBuy: usdcQuote.minimumBuy, fee: "0",
+                                    requestId: nil, calls: wider), sell: usdcBase, amount: "100000") == nil,
+      "an approval for more than is sold is refused")
+var stranger = usdcQuote.calls
+stranger[0] = .init(to: stranger[0].to, value: "0", data: YourAccountSwap.approveSelector + YourAccount.w("0x000000000000000000000000000000000000dEaD") + SafeABI.word(uint256: "100000")!)
+check(YourAccountSwap.checked(.init(sellAmount: "100000", buyAmount: usdcQuote.buyAmount, minimumBuy: usdcQuote.minimumBuy, fee: "0",
+                                    requestId: nil, calls: stranger), sell: usdcBase, amount: "100000") == nil,
+      "an approval to anyone but Relay is refused")
+let summed = YourAccountSwap.approvalCalls([(usdcChecked!.approvals[0].token, usdcChecked!.approvals[0].spender, "100000"),
+                                            (usdcChecked!.approvals[0].token, usdcChecked!.approvals[0].spender, "250000")])!
+check(summed.count == 1 && summed[0].data == YourAccountSwap.approveSelector + YourAccount.w(usdcChecked!.approvals[0].spender) + SafeABI.word(uint256: "350000")!,
+      "two swaps selling one token approve their sum once (an approval replaces, never adds)")
+check(YourAccountSwap.supported(YourAccountOp.base) && YourAccountSwap.supported(YourAccountOp.ethereum)
+      && !YourAccountSwap.supported(YourAccountOp.baseSepolia), "Relay swaps on Base and Ethereum, never a test network")
 
 // The outside key (prd §1432): an owner at threshold 1; a wallet upgraded by
 // EIP-7702 is still a wallet (the user's own, measured on Base), a contract is not.
@@ -202,9 +198,9 @@ check(YourAccountOp.abiString("0x4d4b5200000000000000000000000000000000000000000
 check(YourAccountOp.abiString("0x") == nil, "no answer is no symbol")
 exit(bad == 0 ? 0 : 1)
 SWIFT
-xcrun swiftc -O -o "$TMP/t" "$ACCOUNT" "$OP" "$SWAP" "$COW" "$TX" "$KECCAK" "$CLEARSIGN" "$WEBAUTHN" "$TMP/main.swift" 2>"$TMP/err" \
+xcrun swiftc -O -o "$TMP/t" "$ACCOUNT" "$OP" "$SWAP" "$TX" "$KECCAK" "$CLEARSIGN" "$WEBAUTHN" "$TMP/main.swift" 2>"$TMP/err" \
   || { cat "$TMP/err"; echo "✗ YourAccount.swift and YourAccountOp.swift do not compile alone (Foundation and the Safe encoders only)"; exit 1; }
-"$TMP/t" || { echo "✗ your account's arithmetic drifted — see above"; exit 1; }
+FIXTURES="$FIXTURES" "$TMP/t" || { echo "✗ your account's arithmetic drifted — see above"; exit 1; }
 
 # The gates: Move is a tab in every build, with no switch to hide it, and a
 # release build never offers a test network.

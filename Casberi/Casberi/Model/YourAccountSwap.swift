@@ -1,199 +1,184 @@
 import Foundation
 
-/// **YOUR ACCOUNT'S SWAP (prd §1430) — the order and its bytes.** A swap is
-/// a CoW Protocol order the account PRE-SIGNS: CoW's solvers fill it at the
-/// best price they find, and the account signs nothing CoW could change.
+/// **YOUR ACCOUNT'S SWAP, THROUGH RELAY (prd §1440, replacing §1430's CoW).**
+/// One provider for every network the account is on (user, 2026-10-19:
+/// "lets switch"; "don't ship on cow"): Relay's keyless API quotes a swap and
+/// hands back the transactions that do it — for ETH sold, one call to Relay's
+/// router; for a token sold, an exact `approve` to Relay's approval proxy and
+/// one call to it. The account signs those calls in its own operation, beside
+/// any sends, so Add batches swaps as before.
 ///
-/// The order is built HERE from CoW's quote — the account as owner and
-/// receiver, the quote's amounts, the slippage taken off what it receives —
-/// and its id (`digest ‖ owner ‖ validTo`) is computed here with
-/// `CowOrder.digest`, the hashing §1285 proved on nine real orders. CoW's
-/// API is told the order and must answer with that same id; the account then
-/// signs one operation that wraps ETH when ETH is sold (CoW trades WETH),
-/// approves exactly the amount sold to CoW's vault relayer, and calls the
-/// settlement contract's `setPreSignature(uid, true)`. A server that answered
-/// with anything else is refused before a prompt: the person approves only
-/// the order the page describes.
+/// Relay's route is packed bytes this phone cannot read, so nothing here
+/// trusts it on its word:
 ///
-/// Pure (Foundation, `CowOrder`, `SafeABI`); the requests are
-/// `YourAccountChain`'s.
+/// 1. **Where it goes.** Every call must go to Relay's router or approval
+///    proxy, pinned below from Relay's own `/chains` (measured 2026-10-19 on
+///    Base, Ethereum and Robinhood Chain: the same addresses on each), or be
+///    the sold token's own `approve` naming one of them.
+/// 2. **How much.** ETH sent is exactly the amount sold; a token approved is
+///    exactly the amount sold, never more.
+/// 3. **What comes back** is proven by `YourAccountChain` before Face ID: the
+///    whole operation is simulated (`eth_simulateV1`) and refused unless every
+///    swap pays the account at least its quoted minimum.
+///
+/// Pure (Foundation, `SafeABI`); the requests are `YourAccountChain`'s.
 enum YourAccountSwap {
-    /// CoW's vault relayer, the one address an approval goes to — the same
-    /// on every chain CoW settles on.
-    static let vaultRelayer = "0xC92E8bdf79f0507f65a392b0ab4667716BFE0110"
+    /// Relay's v3 and v3.2 router and approval proxy, the same on every chain
+    /// Relay settles on (its `/chains`, read 2026-10-19).
+    static let routers: Set<String> = [
+        "0xb92fe925dc43a0ecde6c8b1a2709c170ec4fff4f", "0x0729e2a4716d9f7dd17858d5d504426d228697f7",
+    ]
+    static let approvalProxies: Set<String> = [
+        "0xccc88a9d1b4ed6b0eaba998850414b24f1c315be", "0x5567954cd026cebfe486062cb75848e0f1c12e58",
+    ]
 
-    /// CoW's placeholder for a buy paid out in ETH (`CowOrders.native`).
-    static let nativeETH = "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+    /// Relay's word for the network's own coin.
+    static let native = "0x0000000000000000000000000000000000000000"
 
-    /// Wrapped ETH, which CoW trades in place of ETH.
-    static func weth(chainId: Int) -> String? {
-        switch chainId {
-        case 1: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"
-        case 8453: "0x4200000000000000000000000000000000000006"
-        default: nil
-        }
-    }
-
-    /// Where CoW settles: Base and Ethereum (none on Base Sepolia).
+    /// Where the account swaps: Base and Ethereum. Never a test network.
     static func supported(_ network: YourAccountOp.Network) -> Bool {
-        CowOrder.apiNetwork[network.chainId] != nil && weth(chainId: network.chainId) != nil
+        !network.isTest && (network.chainId == 8453 || network.chainId == 1)
     }
 
-    /// Off what it receives: 0.5%, CoW's own default.
-    static let slippageBasisPoints = 50
-
-    /// Who made the order, for CoW's records.
-    static let appData = #"{"appCode":"Casberi","metadata":{},"version":"1.3.0"}"#
-    static var appDataHash: [UInt8] { Keccak256.hash(Array(appData.utf8)) }
-
-    /// The token CoW is told about: WETH when selling ETH; CoW's native
-    /// placeholder when buying it (paid out as ETH).
-    static func cowToken(_ token: YourAccountOp.Token, on network: YourAccountOp.Network, selling: Bool) -> String? {
-        if let contract = token.contract { return contract.lowercased() }
-        return selling ? weth(chainId: network.chainId)?.lowercased() : nativeETH
+    static func currency(_ token: YourAccountOp.Token) -> String {
+        token.contract?.lowercased() ?? native
     }
 
     // MARK: - The quote
 
+    struct Call: Equatable, Sendable {
+        let to: String
+        let value: String
+        let data: [UInt8]
+    }
+
     struct Quote: Equatable, Sendable {
-        /// What is sold, all of it (the fee is taken from the surplus).
+        /// What is sold, all of it.
         let sellAmount: String
-        /// What the quote says comes back.
+        /// What Relay says comes back.
         let buyAmount: String
-        /// At least this comes back, or the order does not fill.
+        /// At least this comes back, or the swap is refused before Face ID.
         let minimumBuy: String
-        /// CoW's estimate of the network cost, in the sold token.
+        /// Relay's own fee, in the sold token's units ("0" when it charged it
+        /// in something else).
         let fee: String
-        let validTo: UInt32
-        let id: Int?
+        let requestId: String?
+        /// The calls that do it, as Relay gave them, checked by `checked`.
+        let calls: [Call]
     }
 
-    /// CoW's quote, read strictly; nil for anything malformed.
-    static func quote(from json: [String: Any]) -> Quote? {
-        guard let q = json["quote"] as? [String: Any],
-              let sell = q["sellAmount"] as? String, sell.allSatisfy(\.isNumber),
-              let buy = q["buyAmount"] as? String, buy.allSatisfy(\.isNumber),
-              let fee = q["feeAmount"] as? String, fee.allSatisfy(\.isNumber),
-              let validTo = (q["validTo"] as? NSNumber)?.int64Value, validTo > 0, validTo <= Int64(UInt32.max),
-              let minimum = minus(basisPoints: slippageBasisPoints, of: buy)
+    /// Relay's quote, read strictly: transaction steps only (a step asking
+    /// for a signature is refused), every call on `chainId`, amounts plain
+    /// digits. nil for anything else.
+    static func quote(from json: [String: Any], chainId: Int, sell: YourAccountOp.Token) -> Quote? {
+        guard let steps = json["steps"] as? [[String: Any]], !steps.isEmpty,
+              let details = json["details"] as? [String: Any],
+              let inn = details["currencyIn"] as? [String: Any],
+              let out = details["currencyOut"] as? [String: Any],
+              let sold = inn["amount"] as? String, sold.allSatisfy(\.isNumber),
+              let back = out["amount"] as? String, back.allSatisfy(\.isNumber),
+              let least = out["minimumAmount"] as? String, least.allSatisfy(\.isNumber)
         else { return nil }
-        return Quote(sellAmount: YourAccountOp.sum(sell, fee), buyAmount: buy, minimumBuy: minimum,
-                     fee: fee, validTo: UInt32(validTo), id: (json["id"] as? NSNumber)?.intValue)
-    }
-
-    /// `amount` less `bp` basis points, rounded down: digit arithmetic, so a
-    /// token with 18 decimals never meets a floating point.
-    static func minus(basisPoints bp: Int, of amount: String) -> String? {
-        guard !amount.isEmpty, amount.allSatisfy(\.isNumber), (0...10_000).contains(bp) else { return nil }
-        // amount × (10000 − bp) ÷ 10000, by long multiplication then division.
-        var product: [Int] = Array(repeating: 0, count: amount.count + 5)
-        let factor = 10_000 - bp
-        var carry = 0
-        let digits = amount.reversed().map { Int(String($0))! }
-        for i in 0..<product.count {
-            let d = i < digits.count ? digits[i] : 0
-            let v = d * factor + carry
-            product[i] = v % 10
-            carry = v / 10
+        var calls: [Call] = []
+        for step in steps {
+            guard (step["kind"] as? String) == "transaction", let items = step["items"] as? [[String: Any]] else { return nil }
+            for item in items {
+                guard let d = item["data"] as? [String: Any],
+                      let to = d["to"] as? String, SafeABI.word(address: to) != nil,
+                      let hex = d["data"] as? String, let data = SafeABI.hexBytes(hex),
+                      (d["chainId"] as? Int).map({ $0 == chainId }) ?? true else { return nil }
+                let value = (d["value"] as? String) ?? "0"
+                guard value.allSatisfy(\.isNumber) else { return nil }
+                calls.append(Call(to: to.lowercased(), value: value.isEmpty ? "0" : value, data: data))
+            }
         }
-        var text = String(product.reversed().map { Character(String($0)) }).drop { $0 == "0" }
-        guard text.count > 4 else { return "0" }
-        text = text.dropLast(4)
-        return String(text)
-    }
-
-    // MARK: - The order
-
-    /// The order the account signs: its terms, as `CowOrder` hashes them.
-    static func order(sell: YourAccountOp.Token, buy: YourAccountOp.Token, on network: YourAccountOp.Network,
-                      account: String, quote: Quote) -> CowOrder.Order? {
-        guard let sellToken = cowToken(sell, on: network, selling: true),
-              let buyToken = cowToken(buy, on: network, selling: false),
-              let sellAmount = SafeABI.word(uint256: quote.sellAmount),
-              let buyAmount = SafeABI.word(uint256: quote.minimumBuy),
-              let zero = SafeABI.word(uint256: "0") else { return nil }
-        return CowOrder.Order(sellToken: sellToken, buyToken: buyToken, receiver: account.lowercased(),
-                              sellAmount: sellAmount, buyAmount: buyAmount, validTo: quote.validTo,
-                              appData: appDataHash, feeAmount: zero, kind: "sell", partiallyFillable: false,
-                              sellTokenBalance: "erc20", buyTokenBalance: "erc20")
-    }
-
-    /// The order's id: its EIP-712 digest, the owner, the expiry.
-    static func uid(_ order: CowOrder.Order, owner: String, chainId: Int) -> [UInt8]? {
-        guard let digest = CowOrder.digest(order, chainId: chainId),
-              let ownerWord = SafeABI.word(address: owner) else { return nil }
-        let t = order.validTo
-        return digest + Array(ownerWord.suffix(20)) + [UInt8(t >> 24), UInt8(t >> 16 & 0xff), UInt8(t >> 8 & 0xff), UInt8(t & 0xff)]
-    }
-
-    /// The body CoW's `POST /orders` takes for this order, pre-signed.
-    static func orderBody(_ order: CowOrder.Order, owner: String, quoteId: Int?) -> [String: Any] {
-        var body: [String: Any] = [
-            "sellToken": order.sellToken, "buyToken": order.buyToken, "receiver": order.receiver ?? owner,
-            "sellAmount": SafeCalldata.decimal(order.sellAmount), "buyAmount": SafeCalldata.decimal(order.buyAmount),
-            "validTo": Int(order.validTo), "feeAmount": "0", "kind": order.kind,
-            "partiallyFillable": order.partiallyFillable,
-            "sellTokenBalance": order.sellTokenBalance, "buyTokenBalance": order.buyTokenBalance,
-            "signingScheme": "presign", "signature": "0x", "from": owner,
-            "appData": appData, "appDataHash": SafeABI.hex(appDataHash),
-        ]
-        if let quoteId { body["quoteId"] = quoteId }
-        return body
-    }
-
-    // MARK: - The account's calls
-
-    /// An order CoW has taken under the id this phone computed.
-    struct Placed: Equatable {
-        let order: CowOrder.Order
-        let uid: [UInt8]
-        let sellingETH: Bool
-    }
-
-    /// Wrap when ETH is sold, approve exactly what is sold, pre-sign the order.
-    static func calls(order: CowOrder.Order, uid: [UInt8], sellingETH: Bool, network: YourAccountOp.Network) -> [YourAccountOp.Call]? {
-        calls(orders: [Placed(order: order, uid: uid, sellingETH: sellingETH)], network: network)
-    }
-
-    /// **EVERY ORDER IN ONE OPERATION (prd §1436, batch swaps).** One wrap for
-    /// all the ETH the orders sell, then ONE approval per sold token for the
-    /// SUM its orders sell — `approve` replaces the allowance rather than
-    /// adding to it, so two approvals of one token would leave the first
-    /// order unfillable — then each order's pre-signature, in order.
-    static func calls(orders: [Placed], network: YourAccountOp.Network) -> [YourAccountOp.Call]? {
-        guard !orders.isEmpty, orders.allSatisfy({ $0.uid.count == 56 }),
-              let wethAddress = weth(chainId: network.chainId),
-              let zero = SafeABI.word(uint256: "0") else { return nil }
-        var out: [YourAccountOp.Call] = []
-        let wrapped = orders.filter(\.sellingETH).map(\.order.sellAmount)
-        if !wrapped.isEmpty {
-            guard let total = total(wrapped) else { return nil }
-            out.append(.init(operation: 0, to: wethAddress, value: total, data: YourAccount.sel("deposit()")))
+        var fee = "0"
+        if let relayer = (json["fees"] as? [String: Any])?["relayer"] as? [String: Any],
+           let amount = relayer["amount"] as? String, amount.allSatisfy(\.isNumber),
+           let address = (relayer["currency"] as? [String: Any])?["address"] as? String,
+           address.lowercased() == currency(sell) {
+            fee = amount
         }
-        var tokens: [String] = []
-        var sold: [String: [[UInt8]]] = [:]
-        for o in orders {
-            if sold[o.order.sellToken] == nil { tokens.append(o.order.sellToken) }
-            sold[o.order.sellToken, default: []].append(o.order.sellAmount)
+        return Quote(sellAmount: sold, buyAmount: back, minimumBuy: least, fee: fee,
+                     requestId: json["requestId"] as? String ?? (steps.first?["requestId"] as? String),
+                     calls: calls)
+    }
+
+    // MARK: - The check
+
+    static let approveSelector: [UInt8] = [0x09, 0x5e, 0xa7, 0xb3]
+
+    /// The quote's calls, if every one is Relay's and moves exactly what is
+    /// sold; nil with the reason otherwise. An `approve` is returned apart, so
+    /// a batch can approve each token once for the sum it sells.
+    static func checked(_ quote: Quote, sell: YourAccountOp.Token, amount: String)
+        -> (approvals: [(token: String, spender: String, amount: String)], calls: [Call])? {
+        guard quote.sellAmount == amount else { return nil }
+        var approvals: [(String, String, String)] = []
+        var calls: [Call] = []
+        for call in quote.calls {
+            if call.data.starts(with: approveSelector) {
+                // approve(spender, amount) on the sold token, to Relay's proxy,
+                // for exactly what is sold.
+                guard let contract = sell.contract?.lowercased(), call.to == contract, call.value == "0",
+                      call.data.count == 4 + 64,
+                      let spender = address(fromWord: Array(call.data[4..<36])),
+                      approvalProxies.contains(spender) || routers.contains(spender),
+                      SafeCalldata.decimal(Array(call.data[36..<68])) == amount else { return nil }
+                approvals.append((contract, spender, amount))
+                continue
+            }
+            guard routers.contains(call.to) || approvalProxies.contains(call.to) else { return nil }
+            // ETH leaves only when ETH is sold, and only the amount sold.
+            if sell.contract == nil {
+                guard call.value == amount || call.value == "0" else { return nil }
+            } else {
+                guard call.value == "0" else { return nil }
+            }
+            calls.append(call)
         }
-        for token in tokens {
-            guard let amount = total(sold[token] ?? []) else { return nil }
-            let approve = YourAccount.sel("approve(address,uint256)") + YourAccount.w(vaultRelayer) + amount
-            out.append(.init(operation: 0, to: token, value: zero, data: approve))
+        // Selling ETH must send it once; selling a token must approve it.
+        if sell.contract == nil {
+            guard calls.contains(where: { $0.value == amount }) else { return nil }
+        } else {
+            guard approvals.count == 1 else { return nil }
         }
-        for o in orders {
-            let preSign = YourAccount.sel("setPreSignature(bytes,bool)") + YourAccount.w(64) + YourAccount.w(1)
-                + YourAccount.dynamic(o.uid)
-            out.append(.init(operation: 0, to: CowOrder.settlement, value: zero, data: preSign))
+        return (approvals, calls)
+    }
+
+    private static func address(fromWord word: [UInt8]) -> String? {
+        guard word.count == 32, word[0..<12].allSatisfy({ $0 == 0 }) else { return nil }
+        return SafeABI.hex(Array(word[12..<32])).lowercased()
+    }
+
+    /// Every swap's approvals, once per token and spender for the sum: an
+    /// `approve` replaces an allowance, so two would leave the first swap
+    /// short (the rule §1436 set for CoW, kept).
+    static func approvalCalls(_ approvals: [(token: String, spender: String, amount: String)]) -> [YourAccount.Call]? {
+        var order: [String] = []
+        var sums: [String: (token: String, spender: String, amount: String)] = [:]
+        for a in approvals {
+            let key = a.token + "|" + a.spender
+            if let have = sums[key] {
+                sums[key] = (a.token, a.spender, YourAccountOp.sum(have.amount, a.amount))
+            } else {
+                order.append(key)
+                sums[key] = a
+            }
+        }
+        var out: [YourAccount.Call] = []
+        for key in order {
+            guard let a = sums[key], let amount = SafeABI.word(uint256: a.amount), let zero = SafeABI.word(uint256: "0")
+            else { return nil }
+            out.append(.init(operation: 0, to: a.token,
+                             value: zero, data: approveSelector + YourAccount.w(a.spender) + amount))
         }
         return out
     }
 
-    /// The sum of amount words, as a word: digit arithmetic through
-    /// `YourAccountOp.sum`, never a machine integer.
-    private static func total(_ words: [[UInt8]]) -> [UInt8]? {
-        var sum = "0"
-        for w in words { sum = YourAccountOp.sum(sum, SafeCalldata.decimal(w)) }
-        return SafeABI.word(uint256: sum)
+    /// A checked call as one of the account's own.
+    static func accountCall(_ call: Call) -> YourAccount.Call? {
+        guard let value = SafeABI.word(uint256: call.value) else { return nil }
+        return .init(operation: 0, to: call.to, value: value, data: call.data)
     }
 }

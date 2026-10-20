@@ -925,6 +925,34 @@
         }
       }
     },
+    "%@ could not check this swap, so nothing was signed" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ no pudo comprobar este cambio, así que no se firmó nada"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ でこのスワップを確認できなかったため、何も署名していません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@에서 이 스왑을 확인할 수 없어 아무것도 서명하지 않았습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 无法检查这次兑换,因此没有签署任何内容"
+          }
+        }
+      }
+    },
     "%@ due %@" : {
       "localizations" : {
         "es" : {
@@ -102517,6 +102545,34 @@
         }
       }
     },
+    "Not verified by Relay" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No verificado por Relay"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Relay による検証なし"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Relay 미검증"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "未经 Relay 验证"
+          }
+        }
+      }
+    },
     "Nothing attached." : {
       "localizations" : {
         "es" : {
@@ -103745,6 +103801,118 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "已退款至 %@"
+          }
+        }
+      }
+    },
+    "Relay asked for something other than this swap, so nothing was signed" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Relay pidió algo distinto a este cambio, así que no se firmó nada"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Relay がこのスワップ以外のものを求めたため、何も署名していません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Relay가 이 스왑이 아닌 것을 요청해 아무것도 서명하지 않았습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Relay 请求的不是这次兑换,因此没有签署任何内容"
+          }
+        }
+      }
+    },
+    "Relay did not answer on %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Relay no respondió en %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Relay は %@ で応答しませんでした"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Relay가 %@에서 응답하지 않음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Relay 在 %@ 上没有响应"
+          }
+        }
+      }
+    },
+    "Relay said: %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Relay dijo: %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Relay の回答: %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Relay 응답: %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Relay 表示:%@"
+          }
+        }
+      }
+    },
+    "Relay's route would pay less than it quoted, so nothing was signed" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "La ruta de Relay pagaría menos de lo cotizado, así que no se firmó nada"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Relay のルートは見積もりより少なく支払うため、何も署名していません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Relay 경로가 견적보다 적게 지급하므로 아무것도 서명하지 않았습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Relay 的路由支付会少于报价,因此没有签署任何内容"
           }
         }
       }
@@ -164540,6 +164708,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "本周"
+          }
+        }
+      }
+    },
+    "This would fail on %@, so nothing was signed" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Esto fallaría en %@, así que no se firmó nada"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ で失敗するため、何も署名していません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@에서 실패할 것이므로 아무것도 서명하지 않았습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "这在 %@ 上会失败,因此没有签署任何内容"
           }
         }
       }

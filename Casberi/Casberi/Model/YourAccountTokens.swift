@@ -10,19 +10,19 @@ import Foundation
 /// priced only by that reading (dollars over amount); one it never priced
 /// offers no dollars.
 ///
-/// *For* is CoW's own lists, from `files.cow.fi`: the CoinGecko list it
-/// publishes per chain (by market size, so its head is what people hold) and
-/// its curated list, a day at a time. A pasted address
-/// outside them is read off the chain (`symbol()`, `decimals()`) and says it
-/// is "not on CoW's list", so a look-alike never passes as the real one.
+/// *For* is Relay's token search (prd §1440): its list for the network
+/// with nothing typed, its matches as you type, each marked verified or not.
+/// A pasted address Relay does not know is read off the chain (`symbol()`,
+/// `decimals()`) and says it is "Not verified by Relay", so a look-alike
+/// never passes as the real one.
 enum YourAccountTokens {
     typealias Op = YourAccountOp
 
     struct Listed: Equatable, Identifiable, Sendable {
         let token: Op.Token
         let name: String
-        /// On one of CoW's lists. A pasted address that is not, is still
-        /// offered, and said to be not.
+        /// Verified by Relay. One that is not is still offered, and said
+        /// to be not.
         let onList: Bool
         var id: String { token.contract?.lowercased() ?? token.symbol }
     }
@@ -37,35 +37,40 @@ enum YourAccountTokens {
         var usd: Double? { price.map { Op.dollars(units, decimals: token.decimals, price: $0) } }
     }
 
-    // MARK: - CoW's lists
+    // MARK: - Relay's search
 
     @MainActor private static var lists: [Int: (tokens: [Listed], at: Date)] = [:]
 
-    /// The tokens CoW lists on `net`, ETH first. Empty where CoW does not
-    /// settle (Base Sepolia).
+    /// Relay's tokens on `net` matching `term`, verified first; with nothing
+    /// typed, its list for the network, ETH first, kept an hour. Empty where
+    /// the account does not swap (a test network).
     @MainActor
-    static func list(_ net: Op.Network) async -> [Listed] {
+    static func list(_ net: Op.Network, term: String = "") async -> [Listed] {
         guard YourAccountSwap.supported(net) else { return [] }
-        if let cached = lists[net.chainId], cached.at.timeIntervalSinceNow > -86_400 { return cached.tokens }
+        let q = term.trimmingCharacters(in: .whitespacesAndNewlines)
+        if q.isEmpty, let cached = lists[net.chainId], cached.at.timeIntervalSinceNow > -3_600 { return cached.tokens }
         var seen: Set<String> = []
-        var out: [Listed] = [Listed(token: Op.eth, name: "Ether", onList: true)]
-        // CoinGecko's list first: it comes by market size, so with nothing
-        // typed the head of it is what people hold. CoW's own after it.
-        for url in ["https://files.cow.fi/token-lists/CoinGecko.\(net.chainId).json",
-                    "https://files.cow.fi/tokens/CowSwap.json"] {
-            guard let root = await YourAccountChain.fetchJSON(url) as? [String: Any],
-                  let tokens = root["tokens"] as? [[String: Any]] else { continue }
-            for t in tokens {
-                guard (t["chainId"] as? Int) == net.chainId,
-                      let address = t["address"] as? String, ENS.isHexAddress(address),
-                      let symbol = t["symbol"] as? String, !symbol.isEmpty, symbol.count <= 16,
-                      let decimals = t["decimals"] as? Int, (0...36).contains(decimals),
-                      seen.insert(address.lowercased()).inserted else { continue }
-                out.append(Listed(token: Op.Token(symbol: symbol, decimals: decimals, contract: EIP55.checksum(address)),
-                                  name: (t["name"] as? String) ?? symbol, onList: true))
+        var out: [Listed] = q.isEmpty ? [Listed(token: Op.eth, name: "Ether", onList: true)] : []
+        if q.isEmpty { seen.insert(Op.eth.symbol) }
+        for c in await YourAccountChain.relayCurrencies(net, term: q) {
+            guard let address = c["address"] as? String,
+                  let symbol = c["symbol"] as? String, !symbol.isEmpty, symbol.count <= 16,
+                  let decimals = c["decimals"] as? Int, (0...36).contains(decimals) else { continue }
+            let verified = ((c["metadata"] as? [String: Any])?["verified"] as? Bool) ?? false
+            let token: Op.Token
+            if address.lowercased() == YourAccountSwap.native {
+                token = Op.eth
+            } else {
+                guard ENS.isHexAddress(address) else { continue }
+                token = Op.Token(symbol: symbol, decimals: decimals, contract: EIP55.checksum(address))
             }
+            let id = token.contract?.lowercased() ?? token.symbol
+            guard seen.insert(id).inserted else { continue }
+            out.append(Listed(token: token, name: (c["name"] as? String) ?? symbol, onList: verified))
         }
-        if out.count > 1 { lists[net.chainId] = (out, .now) }
+        // Verified first, each group in Relay's order.
+        out = out.filter(\.onList) + out.filter { !$0.onList }
+        if q.isEmpty, out.count > 1 { lists[net.chainId] = (out, .now) }
         return out
     }
 
@@ -74,7 +79,7 @@ enum YourAccountTokens {
     @MainActor
     static func lookUp(_ address: String, on net: Op.Network) async -> Listed? {
         guard ENS.isHexAddress(address) else { return nil }
-        if let known = await list(net).first(where: { $0.token.contract?.lowercased() == address.lowercased() }) {
+        if let known = await list(net, term: address).first(where: { $0.token.contract?.lowercased() == address.lowercased() }) {
             return known
         }
         guard let token = await readToken(address, on: net) else { return nil }
