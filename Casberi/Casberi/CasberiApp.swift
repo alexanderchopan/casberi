@@ -56,6 +56,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // "Daily Brief" a build before 2026-09-11 registered: dynamic items
         // persist on the device across launches until the app replaces them.
         application.shortcutItems = []
+        #if DEBUG
+        ChainReadsOff.install()
+        #endif
         return true
     }
 }

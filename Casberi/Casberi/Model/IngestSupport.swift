@@ -364,6 +364,9 @@ enum IngestSupport {
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest = 15
         config.waitsForConnectivity = false
+        #if DEBUG
+        config.protocolClasses = [ChainReadsOff.self] + (config.protocolClasses ?? [])
+        #endif
         return URLSession(configuration: config)
     }()
 

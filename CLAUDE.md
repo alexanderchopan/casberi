@@ -178,7 +178,7 @@ deliberately does not check are in `docs/verify.md`.
 - Dynamic Type: `xcrun simctl ui booted content_size` (underscore).
 - Launch args do NOT trigger `onOpenURL` — use the `-deeplink` hook below, or `xcrun simctl openurl booted casberi://...`.
 - Computer-use approval is blocked in scheduled/non-interactive runs — drive the app via launch-arg hooks + `simctl` there.
-- Installing for probes: pick the NEWEST DerivedData (`ls -dt ~/Library/Developer/Xcode/DerivedData/Casberi-*` — plain `ls -d` is alphabetical and served a day-old binary for 30 minutes on 2026-07-14). → docs/gotchas.md
+- Installing for probes: pick the NEWEST DerivedData (`ls -dt`, never alphabetical `ls -d`). → docs/gotchas.md
 - **`booted` is ambiguous with two simulators up.** A second session's device can take your `simctl … booted` calls and simulator taps, and it reads as a stale build. Pin the udid on every call (`xcrun simctl list devices booted`) → docs/gotchas.md
 - **Verify the INSTALLED binary, not just the newest one.** `ls -dt` globs every `Casberi-*` DerivedData, so a concurrent session can serve you their app without your hooks. → docs/gotchas.md
 - On a fresh sim install the demo seeds re-ask Photos/Calendar/Health permission at launch, and the queued sheets block everything (probes still run, but the UI is unusable and Health's ask stalls its probe). → docs/gotchas.md
@@ -192,6 +192,7 @@ deliberately does not check are in `docs/verify.md`.
 All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag stays here; the long entry moved to `docs/hooks/`** — open the named file for the measured quirks, the decisions with reasons, and what each probe exists to separate:
 
 - `-deeplink <casberi://url>` — open a deep link on launch.
+- `-liveChains YES` — DEBUG reaches no Alchemy/Zerion host without it (`Model/ChainReadsOff.swift`)
 - `-demoCensus YES` — over a poured demo (`-demoEnter YES` first), compose every surface in one process and NSLog `demoCensus| <surface> | … | ok|empty|skipped`; a new surface is one row in `DemoCensus.registry` (`Shell/DemoCensus.swift`, prd §617).
 - `-chipStats "<source:n[,…]>"|clear` — seed the source strip's tap-learning counters (`Model/ChipMemory.swift`); every mount NSLogs `chipLabels:`.
 - `-openRoom "<seat name>"` — land in a source's room headlessly at mount (`RootShell.openRoomIfRequested`; NSLogs `openRoom:`). Pair with `-demoEnter YES` on a prior launch for a furnished room.
