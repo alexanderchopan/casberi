@@ -67761,3 +67761,4 @@ Mock: the design canvas "Aztec experience".
 4. **The account's own address is "yourself"** in the To field and the receipt.
 5. **Add raises the keys on the next line:** the new line's field exists only after the pass that inserts it, so focus waits 120ms.
 6. `-moveSendDraft` (DEBUG) takes `;`-separated lines, each `<amount>|<to>[|<SYM>]`, and Adds all but the last, because a `simctl`-booted simulator drops typed characters.
+7. **A send line counts only when its recipient stands for what the field says now** (`stands`): a pasted address resolves on the next pass, and until then the last person must not take the line. Measured: two recipients in one operation, 0.00005 ETH to yourself and 0.0001 ETH with 0.05 USDC to …f51a (block 52,868,806), after the draft first grouped the second line under the first person.

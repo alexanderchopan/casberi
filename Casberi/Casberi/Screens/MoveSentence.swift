@@ -199,11 +199,19 @@ struct MoveSentence: View {
             guard let buy, let quote, lockedBuy.map({ $0 == buy.token }) ?? true else { return nil }
             return .swap(Chain.Swap(network: network, sell: with.token, buy: buy.token, amount: units, quote: quote))
         case .send:
-            guard let r = resolved, r.imitates == nil else { return nil }
+            guard let r = resolved, r.imitates == nil, stands(r) else { return nil }
             return .send(Op.Payment(network: network, token: with.token, amount: units, to: r.address, toName: r.name))
         case .receive:
             return nil
         }
+    }
+
+    /// The recipient stands for what the field says NOW: a pasted address
+    /// is resolved on the next pass, and until then the last person must
+    /// not take the line (§1442l).
+    private func stands(_ r: Recipient) -> Bool {
+        let text = to.trimmingCharacters(in: .whitespacesAndNewlines)
+        return WalletWatch.sameAddress(text, r.address) || r.name?.caseInsensitiveCompare(text) == .orderedSame
     }
 
     private var all: [Chain.Item] { items + (pendingItem.map { [$0] } ?? []) }
@@ -1754,9 +1762,15 @@ struct MoveSentence: View {
                 await readNetwork()
             } catch let failure as Chain.Failure {
                 stage = nil
+                #if DEBUG
+                NSLog("moveSign: failed %@", failure.message)
+                #endif
                 say(failure.message, failure: true, seconds: 6)
             } catch {
                 stage = nil
+                #if DEBUG
+                NSLog("moveSign: not sent %@", String(describing: error))
+                #endif
                 // Face ID cancelled, or the Enclave refused: nothing left the phone.
                 say(String(localized: "Not sent"), failure: true)
             }
