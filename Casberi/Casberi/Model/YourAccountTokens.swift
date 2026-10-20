@@ -120,6 +120,28 @@ enum YourAccountTokens {
             .map(\.0)
     }
 
+    // MARK: - What a swap bought
+
+    private struct Kept: Codable { let symbol: String; let decimals: Int; let contract: String? }
+    private static func boughtKey(_ net: Op.Network) -> String { "yourAccount.bought.\(net.chainId)" }
+
+    /// A token a swap paid the account (§1442l), read as a candidate holding
+    /// until the Wallet's own reading lists it: the sentence can spend what it
+    /// just bought. Twenty at most, newest kept.
+    static func remember(_ token: Op.Token, on net: Op.Network) {
+        guard token.contract != nil else { return }
+        var kept = remembered(on: net).filter { $0 != token }
+        kept.insert(token, at: 0)
+        let stored = kept.prefix(20).map { Kept(symbol: $0.symbol, decimals: $0.decimals, contract: $0.contract) }
+        if let data = try? JSONEncoder().encode(Array(stored)) { UserDefaults.standard.set(data, forKey: boughtKey(net)) }
+    }
+
+    static func remembered(on net: Op.Network) -> [Op.Token] {
+        guard let data = UserDefaults.standard.data(forKey: boughtKey(net)),
+              let kept = try? JSONDecoder().decode([Kept].self, from: data) else { return [] }
+        return kept.map { Op.Token(symbol: $0.symbol, decimals: $0.decimals, contract: $0.contract) }
+    }
+
     // MARK: - What you hold
 
     /// The account's tokens on `net` with something in them, biggest first.
@@ -136,6 +158,7 @@ enum YourAccountTokens {
             return row.usd / amount
         }
         var candidates = Op.tokens(on: net)
+        for token in remembered(on: net) where !candidates.contains(token) { candidates.append(token) }
         let listed = await list(net)
         for r in reading.prefix(30) {
             guard let contract = r.contract, ENS.isHexAddress(contract),

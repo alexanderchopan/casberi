@@ -203353,6 +203353,34 @@
         }
       }
     },
+    "yourself" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ti mismo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "自分"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "나 자신"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你自己"
+          }
+        }
+      }
+    },
     "yourteam.atlassian.net" : {
       "localizations" : {
         "es" : {

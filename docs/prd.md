@@ -67752,3 +67752,12 @@ Mock: the design canvas "Aztec experience".
 4. **When that is not every network, Receive says so in the attention ink**: "Send to it only on Base. The iPhone that made this account can open the others." (or, with none, "Not on any network on this iPhone yet").
 5. `your-account-selftest.sh` fails if Move names every network outright again, or the sentence stops reading reach.
 6. Not done yet: the phone that makes an account opening every network at creation (§1427's rule, applied to networks added later), so no account is ever left behind this way.
+
+### §1442l — Move's receipt keeps the sentence's columns, and what you bought stays in the account (amends §1442g, §1442h) (user, 2026-10-20: "can you run these and use the account itself as the address"; "fix and verify"; "should the well say send before each of these rows?")
+
+1. **Measured 2026-10-20 on Base, all status 1:** the gutter receipts after a swap (0.1 USDC for 0.1163 AERO, block 52,868,399) and after a send of three tokens to the account's own address (0.00005 ETH, 0.05 USDC, 0.05 AERO, block 52,868,566), each under a cent.
+2. **The receipt is the sentence in the past tense, in the same two columns:** the past verb ("Swapped", "Sent") leads the first value, each further value stands under it with nothing in the gutter, and the gutter keeps only the glue (for, to, on). The verb is said once and not per row: one transaction is one statement, and repeating "Sent" would read as three. Several-for-one says what was sold, then "for" the total bought (measured, or "≈" the quotes when any line is unmeasured); a send groups lines by consecutive recipient under "to"; anything else is "Signed N in one transaction".
+3. **A token you swap into is kept in the account's list** (`Tokens.remember`, `yourAccount.bought.<chainId>`, 20 at most) and read with the holdings, so its balance shows right away and it can be sent next, before any indexer lists it.
+4. **The account's own address is "yourself"** in the To field and the receipt.
+5. **Add raises the keys on the next line:** the new line's field exists only after the pass that inserts it, so focus waits 120ms.
+6. `-moveSendDraft` (DEBUG) takes `;`-separated lines, each `<amount>|<to>[|<SYM>]`, and Adds all but the last, because a `simctl`-booted simulator drops typed characters.

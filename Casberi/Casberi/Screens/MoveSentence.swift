@@ -130,8 +130,10 @@ struct MoveSentence: View {
 
     /// The sentence in the past tense, and how it went.
     struct Receipt: Equatable {
+        /// One line: its small word for the gutter, and its value.
+        struct Line: Equatable { var glue: String?; var text: String }
         let past: String
-        let lines: [String]
+        let lines: [Line]
         let detail: String
         var link: URL? = nil
         var linkName: String? = nil
@@ -296,7 +298,7 @@ struct MoveSentence: View {
                     .padding(.bottom, DS.Space.s4)
             }
             if let receipt {
-                row(nil) { receiptLines(receipt) }
+                receiptLines(receipt)
             } else if emptyEverywhere, verb != .receive {
                 row(nil) {
                     FlowLayout(spacing: 7, lineSpacing: 0) {
@@ -412,16 +414,17 @@ struct MoveSentence: View {
 
     /// "Swapped 0.004 USDC / for 12.3 AERO / on Base." — the verb rolls to the
     /// past, the ≈ resolves to what was paid out.
+    /// The receipt in the sentence's own grammar (§1442l): its small words
+    /// in the gutter, the past tense leading the first line.
     private func receiptLines(_ r: Receipt) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
-            FlowLayout(spacing: 7, lineSpacing: 0) {
-                word(r.past, ink: DS.textSecondary)
-                if let first = r.lines.first { word(first, ink: DS.textPrimary) }
-            }
-            ForEach(Array(r.lines.dropFirst().enumerated()), id: \.offset) { _, line in
-                FlowLayout(spacing: 7, lineSpacing: 0) {
-                    ForEach(Array(line.split(separator: " ").enumerated()), id: \.offset) { _, w in
-                        word(String(w), ink: DS.textPrimary)
+        VStack(alignment: .leading, spacing: DS.Space.s1) {
+            ForEach(Array(r.lines.enumerated()), id: \.offset) { n, line in
+                row(line.glue) {
+                    FlowLayout(spacing: 7, lineSpacing: 0) {
+                        if n == 0 { word(r.past, ink: DS.textSecondary) }
+                        ForEach(Array(line.text.split(separator: " ").enumerated()), id: \.offset) { _, w in
+                            word(String(w), ink: DS.textPrimary)
+                        }
                     }
                 }
             }
@@ -1705,7 +1708,12 @@ struct MoveSentence: View {
             with = next
             if next.price == nil { inDollars = false }
         }
-        focus = .amount
+        // The new line is a new row (a send regroups it), so the field it
+        // focuses exists only after this pass: raise the keys on the next.
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(120))
+            focus = .amount
+        }
     }
 
     private func sign() {
@@ -1727,6 +1735,11 @@ struct MoveSentence: View {
                 // page, so a second tap cannot pay it twice. The sentence
                 // turns past tense in its place (§1438b): no toast.
                 let made = Self.receipt(for: batch, done: done, on: net)
+                // A token a swap just bought is spendable now, not when the
+                // Wallet next reads the account (§1442l).
+                if case .landed = sent.outcome {
+                    for item in batch { if case .swap(let x) = item { Tokens.remember(x.buy, on: net) } }
+                }
                 withAnimation(DS.Motion.standard) {
                     items = []
                     slot = 0
@@ -1753,44 +1766,60 @@ struct MoveSentence: View {
     /// The sentence in the past tense: what was sent or swapped, what a filled
     /// order actually paid out, and how it went.
     static func receipt(for batch: [Chain.Item], done: Chain.Transacted, on net: Op.Network) -> Receipt {
+        typealias Line = Receipt.Line
         let sent = done.sent
         let tx: String? = { if case .landed(let t, _) = sent.outcome { return t } else { return nil } }()
         let link = tx.flatMap { explorer($0, on: net) }
         let linkName: String? = net.chainId == 1 ? "Etherscan" : net.chainId == 4663 ? "Blockscout" : "Basescan"
-        let on = String(localized: "on \(net.name).")
+        let on = Line(glue: String(localized: "on"), text: net.name + ".")
+        func made(_ past: String, _ lines: [Line], _ detail: [String] = []) -> Receipt {
+            Receipt(past: past, lines: lines, detail: detail.joined(separator: " · "),
+                    link: link, linkName: link == nil ? nil : linkName)
+        }
         if case .pending = sent.outcome {
-            return Receipt(past: String(localized: "Sent,"), lines: [String(localized: "not yet seen"), on],
+            return Receipt(past: String(localized: "Sent,"),
+                           lines: [Line(glue: nil, text: String(localized: "not yet seen")), on],
                            detail: String(localized: "Check before sending again"))
         }
-        // Relay settles in the operation itself: landed is swapped.
-        var detail: [String] = []
-        if batch.count == 1, let item = batch.first {
-            switch item {
-            case .send(let p):
-                let who = p.toName ?? YourAccount.short(p.to)
-                return Receipt(past: String(localized: "Sent"),
-                               lines: [Op.spoken(p.amount, decimals: p.token.decimals) + " " + p.token.symbol,
-                                       String(localized: "to \(who)"), on],
-                               detail: detail.joined(separator: " · "), link: link, linkName: link == nil ? nil : linkName)
-            case .swap(let s):
-                let bought = done.bought.first.flatMap { $0 }
-                let filled = bought != nil
-                let back = bought.map { Op.spoken($0, decimals: s.buy.decimals) }
-                    ?? "≈ " + Op.spoken(s.quote.buyAmount, decimals: s.buy.decimals)
-                // More than quoted is the honest surprise: the route paid more.
-                if let bought, Op.atMost(s.quote.buyAmount, bought), bought != s.quote.buyAmount {
-                    let more = Op.spoken(Op.difference(bought, s.quote.buyAmount), decimals: s.buy.decimals)
-                    detail.append(String(localized: "\(more) \(s.buy.symbol) more than quoted"))
-                }
-                return Receipt(past: filled ? String(localized: "Swapped") : String(localized: "Swapping"),
-                               lines: [Op.spoken(s.amount, decimals: s.sell.decimals) + " " + s.sell.symbol,
-                                       String(localized: "for \(back) \(s.buy.symbol)"), on],
-                               detail: detail.joined(separator: " · "), link: link, linkName: link == nil ? nil : linkName)
+        let swaps = batch.compactMap { if case .swap(let x) = $0 { x } else { nil } }
+        let sends = batch.compactMap { if case .send(let p) = $0 { p } else { nil } }
+        func amount(_ units: String, _ token: Op.Token) -> String { Self.figure(units, decimals: token.decimals) + " " + token.symbol }
+
+        // Swaps, one or several for one (§1442g): each sold line, then what
+        // came back — measured when every swap was, else the quotes, ≈.
+        if sends.isEmpty, let first = swaps.first, swaps.allSatisfy({ $0.buy == first.buy }) {
+            let paid = done.bought.compactMap { $0 }
+            let measured = paid.count == swaps.count
+            let back = measured ? paid.reduce("0") { Op.sum($0, $1) }
+                                : swaps.map(\.quote.buyAmount).reduce("0") { Op.sum($0, $1) }
+            let quoted = swaps.map(\.quote.buyAmount).reduce("0") { Op.sum($0, $1) }
+            var detail: [String] = []
+            // More than quoted is the honest surprise: the route paid more.
+            if measured, Op.atMost(quoted, back), back != quoted {
+                detail.append(String(localized: "\(Self.figure(Op.difference(back, quoted), decimals: first.buy.decimals)) \(first.buy.symbol) more than quoted"))
             }
+            return made(measured ? String(localized: "Swapped") : String(localized: "Swapping"),
+                        swaps.map { Line(glue: nil, text: amount($0.amount, $0.sell)) }
+                        + [Line(glue: String(localized: "for"), text: (measured ? "" : "≈ ") + amount(back, first.buy)), on],
+                        detail)
         }
-        return Receipt(past: String(localized: "Signed"),
-                       lines: [String(localized: "\(batch.count) in one transaction"), on],
-                       detail: detail.joined(separator: " · "), link: link, linkName: link == nil ? nil : linkName)
+        // Sends (§1442h): each person's tokens, then "to <them>".
+        if swaps.isEmpty, !sends.isEmpty {
+            var lines: [Line] = []
+            var at = 0
+            while at < sends.count {
+                let to = sends[at].to
+                var end = at
+                while end < sends.count, WalletWatch.sameAddress(sends[end].to, to) {
+                    lines.append(Line(glue: nil, text: amount(sends[end].amount, sends[end].token)))
+                    end += 1
+                }
+                lines.append(Line(glue: String(localized: "to"), text: sends[at].toName ?? YourAccount.short(to)))
+                at = end
+            }
+            return made(String(localized: "Sent"), lines + [on])
+        }
+        return made(String(localized: "Signed"), [Line(glue: nil, text: String(localized: "\(batch.count) in one transaction")), on])
     }
 
     /// What Face ID says: the whole sentence, the least a swap returns.
@@ -1934,6 +1963,13 @@ struct MoveSentence: View {
                 return
             }
             let address = EIP55.checksum(text)
+            // Your own address says so, never a fragment of itself (§1442l).
+            if WalletWatch.sameAddress(address, account) {
+                withAnimation(DS.Motion.standard) {
+                    resolved = Recipient(address: address, name: String(localized: "yourself"), imitates: nil)
+                }
+                return
+            }
             let book = AddressBook.shared
             let imitates = book.name(for: address) == nil ? book.lookalikes(of: address).first?.name : nil
             withAnimation(DS.Motion.standard) {
@@ -1990,15 +2026,26 @@ struct MoveSentence: View {
         }
     }
 
+    /// Lines are `;`-separated, each `<amount>|<to>[|<SYM>]`; every line but
+    /// the last is Added once its recipient resolves.
     private func sendDraft() {
         guard let draft = UserDefaults.standard.string(forKey: "moveSendDraft"), !draft.isEmpty else { return }
-        let parts = draft.split(separator: "|", maxSplits: 1).map(String.init)
+        let lines = draft.split(separator: ";").map { $0.split(separator: "|").map(String.init) }
         networkPicked = true
-        if with == nil { with = held.first }
-        amount = parts.first ?? ""
-        inDollars = false
-        to = parts.count > 1 ? parts[1] : ""
-        NSLog("moveSendDraft: amount=%@ to=%@", amount, to)
+        Task { @MainActor in
+            for (n, parts) in lines.enumerated() {
+                if parts.count > 2, let h = held.first(where: { $0.token.symbol == parts[2] }) { with = h }
+                if with == nil { with = held.first }
+                amount = parts.first ?? ""
+                inDollars = false
+                to = parts.count > 1 ? parts[1] : ""
+                NSLog("moveSendDraft: amount=%@ %@ to=%@", amount, with?.token.symbol ?? "-", to)
+                guard n < lines.count - 1 else { break }
+                for _ in 0..<50 where pendingItem == nil { try? await Task.sleep(for: .milliseconds(100)) }
+                add()
+                NSLog("moveSendDraft: added, %d in the transaction, to %@", items.count, resolved?.name ?? "-")
+            }
+        }
     }
 
     private func draftAddsTheSwap() {
