@@ -1818,7 +1818,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1440 — Swaps go through Relay, one provider everywhere, proven by simulation before Face ID (supersedes §1430's CoW; keeps §…
 - §1441 — Robinhood Chain joins the account: three live networks, each with send, receive and swap [+1 sub-entries]
 - §1442 — Move is a tray, raised from its tab over wherever you are (amends §1422's place) [+3 sub-entries]
-- §1443 — The toast draws above every sheet [+2 sub-entries]
+- §1443 — The toast draws above every sheet [+3 sub-entries]
 
 ## Dead rulings → what replaced them (generated)
 

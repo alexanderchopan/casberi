@@ -67699,3 +67699,13 @@ Mock: the design canvas "Aztec experience".
 2. **What you have is not restated.** The token list showed it when you picked, the slider is your share of it and its end spends all of it, and going over says "More than you have".
 3. **A swap names Relay wherever one is drawn**, with Relay's mark (`brand-relay`). Only the star is used, cut from Relay's wordmark, because the wordmark's black letters vanish on the dark tray and the words already say the name. It stands on a white disc, as the network marks do, because Relay's purple is too dark to read on the tray (user: "can we put it on white circle?").
 4. **Every line under the sentence starts on one left edge, one fact a line** (user: "how all this is indented so its even"): "≈ $24.48", then "Fee $0.04", then "Powered by Relay" with the mark after the name. The $ · token switch stays at the trailing end of the amount line, where a control stands.
+
+### §1442f — The quieter sentence: three sizes, pink for two jobs, a gutter for the small words (amends §1442c items 2 and 6, §1442d item 4, §1442e items 1, 3, 4) (user, 2026-10-20: "shouldn't the amount of eth and amount of aero have same indent?"; "i think we can have it tidier"; "it still looks kinda ghetto ... how would you improve it"; "build E")
+
+1. **Three type sizes.** The values are the sentence's size (`heading28`). The verbs, the small words and Add are `heading17`. The small print is `body17`. The verbs no longer compete with the values.
+2. **The small words stand in a gutter** (`MoveSentence.gutter`, 40pt), so every value, the small print and the slider start on one edge. "for" and "on" stay white: they are the sentence, not labels.
+3. **Pink is the values' and the signing verb's alone.** Add is white when ready and grey when not. The slider's fill is white (`DSShareSlider(tint:)`). A For locked by a kept swap reads grey, settled rather than a pick.
+4. **One line of small print**: "≈ $24.41 · fee $0.04". The slider, the amount's own control, stands under it.
+5. **Kept lines are numbered in the gutter**, `heading17`, with their ×. The line being filled takes the next number. "In this transaction" is gone: the numbers say it.
+6. **"Powered by Relay" signs the foot, small and centred under Add and the verb**, with Relay's mark on its white disc. A credit, not a fact about this swap.
+7. The $ · token switch stays two `Chip`s. The mock drew one pill with two segments, the grammar §686 retired.

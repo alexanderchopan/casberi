@@ -11,6 +11,9 @@ import SwiftUI
 struct DSShareSlider: View {
     @Binding var percent: Int
     var enabled = true
+    /// The filled part's ink. Move draws it white, so pink stays the
+    /// values' and the signing verb's (prd §1442f).
+    var tint: Color = DS.pickInk
     /// The thumb grows under the finger (§1438b).
     @State private var holding = false
 
@@ -29,7 +32,7 @@ struct DSShareSlider: View {
                         .frame(width: 2, height: 12)
                         .offset(x: CGFloat(n) / 100 * width - 1)
                 }
-                Capsule().fill(enabled ? DS.pickInk : DS.textTertiary).frame(width: x, height: 6)
+                Capsule().fill(enabled ? tint : DS.textTertiary).frame(width: x, height: 6)
                 Circle()
                     .fill(enabled ? Color.white : DS.textTertiary)
                     .frame(width: holding ? 40 : 28, height: holding ? 40 : 28)

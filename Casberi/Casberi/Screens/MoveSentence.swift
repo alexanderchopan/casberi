@@ -230,23 +230,44 @@ struct MoveSentence: View {
 
     // MARK: - The sentence
 
+    /// **E (§1442f, user: "it still looks kinda ghetto ... how would you
+    /// improve it"; "build E").** Three sizes: the values large, the verbs
+    /// and the small words `heading17`, the small print `body17`. The small
+    /// words stand in a gutter, so every value starts on one edge.
+    static let gutter: CGFloat = 40
+
+    /// One line of the sentence: its small word in the gutter, its value
+    /// after it. A kept transaction numbers the line it is filling instead.
+    private func row<Value: View>(_ glue: String?, ink: Color = DS.textPrimary,
+                                  @ViewBuilder _ value: () -> Value) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+            Text(verbatim: glue ?? " ")
+                .dsText(.heading17)
+                .foregroundStyle(ink)
+                .frame(width: Self.gutter, alignment: .leading)
+            value()
+        }
+    }
+
     private var sentence: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        VStack(alignment: .leading, spacing: DS.Space.s1) {
             verbs
-                .padding(.bottom, DS.Space.s3)
-            // What Add kept stands under the verbs, in the sentence's own
-            // ink, so the transaction reads as one thing (§1442c).
+                .padding(.bottom, DS.Space.s4)
+            // What Add kept stands under the verbs, numbered, quieter than the
+            // sentence being filled (§1442c, §1442f).
             if !items.isEmpty, receipt == nil {
                 kept
-                    .padding(.bottom, DS.Space.s3)
+                    .padding(.bottom, DS.Space.s4)
             }
             if let receipt {
-                receiptLines(receipt)
+                row(nil) { receiptLines(receipt) }
             } else if emptyEverywhere, verb != .receive {
-                FlowLayout(spacing: 7, lineSpacing: 0) {
-                    ForEach(Array((verb == .swap ? String(localized: "Nothing to swap yet.") : String(localized: "Nothing to send yet."))
-                        .split(separator: " ").enumerated()), id: \.offset) { _, w in
-                        word(String(w), ink: DS.textSecondary)
+                row(nil) {
+                    FlowLayout(spacing: 7, lineSpacing: 0) {
+                        ForEach(Array((verb == .swap ? String(localized: "Nothing to swap yet.") : String(localized: "Nothing to send yet."))
+                            .split(separator: " ").enumerated()), id: \.offset) { _, w in
+                            word(String(w), ink: DS.textSecondary)
+                        }
                     }
                 }
             } else {
@@ -255,49 +276,42 @@ struct MoveSentence: View {
                 // The amount is a line of its own, and can come first (§1442a).
                 // In dollars the token is a line of its own ("$25 / of ETH");
                 // in its own units it stands beside the figure ("20 USDC").
-                HStack(alignment: .firstTextBaseline, spacing: 0) {
-                    if inDollars { word("$", ink: amount.isEmpty ? DS.textTertiary : DS.pickInk) }
-                    amountField
-                    if !inDollars {
-                        withWord.padding(.leading, 10)
+                row(items.isEmpty ? nil : "\(items.count + 1)", ink: DS.textTertiary) {
+                    HStack(alignment: .firstTextBaseline, spacing: 0) {
+                        if inDollars { word("$", ink: amount.isEmpty ? DS.textTertiary : DS.pickInk) }
+                        amountField
+                        if !inDollars {
+                            withWord.padding(.leading, 8)
+                        }
+                        Spacer(minLength: DS.Space.s2)
+                        unitSwitch
                     }
-                    Spacer(minLength: DS.Space.s2)
-                    unitSwitch
                 }
                 // The whole line takes the tap, not only the narrow field.
                 .contentShape(Rectangle())
                 .onTapGesture { if stage == nil { focus = .amount } }
                 if inDollars {
-                    FlowLayout(spacing: 7, lineSpacing: 0) {
-                        word(String(localized: "of"), ink: DS.textPrimary)
-                        withWord
-                    }
+                    row(String(localized: "of")) { withWord }
                 }
-                FlowLayout(spacing: 7, lineSpacing: 0) {
-                    if verb == .swap {
-                        word(String(localized: "for"), ink: DS.textPrimary)
-                        buyWord
-                    } else {
-                        word(String(localized: "to"), ink: DS.textPrimary)
-                        toWord
-                    }
+                if verb == .swap {
+                    row(String(localized: "for")) { FlowLayout(spacing: 7, lineSpacing: 0) { buyWord } }
+                } else {
+                    row(String(localized: "to")) { toWord }
                 }
-                FlowLayout(spacing: 7, lineSpacing: 0) {
-                    word(String(localized: "on"), ink: DS.textPrimary)
-                    networkWord
-                }
+                row(String(localized: "on")) { FlowLayout(spacing: 7, lineSpacing: 0) { networkWord } }
             case .receive:
-                FlowLayout(spacing: 7, lineSpacing: 0) {
-                    word(String(localized: "at"), ink: DS.textPrimary)
+                row(String(localized: "at")) {
                     Button { copy() } label: { word(YourAccount.short(account), ink: DS.pickInk) }
                         .buttonStyle(RowPress())
                         .accessibilityLabel(Text("Your address, \(account)"))
                         .accessibilityHint(Text("Copies your address"))
                 }
-                // A line of words, so it wraps between them.
-                FlowLayout(spacing: 7, lineSpacing: 0) {
-                    ForEach(Array(String(localized: "on \(Op.networks.filter { !$0.isTest }.map(\.name).formatted(.list(type: .and))).").split(separator: " ").enumerated()), id: \.offset) { _, w in
-                        word(String(w), ink: DS.textPrimary)
+                row(String(localized: "on")) {
+                    // A line of words, so it wraps between them.
+                    FlowLayout(spacing: 7, lineSpacing: 0) {
+                        ForEach(Array((Op.networks.filter { !$0.isTest }.map(\.name).formatted(.list(type: .and)) + ".").split(separator: " ").enumerated()), id: \.offset) { _, w in
+                            word(String(w), ink: DS.textPrimary)
+                        }
                     }
                 }
             }
@@ -381,7 +395,7 @@ struct MoveSentence: View {
     /// "send swap receive should be its own line user chooses which"). The
     /// sentence under it is what that verb does.
     private var verbs: some View {
-        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s3) {
+        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s4) {
             ForEach(Verb.allCases, id: \.self) { v in
                 Button {
                     guard v != verb || receipt != nil else { return }
@@ -393,7 +407,7 @@ struct MoveSentence: View {
                     DSHaptic.selection()
                 } label: {
                     Text(verbatim: title(v))
-                        .dsText(.heading28)
+                        .dsText(.heading17)
                         .foregroundStyle(v == verb ? DS.textPrimary
                                          : v == .receive && emptyEverywhere ? DS.pickInk : DS.textTertiary)
                 }
@@ -455,7 +469,9 @@ struct MoveSentence: View {
     @ViewBuilder private var buyWord: some View {
         if let buy {
             let back = quote.map { "≈ " + Self.figure($0.buyAmount, decimals: buy.token.decimals) + " " }
-            let word = blank((back ?? "") + buy.token.symbol, ink: DS.pickInk, .buy, label: Text("For \(buy.token.symbol), change"))
+            // Locked by a kept swap (§1442c), it reads as settled, not a pick.
+            let word = blank((back ?? "") + buy.token.symbol, ink: lockedBuy == nil ? DS.pickInk : DS.textSecondary,
+                             .buy, label: Text("For \(buy.token.symbol), change"))
             if pricing {
                 // While Relay prices it, the word breathes: working, not stuck.
                 word.phaseAnimator([1.0, 0.4]) { content, phase in content.opacity(phase) } animation: { _ in .easeInOut(duration: 0.9) }
@@ -567,7 +583,9 @@ struct MoveSentence: View {
                 // The box rises into the space and fades as its pick lands.
                 .transition(.asymmetric(insertion: .offset(y: 24).combined(with: .opacity), removal: .opacity))
             } else {
-                line.transition(.opacity)
+                line
+                    .padding(.leading, Self.gutter + DS.Space.s2)
+                    .transition(.opacity)
             }
         }
     }
@@ -654,48 +672,21 @@ struct MoveSentence: View {
         } else if let note = lineNote {
             Text(verbatim: note).dsText(.body17).foregroundStyle(DS.attentionInk)
         } else if let with {
-            // One thing a line (§1442e, user: "this is confusing"): the other
-            // unit, what you have, and who does the swap and for how much.
-            VStack(alignment: .leading, spacing: DS.Space.s1) {
-                // The other unit, live as you type; the switch on the amount
-                // line is what changes which one you type in (§1442d).
-                if let other = otherUnit(with) {
-                    Text(verbatim: "≈ " + other).dsText(.body17).foregroundStyle(DS.textSecondary)
-                }
-                // What you have is not restated (§1442e, user: "why do we
-                // need to say you have N eth if user already chose from drop
-                // down menu"): the list showed it, the slider is your share
-                // of it and its end spends all of it, and going over says so.
-                // Who does the swap, said wherever one is drawn (§1442e,
-                // user: "we need to show that this is processed by relay").
-                // Relay's own mark leads it, as every service's does (user,
-                // 2026-10-20: "do we want to show the relay logo"): the star
-                // alone, because the words already say the name.
-                // One left edge for every line (§1442e, user: "how all this
-                // is indented so its even"): the fee on its own line, and
-                // Relay's mark after its name, so nothing starts indented.
-                if verb == .swap, buy != nil {
-                    if let fee = feeLine(with) {
-                        Text(verbatim: fee).dsText(.body17).foregroundStyle(DS.textSecondary)
-                    }
-                    HStack(spacing: DS.Space.s2) {
-                        Text("Powered by Relay")
-                            .dsText(.body17).foregroundStyle(DS.textSecondary)
-                        // On a white disc, as the network marks stand: Relay's
-                        // purple is too dark to read on the tray (user,
-                        // 2026-10-20: "can we put it on white circle?").
-                        Image("brand-relay")
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 14, height: 14)
-                            .frame(width: 22, height: 22)
-                            .background(Circle().fill(.white))
-                            .accessibilityHidden(true)
-                    }
+            // One line of small print (§1442f): the other unit and the fee.
+            // Relay's credit is the foot's, and the slider, the amount's own
+            // control, stands under it here rather than stranded at the foot.
+            VStack(alignment: .leading, spacing: DS.Space.s6) {
+                let print = [otherUnit(with).map { "≈ " + $0 }, feeLine(with)].compactMap { $0 }
+                if !print.isEmpty {
+                    Text(verbatim: print.joined(separator: " · "))
+                        .dsText(.body17).foregroundStyle(DS.textSecondary)
                 }
                 // A test network says so wherever it is picked (prd §1439).
                 if network.isTest {
                     Text("test coins").dsText(.body17).foregroundStyle(DS.attentionInk)
+                }
+                if verb != .receive, receipt == nil {
+                    DSShareSlider(percent: shareBinding(with), enabled: stage == nil, tint: DS.textPrimary)
                 }
             }
             .fixedSize(horizontal: false, vertical: true)
@@ -734,9 +725,9 @@ struct MoveSentence: View {
         guard verb == .swap, let quote else { return nil }
         if let price = h.price {
             let usd = Op.dollars(quote.fee, decimals: h.token.decimals, price: price)
-            return usd < 0.01 ? String(localized: "Fee under a cent") : String(localized: "Fee \(Self.money(usd))")
+            return usd < 0.01 ? String(localized: "fee under a cent") : String(localized: "fee \(Self.money(usd))")
         }
-        return String(localized: "Fee ≈ \(Self.figure(quote.fee, decimals: h.token.decimals)) \(h.token.symbol)")
+        return String(localized: "fee ≈ \(Self.figure(quote.fee, decimals: h.token.decimals)) \(h.token.symbol)")
     }
 
     /// **$ · ETH (§1442d, user: "a user needs to be able to change token
@@ -1079,13 +1070,10 @@ struct MoveSentence: View {
 
     private var kept: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("In this transaction")
-                .dsText(.subhead12)
-                .foregroundStyle(DS.textSecondary)
-            ForEach(keptLines, id: \.id) { line in
-                HStack(spacing: DS.Space.s3) {
+            ForEach(Array(keptLines.enumerated()), id: \.element.id) { n, line in
+                row("\(n + 1)", ink: DS.textTertiary) {
                     Text(verbatim: line.words)
-                        .dsText(.heading20)
+                        .dsText(.heading17)
                         .foregroundStyle(DS.textPrimary)
                         .fixedSize(horizontal: false, vertical: true)
                     Spacer(minLength: DS.Space.s2)
@@ -1102,7 +1090,7 @@ struct MoveSentence: View {
                     .disabled(stage != nil)
                     .accessibilityLabel(Text("Remove from this transaction"))
                 }
-                .frame(minHeight: 44)
+                .frame(minHeight: 36)
             }
         }
     }
@@ -1111,9 +1099,6 @@ struct MoveSentence: View {
 
     private var foot: some View {
         VStack(spacing: DS.Space.s2) {
-            if verb != .receive, open == nil, receipt == nil, let with {
-                DSShareSlider(percent: shareBinding(with), enabled: stage == nil)
-            }
             if receipt != nil {
                 HStack {
                     Spacer()
@@ -1132,9 +1117,11 @@ struct MoveSentence: View {
             HStack(alignment: .firstTextBaseline) {
                 if verb != .receive {
                     Button { add() } label: {
+                        // Pink is the values' and the signing verb's alone
+                        // (§1442f): Add is white when ready, grey when not.
                         Text("Add")
-                            .dsText(.heading20)
-                            .foregroundStyle(pendingItem != nil && stage == nil ? DS.pickInk : DS.textSecondary)
+                            .dsText(.heading17)
+                            .foregroundStyle(pendingItem != nil && stage == nil ? DS.textPrimary : DS.textSecondary)
                             .frame(minHeight: 48)
                     }
                     .buttonStyle(RowPress())
@@ -1152,6 +1139,24 @@ struct MoveSentence: View {
                 .buttonStyle(RowPress())
                 .disabled(!footOn)
             }
+            }
+            // Relay's credit signs the foot, small and centred, as Apple
+            // Pay's does (§1442f): a credit, not a fact about this swap.
+            if verb == .swap, receipt == nil {
+                HStack(spacing: DS.Space.s1) {
+                    Text("Powered by Relay")
+                        .dsText(.label12)
+                        .foregroundStyle(DS.textTertiary)
+                    Image("brand-relay")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 10, height: 10)
+                        .frame(width: 16, height: 16)
+                        .background(Circle().fill(.white))
+                        .accessibilityHidden(true)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.top, DS.Space.s1)
             }
         }
         .padding(.horizontal, inTray ? DSRoomChassis.leadInset - DS.Space.s4 : DSRoomChassis.leadInset)
