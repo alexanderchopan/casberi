@@ -53,6 +53,9 @@ struct MoveScreen: View {
     @Environment(ShellChrome.self) private var chrome
     @State private var address: String? = YourAccountKey.address
     @State private var creating = false
+    /// What setting up said, under its verb: a toast draws under the tray
+    /// (§1442c), so the page says it in place.
+    @State private var note: (text: String, failure: Bool)?
     /// An account whose recovery key this phone's iCloud Keychain holds,
     /// when this phone has none of its own yet (prd §1427).
     @State private var recoverable: (address: String, origin: String)?
@@ -73,6 +76,13 @@ struct MoveScreen: View {
                         } else {
                             createRow
                                 .padding(.top, DSRoomChassis.sectionGap)
+                        }
+                        if let note {
+                            Text(verbatim: note.text)
+                                .dsText(.body17)
+                                .foregroundStyle(note.failure ? DS.attentionInk : DS.textSecondary)
+                                .multilineTextAlignment(.center)
+                                .padding(.top, DS.Space.s3)
                         }
                     }
                     .padding(.horizontal, DSRoomChassis.leadInset)
@@ -161,7 +171,7 @@ struct MoveScreen: View {
                 // This phone's own account, reinstalled: its keys already sign.
                 guard let index = try YourAccountKey.adopt(address: found.address, origin: found.origin) else {
                     withAnimation(DS.Motion.standard) { address = found.address }
-                    chrome.flash(ThisDevice.ready, tone: .success)
+                    note = (ThisDevice.ready, false)
                     creating = false
                     return
                 }
@@ -178,12 +188,12 @@ struct MoveScreen: View {
                 WalletStore.shared.add(found.address, label: String(localized: "Your account"))
                 withAnimation(DS.Motion.standard) { address = found.address }
                 if failed.isEmpty {
-                    chrome.flash(ThisDevice.ready, tone: .success)
+                    note = (ThisDevice.ready, false)
                 } else {
-                    chrome.flash(failed.joined(separator: " · "), tone: .failure, seconds: 6)
+                    note = (failed.joined(separator: " · "), true)
                 }
             } catch {
-                chrome.flash(String(localized: "Couldn't make a key on this device"), tone: .failure)
+                note = (String(localized: "Couldn't make a key on this device"), true)
             }
             creating = false
         }
@@ -199,7 +209,7 @@ struct MoveScreen: View {
             withAnimation(DS.Motion.standard) { address = made }
             DSHaptic.success()
         } catch {
-            chrome.flash(String(localized: "Couldn't create the account on this device"), tone: .failure)
+            note = (String(localized: "Couldn't create the account on this device"), true)
         }
         creating = false
     }

@@ -1817,7 +1817,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1439 — Base Sepolia ships: one test network and two live ones in every build (amends §1435 item 2) [+1 sub-entries]
 - §1440 — Swaps go through Relay, one provider everywhere, proven by simulation before Face ID (supersedes §1430's CoW; keeps §…
 - §1441 — Robinhood Chain joins the account: three live networks, each with send, receive and swap [+1 sub-entries]
-- §1442 — Move is a tray, raised from its tab over wherever you are (amends §1422's place) [+2 sub-entries]
+- §1442 — Move is a tray, raised from its tab over wherever you are (amends §1422's place) [+3 sub-entries]
 
 ## Dead rulings → what replaced them (generated)
 

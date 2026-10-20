@@ -67664,3 +67664,14 @@ Mock: the design canvas "Aztec experience".
 1. **The verbs and the sentence stand at the top of the tray from the start**, and nothing opening, closing or switching under them moves them. The verbs no longer step aside.
 2. **A blank's choices open under the sentence and grow only downward**: as tall as their rows, up to the room left above the foot or the keys, then they scroll inside. A short list (the three networks) draws a short box.
 3. **A token list opens with the keyboard down and leads with a Search row** inside its box; tapping it raises the keys. The sentence's word stays a word and never turns into a field, so its line never reflows. Your own tokens get the whole room under the sentence.
+
+### §1442c — Several for one; picks in pink; the sentence at the verbs' size; Move says things in its own lines (amends §1442a item 1, §1436's batch) (user, 2026-10-20: "add was grayed out"; "if i add another swap, i should be able to see the first swap too"; "lets do several for one only b/c otherwise may confuse a user"; "should our entries stay red ... so user knows they can change them?"; "the words in our sentence should be same size as 'swap send receive'")
+
+1. **A batch of swaps is several tokens for one.** Once a swap is kept, the For word is locked to its token; tapping it says "One token for the whole swap". The token being bought never appears among what can be sold. Sends are unchanged.
+2. **What Add kept stands under the verbs**, captioned "In this transaction", in the sentence's own ink, with its ×.
+3. **Add is never a dead word.** Ready, it is pink. Unready, it is grey and still answers, saying what is missing: a token, an amount, what you want, who it goes to, the price.
+4. **An amount over what is left is refused.** The line says "More than you have", and Add and Swap do not take it. No quote is asked for it.
+5. **Picks are pink and blanks are grey.** The amount, each token, the network and the recipient are pink once chosen. Unchosen, they are grey placeholders, as the amount's "0" already was. The glue words stay white.
+6. **The sentence is the verbs' size** (`MoveSentence.size`, `heading28`). In a token's own units, the token stands beside the figure ("20 USDC"). In dollars it takes its own line ("$25 / of ETH").
+7. **Move says things in its own lines, never a toast.** A toast draws under the tray, so what is missing, what failed and "Address copied" appear in the sentence's line, or atop an open list, for a few seconds. The account set-up page says its outcome under its verb.
+8. Re-quoting at Swap was already the rule: `YourAccountChain.transact` asks Relay afresh for every swap at signing and checks each against its minimum.
