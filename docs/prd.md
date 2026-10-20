@@ -67579,3 +67579,9 @@ Mock: the design canvas "Aztec experience".
 7. **The chain** (`YourAccountTokens`): *With* is ETH and USDC read off the chain plus every token the Wallet's last reading saw at the account (`WalletIngest.lastKnownHoldings(owner:)`), each read back for its exact balance; a send or swap of any of them is checked for balance before any prompt (the check no longer stops at ETH and USDC). `files.cow.fi` is declared under Your account in `NetworkReach`. The arithmetic (`difference`, `share`, `baseUnits(dollars:)`, `abiString`) is pinned in `your-account-selftest.sh`.
 8. **Measured on the simulator, 2026-10-19**: a USDC→ETH swap kept by Add and a USDC send as the next sentence, "Sign both" (drafted by `-moveSwapDraft "0.004|USDC|ETH"` with `-moveSendDraft`); the For list from CoW's lists; the verb list; Receive; the foot over the tab bar. **Not signed on chain this pass** — the transaction path is §1436's, unchanged.
 9. **Known limit**: the sentence is English word order; its words are translated one by one, which reads unnaturally in Japanese and Korean. A per-language order is a later pass.
+
+### §1438a — The verbs on their own line; no keyboard on arrival (amends §1438 items 1 and 4) (user, 2026-10-19: "send swap receive should be its own line user chooses which. even tho it is a sentence doesn't mean it needs to run all together"; "if it is a page then that's weird right?")
+
+1. **Swap · Send · Receive is the first line**, `heading28`, the picked verb bright and the other two grey, each a tap. The sentence under it starts with the amount: "0.004 USDC / for ≈ 12.1 AERO / on Base." The verb is no longer a blank with a list.
+2. **Move raises no keyboard on its own.** It is a page, a tab, and a keyboard raised on arrival covered the tab bar until it was swiped away. The keypad comes up when the amount is tapped or a token is picked.
+

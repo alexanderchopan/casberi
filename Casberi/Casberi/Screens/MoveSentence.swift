@@ -4,13 +4,14 @@ import UIKit
 /// **MOVE IS A SENTENCE YOU FILL IN (prd §1438)**, from the 2026-10-19 canvas
 /// (user: "its still intimidating like a form"; "oooooh i like this").
 ///
-///     Swap 0.004 USDC
+///     Swap  Send  Receive
+///     0.004 USDC
 ///     for ≈ 12.1 AERO
 ///     on Base.
 ///
-/// Every blank is a word: the verb (Swap · Send · Receive), the amount (the
-/// cursor is already in it), the token you spend, what you want or who it
-/// goes to, the network. Tap a word and its choices open in the space under
+/// The verbs stand on their own line, the picked one bright (§1438a); under
+/// them every blank is a word: the amount, the token you spend, what you
+/// want or who it goes to, the network. Tap a word and its choices open in the space under
 /// the sentence — what you hold, CoW's list, your addresses — and typing only
 /// narrows them; nothing slides over the page. One grey line says the rest:
 /// the other unit (tap it to type in it), what you have, the fee.
@@ -31,7 +32,7 @@ struct MoveSentence: View {
     typealias Tokens = YourAccountTokens
 
     enum Verb: CaseIterable { case swap, send, receive }
-    enum Blank: Equatable { case verb, with, buy, to, network }
+    enum Blank: Equatable { case with, buy, to, network }
     enum Field: Hashable { case amount, search, to }
 
     struct Recipient: Equatable {
@@ -134,9 +135,9 @@ struct MoveSentence: View {
             #if DEBUG
             draft()
             #endif
-            // The cursor is already in the amount (user: "we don't want to
-            // have to tap if we don't have to").
-            if verb != .receive, amount.isEmpty, open == nil { focus = .amount }
+            // No keyboard on its own: Move is a page, and a keyboard raised
+            // on arrival covers the tab bar until it is swiped away (user,
+            // 2026-10-19). A tap on the amount, or a token picked, raises it.
         }
         .onChange(of: focus) { _, field in
             // A field left by the hand closes its list.
@@ -150,10 +151,11 @@ struct MoveSentence: View {
 
     private var sentence: some View {
         VStack(alignment: .leading, spacing: 0) {
+            verbs
+                .padding(.bottom, DS.Space.s3)
             switch verb {
             case .swap, .send:
                 FlowLayout(spacing: 10, lineSpacing: 0) {
-                    verbWord
                     if inDollars { word("$", ink: amount.isEmpty ? DS.textTertiary : DS.textPrimary) }
                     amountField
                     if inDollars { word(String(localized: "of"), ink: DS.textPrimary) }
@@ -174,7 +176,6 @@ struct MoveSentence: View {
                 }
             case .receive:
                 FlowLayout(spacing: 10, lineSpacing: 0) {
-                    verbWord
                     word(String(localized: "at"), ink: DS.textPrimary)
                     Button { copy() } label: { word(YourAccount.short(account), ink: DS.textPrimary) }
                         .buttonStyle(RowPress())
@@ -221,8 +222,30 @@ struct MoveSentence: View {
         .accessibilityLabel(label)
     }
 
-    private var verbWord: some View {
-        blank(title(verb), ink: DS.textPrimary, .verb, label: Text("\(title(verb)), change"))
+    /// The three verbs on their own line, the picked one bright (user:
+    /// "send swap receive should be its own line user chooses which"). The
+    /// sentence under it is what that verb does.
+    private var verbs: some View {
+        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s3) {
+            ForEach(Verb.allCases, id: \.self) { v in
+                Button {
+                    guard v != verb else { return }
+                    withAnimation(DS.Motion.standard) {
+                        verb = v
+                        open = nil
+                    }
+                    DSHaptic.selection()
+                } label: {
+                    Text(verbatim: title(v))
+                        .dsText(.heading28)
+                        .foregroundStyle(v == verb ? DS.textPrimary : DS.textTertiary)
+                }
+                .buttonStyle(RowPress())
+                .disabled(stage != nil)
+                .accessibilityAddTraits(v == verb ? [.isSelected] : [])
+            }
+        }
+        .frame(minHeight: 44, alignment: .leading)
     }
 
     private func title(_ v: Verb) -> String {
@@ -306,7 +329,6 @@ struct MoveSentence: View {
 
     @ViewBuilder private var space: some View {
         switch open {
-        case .verb: verbList
         case .with: withList
         case .buy: buyList
         case .to: toList
@@ -433,14 +455,6 @@ struct MoveSentence: View {
             .opacity(dim ? 0.55 : 1)
         }
         .buttonStyle(RowPress())
-    }
-
-    private var verbList: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            ForEach(Verb.allCases, id: \.self) { v in
-                listRow(title(v), dim: v == verb) { pick { verb = v } }
-            }
-        }
     }
 
     private var withList: some View {
