@@ -147,13 +147,12 @@ struct MoveSentence: View {
     // MARK: - The page
 
     var body: some View {
-        // The sentence stands at the bottom, over the foot and in reach of
-        // the thumb, and rises as its choices open under it (user,
-        // 2026-10-20: "closer to the tab bar? and it move up accordingly").
+        // The sentence stands at the top and never moves: a blank's choices
+        // open under it, down toward the foot (§1442b, user: "it can't extend
+        // up and then extend down ... this is just too jittery").
         GeometryReader { geo in
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    Spacer(minLength: 0)
                     VStack(alignment: .leading, spacing: 0) {
                         if !items.isEmpty { kept }
                         sentence
@@ -164,11 +163,10 @@ struct MoveSentence: View {
                         .padding(.top, open == nil ? DS.Space.s6 : DS.Space.s4)
                 }
                 .padding(.horizontal, inTray ? DSRoomChassis.leadInset - DS.Space.s4 : DSRoomChassis.leadInset)
-                .padding(.top, inTray ? 0 : DS.Space.s6)
+                .padding(.top, inTray ? DS.Space.s2 : DS.Space.s6)
                 .padding(.bottom, DS.Space.s4)
-                .frame(maxWidth: .infinity, minHeight: geo.size.height, alignment: .bottomLeading)
+                .frame(maxWidth: .infinity, minHeight: geo.size.height, alignment: .topLeading)
             }
-            .defaultScrollAnchor(.bottom)
         }
         .scrollContentBackground(.hidden)
         .scrollDismissesKeyboard(.interactively)
@@ -188,8 +186,9 @@ struct MoveSentence: View {
             // 2026-10-19). A tap on the amount, or a token picked, raises it.
         }
         .onChange(of: focus) { _, field in
-            // A field left by the hand closes its list.
-            if field == nil, open == .with || open == .buy || open == .to {
+            // The To field left by the hand closes its list. A token list
+            // stays open with the keyboard down: its search is a row in it.
+            if field == nil, open == .to {
                 withAnimation(DS.Motion.standard) { open = nil }
             }
         }
@@ -199,13 +198,8 @@ struct MoveSentence: View {
 
     private var sentence: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // While a blank is open the verbs step aside, and its list takes
-            // their room above the keyboard (§1442a).
-            if open == nil {
-                verbs
-                    .padding(.bottom, DS.Space.s3)
-                    .transition(.opacity)
-            }
+            verbs
+                .padding(.bottom, DS.Space.s3)
             if let receipt {
                 receiptLines(receipt)
             } else if emptyEverywhere, verb != .receive {
@@ -262,7 +256,6 @@ struct MoveSentence: View {
             }
         }
         .animation(DS.Motion.standard, value: verb)
-        .animation(DS.Motion.standard, value: open == nil)
         .animation(DS.Motion.standard, value: receipt)
     }
 
@@ -312,7 +305,9 @@ struct MoveSentence: View {
                 if open == which { open = nil } else {
                     open = which
                     search = ""
-                    focus = which == .with || which == .buy ? .search : which == .to ? .to : nil
+                    // A token list opens with the keyboard down, so it has the
+                    // room to the foot; its search row raises the keys (§1442b).
+                    focus = which == .to ? .to : nil
                 }
             }
             DSHaptic.selection()
@@ -388,19 +383,13 @@ struct MoveSentence: View {
             .onChange(of: amount) { _, _ in if open != nil, focus == .amount { open = nil } }
     }
 
-    @ViewBuilder private var withWord: some View {
-        if open == .with {
-            searchField(String(localized: "token"))
-        } else {
-            blank(with?.token.symbol ?? String(localized: "token"), ink: with == nil ? DS.pickInk : DS.textPrimary,
-                  .with, label: Text("Spend \(with?.token.symbol ?? ""), change"))
-        }
+    private var withWord: some View {
+        blank(with?.token.symbol ?? String(localized: "token"), ink: with == nil ? DS.pickInk : DS.textPrimary,
+              .with, label: Text("Spend \(with?.token.symbol ?? ""), change"))
     }
 
     @ViewBuilder private var buyWord: some View {
-        if open == .buy {
-            searchField(String(localized: "token"))
-        } else if let buy {
+        if let buy {
             let back = quote.map { "≈ " + Self.figure($0.buyAmount, decimals: buy.token.decimals) + " " }
             let word = blank((back ?? "") + buy.token.symbol, ink: DS.textPrimary, .buy, label: Text("For \(buy.token.symbol), change"))
             if pricing {
@@ -462,18 +451,26 @@ struct MoveSentence: View {
         }
     }
 
-    /// The blank's own word stays as the prompt, so turning it into a field
-    /// moves nothing on the line (§1442a).
-    private func searchField(_ prompt: String) -> some View {
-        TextField(text: $search, prompt: Text(verbatim: prompt).foregroundStyle(DS.textTertiary)) { Text(verbatim: prompt) }
-            .focused($focus, equals: .search)
-            .textInputAutocapitalization(.never)
-            .autocorrectionDisabled()
-            .submitLabel(.done)
-            .dsText(.heading40)
-            .foregroundStyle(DS.textPrimary)
-            .fixedSize()
-            .task(id: search) { await lookUpPasted() }
+    /// A token list's search, its first row: the sentence's word never turns
+    /// into a field, so the line never reflows (§1442b).
+    private var searchRow: some View {
+        HStack(spacing: DS.Space.s3) {
+            Image(systemName: "magnifyingglass")
+                .dsGlyph(.body, weight: .medium)
+                .foregroundStyle(DS.textSecondary)
+                .frame(width: DS.Face.list)
+                .accessibilityHidden(true)
+            TextField(String(localized: "Search"), text: $search)
+                .focused($focus, equals: .search)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .submitLabel(.done)
+                .dsText(.body17)
+                .foregroundStyle(DS.textPrimary)
+                .task(id: search) { await lookUpPasted() }
+        }
+        .frame(minHeight: 52)
+        .padding(.horizontal, DS.Space.s4)
     }
 
     // MARK: - The space under it
@@ -489,7 +486,7 @@ struct MoveSentence: View {
     private func space(room: CGFloat) -> some View {
         ZStack(alignment: .topLeading) {
             if let open {
-                choices(height: choicesHeight(room)) {
+                choices(room: choicesRoom(room), searches: open == .with || open == .buy) {
                     ZStack(alignment: .topLeading) {
                         Group {
                             switch open {
@@ -511,25 +508,34 @@ struct MoveSentence: View {
         }
     }
 
-    /// What the page has under the sentence, up to about six rows: a fixed
-    /// figure for a given page, never the rows' own height.
-    private func choicesHeight(_ room: CGFloat) -> CGFloat {
-        let under = room - sentenceHeight - DS.Space.s4 * 2 - (inTray ? 0 : DS.Space.s6)
-        return min(360, max(140, under))
+    /// Everything under the sentence, down to the foot (or the keys).
+    private func choicesRoom(_ room: CGFloat) -> CGFloat {
+        max(140, room - sentenceHeight - DS.Space.s4 * 2 - (inTray ? DS.Space.s2 : DS.Space.s6))
     }
+
+    /// The rows' own height, so a short list draws a short box (§1442b).
+    @State private var rowsHeight: CGFloat = 0
 
     /// A blank's choices on their own glass, the rooms tray's card (§1203):
     /// a layer that floats for a moment, so glass, while the sentence stays
-    /// bare. The rows scroll inside it.
-    private func choices<Rows: View>(height: CGFloat, @ViewBuilder _ rows: () -> Rows) -> some View {
-        ScrollView {
-            rows()
-                .padding(.vertical, DS.Space.s2)
-                .frame(maxWidth: .infinity, alignment: .leading)
+    /// bare. As tall as its rows, up to the room under the sentence, then
+    /// they scroll inside it. It grows downward only: the sentence above
+    /// never moves (§1442b). A token list leads with its search.
+    private func choices<Rows: View>(room: CGFloat, searches: Bool,
+                                     @ViewBuilder _ rows: () -> Rows) -> some View {
+        let head: CGFloat = searches ? 52 : 0
+        return VStack(alignment: .leading, spacing: 0) {
+            if searches { searchRow }
+            ScrollView {
+                rows()
+                    .padding(.vertical, DS.Space.s2)
+                    .padding(.horizontal, DS.Space.s4)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { rowsHeight = $0 }
+            }
+            .scrollIndicators(.hidden)
+            .frame(height: max(56, min(rowsHeight, room - head)))
         }
-        .scrollIndicators(.hidden)
-        .frame(height: height)
-        .padding(.horizontal, DS.Space.s4)
         .frame(maxWidth: .infinity, alignment: .leading)
         .dsGlass(cornerRadius: RoomsTray.radius)
     }

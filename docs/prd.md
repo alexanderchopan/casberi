@@ -67658,3 +67658,9 @@ Mock: the design canvas "Aztec experience".
 4. **While a blank is open the verbs and the foot step aside**, so the list has their room above the keyboard. A search field keeps its blank's word as its prompt, so the line does not reflow.
 5. **Sentence figures are rounded** (`MoveSentence.figure`): whole above a thousand, two places above one, four significant figures under it. A fee is in dollars. Face ID and the receipt's link carry the exact units.
 6. **`-moveHoldings "<chainId>:<SYMBOL>:<amount>[,…]"` (DEBUG)** pretends holdings so lists, dollars, quotes and Add can be tried on a simulator. Relay quotes an account that cannot pay (measured 2026-10-20); the simulation before Face ID refuses to sign one.
+
+### §1442b — The sentence stands at the top and never moves; a token list searches inside itself (amends §1442a items 3–4, §1441a item 2) (user, 2026-10-20: "it can't extend up and then extend down. maybe we have to go w/ the sentence at the top at first b/c this is just too jittery"; "not enough scrolling room when selecting my own token"; "network selector has empty space")
+
+1. **The verbs and the sentence stand at the top of the tray from the start**, and nothing opening, closing or switching under them moves them. The verbs no longer step aside.
+2. **A blank's choices open under the sentence and grow only downward**: as tall as their rows, up to the room left above the foot or the keys, then they scroll inside. A short list (the three networks) draws a short box.
+3. **A token list opens with the keyboard down and leads with a Search row** inside its box; tapping it raises the keys. The sentence's word stays a word and never turns into a field, so its line never reflows. Your own tokens get the whole room under the sentence.
