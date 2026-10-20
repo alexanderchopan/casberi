@@ -670,17 +670,27 @@ struct MoveSentence: View {
                 // user: "we need to show that this is processed by relay").
                 // Relay's own mark leads it, as every service's does (user,
                 // 2026-10-20: "do we want to show the relay logo"): the star
-                // alone, because the wordmark's black letters vanish on the
-                // tray, and the words already say the name.
+                // alone, because the words already say the name.
+                // One left edge for every line (§1442e, user: "how all this
+                // is indented so its even"): the fee on its own line, and
+                // Relay's mark after its name, so nothing starts indented.
                 if verb == .swap, buy != nil {
+                    if let fee = feeLine(with) {
+                        Text(verbatim: fee).dsText(.body17).foregroundStyle(DS.textSecondary)
+                    }
                     HStack(spacing: DS.Space.s2) {
+                        Text("Powered by Relay")
+                            .dsText(.body17).foregroundStyle(DS.textSecondary)
+                        // On a white disc, as the network marks stand: Relay's
+                        // purple is too dark to read on the tray (user,
+                        // 2026-10-20: "can we put it on white circle?").
                         Image("brand-relay")
                             .resizable()
                             .scaledToFit()
-                            .frame(width: 18, height: 18)
+                            .frame(width: 14, height: 14)
+                            .frame(width: 22, height: 22)
+                            .background(Circle().fill(.white))
                             .accessibilityHidden(true)
-                        Text(verbatim: [String(localized: "Powered by Relay"), feeLine(with)].compactMap { $0 }.joined(separator: " · "))
-                            .dsText(.body17).foregroundStyle(DS.textSecondary)
                     }
                 }
                 // A test network says so wherever it is picked (prd §1439).
@@ -724,9 +734,9 @@ struct MoveSentence: View {
         guard verb == .swap, let quote else { return nil }
         if let price = h.price {
             let usd = Op.dollars(quote.fee, decimals: h.token.decimals, price: price)
-            return usd < 0.01 ? String(localized: "fee under a cent") : String(localized: "fee \(Self.money(usd))")
+            return usd < 0.01 ? String(localized: "Fee under a cent") : String(localized: "Fee \(Self.money(usd))")
         }
-        return String(localized: "fee ≈ \(Self.figure(quote.fee, decimals: h.token.decimals)) \(h.token.symbol)")
+        return String(localized: "Fee ≈ \(Self.figure(quote.fee, decimals: h.token.decimals)) \(h.token.symbol)")
     }
 
     /// **$ · ETH (§1442d, user: "a user needs to be able to change token

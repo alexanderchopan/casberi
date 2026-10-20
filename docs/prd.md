@@ -67697,4 +67697,5 @@ Mock: the design canvas "Aztec experience".
 
 1. **The line under the sentence is two lines, one thing each.** First the other unit ("≈ $24.50"), then for a swap Relay's own line ("Powered by Relay · fee $0.04").
 2. **What you have is not restated.** The token list showed it when you picked, the slider is your share of it and its end spends all of it, and going over says "More than you have".
-3. **A swap names Relay wherever one is drawn**, behind Relay's mark (`brand-relay`). Only the star is used, cut from Relay's wordmark, because the wordmark's black letters vanish on the dark tray and the words already say the name.
+3. **A swap names Relay wherever one is drawn**, with Relay's mark (`brand-relay`). Only the star is used, cut from Relay's wordmark, because the wordmark's black letters vanish on the dark tray and the words already say the name. It stands on a white disc, as the network marks do, because Relay's purple is too dark to read on the tray (user: "can we put it on white circle?").
+4. **Every line under the sentence starts on one left edge, one fact a line** (user: "how all this is indented so its even"): "≈ $24.48", then "Fee $0.04", then "Powered by Relay" with the mark after the name. The $ · token switch stays at the trailing end of the amount line, where a control stands.
