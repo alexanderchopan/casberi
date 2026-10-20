@@ -17,20 +17,23 @@
 # the op's fields by EIP-712 (`safeOpHash`), to that same answer, so a field
 # moved inside the packed tuple fails even when both encoders move together.
 # The send's id (`userOpHash`) is pinned to EntryPoint v0.7's own answer, and
-# the recovery key's two operations (prd §1427) to the spike's landed ones. It also holds the Move tab to DEBUG until the
+# the recovery key's two operations (prd §1427) to the spike's landed ones,
+# and a swap's order id (prd §1430) to the one CoW's API answered for it. It also holds the Move tab to DEBUG until the
 # account can recover, and Base Sepolia to DEBUG always.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
 ACCOUNT="Casberi/Casberi/Model/YourAccount.swift"
 OP="Casberi/Casberi/Model/YourAccountOp.swift"
+SWAP="Casberi/Casberi/Model/YourAccountSwap.swift"
+COW="Casberi/Casberi/Model/CowOrder.swift"
 TX="Casberi/Casberi/Model/SafeTransaction.swift"
 KECCAK="Casberi/Casberi/Model/Keccak256.swift"
 CLEARSIGN="Casberi/Casberi/Model/ClearSign.swift"
 WEBAUTHN="Casberi/Casberi/Model/SafeWebAuthnSignature.swift"
 MOVE="Casberi/Casberi/Screens/MoveScreen.swift"
 TABS="Casberi/Casberi/Design/PlaceTabBar.swift"
-for f in "$ACCOUNT" "$OP" "$TX" "$KECCAK" "$CLEARSIGN" "$WEBAUTHN" "$MOVE" "$TABS"; do
+for f in "$ACCOUNT" "$OP" "$SWAP" "$COW" "$TX" "$KECCAK" "$CLEARSIGN" "$WEBAUTHN" "$MOVE" "$TABS"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -98,6 +101,38 @@ check(YourAccountOp.dummySignature(owner: recoverySigner) != YourAccountOp.dummy
       "the recovery key's estimate signs as the shared signer")
 check(YourAccount.short(want) == "…29Ce", "an address is its last four or the whole of it (prd §495)")
 
+// Swap (prd §1430): a real CoW quote on Base (2026-10-19) built into the
+// order HERE gives the id CoW's own API answered when that order was posted
+// — 0x32fa…bab2 — so this phone and CoW agree on every byte the person
+// pre-signs. The pre-sign call reads back through §1285's parser.
+let quoteJSON: [String: Any] = ["id": 417304251, "quote": [
+    "sellAmount": "198563874188220", "buyAmount": "476693", "feeAmount": "1436125811780",
+    "validTo": 1792457394] as [String: Any]]
+let cowAccount = "0xb91a38aA11C903bf5A465326b9c0cf8680F43416"
+let swapQuote = YourAccountSwap.quote(from: quoteJSON)!
+check(swapQuote.sellAmount == "200000000000000", "the order sells what was asked (the quote's amount plus its fee)")
+check(swapQuote.minimumBuy == "474309", "the minimum is 0.5% under the quote, rounded down")
+let cowOrder = YourAccountSwap.order(sell: YourAccountOp.eth, buy: YourAccountOp.usdc(on: YourAccountOp.base),
+                                     on: YourAccountOp.base, account: cowAccount, quote: swapQuote)!
+let cowUID = YourAccountSwap.uid(cowOrder, owner: cowAccount, chainId: 8453)!
+check(SafeABI.hex(cowUID) == "0x32fa77466b4b4845779d6546e6d5a61cec74725646d688962d71c16db94ab24cb91a38aa11c903bf5a465326b9c0cf8680f434166ad6bab2",
+      "the order's id is not the one CoW's API answered for it")
+check(SafeABI.hex(YourAccountSwap.appDataHash) == "0x868db1f7ba62a9708787a6ce366c687ddc6a32e22b6722aebbc0e8bd0c00da59",
+      "the app data hash is not CoW's")
+let swapCalls = YourAccountSwap.calls(order: cowOrder, uid: cowUID, sellingETH: true, network: YourAccountOp.base)!
+check(swapCalls.count == 3 && swapCalls[0].to == YourAccountSwap.weth(chainId: 8453)! && swapCalls[0].value == cowOrder.sellAmount,
+      "selling ETH wraps exactly what is sold first")
+check(swapCalls[1].data == YourAccount.sel("approve(address,uint256)") + YourAccount.w(YourAccountSwap.vaultRelayer) + cowOrder.sellAmount,
+      "the approval is exactly what is sold, to CoW's vault relayer only")
+check(CowOrder.preSignature(swapCalls[2].data).map { $0.uid == cowUID && $0.signed } == true && swapCalls[2].to == CowOrder.settlement,
+      "the pre-signature is not setPreSignature(uid, true) on the settlement contract")
+check(YourAccountSwap.calls(order: cowOrder, uid: cowUID, sellingETH: false, network: YourAccountOp.base)!.count == 2,
+      "selling a token wraps nothing")
+check(YourAccountSwap.minus(basisPoints: 50, of: "1000") == "995" && YourAccountSwap.minus(basisPoints: 50, of: "1") == "0"
+      && YourAccountSwap.minus(basisPoints: 50, of: "123456789012345678901234567890") == "122839505067283950506728395050",
+      "slippage arithmetic")
+check(!YourAccountSwap.supported(YourAccountOp.baseSepolia), "CoW does not settle on Base Sepolia")
+
 // Amounts: base units in, readable out, rounded down, never invented.
 check(YourAccountOp.baseUnits("0.01", decimals: 18) == "10000000000000000", "0.01 ETH")
 check(YourAccountOp.baseUnits("1,5", decimals: 6) == "1500000", "a comma is a decimal point")
@@ -113,7 +148,7 @@ check(YourAccountOp.sum("999999999999999999999", "1") == "1000000000000000000000
 check(YourAccountOp.decimal(hexQuantity: "0xde0b6b3a7640000") == "1000000000000000000", "hex quantity")
 exit(bad == 0 ? 0 : 1)
 SWIFT
-xcrun swiftc -O -o "$TMP/t" "$ACCOUNT" "$OP" "$TX" "$KECCAK" "$CLEARSIGN" "$WEBAUTHN" "$TMP/main.swift" 2>"$TMP/err" \
+xcrun swiftc -O -o "$TMP/t" "$ACCOUNT" "$OP" "$SWAP" "$COW" "$TX" "$KECCAK" "$CLEARSIGN" "$WEBAUTHN" "$TMP/main.swift" 2>"$TMP/err" \
   || { cat "$TMP/err"; echo "✗ YourAccount.swift and YourAccountOp.swift do not compile alone (Foundation and the Safe encoders only)"; exit 1; }
 "$TMP/t" || { echo "✗ your account's arithmetic drifted — see above"; exit 1; }
 

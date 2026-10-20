@@ -6975,6 +6975,34 @@
         }
       }
     },
+    "At least %@ %@ · fee ≈ %@ %@ · CoW" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Al menos %1$@ %2$@ · comisión ≈ %3$@ %4$@ · CoW"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "最低 %1$@ %2$@ · 手数料 ≈ %3$@ %4$@ · CoW"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "최소 %1$@ %2$@ · 수수료 ≈ %3$@ %4$@ · CoW"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "至少 %1$@ %2$@ · 费用 ≈ %3$@ %4$@ · CoW"
+          }
+        }
+      }
+    },
     "Attachments" : {
       "localizations" : {
         "es" : {
@@ -8847,6 +8875,90 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "无法保存提醒事项"
+          }
+        }
+      }
+    },
+    "CoW did not answer on %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "CoW no respondió en %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ でCoWから応答がありません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@에서 CoW가 응답하지 않았습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "CoW 在 %@ 上没有响应"
+          }
+        }
+      }
+    },
+    "CoW named a different order, so nothing was signed" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "CoW indicó otra orden, así que no se firmó nada"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "CoWが別の注文を示したため、何も署名していません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "CoW가 다른 주문을 알려 와서 아무것도 서명하지 않았습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "CoW 给出了不同的订单，因此没有签名"
+          }
+        }
+      }
+    },
+    "CoW said: %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "CoW dijo: %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "CoWの回答: %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "CoW 응답: %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "CoW 表示：%@"
           }
         }
       }
@@ -11791,6 +11903,34 @@
         }
       }
     },
+    "For" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Por"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "受け取る"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "받기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "换得"
+          }
+        }
+      }
+    },
     "From an exchange" : {
       "localizations" : {
         "es" : {
@@ -14367,6 +14507,34 @@
         }
       }
     },
+    "Nothing to swap yet" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aún no hay nada que intercambiar"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "まだ交換できるものがありません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "아직 교환할 것이 없습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "还没有可兑换的资产"
+          }
+        }
+      }
+    },
     "Notification" : {
       "localizations" : {
         "es" : {
@@ -14755,6 +14923,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "或一天内的涨跌,单位 %"
+          }
+        }
+      }
+    },
+    "Order placed. CoW fills it at the best price it finds" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Orden creada. CoW la completa al mejor precio que encuentre"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "注文しました。CoWが見つけた最良の価格で約定します"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "주문했습니다. CoW가 찾은 최적의 가격으로 체결합니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已下单。CoW 会以找到的最优价格成交"
           }
         }
       }
@@ -17145,6 +17341,62 @@
         }
       }
     },
+    "Swap" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Intercambiar"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "交換"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "교환"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "兑换"
+          }
+        }
+      }
+    },
+    "Swap %@ %@ for ≈ %@ %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Intercambiar %1$@ %2$@ por ≈ %3$@ %4$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ %2$@ を ≈ %3$@ %4$@ に交換"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ %2$@를 ≈ %3$@ %4$@로 교환"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "用 %1$@ %2$@ 兑换 ≈ %3$@ %4$@"
+          }
+        }
+      }
+    },
     "Swapped" : {
       "localizations" : {
         "es" : {
@@ -17197,6 +17449,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "已将 %@ 兑换为 %@"
+          }
+        }
+      }
+    },
+    "Swapped on %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Intercambiado en %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ で交換しました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@에서 교환했습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已在 %@ 上兑换"
+          }
+        }
+      }
+    },
+    "Swaps are not on %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No hay intercambios en %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ では交換できません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@에서는 교환할 수 없습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 上不支持兑换"
           }
         }
       }
@@ -18009,6 +18317,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "无法生成这笔发送"
+          }
+        }
+      }
+    },
+    "This swap could not be written" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se pudo preparar este intercambio"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "この交換を作成できませんでした"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 교환을 만들 수 없습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "无法生成这笔兑换"
+          }
+        }
+      }
+    },
+    "Through CoW, at the best price its solvers find" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "A través de CoW, al mejor precio que encuentren sus solvers"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "CoW経由で、ソルバーが見つけた最良の価格で"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "CoW를 통해, 솔버가 찾은 최적의 가격으로"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "通过 CoW，以其求解器找到的最优价格"
           }
         }
       }

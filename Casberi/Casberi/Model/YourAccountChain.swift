@@ -289,6 +289,113 @@ enum YourAccountChain {
         return .landed(transaction: tx, rotated: await rotated(net, account, to: next, x: x))
     }
 
+    // MARK: - Swap (prd §1430)
+
+    private static func cowURL(_ net: Network, _ path: String) -> String? {
+        CowOrder.apiNetwork[net.chainId].map { "https://api.cow.fi/\($0)/api/v1/\(path)" }
+    }
+
+    /// One CoW call, the body kept whatever the status: CoW's refusals carry
+    /// their reason (`description`), and its order id answers as a bare string.
+    private static func cow(_ url: String, body: [String: Any]?) async -> (json: Any?, status: Int) {
+        guard let u = URL(string: url) else { return (nil, 0) }
+        var request = URLRequest(url: u)
+        if let body, let payload = try? JSONSerialization.data(withJSONObject: body) {
+            request.httpMethod = "POST"
+            request.httpBody = payload
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        }
+        guard let (data, http) = await IngestSupport.sendRequest(request, service: service) else { return (nil, 0) }
+        return (try? JSONSerialization.jsonObject(with: data, options: .fragmentsAllowed), http.statusCode)
+    }
+
+    private static func cowRefusal(_ json: Any?, _ net: Network) -> Failure {
+        let said = (json as? [String: Any])?["description"] as? String
+        return Failure(message: said.map { String(localized: "CoW said: \($0)") }
+                       ?? String(localized: "CoW did not answer on \(net.name)"))
+    }
+
+    /// CoW's price for selling `amount` of `sell` for `buy` from the account.
+    static func swapQuote(_ net: Network, sell: YourAccountOp.Token, buy: YourAccountOp.Token,
+                          amount: String, account: String) async throws -> YourAccountSwap.Quote {
+        guard YourAccountSwap.supported(net), let url = cowURL(net, "quote"),
+              let sellToken = YourAccountSwap.cowToken(sell, on: net, selling: true),
+              let buyToken = YourAccountSwap.cowToken(buy, on: net, selling: false) else {
+            throw Failure(message: String(localized: "Swaps are not on \(net.name)"))
+        }
+        let body: [String: Any] = [
+            "sellToken": sellToken, "buyToken": buyToken, "from": account, "receiver": account,
+            "sellAmountBeforeFee": amount, "kind": "sell", "signingScheme": "presign", "onchainOrder": false,
+            "sellTokenBalance": "erc20", "buyTokenBalance": "erc20", "priceQuality": "verified",
+            "appData": YourAccountSwap.appData, "appDataHash": SafeABI.hex(YourAccountSwap.appDataHash),
+            "validFor": 1800,
+        ]
+        let (json, status) = await cow(url, body: body)
+        guard status == 200, let root = json as? [String: Any], let quote = YourAccountSwap.quote(from: root) else {
+            throw cowRefusal(json, net)
+        }
+        return quote
+    }
+
+    /// Where a placed order stands, CoW's word.
+    static func swapStatus(_ net: Network, uid: [UInt8]) async -> String? {
+        guard let url = cowURL(net, "orders/" + SafeABI.hex(uid)),
+              let root = await cow(url, body: nil).json as? [String: Any] else { return nil }
+        return root["status"] as? String
+    }
+
+    struct Swapped: Equatable {
+        let sent: Sent
+        /// CoW's last word on the order: "fulfilled", or still "open".
+        let status: String?
+    }
+
+    /// Quote afresh, build the order here, have CoW take it under the id
+    /// this phone computed, then one operation — wrap, approve, pre-sign, and
+    /// the key change — and follow the order until it fills (two minutes).
+    static func swap(_ net: Network, sell: YourAccountOp.Token, buy: YourAccountOp.Token, amount: String,
+                     reason: String, stage: @escaping @Sendable (Stage) async -> Void) async throws -> Swapped {
+        guard let account = YourAccountKey.address else {
+            throw Failure(message: String(localized: "There is no account on this iPhone"))
+        }
+        await stage(.preparing)
+        let quote = try await swapQuote(net, sell: sell, buy: buy, amount: amount, account: account)
+        guard let order = YourAccountSwap.order(sell: sell, buy: buy, on: net, account: account, quote: quote),
+              let uid = YourAccountSwap.uid(order, owner: account, chainId: net.chainId),
+              let calls = YourAccountSwap.calls(order: order, uid: uid, sellingETH: sell.contract == nil, network: net),
+              let url = cowURL(net, "orders") else {
+            throw Failure(message: String(localized: "This swap could not be written"))
+        }
+        let (json, status) = await cow(url, body: YourAccountSwap.orderBody(order, owner: account, quoteId: quote.id))
+        guard status == 201 || status == 200 else { throw cowRefusal(json, net) }
+        // CoW must name the order this phone built, or nothing is signed.
+        guard let said = json as? String, SafeABI.hexBytes(said) == uid else {
+            throw Failure(message: String(localized: "CoW named a different order, so nothing was signed"))
+        }
+
+        let deployed = try await isDeployed(net, account)
+        let (signerIndex, signer) = try await deviceSigner(net, account, deployed: deployed)
+        let next = try YourAccountKey.nextKey(after: signerIndex)
+        guard let nextKey = YourAccountKey.publicKey(next) else {
+            throw Failure(message: String(localized: "This swap could not be written"))
+        }
+        // What leaves the account, for the balance check before any prompt.
+        let spent = YourAccountOp.Payment(network: net, token: sell, amount: quote.sellAmount,
+                                          to: CowOrder.settlement, toName: nil)
+        let outcome = try await operate(net, account: account, deployed: deployed, calls: calls,
+                                        rotateTo: nextKey, payments: [spent], signer: signer,
+                                        reason: reason, stage: stage)
+        let sent = Sent(outcome: await settle(outcome, net, account, next: next, x: nextKey.x), network: net)
+        guard case .landed = sent.outcome else { return Swapped(sent: sent, status: nil) }
+        var last: String?
+        for _ in 0..<40 {
+            last = await swapStatus(net, uid: uid)
+            if last == "fulfilled" || last == "expired" || last == "cancelled" { break }
+            try await Task.sleep(nanoseconds: 3_000_000_000)
+        }
+        return Swapped(sent: sent, status: last)
+    }
+
     // MARK: - One operation, end to end
 
     /// Build, price, check, hash, sign, verify, send and follow one
