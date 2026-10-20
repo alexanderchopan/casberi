@@ -67505,3 +67505,12 @@ Mock: the design canvas "Aztec experience".
 2. **Move's head shows the whole address**, one line of mono, and a tap copies it.
 3. **To wraps** onto as many lines as the address needs, the hint under it.
 4. **Everywhere else on Move an address is its last four** (`…f51a`, §495's form, `YourAccount.short`), never cut at both ends.
+
+## §1429 — Your account, measured on Base mainnet (proves §1424 and §1427 with real money; Move stays DEBUG-only until the whole page is done and a full verify passes) (user, 2026-10-19: "yes do that next. we aren't shipping to testflight until we have it all done"; "we will also run full verify before testflight")
+
+1. **A fresh account** (`0xb91a…3416`, a new simulator), funded with 0.000316 ETH from the user's own wallet.
+2. **The first send** (0.00005 ETH back to that wallet) created the account on Base and moved it to key 1.
+3. **Set up** added the recovery key as the second owner on Base (two owners, read back); Ethereum and Base Sepolia said they need ETH, as designed.
+4. **A lost phone** (`-yourAccountForgetDevice`): the page offered the account; the first recovery never sent, because the simulator's passcode sheet needs its ✓ and the app was relaunched under it — the phone had adopted the account, so Security drew "Another device signs on Base" with **Move here**, the path built for exactly that, and the recovery key moved Base to the new key (the nonce went 2 → 3).
+5. **The recovered phone sent the rest back** (0.000234 ETH; nonce 3 → 4). About 0.00002 ETH stays as dust. Setup and recovery were paid from the first send's prefund left at the EntryPoint.
+6. **Fixed on the way**: Security reads the chain again whenever a send lands (`ShellChrome.roomRevision`); only the acting row's verb says "Setting up…" or "Moving…", and keeps its width.

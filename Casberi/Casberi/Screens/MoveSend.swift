@@ -322,6 +322,7 @@ struct MoveSend: View {
                     await MainActor.run { stage = s }
                 }
                 stage = nil
+                chrome.refreshRooms()
                 // Landed or still on its way, the send is gone from the page,
                 // so it cannot be paid again by a second tap.
                 items = []

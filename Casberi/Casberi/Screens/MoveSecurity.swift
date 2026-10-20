@@ -28,7 +28,9 @@ struct MoveSecurity: View {
 
     @State private var standings: [Standing] = []
     @State private var hasRecoveryKey = false
-    @State private var working: String?
+    /// The row acting and what its verb says meanwhile; every other row's
+    /// verb waits, in its own word.
+    @State private var working: (row: String, label: String)?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -43,7 +45,9 @@ struct MoveSecurity: View {
                 verb: recoveryVerb.map { ($0, setUp) })
             row(title: String(localized: "Rotate"), line: rotateLine, verb: nil)
         }
-        .task(id: account) { await read() }
+        // Read again whenever a send lands (`MoveSend` bumps the rooms'
+        // revision): a first send creates the account and moves its key.
+        .task(id: "\(account)·\(chrome.roomRevision)") { await read() }
     }
 
     private func row(title: String, line: String, verb: (String, () -> Void)?) -> some View {
@@ -55,7 +59,7 @@ struct MoveSecurity: View {
             Spacer(minLength: DS.Space.s2)
             if let (word, action) = verb {
                 Button(action: action) {
-                    Text(verbatim: working ?? word)
+                    Text(verbatim: working?.row == title ? working!.label : word)
                         .dsText(.body17)
                         .foregroundStyle(working == nil ? DS.pickInk : DS.textTertiary)
                         .lineLimit(1)
@@ -64,6 +68,9 @@ struct MoveSecurity: View {
                 }
                 .buttonStyle(RowPress())
                 .disabled(working != nil)
+                // The verb keeps its width ("Setting up…" is longer than
+                // "Finish"); the line beside it wraps instead.
+                .layoutPriority(1)
             }
         }
         .frame(minHeight: 60)
@@ -152,7 +159,7 @@ struct MoveSecurity: View {
     private func setUp() {
         guard working == nil else { return }
         let targets = missing.map(\.network)
-        working = String(localized: "Setting up…")
+        working = (String(localized: "Recovery key"), String(localized: "Setting up…"))
         Task {
             var done: [String] = []
             var failed: [String] = []
@@ -183,7 +190,7 @@ struct MoveSecurity: View {
     private func moveHere() {
         guard working == nil else { return }
         let targets = movable.map(\.network)
-        working = String(localized: "Moving…")
+        working = (String(localized: "This iPhone"), String(localized: "Moving…"))
         Task {
             // A key made now: never one that might be dead or in use.
             guard let index = try? YourAccountKey.freshKey() else {
