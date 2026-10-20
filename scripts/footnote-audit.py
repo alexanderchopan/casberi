@@ -88,7 +88,6 @@ ALLOWANCE = {
     # The Move page before an account stands on this phone (prd §1422,
     # §1427): Create's line, or — when iCloud Keychain holds a recovery key —
     # Move it to this iPhone's. Exclusive states, never on screen together.
-    "MoveScreen.swift": (2, "create or recover, exclusive states (prd §1427)"),
     # Three settings cards in one file (Data, Agent key, Notifications). Data
     # holds the librarian disclosure (two exclusive branches, (c)), the ADP
     # line (a) and the redaction line (c); notifications its no-push ceiling (a).

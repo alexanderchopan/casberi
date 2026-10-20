@@ -59,38 +59,37 @@ struct MoveScreen: View {
     /// An account whose recovery key this phone's iCloud Keychain holds,
     /// when this phone has none of its own yet (prd §1427).
     @State private var recoverable: (address: String, origin: String)?
+    /// Made or brought here in this tray: the sentence finishes itself
+    /// ("Your account" → "Created …3416", §1442j).
+    @State private var arrival: MoveSentence.Arrival?
+
+    #if DEBUG
+    /// `-movePreview create|recover|created|ready` (DEBUG): draw a screen
+    /// of §1442j over a phone that already has an account, without touching
+    /// its key — create and recover are inert here, so the preview can never
+    /// make or move an account.
+    private var preview: String? { UserDefaults.standard.string(forKey: "movePreview") }
+    #endif
 
     var body: some View {
         Group {
-            if let address {
-                // The account exists: the page is the sentence (prd §1438),
-                // no head — it is this phone's account, there is no other.
-                MoveSentence(account: address, inTray: inTray)
-            } else {
-                ScrollView {
-                    VStack(spacing: 0) {
-                        head
-                        if let recoverable {
-                            recoverRow(recoverable)
-                                .padding(.top, DSRoomChassis.sectionGap)
-                        } else {
-                            createRow
-                                .padding(.top, DSRoomChassis.sectionGap)
+            #if DEBUG
+            if let preview, preview == "create" || preview == "recover" {
+                before
+                    .task {
+                        if preview == "recover" {
+                            recoverable = (address ?? "0xb91a38aA11C903bf5A465326b9c0cf8680F43416", "preview")
                         }
-                        if let note {
-                            Text(verbatim: note.text)
-                                .dsText(.body17)
-                                .foregroundStyle(note.failure ? DS.attentionInk : DS.textSecondary)
-                                .multilineTextAlignment(.center)
-                                .padding(.top, DS.Space.s3)
-                        }
+                        NSLog("movePreview: %@", preview)
                     }
-                    .padding(.horizontal, DSRoomChassis.leadInset)
-                    .padding(.top, DS.Space.s6)
-                    .padding(.bottom, DS.Space.s8 * 3)
-                }
-                .scrollContentBackground(.hidden)
+            } else if let preview, let address, preview == "created" || preview == "ready" {
+                MoveSentence(account: address, inTray: inTray, arrival: preview == "ready" ? .broughtHere : .created)
+            } else {
+                shown
             }
+            #else
+            shown
+            #endif
         }
         .background { if !inTray { DSPageBackground() } }
         .task {
@@ -98,78 +97,141 @@ struct MoveScreen: View {
         }
     }
 
-    // MARK: The head
-
-    /// Before the account exists: the move mark, centred, and its name.
-    private var head: some View {
-        VStack(spacing: DS.Space.s2) {
-            Image(systemName: ScopeTileGlyph.move)
-                .dsGlyph(.title, weight: .semibold)
-                .foregroundStyle(DS.brandInk)
-                .frame(width: DS.Face.sheet, height: DS.Face.sheet)
-                .accessibilityHidden(true)
-            Text("Your account")
-                .dsText(.heading24)
-                .foregroundStyle(DS.headInk)
+    @ViewBuilder private var shown: some View {
+        Group {
+            if let address {
+                // The account exists: the page is the sentence (prd §1438),
+                // no head — it is this phone's account, there is no other.
+                MoveSentence(account: address, inTray: inTray, arrival: arrival)
+                    .transition(.opacity)
+            } else {
+                before
+            }
         }
-        .frame(maxWidth: .infinity)
     }
 
     // MARK: Before the account exists
 
-    private var createRow: some View {
-        VStack(spacing: DS.Space.s3) {
-            DSFootnote("A wallet only you control. Its key never leaves this iPhone, and it can receive before its first send.", centered: true)
-            Button {
-                create()
-            } label: {
-                Text(creating ? "Creating…" : "Create your account")
-                    .dsText(.heading17)
-                    .foregroundStyle(DS.pickInk)
-                    .frame(minHeight: 44)
+    /// **CREATE AND RECOVER IN THE SENTENCE (§1442j, user: "should we look at
+    /// the account create recover etc flows now"; "build it").** One shape
+    /// for both: "Your account [ …3416 ] / on <the networks>." No verbs yet,
+    /// because none can be tapped; one line of small print; one act at the
+    /// foot, where Swap, Send and Share stand.
+    private var before: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: DS.Space.s1) {
+                line(nil) {
+                    HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                        Text("Your account")
+                            .dsText(MoveSentence.size).foregroundStyle(DS.textPrimary)
+                        if let recoverable {
+                            Text(verbatim: YourAccount.short(recoverable.address))
+                                .dsText(MoveSentence.size).foregroundStyle(DS.pickInk)
+                        }
+                    }
+                }
+                line(String(localized: "on")) {
+                    Text(verbatim: YourAccountOp.networks.filter { !$0.isTest }.map(\.name).formatted(.list(type: .and)) + ".")
+                        .dsText(MoveSentence.size).foregroundStyle(DS.textPrimary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                VStack(alignment: .leading, spacing: DS.Space.s3) {
+                    if let recoverable {
+                        Text(verbatim: recoverable.address)
+                            .dsText(.mono12)
+                            .foregroundStyle(DS.textSecondary)
+                            .textSelection(.enabled)
+                            .fixedSize(horizontal: false, vertical: true)
+                        // What a person needs (prd §1434): it is theirs, it is
+                        // here, and the one real consequence.
+                        Text("Found in your iCloud Keychain. Your other \(ThisDevice.name) stops sending from it.")
+                            .dsText(.body17).foregroundStyle(DS.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    } else {
+                        // The one fact that decides the tap (§1442j); the rest
+                        // is said once the account exists.
+                        Text("Face ID signs. No seed phrase.")
+                            .dsText(.body17).foregroundStyle(DS.textSecondary)
+                    }
+                    if let note {
+                        Text(verbatim: note.text)
+                            .dsText(.body17)
+                            .foregroundStyle(note.failure ? DS.attentionInk : DS.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .padding(.leading, MoveSentence.gutter + DS.Space.s2)
+                .padding(.top, DS.Space.s4)
             }
-            .buttonStyle(RowPress())
-            .disabled(creating)
+            .padding(.horizontal, inTray ? DSRoomChassis.leadInset - DS.Space.s4 : DSRoomChassis.leadInset)
+            .padding(.top, inTray ? DS.Space.s8 : DS.Space.s6 + DS.Space.s6)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .frame(maxWidth: .infinity)
+        .scrollContentBackground(.hidden)
+        .safeAreaInset(edge: .bottom, spacing: 0) { beforeFoot }
     }
 
-    /// A phone with no account of its own, whose iCloud Keychain holds one's
-    /// recovery key: the account, and one verb that brings it here.
-    private func recoverRow(_ found: (address: String, origin: String)) -> some View {
-        VStack(spacing: DS.Space.s3) {
-            Text(verbatim: found.address)
-                .dsText(.mono12)
-                .foregroundStyle(DS.textSecondary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
-            // What a person needs (prd §1434, user: "nobody will understand
-            // that"): their account is here; say yes and it works on this
-            // device. The one consequence worth saying is the real one.
+    /// A line in the sentence's gutter grammar (§1442f).
+    private func line<Value: View>(_ glue: String?, @ViewBuilder _ value: () -> Value) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+            Text(verbatim: glue ?? " ")
+                .dsText(.heading17)
+                .foregroundStyle(DS.textPrimary)
+                .frame(width: MoveSentence.gutter, alignment: .leading)
+            value()
+        }
+    }
+
+    /// The one act, at the trailing edge; recovering, a quiet choice beside it.
+    private var beforeFoot: some View {
+        HStack(alignment: .firstTextBaseline) {
+            if recoverable != nil {
+                Button { create() } label: {
+                    Text("New account")
+                        .dsText(.heading17)
+                        .foregroundStyle(DS.textSecondary)
+                        .lineLimit(1)
+                        .fixedSize()
+                        .frame(minHeight: 48)
+                }
+                .buttonStyle(RowPress())
+                .disabled(creating)
+            }
+            Spacer(minLength: DS.Space.s3)
             Button {
-                recover(found)
+                if let recoverable { recover(recoverable) } else { create() }
             } label: {
-                Text(verbatim: creating ? String(localized: "Setting up…") : ThisDevice.use)
-                    .dsText(.heading17)
-                    .foregroundStyle(DS.pickInk)
-                    .frame(minHeight: 44)
+                Text(verbatim: creating
+                     ? (recoverable == nil ? String(localized: "Creating…") : String(localized: "Setting up…"))
+                     : (recoverable == nil ? String(localized: "Create") : ThisDevice.use))
+                    .dsText(.heading28)
+                    .foregroundStyle(creating ? DS.textTertiary : DS.pickInk)
+                    // One line, as every foot verb is.
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+                    .frame(minHeight: 48, alignment: .trailing)
             }
             .buttonStyle(RowPress())
             .disabled(creating)
-            DSFootnote("Your other device won't be able to send from it anymore.", centered: true)
         }
-        .frame(maxWidth: .infinity)
+        .padding(.horizontal, inTray ? DSRoomChassis.leadInset - DS.Space.s4 : DSRoomChassis.leadInset)
+        .padding(.bottom, DS.Space.s2)
+        .background { if inTray { DS.surfaceSheet } else { DSPageBackground() } }
     }
 
     /// Take the account onto this phone: a new key here, then the recovery
     /// key moves each network the account is on to it.
     private func recover(_ found: (address: String, origin: String)) {
+        #if DEBUG
+        if preview != nil { NSLog("movePreview: recover is inert"); return }
+        #endif
         guard !creating else { return }
         creating = true
         Task {
             do {
                 // This phone's own account, reinstalled: its keys already sign.
                 guard let index = try YourAccountKey.adopt(address: found.address, origin: found.origin) else {
+                    arrival = .broughtHere
                     withAnimation(DS.Motion.standard) { address = found.address }
                     note = (ThisDevice.ready, false)
                     creating = false
@@ -186,7 +248,8 @@ struct MoveScreen: View {
                 }
                 failed += await MoveRecovery.move(targets, to: index)
                 WalletStore.shared.add(found.address, label: String(localized: "Your account"))
-                withAnimation(DS.Motion.standard) { address = found.address }
+                arrival = .broughtHere
+                    withAnimation(DS.Motion.standard) { address = found.address }
                 if failed.isEmpty {
                     note = (ThisDevice.ready, false)
                 } else {
@@ -200,12 +263,16 @@ struct MoveScreen: View {
     }
 
     private func create() {
+        #if DEBUG
+        if preview != nil { NSLog("movePreview: create is inert"); return }
+        #endif
         creating = true
         do {
             let made = try YourAccountKey.create()
             // Followed in the Wallet from the start, so its balance and moves
             // land where every account's do.
             WalletStore.shared.add(made, label: String(localized: "Your account"))
+            arrival = .created
             withAnimation(DS.Motion.standard) { address = made }
             DSHaptic.success()
         } catch {

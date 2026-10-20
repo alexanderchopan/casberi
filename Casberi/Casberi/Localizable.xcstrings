@@ -5037,6 +5037,34 @@
         }
       }
     },
+    "Face ID signs. No seed phrase." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Face ID firma. Sin frase semilla."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Face ID で署名。シードフレーズは不要です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Face ID로 서명합니다. 시드 문구가 없습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "面容 ID 签名。无需助记词。"
+          }
+        }
+      }
+    },
     "Fee %@" : {
       "localizations" : {
         "es" : {
@@ -5121,6 +5149,34 @@
         }
       }
     },
+    "Found in your iCloud Keychain. Your other %@ stops sending from it." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Encontrada en tu llavero de iCloud. Tu otro %@ dejará de enviar desde ella."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "iCloud キーチェーンで見つかりました。もう一方の %@ からは送金できなくなります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "iCloud 키체인에서 찾았습니다. 다른 %@에서는 더 이상 보낼 수 없습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在你的 iCloud 钥匙串中找到。你的另一台 %@ 将无法再从中发送。"
+          }
+        }
+      }
+    },
     "More than you have" : {
       "localizations" : {
         "es" : {
@@ -5201,6 +5257,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "%@ 没有美元价格"
+          }
+        }
+      }
+    },
+    "Nothing in it yet." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aún no tiene nada."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "まだ何も入っていません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "아직 아무것도 없습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "里面还没有东西。"
           }
         }
       }

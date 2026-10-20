@@ -26,9 +26,29 @@ struct MoveSentence: View {
     /// In `MoveTray` (prd §1442): the tray brings its own side padding and
     /// there is no tab bar to clear.
     var inTray = false
+
+    /// The account was just made, or just brought to this phone (§1442j):
+    /// the sentence opens on Receive and finishes itself, "Your account"
+    /// turning into "Created …3416" (or "Ready …3416"), the verbs arriving.
+    enum Arrival { case created, broughtHere }
+    var arrival: Arrival?
+
+    init(account: String, inTray: Bool = false, arrival: Arrival? = nil) {
+        self.account = account
+        self.inTray = inTray
+        self.arrival = arrival
+        _verb = State(initialValue: arrival == nil ? .swap : .receive)
+        _fresh = State(initialValue: arrival != nil)
+    }
+
+    /// Still the arrival's sentence: until a verb is picked.
+    @State private var fresh = false
+    /// The beat has played: the past tense is said and the verbs are in.
+    @State private var arrived = false
     @Environment(ShellChrome.self) private var chrome
     @Environment(\.openURL) private var openURL
     @Environment(\.horizontalSizeClass) private var sizeClass
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     typealias Op = YourAccountOp
     typealias Chain = YourAccountChain
@@ -211,6 +231,18 @@ struct MoveSentence: View {
         // half-picked sentence, and the list takes its room (§1442a).
         .safeAreaInset(edge: .bottom, spacing: 0) { if open == nil { foot.transition(.opacity) } }
         .task(id: network.chainId) { await readNetwork() }
+        .task {
+            // The sentence finishes itself a moment after it lands (§1442j);
+            // with Reduce Motion it is simply finished.
+            guard fresh, !arrived else { return }
+            if reduceMotion { arrived = true; return }
+            try? await Task.sleep(for: .milliseconds(650))
+            withAnimation(DS.Motion.standard) { arrived = true }
+            DSHaptic.success()
+        }
+        .onChange(of: verb) { _, _ in
+            if fresh { withAnimation(DS.Motion.standard) { fresh = false; arrived = true } }
+        }
         .task(id: quoteKey) { await requote() }
         .task(id: to) { await resolve() }
         .task {
@@ -247,8 +279,13 @@ struct MoveSentence: View {
 
     private var sentence: some View {
         VStack(alignment: .leading, spacing: DS.Space.s1) {
-            verbs
-                .padding(.bottom, DS.Space.s4)
+            // An arrival's sentence has no verbs until it has finished itself
+            // (§1442j): before the account existed none could be tapped.
+            if !fresh || arrived {
+                verbs
+                    .padding(.bottom, DS.Space.s4)
+                    .transition(.opacity)
+            }
             // What Add kept stands under the verbs, numbered, quieter than the
             // sentence being filled (§1442c, §1442f).
             if receipt == nil, !keptLines.filter(showsKept).isEmpty {
@@ -334,6 +371,28 @@ struct MoveSentence: View {
                     }
                 }
                 .padding(.top, groups.count > 1 ? DS.Space.s3 : 0)
+            case .receive where fresh:
+                row(nil) {
+                    HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                        word(arrived ? (arrival == .broughtHere ? String(localized: "Ready") : String(localized: "Created"))
+                                     : String(localized: "Your account"),
+                             ink: arrived ? DS.textSecondary : DS.textPrimary)
+                        if arrived {
+                            Button { copy() } label: { word(YourAccount.short(account), ink: DS.pickInk) }
+                                .buttonStyle(RowPress())
+                                .accessibilityLabel(Text("Your address, \(account)"))
+                                .accessibilityHint(Text("Copies your address"))
+                                .transition(.asymmetric(insertion: .offset(y: 28).combined(with: .opacity), removal: .opacity))
+                        }
+                    }
+                }
+                row(String(localized: "on")) {
+                    FlowLayout(spacing: 7, lineSpacing: 0) {
+                        ForEach(Array((Op.networks.filter { !$0.isTest }.map(\.name).formatted(.list(type: .and)) + ".").split(separator: " ").enumerated()), id: \.offset) { _, w in
+                            word(String(w), ink: DS.textPrimary)
+                        }
+                    }
+                }
             case .receive:
                 row(String(localized: "at")) {
                     Button { copy() } label: { word(YourAccount.short(account), ink: DS.pickInk) }
@@ -943,6 +1002,11 @@ struct MoveSentence: View {
                     .textSelection(.enabled)
                     .fixedSize(horizontal: false, vertical: true)
                 DSCopyRow(value: account, label: "Copy address", sensitive: false)
+                if fresh, arrived, emptyEverywhere {
+                    Text("Nothing in it yet.")
+                        .dsText(.body17).foregroundStyle(DS.textSecondary)
+                        .transition(.opacity)
+                }
                 Button {
                     withAnimation(DS.Motion.standard) { open = .exchange }
                     DSHaptic.selection()

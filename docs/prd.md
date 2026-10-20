@@ -67734,3 +67734,12 @@ Mock: the design canvas "Aztec experience".
 3. **The foot's one act is Share**, pink at the trailing edge: copying is beside the address, so the foot does not say it twice.
 4. **"From an exchange" is a pink line that opens the same glass list every blank does**, in place of a system menu: Coinbase ("Copies your address, opens Coinbase") and Another wallet ("Copies your address"). Not a directory of every exchange the app reads; Kraken is gone (user).
 5. Asking for an amount (board P, a payment link) is not built.
+
+### §1442j — Create and recover in the sentence; the sentence finishes itself (amends §1427, §1434's words, §1442i) (user, 2026-10-20: "should we look at the account create recover etc flows now"; "how would you improve the design on these if at all"; "build it")
+
+1. **One shape for both: "Your account [ …3416 ] / on Base, Ethereum and Robinhood Chain."** Create has no address; recover shows the short one in pink and the whole one under it in grey monospace. The only difference between the two screens is whether the account is known.
+2. **No verbs before the account exists**: none could be tapped (§83).
+3. **One line of small print.** Create: "Face ID signs. No seed phrase." Recover: "Found in your iCloud Keychain. Your other iPhone stops sending from it."
+4. **One act at the foot, where Swap, Send and Share stand**: "Create", or "Use on this iPhone" with "New account" quiet beside it. No "Already have one?": recovery is found through the iCloud Keychain without being asked, so the word could only lead to a dead end.
+5. **The sentence finishes itself** (`MoveSentence.Arrival`). After either act the tray opens on Receive with "Your account"; 650ms later it turns grey into "Created" (or "Ready" for a recovered account), the short address rises into the line in pink, the verbs arrive, and a success haptic lands. "Nothing in it yet." stands under the copy row while the account is empty. Picking a verb leaves the arrival sentence for plain Receive.
+6. `-movePreview create|recover|created|ready` (DEBUG) draws these over a phone that has an account, its create and recover inert, so a preview can never make or move an account.
