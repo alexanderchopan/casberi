@@ -211,6 +211,9 @@ xcrun swiftc -O -o "$TMP/t" "$ACCOUNT" "$OP" "$SWAP" "$COW" "$TX" "$KECCAK" "$CL
 grep -rq 'MoveTab' Casberi/Casberi --include='*.swift' && { echo "✗ a switch hides Move again — a dormant feature in a release build is App Review 2.3.1 (prd §1435)"; exit 1; }
 grep -q 'case feed, wallet, move, library, search' "$TABS" || { echo "✗ Move is not one of the five tabs (prd §1422)"; exit 1; }
 grep -q 'static var allCases' "$TABS" && { echo "✗ PlaceTab.allCases is overridden — a build could drop a tab (prd §1435)"; exit 1; }
-grep -A3 'static var networks' "$OP" | grep -q '#if DEBUG' || { echo "✗ YourAccountOp.networks offers Base Sepolia outside DEBUG"; exit 1; }
+# One test network in every build, never hidden (prd §1439): Base Sepolia
+# is in the list as it is, and marked a test network.
+grep -q 'static let networks: \[Network\] = \[base, ethereum, baseSepolia\]' "$OP" || { echo "✗ YourAccountOp.networks is not Base, Ethereum and Base Sepolia in every build (prd §1439)"; exit 1; }
+grep -A4 'static let baseSepolia' "$OP" | grep -q 'isTest: true' || { echo "✗ Base Sepolia is not marked a test network"; exit 1; }
 
 echo "✓ your account: the address is the factory's, the send's bytes are the module's, amounts add up, Move is in every build"

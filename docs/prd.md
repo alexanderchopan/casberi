@@ -67593,3 +67593,11 @@ Mock: the design canvas "Aztec experience".
 3. **The sentence becomes the receipt — no toast.** The verb turns past tense ("Sent", "Swapped", "Signed 2 in one transaction"), a filled swap says what CoW actually paid out (`executedBuyAmount`, `YourAccountChain.orderState`) and how it went — "Filled in 41 seconds · 0.2 AERO more than quoted" when the solvers found more — with "View on Basescan" and **Done**. A landed transaction rains once over the Wallet (`ShellChrome.rain`). Measured: a test-ETH send on Base Sepolia from the simulator, 2026-10-19.
 4. **The small ones.** "of 0.007948" is a door: a tap spends all of it. A swap's fee under a cent says "fee under a cent". A pasted address in your book becomes its name with a `snap`; one imitating a name you know turns orange and shakes once, with the failure haptic. While CoW prices, the For word breathes. With nothing anywhere, the sentence says "Nothing to send yet." and "Receive something first" opens Receive, its verb pink.
 5. **Not built: the QR on Receive** (user's call).
+
+## §1439 — Base Sepolia ships: one test network and two live ones in every build (amends §1435 item 2) (user, 2026-10-19: "this adds base testnet, base mainnet, and ethereum mainnet; one developer network, and two live networks for cryptocurrency")
+
+1. **Every build offers Base, Ethereum and Base Sepolia** (`YourAccountOp.networks`, no `#if DEBUG`). Base Sepolia's coins come from a faucet and carry no value; it is there so the account can be tried without real money.
+2. **It says so wherever it is picked**: the network list reads "Test network · its coins have no value", and the sentence's grey line ends "test coins" in the attention ink while Base Sepolia is the network. CoW settles on neither test network, so there the sentence starts on Send (§1438 item 6).
+3. **`your-account-selftest.sh`** now holds the opposite gate: the three networks in every build, and Base Sepolia marked `isTest`. The probe and draft hooks stay `#if DEBUG`.
+4. **The account sends and swaps**, so "Casberi can read, never spend" is no longer true of the app. The App Store description and the website's Wallet page are redrafted in `docs/store-copy.md` and `website/wallet.html`; the live store text changes with the next App Store submission, the website with its next deploy. Following someone else's wallet stays read-only.
+

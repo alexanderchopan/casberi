@@ -508,6 +508,10 @@ struct MoveSentence: View {
                 if let fee = feeLine(with) {
                     Text(verbatim: " · " + fee).dsText(.body17).foregroundStyle(DS.textSecondary)
                 }
+                // A test network says so wherever it is picked (prd §1439).
+                if network.isTest {
+                    Text(verbatim: " · " + String(localized: "test coins")).dsText(.body17).foregroundStyle(DS.attentionInk)
+                }
             }
             .fixedSize(horizontal: false, vertical: true)
         } else if heldBy.isEmpty {
@@ -662,7 +666,8 @@ struct MoveSentence: View {
         VStack(alignment: .leading, spacing: 0) {
             ForEach(Op.networks) { n in
                 let total = (heldBy[n.chainId] ?? []).compactMap(\.usd).reduce(0, +)
-                listRow(n.name, trailing: total > 0 ? Self.money(total) : nil, dim: n == network) {
+                listRow(n.name, sub: n.isTest ? String(localized: "Test network · its coins have no value") : nil,
+                        trailing: total > 0 ? Self.money(total) : nil, dim: n == network) {
                     pick { switchNetwork(n) }
                 }
             }

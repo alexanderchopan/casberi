@@ -156266,6 +156266,34 @@
         }
       }
     },
+    "Test network · its coins have no value" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Red de prueba · sus monedas no tienen valor"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "テストネットワーク · コインに価値はありません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "테스트 네트워크 · 코인에 가치가 없음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "测试网络 · 其代币没有价值"
+          }
+        }
+      }
+    },
     "Test token" : {
       "extractionState" : "manual",
       "localizations" : {

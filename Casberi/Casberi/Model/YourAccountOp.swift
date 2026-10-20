@@ -54,15 +54,11 @@ enum YourAccountOp {
         bundlers: ["https://public.pimlico.io/v2/84532/rpc", "https://api.candide.dev/public/v3/84532"],
         usdc: "0x036CbD53842c5426634e7929541eC2318f3dCF7e", isTest: true)
 
-    /// Base and Ethereum, where the account is offered; Base Sepolia too in a
-    /// DEBUG build, so a send can be tried with a faucet's coins.
-    static var networks: [Network] {
-        #if DEBUG
-        [base, ethereum, baseSepolia]
-        #else
-        [base, ethereum]
-        #endif
-    }
+    /// Two live networks, Base and Ethereum, and one test network, Base
+    /// Sepolia, in every build (prd §1439, amends §1435 item 2): a send can be
+    /// tried with a faucet's coins, which carry no value, and the sentence
+    /// says "test network" wherever Base Sepolia is picked.
+    static let networks: [Network] = [base, ethereum, baseSepolia]
 
     struct Token: Equatable, Hashable, Sendable {
         let symbol: String

@@ -47,6 +47,13 @@ Still pending on iOS, refused with 409 on 2026-09-03 and already applied on Mac:
   a reviewer scans on an app that was just rejected under Guideline 3.1.5;
   reordering costs nothing, since keyword order does not affect search ranking)
 
+### Wallet paragraph for the release that ships Your account (prd §1439) — DRAFT, NOT YET APPLIED
+
+"Casberi can read, never spend" stops being true when Move ships: the account sends and swaps. This replaces the "One wallet for all your money." paragraph in both descriptions at the next App Store submission; following other wallets stays read-only, and the line says so.
+
+One wallet for all your money, and an account of your own.
+Your wallets, exchanges, cards, savings and cash add up to one number. Follow any wallet address without a key or a signature; following only reads. Your own account is a Safe only you control, with no seed phrase: it sends, swaps and receives on Base and Ethereum, signed with Face ID, and recovers on a new device through iCloud Keychain.
+
 ### iOS description (1547 chars) — LIVE on 3.0.6 (in review), read back 2026-10-15; the opening is the line (user, 2026-10-15)
 
 Everything you do is scattered across apps, agents, wallets. Casberi is an inbox for your apps and, soon, a rewards account for your subscriptions. It all comes together on your iPhone, iPad and Mac, with no account, no servers and no tracking.
