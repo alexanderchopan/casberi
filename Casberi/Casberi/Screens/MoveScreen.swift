@@ -6,10 +6,11 @@ import UIKit
 /// account's face, its name, its address. Then the modules, bare on the page
 /// (§1382, §1393), a 32pt seam between them (§1386).
 ///
-/// **Built so far: create, send (`MoveSend`, prd §1424), receive, and
-/// security with recovery (`MoveSecurity`, prd §1427).** Swap is not drawn
-/// until it works (§83: no dead controls). No balance: the Wallet, where the
-/// account is followed from the moment it exists, shows it.
+/// **Move is the acts alone (prd §1436)**: Send · Swap (`MoveSend`, §1424,
+/// §1430) and Receive, each under the Wallet's own section head
+/// (`SectionPanelName`: a pink glyph, `heading28`), so a scan reads two
+/// places and never one form. Security's rows went to the Wallet's Security
+/// tile (`MoveSecurity`, §1427). No balance: the Wallet shows it.
 struct MoveScreen: View {
     @Environment(ShellChrome.self) private var chrome
     @Environment(\.openURL) private var openURL
@@ -27,8 +28,6 @@ struct MoveScreen: View {
                     MoveSend(account: address)
                         .padding(.top, DSRoomChassis.sectionGap)
                     receive(address)
-                        .padding(.top, DSRoomChassis.sectionGap)
-                    MoveSecurity(account: address)
                         .padding(.top, DSRoomChassis.sectionGap)
                 } else if let recoverable {
                     recoverRow(recoverable)
@@ -198,11 +197,8 @@ struct MoveScreen: View {
     /// Send's Add is the page's one Add — it batches.
     private func receive(_ address: String) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("Receive")
-                .dsText(.heading20)
-                .foregroundStyle(DS.headInk)
+            SectionPanelName(name: String(localized: "Receive"), glyph: ScopeTileGlyph.receive, inset: 0) { EmptyView() }
                 .frame(minHeight: 44, alignment: .leading)
-                .accessibilityAddTraits(.isHeader)
             Menu {
                 Button { addFrom("https://www.coinbase.com", address) } label: { Text(verbatim: "Coinbase") }
                 Button { addFrom("https://www.kraken.com", address) } label: { Text(verbatim: "Kraken") }

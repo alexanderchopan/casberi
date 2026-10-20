@@ -10,7 +10,8 @@ import SwiftUI
 /// **Swap (prd §1430)** is the header's other word: the same amount over
 /// what is sold, "For ≈" what comes back, the least it can be after CoW's
 /// slippage, and the slab saying the whole swap. A swap is one CoW order
-/// (`YourAccountSwap`), on Base and Ethereum; Add batches sends only.
+/// (`YourAccountSwap`), on Base and Ethereum, and Add batches it with sends
+/// and other swaps alike (prd §1436): one operation carries them all.
 ///
 /// The token picker lists what the account holds, each with its network,
 /// read from the chain on open; a send says what it needs in words when the
@@ -21,6 +22,7 @@ struct MoveSend: View {
     @Environment(\.openURL) private var openURL
 
     typealias Op = YourAccountOp
+    typealias Chain = YourAccountChain
 
     struct Holding: Identifiable, Hashable {
         let network: Op.Network
@@ -40,13 +42,17 @@ struct MoveSend: View {
     /// a stray character, or a mixed-case checksum one letter off.
     @State private var malformed = false
     @FocusState private var toFocused: Bool
-    @State private var items: [Op.Payment] = []
+    /// What Add put in this transaction: sends and swaps, one network.
+    @State private var items: [Chain.Item] = []
     @State private var stage: YourAccountChain.Stage?
     /// Swap, not Send (the header's second word).
     @State private var swapping = false
     @State private var quote: YourAccountSwap.Quote?
     /// Why there is no quote, in CoW's words or ours.
     @State private var quoteNote: String?
+    #if DEBUG
+    @State private var swapDrafted = false
+    #endif
 
     struct Recipient: Equatable {
         let address: String
@@ -56,9 +62,13 @@ struct MoveSend: View {
     }
 
     /// What the picker offers: every holding to send, the ones on a network
-    /// CoW settles on to swap.
+    /// CoW settles on to swap — and, once something is in the transaction,
+    /// only its network's.
     private var offered: [Holding] {
-        swapping ? holdings.filter { YourAccountSwap.supported($0.network) } : holdings
+        holdings.filter { h in
+            (!swapping || YourAccountSwap.supported(h.network))
+                && items.first.map { $0.network == h.network } ?? true
+        }
     }
 
     private var chosen: Holding {
@@ -78,23 +88,38 @@ struct MoveSend: View {
         return Op.Payment(network: chosen.network, token: chosen.token, amount: units, to: r.address, toName: r.name)
     }
 
-    private var all: [Op.Payment] { items + (pending.map { [$0] } ?? []) }
+    /// The swap the fields describe, once CoW has priced it.
+    private var pendingSwap: Chain.Swap? {
+        guard swapping, let quote, let buy = buyToken,
+              let units = Op.baseUnits(amount, decimals: chosen.token.decimals) else { return nil }
+        return Chain.Swap(network: chosen.network, sell: chosen.token, buy: buy, amount: units, quote: quote)
+    }
+
+    private var pendingItem: Chain.Item? {
+        swapping ? pendingSwap.map(Chain.Item.swap) : pending.map(Chain.Item.send)
+    }
+
+    private var all: [Chain.Item] { items + (pendingItem.map { [$0] } ?? []) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: DS.Space.s2) {
+            // The Wallet's section head (§1436): the glyph, then the two
+            // words at the section's rung, the picked one in the head's ink.
+            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                Image(systemName: ScopeTileGlyph.send)
+                    .dsGlyph(.body)
+                    .foregroundStyle(DS.brandInk)
+                    .accessibilityHidden(true)
                 mode(String(localized: "Send"), on: !swapping) { swapping = false }
-                Text(verbatim: "·").dsText(.heading20).foregroundStyle(DS.textTertiary)
+                Text(verbatim: "·").dsText(.heading28).foregroundStyle(DS.textTertiary)
                 mode(String(localized: "Swap"), on: swapping) { swapping = true }
                 Spacer(minLength: DS.Space.s2)
-                if !swapping {
-                    Button("Add") { add() }
-                        .dsText(.body17)
-                        .foregroundStyle(pending == nil || stage != nil ? DS.textTertiary : DS.pickInk)
-                        .buttonStyle(RowPress())
-                        .disabled(pending == nil || stage != nil)
-                        .accessibilityHint(Text("Adds this to the transaction and starts another"))
-                }
+                Button("Add") { add() }
+                    .dsText(.body17)
+                    .foregroundStyle(pendingItem == nil || stage != nil ? DS.textTertiary : DS.pickInk)
+                    .buttonStyle(RowPress())
+                    .disabled(pendingItem == nil || stage != nil)
+                    .accessibilityHint(Text("Adds this to the transaction and starts another"))
             }
             .frame(minHeight: 44)
 
@@ -153,23 +178,40 @@ struct MoveSend: View {
             .buttonStyle(RowPress())
             .disabled(!slabOn)
 
-            if !items.isEmpty && !swapping { batch }
+            if !items.isEmpty { batch }
         }
         .task(id: swapKey) { await requote() }
         .task {
             #if DEBUG
-            // `-moveSendDraft "<amount>|<to>"`: the fields filled, because a
-            // `simctl`-booted simulator drops typed characters (prd §1424).
-            if let draft = UserDefaults.standard.string(forKey: "moveSendDraft"), amount.isEmpty, to.isEmpty {
+            // `-moveSwapDraft "<amount>[|<SYMBOL>]"`: Swap with the amount filled; once
+            // CoW prices it the swap is Added and `-moveSendDraft` fills the
+            // send under it, so a batch of both can be driven on a simulator.
+            if let draft = UserDefaults.standard.string(forKey: "moveSwapDraft"), amount.isEmpty {
                 let parts = draft.split(separator: "|", maxSplits: 1).map(String.init)
-                amount = parts.first ?? ""
-                to = parts.count > 1 ? parts[1] : ""
-                NSLog("moveSendDraft: amount=%@ to=%@", amount, to)
+                swapping = true
+                amount = parts[0]
+                NSLog("moveSwapDraft: amount=%@ token=%@", amount, parts.count > 1 ? parts[1] : "first")
+                await readHoldings()
+                if parts.count > 1 { pick = holdings.first { $0.token.symbol == parts[1] } }
+                return
             }
+            sendDraft()
             #endif
             await readHoldings()
         }
     }
+
+    #if DEBUG
+    /// `-moveSendDraft "<amount>|<to>"`: the fields filled, because a
+    /// `simctl`-booted simulator drops typed characters (prd §1424).
+    private func sendDraft() {
+        guard let draft = UserDefaults.standard.string(forKey: "moveSendDraft"), amount.isEmpty, to.isEmpty else { return }
+        let parts = draft.split(separator: "|", maxSplits: 1).map(String.init)
+        amount = parts.first ?? ""
+        to = parts.count > 1 ? parts[1] : ""
+        NSLog("moveSendDraft: amount=%@ to=%@", amount, to)
+    }
+    #endif
 
     // MARK: - The token
 
@@ -194,7 +236,7 @@ struct MoveSend: View {
             }
             .frame(minHeight: 44)
         }
-        .disabled(offered.isEmpty || (!items.isEmpty && !swapping) || stage != nil)
+        .disabled(offered.isEmpty || stage != nil)
         .accessibilityLabel(Text("Token \(chosen.token.symbol) on \(chosen.network.name)"))
     }
 
@@ -283,7 +325,7 @@ struct MoveSend: View {
                 HStack(spacing: DS.Space.s3) {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(verbatim: words(item)).dsText(.body17).foregroundStyle(DS.textPrimary)
-                        Text(verbatim: YourAccount.short(item.to) + " · " + item.network.name)
+                        Text(verbatim: line(item))
                             .dsText(.subhead12)
                             .foregroundStyle(DS.textSecondary)
                     }
@@ -306,12 +348,12 @@ struct MoveSend: View {
     }
 
     private func add() {
-        guard let p = pending else { return }
-        if let first = items.first, first.network != p.network {
+        guard let item = pendingItem else { return }
+        if let first = items.first, first.network != item.network {
             chrome.flash(String(localized: "One transaction sends on one network"), tone: .failure)
             return
         }
-        withAnimation(DS.Motion.standard) { items.append(p) }
+        withAnimation(DS.Motion.standard) { items.append(item) }
         DSHaptic.tap()
         amount = ""
         to = ""
@@ -325,6 +367,36 @@ struct MoveSend: View {
         return String(localized: "\(howMuch) \(p.token.symbol) to \(who)")
     }
 
+    /// "0.001 ETH to Hardware" / "0.001 ETH for ≈ 2.4 USDC".
+    private func words(_ item: Chain.Item) -> String {
+        switch item {
+        case .send(let p): return words(p)
+        case .swap(let s):
+            let sold = Op.spoken(s.amount, decimals: s.sell.decimals)
+            let back = Op.spoken(s.quote.buyAmount, decimals: s.buy.decimals)
+            return String(localized: "\(sold) \(s.sell.symbol) for ≈ \(back) \(s.buy.symbol)")
+        }
+    }
+
+    private func line(_ item: Chain.Item) -> String {
+        switch item {
+        case .send(let p): YourAccount.short(p.to) + " · " + p.network.name
+        case .swap(let s): "CoW · " + s.network.name
+        }
+    }
+
+    /// The whole transaction in one sentence, for the slab and the prompt.
+    private func sentence(_ items: [Chain.Item]) -> String {
+        if items.count > 1 { return String(localized: "Sign \(items.count) in one transaction") }
+        switch items.first {
+        case .send(let p): return String(localized: "Send \(words(p))")
+        case .swap(let s): return String(localized: "Swap \(words(s))")
+        case nil: return ""
+        }
+    }
+
+    private func words(_ s: Chain.Swap) -> String { words(.swap(s)) }
+
     private var slab: String {
         switch stage {
         case .preparing: return String(localized: "Preparing…")
@@ -333,49 +405,47 @@ struct MoveSend: View {
         case .landing: return String(localized: "Waiting for \(all.first?.network.name ?? "")…")
         case nil: break
         }
+        if !all.isEmpty { return sentence(all) }
         if swapping { return swapSlab }
         if holdings.isEmpty { return String(localized: "Nothing to send yet") }
-        let payments = all
-        if payments.count > 1 { return String(localized: "Sign \(payments.count) in one transaction") }
-        if let p = payments.first { return String(localized: "Send \(words(p))") }
         return Op.baseUnits(amount, decimals: chosen.token.decimals) == nil
             ? String(localized: "Enter an amount") : String(localized: "Enter who it goes to")
     }
 
-    private var slabOn: Bool {
-        guard stage == nil else { return false }
-        return swapping ? quote != nil : !all.isEmpty && !holdings.isEmpty
-    }
+    private var slabOn: Bool { stage == nil && !all.isEmpty }
 
     private func send() {
         // One send at a time: a second tap before the slab redraws is not a
         // second payment.
         guard stage == nil else { return }
-        if swapping { swap(); return }
-        let payments = all
-        guard !payments.isEmpty else { return }
-        let reason = payments.count > 1
-            ? String(localized: "Sign \(payments.count) in one transaction")
-            : String(localized: "Send \(words(payments[0]))")
+        let batch = all
+        guard !batch.isEmpty else { return }
+        let reason = sentence(batch)
+        let swaps = batch.contains { if case .swap = $0 { true } else { false } }
         stage = .preparing
         Task {
             do {
-                let sent = try await YourAccountChain.send(payments, reason: reason) { s in
+                let done = try await Chain.transact(batch, reason: reason) { s in
                     await MainActor.run { stage = s }
                 }
+                let sent = done.sent
                 stage = nil
                 chrome.refreshRooms()
-                // Landed or still on its way, the send is gone from the page,
-                // so it cannot be paid again by a second tap.
+                // Landed or still on its way, the transaction is gone from the
+                // page, so it cannot be paid again by a second tap.
                 items = []
                 amount = ""
                 to = ""
                 switch sent.outcome {
-                case .landed(let tx, _):
+                case .landed(let tx, _) where !swaps:
                     let link = tx.flatMap { Self.explorer($0, on: sent.network) }
                     chrome.flash(String(localized: "Sent on \(sent.network.name)"), tone: .success,
                                  action: link.map { url in .init(label: String(localized: "View")) { openURL(url) } },
                                  seconds: 4)
+                case .landed where done.orders.allSatisfy({ $0 == "fulfilled" }):
+                    chrome.flash(String(localized: "Swapped on \(sent.network.name)"), tone: .success, seconds: 4)
+                case .landed:
+                    chrome.flash(String(localized: "Order placed. CoW fills it at the best price it finds"), seconds: 5)
                 case .pending:
                     chrome.flash(String(localized: "Sent, and not yet seen on \(sent.network.name). Check before sending again"),
                                  seconds: 6)
@@ -383,9 +453,9 @@ struct MoveSend: View {
                     break
                 }
                 await readHoldings()
-            } catch let failure as YourAccountChain.Failure {
+            } catch let failure as Chain.Failure {
                 stage = nil
-                chrome.flash(failure.message, tone: .failure, seconds: 4)
+                chrome.flash(failure.message, tone: .failure, seconds: 5)
             } catch {
                 stage = nil
                 // Face ID cancelled, or the Enclave refused: nothing left the phone.
@@ -414,7 +484,7 @@ struct MoveSend: View {
             DSHaptic.selection()
         } label: {
             Text(verbatim: word)
-                .dsText(.heading20)
+                .dsText(.heading28)
                 .foregroundStyle(on ? DS.headInk : DS.textTertiary)
         }
         .buttonStyle(RowPress())
@@ -450,15 +520,12 @@ struct MoveSend: View {
         return String(localized: "At least \(least) \(buy.symbol) · fee ≈ \(fee) \(chosen.token.symbol) · CoW")
     }
 
+    /// The slab with no swap priced yet.
     private var swapSlab: String {
         if offered.isEmpty { return String(localized: "Nothing to swap yet") }
-        guard let quote, let buy = buyToken,
-              let units = Op.baseUnits(amount, decimals: chosen.token.decimals) else {
-            return String(localized: "Enter an amount")
-        }
-        let sold = Op.spoken(units, decimals: chosen.token.decimals)
-        let back = Op.spoken(quote.buyAmount, decimals: buy.decimals)
-        return String(localized: "Swap \(sold) \(chosen.token.symbol) for ≈ \(back) \(buy.symbol)")
+        if quoteNote != nil { return String(localized: "No price yet") }
+        return Op.baseUnits(amount, decimals: chosen.token.decimals) == nil
+            ? String(localized: "Enter an amount") : String(localized: "Pricing…")
     }
 
     /// The quote is asked again whenever what would be swapped changes.
@@ -476,43 +543,18 @@ struct MoveSend: View {
                                                          amount: units, account: account)
             guard !Task.isCancelled else { return }
             quote = q
+            #if DEBUG
+            if UserDefaults.standard.string(forKey: "moveSwapDraft") != nil, !swapDrafted {
+                swapDrafted = true
+                add()
+                swapping = false
+                sendDraft()
+                NSLog("moveSwapDraft: added, %d in the transaction", items.count)
+            }
+            #endif
         } catch let failure as YourAccountChain.Failure {
             guard !Task.isCancelled else { return }
             quoteNote = failure.message
         } catch {}
-    }
-
-    private func swap() {
-        guard let buy = buyToken, let units = Op.baseUnits(amount, decimals: chosen.token.decimals) else { return }
-        let net = chosen.network, sell = chosen.token
-        let reason = swapSlab
-        stage = .preparing
-        Task {
-            do {
-                let done = try await YourAccountChain.swap(net, sell: sell, buy: buy, amount: units, reason: reason) { s in
-                    await MainActor.run { stage = s }
-                }
-                stage = nil
-                chrome.refreshRooms()
-                amount = ""
-                switch (done.sent.outcome, done.status) {
-                case (.landed, "fulfilled"):
-                    chrome.flash(String(localized: "Swapped on \(net.name)"), tone: .success, seconds: 4)
-                case (.landed, _):
-                    chrome.flash(String(localized: "Order placed. CoW fills it at the best price it finds"), seconds: 5)
-                case (.pending, _):
-                    chrome.flash(String(localized: "Sent, and not yet seen on \(net.name). Check before sending again"), seconds: 6)
-                case (.dryRun, _):
-                    break
-                }
-                await readHoldings()
-            } catch let failure as YourAccountChain.Failure {
-                stage = nil
-                chrome.flash(failure.message, tone: .failure, seconds: 5)
-            } catch {
-                stage = nil
-                chrome.flash(String(localized: "Not sent"), tone: .failure)
-            }
-        }
     }
 }

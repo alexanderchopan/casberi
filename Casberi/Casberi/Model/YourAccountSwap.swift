@@ -55,7 +55,7 @@ enum YourAccountSwap {
 
     // MARK: - The quote
 
-    struct Quote: Equatable {
+    struct Quote: Equatable, Sendable {
         /// What is sold, all of it (the fee is taken from the surplus).
         let sellAmount: String
         /// What the quote says comes back.
@@ -143,19 +143,57 @@ enum YourAccountSwap {
 
     // MARK: - The account's calls
 
+    /// An order CoW has taken under the id this phone computed.
+    struct Placed: Equatable {
+        let order: CowOrder.Order
+        let uid: [UInt8]
+        let sellingETH: Bool
+    }
+
     /// Wrap when ETH is sold, approve exactly what is sold, pre-sign the order.
     static func calls(order: CowOrder.Order, uid: [UInt8], sellingETH: Bool, network: YourAccountOp.Network) -> [YourAccountOp.Call]? {
-        guard uid.count == 56, let wethAddress = weth(chainId: network.chainId),
+        calls(orders: [Placed(order: order, uid: uid, sellingETH: sellingETH)], network: network)
+    }
+
+    /// **EVERY ORDER IN ONE OPERATION (prd §1436, batch swaps).** One wrap for
+    /// all the ETH the orders sell, then ONE approval per sold token for the
+    /// SUM its orders sell — `approve` replaces the allowance rather than
+    /// adding to it, so two approvals of one token would leave the first
+    /// order unfillable — then each order's pre-signature, in order.
+    static func calls(orders: [Placed], network: YourAccountOp.Network) -> [YourAccountOp.Call]? {
+        guard !orders.isEmpty, orders.allSatisfy({ $0.uid.count == 56 }),
+              let wethAddress = weth(chainId: network.chainId),
               let zero = SafeABI.word(uint256: "0") else { return nil }
         var out: [YourAccountOp.Call] = []
-        if sellingETH {
-            out.append(.init(operation: 0, to: wethAddress, value: order.sellAmount, data: YourAccount.sel("deposit()")))
+        let wrapped = orders.filter(\.sellingETH).map(\.order.sellAmount)
+        if !wrapped.isEmpty {
+            guard let total = total(wrapped) else { return nil }
+            out.append(.init(operation: 0, to: wethAddress, value: total, data: YourAccount.sel("deposit()")))
         }
-        let approve = YourAccount.sel("approve(address,uint256)") + YourAccount.w(vaultRelayer) + order.sellAmount
-        out.append(.init(operation: 0, to: order.sellToken, value: zero, data: approve))
-        let preSign = YourAccount.sel("setPreSignature(bytes,bool)") + YourAccount.w(64) + YourAccount.w(1)
-            + YourAccount.dynamic(uid)
-        out.append(.init(operation: 0, to: CowOrder.settlement, value: zero, data: preSign))
+        var tokens: [String] = []
+        var sold: [String: [[UInt8]]] = [:]
+        for o in orders {
+            if sold[o.order.sellToken] == nil { tokens.append(o.order.sellToken) }
+            sold[o.order.sellToken, default: []].append(o.order.sellAmount)
+        }
+        for token in tokens {
+            guard let amount = total(sold[token] ?? []) else { return nil }
+            let approve = YourAccount.sel("approve(address,uint256)") + YourAccount.w(vaultRelayer) + amount
+            out.append(.init(operation: 0, to: token, value: zero, data: approve))
+        }
+        for o in orders {
+            let preSign = YourAccount.sel("setPreSignature(bytes,bool)") + YourAccount.w(64) + YourAccount.w(1)
+                + YourAccount.dynamic(o.uid)
+            out.append(.init(operation: 0, to: CowOrder.settlement, value: zero, data: preSign))
+        }
         return out
+    }
+
+    /// The sum of amount words, as a word: digit arithmetic through
+    /// `YourAccountOp.sum`, never a machine integer.
+    private static func total(_ words: [[UInt8]]) -> [UInt8]? {
+        var sum = "0"
+        for w in words { sum = YourAccountOp.sum(sum, SafeCalldata.decimal(w)) }
+        return SafeABI.word(uint256: sum)
     }
 }

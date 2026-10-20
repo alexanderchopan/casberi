@@ -62,6 +62,10 @@ enum WalletPrepare {
         /// The prepared revoke as a wallet-ready JSON object — nil when the
         /// grant is no longer active (nothing left to prepare).
         let transactionJSON: String?
+        /// The same revoke as the call your own account makes (prd §1437):
+        /// the contract and its calldata, hex. nil with `transactionJSON`.
+        var revokeTo: String? = nil
+        var revokeData: String? = nil
         /// The wallet's Revoke.cash page, built from the thing's OWN fields
         /// (owner + chain) — the card's door never trusts `content` to be
         /// what its label claims (review 2026-07-17).
@@ -230,7 +234,8 @@ enum WalletPrepare {
         }
         return .ok(Check(active: true, forAll: forAll, allowanceRaw: allowanceRaw,
                          contract: contract, network: network, feeLine: feeLine,
-                         transactionJSON: json, revokeURL: revokeURL))
+                         transactionJSON: json, revokeTo: toContract, revokeData: calldata,
+                         revokeURL: revokeURL))
     }
 
     /// The first 32-byte word of a multi-word `eth_call` return — Permit2's

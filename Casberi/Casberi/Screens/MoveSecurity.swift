@@ -1,6 +1,7 @@
 import SwiftUI
 
-/// **SECURITY (prd §1427): the Move page's last module**, the canvas's rows —
+/// **YOUR ACCOUNT'S KEYS (prd §1427, in the Wallet's Security tile since
+/// §1436)**: the canvas's rows —
 /// a name, a line that says the state, and a verb only where there is
 /// something to do. Who signs, network by network (this iPhone, or another
 /// device the recovery key can move it from); the recovery key and where it
@@ -41,11 +42,6 @@ struct MoveSecurity: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("Security")
-                .dsText(.heading20)
-                .foregroundStyle(DS.headInk)
-                .frame(minHeight: 44, alignment: .leading)
-                .accessibilityAddTraits(.isHeader)
             row(title: ThisDevice.title, line: deviceLine,
                 verb: canMoveHere ? (ThisDevice.use, moveHere) : nil)
             row(title: String(localized: "Recovery key"), line: recoveryLine,
@@ -59,7 +55,6 @@ struct MoveSecurity: View {
                     } else { addOutside() } })
                 })
             if addingOutside { outsideField }
-            row(title: String(localized: "Rotate"), line: rotateLine, verb: nil)
         }
         // Read again whenever a send lands (`MoveSend` bumps the rooms'
         // revision): a first send creates the account and moves its key.
@@ -117,7 +112,9 @@ struct MoveSecurity: View {
         let here = live.filter { $0.keyIndex != nil }
         let elsewhere = live.filter { $0.keyIndex == nil }
         if live.isEmpty { return String(localized: "Signs your first send, Face ID each time") }
-        if elsewhere.isEmpty { return String(localized: "Signs on \(names(here))") }
+        // The key that changes with every send rides this line (§1436:
+        // Rotate's own row folded in).
+        if elsewhere.isEmpty { return String(localized: "Signs on \(names(here)) · \(rotateLine)") }
         if here.isEmpty { return String(localized: "Your other device signs for it now") }
         return String(localized: "Signs on \(names(here)) · your other device on \(names(elsewhere))")
     }
@@ -148,8 +145,8 @@ struct MoveSecurity: View {
 
     private var rotateLine: String {
         let highest = live.compactMap(\.keyIndex).max()
-        guard let highest else { return String(localized: "A new key with every send") }
-        return String(localized: "A new key with every send · key \(highest)")
+        guard let highest else { return String(localized: "a new key with every send") }
+        return String(localized: "a new key with every send · key \(highest)")
     }
 
     // MARK: - Reading
@@ -397,11 +394,11 @@ private extension Optional {
 /// you** — the Wallet's Home and the Feed's Wallet section — while your
 /// account answers only to keys inside Casberi. A passkey signs only where
 /// it was made, so the way out is a key the person holds elsewhere; the row
-/// stands until every network the account is on has one, and opens Move,
-/// where Security's Outside key adds it. Same anatomy as the rows around it
+/// stands until every network the account is on has one, and opens the
+/// Wallet's Security, where Outside key adds it (§1436). Same anatomy as the rows around it
 /// (§1413 item 7): the account's face, a name, one line.
 struct OutsideKeyNudge: View {
-    @Environment(HomeRoute.self) private var route
+    @Environment(ShellChrome.self) private var chrome
 
     /// Drawn at all: the account needs the key.
     static var shown: Bool { YourAccountKey.needsOutsideKey }
@@ -409,7 +406,7 @@ struct OutsideKeyNudge: View {
     var body: some View {
         Button {
             DSHaptic.selection()
-            route.present(.move)
+            chrome.openWalletSecurity(at: FeedScreen.SecurityAnchor.account.id)
         } label: {
             DSFeedRow(name: String(localized: "Add a key you hold outside Casberi"),
                       line: Text("So your account never depends on this app")) {
@@ -424,7 +421,7 @@ struct OutsideKeyNudge: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(RowPress())
-        .accessibilityHint(Text("Opens your account's page"))
+        .accessibilityHint(Text("Opens the Wallet's security tile"))
     }
 
     /// As a row of a `List`, in the feed's insets.

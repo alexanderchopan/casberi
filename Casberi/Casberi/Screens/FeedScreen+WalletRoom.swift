@@ -565,7 +565,8 @@ extension FeedScreen {
         case .home, .markets, .subscriptions: return false
         case .holdings:        return blockStream.els.isEmpty
         // Every kind the checkup counts, the same reads its sections draw on.
-        case .security:        return walletSecurityCounts.isEmpty
+        // Your account's keys fill it too (§1436).
+        case .security:        return walletSecurityCounts.isEmpty && YourAccountKey.address == nil
         }
     }
 
@@ -870,7 +871,10 @@ extension FeedScreen {
             walletCard(String(localized: "Approvals"), glyph: WalletWarning.Kind.approval.glyph, anchor: SecurityAnchor.approvals.id) {
                 WalletApprovalExposureCard(exposure: walletLive.exposure,
                                            cap: Self.walletHomeCap, open: walletSecurityOpen(.approvals),
-                                           more: { walletSecurityToggle(.approvals) }) { grant in
+                                           more: { walletSecurityToggle(.approvals) },
+                                           revocable: Set(walletRevocable.keys), revoking: walletRevoking,
+                                           revoke: { walletRevoke([$0.thingID]) },
+                                           revokeAll: { walletRevoke(Array(walletRevocable.keys)) }) { grant in
                     guard let thing = walletLive.activeApprovals
                         .first(where: { $0.isLive && $0.id == grant.thingID })
                     else {

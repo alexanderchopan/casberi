@@ -637,6 +637,9 @@ struct FeedScreen: View {
     /// read off `SafeBridge.pendingSnapshot()` in `loadWalletLive`, never in a
     /// body (§628), and read by Coming up.
     @State var walletSafePending: Set<String> = []
+    /// A revoke your account is signing (prd §1437): the grants in flight and
+    /// the stage's word the card draws on them; nil at rest.
+    @State var walletRevoking: (ids: Set<UUID>, word: String)?
     /// A section the Security checkup asked to be walked to (prd §1107; the
     /// risk strip's dots, §417, until §1107 retired the strip), consumed and
     /// cleared by `listCore`.

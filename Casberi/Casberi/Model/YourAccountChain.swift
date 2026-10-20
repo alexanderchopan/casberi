@@ -185,25 +185,7 @@ enum YourAccountChain {
     static func send(_ payments: [YourAccountOp.Payment], reason: String, dryRun: Bool = false,
                      report: @escaping @Sendable (String) -> Void = { _ in },
                      stage: @escaping @Sendable (Stage) async -> Void) async throws -> Sent {
-        guard let net = payments.first?.network, payments.allSatisfy({ $0.network == net }) else {
-            throw Failure(message: String(localized: "One transaction sends on one network"))
-        }
-        guard let account = YourAccountKey.address else {
-            throw Failure(message: String(localized: "There is no account on this iPhone"))
-        }
-        await stage(.preparing)
-        let deployed = try await isDeployed(net, account)
-        let (signerIndex, signer) = try await deviceSigner(net, account, deployed: deployed)
-        let next = try YourAccountKey.nextKey(after: signerIndex)
-        let calls = payments.compactMap(YourAccountOp.call(for:))
-        guard calls.count == payments.count, let nextKey = YourAccountKey.publicKey(next) else {
-            throw Failure(message: String(localized: "This send could not be written"))
-        }
-        report("account=\(account) deployed=\(deployed) signer=key\(signerIndex) next=key\(next)")
-        let outcome = try await operate(net, account: account, deployed: deployed, calls: calls,
-                                        rotateTo: nextKey, payments: payments, signer: signer,
-                                        reason: reason, dryRun: dryRun, report: report, stage: stage)
-        return Sent(outcome: await settle(outcome, net, account, next: next, x: nextKey.x), network: net)
+        try await transact(payments.map(Item.send), reason: reason, dryRun: dryRun, report: report, stage: stage).sent
     }
 
     // MARK: - Recovery (prd §1427)
@@ -387,56 +369,154 @@ enum YourAccountChain {
         return root["status"] as? String
     }
 
-    struct Swapped: Equatable {
-        let sent: Sent
-        /// CoW's last word on the order: "fulfilled", or still "open".
-        let status: String?
+    /// A swap the page describes: what is sold, for what, on one network.
+    struct Swap: Equatable, Identifiable, Sendable {
+        var id = UUID()
+        let network: Network
+        let sell: YourAccountOp.Token
+        let buy: YourAccountOp.Token
+        let amount: String
+        /// The quote the page showed; the order is quoted afresh at signing.
+        let quote: YourAccountSwap.Quote
     }
 
-    /// Quote afresh, build the order here, have CoW take it under the id
-    /// this phone computed, then one operation — wrap, approve, pre-sign, and
-    /// the key change — and follow the order until it fills (two minutes).
-    static func swap(_ net: Network, sell: YourAccountOp.Token, buy: YourAccountOp.Token, amount: String,
-                     reason: String, stage: @escaping @Sendable (Stage) async -> Void) async throws -> Swapped {
+    /// One thing in a transaction: a send or a swap (prd §1436, batch swaps).
+    enum Item: Equatable, Identifiable, Sendable {
+        case send(YourAccountOp.Payment)
+        case swap(Swap)
+        var id: UUID {
+            switch self {
+            case .send(let p): p.id
+            case .swap(let s): s.id
+            }
+        }
+        var network: Network {
+            switch self {
+            case .send(let p): p.network
+            case .swap(let s): s.network
+            }
+        }
+    }
+
+    struct Transacted: Equatable {
+        let sent: Sent
+        /// CoW's last word on each order, in the swaps' order: "fulfilled",
+        /// or still "open".
+        let orders: [String?]
+    }
+
+    /// **EVERY SEND AND SWAP IN ONE OPERATION (prd §1436).** Each swap is
+    /// quoted afresh, built here, and taken by CoW under the id this phone
+    /// computed; then one operation — the sends, one wrap, one approval per
+    /// sold token, each pre-signature, the key change — signed once, and the
+    /// orders followed until they fill (two minutes).
+    static func transact(_ items: [Item], reason: String, dryRun: Bool = false,
+                         report: @escaping @Sendable (String) -> Void = { _ in },
+                         stage: @escaping @Sendable (Stage) async -> Void) async throws -> Transacted {
+        guard let net = items.first?.network, items.allSatisfy({ $0.network == net }) else {
+            throw Failure(message: String(localized: "One transaction sends on one network"))
+        }
         guard let account = YourAccountKey.address else {
             throw Failure(message: String(localized: "There is no account on this iPhone"))
         }
         await stage(.preparing)
-        let quote = try await swapQuote(net, sell: sell, buy: buy, amount: amount, account: account)
-        guard let order = YourAccountSwap.order(sell: sell, buy: buy, on: net, account: account, quote: quote),
-              let uid = YourAccountSwap.uid(order, owner: account, chainId: net.chainId),
-              let calls = YourAccountSwap.calls(order: order, uid: uid, sellingETH: sell.contract == nil, network: net),
-              let url = cowURL(net, "orders") else {
-            throw Failure(message: String(localized: "This swap could not be written"))
+        var payments: [YourAccountOp.Payment] = []
+        var calls: [YourAccountOp.Call] = []
+        var placed: [YourAccountSwap.Placed] = []
+        for item in items {
+            switch item {
+            case .send(let p):
+                guard let call = YourAccountOp.call(for: p) else {
+                    throw Failure(message: String(localized: "This send could not be written"))
+                }
+                payments.append(p)
+                calls.append(call)
+            case .swap(let s):
+                let quote = try await swapQuote(net, sell: s.sell, buy: s.buy, amount: s.amount, account: account)
+                guard let order = YourAccountSwap.order(sell: s.sell, buy: s.buy, on: net, account: account, quote: quote),
+                      let uid = YourAccountSwap.uid(order, owner: account, chainId: net.chainId),
+                      let url = cowURL(net, "orders") else {
+                    throw Failure(message: String(localized: "This swap could not be written"))
+                }
+                let (json, status) = await cow(url, body: YourAccountSwap.orderBody(order, owner: account, quoteId: quote.id))
+                guard status == 201 || status == 200 else { throw cowRefusal(json, net) }
+                // CoW must name the order this phone built, or nothing is signed.
+                guard let said = json as? String, SafeABI.hexBytes(said) == uid else {
+                    throw Failure(message: String(localized: "CoW named a different order, so nothing was signed"))
+                }
+                placed.append(.init(order: order, uid: uid, sellingETH: s.sell.contract == nil))
+                // What leaves the account, for the balance check before any prompt.
+                payments.append(.init(network: net, token: s.sell, amount: quote.sellAmount,
+                                      to: CowOrder.settlement, toName: nil))
+            }
         }
-        let (json, status) = await cow(url, body: YourAccountSwap.orderBody(order, owner: account, quoteId: quote.id))
-        guard status == 201 || status == 200 else { throw cowRefusal(json, net) }
-        // CoW must name the order this phone built, or nothing is signed.
-        guard let said = json as? String, SafeABI.hexBytes(said) == uid else {
-            throw Failure(message: String(localized: "CoW named a different order, so nothing was signed"))
+        if !placed.isEmpty {
+            guard let swapCalls = YourAccountSwap.calls(orders: placed, network: net) else {
+                throw Failure(message: String(localized: "This swap could not be written"))
+            }
+            calls += swapCalls
         }
 
         let deployed = try await isDeployed(net, account)
         let (signerIndex, signer) = try await deviceSigner(net, account, deployed: deployed)
         let next = try YourAccountKey.nextKey(after: signerIndex)
         guard let nextKey = YourAccountKey.publicKey(next) else {
-            throw Failure(message: String(localized: "This swap could not be written"))
+            throw Failure(message: String(localized: "This send could not be written"))
         }
-        // What leaves the account, for the balance check before any prompt.
-        let spent = YourAccountOp.Payment(network: net, token: sell, amount: quote.sellAmount,
-                                          to: CowOrder.settlement, toName: nil)
+        report("account=\(account) deployed=\(deployed) signer=key\(signerIndex) next=key\(next) orders=\(placed.count)")
         let outcome = try await operate(net, account: account, deployed: deployed, calls: calls,
-                                        rotateTo: nextKey, payments: [spent], signer: signer,
-                                        reason: reason, stage: stage)
+                                        rotateTo: nextKey, payments: payments, signer: signer,
+                                        reason: reason, dryRun: dryRun, report: report, stage: stage)
         let sent = Sent(outcome: await settle(outcome, net, account, next: next, x: nextKey.x), network: net)
-        guard case .landed = sent.outcome else { return Swapped(sent: sent, status: nil) }
-        var last: String?
+        guard case .landed = sent.outcome, !placed.isEmpty else {
+            return Transacted(sent: sent, orders: placed.map { _ in nil })
+        }
+        var last: [String?] = placed.map { _ in nil }
         for _ in 0..<40 {
-            last = await swapStatus(net, uid: uid)
-            if last == "fulfilled" || last == "expired" || last == "cancelled" { break }
+            for (i, p) in placed.enumerated() where !Self.settled(last[i]) {
+                last[i] = await swapStatus(net, uid: p.uid)
+            }
+            if last.allSatisfy(Self.settled) { break }
             try await Task.sleep(nanoseconds: 3_000_000_000)
         }
-        return Swapped(sent: sent, status: last)
+        return Transacted(sent: sent, orders: last)
+    }
+
+    private static func settled(_ status: String?) -> Bool {
+        status == "fulfilled" || status == "expired" || status == "cancelled"
+    }
+
+    // MARK: - Revoke (prd §1437)
+
+    /// Take back what the account let others spend: every revoke on one
+    /// network in one operation, signed by this iPhone, with the key change.
+    /// The calls are `WalletPrepare`'s own (`revokeTo`/`revokeData`), the
+    /// same bytes the prepare card has always shown.
+    static func revoke(_ revokes: [(to: String, data: String)], on net: Network, reason: String,
+                       stage: @escaping @Sendable (Stage) async -> Void) async throws -> Sent {
+        guard let account = YourAccountKey.address else {
+            throw Failure(message: String(localized: "There is no account on this iPhone"))
+        }
+        guard let zero = SafeABI.word(uint256: "0") else { throw Failure(message: String(localized: "This send could not be written")) }
+        var calls: [YourAccountOp.Call] = []
+        for r in revokes {
+            guard SafeABI.word(address: r.to) != nil, let data = SafeABI.hexBytes(r.data) else {
+                throw Failure(message: String(localized: "This send could not be written"))
+            }
+            calls.append(.init(operation: 0, to: r.to, value: zero, data: data))
+        }
+        guard !calls.isEmpty else { throw Failure(message: String(localized: "Nothing to revoke")) }
+        await stage(.preparing)
+        let deployed = try await isDeployed(net, account)
+        let (signerIndex, device) = try await deviceSigner(net, account, deployed: deployed)
+        let next = try YourAccountKey.nextKey(after: signerIndex)
+        guard let nextKey = YourAccountKey.publicKey(next) else {
+            throw Failure(message: String(localized: "This send could not be written"))
+        }
+        let outcome = try await operate(net, account: account, deployed: deployed, calls: calls,
+                                        rotateTo: nextKey, payments: [], signer: device,
+                                        reason: reason, stage: stage)
+        return Sent(outcome: await settle(outcome, net, account, next: next, x: nextKey.x), network: net)
     }
 
     // MARK: - One operation, end to end

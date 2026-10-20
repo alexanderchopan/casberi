@@ -52,7 +52,7 @@ extension FeedScreen {
 
     /// Where a cell's door lands: its section's header.
     enum SecurityAnchor: String {
-        case signatures, delegations, approvals, poisoning, fakeTokens, fakeTransfers
+        case account, signatures, delegations, approvals, poisoning, fakeTokens, fakeTransfers
         var id: String { "wallet.security.\(rawValue)" }
     }
 
@@ -67,6 +67,7 @@ extension FeedScreen {
     /// you. Each section draws only when it has rows.
     @ViewBuilder
     var walletSecuritySections: some View {
+        walletAccountSection
         walletSignaturesSection
         walletActingSection
         walletApprovalsSection
@@ -76,6 +77,31 @@ extension FeedScreen {
                              word: String(localized: "Fake tokens"))
         walletFlaggedSection(.fakeTransfer, anchor: .fakeTransfers,
                              word: String(localized: "Fake transfers"))
+    }
+
+    /// **YOUR ACCOUNT'S KEYS LEAD SECURITY (prd §1436, user: "ya this makes a
+    /// lot more sense").** This iPhone, the recovery key, the outside key —
+    /// `MoveSecurity`'s rows, moved here from Move so Move is the acts alone
+    /// and every question of keys has one home. On All, or with your account
+    /// picked; a followed wallet's Security is a reading, never a key.
+    @ViewBuilder
+    var walletAccountSection: some View {
+        if let account = YourAccountKey.address,
+           chrome.walletScope == nil || WalletWatch.sameAddress(chrome.walletScope ?? "", account) {
+            walletCard(String(localized: "Your account"), glyph: ScopeTileGlyph.move, anchor: SecurityAnchor.account.id) {
+                MoveSecurity(account: account)
+                    .listRowInsets(WalletCardStyle.rowInsets)
+                    .feedRowBackground()
+                    .listRowSeparator(.hidden)
+                    // The nudge's landing (`ShellChrome.openWalletSecurity`).
+                    .task(id: chrome.walletScrollRequest) {
+                        guard chrome.walletScrollRequest == SecurityAnchor.account.id else { return }
+                        try? await Task.sleep(for: .milliseconds(300))
+                        cardScrollTarget = SecurityAnchor.account.id
+                        chrome.walletScrollRequest = nil
+                    }
+            }
+        }
     }
 
     /// One kind of flagged transfer under its own name (it was one "Worth a
@@ -202,6 +228,98 @@ struct WalletSecurityFigure: View {
                 }
                 .disabled(count == 0)
             }
+        }
+    }
+}
+
+extension FeedScreen {
+    // MARK: - Revoke (prd §1437)
+
+    /// The grants your own account can take back here: its own, on a network
+    /// it acts on (Base, Ethereum). Every other grant keeps its prepare card.
+    var walletRevocable: [UUID: Thing] {
+        guard let account = YourAccountKey.address else { return [:] }
+        var out: [UUID: Thing] = [:]
+        for thing in walletLive.activeApprovals where thing.isLive
+            && WalletWatch.sameAddress(thing.walletAddress ?? "", account)
+            && YourAccountOp.network(appName: Self.approvalNetwork(thing)) != nil {
+            out[thing.id] = thing
+        }
+        return out
+    }
+
+    /// "base-mainnet" off `wallet:approval:<network>:<tx>:<log>`.
+    static func approvalNetwork(_ thing: Thing) -> String {
+        let parts = (thing.sourceRef ?? "").split(separator: ":")
+        return parts.count == 5 ? String(parts[2]) : ""
+    }
+
+    /// Take the grants back: each re-read live first (one gone already is
+    /// skipped), then one operation a network, signed by this iPhone. The
+    /// calls are the prepare card's own bytes (`WalletPrepare.Check`).
+    func walletRevoke(_ ids: [UUID]) {
+        guard walletRevoking == nil else { return }
+        let things = ids.compactMap { walletRevocable[$0] }
+        guard !things.isEmpty else { return }
+        let inFlight = Set(things.map(\.id))
+        walletRevoking = (inFlight, String(localized: "Preparing…"))
+        Task {
+            do {
+                var networks: [YourAccountOp.Network] = []
+                var revokes: [Int: [(to: String, data: String)]] = [:]
+                var names: [Int: [String]] = [:]
+                for thing in things {
+                    guard let check = await WalletPrepare.check(for: thing) else {
+                        throw YourAccountChain.Failure(message: String(localized: "That grant could not be read"))
+                    }
+                    guard check.active, let to = check.revokeTo, let data = check.revokeData,
+                          let net = YourAccountOp.network(appName: check.network ?? "") else { continue }
+                    if !networks.contains(net) { networks.append(net) }
+                    revokes[net.chainId, default: []].append((to, data))
+                    names[net.chainId, default: []].append(walletLive.exposure.all.first { $0.thingID == thing.id }?.spender ?? thing.title)
+                }
+                var landed: [String] = []
+                for net in networks {
+                    let who = names[net.chainId] ?? []
+                    let reason = who.count == 1
+                        ? String(localized: "Revoke \(who[0])'s access")
+                        : String(localized: "Revoke \(who.count) approvals on \(net.name)")
+                    let sent = try await YourAccountChain.revoke(revokes[net.chainId] ?? [], on: net, reason: reason) { s in
+                        await MainActor.run { walletRevoking = (inFlight, Self.stageWord(s)) }
+                    }
+                    switch sent.outcome {
+                    case .landed: landed.append(net.name)
+                    case .pending:
+                        chrome.flash(String(localized: "Sent, and not yet seen on \(net.name). Check before sending again"), seconds: 6)
+                    case .dryRun: break
+                    }
+                }
+                walletRevoking = nil
+                if !landed.isEmpty {
+                    chrome.flash(String(localized: "Revoked on \(landed.formatted(.list(type: .and)))"), tone: .success, seconds: 4)
+                } else if networks.isEmpty {
+                    chrome.flash(String(localized: "That grant is no longer here."))
+                }
+                // The list re-reads every allowance live, so what was taken
+                // back drops out of it.
+                loadWalletLive()
+                chrome.refreshRooms()
+            } catch let failure as YourAccountChain.Failure {
+                walletRevoking = nil
+                chrome.flash(failure.message, tone: .failure, seconds: 5)
+            } catch {
+                walletRevoking = nil
+                chrome.flash(String(localized: "Not revoked"), tone: .failure)
+            }
+        }
+    }
+
+    static func stageWord(_ stage: YourAccountChain.Stage) -> String {
+        switch stage {
+        case .preparing: String(localized: "Preparing…")
+        case .signing: String(localized: "Confirm with Face ID")
+        case .sending: String(localized: "Sending…")
+        case .landing: String(localized: "Waiting…")
         }
     }
 }

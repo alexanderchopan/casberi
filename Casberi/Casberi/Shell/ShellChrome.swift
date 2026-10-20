@@ -1148,6 +1148,18 @@ final class ShellChrome {
         sourceRequest = CategoryFold.walletRoom
     }
 
+    /// The Wallet's Security tile, scrolled to one of its sections (prd
+    /// §1436: your account's keys live there; the Needs you nudge lands on
+    /// them). The section's card reads `walletScrollRequest` as it appears.
+    var walletScrollRequest: String?
+    func openWalletSecurity(at anchor: String) {
+        roomsTray = false
+        walletScope = nil
+        walletSection = .security
+        walletScrollRequest = anchor
+        sourceRequest = CategoryFold.walletRoom
+    }
+
     /// Land in a connected app's feed from a sheet that has just closed.
     /// Already standing in that app's sheet, the closed sheet was the way
     /// back to it; another app's sheet steps down first (prd §1372).

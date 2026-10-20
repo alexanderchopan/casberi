@@ -57,6 +57,14 @@ struct WalletApprovalExposureCard: View {
     var more: (() -> Void)? = nil
     /// Opens a grant's own prepare card (live allowance, revoke calldata, fee
     /// quote, Revoke.cash door). Reads and previews only — prd §112.
+    /// **REVOKE IN THE APP (prd §1437).** The grants your own account can take
+    /// back here, by thing; `revoke` takes one, `revokeAll` every one. While
+    /// one runs, `revoking` names the grants in flight and the stage's word
+    /// they wear; every other Revoke waits.
+    var revocable: Set<UUID> = []
+    var revoking: (ids: Set<UUID>, word: String)? = nil
+    var revoke: ((WalletApprovalExposure.Grant) -> Void)? = nil
+    var revokeAll: (() -> Void)? = nil
     var onOpen: (WalletApprovalExposure.Grant) -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -90,6 +98,9 @@ struct WalletApprovalExposureCard: View {
                               opens: !open, action: more)
                 }
 
+                if revocable.count > 1, let revokeAll {
+                    revokeAllRow(revokeAll)
+                }
                 if let target = exposure.oldestWorthReviewing {
                     reviewButton(target)
                 }
@@ -147,10 +158,62 @@ struct WalletApprovalExposureCard: View {
                         .foregroundStyle(DS.textPrimary)
                         .monospacedDigit()
                 }
+                if revocable.contains(grant.thingID), let revoke {
+                    revokeWord(grant, revoke)
+                }
             }
             .contentShape(Rectangle())
         }
         .buttonStyle(RowPress())
+        .padding(.vertical, DS.Space.s2)
+    }
+
+    /// The verb at the row's trailing edge, in the pick's ink; in flight it
+    /// wears the stage's word and every other one waits.
+    private func revokeWord(_ grant: WalletApprovalExposure.Grant,
+                            _ revoke: @escaping (WalletApprovalExposure.Grant) -> Void) -> some View {
+        let inFlight = revoking?.ids.contains(grant.thingID) == true
+        return Button {
+            DSHaptic.selection()
+            revoke(grant)
+        } label: {
+            Text(verbatim: inFlight ? revoking?.word ?? "" : String(localized: "Revoke"))
+                .dsText(.body17)
+                .foregroundStyle(revoking == nil ? DS.pickInk : DS.textTertiary)
+                .lineLimit(1)
+                .fixedSize()
+                .frame(minHeight: 44)
+        }
+        .buttonStyle(RowPress())
+        .disabled(revoking != nil)
+        .layoutPriority(1)
+        .accessibilityLabel(Text("Revoke \(grant.spender)'s access"))
+    }
+
+    /// Every grant the account can take back, in one transaction a network
+    /// — a verb is a row (prd §746).
+    private func revokeAllRow(_ act: @escaping () -> Void) -> some View {
+        Button {
+            DSHaptic.selection()
+            act()
+        } label: {
+            HStack(spacing: DS.Space.s3) {
+                ZStack {
+                    Image(systemName: "xmark.shield")
+                        .dsGlyph(.body, weight: .semibold)
+                        .foregroundStyle(DS.brandInk)
+                        .accessibilityHidden(true)
+                }
+                .frame(width: DS.Face.list, height: DS.Face.list)
+                Text(verbatim: revoking.map(\.word) ?? String(localized: "Revoke all \(revocable.count)"))
+                    .dsText(.body17)
+                    .foregroundStyle(revoking == nil ? DS.textSecondary : DS.textTertiary)
+                Spacer(minLength: 0)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(RowPress())
+        .disabled(revoking != nil)
         .padding(.vertical, DS.Space.s2)
     }
 

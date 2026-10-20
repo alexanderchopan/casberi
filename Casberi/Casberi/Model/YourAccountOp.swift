@@ -38,6 +38,16 @@ enum YourAccountOp {
         rpcs: ["https://rpc.mevblocker.io", "https://ethereum-rpc.publicnode.com"],
         bundlers: ["https://public.pimlico.io/v2/1/rpc", "https://api.candide.dev/public/v3/1"],
         usdc: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", isTest: false)
+    /// The network behind one of this app's own chain names ("base-mainnet",
+    /// the approvals' and receipts' spelling), when the account can act there.
+    static func network(appName: String) -> Network? {
+        switch appName {
+        case "base-mainnet": base
+        case "eth-mainnet": ethereum
+        default: nil
+        }
+    }
+
     static let baseSepolia = Network(
         name: "Base Sepolia", chainId: 84532,
         rpcs: ["https://sepolia.base.org", "https://base-sepolia-rpc.publicnode.com"],
@@ -316,11 +326,17 @@ enum YourAccountOp {
         return fraction.isEmpty ? whole : whole + "." + fraction
     }
 
-    /// The amount as the slab and Face ID say it: six places, or as many as
-    /// it takes so a real amount never reads "0".
+    /// The amount as the slab and Face ID say it: six places, or, when those
+    /// read "0" for a real amount, three significant digits of it
+    /// ("0.000000314 ETH", never eighteen places).
     static func spoken(_ units: String, decimals: Int) -> String {
         let six = display(units, decimals: decimals)
-        return six == "0" && units.contains(where: { $0 != "0" }) ? display(units, decimals: decimals, places: decimals) : six
+        guard six == "0", units.contains(where: { $0 != "0" }) else { return six }
+        let whole = display(units, decimals: decimals, places: decimals)
+        guard let dot = whole.firstIndex(of: "."),
+              let first = whole[dot...].firstIndex(where: { $0 != "0" && $0 != "." }) else { return whole }
+        let places = whole.distance(from: whole.index(after: dot), to: first) + 3
+        return display(units, decimals: decimals, places: places)
     }
 
     /// a ≤ b, both decimal strings of base units.

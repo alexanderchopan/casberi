@@ -18,7 +18,8 @@
 # moved inside the packed tuple fails even when both encoders move together.
 # The send's id (`userOpHash`) is pinned to EntryPoint v0.7's own answer, and
 # the recovery key's two operations (prd §1427) to the spike's landed ones,
-# and a swap's order id (prd §1430) to the one CoW's API answered for it. It
+# and a swap's order id (prd §1430) to the one CoW's API answered for it, and
+# two orders' calls to one approval of their sum (prd §1436). It
 # also holds Move to every build — no hidden or dormant feature in a release
 # (prd §1435, App Review 2.3.1) — and Base Sepolia to DEBUG always.
 set -euo pipefail
@@ -129,6 +130,30 @@ check(CowOrder.preSignature(swapCalls[2].data).map { $0.uid == cowUID && $0.sign
       "the pre-signature is not setPreSignature(uid, true) on the settlement contract")
 check(YourAccountSwap.calls(order: cowOrder, uid: cowUID, sellingETH: false, network: YourAccountOp.base)!.count == 2,
       "selling a token wraps nothing")
+// Two orders in one operation (prd §1436): one wrap for all the ETH they
+// sell, ONE approval for the sum — `approve` replaces an allowance, so two
+// would leave the first order unfillable — then each pre-signature.
+var laterJSON = quoteJSON
+laterJSON["quote"] = ["sellAmount": "198563874188220", "buyAmount": "476693", "feeAmount": "1436125811780", "validTo": 1792457395] as [String: Any]
+let laterOrder = YourAccountSwap.order(sell: YourAccountOp.eth, buy: YourAccountOp.usdc(on: YourAccountOp.base),
+                                       on: YourAccountOp.base, account: cowAccount, quote: YourAccountSwap.quote(from: laterJSON)!)!
+let laterUID = YourAccountSwap.uid(laterOrder, owner: cowAccount, chainId: 8453)!
+check(laterUID != cowUID, "a later expiry is another order")
+let two = YourAccountSwap.calls(orders: [.init(order: cowOrder, uid: cowUID, sellingETH: true),
+                                         .init(order: laterOrder, uid: laterUID, sellingETH: true)], network: YourAccountOp.base)!
+let doubled = SafeABI.word(uint256: "400000000000000")!
+check(two.count == 4 && two[0].value == doubled && two[0].to == YourAccountSwap.weth(chainId: 8453)!,
+      "two ETH orders wrap their sum once")
+check(two[1].data == YourAccount.sel("approve(address,uint256)") + YourAccount.w(YourAccountSwap.vaultRelayer) + doubled
+      && two.filter { $0.data.starts(with: YourAccount.sel("approve(address,uint256)")) }.count == 1, "two orders selling one token approve its SUM, once")
+check(CowOrder.preSignature(two[2].data)?.uid == cowUID && CowOrder.preSignature(two[3].data)?.uid == laterUID,
+      "each order is pre-signed, in order")
+let usdcOrder = YourAccountSwap.order(sell: YourAccountOp.usdc(on: YourAccountOp.base), buy: YourAccountOp.eth,
+                                      on: YourAccountOp.base, account: cowAccount, quote: swapQuote)!
+let mixed = YourAccountSwap.calls(orders: [.init(order: cowOrder, uid: cowUID, sellingETH: true),
+                                           .init(order: usdcOrder, uid: laterUID, sellingETH: false)], network: YourAccountOp.base)!
+check(mixed.count == 5 && mixed[0].value == cowOrder.sellAmount && mixed[1].to == cowOrder.sellToken && mixed[2].to == usdcOrder.sellToken,
+      "two tokens sold are two approvals, the ETH wrapped for its own order only")
 check(YourAccountSwap.minus(basisPoints: 50, of: "1000") == "995" && YourAccountSwap.minus(basisPoints: 50, of: "1") == "0"
       && YourAccountSwap.minus(basisPoints: 50, of: "123456789012345678901234567890") == "122839505067283950506728395050",
       "slippage arithmetic")
@@ -153,6 +178,8 @@ check(YourAccountOp.baseUnits(".5", decimals: 6) == "500000", ".5")
 check(YourAccountOp.display("1999999", decimals: 6, places: 2) == "1.99", "display rounds down")
 check(YourAccountOp.display("10000000000000000", decimals: 18) == "0.01", "display cuts zeros")
 check(YourAccountOp.display("0", decimals: 18) == "0", "display of nothing")
+check(YourAccountOp.spoken("314172465981", decimals: 18) == "0.000000314" && YourAccountOp.spoken("1500000", decimals: 6) == "1.5"
+      && YourAccountOp.spoken("100", decimals: 18) == "0.0000000000000001", "a tiny amount is spoken to three significant digits, never eighteen places")
 check(YourAccountOp.atMost("999", "1000") && !YourAccountOp.atMost("1001", "1000") && YourAccountOp.atMost("0100", "100"), "atMost")
 check(YourAccountOp.sum("999999999999999999999", "1") == "1000000000000000000000", "sum carries past UInt64")
 check(YourAccountOp.decimal(hexQuantity: "0xde0b6b3a7640000") == "1000000000000000000", "hex quantity")
