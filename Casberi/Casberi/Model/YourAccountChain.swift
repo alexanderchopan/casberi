@@ -374,16 +374,36 @@ enum YourAccountChain {
         return SafeCall.decodeUInt(answer) == 1
     }
 
-    /// A spend limit's session on an account already on the adapter: this
-    /// phone's session key may transfer at most `perSend` units of the
-    /// network's dollar a send, to anyone, and nothing else. Smart Sessions
-    /// is installed with it the first time, enabled beside it after; any
-    /// `retire` session still enabled is removed in the same operation.
-    /// Signed by this phone's account key like any send. Throwaway-only
-    /// outside a simulation, which also runs the call as the account.
-    static func installSession(on net: Network, perSend units: String, retire: [[UInt8]] = [], reason: String, dryRun: Bool,
-                               report: @escaping @Sendable (String) -> Void = { _ in },
-                               stage: @escaping @Sendable (Stage) async -> Void) async throws -> Sent {
+    /// The plan this phone installed on `net`, kept beside its keys' public
+    /// halves: which windows exist and what each allows. The chain is the
+    /// word on whether a window's session is enabled.
+    private static func planKey(_ net: Network) -> String { "yourAccount.spendLimit.\(net.chainId)" }
+
+    static func plan(_ net: Network) -> YourAccount7579.Plan? {
+        UserDefaults.standard.data(forKey: planKey(net)).flatMap { try? JSONDecoder().decode(YourAccount7579.Plan.self, from: $0) }
+    }
+
+    /// Every session the account has on Smart Sessions.
+    static func sessionIds(_ net: Network, _ account: String) async throws -> [[UInt8]] {
+        let answer = SafeABI.hexBytes(try await ethCall(net, to: YourAccount7579.smartSession,
+                                                        data: YourAccount7579.permissionIdsCall(account: account))) ?? []
+        guard answer.count >= 64 else { return [] }
+        let count = answer[32..<64].reduce(0) { $0 << 8 | Int($1) }
+        guard count < 4096, answer.count >= 64 + count * 32 else { return [] }
+        return (0..<count).map { Array(answer[(64 + $0 * 32)..<(96 + $0 * 32)]) }
+    }
+
+    /// A spend limit (prd §1447 items 14–15): one session per window of
+    /// `plan`, each letting this phone's session key move up to the plan's
+    /// dollar and ETH totals inside it — the dollar by `transfer`, ETH through
+    /// Multicall3. Smart Sessions is installed with them the first time and
+    /// enabled beside the old after, every older session removed in the same
+    /// operation: a new limit replaces the last. Signed by this phone's
+    /// account key like any send. Throwaway-only outside a simulation, which
+    /// also runs each call as the account.
+    static func installLimit(on net: Network, plan: YourAccount7579.Plan, reason: String, dryRun: Bool,
+                             report: @escaping @Sendable (String) -> Void = { _ in },
+                             stage: @escaping @Sendable (Stage) async -> Void) async throws -> Sent {
         guard let account = YourAccountKey.address else {
             throw Failure(message: String(localized: "There is no account on this iPhone"))
         }
@@ -395,18 +415,20 @@ enum YourAccountChain {
             throw Failure(message: String(localized: "A spend limit is not available yet"))
         }
         let validatorInit = try sessionInit()
-        let token = net.dollar
-        guard let session = YourAccount7579.session(validatorInit: validatorInit, token: token, perSend: units) else {
+        let sessions = plan.windows.compactMap { YourAccount7579.session(validatorInit: validatorInit, plan: plan, window: $0) }
+        guard !sessions.isEmpty, sessions.count == plan.windows.count else {
             throw Failure(message: String(localized: "This send could not be written"))
         }
+        let fresh = plan.windows.map { YourAccount7579.permissionId(validatorInit: validatorInit, salt: YourAccount7579.salt(plan, $0)) }
         let installed = try await sessionsInstalled(net, account)
-        var calls = [installed ? YourAccount7579.enableSessionCall(session)
-                               : YourAccount7579.installSessionCall(account: account, session: session)]
-        for old in retire where installed {
-            if try await sessionEnabled(net, account, old) { calls.append(YourAccount7579.removeSessionCall(old)) }
+        var calls = [installed ? YourAccount7579.enableSessionsCall(sessions)
+                               : YourAccount7579.installSessionsCall(account: account, sessions: sessions)]
+        if installed {
+            for old in try await sessionIds(net, account) where !fresh.contains(old) {
+                calls.append(YourAccount7579.removeSessionCall(old))
+            }
         }
-        let permission = YourAccount7579.permissionId(validatorInit: validatorInit, salt: YourAccount7579.salt(token: token, units: units))
-        report("permissionId=\(SafeABI.hex(permission)) installed=\(installed) calls=\(calls.count)")
+        report("windows=\(plan.windows.count) installed=\(installed) calls=\(calls.count) first=\(SafeABI.hex(fresh[0]))")
         if dryRun {
             for call in calls {
                 do {
@@ -425,24 +447,21 @@ enum YourAccountChain {
         let outcome = try await operate(net, account: account, deployed: true, calls: calls,
                                         rotateTo: nextKey, payments: [], signer: device, reason: reason,
                                         dryRun: dryRun, report: report, stage: stage)
+        if case .landed = outcome, let data = try? JSONEncoder().encode(plan) {
+            UserDefaults.standard.set(data, forKey: planKey(net))
+        }
         return Sent(outcome: await settle(outcome, net, account, next: next, x: nextKey.x), network: net)
     }
 
-    /// The first, ETH session the throwaway was given (salt zero), which no
-    /// send can pass: retired by the next install.
-    static func firstSessionId() throws -> [UInt8] {
-        YourAccount7579.permissionId(validatorInit: try sessionInit(), salt: [UInt8](repeating: 0, count: 32))
-    }
-
-    /// A transfer of `units` of the network's dollar signed by the session
-    /// key alone, through Smart Sessions, under the limit set at `perSend`:
-    /// the nonce key names Smart Sessions, the signature is USE mode, and the
-    /// EntryPoint's own hash is what Face ID approves. Over the limit the
-    /// policy refuses it in validation, so the bundler's estimate is where
-    /// it stops.
-    static func sessionSend(on net: Network, to target: String, units: String, perSend: String, reason: String, dryRun: Bool,
-                            report: @escaping @Sendable (String) -> Void = { _ in },
-                            stage: @escaping @Sendable (Stage) async -> Void) async throws -> Sent {
+    /// `units` of `token` (ETH or the network's dollar) to `target`, signed
+    /// by the session key alone, on the window of this phone's plan that
+    /// holds now: the nonce key names Smart Sessions, the signature is USE
+    /// mode, and the EntryPoint's own hash is what Face ID approves. Over
+    /// the window's total the policy refuses it in validation, so the
+    /// bundler's estimate is where it stops.
+    static func limitSend(on net: Network, token: YourAccountOp.Token, to target: String, units: String, reason: String, dryRun: Bool,
+                          report: @escaping @Sendable (String) -> Void = { _ in },
+                          stage: @escaping @Sendable (Stage) async -> Void) async throws -> Sent {
         guard let account = YourAccountKey.address else {
             throw Failure(message: String(localized: "There is no account on this iPhone"))
         }
@@ -450,13 +469,23 @@ enum YourAccountChain {
             throw Failure(message: String(localized: "A spend limit is not available yet"))
         }
         await stage(.preparing)
-        guard try await accountEntry(net, account) == .adapter else {
+        guard try await accountEntry(net, account) == .adapter, let plan = plan(net),
+              let window = plan.window(at: Int(Date().timeIntervalSince1970)) else {
             throw Failure(message: String(localized: "A spend limit is not available yet"))
         }
         let validatorInit = try sessionInit()
-        let permission = YourAccount7579.permissionId(validatorInit: validatorInit,
-                                                      salt: YourAccount7579.salt(token: net.dollar, units: perSend))
-        guard let callData = YourAccount7579.transferCall(token: net.dollar, to: target, units: units) else {
+        let permission = YourAccount7579.permissionId(validatorInit: validatorInit, salt: YourAccount7579.salt(plan, window))
+        report("window=\(window.from)–\(window.until) permissionId=\(SafeABI.hex(permission))")
+        let call: [UInt8]?
+        if let contract = token.contract {
+            guard WalletWatch.sameAddress(contract, plan.dollar) else {
+                throw Failure(message: String(localized: "A spend limit is not available yet"))
+            }
+            call = YourAccount7579.transferCall(token: contract, to: target, units: units)
+        } else {
+            call = YourAccount7579.ethSendCall(to: target, wei: units)
+        }
+        guard let callData = call else {
             throw Failure(message: String(localized: "This send could not be written"))
         }
         var op = YourAccountOp.Op(sender: account, nonce: 0, factory: nil, factoryData: [], callData: callData)
@@ -910,6 +939,11 @@ enum YourAccountChain {
         // Which contract this account answers through on this network
         // (prd §1447 item 11): the 4337 module, or the 7579 adapter.
         let entry: YourAccountOp.Entry = deployed ? try await accountEntry(net, account) : .module4337
+        // A token approved to Multicall3 would ride every spend limit's ETH
+        // route (prd §1447 item 15): never, from any operation.
+        guard !calls.contains(where: YourAccount7579.approvesMulticall3) else {
+            throw Failure(message: String(localized: "This send could not be written"))
+        }
         guard let callData = YourAccountOp.callData(calls: calls, rotateTo: next, entry: entry) else {
             throw Failure(message: String(localized: "This send could not be written"))
         }

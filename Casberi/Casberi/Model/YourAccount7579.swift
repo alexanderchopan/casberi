@@ -35,6 +35,16 @@ enum YourAccount7579 {
     /// older SmartSession (`0x…2B0e…`) shares the Session shape; not it.
     static let smartSession = "0x00000000008bDABA73cD9815d79069c247Eb4bDA"
     static let uniActionPolicy = "0x0000000000714cf48fcf88a0bfba70d313415032"
+    static let timeFramePolicy = "0x0000000000d30f611fa3bf652ac6879428586930"
+    static let valueLimitPolicy = "0x000000000021dc45451291bcdfc9f0b46d6f0278"
+    /// Multicall3, the standard contract at one address on every network:
+    /// ETH under the limit goes THROUGH it, because a plain ETH send carries
+    /// no call a policy can be pinned to, and the only way to allow one to
+    /// anyone is a catch-all that would also let the session call the
+    /// account itself (prd §1447 item 15). Multicall3 holds no power over the
+    /// account, so through it the session can spend ETH up to the limit and
+    /// nothing else — as long as the account never approves it a token.
+    static let multicall3 = "0xcA11bde05977b3631167028862bE2a173976CA11"
     /// Rhinestone's passkey validator, the audited (ChainLight) build that
     /// answers a session's `validateSignatureWithData`; the module SDK's
     /// `0x7ab16f…` does not, so it cannot sign for a session.
@@ -106,22 +116,55 @@ enum YourAccount7579 {
             + id
     }
 
+    /// One period's allowance: from `from` until `until` (unix seconds), at
+    /// most `dollarCap` units of the network's dollar and `ethCap` wei, each a
+    /// running total within it. "0" leaves that token out: it then always
+    /// needs both keys.
+    struct Window: Codable, Equatable {
+        let from: Int
+        let until: Int
+    }
+
+    struct Plan: Codable, Equatable {
+        let chainId: Int
+        let dollar: String
+        let dollarCap: String
+        let ethCap: String
+        let windows: [Window]
+
+        /// The window that holds `now`, if any.
+        func window(at now: Int) -> Window? { windows.first { $0.from <= now && now < $0.until } }
+    }
+
+    /// `count` back-to-back windows of `seconds` each, from `start`. A period
+    /// limit is set up AHEAD: no deployed policy refills, so each period is
+    /// its own session, valid only inside it (TimeFramePolicy).
+    static func windows(start: Int, seconds: Int, count: Int) -> [Window] {
+        (0..<max(count, 0)).map { Window(from: start + $0 * seconds, until: start + ($0 + 1) * seconds) }
+    }
+
     /// UniActionPolicy's `ActionConfig`, all static: no ETH with the call,
-    /// and ONE rule — the token amount (`transfer`'s second word, offset 32)
-    /// at most `units`. The policy refuses a config with no rule, and every
-    /// rule reads the call's data, so a plain ETH send can never pass it:
-    /// ETH has no per-send cap among the deployed policies (prd §1447 item 14).
-    static func perSendConfig(units: String) -> [UInt8]? {
+    /// and ONE rule on the token amount (`transfer`'s second word, offset
+    /// 32): at most `units` a send, and — `isLimited` — at most `units` in
+    /// all, so the session's total within its window.
+    static func tokenTotalConfig(units: String) -> [UInt8]? {
         guard let cap = word(units) else { return nil }
         let lessThanOrEqual = 4
-        let rule = YourAccount.w(lessThanOrEqual) + YourAccount.w(32) + YourAccount.w(0) + cap
-            + YourAccount.w(0) + YourAccount.w(0)
+        let rule = YourAccount.w(lessThanOrEqual) + YourAccount.w(32) + YourAccount.w(1) + cap
+            + cap + YourAccount.w(0)                                             // usage: limit, used
         return YourAccount.w(0) + YourAccount.w(1) + rule + [UInt8](repeating: 0, count: 15 * 6 * 32)
     }
 
-    /// A session's salt, so each limit is its own permission.
-    static func salt(token: String, units: String) -> [UInt8] {
-        Keccak256.hash(Array("casberi.spendLimit".utf8) + YourAccount.w(token) + (word(units) ?? []))
+    /// TimeFramePolicy's 12 bytes: `validUntil` then `validAfter`, 6 each.
+    static func timeFrameInit(_ window: Window) -> [UInt8] {
+        func six(_ n: Int) -> [UInt8] { (0..<6).map { UInt8(truncatingIfNeeded: n >> (8 * (5 - $0))) } }
+        return six(window.until) + six(window.from)
+    }
+
+    /// A window's salt, so each period is its own permission.
+    static func salt(_ plan: Plan, _ window: Window) -> [UInt8] {
+        Keccak256.hash(Array("casberi.spendLimit".utf8) + YourAccount.w(plan.dollar) + (word(plan.dollarCap) ?? [])
+                       + (word(plan.ethCap) ?? []) + YourAccount.w(window.from) + YourAccount.w(window.until))
     }
 
     /// The session's id: `keccak256(abi.encode(validator, initData, salt))`.
@@ -129,35 +172,61 @@ enum YourAccount7579 {
         Keccak256.hash(YourAccount.w(webAuthnValidator) + YourAccount.w(96) + salt + YourAccount.dynamic(validatorInit))
     }
 
-    /// One `Session`: the passkey validator over `validatorInit`, no user
-    /// operation policies, no ERC-1271, and ONE action — `token.transfer`,
-    /// to anyone, at most `units` a send.
-    static func session(validatorInit: [UInt8], token: String, perSend units: String) -> [UInt8]? {
-        guard let config = perSendConfig(units: units) else { return nil }
+    private static func policyList(_ policy: String, _ initData: [UInt8]) -> [UInt8] {
+        YourAccount.w(1) + YourAccount.w(32) + YourAccount.w(policy) + YourAccount.w(64) + YourAccount.dynamic(initData)
+    }
+
+    private static func selectorWord(_ signature: String) -> [UInt8] {
+        YourAccount.sel(signature) + [UInt8](repeating: 0, count: 28)
+    }
+
+    /// One window's `Session`: the passkey validator over `validatorInit`,
+    /// the window as its user-operation policy, no ERC-1271, and at most two
+    /// actions — the dollar's `transfer` to anyone, totalled; ETH through
+    /// Multicall3's `aggregate3Value`, totalled (ValueLimitPolicy).
+    static func session(validatorInit: [UInt8], plan: Plan, window: Window) -> [UInt8]? {
+        var actions: [[UInt8]] = []
+        if plan.dollarCap != "0" {
+            guard let config = tokenTotalConfig(units: plan.dollarCap) else { return nil }
+            actions.append(selectorWord("transfer(address,uint256)") + YourAccount.w(plan.dollar) + YourAccount.w(96)
+                           + policyList(uniActionPolicy, config))
+        }
+        if plan.ethCap != "0" {
+            guard let cap = word(plan.ethCap) else { return nil }
+            actions.append(selectorWord("aggregate3Value((address,bool,uint256,bytes)[])") + YourAccount.w(multicall3)
+                           + YourAccount.w(96) + policyList(valueLimitPolicy, cap))
+        }
+        guard !actions.isEmpty else { return nil }
+        var heads: [UInt8] = [], tails: [UInt8] = []
+        for action in actions {
+            heads += YourAccount.w(actions.count * 32 + tails.count)
+            tails += action
+        }
+        let actionList = YourAccount.w(actions.count) + heads + tails
         let initTail = YourAccount.dynamic(validatorInit)
-        let userOpPolicies = YourAccount.w(0)
+        let userOpPolicies = policyList(timeFramePolicy, timeFrameInit(window))
         let erc7739 = YourAccount.w(64) + YourAccount.w(96) + YourAccount.w(0) + YourAccount.w(0)
-        let policy = YourAccount.w(uniActionPolicy) + YourAccount.w(64) + YourAccount.dynamic(config)
-        let policies = YourAccount.w(1) + YourAccount.w(32) + policy
-        let transfer = YourAccount.sel("transfer(address,uint256)") + [UInt8](repeating: 0, count: 28)
-        let action = transfer + YourAccount.w(token) + YourAccount.w(96) + policies
-        let actions = YourAccount.w(1) + YourAccount.w(32) + action
-        let head = 7 * 32
-        let a = head, b = a + initTail.count, c = b + userOpPolicies.count, d = c + erc7739.count
-        return YourAccount.w(webAuthnValidator) + YourAccount.w(a) + salt(token: token, units: units)
+        let a = 7 * 32, b = a + initTail.count, c = b + userOpPolicies.count, d = c + erc7739.count
+        return YourAccount.w(webAuthnValidator) + YourAccount.w(a) + salt(plan, window)
             + YourAccount.w(b) + YourAccount.w(c) + YourAccount.w(d) + YourAccount.w(0)
-            + initTail + userOpPolicies + erc7739 + actions
+            + initTail + userOpPolicies + erc7739 + actionList
     }
 
-    private static func sessions(_ session: [UInt8]) -> [UInt8] {
-        YourAccount.w(32) + YourAccount.w(1) + YourAccount.w(32) + session
+    /// `abi.encode(Session[])`.
+    private static func sessions(_ list: [[UInt8]]) -> [UInt8] {
+        var heads: [UInt8] = [], tails: [UInt8] = []
+        for session in list {
+            heads += YourAccount.w(list.count * 32 + tails.count)
+            tails += session
+        }
+        return YourAccount.w(32) + YourAccount.w(list.count) + heads + tails
     }
 
-    /// `enableSessions([session])`, on Smart Sessions already installed.
-    static func enableSessionCall(_ session: [UInt8]) -> Call {
+    /// `enableSessions(sessions)`, on Smart Sessions already installed.
+    static func enableSessionsCall(_ list: [[UInt8]]) -> Call {
         Call(operation: 0, to: smartSession, value: YourAccount.w(0),
              data: YourAccount.sel("enableSessions((address,bytes,bytes32,(address,bytes)[],((bytes32,string[])[],(address,bytes)[]),(bytes4,address,(address,bytes)[])[],bool)[])")
-                + sessions(session))
+                + sessions(list))
     }
 
     /// `removeSession(permissionId)`: a limit taken back.
@@ -166,10 +235,10 @@ enum YourAccount7579 {
              data: YourAccount.sel("removeSession(bytes32)") + permissionId)
     }
 
-    /// `installModule(1, smartSession, ENABLE ‖ abi.encode(Session[1]))`,
+    /// `installModule(1, smartSession, ENABLE ‖ abi.encode(Session[]))`,
     /// called by the account on itself (the adapter's `onlyEntryPointOrSelf`).
-    static func installSessionCall(account: String, session: [UInt8]) -> Call {
-        let initData: [UInt8] = [0x01] + sessions(session)
+    static func installSessionsCall(account: String, sessions list: [[UInt8]]) -> Call {
+        let initData: [UInt8] = [0x01] + sessions(list)
         return Call(operation: 0, to: account, value: YourAccount.w(0),
                     data: YourAccount.sel("installModule(uint256,address,bytes)") + YourAccount.w(1)
                         + YourAccount.w(smartSession) + YourAccount.w(96) + YourAccount.dynamic(initData))
@@ -181,11 +250,39 @@ enum YourAccount7579 {
         return executeSingle(to: token, wei: "0", data: YourAccount.sel("transfer(address,uint256)") + YourAccount.w(to) + amount)
     }
 
+    /// `wei` ETH to `to` THROUGH Multicall3 — `aggregate3Value([(to, no
+    /// failure allowed, wei, no data)])` with `wei` on the call — as the
+    /// adapter's one plain call. Multicall3 forwards it with all its gas, so
+    /// a smart account receives it too.
+    static func ethSendCall(to: String, wei: String) -> [UInt8]? {
+        guard let value = word(wei) else { return nil }
+        let call3 = YourAccount.w(to) + YourAccount.w(0) + value + YourAccount.w(128) + YourAccount.w(0)
+        let data = YourAccount.sel("aggregate3Value((address,bool,uint256,bytes)[])")
+            + YourAccount.w(32) + YourAccount.w(1) + YourAccount.w(32) + call3
+        return executeSingle(to: multicall3, wei: wei, data: data)
+    }
+
+    /// Whether `call` would let Multicall3 spend a token of the account's —
+    /// an `approve`, `increaseAllowance` or `setApprovalForAll` naming it —
+    /// which would hand every session's ETH route the token too. Refused.
+    static func approvesMulticall3(_ call: Call) -> Bool {
+        let spenderFirst = ["approve(address,uint256)", "increaseAllowance(address,uint256)", "setApprovalForAll(address,bool)"]
+        guard call.data.count >= 36 else { return false }
+        let selector = Array(call.data.prefix(4))
+        guard spenderFirst.contains(where: { YourAccount.sel($0) == selector }) else { return false }
+        return Array(call.data[4..<36]) == YourAccount.w(multicall3)
+    }
+
     /// The adapter's `execute(mode 0, target ‖ value ‖ data)`: one plain call.
     static func executeSingle(to target: String, wei: String, data: [UInt8] = []) -> [UInt8]? {
         guard let value = word(wei) else { return nil }
         return YourAccount.sel("execute(bytes32,bytes)") + YourAccount.w(0) + YourAccount.w(64)
             + YourAccount.dynamic(YourAccount.addressBytes(target) + value + data)
+    }
+
+    /// `getPermissionIDs(account)`: every session the account has.
+    static func permissionIdsCall(account: String) -> [UInt8] {
+        YourAccount.sel("getPermissionIDs(address)") + YourAccount.w(account)
     }
 
     /// The nonce key that picks Smart Sessions: its address, then 4 zero bytes.

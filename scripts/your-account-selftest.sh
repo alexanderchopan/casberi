@@ -110,10 +110,27 @@ let svi = YourAccount7579.validatorInitData(x: sx, y: sy)
 check(svi.count == 320, "the session key's config no longer fits Smart Sessions' 320 bytes")
 check(Keccak256.hexString(k(svi)) == "ce8b39a70ac8d8be4c45ed41d887c2cc38c659d2ecb29018deb7013bab3a93af", "the session key's packed config changed")
 let susdc = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
-check(Keccak256.hexString(YourAccount7579.permissionId(validatorInit: svi, salt: YourAccount7579.salt(token: susdc, units: "1000000")))
-      == "c8c2da9203b8cc3775942f9fdd628518d1fc54e7cc86cfd880dbae4e3d0bdf29", "the session's permission id changed")
-check(Keccak256.hexString(k(YourAccount7579.session(validatorInit: svi, token: susdc, perSend: "1000000")!))
-      == "e9c7bea6c923dce9251335ce7d2a77fe42b540a60dcad4f42233f64e728cbfe5", "the spend limit's session bytes changed")
+// A period limit (prd §1447 item 15): one session per window, the dollar
+// by `transfer` and ETH through Multicall3, each a total within the window.
+let swin = YourAccount7579.Window(from: 1792560060, until: 1792560660)
+let splan = YourAccount7579.Plan(chainId: 8453, dollar: susdc, dollarCap: "600000", ethCap: "2000000000000", windows: [swin])
+check(SafeABI.hex(YourAccount7579.timeFrameInit(swin)) == "0x00006ad84e1400006ad84bbc", "a window's time frame is not validUntil then validAfter, six bytes each")
+check(Keccak256.hexString(YourAccount7579.permissionId(validatorInit: svi, salt: YourAccount7579.salt(splan, swin)))
+      == "22de65785c1c0634061ef98a5e609853cb7ca904ea19b329ebe33add6b88fad7", "a window's permission id changed")
+check(Keccak256.hexString(k(YourAccount7579.session(validatorInit: svi, plan: splan, window: swin)!))
+      == "6c5a443b08d2faee2e9ae231c2ed4a737f745aece0de9a712e563c97e2b90d75", "a window's session bytes changed")
+check(YourAccount7579.windows(start: 100, seconds: 10, count: 3) == [.init(from: 100, until: 110), .init(from: 110, until: 120), .init(from: 120, until: 130)],
+      "windows are not back to back")
+check(splan.window(at: 1792560660) == nil && splan.window(at: 1792560060) == swin, "a window does not hold its start and drop its end")
+let sacct = "0x82d443cb2dc0F924f5Cc5156e557ECB202283Dc6"
+check(Keccak256.hexString(k(YourAccount7579.ethSendCall(to: sacct, wei: "1500000000000")!))
+      == "0f786ad4dae2db1d610f549ea6a7f1e87a37be14b2ce0700d61e59e517886d93", "ETH under the limit no longer goes through Multicall3 as built")
+let mApprove = YourAccountOp.Call(operation: 0, to: susdc, value: YourAccount.w(0),
+                                  data: YourAccount.sel("approve(address,uint256)") + YourAccount.w(YourAccount7579.multicall3) + YourAccount.w(1))
+let otherApprove = YourAccountOp.Call(operation: 0, to: susdc, value: YourAccount.w(0),
+                                      data: YourAccount.sel("approve(address,uint256)") + YourAccount.w(sacct) + YourAccount.w(1))
+check(YourAccount7579.approvesMulticall3(mApprove) && !YourAccount7579.approvesMulticall3(otherApprove),
+      "an approval to Multicall3 is not caught, or another is")
 let stc = YourAccount7579.transferCall(token: susdc, to: "0x82d443cb2dc0F924f5Cc5156e557ECB202283Dc6", units: "500000")!
 check(Keccak256.hexString(k(stc)) == "e7ac0d56f0e885a1c04b91ad63d5ba08cfb27a6281c837ac0675b8e6d27dd0be", "the session's transfer call changed")
 var sop = YourAccountOp.Op(sender: "0x82d443cb2dc0F924f5Cc5156e557ECB202283Dc6", nonce: 7, factory: nil, factoryData: [], callData: stc)
@@ -293,6 +310,10 @@ grep -q 'guard dryRun else' Casberi/Casberi/Model/YourAccountChain.swift || { ec
 grep -B1 -A1 '{ spendLimit }' "$SEC" | grep -q 'spendLimitOpen' || { echo "✗ the Spend limit row is drawn outside DEBUG (prd §1447 item 9)"; exit 1; }
 # The adapter install is a simulation until its send path is proven (§1447 item 11).
 grep -A9 'static func installAdapter' Casberi/Casberi/Model/YourAccountChain.swift | grep -q 'guard dryRun || throwaway(account) else' || { echo "✗ installAdapter runs for real before the adapter's send path is proven (prd §1447 item 11)"; exit 1; }
+grep -q 'guard !calls.contains(where: YourAccount7579.approvesMulticall3) else' Casberi/Casberi/Model/YourAccountChain.swift || { echo "✗ operations no longer refuse an approval to Multicall3, which would ride the spend limit's ETH route (prd §1447 item 15)"; exit 1; }
+for f in installLimit limitSend; do
+  grep -A9 "static func $f" Casberi/Casberi/Model/YourAccountChain.swift | grep -q 'guard dryRun || throwaway(account) else' || { echo "✗ $f runs for real outside the throwaway (prd §1447 items 14–15)"; exit 1; }
+done
 awk '/private static func throwaway/,/^    }$/' Casberi/Casberi/Model/YourAccountChain.swift | grep -A1 '#else' | grep -q 'return false' || { echo "✗ a build outside DEBUG may install the adapter for real (prd §1447 item 13)"; exit 1; }
 grep -q '0x540fb4f9\|initializeAccount((address,bytes)\[\],(address,bytes)\[\],(address,bytes)\[\],(address,bytes)\[\]' Casberi/Casberi/Model/YourAccount7579.swift || { echo "✗ initializeAccount is not the deployed v1 signature (prd §1447 item 11)"; exit 1; }
 # The Security row offers the switch only where a Signer stands (§1447 item 2).
