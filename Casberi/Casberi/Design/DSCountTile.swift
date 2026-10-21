@@ -14,6 +14,12 @@ struct DSCountTile: View {
     /// (user: "the categories w/ no numbers, just their glyph and name").
     let count: Int?
     let label: String
+    /// A figure that is not a count ("$2", "Off", prd §1462): drawn in the
+    /// count's place, in its ink; `count` then only says zero or not.
+    var figure: String? = nil
+    /// Figure over word, centered (Security's nine, prd §1462): the Health
+    /// shape, three across.
+    var centered: Bool = false
     /// A category's glyph over the figure (Apps); nil draws figure and word.
     var glyph: String? = nil
     let isOn: Bool
@@ -58,8 +64,8 @@ struct DSCountTile: View {
     static var cellRadius: CGFloat { DS.Radius.widget - DS.Space.s2 }
 
     /// One inline row's share of the well: 52pt for four rows on the phone.
-    static func cellHeight(items: Int) -> CGFloat {
-        let rows = CGFloat(max(1, (items + 1) / 2))
+    static func cellHeight(items: Int, columns: Int = 2) -> CGFloat {
+        let rows = CGFloat(max(1, (items + columns - 1) / columns))
         return (DSRoomChassis.leadHeight - 2 * DS.Space.s2 - (rows - 1) * DS.Space.s1) / rows
     }
 
@@ -193,14 +199,21 @@ struct DSCountTile: View {
                 .animation(DS.Motion.standard, value: isOn)
                 .contentShape(shape)
             } else {
-            VStack(alignment: glyph == nil ? .leading : .center, spacing: 2) {
+            VStack(alignment: glyph == nil && !centered ? .leading : .center, spacing: 2) {
                 if let glyph {
                     Image(systemName: glyph)
                         .dsGlyph(.body, weight: .regular)
                         .frame(height: 20)
                         .foregroundStyle(isOn ? DS.pickInk : zero ? DS.textTertiary : DS.brandInk)
                 }
-                if let count {
+                if let figure {
+                    Text(verbatim: figure)
+                        .dsText(.heading28)
+                        .monospacedDigit()
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                        .foregroundStyle(isOn ? DS.pickInk : zero ? DS.textTertiary : DS.textPrimary)
+                } else if let count {
                     Text(count.formatted())
                         .dsText(glyph == nil ? .heading28 : .heading24)
                         .monospacedDigit()
@@ -214,9 +227,10 @@ struct DSCountTile: View {
                     .minimumScaleFactor(0.8)
                     .foregroundStyle(isOn ? DS.pickInk : wants ? DS.attentionInk : DS.textSecondary)
             }
-            .padding(.horizontal, glyph == nil ? DS.Space.s2 : 2)
+            .padding(.horizontal, glyph == nil && !centered ? DS.Space.s2 : 2)
             .padding(.vertical, DS.Space.s2)
-            .frame(maxWidth: .infinity, alignment: glyph == nil ? .leading : .center)
+            .frame(maxWidth: .infinity, minHeight: centered ? cellHeight : nil,
+                   alignment: glyph == nil && !centered ? .leading : .center)
             // No backing (prd §1268): the pick's ink says it.
             .animation(DS.Motion.standard, value: isOn)
             .contentShape(shape)
@@ -239,6 +253,8 @@ struct DSCountTile: View {
 struct DSCountGrid<Content: View>: View {
     /// How many counts stand in the box, two across, so the rows can share it.
     let items: Int
+    /// Across: two (Settings, Markets), three for Security's nine (prd §1462).
+    var columns: Int = 2
     /// Inside a box that is already a well (the Wallet's Security, prd
     /// §1221): the grid alone, never a well inside a well.
     var bare = false
@@ -247,11 +263,11 @@ struct DSCountGrid<Content: View>: View {
     var body: some View {
         // The gutter is s3, not s1 (prd §1388): the left column's + stood
         // against the right column's figure ("Mail lists +24").
-        let grid = LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: DS.Space.s3, alignment: .leading), count: 2),
+        let grid = LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: DS.Space.s3, alignment: .leading), count: columns),
                              alignment: .leading, spacing: DS.Space.s1) {
             content
         }
-        .environment(\.dsCountCellHeight, DSCountTile.cellHeight(items: items))
+        .environment(\.dsCountCellHeight, DSCountTile.cellHeight(items: items, columns: columns))
         if bare {
             grid.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         } else {
