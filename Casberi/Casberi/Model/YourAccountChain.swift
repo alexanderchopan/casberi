@@ -354,7 +354,7 @@ enum YourAccountChain {
     // MARK: - The spend limit's session (prd §1447 item 14)
 
     /// The phone's session key's validator config. Native P-256 only: Base's
-    /// RIP-7212 is measured; Ethereum's EIP-7951 is not yet, here.
+    /// RIP-7212 and Ethereum's EIP-7951, both measured.
     private static func sessionInit() throws -> [UInt8] {
         let key = try YourAccountKey.sessionKey()
         return YourAccount7579.validatorInitData(x: key.x, y: key.y)
