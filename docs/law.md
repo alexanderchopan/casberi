@@ -235,7 +235,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1585 of 1654 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1586 of 1655 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1593,9 +1593,9 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1211 — Search finds what things SAY, teaches when empty, and reaches iOS
 - §1212 — The pill above the Feed takes you to its top (amended by §1208l)
 - §1213 — Logos chat says who, then what (amended by §1214)
-- §1214 — The Node box says the stage Basecamp's bar says (amended by §1216)
+- §1214 — The Node box says the stage Basecamp's bar says (amended by §1216, §1448)
 - §1215 — Logos chat is two-way, on the phone, as its own client (amended by §1313)
-- §1216 — The Node box reads the stake: Funded, aging, Eligible to propose
+- §1216 — The Node box reads the stake: Funded, aging, Eligible to propose (amended by §1448)
 - §1217 — Each kind that keeps coming has one home, and one verb
 - §1218 — The picked tile is the page's ink
 - §1219 — The Wallet's Home takes the Feed's shape, from the Feed's own parts
@@ -1822,6 +1822,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1444 — An app's settings are on its page: the name in the title wears the sliders disc and opens them; Casberi › Apps is del… [+1 sub-entries]
 - §1445 — A card per subscription: Pro makes each tracked plan its own Privacy.com card, Premium is Casberi's own card (builds…
 - §1446 — Aztec through V6: rollups found in the Registry, a warning before an upgrade strands zk.money money, and the sign she… [+2 sub-entries]
+- §1448 — The node's epoch, read the day the Observer sends it
 
 ## Dead rulings → what replaced them (generated)
 
