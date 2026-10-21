@@ -4000,6 +4000,26 @@ enum ProbeHooks {
                 }
             }
         },
+        // `-adapterInstallProbe <network>` — the account onto Safe's 7579
+        // adapter, SIMULATED (prd §1447 item 11): the bundler's gas estimate
+        // runs all four calls; nothing is sent. `adapterInstall|` lines.
+        Hook(key: "adapterInstallProbe") { raw, _ in
+            Task { @MainActor in
+                func log(_ line: String) { NSLog("adapterInstall| %@", line) }
+                guard let net = YourAccountOp.networks.first(where: { $0.name.caseInsensitiveCompare(raw) == .orderedSame }) else {
+                    log("no such network"); return
+                }
+                do {
+                    let sent = try await YourAccountChain.installAdapter(on: net, reason: "Probe: the 7579 adapter, simulated", dryRun: true,
+                                                                       report: { line in NSLog("adapterInstall| %@", line) }) { stage in log("stage=\(stage)") }
+                    log("result=\(sent.outcome)")
+                } catch let failure as YourAccountChain.Failure {
+                    log("refused: \(failure.message)")
+                } catch {
+                    log("error: \(String(describing: error))")
+                }
+            }
+        },
         // `-recoveryNudgePreview "<chainId,…>"` — draw Needs you's recovery-key
         // row for these networks (prd §1442m) on a phone that cannot fix them.
         Hook(key: "recoveryNudgePreview") { raw, _ in

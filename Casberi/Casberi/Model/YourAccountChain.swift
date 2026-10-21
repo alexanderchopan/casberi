@@ -62,6 +62,9 @@ enum YourAccountChain {
             if let result, !(result is NSNull) { return result }
             if let error {
                 last = error
+                #if DEBUG
+                NSLog("bundler| %@ %@ → %@", URL(string: url)?.host ?? url, method, error)
+                #endif
                 if error.contains("AA") || error.lowercased().contains("signature") { break }
             }
         }
@@ -284,6 +287,35 @@ enum YourAccountChain {
                                         rotateTo: nextKey, payments: [], signer: device, reason: reason,
                                         dryRun: dryRun, stage: stage)
         return Sent(outcome: await settle(outcome, net, account, next: next, x: nextKey.x), network: net)
+    }
+
+    /// The account onto Safe's 7579 adapter (prd §1447 item 11): one
+    /// operation, signed by this phone. SIMULATION ONLY until the adapter's
+    /// send path is built and proven — after a real install every send must
+    /// speak the adapter's encoding, and today's would be refused.
+    static func installAdapter(on net: Network, reason: String, dryRun: Bool,
+                               report: @escaping @Sendable (String) -> Void = { _ in },
+                               stage: @escaping @Sendable (Stage) async -> Void) async throws -> Sent {
+        guard dryRun else {
+            throw Failure(message: String(localized: "A spend limit is not available yet"))
+        }
+        guard let account = YourAccountKey.address else {
+            throw Failure(message: String(localized: "There is no account on this iPhone"))
+        }
+        await stage(.preparing)
+        guard try await isDeployed(net, account) else {
+            throw Failure(message: String(localized: "Your account is not on \(net.name) yet"))
+        }
+        let (signerIndex, device) = try await deviceSigner(net, account, deployed: true)
+        let next = try YourAccountKey.nextKey(after: signerIndex)
+        guard let nextKey = YourAccountKey.publicKey(next) else {
+            throw Failure(message: String(localized: "This send could not be written"))
+        }
+        let outcome = try await operate(net, account: account, deployed: true,
+                                        calls: YourAccount7579.installCalls(account: account),
+                                        rotateTo: nextKey, payments: [], signer: device, reason: reason,
+                                        dryRun: true, report: report, stage: stage)
+        return Sent(outcome: outcome, network: net)
     }
 
     static func recoveryState(_ net: Network, _ account: String, signer: String) async throws -> RecoveryState {
