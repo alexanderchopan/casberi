@@ -4010,8 +4010,35 @@ enum ProbeHooks {
                     log("no such network"); return
                 }
                 do {
-                    let sent = try await YourAccountChain.installAdapter(on: net, reason: "Probe: the 7579 adapter, simulated", dryRun: true,
+                    // Real only on the throwaway `-adapterThrowaway` names.
+                    let real = UserDefaults.standard.string(forKey: "adapterThrowaway") != nil
+                    let sent = try await YourAccountChain.installAdapter(on: net, reason: "Probe: the 7579 adapter", dryRun: !real,
                                                                        report: { line in NSLog("adapterInstall| %@", line) }) { stage in log("stage=\(stage)") }
+                    log("result=\(sent.outcome)")
+                } catch let failure as YourAccountChain.Failure {
+                    log("refused: \(failure.message)")
+                } catch {
+                    log("error: \(String(describing: error))")
+                }
+            }
+        },
+        // `-throwawaySendProbe "<network>|<wei>"` — a REAL send of `wei` ETH
+        // from the account to itself, only on the throwaway `-adapterThrowaway`
+        // names (prd §1447 item 13): the adapter's send path, proven on chain.
+        Hook(key: "throwawaySendProbe") { raw, _ in
+            Task { @MainActor in
+                func log(_ line: String) { NSLog("throwawaySend| %@", line) }
+                let p = raw.split(separator: "|").map(String.init)
+                guard p.count == 2, let net = YourAccountOp.networks.first(where: { $0.name.caseInsensitiveCompare(p[0]) == .orderedSame }),
+                      let account = YourAccountKey.address,
+                      let named = UserDefaults.standard.string(forKey: "adapterThrowaway"), WalletWatch.sameAddress(named, account) else {
+                    log("only on the throwaway -adapterThrowaway names"); return
+                }
+                let payment = YourAccountOp.Payment(network: net, token: YourAccountOp.eth, amount: p[1], to: account, toName: nil)
+                do {
+                    log("entry=\(try await YourAccountChain.accountEntry(net, account))")
+                    let sent = try await YourAccountChain.send([payment], reason: "Probe: a send on the adapter",
+                                                             report: { line in NSLog("throwawaySend| %@", line) }) { stage in log("stage=\(stage)") }
                     log("result=\(sent.outcome)")
                 } catch let failure as YourAccountChain.Failure {
                     log("refused: \(failure.message)")

@@ -230,6 +230,18 @@ enum YourAccountChain {
         return SafeCall.decodeAddressArray(answer) ?? []
     }
 
+    /// The one account a real install may run on before the adapter path is
+    /// proven: a throwaway named by address in DEBUG (`-adapterThrowaway
+    /// <0x…>`), never in a build anyone else runs (prd §1447 item 13).
+    private static func throwaway(_ account: String) -> Bool {
+        #if DEBUG
+        guard let named = UserDefaults.standard.string(forKey: "adapterThrowaway") else { return false }
+        return WalletWatch.sameAddress(named, account)
+        #else
+        return false
+        #endif
+    }
+
     /// Safe's fallback-handler slot, `keccak256("fallback_manager.handler.address")`.
     private static let fallbackHandlerSlot = "0x6c9a6c4a39284e37ed1cf53d337577d14212a4870fb976a4366c693b939918d5"
 
@@ -310,26 +322,31 @@ enum YourAccountChain {
     static func installAdapter(on net: Network, reason: String, dryRun: Bool,
                                report: @escaping @Sendable (String) -> Void = { _ in },
                                stage: @escaping @Sendable (Stage) async -> Void) async throws -> Sent {
-        guard dryRun else {
-            throw Failure(message: String(localized: "A spend limit is not available yet"))
-        }
         guard let account = YourAccountKey.address else {
             throw Failure(message: String(localized: "There is no account on this iPhone"))
         }
-        await stage(.preparing)
-        guard try await isDeployed(net, account) else {
-            throw Failure(message: String(localized: "Your account is not on \(net.name) yet"))
+        guard dryRun || throwaway(account) else {
+            throw Failure(message: String(localized: "A spend limit is not available yet"))
         }
-        let (signerIndex, device) = try await deviceSigner(net, account, deployed: true)
+        await stage(.preparing)
+        // Not there yet: the account is created by this same operation, on
+        // the phone that made it, as a first send creates it.
+        let deployed = try await isDeployed(net, account)
+        if deployed {
+            guard try await accountEntry(net, account) == .module4337 else {
+                throw Failure(message: String(localized: "Your account is already on it"))
+            }
+        }
+        let (signerIndex, device) = try await deviceSigner(net, account, deployed: deployed)
         let next = try YourAccountKey.nextKey(after: signerIndex)
         guard let nextKey = YourAccountKey.publicKey(next) else {
             throw Failure(message: String(localized: "This send could not be written"))
         }
-        let outcome = try await operate(net, account: account, deployed: true,
+        let outcome = try await operate(net, account: account, deployed: deployed,
                                         calls: YourAccount7579.installCalls(account: account),
                                         rotateTo: nextKey, payments: [], signer: device, reason: reason,
-                                        dryRun: true, report: report, stage: stage)
-        return Sent(outcome: outcome, network: net)
+                                        dryRun: dryRun, report: report, stage: stage)
+        return Sent(outcome: await settle(outcome, net, account, next: next, x: nextKey.x), network: net)
     }
 
     static func recoveryState(_ net: Network, _ account: String, signer: String) async throws -> RecoveryState {
