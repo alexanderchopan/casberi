@@ -363,5 +363,6 @@ grep -q 'if !deployed, let setup = try await setupCalls(net, account)' "$CH" || 
 awk '/static func setupCalls/,/^    }$/' "$CH" | awk '/addRecoveryCalls/{a=NR}/addOwnerCall/{b=NR}/installCalls/{c=NR}/limitCalls/{d=NR}/changeThreshold/{e=NR}END{exit !(a<b && b<c && c<d && d<e)}' \
   || { echo "✗ setupCalls no longer adds recovery, Signer, adapter, sessions, then both keys last (prd §1457)"; exit 1; }
 grep -q 'guard signer != nil, let limitDollars' Casberi/Casberi/Model/YourAccountSetup.swift || { echo "✗ a spend limit chosen at Create can stand with no Signer to sign over it (prd §1457)"; exit 1; }
+grep -q 'count: YourAccountSetup.firstPeriods)' Casberi/Casberi/Model/YourAccountChain.swift && grep -Eq 'static let firstPeriods = [1-6]$' Casberi/Casberi/Model/YourAccountSetup.swift || { echo "✗ the opening operation sets up more than six limit periods: twelve is 19.2M gas against the bundler's 15M (prd §1461)"; exit 1; }
 grep -q 'walking = true' Casberi/Casberi/Screens/MoveScreen.swift || { echo "✗ Create no longer walks through your keys (prd §1457)"; exit 1; }
 echo "✓ your account: the address is the factory's, the send's bytes are the module's, amounts add up, Move is in every build, it names only networks this phone can use, and asks where money lacks the recovery key"

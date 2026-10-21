@@ -19,6 +19,9 @@ enum YourAccountSetup {
         }
     }
 
+    /// The spend limit's periods the opening operation sets up (prd §1461).
+    static let firstPeriods = 6
+
     private static func key(_ account: String) -> String { "yourAccount.setup." + account.lowercased() }
 
     static func choice(for account: String) -> Choice? {
