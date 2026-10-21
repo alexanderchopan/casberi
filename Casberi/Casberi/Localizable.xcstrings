@@ -6017,6 +6017,34 @@
         }
       }
     },
+    "Face ID signs." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Face ID firma."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Face IDで署名します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Face ID로 서명합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "由面容 ID 签名。"
+          }
+        }
+      }
+    },
     "From another network" : {
       "localizations" : {
         "es" : {
@@ -6097,34 +6125,6 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "丢了这台 iPhone，也能在下一台上继续使用。"
-          }
-        }
-      }
-    },
-    "MetaMask, Rainbow or any other. It signs big sends with this iPhone." : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "MetaMask, Rainbow u otra. Firma los envíos grandes junto con este iPhone."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "MetaMask、Rainbowなど何でも。大きな送金にはこのiPhoneと一緒に署名します。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "MetaMask, Rainbow 등 무엇이든. 큰 송금은 이 iPhone과 함께 서명합니다."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "MetaMask、Rainbow 或其他钱包均可。大额发送时与这台 iPhone 一起签名。"
           }
         }
       }
