@@ -1395,7 +1395,6 @@ struct MoveSentence: View {
         switch n.chainId {
         case 8453: "brand-l2b-base"
         case 1: "brand-eth"
-        case 4663: "brand-l2b-robinhood"
         default: nil
         }
     }
@@ -1800,7 +1799,7 @@ struct MoveSentence: View {
         let sent = done.sent
         let tx: String? = { if case .landed(let t, _) = sent.outcome { return t } else { return nil } }()
         let link = tx.flatMap { explorer($0, on: net) }
-        let linkName: String? = net.chainId == 1 ? "Etherscan" : net.chainId == 4663 ? "Blockscout" : "Basescan"
+        let linkName: String? = net.chainId == 1 ? "Etherscan" : "Basescan"
         let on = Line(glue: String(localized: "on"), text: net.name + ".")
         func made(_ past: String, _ lines: [Line], _ detail: [String] = []) -> Receipt {
             Receipt(past: past, lines: lines, detail: detail.joined(separator: " · "),
@@ -1871,7 +1870,6 @@ struct MoveSentence: View {
         switch network.chainId {
         case 8453: host = "basescan.org"
         case 1: host = "etherscan.io"
-        case 4663: host = "robinhoodchain.blockscout.com"
         case 84532: host = "sepolia.basescan.org"
         default: return nil
         }

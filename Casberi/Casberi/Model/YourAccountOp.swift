@@ -41,21 +41,16 @@ enum YourAccountOp {
         rpcs: ["https://rpc.mevblocker.io", "https://ethereum-rpc.publicnode.com"],
         bundlers: ["https://public.pimlico.io/v2/1/rpc", "https://api.candide.dev/public/v3/1"],
         dollar: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", isTest: false)
-    /// Robinhood Chain (prd §1441): every contract the account uses is at the
-    /// same address there (measured 2026-10-19), so the account has the same
-    /// address; Pimlico's public bundler serves it, Candide's does not.
-    static let robinhood = Network(
-        name: "Robinhood Chain", chainId: 4663,
-        rpcs: ["https://rpc.mainnet.chain.robinhood.com", "https://robinhood-rpc.publicnode.com"],
-        bundlers: ["https://public.pimlico.io/v2/4663/rpc"],
-        dollar: "0x5fc5360d0400a0fd4f2af552add042d716f1d168", dollarSymbol: "USDG", isTest: false)
+    // Robinhood Chain left the account (prd §1449): the spend limit's
+    // contracts are not there, and a limit that covers some networks is
+    // "weird to explain to a user". Money already at the address there stays,
+    // movable only by a build with the network back, on the phone that made it.
     /// The network behind one of this app's own chain names ("base-mainnet",
     /// the approvals' and receipts' spelling), when the account can act there.
     static func network(appName: String) -> Network? {
         switch appName {
         case "base-mainnet": base
         case "eth-mainnet": ethereum
-        case "robinhood-mainnet": robinhood
         default: nil
         }
     }
@@ -66,11 +61,12 @@ enum YourAccountOp {
         bundlers: ["https://public.pimlico.io/v2/84532/rpc", "https://api.candide.dev/public/v3/84532"],
         dollar: "0x036CbD53842c5426634e7929541eC2318f3dCF7e", isTest: true)
 
-    /// The account's networks, the same in every build: Base, Ethereum and
-    /// Robinhood Chain (§1441), each with send, receive and swap. Base Sepolia
-    /// is in none, DEBUG included (prd §1441a, user: "we got rid of
-    /// sepolia"); its constant stays for the dry-run probe alone.
-    static let networks: [Network] = [base, ethereum, robinhood]
+    /// The account's networks, the same in every build: Base and Ethereum,
+    /// each with send, receive, swap and the spend limit (Robinhood Chain
+    /// left, prd §1449). Base Sepolia is in none, DEBUG included (prd §1441a,
+    /// user: "we got rid of sepolia"); its constant stays for the dry-run
+    /// probe alone.
+    static let networks: [Network] = [base, ethereum]
 
     struct Token: Equatable, Hashable, Sendable {
         let symbol: String
@@ -90,7 +86,6 @@ enum YourAccountOp {
         switch network.chainId {
         case 8453: "base-mainnet"
         case 1: "eth-mainnet"
-        case 4663: "robinhood-mainnet"
         case 84532: "base-sepolia"
         default: nil
         }

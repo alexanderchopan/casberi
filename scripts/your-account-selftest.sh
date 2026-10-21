@@ -153,11 +153,11 @@ let summed = YourAccountSwap.approvalCalls([(usdcChecked!.approvals[0].token, us
 check(summed.count == 1 && summed[0].data == YourAccountSwap.approveSelector + YourAccount.w(usdcChecked!.approvals[0].spender) + SafeABI.word(uint256: "350000")!,
       "two swaps selling one token approve their sum once (an approval replaces, never adds)")
 check(YourAccountSwap.supported(YourAccountOp.base) && YourAccountSwap.supported(YourAccountOp.ethereum)
-      && YourAccountSwap.supported(YourAccountOp.robinhood)
       && !YourAccountSwap.supported(YourAccountOp.baseSepolia), "Relay swaps on every live network the account is on, never a test network")
 check(YourAccountOp.networks.filter { !$0.isTest }.allSatisfy(YourAccountSwap.supported),
       "a live network without swaps — send, receive and swap arrive together (prd §1441)")
-check(YourAccountOp.dollar(on: YourAccountOp.robinhood).symbol == "USDG", "Robinhood Chain's dollar is USDG")
+check(!YourAccountOp.networks.contains { $0.chainId == 4663 } && YourAccountOp.network(appName: "robinhood-mainnet") == nil,
+      "Robinhood Chain left the account (prd §1449): the spend limit's contracts are not there")
 
 // The outside key (prd §1432): an owner at threshold 1; a wallet upgraded by
 // EIP-7702 is still a wallet (the user's own, measured on Base), a contract is not.
@@ -213,7 +213,7 @@ grep -q 'case feed, wallet, move, library, search' "$TABS" || { echo "✗ Move i
 grep -q 'static var allCases' "$TABS" && { echo "✗ PlaceTab.allCases is overridden — a build could drop a tab (prd §1435)"; exit 1; }
 # The account's networks are the same in every build, no test network among
 # them, DEBUG included (prd §1441a).
-grep -q 'static let networks: \[Network\] = \[base, ethereum, robinhood\]$' "$OP" || { echo "✗ YourAccountOp.networks is not Base, Ethereum and Robinhood Chain in every build (prd §1441a)"; exit 1; }
+grep -q 'static let networks: \[Network\] = \[base, ethereum\]$' "$OP" || { echo "✗ YourAccountOp.networks is not Base and Ethereum in every build (prd §1441a, §1449)"; exit 1; }
 grep -A4 'static let baseSepolia' "$OP" | grep -q 'isTest: true' || { echo "✗ Base Sepolia is not marked a test network"; exit 1; }
 
 # Where the account can be used is read, never assumed (prd §1442k): Move
