@@ -67979,3 +67979,4 @@ Guarded by `category-fold-selftest.sh` (proven by mutation). **Mac half:** the r
 
 1. The walk's "Your keys" page is deleted from view and model (`MoveKeysWalk.Step` is recovery, signer, limit): a list of name-over-value facts indented to the sentence's column is not the sentence's grammar.
 2. The last step — Set or Later on the limit, or Later on the Signer — hands straight over to the Created sentence (§1442j), which says the one thing the page did: "Your keys go on with your first send.", under Copy address, only for a new account with a recovery key or a Signer chosen (`MoveSentence.keysWaiting`). Security lists every key (§1457 item 4).
+3. **The line names what it activates** (user: "it's not clear what 'your keys go on with your first send' means"; "use 'activates'"): "Your first send activates your recovery key, Signer, and spend limit." — only what was chosen, in that order.

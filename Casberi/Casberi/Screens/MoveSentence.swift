@@ -41,9 +41,16 @@ struct MoveSentence: View {
         _fresh = State(initialValue: arrival != nil)
     }
 
-    /// A recovery key or a Signer chosen at Create, still to go on.
-    private var keysWaiting: Bool {
-        YourAccountSetup.choice(for: account).map { $0.recovery || $0.signer != nil } ?? false
+    /// What was chosen at Create, named, and when it turns on (user: "it's
+    /// not clear what 'your keys go on with your first send' means").
+    private var keysWaiting: String? {
+        guard let choice = YourAccountSetup.choice(for: account) else { return nil }
+        var named: [String] = []
+        if choice.recovery { named.append(String(localized: "recovery key")) }
+        if choice.signer != nil { named.append(String(localized: "Signer")) }
+        if choice.limit != nil { named.append(String(localized: "spend limit")) }
+        guard !named.isEmpty else { return nil }
+        return String(localized: "Your first send activates your \(named.formatted(.list(type: .and))).")
     }
 
     /// Still the arrival's sentence: until a verb is picked.
@@ -1172,8 +1179,8 @@ struct MoveSentence: View {
                 }
                 // The keys chosen right after Create (prd §1457, §1460): the
                 // one line that stands for a summary.
-                if fresh, arrived, arrival == .created, keysWaiting {
-                    Text("Your keys go on with your first send.")
+                if fresh, arrived, arrival == .created, let keysWaiting {
+                    Text(verbatim: keysWaiting)
                         .dsText(.body17).foregroundStyle(DS.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
                         .transition(.opacity)

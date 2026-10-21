@@ -7081,30 +7081,30 @@
         }
       }
     },
-    "Your keys go on with your first send." : {
+    "Your first send activates your %@." : {
       "localizations" : {
         "es" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Tus llaves se activan con tu primer envío."
+            "value" : "Tu primer envío activa tu %@."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "鍵は最初の送金と一緒に設定されます。"
+            "value" : "最初の送金で%@が有効になります。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "키는 첫 송금과 함께 적용됩니다."
+            "value" : "첫 송금으로 %@이(가) 활성화됩니다."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "你的密钥随第一次发送一起生效。"
+            "value" : "你的第一次发送会启用你的%@。"
           }
         }
       }
@@ -8677,6 +8677,34 @@
         }
       }
     },
+    "recovery key" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "llave de recuperación"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "復旧キー"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "복구 키"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "恢复密钥"
+          }
+        }
+      }
+    },
     "renews with your next send on %@" : {
       "localizations" : {
         "es" : {
@@ -9289,6 +9317,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "以美元输入"
+          }
+        }
+      }
+    },
+    "spend limit" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "límite de gasto"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "利用上限"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "지출 한도"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "支出限额"
           }
         }
       }
