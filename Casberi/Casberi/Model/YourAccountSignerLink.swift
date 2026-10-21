@@ -37,15 +37,34 @@ enum YourAccountSignerLink {
     /// for one on this phone); the answer is `r ‖ s ‖ v`, `v` 27 or 28.
     static func sign(typedData: String, signer: String, chainId: Int, timeout: Duration = .seconds(300),
                      show: @MainActor (URL) -> Void) async throws -> [UInt8] {
-        guard WalletConnectBridge.isAvailable, let chain = Blockchain("eip155:\(chainId)") else { throw Failure.unavailable }
+        let pairing = try await connect(signer: signer, chainIds: [chainId], timeout: timeout, show: show)
+        defer { close(pairing) }
+        return try await request(pairing, typedData: typedData, chainId: chainId, timeout: timeout)
+    }
+
+    /// A settled session with the Signer's wallet: its topic and the
+    /// networks it agreed to sign on.
+    struct Pairing: Sendable {
+        let topic: String
+        let signer: String
+        let chainIds: Set<Int>
+    }
+
+    /// **ONE SCAN FOR EVERY NETWORK (prd §1456).** One proposal naming every
+    /// network the batch will ask on, one method; the settled session must
+    /// name the Signer. Several requests then ride it, one per network.
+    static func connect(signer: String, chainIds: [Int], timeout: Duration = .seconds(300),
+                        show: @MainActor (URL) -> Void) async throws -> Pairing {
+        let chains = chainIds.compactMap { Blockchain("eip155:\($0)") }
+        guard WalletConnectBridge.isAvailable, !chains.isEmpty else { throw Failure.unavailable }
         WalletConnectBridge.configureIfNeeded()
-        let namespaces = [WalletConnectBridge.evmNamespace: ProposalNamespace(chains: [chain], methods: [method], events: [])]
+        let namespaces = [WalletConnectBridge.evmNamespace: ProposalNamespace(chains: chains, methods: [method], events: [])]
         // The proposal waits on the relay socket; a socket the SDK left
         // closed (measured: a proposal stalled for minutes) is opened here,
         // and a stalled proposal is asked once more on a fresh socket.
         var uri: WalletConnectURI?
         for attempt in 1...2 {
-            trace("proposing on \(chain.absoluteString), attempt \(attempt)")
+            trace("proposing on \(chains.map(\.absoluteString).joined(separator: ",")), attempt \(attempt)")
             if !(await socketUp(within: .seconds(10))) {
                 trace("socket down: connecting")
                 try? Networking.instance.connect()
@@ -64,18 +83,24 @@ enum YourAccountSignerLink {
         await show(url)
         guard let session = await settled else { throw Failure.timedOut }
         trace("settled")
-        defer { Task.detached { try? await WalletConnectBridge.tearDown(topic: session.topic) } }
-
-        let accounts = WalletConnectBridge.accounts(from: session)
-        guard accounts.contains(where: { $0.namespace == WalletConnectBridge.evmNamespace
-                                         && $0.address.caseInsensitiveCompare(signer) == .orderedSame }) else {
+        let accounts = session.namespaces[WalletConnectBridge.evmNamespace]?.accounts ?? []
+        let agreed = Set(accounts.filter { $0.address.caseInsensitiveCompare(signer) == .orderedSame }
+                                 .compactMap { Int($0.blockchain.reference) })
+        guard !agreed.isEmpty else {
+            Task.detached { try? await WalletConnectBridge.tearDown(topic: session.topic) }
             throw Failure.notTheSigner(accounts.first?.address ?? "")
         }
-        let request = try Request(topic: session.topic, method: method,
-                                  params: AnyCodable([signer, typedData]), chainId: chain)
+        return Pairing(topic: session.topic, signer: signer, chainIds: agreed)
+    }
+
+    /// One signature over a settled pairing, on one of its networks.
+    static func request(_ pairing: Pairing, typedData: String, chainId: Int, timeout: Duration = .seconds(300)) async throws -> [UInt8] {
+        guard pairing.chainIds.contains(chainId), let chain = Blockchain("eip155:\(chainId)") else { throw Failure.unavailable }
+        let request = try Request(topic: pairing.topic, method: method,
+                                  params: AnyCodable([pairing.signer, typedData]), chainId: chain)
         async let answer = response(to: request.id, timeout: timeout)
         try await Sign.instance.request(params: request)
-        trace("asked")
+        trace("asked on \(chainId)")
         guard let result = await answer else { throw Failure.timedOut }
         switch result {
         case .error(let error):
@@ -84,6 +109,11 @@ enum YourAccountSignerLink {
             guard let hex = try? value.get(String.self) else { throw Failure.malformedSignature }
             return try normalized(hex)
         }
+    }
+
+    /// The session torn down, answered or not.
+    static func close(_ pairing: Pairing) {
+        Task.detached { try? await WalletConnectBridge.tearDown(topic: pairing.topic) }
     }
 
     private static func trace(_ line: String) {

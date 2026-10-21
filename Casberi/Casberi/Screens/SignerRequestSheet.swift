@@ -79,6 +79,49 @@ struct SignerRequestSheet: View {
         }
     }
 
+    /// One scan for several networks (prd §1456): the wallet is paired on
+    /// the first network's ask, for every network the batch names, and each
+    /// later ask rides the same session; `finish` tears it down.
+    actor Batch {
+        let owner: String
+        let chainIds: [Int]
+        private var pairing: YourAccountSignerLink.Pairing?
+
+        init(owner: String, chainIds: [Int]) {
+            self.owner = owner
+            self.chainIds = chainIds
+        }
+
+        nonisolated func coSigner(chainId: Int) -> YourAccountChain.CoSigner {
+            YourAccountChain.CoSigner(owner: owner) { _, typedData in
+                try await self.sign(typedData, chainId: chainId)
+            }
+        }
+
+        private func sign(_ typedData: String, chainId: Int) async throws -> [UInt8] {
+            if pairing == nil || pairing?.chainIds.contains(chainId) == false {
+                let handle = await MainActor.run { Handle() }
+                let owner = self.owner
+                do {
+                    pairing = try await YourAccountSignerLink.connect(signer: owner, chainIds: chainIds) { url in
+                        handle.close = SignerRequestSheet.present(url: url, signer: owner)
+                    }
+                } catch {
+                    await MainActor.run { handle.close() }
+                    throw error
+                }
+                await MainActor.run { handle.close() }
+            }
+            guard let pairing else { throw YourAccountSignerLink.Failure.unavailable }
+            return try await YourAccountSignerLink.request(pairing, typedData: typedData, chainId: chainId)
+        }
+
+        func finish() {
+            if let pairing { YourAccountSignerLink.close(pairing) }
+            pairing = nil
+        }
+    }
+
     @MainActor
     final class Handle {
         var close: @MainActor () -> Void = {}
@@ -99,5 +142,18 @@ struct SignerRequestSheet: View {
         while let next = top?.presentedViewController { top = next }
         top?.present(host, animated: true)
         return { [weak host] in host?.dismiss(animated: true) }
+    }
+}
+
+extension YourAccountChain {
+    /// The Signer an operation at both keys asks when its caller named none
+    /// (prd §1456): the account's first Signer on `net`, through the Signer
+    /// sheet. DEBUG's `-coSignWith` hands a throwaway's test key instead.
+    static func defaultCoSigner(_ net: Network, _ account: String) async -> CoSigner? {
+        #if DEBUG
+        if let test = UserDefaults.standard.string(forKey: "coSignWith") { return ProbeCoSigner.make(test) }
+        #endif
+        guard let signer = try? await signers(net, account).first else { return nil }
+        return SignerRequestSheet.coSigner(owner: signer, chainId: net.chainId)
     }
 }

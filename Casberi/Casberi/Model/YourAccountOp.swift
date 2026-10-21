@@ -427,9 +427,11 @@ enum YourAccountOp {
 
     /// Deploy the recovery key's Safe passkey signer (idempotent: the
     /// factory returns the existing one) and make it an owner at threshold 1.
-    static func addRecoveryCalls(account: String, x: [UInt8], y: [UInt8], signer: String) -> [Call] {
+    /// `threshold` is the one the network already keeps (prd §1456): adding
+    /// a key never lowers it — at 2 the spend limit stands.
+    static func addRecoveryCalls(account: String, x: [UInt8], y: [UInt8], signer: String, threshold: Int = 1) -> [Call] {
         let create = YourAccount.sel("createSigner(uint256,uint256,uint176)") + x + y + SafeWebAuthn.verifiersWord!
-        let add = YourAccount.sel("addOwnerWithThreshold(address,uint256)") + w(signer) + w(1)
+        let add = YourAccount.sel("addOwnerWithThreshold(address,uint256)") + w(signer) + w(max(threshold, 1))
         return [Call(operation: 0, to: SafeWebAuthn.factory, value: w(0), data: create),
                 Call(operation: 0, to: account, value: w(0), data: add)]
     }
@@ -437,9 +439,9 @@ enum YourAccountOp {
     /// A key held outside Casberi (prd §1432): an address of the person's own
     /// — a Ledger, MetaMask — made an owner at threshold 1, so the account
     /// answers to it with no app of ours (Safe's own web app signs for it).
-    static func addOwnerCall(account: String, owner: String) -> Call {
+    static func addOwnerCall(account: String, owner: String, threshold: Int = 1) -> Call {
         Call(operation: 0, to: account, value: w(0),
-             data: YourAccount.sel("addOwnerWithThreshold(address,uint256)") + w(owner) + w(1))
+             data: YourAccount.sel("addOwnerWithThreshold(address,uint256)") + w(owner) + w(max(threshold, 1)))
     }
 
     /// Whether `code` (`eth_getCode`'s answer) is a contract's: anything but

@@ -174,6 +174,11 @@ check(RoundUps.plan(dollarSent: "4300000", saved: "4500000", step: 1) == .init(c
       "a round-up reaching $5 does not buy everything counted")
 check(RoundUps.plan(dollarSent: "4300000", saved: "4300000", step: 1) == .init(change: "700000", buy: "5000000", savedAfter: "0"),
       "exactly $5 does not buy")
+// Adding a key keeps the network's threshold (prd §1456): at 2 — the spend
+// limit on — a recovery key or a Signer added never drops it to one key.
+check(Array(YourAccountOp.addOwnerCall(account: want, owner: want, threshold: 2).data.suffix(32)) == YourAccount.w(2)
+      && Array(YourAccountOp.addRecoveryCalls(account: want, x: x, y: y, signer: want, threshold: 2)[1].data.suffix(32)) == YourAccount.w(2),
+      "adding a key resets the threshold: the spend limit would switch itself off")
 var huge = op; huge.maxFeePerGas = UInt64.max
 check(huge.maxCost == nil && op.maxCost == 1320000000000, "maxCost overflows into a trap, or is wrong")
 check(YourAccountOp.spoken("500000000000", decimals: 18) == "0.0000005", "a real amount must never be spoken as 0")
@@ -348,6 +353,6 @@ grep -q '0x540fb4f9\|initializeAccount((address,bytes)\[\],(address,bytes)\[\],(
 # The Security row offers the switch only where a Signer stands (§1447 item 2).
 grep -q '(limited.isEmpty && notYet.isEmpty)' "$SEC" || { echo "✗ the Spend limit switch can be turned on with no Signer on any network (prd §1455)"; exit 1; }
 grep -q 'applyLimit(limited + notYet' "$SEC" || { echo "✗ the one Spend limit switch no longer sets every network the account is on (prd §1455, user: \"we want one switch for all networks\")"; exit 1; }
-grep -q 'turnOffLimit(on: net, coSigner: SignerRequestSheet.coSigner' "$SEC" || { echo "✗ turning a spend limit off no longer asks the Signer — at 2-of-2 it cannot be one key's (prd §1455, §83)"; exit 1; }
+grep -q 'turnOffLimit(on: net, coSigner: batch.coSigner(chainId: net.chainId)' "$SEC" && grep -q 'SignerRequestSheet.Batch(owner:' "$SEC" || { echo "✗ turning a spend limit off no longer asks the Signer — at 2-of-2 it cannot be one key's (prd §1455, §83)"; exit 1; }
 
 echo "✓ your account: the address is the factory's, the send's bytes are the module's, amounts add up, Move is in every build, it names only networks this phone can use, and asks where money lacks the recovery key"

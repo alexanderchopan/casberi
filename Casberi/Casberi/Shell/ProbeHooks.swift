@@ -3921,7 +3921,16 @@ enum ProbeHooks {
                 do {
                     // Only the recovery key this phone already holds: never a
                     // new one, which would add a second recovery key.
-                    guard let key = YourAccountRecovery.publicKey(for: account) else {
+                    // `-recoverMake YES` on the throwaway `-adapterThrowaway`
+                    // names: a first recovery key may be made here.
+                    let throwaway = UserDefaults.standard.string(forKey: "adapterThrowaway").map { WalletWatch.sameAddress($0, account) } ?? false
+                    let key: (x: [UInt8], y: [UInt8])
+                    if let held = YourAccountRecovery.publicKey(for: account) {
+                        key = held
+                    } else if throwaway, UserDefaults.standard.bool(forKey: "recoverMake") {
+                        key = try YourAccountRecovery.make(for: account)
+                        log("made a recovery key for the throwaway")
+                    } else {
                         log("stopped: this phone holds no recovery key for \(account)"); return
                     }
                     let signer = try await YourAccountChain.recoverySigner(x: key.x, y: key.y)
