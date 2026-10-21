@@ -373,5 +373,9 @@ FIG=Casberi/Casberi/Screens/FeedScreen+WalletSecurity.swift
 grep -q 'columns: counts.account == nil ? 2 : 3' "$FIG" && grep -q 'centered: counts.account != nil' "$FIG" || { echo "✗ Security's box no longer draws your account's three beside the six counts, three across (prd §1462)"; exit 1; }
 grep -q 'YourAccountFacts.noteSigners(Set(live.flatMap' Casberi/Casberi/Screens/MoveSecurity.swift || { echo "✗ the box's Signers figure is no longer stamped by Security's read (prd §1462)"; exit 1; }
 grep -q 'String(localized: "Limit a \\($0)")' "$FIG" || { echo "✗ the limit's word is not \"Limit a month\" (prd §1462, user: \"we can just say 'limit a month'\")"; exit 1; }
+# The wash says the state (prd §1463): a threat red, an ask orange, on green, nothing for a zero.
+grep -q 'tone: counts.poisoning > 0 ? .threat : .none' "$FIG" && grep -q 'tone: counts.fakeTransfers > 0 ? .threat : .none' "$FIG" && grep -q 'tone: counts.signatures > 0 ? .wants : .none' "$FIG" && grep -q 'tone: a.signers > 0 ? .on : .wants' "$FIG" || { echo "✗ Security's box no longer washes a threat red, an ask orange and what is on green (prd §1463)"; exit 1; }
+grep -q 'needsYouRow(glyph: kind.glyph, critical: true,' "$FIG" || { echo "✗ a fake transfer's row is no longer red with the other threats (prd §1463)"; exit 1; }
+awk '/case .threat: return DS.destructive/{a=1}/case .wants: return DS.attention$/{b=1}/case .on: return DS.confirm$/{c=1}END{exit !(a&&b&&c)}' Casberi/Casberi/Design/DSCountTile.swift || { echo "✗ DSCountTile's tones no longer map threat→destructive, wants→attention, on→confirm (prd §1463)"; exit 1; }
 grep -q 'walking = true' Casberi/Casberi/Screens/MoveScreen.swift || { echo "✗ Create no longer walks through your keys (prd §1457)"; exit 1; }
 echo "✓ your account: the address is the factory's, the send's bytes are the module's, amounts add up, Move is in every build, it names only networks this phone can use, and asks where money lacks the recovery key"

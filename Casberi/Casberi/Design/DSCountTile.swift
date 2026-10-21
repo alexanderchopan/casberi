@@ -24,6 +24,12 @@ struct DSCountTile: View {
     var glyph: String? = nil
     let isOn: Bool
     var wants: Bool = false
+    /// **THE WASH SAYS THE STATE (prd §1463), centered only:** nothing for a
+    /// zero, orange for what waits on you, red for a threat, green for what
+    /// is on — the three inks' meanings (§1004) as Markets' tiles wear a
+    /// move (§1391): a wash and an edge, never a plate (§782).
+    enum Tone { case none, wants, threat, on }
+    var tone: Tone = .none
     /// The figure and its word on one line (Settings' eight kinds, two
     /// across, prd §1166), so every word stands whole, as Reminders' and
     /// Passwords' grids draw theirs.
@@ -134,6 +140,35 @@ struct DSCountTile: View {
             .contentShape(Rectangle())
     }
 
+    /// The state's hue, centered only; nil draws no wash.
+    private var hue: Color? {
+        guard centered, !isOn else { return nil }
+        switch tone {
+        case .none: return nil
+        case .wants: return DS.attention
+        case .threat: return DS.destructive
+        case .on: return DS.confirm
+        }
+    }
+
+    private func figureInk(zero: Bool) -> Color {
+        if isOn { return DS.pickInk }
+        if centered, tone == .on { return DS.confirmInk }
+        return zero ? DS.textTertiary : DS.textPrimary
+    }
+
+    private var wordInk: Color {
+        if isOn { return DS.pickInk }
+        if centered {
+            switch tone {
+            case .wants: return DS.attentionInk
+            case .threat: return DS.destructiveInk
+            case .on, .none: return wants ? DS.attentionInk : DS.textSecondary
+            }
+        }
+        return wants ? DS.attentionInk : DS.textSecondary
+    }
+
     @ViewBuilder private var tile: some View {
         let zero = count == 0 && !isOn
         Button {
@@ -212,25 +247,34 @@ struct DSCountTile: View {
                         .monospacedDigit()
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
-                        .foregroundStyle(isOn ? DS.pickInk : zero ? DS.textTertiary : DS.textPrimary)
+                        .foregroundStyle(figureInk(zero: zero))
                 } else if let count {
                     Text(count.formatted())
                         .dsText(glyph == nil ? .heading28 : .heading24)
                         .monospacedDigit()
                         .contentTransition(countRoll)
                         .animation(countAnimation, value: count)
-                        .foregroundStyle(isOn ? DS.pickInk : zero ? DS.textTertiary : DS.textPrimary)
+                        .foregroundStyle(figureInk(zero: zero))
                 }
                 Text(label)
                     .dsText(.label12)
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
-                    .foregroundStyle(isOn ? DS.pickInk : wants ? DS.attentionInk : DS.textSecondary)
+                    .foregroundStyle(wordInk)
             }
             .padding(.horizontal, glyph == nil && !centered ? DS.Space.s2 : 2)
             .padding(.vertical, DS.Space.s2)
             .frame(maxWidth: .infinity, minHeight: centered ? cellHeight : nil,
                    alignment: glyph == nil && !centered ? .leading : .center)
+            // The wash and its edge (prd §1463), Markets' 12pt corner (§1391).
+            .background(RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(hue?.opacity(0.14) ?? Color.clear))
+            .overlay {
+                if let hue {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .strokeBorder(hue.opacity(0.6), lineWidth: 1.5)
+                }
+            }
             // No backing (prd §1268): the pick's ink says it.
             .animation(DS.Motion.standard, value: isOn)
             .contentShape(shape)

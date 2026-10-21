@@ -235,7 +235,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1600 of 1669 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1601 of 1670 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1350,7 +1350,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §999 — The Calendar room's tiles read in time, and its month title stands at the day dividers' size (part superseded by §1006)
 - §1000 — Markets: Tokens and Stocktwits are one app, and every catalogue category is a company pack (amended by §1082)
 - §1003 — The redundancy and wordiness sweep, the whole app
-- §1004 — A status word takes the INK, never the hue
+- §1004 — A status word takes the INK, never the hue (amended by §1463)
 - §1005 — The vibecoded audit, first pass: the demo, the wallet crown, Settings (amended by §1039)
 - §1006 — The polish pass: the screen's name leads, the day steps down, a deadline is a bar (amended by §1046)
 - §1007 — Logos: the testnet moved to LEZ v0.3, and the seat reads it
@@ -1836,7 +1836,8 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1459 — Two lines cut from creating your account
 - §1460 — No summary after your keys: the Created sentence says it in one line
 - §1461 — The opening operation sets six limit periods, not twelve
-- §1462 — Security's box is nine, three across, the figure centered over its word
+- §1462 — Security's box is nine, three across, the figure centered over its word (amended by §1463)
+- §1463 — The wash says the state: a threat red, an ask orange, on green, nothing for a zero
 
 ## Dead rulings → what replaced them (generated)
 
