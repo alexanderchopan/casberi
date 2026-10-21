@@ -6,8 +6,8 @@ import SwiftUI
 /// the person already has, and — with a Signer — a spend limit. Nothing here
 /// touches a chain: the recovery key is made at once (free), and the rest is
 /// kept in `YourAccountSetup` and rides the first send on each network.
-/// The last page says what was chosen; Done hands over to the Created
-/// sentence.
+/// The last step hands straight over to the Created sentence, which says
+/// the keys go on with the first send (user: "No summary").
 struct MoveKeysWalk: View {
     let account: String
     var inTray = false
@@ -15,7 +15,7 @@ struct MoveKeysWalk: View {
     var inert = false
     let done: () -> Void
 
-    enum Step: Int { case recovery = 1, signer, limit, summary }
+    enum Step: Int { case recovery = 1, signer, limit }
     typealias Period = MoveSecurity.LimitPeriod
 
     @State private var step: Step
@@ -36,7 +36,7 @@ struct MoveKeysWalk: View {
         if !inert, let kept = YourAccountSetup.choice(for: account) { _choice = State(initialValue: kept) }
         #if DEBUG
         if inert {
-            // The preview's summary draws every key chosen.
+            // The preview draws every key chosen.
             _choice = State(initialValue: .init(recovery: true, signer: "0x2F60D2BB84Eb8df6951F7215ef035eF052BA2725",
                                                 limitDollars: 100, limitMinutes: Period.month.minutes))
             _amountText = State(initialValue: "100")
@@ -51,12 +51,10 @@ struct MoveKeysWalk: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: DS.Space.s1) {
-                if step != .summary {
-                    Text("\(step.rawValue) of 3")
-                        .dsText(.body17).foregroundStyle(DS.textSecondary)
-                        .padding(.leading, gutter + DS.Space.s2)
-                        .padding(.bottom, DS.Space.s6)
-                }
+                Text("\(step.rawValue) of 3")
+                    .dsText(.body17).foregroundStyle(DS.textSecondary)
+                    .padding(.leading, gutter + DS.Space.s2)
+                    .padding(.bottom, DS.Space.s6)
                 content
                     .id(step)
                     .transition(.opacity)
@@ -124,24 +122,6 @@ struct MoveKeysWalk: View {
             }
             // With the limit on, recovery needs the Signer too (prd §1456).
             small(String(localized: "Over it, your Signer signs too. So does recovery."))
-        case .summary:
-            title("Your keys")
-            VStack(alignment: .leading, spacing: DS.Space.s4) {
-                fact(ThisDevice.title, String(localized: "Face ID"))
-                fact(String(localized: "Recovery key"), choice.recovery ? String(localized: "iCloud Keychain") : String(localized: "Not yet"))
-                fact(String(localized: "Signer"), choice.signer.map(YourAccount.short) ?? String(localized: "Not yet"))
-                if let limit = choice.limit {
-                    fact(String(localized: "Spend limit"),
-                         String(localized: "\(limit.dollars.formatted(.currency(code: "USD").precision(.fractionLength(0)))) of each coin a \(Period.of(seconds: limit.minutes * 60).word)"))
-                }
-            }
-            .padding(.leading, gutter + DS.Space.s2)
-            .padding(.top, DS.Space.s6)
-            // A new account is on no network yet (prd §1457): the keys go on
-            // with its first send there.
-            small(choice.signer == nil && !choice.recovery
-                  ? String(localized: "Add any of them in Wallet › Security.")
-                  : String(localized: "They go on with your first send. Change any in Wallet › Security."))
         }
     }
 
@@ -162,13 +142,6 @@ struct MoveKeysWalk: View {
             .padding(.top, DS.Space.s4)
     }
 
-    private func fact(_ name: String, _ value: String) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(verbatim: name).dsText(.body17).foregroundStyle(DS.textPrimary)
-            Text(verbatim: value).dsText(.body17).foregroundStyle(DS.textSecondary)
-        }
-    }
-
     /// A line in the sentence's gutter grammar (§1442f), the wider gutter
     /// "up to" needs.
     private func line<Value: View>(_ glue: String?, @ViewBuilder _ value: () -> Value) -> some View {
@@ -185,13 +158,11 @@ struct MoveKeysWalk: View {
 
     private var foot: some View {
         HStack(alignment: .firstTextBaseline) {
-            if step != .summary {
-                Button { advance() } label: {
-                    Text("Later").dsText(.heading17).foregroundStyle(DS.textSecondary).frame(minHeight: 48)
-                }
-                .buttonStyle(RowPress())
-                .disabled(connecting)
+            Button { advance() } label: {
+                Text("Later").dsText(.heading17).foregroundStyle(DS.textSecondary).frame(minHeight: 48)
             }
+            .buttonStyle(RowPress())
+            .disabled(connecting)
             Spacer(minLength: DS.Space.s3)
             Button { act() } label: {
                 Text(verbatim: verb)
@@ -214,7 +185,6 @@ struct MoveKeysWalk: View {
         case .recovery: String(localized: "Add")
         case .signer: connecting ? String(localized: "Connecting…") : String(localized: "Connect")
         case .limit: String(localized: "Set")
-        case .summary: String(localized: "Done")
         }
     }
 
@@ -278,21 +248,25 @@ struct MoveKeysWalk: View {
             choice.limitMinutes = period.minutes
             DSHaptic.success()
             advance()
-        case .summary:
-            done()
         }
     }
 
-    /// The next step, kept as it goes; the limit only stands with a Signer.
+    /// The next step, kept as it goes; the limit only stands with a Signer,
+    /// and the last step hands over to the Created sentence.
     private func advance() {
         note = nil
         if !inert { YourAccountSetup.save(choice, for: account) }
-        let next: Step
+        let next: Step?
         switch step {
         case .recovery: next = .signer
-        case .signer: next = choice.signer == nil ? .summary : .limit
-        case .limit, .summary: next = .summary
+        case .signer: next = choice.signer == nil ? nil : .limit
+        case .limit: next = nil
         }
+        #if DEBUG
+        NSLog("keysWalk: step %d recovery=%@ signer=%@ limit=%@", next?.rawValue ?? 0, choice.recovery ? "yes" : "no",
+              choice.signer ?? "none", choice.limit.map { "\($0.dollars)/\($0.minutes)" } ?? "none")
+        #endif
+        guard let next else { done(); return }
         withAnimation(DS.Motion.standard) { step = next }
         if next == .limit {
             Task { @MainActor in
@@ -300,9 +274,5 @@ struct MoveKeysWalk: View {
                 amountFocused = true
             }
         }
-        #if DEBUG
-        NSLog("keysWalk: step %d recovery=%@ signer=%@ limit=%@", next.rawValue, choice.recovery ? "yes" : "no",
-              choice.signer ?? "none", choice.limit.map { "\($0.dollars)/\($0.minutes)" } ?? "none")
-        #endif
     }
 }

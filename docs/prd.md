@@ -67974,3 +67974,8 @@ Guarded by `category-fold-selftest.sh` (proven by mutation). **Mac half:** the r
 1. Create's small print is "Face ID signs." — no "No seed phrase": nobody signs with one, so naming it explains nothing.
 2. The walk's Signer step is its sentence alone, "Your Signer / in a wallet you have."; the line naming wallets and "big sends" is deleted. The spend limit step already says what the Signer does ("Over it, your Signer signs too.").
 3. `-keysWalk YES` with `-keysStep <n>` (DEBUG) reopens the walk for this phone's account, keeping what it chose, because a relaunch ends it. A fresh iOS 27 simulator refuses the Secure Enclave key (`enclaveRefused`, logged as `moveCreate|`); a clone of one that made a key works.
+
+## §1460 — No summary after your keys: the Created sentence says it in one line (amends §1457 item 1) (user, 2026-10-21: "that confirmation message looked terrible … it was indented in the well but doesn't fit that design pattern"; picked "No summary") — BUILT
+
+1. The walk's "Your keys" page is deleted from view and model (`MoveKeysWalk.Step` is recovery, signer, limit): a list of name-over-value facts indented to the sentence's column is not the sentence's grammar.
+2. The last step — Set or Later on the limit, or Later on the Signer — hands straight over to the Created sentence (§1442j), which says the one thing the page did: "Your keys go on with your first send.", under Copy address, only for a new account with a recovery key or a Signer chosen (`MoveSentence.keysWaiting`). Security lists every key (§1457 item 4).

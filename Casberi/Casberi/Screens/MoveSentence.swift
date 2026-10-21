@@ -41,6 +41,11 @@ struct MoveSentence: View {
         _fresh = State(initialValue: arrival != nil)
     }
 
+    /// A recovery key or a Signer chosen at Create, still to go on.
+    private var keysWaiting: Bool {
+        YourAccountSetup.choice(for: account).map { $0.recovery || $0.signer != nil } ?? false
+    }
+
     /// Still the arrival's sentence: until a verb is picked.
     @State private var fresh = false
     /// The beat has played: the past tense is said and the verbs are in.
@@ -1163,6 +1168,14 @@ struct MoveSentence: View {
                 if fresh, arrived, emptyEverywhere {
                     Text("Nothing in it yet.")
                         .dsText(.body17).foregroundStyle(DS.textSecondary)
+                        .transition(.opacity)
+                }
+                // The keys chosen right after Create (prd §1457, §1460): the
+                // one line that stands for a summary.
+                if fresh, arrived, arrival == .created, keysWaiting {
+                    Text("Your keys go on with your first send.")
+                        .dsText(.body17).foregroundStyle(DS.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
                         .transition(.opacity)
                 }
                 Button {
