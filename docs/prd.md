@@ -67883,3 +67883,12 @@ Mock: the design canvas "Where app settings live" (option C, title door 3).
 1. **Four optional fields under `node` in `/v2/status`**, proposed to the Observer's developer: `slot`, `epoch`, `slots_until_next_epoch`, `slot_duration_ms`. Each is a non-negative count; a Bool, a negative or a missing field is no reading. Today's Observer sends none, and the box says nothing.
 2. **The Node box says when, not how many:** "Epoch 412 · next in 2h" under the Block line. The time is slots × slot length; with no slot length it says the count ("1,203 slots to the next"), never a guessed time. An epoch alone stands alone.
 3. **Names are provisional** until the developer confirms them; a rename is one line in `LogosObserverWire.status`. Guarded by `logos-observer-selftest.sh` ("The epoch").
+
+## §1450 — Diagnostics is deleted; Wallet's Subscriptions opens as a page again; one row per alarm on the Feed (amends §623, §777, §1079, §1232) (user, 2026-10-21, over the nightly audit's findings: "fix 1, 2, 3, remove diagnostics, 6, 7") — BUILT
+
+1. **Diagnostics is deleted.** It left Settings on 2026-10-10 (user: "doesn't seem we need it anymore") and opened only from `-openDiagnostics` in DEBUG, where the audit found its Copy control drawn over its own text. `DiagnosticsScreen`, the hook, `SettingsPage.diagnostics` and the DEBUG web-session capture it alone opened (`WebSessionCapture`, `WebSessionCaptureView`, `web-session-selftest.sh`, §777) go with it, as does `AppleMusicIngest.artworkDiagnostic`. The readings stay: `-perfReadingsProbe` and `-metricsProbe` log them through the same `PerfReadings.lines` and `AppMetrics.report()`.
+2. **Subscriptions is a page with no tile (§1232's own words), and the room now resolves to it.** Home's "See all" and a plan's "What you pay" set it, but the room resolved against the four tiles alone, so the title said "Wallet · Subscriptions" over Home (§83). `WalletSection.pages(tiles:)` adds it; `wallet-section-selftest.sh` asserts the resolve and guards the call.
+3. **The Feed's Work section folds as the Work page does (§1079).** An alarm keeps every transition as its own row, so one alarm led the section five times. The Feed computes Work's object keys off the main actor, as the page does, and folds the section (`object-fold-selftest.sh` guards both).
+4. **A note of yours in Newest says its time once:** the app's line carries it (§1256); the row's own stamp is for the Notes section and room (§969, §1347).
+
+**Mac half.** The same views; nothing is Mac-only.

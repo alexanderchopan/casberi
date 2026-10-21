@@ -101,7 +101,7 @@ deliberately does not check are in `docs/verify.md`.
 - **Safe signer §913 self-test (scripts/safe-signer-selftest.sh) — EIP-712 pinned to the spec's vector, the SafeMessage, recovery and WebAuthn preimages, the peer's allowlist; 33 mutations** → docs/verify.md · prd §913
 - **Wallet-total audit (scripts/wallet-total-audit.py, was `chain-filter-audit.py`)** → docs/verify.md · prd §825 · §826
 - **Card-spend audit (scripts/card-spend-audit.py) — the three onchain-card seats, and four failures that compile and look right** → docs/verify.md · prd §857
-- **The demo's mark: on the phone "Exit demo" in the band (`DemoTag`), nothing reserved at the top; iPad/Mac keep the top pill (`DSDemoMark.inBand`)** → prd §919 · §1322
+- **The demo's mark: on the phone "Exit demo" ends the title row (`demoTagOnTitle()`), none on a pushed page; iPad/Mac keep the top pill** → prd §919 · §1389
 - **The demo is one person's life (prd §1026): a topic (`ocrTopics`) in at most two rooms, no room leading three topic rows with one word, and the person's app is Quillmark, never Casberi (`CasberiTests/DemoSpreadTests`); pictures are drawn by `scripts/demo-art/render.py`, one generator per imageset** → prd §1026 · §890
 - **Dead-closure audit (scripts/dead-closure-audit.py) — a control calling a closure property nothing ever supplies** → docs/verify.md · prd §669
 - **Way-back audit (scripts/way-back-audit.py) — every screen has a way back: a full-screen cover shows a close control on every branch, no sheet switches its swipe off unlisted, a hidden back button keeps `DSSwipeBack()`** → docs/verify.md
@@ -122,7 +122,6 @@ deliberately does not check are in `docs/verify.md`.
 - **RULE: a feature deleted from the surface is deleted from the model**, or it is §83's dead control one layer down where no screen sweep sees it (the ranked board and `roomScoped`) → docs/hooks/system.md · prd §723
 - **RULE: name every column a `propertiesToFetch` read touches** (the RSS page's sync) → docs/hooks/system.md · prd §722
 - **Feed-walk self-test (scripts/feed-walk-selftest.sh) — next/previous follows the list you opened from; `FeedSheetRoute.thing` carries a `WalkScope` value, never a `[Thing]`** → docs/verify.md · prd §645
-- **Web-session capture (Model/WebSessionCapture.swift + Screens/WebSessionCaptureView.swift, Diagnostics, DEBUG, 2026-09-16)** → docs/verify.md · prd §777
 - **Duolingo self-test (scripts/duolingo-selftest.sh) — a JWT payload read as plain base64 is nil for every token carrying a `-`** → docs/hooks/bridges.md · prd §776
 - **Mail-location self-test (scripts/mail-location-selftest.sh) — the message door: a `Message-ID` fence, and an unencoded `/` that turns Gmail's one search into a PATH** → docs/hooks/bridges.md · prd §735
 - **Readable-body self-test (scripts/readable-body-selftest.sh) — the page extractor: one 200-paragraph / 8,000-character bound across app and appex, and which hosts a scrape is fair on** → docs/verify.md · prd §645
@@ -209,7 +208,7 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - `-subscriptionsCategory "<Category>"|Other` — with `-openRoom Wallet -openSection subscriptions`, press that tile on the Subscriptions tile's category map (prd §1112) once the tile has read (NSLogs `subscriptionsCategory:`); the map logs `subscriptionsMap| <Category> | <monthly> | <share>` per category (shares only under Hide balances), the measure of how much spend lands in Other (`subscription-categories-selftest.sh`)
 - `-roomScope "<room>|seat:<Name>"` — pick an app in a merged room's menu at launch (`chrome.mergedScope`; NSLogs `roomScope:`), the room sweep's door to every app pick, as `-walletScope` is the Wallet's (prd §1067)
 - `-sectionAdd "<Category>[|<App>]"` — log a Feed section's + rows (`sectionAdd|`) and take one (`Model/FollowByName.swift`) → prd §1300
-- `-openSection <raw>` — with `-openRoom`, land on a wallet-family tile, Work's or Life's (`subscriptions`, prd §1111, §1231), or a Markets company pack by its category name (`Work`) at launch, no tap (DEBUG) → docs/hooks/system.md · prd §953
+- `-openSection <raw>` — with `-openRoom`, land on a wallet-family tile (Wallet's `subscriptions` is a page, no tile, §1232), Work's or Life's (`subscriptions`, prd §1111, §1231), or a Markets company pack by its category name (`Work`) at launch, no tap (DEBUG) → docs/hooks/system.md · prd §953
 - **The folded rooms' own views are deleted (prd §1059): the kind tiles (`RoomKindTiles`), Reminders' and Mail's tiles, the Calendar agenda and every room-level arm only a folded app reached; `FeedScreen.Shape` and `rowShape` stay for the rows. A mail's `Attached` fact stays (`MailIngest.attachedLabel`): the sheet and search read it** → prd §1059
 - `-connectReminders YES` — the real Reminders connect, seat included (relaunch to see it; `simctl privacy … grant reminders` first, `-demo.corpusAllowed NO` on a fresh install or the dev seed pours four) → prd §993
 - **Shares file by kind (`ShareHome`)** → prd §1200
@@ -292,7 +291,7 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - `-secretScanProbe` — run the credential tripwire (prd §277, Model/SecretScan.swift) and NSLog what it found: the KINDS plus → docs/hooks/system.md · prd §277
 - `-keychainProbe YES` — NSLog the vault's storage-policy census, force `TokenVault.migrateToDeviceOnly`, then census again (counts only, never a value; prd §277).
 - `-receiptsProbe` — dump the network receipts ledger (prd §277, Model/NetworkLedger.swift): one receipt| line per host actually → docs/hooks/system.md · prd §277
-- `-metricsProbe` `-metricsForget` — what MetricKit has handed this app, one `metricKit|` line per Diagnostics line (`Model/AppMetrics.swift`). Always EMPTY on the simulator; delivery is a device check → docs/verify.md · prd §622
+- `-metricsProbe` `-metricsForget` — what MetricKit has handed this app, one `metricKit|` line per reading (`Model/AppMetrics.swift`). Always EMPTY on the simulator; delivery is a device check → docs/verify.md · prd §622
 - **The phone's own perf numbers, on the phone — the same spans MetricKit histograms, read seconds after they happen (`-perfReadingsProbe` `-perfMeasure` `-perfForget`)** → docs/hooks/system.md · prd §623
 - **The source room's light columns, behind an OS gate (`-sourceRoomLightColumns`, DEBUG) — the projection on iOS 26+ only, because a predicated partial fetch drops rows on 18.6** → docs/hooks/system.md · prd §623
 - **Perf-readings self-test (scripts/perf-readings-selftest.sh)** → docs/verify.md · prd §623
@@ -407,7 +406,7 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - `-watchCapProbe <address>` — attempt one more watch and NSLog `added`/`alreadyWatching`/`limitReached`/`invalid` (prd §170); one add per launch.
 - `-holdingsWindowProbe` `-holdingsWindow` — the holdings freshness window (prd §216, HoldingsCache in Model/WalletIngest.swift) → docs/hooks/wallet.md · prd §216
 - `-portfolioProbe YES|<watched address>` — the combined portfolio read headless (prd §155): merged total, token count and treemap shape. Spends Alchemy credits → docs/hooks/wallet.md
-- `-openDiagnostics YES` — open the Diagnostics sheet (pair with `-openSettings YES`); it runs the cover-photo and token-chart paths on-device and prints each step.
+- **Diagnostics is deleted (2026-10-21), its web-session capture (§777) with it; perf readings are `-perfReadingsProbe`/`-metricsProbe`**
 - `-connectPhotos YES` — runs the real Photos connect+ingest headlessly; `-reingestPhotos YES` — calls the bare re-scan (no permission request) that `BridgeRefresh` now runs each foreground.
 - `-connectStrava YES` / `-connectGarmin YES` — run a rider's connect: Health workouts filtered by `sourceRevision` through `HealthIngest.riders`, one row per rider. On the sim expect "connected, 0 in" → docs/hooks/system.md
 - **ONE ACTIVITY, ONE ROW — and Strava never wins (RULE, `Model/HealthRiders.swift`).** → docs/hooks/system.md
@@ -481,7 +480,7 @@ Deep links: `casberi://home`, `casberi://feed`, `casberi://feed/type/<Tag>` (int
 ## Design law (read docs/build-brief.md §8 before UI work)
 
 - Trays are NEVER hand-rolled — use `DSTray(title:height:)` (`Design/DSTray.swift`).
-- Liquid Glass on the floating layer only (composer/FAB/toasts) — never on content. There is no tab bar (prd §100); older rulings that narrate one are historical → docs/hooks/design.md
+- Liquid Glass on the floating layer only (composer/FAB/toasts) — never on content. The tab bar (Feed · Wallet · Library + Search, prd §1327, §1374; the Mac's rail, §1402) retired §100's "no tab bar" → docs/hooks/design.md
 - No letter-spacing, no ALL-CAPS eyebrows — headers are words in sentence case ("Getting started", never "G E T T I N G  S T A R T E D" or "GETTING STARTED"). `.kerning()` is banned; the type ramp carries hierarchy by size/weight alone (ruling 2026-07-08).
 - **Every text rung is named for the size it draws, and a glyph takes a `DSGlyph` rung, never a number (prd §762).** → docs/hooks/design.md · prd §762
 - **Every row in every room is one anatomy (prd §764, amended by §902)** Weight carries a fact (the next event, a state word), never a row's title. → docs/hooks/design.md · prd §764

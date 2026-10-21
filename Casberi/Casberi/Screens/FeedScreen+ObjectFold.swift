@@ -9,8 +9,16 @@ import SwiftUI
 // computed instead once per corpus revision, on a context of their own off
 // the main actor, and the body folds with a dictionary lookup per row.
 extension FeedScreen {
+    /// The room whose objects fold: this room's, or on the Feed its Work
+    /// section's, which drew one row per alarm transition (2026-10-21). Nil
+    /// anywhere else.
+    var objectFoldTarget: String? {
+        if ObjectFold.Room(room: source) != nil { return source }
+        return source == "All" ? RoomAccounts.workRoom : nil
+    }
+
     /// Work or Reading, else nil (no fold).
-    var objectFoldRoom: ObjectFold.Room? { ObjectFold.Room(room: source) }
+    var objectFoldRoom: ObjectFold.Room? { objectFoldTarget.flatMap { ObjectFold.Room(room: $0) } }
 
     /// What the keys are computed against: the room and any change to the
     /// corpus. Empty outside the two rooms, so the task does nothing there.
@@ -22,13 +30,13 @@ extension FeedScreen {
     /// The room's object keys, off the main actor: the same rows the room's
     /// query reads (its members, newest first, its bound), each row's key.
     func recomputeObjectKeys() async {
-        guard let room = objectFoldRoom else {
+        guard let room = objectFoldRoom, let target = objectFoldTarget else {
             if !objectKeys.isEmpty { objectKeys = [:] }
             return
         }
         // Media's keys are its Read half's (prd §1204): a video or a song
         // saved twice is two plays, never one object.
-        let members = RoomAccounts.roomSources(source == RoomAccounts.mediaRoom ? RoomAccounts.readingRoom : source)
+        let members = RoomAccounts.roomSources(target == RoomAccounts.mediaRoom ? RoomAccounts.readingRoom : target)
         let container = modelContext.container
         let limit = Self.sourceRoomFetchLimit
         let keys = await Task.detached(priority: .utility) { () -> [UUID: String] in

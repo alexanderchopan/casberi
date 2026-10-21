@@ -317,7 +317,8 @@ extension FeedScreen {
                 let inert = seatPicked ? walletInertSections(visible: visible, upcoming: upcoming) : []
                 let section = pinnedWalletSection ?? WalletSection.resolve(
                     chrome.walletSection,
-                    present: walletSectionPublication.sections.filter { !inert.contains($0) })
+                    present: WalletSection.pages(tiles: walletSectionPublication.sections)
+                        .filter { !inert.contains($0) })
                 // The crown's own newest-few (§208, added 2026-08-18) exist for one
                 // reason: "the room's transactions used to begin after ten standing
                 // cards, so on a busy wallet the one thing a wallet app gets opened

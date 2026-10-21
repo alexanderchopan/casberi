@@ -45,9 +45,8 @@ DIGEST="Casberi/Casberi/Model/AppMetricsDigest.swift"
 METRICS="Casberi/Casberi/Model/AppMetrics.swift"
 SIGNPOSTS="Casberi/Casberi/Model/AppSignposts.swift"
 APPFILE="Casberi/Casberi/CasberiApp.swift"
-SCREEN="Casberi/Casberi/Screens/DiagnosticsScreen.swift"
 PROBES="Casberi/Casberi/Shell/ProbeHooks.swift"
-for f in "$DIGEST" "$METRICS" "$SIGNPOSTS" "$APPFILE" "$SCREEN" "$PROBES"; do
+for f in "$DIGEST" "$METRICS" "$SIGNPOSTS" "$APPFILE" "$PROBES"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -78,10 +77,7 @@ grep -q 'AppMetrics.begin()' "$APPFILE" \
 # The failure was a violation reported against correct code, in the same words
 # as the real bug — the exact shape `docs/perf-spec.md` records as worse than
 # staying silent. Without `-q`, grep drains its input and there is no SIGPIPE.
-SCREEN_CODE=$(sed 's://.*::' "$SCREEN")
 PROBES_CODE=$(sed 's://.*::' "$PROBES")
-echo "$SCREEN_CODE" | grep 'AppMetrics.report()' >/dev/null \
-  || { echo "✗ the Diagnostics screen no longer prints the MetricKit read"; exit 1; }
 
 # ONE RENDERER. The probe must go through the same `report()` the screen draws,
 # or it stops being evidence ABOUT the screen and becomes a second opinion

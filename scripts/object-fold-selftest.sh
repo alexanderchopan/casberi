@@ -30,6 +30,12 @@ trap 'rm -rf "$FEED_DIR"' EXIT
 cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+*.swift > "$FEED_DIR/FeedScreen.swift"
 grep -q 'objectFolded(' "$FEED_DIR/FeedScreen.swift" \
   || { echo "✗ no merged room folds its rows through ObjectFold any more"; exit 1; }
+# The Feed's Work section folds too (2026-10-21): it drew one row per alarm
+# transition, five of one alarm leading Work, while the Work page folded them.
+grep -q 'workRoomSections(objectFolded(things)' "$FEED_DIR/FeedScreen.swift" \
+  || { echo "✗ the Feed's Work section no longer folds its rows — one alarm leads Work five times"; exit 1; }
+grep -q 'return source == "All" ? RoomAccounts.workRoom : nil' "$FEED_DIR/FeedScreen.swift" \
+  || { echo "✗ the Feed computes no object keys for its Work section, so its fold is a no-op"; exit 1; }
 grep -q 'ObjectFold.key(' Casberi/Casberi/Screens/ThingSheetView.swift \
   || { echo "✗ the thing sheet no longer lists the rows folded under it — the fold would hide them for good"; exit 1; }
 

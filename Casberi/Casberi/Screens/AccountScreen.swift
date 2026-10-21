@@ -31,7 +31,6 @@ struct SettingsRows: View {
     /// crossing is celebrated once and never re-celebrated on the next open.
     @AppStorage("settings.thingsRung") private var celebratedRung = 0
     @State private var rungBounce = 0
-    @State private var diagnosticsOpen = false
     @State private var languageOpen = false
     @State private var detail: AccountDetail?
     /// How the rows draw (prd §1208c): as rows, as the Settings box's grid,
@@ -100,12 +99,6 @@ struct SettingsRows: View {
             // a sweep may have landed things while it was away — and never
             // in between: one COUNT per return, not one per bridge landing.
             .onChange(of: scenePhase) { _, phase in if phase == .active { readCounts() } }
-            // `dsNavSheet` rather than `dsPageSheet` (prd §560) — the nav-sheet
-            // family's own chassis, which adds the presented corner these
-            // three were missing along with the sizing they already had.
-            .sheet(isPresented: $diagnosticsOpen) {
-                presented(NavigationStack { DiagnosticsScreen() }.dsNavSheet())
-            }
             // `onDismiss` re-reads the mirrored counts (prd §628): a tray
             // that changed what a row states must not leave the row stale
             // (§83's fake status).
@@ -171,9 +164,6 @@ struct SettingsRows: View {
                 // the PANE path the person takes (prd §876), not a sheet.
                 // The colophon under the Settings box answers none of them.
                 guard style != .colophon else { return }
-                if UserDefaults.standard.bool(forKey: "openDiagnostics") {
-                    open(.diagnostics) { diagnosticsOpen = true }
-                }
                 if let raw = UserDefaults.standard.string(forKey: "accountDetail"),
                    let which = AccountDetail(rawValue: raw),
                    let page = SettingsPage(rawValue: raw) {
@@ -416,7 +406,7 @@ struct SettingsRows: View {
                     }),
         ]
         // Diagnostics left Settings (user, 2026-10-10: "doesn't seem we need
-        // it anymore"); the screen opens from `-openDiagnostics` in DEBUG only.
+        // it anymore") and was deleted on 2026-10-21 (user: "remove diagnostics").
         return rows.sorted { $0.title < $1.title }
     }
 
@@ -555,7 +545,6 @@ struct SettingsRows: View {
         case "Avatar": "person.crop.circle"
         case "Name": "signature"
         case "Data": "externaldrive"
-        case "Diagnostics": "stethoscope"
         case "Feed order": "arrow.up.arrow.down"
         case "Theme": "circle.lefthalf.filled"
         case "Notifications": "bell"

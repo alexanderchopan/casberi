@@ -1554,8 +1554,7 @@
    "covers": [
     "Screens/AccountScreen.swift:detail#data",
     "Screens/AccountScreen.swift:detail#notifications",
-    "Screens/AccountScreen.swift:languageOpen",
-    "Screens/AccountScreen.swift:diagnosticsOpen"
+    "Screens/AccountScreen.swift:languageOpen"
    ],
    "why": "on the phone a setting is a page pushed beside Sources (AccountScreen.open, SettingsHome.bandSearches, prd §1321), never a sheet; these rise only on the iPad outside a sheet"
   },
@@ -1671,19 +1670,6 @@
     "Screens/SocialPostViews.swift:profile@2"
    ],
    "why": "reply avatars come from a live thread fetch; the demo has no replies to tap"
-  },
-  {
-   "covers": [
-    "Screens/DiagnosticsScreen.swift:capturing#youtube",
-    "Screens/DiagnosticsScreen.swift:capturing#podcasts",
-    "Screens/DiagnosticsScreen.swift:capturing#pinterest",
-    "Screens/DiagnosticsScreen.swift:capturing#github",
-    "Screens/DiagnosticsScreen.swift:capturing#npm",
-    "Screens/DiagnosticsScreen.swift:capturing#pypi",
-    "Screens/DiagnosticsScreen.swift:capturing#huggingFace",
-    "Screens/DiagnosticsScreen.swift:capturing#radicle"
-   ],
-   "why": "DEBUG-only measurement covers in Diagnostics, which the phone reaches only by the -openDiagnostics hook; never seen by a person"
   },
   {
    "covers": [

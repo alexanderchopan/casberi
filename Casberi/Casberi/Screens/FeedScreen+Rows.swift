@@ -323,7 +323,7 @@ extension FeedScreen {
                     if let app { appLine(app.source, at: app.date, place: place) }
                     AnyView(shapedRow(thing, nextEventID: nextEventID, index: index,
                                       imageOnly: imageOnly, wideArt: wideArt,
-                                      replies: replies))
+                                      replies: replies, timed: app != nil))
                 }
                 .contentShape(Rectangle())
                 // THE INK FOLLOWS ITS CARD. Every text token in this app is a
@@ -463,7 +463,10 @@ extension FeedScreen {
     private func shapedRow(_ thing: Thing, nextEventID: UUID?, index: Int = 0,
                            imageOnly: Bool = false,
                            wideArt: Bool = false,
-                           replies: [String: [Thing]] = [:]) -> some View {
+                           replies: [String: [Thing]] = [:],
+                           // The app's line above already says the time
+                           // (Newest, §1256), so the row draws no second one.
+                           timed: Bool = false) -> some View {
         // Dead-model guard first (corollary 3, build 176 — see
         // `ThingRowKeying`). This is where build 176 trapped: `thing.kind`,
         // one frame after a heal deleted the row, reached from a correctly
@@ -686,7 +689,7 @@ extension FeedScreen {
                             // row carries its own time (prd §969).
                             // The Feed's Notes section draws the same row
                             // (prd §1347).
-                            stamp: Pinboard.isPinnedRoom(source) || (source == "All" && Pinboard.inRoom(thing))
+                            stamp: !timed && (Pinboard.isPinnedRoom(source) || (source == "All" && Pinboard.inRoom(thing)))
                                 ? thing.capturedAt : nil,
                             // What a note of yours says (prd §983).
                             notePreview: (Pinboard.isPinnedRoom(source) || source == "All") && Pinboard.isNote(thing),

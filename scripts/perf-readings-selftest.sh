@@ -35,7 +35,6 @@ SRC="Casberi/Casberi/Model/PerfReadings.swift"
 SIGNPOSTS="Casberi/Casberi/Model/AppSignposts.swift"
 SWEEP="Casberi/Casberi/Shell/SweepClock.swift"
 SAVE="Casberi/Shared/SaveHonestly.swift"
-SCREEN="Casberi/Casberi/Screens/DiagnosticsScreen.swift"
 PROBES="Casberi/Casberi/Shell/ProbeHooks.swift"
 # FeedScreen is split across files (prd §718). Checks read the room as ONE text,
 # so a guard can neither fail nor pass because its code moved next door.
@@ -43,7 +42,7 @@ FEED_DIR="$(mktemp -d -t feedscreen)"
 FEED="$FEED_DIR/FeedScreen.swift"
 cat Casberi/Casberi/Screens/FeedScreen.swift Casberi/Casberi/Screens/FeedScreen+*.swift > "$FEED"
 PERFSH="scripts/perf.sh"
-for f in "$SRC" "$SIGNPOSTS" "$SWEEP" "$SAVE" "$SCREEN" "$PROBES" "$FEED" "$PERFSH"; do
+for f in "$SRC" "$SIGNPOSTS" "$SWEEP" "$SAVE" "$PROBES" "$FEED" "$PERFSH"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -69,12 +68,8 @@ need "$SWEEP" 'saves=%d' \
   "the sweepPass| line lost saves= — hitches and saves must sit on ONE line to answer whether each save re-emits the feed"
 need "$SAVE" 'SaveCensus.count += 1' \
   "saveHonestly no longer counts saves — saves=N would read 0 forever and look like a fix"
-need "$SCREEN" 'PerfReadings.lines(PerfReadings.load(), measuring: PerfReadings.measuring)' \
-  "DiagnosticsScreen draws readings through something other than PerfReadings.lines"
-need "$SCREEN" 'PerfReadings.measuring = on' \
-  "the Measure stalls toggle no longer writes PerfReadings.measuring"
 need "$PROBES" 'PerfReadings.lines(PerfReadings.load(), measuring: PerfReadings.measuring)' \
-  "-perfReadingsProbe draws through a second digest — the probe must be evidence about the SCREEN"
+  "-perfReadingsProbe draws through a second digest — PerfReadings.lines is the one reader (the Diagnostics screen was deleted, 2026-10-21)"
 for key in perfReadingsProbe perfMeasure perfForget; do
   need "$PROBES" "Hook(key: \"$key\")" "the -$key hook is gone"
 done

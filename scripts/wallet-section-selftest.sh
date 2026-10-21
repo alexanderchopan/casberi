@@ -131,6 +131,12 @@ check(WalletSection.resolve(.holdings, present: [.holdings, .security]) == .hold
 // present scope" — without it, both implementations pass every case above.
 check(WalletSection.resolve(.security, present: [.holdings, .home]) == .home,
       "an absent scope resolves to home, not to the first present scope")
+// Subscriptions has no tile since §1232, but Home's "See all" opens it: a
+// door that resolves against the tiles alone drew Home under its title.
+check(WalletSection.resolve(.subscriptions, present: WalletSection.pages(tiles: WalletSection.present())) == .subscriptions,
+      "Home's See all opens Subscriptions, a page with no tile")
+check(WalletSection.pages(tiles: WalletSection.present()).filter { $0 == .subscriptions }.count == 1,
+      "pages lists Subscriptions once")
 
 check(!WalletSection.shows(present: [.home]), "one scope draws no strip")
 check(!WalletSection.shows(present: []), "no scopes draw no strip")
@@ -320,6 +326,8 @@ wallet_fn=$(sed -n '/func walletScopeChromeSection(/,/^    }$/p' "$work/FeedScre
   || fail "drift: the wallet no longer hands its section figure to the chrome (§765)"
 guard FeedScreen.swift "WalletSection.resolve(" \
   "the room reads chrome.walletSection raw instead of resolving it"
+guard FeedScreen.swift "WalletSection.pages(tiles:" \
+  "the room resolves against the tiles alone, so Subscriptions (no tile, §1232) draws Home under its title"
 
 # The crown and its chart belong to NO scope, so the switcher must come AFTER
 # them: above it, the toggle would appear to scope the balance it does not scope.

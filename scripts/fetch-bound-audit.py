@@ -167,11 +167,6 @@ KNOWN_UNBOUNDED: dict[tuple[str, str], str] = {
     # Wallet account page grew in §639b — same verb, same dialog, same
     # keep-or-purge choice — so it is deleted, and the purge it defended now
     # runs only through `BridgeDisconnectSection.disconnect` above.
-    ("Screens/DiagnosticsScreen.swift", "run"):
-        "Diagnostics reports on the corpus, so it must read the corpus — a "
-        "bounded count is the wrong answer to 'Things: N', and this screen's "
-        "whole job (§315 round 3) is telling a predicate's answer apart from a "
-        "plain Swift filter's over the SAME store.",
     ("Screens/ProjectDetailScreen.swift", "corpus"):
         "A project is defined by a TAG, and a `#Predicate` over the "
         "transformable `tags` array COMPILES CLEAN AND TRAPS AT RUNTIME (see "

@@ -1748,13 +1748,6 @@ harness "Privy self-test" "Privy self-test" "scripts/privy-selftest.sh" "the Pri
 # read parses to nothing, address-poisoning dust landed as news, and a
 # proposal waiting on signatures drawn as done.
 harness "Splits self-test" "Splits self-test" "scripts/splits-selftest.sh" "the Splits self-test failed — run scripts/splits-selftest.sh"
-# The web-session capture (prd §777) — an instrument that records a MONEY app's
-# own traffic, so what it may report is the whole check: a host outside the
-# named target is dropped rather than redacted, a URL keeps its path and loses
-# every value, a response is keys and types and never an amount, an
-# Authorization header is a scheme. Each of those is one edit away from a
-# transcript somebody pastes into a chat.
-harness "Web-session capture self-test" "Web-session capture self-test" "scripts/web-session-selftest.sh" "the web-session capture self-test failed — run scripts/web-session-selftest.sh"
 # Bankr's key, made in the app (prd §800) — the request asks for Agent API
 # and read-only and nothing else, a key that comes back wider is never
 # stored (an ABSENT flag included), and the sign-in's jar never outlives the
@@ -2854,14 +2847,14 @@ harness "Cloud-sync self-test" "20 assertions, 6 mutations, 14 drift guards — 
 # capitals against bulk use, so a span reaching a view body would be an
 # instrument that costs what it measures, inside the very spans it exists to
 # protect.
-harness "MetricKit self-test" "11 mutations, 15 drift guards — the payload read, and the signposts that make one worth reading" "scripts/metrics-selftest.sh" "the MetricKit self-test failed — run scripts/metrics-selftest.sh"
+harness "MetricKit self-test" "11 mutations, 14 drift guards — the payload read, and the signposts that make one worth reading" "scripts/metrics-selftest.sh" "the MetricKit self-test failed — run scripts/metrics-selftest.sh"
 # The phone's own perf numbers, on the phone (prd §623): the digest the
 # Diagnostics screen draws, the ONE switch that flips BOTH measurement gates,
 # and the OS gate keeping the source room's light-column projection off iOS
 # 18.x, where it returns rows the predicate never selected (§592). Every
 # failure it catches is a silently wrong number on a screen meant to be
 # screenshotted and believed.
-harness "Perf-readings self-test" "4 mutations, 16 drift guards — the on-device perf digest, the measurement switch, and the light-column OS gate" "scripts/perf-readings-selftest.sh" "the perf-readings self-test failed — run scripts/perf-readings-selftest.sh"
+harness "Perf-readings self-test" "4 mutations, 14 drift guards — the on-device perf digest, the measurement switch, and the light-column OS gate" "scripts/perf-readings-selftest.sh" "the perf-readings self-test failed — run scripts/perf-readings-selftest.sh"
 
 # The save coalescer (prd §658, 2026-09-08): ~45 per-bridge saves a sweep,
 # each re-running every mounted @Query, become a handful — and nothing but a

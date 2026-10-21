@@ -102,6 +102,14 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
     /// Which scopes the strip offers: **every one, on every wallet (prd §611).**
     static func present() -> [WalletSection] { order }
 
+    /// The pages a door may open: the tiles, and Subscriptions, which Home's
+    /// "See all" and a plan's "What you pay" open with no tile of its own
+    /// (§1232). Resolving against the tiles alone drew Home under a
+    /// "Wallet · Subscriptions" title.
+    static func pages(tiles: [WalletSection]) -> [WalletSection] {
+        tiles.contains(.subscriptions) ? tiles : tiles + [.subscriptions]
+    }
+
     /// **THE SHORT STATE, drawn where the scope's headline would go (prd §611).**
     var emptyHeadline: String? {
         switch self {

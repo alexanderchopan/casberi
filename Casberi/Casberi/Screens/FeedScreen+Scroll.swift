@@ -197,7 +197,9 @@ extension FeedScreen {
         case RoomAccounts.lifeRoom:
             lifeRoomSections(things, nextEventID: nextEventID)
         case RoomAccounts.workRoom:
-            workRoomSections(things, nextEventID: nextEventID, heroShown: true)
+            // One row per object (prd §1079) on the Feed too: the Work
+            // page's rows arrive folded, and folding twice changes nothing.
+            workRoomSections(objectFolded(things), nextEventID: nextEventID, heroShown: true)
         case RoomAccounts.mediaRoom:
             mediaRoomSections(things, nextEventID: nextEventID, heroShown: true)
         case RoomAccounts.socialRoom:

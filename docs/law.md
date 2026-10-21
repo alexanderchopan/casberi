@@ -235,7 +235,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1587 of 1656 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1588 of 1657 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -919,7 +919,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §620 — The first screen rides on the demo: no cover, no buttons, a tap or a scroll lifts it [+1 sub-entries]
 - §621 — The dock is continuous: the fold tracks the scroll, folders open in place, the page follows the finger, and a press-a… [+4 sub-entries]
 - §622 — MetricKit: the two failure classes no check here can see, arriving on their own
-- §623 — The phone's own perf numbers, on the phone; and the source room's light columns come back behind an OS gate
+- §623 — The phone's own perf numbers, on the phone; and the source room's light columns come back behind an OS gate (amended by §1450)
 - §624 — The feed is a carousel: a swipe lifts the room as a card over the next room's cover [+1 sub-entries]
 - §625 — First paint: the launch sweeps wait for the first painted frame
 - §626 — Six costs that ran per row, per render; and the first sweep of the row bodies [+1 sub-entries]
@@ -1095,7 +1095,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §773 — Nothing from today is dimmed
 - §774 — Every devnet Home offers Create account, and a phone can hold more than one account on Frames, Hegotá and the Privacy… (amended by §1039, §1108)
 - §776 — Duolingo, on the same door as Spotify, Instagram, TikTok and X
-- §777 — Measure the web app before writing the seat
+- §777 — Measure the web app before writing the seat (amended by §1450)
 - §778 — Wise, and the two doors that stay shut: Plaid, Stripe Financial Connections, and a cookie sign-in for banks
 - §779 — Apple Wallet has been reading UK bank accounts for months, and every sentence about it said "US-only"
 - §780 — Two finance seats, and the three that were refused for cause
@@ -1439,7 +1439,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1076 — A Wallet transfer with no address and no token wears the way it moved
 - §1077 — The 2.0 store listing, after the 4.1(a) rejection
 - §1078 — The One Wallet, five changes: your own moves are one row, Holdings dates a stored reading and the total names a card… (amended by §1105)
-- §1079 — Work and Reading show one row per object, Work's box is its newest event, and Social gets its threads and faces back (amended by §1080, §1109)
+- §1079 — Work and Reading show one row per object, Work's box is its newest event, and Social gets its threads and faces back (amended by §1080, §1109, §1450)
 - §1080 — Work's Coming up leads with what needs you, then what is due
 - §1081 — Markets, find it in one tap and keep it in one more: the day as a heat map, Add in the room, alerts, stock logos (amended by §1082, §1177)
 - §1082 — Markets' categories are an index of the companies behind every app, your apps first, and Add becomes Search over the…
@@ -1611,7 +1611,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1229 — Day's box is a calendar (amended by §1344)
 - §1230 — Follow and subscriptions, one standard
 - §1231 — The Feed's row is Feed · Day · Notes · Sources; Day is a door, mail lives in Life
-- §1232 — Markets is a Wallet tile; Wallet Home is Needs you · Subscriptions · Spending · Cards · Transactions
+- §1232 — Markets is a Wallet tile; Wallet Home is Needs you · Subscriptions · Spending · Cards · Transactions (amended by §1450)
 - §1233 — An empty Day is Day, and New needs no connect; Apps' categories are the two-across box
 - §1234 — The catalogue is Sources › Apps; the Apps screen is deleted
 - §1235 — Notes holds everything you write: your notes, Obsidian, Apple Journal, Day One and Notion
@@ -1824,6 +1824,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1446 — Aztec through V6: rollups found in the Registry, a warning before an upgrade strands zk.money money, and the sign she… [+2 sub-entries]
 - §1448 — The node's epoch, read the day the Observer sends it
 - §1449 — Robinhood Chain leaves the account (amends §1441, §1441a)
+- §1450 — Diagnostics is deleted; Wallet's Subscriptions opens as a page again; one row per alarm on the Feed
 
 ## Dead rulings → what replaced them (generated)
 
