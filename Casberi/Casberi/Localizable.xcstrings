@@ -1553,34 +1553,6 @@
         }
       }
     },
-    "%@ of each coin a %@" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "%1$@ de cada moneda al %2$@"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "各コイン%1$@まで、1%2$@ごと"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "코인마다 %2$@ %1$@까지"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "每种币每%2$@ %1$@"
-          }
-        }
-      }
-    },
     "%@ of round-ups buys %@ on %@" : {
       "localizations" : {
         "es" : {
@@ -5569,34 +5541,6 @@
         }
       }
     },
-    "Add any of them in Wallet › Security." : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Añade cualquiera en Cartera › Seguridad."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "ウォレット › セキュリティでいつでも追加できます。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "지갑 › 보안에서 언제든 추가하세요."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "可随时在“钱包 › 安全”中添加。"
-          }
-        }
-      }
-    },
     "Add your recovery key" : {
       "localizations" : {
         "es" : {
@@ -5957,34 +5901,6 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "美元"
-          }
-        }
-      }
-    },
-    "Face ID" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Face ID"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Face ID"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Face ID"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "面容 ID"
           }
         }
       }
@@ -6801,34 +6717,6 @@
         }
       }
     },
-    "They go on with your first send. Change any in Wallet › Security." : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Se activan con tu primer envío. Cámbialos en Cartera › Seguridad."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "最初の送金と一緒に設定されます。変更はウォレット › セキュリティで。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "첫 송금과 함께 적용됩니다. 지갑 › 보안에서 바꿀 수 있습니다."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "随你的第一次发送一起生效。可在“钱包 › 安全”中更改。"
-          }
-        }
-      }
-    },
     "Total" : {
       "localizations" : {
         "es" : {
@@ -7193,30 +7081,30 @@
         }
       }
     },
-    "Your keys" : {
+    "Your keys go on with your first send." : {
       "localizations" : {
         "es" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Tus llaves"
+            "value" : "Tus llaves se activan con tu primer envío."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "あなたの鍵"
+            "value" : "鍵は最初の送金と一緒に設定されます。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "당신의 키"
+            "value" : "키는 첫 송금과 함께 적용됩니다."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "你的密钥"
+            "value" : "你的密钥随第一次发送一起生效。"
           }
         }
       }
