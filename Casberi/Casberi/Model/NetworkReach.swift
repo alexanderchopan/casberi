@@ -456,15 +456,17 @@ enum NetworkReach {
         // Public nodes for balances and the chain's checks, public ERC-4337
         // bundlers (Pimlico's, then Candide's: keyless) for the send. Reach
         // WALLET: the account is one of the Wallet's, and nothing is reached
-        // until it exists on this phone. Base Sepolia's hosts are DEBUG's
-        // only (`YourAccountOp.networks`, prd §1439a).
+        // until it exists on this phone. Base Sepolia's and Robinhood Chain's
+        // hosts are DEBUG's only (`YourAccountOp.probeNetworks`, prd §1439a,
+        // §1447 item 18).
         Endpoint(service: "Your account",
                  reach: .whenConnected(bridge: "Wallet"),
                  purpose: "Reads what your account holds on Base and Ethereum, and when you tap Send, sends the transaction you signed to a public bundler that puts it on chain. A swap asks Relay's public API for tokens and a price; this phone checks that every call it hands back goes only to Relay's own contracts for exactly the amount sold, then has the network's node simulate it and signs nothing unless you would receive at least the quoted minimum. Carries your account's public address, the swap and the signed transaction, nothing else about you.",
                  hosts: ["public.pimlico.io", "api.candide.dev",
                          "mainnet.base.org", "base-rpc.publicnode.com",
                          "rpc.mevblocker.io", "ethereum-rpc.publicnode.com",
-                         "sepolia.base.org", "base-sepolia-rpc.publicnode.com", "api.relay.link"],
+                         "sepolia.base.org", "base-sepolia-rpc.publicnode.com", "api.relay.link",
+                         "rpc.mainnet.chain.robinhood.com", "robinhood-rpc.publicnode.com"],
                  credentialed: false),
         Endpoint(service: "Gnosis Chain",
                  reach: .whenConnected(bridge: "Wallet"),

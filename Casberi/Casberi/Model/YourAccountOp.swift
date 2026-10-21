@@ -40,10 +40,17 @@ enum YourAccountOp {
         rpcs: ["https://rpc.mevblocker.io", "https://ethereum-rpc.publicnode.com"],
         bundlers: ["https://public.pimlico.io/v2/1/rpc", "https://api.candide.dev/public/v3/1"],
         dollar: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", isTest: false)
-    // Robinhood Chain left the account (prd §1449): the spend limit's
-    // contracts are not there, and a limit that covers some networks is
-    // "weird to explain to a user". Money already at the address there stays,
-    // movable only by a build with the network back, on the phone that made it.
+    // Robinhood Chain left the account (prd §1449): a limit that covers some
+    // networks is "weird to explain to a user". It may come back with every
+    // feature (prd §1447 item 18): all the spend limit needs there but Safe's
+    // adapter is on chain, and the adapter can be published at its own
+    // address. Until then it is DEBUG's alone (`probeNetworks`), never in
+    // `networks`.
+    static let robinhood = Network(
+        name: "Robinhood Chain", chainId: 4663,
+        rpcs: ["https://rpc.mainnet.chain.robinhood.com", "https://robinhood-rpc.publicnode.com"],
+        bundlers: ["https://public.pimlico.io/v2/4663/rpc"],
+        dollar: "0x5fc5360d0400a0fd4f2af552add042d716f1d168", dollarSymbol: "USDG", isTest: false)
     /// The network behind one of this app's own chain names ("base-mainnet",
     /// the approvals' and receipts' spelling), when the account can act there.
     static func network(appName: String) -> Network? {
@@ -66,6 +73,12 @@ enum YourAccountOp {
     /// user: "we got rid of sepolia"); its constant stays for the dry-run
     /// probe alone.
     static let networks: [Network] = [base, ethereum]
+
+    #if DEBUG
+    /// What the throwaway probes may name: the account's networks, and
+    /// Robinhood Chain while its return is measured (prd §1447 item 18).
+    static var probeNetworks: [Network] { networks + [robinhood] }
+    #endif
 
     struct Token: Equatable, Hashable, Sendable {
         let symbol: String
