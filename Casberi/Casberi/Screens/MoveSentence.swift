@@ -493,7 +493,9 @@ struct MoveSentence: View {
                             .buttonStyle(RowPress())
                             .accessibilityHint(Text("Switches between USDC and ETH"))
                     }
-                    row(String(localized: "from")) {
+                    // Where the sender's money is (user: "'on' arbitrum would
+                    // be better").
+                    row(String(localized: "on")) {
                         Button {
                             withAnimation(DS.Motion.standard) { open = .elsewhere }
                             DSHaptic.selection()
