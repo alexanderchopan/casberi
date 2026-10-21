@@ -116,6 +116,7 @@ struct LogosRoomFigure: View {
                 note([String(localized: "Block \(LogosWire.amount(Decimal(h)))"),
                       snap.peers.map { $0 == 1 ? String(localized: "1 peer") : String(localized: "\($0) peers") }]
                         .compactMap { $0 }.joined(separator: " · "))
+                if let line = snap.epochLine { note(line) }
                 if let line = Self.stake(snap) { note(line) }
                 if let line = Self.earnings(snap) { note(line) }
                 if let line = Self.vouchers(snap) { note(line) }

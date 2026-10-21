@@ -185,6 +185,19 @@ let half = W.status(parse(#"{"v":2,"node":{"reachable":true,"phase":"Following",
 check(half.eligibleNotes == nil && half.agingNotes == nil, "half a count, or a Bool, is no count")
 check(W.snapshot(staked).eligibleNotes == 1 && W.snapshot(staked).stage == .eligible, "the snapshot carries the stake to the stage")
 
+print("The epoch (prd §1448)")
+let ep = W.snapshot(W.status(parse(#"{"v":2,"node":{"reachable":true,"phase":"Following","height":9,"tip":"t","slot":24680,"epoch":412,"slots_until_next_epoch":1203,"slot_duration_ms":6000}}"#))!)
+check(ep.epoch == 412 && ep.slotsToNextEpoch == 1203 && ep.slotDurationMs == 6000, "the four node fields reach the snapshot")
+check(ep.epochLine == "Epoch 412 · next in 2h", "slots times their length is a time, not a count")
+var noLen = ep; noLen.slotDurationMs = nil
+check(noLen.epochLine == "Epoch 412 · 1,203 slots to the next", "with no slot length, the count, never a guessed time")
+var onlyEpoch = ep; onlyEpoch.slotsToNextEpoch = nil
+check(onlyEpoch.epochLine == "Epoch 412", "an epoch alone stands alone")
+let old = W.snapshot(W.status(parse(#"{"v":2,"node":{"reachable":true,"phase":"Following","height":9,"tip":"t"}}"#))!)
+check(old.epoch == nil && old.epochLine == nil, "today's Observer sends none, and the box says nothing")
+let bogus = W.snapshot(W.status(parse(#"{"v":2,"node":{"reachable":true,"height":9,"epoch":true,"slots_until_next_epoch":-4}}"#))!)
+check(bogus.epochLine == nil, "a Bool or a negative is no epoch")
+
 print("Chat (chat.read, prd §1155)")
 check(W.scopeLabel("chat.read") == "Your chats" && W.isReadScope("chat.read"), "chat.read is a read scope with its own words")
 check(W.chatAvailability(parse(#"{"available":false,"reason":"chat_not_started"}"#)) == .notStarted,

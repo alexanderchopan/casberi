@@ -988,6 +988,12 @@ extension LogosWire {
         var agingNotes: Int?
         var eligibleNotes: Int?
         var eligibleBalance: Decimal?
+        /// Where the chain is in its epoch (prd §1448), through an Observer
+        /// only: the epoch, the slots left in it, and how long a slot lasts,
+        /// so the box can say when the next one starts rather than a count.
+        var epoch: Int?
+        var slotsToNextEpoch: Int?
+        var slotDurationMs: Int?
 
         var synced: Bool { reachable && phase == "Following" }
         static let unreachable = NodeSnapshot(reachable: false)
@@ -1024,6 +1030,31 @@ extension LogosWire {
             case .aging:    return String(localized: "Funded, aging")
             case .eligible: return String(localized: "Eligible to propose")
             case .earning:  return String(localized: "Earning")
+            }
+        }
+
+        /// "Epoch 412 · next in 2h"; with no slot length, "Epoch 412 · 1,203
+        /// slots to the next" — never a time the Observer did not give the
+        /// means to work out. Nil when it said nothing about epochs.
+        var epochLine: String? {
+            let next: String? = slotsToNextEpoch.map { slots in
+                if let ms = slotDurationMs, ms > 0 {
+                    let f = DateComponentsFormatter()
+                    f.unitsStyle = .abbreviated
+                    f.maximumUnitCount = 1
+                    f.allowedUnits = [.minute, .hour, .day]
+                    let wait = f.string(from: max(60, Double(slots) * Double(ms) / 1000)) ?? ""
+                    return String(localized: "next in \(wait)")
+                }
+                let count = slots.formatted(.number.locale(Locale(identifier: "en_US")))
+                return slots == 1 ? String(localized: "1 slot to the next")
+                                  : String(localized: "\(count) slots to the next")
+            }
+            switch (epoch, next) {
+            case let (e?, n?): return String(localized: "Epoch \(e) · \(n)")
+            case let (e?, nil): return String(localized: "Epoch \(e)")
+            case let (nil, n?): return String(localized: "Epoch ends · \(n)")
+            default: return nil
             }
         }
 

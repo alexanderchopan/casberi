@@ -257,7 +257,13 @@ enum LogosObserverWire {
         var value: T? { if case .value(let v) = self { return v }; return nil }
     }
 
-    struct Node: Equatable { var reachable: Bool; var phase: String?; var height: Int?; var tip: String? }
+    struct Node: Equatable {
+        var reachable: Bool; var phase: String?; var height: Int?; var tip: String?
+        /// The epoch fields (prd §1448), each optional: `slot`, `epoch`,
+        /// `slots_until_next_epoch`, `slot_duration_ms`.
+        var slot: Int? = nil; var epoch: Int? = nil
+        var slotsToNextEpoch: Int? = nil; var slotDurationMs: Int? = nil
+    }
     struct Mining: Equatable { var isMining: Bool; var rewardsEnabled: Bool?; var autoClaim: Bool? }
     struct Rewards: Equatable {
         var tickets: Int?; var slotsUntilExpiry: Int?; var vouchers: Int?; var claimable: Decimal?
@@ -288,17 +294,6 @@ enum LogosObserverWire {
             guard let dict = raw as? [String: Any], let v = parse(dict) else { return .failed }
             return .value(v)
         }
-        let node: Read<Node> = read("node") { d in
-            guard let r = d["reachable"] as? Bool else { return nil }
-            return Node(reachable: r, phase: d["phase"] as? String,
-                        height: (d["height"] as? NSNumber)?.intValue, tip: d["tip"] as? String)
-        }
-        let peers: Read<Int> = read("network") { ($0["peers"] as? NSNumber)?.intValue }
-        let mining: Read<Mining> = read("mining") { d in
-            guard let m = d["is_mining"] as? Bool else { return nil }
-            return Mining(isMining: m, rewardsEnabled: d["rewards_enabled"] as? Bool,
-                          autoClaim: d["auto_claim"] as? Bool)
-        }
         func decimal(_ v: Any?) -> Decimal? {
             (v as? String).flatMap { Decimal(string: $0, locale: Locale(identifier: "en_US_POSIX")) }
         }
@@ -306,6 +301,20 @@ enum LogosObserverWire {
             // A JSON true is an NSNumber too; a count is never a Bool.
             guard let n = v as? NSNumber, CFGetTypeID(n) != CFBooleanGetTypeID() else { return nil }
             return n.intValue >= 0 ? n.intValue : nil
+        }
+        let node: Read<Node> = read("node") { d in
+            guard let r = d["reachable"] as? Bool else { return nil }
+            return Node(reachable: r, phase: d["phase"] as? String,
+                        height: (d["height"] as? NSNumber)?.intValue, tip: d["tip"] as? String,
+                        slot: count(d["slot"]), epoch: count(d["epoch"]),
+                        slotsToNextEpoch: count(d["slots_until_next_epoch"]),
+                        slotDurationMs: count(d["slot_duration_ms"]))
+        }
+        let peers: Read<Int> = read("network") { ($0["peers"] as? NSNumber)?.intValue }
+        let mining: Read<Mining> = read("mining") { d in
+            guard let m = d["is_mining"] as? Bool else { return nil }
+            return Mining(isMining: m, rewardsEnabled: d["rewards_enabled"] as? Bool,
+                          autoClaim: d["auto_claim"] as? Bool)
         }
         let rewards: Read<Rewards> = read("rewards") { d in
             Rewards(tickets: (d["claimable_tickets"] as? NSNumber)?.intValue,
@@ -337,6 +346,9 @@ enum LogosObserverWire {
         var snap = LogosWire.NodeSnapshot(reachable: true, phase: node.phase,
                                           height: node.height, tip: node.tip)
         snap.peers = s.peers.value
+        snap.epoch = node.epoch
+        snap.slotsToNextEpoch = node.slotsToNextEpoch
+        snap.slotDurationMs = node.slotDurationMs
         if let m = s.mining.value { snap.mining = m.isMining; snap.miningPays = m.rewardsEnabled }
         if let r = s.rewards.value {
             snap.tickets = r.tickets
