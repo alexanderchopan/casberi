@@ -461,7 +461,7 @@ enum NetworkReach {
         // §1447 item 18).
         Endpoint(service: "Your account",
                  reach: .whenConnected(bridge: "Wallet"),
-                 purpose: "Reads what your account holds on Base and Ethereum, and when you tap Send, sends the transaction you signed to a public bundler that puts it on chain. A swap asks Relay's public API for tokens and a price; this phone checks that every call it hands back goes only to Relay's own contracts for exactly the amount sold, then has the network's node simulate it and signs nothing unless you would receive at least the quoted minimum. Carries your account's public address, the swap and the signed transaction, nothing else about you.",
+                 purpose: "Reads what your account holds on Base and Ethereum, and when you tap Send, sends the transaction you signed to a public bundler that puts it on chain. A swap asks Relay's public API for tokens and a price; this phone checks that every call it hands back goes only to Relay's own contracts for exactly the amount sold, then has the network's node simulate it and signs nothing unless you would receive at least the quoted minimum. Receiving from another network, or a round-up's buy, asks Relay for the deposit address of that route, refused unless Relay names your account as the one that gets it. Carries your account's public address, the swap and the signed transaction, nothing else about you.",
                  hosts: ["public.pimlico.io", "api.candide.dev",
                          "mainnet.base.org", "base-rpc.publicnode.com",
                          "rpc.mevblocker.io", "ethereum-rpc.publicnode.com",
