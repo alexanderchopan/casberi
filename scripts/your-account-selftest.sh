@@ -353,7 +353,7 @@ grep -q '0x540fb4f9\|initializeAccount((address,bytes)\[\],(address,bytes)\[\],(
 # The Security row offers the switch only where a Signer stands (§1447 item 2).
 grep -q '(limited.isEmpty && notYet.isEmpty)' "$SEC" || { echo "✗ the Spend limit switch can be turned on with no Signer on any network (prd §1455)"; exit 1; }
 grep -q 'applyLimit(limited + notYet' "$SEC" || { echo "✗ the one Spend limit switch no longer sets every network the account is on (prd §1455, user: \"we want one switch for all networks\")"; exit 1; }
-grep -q 'turnOffLimit(on: net, coSigner: batch.coSigner(chainId: net.chainId)' "$SEC" && grep -q 'SignerRequestSheet.Batch(owner:' "$SEC" || { echo "✗ turning a spend limit off no longer asks the Signer — at 2-of-2 it cannot be one key's (prd §1455, §83)"; exit 1; }
+grep -q 'turnOffLimit(on: net, coSigner: co,' "$SEC" && grep -q 'guard let co = coSigner(s, batch) else' "$SEC" && grep -q 'Self.sharedSigner(targets)' "$SEC" || { echo "✗ turning a spend limit off no longer asks the Signer — at 2-of-2 it cannot be one key's (prd §1455, §83)"; exit 1; }
 
 # The keys chosen at Create (prd §1457): they ride only the operation that
 # opens a network, the limit only with a Signer, both keys switched on LAST

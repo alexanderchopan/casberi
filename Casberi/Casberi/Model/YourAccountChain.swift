@@ -369,8 +369,32 @@ enum YourAccountChain {
         guard try await isDeployed(net, account), try await accountEntry(net, account) == .adapter else {
             throw Failure(message: String(localized: "A spend limit is not available yet"))
         }
-        let (installed, fresh, planCalls) = try await limitCalls(net, account, plan)
+        let (installed, fresh, planCalls, removals) = try await limitCalls(net, account, plan)
         var calls = planCalls
+        if removals.count <= 2 {
+            calls += removals
+        } else {
+            // A change of amount or period: the old periods still ahead go
+            // in their own operation first, because twelve enabled and
+            // twelve removed are more than one operation may hold (measured
+            // on Base: 15.5M gas against the bundler's 15M). In between no
+            // session stands, so a send takes both keys — never two limits.
+            report("removing \(removals.count) periods first")
+            if !dryRun {
+                let (signerIndex, device) = try await deviceSigner(net, account, deployed: true)
+                let next = try YourAccountKey.nextKey(after: signerIndex)
+                guard let nextKey = YourAccountKey.publicKey(next) else {
+                    throw Failure(message: String(localized: "This send could not be written"))
+                }
+                let outcome = try await operate(net, account: account, deployed: true, calls: removals, rotateTo: nextKey,
+                                                payments: [], signer: device, coSigner: coSigner, reason: reason,
+                                                report: report, stage: stage)
+                let removed = Sent(outcome: await settle(outcome, net, account, next: next, x: nextKey.x), network: net)
+                guard case .landed = removed.outcome else {
+                    throw Failure(message: String(localized: "\(net.name) did not take the change yet: try again in a minute"))
+                }
+            }
+        }
         // Turning the limit on (prd §1455): both keys above it, last, while
         // this phone alone still signs.
         if requireBoth, try await threshold(net, account) == 1 {
@@ -405,7 +429,7 @@ enum YourAccountChain {
     /// A plan's calls: its sessions enabled (Smart Sessions installed with
     /// them the first time), every older session removed.
     private static func limitCalls(_ net: Network, _ account: String, _ plan: YourAccount7579.Plan) async throws
-        -> (installed: Bool, fresh: [[UInt8]], calls: [YourAccountOp.Call]) {
+        -> (installed: Bool, fresh: [[UInt8]], calls: [YourAccountOp.Call], removals: [YourAccountOp.Call]) {
         let validatorInit = try sessionInit()
         let sessions = plan.windows.compactMap { YourAccount7579.session(validatorInit: validatorInit, plan: plan, window: $0) }
         guard !sessions.isEmpty, sessions.count == plan.windows.count else {
@@ -413,14 +437,23 @@ enum YourAccountChain {
         }
         let fresh = plan.windows.map { YourAccount7579.permissionId(validatorInit: validatorInit, salt: YourAccount7579.salt(plan, $0)) }
         let installed = try await sessionsInstalled(net, account)
-        var calls = [installed ? YourAccount7579.enableSessionsCall(sessions)
+        let calls = [installed ? YourAccount7579.enableSessionsCall(sessions)
                                : YourAccount7579.installSessionsCall(account: account, sessions: sessions)]
+        // Every older session goes, but one whose period is over: its
+        // TimeFramePolicy already refuses it, and removing a year of them
+        // with the renewal is more than one operation may hold.
+        var removals: [YourAccountOp.Call] = []
         if installed {
-            for old in try await sessionIds(net, account) where !fresh.contains(old) {
-                calls.append(YourAccount7579.removeSessionCall(old))
+            let now = Int(Date().timeIntervalSince1970)
+            let over: [[UInt8]] = YourAccountChain.plan(net).map { kept in
+                kept.windows.filter { $0.until <= now }
+                    .map { YourAccount7579.permissionId(validatorInit: validatorInit, salt: YourAccount7579.salt(kept, $0)) }
+            } ?? []
+            for old in try await sessionIds(net, account) where !fresh.contains(old) && !over.contains(old) {
+                removals.append(YourAccount7579.removeSessionCall(old))
             }
         }
-        return (installed, fresh, calls)
+        return (installed, fresh, calls, removals)
     }
 
     /// **ONE SETTING (prd §1455, user: "needs to be one setting").** A plan
@@ -435,7 +468,10 @@ enum YourAccountChain {
         guard let dollars = Int(plan.dollarCap.dropLast(6)) else { return nil }
         let price = plan.ethCap == "0" ? nil : await relayPrice(net, YourAccountOp.eth)
         let next = limitPlan(on: net, dollars: dollars, ethPrice: price, minutes: max(length / 60, 1))
-        return (try await limitCalls(net, account, next).calls, next)
+        // Riding a send, it removes only the period still running.
+        let l = try await limitCalls(net, account, next)
+        guard l.removals.count <= 2 else { return nil }
+        return (l.calls + l.removals, next)
     }
 
     /// What the keys chosen at Create add to the operation that opens the
@@ -536,6 +572,31 @@ enum YourAccountChain {
             let moved = try await installAdapter(on: net, reason: reason, dryRun: false, report: report, stage: stage)
             guard case .landed = moved.outcome else {
                 throw Failure(message: String(localized: "\(net.name) did not take the change yet: try again in a minute"))
+            }
+        }
+        // The plan this phone set still stands — its sessions enabled, a
+        // period ahead — and only both keys went (a key added at one key,
+        // prd §1456): both keys again, nothing re-enabled. Enabling twelve
+        // sessions and removing twelve is more than one operation may hold
+        // (measured on Base: 17.9M gas against the bundler's 15M).
+        if try await threshold(net, account) == 1, let kept = plan(net), kept.dollarCap == String(dollars) + "000000",
+           kept.windows.first.map({ $0.until - $0.from }) == minutes * 60,
+           kept.window(at: Int(Date().timeIntervalSince1970)) != nil {
+            let validatorInit = try sessionInit()
+            let standing = try await sessionIds(net, account)
+            let ids = kept.windows.map { YourAccount7579.permissionId(validatorInit: validatorInit, salt: YourAccount7579.salt(kept, $0)) }
+            if ids.allSatisfy(standing.contains) {
+                report("plan stands: both keys again")
+                let (signerIndex, device) = try await deviceSigner(net, account, deployed: true)
+                let next = try YourAccountKey.nextKey(after: signerIndex)
+                guard let nextKey = YourAccountKey.publicKey(next) else {
+                    throw Failure(message: String(localized: "This send could not be written"))
+                }
+                let calls = [YourAccountOp.Call(operation: 0, to: account, value: YourAccount.w(0),
+                                                data: YourAccount.sel("changeThreshold(uint256)") + YourAccount.w(2))]
+                let outcome = try await operate(net, account: account, deployed: true, calls: calls, rotateTo: nextKey,
+                                                payments: [], signer: device, reason: reason, report: report, stage: stage)
+                return Sent(outcome: await settle(outcome, net, account, next: next, x: nextKey.x), network: net)
             }
         }
         let price = await relayPrice(net, YourAccountOp.eth)
@@ -1360,6 +1421,7 @@ enum YourAccountChain {
         // With both keys the dummy's ECDSA half fails first, so the estimate
         // never reaches the passkey's P-256 check the real pair pays for
         // (AA26 on Base, prd §1447 item 16): that check, and more, on top.
+        report("gas verification=\(vgl) call=\(cgl) pre=\(pvg)")
         op.verificationGasLimit = coSigner == nil ? vgl : vgl + 100_000
         op.callGasLimit = cgl
         op.preVerificationGas = pvg
