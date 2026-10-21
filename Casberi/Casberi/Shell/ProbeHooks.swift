@@ -4113,7 +4113,8 @@ enum ProbeHooks {
                       let account = YourAccountKey.address else { log("usage: <network>|<signer address>"); return }
                 do {
                     let real = UserDefaults.standard.string(forKey: "adapterThrowaway").map { WalletWatch.sameAddress($0, account) } ?? false
-                    let sent = try await YourAccountChain.requireBoth(p[1], on: net, reason: "Probe: both keys", dryRun: !real,
+                    let coSigner = UserDefaults.standard.string(forKey: "coSignWith").map(ProbeCoSigner.make)
+                    let sent = try await YourAccountChain.requireBoth(p[1], on: net, reason: "Probe: both keys", dryRun: !real, coSigner: coSigner,
                                                                      report: { line in NSLog("requireBoth| %@", line) }) { stage in log("stage=\(stage)") }
                     log("result=\(sent.outcome)")
                 } catch let failure as YourAccountChain.Failure {
@@ -4144,6 +4145,43 @@ enum ProbeHooks {
                 do {
                     let sent = try await YourAccountChain.send([payment], reason: "Probe: a send with both keys", coSigner: coSigner,
                                                              report: { line in NSLog("coSignSend| %@", line) }) { stage in log("stage=\(stage)") }
+                    log("result=\(sent.outcome)")
+                } catch let failure as YourAccountChain.Failure {
+                    log("refused: \(failure.message)")
+                } catch {
+                    log("error: \(String(describing: error))")
+                }
+            }
+        },
+        // `-walletCoSignProbe "<network>|<wei>|<signer address>"` — `wei` ETH
+        // from the account to itself signed by this phone AND the Signer's own
+        // wallet over WalletConnect (prd §1447 item 17): the sheet shows the
+        // code, the wallet signs the SafeOp as typed data. Throwaway only.
+        Hook(key: "walletCoSignProbe") { raw, _ in
+            Task { @MainActor in
+                func log(_ line: String) { NSLog("walletCoSign| %@", line) }
+                let p = raw.split(separator: "|").map(String.init)
+                guard p.count == 3, let net = YourAccountOp.networks.first(where: { $0.name.caseInsensitiveCompare(p[0]) == .orderedSame }),
+                      let account = YourAccountKey.address,
+                      let named = UserDefaults.standard.string(forKey: "adapterThrowaway"), WalletWatch.sameAddress(named, account) else {
+                    log("only on the throwaway -adapterThrowaway names: <network>|<wei>|<signer address>"); return
+                }
+                let sheet = SignerSheetHandle()
+                let coSigner = YourAccountChain.CoSigner(owner: p[2]) { _, typedData in
+                    NSLog("walletCoSign| the Signer is next (%d bytes of typed data)", typedData.utf8.count)
+                    defer { Task { @MainActor in sheet.close() } }
+                    let sig = try await YourAccountSignerLink.sign(typedData: typedData, signer: p[2], chainId: net.chainId,
+                                                                   timeout: .seconds(900)) { url in
+                        NSLog("walletCoSign| asking the Signer")
+                        sheet.close = SignerRequestSheet.present(url: url, signer: p[2])
+                    }
+                    NSLog("walletCoSign| the Signer answered")
+                    return sig
+                }
+                let payment = YourAccountOp.Payment(network: net, token: YourAccountOp.eth, amount: p[1], to: account, toName: nil)
+                do {
+                    let sent = try await YourAccountChain.send([payment], reason: "Probe: a send with your Signer", coSigner: coSigner,
+                                                             report: { line in NSLog("walletCoSign| %@", line) }) { stage in log("stage=\(stage)") }
                     log("result=\(sent.outcome)")
                 } catch let failure as YourAccountChain.Failure {
                     log("refused: \(failure.message)")
@@ -7316,7 +7354,7 @@ enum WalletConnectProbe {
 /// person's own wallet, never a key in the app.
 enum ProbeCoSigner {
     static func make(_ owner: String) -> YourAccountChain.CoSigner {
-        YourAccountChain.CoSigner(owner: owner) { hash in
+        YourAccountChain.CoSigner(owner: owner) { hash, _ in
             guard let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
                 throw YourAccountChain.Failure(message: "No Documents folder")
             }
@@ -7332,5 +7370,13 @@ enum ProbeCoSigner {
             throw YourAccountChain.Failure(message: "No signature came")
         }
     }
+}
+#endif
+
+#if DEBUG
+/// Holds the Signer sheet's dismissal for the probe that raised it.
+@MainActor
+final class SignerSheetHandle {
+    var close: @MainActor () -> Void = {}
 }
 #endif

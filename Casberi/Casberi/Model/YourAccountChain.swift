@@ -159,7 +159,9 @@ enum YourAccountChain {
     /// when an operation needs both keys.
     struct CoSigner {
         let owner: String
-        let sign: (_ hash: [UInt8]) async throws -> [UInt8]
+        /// `typedData` is the SafeOp as `eth_signTypedData_v4` takes it,
+        /// whose digest is `hash`.
+        let sign: (_ hash: [UInt8], _ typedData: String) async throws -> [UInt8]
     }
 
     /// The device key the chain says signs for the account on `net` — the
@@ -617,7 +619,7 @@ enum YourAccountChain {
     /// phone while one key still suffices. Under a spend limit the session
     /// key still sends alone; everything else waits on the Signer too.
     /// Throwaway-only until the Signer's side is built.
-    static func requireBoth(_ signer: String, on net: Network, reason: String, dryRun: Bool,
+    static func requireBoth(_ signer: String, on net: Network, reason: String, dryRun: Bool, coSigner: CoSigner? = nil,
                             report: @escaping @Sendable (String) -> Void = { _ in },
                             stage: @escaping @Sendable (Stage) async -> Void) async throws -> Sent {
         guard let account = YourAccountKey.address else {
@@ -645,7 +647,7 @@ enum YourAccountChain {
             throw Failure(message: String(localized: "This send could not be written"))
         }
         let outcome = try await operate(net, account: account, deployed: true, calls: [call],
-                                        rotateTo: nextKey, payments: [], signer: device, reason: reason,
+                                        rotateTo: nextKey, payments: [], signer: device, coSigner: coSigner, reason: reason,
                                         dryRun: dryRun, report: report, stage: stage)
         return Sent(outcome: await settle(outcome, net, account, next: next, x: nextKey.x), network: net)
     }
@@ -1097,7 +1099,10 @@ enum YourAccountChain {
         if let coSigner {
             // The second key, over the same hash; then the Safe itself is
             // asked whether the two together are its signatures.
-            let ecdsa = try await coSigner.sign(hash)
+            guard let typedData = YourAccountOp.safeOpTypedData(op, chainId: net.chainId) else {
+                throw Failure(message: String(localized: "This send could not be written"))
+            }
+            let ecdsa = try await coSigner.sign(hash, typedData)
             guard let both = YourAccountOp.bothSignatures(r: r, s: s, owner: signer.owner, signer: coSigner.owner, ecdsa: ecdsa) else {
                 throw Failure(message: String(localized: "The signature did not check out, so nothing was sent"))
             }

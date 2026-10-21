@@ -34,9 +34,10 @@ TX="Casberi/Casberi/Model/SafeTransaction.swift"
 KECCAK="Casberi/Casberi/Model/Keccak256.swift"
 CLEARSIGN="Casberi/Casberi/Model/ClearSign.swift"
 WEBAUTHN="Casberi/Casberi/Model/SafeWebAuthnSignature.swift"
+TYPED="Casberi/Casberi/Model/SafeTypedData.swift"
 MOVE="Casberi/Casberi/Screens/MoveScreen.swift"
 TABS="Casberi/Casberi/Design/PlaceTabBar.swift"
-for f in "$ACCOUNT" "$OP" "$SWAP" "$TX" "$KECCAK" "$CLEARSIGN" "$WEBAUTHN" "$MOVE" "$TABS"; do
+for f in "$ACCOUNT" "$OP" "$SWAP" "$TX" "$KECCAK" "$CLEARSIGN" "$WEBAUTHN" "$TYPED" "$MOVE" "$TABS"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -149,6 +150,18 @@ check(Array(low[12..<77]) == ecdsa && Array(low[77..<109]) == YourAccount.w(Your
 check(Array(high[12..<44]) == YourAccount.w(YourAccount.sharedSigner) && Array(high[77..<142]) == ecdsa, "a Signer above the passkey's address does not sign second")
 check(Array(low[109..<141]) == YourAccount.w(130) && Array(high[44..<76]) == YourAccount.w(130), "the passkey's assertion is not after both static parts")
 check(low.count == high.count && Array(low.suffix(from: 142)) == Array(high.suffix(from: 142)), "the passkey's assertion moved with the order")
+// What the Signer's wallet is asked to sign (prd §1447 item 17): the SafeOp
+// as typed data, whose EIP-712 digest — read by the app's own general parser
+// — is the very hash this phone signs, on the adapter's domain and with a
+// session's keyed nonce alike.
+for (label, tdOp) in [("the adapter's op", aop), ("a keyed-nonce op", { var o = sop; o.entry = .adapter; return o }())] {
+    let json = YourAccountOp.safeOpTypedData(tdOp, chainId: 8453)!
+    let parsed = EIP712.parse(try! JSONSerialization.jsonObject(with: Data(json.utf8)))!
+    check(EIP712.digest(parsed) == YourAccountOp.safeOpHash(tdOp, chainId: 8453), "\(label)'s typed data does not hash to the SafeOp hash the phone signs")
+}
+check(YourAccountOp.decimal(YourAccount.w(0)) == "0" && YourAccountOp.decimal(YourAccount.w(1234567890)) == "1234567890"
+      && YourAccountOp.decimal(sop.nonceWord) == "57532766240966947952054840643333136270388981957654712034659401735",
+      "a word's decimal is wrong")
 var huge = op; huge.maxFeePerGas = UInt64.max
 check(huge.maxCost == nil && op.maxCost == 1320000000000, "maxCost overflows into a trap, or is wrong")
 check(YourAccountOp.spoken("500000000000", decimals: 18) == "0.0000005", "a real amount must never be spoken as 0")
@@ -270,7 +283,7 @@ check(YourAccountOp.abiString("0x4d4b5200000000000000000000000000000000000000000
 check(YourAccountOp.abiString("0x") == nil, "no answer is no symbol")
 exit(bad == 0 ? 0 : 1)
 SWIFT
-xcrun swiftc -O -o "$TMP/t" "$ACCOUNT" "$OP" "$SWAP" "$ADAPTER" "$TX" "$KECCAK" "$CLEARSIGN" "$WEBAUTHN" "$TMP/main.swift" 2>"$TMP/err" \
+xcrun swiftc -O -o "$TMP/t" "$ACCOUNT" "$OP" "$SWAP" "$ADAPTER" "$TX" "$KECCAK" "$CLEARSIGN" "$WEBAUTHN" "$TYPED" "$TMP/main.swift" 2>"$TMP/err" \
   || { cat "$TMP/err"; echo "✗ YourAccount.swift and YourAccountOp.swift do not compile alone (Foundation and the Safe encoders only)"; exit 1; }
 FIXTURES="$FIXTURES" "$TMP/t" || { echo "✗ your account's arithmetic drifted — see above"; exit 1; }
 

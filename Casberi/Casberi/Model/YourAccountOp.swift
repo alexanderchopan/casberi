@@ -282,6 +282,56 @@ enum YourAccountOp {
         return k([0x19, 0x01] + domain + structHash)
     }
 
+    /// A big-endian word in decimal, for typed data's numbers.
+    static func decimal(_ word: [UInt8]) -> String {
+        var digits = word.drop { $0 == 0 }.map { UInt32($0) }
+        var out: [Character] = []
+        while !digits.isEmpty {
+            var rest: UInt32 = 0
+            var next: [UInt32] = []
+            for d in digits {
+                let cur = rest << 8 | d
+                let q = cur / 10
+                rest = cur % 10
+                if !next.isEmpty || q != 0 { next.append(q) }
+            }
+            out.append(Character(String(rest)))
+            digits = next
+        }
+        return out.isEmpty ? "0" : String(out.reversed())
+    }
+
+    /// The SafeOp as EIP-712 typed data — what the Signer's wallet is asked
+    /// to sign with `eth_signTypedData_v4` (prd §1447 item 17), the same
+    /// type, domain and fields `safeOpHash` hashes, so the wallet shows the
+    /// person the operation and its digest is this phone's.
+    static func safeOpTypedData(_ op: Op, chainId: Int) -> String? {
+        func field(_ name: String, _ type: String) -> [String: String] { ["name": name, "type": type] }
+        let initCode = op.factory.map { YourAccount.addressBytes($0) + op.factoryData } ?? []
+        let typed: [String: Any] = [
+            "types": [
+                "EIP712Domain": [field("chainId", "uint256"), field("verifyingContract", "address")],
+                "SafeOp": [field("safe", "address"), field("nonce", "uint256"), field("initCode", "bytes"),
+                           field("callData", "bytes"), field("verificationGasLimit", "uint128"),
+                           field("callGasLimit", "uint128"), field("preVerificationGas", "uint256"),
+                           field("maxPriorityFeePerGas", "uint128"), field("maxFeePerGas", "uint128"),
+                           field("paymasterAndData", "bytes"), field("validAfter", "uint48"),
+                           field("validUntil", "uint48"), field("entryPoint", "address")],
+            ],
+            "primaryType": "SafeOp",
+            "domain": ["chainId": chainId, "verifyingContract": op.entry.verifyingContract],
+            "message": [
+                "safe": op.sender, "nonce": decimal(op.nonceWord), "initCode": SafeABI.hex(initCode),
+                "callData": SafeABI.hex(op.callData), "verificationGasLimit": String(op.verificationGasLimit),
+                "callGasLimit": String(op.callGasLimit), "preVerificationGas": String(op.preVerificationGas),
+                "maxPriorityFeePerGas": String(op.maxPriorityFeePerGas), "maxFeePerGas": String(op.maxFeePerGas),
+                "paymasterAndData": "0x", "validAfter": "0", "validUntil": "0", "entryPoint": YourAccount.entryPoint,
+            ],
+        ]
+        guard let data = try? JSONSerialization.data(withJSONObject: typed, options: [.sortedKeys]) else { return nil }
+        return String(data: data, encoding: .utf8)
+    }
+
     /// EntryPoint v0.7's `getUserOpHash`: the id a bundler's receipt is
     /// asked by, known before the send so an unclear answer can still be
     /// followed to whether it landed.
