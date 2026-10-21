@@ -67968,3 +67968,9 @@ Guarded by `category-fold-selftest.sh` (proven by mutation). **Mac half:** the r
 4. **Finish keeps a standing plan:** a network whose plan's sessions still stand, with a period ahead, at one key (a key added at one key before §1456's fix), gets both keys back alone — `changeThreshold(2)`, Face ID only. Proven: Base back to `2:on`.
 5. **One scan names a Signer every network shares** (`MoveSecurity.sharedSigner`): a network's first Signer may be on it alone (the test account's Base holds a second Signer Robinhood Chain never had); a network without the shared one asks its own.
 6. **Proven on the test account, through the screens (2026-10-21):** Change from $1 to $2 a month on Base and Robinhood Chain — ONE WalletConnect scan in Rainbow, four approvals (each network's old periods removed, then the new enabled), four operations landed (the phone's key 21 → 25), twelve sessions on each network after, and Security reads "Up to $2.00 of each coin a month".
+
+## §1459 — Two lines cut from creating your account (amends §1442j, §1457) (user, 2026-10-21: "Can you remove 'No seed phrase'. nobody signs w/ seed phrase"; on the Signer step's line, "remove this it is unclear and not necessary. 'big sends' what does that even mean") — BUILT
+
+1. Create's small print is "Face ID signs." — no "No seed phrase": nobody signs with one, so naming it explains nothing.
+2. The walk's Signer step is its sentence alone, "Your Signer / in a wallet you have."; the line naming wallets and "big sends" is deleted. The spend limit step already says what the Signer does ("Over it, your Signer signs too.").
+3. `-keysWalk YES` with `-keysStep <n>` (DEBUG) reopens the walk for this phone's account, keeping what it chose, because a relaunch ends it. A fresh iOS 27 simulator refuses the Secure Enclave key (`enclaveRefused`, logged as `moveCreate|`); a clone of one that made a key works.

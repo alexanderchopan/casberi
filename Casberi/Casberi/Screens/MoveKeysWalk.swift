@@ -32,6 +32,8 @@ struct MoveKeysWalk: View {
         self.inert = inert
         self.done = done
         _step = State(initialValue: step)
+        // Picked up where it was left (DEBUG's `-keysWalk YES` reopens it).
+        if !inert, let kept = YourAccountSetup.choice(for: account) { _choice = State(initialValue: kept) }
         #if DEBUG
         if inert {
             // The preview's summary draws every key chosen.
@@ -91,7 +93,6 @@ struct MoveKeysWalk: View {
         case .signer:
             title("Your Signer")
             line(String(localized: "in")) { pick(String(localized: "a wallet you have.")) }
-            small(String(localized: "MetaMask, Rainbow or any other. It signs big sends with this iPhone."))
         case .limit:
             title("Face ID alone")
             line(String(localized: "up to")) {

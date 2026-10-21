@@ -64,6 +64,11 @@ struct MoveScreen: View {
     @State private var arrival: MoveSentence.Arrival?
     /// Just created: your keys first (prd §1457), then the Created sentence.
     @State private var walking = false
+    #if DEBUG
+    /// `-keysWalk YES` (DEBUG): the walk again for this phone's account, at
+    /// `-keysStep`, keeping what it chose — for a step a relaunch cut off.
+    private static var walkAgain: Bool { UserDefaults.standard.bool(forKey: "keysWalk") }
+    #endif
     /// Recovering: the networks the recovery key can bring it to (§1442k).
     @State private var recoverableOn: [YourAccountOp.Network]?
 
@@ -112,8 +117,9 @@ struct MoveScreen: View {
 
     @ViewBuilder private var shown: some View {
         Group {
-            if let address, walking {
-                MoveKeysWalk(account: address, inTray: inTray) {
+            if let address, walking || walkAgainNow {
+                MoveKeysWalk(account: address, inTray: inTray, step: walkStep) {
+                    walkAgainDone = true
                     withAnimation(DS.Motion.standard) { walking = false }
                 }
                 .transition(.opacity)
@@ -126,6 +132,21 @@ struct MoveScreen: View {
                 before
             }
         }
+    }
+
+    @State private var walkAgainDone = false
+    private var walkAgainNow: Bool {
+        #if DEBUG
+        return Self.walkAgain && !walkAgainDone
+        #else
+        return false
+        #endif
+    }
+    private var walkStep: MoveKeysWalk.Step {
+        #if DEBUG
+        if walkAgainNow { return MoveKeysWalk.Step(rawValue: UserDefaults.standard.integer(forKey: "keysStep")) ?? .recovery }
+        #endif
+        return .recovery
     }
 
     // MARK: Before the account exists
@@ -173,7 +194,7 @@ struct MoveScreen: View {
                     } else {
                         // The one fact that decides the tap (§1442j); the rest
                         // is said once the account exists.
-                        Text("Face ID signs. No seed phrase.")
+                        Text("Face ID signs.")
                             .dsText(.body17).foregroundStyle(DS.textSecondary)
                     }
                     if let note {
@@ -300,6 +321,9 @@ struct MoveScreen: View {
             withAnimation(DS.Motion.standard) { address = made }
             DSHaptic.success()
         } catch {
+            #if DEBUG
+            NSLog("moveCreate| failed: %@", String(describing: error))
+            #endif
             note = (String(localized: "Couldn't create the account on this device"), true)
         }
         creating = false
