@@ -61,7 +61,7 @@ enum YourAccountChain {
             let (result, error) = await post(url, method, params)
             if let result, !(result is NSNull) { return result }
             if let error {
-                last = error
+                last = worded(error, on: net)
                 #if DEBUG
                 NSLog("bundler| %@ %@ → %@", URL(string: url)?.host ?? url, method, error)
                 #endif
@@ -69,6 +69,26 @@ enum YourAccountChain {
             }
         }
         throw Failure(message: last)
+    }
+
+    /// A bundler's refusal in the app's words (prd §1461 item 4): the ones
+    /// a person can meet are said as what happened; the rest keep the
+    /// bundler's, which name an AA code the logs can be read by.
+    static func worded(_ error: String, on net: Network) -> String {
+        let lower = error.lowercased()
+        if lower.contains("max gas") || lower.contains("gas limits exceed") || lower.contains("gas limit too high") {
+            return String(localized: "Too much for one transaction on \(net.name): send less at once")
+        }
+        if lower.contains("aa21") || lower.contains("didn't pay prefund") || lower.contains("insufficient funds") {
+            return String(localized: "Not enough ETH on \(net.name) for the fee")
+        }
+        if lower.contains("aa25") || lower.contains("invalid account nonce") {
+            return String(localized: "\(net.name) is still taking your last send: try again in a minute")
+        }
+        if lower.contains("replacement") || lower.contains("already known") || lower.contains("already in the mempool") {
+            return String(localized: "This send is already on its way on \(net.name)")
+        }
+        return error
     }
 
     static func ethCall(_ net: Network, to: String, data: [UInt8]) async throws -> String {
