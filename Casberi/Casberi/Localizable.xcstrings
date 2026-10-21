@@ -5485,6 +5485,34 @@
         }
       }
     },
+    "Asking Relay" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Preguntando a Relay"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Relayに問い合わせ中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Relay에 묻는 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在询问 Relay"
+          }
+        }
+      }
+    },
     "Aztec upgrades from %@: take your money out of zk.money first" : {
       "localizations" : {
         "es" : {
@@ -5653,6 +5681,34 @@
         }
       }
     },
+    "From another network" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Desde otra red"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "別のネットワークから"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "다른 네트워크에서"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "来自其他网络"
+          }
+        }
+      }
+    },
     "Off · each dollar send rounds up, the change buys a token" : {
       "localizations" : {
         "es" : {
@@ -5681,6 +5737,62 @@
         }
       }
     },
+    "Only %@ on %@ here. Relay brings it to your account in seconds, for about %@." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aquí solo %1$@ en %2$@. Relay lo trae a tu cuenta en segundos, por unos %3$@."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ここは%2$@の%1$@のみ。Relayが数秒であなたのアカウントに届けます。約%3$@。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "여기에는 %2$@의 %1$@만 보내세요. Relay가 몇 초 만에 계정으로 옮깁니다. 약 %3$@."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "这里只收 %2$@ 上的 %1$@。Relay 几秒内送到你的账户，约 %3$@。"
+          }
+        }
+      }
+    },
+    "Only %@ on %@ here. Relay brings it to your account in seconds." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aquí solo %1$@ en %2$@. Relay lo trae a tu cuenta en segundos."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ここは%2$@の%1$@のみ。Relayが数秒であなたのアカウントに届けます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "여기에는 %2$@의 %1$@만 보내세요. Relay가 몇 초 만에 계정으로 옮깁니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "这里只收 %2$@ 上的 %1$@。Relay 几秒内送到你的账户。"
+          }
+        }
+      }
+    },
     "Open MetaMask" : {
       "localizations" : {
         "es" : {
@@ -5705,6 +5817,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "打开 MetaMask"
+          }
+        }
+      }
+    },
+    "Relay did not answer" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Relay no respondió"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Relayから応答がありません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Relay가 응답하지 않았습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Relay 没有回应"
+          }
+        }
+      }
+    },
+    "Relay does not take %@ from %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Relay no acepta %1$@ desde %2$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Relayは%2$@からの%1$@を受け付けません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Relay는 %2$@에서 %1$@를 받지 않습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Relay 不接受来自 %2$@ 的 %1$@"
           }
         }
       }
@@ -5789,6 +5957,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "用 …%@ 的钱包扫描，然后批准。"
+          }
+        }
+      }
+    },
+    "Switches between USDC and ETH" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cambia entre USDC y ETH"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "USDCとETHを切り替えます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "USDC와 ETH 사이를 전환합니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 USDC 和 ETH 之间切换"
           }
         }
       }
@@ -6017,6 +6213,34 @@
         }
       }
     },
+    "Your own address" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu propia dirección"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "自分のアドレス"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "내 주소"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你自己的地址"
+          }
+        }
+      }
+    },
     "and buy" : {
       "localizations" : {
         "es" : {
@@ -6041,6 +6265,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "并买入"
+          }
+        }
+      }
+    },
+    "as" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "como"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "として"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "으로"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "作为"
           }
         }
       }
@@ -6461,6 +6713,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "每"
+          }
+        }
+      }
+    },
+    "from" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "desde"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "から"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "에서"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "来自"
           }
         }
       }
@@ -7805,6 +8085,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "以美元输入"
+          }
+        }
+      }
+    },
+    "through Relay" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "a través de Relay"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Relay経由"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Relay를 통해"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "通过 Relay"
           }
         }
       }
@@ -28851,6 +29159,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你的恢复密钥不在 %@ 上"
+          }
+        }
+      }
+    },
+    "your own address" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "tu propia dirección"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "自分のアドレス"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "내 주소"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你自己的地址"
           }
         }
       }

@@ -55,7 +55,7 @@ struct MoveSentence: View {
     typealias Tokens = YourAccountTokens
 
     enum Verb: CaseIterable { case swap, send, receive }
-    enum Blank: Equatable { case with, buy, to, network, exchange }
+    enum Blank: Equatable { case with, buy, to, network, exchange, elsewhere }
     enum Field: Hashable { case amount, search, to }
 
     struct Recipient: Equatable {
@@ -103,6 +103,11 @@ struct MoveSentence: View {
     @State private var stage: Chain.Stage?
     /// What a signed transaction became, said in the sentence's place (§1438b).
     @State private var receipt: Receipt?
+    /// Receiving from another network (prd §1453): the route picked, the
+    /// networks Relay takes deposits on, and which token.
+    @State private var elsewhere: YourAccountElsewhere.Route?
+    @State private var elsewhereNetworks: [YourAccountElsewhere.Network] = []
+    @State private var elsewhereFinding: String?
     /// What the sentence says back for a moment — what is missing, what
     /// failed — in its own line, because a toast draws under the tray
     /// (§1442c). Cleared after a few seconds, or by the next one.
@@ -478,15 +483,37 @@ struct MoveSentence: View {
                     receiveNetworks
                 }
             case .receive:
-                row(String(localized: "at")) {
-                    Button { copy() } label: { word(YourAccount.short(account), ink: DS.pickInk) }
-                        .buttonStyle(RowPress())
-                        .accessibilityLabel(Text("Your address, \(account)"))
-                        .accessibilityHint(Text("Copies your address"))
-                }
-                row(String(localized: "on")) {
-                    // A line of words, so it wraps between them.
-                    receiveNetworks
+                if let route = elsewhere {
+                    // **FROM ANOTHER NETWORK (prd §1453, user: "for z1 we
+                    // wouldn't say 'send' we would say 'receive'").**
+                    // The tab says Receive, as Send's amount stands with no
+                    // word before it: the token leads.
+                    row(nil) {
+                        Button { switchElsewhereToken() } label: { word(route.token, ink: DS.pickInk) }
+                            .buttonStyle(RowPress())
+                            .accessibilityHint(Text("Switches between USDC and ETH"))
+                    }
+                    row(String(localized: "from")) {
+                        Button {
+                            withAnimation(DS.Motion.standard) { open = .elsewhere }
+                            DSHaptic.selection()
+                        } label: { word(route.from.name, ink: DS.pickInk) }
+                            .buttonStyle(RowPress())
+                    }
+                    row(String(localized: "as")) {
+                        word(String(localized: "\(route.token) on \(route.to.name)."), ink: DS.textPrimary)
+                    }
+                } else {
+                    row(String(localized: "at")) {
+                        Button { copy() } label: { word(YourAccount.short(account), ink: DS.pickInk) }
+                            .buttonStyle(RowPress())
+                            .accessibilityLabel(Text("Your address, \(account)"))
+                            .accessibilityHint(Text("Copies your address"))
+                    }
+                    row(String(localized: "on")) {
+                        // A line of words, so it wraps between them.
+                        receiveNetworks
+                    }
                 }
             }
             }
@@ -1005,6 +1032,7 @@ struct MoveSentence: View {
                             case .to: toList
                             case .network: networkList
                             case .exchange: exchangeList
+                            case .elsewhere: elsewhereList
                             }
                         }
                         .id(open)
@@ -1090,6 +1118,31 @@ struct MoveSentence: View {
             // copy; the exchange door is a line, and opens a list like
             // every blank's (the system menu was the one control on Move that
             // matched nothing else).
+            if let route = elsewhere {
+                VStack(alignment: .leading, spacing: DS.Space.s3) {
+                    Text(verbatim: route.address)
+                        .dsText(.mono12)
+                        .foregroundStyle(DS.textSecondary)
+                        .textSelection(.enabled)
+                        .fixedSize(horizontal: false, vertical: true)
+                    DSCopyRow(value: route.address, label: "Copy address", sensitive: false)
+                    Text(route.feeUSD.map { fee in
+                        String(localized: "Only \(route.token) on \(route.from.name) here. Relay brings it to your account in seconds, for about \(Self.money(max(fee, 0.01))).")
+                    } ?? String(localized: "Only \(route.token) on \(route.from.name) here. Relay brings it to your account in seconds."))
+                        .dsText(.body17).foregroundStyle(DS.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Button {
+                        withAnimation(DS.Motion.standard) { elsewhere = nil }
+                        DSHaptic.selection()
+                    } label: {
+                        Text("Your own address")
+                            .dsText(.body17)
+                            .foregroundStyle(DS.pickInk)
+                            .frame(minHeight: 44, alignment: .leading)
+                    }
+                    .buttonStyle(RowPress())
+                }
+            } else {
             VStack(alignment: .leading, spacing: DS.Space.s3) {
                 Text(verbatim: account)
                     .dsText(.mono12)
@@ -1120,6 +1173,23 @@ struct MoveSentence: View {
                         .frame(minHeight: 44, alignment: .leading)
                 }
                 .buttonStyle(RowPress())
+                if !network.isTest {
+                    Button {
+                        withAnimation(DS.Motion.standard) { open = .elsewhere }
+                        DSHaptic.selection()
+                    } label: {
+                        Text("From another network")
+                            .dsText(.body17)
+                            .foregroundStyle(DS.pickInk)
+                            .frame(minHeight: 44, alignment: .leading)
+                    }
+                    .buttonStyle(RowPress())
+                }
+                if let elsewhereFinding {
+                    Text(verbatim: elsewhereFinding).dsText(.body17).foregroundStyle(DS.attentionInk)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
             }
         } else if let note = lineNote {
             HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
@@ -1433,6 +1503,60 @@ struct MoveSentence: View {
         }
     }
 
+    /// Where the money is (prd §1453): the account's own networks take your
+    /// own address; every other network Relay takes deposits on goes
+    /// through Relay, to your account on this network.
+    private var elsewhereList: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ForEach(networksByWorth) { n in
+                listRow(n.name, sub: String(localized: "your own address"), image: Self.networkMark(n)) {
+                    pick { elsewhere = nil }
+                }
+            }
+            ForEach(elsewhereNetworks) { n in
+                listRow(n.name, sub: String(localized: "through Relay"), mark: String(n.name.prefix(1))) {
+                    pick {}
+                    takeRoute(from: n, token: elsewhere?.token == "ETH" && n.ethNative ? "ETH" : (n.usdc != nil ? "USDC" : "ETH"))
+                }
+            }
+            if elsewhereNetworks.isEmpty {
+                HStack(spacing: DS.Space.s2) {
+                    DSSpinner()
+                    Text("Asking Relay").dsText(.body17).foregroundStyle(DS.textSecondary)
+                }
+                .frame(minHeight: 52)
+            }
+        }
+        .task { if elsewhereNetworks.isEmpty { elsewhereNetworks = await YourAccountElsewhere.networks() } }
+    }
+
+    /// Relay's address for the route, kept per route; on the network Receive
+    /// stands on, Base when that is a test network.
+    private func takeRoute(from: YourAccountElsewhere.Network, token: String) {
+        let to = network.isTest ? Op.base : network
+        let who = account
+        elsewhereFinding = nil
+        Task {
+            do {
+                let route = try await YourAccountElsewhere.route(from: from, token: token, to: to, account: who)
+                withAnimation(DS.Motion.standard) { elsewhere = route }
+                DSHaptic.tap()
+            } catch let failure as Chain.Failure {
+                elsewhereFinding = failure.message
+            } catch {
+                elsewhereFinding = String(localized: "Relay did not answer")
+            }
+        }
+    }
+
+    /// USDC or ETH, where the route's network has both.
+    private func switchElsewhereToken() {
+        guard let route = elsewhere else { return }
+        let other = route.token == "USDC" ? "ETH" : "USDC"
+        guard other == "USDC" ? route.from.usdc != nil : route.from.ethNative else { return }
+        takeRoute(from: route.from, token: other)
+    }
+
     private var networkList: some View {
         VStack(alignment: .leading, spacing: 0) {
             ForEach(networksByWorth) { n in
@@ -1614,7 +1738,7 @@ struct MoveSentence: View {
                     // Copying is beside the address (§1442i); the foot's one
                     // act hands it to someone.
                     Spacer(minLength: 0)
-                    ShareLink(item: account) {
+                    ShareLink(item: receiveAddress) {
                         Text("Share")
                             .dsText(.heading28)
                             .foregroundStyle(DS.pickInk)
@@ -1940,8 +2064,11 @@ struct MoveSentence: View {
         return URL(string: "https://\(host)/tx/\(transaction)")
     }
 
+    /// The address Receive shows: your own, or a route's (prd §1453).
+    private var receiveAddress: String { elsewhere?.address ?? account }
+
     private func copy() {
-        UIPasteboard.general.string = account
+        UIPasteboard.general.string = receiveAddress
         DSHaptic.tap()
         say(String(localized: "Address copied"))
     }

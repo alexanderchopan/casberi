@@ -345,6 +345,8 @@ grep -B1 -A1 '{ spendLimit }' "$SEC" | grep -q 'spendLimitOpen' || { echo "✗ t
 # The adapter install is a simulation until its send path is proven (§1447 item 11).
 grep -A9 'static func installAdapter' Casberi/Casberi/Model/YourAccountChain.swift | grep -q 'guard dryRun || throwaway(account) else' || { echo "✗ installAdapter runs for real before the adapter's send path is proven (prd §1447 item 11)"; exit 1; }
 grep -q 'guard !calls.contains(where: YourAccount7579.approvesMulticall3) else' Casberi/Casberi/Model/YourAccountChain.swift || { echo "✗ operations no longer refuse an approval to Multicall3, which would ride the spend limit's ETH route (prd §1447 item 15)"; exit 1; }
+grep -q '(c\["vmType"\] as? String) == "evm", (c\["depositAddressEnabled"\] as? Bool) == true' Casberi/Casberi/Model/YourAccountElsewhere.swift || { echo "✗ receiving from another network offers a network Relay takes no keyless deposit address on (prd §1453: EVM only, no Relay key)"; exit 1; }
+grep -q 'WalletWatch.sameAddress(recipient, account)' Casberi/Casberi/Model/YourAccountChain.swift || { echo "✗ a Relay deposit address is taken without Relay naming the account as the one that gets it (prd §1452, §1453)"; exit 1; }
 for f in installLimit limitSend requireBoth; do
   grep -A9 "static func $f" Casberi/Casberi/Model/YourAccountChain.swift | grep -q 'guard dryRun || throwaway(account) else' || { echo "✗ $f runs for real outside the throwaway (prd §1447 items 14–15)"; exit 1; }
 done

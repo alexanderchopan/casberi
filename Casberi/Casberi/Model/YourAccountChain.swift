@@ -808,6 +808,13 @@ enum YourAccountChain {
         return Deposit(address: address, outUSD: out, feeUSD: fees == nil ? nil : fee, seconds: details["timeEstimate"] as? Int)
     }
 
+    /// Relay's networks (`/chains`), as it lists them.
+    static func relayChains() async -> [[String: Any]] {
+        let (json, status) = await relay("chains", body: nil)
+        guard status == 200 else { return [] }
+        return ((json as? [String: Any])?["chains"] as? [[String: Any]]) ?? []
+    }
+
     /// Relay's token search for the sentence's For (prd §1440): its default
     /// list with nothing typed, matches as you type; verified tokens marked.
     static func relayCurrencies(_ net: Network, term: String) async -> [[String: Any]] {
