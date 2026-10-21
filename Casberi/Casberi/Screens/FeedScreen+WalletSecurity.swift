@@ -24,6 +24,9 @@ struct WalletSecurityCounts: Equatable {
     var poisoning = 0
     var fakeTokens = 0
     var fakeTransfers = 0
+    /// **YOUR ACCOUNT'S THREE (prd §1462, user: "F looks the cleanest").**
+    /// Nil with no account on this phone.
+    var account: YourAccountFacts? = nil
 
     var flagged: Int { poisoning + fakeTokens + fakeTransfers }
     var isEmpty: Bool {
@@ -47,7 +50,8 @@ extension FeedScreen {
             unlimited: grants.filter(\.unlimited).count,
             poisoning: warnings.filter { $0.kind == .poisoning }.count,
             fakeTokens: warnings.filter { $0.kind == .spoofedSymbol }.count,
-            fakeTransfers: warnings.filter { $0.kind == .fakeTransfer }.count)
+            fakeTransfers: warnings.filter { $0.kind == .fakeTransfer }.count,
+            account: YourAccountFacts.current)
     }
 
     /// Where a cell's door lands: its section's header.
@@ -202,32 +206,75 @@ struct WalletSecurityFigure: View {
     let counts: WalletSecurityCounts
     let onJump: (FeedScreen.SecurityAnchor) -> Void
 
-    /// **SETTINGS' COUNT GRID (prd §1221, user: "make the security card look
-    /// like the settings and sources one -- 2 columns").** Six counts two
-    /// across in `DSCountTile`s; a count that wants you says so in its word
-    /// (§1004), and a zero is a fact, not a door (§83).
-    var body: some View {
-        let cells: [(FeedScreen.SecurityAnchor, Int, String, Bool)] = [
-            (.signatures, counts.signatures, String(localized: "Signatures"), counts.signatures > 0),
-            (.delegations, counts.delegations, String(localized: "Delegations"), false),
+    /// **NINE, THREE ACROSS, THE FIGURE CENTERED OVER ITS WORD (prd §1462,
+    /// user: "F looks the cleanest").** The six counts (§1221), then your
+    /// account's three — the spend limit, the Signers, the round-ups — each
+    /// a figure over a word in one grammar; a count that wants you says so
+    /// in its word (§1004), and a zero is a fact, not a door (§83).
+    struct Cell: Identifiable {
+        let id: String
+        let anchor: FeedScreen.SecurityAnchor
+        let count: Int
+        let figure: String?
+        let word: String
+        let wants: Bool
+    }
+
+    /// Whole dollars: "$2", never "$2.00" (the limit and the step are whole).
+    private static func dollars(_ n: Int) -> String {
+        n.formatted(.currency(code: "USD").precision(.fractionLength(0)))
+    }
+
+    private var cells: [Cell] {
+        var cells: [Cell] = [
+            Cell(id: "signatures", anchor: .signatures, count: counts.signatures, figure: nil,
+                 word: String(localized: "Signatures"), wants: counts.signatures > 0),
+            Cell(id: "delegations", anchor: .delegations, count: counts.delegations, figure: nil,
+                 word: String(localized: "Delegations"), wants: false),
             // A grant with no limit wants you.
-            (.approvals, counts.approvals, String(localized: "Approvals"), counts.unlimited > 0),
+            Cell(id: "approvals", anchor: .approvals, count: counts.approvals, figure: nil,
+                 word: String(localized: "Approvals"), wants: counts.unlimited > 0),
             // The tile's short word; the list under it keeps the full name.
-            (.poisoning, counts.poisoning, String(localized: "Poisoning"), counts.poisoning > 0),
-            (.fakeTokens, counts.fakeTokens, String(localized: "Fake tokens"), counts.fakeTokens > 0),
+            Cell(id: "poisoning", anchor: .poisoning, count: counts.poisoning, figure: nil,
+                 word: String(localized: "Poisoning"), wants: counts.poisoning > 0),
+            Cell(id: "fakeTokens", anchor: .fakeTokens, count: counts.fakeTokens, figure: nil,
+                 word: String(localized: "Fake tokens"), wants: counts.fakeTokens > 0),
             // Spam, as much as a fake token is (user, 2026-10-20: "fake
             // tokens are just as much spam as fake transfers"): the same ink.
-            (.fakeTransfers, counts.fakeTransfers, String(localized: "Fake transfers"), counts.fakeTransfers > 0),
+            Cell(id: "fakeTransfers", anchor: .fakeTransfers, count: counts.fakeTransfers, figure: nil,
+                 word: String(localized: "Fake transfers"), wants: counts.fakeTransfers > 0),
         ]
-        let widest = cells.map(\.1).max()
-        DSCountGrid(items: cells.count, bare: true) {
-            ForEach(cells, id: \.0) { anchor, count, word, wants in
-                DSCountTile(count: count, label: word, isOn: false, wants: wants,
-                            inline: true, widest: widest) {
+        if let a = counts.account {
+            // "Limit a month" (user: "we can just say 'limit a month'"); Off
+            // is a figure too, in the zero's ink.
+            cells += [
+                Cell(id: "limit", anchor: .account, count: a.limitDollars ?? 0,
+                     figure: a.limitDollars.map(Self.dollars) ?? String(localized: "Off"),
+                     word: a.limitPeriod.map { String(localized: "Limit a \($0)") } ?? String(localized: "Limit"),
+                     // Off with a Signer standing: it could be on.
+                     wants: a.limitDollars == nil && a.signers > 0),
+                Cell(id: "signers", anchor: .account, count: a.signers, figure: nil,
+                     word: String(localized: "Signers"), wants: a.signers == 0),
+                Cell(id: "roundUps", anchor: .account, count: a.roundUpStep ?? 0,
+                     figure: a.roundUpStep.map(Self.dollars) ?? String(localized: "Off"),
+                     word: a.roundUpSymbol.map { String(localized: "Round-ups to \($0)") } ?? String(localized: "Round-ups"),
+                     wants: false),
+            ]
+        }
+        return cells
+    }
+
+    var body: some View {
+        let cells = cells
+        DSCountGrid(items: cells.count, columns: counts.account == nil ? 2 : 3, bare: true) {
+            ForEach(cells) { cell in
+                DSCountTile(count: cell.count, label: cell.word, figure: cell.figure, centered: counts.account != nil,
+                            isOn: false, wants: cell.wants, inline: counts.account == nil) {
                     DSHaptic.selection()
-                    onJump(anchor)
+                    onJump(cell.anchor)
                 }
-                .disabled(count == 0)
+                // Your account's cells are doors to its rows at Off too.
+                .disabled(cell.count == 0 && cell.anchor != .account)
             }
         }
     }

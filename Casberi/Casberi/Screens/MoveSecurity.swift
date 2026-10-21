@@ -346,6 +346,8 @@ struct MoveSecurity: View {
         // the account is on has one (prd §1432).
         let live = standings.filter(\.deployed)
         YourAccountKey.noteOutsideKey(held: !live.isEmpty && live.allSatisfy { !$0.outside.isEmpty })
+        // The box's Signers figure (prd §1462): distinct keys across the networks.
+        YourAccountFacts.noteSigners(Set(live.flatMap(\.outside).map { $0.lowercased() }).count)
         // And for the recovery key where money sits (prd §1442m), so Finish
         // clears the nudge as soon as it lands.
         await YourAccountProtection.check(force: true)

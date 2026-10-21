@@ -235,7 +235,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1599 of 1668 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1600 of 1669 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1600,7 +1600,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1218 — The picked tile is the page's ink
 - §1219 — The Wallet's Home takes the Feed's shape, from the Feed's own parts
 - §1220 — On the phone, a Wallet tile rises as a sheet
-- §1221 — Security's box is Settings' count grid
+- §1221 — Security's box is Settings' count grid (amended by §1462)
 - §1222 — What this app reaches takes the Feed's shape
 - §1223 — A Watchlist widget, small (amended by §1242)
 - §1224 — A Wallet box leads with its figure
@@ -1836,6 +1836,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1459 — Two lines cut from creating your account
 - §1460 — No summary after your keys: the Created sentence says it in one line
 - §1461 — The opening operation sets six limit periods, not twelve
+- §1462 — Security's box is nine, three across, the figure centered over its word
 
 ## Dead rulings → what replaced them (generated)
 

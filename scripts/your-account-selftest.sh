@@ -366,5 +366,12 @@ grep -q 'guard signer != nil, let limitDollars' Casberi/Casberi/Model/YourAccoun
 grep -q 'count: YourAccountSetup.firstPeriods)' Casberi/Casberi/Model/YourAccountChain.swift && grep -Eq 'static let firstPeriods = [1-6]$' Casberi/Casberi/Model/YourAccountSetup.swift || { echo "✗ the opening operation sets up more than six limit periods: twelve is 19.2M gas against the bundler's 15M (prd §1461)"; exit 1; }
 # A bundler's refusal reaches the person in the app's words (prd §1461 item 4).
 grep -q 'last = worded(error, on: net)' Casberi/Casberi/Model/YourAccountChain.swift && grep -q 'lower.contains("max gas")' Casberi/Casberi/Model/YourAccountChain.swift || { echo "✗ a bundler's raw refusal (\"UserOperation max gas … is larger than\") reaches the person (prd §1461 item 4)"; exit 1; }
+# Security's box is nine, three across, the figure centered over its word (prd §1462):
+# the six counts and your account's limit, Signers and round-ups; the Signers
+# figure is a last reading MoveSecurity stamps, never a zero it did not read.
+FIG=Casberi/Casberi/Screens/FeedScreen+WalletSecurity.swift
+grep -q 'columns: counts.account == nil ? 2 : 3' "$FIG" && grep -q 'centered: counts.account != nil' "$FIG" || { echo "✗ Security's box no longer draws your account's three beside the six counts, three across (prd §1462)"; exit 1; }
+grep -q 'YourAccountFacts.noteSigners(Set(live.flatMap' Casberi/Casberi/Screens/MoveSecurity.swift || { echo "✗ the box's Signers figure is no longer stamped by Security's read (prd §1462)"; exit 1; }
+grep -q 'String(localized: "Limit a \\($0)")' "$FIG" || { echo "✗ the limit's word is not \"Limit a month\" (prd §1462, user: \"we can just say 'limit a month'\")"; exit 1; }
 grep -q 'walking = true' Casberi/Casberi/Screens/MoveScreen.swift || { echo "✗ Create no longer walks through your keys (prd §1457)"; exit 1; }
 echo "✓ your account: the address is the factory's, the send's bytes are the module's, amounts add up, Move is in every build, it names only networks this phone can use, and asks where money lacks the recovery key"
