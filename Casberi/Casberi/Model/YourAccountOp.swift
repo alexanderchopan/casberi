@@ -141,10 +141,32 @@ enum YourAccountOp {
         return callData(calls: calls, rotateTo: next)
     }
 
+    /// The contract an operation goes through (prd §1447 item 11).
+    enum Entry: Equatable, Sendable {
+        case module4337, adapter
+        /// The SafeOp hash's EIP-712 domain: the validating contract itself.
+        var verifyingContract: String {
+            switch self {
+            case .module4337: YourAccount.module4337
+            case .adapter: YourAccount7579.adapter
+            }
+        }
+    }
+
     /// Any calls, then the key change, as one operation; one call alone is a
     /// plain `executeUserOp` (a delegate call when its operation says so).
-    static func callData(calls: [Call], rotateTo next: (x: [UInt8], y: [UInt8])?) -> [UInt8]? {
+    /// On the adapter, the same batch through its `execute`: one delegatecall
+    /// to MultiSend, mode `0xFF…` (v1's CALLTYPE_DELEGATECALL).
+    static func callData(calls: [Call], rotateTo next: (x: [UInt8], y: [UInt8])?, entry: Entry = .module4337) -> [UInt8]? {
         guard !calls.isEmpty || next != nil else { return nil }
+        if entry == .adapter {
+            var batch = calls
+            if let next {
+                batch.append(Call(operation: 1, to: YourAccount.sharedSigner, value: w(0),
+                                  data: YourAccount.configure(x: next.x, y: next.y)))
+            }
+            return adapterExecute(delegateTo: YourAccount.multiSend, data: YourAccount.multiSend(batch))
+        }
         if next == nil, calls.count == 1 { return execute(calls[0]) }
         var batch = calls
         if let next {
@@ -176,6 +198,9 @@ enum YourAccountOp {
         var maxFeePerGas: UInt64 = 0
         var maxPriorityFeePerGas: UInt64 = 0
         var signature: [UInt8] = []
+        /// Which contract validates and runs it (prd §1447 item 11): Safe's
+        /// 4337 module, or — once the account is on it — Safe's 7579 adapter.
+        var entry: Entry = .module4337
 
         static func quantity(_ n: UInt64) -> String { "0x" + String(n, radix: 16) }
 
@@ -235,7 +260,7 @@ enum YourAccountOp {
     static func safeOpHash(_ op: Op, chainId: Int) -> [UInt8] {
         let typeHash = k(Array("SafeOp(address safe,uint256 nonce,bytes initCode,bytes callData,uint128 verificationGasLimit,uint128 callGasLimit,uint256 preVerificationGas,uint128 maxPriorityFeePerGas,uint128 maxFeePerGas,bytes paymasterAndData,uint48 validAfter,uint48 validUntil,address entryPoint)".utf8))
         let domain = k(k(Array("EIP712Domain(uint256 chainId,address verifyingContract)".utf8))
-                       + YourAccount.w(chainId) + YourAccount.w(YourAccount.module4337))
+                       + YourAccount.w(chainId) + YourAccount.w(op.entry.verifyingContract))
         let initCode = op.factory.map { YourAccount.addressBytes($0) + op.factoryData } ?? []
         let structHash = k(typeHash + YourAccount.w(op.sender) + u(op.nonce) + k(initCode) + k(op.callData)
                            + u(op.verificationGasLimit) + u(op.callGasLimit) + u(op.preVerificationGas)
@@ -253,6 +278,37 @@ enum YourAccountOp {
             + pair(op.verificationGasLimit, op.callGasLimit) + u(op.preVerificationGas)
             + pair(op.maxPriorityFeePerGas, op.maxFeePerGas) + k([])
         return k(k(packed) + YourAccount.w(YourAccount.entryPoint) + YourAccount.w(chainId))
+    }
+
+    /// The adapter's `execute(ModeCode, bytes)` as one delegatecall:
+    /// mode byte 0 is the call type (0xFF), the rest zero (default exec);
+    /// the calldata is the target's 20 bytes, then what it is called with.
+    static func adapterExecute(delegateTo target: String, data: [UInt8]) -> [UInt8] {
+        var mode = [UInt8](repeating: 0, count: 32)
+        mode[0] = 0xFF
+        return YourAccount.sel("execute(bytes32,bytes)") + mode + w(64)
+            + YourAccount.dynamic(YourAccount.addressBytes(target) + data)
+    }
+
+    /// The adapter's `getSafeOp(userOp, entryPoint)` calldata, the op's
+    /// signature cut to the 12 bytes of time bounds; the hash is the keccak
+    /// of the `operationData` it answers.
+    static func safeOpCall(_ op: Op) -> [UInt8] {
+        var bare = op
+        bare.signature = [UInt8](repeating: 0, count: 12)
+        return YourAccount.sel("getSafeOp((address,uint256,bytes,bytes,bytes32,uint256,bytes32,bytes,bytes),address)")
+            + w(64) + w(YourAccount.entryPoint) + bare.packedTuple
+    }
+
+    /// The first `bytes` of an ABI answer (`getSafeOp`'s `operationData`).
+    static func firstBytes(_ answer: [UInt8]) -> [UInt8]? {
+        guard answer.count >= 64 else { return nil }
+        func int(_ at: Int) -> Int? {
+            guard at + 32 <= answer.count, answer[at..<(at + 24)].allSatisfy({ $0 == 0 }) else { return nil }
+            return answer[(at + 24)..<(at + 32)].reduce(0) { $0 << 8 | Int($1) }
+        }
+        guard let offset = int(0), let length = int(offset), offset + 32 + length <= answer.count else { return nil }
+        return Array(answer[(offset + 32)..<(offset + 32 + length)])
     }
 
     /// `getOperationHash` calldata: the module hashes the op with its

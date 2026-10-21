@@ -230,6 +230,20 @@ enum YourAccountChain {
         return SafeCall.decodeAddressArray(answer) ?? []
     }
 
+    /// Safe's fallback-handler slot, `keccak256("fallback_manager.handler.address")`.
+    private static let fallbackHandlerSlot = "0x6c9a6c4a39284e37ed1cf53d337577d14212a4870fb976a4366c693b939918d5"
+
+    /// The contract the account answers through on `net`: the 7579 adapter
+    /// once it is the fallback handler (prd §1447 item 11), else the module.
+    static func accountEntry(_ net: Network, _ account: String) async throws -> YourAccountOp.Entry {
+        guard let word = try await rpc(net, "eth_getStorageAt", [account, fallbackHandlerSlot, "latest"]) as? String,
+              let bytes = SafeABI.hexBytes(word), bytes.count == 32 else {
+            throw Failure(message: String(localized: "\(net.name) did not answer"))
+        }
+        let handler = "0x" + Keccak256.hexString(Array(bytes.suffix(20)))
+        return WalletWatch.sameAddress(handler, YourAccount7579.adapter) ? .adapter : .module4337
+    }
+
     /// The Safe's threshold: how many owners a transaction needs (prd §1447).
     static func threshold(_ net: Network, _ account: String) async throws -> Int {
         let answer = try await ethCall(net, to: account, data: YourAccount.sel("getThreshold()"))
@@ -713,10 +727,14 @@ enum YourAccountChain {
                                 signer: Signer, reason: String, dryRun: Bool = false,
                                 report: @escaping @Sendable (String) -> Void = { _ in },
                                 stage: @escaping @Sendable (Stage) async -> Void) async throws -> Sent.Outcome {
-        guard let callData = YourAccountOp.callData(calls: calls, rotateTo: next) else {
+        // Which contract this account answers through on this network
+        // (prd §1447 item 11): the 4337 module, or the 7579 adapter.
+        let entry: YourAccountOp.Entry = deployed ? try await accountEntry(net, account) : .module4337
+        guard let callData = YourAccountOp.callData(calls: calls, rotateTo: next, entry: entry) else {
             throw Failure(message: String(localized: "This send could not be written"))
         }
         var op = YourAccountOp.Op(sender: account, nonce: 0, factory: nil, factoryData: [], callData: callData)
+        op.entry = entry
         if deployed {
             op.nonce = try await nonce(net, account)
         } else {
@@ -779,9 +797,15 @@ enum YourAccountChain {
         // What the person approves is computed HERE, and the module must
         // agree: a node's word alone never chooses the bytes this phone signs.
         let hash = YourAccountOp.safeOpHash(op, chainId: net.chainId)
-        guard SafeABI.hexBytes(try await ethCall(net, to: YourAccount.module4337,
-                                                 data: YourAccountOp.operationHashCall(op))) == hash,
-              let digest = SafeWebAuthn.signingDigest(challenge: hash) else {
+        let theirs: [UInt8]?
+        switch entry {
+        case .module4337:
+            theirs = SafeABI.hexBytes(try await ethCall(net, to: YourAccount.module4337, data: YourAccountOp.operationHashCall(op)))
+        case .adapter:
+            theirs = SafeABI.hexBytes(try await ethCall(net, to: YourAccount7579.adapter, data: YourAccountOp.safeOpCall(op)))
+                .flatMap(YourAccountOp.firstBytes).map(Keccak256.hash)
+        }
+        guard theirs == hash, let digest = SafeWebAuthn.signingDigest(challenge: hash) else {
             throw Failure(message: String(localized: "Safe's module disagrees with this iPhone about what is signed, so nothing was"))
         }
 

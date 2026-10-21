@@ -28,6 +28,7 @@ cd "$(dirname "$0")/.."
 ACCOUNT="Casberi/Casberi/Model/YourAccount.swift"
 OP="Casberi/Casberi/Model/YourAccountOp.swift"
 SWAP="Casberi/Casberi/Model/YourAccountSwap.swift"
+ADAPTER="Casberi/Casberi/Model/YourAccount7579.swift"
 FIXTURES="$PWD/scripts/fixtures/your-account"
 TX="Casberi/Casberi/Model/SafeTransaction.swift"
 KECCAK="Casberi/Casberi/Model/Keccak256.swift"
@@ -81,6 +82,25 @@ check(Keccak256.hexString(YourAccountOp.safeOpHash(op, chainId: 84532)) == "91e2
       "the SafeOp hash on Base Sepolia is not the module's")
 check(Keccak256.hexString(YourAccountOp.userOpHash(op, chainId: 8453)) == "d9a4f87e3a300872e4f599fee93366c0b1a0dbb144c25dd32bb3622efcc65e17",
       "the userOp id is not EntryPoint v0.7's getUserOpHash on Base — a send could not be followed")
+
+// On Safe's 7579 adapter (prd §1447 item 11): the same batch through its
+// `execute` as one delegatecall to MultiSend, and the SafeOp hash in the
+// adapter's domain — pinned to what the deployed v1 adapter's `getSafeOp`
+// answered on Base for these bytes (keccak of its operationData).
+let adapterCalls = [YourAccountOp.call(for: eth)!]
+let acd = YourAccountOp.callData(calls: adapterCalls, rotateTo: (x, y), entry: .adapter)!
+check(Array(acd.prefix(5)) == SafeABI.hexBytes("0xe9ae5c53ff")!, "the adapter's call is not execute(bytes32,bytes) in delegatecall mode")
+check(Keccak256.hexString(k(acd)) == "6577c8b4040928c27af4f5ae93fec2df1e7cc0846c3e1a3a34b0c069c4a71312", "the adapter's batch bytes changed")
+var aop = YourAccountOp.Op(sender: want, nonce: 0, factory: nil, factoryData: [], callData: acd)
+aop.verificationGasLimit = 500000; aop.callGasLimit = 100000; aop.preVerificationGas = 60000
+aop.maxFeePerGas = 2000000; aop.maxPriorityFeePerGas = 1000000
+aop.signature = YourAccountOp.dummySignature
+aop.entry = .adapter
+check(Keccak256.hexString(YourAccountOp.safeOpHash(aop, chainId: 8453)) == "1d9528b67175addfa7a3b85fb67ec3b4d6eca26614a74c754805404f5ab2b16a",
+      "the SafeOp hash on the adapter is not what Safe's 7579 adapter on Base answered for the same op")
+var amod = aop; amod.entry = .module4337
+check(YourAccountOp.safeOpHash(amod, chainId: 8453) != YourAccountOp.safeOpHash(aop, chainId: 8453), "the adapter's hash does not take its own domain")
+check(YourAccountOp.firstBytes(YourAccount.w(32) + YourAccount.w(3) + [1, 2, 3] + [UInt8](repeating: 0, count: 29)) == [1, 2, 3], "an answer's first bytes are not read")
 var huge = op; huge.maxFeePerGas = UInt64.max
 check(huge.maxCost == nil && op.maxCost == 1320000000000, "maxCost overflows into a trap, or is wrong")
 check(YourAccountOp.spoken("500000000000", decimals: 18) == "0.0000005", "a real amount must never be spoken as 0")
@@ -202,7 +222,7 @@ check(YourAccountOp.abiString("0x4d4b5200000000000000000000000000000000000000000
 check(YourAccountOp.abiString("0x") == nil, "no answer is no symbol")
 exit(bad == 0 ? 0 : 1)
 SWIFT
-xcrun swiftc -O -o "$TMP/t" "$ACCOUNT" "$OP" "$SWAP" "$TX" "$KECCAK" "$CLEARSIGN" "$WEBAUTHN" "$TMP/main.swift" 2>"$TMP/err" \
+xcrun swiftc -O -o "$TMP/t" "$ACCOUNT" "$OP" "$SWAP" "$ADAPTER" "$TX" "$KECCAK" "$CLEARSIGN" "$WEBAUTHN" "$TMP/main.swift" 2>"$TMP/err" \
   || { cat "$TMP/err"; echo "✗ YourAccount.swift and YourAccountOp.swift do not compile alone (Foundation and the Safe encoders only)"; exit 1; }
 FIXTURES="$FIXTURES" "$TMP/t" || { echo "✗ your account's arithmetic drifted — see above"; exit 1; }
 
