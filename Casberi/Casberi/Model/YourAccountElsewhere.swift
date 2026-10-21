@@ -26,6 +26,9 @@ enum YourAccountElsewhere {
         let from: Network
         let token: String
         let to: Op.Network
+        /// What arrives: the network's dollar (USDC, or Robinhood Chain's
+        /// USDG) for USDC, ETH for ETH.
+        let arrives: String
         let address: String
         let feeUSD: Double?
         let seconds: Int?
@@ -68,14 +71,15 @@ enum YourAccountElsewhere {
     static func route(from: Network, token: String, to net: Op.Network, account: String) async throws -> Route {
         let key = keptKey(account, from.id, token, net.chainId)
         if let data = UserDefaults.standard.data(forKey: key), let kept = try? JSONDecoder().decode(Kept.self, from: data) {
-            return Route(from: from, token: token, to: net, address: kept.address, feeUSD: kept.fee, seconds: kept.seconds)
+            return Route(from: from, token: token, to: net, arrives: token == "USDC" ? net.dollarSymbol : token,
+                         address: kept.address, feeUSD: kept.fee, seconds: kept.seconds)
         }
         let usdc = token == "USDC"
         guard let origin = usdc ? from.usdc : YourAccountSwap.native, usdc || from.ethNative else {
             throw YourAccountChain.Failure(message: String(localized: "Relay does not take \(token) from \(from.name)"))
         }
         let target = RoundUps.Target(chainId: net.chainId, address: usdc ? net.dollar : YourAccountSwap.native,
-                                     symbol: token, decimals: usdc ? 6 : 18, network: net.name)
+                                     symbol: usdc ? net.dollarSymbol : token, decimals: usdc ? 6 : 18, network: net.name)
         // An open address takes any amount on its route; the quote names one.
         let deposit = try await YourAccountChain.depositAddress(fromChain: from.id, currency: origin, to: target,
                                                                 amount: usdc ? "10000000" : "5000000000000000",
@@ -83,6 +87,7 @@ enum YourAccountElsewhere {
         if let data = try? JSONEncoder().encode(Kept(address: deposit.address, fee: deposit.feeUSD, seconds: deposit.seconds)) {
             UserDefaults.standard.set(data, forKey: key)
         }
-        return Route(from: from, token: token, to: net, address: deposit.address, feeUSD: deposit.feeUSD, seconds: deposit.seconds)
+        return Route(from: from, token: token, to: net, arrives: target.symbol,
+                     address: deposit.address, feeUSD: deposit.feeUSD, seconds: deposit.seconds)
     }
 }
