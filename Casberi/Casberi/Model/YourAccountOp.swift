@@ -22,8 +22,7 @@ enum YourAccountOp {
         let rpcs: [String]
         /// ERC-4337 v0.7 bundlers, public and keyless, tried in order.
         let bundlers: [String]
-        /// The network's dollar: USDC on Base and Ethereum, USDG (Global
-        /// Dollar, Paxos) on Robinhood Chain, which has no native USDC.
+        /// The network's dollar: USDC on Base and Ethereum.
         let dollar: String
         var dollarSymbol = "USDC"
         /// A test network: free money, offered in DEBUG builds only.
@@ -201,13 +200,27 @@ enum YourAccountOp {
         /// Which contract validates and runs it (prd §1447 item 11): Safe's
         /// 4337 module, or — once the account is on it — Safe's 7579 adapter.
         var entry: Entry = .module4337
+        /// The nonce's 24-byte key, empty for key 0. On the adapter its first
+        /// 20 bytes name the validator (prd §1447 item 14: Smart Sessions).
+        var nonceKey: [UInt8] = []
+
+        /// The nonce as the EntryPoint reads it: the key, then the sequence.
+        var nonceWord: [UInt8] {
+            let key = nonceKey.count == 24 ? nonceKey : [UInt8](repeating: 0, count: 24)
+            return key + Array(SafeABI.word(uint256: String(nonce))!.suffix(8))
+        }
 
         static func quantity(_ n: UInt64) -> String { "0x" + String(n, radix: 16) }
+        static func quantity(word: [UInt8]) -> String {
+            let hex = Keccak256.hexString(Array(word.drop { $0 == 0 }))
+            let trimmed = hex.drop { $0 == "0" }
+            return "0x" + (trimmed.isEmpty ? "0" : trimmed)
+        }
 
         /// The bundler's JSON (EntryPoint v0.7's unpacked form).
         var json: [String: Any] {
             var o: [String: Any] = [
-                "sender": sender, "nonce": Self.quantity(nonce), "callData": SafeABI.hex(callData),
+                "sender": sender, "nonce": Self.quantity(word: nonceWord), "callData": SafeABI.hex(callData),
                 "callGasLimit": Self.quantity(callGasLimit),
                 "verificationGasLimit": Self.quantity(verificationGasLimit),
                 "preVerificationGas": Self.quantity(preVerificationGas),
@@ -229,7 +242,7 @@ enum YourAccountOp {
             var offset = 9 * 32
             var offsets: [[UInt8]] = []
             for t in tails { offsets.append(YourAccount.w(offset)); offset += t.count }
-            return YourAccount.w(sender) + word(nonce) + offsets[0] + offsets[1]
+            return YourAccount.w(sender) + nonceWord + offsets[0] + offsets[1]
                 + pair(verificationGasLimit, callGasLimit) + word(preVerificationGas)
                 + pair(maxPriorityFeePerGas, maxFeePerGas) + offsets[2] + offsets[3]
                 + tails.reduce([], +)
@@ -262,7 +275,7 @@ enum YourAccountOp {
         let domain = k(k(Array("EIP712Domain(uint256 chainId,address verifyingContract)".utf8))
                        + YourAccount.w(chainId) + YourAccount.w(op.entry.verifyingContract))
         let initCode = op.factory.map { YourAccount.addressBytes($0) + op.factoryData } ?? []
-        let structHash = k(typeHash + YourAccount.w(op.sender) + u(op.nonce) + k(initCode) + k(op.callData)
+        let structHash = k(typeHash + YourAccount.w(op.sender) + op.nonceWord + k(initCode) + k(op.callData)
                            + u(op.verificationGasLimit) + u(op.callGasLimit) + u(op.preVerificationGas)
                            + u(op.maxPriorityFeePerGas) + u(op.maxFeePerGas) + k([]) + u(0) + u(0)
                            + YourAccount.w(YourAccount.entryPoint))
@@ -274,7 +287,7 @@ enum YourAccountOp {
     /// followed to whether it landed.
     static func userOpHash(_ op: Op, chainId: Int) -> [UInt8] {
         let initCode = op.factory.map { YourAccount.addressBytes($0) + op.factoryData } ?? []
-        let packed = YourAccount.w(op.sender) + u(op.nonce) + k(initCode) + k(op.callData)
+        let packed = YourAccount.w(op.sender) + op.nonceWord + k(initCode) + k(op.callData)
             + pair(op.verificationGasLimit, op.callGasLimit) + u(op.preVerificationGas)
             + pair(op.maxPriorityFeePerGas, op.maxFeePerGas) + k([])
         return k(k(packed) + YourAccount.w(YourAccount.entryPoint) + YourAccount.w(chainId))

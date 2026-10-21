@@ -104,16 +104,20 @@ enum YourAccountKey {
         (UserDefaults.standard.object(forKey: biometricKey) as? Bool) ?? biometryEnrolled
     }
 
-    private static func item(_ index: Int) -> [String: Any] {
+    private static func item(_ index: Int) -> [String: Any] { item(named: "key-\(index)") }
+
+    private static func item(named name: String) -> [String: Any] {
         [kSecClass as String: kSecClassGenericPassword,
          kSecAttrService as String: service,
-         kSecAttrAccount as String: "key-\(index)"]
+         kSecAttrAccount as String: name]
     }
 
     /// The public half of the key already stored as `key-<index>`, if any —
     /// read without a prompt (only signing needs one).
-    private static func stored(_ index: Int) -> [UInt8]? {
-        var query = item(index)
+    private static func stored(_ index: Int) -> [UInt8]? { stored(item(index)) }
+
+    private static func stored(_ item: [String: Any]) -> [UInt8]? {
+        var query = item
         query[kSecReturnData as String] = true
         query[kSecMatchLimit as String] = kSecMatchLimitOne
         var out: CFTypeRef?
@@ -129,7 +133,11 @@ enum YourAccountKey {
     /// error that would stop every send, and never a deletion of a key the
     /// account might answer to.
     private static func make(index: Int, biometric: Bool) throws -> [UInt8] {
-        if let existing = stored(index) { return existing }
+        try make(item(index), domain: domainKey(index), biometric: biometric)
+    }
+
+    private static func make(_ item: [String: Any], domain: String, biometric: Bool) throws -> [UInt8] {
+        if let existing = stored(item) { return existing }
         guard SecureEnclave.isAvailable else { throw Failure.noEnclave }
         var flags: SecAccessControlCreateFlags = [.privateKeyUsage]
         if biometric { flags.insert(.biometryCurrentSet) }
@@ -140,7 +148,7 @@ enum YourAccountKey {
         let key: SecureEnclave.P256.Signing.PrivateKey
         do { key = try SecureEnclave.P256.Signing.PrivateKey(accessControl: control) }
         catch { throw Failure.enclaveRefused }
-        var add = item(index)
+        var add = item
         add[kSecValueData as String] = key.dataRepresentation
         add[kSecAttrAccessible as String] = kSecAttrAccessibleWhenPasscodeSetThisDeviceOnly
         add[kSecAttrSynchronizable as String] = false
@@ -149,7 +157,7 @@ enum YourAccountKey {
         let context = LAContext()
         if biometric, context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: nil),
            let state = context.domainState.biometry.stateHash {
-            UserDefaults.standard.set(state, forKey: domainKey(index))
+            UserDefaults.standard.set(state, forKey: domain)
         }
         let xy = [UInt8](key.publicKey.rawRepresentation)
         guard xy.count == 64 else { throw Failure.noKey }
@@ -306,6 +314,7 @@ enum YourAccountKey {
     static func forgetDevice() {
         for i in 0..<max(publicKeys.count, 1) + 8 { SecItemDelete(item(i) as CFDictionary) }
         SecItemDelete(recordItem as CFDictionary)
+        SecItemDelete(item(named: sessionName) as CFDictionary)
         for k in [addressKey, key0Key, publicKeysKey, pendingKey, biometricKey, originKey] {
             UserDefaults.standard.removeObject(forKey: k)
         }
@@ -336,7 +345,29 @@ enum YourAccountKey {
     /// Sign 32 pre-hashed bytes with key `index`, behind Face ID with
     /// `reason`: `r ‖ s`, `s` low.
     static func sign(_ digest: [UInt8], with index: Int, reason: String) async throws -> (r: [UInt8], s: [UInt8]) {
-        var query = item(index)
+        try await sign(digest, item: item(index), reason: reason)
+    }
+
+    // MARK: - The spend limit's key
+
+    /// The spend limit's own key (prd §1447 item 14): one Enclave key under
+    /// the account's policy, that Smart Sessions alone answers to and only
+    /// within the limit. Never an owner of the Safe, never rotated: a
+    /// session names it, and a new key is a new session.
+    private static let sessionName = "session-key"
+
+    /// Its public half, made on first ask.
+    static func sessionKey() throws -> (x: [UInt8], y: [UInt8]) {
+        let xy = try make(item(named: sessionName), domain: "yourAccount.domainState.session", biometric: biometric)
+        return (Array(xy[0..<32]), Array(xy[32..<64]))
+    }
+
+    static func signSession(_ digest: [UInt8], reason: String) async throws -> (r: [UInt8], s: [UInt8]) {
+        try await sign(digest, item: item(named: sessionName), reason: reason)
+    }
+
+    private static func sign(_ digest: [UInt8], item: [String: Any], reason: String) async throws -> (r: [UInt8], s: [UInt8]) {
+        var query = item
         query[kSecReturnData as String] = true
         query[kSecMatchLimit as String] = kSecMatchLimitOne
         var out: CFTypeRef?

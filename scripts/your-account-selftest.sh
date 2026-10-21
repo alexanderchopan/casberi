@@ -101,6 +101,28 @@ check(Keccak256.hexString(YourAccountOp.safeOpHash(aop, chainId: 8453)) == "1d95
 var amod = aop; amod.entry = .module4337
 check(YourAccountOp.safeOpHash(amod, chainId: 8453) != YourAccountOp.safeOpHash(aop, chainId: 8453), "the adapter's hash does not take its own domain")
 check(YourAccountOp.firstBytes(YourAccount.w(32) + YourAccount.w(3) + [1, 2, 3] + [UInt8](repeating: 0, count: 29)) == [1, 2, 3], "an answer's first bytes are not read")
+// The spend limit's session (prd §1447 item 14), each pinned to bytes
+// re-derived apart from this code and proven on Base: the passkey config
+// packed into Smart Sessions' 320 bytes, the session's id, the session, the
+// dollar transfer, and a session op's hash as the EntryPoint answered it.
+let sx = [UInt8](repeating: 0x11, count: 32), sy = [UInt8](repeating: 0x22, count: 32)
+let svi = YourAccount7579.validatorInitData(x: sx, y: sy)
+check(svi.count == 320, "the session key's config no longer fits Smart Sessions' 320 bytes")
+check(Keccak256.hexString(k(svi)) == "ce8b39a70ac8d8be4c45ed41d887c2cc38c659d2ecb29018deb7013bab3a93af", "the session key's packed config changed")
+let susdc = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
+check(Keccak256.hexString(YourAccount7579.permissionId(validatorInit: svi, salt: YourAccount7579.salt(token: susdc, units: "1000000")))
+      == "c8c2da9203b8cc3775942f9fdd628518d1fc54e7cc86cfd880dbae4e3d0bdf29", "the session's permission id changed")
+check(Keccak256.hexString(k(YourAccount7579.session(validatorInit: svi, token: susdc, perSend: "1000000")!))
+      == "e9c7bea6c923dce9251335ce7d2a77fe42b540a60dcad4f42233f64e728cbfe5", "the spend limit's session bytes changed")
+let stc = YourAccount7579.transferCall(token: susdc, to: "0x82d443cb2dc0F924f5Cc5156e557ECB202283Dc6", units: "500000")!
+check(Keccak256.hexString(k(stc)) == "e7ac0d56f0e885a1c04b91ad63d5ba08cfb27a6281c837ac0675b8e6d27dd0be", "the session's transfer call changed")
+var sop = YourAccountOp.Op(sender: "0x82d443cb2dc0F924f5Cc5156e557ECB202283Dc6", nonce: 7, factory: nil, factoryData: [], callData: stc)
+sop.nonceKey = YourAccount7579.sessionNonceKey
+sop.verificationGasLimit = 500000; sop.callGasLimit = 100000; sop.preVerificationGas = 60000
+sop.maxFeePerGas = 2000000; sop.maxPriorityFeePerGas = 1000000
+check(Keccak256.hexString(YourAccountOp.userOpHash(sop, chainId: 8453)) == "d59bff9f0a72eb2cdb01e14642cc07c376eaf838ea00ae8478e9697f0abec4b9",
+      "a session op's hash is not what the EntryPoint on Base answered")
+check(sop.json["nonce"] as? String == "0x8bdaba73cd9815d79069c247eb4bda000000000000000000000007", "a session op's nonce is not its key then its sequence")
 var huge = op; huge.maxFeePerGas = UInt64.max
 check(huge.maxCost == nil && op.maxCost == 1320000000000, "maxCost overflows into a trap, or is wrong")
 check(YourAccountOp.spoken("500000000000", decimals: 18) == "0.0000005", "a real amount must never be spoken as 0")

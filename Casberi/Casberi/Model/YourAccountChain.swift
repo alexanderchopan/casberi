@@ -106,8 +106,10 @@ enum YourAccountChain {
         return YourAccountOp.isContractCode(code)
     }
 
-    static func nonce(_ net: Network, _ account: String) async throws -> UInt64 {
-        let data = YourAccount.sel("getNonce(address,uint192)") + YourAccount.w(account) + YourAccount.w(0)
+    /// The sequence under nonce `key` (24 bytes; empty is key 0).
+    static func nonce(_ net: Network, _ account: String, key: [UInt8] = []) async throws -> UInt64 {
+        let keyWord = key.count == 24 ? [UInt8](repeating: 0, count: 8) + key : YourAccount.w(0)
+        let data = YourAccount.sel("getNonce(address,uint192)") + YourAccount.w(account) + keyWord
         let word = try await ethCall(net, to: YourAccount.entryPoint, data: data)
         return UInt64(word.suffix(16), radix: 16) ?? 0
     }
@@ -347,6 +349,167 @@ enum YourAccountChain {
                                         rotateTo: nextKey, payments: [], signer: device, reason: reason,
                                         dryRun: dryRun, report: report, stage: stage)
         return Sent(outcome: await settle(outcome, net, account, next: next, x: nextKey.x), network: net)
+    }
+
+    // MARK: - The spend limit's session (prd §1447 item 14)
+
+    /// The phone's session key's validator config. Native P-256 only: Base's
+    /// RIP-7212 is measured; Ethereum's EIP-7951 is not yet, here.
+    private static func sessionInit() throws -> [UInt8] {
+        let key = try YourAccountKey.sessionKey()
+        return YourAccount7579.validatorInitData(x: key.x, y: key.y)
+    }
+
+    /// Whether Smart Sessions is a validator on the account, and whether a
+    /// session is enabled on it.
+    private static func sessionsInstalled(_ net: Network, _ account: String) async throws -> Bool {
+        let answer = try await ethCall(net, to: account, data: YourAccount.sel("isModuleInstalled(uint256,address,bytes)")
+            + YourAccount.w(1) + YourAccount.w(YourAccount7579.smartSession) + YourAccount.w(96) + YourAccount.w(0))
+        return SafeCall.decodeUInt(answer) == 1
+    }
+
+    private static func sessionEnabled(_ net: Network, _ account: String, _ permission: [UInt8]) async throws -> Bool {
+        let answer = try await ethCall(net, to: YourAccount7579.smartSession,
+                                       data: YourAccount.sel("isPermissionEnabled(bytes32,address)") + permission + YourAccount.w(account))
+        return SafeCall.decodeUInt(answer) == 1
+    }
+
+    /// A spend limit's session on an account already on the adapter: this
+    /// phone's session key may transfer at most `perSend` units of the
+    /// network's dollar a send, to anyone, and nothing else. Smart Sessions
+    /// is installed with it the first time, enabled beside it after; any
+    /// `retire` session still enabled is removed in the same operation.
+    /// Signed by this phone's account key like any send. Throwaway-only
+    /// outside a simulation, which also runs the call as the account.
+    static func installSession(on net: Network, perSend units: String, retire: [[UInt8]] = [], reason: String, dryRun: Bool,
+                               report: @escaping @Sendable (String) -> Void = { _ in },
+                               stage: @escaping @Sendable (Stage) async -> Void) async throws -> Sent {
+        guard let account = YourAccountKey.address else {
+            throw Failure(message: String(localized: "There is no account on this iPhone"))
+        }
+        guard dryRun || throwaway(account) else {
+            throw Failure(message: String(localized: "A spend limit is not available yet"))
+        }
+        await stage(.preparing)
+        guard try await isDeployed(net, account), try await accountEntry(net, account) == .adapter else {
+            throw Failure(message: String(localized: "A spend limit is not available yet"))
+        }
+        let validatorInit = try sessionInit()
+        let token = net.dollar
+        guard let session = YourAccount7579.session(validatorInit: validatorInit, token: token, perSend: units) else {
+            throw Failure(message: String(localized: "This send could not be written"))
+        }
+        let installed = try await sessionsInstalled(net, account)
+        var calls = [installed ? YourAccount7579.enableSessionCall(session)
+                               : YourAccount7579.installSessionCall(account: account, session: session)]
+        for old in retire where installed {
+            if try await sessionEnabled(net, account, old) { calls.append(YourAccount7579.removeSessionCall(old)) }
+        }
+        let permission = YourAccount7579.permissionId(validatorInit: validatorInit, salt: YourAccount7579.salt(token: token, units: units))
+        report("permissionId=\(SafeABI.hex(permission)) installed=\(installed) calls=\(calls.count)")
+        if dryRun {
+            for call in calls {
+                do {
+                    let answer = try await rpc(net, "eth_call", [["from": account, "to": call.to, "data": SafeABI.hex(call.data)], "latest"])
+                    report("asAccount=\(String(describing: answer).prefix(80))")
+                } catch let failure as Failure {
+                    report("asAccount refused: \(failure.message)")
+                }
+            }
+        }
+        let (signerIndex, device) = try await deviceSigner(net, account, deployed: true)
+        let next = try YourAccountKey.nextKey(after: signerIndex)
+        guard let nextKey = YourAccountKey.publicKey(next) else {
+            throw Failure(message: String(localized: "This send could not be written"))
+        }
+        let outcome = try await operate(net, account: account, deployed: true, calls: calls,
+                                        rotateTo: nextKey, payments: [], signer: device, reason: reason,
+                                        dryRun: dryRun, report: report, stage: stage)
+        return Sent(outcome: await settle(outcome, net, account, next: next, x: nextKey.x), network: net)
+    }
+
+    /// The first, ETH session the throwaway was given (salt zero), which no
+    /// send can pass: retired by the next install.
+    static func firstSessionId() throws -> [UInt8] {
+        YourAccount7579.permissionId(validatorInit: try sessionInit(), salt: [UInt8](repeating: 0, count: 32))
+    }
+
+    /// A transfer of `units` of the network's dollar signed by the session
+    /// key alone, through Smart Sessions, under the limit set at `perSend`:
+    /// the nonce key names Smart Sessions, the signature is USE mode, and the
+    /// EntryPoint's own hash is what Face ID approves. Over the limit the
+    /// policy refuses it in validation, so the bundler's estimate is where
+    /// it stops.
+    static func sessionSend(on net: Network, to target: String, units: String, perSend: String, reason: String, dryRun: Bool,
+                            report: @escaping @Sendable (String) -> Void = { _ in },
+                            stage: @escaping @Sendable (Stage) async -> Void) async throws -> Sent {
+        guard let account = YourAccountKey.address else {
+            throw Failure(message: String(localized: "There is no account on this iPhone"))
+        }
+        guard dryRun || throwaway(account) else {
+            throw Failure(message: String(localized: "A spend limit is not available yet"))
+        }
+        await stage(.preparing)
+        guard try await accountEntry(net, account) == .adapter else {
+            throw Failure(message: String(localized: "A spend limit is not available yet"))
+        }
+        let validatorInit = try sessionInit()
+        let permission = YourAccount7579.permissionId(validatorInit: validatorInit,
+                                                      salt: YourAccount7579.salt(token: net.dollar, units: perSend))
+        guard let callData = YourAccount7579.transferCall(token: net.dollar, to: target, units: units) else {
+            throw Failure(message: String(localized: "This send could not be written"))
+        }
+        var op = YourAccountOp.Op(sender: account, nonce: 0, factory: nil, factoryData: [], callData: callData)
+        op.entry = .adapter
+        op.nonceKey = YourAccount7579.sessionNonceKey
+        op.nonce = try await nonce(net, account, key: op.nonceKey)
+        op.signature = YourAccount7579.useSignature(permissionId: permission, hash: [UInt8](repeating: 0, count: 32),
+                                                    r: [UInt8](repeating: 0x11, count: 32), s: [UInt8](repeating: 0x22, count: 32))
+        try await price(&op, on: net)
+        let estimate: [String: Any]
+        do {
+            estimate = try await bundler(net, "eth_estimateUserOperationGas", [op.json, YourAccount.entryPoint]) as? [String: Any] ?? [:]
+        } catch let failure as Failure {
+            report("estimate refused: \(failure.message)")
+            throw failure
+        }
+        func q(_ k: String) -> UInt64? {
+            guard let v = (estimate[k] as? String).flatMap({ UInt64($0.dropFirst(2), radix: 16) }) else { return nil }
+            let (m, overflow) = v.multipliedReportingOverflow(by: 12)
+            return overflow ? nil : m / 10
+        }
+        guard let vgl = q("verificationGasLimit"), let cgl = q("callGasLimit"), let pvg = q("preVerificationGas"),
+              vgl > 0, cgl > 0 else {
+            throw Failure(message: String(localized: "\(net.name) could not price this send"))
+        }
+        // The dummy fails the challenge before the P-256 check the real
+        // signature pays for; that difference, and more, on top.
+        op.verificationGasLimit = vgl + 20_000
+        op.callGasLimit = cgl
+        op.preVerificationGas = pvg
+        report("gas vgl=\(vgl) cgl=\(cgl) pvg=\(pvg)")
+
+        // The EntryPoint's own word on the hash, before Face ID sees it.
+        let hash = YourAccountOp.userOpHash(op, chainId: net.chainId)
+        let theirs = SafeABI.hexBytes(try await ethCall(net, to: YourAccount.entryPoint,
+            data: YourAccount.sel("getUserOpHash((address,uint256,bytes,bytes,bytes32,uint256,bytes32,bytes,bytes))")
+                + YourAccount.w(32) + op.packedTuple))
+        guard theirs == hash, let digest = SafeWebAuthn.signingDigest(challenge: hash) else {
+            throw Failure(message: String(localized: "Safe's module disagrees with this iPhone about what is signed, so nothing was"))
+        }
+        await stage(.signing)
+        let (r, s) = try await YourAccountKey.signSession(digest, reason: reason)
+        let signature = YourAccount7579.useSignature(permissionId: permission, hash: hash, r: r, s: s)
+        // The validator itself, asked before anything goes.
+        let verdict = try await ethCall(net, to: YourAccount7579.webAuthnValidator,
+                                        data: YourAccount7579.checkCall(hash: hash, useSignature: signature, validatorInit: validatorInit))
+        guard SafeCall.decodeUInt(verdict) == 1 else {
+            throw Failure(message: String(localized: "The signature did not check out, so nothing was sent"))
+        }
+        op.signature = signature
+        report("signed: the passkey validator verifies it")
+        if dryRun { return Sent(outcome: .dryRun, network: net) }
+        return Sent(outcome: try await submit(op, net, account: account, stage: stage), network: net)
     }
 
     static func recoveryState(_ net: Network, _ account: String, signer: String) async throws -> RecoveryState {
@@ -840,7 +1003,12 @@ enum YourAccountChain {
         op.signature = signature
         report("signed: the passkey factory verifies it")
         if dryRun { return .dryRun }
+        return try await submit(op, net, account: account, stage: stage)
+    }
 
+    /// Sends a signed operation and follows it to the chain.
+    private static func submit(_ op: YourAccountOp.Op, _ net: Network, account: String,
+                               stage: @escaping @Sendable (Stage) async -> Void) async throws -> Sent.Outcome {
         // Followed by its OWN id, known before it goes, so a late or lost
         // answer from the bundler can still be traced to whether it landed.
         let id = SafeABI.hex(YourAccountOp.userOpHash(op, chainId: net.chainId))
@@ -856,7 +1024,7 @@ enum YourAccountChain {
             refusal = failure.message
         }
         await stage(.landing)
-        func landed() async -> Bool { ((try? await nonce(net, account)) ?? op.nonce) > op.nonce }
+        func landed() async -> Bool { ((try? await nonce(net, account, key: op.nonceKey)) ?? op.nonce) > op.nonce }
         for tick in 1...60 {
             try await Task.sleep(nanoseconds: 2_000_000_000)
             if let receipt = try? await bundler(net, "eth_getUserOperationReceipt", [id]) as? [String: Any] {

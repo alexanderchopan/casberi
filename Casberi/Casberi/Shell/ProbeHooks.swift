@@ -4047,6 +4047,53 @@ enum ProbeHooks {
                 }
             }
         },
+        // `-sessionInstallProbe "<network>|<perSend>"` — a spend limit's session:
+        // this phone's session key may transfer at most `perSend` units of the
+        // network's dollar a send (prd §1447 item 14); the first, ETH session
+        // is retired. Simulated unless `-adapterThrowaway` names this account.
+        Hook(key: "sessionInstallProbe") { raw, _ in
+            Task { @MainActor in
+                func log(_ line: String) { NSLog("sessionInstall| %@", line) }
+                let p = raw.split(separator: "|").map(String.init)
+                guard p.count == 2, let net = YourAccountOp.networks.first(where: { $0.name.caseInsensitiveCompare(p[0]) == .orderedSame }),
+                      let account = YourAccountKey.address else { log("usage: <network>|<perSend>"); return }
+                do {
+                    let real = UserDefaults.standard.string(forKey: "adapterThrowaway").map { WalletWatch.sameAddress($0, account) } ?? false
+                    let sent = try await YourAccountChain.installSession(on: net, perSend: p[1],
+                                                                        retire: [try YourAccountChain.firstSessionId()],
+                                                                        reason: "Probe: a spend limit", dryRun: !real,
+                                                                        report: { line in NSLog("sessionInstall| %@", line) }) { stage in log("stage=\(stage)") }
+                    log("result=\(sent.outcome)")
+                } catch let failure as YourAccountChain.Failure {
+                    log("refused: \(failure.message)")
+                } catch {
+                    log("error: \(String(describing: error))")
+                }
+            }
+        },
+        // `-sessionSendProbe "<network>|<units>|<perSend>"` — `units` of the
+        // network's dollar from the account to itself, signed by the session key
+        // alone, under the `perSend` limit (prd §1447 item 14). Over the limit it
+        // must be refused. Simulated unless `-adapterThrowaway` names this account.
+        Hook(key: "sessionSendProbe") { raw, _ in
+            Task { @MainActor in
+                func log(_ line: String) { NSLog("sessionSend| %@", line) }
+                let p = raw.split(separator: "|").map(String.init)
+                guard p.count == 3, let net = YourAccountOp.networks.first(where: { $0.name.caseInsensitiveCompare(p[0]) == .orderedSame }),
+                      let account = YourAccountKey.address else { log("usage: <network>|<units>|<perSend>"); return }
+                do {
+                    let real = UserDefaults.standard.string(forKey: "adapterThrowaway").map { WalletWatch.sameAddress($0, account) } ?? false
+                    let sent = try await YourAccountChain.sessionSend(on: net, to: account, units: p[1], perSend: p[2],
+                                                                     reason: "Probe: a send within the limit", dryRun: !real,
+                                                                     report: { line in NSLog("sessionSend| %@", line) }) { stage in log("stage=\(stage)") }
+                    log("result=\(sent.outcome)")
+                } catch let failure as YourAccountChain.Failure {
+                    log("refused: \(failure.message)")
+                } catch {
+                    log("error: \(String(describing: error))")
+                }
+            }
+        },
         // `-recoveryNudgePreview "<chainId,…>"` — draw Needs you's recovery-key
         // row for these networks (prd §1442m) on a phone that cannot fix them.
         Hook(key: "recoveryNudgePreview") { raw, _ in
