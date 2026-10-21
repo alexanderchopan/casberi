@@ -1933,8 +1933,9 @@ struct MoveSentence: View {
         stage = .preparing
         Task {
             do {
-                let done = try await Chain.transact(batch, reason: reason,
-                                                    roundUp: roundUp?.buy.map { Chain.RoundUpBuy(units: $0, target: target) }) { s in
+                let buy = roundUp?.buy.map { Chain.RoundUpBuy(units: $0, target: target) }
+                let done = try await Self.spend(batch, on: net, account: account, roundUp: buy, reason: reason,
+                                                said: { line in await MainActor.run { say(line) } }) { s in
                     await MainActor.run { stage = s }
                 }
                 // The change is counted once the send has landed; a buy
@@ -1981,6 +1982,48 @@ struct MoveSentence: View {
                 say(String(localized: "Not sent"), failure: true)
             }
         }
+    }
+
+    /// **UNDER THE LIMIT, FACE ID ALONE; OVER IT, THE SIGNER TOO (prd §1455).**
+    /// With the spend limit on, sends of the dollar and ETH go on the session
+    /// key; one the limit refuses (over the window's total, or a token it does
+    /// not cover) and every swap are signed by this phone and the Signer, whose
+    /// wallet is asked through the Signer sheet. A refusal before Face ID sends
+    /// nothing, so asking both keys next pays nothing twice.
+    static func spend(_ batch: [Chain.Item], on net: Op.Network, account: String, roundUp: Chain.RoundUpBuy?,
+                      reason: String, said: @escaping @Sendable (String) async -> Void,
+                      stage: @escaping @Sendable (Chain.Stage) async -> Void) async throws -> Chain.Transacted {
+        guard case .on = (try? await Chain.limitState(net, account)) ?? .off else {
+            return try await Chain.transact(batch, reason: reason, roundUp: roundUp, stage: stage)
+        }
+        let sends = batch.compactMap { if case .send(let p) = $0 { p } else { nil } }
+        if sends.count == batch.count {
+            let signed = SignedFlag()
+            do {
+                let sent = try await Chain.sessionSend(sends, roundUp: roundUp, reason: reason) { s in
+                    if s == .signing { await signed.mark() }
+                    await stage(s)
+                }
+                return Chain.Transacted(sent: sent)
+            } catch let failure as Chain.Failure {
+                guard await !signed.value else { throw failure }
+                #if DEBUG
+                NSLog("moveSpend: over the limit, both keys: %@", failure.message)
+                #endif
+                await said(String(localized: "Over your limit: your Signer signs too"))
+            }
+        }
+        guard let signer = try await Chain.signers(net, account).first else {
+            throw Chain.Failure(message: String(localized: "Add a signer first: over the limit, a send waits on it"))
+        }
+        return try await Chain.transact(batch, reason: reason, coSigner: SignerRequestSheet.coSigner(owner: signer, chainId: net.chainId),
+                                        roundUp: roundUp, renew: true, stage: stage)
+    }
+
+    /// Whether Face ID was reached, read across the send's tasks.
+    actor SignedFlag {
+        private(set) var value = false
+        func mark() { value = true }
     }
 
     /// The sentence in the past tense: what was sent or swapped, what a filled

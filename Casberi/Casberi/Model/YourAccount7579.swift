@@ -176,6 +176,15 @@ enum YourAccount7579 {
         return six(window.until) + six(window.from)
     }
 
+    /// How many windows a plan sets up ahead (prd §1455): a year of months
+    /// or of twelve weeks, two weeks of days — then a new plan, both keys.
+    static func windowCount(minutes: Int) -> Int {
+        switch minutes {
+        case ..<1_441: 14
+        default: 12
+        }
+    }
+
     /// A window's salt, so each period is its own permission.
     static func salt(_ plan: Plan, _ window: Window) -> [UInt8] {
         Keccak256.hash(Array("casberi.spendLimit".utf8) + YourAccount.w(plan.dollar) + (word(plan.dollarCap) ?? [])
@@ -286,6 +295,43 @@ enum YourAccount7579 {
         let selector = Array(call.data.prefix(4))
         guard spenderFirst.contains(where: { YourAccount.sel($0) == selector }) else { return false }
         return Array(call.data[4..<36]) == YourAccount.w(multicall3)
+    }
+
+    /// One call of a batch: where, how much ETH, with what.
+    struct Execution: Equatable, Sendable {
+        let target: String
+        let value: [UInt8]
+        let data: [UInt8]
+    }
+
+    /// The adapter's `execute(mode 1, abi.encode(Execution[]))`: several
+    /// plain calls in one, as Smart Sessions checks each against its actions.
+    static func executeBatch(_ calls: [Execution]) -> [UInt8] {
+        var mode = [UInt8](repeating: 0, count: 32)
+        mode[0] = 0x01
+        var heads: [UInt8] = [], tails: [UInt8] = []
+        for c in calls {
+            heads += YourAccount.w(calls.count * 32 + tails.count)
+            tails += YourAccount.w(c.target) + c.value + YourAccount.w(96) + YourAccount.dynamic(c.data)
+        }
+        let list = YourAccount.w(32) + YourAccount.w(calls.count) + heads + tails
+        return YourAccount.sel("execute(bytes32,bytes)") + mode + YourAccount.w(64) + YourAccount.dynamic(list)
+    }
+
+    /// A send as a session may carry it (prd §1455): the network's dollar by
+    /// `transfer`, ETH through Multicall3; nil for anything else, which the
+    /// limit does not cover and both keys sign.
+    static func sessionCall(token contract: String?, dollar: String, to: String, units: String) -> Execution? {
+        guard let amount = word(units) else { return nil }
+        if let contract {
+            guard contract.caseInsensitiveCompare(dollar) == .orderedSame else { return nil }
+            return Execution(target: contract, value: YourAccount.w(0),
+                             data: YourAccount.sel("transfer(address,uint256)") + YourAccount.w(to) + amount)
+        }
+        let call3 = YourAccount.w(to) + YourAccount.w(0) + amount + YourAccount.w(128) + YourAccount.w(0)
+        let data = YourAccount.sel("aggregate3Value((address,bool,uint256,bytes)[])")
+            + YourAccount.w(32) + YourAccount.w(1) + YourAccount.w(32) + call3
+        return Execution(target: multicall3, value: amount, data: data)
     }
 
     /// The adapter's `execute(mode 0, target ‖ value ‖ data)`: one plain call.

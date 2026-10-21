@@ -329,31 +329,25 @@ grep -q 'await YourAccountProtection.check()' Casberi/Casberi/Model/BridgeRefres
 grep -v '^[[:space:]]*//' Casberi/Casberi/Model/YourAccountProtection.swift | grep -q 'addRecovery\|addOutsideKey\|transact(' && { echo "✗ YourAccountProtection signs: opening a network is a Face ID the person asks for (prd §1442m)"; exit 1; }
 grep -q 'RecoveryKeyNudge().listRow' Casberi/Casberi/Screens/FeedScreen+WalletHome.swift || { echo "✗ the Wallet's Home no longer draws the recovery-key row (prd §1442m)"; exit 1; }
 
-# Two keys above an amount (prd §1447): the rule is Safe's Allowance module,
-# never a contract of ours and never the app alone; the threshold goes LAST in
-# the switch so a failed step leaves the account at 1; and nothing in the
-# model flips the threshold without a Signer on the account.
-SIGNING=Casberi/Casberi/Model/YourAccountSigning.swift
-grep -q 'static let address = "0xCFbFaC74C26F8647cBDb8c5caf80BB5b32E43134"' "$SIGNING" || { echo "✗ the Allowance module's address drifted from the one measured on Base (prd §1447)"; exit 1; }
-grep -q 'thresholdCall(account: account, to: 2)\]' "$SIGNING" || { echo "✗ the switch no longer sets the threshold LAST (prd §1447)"; exit 1; }
-grep -q 'Add a signer first' Casberi/Casberi/Model/YourAccountChain.swift || { echo "✗ the switch no longer refuses an account with no Signer — every send would wait on nobody (prd §1447)"; exit 1; }
-grep -v '^[[:space:]]*//' Casberi/Casberi/Model/YourAccountSigning.swift | grep -q 'UserDefaults\|amountLimit\|aboveDollars' && { echo "✗ YourAccountSigning enforces an amount in the app: that is not 2-of-2 (prd §1447)"; exit 1; }
-# The spend limit is not drawn and the switch refuses for real (§1447 item 9):
-# the shared signer cannot be the Allowance module's delegate.
-grep -q 'guard dryRun else' Casberi/Casberi/Model/YourAccountChain.swift || { echo "✗ setBothKeys runs for real again — the shared signer cannot be the module's delegate, every send would wait on the signer (prd §1447 item 9)"; exit 1; }
-grep -B1 -A1 '{ spendLimit }' "$SEC" | grep -q 'spendLimitOpen' || { echo "✗ the Spend limit row is drawn outside DEBUG (prd §1447 item 9)"; exit 1; }
-# The adapter install is a simulation until its send path is proven (§1447 item 11).
-grep -A9 'static func installAdapter' Casberi/Casberi/Model/YourAccountChain.swift | grep -q 'guard dryRun || throwaway(account) else' || { echo "✗ installAdapter runs for real before the adapter's send path is proven (prd §1447 item 11)"; exit 1; }
+# The spend limit (prd §1455): Smart Sessions on Safe's adapter, never a
+# contract of ours; turning it on refuses an account with no Signer (every send
+# over it would wait on nobody); the row is drawn in every build (no hidden
+# feature, §1435); the adapter's publish stays a throwaway's alone.
+grep -q 'Add a signer first: over the limit, a send waits on it' Casberi/Casberi/Model/YourAccountChain.swift || { echo "✗ turning the limit on no longer refuses an account with no Signer (prd §1455)"; exit 1; }
+grep -q '^            spendLimit$' "$SEC" || { echo "✗ the Spend limit row is not drawn in every build (prd §1455, §1435)"; exit 1; }
+grep -A9 'static func publishAdapter' Casberi/Casberi/Model/YourAccountChain.swift | grep -q 'guard dryRun || throwaway(account) else' || { echo "✗ publishing Safe's adapter runs outside the throwaway (prd §1447 item 18)"; exit 1; }
+grep -q 'YourAccountSigning\|AllowanceModule' Casberi/Casberi/Model/*.swift Casberi/Casberi/Screens/*.swift && { echo "✗ the dropped Allowance-module design is back (prd §1447 item 9, §1455)"; exit 1; }
 grep -q 'guard !calls.contains(where: YourAccount7579.approvesMulticall3) else' Casberi/Casberi/Model/YourAccountChain.swift || { echo "✗ operations no longer refuse an approval to Multicall3, which would ride the spend limit's ETH route (prd §1447 item 15)"; exit 1; }
 grep -q '(c\["vmType"\] as? String) == "evm", (c\["depositAddressEnabled"\] as? Bool) == true' Casberi/Casberi/Model/YourAccountElsewhere.swift || { echo "✗ receiving from another network offers a network Relay takes no keyless deposit address on (prd §1453: EVM only, no Relay key)"; exit 1; }
 grep -q 'WalletWatch.sameAddress(recipient, account)' Casberi/Casberi/Model/YourAccountChain.swift || { echo "✗ a Relay deposit address is taken without Relay naming the account as the one that gets it (prd §1452, §1453)"; exit 1; }
-for f in installLimit limitSend requireBoth; do
+for f in requireBoth; do
   grep -A9 "static func $f" Casberi/Casberi/Model/YourAccountChain.swift | grep -q 'guard dryRun || throwaway(account) else' || { echo "✗ $f runs for real outside the throwaway (prd §1447 items 14–15)"; exit 1; }
 done
 awk '/private static func throwaway/,/^    }$/' Casberi/Casberi/Model/YourAccountChain.swift | grep -A1 '#else' | grep -q 'return false' || { echo "✗ a build outside DEBUG may install the adapter for real (prd §1447 item 13)"; exit 1; }
 grep -q '0x540fb4f9\|initializeAccount((address,bytes)\[\],(address,bytes)\[\],(address,bytes)\[\],(address,bytes)\[\]' Casberi/Casberi/Model/YourAccount7579.swift || { echo "✗ initializeAccount is not the deployed v1 signature (prd §1447 item 11)"; exit 1; }
 # The Security row offers the switch only where a Signer stands (§1447 item 2).
-grep -q '(both.isEmpty && (!hasSigner || single.isEmpty))' "$SEC" || { echo "✗ the Spend limit switch can be turned on with no Signer (prd §1447)"; exit 1; }
-grep -q 'Turning it off needs' "$SEC" || { echo "✗ the Spend limit switch no longer says that turning it off needs the signer — it would look off while the chain is 2-of-2 (prd §1447, §83)"; exit 1; }
+grep -q '(limited.isEmpty && notYet.isEmpty)' "$SEC" || { echo "✗ the Spend limit switch can be turned on with no Signer on any network (prd §1455)"; exit 1; }
+grep -q 'applyLimit(limited + notYet' "$SEC" || { echo "✗ the one Spend limit switch no longer sets every network the account is on (prd §1455, user: \"we want one switch for all networks\")"; exit 1; }
+grep -q 'turnOffLimit(on: net, coSigner: SignerRequestSheet.coSigner' "$SEC" || { echo "✗ turning a spend limit off no longer asks the Signer — at 2-of-2 it cannot be one key's (prd §1455, §83)"; exit 1; }
 
 echo "✓ your account: the address is the factory's, the send's bytes are the module's, amounts add up, Move is in every build, it names only networks this phone can use, and asks where money lacks the recovery key"
