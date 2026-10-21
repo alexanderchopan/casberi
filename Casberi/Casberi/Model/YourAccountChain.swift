@@ -227,6 +227,59 @@ enum YourAccountChain {
         return SafeCall.decodeAddressArray(answer) ?? []
     }
 
+    /// The Safe's threshold: how many owners a transaction needs (prd §1447).
+    static func threshold(_ net: Network, _ account: String) async throws -> Int {
+        let answer = try await ethCall(net, to: account, data: YourAccount.sel("getThreshold()"))
+        guard let n = SafeCall.decodeUInt(answer) else {
+            throw Failure(message: String(localized: "\(net.name) did not answer"))
+        }
+        return n
+    }
+
+    /// This phone's key's allowance on the module, nil when the module has
+    /// none for it (never set, or the module not enabled).
+    static func allowance(_ net: Network, _ account: String, delegate: String, token: String) async throws -> YourAccountSigning.Allowance? {
+        let answer = try await ethCall(net, to: YourAccountSigning.AllowanceModule.address,
+                                       data: YourAccountSigning.allowanceCalldata(account: account, delegate: delegate, token: token))
+        return YourAccountSigning.decodeAllowance(answer)
+    }
+
+    /// Two keys above an amount (prd §1447): the Allowance module on, this
+    /// phone's signer a delegate with `amount` of `token` a period, then
+    /// threshold 2 — one operation, signed by this phone, on a network the
+    /// account exists on. Needs a Signer already an owner, or every send
+    /// would wait on a key nobody holds.
+    static func setBothKeys(on net: Network, token: String, amount: String, resetMinutes: Int, reason: String,
+                            dryRun: Bool = false,
+                            stage: @escaping @Sendable (Stage) async -> Void) async throws -> Sent {
+        guard let account = YourAccountKey.address else {
+            throw Failure(message: String(localized: "There is no account on this iPhone"))
+        }
+        await stage(.preparing)
+        guard try await isDeployed(net, account) else {
+            throw Failure(message: String(localized: "Your account is not on \(net.name) yet"))
+        }
+        let all = try await owners(net, account)
+        var plain = 0
+        for owner in all where owner.caseInsensitiveCompare(YourAccount.sharedSigner) != .orderedSame {
+            if try await !isContract(net, owner) { plain += 1 }
+        }
+        guard plain > 0 else {
+            throw Failure(message: String(localized: "Add a signer first: with both keys required, a send waits on it"))
+        }
+        let (signerIndex, device) = try await deviceSigner(net, account, deployed: true)
+        let next = try YourAccountKey.nextKey(after: signerIndex)
+        guard let nextKey = YourAccountKey.publicKey(next),
+              let calls = YourAccountSigning.enableCalls(account: account, delegate: YourAccount.sharedSigner,
+                                                         token: token, amount: amount, resetMinutes: resetMinutes) else {
+            throw Failure(message: String(localized: "This send could not be written"))
+        }
+        let outcome = try await operate(net, account: account, deployed: true, calls: calls,
+                                        rotateTo: nextKey, payments: [], signer: device, reason: reason,
+                                        dryRun: dryRun, stage: stage)
+        return Sent(outcome: await settle(outcome, net, account, next: next, x: nextKey.x), network: net)
+    }
+
     static func recoveryState(_ net: Network, _ account: String, signer: String) async throws -> RecoveryState {
         guard try await isDeployed(net, account) else { return .notThere }
         let all = try await owners(net, account)

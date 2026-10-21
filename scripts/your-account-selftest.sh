@@ -236,4 +236,14 @@ grep -q 'await YourAccountProtection.check()' Casberi/Casberi/Model/BridgeRefres
 grep -v '^[[:space:]]*//' Casberi/Casberi/Model/YourAccountProtection.swift | grep -q 'addRecovery\|addOutsideKey\|transact(' && { echo "✗ YourAccountProtection signs: opening a network is a Face ID the person asks for (prd §1442m)"; exit 1; }
 grep -q 'RecoveryKeyNudge().listRow' Casberi/Casberi/Screens/FeedScreen+WalletHome.swift || { echo "✗ the Wallet's Home no longer draws the recovery-key row (prd §1442m)"; exit 1; }
 
+# Two keys above an amount (prd §1447): the rule is Safe's Allowance module,
+# never a contract of ours and never the app alone; the threshold goes LAST in
+# the switch so a failed step leaves the account at 1; and nothing in the
+# model flips the threshold without a Signer on the account.
+SIGNING=Casberi/Casberi/Model/YourAccountSigning.swift
+grep -q 'static let address = "0xCFbFaC74C26F8647cBDb8c5caf80BB5b32E43134"' "$SIGNING" || { echo "✗ the Allowance module's address drifted from the one measured on Base (prd §1447)"; exit 1; }
+grep -q 'thresholdCall(account: account, to: 2)\]' "$SIGNING" || { echo "✗ the switch no longer sets the threshold LAST (prd §1447)"; exit 1; }
+grep -q 'Add a signer first' Casberi/Casberi/Model/YourAccountChain.swift || { echo "✗ the switch no longer refuses an account with no Signer — every send would wait on nobody (prd §1447)"; exit 1; }
+grep -v '^[[:space:]]*//' Casberi/Casberi/Model/YourAccountSigning.swift | grep -q 'UserDefaults\|amountLimit\|aboveDollars' && { echo "✗ YourAccountSigning enforces an amount in the app: that is not 2-of-2 (prd §1447)"; exit 1; }
+
 echo "✓ your account: the address is the factory's, the send's bytes are the module's, amounts add up, Move is in every build, it names only networks this phone can use, and asks where money lacks the recovery key"
