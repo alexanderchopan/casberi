@@ -35,11 +35,11 @@ enum YourAccountSwap {
     /// Relay's word for the network's own coin.
     static let native = "0x0000000000000000000000000000000000000000"
 
-    /// Where the account swaps: every live network it is on (Base and
-    /// Ethereum, prd §1449), so send, receive and swap arrive together. Never
-    /// a test network.
+    /// Where the account swaps: every live network it is on (Base, Ethereum,
+    /// Robinhood Chain, prd §1454), so send, receive and swap arrive
+    /// together. Never a test network.
     static func supported(_ network: YourAccountOp.Network) -> Bool {
-        !network.isTest && [8453, 1].contains(network.chainId)
+        !network.isTest && [8453, 1, 4663].contains(network.chainId)
     }
 
     static func currency(_ token: YourAccountOp.Token) -> String {

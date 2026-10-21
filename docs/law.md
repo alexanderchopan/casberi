@@ -235,7 +235,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1591 of 1660 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1592 of 1661 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1823,11 +1823,12 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1445 — A card per subscription: Pro makes each tracked plan its own Privacy.com card, Premium is Casberi's own card (builds…
 - §1446 — Aztec through V6: rollups found in the Registry, a warning before an upgrade strands zk.money money, and the sign she… [+2 sub-entries]
 - §1448 — The node's epoch, read the day the Observer sends it
-- §1449 — Robinhood Chain leaves the account (amends §1441, §1441a)
+- §1449 — Robinhood Chain leaves the account (amends §1441, §1441a) (amended by §1454)
 - §1450 — Diagnostics is deleted; Wallet's Subscriptions opens as a page again; one row per alarm on the Feed
 - §1451 — Day and Notes stand in the rooms tray, in the Feed's order
 - §1452 — Round-ups: each dollar send rounds up, the change buys a token you pick
 - §1453 — Receive from another network: Relay's deposit address for the route
+- §1454 — Robinhood Chain comes back to the account with every feature
 
 ## Dead rulings → what replaced them (generated)
 

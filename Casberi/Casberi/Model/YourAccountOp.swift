@@ -40,12 +40,10 @@ enum YourAccountOp {
         rpcs: ["https://rpc.mevblocker.io", "https://ethereum-rpc.publicnode.com"],
         bundlers: ["https://public.pimlico.io/v2/1/rpc", "https://api.candide.dev/public/v3/1"],
         dollar: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", isTest: false)
-    // Robinhood Chain left the account (prd §1449): a limit that covers some
-    // networks is "weird to explain to a user". It may come back with every
-    // feature (prd §1447 item 18): all the spend limit needs there but Safe's
-    // adapter is on chain, and the adapter can be published at its own
-    // address. Until then it is DEBUG's alone (`probeNetworks`), never in
-    // `networks`.
+    /// Robinhood Chain, back with every feature (prd §1454, amending
+    /// §1449): every contract the account and its spend limit use is there,
+    /// Safe's adapter published at its own address (§1447 item 18); Pimlico's
+    /// public bundler serves it, Candide's does not.
     static let robinhood = Network(
         name: "Robinhood Chain", chainId: 4663,
         rpcs: ["https://rpc.mainnet.chain.robinhood.com", "https://robinhood-rpc.publicnode.com"],
@@ -57,6 +55,7 @@ enum YourAccountOp {
         switch appName {
         case "base-mainnet": base
         case "eth-mainnet": ethereum
+        case "robinhood-mainnet": robinhood
         default: nil
         }
     }
@@ -67,17 +66,16 @@ enum YourAccountOp {
         bundlers: ["https://public.pimlico.io/v2/84532/rpc", "https://api.candide.dev/public/v3/84532"],
         dollar: "0x036CbD53842c5426634e7929541eC2318f3dCF7e", isTest: true)
 
-    /// The account's networks, the same in every build: Base and Ethereum,
-    /// each with send, receive, swap and the spend limit (Robinhood Chain
-    /// left, prd §1449). Base Sepolia is in none, DEBUG included (prd §1441a,
-    /// user: "we got rid of sepolia"); its constant stays for the dry-run
-    /// probe alone.
-    static let networks: [Network] = [base, ethereum]
+    /// The account's networks, the same in every build: Base, Ethereum and
+    /// Robinhood Chain (prd §1454), each with send, receive, swap, round-ups
+    /// and the spend limit. Base Sepolia is in none, DEBUG included (prd
+    /// §1441a, user: "we got rid of sepolia"); its constant stays for the
+    /// dry-run probe alone.
+    static let networks: [Network] = [base, ethereum, robinhood]
 
     #if DEBUG
-    /// What the throwaway probes may name: the account's networks, and
-    /// Robinhood Chain while its return is measured (prd §1447 item 18).
-    static var probeNetworks: [Network] { networks + [robinhood] }
+    /// What the throwaway probes may name: the account's networks.
+    static var probeNetworks: [Network] { networks }
     #endif
 
     struct Token: Equatable, Hashable, Sendable {
@@ -98,6 +96,7 @@ enum YourAccountOp {
         switch network.chainId {
         case 8453: "base-mainnet"
         case 1: "eth-mainnet"
+        case 4663: "robinhood-mainnet"
         case 84532: "base-sepolia"
         default: nil
         }
