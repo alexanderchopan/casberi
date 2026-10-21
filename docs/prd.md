@@ -67855,6 +67855,7 @@ Mock: the design canvas "Where app settings live" (option C, title door 3).
 2. **What left:** the network from `YourAccountOp.networks`, its app-name mapping, Relay's supported set, Move's network mark and explorer, and the two node hosts from the account's reach entry. The Wallet still reads Robinhood Chain for the accounts a person follows; that is a different thing.
 3. **What stays:** money already at the account's address on Robinhood Chain (~$1 of ETH measured) stays there, movable only by a build with the network back, run on the phone that made the account. Nobody else holds an account.
 4. `your-account-selftest.sh` fails if the network comes back without a ruling.
+5. **No other network for now** (user: "i think we can wait to add other chains. simpler is better for beginning"). Measured the same day for when it reopens: Optimism, Arbitrum, Polygon, Gnosis, Avalanche, BNB, Scroll, Linea, Unichain, World Chain, Celo, Soneium, Ink, Mantle and Sonic hold all six contracts the account and the spend limit need; Berachain lacks the spend limit's three. Relay and a public bundler were not checked for any of them.
 
 ## §1448 — The node's epoch, read the day the Observer sends it (amends §1214, §1216) (Observer developer, 2026-10-20: "for node monitoring I'd like to see the current epoch and slots left until the next epoch, I'll work on that next"; user: "yes. i'll wait for him to come back on names but imagine he will be fine w/ what you propposed") — BUILT
 
