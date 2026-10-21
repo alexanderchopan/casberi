@@ -561,6 +561,24 @@ struct MoveSecurity: View {
         return String(localized: "Over it, \(signerShort) signs too. ETH and dollars count apart on each network: up to \(total) in all.")
     }
 
+    /// The Signer every one of these networks shares, for one scan (prd
+    /// §1456): a network's first Signer may be on it alone (measured: the
+    /// test account's Base kept a second Signer Robinhood Chain never had).
+    private static func sharedSigner(_ list: [Standing]) -> String? {
+        list.first?.outside.first { owner in
+            list.allSatisfy { $0.outside.contains { $0.caseInsensitiveCompare(owner) == .orderedSame } }
+        }
+    }
+
+    /// The batch's Signer where it stands on this network; else the
+    /// network's own, asked alone.
+    private func coSigner(_ s: Standing, _ batch: SignerRequestSheet.Batch?) -> Chain.CoSigner? {
+        if let batch, s.outside.contains(where: { $0.caseInsensitiveCompare(batch.owner) == .orderedSame }) {
+            return batch.coSigner(chainId: s.network.chainId)
+        }
+        return s.outside.first.map { SignerRequestSheet.coSigner(owner: $0, chainId: s.network.chainId) }
+    }
+
     /// One network at a time, each its own transaction: on, this phone alone
     /// while one key still signs; a new amount where it stands, the Signer too.
     private func applyLimit(_ targets: [Standing], dollars n: Int, minutes: Int) {
@@ -570,7 +588,7 @@ struct MoveSecurity: View {
         let word = LimitPeriod.of(seconds: minutes * 60).word
         // One scan for every network that needs the Signer (prd §1456).
         let cosigned = targets.filter { $0.threshold == 2 }
-        let batch = cosigned.first?.outside.first.map {
+        let batch = Self.sharedSigner(cosigned).map {
             SignerRequestSheet.Batch(owner: $0, chainIds: cosigned.map(\.network.chainId))
         }
         Task {
@@ -582,15 +600,14 @@ struct MoveSecurity: View {
                 let reason = String(localized: "Spend limit of \(MoveSentence.money(Double(n))) a \(word) on \(net.name)")
                 do {
                     let sent: Chain.Sent
-                    if plan(of: s) != nil, let signer = s.outside.first, let batch {
-                        working = ("limit", String(localized: "Waiting on \(YourAccount.short(signer)) · \(net.name)"))
+                    if plan(of: s) != nil, let co = coSigner(s, batch) {
+                        working = ("limit", String(localized: "Waiting on \(YourAccount.short(co.owner)) · \(net.name)"))
                         sent = try await Chain.changeLimit(on: net, dollars: n, minutes: minutes,
-                                                           coSigner: batch.coSigner(chainId: net.chainId),
-                                                           reason: reason) { _ in }
+                                                           coSigner: co, reason: reason) { _ in }
                     } else {
                         working = ("limit", String(localized: "Setting on \(net.name)…"))
                         sent = try await Chain.turnOnLimit(on: net, dollars: n, minutes: minutes, reason: reason,
-                                                           coSigner: s.threshold == 2 ? batch?.coSigner(chainId: net.chainId) : nil) { _ in }
+                                                           coSigner: s.threshold == 2 ? coSigner(s, batch) : nil) { _ in }
                     }
                     if case .pending = sent.outcome { failed.append(String(localized: "\(net.name): sent, not yet seen")) }
                     else { done.append(net.name) }
@@ -633,7 +650,7 @@ struct MoveSecurity: View {
     private func turnOffLimit() {
         guard working == nil else { return }
         let targets = limited
-        let batch = targets.first?.outside.first.map {
+        let batch = Self.sharedSigner(targets).map {
             SignerRequestSheet.Batch(owner: $0, chainIds: targets.map(\.network.chainId))
         }
         Task {
@@ -642,10 +659,10 @@ struct MoveSecurity: View {
             defer { Task { await batch?.finish() } }
             for s in targets {
                 let net = s.network
-                guard let signer = s.outside.first, let batch else { continue }
-                working = ("limit", String(localized: "Waiting on \(YourAccount.short(signer)) · \(net.name)"))
+                guard let co = coSigner(s, batch) else { continue }
+                working = ("limit", String(localized: "Waiting on \(YourAccount.short(co.owner)) · \(net.name)"))
                 do {
-                    let sent = try await Chain.turnOffLimit(on: net, coSigner: batch.coSigner(chainId: net.chainId),
+                    let sent = try await Chain.turnOffLimit(on: net, coSigner: co,
                                                             reason: String(localized: "Turn off the spend limit on \(net.name)")) { _ in }
                     if case .pending = sent.outcome { failed.append(String(localized: "\(net.name): sent, not yet seen")) }
                     else { done.append(net.name) }
