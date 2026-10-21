@@ -438,6 +438,35 @@ enum YourAccountChain {
         return (try await limitCalls(net, account, next).calls, next)
     }
 
+    /// What the keys chosen at Create add to the operation that opens the
+    /// account on `net` (prd §1457): the recovery key, the Signer, and — with
+    /// a Signer — the spend limit: the account onto Safe's adapter, the
+    /// plan's sessions, and both keys above them, last, while this phone
+    /// alone still signs. Nil when nothing was chosen.
+    static func setupCalls(_ net: Network, _ account: String) async throws
+        -> (calls: [YourAccountOp.Call], plan: YourAccount7579.Plan?)? {
+        guard let choice = YourAccountSetup.choice(for: account) else { return nil }
+        var calls: [YourAccountOp.Call] = []
+        if choice.recovery, let key = YourAccountRecovery.publicKey(for: account) {
+            let signer = try await recoverySigner(x: key.x, y: key.y)
+            calls += YourAccountOp.addRecoveryCalls(account: account, x: key.x, y: key.y, signer: signer, threshold: 1)
+        }
+        var plan: YourAccount7579.Plan?
+        if let owner = choice.signer {
+            calls.append(YourAccountOp.addOwnerCall(account: account, owner: owner, threshold: 1))
+            if let limit = choice.limit {
+                let price = await relayPrice(net, YourAccountOp.eth)
+                let next = limitPlan(on: net, dollars: limit.dollars, ethPrice: price, minutes: limit.minutes)
+                calls += YourAccount7579.installCalls(account: account)
+                calls += try await limitCalls(net, account, next).calls
+                calls.append(YourAccountOp.Call(operation: 0, to: account, value: YourAccount.w(0),
+                                                data: YourAccount.sel("changeThreshold(uint256)") + YourAccount.w(2)))
+                plan = next
+            }
+        }
+        return calls.isEmpty ? nil : (calls, plan)
+    }
+
     static func savePlan(_ plan: YourAccount7579.Plan, on net: Network) {
         if let data = try? JSONEncoder().encode(plan) { UserDefaults.standard.set(data, forKey: planKey(net)) }
     }
@@ -1188,6 +1217,16 @@ enum YourAccountChain {
         report("simulated: \(simulated.compactMap { $0 }.joined(separator: ", "))")
 
         let deployed = try await isDeployed(net, account)
+        // The keys chosen at Create (prd §1457): with the operation that
+        // opens the account on this network, after everything it sends.
+        var reason = reason
+        var setupPlan: YourAccount7579.Plan?
+        if !deployed, let setup = try await setupCalls(net, account) {
+            calls += setup.calls
+            setupPlan = setup.plan
+            reason += " · " + String(localized: "and your keys")
+            report("setup: \(setup.calls.count) calls, limit \(setup.plan.map { "\($0.windows.count) periods" } ?? "none")")
+        }
         let (signerIndex, signer) = try await deviceSigner(net, account, deployed: deployed)
         let next = try YourAccountKey.nextKey(after: signerIndex)
         guard let nextKey = YourAccountKey.publicKey(next) else {
@@ -1198,6 +1237,7 @@ enum YourAccountChain {
                                         rotateTo: nextKey, payments: payments, signer: signer, coSigner: coSigner,
                                         reason: reason, dryRun: dryRun, report: report, stage: stage)
         if let renewed, case .landed = outcome { savePlan(renewed, on: net) }
+        if let setupPlan, case .landed = outcome { savePlan(setupPlan, on: net) }
         let sent = Sent(outcome: await settle(outcome, net, account, next: next, x: nextKey.x), network: net)
         guard case .landed = sent.outcome, !swaps.isEmpty else {
             return Transacted(sent: sent, bought: simulated)

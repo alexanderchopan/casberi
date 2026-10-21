@@ -3904,6 +3904,34 @@ enum ProbeHooks {
                 }
             }
         },
+        // `-keysSetupProbe <network>` — the keys chosen at Create riding a
+        // first send (prd §1457), SIMULATED on a network the account is not
+        // on yet: the recovery key (when this phone holds it), the Signer
+        // (`-keysSetupSigner`, else the user's test wallet) and a $1 monthly
+        // limit are kept as the walk keeps them, then a 1-wei send to itself
+        // is priced by the bundler and signed, never sent. Logs `keysSetup|`.
+        Hook(key: "keysSetupProbe") { raw, _ in
+            Task { @MainActor in
+                func log(_ line: String) { NSLog("keysSetup| %@", line) }
+                guard let account = YourAccountKey.address,
+                      let net = YourAccountOp.probeNetworks.first(where: { $0.name.caseInsensitiveCompare(raw) == .orderedSame }) else {
+                    log("refused: no account, or no network \(raw)"); return
+                }
+                let signer = UserDefaults.standard.string(forKey: "keysSetupSigner") ?? "0x2F60D2BB84Eb8df6951F7215ef035eF052BA2725"
+                YourAccountSetup.save(.init(recovery: YourAccountRecovery.exists(for: account), signer: signer,
+                                            limitDollars: 1, limitMinutes: MoveSecurity.LimitPeriod.month.minutes), for: account)
+                do {
+                    if try await YourAccountChain.isDeployed(net, account) { log("refused: already on \(net.name)"); return }
+                    let pay = YourAccountOp.Payment(network: net, token: YourAccountOp.eth, amount: "1", to: account, toName: nil)
+                    let sent = try await YourAccountChain.send([pay], reason: "Probe", dryRun: true, report: log) { log("stage=\($0)") }
+                    log("ok network=\(sent.network.name) result=\(sent.outcome)")
+                } catch let failure as YourAccountChain.Failure {
+                    log("refused: \(failure.message)")
+                } catch {
+                    log("error: \(error)")
+                }
+            }
+        },
         // `-yourAccountRecoverProbe <network>` — recovery, for real, on one
         // network (prd §1442j): when the recovery key is not on it yet, the
         // device key puts it there (creating the account there if need be);

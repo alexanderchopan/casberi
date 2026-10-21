@@ -53,7 +53,9 @@ enum YourAccountSignerLink {
     /// **ONE SCAN FOR EVERY NETWORK (prd §1456).** One proposal naming every
     /// network the batch will ask on, one method; the settled session must
     /// name the Signer. Several requests then ride it, one per network.
-    static func connect(signer: String, chainIds: [Int], timeout: Duration = .seconds(300),
+    /// With no Signer yet (choosing one at Create, prd §1457), the wallet's
+    /// first address is the Signer, and nothing is asked over the session.
+    static func connect(signer: String?, chainIds: [Int], timeout: Duration = .seconds(300),
                         show: @MainActor (URL) -> Void) async throws -> Pairing {
         let chains = chainIds.compactMap { Blockchain("eip155:\($0)") }
         guard WalletConnectBridge.isAvailable, !chains.isEmpty else { throw Failure.unavailable }
@@ -84,6 +86,10 @@ enum YourAccountSignerLink {
         guard let session = await settled else { throw Failure.timedOut }
         trace("settled")
         let accounts = session.namespaces[WalletConnectBridge.evmNamespace]?.accounts ?? []
+        guard let signer = signer ?? accounts.first.map({ EIP55.checksum($0.address) }) else {
+            Task.detached { try? await WalletConnectBridge.tearDown(topic: session.topic) }
+            throw Failure.notTheSigner("")
+        }
         let agreed = Set(accounts.filter { $0.address.caseInsensitiveCompare(signer) == .orderedSame }
                                  .compactMap { Int($0.blockchain.reference) })
         guard !agreed.isEmpty else {

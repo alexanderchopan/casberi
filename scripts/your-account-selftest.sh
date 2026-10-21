@@ -355,4 +355,13 @@ grep -q '(limited.isEmpty && notYet.isEmpty)' "$SEC" || { echo "✗ the Spend li
 grep -q 'applyLimit(limited + notYet' "$SEC" || { echo "✗ the one Spend limit switch no longer sets every network the account is on (prd §1455, user: \"we want one switch for all networks\")"; exit 1; }
 grep -q 'turnOffLimit(on: net, coSigner: batch.coSigner(chainId: net.chainId)' "$SEC" && grep -q 'SignerRequestSheet.Batch(owner:' "$SEC" || { echo "✗ turning a spend limit off no longer asks the Signer — at 2-of-2 it cannot be one key's (prd §1455, §83)"; exit 1; }
 
+# The keys chosen at Create (prd §1457): they ride only the operation that
+# opens a network, the limit only with a Signer, both keys switched on LAST
+# (while this phone alone still signs), and Create walks through them.
+CH=Casberi/Casberi/Model/YourAccountChain.swift
+grep -q 'if !deployed, let setup = try await setupCalls(net, account)' "$CH" || { echo "✗ the keys chosen at Create ride an operation on a network the account is already on (prd §1457)"; exit 1; }
+awk '/static func setupCalls/,/^    }$/' "$CH" | awk '/addRecoveryCalls/{a=NR}/addOwnerCall/{b=NR}/installCalls/{c=NR}/limitCalls/{d=NR}/changeThreshold/{e=NR}END{exit !(a<b && b<c && c<d && d<e)}' \
+  || { echo "✗ setupCalls no longer adds recovery, Signer, adapter, sessions, then both keys last (prd §1457)"; exit 1; }
+grep -q 'guard signer != nil, let limitDollars' Casberi/Casberi/Model/YourAccountSetup.swift || { echo "✗ a spend limit chosen at Create can stand with no Signer to sign over it (prd §1457)"; exit 1; }
+grep -q 'walking = true' Casberi/Casberi/Screens/MoveScreen.swift || { echo "✗ Create no longer walks through your keys (prd §1457)"; exit 1; }
 echo "✓ your account: the address is the factory's, the send's bytes are the module's, amounts add up, Move is in every build, it names only networks this phone can use, and asks where money lacks the recovery key"

@@ -1,0 +1,307 @@
+import SwiftUI
+
+/// **YOUR KEYS, RIGHT AFTER CREATE (prd §1457, the K1–K4 canvas; user:
+/// "with the first send").** Three steps in the sentence's grammar, each one
+/// that can wait: a recovery key in iCloud Keychain, a Signer in a wallet
+/// the person already has, and — with a Signer — a spend limit. Nothing here
+/// touches a chain: the recovery key is made at once (free), and the rest is
+/// kept in `YourAccountSetup` and rides the first send on each network.
+/// The last page says what was chosen; Done hands over to the Created
+/// sentence.
+struct MoveKeysWalk: View {
+    let account: String
+    var inTray = false
+    /// Inert (DEBUG's `-movePreview keys`): every step draws, nothing is kept.
+    var inert = false
+    let done: () -> Void
+
+    enum Step: Int { case recovery = 1, signer, limit, summary }
+    typealias Period = MoveSecurity.LimitPeriod
+
+    @State private var step: Step
+    @State private var choice = YourAccountSetup.Choice()
+    @State private var connecting = false
+    @State private var note: String?
+    @State private var amountText = ""
+    @State private var period: Period = .month
+    @FocusState private var amountFocused: Bool
+
+    init(account: String, inTray: Bool = false, inert: Bool = false, step: Step = .recovery, done: @escaping () -> Void) {
+        self.account = account
+        self.inTray = inTray
+        self.inert = inert
+        self.done = done
+        _step = State(initialValue: step)
+        #if DEBUG
+        if inert {
+            // The preview's summary draws every key chosen.
+            _choice = State(initialValue: .init(recovery: true, signer: "0x2F60D2BB84Eb8df6951F7215ef035eF052BA2725",
+                                                limitDollars: 100, limitMinutes: Period.month.minutes))
+            _amountText = State(initialValue: "100")
+        }
+        #endif
+    }
+
+    /// Wider than the sentence's, for "up to", and the same on every step
+    /// so the words never jump between them.
+    private let gutter: CGFloat = 56
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: DS.Space.s1) {
+                if step != .summary {
+                    Text("\(step.rawValue) of 3")
+                        .dsText(.body17).foregroundStyle(DS.textSecondary)
+                        .padding(.leading, gutter + DS.Space.s2)
+                        .padding(.bottom, DS.Space.s6)
+                }
+                content
+                    .id(step)
+                    .transition(.opacity)
+                if let note {
+                    Text(verbatim: note)
+                        .dsText(.body17).foregroundStyle(DS.attentionInk)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.leading, gutter + DS.Space.s2)
+                        .padding(.top, DS.Space.s3)
+                }
+            }
+            .padding(.horizontal, inTray ? DSRoomChassis.leadInset - DS.Space.s4 : DSRoomChassis.leadInset)
+            .padding(.top, inTray ? DS.Space.s8 : DS.Space.s6 + DS.Space.s6)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .scrollContentBackground(.hidden)
+        .scrollDismissesKeyboard(.interactively)
+        .safeAreaInset(edge: .bottom, spacing: 0) { foot }
+        .onAppear {
+            #if DEBUG
+            NSLog("keysWalk: step %d", step.rawValue)
+            #endif
+        }
+    }
+
+    // MARK: - The steps
+
+    @ViewBuilder private var content: some View {
+        switch step {
+        case .recovery:
+            title("A recovery key")
+            line(String(localized: "in")) { pick(String(localized: "iCloud Keychain.")) }
+            small(String(localized: "Lose this iPhone, sign in on the next one."))
+        case .signer:
+            title("Your Signer")
+            line(String(localized: "in")) { pick(String(localized: "a wallet you have.")) }
+            small(String(localized: "MetaMask, Rainbow or any other. It signs big sends with this iPhone."))
+        case .limit:
+            title("Face ID alone")
+            line(String(localized: "up to")) {
+                HStack(alignment: .firstTextBaseline, spacing: 0) {
+                    Text(verbatim: "$").dsText(MoveSentence.size).foregroundStyle(DS.pickInk)
+                    TextField("100", text: $amountText)
+                        .keyboardType(.numberPad)
+                        .focused($amountFocused)
+                        .dsText(MoveSentence.size)
+                        .foregroundStyle(DS.pickInk)
+                        .tint(DS.pickInk)
+                        .fixedSize()
+                        .accessibilityLabel(Text("Dollars"))
+                }
+            }
+            line(nil) { Text("of each coin").dsText(MoveSentence.size).foregroundStyle(DS.textPrimary) }
+            line(String(localized: "a")) {
+                Menu {
+                    ForEach(Period.allCases, id: \.self) { p in
+                        Button { withAnimation(DS.Motion.standard) { period = p } } label: {
+                            if p == period { Label(p.word, systemImage: "checkmark") } else { Text(verbatim: p.word) }
+                        }
+                    }
+                } label: {
+                    Text(verbatim: period.word + ".").dsText(MoveSentence.size).foregroundStyle(DS.pickInk)
+                        .contentTransition(.opacity)
+                }
+                .accessibilityLabel(Text("How often it starts again"))
+            }
+            // With the limit on, recovery needs the Signer too (prd §1456).
+            small(String(localized: "Over it, your Signer signs too. So does recovery."))
+        case .summary:
+            title("Your keys")
+            VStack(alignment: .leading, spacing: DS.Space.s4) {
+                fact(ThisDevice.title, String(localized: "Face ID"))
+                fact(String(localized: "Recovery key"), choice.recovery ? String(localized: "iCloud Keychain") : String(localized: "Not yet"))
+                fact(String(localized: "Signer"), choice.signer.map(YourAccount.short) ?? String(localized: "Not yet"))
+                if let limit = choice.limit {
+                    fact(String(localized: "Spend limit"),
+                         String(localized: "\(limit.dollars.formatted(.currency(code: "USD").precision(.fractionLength(0)))) of each coin a \(Period.of(seconds: limit.minutes * 60).word)"))
+                }
+            }
+            .padding(.leading, gutter + DS.Space.s2)
+            .padding(.top, DS.Space.s6)
+            // A new account is on no network yet (prd §1457): the keys go on
+            // with its first send there.
+            small(choice.signer == nil && !choice.recovery
+                  ? String(localized: "Add any of them in Wallet › Security.")
+                  : String(localized: "They go on with your first send. Change any in Wallet › Security."))
+        }
+    }
+
+    private func title(_ words: LocalizedStringKey) -> some View {
+        line(nil) { Text(words).dsText(MoveSentence.size).foregroundStyle(DS.textPrimary) }
+    }
+
+    private func pick(_ words: String) -> some View {
+        Text(verbatim: words).dsText(MoveSentence.size).foregroundStyle(DS.pickInk)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private func small(_ words: String) -> some View {
+        Text(verbatim: words)
+            .dsText(.body17).foregroundStyle(DS.textSecondary)
+            .fixedSize(horizontal: false, vertical: true)
+            .padding(.leading, gutter + DS.Space.s2)
+            .padding(.top, DS.Space.s4)
+    }
+
+    private func fact(_ name: String, _ value: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(verbatim: name).dsText(.body17).foregroundStyle(DS.textPrimary)
+            Text(verbatim: value).dsText(.body17).foregroundStyle(DS.textSecondary)
+        }
+    }
+
+    /// A line in the sentence's gutter grammar (§1442f), the wider gutter
+    /// "up to" needs.
+    private func line<Value: View>(_ glue: String?, @ViewBuilder _ value: () -> Value) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+            Text(verbatim: glue ?? " ")
+                .dsText(.heading17)
+                .foregroundStyle(DS.textPrimary)
+                .frame(width: gutter, alignment: .leading)
+            value()
+        }
+    }
+
+    // MARK: - The foot
+
+    private var foot: some View {
+        HStack(alignment: .firstTextBaseline) {
+            if step != .summary {
+                Button { advance() } label: {
+                    Text("Later").dsText(.heading17).foregroundStyle(DS.textSecondary).frame(minHeight: 48)
+                }
+                .buttonStyle(RowPress())
+                .disabled(connecting)
+            }
+            Spacer(minLength: DS.Space.s3)
+            Button { act() } label: {
+                Text(verbatim: verb)
+                    .dsText(.heading28)
+                    .foregroundStyle(verbEnabled ? DS.pickInk : DS.textTertiary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+                    .frame(minHeight: 48, alignment: .trailing)
+            }
+            .buttonStyle(RowPress())
+            .disabled(!verbEnabled)
+        }
+        .padding(.horizontal, inTray ? DSRoomChassis.leadInset - DS.Space.s4 : DSRoomChassis.leadInset)
+        .padding(.bottom, DS.Space.s2)
+        .background { if inTray { DS.surfaceSheet } else { DSPageBackground() } }
+    }
+
+    private var verb: String {
+        switch step {
+        case .recovery: String(localized: "Add")
+        case .signer: connecting ? String(localized: "Connecting…") : String(localized: "Connect")
+        case .limit: String(localized: "Set")
+        case .summary: String(localized: "Done")
+        }
+    }
+
+    private var verbEnabled: Bool {
+        switch step {
+        case .signer: !connecting
+        case .limit: amountDollars != nil
+        default: true
+        }
+    }
+
+    /// Whole dollars, one or more.
+    private var amountDollars: Int? {
+        let text = amountText.trimmingCharacters(in: .whitespaces).replacingOccurrences(of: "$", with: "")
+        guard let n = Int(text), n >= 1, n <= 1_000_000 else { return nil }
+        return n
+    }
+
+    private func act() {
+        note = nil
+        switch step {
+        case .recovery:
+            if !inert {
+                do {
+                    try YourAccountRecovery.make(for: account)
+                } catch {
+                    note = String(localized: "iCloud Keychain did not take the key. Add it later in Wallet › Security.")
+                    return
+                }
+            }
+            choice.recovery = true
+            DSHaptic.success()
+            advance()
+        case .signer:
+            guard !inert else { advance(); return }
+            connecting = true
+            Task {
+                defer { connecting = false }
+                do {
+                    let owner = try await SignerRequestSheet.choose(on: YourAccountOp.networks.filter { !$0.isTest }.map(\.chainId))
+                    // A contract (a smart wallet) cannot sign for the account.
+                    if try await YourAccountChain.isContract(YourAccountOp.base, owner) {
+                        note = String(localized: "That wallet is a contract, not one whose key you hold")
+                        return
+                    }
+                    guard owner.caseInsensitiveCompare(account) != .orderedSame else {
+                        note = String(localized: "That is your account's own address")
+                        return
+                    }
+                    choice.signer = owner
+                    DSHaptic.success()
+                    advance()
+                } catch {
+                    note = String(localized: "No wallet connected. Try again, or add one later.")
+                }
+            }
+        case .limit:
+            guard let n = amountDollars else { return }
+            amountFocused = false
+            choice.limitDollars = n
+            choice.limitMinutes = period.minutes
+            DSHaptic.success()
+            advance()
+        case .summary:
+            done()
+        }
+    }
+
+    /// The next step, kept as it goes; the limit only stands with a Signer.
+    private func advance() {
+        note = nil
+        if !inert { YourAccountSetup.save(choice, for: account) }
+        let next: Step
+        switch step {
+        case .recovery: next = .signer
+        case .signer: next = choice.signer == nil ? .summary : .limit
+        case .limit, .summary: next = .summary
+        }
+        withAnimation(DS.Motion.standard) { step = next }
+        if next == .limit {
+            Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(300))
+                amountFocused = true
+            }
+        }
+        #if DEBUG
+        NSLog("keysWalk: step %d recovery=%@ signer=%@ limit=%@", next.rawValue, choice.recovery ? "yes" : "no",
+              choice.signer ?? "none", choice.limit.map { "\($0.dollars)/\($0.minutes)" } ?? "none")
+        #endif
+    }
+}
