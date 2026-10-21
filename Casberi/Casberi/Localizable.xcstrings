@@ -5177,6 +5177,34 @@
         }
       }
     },
+    "A spend limit is not available yet" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aún no hay límite de gasto disponible"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "利用上限はまだ使えません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "지출 한도는 아직 사용할 수 없습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "消费上限暂不可用"
+          }
+        }
+      }
+    },
     "Above it, your signer signs too — and so does any change to these keys." : {
       "localizations" : {
         "es" : {

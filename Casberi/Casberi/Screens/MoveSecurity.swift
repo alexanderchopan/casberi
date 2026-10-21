@@ -66,9 +66,14 @@ struct MoveSecurity: View {
                     } else { addOutside() } })
                 })
             if addingOutside { outsideField }
-            // The spend limit (prd §1447): a switch after the keys it is made
-            // of, the amount beneath it as a sentence.
-            spendLimit
+            // The spend limit (prd §1447) is NOT drawn (item 9): the phone's
+            // key signs through Safe's shared signer, which answers only the
+            // account itself, so it can never be the Allowance module's
+            // delegate — and at 2-of-2 the 4337 module asks both keys of
+            // every send. Turned on, every send would wait on the signer.
+            #if DEBUG
+            if UserDefaults.standard.bool(forKey: "spendLimitOpen") { spendLimit }
+            #endif
             // Said once, under the keys, only on a device that cannot open
             // them (§1442n item 3; user: "the user will have created their
             // account on the device they are reading this on"): the fact is

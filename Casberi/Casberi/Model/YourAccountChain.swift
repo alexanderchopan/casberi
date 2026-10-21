@@ -267,6 +267,12 @@ enum YourAccountChain {
         guard plain > 0 else {
             throw Failure(message: String(localized: "Add a signer first: with both keys required, a send waits on it"))
         }
+        // prd §1447 item 9: the shared signer cannot be the module's delegate,
+        // and at 2-of-2 every user operation needs both keys — so this would
+        // leave the account answering only to both. Refused outside a dry run.
+        guard dryRun else {
+            throw Failure(message: String(localized: "A spend limit is not available yet"))
+        }
         let (signerIndex, device) = try await deviceSigner(net, account, deployed: true)
         let next = try YourAccountKey.nextKey(after: signerIndex)
         guard let nextKey = YourAccountKey.publicKey(next),

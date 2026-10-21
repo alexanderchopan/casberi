@@ -245,6 +245,10 @@ grep -q 'static let address = "0xCFbFaC74C26F8647cBDb8c5caf80BB5b32E43134"' "$SI
 grep -q 'thresholdCall(account: account, to: 2)\]' "$SIGNING" || { echo "✗ the switch no longer sets the threshold LAST (prd §1447)"; exit 1; }
 grep -q 'Add a signer first' Casberi/Casberi/Model/YourAccountChain.swift || { echo "✗ the switch no longer refuses an account with no Signer — every send would wait on nobody (prd §1447)"; exit 1; }
 grep -v '^[[:space:]]*//' Casberi/Casberi/Model/YourAccountSigning.swift | grep -q 'UserDefaults\|amountLimit\|aboveDollars' && { echo "✗ YourAccountSigning enforces an amount in the app: that is not 2-of-2 (prd §1447)"; exit 1; }
+# The spend limit is not drawn and the switch refuses for real (§1447 item 9):
+# the shared signer cannot be the Allowance module's delegate.
+grep -q 'guard dryRun else' Casberi/Casberi/Model/YourAccountChain.swift || { echo "✗ setBothKeys runs for real again — the shared signer cannot be the module's delegate, every send would wait on the signer (prd §1447 item 9)"; exit 1; }
+grep -B1 -A1 '{ spendLimit }' "$SEC" | grep -q 'spendLimitOpen' || { echo "✗ the Spend limit row is drawn outside DEBUG (prd §1447 item 9)"; exit 1; }
 # The Security row offers the switch only where a Signer stands (§1447 item 2).
 grep -q '(both.isEmpty && (!hasSigner || single.isEmpty))' "$SEC" || { echo "✗ the Spend limit switch can be turned on with no Signer (prd §1447)"; exit 1; }
 grep -q 'Turning it off needs' "$SEC" || { echo "✗ the Spend limit switch no longer says that turning it off needs the signer — it would look off while the chain is 2-of-2 (prd §1447, §83)"; exit 1; }
