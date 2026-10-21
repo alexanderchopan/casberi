@@ -433,8 +433,8 @@ enum NetworkReach {
                  hosts: ["aztec-testnet.drpc.org", "ethereum-sepolia-rpc.publicnode.com"]),
         Endpoint(service: "0xBow Privacy Pools",
                  reach: .whenConnected(bridge: "0xBow Privacy Pools"),
-                 purpose: "Reads your Privacy Pools deposits from the public chain and their review status from 0xBow's public API, for the accounts you follow.",
-                 hosts: ["api.0xbow.io", "rpc.mevblocker.io", "gateway.tenderly.co"]),
+                 purpose: "Reads your Privacy Pools deposits, v1 and v2, from the public chain and their review status from 0xBow's public APIs, for the accounts you follow.",
+                 hosts: ["api.0xbow.io", "api-v2.0xbow.io", "rpc.mevblocker.io", "gateway.tenderly.co"]),
         // Reach is WALLET, not "Railgun" — MetaMask Card's reason below: the seat
         // appears only once a shield has been seen, but the read that
         // discovers one runs for every watched wallet, so declaring it under

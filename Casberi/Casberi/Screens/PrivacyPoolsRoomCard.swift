@@ -74,7 +74,7 @@ struct PrivacyPoolsRoomCard: View {
     /// Where a proof is actually supplied. 0xBow's own app, the same
     /// destination the `poi_required` alert row already links to — one place
     /// this URL means one thing.
-    private static let respondURL = URL(string: "https://app.0xbow.io")
+    private static let respondURL = URL(string: "https://privacypools.com")
 
     /// §374, passed down rather than read inside `PrivacyPoolsRoom` — that
     /// file is Foundation-only and compiled whole by the harness, so it cannot

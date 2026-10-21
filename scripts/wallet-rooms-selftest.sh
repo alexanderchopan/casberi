@@ -175,8 +175,12 @@ grep -q 'tags: \["Shielded", "Pending"\]' "$BR_POOLS" \
 # against — three readings gone while the card still renders a full standing.
 grep -q 'thing.priceValue = value' "$BR_POOLS" \
   || { echo "✗ PrivacyPoolsBridge no longer stamps priceValue — the room could state no money at all, and §349's refusal would be back"; exit 1; }
-grep -q 'thing.priceCurrency = pool.symbol' "$BR_POOLS" \
+# One helper stamps both versions' deposits (2026-10-21); v1 must hand it OUR
+# pool symbol, since the cover joins on `priceCurrency` (`PrivacyPoolsCover`).
+grep -q 'thing.priceCurrency = symbol' "$BR_POOLS" \
   || { echo "✗ PrivacyPoolsBridge no longer stamps priceCurrency — deposits would drop out of every holding with nothing on screen to say so"; exit 1; }
+grep -q 'symbol: pool?.symbol,' "$BR_POOLS" \
+  || { echo "✗ a v1 deposit no longer stamps its pool's own symbol — the cover line would stop joining its holding"; exit 1; }
 # THE LOOP. Without this the deposit a ragequit undoes keeps its `Declined`
 # tag, so the row and the card disagree about the same deposit forever. (The
 # CARD is still right — `PrivacyPoolsRoom` does the join itself — so this
@@ -219,7 +223,7 @@ grep -q 'PrivacyPoolsRoom.coverLine(room.cover)' "$CARD_POOLS" \
 # nowhere else — capture-only means the honest affordance is a hand-off.
 grep -q 'if room.needsYou != nil {' "$CARD_POOLS" \
   || { echo "✗ the 0xBow door is no longer gated on the one state that needs you — it would be chrome on every other room state"; exit 1; }
-grep -q 'respondURL = URL(string: "https://app.0xbow.io")' "$CARD_POOLS" \
+grep -q 'respondURL = URL(string: "https://privacypools.com")' "$CARD_POOLS" \
   || { echo "✗ the respond door no longer opens 0xBow — a door telling you to respond must land where responding happens"; exit 1; }
 
 # --- prd §486's three readings, one head since prd §1060 ---------------------
