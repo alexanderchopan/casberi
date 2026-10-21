@@ -36,10 +36,10 @@ struct AztecSignTray: View {
                         .padding(.top, DS.Space.s2)
                     ForEach(Array(request.calls.enumerated()), id: \.offset) { _, call in
                         VStack(alignment: .leading, spacing: DS.Space.s1) {
-                            Text(verbatim: AztecSignRequest.line(call))
+                            Text(verbatim: AztecSignRequest.line(call, account: request.account))
                                 .dsText(.body17)
                                 .foregroundStyle(DS.textPrimary)
-                            Text(verbatim: "\(call.type == "public" ? String(localized: "Public") : String(localized: "Private")) · \(AztecSignRequest.short(call.to))")
+                            Text(verbatim: "\(call.type == "public" ? String(localized: "Public") : String(localized: "Private")) · \(AztecSignRequest.target(call, account: request.account))")
                                 .dsText(.subhead12)
                                 .foregroundStyle(DS.textSecondary)
                         }
@@ -59,7 +59,9 @@ struct AztecSignTray: View {
                             .foregroundStyle(DS.destructiveInk)
                             .padding(.top, DS.Space.s2)
                     case .sign:
-                        DSFootnote(prose: String(localized: "Your computer names each call; the signature covers what each one does. Test money only."))
+                        DSFootnote(prose: request.calls.allSatisfy(AztecSignRequest.nameChecked)
+                                   ? String(localized: "Each call's name is checked against what it runs. Test money only.")
+                                   : String(localized: "Your computer names each call; the signature covers what each one does. Test money only."))
                             .padding(.top, DS.Space.s2)
                         if let failure {
                             Text(failure).dsText(.body17).foregroundStyle(DS.destructiveInk)

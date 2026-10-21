@@ -148,6 +148,11 @@ enum WiseShape {
     static let source = "Wise"
     static func isStuck(tags: [String]) -> Bool { tags.contains("Needs attention") }
 }
+enum AztecStakeWire {
+    // The shipped rule is AztecStakeWire.upgradeWaiting (aztec-stake-selftest.sh
+    // tests it); this stub only says whether the hook routes to it.
+    static func upgradeWaiting(ref: String, now: Date) -> Bool { ref.hasSuffix(":future") }
+}
 enum ZFiOrders {
     struct Book: Equatable { var waiting: Set<String> = []; var complete = true }
     static let reclaimPrefix = "zfi:reclaim:"
@@ -189,6 +194,8 @@ check(waits("Apple Wallet", ref: "aw:1", tags: ["Price rise"], at: ago(24 * 29))
 check(!waits("Apple Wallet", ref: "aw:1", tags: ["Price rise"], at: ago(24 * 31)), "and goes after it")
 check(!waits("Apple Wallet", ref: "aw:2", tags: ["Spend"]), "an ordinary charge does not")
 check(!waits("Safe", ref: nil, safe: ["x"]), "a row with no ref never waits")
+check(waits("Wallet", ref: "aztec:upgrade:0xe37a:future"), "an Aztec upgrade still to come needs you (prd §1446)")
+check(!waits("Wallet", ref: "aztec:upgrade:0xe37a:past"), "one that can already execute does not")
 check(WalletNeedsYou.readsBook(ref: "zfi:reclaim:b:1") && !WalletNeedsYou.readsBook(ref: "wise:transfer:1"),
       "the zFi book is read for reclaim rows only")
 
@@ -236,6 +243,8 @@ mutate "every Wise transfer waits" "$WALLET" \
   'return WiseShape.isStuck(tags: tags)|||return true' || mfail=1
 mutate "a deposit under review is called waiting" "$WALLET" \
   'PrivacyPoolsRoom.state(tags: tags) == .needsProof|||PrivacyPoolsRoom.state(tags: tags).map { !$0.resolved } ?? false' || mfail=1
+mutate "an Aztec upgrade never waits" "$WALLET" \
+  'if ref.hasPrefix("aztec:upgrade:") { return AztecStakeWire.upgradeWaiting(ref: ref, now: now) }|||' || mfail=1
 mutate "a Safe transaction waiting on others still waits on you" "$WALLET" \
   'safePending.contains(ref) && tags.contains("Your turn")|||safePending.contains(ref)' || mfail=1
 

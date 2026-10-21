@@ -42,6 +42,6 @@ enum AztecSignedLog {
     static func entry(for request: AztecSignRequest.Request, network: String, at: Date = .now) -> Entry {
         Entry(at: at, network: network, account: request.account.lowercased(),
               messageHash: request.messageHash.lowercased(),
-              lines: request.calls.map(AztecSignRequest.line))
+              lines: request.calls.map { AztecSignRequest.line($0, account: request.account) })
     }
 }

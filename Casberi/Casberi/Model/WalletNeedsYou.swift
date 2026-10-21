@@ -42,6 +42,9 @@ enum WalletNeedsYou {
         // A zFi order whose escrow waits on the board (prd §1282), while
         // the live book still says so.
         if ref.hasPrefix(ZFiOrders.reclaimPrefix) { return ZFiOrders.stillWaiting(ref: ref, in: zfi) }
+        // An Aztec upgrade coming while money sits in zk.money (prd §1446),
+        // until it can execute; its date rides the ref.
+        if ref.hasPrefix("aztec:upgrade:") { return AztecStakeWire.upgradeWaiting(ref: ref, now: now) }
         if source == AppleWalletBridge.sourceName, tags.contains("Price rise") {
             return now.timeIntervalSince(capturedAt) < priceRiseWindow
         }

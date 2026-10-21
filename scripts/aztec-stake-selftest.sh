@@ -37,20 +37,26 @@ for f in "$WIRE" "$APP" "$FIX"/stake-logs-delegator.json "$FIX"/stake-view-valid
          "$FIX"/stake-view-atp.json "$FIX"/stake-logs-atp.json "$FIX"/stake-provider-logs.json "$FIX"/stake-split-logs.json \
          "$FIX"/stake-rewards.json "$FIX"/atp-created-logs.json "$FIX"/atp-staker.json "$FIX"/atp-held.json \
          "$FIX"/atp-claimable.json "$FIX"/atp-beneficiary.json "$FIX"/registry-canonical.json "$FIX"/gov-count.json \
-         "$FIX"/gov-proposal-4.json "$FIX"/gov-state-4.json; do
+         "$FIX"/gov-proposal-4.json "$FIX"/gov-state-4.json "$FIX"/governance-v6-upgrade.json; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 # The app half: reads through the Wallet's declared pool and Aztec's own
 # node only; every stake read on the CANONICAL Rollup; unwatching clears the
 # walk.
 if grep -nE 'https?://' "$APP" | grep -v '^\s*[0-9]*:\s*///' \
-   | grep -vE 'aztec-mainnet\.drpc\.org|stake\.aztec\.network|aztecscan\.xyz/validators|aztecgov\.nethermind\.io' | grep -q .; then
+   | grep -vE 'aztec-mainnet\.drpc\.org|stake\.aztec\.network|aztecscan\.xyz/validators|aztecgov\.nethermind\.io|//zk\.money"' | grep -q .; then
   echo "✗ AztecStaking.swift names a host it does not declare"; exit 1
 fi
 grep -q 'aztec-mainnet.drpc.org' Casberi/Casberi/Model/NetworkReach.swift \
   || { echo "✗ Aztec's mainnet node is not in NetworkReach"; exit 1; }
-grep -q 'call(rollup, AztecStakeWire.viewCall(attester))' "$APP" \
-  || { echo "✗ a stake is no longer read on the canonical Rollup (§1279: three of seven drawn)"; exit 1; }
+grep -q 'for (i, r) in (\[rollup\] + others' "$APP" && grep -q 'await call(r, AztecStakeWire.viewCall(attester))' "$APP" \
+  || { echo "✗ a stake is no longer read on the canonical Rollup first (§1279: three of seven drawn)"; exit 1; }
+grep -q 'AztecStakeWire.merged(await registryRollups())' "$APP" \
+  || { echo "✗ the Rollups are no longer asked of the Registry: an upgrade's stakes go unseen (prd §1446)"; exit 1; }
+grep -q 'd.set(walked, forKey: key("cursorSet", withdrawer))' "$APP" \
+  || { echo "✗ a stake walk no longer restarts when a Rollup is added (prd §1446)"; exit 1; }
+grep -q 'if ZkMoney.hasDeposited, let wallet = addresses.first, let up = await upcomingUpgrade()' "$APP" \
+  || { echo "✗ the upgrade warning no longer lands for someone with money in zk.money (prd §1446)"; exit 1; }
 grep -q 'AztecStakeWire.registry, AztecStakeWire.getCanonicalRollup' "$APP" \
   || { echo "✗ the canonical Rollup is no longer asked of the Registry"; exit 1; }
 grep -q 'if let b = beneficiary, AztecStakeWire.address(reply: b) != address { continue }' "$APP" \
@@ -216,6 +222,54 @@ let pending = AztecStakeWire.proposal(id: 4, view: reply("gov-proposal-4.json"),
 check(AztecStakeWire.voteTitle(pending, now: Date(timeIntervalSince1970: 1_783_023_491)).hasPrefix("Aztec proposal 4 opens for votes "),
       "pending, it says when it opens")
 
+print("an upgrade coming (prd §1446)")
+let up = try! JSONSerialization.jsonObject(with: Data(contentsOf: URL(fileURLWithPath: fix + "/governance-v6-upgrade.json"))) as! [String: String]
+check(AztecStakeWire.addedRollup(actions: up["v6Actions"]) == "0xe37a2663cc9c119ba41572c40fab0bbb23a5402f",
+      "proposal 5's payload adds V6's Rollup to the Registry")
+check(AztecStakeWire.addedRollup(actions: up["proposal4Actions"]) == "0x91ff8bbd8ebb07893010d50a48a1609e5ebd8e34",
+      "proposal 4's added V5's")
+check(AztecStakeWire.rollups.contains(AztecStakeWire.addedRollup(actions: up["v6Actions"]) ?? "-"),
+      "the Rollup V6 adds is walked before the Registry lists it")
+/// `(address target, bytes data)[]`, ABI-encoded, for actions built here.
+func encodeActions(_ actions: [(String, String)]) -> String {
+    func w(_ n: Int) -> String { String(repeating: "0", count: 64 - String(n, radix: 16).count) + String(n, radix: 16) }
+    func pad(_ hex: String) -> String { hex + String(repeating: "0", count: (64 - hex.count % 64) % 64) }
+    var heads = "", tails = "", offset = 32 * actions.count
+    for (target, data) in actions {
+        heads += w(offset)
+        let body = String(repeating: "0", count: 24) + target.dropFirst(2) + w(64) + w(data.count / 2) + pad(data)
+        tails += body
+        offset += body.count / 2
+    }
+    return "0x" + w(32) + w(actions.count) + heads + tails
+}
+let addsElsewhere = encodeActions([("0xa92ecfd0e70c9cd5e5cd76c50af0f7da93567a4f",
+                                "59264f00" + String(repeating: "0", count: 24) + "00000000000000000000000000000000deadbeef")])
+check(AztecStakeWire.addedRollup(actions: addsElsewhere) == nil, "addRollup on another contract is not the Registry's")
+check(AztecStakeWire.addedRollup(actions: encodeActions([("0x35b22e09ee0390539439e24f06da43d83f90e298",
+                                "59264f00" + String(repeating: "0", count: 24) + "00000000000000000000000000000000deadbeef")]))
+      == "0x00000000000000000000000000000000deadbeef", "the encoder agrees with Aztec's")
+check(AztecStakeWire.payload(view: up["proposal5View"]) == "0xe8d663a8b355415f331a54d694f36685346b5433", "the payload is read off the view")
+let v6 = AztecStakeWire.upgrade(id: 5, view: up["proposal5View"], state: up["proposal5State"], actions: up["v6Actions"])
+check(v6?.rollup == "0xe37a2663cc9c119ba41572c40fab0bbb23a5402f"
+      && v6?.executableFrom == Date(timeIntervalSince1970: 1_791_952_895 + 259_200 + 604_800 + 172_800),
+      "open now, it can execute after voting and the execution delay")
+let ran = "0x" + String(repeating: "0", count: 63) + "5"
+check(AztecStakeWire.upgrade(id: 5, view: up["proposal5View"], state: ran, actions: up["v6Actions"]) == nil,
+      "an executed upgrade is no longer coming")
+check(AztecStakeWire.upgrade(id: 5, view: up["proposal5View"], state: up["proposal5State"], actions: "0x") == nil,
+      "a proposal that adds no Rollup is no upgrade")
+let ref = AztecStakeWire.upgradeRef(v6!)
+check(AztecStakeWire.upgradeWaiting(ref: ref, now: Date(timeIntervalSince1970: 1_792_900_000))
+      && !AztecStakeWire.upgradeWaiting(ref: ref, now: Date(timeIntervalSince1970: 1_793_000_000)),
+      "it waits on you until it can execute")
+check(AztecStakeWire.upgradeTitle(v6!).hasSuffix("take your money out of zk.money first"), "its row")
+check(AztecStakeWire.merged(["0x603bb2c05d474794ea97805e8de69bccfb3bca12", "0xABC"]).last == "0xabc"
+      && AztecStakeWire.merged([]).count == AztecStakeWire.rollups.count,
+      "the Registry's Rollups join the known ones, once each")
+check(AztecStakeWire.walkKey(AztecStakeWire.rollups) != AztecStakeWire.walkKey(AztecStakeWire.rollups.dropLast().map { $0 }),
+      "a Rollup added changes the walk")
+
 print("words")
 let before = Date(timeIntervalSince1970: 1_791_774_479 - 86_400)
 let after = Date(timeIntervalSince1970: 1_791_774_479 + 60)
@@ -296,6 +350,21 @@ mutate "a stop called one miss late" \
 mutate "a garbage word trusted as a small number" \
   'guard w.count == 64, w.prefix(48).allSatisfy({ $0 == "0" }) else { return nil }' \
   'guard w.count == 64 else { return nil }'
+mutate "an upgrade read off any target" \
+  'if target == registry, selector == addRollup { return address(at: data + 4) }' \
+  'if selector == addRollup { return address(at: data + 4) }'
+mutate "an executed upgrade still coming" \
+  'let state = small(s[0]), (0...3).contains(state), let rollup' \
+  'let state = small(s[0]), state >= 0, let rollup'
+mutate "the execution delay left off" \
+  'uint(w[10]) + uint(w[0]) + uint(w[1]) + uint(w[2])' \
+  'uint(w[10]) + uint(w[0]) + uint(w[1])'
+mutate "an upgrade waits on you forever" \
+  'return now.timeIntervalSince1970 < t' \
+  'return t > 0'
+mutate "V6's Rollup left off the known list" \
+  '                          "0xe37a2663cc9c119ba41572c40fab0bbb23a5402f"]' \
+  '                          ]'
 mutate "an executed proposal drawn as a vote" \
   'guard let state = small(s[0]), state == 0 || state == 1 else { return nil }' \
   'guard let state = small(s[0]), state >= 0 else { return nil }'

@@ -33,6 +33,10 @@ enum ZkMoney {
         return deposits
     }
 
+    /// Whether a watched wallet has put money into zk.money on this device:
+    /// one recognised deposit or savings address is enough (prd §1446).
+    static var hasDeposited: Bool { !depositsSnapshot().isEmpty }
+
     /// The portals' DAI as last read in a pass that named a zk.money move.
     nonisolated(unsafe) static var lastPortalTotal: Decimal?
 

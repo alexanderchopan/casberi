@@ -235,7 +235,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1584 of 1653 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1585 of 1654 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1656,9 +1656,9 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1274 — Sources' Subscriptions, Mail lists and Following open their page over Sources (amends §1217, §1265)
 - §1275 — Everything in Sources opens in Sources (amends §1217, §1274)
 - §1276 — Aztec: this phone signs for a TESTNET account (amended by §1380, §1419)
-- §1277 — Aztec mainnet in the Wallet: its contracts named, AZTEC staked shown in Positions (amended by §1419)
+- §1277 — Aztec mainnet in the Wallet: its contracts named, AZTEC staked shown in Positions (amended by §1419, §1446)
 - §1278 — The band's ✎ becomes the Wallet (amends §1207 item 6)
-- §1279 — Aztec staking, round two: stakes read where they live, token-sale vaults, rewards, sequencer health, votes (amends §1…
+- §1279 — Aztec staking, round two: stakes read where they live, token-sale vaults, rewards, sequencer health, votes (amends §1… (amended by §1446)
 - §1280 — The face goes to the Feed; the bar is the tray's door (amends §930, §1207 item 4 and §1209a on the phone)
 - §1281 — zFi and Tacit in the Wallet: their moves named, zFi's orders in Positions
 - §1282 — zFi's waiting escrow leads Needs you; the Safe sign block reads zFi, Tacit and CoW (amends §1281, §834)
@@ -1759,7 +1759,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1381 — One slot, no fill: the box keeps its size and place on every screen and draws no well; the thing fills it on sheets a…
 - §1382 — The Feed's and the Wallet's sections stand bare: the panel keeps its air and its column, and draws no fill
 - §1383 — Library's pages stand bare too
-- §1384 — zk.money, round two: today's withdrawals named, USDC/USDT and savings, claim links kept on this device, requests date… (amended by §1419)
+- §1384 — zk.money, round two: today's withdrawals named, USDC/USDT and savings, claim links kept on this device, requests date… (amended by §1419, §1446)
 - §1385 — One ink for the pick: pink is state and verb, a door is grey with its chevron, blue is charts and in-text links
 - §1386 — The seams of the audit week: one More row, one Add, one section gap, a pinned header for the pill, one row in Day, th…
 - §1387 — Day's Needs you keeps its places, each as the one group word (amends §1340's "Needs you · Wallet" eyebrow; closes §13…
@@ -1794,7 +1794,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1416 — The Wallet says what is, not how it was read: every footnote that narrates freshness, pricing gaps, what Casberi cann…
 - §1417 — Connect a wallet is back in Follow an account, every time
 - §1418 — An app you have GOES: a tap in Library lands where the tray's icon does, a long press holds Open and Settings, and Ca… (amended by §1444)
-- §1419 — Aztec's testnet, round three: the signer follows a reset testnet, keeps a log of what it signed, follows the account…
+- §1419 — Aztec's testnet, round three: the signer follows a reset testnet, keeps a log of what it signed, follows the account… (amended by §1446)
 - §1420 — The generic empty start screen is deleted: an app's page with nothing yet says so in one line
 - §1421 — Your account has no phrase: recovery is your other devices and an iCloud-synced passkey (amends `docs/safe-wallet-spe…
 - §1422 — Five equal tabs: Feed · Wallet · Move · Library · Search; Move is a page (amends §1327's three tabs and Search apart,…
@@ -1821,6 +1821,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1443 — The toast draws above every sheet [+9 sub-entries]
 - §1444 — An app's settings are on its page: the name in the title wears the sliders disc and opens them; Casberi › Apps is del… [+1 sub-entries]
 - §1445 — A card per subscription: Pro makes each tracked plan its own Privacy.com card, Premium is Casberi's own card (builds…
+- §1446 — Aztec through V6: rollups found in the Registry, a warning before an upgrade strands zk.money money, and the sign she…
 
 ## Dead rulings → what replaced them (generated)
 

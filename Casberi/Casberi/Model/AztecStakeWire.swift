@@ -47,11 +47,36 @@ enum AztecStakeWire {
     static let getCanonicalRollup = "0x971b0e6b"
 
     /// Every Rollup a stake may have been queued on: the canonical one when
-    /// this was written, then the two before it. Discovery reads all three;
-    /// rewards may still be owed on any of them.
+    /// this was written (Alpha V5), the two before it, and V6
+    /// (`0xe37a…402f`, version 2070860440), the one governance proposal 5
+    /// ("V6UpgradePayload", read 2026-10-20, prd §1446) adds to the Registry.
+    /// The Registry is asked for the rest at run time (`registryRollups`), so
+    /// an upgrade after V6 is found without a release. Rewards may still be
+    /// owed on any of them.
     static let rollups = ["0x91ff8bbd8ebb07893010d50a48a1609e5ebd8e34",
                           "0x603bb2c05d474794ea97805e8de69bccfb3bca12",
-                          "0xae2001f7e21d5ecabf6234e9fdd1e76f50f74962"]
+                          "0xae2001f7e21d5ecabf6234e9fdd1e76f50f74962",
+                          "0xe37a2663cc9c119ba41572c40fab0bbb23a5402f"]
+
+    /// The Registry's own list: `numberOfVersions()`, then `getVersion(i)`
+    /// and `getRollup(version)` (selectors read off the contract 2026-10-20).
+    static let numberOfVersions = "0x5a4ce7ba"
+    static let getVersionAt = "0xb88da759"
+    static let getRollupFor = "0xdd1583c2"
+
+    /// The known Rollups and the Registry's, once each, known first.
+    static func merged(_ found: [String]) -> [String] {
+        var out = rollups
+        for r in found.map({ $0.lowercased() }) where !out.contains(r) { out.append(r) }
+        return out
+    }
+
+    /// The set a stake walk ran over, as a stable word: a walk over fewer
+    /// Rollups than are known now starts again from the floor, because its
+    /// cursor passed blocks where a new Rollup's logs may already sit.
+    static func walkKey(_ rollups: [String]) -> String {
+        rollups.map { String($0.lowercased().suffix(6)) }.sorted().joined(separator: ".")
+    }
 
     /// The first `ValidatorQueued` on any of them: the stake walk's floor.
     static let firstBlock = 23_790_839
@@ -171,7 +196,7 @@ enum AztecStakeWire {
     }
 
     /// `eth_getLogs` params for stakes withdrawable by any of `withdrawers`.
-    static func logFilter(withdrawers: [String], from: Int, to: Int) -> [String: Any] {
+    static func logFilter(withdrawers: [String], rollups: [String] = rollups, from: Int, to: Int) -> [String: Any] {
         var f = range(from, to)
         f["address"] = rollups
         f["topics"] = [validatorQueued, NSNull(), withdrawers.map(topic)] as [Any]
@@ -261,7 +286,7 @@ enum AztecStakeWire {
     /// "attester@withdrawer" for each stake one of `withdrawers` can take
     /// out, oldest first. A log for another withdrawer, from another
     /// contract, or removed by a reorg is not this wallet's.
-    static func attesters(fromLogs logs: [[String: Any]], withdrawers: [String]) -> [String] {
+    static func attesters(fromLogs logs: [[String: Any]], withdrawers: [String], rollups: [String] = rollups) -> [String] {
         let mine = Set(withdrawers.map(topic))
         var out: [String] = []
         for log in logs {
@@ -348,6 +373,91 @@ enum AztecStakeWire {
 
     /// A proposal from `getProposal` and `getProposalState`, or nil once it
     /// is no longer pending or active: only a vote still to come is drawn.
+    // MARK: - An upgrade coming
+
+    /// `getActions()` on a governance payload, and the Registry's
+    /// `addRollup(address)`: a payload that calls it moves Aztec to a new
+    /// Rollup (prd §1446). Selectors read off the contracts 2026-10-20.
+    static let getActions = "0x504d080b"
+    static let addRollup = "0x59264f00"
+
+    /// An Aztec upgrade still to come: the proposal, the Rollup it adds, and
+    /// the first moment it can execute.
+    struct Upgrade: Equatable, Sendable {
+        let id: Int
+        let rollup: String
+        let executableFrom: Date
+    }
+
+    /// The Rollup a payload adds to the Registry, nil when it adds none.
+    /// `getActions()` returns `(address target, bytes data)[]`, ABI-encoded:
+    /// an offset, the length, one offset per action, then each action's
+    /// target, its data's offset, length and bytes.
+    static func addedRollup(actions hex: String?) -> String? {
+        guard let hex, hex.hasPrefix("0x"), (hex.count - 2) % 2 == 0 else { return nil }
+        let bytes = Array(hex.utf8.dropFirst(2))
+        var raw: [UInt8] = []
+        raw.reserveCapacity(bytes.count / 2)
+        var i = 0
+        while i < bytes.count {
+            guard let b = UInt8(String(decoding: bytes[i..<(i + 2)], as: UTF8.self), radix: 16) else { return nil }
+            raw.append(b); i += 2
+        }
+        func int(at o: Int) -> Int? {
+            guard o >= 0, o + 32 <= raw.count, raw[o..<(o + 24)].allSatisfy({ $0 == 0 }) else { return nil }
+            return raw[(o + 24)..<(o + 32)].reduce(0) { $0 << 8 | Int($1) }
+        }
+        func address(at o: Int) -> String? {
+            guard o >= 0, o + 32 <= raw.count, raw[o..<(o + 12)].allSatisfy({ $0 == 0 }) else { return nil }
+            return "0x" + raw[(o + 12)..<(o + 32)].map { String(format: "%02x", $0) }.joined()
+        }
+        guard let array = int(at: 0), let n = int(at: array), n < 64 else { return nil }
+        let heads = array + 32
+        for k in 0..<n {
+            guard let rel = int(at: heads + 32 * k), let target = address(at: heads + rel),
+                  let dataRel = int(at: heads + rel + 32), let length = int(at: heads + rel + dataRel) else { return nil }
+            let data = heads + rel + dataRel + 32
+            guard length >= 36, data + 36 <= raw.count else { continue }
+            let selector = "0x" + raw[data..<(data + 4)].map { String(format: "%02x", $0) }.joined()
+            if target == registry, selector == addRollup { return address(at: data + 4) }
+        }
+        return nil
+    }
+
+    /// An upgrade still to come — pending, open, queued or executable (states
+    /// 0 to 3) — from its view (`getProposal`), state and payload's actions.
+    /// It can execute once voting and the execution delay have both passed.
+    static func upgrade(id: Int, view hex: String?, state stateHex: String?, actions: String?) -> Upgrade? {
+        guard let w = words(hex), w.count == 13, let s = words(stateHex), s.count == 1,
+              let state = small(s[0]), (0...3).contains(state), let rollup = addedRollup(actions: actions) else { return nil }
+        return Upgrade(id: id, rollup: rollup,
+                       executableFrom: Date(timeIntervalSince1970: uint(w[10]) + uint(w[0]) + uint(w[1]) + uint(w[2])))
+    }
+
+    /// The payload a proposal will run (`getProposal` word 8).
+    static func payload(view hex: String?) -> String? {
+        guard let w = words(hex), w.count == 13 else { return nil }
+        return address(w[8])
+    }
+
+    /// The Needs you row for someone with money in zk.money: what happens,
+    /// when, and the one thing to do.
+    static func upgradeTitle(_ u: Upgrade) -> String {
+        String(localized: "Aztec upgrades from \(u.executableFrom.formatted(.dateTime.month(.abbreviated).day())): take your money out of zk.money first")
+    }
+
+    /// `aztec:upgrade:<rollup>:<unix seconds it can execute from>`: the date
+    /// rides the ref, so Needs you can end it without a read.
+    static func upgradeRef(_ u: Upgrade) -> String {
+        "aztec:upgrade:\(u.rollup):\(Int(u.executableFrom.timeIntervalSince1970))"
+    }
+
+    /// Whether an upgrade row still waits on the person: until it can execute.
+    static func upgradeWaiting(ref: String, now: Date = .now) -> Bool {
+        guard ref.hasPrefix("aztec:upgrade:"), let t = ref.split(separator: ":").last.flatMap({ Double($0) }) else { return false }
+        return now.timeIntervalSince1970 < t
+    }
+
     static func proposal(id: Int, view hex: String?, state stateHex: String?) -> Proposal? {
         guard let w = words(hex), w.count == 13, let s = words(stateHex), s.count == 1 else { return nil }
         guard let state = small(s[0]), state == 0 || state == 1 else { return nil }

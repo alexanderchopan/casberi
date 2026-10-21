@@ -5065,6 +5065,34 @@
         }
       }
     },
+    "Aztec upgrades from %@: take your money out of zk.money first" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec se actualiza a partir del %@: saca tu dinero de zk.money antes"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztecは%@からアップグレードされます。先にzk.moneyから資金を引き出してください"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec이 %@부터 업그레이드됩니다. 먼저 zk.money에서 돈을 빼세요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aztec 将于 %@ 起升级：请先把资金从 zk.money 取出"
+          }
+        }
+      }
+    },
     "Copies your address, opens Coinbase" : {
       "localizations" : {
         "es" : {
@@ -5089,6 +5117,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "复制你的地址并打开 Coinbase"
+          }
+        }
+      }
+    },
+    "Each call's name is checked against what it runs. Test money only." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "El nombre de cada llamada se comprueba con lo que ejecuta. Solo dinero de prueba."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "各呼び出しの名前は、実行内容と照合済みです。テスト用の資金のみ。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "각 호출의 이름을 실제 실행 내용과 대조해 확인했습니다. 테스트 자금만 사용합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "每个调用的名称都已与其实际执行的内容核对。仅限测试资金。"
           }
         }
       }
@@ -5761,6 +5817,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "分享你的地址"
+          }
+        }
+      }
+    },
+    "The sponsored fee payer pays the fee" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "El pagador de comisiones patrocinado paga la comisión"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "スポンサーの手数料支払者が手数料を支払います"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "후원 수수료 지불자가 수수료를 냅니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "由赞助的手续费支付方支付手续费"
           }
         }
       }

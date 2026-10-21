@@ -43,8 +43,9 @@ enum AztecStaking {
             guard let staker = entry.split(separator: "@").last else { continue }
             d.removeObject(forKey: key("cursor", String(staker)))
             d.removeObject(forKey: key("attesters", String(staker)))
+            d.removeObject(forKey: key("cursorSet", String(staker)))
         }
-        for kind in ["attesters", "cursor", "vaults", "vaultCursor"] { d.removeObject(forKey: key(kind, address)) }
+        for kind in ["attesters", "cursor", "cursorSet", "vaults", "vaultCursor"] { d.removeObject(forKey: key(kind, address)) }
     }
 
     struct Book: Equatable, Sendable {
@@ -75,6 +76,7 @@ enum AztecStaking {
         guard let head = await blockNumber() else { return nil }
         let rollup = AztecStakeWire.address(reply: await call(AztecStakeWire.registry, AztecStakeWire.getCanonicalRollup))
             ?? AztecStakeWire.rollups[0]
+        let rollups = AztecStakeWire.merged(await registryRollups())
         var book = Book()
         var reached = false
         // Once each: the sweep's list can carry one wallet twice (a name and
@@ -87,7 +89,7 @@ enum AztecStaking {
 
             var keys: [(attester: String, withdrawer: String, via: AztecStakeWire.Via)] = []
             for (withdrawer, via) in withdrawers {
-                guard let (found, caughtUp) = await discoverStakes(withdrawer: withdrawer, head: head) else {
+                guard let (found, caughtUp) = await discoverStakes(withdrawer: withdrawer, head: head, rollups: rollups) else {
                     book.complete = false
                     continue
                 }
@@ -110,7 +112,7 @@ enum AztecStaking {
                     next += 1
                     group.addTask {
                         let (stake, failed) = await readStake(attester: k.attester, withdrawer: k.withdrawer, via: k.via,
-                                                              owner: address, rollup: rollup, head: head)
+                                                              owner: address, rollup: rollup, others: rollups, head: head)
                         return (i, stake, failed)
                     }
                 }
@@ -132,11 +134,25 @@ enum AztecStaking {
     /// One stake on the canonical Rollup, with its provider's rewards and
     /// its sequencer's record. `failed` when the view itself could not be
     /// read, so the book says it is incomplete rather than empty.
+    ///
+    /// A stake that is not on the canonical Rollup is looked for on the
+    /// others, newest first (prd §1446): an upgrade that moves the canonical
+    /// pointer need not move every stake with it, and one left behind is
+    /// still the wallet's money.
     private static func readStake(attester: String, withdrawer: String, via: AztecStakeWire.Via,
-                                  owner: String, rollup: String, head: Int) async -> (AztecStakeWire.Stake?, Bool) {
-        guard let view = await call(rollup, AztecStakeWire.viewCall(attester)) else { return (nil, true) }
-        guard var stake = AztecStakeWire.stake(view: view, owner: owner, withdrawer: withdrawer,
-                                               attester: attester, rollup: rollup) else { return (nil, false) }
+                                  owner: String, rollup: String, others: [String], head: Int) async -> (AztecStakeWire.Stake?, Bool) {
+        var found: AztecStakeWire.Stake?
+        for (i, r) in ([rollup] + others.reversed().filter { $0 != rollup.lowercased() }).enumerated() {
+            guard let view = await call(r, AztecStakeWire.viewCall(attester)) else {
+                if i == 0 { return (nil, true) }
+                continue
+            }
+            if let s = AztecStakeWire.stake(view: view, owner: owner, withdrawer: withdrawer, attester: attester, rollup: r) {
+                found = s
+                break
+            }
+        }
+        guard var stake = found else { return (nil, false) }
         stake.via = via
         // A delegated stake's rewards are the wallet's share of the split, or
         // its vault staker's (measured 2026-10-12: one vault stake's split
@@ -217,21 +233,22 @@ enum AztecStaking {
     /// Every "attester@withdrawer" `withdrawer` can take out, oldest first,
     /// walking forward from where its last pass stopped, and whether the walk
     /// reached the head. nil when no chunk could be read and nothing is known.
-    private static func discoverStakes(withdrawer: String, head: Int) async -> ([String], Bool)? {
+    private static func discoverStakes(withdrawer: String, head: Int, rollups: [String]) async -> ([String], Bool)? {
         let d = UserDefaults.standard
         var known = d.stringArray(forKey: key("attesters", withdrawer)) ?? []
-        var from = max((d.object(forKey: key("cursor", withdrawer)) as? Int) ?? AztecStakeWire.firstBlock,
-                       AztecStakeWire.firstBlock)
+        let walked = AztecStakeWire.walkKey(rollups)
+        let cursor = d.string(forKey: key("cursorSet", withdrawer)) == walked ? d.object(forKey: key("cursor", withdrawer)) as? Int : nil
+        var from = max(cursor ?? AztecStakeWire.firstBlock, AztecStakeWire.firstBlock)
         let range = WalletApprovals.maxLogRange(forNetwork: network) ?? 900_000
         var chunks = 0
         var readAny = from > head
         while from <= head, chunks < maxChunksPerPass {
             let to = min(head, from + range - 1)
             guard let logs = await read("eth_getLogs",
-                    [AztecStakeWire.logFilter(withdrawers: [withdrawer], from: from, to: to)]) as? [[String: Any]]
+                    [AztecStakeWire.logFilter(withdrawers: [withdrawer], rollups: rollups, from: from, to: to)]) as? [[String: Any]]
             else { break }
             readAny = true
-            for key in AztecStakeWire.attesters(fromLogs: logs, withdrawers: [withdrawer]) where !known.contains(key) {
+            for key in AztecStakeWire.attesters(fromLogs: logs, withdrawers: [withdrawer], rollups: rollups) where !known.contains(key) {
                 known.append(key)
             }
             from = to + 1
@@ -240,6 +257,7 @@ enum AztecStaking {
         guard readAny || !known.isEmpty else { return nil }
         d.set(known, forKey: key("attesters", withdrawer))
         d.set(rewound(from, head: head, floor: AztecStakeWire.firstBlock), forKey: key("cursor", withdrawer))
+        d.set(walked, forKey: key("cursorSet", withdrawer))
         return (known, from > head)
     }
 
@@ -295,7 +313,7 @@ enum AztecStaking {
         }
         guard let share, share > 0 else { return nil }
         var owed = 0.0
-        for rollup in AztecStakeWire.rollups {
+        for rollup in AztecStakeWire.merged(await registryRollups()) {
             guard let amount = AztecStakeWire.amount(reply: await call(
                 rollup, AztecStakeWire.getSequencerRewards + AztecStakeWire.topic(coinbase).dropFirst(2))) else { return nil }
             owed += amount
@@ -317,6 +335,53 @@ enum AztecStaking {
             from = to + 1
         }
         return out
+    }
+
+    // MARK: - The Registry
+
+    private static let rollupCache = CoalescingCache<[String]>()
+
+    /// Every Rollup Aztec's Registry lists, oldest first, six hours fresh:
+    /// an upgrade adds one, and stakes and rewards are looked for on it from
+    /// then on. Empty when the Registry could not be read; the known list
+    /// stands then.
+    static func registryRollups() async -> [String] {
+        await rollupCache.value(key: "registry", ttl: 6 * 3600) {
+            guard let n = AztecStakeWire.count(reply: await call(AztecStakeWire.registry, AztecStakeWire.numberOfVersions)),
+                  n > 0, n < 64 else { return nil }
+            var out: [String] = []
+            for i in 0..<n {
+                guard let version = await call(AztecStakeWire.registry, AztecStakeWire.getVersionAt + AztecStakeWire.word(i)),
+                      version.count == 66, let rollup = AztecStakeWire.address(reply: await call(
+                        AztecStakeWire.registry, AztecStakeWire.getRollupFor + String(version.dropFirst(2))))
+                else { return nil }
+                out.append(rollup)
+            }
+            return out
+        } ?? []
+    }
+
+    private static let upgradeCache = CoalescingCache<[AztecStakeWire.Upgrade]>()
+
+    /// An Aztec upgrade still to come, read off the newest three proposals,
+    /// an hour fresh (prd §1446). nil when none is coming or governance could
+    /// not be read: no warning beats a wrong one.
+    static func upcomingUpgrade() async -> AztecStakeWire.Upgrade? {
+        await upgradeCache.value(key: "upgrade", ttl: 3600) {
+            guard let count = AztecStakeWire.count(reply: await call(AztecStakeWire.governance, AztecStakeWire.proposalCount))
+            else { return nil }
+            var out: [AztecStakeWire.Upgrade] = []
+            for id in max(0, count - 3)..<count {
+                let arg = AztecStakeWire.word(id)
+                let state = await call(AztecStakeWire.governance, AztecStakeWire.getProposalState + arg)
+                guard let s = AztecStakeWire.words(state)?.first.flatMap(AztecStakeWire.small), (0...3).contains(s) else { continue }
+                let view = await call(AztecStakeWire.governance, AztecStakeWire.getProposal + arg)
+                guard let payload = AztecStakeWire.payload(view: view) else { continue }
+                let actions = await call(payload, AztecStakeWire.getActions)
+                if let u = AztecStakeWire.upgrade(id: id, view: view, state: state, actions: actions) { out.append(u) }
+            }
+            return out
+        }?.first
     }
 
     // MARK: - Health and governance
@@ -381,6 +446,15 @@ enum AztecStaking {
                      url: "https://aztecscan.xyz/validators/\(stake.attester)", due: nil, wallet: stake.owner)
             }
         }
+        // Money in zk.money sits on the Rollup Aztec is leaving: an upgrade
+        // adds a NEW Rollup, and nothing on the old one moves with it (Nyx,
+        // 2026-10-20: "Funds left on Alpha V5 will be stuck once Aztec Alpha
+        // V6 goes live"). Someone who used zk.money from a watched wallet is
+        // told before it can execute (prd §1446).
+        if ZkMoney.hasDeposited, let wallet = addresses.first, let up = await upcomingUpgrade() {
+            land(ref: AztecStakeWire.upgradeRef(up), title: AztecStakeWire.upgradeTitle(up),
+                 url: "https://zk.money", due: up.executableFrom, wallet: wallet)
+        }
         if let wallet = book.stakes.first?.owner {
             for p in book.proposals {
                 land(ref: "aztec:vote:\(p.id)", title: AztecStakeWire.voteTitle(p),
@@ -441,6 +515,13 @@ enum AztecStaking {
             lines.append("vault \(v.atp) | held \(AztecStakeWire.plain(v.held)) | claimable \(v.claimable.map { AztecStakeWire.plain($0) } ?? "unread")")
         }
         for p in book.proposals { lines.append("vote | \(AztecStakeWire.voteTitle(p))") }
+        let rollups = await registryRollups()
+        lines.append("rollups | registry \(rollups.count) | walked \(AztecStakeWire.merged(rollups).count)")
+        if let up = await upcomingUpgrade() {
+            lines.append("upgrade | proposal \(up.id) adds \(up.rollup) | \(AztecStakeWire.upgradeTitle(up)) | needsYou=\(AztecStakeWire.upgradeWaiting(ref: AztecStakeWire.upgradeRef(up)))")
+        } else {
+            lines.append("upgrade | none coming")
+        }
         if book.stakes.isEmpty && book.vaults.isEmpty {
             lines.append(book.complete ? "no stakes (a real empty answer, not a miss)"
                                        : "none found YET: a walk has not reached the head")

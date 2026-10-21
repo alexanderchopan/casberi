@@ -64,8 +64,10 @@ enum ZkMoneyWire {
     static let dai = "0x6b175474e89094c44da98b954eedeac495271d0f"
     static let nameRegistry = "0xa9863b8f573d62377d987ccb9af6e0000f99d14a"
     static let metadataRegistry = "0xda79bae4485c40291363d885aae5b543d2d0efa9"
-    /// Aztec mainnet's rollup version: a record on another is a stale one.
-    static let rollupVersion = 4248422647
+    /// Aztec mainnet's rollup versions, Alpha V5 and V6 (the rollup
+    /// governance proposal 5 adds, prd §1446): a record on another is a
+    /// stale one.
+    static let rollupVersions: Set<Int> = [4_248_422_647, 2_070_860_440]
 
     static func isPortal(_ address: String) -> Bool {
         deployments.contains { $0.portal == address.lowercased() }
@@ -189,7 +191,7 @@ enum ZkMoneyWire {
         let account: String
         let aztec: String?
         let rollupVersion: Int?
-        var onMainnet: Bool { rollupVersion == ZkMoneyWire.rollupVersion }
+        var onMainnet: Bool { rollupVersion.map(ZkMoneyWire.rollupVersions.contains) ?? false }
     }
 
     static func record(tag: String, account: String, userRecord: String?) -> Record {

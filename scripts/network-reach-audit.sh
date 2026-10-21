@@ -52,6 +52,9 @@ KNOWN_NON_REACH=(
   # The Aztec testnet's Governance contract on Sepolia's explorer (prd §1419):
   # the page a testnet vote row opens. Read through the declared Sepolia node.
   sepolia.etherscan.io
+  # zk.money's own site: the door an Aztec upgrade row opens (prd §1446).
+  # The app reads zk.money only through the Wallet's declared mainnet hosts.
+  zk.money
   # **A denylist entry is a claim about CONDUCT** (prd §531, 2026-08-30): a
   # devnet faucet sat here for a day after a Claim button began POSTing to it,
   # and the audit stayed green because nothing re-reads an entry's REASON when

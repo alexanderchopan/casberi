@@ -127,6 +127,41 @@ let mainnetLie = onVersion(4_248_422_647)
 check(AztecSignRequest.check(mainnetLie, live: .init(rollupVersion: 4_248_422_647, l1ChainID: 11_155_111))
       == .refused("This request names a rollup that is not one of Aztec's testnets."),
       "Aztec mainnet's rollup is refused even if a node calls it a testnet")
+let mainnetV6 = onVersion(2_070_860_440)
+check(AztecSignRequest.check(mainnetV6, live: .init(rollupVersion: 2_070_860_440, l1ChainID: 11_155_111))
+      == .refused("This request names a rollup that is not one of Aztec's testnets."),
+      "so is mainnet's V6 rollup, the one governance proposal 5 adds (prd §1446)")
+
+print("names, checked (prd §1446)")
+check(AztecSignRequest.selector(of: "sponsor_unconditionally()") == 0x23d7_7f89
+      && AztecSignRequest.selector(of: "mint_to_public((Field),u128)") == 0x451b_5fae,
+      "a signature's selector is Aztec's, as the mined request carries it")
+check(AztecSignRequest.selector(of: "mint_to_public((Field), u128)") == nil, "a signature with a space is no signature")
+func signed(_ sigs: [String?], names: [String]? = nil) -> AztecSignRequest.Request {
+    callsChanged { calls in
+        for i in calls.indices {
+            if let sig = sigs[i] { calls[i]["signature"] = sig }
+            if let names { calls[i]["name"] = names[i] }
+        }
+    }
+}
+let named = signed(["sponsor_unconditionally()", "mint_to_public((Field),u128)"])
+check(AztecSignRequest.check(named) == .sign(network: "Aztec testnet (v5)"), "true signatures are signed")
+check(AztecSignRequest.check(signed([nil, "transfer_in_public((Field),(Field),u128,Field)"], names: ["sponsor_unconditionally", "transfer_in_public"]))
+      == .refused("A call's name does not match the function it runs. Nothing was signed."),
+      "a call named as another function is refused, though the hash matches")
+check(AztecSignRequest.check(signed([nil, "mint_to_public((Field),u128)"], names: ["sponsor_unconditionally", "burn"]))
+      == .refused("A call's name does not match the function it runs. Nothing was signed."),
+      "a name that is not its own signature's is refused")
+check(AztecSignRequest.line(named.calls[0]) == "The sponsored fee payer pays the fee",
+      "a checked fee call reads in plain words")
+check(AztecSignRequest.line(real.calls[0]) == "sponsor_unconditionally()", "an unchecked one keeps the computer's name")
+check(AztecSignRequest.line(named.calls[1], account: real.account) == "mint_to_public(your account, 1)",
+      "the account itself is \"your account\"")
+check(AztecSignRequest.target(named.calls[1], account: real.account) != "your account"
+      && AztecSignRequest.target(.init(name: "x", to: real.account, selector: "0x1", type: "private",
+                                       hideMsgSender: false, isStatic: false, args: []), account: real.account) == "your account",
+      "a call to the account itself goes to \"your account\"")
 
 print("the signed log")
 let suite = "aztec.sign.selftest.\(ProcessInfo.processInfo.processIdentifier)"
@@ -136,7 +171,7 @@ AztecSignedLog.record(AztecSignedLog.entry(for: real, network: "Aztec testnet (v
 AztecSignedLog.record(AztecSignedLog.entry(for: real, network: "Aztec testnet (v5)", at: Date(timeIntervalSince1970: 2)), defaults)
 let logged = AztecSignedLog.entries(defaults)
 check(logged.count == 1 && logged[0].at == Date(timeIntervalSince1970: 2), "the same hash signed twice is one entry, the newer")
-check(logged[0].lines == real.calls.map(AztecSignRequest.line) && logged[0].account == real.account.lowercased(),
+check(logged[0].lines == real.calls.map { AztecSignRequest.line($0, account: real.account) } && logged[0].account == real.account.lowercased(),
       "it keeps what the sheet showed")
 for i in 0..<40 { AztecSignedLog.record(.init(at: .now, network: "t", account: "a", messageHash: "0x\(i)", lines: []), defaults) }
 check(AztecSignedLog.entries(defaults).count == AztecSignedLog.cap && AztecSignedLog.entries(defaults).first?.messageHash == "0x39",
@@ -197,8 +232,23 @@ mutate "any rollup accepted" \
   '              let network = testnetRollups[version]' \
   '              let network = testnetRollups[version] ?? Optional("any")'
 mutate "Aztec mainnet's rollup trusted when a node vouches" \
-  'guard let version = int(r.version), version != mainnetRollup,' \
+  'guard let version = int(r.version), !mainnetRollups.contains(version),' \
   'guard let version = int(r.version),'
+mutate "mainnet's V6 rollup left off the refused list" \
+  'static let mainnetRollups: Set<Int> = [4_248_422_647, 2_070_860_440]' \
+  'static let mainnetRollups: Set<Int> = [4_248_422_647]'
+mutate "a call's name never checked" \
+  'guard r.calls.allSatisfy({ $0.signature == nil || nameChecked($0) }) else {' \
+  'guard true else {'
+mutate "a signature read big-endian" \
+  'fields.append(Data(chunk.reversed()))' \
+  'fields.append(Data(chunk))'
+mutate "a signature that names another function accepted" \
+  'guard let sig = c.signature, sig.hasPrefix(c.name + "("),' \
+  'guard let sig = c.signature,'
+mutate "your own account drawn as an address" \
+  'if let own, data == own { return String(localized: "your account") }' \
+  'if let own, data == own, false { return String(localized: "your account") }'
 mutate "a live reading trusted off Sepolia" \
   '$0.rollupVersion == version && $0.l1ChainID == l1ChainID ? "Aztec testnet" : nil' \
   '$0.rollupVersion == version ? "Aztec testnet" : nil'

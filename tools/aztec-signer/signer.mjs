@@ -36,6 +36,7 @@ import { EcdsaRSSHAccountContract } from '@aztec/accounts/ecdsa';
 import { EncodedAppEntrypointCalls } from '@aztec/entrypoints/encoding';
 import { SponsoredFPCContract } from '@aztec/noir-contracts.js/SponsoredFPC';
 import { TokenContract } from '@aztec/noir-contracts.js/Token';
+import { FunctionSelector, decodeFunctionSignature } from '@aztec/stdlib/abi';
 import { AuthWitness } from '@aztec/stdlib/auth-witness';
 import { AztecAddress } from '@aztec/stdlib/aztec-address';
 import { getContractInstanceFromInstantiationParams } from '@aztec/stdlib/contract';
@@ -109,6 +110,23 @@ async function askPhone(request, publicKeyHex) {
   throw new Error('no signature came back within five minutes');
 }
 
+// Each call's full signature, so the phone can check the name it shows against
+// the selector the signature covers (prd §1446). Found in the contracts this
+// tool knows; a call to any other goes without one and the phone says the
+// name is this computer's word.
+const signatures = new Map();
+async function signatureOf(selector) {
+  if (!signatures.size) {
+    for (const a of [TokenContract.artifact, SponsoredFPCContract.artifact]) {
+      for (const f of [...a.functions, ...(a.nonDispatchPublicFunctions ?? [])]) {
+        const sig = decodeFunctionSignature(f.name, f.parameters);
+        signatures.set((await FunctionSelector.fromSignature(sig)).toString(), sig);
+      }
+    }
+  }
+  return signatures.get(selector.toString());
+}
+
 class PhoneAccountContract extends EcdsaRSSHAccountContract {
   constructor(publicKeyHex, address) { super(Buffer.from(publicKeyHex, 'hex')); this.hex = publicKeyHex; this.address = address; }
   getAuthWitnessProvider() {
@@ -120,8 +138,9 @@ class PhoneAccountContract extends EcdsaRSSHAccountContract {
         const request = {
           account: self.address.toString(), chainId: info.chainId.toString(), version: info.version.toString(),
           txNonce: pending.txNonce.toString(), messageHash: messageHash.toString(),
-          calls: pending.calls.map(c => ({ name: c.name, to: c.to.toString(), selector: c.selector.toField().toString(),
-            type: String(c.type), hideMsgSender: !!c.hideMsgSender, isStatic: !!c.isStatic, args: c.args.map(a => a.toString()) })),
+          calls: await Promise.all(pending.calls.map(async c => ({ name: c.name, signature: await signatureOf(c.selector),
+            to: c.to.toString(), selector: c.selector.toField().toString(),
+            type: String(c.type), hideMsgSender: !!c.hideMsgSender, isStatic: !!c.isStatic, args: c.args.map(a => a.toString()) }))),
         };
         pending = null;
         const sig = await askPhone(request, hex);
