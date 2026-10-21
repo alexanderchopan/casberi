@@ -246,6 +246,7 @@ grep -q 'thresholdCall(account: account, to: 2)\]' "$SIGNING" || { echo "✗ the
 grep -q 'Add a signer first' Casberi/Casberi/Model/YourAccountChain.swift || { echo "✗ the switch no longer refuses an account with no Signer — every send would wait on nobody (prd §1447)"; exit 1; }
 grep -v '^[[:space:]]*//' Casberi/Casberi/Model/YourAccountSigning.swift | grep -q 'UserDefaults\|amountLimit\|aboveDollars' && { echo "✗ YourAccountSigning enforces an amount in the app: that is not 2-of-2 (prd §1447)"; exit 1; }
 # The Security row offers the switch only where a Signer stands (§1447 item 2).
-grep -q 'guard hasSigner, !single.isEmpty else { return nil }' "$SEC" || { echo "✗ Security offers Set amount on an account with no Signer (prd §1447)"; exit 1; }
+grep -q '(both.isEmpty && (!hasSigner || single.isEmpty))' "$SEC" || { echo "✗ the Spend limit switch can be turned on with no Signer (prd §1447)"; exit 1; }
+grep -q 'Turning it off needs' "$SEC" || { echo "✗ the Spend limit switch no longer says that turning it off needs the signer — it would look off while the chain is 2-of-2 (prd §1447, §83)"; exit 1; }
 
 echo "✓ your account: the address is the factory's, the send's bytes are the module's, amounts add up, Move is in every build, it names only networks this phone can use, and asks where money lacks the recovery key"

@@ -44,9 +44,11 @@ struct MoveSecurity: View {
     @State private var addingOutside = false
     @State private var outsideText = ""
     @FocusState private var outsideFocused: Bool
-    /// The amount field for "both keys above an amount" (prd §1447).
-    @State private var settingAmount = false
+    /// The spend limit being set (prd §1447): the switch is on here before
+    /// the chain says so, while the amount is typed.
+    @State private var limitOn = false
     @State private var amountText = ""
+    @State private var period: LimitPeriod = .month
     @FocusState private var amountFocused: Bool
 
     var body: some View {
@@ -64,11 +66,9 @@ struct MoveSecurity: View {
                     } else { addOutside() } })
                 })
             if addingOutside { outsideField }
-            // Two keys above an amount (prd §1447): a row after the keys it
-            // is made of, its verb opening the amount, or putting it back.
-            row(title: String(localized: "Signing"), line: signingLine,
-                verb: settingAmount ? nil : signingVerb)
-            if settingAmount { amountField }
+            // The spend limit (prd §1447): a switch after the keys it is made
+            // of, the amount beneath it as a sentence.
+            spendLimit
             // Said once, under the keys, only on a device that cannot open
             // them (§1442n item 3; user: "the user will have created their
             // account on the device they are reading this on"): the fact is
@@ -244,37 +244,58 @@ struct MoveSecurity: View {
         // And for the recovery key where money sits (prd §1442m), so Finish
         // clears the nudge as soon as it lands.
         await YourAccountProtection.check(force: true)
+        #if DEBUG
+        NSLog("spendLimit| both=%d single=%d hasSigner=%d thresholds=%@", both.count, single.count, hasSigner ? 1 : 0,
+              standings.map { "\($0.network.name):\($0.threshold.map(String.init) ?? "-"):\($0.keyIndex.map(String.init) ?? "-")" }.joined(separator: ","))
+        // `-spendLimitOpen YES`: the sentence open, as the switch turned on
+        // opens it, because a simulator does not flip a switch.
+        if UserDefaults.standard.bool(forKey: "spendLimitOpen"), both.isEmpty, !limitOn {
+            withAnimation(DS.Motion.standard) { limitOn = true }
+        }
+        #endif
     }
 
-    // MARK: - Signing (prd §1447)
+    // MARK: - The spend limit (prd §1447)
+
+    /// How often the limit starts again (user: "is there option to change
+    /// month?"; "need per tx too!"): the module counts in minutes. Safe's
+    /// Allowance module knows only an amount a period, so PER SEND is the
+    /// amount a minute: each send spends up to it alone, and two inside one
+    /// minute share it (the second waits on the signer).
+    enum LimitPeriod: CaseIterable {
+        case send, day, week, month
+        var minutes: Int {
+            switch self {
+            case .send: 1
+            case .day: 60 * 24
+            case .week: 60 * 24 * 7
+            case .month: 60 * 24 * 30
+            }
+        }
+        var word: String {
+            switch self {
+            case .send: String(localized: "send")
+            case .day: String(localized: "day")
+            case .week: String(localized: "week")
+            case .month: String(localized: "month")
+            }
+        }
+        /// The sentence's glue for it: "a day", "per send".
+        var glue: String { self == .send ? String(localized: "per") : String(localized: "a") }
+        var phrase: String { glue + " " + word }
+        /// The period a limit on the chain resets on, nearest of the three.
+        static func of(minutes: Int) -> LimitPeriod {
+            allCases.min { abs($0.minutes - minutes) < abs($1.minutes - minutes) } ?? .month
+        }
+    }
 
     /// The networks at 2-of-2, and at 1, among those this phone signs on.
     private var both: [Standing] { live.filter { $0.threshold == 2 } }
     private var single: [Standing] { live.filter { $0.threshold == 1 && $0.keyIndex != nil } }
     private var hasSigner: Bool { live.contains { !$0.outside.isEmpty } }
-
-    private var signingLine: String {
-        if standings.isEmpty { return String(localized: "Reading…") }
-        if both.isEmpty {
-            return hasSigner
-                ? String(localized: "Any one key · set an amount above which both keys sign")
-                : String(localized: "Any one key · add a signer to require both above an amount")
-        }
-        let a = both.compactMap { s -> String? in
-            guard let dollar = s.allowance?.amount else { return nil }
-            return MoveSentence.money(Op.dollars(dollar, decimals: 6, price: 1))
-        }.first
-        let where_ = names(both)
-        if let a { return String(localized: "Both keys above \(a) a month on \(where_)") }
-        return String(localized: "Both keys on \(where_)")
-    }
-
-    private var signingVerb: (String, () -> Void)? {
-        guard !standings.isEmpty, working == nil else { return nil }
-        if !both.isEmpty { return (String(localized: "Any one key"), setAnyKey) }
-        guard hasSigner, !single.isEmpty else { return nil }
-        return (String(localized: "Set amount"), { withAnimation(DS.Motion.standard) { settingAmount = true; amountFocused = true } })
-    }
+    private var signerShort: String { live.flatMap(\.outside).first.map(YourAccount.short) ?? String(localized: "your signer") }
+    /// The limit the chain holds, where one does.
+    private var held: YourAccountSigning.Allowance? { both.compactMap(\.allowance).first }
 
     /// Whole dollars, one or more; the dollar's units at six decimals.
     private var amountUnits: String? {
@@ -283,54 +304,137 @@ struct MoveSecurity: View {
         return String(n) + "000000"
     }
 
-    private var amountField: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s2) {
-            TextField("Dollars a month, with Face ID alone", text: $amountText)
-                .keyboardType(.numberPad)
-                .focused($amountFocused)
-                .dsText(.body17)
-                .foregroundStyle(DS.textPrimary)
-                .disabled(working != nil)
-            // One file, one footnote (§748): the signer's field has it, so
-            // this is a fact in the rows' rung, not an explanation.
-            Text("Above it, your signer signs too — and so does any change to these keys.")
-                .dsText(.subhead12).foregroundStyle(DS.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-            HStack {
-                Button { setBothKeys() } label: {
-                    Text("Require both keys")
-                        .dsText(.heading17)
-                        .foregroundStyle(amountUnits == nil || working != nil ? DS.textTertiary : DS.pickInk)
-                        .frame(minHeight: 44)
+    private func dollars(_ units: String) -> String {
+        MoveSentence.money(Op.dollars(units, decimals: 6, price: 1))
+    }
+
+    /// The switch: on where the chain says 2-of-2, or while an amount is
+    /// being set. Turning it on opens the amount; off before it is set drops
+    /// it, nothing sent; off at 2-of-2 is itself a two-key transaction, and
+    /// until the signer's half is built it says so and stays on (§83).
+    private var limitBinding: Binding<Bool> {
+        Binding(get: { !both.isEmpty || limitOn }, set: { on in
+            if on, both.isEmpty {
+                withAnimation(DS.Motion.standard) { limitOn = true; amountText = "" }
+                Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(250))
+                    amountFocused = true
                 }
-                .buttonStyle(RowPress())
-                .disabled(amountUnits == nil || working != nil)
-                Spacer()
-                Button { withAnimation(DS.Motion.standard) { settingAmount = false; amountText = "" } } label: {
-                    Text("Cancel").dsText(.body17).foregroundStyle(DS.textSecondary).frame(minHeight: 44)
-                }
-                .buttonStyle(RowPress())
-                .disabled(working != nil)
+            } else if !on, both.isEmpty {
+                withAnimation(DS.Motion.standard) { limitOn = false; amountText = "" }
+                amountFocused = false
+            } else if !on {
+                chrome.flash(String(localized: "Turning it off needs \(signerShort) to sign too — coming next"), seconds: 5)
             }
+        })
+    }
+
+    private var limitLine: String {
+        if standings.isEmpty { return String(localized: "Reading…") }
+        if let held {
+            let every = LimitPeriod.of(minutes: held.resetMinutes)
+            var line = String(localized: "Over \(dollars(held.amount)) \(every.phrase), \(signerShort) signs too")
+            if held.spent != "0" { line += " · " + String(localized: "\(dollars(held.spent)) spent") }
+            if held.resetMinutes > 1 {
+                let reset = Date(timeIntervalSince1970: TimeInterval((held.lastReset + held.resetMinutes) * 60))
+                line += " · " + String(localized: "resets \(reset.formatted(.dateTime.month(.abbreviated).day()))")
+            }
+            return line
+        }
+        if !both.isEmpty { return String(localized: "\(signerShort) signs every send") }
+        if limitOn { return String(localized: "Over it, \(signerShort) signs too") }
+        if !hasSigner { return String(localized: "Off · add a signer to set one") }
+        return String(localized: "Off · any one key signs")
+    }
+
+    @ViewBuilder private var spendLimit: some View {
+        DSToggleRow(title: Text("Spend limit"), detail: Text(verbatim: limitLine), isOn: limitBinding)
+            .disabled(standings.isEmpty || working != nil || (both.isEmpty && (!hasSigner || single.isEmpty)))
+            .frame(minHeight: 60)
+            .padding(.vertical, DS.Space.s1)
+        if !both.isEmpty || limitOn { limitSentence }
+    }
+
+    /// The amount, as Move says things (§1438): the glue in the gutter, the
+    /// value large, pink while it can be changed.
+    private var limitSentence: some View {
+        let editing = both.isEmpty
+        return VStack(alignment: .leading, spacing: DS.Space.s2) {
+            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                Text("up to").dsText(.body17).foregroundStyle(DS.textPrimary).frame(width: 44, alignment: .leading)
+                if editing {
+                    HStack(alignment: .firstTextBaseline, spacing: 0) {
+                        Text(verbatim: "$").dsText(.heading28).foregroundStyle(DS.pickInk)
+                        TextField("500", text: $amountText)
+                            .keyboardType(.numberPad)
+                            .focused($amountFocused)
+                            .dsText(.heading28)
+                            .foregroundStyle(DS.pickInk)
+                            .tint(DS.pickInk)
+                            .fixedSize()
+                            .accessibilityLabel(Text("Dollars a month"))
+                    }
+                } else {
+                    Text(verbatim: held.map { dollars($0.amount) } ?? "—").dsText(.heading28).foregroundStyle(DS.textPrimary)
+                }
+                Spacer(minLength: DS.Space.s2)
+                if editing {
+                    Button { setBothKeys() } label: {
+                        Text(working?.row == "limit" ? working!.label : String(localized: "Set"))
+                            .dsText(.body17)
+                            .foregroundStyle(amountUnits == nil || working != nil ? DS.textTertiary : DS.pickInk)
+                            .frame(minHeight: 44)
+                    }
+                    .buttonStyle(RowPress())
+                    .disabled(amountUnits == nil || working != nil)
+                }
+            }
+            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                Text(verbatim: editing ? period.glue : LimitPeriod.of(minutes: held?.resetMinutes ?? LimitPeriod.month.minutes).glue)
+                    .dsText(.body17).foregroundStyle(DS.textPrimary).frame(width: 44, alignment: .leading)
+                if editing {
+                    // A blank of the sentence: pink, and its choices in a menu.
+                    Menu {
+                        ForEach(LimitPeriod.allCases, id: \.self) { p in
+                            Button { withAnimation(DS.Motion.standard) { period = p } } label: {
+                                if p == period { Label(p.word, systemImage: "checkmark") } else { Text(verbatim: p.word) }
+                            }
+                        }
+                    } label: {
+                        Text(verbatim: period.word).dsText(.heading28).foregroundStyle(DS.pickInk)
+                            .contentTransition(.opacity)
+                    }
+                    .accessibilityLabel(Text("How often it starts again"))
+                } else {
+                    Text(verbatim: LimitPeriod.of(minutes: held?.resetMinutes ?? LimitPeriod.month.minutes).word)
+                        .dsText(.heading28).foregroundStyle(DS.textPrimary)
+                }
+            }
+            Text(editing ? "with Face ID alone." : "with Face ID alone. A new amount needs both keys.")
+                .dsText(.subhead12).foregroundStyle(DS.textSecondary)
+                .padding(.leading, 44 + DS.Space.s2)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .padding(.bottom, DS.Space.s3)
+        .transition(.opacity.combined(with: .move(edge: .top)))
     }
 
     /// 2-of-2 above the amount, on every network this phone signs on at 1
-    /// that has a dollar: one operation each, the threshold last.
+    /// with a Signer: one operation each, the threshold last.
     private func setBothKeys() {
         guard working == nil, let units = amountUnits else { return }
         let targets = single.filter { !$0.outside.isEmpty }.map(\.network)
         guard !targets.isEmpty else { return }
-        working = (String(localized: "Signing"), String(localized: "Setting…"))
+        amountFocused = false
+        working = ("limit", String(localized: "Setting…"))
         Task {
             var done: [String] = []
             var failed: [String] = []
             for net in targets {
                 do {
                     let sent = try await Chain.setBothKeys(
-                        on: net, token: net.dollar, amount: units, resetMinutes: 60 * 24 * 30,
-                        reason: String(localized: "Require both keys above an amount on \(net.name)")) { _ in }
+                        on: net, token: net.dollar, amount: units, resetMinutes: period.minutes,
+                        reason: String(localized: "Set a spend limit of \(dollars(units)) \(period.phrase) on \(net.name)")) { _ in }
                     if case .pending = sent.outcome { failed.append(String(localized: "\(net.name): sent, not yet seen")) }
                     else { done.append(net.name) }
                 } catch let failure as Chain.Failure {
@@ -340,21 +444,14 @@ struct MoveSecurity: View {
                 }
             }
             working = nil
-            settingAmount = false
-            amountText = ""
             await read()
+            withAnimation(DS.Motion.standard) { limitOn = false; amountText = ""; period = .month }
             if failed.isEmpty {
-                chrome.flash(String(localized: "Both keys above the amount on \(done.formatted(.list(type: .and)))"), tone: .success)
+                chrome.flash(String(localized: "Spend limit set on \(done.formatted(.list(type: .and)))"), tone: .success)
             } else {
                 chrome.flash(failed.joined(separator: " · "), tone: done.isEmpty ? .failure : .neutral, seconds: 6)
             }
         }
-    }
-
-    /// Back to any one key: itself a two-key transaction, so it goes to the
-    /// signer to co-sign (prd §1447 item 3) — until that path lands, it says so.
-    private func setAnyKey() {
-        chrome.flash(String(localized: "Going back to one key needs your signer to sign too — coming next"), seconds: 5)
     }
 
     // MARK: - The outside key (prd §1432)
