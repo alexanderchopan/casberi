@@ -45,7 +45,7 @@ extension FeedScreen {
                 lines.append(OverviewLine(name: Self.accountsName, figure: "\(accounts.count)"))
             }
             let waiting = Self.things(needs + dated).filter(\.isLive)
-            let asks = waiting.count + (OutsideKeyNudge.shown ? 1 : 0)
+            let asks = waiting.count + (OutsideKeyNudge.shown ? 1 : 0) + (RecoveryKeyNudge.shown ? 1 : 0)
             if asks > 0 {
                 lines.append(OverviewLine(name: Self.needsYouGroup, figure: "\(asks)"))
             }
@@ -94,13 +94,16 @@ extension FeedScreen {
         // Your account's outside key leads Needs you while it has none
         // (prd §1432), on All, where the account stands among the rest.
         let nudge = onAll && OutsideKeyNudge.shown
-        if !restNeeds.isEmpty || !restDated.isEmpty || nudge {
+        // Money on a network without the recovery key leads (prd §1442m).
+        let unprotected = onAll && RecoveryKeyNudge.shown
+        if !restNeeds.isEmpty || !restDated.isEmpty || nudge || unprotected {
             let open = walletOpenSections.contains("needs")
             let total = restNeeds.count + restDated.count
             let firstNeeds = open ? restNeeds : Array(restNeeds.prefix(Self.walletHomeCap))
             let firstDated = open ? restDated : Array(restDated.prefix(max(0, Self.walletHomeCap - firstNeeds.count)))
             walletPanel(Self.needsYouGroup, glyph: Self.walletHomeGlyph(Self.needsYouGroup),
                         things: Self.things(restNeeds + restDated)) {
+                if unprotected { RecoveryKeyNudge().listRow }
                 if nudge { OutsideKeyNudge().listRow }
                 if !firstNeeds.isEmpty {
                     walletDaySections([(Self.needsYouGroup, firstNeeds)],

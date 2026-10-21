@@ -225,4 +225,15 @@ for f in Casberi/Casberi/Screens/MoveSentence.swift Casberi/Casberi/Screens/Move
 done
 grep -q 'reach = await YourAccountReach.usable(account)' Casberi/Casberi/Screens/MoveSentence.swift || { echo "✗ the sentence no longer reads where the account can be used (prd §1442k)"; exit 1; }
 
-echo "✓ your account: the address is the factory's, the send's bytes are the module's, amounts add up, Move is in every build, and it names only networks this phone can use"
+# Security offers only the networks this phone can sign on (prd §1442m): a
+# Finish aimed at the rest is offered and then refused.
+SEC=Casberi/Casberi/Screens/MoveSecurity.swift
+grep -q 'let targets = fixable.map(\\.network)' "$SEC" || { echo "✗ the recovery row's Finish no longer aims only at this phone's networks (prd §1442m)"; exit 1; }
+grep -q 'outside.isEmpty && canFix($0) }.map(\\.network)' "$SEC" || { echo "✗ the outside key's Finish no longer aims only at this phone's networks (prd §1442m)"; exit 1; }
+# Money on a network without the recovery key is asked about, from the sweep,
+# and never signed for on its own (prd §1442m).
+grep -q 'await YourAccountProtection.check()' Casberi/Casberi/Model/BridgeRefresh.swift || { echo "✗ the foreground sweep no longer checks for money the recovery key does not cover (prd §1442m)"; exit 1; }
+grep -v '^[[:space:]]*//' Casberi/Casberi/Model/YourAccountProtection.swift | grep -q 'addRecovery\|addOutsideKey\|transact(' && { echo "✗ YourAccountProtection signs: opening a network is a Face ID the person asks for (prd §1442m)"; exit 1; }
+grep -q 'RecoveryKeyNudge().listRow' Casberi/Casberi/Screens/FeedScreen+WalletHome.swift || { echo "✗ the Wallet's Home no longer draws the recovery-key row (prd §1442m)"; exit 1; }
+
+echo "✓ your account: the address is the factory's, the send's bytes are the module's, amounts add up, Move is in every build, it names only networks this phone can use, and asks where money lacks the recovery key"

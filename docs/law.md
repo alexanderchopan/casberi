@@ -1819,7 +1819,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1441 — Robinhood Chain joins the account: three live networks, each with send, receive and swap [+1 sub-entries]
 - §1442 — Move is a tray, raised from its tab over wherever you are (amends §1422's place) [+3 sub-entries]
 - §1443 — The toast draws above every sheet [+9 sub-entries]
-- §1444 — An app's settings are on its page: the name in the title wears the sliders disc and opens them; Casberi › Apps is del…
+- §1444 — An app's settings are on its page: the name in the title wears the sliders disc and opens them; Casberi › Apps is del… [+1 sub-entries]
 
 ## Dead rulings → what replaced them (generated)
 

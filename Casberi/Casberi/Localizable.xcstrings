@@ -2091,6 +2091,34 @@
         }
       }
     },
+    "%@ · not yet on %@ · your other device adds %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ · aún no en %2$@ · tu otro dispositivo añade %3$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ · %2$@ はまだ · %3$@ はもう一台のデバイスで追加"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ · %2$@에는 아직 · %3$@은(는) 다른 기기에서 추가"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ · 尚未在 %2$@ 上 · %3$@ 由你的另一台设备添加"
+          }
+        }
+      }
+    },
     "%@ · on %@" : {
       "localizations" : {
         "es" : {
@@ -2367,6 +2395,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "%@ · 1 张票"
+          }
+        }
+      }
+    },
+    "%@ · your other device adds %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ · tu otro dispositivo añade %2$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ · %2$@ はもう一台のデバイスで追加"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ · %2$@은(는) 다른 기기에서 추가"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ · %2$@ 由你的另一台设备添加"
           }
         }
       }
@@ -4981,6 +5037,34 @@
         }
       }
     },
+    "Add your recovery key" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Añade tu clave de recuperación"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "復旧キーを追加"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "복구 키 추가"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "添加你的恢复密钥"
+          }
+        }
+      }
+    },
     "Copies your address, opens Coinbase" : {
       "localizations" : {
         "es" : {
@@ -5341,6 +5425,90 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "还没有可花的"
+          }
+        }
+      }
+    },
+    "On %@ · not yet on %@ · your other device adds %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "En %1$@ · aún no en %2$@ · tu otro dispositivo añade %3$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ に設定済み · %2$@ はまだ · %3$@ はもう一台のデバイスで追加"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@에 있음 · %2$@에는 아직 · %3$@은(는) 다른 기기에서 추가"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已在 %1$@ · 尚未在 %2$@ · %3$@ 由你的另一台设备添加"
+          }
+        }
+      }
+    },
+    "On %@ · your other device adds %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "En %1$@ · tu otro dispositivo añade %2$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ に設定済み · %2$@ はもう一台のデバイスで追加"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@에 있음 · %2$@은(는) 다른 기기에서 추가"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已在 %1$@ · %2$@ 由你的另一台设备添加"
+          }
+        }
+      }
+    },
+    "On %@, only this %@ can move it" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "En %1$@, solo este %2$@ puede moverlo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ では、この %2$@ だけが動かせます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@에서는 이 %2$@만 옮길 수 있습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 %1$@ 上，只有这台 %2$@ 能转移它"
           }
         }
       }

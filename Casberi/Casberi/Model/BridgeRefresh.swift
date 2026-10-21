@@ -421,6 +421,15 @@ enum BridgeRefresh {
                 _ = await NerdWalletIngest.refresh(context: context)
             }
         }
+        // Your money on a network without the recovery key (prd §1442m): a
+        // few reads per network, at most every ten minutes, and a row under
+        // Needs you when this phone can fix it. Never signs: that is Face ID.
+        if YourAccountKey.address != nil {
+            let s = slot(); BridgeRefresh.landingTask { @MainActor in
+                await BridgeRefresh.stagger(s)
+                await YourAccountProtection.check()
+            }
+        }
         // What the articles actually SAY (2026-08-06) — a bounded, ledgered
         // read of the pages RSS and Substack rows already link to, into
         // retrieval-only `enrichedText`. Its own slot: it is several fetches

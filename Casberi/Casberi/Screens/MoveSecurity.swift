@@ -130,16 +130,34 @@ struct MoveSecurity: View {
     /// so money on a network never used cannot be stuck behind one key).
     private var missing: [Standing] { standings.filter { $0.recovery != .added } }
 
+    /// The missing networks this phone can put the key on: where it signs, or
+    /// — where the account is not there yet — only on the phone that made it
+    /// (prd §1442m). The rest are named, never offered and refused.
+    private var fixable: [Standing] {
+        missing.filter { $0.deployed ? $0.keyIndex != nil : YourAccountKey.holdsOrigin }
+    }
+    private var stuck: [Standing] {
+        let ids = Set(fixable.map(\.id))
+        return missing.filter { !ids.contains($0.id) }
+    }
+
+    /// Whether this phone can sign the change on a network (prd §1442m).
+    private func canFix(_ s: Standing) -> Bool {
+        s.deployed ? s.keyIndex != nil : YourAccountKey.holdsOrigin
+    }
+
     private var recoveryLine: String {
         if standings.isEmpty { return String(localized: "Reading…") }
         let on = standings.filter { $0.recovery == .added }
         if on.isEmpty { return String(localized: "Not set up · for a new iPhone") }
         if missing.isEmpty { return String(localized: "On \(names(on))") }
-        return String(localized: "On \(names(on)) · not yet on \(names(missing))")
+        if stuck.isEmpty { return String(localized: "On \(names(on)) · not yet on \(names(missing))") }
+        if fixable.isEmpty { return String(localized: "On \(names(on)) · your other device adds \(names(stuck))") }
+        return String(localized: "On \(names(on)) · not yet on \(names(fixable)) · your other device adds \(names(stuck))")
     }
 
     private var recoveryVerb: String? {
-        guard !standings.isEmpty, !missing.isEmpty else { return nil }
+        guard !standings.isEmpty, !fixable.isEmpty else { return nil }
         return standings.contains { $0.recovery == .added } ? String(localized: "Finish") : String(localized: "Set up")
     }
 
@@ -185,6 +203,9 @@ struct MoveSecurity: View {
         // the account is on has one (prd §1432).
         let live = standings.filter(\.deployed)
         YourAccountKey.noteOutsideKey(held: !live.isEmpty && live.allSatisfy { !$0.outside.isEmpty })
+        // And for the recovery key where money sits (prd §1442m), so Finish
+        // clears the nudge as soon as it lands.
+        await YourAccountProtection.check(force: true)
     }
 
     // MARK: - The outside key (prd §1432)
@@ -199,13 +220,17 @@ struct MoveSecurity: View {
         }
         let who = keys.count == 1 ? YourAccount.short(one) : String(localized: "\(keys.count) keys")
         if missing.isEmpty { return String(localized: "\(who) · on \(names(on))") }
-        return String(localized: "\(who) · not yet on \(names(missing))")
+        // The networks only the first phone can open are named, not offered.
+        let here = missing.filter(canFix), there = missing.filter { !canFix($0) }
+        if there.isEmpty { return String(localized: "\(who) · not yet on \(names(missing))") }
+        if here.isEmpty { return String(localized: "\(who) · your other device adds \(names(there))") }
+        return String(localized: "\(who) · not yet on \(names(here)) · your other device adds \(names(there))")
     }
 
     private var outsideVerb: String? {
         guard !standings.isEmpty else { return nil }
         if live.allSatisfy({ $0.outside.isEmpty }) { return String(localized: "Add") }
-        return standings.contains { $0.outside.isEmpty } ? String(localized: "Finish") : nil
+        return standings.contains { $0.outside.isEmpty && canFix($0) } ? String(localized: "Finish") : nil
     }
 
     /// The address to add, the one warning that matters, and the verb.
@@ -269,7 +294,7 @@ struct MoveSecurity: View {
     /// created where it is not there yet (§1427's rule: nothing stuck).
     private func addOutside() {
         guard working == nil, let owner = addingOutside ? outsideCandidate : live.flatMap(\.outside).first else { return }
-        let targets = standings.filter { $0.outside.isEmpty }.map(\.network)
+        let targets = standings.filter { $0.outside.isEmpty && canFix($0) }.map(\.network)
         working = (String(localized: "Outside key"), String(localized: "Adding…"))
         Task {
             var done: [String] = []
@@ -304,7 +329,7 @@ struct MoveSecurity: View {
     /// operation each; a network that cannot pay its fee is named, not fatal.
     private func setUp() {
         guard working == nil else { return }
-        let targets = missing.map(\.network)
+        let targets = fixable.map(\.network)
         working = (String(localized: "Recovery key"), String(localized: "Setting up…"))
         Task {
             var done: [String] = []
@@ -410,6 +435,50 @@ struct OutsideKeyNudge: View {
         } label: {
             DSFeedRow(name: String(localized: "Add a key you hold outside Casberi"),
                       line: Text("So your account never depends on this app")) {
+                if let address = YourAccountKey.address {
+                    WalletFace(address: address, size: DS.Face.seat, circular: true)
+                }
+            } trailing: {
+                EmptyView()
+            } below: {
+                EmptyView()
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(RowPress())
+        .accessibilityHint(Text("Opens the Wallet's security tile"))
+    }
+
+    /// As a row of a `List`, in the feed's insets.
+    var listRow: some View {
+        self
+            .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DSRoomChassis.rowInset,
+                                      bottom: DS.Space.s2, trailing: DSRoomChassis.rowInset))
+            .feedRowBackground()
+            .listRowSeparator(.hidden)
+    }
+}
+
+/// **THE RECOVERY-KEY NUDGE (prd §1442m): one row under Needs you** while a
+/// network holds your money without the recovery key, and this phone can put
+/// it there (`YourAccountProtection`). It leads Needs you: until the key is
+/// there, losing this phone loses that money. Opens the Wallet's Security,
+/// where the recovery row's Finish opens the network and adds the key.
+struct RecoveryKeyNudge: View {
+    @Environment(ShellChrome.self) private var chrome
+
+    static var shown: Bool { YourAccountProtection.shown }
+
+    var body: some View {
+        let names = YourAccountProtection.unprotected.map(\.name).formatted(.list(type: .and))
+        Button {
+            DSHaptic.selection()
+            chrome.openWalletSecurity(at: FeedScreen.SecurityAnchor.account.id)
+        } label: {
+            // One line each (§902): the verb is the title, as the outside
+            // key's row; where the money is rides the line.
+            DSFeedRow(name: String(localized: "Add your recovery key"),
+                      line: Text("On \(names), only this \(ThisDevice.name) can move it")) {
                 if let address = YourAccountKey.address {
                     WalletFace(address: address, size: DS.Face.seat, circular: true)
                 }

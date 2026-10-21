@@ -64,9 +64,12 @@ extension FeedScreen {
         let rows = Array(walletNeeds.live.prefix(limit))
         // Your account's outside key, while it has none (prd §1432).
         let nudge = OutsideKeyNudge.shown
-        if !rows.isEmpty || nudge {
+        // Money on a network without the recovery key leads (prd §1442m).
+        let unprotected = RecoveryKeyNudge.shown
+        if !rows.isEmpty || nudge || unprotected {
             DSGroupHeader(word: Self.needsYouGroup)
                 .feedRowBackground()
+            if unprotected { RecoveryKeyNudge().listRow }
             if nudge { OutsideKeyNudge().listRow }
             // Keyed by value, read live (`ThingRowKeying`, the liveness rule).
             ForEach(Array(keyed(rows).enumerated()), id: \.element.id) { i, item in

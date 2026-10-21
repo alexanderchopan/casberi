@@ -3951,6 +3951,15 @@ enum ProbeHooks {
                 }
             }
         },
+        // `-recoveryNudgePreview "<chainId,…>"` — draw Needs you's recovery-key
+        // row for these networks (prd §1442m) on a phone that cannot fix them.
+        Hook(key: "recoveryNudgePreview") { raw, _ in
+            Task { @MainActor in
+                let ids = raw.split(separator: ",").compactMap { Int($0.trimmingCharacters(in: .whitespaces)) }
+                YourAccountProtection.preview(ids)
+                NSLog("recoveryNudgePreview: %@", ids.map(String.init).joined(separator: ","))
+            }
+        },
         // `-yourAccountApproveProbe "<network>|<token>|<spender>|<units>"` —
         // grant ONE small ERC-20 approval from your account, so Revoke
         // (prd §1437, §1442l) has a real grant to take back. Rides
