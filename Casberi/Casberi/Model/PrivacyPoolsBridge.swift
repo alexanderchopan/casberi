@@ -59,6 +59,31 @@ import SwiftData
 /// - A real deposit round-tripped end-to-end: block 25581320's 0.07 ETH
 ///   deposit decoded off both events and came back from deposits-by-label
 ///   with matching label/txHash/amount and `reviewStatus: approved`.
+///
+/// V2 (deployed 2026-09-01, read here since 2026-10-21) is a SECOND protocol
+/// beside v1, not a migration: v1's pools still hold money and can still be
+/// reclaimed from, so both are read, each from its own cursor. MEASURED
+/// 2026-10-21 against mainnet and `api-v2.0xbow.io`:
+/// - A plain deposit indexes the depositor on the v2 Entrypoint
+///   (`Deposited(asset indexed, depositor indexed, amount, fee)`); a YIELD
+///   deposit (ppUSDC/ppETH/ppUSDT, ~87% of v2's first 167 deposits) goes
+///   through a per-share PPRouter whose own `Deposited` indexes the person
+///   FIRST — the Entrypoint sees the router as the depositor. Two reads.
+/// - The LABEL is encrypted to the ASP at deposit (`LabelRegistered(bytes)`
+///   is ciphertext), so v2 keys a deposit by its COMMITMENT — the PoolVault
+///   `Deposited`'s first word, which is also the second word of the
+///   `Ragequit` that undoes it (all nine live ragequits matched).
+/// - Review status is keyless: `/1/public/events` under an `X-Asset` header
+///   (the SHARE token for a yield deposit), pages from 1, newest first, each
+///   deposit carrying `txHash` and `reviewStatus` — joined by transaction.
+///   `deposits-by-label` answers `[]` for every v2 deposit tried.
+/// - Status values are v1's minus the terminal pair: pending | approved |
+///   declined | poi_required (0xBow's website-v2 `services/api-types.ts`).
+/// - v2 has no `pools-stats`; its per-asset `acceptedDepositsCount` is at
+///   `/1/public/assets-stats` and is NOT read yet, so a v2 deposit lands
+///   without a cover line rather than with v1's figure.
+/// - Mainnet only, like v1: BNB Chain and Citrea run the same addresses and
+///   wait until someone here deposits there.
 enum PrivacyPoolsBridge {
 
     /// Mainnet only for now — Optimism/Arbitrum share a different Entrypoint
@@ -102,6 +127,79 @@ enum PrivacyPoolsBridge {
     private static var poolAddresses: [String] { Array(pools.keys) }
 
     private static let aspBase = "https://api.0xbow.io/1/public"
+
+    /// Where each version's deposits are managed — the door a status row
+    /// opens. `app.0xbow.io` stopped resolving by 2026-10-21; v1 lives at the
+    /// project's own domain now and v2 at its subdomain.
+    static let v1AppURL = "https://privacypools.com"
+    static let v2AppURL = "https://v2.privacypools.com"
+
+    // MARK: - V2 (same addresses on every v2 chain; mainnet read only)
+
+    static let v2Entrypoint = "0xca1e072236d231130059eea6bfceb7f4e9a1f0c3"
+    static let v2PoolVault = "0x0eb42804bf897662af851370eaeadcdbec1b97ed"
+    /// PoolVault's `Initialized` block — nothing v2 exists before it.
+    private static let v2DeployBlock = 25_884_277
+    private static let v2ASPBase = "https://api-v2.0xbow.io/1/public"
+
+    /// Entrypoint `Deposited(address indexed asset, address indexed depositor,
+    /// uint256 amount, uint256 fee)`. Same topic0 as v1's Entrypoint (same
+    /// shape), different contract — the address keeps the reads apart.
+    private static let v2DepositedTopic = depositedTopic
+    /// PPRouter `Deposited(address indexed depositor, address indexed share,
+    /// uint256 shares, uint256 underlyingIn, uint256 sharesOut)`.
+    private static let v2RouterDepositedTopic =
+        "0x8bab6aed5a508937051a144e61d6e61336834a66aaee250a00613ae6f744c422"
+    /// PoolVault `Deposited(uint256 commitment, address indexed asset,
+    /// uint256 value, address indexed entrypoint)` — the commitment.
+    private static let v2PoolDepositedTopic =
+        "0xed45e0df2bf0e287a792a7b79b19292af5cbab76cc8819049bf37aa067bf8501"
+    /// PoolVault `Ragequit(address indexed ragequitter, address indexed asset,
+    /// uint256 value, uint256 commitment, uint256 nullifierHash, uint256 label)`.
+    private static let v2RagequitTopic =
+        "0x507455b25c1a4595720da5b6a8f6b76e4aa36db987a63b47266112d3cbf2e103"
+
+    struct V2Asset {
+        let symbol: String
+        let decimals: Int
+    }
+
+    /// What a v2 pool holds, keyed by lowercased asset address — the
+    /// Entrypoint's topics[1], the Ragequit's topics[2] and the ASP's
+    /// `X-Asset`. The yield shares are 18-decimal ERC-4626 wrappers over Aave
+    /// (read off each contract, 2026-10-21). An asset missing here still
+    /// lands and still polls; it is titled "crypto" and carries no figure.
+    static let v2Assets: [String: V2Asset] = [
+        "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee": V2Asset(symbol: "ETH", decimals: 18),
+        "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48": V2Asset(symbol: "USDC", decimals: 6),
+        "0xc246afb23482ff9596e9cee5f1f678efe0eb1ad6": V2Asset(symbol: "ppUSDC", decimals: 18),
+        "0x66051920d25af4e3596a8a46309f4d045f9d83b7": V2Asset(symbol: "ppETH", decimals: 18),
+        "0xa4cf419558ef36cc6ffb666195684dc963910426": V2Asset(symbol: "ppUSDT", decimals: 18),
+    ]
+
+    struct V2Router {
+        /// The share token the router deposits — the asset the ASP files it under.
+        let share: String
+        /// What the person paid in, which is what the row states.
+        let underlying: V2Asset
+    }
+
+    /// The three mainnet PPRouters (one per yield share, from the Entrypoint's
+    /// own deposit log), keyed by lowercased router address. Each one's
+    /// `UNDERLYING()` was read live; ppETH's router runs in native mode, so
+    /// what goes in is ETH. A router the factory adds later is not read until
+    /// it is listed here.
+    static let v2Routers: [String: V2Router] = [
+        "0xe76e793d776c1e207ad7a7fa7c57d27420d85110": V2Router(
+            share: "0xc246afb23482ff9596e9cee5f1f678efe0eb1ad6",
+            underlying: V2Asset(symbol: "USDC", decimals: 6)),
+        "0x77613d670bb9fd48a9898d0eac8ebf21b566f960": V2Router(
+            share: "0x66051920d25af4e3596a8a46309f4d045f9d83b7",
+            underlying: V2Asset(symbol: "ETH", decimals: 18)),
+        "0x13a0b86bac3e0c29bd64fed7bcd2ee84f371f41c": V2Router(
+            share: "0xa4cf419558ef36cc6ffb666195684dc963910426",
+            underlying: V2Asset(symbol: "USDT", decimals: 6)),
+    ]
 
     struct Pool {
         let symbol: String
@@ -162,8 +260,15 @@ enum PrivacyPoolsBridge {
 
     /// Wallet unwatch takes this seat's cursor and that wallet's pending
     /// entries with it — called from WalletStore beside the siblings'.
+    /// V2's own cursor: v1's has long passed v2's deploy block, so sharing it
+    /// would skip every v2 deposit made before today.
+    private static func v2CursorKey(_ address: String) -> String {
+        "privacypools.v2cursor.\(address.lowercased())"
+    }
+
     static func clearState(address: String) {
         UserDefaults.standard.removeObject(forKey: cursorKey(address))
+        UserDefaults.standard.removeObject(forKey: v2CursorKey(address))
         let wallet = address.lowercased()
         setPending(pending().filter { $0["wallet"] != wallet })
         // …and the catalog seat's mark, or the seat stays lit for a wallet
@@ -195,7 +300,9 @@ enum PrivacyPoolsBridge {
 
     /// Each entry: label (decimal), scope (decimal), symbol, amount (display
     /// string), wallet (lowercased hex), status (last seen; "" = just landed,
-    /// baseline unknown).
+    /// baseline unknown). A v2 entry adds `v: "2"`, its `tx` and its `asset`
+    /// (the ASP answers v2 by transaction under an asset) and has no scope;
+    /// its `label` is the deposit's commitment, the key its row lands under.
     private static func pending() -> [[String: String]] {
         (UserDefaults.standard.array(forKey: pendingKey) as? [[String: String]]) ?? []
     }
@@ -374,11 +481,16 @@ enum PrivacyPoolsBridge {
                     context.insert(thing)
                     SpotlightIndex.index([thing])
                 }
+                closeReclaims(landed, context: context)
                 // Land and SAVE before advancing (the WalletApprovals rule).
                 guard context.saveHonestly() else { continue }
                 added += landed.count
             }
             defaults.set(scanned, forKey: key)
+        }
+        for address in addresses {
+            added += await syncV2(context: context, wallet: address,
+                                  latest: latest, existing: existing)
         }
 
         // The status poll rides every pass, reachable-RPC or not — the ASP
@@ -477,6 +589,8 @@ enum PrivacyPoolsBridge {
             for address in addresses {
                 UserDefaults.standard.set(max(deployBlock - 1, latest - back),
                                           forKey: cursorKey(address))
+                UserDefaults.standard.set(max(v2DeployBlock - 1, latest - back),
+                                          forKey: v2CursorKey(address))
             }
         }
         return await syncLocked(context: context, addresses: addresses,
@@ -588,44 +702,9 @@ enum PrivacyPoolsBridge {
             let amount = value.map { WalletIngest.format($0) }
             let what = pool.map { "\(amount ?? "") \($0.symbol)" } ?? "crypto"
             let capturedAt = times[deposit.block] ?? .now
-            let thing = Thing(
-                kind: .transaction,
-                title: String(localized: "Put \(what) into Privacy Pools"),
-                content: "https://etherscan.io/tx/\(deposit.txHash)",
-                source: "Privacy Pools",
-                capturedAt: capturedAt,
-                tags: ["Shielded", "Pending"],
-                sourceRef: ref)
-            thing.walletAddress = wallet
-            // The amount as DATA (prd §369, 2026-08-12) — the same
-            // `transferAmount` slot the cards and Railgun already fill. Until
-            // this it existed only inside the localized title, so the receipt
-            // could not state a figure without parsing a sentence, which is the
-            // one thing it refuses to do. Only when a pool resolved: `what`
-            // falls back to the word "crypto", and "crypto" is not an amount.
-            // An existing field — no CloudKit deploy — and rows landed before
-            // today simply keep leading with their title.
-            if pool != nil { thing.transferAmount = what }
-            // The DIRECTION, so the room's rows read as a ledger (prd §485).
-            // `BandRow.moneyColumn` needs the pair — an amount with no
-            // direction has no sign, so it stays inside the sentence — and
-            // until this the pair was half-stamped: §369 landed the amount and
-            // nothing ever landed the side it went. Money into the pool is
-            // money out of the wallet, which is what "sent" means everywhere
-            // else in this app.
-            thing.transferDirection = "sent"
-            // The size as STRUCTURED data (prd §397, 2026-08-17) — the same
-            // `priceValue`/`priceCurrency` pair Railgun and the cards already
-            // stamp, and the only reason the room can state what is in the
-            // pools per asset. §349 refused that figure because the amount
-            // lived solely inside a localized title; this is what retires the
-            // refusal. Both existing fields — no CloudKit deploy — and
-            // deposits landed before today stay `unpriced`, counted and named
-            // on the card rather than silently missing from the total.
-            if let pool, let value {
-                thing.priceValue = value
-                thing.priceCurrency = pool.symbol
-            }
+            let thing = depositThing(what: what, value: value, symbol: pool?.symbol,
+                                     capturedAt: capturedAt, txHash: deposit.txHash,
+                                     ref: ref, wallet: wallet)
             // Anonymity-set context (prd §228): how much cover this deposit
             // has, on `enrichedText` (the thing sheet's body + search), never
             // the title — it's context, not a tally-thing. Snapshot at landing;
@@ -659,6 +738,52 @@ enum PrivacyPoolsBridge {
         return out
     }
 
+    /// A deposit row, either version. `value` and `symbol` are nil together
+    /// when the asset did not resolve, and then `what` is the word "crypto".
+    private static func depositThing(what: String, value: Double?, symbol: String?,
+                                     capturedAt: Date, txHash: String,
+                                     ref: String, wallet: String) -> Thing {
+        let thing = Thing(
+            kind: .transaction,
+            title: String(localized: "Put \(what) into Privacy Pools"),
+            content: "https://etherscan.io/tx/\(txHash)",
+            source: "Privacy Pools",
+            capturedAt: capturedAt,
+            tags: ["Shielded", "Pending"],
+            sourceRef: ref)
+        thing.walletAddress = wallet
+        // The amount as DATA (prd §369, 2026-08-12) — the same
+        // `transferAmount` slot the cards and Railgun already fill. Until
+        // this it existed only inside the localized title, so the receipt
+        // could not state a figure without parsing a sentence, which is the
+        // one thing it refuses to do. Only when the asset resolved: `what`
+        // falls back to the word "crypto", and "crypto" is not an amount.
+        // An existing field — no CloudKit deploy — and rows landed before
+        // today simply keep leading with their title.
+        if symbol != nil { thing.transferAmount = what }
+        // The DIRECTION, so the room's rows read as a ledger (prd §485).
+        // `BandRow.moneyColumn` needs the pair — an amount with no
+        // direction has no sign, so it stays inside the sentence — and
+        // until this the pair was half-stamped: §369 landed the amount and
+        // nothing ever landed the side it went. Money into the pool is
+        // money out of the wallet, which is what "sent" means everywhere
+        // else in this app.
+        thing.transferDirection = "sent"
+        // The size as STRUCTURED data (prd §397, 2026-08-17) — the same
+        // `priceValue`/`priceCurrency` pair Railgun and the cards already
+        // stamp, and the only reason the room can state what is in the
+        // pools per asset. §349 refused that figure because the amount
+        // lived solely inside a localized title; this is what retires the
+        // refusal. Both existing fields — no CloudKit deploy — and
+        // deposits landed before today stay `unpriced`, counted and named
+        // on the card rather than silently missing from the total.
+        if let symbol, let value {
+            thing.priceValue = value
+            thing.priceCurrency = symbol
+        }
+        return thing
+    }
+
     /// The pool-level Deposited event in the deposit's own block, matched by
     /// commitment → the label, as a DECIMAL string (the ASP's own encoding).
     private static func label(for deposit: Deposit, wallet: String) async -> String? {
@@ -681,6 +806,198 @@ enum PrivacyPoolsBridge {
         return nil
     }
 
+    // MARK: - V2 deposits and exits (2026-10-21)
+
+    /// One wallet's v2 window: plain and yield deposits, then exits, landed
+    /// and saved before the cursor moves (the v1 loop's rule). Returns landed.
+    @MainActor
+    private static func syncV2(context: ModelContext, wallet: String, latest: Int,
+                               existing: Set<String>) async -> Int {
+        let defaults = UserDefaults.standard
+        let key = v2CursorKey(wallet)
+        // First sight backfills from the deploy block, as v1 does — the
+        // alert's main case is a deposit made before watching.
+        let cursor = (defaults.object(forKey: key) as? Int) ?? (v2DeployBlock - 1)
+        guard latest > cursor else { return 0 }
+        var from = cursor + 1
+        let budget = maxRange * maxChunks
+        if latest - from >= budget { from = latest - budget + 1 }
+        var scanned = from - 1
+        var deposits: [[String: Any]] = []
+        var exits: [[String: Any]] = []
+        while scanned < latest {
+            let to = min(scanned + maxRange, latest)
+            guard let plain = await fetchV2Deposits(wallet: wallet, from: scanned + 1, to: to),
+                  let yield = await fetchV2RouterDeposits(wallet: wallet, from: scanned + 1, to: to)
+            else { break }
+            deposits += plain + yield
+            if let rq = await fetchV2Ragequits(wallet: wallet, from: scanned + 1, to: to) {
+                exits += rq
+            }
+            scanned = to
+        }
+        guard scanned > cursor else { return 0 }
+        if !deposits.isEmpty { evidence.remember(wallet) }
+        var landed = await v2Things(from: deposits, wallet: wallet, existing: existing)
+        landed += await landExits(v2Exits(from: exits), wallet: wallet,
+                                  existing: existing, context: context)
+        if !landed.isEmpty {
+            for thing in landed {
+                context.insert(thing)
+                SpotlightIndex.index([thing])
+            }
+            closeReclaims(landed, context: context)
+            guard context.saveHonestly() else { return 0 }
+        }
+        defaults.set(scanned, forKey: key)
+        return landed.count
+    }
+
+    private struct V2Deposit {
+        /// The asset the ASP files it under: the pool asset, or the yield share.
+        let asset: String
+        /// What the person put in, for the row — the underlying on a yield deposit.
+        let paid: V2Asset?
+        let raw: Double
+        let block: Int
+        let txHash: String
+    }
+
+    @MainActor
+    private static func v2Things(from logs: [[String: Any]], wallet: String,
+                                 existing: Set<String>) async -> [Thing] {
+        var deposits: [V2Deposit] = []
+        for log in logs {
+            guard (log["removed"] as? Bool) != true,
+                  let contract = (log["address"] as? String)?.lowercased(),
+                  let topics = log["topics"] as? [String], topics.count == 3,
+                  let txHash = (log["transactionHash"] as? String)?.lowercased(),
+                  let blockHex = log["blockNumber"] as? String,
+                  let data = log["data"] as? String
+            else { continue }
+            let block = WalletIngest.hexToInt(blockHex)
+            if let router = v2Routers[contract] {
+                // Router: shares, underlyingIn, sharesOut — the row states
+                // what was paid in, the ASP knows it by the share.
+                guard let paid = word(data, 1) else { continue }
+                deposits.append(V2Deposit(asset: router.share, paid: router.underlying,
+                                          raw: WalletIngest.hexToDouble("0x" + paid),
+                                          block: block, txHash: txHash))
+            } else {
+                // Entrypoint: asset is topics[1], amount the first word.
+                guard let amount = word(data, 0) else { continue }
+                let asset = "0x" + topics[1].suffix(40).lowercased()
+                deposits.append(V2Deposit(asset: asset, paid: v2Assets[asset],
+                                          raw: WalletIngest.hexToDouble("0x" + amount),
+                                          block: block, txHash: txHash))
+            }
+        }
+        deposits = Array(deposits.sorted { $0.block < $1.block }.suffix(10))
+        guard !deposits.isEmpty else { return [] }
+
+        let times = await blockTimes(blocks: deposits.map(\.block))
+        var out: [Thing] = []
+        var seen = Set<String>()
+        var watchlist = pending()
+        for deposit in deposits {
+            // The commitment is the key a later ragequit names; a miss keys
+            // the row by its transaction, which still polls but cannot join.
+            let commitment = await v2Commitment(for: deposit)
+            let key = commitment ?? "v2:\(deposit.txHash)"
+            let ref = depositRefPrefix + key
+            guard !existing.contains(ref), seen.insert(ref).inserted else { continue }
+            let value = deposit.paid.map { deposit.raw / pow(10, Double($0.decimals)) }
+            let amount = value.map { WalletIngest.format($0) }
+            let what = deposit.paid.map { "\(amount ?? "") \($0.symbol)" } ?? "crypto"
+            let capturedAt = times[deposit.block] ?? .now
+            out.append(depositThing(what: what, value: value, symbol: deposit.paid?.symbol,
+                                    capturedAt: capturedAt, txHash: deposit.txHash,
+                                    ref: ref, wallet: wallet))
+            let fresh = Date.now.timeIntervalSince(capturedAt) < 86_400
+            watchlist.append([
+                "v": "2", "label": key, "tx": deposit.txHash, "asset": deposit.asset,
+                "symbol": deposit.paid?.symbol ?? "", "amount": amount ?? "",
+                "wallet": wallet.lowercased(),
+                "status": fresh ? "pending" : "",
+            ])
+        }
+        setPending(watchlist)
+        return out
+    }
+
+    /// The PoolVault `Deposited` in the deposit's own transaction → its
+    /// commitment, as a decimal string.
+    private static func v2Commitment(for deposit: V2Deposit) async -> String? {
+        let assetTopic = "0x000000000000000000000000" + deposit.asset.dropFirst(2)
+        let params: [String: Any] = [
+            "fromBlock": hex(deposit.block), "toBlock": hex(deposit.block),
+            "address": v2PoolVault,
+            "topics": [v2PoolDepositedTopic, assetTopic],
+        ]
+        guard let logs = await call(method: "eth_getLogs",
+                                    params: [params]) as? [[String: Any]]
+        else { return nil }
+        for log in logs {
+            guard (log["transactionHash"] as? String)?.lowercased() == deposit.txHash,
+                  let data = log["data"] as? String,
+                  let commitment = word(data, 0)
+            else { continue }
+            return decimalString(hexWord: commitment)
+        }
+        return nil
+    }
+
+    /// v2 `Ragequit` data words: value, commitment, nullifierHash, label —
+    /// keyed by the COMMITMENT, which is what the deposit landed under.
+    private static func v2Exits(from logs: [[String: Any]]) -> [Exit] {
+        logs.compactMap { log in
+            guard (log["removed"] as? Bool) != true,
+                  let topics = log["topics"] as? [String], topics.count == 3,
+                  let txHash = log["transactionHash"] as? String,
+                  let blockHex = log["blockNumber"] as? String,
+                  let data = log["data"] as? String,
+                  let valueHex = word(data, 0),
+                  let commitment = word(data, 1)
+            else { return nil }
+            let asset = v2Assets["0x" + topics[2].suffix(40).lowercased()]
+            return Exit(label: decimalString(hexWord: commitment),
+                        symbol: asset?.symbol, decimals: asset?.decimals ?? 0,
+                        raw: WalletIngest.hexToDouble("0x" + valueHex),
+                        block: WalletIngest.hexToInt(blockHex), txHash: txHash)
+        }
+    }
+
+    /// Review status for v2 deposits, by transaction: the ASP's events feed
+    /// for each asset with something watched, newest first, paged until every
+    /// watched transaction is found or five pages are read. Returns tx → status;
+    /// an unreachable asset answers nothing and its entries wait a pass.
+    private static func v2Statuses(for entries: [[String: String]]) async -> [String: String] {
+        var wanted: [String: Set<String>] = [:]   // asset → tx hashes
+        for e in entries {
+            guard let asset = e["asset"], let tx = e["tx"] else { continue }
+            wanted[asset, default: []].insert(tx)
+        }
+        var out: [String: String] = [:]
+        for (asset, txs) in wanted {
+            var missing = txs
+            for page in 1...5 where !missing.isEmpty {
+                guard let root = await IngestSupport.getJSON(
+                        "\(v2ASPBase)/events?page=\(page)&perPage=100",
+                        headers: ["X-Asset": asset]) as? [String: Any],
+                      let events = root["events"] as? [[String: Any]], !events.isEmpty
+                else { break }
+                for event in events where (event["type"] as? String) == "deposit" {
+                    guard let tx = (event["txHash"] as? String)?.lowercased(),
+                          missing.contains(tx),
+                          let status = event["reviewStatus"] as? String else { continue }
+                    out[tx] = status
+                    missing.remove(tx)
+                }
+            }
+        }
+        return out
+    }
+
     // MARK: - Ragequit exits (prd §228)
 
     /// Turns a wallet's ragequit logs into "came back out" things — the honest
@@ -689,12 +1006,36 @@ enum PrivacyPoolsBridge {
     /// with the deposit's own ref, and pruned from the pending watchlist (a
     /// ragequit resolves it — it's out of the pool now). Newest 10, like every
     /// wallet landing path.
+    /// The reclaim join again, once this window's rows are inserted.
+    /// `landExits` retags as it decodes, which reaches a deposit landed in an
+    /// EARLIER window; a deposit and its ragequit read in the SAME window
+    /// (every first sight of a wallet that has already exited) are not in the
+    /// context yet at that moment, so the deposit kept `Pending` (measured
+    /// 2026-10-21 on a live v2 ragequit).
+    @MainActor
+    private static func closeReclaims(_ landed: [Thing], context: ModelContext) {
+        for thing in landed {
+            guard let ref = thing.sourceRef, ref.hasPrefix(PrivacyPoolsRoom.reclaimedPrefix),
+                  let label = PrivacyPoolsRoom.label(ref: ref) else { continue }
+            retag(label: label, to: PrivacyPoolsRoom.State.reclaimed.rawValue, context: context)
+        }
+    }
+
+    /// One exit, decoded — v1 keys it by label, v2 by commitment, and each
+    /// resolves its own asset; past that they land identically.
+    private struct Exit {
+        let label: String
+        let symbol: String?
+        let decimals: Int
+        let raw: Double
+        let block: Int
+        let txHash: String
+    }
+
     @MainActor
     private static func ragequitThings(from logs: [[String: Any]], wallet: String,
                                        existing: Set<String>,
                                        context: ModelContext) async -> [Thing] {
-        struct Exit { let label: String; let pool: String; let raw: Double
-                      let block: Int; let txHash: String }
         var exits: [Exit] = []
         for log in logs {
             guard (log["removed"] as? Bool) != true,
@@ -705,13 +1046,21 @@ enum PrivacyPoolsBridge {
                   let labelHex = word(data, 1),
                   let valueHex = word(data, 2)
             else { continue }
+            let pool = pools[contract]
             exits.append(Exit(label: decimalString(hexWord: labelHex),
-                              pool: contract,
+                              symbol: pool?.symbol, decimals: pool?.decimals ?? 0,
                               raw: WalletIngest.hexToDouble("0x" + valueHex),
                               block: WalletIngest.hexToInt(blockHex),
                               txHash: txHash))
         }
-        exits = Array(exits.suffix(10))
+        return await landExits(exits, wallet: wallet, existing: existing, context: context)
+    }
+
+    @MainActor
+    private static func landExits(_ decoded: [Exit], wallet: String,
+                                  existing: Set<String>,
+                                  context: ModelContext) async -> [Thing] {
+        let exits = Array(decoded.suffix(10))
         guard !exits.isEmpty else { return [] }
 
         let times = await blockTimes(blocks: exits.map(\.block))
@@ -730,9 +1079,8 @@ enum PrivacyPoolsBridge {
             retag(label: exit.label, to: PrivacyPoolsRoom.State.reclaimed.rawValue,
                   context: context)
             guard !existing.contains(ref), seen.insert(ref).inserted else { continue }
-            let pool = pools[exit.pool]
-            let value = pool.map { exit.raw / pow(10, Double($0.decimals)) }
-            let what = pool.map { "\(WalletIngest.format(value ?? 0)) \($0.symbol)" } ?? "crypto"
+            let value = exit.symbol.map { _ in exit.raw / pow(10, Double(exit.decimals)) }
+            let what = exit.symbol.map { "\(WalletIngest.format(value ?? 0)) \($0)" } ?? "crypto"
             let thing = Thing(
                 kind: .transaction,
                 title: String(localized: "Reclaimed \(what) from Privacy Pools"),
@@ -746,10 +1094,10 @@ enum PrivacyPoolsBridge {
             // its title. The ROOM never counts a reclaim toward holdings —
             // this money is out of the pools — so these fields feed the sheet,
             // not the card.
-            if let pool, let value {
+            if let symbol = exit.symbol, let value {
                 thing.transferAmount = what
                 thing.priceValue = value
-                thing.priceCurrency = pool.symbol
+                thing.priceCurrency = symbol
             }
             // Outside the priced branch on purpose: which way the money went
             // is known even when the pool did not resolve, and a direction is
@@ -825,6 +1173,17 @@ enum PrivacyPoolsBridge {
                 statuses[label] = status
             }
         }
+        // v2 answers by transaction; filed back under the entry's own key so
+        // the switch below treats both versions alike.
+        let v2 = entries.filter { $0["v"] == "2" }
+        if !v2.isEmpty {
+            let byTx = await v2Statuses(for: v2)
+            for e in v2 {
+                guard let tx = e["tx"], let label = e["label"],
+                      let status = byTx[tx] else { continue }
+                statuses[label] = status
+            }
+        }
         guard !statuses.isEmpty else { return 0 }
 
         var alerts = 0
@@ -856,7 +1215,7 @@ enum PrivacyPoolsBridge {
                     let ref = "privacypools:status:\(label)"
                     if !existing.contains(ref) {
                         let thing = Thing(kind: .transaction, title: title,
-                                          content: "https://app.0xbow.io",
+                                          content: e["v"] == "2" ? v2AppURL : v1AppURL,
                                           source: "Privacy Pools",
                                           capturedAt: .now, sourceRef: ref)
                         thing.walletAddress = e["wallet"]
@@ -887,7 +1246,7 @@ enum PrivacyPoolsBridge {
                         let thing = Thing(
                             kind: .transaction,
                             title: String(localized: "Privacy Pools needs proof for your \(what) deposit — open 0xBow"),
-                            content: "https://app.0xbow.io",
+                            content: e["v"] == "2" ? v2AppURL : v1AppURL,
                             source: "Privacy Pools",
                             capturedAt: .now, sourceRef: ref)
                         thing.walletAddress = e["wallet"]
@@ -952,6 +1311,45 @@ enum PrivacyPoolsBridge {
             "fromBlock": hex(from), "toBlock": hex(to),
             "address": poolAddresses,
             "topics": [ragequitTopic, walletTopic],
+        ]
+        return await call(method: "eth_getLogs", params: [params]) as? [[String: Any]]
+    }
+
+    /// v2 Entrypoint deposits by this wallet — the depositor is topics[2].
+    private static func fetchV2Deposits(wallet: String, from: Int,
+                                        to: Int) async -> [[String: Any]]? {
+        let walletTopic = "0x000000000000000000000000" + wallet.dropFirst(2).lowercased()
+        let params: [String: Any] = [
+            "fromBlock": hex(from), "toBlock": hex(to),
+            "address": v2Entrypoint,
+            "topics": [v2DepositedTopic, NSNull(), walletTopic],
+        ]
+        return await call(method: "eth_getLogs", params: [params]) as? [[String: Any]]
+    }
+
+    /// v2 yield deposits by this wallet, every router in one call — the
+    /// person is the router event's topics[1].
+    private static func fetchV2RouterDeposits(wallet: String, from: Int,
+                                              to: Int) async -> [[String: Any]]? {
+        let walletTopic = "0x000000000000000000000000" + wallet.dropFirst(2).lowercased()
+        let params: [String: Any] = [
+            "fromBlock": hex(from), "toBlock": hex(to),
+            "address": Array(v2Routers.keys),
+            "topics": [v2RouterDepositedTopic, walletTopic],
+        ]
+        return await call(method: "eth_getLogs", params: [params]) as? [[String: Any]]
+    }
+
+    /// v2 ragequits by this wallet. v2 notes can change hands, so the
+    /// ragequitter is whoever held the note — a reclaim of a note this wallet
+    /// was sent lands too, and joins no deposit, which is the truth.
+    private static func fetchV2Ragequits(wallet: String, from: Int,
+                                         to: Int) async -> [[String: Any]]? {
+        let walletTopic = "0x000000000000000000000000" + wallet.dropFirst(2).lowercased()
+        let params: [String: Any] = [
+            "fromBlock": hex(from), "toBlock": hex(to),
+            "address": v2PoolVault,
+            "topics": [v2RagequitTopic, walletTopic],
         ]
         return await call(method: "eth_getLogs", params: [params]) as? [[String: Any]]
     }

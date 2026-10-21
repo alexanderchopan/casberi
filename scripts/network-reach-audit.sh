@@ -60,7 +60,7 @@ KNOWN_NON_REACH=(
   # and the audit stayed green because nothing re-reads an entry's REASON when
   # the code underneath it changes. Landing a write is exactly the moment to
   # re-read every entry that says a host is never touched.
-  app.0xbow.io app.cal.com app.todoist.com kalshi.com opensea.io
+  privacypools.com v2.privacypools.com app.cal.com app.todoist.com kalshi.com opensea.io
   dexscreener.com twitch.tv stocktwits.com
   # A followed coin's page (prd §1250): its row's content and the door its
   # sheet offers when CoinPaprika's ticks do not answer, opened in the
