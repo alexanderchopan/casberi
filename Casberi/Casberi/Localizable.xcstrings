@@ -981,6 +981,34 @@
         }
       }
     },
+    "%@ did not take the change yet: try again in a minute" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ aún no aceptó el cambio: inténtalo en un minuto"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@はまだ変更を受け付けていません。1分後にもう一度お試しください"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@이(가) 아직 변경을 받지 않았습니다. 1분 뒤 다시 시도하세요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 还没有接受这项更改：请一分钟后再试"
+          }
+        }
+      }
+    },
     "%@ due %@" : {
       "localizations" : {
         "es" : {
@@ -5345,6 +5373,62 @@
         }
       }
     },
+    "Add a signer first" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Primero añade un firmante"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "まず署名者を追加してください"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "먼저 서명자를 추가하세요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "请先添加签名者"
+          }
+        }
+      }
+    },
+    "Add a signer first: over the limit, a send waits on it" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Primero añade un firmante: por encima del límite, un envío lo espera"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "まず署名者を追加してください。上限を超える送金は署名者を待ちます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "먼저 서명자를 추가하세요. 한도를 넘는 송금은 서명자를 기다립니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "请先添加签名者：超过限额的转账要等它签名"
+          }
+        }
+      }
+    },
     "Add a signer first: with both keys required, a send waits on it" : {
       "localizations" : {
         "es" : {
@@ -5625,6 +5709,34 @@
         }
       }
     },
+    "Change collects in your dollars. At $5, your next send buys %@ with it." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "El cambio se junta en tus dólares. Al llegar a $5, tu próximo envío compra %@ con él."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "端数はドルのまま貯まります。$5になると、次の送金で%@を購入します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "잔돈은 달러로 모입니다. $5가 되면 다음 송금에서 %@를 삽니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "零钱留在你的美元里。满 $5 时，你的下一笔转账会用它买入 %@。"
+          }
+        }
+      }
+    },
     "Copies your address, opens Coinbase" : {
       "localizations" : {
         "es" : {
@@ -5681,6 +5793,34 @@
         }
       }
     },
+    "Dollars" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Dólares"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ドル"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "달러"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "美元"
+          }
+        }
+      }
+    },
     "From another network" : {
       "localizations" : {
         "es" : {
@@ -5705,6 +5845,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "来自其他网络"
+          }
+        }
+      }
+    },
+    "No wallet here opens it: the link is copied, paste it in yours." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ninguna billetera aquí lo abre: el enlace está copiado, pégalo en la tuya."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "この端末のウォレットでは開けません。リンクをコピーしたので、ウォレットに貼り付けてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 기기의 지갑이 열지 않습니다. 링크가 복사되었으니 지갑에 붙여 넣으세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "这台设备上没有钱包能打开它：链接已复制，请粘贴到你的钱包。"
           }
         }
       }
@@ -5817,6 +5985,118 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "打开 MetaMask"
+          }
+        }
+      }
+    },
+    "Open wallet" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Abrir billetera"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ウォレットを開く"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "지갑 열기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "打开钱包"
+          }
+        }
+      }
+    },
+    "Over it, %@ signs too. ETH and dollars count apart on each network." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Por encima, %@ también firma. ETH y dólares cuentan por separado en cada red."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "超えると%@も署名します。ETHとドルはネットワークごとに別々に数えます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "넘으면 %@도 서명합니다. ETH와 달러는 네트워크마다 따로 셉니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "超过时，%@ 也要签名。ETH 和美元在每个网络上分别计算。"
+          }
+        }
+      }
+    },
+    "Over it, %@ signs too. ETH and dollars count apart on each network: up to %@ in all." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Por encima, %1$@ también firma. ETH y dólares cuentan por separado en cada red: hasta %2$@ en total."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "超えると%1$@も署名します。ETHとドルはネットワークごとに別々に数えます。合計で最大%2$@。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "넘으면 %1$@도 서명합니다. ETH와 달러는 네트워크마다 따로 셉니다. 모두 합쳐 최대 %2$@."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "超过时，%1$@ 也要签名。ETH 和美元在每个网络上分别计算：总共最多 %2$@。"
+          }
+        }
+      }
+    },
+    "Over your limit: your Signer signs too" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Por encima de tu límite: tu firmante también firma"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "上限を超えています。署名者も署名します"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "한도를 넘었습니다. 서명자도 서명합니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "超过你的限额：你的签名者也要签名"
           }
         }
       }
@@ -5961,6 +6241,118 @@
         }
       }
     },
+    "Set the amount below" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Fija el monto abajo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "下で金額を設定してください"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "아래에서 금액을 정하세요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在下方设置金额"
+          }
+        }
+      }
+    },
+    "Setting on %@…" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Configurando en %@…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@で設定中…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@에서 설정 중…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在 %@ 上设置…"
+          }
+        }
+      }
+    },
+    "Spend limit of %@ a %@ on %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Límite de gasto de %1$@ por %2$@ en %3$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%3$@で%2$@あたり%1$@の支出上限"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%3$@에서 %2$@당 %1$@ 지출 한도"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 %3$@ 上每%2$@ %1$@ 的支出限额"
+          }
+        }
+      }
+    },
+    "Spend limit off on %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Límite de gasto desactivado en %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@の支出上限をオフにしました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@에서 지출 한도 끔"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 上的支出限额已关闭"
+          }
+        }
+      }
+    },
     "Switches between USDC and ETH" : {
       "localizations" : {
         "es" : {
@@ -6045,6 +6437,62 @@
         }
       }
     },
+    "Turn off the spend limit on %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Desactivar el límite de gasto en %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@の支出上限をオフにする"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@에서 지출 한도 끄기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "关闭 %@ 上的支出限额"
+          }
+        }
+      }
+    },
+    "Up to %@ of each coin a %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Hasta %1$@ de cada moneda por %2$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "各コイン%2$@あたり最大%1$@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "코인마다 %2$@당 최대 %1$@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "每种币每%2$@最多 %1$@"
+          }
+        }
+      }
+    },
     "Waiting for your Signer" : {
       "localizations" : {
         "es" : {
@@ -6069,6 +6517,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "正在等待你的签名者"
+          }
+        }
+      }
+    },
+    "Waiting on %@ · %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Esperando a %1$@ · %2$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@を待っています · %2$@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ 기다리는 중 · %2$@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在等待 %1$@ · %2$@"
           }
         }
       }
@@ -6293,6 +6769,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "作为"
+          }
+        }
+      }
+    },
+    "coin" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "moneda"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "コイン"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "코인"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "币"
           }
         }
       }
@@ -7305,6 +7809,62 @@
         }
       }
     },
+    "not yet on %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "aún no en %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ではまだ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@에는 아직"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "尚未在 %@ 上"
+          }
+        }
+      }
+    },
+    "of each" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "de cada"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "それぞれ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "각각"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "每种"
+          }
+        }
+      }
+    },
     "per" : {
       "localizations" : {
         "es" : {
@@ -7497,6 +8057,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "在 %@ 上要求超过金额时两把密钥签名"
+          }
+        }
+      }
+    },
+    "renews with your next send on %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "se renueva con tu próximo envío en %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@での次の送金で更新されます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@에서 다음 송금과 함께 갱신됩니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "将随你在 %@ 上的下一笔转账续期"
           }
         }
       }

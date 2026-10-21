@@ -277,56 +277,6 @@ enum YourAccountChain {
         return n
     }
 
-    /// This phone's key's allowance on the module, nil when the module has
-    /// none for it (never set, or the module not enabled).
-    static func allowance(_ net: Network, _ account: String, delegate: String, token: String) async throws -> YourAccountSigning.Allowance? {
-        let answer = try await ethCall(net, to: YourAccountSigning.AllowanceModule.address,
-                                       data: YourAccountSigning.allowanceCalldata(account: account, delegate: delegate, token: token))
-        return YourAccountSigning.decodeAllowance(answer)
-    }
-
-    /// Two keys above an amount (prd §1447): the Allowance module on, this
-    /// phone's signer a delegate with `amount` of `token` a period, then
-    /// threshold 2 — one operation, signed by this phone, on a network the
-    /// account exists on. Needs a Signer already an owner, or every send
-    /// would wait on a key nobody holds.
-    static func setBothKeys(on net: Network, token: String, amount: String, resetMinutes: Int, reason: String,
-                            dryRun: Bool = false,
-                            stage: @escaping @Sendable (Stage) async -> Void) async throws -> Sent {
-        guard let account = YourAccountKey.address else {
-            throw Failure(message: String(localized: "There is no account on this iPhone"))
-        }
-        await stage(.preparing)
-        guard try await isDeployed(net, account) else {
-            throw Failure(message: String(localized: "Your account is not on \(net.name) yet"))
-        }
-        let all = try await owners(net, account)
-        var plain = 0
-        for owner in all where owner.caseInsensitiveCompare(YourAccount.sharedSigner) != .orderedSame {
-            if try await !isContract(net, owner) { plain += 1 }
-        }
-        guard plain > 0 else {
-            throw Failure(message: String(localized: "Add a signer first: with both keys required, a send waits on it"))
-        }
-        // prd §1447 item 9: the shared signer cannot be the module's delegate,
-        // and at 2-of-2 every user operation needs both keys — so this would
-        // leave the account answering only to both. Refused outside a dry run.
-        guard dryRun else {
-            throw Failure(message: String(localized: "A spend limit is not available yet"))
-        }
-        let (signerIndex, device) = try await deviceSigner(net, account, deployed: true)
-        let next = try YourAccountKey.nextKey(after: signerIndex)
-        guard let nextKey = YourAccountKey.publicKey(next),
-              let calls = YourAccountSigning.enableCalls(account: account, delegate: YourAccount.sharedSigner,
-                                                         token: token, amount: amount, resetMinutes: resetMinutes) else {
-            throw Failure(message: String(localized: "This send could not be written"))
-        }
-        let outcome = try await operate(net, account: account, deployed: true, calls: calls,
-                                        rotateTo: nextKey, payments: [], signer: device, reason: reason,
-                                        dryRun: dryRun, stage: stage)
-        return Sent(outcome: await settle(outcome, net, account, next: next, x: nextKey.x), network: net)
-    }
-
     /// The account onto Safe's 7579 adapter (prd §1447 item 11): one
     /// operation, signed by this phone. SIMULATION ONLY until the adapter's
     /// send path is built and proven — after a real install every send must
@@ -336,9 +286,6 @@ enum YourAccountChain {
                                stage: @escaping @Sendable (Stage) async -> Void) async throws -> Sent {
         guard let account = YourAccountKey.address else {
             throw Failure(message: String(localized: "There is no account on this iPhone"))
-        }
-        guard dryRun || throwaway(account) else {
-            throw Failure(message: String(localized: "A spend limit is not available yet"))
         }
         await stage(.preparing)
         // Not there yet: the account is created by this same operation, on
@@ -412,31 +359,23 @@ enum YourAccountChain {
     /// account key like any send. Throwaway-only outside a simulation, which
     /// also runs each call as the account.
     static func installLimit(on net: Network, plan: YourAccount7579.Plan, reason: String, dryRun: Bool, coSigner: CoSigner? = nil,
+                             requireBoth: Bool = false,
                              report: @escaping @Sendable (String) -> Void = { _ in },
                              stage: @escaping @Sendable (Stage) async -> Void) async throws -> Sent {
         guard let account = YourAccountKey.address else {
             throw Failure(message: String(localized: "There is no account on this iPhone"))
         }
-        guard dryRun || throwaway(account) else {
-            throw Failure(message: String(localized: "A spend limit is not available yet"))
-        }
         await stage(.preparing)
         guard try await isDeployed(net, account), try await accountEntry(net, account) == .adapter else {
             throw Failure(message: String(localized: "A spend limit is not available yet"))
         }
-        let validatorInit = try sessionInit()
-        let sessions = plan.windows.compactMap { YourAccount7579.session(validatorInit: validatorInit, plan: plan, window: $0) }
-        guard !sessions.isEmpty, sessions.count == plan.windows.count else {
-            throw Failure(message: String(localized: "This send could not be written"))
-        }
-        let fresh = plan.windows.map { YourAccount7579.permissionId(validatorInit: validatorInit, salt: YourAccount7579.salt(plan, $0)) }
-        let installed = try await sessionsInstalled(net, account)
-        var calls = [installed ? YourAccount7579.enableSessionsCall(sessions)
-                               : YourAccount7579.installSessionsCall(account: account, sessions: sessions)]
-        if installed {
-            for old in try await sessionIds(net, account) where !fresh.contains(old) {
-                calls.append(YourAccount7579.removeSessionCall(old))
-            }
+        let (installed, fresh, planCalls) = try await limitCalls(net, account, plan)
+        var calls = planCalls
+        // Turning the limit on (prd §1455): both keys above it, last, while
+        // this phone alone still signs.
+        if requireBoth, try await threshold(net, account) == 1 {
+            calls.append(YourAccountOp.Call(operation: 0, to: account, value: YourAccount.w(0),
+                                            data: YourAccount.sel("changeThreshold(uint256)") + YourAccount.w(2)))
         }
         report("windows=\(plan.windows.count) installed=\(installed) calls=\(calls.count) first=\(SafeABI.hex(fresh[0]))")
         if dryRun {
@@ -463,6 +402,187 @@ enum YourAccountChain {
         return Sent(outcome: await settle(outcome, net, account, next: next, x: nextKey.x), network: net)
     }
 
+    /// A plan's calls: its sessions enabled (Smart Sessions installed with
+    /// them the first time), every older session removed.
+    private static func limitCalls(_ net: Network, _ account: String, _ plan: YourAccount7579.Plan) async throws
+        -> (installed: Bool, fresh: [[UInt8]], calls: [YourAccountOp.Call]) {
+        let validatorInit = try sessionInit()
+        let sessions = plan.windows.compactMap { YourAccount7579.session(validatorInit: validatorInit, plan: plan, window: $0) }
+        guard !sessions.isEmpty, sessions.count == plan.windows.count else {
+            throw Failure(message: String(localized: "This send could not be written"))
+        }
+        let fresh = plan.windows.map { YourAccount7579.permissionId(validatorInit: validatorInit, salt: YourAccount7579.salt(plan, $0)) }
+        let installed = try await sessionsInstalled(net, account)
+        var calls = [installed ? YourAccount7579.enableSessionsCall(sessions)
+                               : YourAccount7579.installSessionsCall(account: account, sessions: sessions)]
+        if installed {
+            for old in try await sessionIds(net, account) where !fresh.contains(old) {
+                calls.append(YourAccount7579.removeSessionCall(old))
+            }
+        }
+        return (installed, fresh, calls)
+    }
+
+    /// **ONE SETTING (prd §1455, user: "needs to be one setting").** A plan
+    /// whose periods run out — or are down to the last — is renewed by the
+    /// next operation both keys sign anyway: the same amount and period, from
+    /// now, the old sessions removed. Nobody is ever asked to set it again.
+    static func renewal(_ net: Network, _ account: String) async throws -> (calls: [YourAccountOp.Call], plan: YourAccount7579.Plan)? {
+        guard case .on(let plan, let current) = try await limitState(net, account) else { return nil }
+        let now = Int(Date().timeIntervalSince1970)
+        let length = plan.windows.first.map { $0.until - $0.from } ?? 0
+        guard current == nil || (plan.windows.last?.until ?? 0) - now <= length else { return nil }
+        guard let dollars = Int(plan.dollarCap.dropLast(6)) else { return nil }
+        let price = plan.ethCap == "0" ? nil : await relayPrice(net, YourAccountOp.eth)
+        let next = limitPlan(on: net, dollars: dollars, ethPrice: price, minutes: max(length / 60, 1))
+        return (try await limitCalls(net, account, next).calls, next)
+    }
+
+    static func savePlan(_ plan: YourAccount7579.Plan, on net: Network) {
+        if let data = try? JSONEncoder().encode(plan) { UserDefaults.standard.set(data, forKey: planKey(net)) }
+    }
+
+    // MARK: - The spend limit, as the app turns it on (prd §1455)
+
+    /// The account's Signers on `net`: owners whose key someone holds —
+    /// neither this phone's shared passkey signer nor a recovery key's
+    /// contract.
+    static func signers(_ net: Network, _ account: String) async throws -> [String] {
+        var out: [String] = []
+        for owner in try await owners(net, account) where owner.caseInsensitiveCompare(YourAccount.sharedSigner) != .orderedSame {
+            if try await !isContract(net, owner) { out.append(owner) }
+        }
+        return out
+    }
+
+    /// Where the spend limit stands on a network: off, on (its plan and the
+    /// window that holds now), or on with every window spent.
+    enum LimitState: Equatable {
+        case off
+        case on(YourAccount7579.Plan, current: YourAccount7579.Window?)
+    }
+
+    static func limitState(_ net: Network, _ account: String) async throws -> LimitState {
+        guard try await isDeployed(net, account), try await threshold(net, account) == 2,
+              try await accountEntry(net, account) == .adapter, let plan = plan(net),
+              try await !sessionIds(net, account).isEmpty else { return .off }
+        return .on(plan, current: plan.window(at: Int(Date().timeIntervalSince1970)))
+    }
+
+    /// A plan of `dollars` of the network's dollar and as much ETH (at
+    /// `ethPrice`, nil leaves ETH to both keys) each `minutes`, set up ahead.
+    static func limitPlan(on net: Network, dollars: Int, ethPrice: Double?, minutes: Int) -> YourAccount7579.Plan {
+        let dollarCap = String(dollars) + "000000"
+        var ethCap = "0"
+        if let ethPrice, ethPrice > 0 {
+            let wei = (Decimal(dollars) / Decimal(ethPrice)) * pow(10, 18)
+            var rounded = Decimal(), value = wei
+            NSDecimalRound(&rounded, &value, 0, .down)
+            ethCap = NSDecimalNumber(decimal: rounded).stringValue
+        }
+        let start = Int(Date().timeIntervalSince1970) / 60 * 60
+        return YourAccount7579.Plan(chainId: net.chainId, dollar: net.dollar, dollarCap: dollarCap, ethCap: ethCap,
+                                    windows: YourAccount7579.windows(start: start, seconds: minutes * 60,
+                                                                     count: YourAccount7579.windowCount(minutes: minutes)))
+    }
+
+    /// Turning it on (prd §1455): this phone alone, while one key still
+    /// signs — the account onto Safe's adapter if it is not yet, then the
+    /// plan's sessions and both keys above them, in one operation. Needs a
+    /// Signer, or every send over the limit would wait on nobody.
+    static func turnOnLimit(on net: Network, dollars: Int, minutes: Int, reason: String,
+                            report: @escaping @Sendable (String) -> Void = { _ in },
+                            stage: @escaping @Sendable (Stage) async -> Void) async throws -> Sent {
+        guard let account = YourAccountKey.address else {
+            throw Failure(message: String(localized: "There is no account on this iPhone"))
+        }
+        await stage(.preparing)
+        guard try await isDeployed(net, account) else {
+            throw Failure(message: String(localized: "Your account is not on \(net.name) yet"))
+        }
+        guard try await !signers(net, account).isEmpty else {
+            throw Failure(message: String(localized: "Add a signer first: over the limit, a send waits on it"))
+        }
+        if try await accountEntry(net, account) == .module4337 {
+            let moved = try await installAdapter(on: net, reason: reason, dryRun: false, report: report, stage: stage)
+            guard case .landed = moved.outcome else {
+                throw Failure(message: String(localized: "\(net.name) did not take the change yet: try again in a minute"))
+            }
+        }
+        let price = await relayPrice(net, YourAccountOp.eth)
+        let plan = limitPlan(on: net, dollars: dollars, ethPrice: price, minutes: minutes)
+        return try await installLimit(on: net, plan: plan, reason: reason, dryRun: false, requireBoth: true,
+                                      report: report, stage: stage)
+    }
+
+    /// A new amount or period: a new plan, every older session removed —
+    /// a change to the keys, so both sign.
+    static func changeLimit(on net: Network, dollars: Int, minutes: Int, coSigner: CoSigner, reason: String,
+                            stage: @escaping @Sendable (Stage) async -> Void) async throws -> Sent {
+        let price = await relayPrice(net, YourAccountOp.eth)
+        let plan = limitPlan(on: net, dollars: dollars, ethPrice: price, minutes: minutes)
+        return try await installLimit(on: net, plan: plan, reason: reason, dryRun: false, coSigner: coSigner, stage: stage)
+    }
+
+    /// Turning it off: every session removed and one key again — both sign it.
+    static func turnOffLimit(on net: Network, coSigner: CoSigner, reason: String,
+                             stage: @escaping @Sendable (Stage) async -> Void) async throws -> Sent {
+        guard let account = YourAccountKey.address else {
+            throw Failure(message: String(localized: "There is no account on this iPhone"))
+        }
+        await stage(.preparing)
+        var calls = try await sessionIds(net, account).map(YourAccount7579.removeSessionCall)
+        calls.append(YourAccountOp.Call(operation: 0, to: account, value: YourAccount.w(0),
+                                        data: YourAccount.sel("changeThreshold(uint256)") + YourAccount.w(1)))
+        let (signerIndex, device) = try await deviceSigner(net, account, deployed: true)
+        let next = try YourAccountKey.nextKey(after: signerIndex)
+        guard let nextKey = YourAccountKey.publicKey(next) else {
+            throw Failure(message: String(localized: "This send could not be written"))
+        }
+        let outcome = try await operate(net, account: account, deployed: true, calls: calls,
+                                        rotateTo: nextKey, payments: [], signer: device, coSigner: coSigner,
+                                        reason: reason, stage: stage)
+        if case .landed = outcome { UserDefaults.standard.removeObject(forKey: planKey(net)) }
+        return Sent(outcome: await settle(outcome, net, account, next: next, x: nextKey.x), network: net)
+    }
+
+    /// Sends under the limit, on the session key alone (prd §1455): each
+    /// the network's dollar or ETH, a round-up's buy with them, in one
+    /// operation on the window that holds now. Over the limit, or anything
+    /// else, the policy refuses it in validation and nothing is sent — the
+    /// caller asks both keys instead.
+    static func sessionSend(_ payments: [YourAccountOp.Payment], roundUp: RoundUpBuy? = nil, reason: String,
+                            report: @escaping @Sendable (String) -> Void = { _ in },
+                            stage: @escaping @Sendable (Stage) async -> Void) async throws -> Sent {
+        guard let net = payments.first?.network, payments.allSatisfy({ $0.network == net }),
+              let account = YourAccountKey.address, let plan = plan(net),
+              let window = plan.window(at: Int(Date().timeIntervalSince1970)) else {
+            throw Failure(message: String(localized: "A spend limit is not available yet"))
+        }
+        await stage(.preparing)
+        var calls: [YourAccount7579.Execution] = []
+        for p in payments {
+            guard let call = YourAccount7579.sessionCall(token: p.token.contract, dollar: plan.dollar, to: p.to, units: p.amount) else {
+                throw Failure(message: String(localized: "A spend limit is not available yet"))
+            }
+            calls.append(call)
+        }
+        if let roundUp {
+            let deposit = try await depositAddress(from: net, currency: net.dollar, to: roundUp.target,
+                                                   amount: roundUp.units, account: account)
+            guard let call = YourAccount7579.sessionCall(token: net.dollar, dollar: plan.dollar, to: deposit.address, units: roundUp.units) else {
+                throw Failure(message: String(localized: "This send could not be written"))
+            }
+            calls.append(call)
+        }
+        let callData = calls.count == 1
+            ? YourAccount7579.executeSingle(to: calls[0].target, wei: YourAccountOp.decimal(calls[0].value), data: calls[0].data)
+            : YourAccount7579.executeBatch(calls)
+        guard let callData else { throw Failure(message: String(localized: "This send could not be written")) }
+        return try await sessionOperation(net, account: account, callData: callData,
+                                          salt: YourAccount7579.salt(plan, window), reason: reason, report: report, stage: stage)
+    }
+
     /// `units` of `token` (ETH or the network's dollar) to `target`, signed
     /// by the session key alone, on the window of this phone's plan that
     /// holds now: the nonce key names Smart Sessions, the signature is USE
@@ -475,17 +595,12 @@ enum YourAccountChain {
         guard let account = YourAccountKey.address else {
             throw Failure(message: String(localized: "There is no account on this iPhone"))
         }
-        guard dryRun || throwaway(account) else {
-            throw Failure(message: String(localized: "A spend limit is not available yet"))
-        }
         await stage(.preparing)
         guard try await accountEntry(net, account) == .adapter, let plan = plan(net),
               let window = plan.window(at: Int(Date().timeIntervalSince1970)) else {
             throw Failure(message: String(localized: "A spend limit is not available yet"))
         }
-        let validatorInit = try sessionInit()
-        let permission = YourAccount7579.permissionId(validatorInit: validatorInit, salt: YourAccount7579.salt(plan, window))
-        report("window=\(window.from)–\(window.until) permissionId=\(SafeABI.hex(permission))")
+        report("window=\(window.from)–\(window.until)")
         let call: [UInt8]?
         if let contract = token.contract {
             guard WalletWatch.sameAddress(contract, plan.dollar) else {
@@ -498,6 +613,19 @@ enum YourAccountChain {
         guard let callData = call else {
             throw Failure(message: String(localized: "This send could not be written"))
         }
+        return try await sessionOperation(net, account: account, callData: callData, salt: YourAccount7579.salt(plan, window),
+                                          reason: reason, dryRun: dryRun, report: report, stage: stage)
+    }
+
+    /// One operation on the session key: Smart Sessions' nonce key, the
+    /// window's permission, the EntryPoint's own hash under Face ID, and the
+    /// passkey validator asked before it goes.
+    private static func sessionOperation(_ net: Network, account: String, callData: [UInt8], salt: [UInt8],
+                                         reason: String, dryRun: Bool = false,
+                                         report: @escaping @Sendable (String) -> Void = { _ in },
+                                         stage: @escaping @Sendable (Stage) async -> Void) async throws -> Sent {
+        let validatorInit = try sessionInit()
+        let permission = YourAccount7579.permissionId(validatorInit: validatorInit, salt: salt)
         var op = YourAccountOp.Op(sender: account, nonce: 0, factory: nil, factoryData: [], callData: callData)
         op.entry = .adapter
         op.nonceKey = YourAccount7579.sessionNonceKey
@@ -983,7 +1111,7 @@ enum YourAccountChain {
     /// simulated and refused unless every swap pays its minimum. Relay settles
     /// in the same transaction, so a landed operation is a finished swap.
     static func transact(_ items: [Item], reason: String, dryRun: Bool = false, coSigner: CoSigner? = nil,
-                         roundUp: RoundUpBuy? = nil,
+                         roundUp: RoundUpBuy? = nil, renew: Bool = false,
                          report: @escaping @Sendable (String) -> Void = { _ in },
                          stage: @escaping @Sendable (Stage) async -> Void) async throws -> Transacted {
         guard let net = items.first?.network, items.allSatisfy({ $0.network == net }) else {
@@ -1038,8 +1166,16 @@ enum YourAccountChain {
             steps.append(([call], nil))
             report("roundUp: \(roundUp.units) to \(deposit.address) for \(roundUp.target.symbol) on \(roundUp.target.network)")
         }
-        let calls = approvalCalls + steps.flatMap(\.calls)
+        var calls = approvalCalls + steps.flatMap(\.calls)
         let swaps = steps.compactMap(\.swap)
+        // The spend limit renewed with it (prd §1455): only where both keys
+        // sign anyway, after everything else.
+        var renewed: YourAccount7579.Plan?
+        if renew, coSigner != nil, let r = try await renewal(net, account) {
+            calls += r.calls
+            renewed = r.plan
+            report("renewing the spend limit: \(r.plan.windows.count) periods")
+        }
 
         // What the bought tokens hold now, to measure what landed.
         var before: [String: String] = [:]
@@ -1059,6 +1195,7 @@ enum YourAccountChain {
         let outcome = try await operate(net, account: account, deployed: deployed, calls: calls,
                                         rotateTo: nextKey, payments: payments, signer: signer, coSigner: coSigner,
                                         reason: reason, dryRun: dryRun, report: report, stage: stage)
+        if let renewed, case .landed = outcome { savePlan(renewed, on: net) }
         let sent = Sent(outcome: await settle(outcome, net, account, next: next, x: nextKey.x), network: net)
         guard case .landed = sent.outcome, !swaps.isEmpty else {
             return Transacted(sent: sent, bought: simulated)

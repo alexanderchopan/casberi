@@ -3951,55 +3951,6 @@ enum ProbeHooks {
                 }
             }
         },
-        // `-signingProbe <network>` — two keys above an amount, read (prd
-        // §1447): the Safe's threshold, its owners by kind, and this phone's
-        // allowance on Safe's Allowance module for the chain's coin and USDC.
-        // Reads only; `signing|` lines. `-signingSet "<network>|<token>|<units>|<minutes>"`
-        // runs the switch itself; `|dry` as a fifth part simulates and signs
-        // but sends nothing. Real, it spends the account's own gas — and
-        // from then on every send above the allowance waits on the Signer.
-        Hook(key: "signingProbe") { raw, _ in
-            Task { @MainActor in
-                func log(_ line: String) { NSLog("signing| %@", line) }
-                guard let net = YourAccountOp.probeNetworks.first(where: { $0.name.caseInsensitiveCompare(raw) == .orderedSame }),
-                      let account = YourAccountKey.address else { log("no such network, or no account"); return }
-                do {
-                    let threshold = try await YourAccountChain.threshold(net, account)
-                    log("network=\(net.name) threshold=\(threshold) mode=\(YourAccountSigning.mode(threshold: threshold))")
-                    for owner in try await YourAccountChain.owners(net, account) {
-                        let kind = owner.caseInsensitiveCompare(YourAccount.sharedSigner) == .orderedSame ? "this phone (shared signer)"
-                            : (try await YourAccountChain.isContract(net, owner)) ? "contract (recovery?)" : "plain key (signer)"
-                        log("owner \(owner) · \(kind)")
-                    }
-                    for token in [YourAccountSwap.native] + (net.chainId == 8453 ? ["0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"] : []) {
-                        let a = try await YourAccountChain.allowance(net, account, delegate: YourAccount.sharedSigner, token: token)
-                        log("allowance token=\(token.suffix(6)) \(a.map { "amount=\($0.amount) spent=\($0.spent) reset=\($0.resetMinutes)m nonce=\($0.nonce)" } ?? "unreadable")")
-                    }
-                } catch let failure as YourAccountChain.Failure {
-                    log("refused: \(failure.message)")
-                } catch {
-                    log("error: \(String(describing: error))")
-                }
-            }
-        },
-        Hook(key: "signingSet") { raw, _ in
-            Task { @MainActor in
-                func log(_ line: String) { NSLog("signingSet| %@", line) }
-                let p = raw.split(separator: "|").map(String.init)
-                guard p.count >= 4, let net = YourAccountOp.probeNetworks.first(where: { $0.name.caseInsensitiveCompare(p[0]) == .orderedSame }),
-                      let minutes = Int(p[3]) else { log("expected <network>|<token>|<units>|<minutes>[|dry]"); return }
-                let dry = p.count > 4 && p[4] == "dry"
-                do {
-                    let sent = try await YourAccountChain.setBothKeys(on: net, token: p[1], amount: p[2], resetMinutes: minutes,
-                                                                     reason: "Probe: both keys above an amount", dryRun: dry) { stage in log("stage=\(stage)") }
-                    log("result=\(sent.outcome)")
-                } catch let failure as YourAccountChain.Failure {
-                    log("refused: \(failure.message)")
-                } catch {
-                    log("error: \(String(describing: error))")
-                }
-            }
-        },
         // `-adapterInstallProbe <network>` — the account onto Safe's 7579
         // adapter, SIMULATED (prd §1447 item 11): the bundler's gas estimate
         // runs all four calls; nothing is sent. `adapterInstall|` lines.
@@ -4246,6 +4197,33 @@ enum ProbeHooks {
                                                                   report: { line in NSLog("roundUpSend| %@", line) }) { stage in log("stage=\(stage)") }
                     if case .landed = done.sent.outcome { RoundUps.setSaved(plan.savedAfter, on: net.chainId) }
                     log("result=\(done.sent.outcome) saved=\(RoundUps.saved(on: net.chainId))")
+                } catch let failure as YourAccountChain.Failure {
+                    log("refused: \(failure.message)")
+                } catch {
+                    log("error: \(String(describing: error))")
+                }
+            }
+        },
+        // `-spendProbe "<network>|eth|usdc|<units>"` — Move's own send path
+        // (`MoveSentence.spend`, prd §1455) to the account itself: under the
+        // spend limit on Face ID alone, over it the Signer sheet. Throwaway only.
+        Hook(key: "spendProbe") { raw, _ in
+            Task { @MainActor in
+                func log(_ line: String) { NSLog("spendProbe| %@", line) }
+                let p = raw.split(separator: "|").map(String.init)
+                guard p.count == 3, let net = YourAccountOp.probeNetworks.first(where: { $0.name.caseInsensitiveCompare(p[0]) == .orderedSame }),
+                      let account = YourAccountKey.address,
+                      let named = UserDefaults.standard.string(forKey: "adapterThrowaway"), WalletWatch.sameAddress(named, account) else {
+                    log("only on the throwaway -adapterThrowaway names: <network>|eth|usdc|<units>"); return
+                }
+                let token = p[1].lowercased() == "eth" ? YourAccountOp.eth : YourAccountOp.dollar(on: net)
+                let payment = YourAccountOp.Payment(network: net, token: token, amount: p[2], to: account, toName: nil)
+                do {
+                    let done = try await MoveSentence.spend([.send(payment)], on: net, account: account, roundUp: nil,
+                                                            reason: "Probe: a send", said: { line in NSLog("spendProbe| said: %@", line) }) { stage in
+                        NSLog("spendProbe| stage=%@", String(describing: stage))
+                    }
+                    log("result=\(done.sent.outcome)")
                 } catch let failure as YourAccountChain.Failure {
                     log("refused: \(failure.message)")
                 } catch {

@@ -4,11 +4,14 @@ import UIKit
 
 /// **The Signer is asked (prd §1447 item 17).** An operation that needs both
 /// keys shows its WalletConnect link here: a code to scan with the Signer's
-/// wallet on another device, a door into MetaMask on this one, the link to
-/// paste into any other. It closes itself when the answer comes.
+/// wallet on another device, a door into whichever wallet on this one takes
+/// the link (user: "it can be open wallet … i just signed in rainbow each
+/// time today"), the link to paste into any other. It closes itself when the
+/// answer comes.
 struct SignerRequestSheet: View {
     let url: URL
     let signer: String
+    @State private var copiedInstead = false
 
     var body: some View {
         DSTray(title: String(localized: "Your Signer signs too"), height: 600, detents: [.large]) {
@@ -27,10 +30,20 @@ struct SignerRequestSheet: View {
                         .frame(maxWidth: .infinity)
                         .accessibilityLabel(Text("WalletConnect code"))
                 }
-                if let metaMask = Self.metaMask(url) {
-                    DSDoorRow(icon: "arrow.up.forward.app", label: "Open MetaMask") {
-                        UIApplication.shared.open(metaMask)
+                DSDoorRow(icon: "arrow.up.forward.app", label: "Open wallet") {
+                    // The wallet that claims WalletConnect's own link (Rainbow,
+                    // Trust, Zerion…); none here, the link is copied instead.
+                    if UIApplication.shared.canOpenURL(url) {
+                        UIApplication.shared.open(url)
+                    } else {
+                        DSPasteboard.copySensitive(url.absoluteString)
+                        withAnimation(DS.Motion.standard) { copiedInstead = true }
                     }
+                }
+                if copiedInstead {
+                    Text("No wallet here opens it: the link is copied, paste it in yours.")
+                        .dsText(.body17).foregroundStyle(DS.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
                 DSCopyRow(value: url.absoluteString, label: "Copy link", sensitive: true)
                 HStack(spacing: DS.Space.s2) {
@@ -53,12 +66,22 @@ struct SignerRequestSheet: View {
         return UIImage(cgImage: cg)
     }
 
-    /// MetaMask's own door to a pairing link on this phone.
-    static func metaMask(_ url: URL) -> URL? {
-        var allowed = CharacterSet.alphanumerics
-        allowed.insert(charactersIn: "-._~")
-        guard let encoded = url.absoluteString.addingPercentEncoding(withAllowedCharacters: allowed) else { return nil }
-        return URL(string: "https://metamask.app.link/wc?uri=" + encoded)
+    /// The account's Signer asked through its own wallet (prd §1447 item 17,
+    /// §1455): the sheet raised with the pairing link, taken down when the
+    /// wallet answers, refuses or the wait runs out.
+    static func coSigner(owner: String, chainId: Int) -> YourAccountChain.CoSigner {
+        YourAccountChain.CoSigner(owner: owner) { _, typedData in
+            let handle = await MainActor.run { Handle() }
+            defer { Task { @MainActor in handle.close() } }
+            return try await YourAccountSignerLink.sign(typedData: typedData, signer: owner, chainId: chainId) { url in
+                handle.close = present(url: url, signer: owner)
+            }
+        }
+    }
+
+    @MainActor
+    final class Handle {
+        var close: @MainActor () -> Void = {}
     }
 
     /// Show the sheet over whatever is on screen; the returned closure takes
