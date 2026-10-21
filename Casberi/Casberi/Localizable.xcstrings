@@ -5093,6 +5093,34 @@
         }
       }
     },
+    "Edits the amount" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Edita la cantidad"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "金額を編集します"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "금액을 편집합니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "编辑金额"
+          }
+        }
+      }
+    },
     "Edits this line" : {
       "localizations" : {
         "es" : {

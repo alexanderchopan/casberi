@@ -667,6 +667,7 @@ struct MoveSentence: View {
         }
         .contentShape(Rectangle())
         .onTapGesture { if stage == nil { focus = .amount } }
+        .dsCardLead(Text("Edits the amount")) { if stage == nil { focus = .amount } }
         if inDollars {
             row(String(localized: "of")) { withWord }
         }
@@ -696,8 +697,7 @@ struct MoveSentence: View {
                 Button(role: .destructive) { remove(id) } label: { Label("Remove", systemImage: "trash") }
             }
             .accessibilityElement(children: .combine)
-            .accessibilityAddTraits(.isButton)
-            .accessibilityHint(Text("Edits this line"))
+            .dsCardLead(Text("Edits this line")) { edit(id) }
             .accessibilityAction(named: Text("Remove")) { remove(id) }
             .transition(.opacity.combined(with: .offset(y: -8)))
         }
