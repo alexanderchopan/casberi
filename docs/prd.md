@@ -67892,3 +67892,11 @@ Mock: the design canvas "Where app settings live" (option C, title door 3).
 4. **A note of yours in Newest says its time once:** the app's line carries it (§1256); the row's own stamp is for the Notes section and room (§969, §1347).
 
 **Mac half.** The same views; nothing is Mac-only.
+
+## §1451 — Day and Notes stand in the rooms tray, in the Feed's order (amends §977's seat gate for the two gathered sections; carries out §1347 item 2) (user, 2026-10-20: "'notes' isn't showing up in my tray … i have it on my feed"; 2026-10-21: "yes fix it") — BUILT
+
+1. **The tray lists Day and Notes as the Feed does.** Both are gathered, never one app's: Day from what is ahead, Notes from what you write, which belong to You and are no seat. §977's gate (a category row only with a connected seat) held them off the tray while the Feed always drew them. Every other category keeps the gate.
+2. **The order is the person's** (`CategoryOrder.current`, set from the Feed's Reorder): each takes its place in it, as on the Feed.
+3. **A tap lands where the Feed's row does:** on the phone the Feed scrolls to its Notes section (`routeIntoFeed`); beside the rail, where there is no Feed section to scroll to, Notes opens your notes page (`Pinboard.room`).
+
+Guarded by `category-fold-selftest.sh` (proven by mutation). **Mac half:** the rail has no tray; item 3's regular-width branch is the iPad's and the Mac's.

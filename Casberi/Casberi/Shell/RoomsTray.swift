@@ -321,11 +321,23 @@ struct RoomsTray: View {
     /// was the category's own name, so the fold made a category chip out of
     /// a room (§975). A row with no venues is that class, whatever string
     /// caused it, and this gate holds it off the tray.
+    ///
+    /// **Day and Notes stand as the Feed stands them (prd §1347 item 2: one
+    /// list for the Feed's sections and the categories).** Both are gathered,
+    /// never one app's: Day from whatever is ahead, Notes from the notes you
+    /// write, which belong to You and are no seat. Behind the venue gate they
+    /// were sections of the Feed and missing here (user: "'notes' isn't
+    /// showing up in my tray … i have it on my feed"). Each takes its place
+    /// in Feed order; a tap lands on its section, as the Feed's row does.
     private var categories: [String] {
-        chrome.chipOrder.filter {
-            $0 != Self.markets
+        let gathered: Set<String> = [RoomAccounts.dayRoom, HomeScope.notesSection]
+        let order = CategoryOrder.current
+        let present = chrome.chipOrder.filter {
+            $0 != Self.markets && !gathered.contains($0)
                 && CategoryFold.isCategory($0) && !(chrome.categoryVenues[$0] ?? []).isEmpty
         }
+        return (present + gathered.filter(CategoryFold.isCategory))
+            .sorted { CategoryOrder.rank(of: $0, in: order) < CategoryOrder.rank(of: $1, in: order) }
     }
 
     /// The categories' card: every row but the Wallet's, which has a card of

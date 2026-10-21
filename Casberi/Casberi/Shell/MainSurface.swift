@@ -2157,7 +2157,9 @@ struct MainSurface: View {
         .onChange(of: chrome.sourceRequest) { _, asked in
             guard let asked else { return }
             chrome.sourceRequest = nil
-            let request = walletLanding(asked)
+            // Beside the rail there is no Feed section to scroll to: the
+            // Notes category opens your notes (prd §1347).
+            let request = isRegular && asked == HomeScope.notesSection ? Pinboard.room : walletLanding(asked)
             if routeIntoFeed(request) != nil {
                 ChipMemory.visited(request)
                 return
@@ -2598,8 +2600,10 @@ struct MainSurface: View {
 
     private func routeIntoFeed(_ label: String, keepingPick: Bool) -> Routed? {
         if label == Pinboard.room, !keepingPick { chrome.mergedScope[Pinboard.room] = nil }
+        // The Notes CATEGORY is the Feed's Notes section (prd §1347), as Day's
+        // is; `Pinboard.room` stays the page Library's folder pushes.
         let section: String? = label == RoomAccounts.readingRoom ? RoomAccounts.mediaRoom
-            : HomeScope.isFeedSection(label) ? label : nil
+            : HomeScope.isFeedSection(label) || label == HomeScope.notesSection ? label : nil
         if let section {
             if label == RoomAccounts.readingRoom { chrome.mediaScope = .read }
             // A door that asked for the section's follow list (prd §1118).
