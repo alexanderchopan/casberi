@@ -273,9 +273,18 @@ struct MoveSecurity: View {
         s.deployed ? s.keyIndex != nil : YourAccountKey.holdsOrigin
     }
 
+    /// The keys chosen at Create still to go on (prd §1457): the networks
+    /// the account is not on yet, where its first send carries them.
+    private var setup: YourAccountSetup.Choice? { YourAccountSetup.choice(for: account) }
+    private var unopened: [Standing] { standings.filter { !$0.deployed && YourAccountKey.holdsOrigin } }
+    private var withFirstSend: String { String(localized: "with your first send on \(names(unopened))") }
+
     private var recoveryLine: String {
         if standings.isEmpty { return String(localized: "Reading…") }
         let on = standings.filter { $0.recovery == .added }
+        if on.isEmpty, setup?.recovery == true, !unopened.isEmpty {
+            return String(localized: "In iCloud Keychain") + " · " + withFirstSend
+        }
         if on.isEmpty { return String(localized: "Not set up · if you lose this \(ThisDevice.name)") }
         // The networks only another device can open are the account's fact,
         // said once under the rows, not this key's.
@@ -402,7 +411,12 @@ struct MoveSecurity: View {
     /// keeps its own copy of the account — with what it comes to in all said
     /// beside it.
     @ViewBuilder private var spendLimit: some View {
-        if !limitNetworks.isEmpty {
+        if limitNetworks.isEmpty, let limit = setup?.limit, !unopened.isEmpty {
+            row(title: String(localized: "Spend limit"),
+                line: String(localized: "Up to \(MoveSentence.money(Double(limit.dollars))) of each coin a \(LimitPeriod.of(seconds: limit.minutes * 60).word)")
+                    + " · " + withFirstSend,
+                verb: nil)
+        } else if !limitNetworks.isEmpty {
             DSToggleRow(title: Text("Spend limit"), detail: Text(verbatim: limitLine), isOn: limitBinding)
                 .disabled(working != nil || (limited.isEmpty && notYet.isEmpty))
                 .frame(minHeight: 60)
@@ -659,6 +673,7 @@ struct MoveSecurity: View {
         let on = live.filter { !$0.outside.isEmpty }
         let missing = standings.filter { $0.outside.isEmpty }
         guard let one = keys.first else {
+            if let chosen = setup?.signer, !unopened.isEmpty { return YourAccount.short(chosen) + " · " + withFirstSend }
             return String(localized: "None · if you lose Casberi, a key in a wallet you hold signs instead")
         }
         let who = keys.count == 1 ? YourAccount.short(one) : String(localized: "\(keys.count) keys")

@@ -62,6 +62,8 @@ struct MoveScreen: View {
     /// Made or brought here in this tray: the sentence finishes itself
     /// ("Your account" → "Created …3416", §1442j).
     @State private var arrival: MoveSentence.Arrival?
+    /// Just created: your keys first (prd §1457), then the Created sentence.
+    @State private var walking = false
     /// Recovering: the networks the recovery key can bring it to (§1442k).
     @State private var recoverableOn: [YourAccountOp.Network]?
 
@@ -84,6 +86,11 @@ struct MoveScreen: View {
                         }
                         NSLog("movePreview: %@", preview)
                     }
+            } else if let preview, let address, preview == "keys" {
+                // `-keysStep 1…4` opens on a step; inert, nothing is kept.
+                let n = UserDefaults.standard.integer(forKey: "keysStep")
+                MoveKeysWalk(account: address, inTray: inTray, inert: true,
+                             step: MoveKeysWalk.Step(rawValue: n) ?? .recovery) { NSLog("movePreview: keys done") }
             } else if let preview, let address, preview == "created" || preview == "ready" {
                 MoveSentence(account: address, inTray: inTray, arrival: preview == "ready" ? .broughtHere : .created)
             } else {
@@ -105,7 +112,12 @@ struct MoveScreen: View {
 
     @ViewBuilder private var shown: some View {
         Group {
-            if let address {
+            if let address, walking {
+                MoveKeysWalk(account: address, inTray: inTray) {
+                    withAnimation(DS.Motion.standard) { walking = false }
+                }
+                .transition(.opacity)
+            } else if let address {
                 // The account exists: the page is the sentence (prd §1438),
                 // no head — it is this phone's account, there is no other.
                 MoveSentence(account: address, inTray: inTray, arrival: arrival)
@@ -284,6 +296,7 @@ struct MoveScreen: View {
             // land where every account's do.
             WalletStore.shared.add(made, label: String(localized: "Your account"))
             arrival = .created
+            walking = true
             withAnimation(DS.Motion.standard) { address = made }
             DSHaptic.success()
         } catch {

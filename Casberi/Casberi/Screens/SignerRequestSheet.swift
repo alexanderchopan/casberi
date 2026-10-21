@@ -10,13 +10,16 @@ import UIKit
 /// answer comes.
 struct SignerRequestSheet: View {
     let url: URL
-    let signer: String
+    /// Nil while one is being chosen (prd §1457): any wallet's first address.
+    let signer: String?
     @State private var copiedInstead = false
 
     var body: some View {
-        DSTray(title: String(localized: "Your Signer signs too"), height: 600, detents: [.large]) {
+        DSTray(title: signer == nil ? String(localized: "Your Signer") : String(localized: "Your Signer signs too"),
+               height: 600, detents: [.large]) {
             VStack(alignment: .leading, spacing: DS.Space.s3) {
-                Text("Scan with …\(String(signer.suffix(4))) in its wallet, then approve.")
+                Text(signer.map { String(localized: "Scan with …\(String($0.suffix(4))) in its wallet, then approve.") }
+                     ?? String(localized: "Scan with the wallet you want, then approve."))
                     .dsText(.body17)
                     .foregroundStyle(DS.textSecondary)
                 if let code = Self.code(url.absoluteString) {
@@ -48,7 +51,7 @@ struct SignerRequestSheet: View {
                 DSCopyRow(value: url.absoluteString, label: "Copy link", sensitive: true)
                 HStack(spacing: DS.Space.s2) {
                     DSSpinner()
-                    Text("Waiting for your Signer")
+                    Text(signer == nil ? String(localized: "Waiting for your wallet") : String(localized: "Waiting for your Signer"))
                         .dsText(.body17)
                         .foregroundStyle(DS.textSecondary)
                 }
@@ -122,6 +125,18 @@ struct SignerRequestSheet: View {
         }
     }
 
+    /// A wallet chosen as the Signer (prd §1457): scanned once, its first
+    /// address taken, the session closed; nothing signed.
+    static func choose(on chainIds: [Int]) async throws -> String {
+        let handle = await MainActor.run { Handle() }
+        defer { Task { @MainActor in handle.close() } }
+        let pairing = try await YourAccountSignerLink.connect(signer: nil, chainIds: chainIds) { url in
+            handle.close = present(url: url, signer: nil)
+        }
+        YourAccountSignerLink.close(pairing)
+        return pairing.signer
+    }
+
     @MainActor
     final class Handle {
         var close: @MainActor () -> Void = {}
@@ -130,7 +145,7 @@ struct SignerRequestSheet: View {
     /// Show the sheet over whatever is on screen; the returned closure takes
     /// it down.
     @MainActor
-    static func present(url: URL, signer: String) -> @MainActor () -> Void {
+    static func present(url: URL, signer: String?) -> @MainActor () -> Void {
         let host = UIHostingController(rootView: SignerRequestSheet(url: url, signer: signer))
         host.view.backgroundColor = .systemBackground
         if let sheet = host.sheetPresentationController {
