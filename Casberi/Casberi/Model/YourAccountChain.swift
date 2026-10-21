@@ -551,6 +551,47 @@ enum YourAccountChain {
         return Sent(outcome: try await submit(op, net, account: account, stage: stage), network: net)
     }
 
+    /// Safe's 7579 adapter onto a network that lacks it (prd §1447 item
+    /// 18): Rhinestone's OWN publish transaction from Ethereum, read off
+    /// Ethereum and replayed through Safe's singleton factory, refused unless
+    /// it lands at the adapter's address (the address commits to the code,
+    /// so it is the audited adapter, byte for byte). Anyone may send it; the
+    /// account sends it as one call, creating itself there first if it must.
+    /// Throwaway-only outside a simulation.
+    static func publishAdapter(on net: Network, reason: String, dryRun: Bool,
+                               report: @escaping @Sendable (String) -> Void = { _ in },
+                               stage: @escaping @Sendable (Stage) async -> Void) async throws -> Sent {
+        guard let account = YourAccountKey.address else {
+            throw Failure(message: String(localized: "There is no account on this iPhone"))
+        }
+        guard dryRun || throwaway(account) else {
+            throw Failure(message: String(localized: "A spend limit is not available yet"))
+        }
+        await stage(.preparing)
+        if try await isContract(net, YourAccount7579.adapter) {
+            report("already published")
+            return Sent(outcome: .landed(transaction: nil, rotated: false), network: net)
+        }
+        guard let tx = try await rpc(YourAccountOp.ethereum, "eth_getTransactionByHash", [YourAccount7579.publishTransaction]) as? [String: Any],
+              let to = tx["to"] as? String, WalletWatch.sameAddress(to, YourAccount7579.singletonFactory),
+              let input = (tx["input"] as? String).flatMap(SafeABI.hexBytes),
+              let lands = YourAccount7579.publishedAddress(input), WalletWatch.sameAddress(lands, YourAccount7579.adapter) else {
+            throw Failure(message: String(localized: "This send could not be written"))
+        }
+        report("publish: \(input.count) bytes, lands at \(lands)")
+        let deployed = try await isDeployed(net, account)
+        let (signerIndex, device) = try await deviceSigner(net, account, deployed: deployed)
+        let next = try YourAccountKey.nextKey(after: signerIndex)
+        guard let nextKey = YourAccountKey.publicKey(next) else {
+            throw Failure(message: String(localized: "This send could not be written"))
+        }
+        let call = YourAccountOp.Call(operation: 0, to: YourAccount7579.singletonFactory, value: YourAccount.w(0), data: input)
+        let outcome = try await operate(net, account: account, deployed: deployed, calls: [call],
+                                        rotateTo: nextKey, payments: [], signer: device, reason: reason,
+                                        dryRun: dryRun, report: report, stage: stage)
+        return Sent(outcome: await settle(outcome, net, account, next: next, x: nextKey.x), network: net)
+    }
+
     static func recoveryState(_ net: Network, _ account: String, signer: String) async throws -> RecoveryState {
         guard try await isDeployed(net, account) else { return .notThere }
         let all = try await owners(net, account)

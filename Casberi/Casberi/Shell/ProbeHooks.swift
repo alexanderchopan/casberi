@@ -3914,7 +3914,7 @@ enum ProbeHooks {
         Hook(key: "yourAccountRecoverProbe") { raw, _ in
             Task { @MainActor in
                 func log(_ line: String) { NSLog("yourAccountRecover| %@", line) }
-                guard let net = YourAccountOp.networks.first(where: { $0.name.caseInsensitiveCompare(raw) == .orderedSame }),
+                guard let net = YourAccountOp.probeNetworks.first(where: { $0.name.caseInsensitiveCompare(raw) == .orderedSame }),
                       let account = YourAccountKey.address else {
                     log("no such network, or no account on this phone"); return
                 }
@@ -3961,7 +3961,7 @@ enum ProbeHooks {
         Hook(key: "signingProbe") { raw, _ in
             Task { @MainActor in
                 func log(_ line: String) { NSLog("signing| %@", line) }
-                guard let net = YourAccountOp.networks.first(where: { $0.name.caseInsensitiveCompare(raw) == .orderedSame }),
+                guard let net = YourAccountOp.probeNetworks.first(where: { $0.name.caseInsensitiveCompare(raw) == .orderedSame }),
                       let account = YourAccountKey.address else { log("no such network, or no account"); return }
                 do {
                     let threshold = try await YourAccountChain.threshold(net, account)
@@ -3986,7 +3986,7 @@ enum ProbeHooks {
             Task { @MainActor in
                 func log(_ line: String) { NSLog("signingSet| %@", line) }
                 let p = raw.split(separator: "|").map(String.init)
-                guard p.count >= 4, let net = YourAccountOp.networks.first(where: { $0.name.caseInsensitiveCompare(p[0]) == .orderedSame }),
+                guard p.count >= 4, let net = YourAccountOp.probeNetworks.first(where: { $0.name.caseInsensitiveCompare(p[0]) == .orderedSame }),
                       let minutes = Int(p[3]) else { log("expected <network>|<token>|<units>|<minutes>[|dry]"); return }
                 let dry = p.count > 4 && p[4] == "dry"
                 do {
@@ -4006,7 +4006,7 @@ enum ProbeHooks {
         Hook(key: "adapterInstallProbe") { raw, _ in
             Task { @MainActor in
                 func log(_ line: String) { NSLog("adapterInstall| %@", line) }
-                guard let net = YourAccountOp.networks.first(where: { $0.name.caseInsensitiveCompare(raw) == .orderedSame }) else {
+                guard let net = YourAccountOp.probeNetworks.first(where: { $0.name.caseInsensitiveCompare(raw) == .orderedSame }) else {
                     log("no such network"); return
                 }
                 do {
@@ -4029,7 +4029,7 @@ enum ProbeHooks {
             Task { @MainActor in
                 func log(_ line: String) { NSLog("throwawaySend| %@", line) }
                 let p = raw.split(separator: "|").map(String.init)
-                guard p.count == 2, let net = YourAccountOp.networks.first(where: { $0.name.caseInsensitiveCompare(p[0]) == .orderedSame }),
+                guard p.count == 2, let net = YourAccountOp.probeNetworks.first(where: { $0.name.caseInsensitiveCompare(p[0]) == .orderedSame }),
                       let account = YourAccountKey.address,
                       let named = UserDefaults.standard.string(forKey: "adapterThrowaway"), WalletWatch.sameAddress(named, account) else {
                     log("only on the throwaway -adapterThrowaway names"); return
@@ -4056,7 +4056,7 @@ enum ProbeHooks {
             Task { @MainActor in
                 func log(_ line: String) { NSLog("limitInstall| %@", line) }
                 let p = raw.split(separator: "|").map(String.init)
-                guard p.count == 5, let net = YourAccountOp.networks.first(where: { $0.name.caseInsensitiveCompare(p[0]) == .orderedSame }),
+                guard p.count == 5, let net = YourAccountOp.probeNetworks.first(where: { $0.name.caseInsensitiveCompare(p[0]) == .orderedSame }),
                       let seconds = Int(p[3]), let count = Int(p[4]), let account = YourAccountKey.address else {
                     log("usage: <network>|<dollar units>|<ETH wei>|<seconds>|<count>"); return
                 }
@@ -4086,7 +4086,7 @@ enum ProbeHooks {
             Task { @MainActor in
                 func log(_ line: String) { NSLog("limitSend| %@", line) }
                 let p = raw.split(separator: "|").map(String.init)
-                guard p.count == 3, let net = YourAccountOp.networks.first(where: { $0.name.caseInsensitiveCompare(p[0]) == .orderedSame }),
+                guard p.count == 3, let net = YourAccountOp.probeNetworks.first(where: { $0.name.caseInsensitiveCompare(p[0]) == .orderedSame }),
                       let account = YourAccountKey.address else { log("usage: <network>|usdc|eth|<units>"); return }
                 let token = p[1].lowercased() == "eth" ? YourAccountOp.eth : YourAccountOp.dollar(on: net)
                 do {
@@ -4109,7 +4109,7 @@ enum ProbeHooks {
             Task { @MainActor in
                 func log(_ line: String) { NSLog("requireBoth| %@", line) }
                 let p = raw.split(separator: "|").map(String.init)
-                guard p.count == 2, let net = YourAccountOp.networks.first(where: { $0.name.caseInsensitiveCompare(p[0]) == .orderedSame }),
+                guard p.count == 2, let net = YourAccountOp.probeNetworks.first(where: { $0.name.caseInsensitiveCompare(p[0]) == .orderedSame }),
                       let account = YourAccountKey.address else { log("usage: <network>|<signer address>"); return }
                 do {
                     let real = UserDefaults.standard.string(forKey: "adapterThrowaway").map { WalletWatch.sameAddress($0, account) } ?? false
@@ -4133,7 +4133,7 @@ enum ProbeHooks {
             Task { @MainActor in
                 func log(_ line: String) { NSLog("coSignSend| %@", line) }
                 let p = raw.split(separator: "|").map(String.init)
-                guard p.count == 3, let net = YourAccountOp.networks.first(where: { $0.name.caseInsensitiveCompare(p[0]) == .orderedSame }),
+                guard p.count == 3, let net = YourAccountOp.probeNetworks.first(where: { $0.name.caseInsensitiveCompare(p[0]) == .orderedSame }),
                       let account = YourAccountKey.address,
                       let named = UserDefaults.standard.string(forKey: "adapterThrowaway"), WalletWatch.sameAddress(named, account),
                       let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
@@ -4161,7 +4161,7 @@ enum ProbeHooks {
             Task { @MainActor in
                 func log(_ line: String) { NSLog("walletCoSign| %@", line) }
                 let p = raw.split(separator: "|").map(String.init)
-                guard p.count == 3, let net = YourAccountOp.networks.first(where: { $0.name.caseInsensitiveCompare(p[0]) == .orderedSame }),
+                guard p.count == 3, let net = YourAccountOp.probeNetworks.first(where: { $0.name.caseInsensitiveCompare(p[0]) == .orderedSame }),
                       let account = YourAccountKey.address,
                       let named = UserDefaults.standard.string(forKey: "adapterThrowaway"), WalletWatch.sameAddress(named, account) else {
                     log("only on the throwaway -adapterThrowaway names: <network>|<wei>|<signer address>"); return
@@ -4190,6 +4190,26 @@ enum ProbeHooks {
                 }
             }
         },
+        // `-publishAdapterProbe <network>` — Safe's 7579 adapter onto a network
+        // that lacks it, from Rhinestone's own Ethereum transaction (prd §1447
+        // item 18). Simulated unless `-adapterThrowaway` names this account.
+        Hook(key: "publishAdapterProbe") { raw, _ in
+            Task { @MainActor in
+                func log(_ line: String) { NSLog("publishAdapter| %@", line) }
+                guard let net = YourAccountOp.probeNetworks.first(where: { $0.name.caseInsensitiveCompare(raw) == .orderedSame }),
+                      let account = YourAccountKey.address else { log("no such network"); return }
+                do {
+                    let real = UserDefaults.standard.string(forKey: "adapterThrowaway").map { WalletWatch.sameAddress($0, account) } ?? false
+                    let sent = try await YourAccountChain.publishAdapter(on: net, reason: "Probe: Safe's adapter", dryRun: !real,
+                                                                        report: { line in NSLog("publishAdapter| %@", line) }) { stage in log("stage=\(stage)") }
+                    log("result=\(sent.outcome)")
+                } catch let failure as YourAccountChain.Failure {
+                    log("refused: \(failure.message)")
+                } catch {
+                    log("error: \(String(describing: error))")
+                }
+            }
+        },
         // `-recoveryNudgePreview "<chainId,…>"` — draw Needs you's recovery-key
         // row for these networks (prd §1442m) on a phone that cannot fix them.
         Hook(key: "recoveryNudgePreview") { raw, _ in
@@ -4210,7 +4230,7 @@ enum ProbeHooks {
                 func log(_ line: String) { NSLog("yourAccountApprove| %@", line) }
                 let p = raw.split(separator: "|").map(String.init)
                 guard p.count == 4,
-                      let net = YourAccountOp.networks.first(where: { $0.name.caseInsensitiveCompare(p[0]) == .orderedSame }),
+                      let net = YourAccountOp.probeNetworks.first(where: { $0.name.caseInsensitiveCompare(p[0]) == .orderedSame }),
                       ENS.isHexAddress(p[1]), let spender = SafeABI.word(address: p[2]),
                       let amount = SafeABI.word(uint256: p[3]) else {
                     log("expected <network>|<token>|<spender>|<units>"); return

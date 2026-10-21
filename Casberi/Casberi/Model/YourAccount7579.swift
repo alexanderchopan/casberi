@@ -49,6 +49,21 @@ enum YourAccount7579 {
     /// answers a session's `validateSignatureWithData`; the module SDK's
     /// `0x7ab16f…` does not, so it cannot sign for a session.
     static let webAuthnValidator = "0x0000000000578c4cb0e472a5462da43c495c3f33"
+    /// Safe's singleton factory (`CREATE2` of `salt ‖ initcode`, the same
+    /// address on every network), which published the adapter on Ethereum in
+    /// `publishTransaction` (block 20,998,751, by Rhinestone's deployer).
+    static let singletonFactory = "0x914d7Fec6aaC8cd542e72Bca78B30650d45643d7"
+    static let publishTransaction = "0xa782c12dcef5ba32d484fbacb96ae9616b1eb61bcdb4f7ce1195201b7ca55fd2"
+
+    /// Where `salt ‖ initcode` sent to the singleton factory lands: the
+    /// address commits to the code, so a match IS the audited adapter.
+    static func publishedAddress(_ input: [UInt8]) -> String? {
+        guard input.count > 32 else { return nil }
+        let salt = Array(input.prefix(32)), initCode = Array(input.dropFirst(32))
+        let hash = Keccak256.hash([0xff] + YourAccount.addressBytes(singletonFactory) + salt + Keccak256.hash(initCode))
+        return "0x" + Keccak256.hexString(Array(hash.suffix(20)))
+    }
+
     /// The head of Safe's module list (`SENTINEL_MODULES`).
     static let sentinel = "0x0000000000000000000000000000000000000001"
 
