@@ -492,7 +492,12 @@ enum YourAccountChain {
             calls.append(YourAccountOp.addOwnerCall(account: account, owner: owner, threshold: 1))
             if let limit = choice.limit {
                 let price = await relayPrice(net, YourAccountOp.eth)
-                let next = limitPlan(on: net, dollars: limit.dollars, ethPrice: price, minutes: limit.minutes)
+                // Six periods, not twelve: opening the account with twelve is
+                // 19.2M gas against the bundler's 15M (measured on Base,
+                // 2026-10-21; user: "One Face ID, 6 periods"). It renews to
+                // twelve with a send both keys sign.
+                let next = limitPlan(on: net, dollars: limit.dollars, ethPrice: price, minutes: limit.minutes,
+                                     count: YourAccountSetup.firstPeriods)
                 calls += YourAccount7579.installCalls(account: account)
                 calls += try await limitCalls(net, account, next).calls
                 calls.append(YourAccountOp.Call(operation: 0, to: account, value: YourAccount.w(0),
@@ -536,7 +541,7 @@ enum YourAccountChain {
 
     /// A plan of `dollars` of the network's dollar and as much ETH (at
     /// `ethPrice`, nil leaves ETH to both keys) each `minutes`, set up ahead.
-    static func limitPlan(on net: Network, dollars: Int, ethPrice: Double?, minutes: Int) -> YourAccount7579.Plan {
+    static func limitPlan(on net: Network, dollars: Int, ethPrice: Double?, minutes: Int, count: Int? = nil) -> YourAccount7579.Plan {
         let dollarCap = String(dollars) + "000000"
         var ethCap = "0"
         if let ethPrice, ethPrice > 0 {
@@ -548,7 +553,7 @@ enum YourAccountChain {
         let start = Int(Date().timeIntervalSince1970) / 60 * 60
         return YourAccount7579.Plan(chainId: net.chainId, dollar: net.dollar, dollarCap: dollarCap, ethCap: ethCap,
                                     windows: YourAccount7579.windows(start: start, seconds: minutes * 60,
-                                                                     count: YourAccount7579.windowCount(minutes: minutes)))
+                                                                     count: count ?? YourAccount7579.windowCount(minutes: minutes)))
     }
 
     /// Turning it on (prd §1455): this phone alone, while one key still
