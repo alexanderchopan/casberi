@@ -5121,6 +5121,34 @@
         }
       }
     },
+    "Above it, your signer signs too — and so does any change to these keys." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Por encima, también firma tu firmante — y cualquier cambio en estas claves."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "それを超えると署名者も署名します。これらの鍵の変更も同様です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "그 이상이면 서명자도 서명하며, 이 키들의 변경도 마찬가지입니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "超过此数额时，你的签名者也要签名——更改这些密钥同样如此。"
+          }
+        }
+      }
+    },
     "Add a signer" : {
       "localizations" : {
         "es" : {
@@ -5145,6 +5173,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "添加签名者"
+          }
+        }
+      }
+    },
+    "Add a signer first: with both keys required, a send waits on it" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Añade primero un firmante: con ambas claves exigidas, un envío espera por él"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "先に署名者を追加してください。両方の鍵が必要だと、送金はそれを待ちます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "먼저 서명자를 추가하세요. 두 키가 필요하면 보내기가 서명자를 기다립니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "请先添加签名者：要求两把密钥时，转账会等待它"
           }
         }
       }
@@ -5177,6 +5233,90 @@
         }
       }
     },
+    "Any one key" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cualquier clave"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "どれか1つの鍵"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "키 하나로"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "任一密钥"
+          }
+        }
+      }
+    },
+    "Any one key · add a signer to require both above an amount" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cualquier clave · añade un firmante para exigir ambas por encima de una cantidad"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "どれか1つの鍵 · 署名者を追加すると、ある金額を超えたとき両方の鍵を必要にできます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "키 하나로 · 서명자를 추가하면 일정 금액 이상에서 두 키를 요구할 수 있습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "任一密钥 · 添加签名者后可要求超过某金额时两把密钥都签名"
+          }
+        }
+      }
+    },
+    "Any one key · set an amount above which both keys sign" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cualquier clave · fija una cantidad a partir de la cual firman ambas"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "どれか1つの鍵 · 両方の鍵で署名する金額を設定"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "키 하나로 · 두 키가 서명할 금액을 설정하세요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "任一密钥 · 设置一个金额，超过时需两把密钥签名"
+          }
+        }
+      }
+    },
     "Aztec upgrades from %@: take your money out of zk.money first" : {
       "localizations" : {
         "es" : {
@@ -5205,6 +5345,90 @@
         }
       }
     },
+    "Both keys above %@ a month on %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ambas claves por encima de %1$@ al mes en %2$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%2$@ では月 %1$@ を超えると両方の鍵"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%2$@에서 월 %1$@ 초과 시 두 키 모두"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 %2$@ 上每月超过 %1$@ 需两把密钥"
+          }
+        }
+      }
+    },
+    "Both keys above the amount on %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ambas claves por encima de la cantidad en %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ で金額を超えると両方の鍵が必要になりました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@에서 금액 초과 시 두 키 모두 필요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已在 %@ 上设置：超过金额需两把密钥"
+          }
+        }
+      }
+    },
+    "Both keys on %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ambas claves en %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ では両方の鍵"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@에서 두 키 모두"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 %@ 上需两把密钥"
+          }
+        }
+      }
+    },
     "Copies your address, opens Coinbase" : {
       "localizations" : {
         "es" : {
@@ -5229,6 +5453,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "复制你的地址并打开 Coinbase"
+          }
+        }
+      }
+    },
+    "Dollars a month, with Face ID alone" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Dólares al mes, solo con Face ID"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Face ID だけで送れる月額（ドル）"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Face ID만으로 보낼 월 한도 (달러)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "每月仅凭 Face ID 可转的美元数"
           }
         }
       }
@@ -5453,6 +5705,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "在你的 iCloud 钥匙串中找到。你的另一台 %@ 将无法再从中发送。"
+          }
+        }
+      }
+    },
+    "Going back to one key needs your signer to sign too — coming next" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Volver a una clave también requiere la firma de tu firmante — próximamente"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1つの鍵に戻すには署名者の署名も必要です — 近日対応"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "키 하나로 되돌리려면 서명자의 서명도 필요합니다 — 곧 지원"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "改回单把密钥也需要签名者签名——即将支持"
           }
         }
       }
@@ -6017,6 +6297,62 @@
         }
       }
     },
+    "Require both keys" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Exigir ambas claves"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "両方の鍵を必要にする"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "두 키 모두 요구"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "要求两把密钥"
+          }
+        }
+      }
+    },
+    "Require both keys above an amount on %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Exigir ambas claves por encima de una cantidad en %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ で金額を超えたら両方の鍵を必要にする"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@에서 금액 초과 시 두 키 모두 요구"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 %@ 上要求超过金额时两把密钥签名"
+          }
+        }
+      }
+    },
     "Same as above" : {
       "localizations" : {
         "es" : {
@@ -6101,6 +6437,62 @@
         }
       }
     },
+    "Set amount" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Fijar cantidad"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "金額を設定"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "금액 설정"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "设置金额"
+          }
+        }
+      }
+    },
+    "Setting…" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Configurando…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "設定中…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "설정 중…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "设置中…"
+          }
+        }
+      }
+    },
     "Shares your address" : {
       "localizations" : {
         "es" : {
@@ -6181,6 +6573,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "已在 %@ 添加签名者"
+          }
+        }
+      }
+    },
+    "Signing" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Firma"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "署名"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "서명"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "签名"
           }
         }
       }
@@ -21593,6 +22013,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你的账户已回到这台 iPhone"
+          }
+        }
+      }
+    },
+    "Your account is not on %@ yet" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu cuenta aún no está en %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アカウントはまだ %@ にありません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "계정이 아직 %@에 없습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的账户还未在 %@ 上"
           }
         }
       }
