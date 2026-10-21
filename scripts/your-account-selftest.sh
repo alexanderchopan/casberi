@@ -364,5 +364,7 @@ awk '/static func setupCalls/,/^    }$/' "$CH" | awk '/addRecoveryCalls/{a=NR}/a
   || { echo "✗ setupCalls no longer adds recovery, Signer, adapter, sessions, then both keys last (prd §1457)"; exit 1; }
 grep -q 'guard signer != nil, let limitDollars' Casberi/Casberi/Model/YourAccountSetup.swift || { echo "✗ a spend limit chosen at Create can stand with no Signer to sign over it (prd §1457)"; exit 1; }
 grep -q 'count: YourAccountSetup.firstPeriods)' Casberi/Casberi/Model/YourAccountChain.swift && grep -Eq 'static let firstPeriods = [1-6]$' Casberi/Casberi/Model/YourAccountSetup.swift || { echo "✗ the opening operation sets up more than six limit periods: twelve is 19.2M gas against the bundler's 15M (prd §1461)"; exit 1; }
+# A bundler's refusal reaches the person in the app's words (prd §1461 item 4).
+grep -q 'last = worded(error, on: net)' Casberi/Casberi/Model/YourAccountChain.swift && grep -q 'lower.contains("max gas")' Casberi/Casberi/Model/YourAccountChain.swift || { echo "✗ a bundler's raw refusal (\"UserOperation max gas … is larger than\") reaches the person (prd §1461 item 4)"; exit 1; }
 grep -q 'walking = true' Casberi/Casberi/Screens/MoveScreen.swift || { echo "✗ Create no longer walks through your keys (prd §1457)"; exit 1; }
 echo "✓ your account: the address is the factory's, the send's bytes are the module's, amounts add up, Move is in every build, it names only networks this phone can use, and asks where money lacks the recovery key"

@@ -1401,6 +1401,34 @@
         }
       }
     },
+    "%@ is still taking your last send: try again in a minute" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ aún está procesando tu último envío: inténtalo en un minuto"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@はまだ前回の送金を処理中です。1分後にもう一度お試しください"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@이(가) 아직 지난 송금을 처리 중입니다. 1분 뒤 다시 시도하세요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 还在处理你上一次发送：请一分钟后再试"
+          }
+        }
+      }
+    },
     "%@ isn't %@" : {
       "localizations" : {
         "es" : {
@@ -1947,6 +1975,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "关注以来 %@"
+          }
+        }
+      }
+    },
+    "%@ slots to the next" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ slots hasta la siguiente"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "次まで%@スロット"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "다음까지 %@ 슬롯"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "距下一个还有 %@ 个时隙"
           }
         }
       }
@@ -4869,6 +4925,34 @@
         }
       }
     },
+    "1 slot to the next" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "1 slot hasta la siguiente"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "次まで1スロット"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "다음까지 1 슬롯"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "距下一个还有 1 个时隙"
+          }
+        }
+      }
+    },
     "1 token" : {
       "localizations" : {
         "es" : {
@@ -5905,6 +5989,90 @@
         }
       }
     },
+    "Epoch %lld" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Época %lld"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "エポック%lld"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "에포크 %lld"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "纪元 %lld"
+          }
+        }
+      }
+    },
+    "Epoch %lld · %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Época %lld · %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "エポック%lld · %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "에포크 %lld · %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "纪元 %lld · %@"
+          }
+        }
+      }
+    },
+    "Epoch ends · %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "La época termina · %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "エポック終了 · %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "에포크 종료 · %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "纪元结束 · %@"
+          }
+        }
+      }
+    },
     "Face ID alone" : {
       "localizations" : {
         "es" : {
@@ -5989,6 +6157,34 @@
         }
       }
     },
+    "In iCloud Keychain" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "En el llavero de iCloud"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "iCloudキーチェーンに保存済み"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "iCloud 키체인에 있음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已存于 iCloud 钥匙串"
+          }
+        }
+      }
+    },
     "Later" : {
       "localizations" : {
         "es" : {
@@ -6041,6 +6237,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "丢了这台 iPhone，也能在下一台上继续使用。"
+          }
+        }
+      }
+    },
+    "Mail list" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Lista de correo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "メーリングリスト"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "메일링 리스트"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "邮件列表"
           }
         }
       }
@@ -6101,6 +6325,34 @@
         }
       }
     },
+    "Not enough ETH on %@ for the fee" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No hay suficiente ETH en %@ para la comisión"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@の手数料に足りるETHがありません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@에서 수수료를 낼 ETH가 부족합니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ 上的 ETH 不足以支付手续费"
+          }
+        }
+      }
+    },
     "Off · each dollar send rounds up, the change buys a token" : {
       "localizations" : {
         "es" : {
@@ -6125,6 +6377,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "关闭 · 每笔美元转账向上取整，零钱买入代币"
+          }
+        }
+      }
+    },
+    "On your lists" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "En tus listas"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "登録中のリスト"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "구독 중인 리스트"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你订阅的列表"
           }
         }
       }
@@ -6209,6 +6489,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "打开 MetaMask"
+          }
+        }
+      }
+    },
+    "Open mail list" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Abrir lista de correo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "メーリングリストを開く"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "메일링 리스트 열기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "打开邮件列表"
           }
         }
       }
@@ -6713,6 +7021,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "该钱包是合约，不是你持有密钥的钱包"
+          }
+        }
+      }
+    },
+    "This send is already on its way on %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Este envío ya está en camino en %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "この送金はすでに%@で処理中です"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 송금은 이미 %@에서 진행 중입니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "这笔发送已在 %@ 上进行中"
+          }
+        }
+      }
+    },
+    "Too much for one transaction on %@: send less at once" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Demasiado para una transacción en %@: envía menos de una vez"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@では1回の取引に収まりません。一度に送る量を減らしてください"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@에서 한 번의 거래에 담기에 너무 큽니다. 한 번에 보내는 양을 줄이세요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 %@ 上一笔交易装不下：请减少单次发送量"
           }
         }
       }
@@ -8393,6 +8757,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "超过时，%@ 也要签名"
+          }
+        }
+      }
+    },
+    "next in %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "siguiente en %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "次は%@後"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "다음은 %@ 후"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@后到下一个"
           }
         }
       }
@@ -30419,6 +30811,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你的恢复密钥不在 %@ 上"
+          }
+        }
+      }
+    },
+    "with your first send on %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "con tu primer envío en %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@での最初の送金と一緒に"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@에서의 첫 송금과 함께"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "随你在 %@ 上的第一次发送"
           }
         }
       }
