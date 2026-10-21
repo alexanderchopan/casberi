@@ -4188,9 +4188,7 @@ struct ThingSheetView: View {
     /// person — a sender at a mailbox provider (`gmail.com`, prd §1113)
     /// writes to you; it does not bill you (prd §1363).
     private var mailKeep: VerbDial.Keep? {
-        guard mailListRead, mailList == nil, let address = mailSubscriptionAddress,
-              !ServiceIdentity.mailboxDomains.contains(ServiceIdentity.registrable(address) ?? "")
-        else { return nil }
+        guard mailListRead, mailList == nil, let address = mailSubscriptionAddress else { return nil }
         return VerbDial.Keep(label: String(localized: "Track"), glyph: SubscriptionWords.planGlyph) {
             addMailSubscription(address)
         }
@@ -4382,7 +4380,10 @@ struct ThingSheetView: View {
         // A transfer's header already draws its wallet (prd §1349), and a
         // receipt's box names it in its Wallet fact.
         let wallet = moneyHasPerson ? nil : fromWallet.flatMap { fresh($0.name) ? $0 : nil }
-        let list = mailListRead ? mailList.flatMap { fresh($0.name) ? $0 : nil } : nil
+        // A mail's list is the one way to its list from here (the sheet's
+        // Track is for a sender on none), so it is never dropped: a name the
+        // head already says gives the row the kind's name instead.
+        let list = mailListRead ? mailList : nil
         let follow = fromFollow.flatMap { fresh($0.name) ? $0 : nil }
         Group {
             if follow != nil || person != nil || contact != nil || wallet != nil || list != nil || app != nil {
@@ -4392,7 +4393,7 @@ struct ThingSheetView: View {
                         if let person { fromPersonRow(person) }
                         if let contact { fromContactRow(contact) }
                         if let wallet { fromWalletRow(wallet) }
-                        if let list { fromListRow(list) }
+                        if let list { fromListRow(list, named: fresh(list.name)) }
                         if let app { fromAppRow(app) }
                     }
                 }
@@ -4525,8 +4526,9 @@ struct ThingSheetView: View {
         }
     }
 
-    private func fromListRow(_ list: MailSubscriptions.Item) -> some View {
-        sourceDoor(title: list.name, line: MailSubscriptions.writesWords(list)) {
+    private func fromListRow(_ list: MailSubscriptions.Item, named: Bool) -> some View {
+        sourceDoor(title: named ? list.name : String(localized: "Mail list"),
+                   line: MailSubscriptions.writesWords(list)) {
             dismiss()
             chrome.open(.list(list.id))
         } lead: {
@@ -4559,12 +4561,10 @@ struct ThingSheetView: View {
         .dsHover()
     }
 
-    /// The sender's mailbox: the envelope's address, else the one in the
-    /// sender's name. Only for a mail seat the reading reads, or the add
-    /// would file nothing (§83).
+    /// The sender's mailbox, when the mail can be tracked by it
+    /// (`MailSubscriptionsReading.trackableAddress`, the row's long press too).
     private var mailSubscriptionAddress: String? {
-        guard MailSubscriptionsReading.sources.contains(thing.source) else { return nil }
-        return MailSubscriptions.address(thing.authorEmail, sender: Self.mailSender(thing))
+        MailSubscriptionsReading.trackableAddress(thing, sender: Self.mailSender(thing))
     }
 
     /// Read once the sheet is up (prd §628): the tile's own reading.
@@ -4577,10 +4577,10 @@ struct ThingSheetView: View {
     /// The one write: the sender joins the tile. The door turns into the
     /// list's own, and the toast says where it went.
     private func addMailSubscription(_ address: String) {
-        let name = MailSubscriptions.senderName(Self.mailSender(thing))
-        guard MailSubscriptionStore.shared.add(address: address, name: name) != nil else { return }
+        guard let name = MailSubscriptionsReading.shared.track(address: address, sender: Self.mailSender(thing),
+                                                               context: modelContext) else { return }
         withAnimation(DS.Motion.standard) { readMailList() }
-        chrome.flash(String(localized: "Tracking \(name ?? address)"))
+        chrome.flash(String(localized: "Tracking \(name)"))
     }
 
     /// Watching an unfinished record from the lock screen (prd §369

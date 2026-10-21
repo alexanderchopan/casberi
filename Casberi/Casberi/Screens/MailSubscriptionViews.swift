@@ -268,19 +268,35 @@ struct MailSubscriptionAddTray: View {
         let searching = !query.trimmingCharacters(in: .whitespaces).isEmpty
         let reading = MailSubscriptionsReading.shared
         let candidates = searching ? Self.matching(reading.senders, query: query) : reading.candidates
+        // Search finds a sender already on your lists too, so a name you
+        // type is never "no mail" when it is there; a tap opens its list.
+        let listed = searching ? Self.matching(reading.items, query: query) : []
         // The find tray's shape (`DSTraySearchField`): the rows, and the
         // field at the bottom on glass.
         DSTray(title: SubscriptionWords.track, height: 640, detents: [.large], scrollsItself: true) {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 0) {
-                    if candidates.isEmpty {
+                    if !listed.isEmpty {
+                        DSTrayGroup(String(localized: "On your lists"), glyph: ScopeTileGlyph.newsletters) {
+                            ForEach(listed) { item in
+                                Button { openList(item) } label: {
+                                    MailSubscriptionRow(item: item, paid: false)
+                                        .contentShape(Rectangle())
+                                }
+                                .buttonStyle(RowPress())
+                                .dsHover()
+                                .padding(.horizontal, DS.Space.s4)
+                            }
+                        }
+                    }
+                    if candidates.isEmpty && listed.isEmpty {
                         DSEmptyState(headline: searching ? DSProse.text("No mail matches")
                                                          : DSProse.text("No one else wrote this month"),
                                      words: searching ? Text("Try a name or an address")
                                                       : Text("Search mail for anyone who wrote before"),
                                      scale: .list(rows: 3))
                             .padding(.horizontal, DS.Space.s4)
-                    } else {
+                    } else if !candidates.isEmpty {
                         DSTrayGroup(searching ? String(localized: "From your mail")
                                               : String(localized: "Writes to you most"), glyph: "envelope") {
                             ForEach(candidates) { candidate in
@@ -333,6 +349,19 @@ struct MailSubscriptionAddTray: View {
         let q = query.trimmingCharacters(in: .whitespaces)
         guard !q.isEmpty else { return all }
         return all.filter { $0.name.localizedCaseInsensitiveContains(q) || $0.address.localizedCaseInsensitiveContains(q) }
+    }
+
+    /// A name on a list matches by its name or its sender's address.
+    static func matching(_ all: [MailSubscriptions.Item], query: String) -> [MailSubscriptions.Item] {
+        let q = query.trimmingCharacters(in: .whitespaces)
+        guard !q.isEmpty else { return all }
+        return all.filter { $0.name.localizedCaseInsensitiveContains(q) || ($0.address ?? "").localizedCaseInsensitiveContains(q) }
+    }
+
+    private func openList(_ item: MailSubscriptions.Item) {
+        DSHaptic.selection()
+        dismiss()
+        chrome.open(.list(item.id))
     }
 
     /// The one write, `-mailSubscriptionAdd`'s and the mail sheet's: the

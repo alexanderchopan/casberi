@@ -843,6 +843,29 @@ struct RowVerbMenu: View {
                 Label("Share", systemImage: "square.and.arrow.up")
             }
         }
+        // A MAIL'S LIST, FROM THE ROW (user: "we still need a way to add it
+        // manually … like long press"): the sheet's Track, or its door to the
+        // list the mail is already on. Read off the last reading, built when
+        // the press raises the menu (§661), never a fetch here (§628).
+        if thing.kind == .mail {
+            let sender = ThingSheetView.mailSender(thing)
+            if let list = MailSubscriptionsReading.shared.item(holding: thing.id) {
+                Button {
+                    chrome.open(.list(list.id))
+                } label: {
+                    Label("Open mail list", systemImage: SubscriptionWords.planGlyph)
+                }
+            } else if let address = MailSubscriptionsReading.trackableAddress(thing, sender: sender) {
+                Button {
+                    guard let name = MailSubscriptionsReading.shared.track(address: address, sender: sender,
+                                                                           context: modelContext) else { return }
+                    DSHaptic.selection()
+                    chrome.flash(String(localized: "Tracking \(name)"))
+                } label: {
+                    Label("Track", systemImage: SubscriptionWords.planGlyph)
+                }
+            }
+        }
         // Anything the Notes room holds files (user: "anything in the
         // room"); one folder at most, so a pick MOVES it. Built when the
         // press raises the menu (§661), so the store read is not per row.

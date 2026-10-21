@@ -55,6 +55,28 @@ final class MailSubscriptionsReading {
         read = true
     }
 
+    /// The sender a mail could be tracked by, the sheet's Track and the row's
+    /// long press both: a mail seat this reading reads (else the add files
+    /// nothing, §83), an address, and never a person at a mailbox provider
+    /// (prd §1363).
+    static func trackableAddress(_ thing: Thing, sender: String?) -> String? {
+        guard thing.kind == .mail, sources.contains(thing.source),
+              let address = MailSubscriptions.address(thing.authorEmail, sender: sender),
+              !ServiceIdentity.mailboxDomains.contains(ServiceIdentity.registrable(address) ?? "")
+        else { return nil }
+        return address
+    }
+
+    /// The one write: the sender joins Mail lists, every mail from them
+    /// filing, the older ones too (§1115). The name the toast says, or nil
+    /// when nothing was added.
+    func track(address: String, sender: String?, context: ModelContext) -> String? {
+        let name = MailSubscriptions.senderName(sender)
+        guard MailSubscriptionStore.shared.add(address: address, name: name) != nil else { return nil }
+        refresh(context)
+        return name ?? address
+    }
+
     /// The list a landed mail is on, if any — a mail's sheet asks, to draw
     /// its door to the list or the add (prd §1115).
     func item(holding mail: UUID) -> MailSubscriptions.Item? {
