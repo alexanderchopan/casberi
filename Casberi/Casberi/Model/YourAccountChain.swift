@@ -490,7 +490,7 @@ enum YourAccountChain {
     /// signs — the account onto Safe's adapter if it is not yet, then the
     /// plan's sessions and both keys above them, in one operation. Needs a
     /// Signer, or every send over the limit would wait on nobody.
-    static func turnOnLimit(on net: Network, dollars: Int, minutes: Int, reason: String,
+    static func turnOnLimit(on net: Network, dollars: Int, minutes: Int, reason: String, coSigner: CoSigner? = nil,
                             report: @escaping @Sendable (String) -> Void = { _ in },
                             stage: @escaping @Sendable (Stage) async -> Void) async throws -> Sent {
         guard let account = YourAccountKey.address else {
@@ -511,7 +511,7 @@ enum YourAccountChain {
         }
         let price = await relayPrice(net, YourAccountOp.eth)
         let plan = limitPlan(on: net, dollars: dollars, ethPrice: price, minutes: minutes)
-        return try await installLimit(on: net, plan: plan, reason: reason, dryRun: false, requireBoth: true,
+        return try await installLimit(on: net, plan: plan, reason: reason, dryRun: false, coSigner: coSigner, requireBoth: true,
                                       report: report, stage: stage)
     }
 
@@ -744,7 +744,8 @@ enum YourAccountChain {
             throw Failure(message: String(localized: "This send could not be written"))
         }
         let outcome = try await operate(net, account: account, deployed: deployed,
-                                        calls: YourAccountOp.addRecoveryCalls(account: account, x: key.x, y: key.y, signer: signer),
+                                        calls: YourAccountOp.addRecoveryCalls(account: account, x: key.x, y: key.y, signer: signer,
+                                                                              threshold: deployed ? try await threshold(net, account) : 1),
                                         rotateTo: nextKey, payments: [], signer: device,
                                         reason: reason, stage: stage)
         return Sent(outcome: await settle(outcome, net, account, next: next, x: nextKey.x), network: net)
@@ -777,7 +778,8 @@ enum YourAccountChain {
             throw Failure(message: String(localized: "This send could not be written"))
         }
         let outcome = try await operate(net, account: account, deployed: deployed,
-                                        calls: [YourAccountOp.addOwnerCall(account: account, owner: owner)],
+                                        calls: [YourAccountOp.addOwnerCall(account: account, owner: owner,
+                                                                           threshold: deployed ? try await threshold(net, account) : 1)],
                                         rotateTo: nextKey, payments: [], signer: device,
                                         reason: reason, stage: stage)
         return Sent(outcome: await settle(outcome, net, account, next: next, x: nextKey.x), network: net)
@@ -1258,6 +1260,17 @@ enum YourAccountChain {
         // Which contract this account answers through on this network
         // (prd §1447 item 11): the 4337 module, or the 7579 adapter.
         let entry: YourAccountOp.Entry = deployed ? try await accountEntry(net, account) : .module4337
+        // **BOTH KEYS MEAN BOTH KEYS, FOR EVERYTHING (prd §1456).** With the
+        // spend limit on, every operation the owners sign — a recovery key
+        // set up, a Signer added, an approval revoked, recovery itself — needs
+        // the Signer as well; one that came without it is given it here.
+        var coSigner = coSigner
+        if coSigner == nil, deployed, entry == .adapter, try await threshold(net, account) >= 2 {
+            guard let asked = await defaultCoSigner(net, account) else {
+                throw Failure(message: String(localized: "Your Signer signs this too, and none is on \(net.name)"))
+            }
+            coSigner = asked
+        }
         // A token approved to Multicall3 would ride every spend limit's ETH
         // route (prd §1447 item 15): never, from any operation.
         guard !calls.contains(where: YourAccount7579.approvesMulticall3) else {

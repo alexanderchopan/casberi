@@ -388,7 +388,9 @@ struct MoveSecurity: View {
 
     private var limited: [Standing] { limitNetworks.filter { plan(of: $0) != nil } }
     /// Where it is not yet, though a Signer stands there to turn it on.
-    private var notYet: [Standing] { limitNetworks.filter { plan(of: $0) == nil && !$0.outside.isEmpty } }
+    /// Only a network read as off: one whose limit could not be read is
+    /// neither on nor off.
+    private var notYet: [Standing] { limitNetworks.filter { $0.limit == .off && !$0.outside.isEmpty } }
     private var shown: YourAccount7579.Plan? { limited.compactMap { plan(of: $0)?.plan }.first }
     private var signerShort: String {
         limitNetworks.flatMap(\.outside).first.map(YourAccount.short) ?? String(localized: "your signer")
@@ -552,22 +554,29 @@ struct MoveSecurity: View {
         amountFocused = false
         working = ("limit", String(localized: "Setting…"))
         let word = LimitPeriod.of(seconds: minutes * 60).word
+        // One scan for every network that needs the Signer (prd §1456).
+        let cosigned = targets.filter { $0.threshold == 2 }
+        let batch = cosigned.first?.outside.first.map {
+            SignerRequestSheet.Batch(owner: $0, chainIds: cosigned.map(\.network.chainId))
+        }
         Task {
             var done: [String] = []
             var failed: [String] = []
+            defer { Task { await batch?.finish() } }
             for s in targets {
                 let net = s.network
                 let reason = String(localized: "Spend limit of \(MoveSentence.money(Double(n))) a \(word) on \(net.name)")
                 do {
                     let sent: Chain.Sent
-                    if plan(of: s) != nil, let signer = s.outside.first {
+                    if plan(of: s) != nil, let signer = s.outside.first, let batch {
                         working = ("limit", String(localized: "Waiting on \(YourAccount.short(signer)) · \(net.name)"))
                         sent = try await Chain.changeLimit(on: net, dollars: n, minutes: minutes,
-                                                           coSigner: SignerRequestSheet.coSigner(owner: signer, chainId: net.chainId),
+                                                           coSigner: batch.coSigner(chainId: net.chainId),
                                                            reason: reason) { _ in }
                     } else {
                         working = ("limit", String(localized: "Setting on \(net.name)…"))
-                        sent = try await Chain.turnOnLimit(on: net, dollars: n, minutes: minutes, reason: reason) { _ in }
+                        sent = try await Chain.turnOnLimit(on: net, dollars: n, minutes: minutes, reason: reason,
+                                                           coSigner: s.threshold == 2 ? batch?.coSigner(chainId: net.chainId) : nil) { _ in }
                     }
                     if case .pending = sent.outcome { failed.append(String(localized: "\(net.name): sent, not yet seen")) }
                     else { done.append(net.name) }
@@ -610,15 +619,19 @@ struct MoveSecurity: View {
     private func turnOffLimit() {
         guard working == nil else { return }
         let targets = limited
+        let batch = targets.first?.outside.first.map {
+            SignerRequestSheet.Batch(owner: $0, chainIds: targets.map(\.network.chainId))
+        }
         Task {
             var done: [String] = []
             var failed: [String] = []
+            defer { Task { await batch?.finish() } }
             for s in targets {
                 let net = s.network
-                guard let signer = s.outside.first else { continue }
+                guard let signer = s.outside.first, let batch else { continue }
                 working = ("limit", String(localized: "Waiting on \(YourAccount.short(signer)) · \(net.name)"))
                 do {
-                    let sent = try await Chain.turnOffLimit(on: net, coSigner: SignerRequestSheet.coSigner(owner: signer, chainId: net.chainId),
+                    let sent = try await Chain.turnOffLimit(on: net, coSigner: batch.coSigner(chainId: net.chainId),
                                                             reason: String(localized: "Turn off the spend limit on \(net.name)")) { _ in }
                     if case .pending = sent.outcome { failed.append(String(localized: "\(net.name): sent, not yet seen")) }
                     else { done.append(net.name) }

@@ -6605,6 +6605,34 @@
         }
       }
     },
+    "Your Signer signs this too, and none is on %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu firmante también firma esto, y no hay ninguno en %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "これには署名者の署名も必要ですが、%@には署名者がいません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "서명자도 이것에 서명해야 하지만 %@에는 서명자가 없습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "这也需要你的签名者签名，但 %@ 上没有签名者"
+          }
+        }
+      }
+    },
     "Your Signer signs too" : {
       "localizations" : {
         "es" : {
