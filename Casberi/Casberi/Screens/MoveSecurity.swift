@@ -55,6 +55,17 @@ struct MoveSecurity: View {
                     } else { addOutside() } })
                 })
             if addingOutside { outsideField }
+            // Said once, under the keys, only on a device that cannot open
+            // them (§1442n item 3; user: "the user will have created their
+            // account on the device they are reading this on"): the fact is
+            // the account's, not either key's, and which device that was the
+            // app does not know.
+            if !elsewhere.isEmpty {
+                Text("\(names(elsewhere)) \(elsewhere.count == 1 ? "opens" : "open") from the device this account was created on.")
+                    .dsText(.subhead12).foregroundStyle(DS.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.vertical, DS.Space.s2)
+            }
         }
         // Read again whenever a send lands (`MoveSentence` bumps the rooms'
         // revision): a first send creates the account and moves its key.
@@ -141,6 +152,10 @@ struct MoveSecurity: View {
         return missing.filter { !ids.contains($0.id) }
     }
 
+    /// Every network neither key can reach from here: not there yet, and
+    /// this is not the device that made the account.
+    private var elsewhere: [Standing] { standings.filter { !$0.deployed && !YourAccountKey.holdsOrigin } }
+
     /// Whether this phone can sign the change on a network (prd §1442m).
     private func canFix(_ s: Standing) -> Bool {
         s.deployed ? s.keyIndex != nil : YourAccountKey.holdsOrigin
@@ -150,10 +165,10 @@ struct MoveSecurity: View {
         if standings.isEmpty { return String(localized: "Reading…") }
         let on = standings.filter { $0.recovery == .added }
         if on.isEmpty { return String(localized: "Not set up · if you lose this \(ThisDevice.name)") }
-        if missing.isEmpty { return String(localized: "On \(names(on))") }
-        if stuck.isEmpty { return String(localized: "On \(names(on)) · not yet on \(names(missing))") }
-        if fixable.isEmpty { return String(localized: "On \(names(on)) · add \(names(stuck)) from the \(ThisDevice.name) you created it on") }
-        return String(localized: "On \(names(on)) · not yet on \(names(fixable)) · add \(names(stuck)) from the \(ThisDevice.name) you created it on")
+        // The networks only another device can open are the account's fact,
+        // said once under the rows, not this key's.
+        if fixable.isEmpty { return String(localized: "On \(names(on))") }
+        return String(localized: "On \(names(on)) · not yet on \(names(fixable))")
     }
 
     private var recoveryVerb: String? {
@@ -219,12 +234,11 @@ struct MoveSecurity: View {
             return String(localized: "None · if you lose Casberi, a key in a wallet you hold signs instead")
         }
         let who = keys.count == 1 ? YourAccount.short(one) : String(localized: "\(keys.count) keys")
-        if missing.isEmpty { return String(localized: "\(who) · on \(names(on))") }
-        // The networks only the first phone can open are named, not offered.
-        let here = missing.filter(canFix), there = missing.filter { !canFix($0) }
-        if there.isEmpty { return String(localized: "\(who) · not yet on \(names(missing))") }
-        if here.isEmpty { return String(localized: "\(who) · add \(names(there)) from the \(ThisDevice.name) you created it on") }
-        return String(localized: "\(who) · not yet on \(names(here)) · add \(names(there)) from the \(ThisDevice.name) you created it on")
+        // The networks only another device can open are said once under the
+        // rows, never here.
+        let here = missing.filter(canFix)
+        if here.isEmpty { return String(localized: "\(who) · on \(names(on))") }
+        return String(localized: "\(who) · not yet on \(names(here))")
     }
 
     private var outsideVerb: String? {

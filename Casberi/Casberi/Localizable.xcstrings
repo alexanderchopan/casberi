@@ -617,6 +617,34 @@
         }
       }
     },
+    "%@ %@ from the device this account was created on." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ %2$@ desde el dispositivo en el que se creó esta cuenta."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ はこのアカウントを作成したデバイスから%2$@。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@은(는) 이 계정을 만든 기기에서 %2$@."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ 需从创建此账户的设备上%2$@。"
+          }
+        }
+      }
+    },
     "%@ %@ more than quoted" : {
       "localizations" : {
         "es" : {
