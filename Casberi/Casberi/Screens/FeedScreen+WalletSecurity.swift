@@ -132,7 +132,8 @@ extension FeedScreen {
                     ForEach(shown.keyed) { row in
                         if let thing = row.live {
                             let words = Self.flaggedRowWords(thing, kind: kind)
-                            needsYouRow(glyph: kind.glyph, critical: kind != .fakeTransfer,
+                            // Every threat's glyph is red (prd §1463), fake transfers too.
+                            needsYouRow(glyph: kind.glyph, critical: true,
                                         title: words.title, line: words.line) {
                                 feedSheet = .thing(thing, walk: .none)
                             }
@@ -218,6 +219,8 @@ struct WalletSecurityFigure: View {
         let figure: String?
         let word: String
         let wants: Bool
+        /// The wash (prd §1463): a threat is red, an ask orange, on green.
+        var tone: DSCountTile.Tone = .none
     }
 
     /// Whole dollars: "$2", never "$2.00" (the limit and the step are whole).
@@ -228,21 +231,28 @@ struct WalletSecurityFigure: View {
     private var cells: [Cell] {
         var cells: [Cell] = [
             Cell(id: "signatures", anchor: .signatures, count: counts.signatures, figure: nil,
-                 word: String(localized: "Signatures"), wants: counts.signatures > 0),
+                 word: String(localized: "Signatures"), wants: counts.signatures > 0,
+                 tone: counts.signatures > 0 ? .wants : .none),
             Cell(id: "delegations", anchor: .delegations, count: counts.delegations, figure: nil,
                  word: String(localized: "Delegations"), wants: false),
             // A grant with no limit wants you.
             Cell(id: "approvals", anchor: .approvals, count: counts.approvals, figure: nil,
-                 word: String(localized: "Approvals"), wants: counts.unlimited > 0),
+                 word: String(localized: "Approvals"), wants: counts.unlimited > 0,
+                 tone: counts.unlimited > 0 ? .wants : .none),
             // The tile's short word; the list under it keeps the full name.
+            // The three threats are RED (prd §1463, user: "by this logic tho
+            // the poisoning etc should be red"): a danger with nothing to do,
+            // never an ask; all three alike (user, 2026-10-20: "fake tokens
+            // are just as much spam as fake transfers").
             Cell(id: "poisoning", anchor: .poisoning, count: counts.poisoning, figure: nil,
-                 word: String(localized: "Poisoning"), wants: counts.poisoning > 0),
+                 word: String(localized: "Poisoning"), wants: counts.poisoning > 0,
+                 tone: counts.poisoning > 0 ? .threat : .none),
             Cell(id: "fakeTokens", anchor: .fakeTokens, count: counts.fakeTokens, figure: nil,
-                 word: String(localized: "Fake tokens"), wants: counts.fakeTokens > 0),
-            // Spam, as much as a fake token is (user, 2026-10-20: "fake
-            // tokens are just as much spam as fake transfers"): the same ink.
+                 word: String(localized: "Fake tokens"), wants: counts.fakeTokens > 0,
+                 tone: counts.fakeTokens > 0 ? .threat : .none),
             Cell(id: "fakeTransfers", anchor: .fakeTransfers, count: counts.fakeTransfers, figure: nil,
-                 word: String(localized: "Fake transfers"), wants: counts.fakeTransfers > 0),
+                 word: String(localized: "Fake transfers"), wants: counts.fakeTransfers > 0,
+                 tone: counts.fakeTransfers > 0 ? .threat : .none),
         ]
         if let a = counts.account {
             // "Limit a month" (user: "we can just say 'limit a month'"); Off
@@ -252,13 +262,15 @@ struct WalletSecurityFigure: View {
                      figure: a.limitDollars.map(Self.dollars) ?? String(localized: "Off"),
                      word: a.limitPeriod.map { String(localized: "Limit a \($0)") } ?? String(localized: "Limit"),
                      // Off with a Signer standing: it could be on.
-                     wants: a.limitDollars == nil && a.signers > 0),
+                     wants: a.limitDollars == nil && a.signers > 0,
+                     tone: a.limitDollars != nil ? .on : a.signers > 0 ? .wants : .none),
                 Cell(id: "signers", anchor: .account, count: a.signers, figure: nil,
-                     word: String(localized: "Signers"), wants: a.signers == 0),
+                     word: String(localized: "Signers"), wants: a.signers == 0,
+                     tone: a.signers > 0 ? .on : .wants),
                 Cell(id: "roundUps", anchor: .account, count: a.roundUpStep ?? 0,
                      figure: a.roundUpStep.map(Self.dollars) ?? String(localized: "Off"),
                      word: a.roundUpSymbol.map { String(localized: "Round-ups to \($0)") } ?? String(localized: "Round-ups"),
-                     wants: false),
+                     wants: false, tone: a.roundUpStep != nil ? .on : .none),
             ]
         }
         return cells
@@ -269,7 +281,7 @@ struct WalletSecurityFigure: View {
         DSCountGrid(items: cells.count, columns: counts.account == nil ? 2 : 3, bare: true) {
             ForEach(cells) { cell in
                 DSCountTile(count: cell.count, label: cell.word, figure: cell.figure, centered: counts.account != nil,
-                            isOn: false, wants: cell.wants, inline: counts.account == nil) {
+                            isOn: false, wants: cell.wants, tone: cell.tone, inline: counts.account == nil) {
                     DSHaptic.selection()
                     onJump(cell.anchor)
                 }
