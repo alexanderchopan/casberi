@@ -140,6 +140,15 @@ sop.maxFeePerGas = 2000000; sop.maxPriorityFeePerGas = 1000000
 check(Keccak256.hexString(YourAccountOp.userOpHash(sop, chainId: 8453)) == "d59bff9f0a72eb2cdb01e14642cc07c376eaf838ea00ae8478e9697f0abec4b9",
       "a session op's hash is not what the EntryPoint on Base answered")
 check(sop.json["nonce"] as? String == "0x8bdaba73cd9815d79069c247eb4bda000000000000000000000007", "a session op's nonce is not its key then its sequence")
+// Both keys (prd §1447 item 16): Safe takes signatures by owner, ascending,
+// 65-byte static parts, the passkey's assertion after them at offset 130.
+let ecdsa = [UInt8](repeating: 0xAB, count: 64) + [27]
+let low = YourAccountOp.bothSignatures(r: x, s: y, signer: "0x3abcb61a90a342e1465525508469b3b5d860f612", ecdsa: ecdsa)!
+let high = YourAccountOp.bothSignatures(r: x, s: y, signer: "0xfffffffffffffffffffffffffffffffffffffff0", ecdsa: ecdsa)!
+check(Array(low[12..<77]) == ecdsa && Array(low[77..<109]) == YourAccount.w(YourAccount.sharedSigner), "a Signer below the passkey's address does not sign first")
+check(Array(high[12..<44]) == YourAccount.w(YourAccount.sharedSigner) && Array(high[77..<142]) == ecdsa, "a Signer above the passkey's address does not sign second")
+check(Array(low[109..<141]) == YourAccount.w(130) && Array(high[44..<76]) == YourAccount.w(130), "the passkey's assertion is not after both static parts")
+check(low.count == high.count && Array(low.suffix(from: 142)) == Array(high.suffix(from: 142)), "the passkey's assertion moved with the order")
 var huge = op; huge.maxFeePerGas = UInt64.max
 check(huge.maxCost == nil && op.maxCost == 1320000000000, "maxCost overflows into a trap, or is wrong")
 check(YourAccountOp.spoken("500000000000", decimals: 18) == "0.0000005", "a real amount must never be spoken as 0")
@@ -311,7 +320,7 @@ grep -B1 -A1 '{ spendLimit }' "$SEC" | grep -q 'spendLimitOpen' || { echo "✗ t
 # The adapter install is a simulation until its send path is proven (§1447 item 11).
 grep -A9 'static func installAdapter' Casberi/Casberi/Model/YourAccountChain.swift | grep -q 'guard dryRun || throwaway(account) else' || { echo "✗ installAdapter runs for real before the adapter's send path is proven (prd §1447 item 11)"; exit 1; }
 grep -q 'guard !calls.contains(where: YourAccount7579.approvesMulticall3) else' Casberi/Casberi/Model/YourAccountChain.swift || { echo "✗ operations no longer refuse an approval to Multicall3, which would ride the spend limit's ETH route (prd §1447 item 15)"; exit 1; }
-for f in installLimit limitSend; do
+for f in installLimit limitSend requireBoth; do
   grep -A9 "static func $f" Casberi/Casberi/Model/YourAccountChain.swift | grep -q 'guard dryRun || throwaway(account) else' || { echo "✗ $f runs for real outside the throwaway (prd §1447 items 14–15)"; exit 1; }
 done
 awk '/private static func throwaway/,/^    }$/' Casberi/Casberi/Model/YourAccountChain.swift | grep -A1 '#else' | grep -q 'return false' || { echo "✗ a build outside DEBUG may install the adapter for real (prd §1447 item 13)"; exit 1; }

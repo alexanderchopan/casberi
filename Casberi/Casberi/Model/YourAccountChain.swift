@@ -154,6 +154,14 @@ enum YourAccountChain {
         let sign: (_ digest: [UInt8], _ reason: String) async throws -> (r: [UInt8], s: [UInt8])
     }
 
+    /// The account's Signer (prd §1447 item 16): an address of the person's
+    /// own, an owner of the Safe, asked for `r ‖ s ‖ v` over the SafeOp hash
+    /// when an operation needs both keys.
+    struct CoSigner {
+        let owner: String
+        let sign: (_ hash: [UInt8]) async throws -> [UInt8]
+    }
+
     /// The device key the chain says signs for the account on `net` — the
     /// account must exist there, or key 0 signs its creation (only on the
     /// phone that made it).
@@ -192,10 +200,10 @@ enum YourAccountChain {
     /// bundler's `eth_sendUserOperation` — the estimate, both hashes, the
     /// Enclave's signature and the passkey factory's check of it — then
     /// stops: nothing is sent, and a short balance is reported, not refused.
-    static func send(_ payments: [YourAccountOp.Payment], reason: String, dryRun: Bool = false,
+    static func send(_ payments: [YourAccountOp.Payment], reason: String, dryRun: Bool = false, coSigner: CoSigner? = nil,
                      report: @escaping @Sendable (String) -> Void = { _ in },
                      stage: @escaping @Sendable (Stage) async -> Void) async throws -> Sent {
-        try await transact(payments.map(Item.send), reason: reason, dryRun: dryRun, report: report, stage: stage).sent
+        try await transact(payments.map(Item.send), reason: reason, dryRun: dryRun, coSigner: coSigner, report: report, stage: stage).sent
     }
 
     // MARK: - Recovery (prd §1427)
@@ -401,7 +409,7 @@ enum YourAccountChain {
     /// operation: a new limit replaces the last. Signed by this phone's
     /// account key like any send. Throwaway-only outside a simulation, which
     /// also runs each call as the account.
-    static func installLimit(on net: Network, plan: YourAccount7579.Plan, reason: String, dryRun: Bool,
+    static func installLimit(on net: Network, plan: YourAccount7579.Plan, reason: String, dryRun: Bool, coSigner: CoSigner? = nil,
                              report: @escaping @Sendable (String) -> Void = { _ in },
                              stage: @escaping @Sendable (Stage) async -> Void) async throws -> Sent {
         guard let account = YourAccountKey.address else {
@@ -445,7 +453,7 @@ enum YourAccountChain {
             throw Failure(message: String(localized: "This send could not be written"))
         }
         let outcome = try await operate(net, account: account, deployed: true, calls: calls,
-                                        rotateTo: nextKey, payments: [], signer: device, reason: reason,
+                                        rotateTo: nextKey, payments: [], signer: device, coSigner: coSigner, reason: reason,
                                         dryRun: dryRun, report: report, stage: stage)
         if case .landed = outcome, let data = try? JSONEncoder().encode(plan) {
             UserDefaults.standard.set(data, forKey: planKey(net))
@@ -601,6 +609,44 @@ enum YourAccountChain {
                                         calls: [YourAccountOp.addOwnerCall(account: account, owner: owner)],
                                         rotateTo: nextKey, payments: [], signer: device,
                                         reason: reason, stage: stage)
+        return Sent(outcome: await settle(outcome, net, account, next: next, x: nextKey.x), network: net)
+    }
+
+    /// Both keys for every operation the account's own owners sign (prd
+    /// §1447 item 16): `signer` an owner and the threshold 2, signed by this
+    /// phone while one key still suffices. Under a spend limit the session
+    /// key still sends alone; everything else waits on the Signer too.
+    /// Throwaway-only until the Signer's side is built.
+    static func requireBoth(_ signer: String, on net: Network, reason: String, dryRun: Bool,
+                            report: @escaping @Sendable (String) -> Void = { _ in },
+                            stage: @escaping @Sendable (Stage) async -> Void) async throws -> Sent {
+        guard let account = YourAccountKey.address else {
+            throw Failure(message: String(localized: "There is no account on this iPhone"))
+        }
+        guard dryRun || throwaway(account) else {
+            throw Failure(message: String(localized: "A spend limit is not available yet"))
+        }
+        await stage(.preparing)
+        guard try await isDeployed(net, account), try await accountEntry(net, account) == .adapter else {
+            throw Failure(message: String(localized: "A spend limit is not available yet"))
+        }
+        if try await isContract(net, signer) {
+            throw Failure(message: String(localized: "That address is a contract on \(net.name), not a wallet whose key you hold"))
+        }
+        let isOwner = try await owners(net, account).contains { $0.caseInsensitiveCompare(signer) == .orderedSame }
+        let call = isOwner
+            ? YourAccountOp.Call(operation: 0, to: account, value: YourAccount.w(0),
+                                 data: YourAccount.sel("changeThreshold(uint256)") + YourAccount.w(2))
+            : YourAccountOp.Call(operation: 0, to: account, value: YourAccount.w(0),
+                                 data: YourAccount.sel("addOwnerWithThreshold(address,uint256)") + YourAccount.w(signer) + YourAccount.w(2))
+        let (signerIndex, device) = try await deviceSigner(net, account, deployed: true)
+        let next = try YourAccountKey.nextKey(after: signerIndex)
+        guard let nextKey = YourAccountKey.publicKey(next) else {
+            throw Failure(message: String(localized: "This send could not be written"))
+        }
+        let outcome = try await operate(net, account: account, deployed: true, calls: [call],
+                                        rotateTo: nextKey, payments: [], signer: device, reason: reason,
+                                        dryRun: dryRun, report: report, stage: stage)
         return Sent(outcome: await settle(outcome, net, account, next: next, x: nextKey.x), network: net)
     }
 
@@ -816,7 +862,7 @@ enum YourAccountChain {
     /// page's order and the key change. Before Face ID the whole of it is
     /// simulated and refused unless every swap pays its minimum. Relay settles
     /// in the same transaction, so a landed operation is a finished swap.
-    static func transact(_ items: [Item], reason: String, dryRun: Bool = false,
+    static func transact(_ items: [Item], reason: String, dryRun: Bool = false, coSigner: CoSigner? = nil,
                          report: @escaping @Sendable (String) -> Void = { _ in },
                          stage: @escaping @Sendable (Stage) async -> Void) async throws -> Transacted {
         guard let net = items.first?.network, items.allSatisfy({ $0.network == net }) else {
@@ -875,7 +921,7 @@ enum YourAccountChain {
         }
         report("account=\(account) deployed=\(deployed) signer=key\(signerIndex) next=key\(next) swaps=\(swaps.count)")
         let outcome = try await operate(net, account: account, deployed: deployed, calls: calls,
-                                        rotateTo: nextKey, payments: payments, signer: signer,
+                                        rotateTo: nextKey, payments: payments, signer: signer, coSigner: coSigner,
                                         reason: reason, dryRun: dryRun, report: report, stage: stage)
         let sent = Sent(outcome: await settle(outcome, net, account, next: next, x: nextKey.x), network: net)
         guard case .landed = sent.outcome, !swaps.isEmpty else {
@@ -933,7 +979,7 @@ enum YourAccountChain {
     /// operation. Shared by a send, adding the recovery key and recovery.
     private static func operate(_ net: Network, account: String, deployed: Bool, calls: [YourAccountOp.Call],
                                 rotateTo next: (x: [UInt8], y: [UInt8])?, payments: [YourAccountOp.Payment],
-                                signer: Signer, reason: String, dryRun: Bool = false,
+                                signer: Signer, coSigner: CoSigner? = nil, reason: String, dryRun: Bool = false,
                                 report: @escaping @Sendable (String) -> Void = { _ in },
                                 stage: @escaping @Sendable (Stage) async -> Void) async throws -> Sent.Outcome {
         // Which contract this account answers through on this network
@@ -958,7 +1004,16 @@ enum YourAccountChain {
             op.factory = YourAccount.proxyFactory
             op.factoryData = YourAccountOp.factoryData(x: origin.x, y: origin.y)
         }
-        op.signature = YourAccountOp.dummySignature(owner: signer.owner)
+        if let coSigner {
+            guard let dummy = YourAccountOp.bothSignatures(r: [UInt8](repeating: 0x11, count: 32), s: [UInt8](repeating: 0x22, count: 32),
+                                                           owner: signer.owner, signer: coSigner.owner,
+                                                           ecdsa: [UInt8](repeating: 0x11, count: 64) + [27]) else {
+                throw Failure(message: String(localized: "This send could not be written"))
+            }
+            op.signature = dummy
+        } else {
+            op.signature = YourAccountOp.dummySignature(owner: signer.owner)
+        }
         try await price(&op, on: net)
         // A balance override lets the bundler estimate whatever the account
         // holds, so a short balance is said below in words.
@@ -976,7 +1031,10 @@ enum YourAccountChain {
               vgl > 0, cgl > 0 else {
             throw Failure(message: String(localized: "\(net.name) could not price this send"))
         }
-        op.verificationGasLimit = vgl
+        // With both keys the dummy's ECDSA half fails first, so the estimate
+        // never reaches the passkey's P-256 check the real pair pays for
+        // (AA26 on Base, prd §1447 item 16): that check, and more, on top.
+        op.verificationGasLimit = coSigner == nil ? vgl : vgl + 100_000
         op.callGasLimit = cgl
         op.preVerificationGas = pvg
         guard let maxCost = op.maxCost else {
@@ -1036,6 +1094,30 @@ enum YourAccountChain {
         }
         op.signature = signature
         report("signed: the passkey factory verifies it")
+        if let coSigner {
+            // The second key, over the same hash; then the Safe itself is
+            // asked whether the two together are its signatures.
+            let ecdsa = try await coSigner.sign(hash)
+            guard let both = YourAccountOp.bothSignatures(r: r, s: s, owner: signer.owner, signer: coSigner.owner, ecdsa: ecdsa) else {
+                throw Failure(message: String(localized: "The signature did not check out, so nothing was sent"))
+            }
+            // Both keys live on the adapter (prd §1447 item 16).
+            guard entry == .adapter,
+                  let operationData = SafeABI.hexBytes(try await ethCall(net, to: YourAccount7579.adapter, data: YourAccountOp.safeOpCall(op)))
+                    .flatMap(YourAccountOp.firstBytes) else {
+                throw Failure(message: String(localized: "A spend limit is not available yet"))
+            }
+            let check = YourAccount.sel("checkSignatures(bytes32,bytes,bytes)") + hash + YourAccount.w(96)
+                + YourAccount.w(96 + YourAccount.dynamic(operationData).count)
+                + YourAccount.dynamic(operationData) + YourAccount.dynamic(Array(both.dropFirst(12)))
+            do {
+                _ = try await ethCall(net, to: account, data: check)
+            } catch {
+                throw Failure(message: String(localized: "The signature did not check out, so nothing was sent"))
+            }
+            op.signature = both
+            report("cosigned: the account takes both signatures")
+        }
         if dryRun { return .dryRun }
         return try await submit(op, net, account: account, stage: stage)
     }

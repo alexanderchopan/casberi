@@ -4061,11 +4061,13 @@ enum ProbeHooks {
                     log("usage: <network>|<dollar units>|<ETH wei>|<seconds>|<count>"); return
                 }
                 let start = Int(Date().timeIntervalSince1970) / 60 * 60
+                // `-coSignWith <signer address>`: a limit set once both keys are required.
+                let coSigner = UserDefaults.standard.string(forKey: "coSignWith").map(ProbeCoSigner.make)
                 let plan = YourAccount7579.Plan(chainId: net.chainId, dollar: net.dollar, dollarCap: p[1], ethCap: p[2],
                                                 windows: YourAccount7579.windows(start: start, seconds: seconds, count: count))
                 do {
                     let real = UserDefaults.standard.string(forKey: "adapterThrowaway").map { WalletWatch.sameAddress($0, account) } ?? false
-                    let sent = try await YourAccountChain.installLimit(on: net, plan: plan, reason: "Probe: a spend limit", dryRun: !real,
+                    let sent = try await YourAccountChain.installLimit(on: net, plan: plan, reason: "Probe: a spend limit", dryRun: !real, coSigner: coSigner,
                                                                       report: { line in NSLog("limitInstall| %@", line) }) { stage in log("stage=\(stage)") }
                     log("result=\(sent.outcome)")
                 } catch let failure as YourAccountChain.Failure {
@@ -4092,6 +4094,56 @@ enum ProbeHooks {
                     let sent = try await YourAccountChain.limitSend(on: net, token: token, to: account, units: p[2],
                                                                    reason: "Probe: a send within the limit", dryRun: !real,
                                                                    report: { line in NSLog("limitSend| %@", line) }) { stage in log("stage=\(stage)") }
+                    log("result=\(sent.outcome)")
+                } catch let failure as YourAccountChain.Failure {
+                    log("refused: \(failure.message)")
+                } catch {
+                    log("error: \(String(describing: error))")
+                }
+            }
+        },
+        // `-requireBothProbe "<network>|<signer address>"` — the Signer an owner
+        // and the threshold 2 (prd §1447 item 16). Simulated unless
+        // `-adapterThrowaway` names this account.
+        Hook(key: "requireBothProbe") { raw, _ in
+            Task { @MainActor in
+                func log(_ line: String) { NSLog("requireBoth| %@", line) }
+                let p = raw.split(separator: "|").map(String.init)
+                guard p.count == 2, let net = YourAccountOp.networks.first(where: { $0.name.caseInsensitiveCompare(p[0]) == .orderedSame }),
+                      let account = YourAccountKey.address else { log("usage: <network>|<signer address>"); return }
+                do {
+                    let real = UserDefaults.standard.string(forKey: "adapterThrowaway").map { WalletWatch.sameAddress($0, account) } ?? false
+                    let sent = try await YourAccountChain.requireBoth(p[1], on: net, reason: "Probe: both keys", dryRun: !real,
+                                                                     report: { line in NSLog("requireBoth| %@", line) }) { stage in log("stage=\(stage)") }
+                    log("result=\(sent.outcome)")
+                } catch let failure as YourAccountChain.Failure {
+                    log("refused: \(failure.message)")
+                } catch {
+                    log("error: \(String(describing: error))")
+                }
+            }
+        },
+        // `-coSignSendProbe "<network>|<wei>|<signer address>"` — `wei` ETH from
+        // the account to itself signed by BOTH keys (prd §1447 item 16): this
+        // phone, and the Signer's `r ‖ s ‖ v` handed over through files — the
+        // SafeOp hash written to Documents/cosign-hash.txt, the signature read
+        // from Documents/cosign-sig.txt (five minutes). Throwaway only.
+        Hook(key: "coSignSendProbe") { raw, _ in
+            Task { @MainActor in
+                func log(_ line: String) { NSLog("coSignSend| %@", line) }
+                let p = raw.split(separator: "|").map(String.init)
+                guard p.count == 3, let net = YourAccountOp.networks.first(where: { $0.name.caseInsensitiveCompare(p[0]) == .orderedSame }),
+                      let account = YourAccountKey.address,
+                      let named = UserDefaults.standard.string(forKey: "adapterThrowaway"), WalletWatch.sameAddress(named, account),
+                      let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
+                    log("only on the throwaway -adapterThrowaway names: <network>|<wei>|<signer address>"); return
+                }
+                _ = docs
+                let coSigner = ProbeCoSigner.make(p[2])
+                let payment = YourAccountOp.Payment(network: net, token: YourAccountOp.eth, amount: p[1], to: account, toName: nil)
+                do {
+                    let sent = try await YourAccountChain.send([payment], reason: "Probe: a send with both keys", coSigner: coSigner,
+                                                             report: { line in NSLog("coSignSend| %@", line) }) { stage in log("stage=\(stage)") }
                     log("result=\(sent.outcome)")
                 } catch let failure as YourAccountChain.Failure {
                     log("refused: \(failure.message)")
@@ -7253,6 +7305,32 @@ enum WalletConnectProbe {
     static var timeout: Double {
         let override = UserDefaults.standard.double(forKey: "wcTimeout")
         return override > 0 ? override : 20
+    }
+}
+#endif
+
+#if DEBUG
+/// The throwaway's test Signer (prd §1447 item 16): the SafeOp hash written
+/// to Documents/cosign-hash.txt, its `r ‖ s ‖ v` read from
+/// Documents/cosign-sig.txt within five minutes. A stand-in for the
+/// person's own wallet, never a key in the app.
+enum ProbeCoSigner {
+    static func make(_ owner: String) -> YourAccountChain.CoSigner {
+        YourAccountChain.CoSigner(owner: owner) { hash in
+            guard let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
+                throw YourAccountChain.Failure(message: "No Documents folder")
+            }
+            let hashFile = docs.appendingPathComponent("cosign-hash.txt"), sigFile = docs.appendingPathComponent("cosign-sig.txt")
+            try? FileManager.default.removeItem(at: sigFile)
+            try SafeABI.hex(hash).write(to: hashFile, atomically: true, encoding: .utf8)
+            NSLog("coSign| hash=%@", SafeABI.hex(hash))
+            for _ in 0..<150 {
+                if let text = try? String(contentsOf: sigFile, encoding: .utf8),
+                   let sig = SafeABI.hexBytes(text.trimmingCharacters(in: .whitespacesAndNewlines)), sig.count == 65 { return sig }
+                try await Task.sleep(nanoseconds: 2_000_000_000)
+            }
+            throw YourAccountChain.Failure(message: "No signature came")
+        }
     }
 }
 #endif

@@ -341,6 +341,19 @@ enum YourAccountOp {
         return [UInt8](repeating: 0, count: 12) + envelope
     }
 
+    /// Both keys (prd §1447 item 16): the passkey's contract signature and
+    /// the Signer's `r ‖ s ‖ v` over the same SafeOp hash, in Safe's order —
+    /// static parts by owner, ascending, 65 bytes each, the passkey's
+    /// assertion after them — behind the 12 bytes of no time bounds.
+    static func bothSignatures(r: [UInt8], s: [UInt8], owner: String = YourAccount.sharedSigner,
+                               signer: String, ecdsa: [UInt8]) -> [UInt8]? {
+        guard ecdsa.count == 65, let assertion = SafeWebAuthn.signatureBytes(r: r, s: s) else { return nil }
+        let passkeyFirst = YourAccount.w(owner).lexicographicallyPrecedes(YourAccount.w(signer))
+        let passkeyStatic = YourAccount.w(owner) + YourAccount.w(130) + [0]
+        let statics = passkeyFirst ? passkeyStatic + ecdsa : ecdsa + passkeyStatic
+        return [UInt8](repeating: 0, count: 12) + statics + YourAccount.w(assertion.count) + assertion
+    }
+
     /// The right shape and length, verifying nothing: for gas estimation,
     /// where a real signature cannot exist yet (it signs the gas).
     static var dummySignature: [UInt8] { dummySignature(owner: YourAccount.sharedSigner) }
