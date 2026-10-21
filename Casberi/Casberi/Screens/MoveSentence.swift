@@ -98,17 +98,19 @@ struct MoveSentence: View {
     @State private var slot = 0
     @State private var quote: YourAccountSwap.Quote?
     @State private var quoteNote: String?
+    /// Whose words `quoteNote` is ("Relay"), drawn as its mark (§1442n).
+    @State private var quoteFrom: String?
     @State private var stage: Chain.Stage?
     /// What a signed transaction became, said in the sentence's place (§1438b).
     @State private var receipt: Receipt?
     /// What the sentence says back for a moment — what is missing, what
     /// failed — in its own line, because a toast draws under the tray
     /// (§1442c). Cleared after a few seconds, or by the next one.
-    struct Hint: Equatable { let text: String; let failure: Bool; let id = UUID() }
+    struct Hint: Equatable { let text: String; let failure: Bool; var from: String? = nil; let id = UUID() }
     @State private var hint: Hint?
 
-    private func say(_ text: String, failure: Bool = false, seconds: Double = 3) {
-        let h = Hint(text: text, failure: failure)
+    private func say(_ text: String, failure: Bool = false, seconds: Double = 3, from: String? = nil) {
+        let h = Hint(text: text, failure: failure, from: from)
         withAnimation(DS.Motion.standard) { hint = h }
         Task {
             try? await Task.sleep(for: .seconds(seconds))
@@ -116,12 +118,29 @@ struct MoveSentence: View {
         }
     }
 
+    /// A service's mark, in place of its name before its own words (§1442n):
+    /// Relay's star on its white circle, as the swap credit draws it.
+    @ViewBuilder static func mark(of service: String) -> some View {
+        if service == "Relay" {
+            Image("brand-relay")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 10, height: 10)
+                .frame(width: 16, height: 16)
+                .background(Circle().fill(.white))
+                .accessibilityLabel(Text(verbatim: service))
+        }
+    }
+
     private func hintText(_ h: Hint) -> some View {
-        Text(verbatim: h.text)
-            .dsText(.body17)
-            .foregroundStyle(h.failure ? DS.attentionInk : DS.textSecondary)
-            .fixedSize(horizontal: false, vertical: true)
-            .transition(.opacity)
+        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+            if let from = h.from { Self.mark(of: from) }
+            Text(verbatim: h.text)
+                .dsText(.body17)
+                .foregroundStyle(h.failure ? DS.attentionInk : DS.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .transition(.opacity)
     }
 
     /// Bumped to shake the To word once: an address that imitates a book entry.
@@ -640,7 +659,7 @@ struct MoveSentence: View {
         var usd = keptSwaps.compactMap { s in price(of: s.sell).map { Op.dollars(s.quote.fee, decimals: s.sell.decimals, price: $0) } }.reduce(0, +)
         if let with, let quote, let p = with.price { usd += Op.dollars(quote.fee, decimals: with.token.decimals, price: p) }
         guard !keptSwaps.isEmpty || quote != nil else { return nil }
-        return usd < 0.01 ? String(localized: "fee under a cent") : String(localized: "fee \(Self.money(usd))")
+        return usd < 0.01 ? String(localized: "Fee under a cent") : String(localized: "Fee \(Self.money(usd))")
     }
 
     /// The amount, its token beside it in its own units, and what it is
@@ -1025,8 +1044,8 @@ struct MoveSentence: View {
                 // Never an address the account cannot follow (§1442k).
                 if let reach, !YourAccountReach.isAll(reach) {
                     Text(reach.isEmpty
-                         ? "Not on any network on this \(ThisDevice.name) yet. The \(ThisDevice.name) that made this account can open it."
-                         : "Send to it only on \(reach.map(\.name).formatted(.list(type: .or))). The \(ThisDevice.name) that made this account can open the others.")
+                         ? "Not on any network from this \(ThisDevice.name) yet."
+                         : "Send to it only on \(reach.map(\.name).formatted(.list(type: .or))).")
                         .dsText(.body17).foregroundStyle(DS.attentionInk)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -1047,7 +1066,10 @@ struct MoveSentence: View {
                 .buttonStyle(RowPress())
             }
         } else if let note = lineNote {
-            Text(verbatim: note).dsText(.body17).foregroundStyle(DS.attentionInk)
+            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                if note == quoteNote, let quoteFrom { Self.mark(of: quoteFrom) }
+                Text(verbatim: note).dsText(.body17).foregroundStyle(DS.attentionInk)
+            }
         } else if let with {
             // One line of small print (§1442f): the other unit and the fee.
             // Relay's credit is the foot's, and the slider, the amount's own
@@ -1057,7 +1079,7 @@ struct MoveSentence: View {
                 // the whole swap's (§1442g).
                 let print: [String] = switch verb {
                 case .swap: [feeTotal].compactMap { $0 }
-                case .send: peopleCount > 1 ? [String(localized: "to \(peopleCount) people")] : []
+                case .send: peopleCount > 1 ? [String(localized: "To \(peopleCount) people")] : []
                 case .receive: []
                 }
                 if !print.isEmpty {
@@ -1113,9 +1135,9 @@ struct MoveSentence: View {
         guard verb == .swap, let quote else { return nil }
         if let price = h.price {
             let usd = Op.dollars(quote.fee, decimals: h.token.decimals, price: price)
-            return usd < 0.01 ? String(localized: "fee under a cent") : String(localized: "fee \(Self.money(usd))")
+            return usd < 0.01 ? String(localized: "Fee under a cent") : String(localized: "Fee \(Self.money(usd))")
         }
-        return String(localized: "fee ≈ \(Self.figure(quote.fee, decimals: h.token.decimals)) \(h.token.symbol)")
+        return String(localized: "Fee ≈ \(Self.figure(quote.fee, decimals: h.token.decimals)) \(h.token.symbol)")
     }
 
     /// **$ · ETH (§1442d, user: "a user needs to be able to change token
@@ -1579,13 +1601,7 @@ struct MoveSentence: View {
                     Text("Powered by Relay")
                         .dsText(.label12)
                         .foregroundStyle(DS.textTertiary)
-                    Image("brand-relay")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 10, height: 10)
-                        .frame(width: 16, height: 16)
-                        .background(Circle().fill(.white))
-                        .accessibilityHidden(true)
+                    Self.mark(of: "Relay")
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.top, DS.Space.s1)
@@ -1765,7 +1781,7 @@ struct MoveSentence: View {
                 #if DEBUG
                 NSLog("moveSign: failed %@", failure.message)
                 #endif
-                say(failure.message, failure: true, seconds: 6)
+                say(failure.message, failure: true, seconds: 6, from: failure.from)
             } catch {
                 stage = nil
                 #if DEBUG
@@ -1918,6 +1934,7 @@ struct MoveSentence: View {
     private func requote() async {
         quote = nil
         quoteNote = nil
+        quoteFrom = nil
         guard verb == .swap, let with, let buy, YourAccountSwap.supported(network), let units, !over else { return }
         try? await Task.sleep(for: .milliseconds(500))
         guard !Task.isCancelled else { return }
@@ -1931,6 +1948,7 @@ struct MoveSentence: View {
         } catch let failure as Chain.Failure {
             guard !Task.isCancelled else { return }
             quoteNote = failure.message
+            quoteFrom = failure.from
         } catch {}
     }
 

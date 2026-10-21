@@ -46,7 +46,7 @@ struct MoveSecurity: View {
                 verb: canMoveHere ? (ThisDevice.use, moveHere) : nil)
             row(title: String(localized: "Recovery key"), line: recoveryLine,
                 verb: recoveryVerb.map { ($0, setUp) })
-            row(title: String(localized: "Outside key"), line: outsideLine,
+            row(title: String(localized: "Signer"), line: outsideLine,
                 verb: addingOutside ? nil : outsideVerb.map { word in
                     // Add opens the field; Finish puts the key already on one
                     // network on the rest.
@@ -149,11 +149,11 @@ struct MoveSecurity: View {
     private var recoveryLine: String {
         if standings.isEmpty { return String(localized: "Reading…") }
         let on = standings.filter { $0.recovery == .added }
-        if on.isEmpty { return String(localized: "Not set up · for a new iPhone") }
+        if on.isEmpty { return String(localized: "Not set up · if you lose this \(ThisDevice.name)") }
         if missing.isEmpty { return String(localized: "On \(names(on))") }
         if stuck.isEmpty { return String(localized: "On \(names(on)) · not yet on \(names(missing))") }
-        if fixable.isEmpty { return String(localized: "On \(names(on)) · your other device adds \(names(stuck))") }
-        return String(localized: "On \(names(on)) · not yet on \(names(fixable)) · your other device adds \(names(stuck))")
+        if fixable.isEmpty { return String(localized: "On \(names(on)) · add \(names(stuck)) from the \(ThisDevice.name) you created it on") }
+        return String(localized: "On \(names(on)) · not yet on \(names(fixable)) · add \(names(stuck)) from the \(ThisDevice.name) you created it on")
     }
 
     private var recoveryVerb: String? {
@@ -216,15 +216,15 @@ struct MoveSecurity: View {
         let on = live.filter { !$0.outside.isEmpty }
         let missing = standings.filter { $0.outside.isEmpty }
         guard let one = keys.first else {
-            return String(localized: "None · a wallet of yours, so the account never depends on this app")
+            return String(localized: "None · if you lose Casberi, a key in a wallet you hold signs instead")
         }
         let who = keys.count == 1 ? YourAccount.short(one) : String(localized: "\(keys.count) keys")
         if missing.isEmpty { return String(localized: "\(who) · on \(names(on))") }
         // The networks only the first phone can open are named, not offered.
         let here = missing.filter(canFix), there = missing.filter { !canFix($0) }
         if there.isEmpty { return String(localized: "\(who) · not yet on \(names(missing))") }
-        if here.isEmpty { return String(localized: "\(who) · your other device adds \(names(there))") }
-        return String(localized: "\(who) · not yet on \(names(here)) · your other device adds \(names(there))")
+        if here.isEmpty { return String(localized: "\(who) · add \(names(there)) from the \(ThisDevice.name) you created it on") }
+        return String(localized: "\(who) · not yet on \(names(here)) · add \(names(there)) from the \(ThisDevice.name) you created it on")
     }
 
     private var outsideVerb: String? {
@@ -295,7 +295,7 @@ struct MoveSecurity: View {
     private func addOutside() {
         guard working == nil, let owner = addingOutside ? outsideCandidate : live.flatMap(\.outside).first else { return }
         let targets = standings.filter { $0.outside.isEmpty && canFix($0) }.map(\.network)
-        working = (String(localized: "Outside key"), String(localized: "Adding…"))
+        working = (String(localized: "Signer"), String(localized: "Adding…"))
         Task {
             var done: [String] = []
             var failed: [String] = []
@@ -316,7 +316,7 @@ struct MoveSecurity: View {
             outsideText = ""
             await read()
             if failed.isEmpty {
-                chrome.flash(String(localized: "Outside key on \(done.formatted(.list(type: .and)))"), tone: .success)
+                chrome.flash(String(localized: "Signer on \(done.formatted(.list(type: .and)))"), tone: .success)
             } else {
                 chrome.flash(failed.joined(separator: " · "), tone: done.isEmpty ? .failure : .neutral, seconds: 6)
             }
@@ -433,8 +433,8 @@ struct OutsideKeyNudge: View {
             DSHaptic.selection()
             chrome.openWalletSecurity(at: FeedScreen.SecurityAnchor.account.id)
         } label: {
-            DSFeedRow(name: String(localized: "Add a key you hold outside Casberi"),
-                      line: Text("So your account never depends on this app")) {
+            DSFeedRow(name: String(localized: "Add a signer"),
+                      line: Text("If you lose Casberi, a key in a wallet you hold signs instead")) {
                 if let address = YourAccountKey.address {
                     WalletFace(address: address, size: DS.Face.seat, circular: true)
                 }

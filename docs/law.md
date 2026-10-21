@@ -1821,7 +1821,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1443 — The toast draws above every sheet [+9 sub-entries]
 - §1444 — An app's settings are on its page: the name in the title wears the sliders disc and opens them; Casberi › Apps is del… [+1 sub-entries]
 - §1445 — A card per subscription: Pro makes each tracked plan its own Privacy.com card, Premium is Casberi's own card (builds…
-- §1446 — Aztec through V6: rollups found in the Registry, a warning before an upgrade strands zk.money money, and the sign she…
+- §1446 — Aztec through V6: rollups found in the Registry, a warning before an upgrade strands zk.money money, and the sign she… [+2 sub-entries]
 
 ## Dead rulings → what replaced them (generated)
 

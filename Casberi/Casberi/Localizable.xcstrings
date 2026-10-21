@@ -1979,6 +1979,34 @@
         }
       }
     },
+    "%@ · add %@ from the %@ you created it on" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ · añade %2$@ desde el %3$@ en el que la creaste"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ · %2$@ は作成した %3$@ から追加"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ · %2$@은(는) 계정을 만든 %3$@에서 추가"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ · 请在创建账户的 %3$@ 上添加 %2$@"
+          }
+        }
+      }
+    },
     "%@ · Due %@" : {
       "localizations" : {
         "es" : {
@@ -2087,6 +2115,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "%1$@ · 尚未在 %2$@ 上"
+          }
+        }
+      }
+    },
+    "%@ · not yet on %@ · add %@ from the %@ you created it on" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ · aún no en %2$@ · añade %3$@ desde el %4$@ en el que la creaste"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ · %2$@ はまだ · %3$@ は作成した %4$@ から追加"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ · %2$@에는 아직 · %3$@은(는) 계정을 만든 %4$@에서 추가"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ · 尚未在 %2$@ 上 · 请在创建账户的 %4$@ 上添加 %3$@"
           }
         }
       }
@@ -5037,6 +5093,34 @@
         }
       }
     },
+    "Add a signer" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Añade un firmante"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "署名者を追加"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "서명자 추가"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "添加签名者"
+          }
+        }
+      }
+    },
     "Add your recovery key" : {
       "localizations" : {
         "es" : {
@@ -5345,6 +5429,34 @@
         }
       }
     },
+    "If you lose Casberi, a key in a wallet you hold signs instead" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Si pierdes Casberi, firma una clave de una cartera que tengas"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberi を失っても、自分のウォレットの鍵で署名できます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Casberi를 잃어도 내가 가진 지갑의 키로 대신 서명합니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "如果失去 Casberi，由你持有的钱包里的密钥代为签名"
+          }
+        }
+      }
+    },
     "More than you have" : {
       "localizations" : {
         "es" : {
@@ -5429,6 +5541,62 @@
         }
       }
     },
+    "None · if you lose Casberi, a key in a wallet you hold signs instead" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ninguno · si pierdes Casberi, firma una clave de una cartera que tengas"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "なし · Casberi を失っても、自分のウォレットの鍵で署名できます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "없음 · Casberi를 잃어도 내가 가진 지갑의 키로 대신 서명합니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "无 · 如果失去 Casberi，由你持有的钱包里的密钥代为签名"
+          }
+        }
+      }
+    },
+    "Not on any network from this %@ yet." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aún no está en ninguna red desde este %@."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "この %@ からはまだどのネットワークにもありません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 %@에서는 아직 어떤 네트워크에도 없습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "从这台 %@ 还未开通任何网络。"
+          }
+        }
+      }
+    },
     "Not on any network on this %@ yet. The %@ that made this account can open it." : {
       "localizations" : {
         "es" : {
@@ -5453,6 +5621,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "在这台 %1$@ 上还不在任何网络上。创建此账户的 %2$@ 可以开通。"
+          }
+        }
+      }
+    },
+    "Not set up · if you lose this %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Sin configurar · por si pierdes este %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "未設定 · この %@ を失ったときのため"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "설정 안 됨 · 이 %@을(를) 잃을 때를 위해"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "未设置 · 以防丢失这台 %@"
           }
         }
       }
@@ -5509,6 +5705,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "还没有可花的"
+          }
+        }
+      }
+    },
+    "On %@ · add %@ from the %@ you created it on" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "En %1$@ · añade %2$@ desde el %3$@ en el que la creaste"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ に設定済み · %2$@ は作成した %3$@ から追加"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@에 있음 · %2$@은(는) 계정을 만든 %3$@에서 추가"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已在 %1$@ · 请在创建账户的 %3$@ 上添加 %2$@"
+          }
+        }
+      }
+    },
+    "On %@ · not yet on %@ · add %@ from the %@ you created it on" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "En %1$@ · aún no en %2$@ · añade %3$@ desde el %4$@ en el que la creaste"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ に設定済み · %2$@ はまだ · %3$@ は作成した %4$@ から追加"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@에 있음 · %2$@에는 아직 · %3$@은(는) 계정을 만든 %4$@에서 추가"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已在 %1$@ · 尚未在 %2$@ · 请在创建账户的 %4$@ 上添加 %3$@"
           }
         }
       }
@@ -5765,6 +6017,34 @@
         }
       }
     },
+    "Send to it only on %@." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Envía a ella solo en %@."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "送金は %@ のみにしてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@에서만 이 주소로 보내세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "只在 %@ 上向它转账。"
+          }
+        }
+      }
+    },
     "Send to it only on %@. The %@ that made this account can open the others." : {
       "localizations" : {
         "es" : {
@@ -5821,6 +6101,62 @@
         }
       }
     },
+    "Signer" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Firmante"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "署名者"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "서명자"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "签名者"
+          }
+        }
+      }
+    },
+    "Signer on %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Firmante en %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ に署名者を追加しました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@에 서명자 추가됨"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已在 %@ 添加签名者"
+          }
+        }
+      }
+    },
     "The sponsored fee payer pays the fee" : {
       "localizations" : {
         "es" : {
@@ -5845,6 +6181,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "由赞助的手续费支付方支付手续费"
+          }
+        }
+      }
+    },
+    "To %lld people" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "A %lld personas"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld 人へ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%lld명에게"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "发给 %lld 人"
           }
         }
       }

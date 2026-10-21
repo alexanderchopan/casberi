@@ -19,6 +19,11 @@ enum YourAccountChain {
 
     struct Failure: Error, Equatable {
         let message: String
+        /// Whose words these are, when they are not the app's: Move draws the
+        /// service's mark in place of its name (§1442n, user: "if we say
+        /// relay we should show their logo. and not say 'said'").
+        var from: String? = nil
+        init(message: String, from: String? = nil) { self.message = message; self.from = from }
     }
 
     private static let service = "Your account"
@@ -353,8 +358,8 @@ enum YourAccountChain {
 
     private static func relayRefusal(_ json: Any?, _ net: Network) -> Failure {
         let said = (json as? [String: Any])?["message"] as? String
-        return Failure(message: said.map { String(localized: "Relay said: \($0)") }
-                       ?? String(localized: "Relay did not answer on \(net.name)"))
+        return said.map { Failure(message: $0, from: "Relay") }
+            ?? Failure(message: String(localized: "Relay did not answer on \(net.name)"))
     }
 
     /// Relay's price and calls for selling `amount` of `sell` for `buy`, the
