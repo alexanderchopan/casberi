@@ -4210,6 +4210,49 @@ enum ProbeHooks {
                 }
             }
         },
+        // `-roundUpsSet "on|off[|<step>[|<saved units on Base>]]"` — round-ups
+        // set as the Security row would set them (prd §1452), and what is
+        // counted on Base, for a screenshot or a send's dry run.
+        Hook(key: "roundUpsSet") { raw, _ in
+            let p = raw.split(separator: "|").map(String.init)
+            var setting = RoundUps.setting
+            setting.on = p.first == "on"
+            if p.count > 1, let step = Int(p[1]), step == 1 || step == 5 { setting.step = step }
+            RoundUps.setting = setting
+            if p.count > 2 { RoundUps.setSaved(p[2], on: YourAccountOp.base.chainId) }
+            NSLog("roundUps| on=%d step=%d saved=%@", setting.on ? 1 : 0, setting.step, RoundUps.saved(on: YourAccountOp.base.chainId))
+        },
+        // `-roundUpSendProbe "<network>|<dollar units>"` — that much of the
+        // dollar from the account to itself with round-ups as set (prd §1452):
+        // the change counted, or bought through Relay once the count reaches
+        // `RoundUps.buyAt`. `-coSignWith` for a both-keys account. Throwaway only.
+        Hook(key: "roundUpSendProbe") { raw, _ in
+            Task { @MainActor in
+                func log(_ line: String) { NSLog("roundUpSend| %@", line) }
+                let p = raw.split(separator: "|").map(String.init)
+                guard p.count == 2, let net = YourAccountOp.probeNetworks.first(where: { $0.name.caseInsensitiveCompare(p[0]) == .orderedSame }),
+                      let account = YourAccountKey.address,
+                      let named = UserDefaults.standard.string(forKey: "adapterThrowaway"), WalletWatch.sameAddress(named, account) else {
+                    log("only on the throwaway -adapterThrowaway names: <network>|<dollar units>"); return
+                }
+                let setting = RoundUps.setting
+                let plan = RoundUps.plan(dollarSent: p[1], saved: RoundUps.saved(on: net.chainId), step: setting.step)
+                log("plan change=\(plan.change) buy=\(plan.buy ?? "-") savedAfter=\(plan.savedAfter) target=\(setting.target.symbol)/\(setting.target.chainId)")
+                let payment = YourAccountOp.Payment(network: net, token: YourAccountOp.dollar(on: net), amount: p[1], to: account, toName: nil)
+                let coSigner = UserDefaults.standard.string(forKey: "coSignWith").map(ProbeCoSigner.make)
+                do {
+                    let done = try await YourAccountChain.transact([.send(payment)], reason: "Probe: a send with a round-up", coSigner: coSigner,
+                                                                  roundUp: plan.buy.map { YourAccountChain.RoundUpBuy(units: $0, target: setting.target) },
+                                                                  report: { line in NSLog("roundUpSend| %@", line) }) { stage in log("stage=\(stage)") }
+                    if case .landed = done.sent.outcome { RoundUps.setSaved(plan.savedAfter, on: net.chainId) }
+                    log("result=\(done.sent.outcome) saved=\(RoundUps.saved(on: net.chainId))")
+                } catch let failure as YourAccountChain.Failure {
+                    log("refused: \(failure.message)")
+                } catch {
+                    log("error: \(String(describing: error))")
+                }
+            }
+        },
         // `-recoveryNudgePreview "<chainId,…>"` — draw Needs you's recovery-key
         // row for these networks (prd §1442m) on a phone that cannot fix them.
         Hook(key: "recoveryNudgePreview") { raw, _ in

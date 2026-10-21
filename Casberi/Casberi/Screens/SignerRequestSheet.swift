@@ -67,7 +67,6 @@ struct SignerRequestSheet: View {
     static func present(url: URL, signer: String) -> @MainActor () -> Void {
         let host = UIHostingController(rootView: SignerRequestSheet(url: url, signer: signer))
         host.view.backgroundColor = .systemBackground
-        host.isModalInPresentation = true
         if let sheet = host.sheetPresentationController {
             sheet.detents = [.large()]
             sheet.prefersGrabberVisible = false

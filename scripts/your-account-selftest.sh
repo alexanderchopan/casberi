@@ -35,9 +35,10 @@ KECCAK="Casberi/Casberi/Model/Keccak256.swift"
 CLEARSIGN="Casberi/Casberi/Model/ClearSign.swift"
 WEBAUTHN="Casberi/Casberi/Model/SafeWebAuthnSignature.swift"
 TYPED="Casberi/Casberi/Model/SafeTypedData.swift"
+ROUNDUPS="Casberi/Casberi/Model/RoundUps.swift"
 MOVE="Casberi/Casberi/Screens/MoveScreen.swift"
 TABS="Casberi/Casberi/Design/PlaceTabBar.swift"
-for f in "$ACCOUNT" "$OP" "$SWAP" "$TX" "$KECCAK" "$CLEARSIGN" "$WEBAUTHN" "$TYPED" "$MOVE" "$TABS"; do
+for f in "$ACCOUNT" "$OP" "$SWAP" "$TX" "$KECCAK" "$CLEARSIGN" "$WEBAUTHN" "$TYPED" "$ROUNDUPS" "$MOVE" "$TABS"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -162,6 +163,17 @@ for (label, tdOp) in [("the adapter's op", aop), ("a keyed-nonce op", { var o = 
 check(YourAccountOp.decimal(YourAccount.w(0)) == "0" && YourAccountOp.decimal(YourAccount.w(1234567890)) == "1234567890"
       && YourAccountOp.decimal(sop.nonceWord) == "57532766240966947952054840643333136270388981957654712034659401735",
       "a word's decimal is wrong")
+// Round-ups (prd §1452): the change to the next $1 or $5, nothing when whole,
+// counted until the count reaches $5, then everything counted is bought.
+check(RoundUps.change("4300000", step: 1) == "700000" && RoundUps.change("4000000", step: 1) == "0"
+      && RoundUps.change("4300000", step: 5) == "700000" && RoundUps.change("5300000", step: 5) == "4700000"
+      && RoundUps.change("1", step: 1) == "999999", "a round-up's change is wrong")
+check(RoundUps.plan(dollarSent: "4300000", saved: "3400000", step: 1) == .init(change: "700000", buy: nil, savedAfter: "4100000"),
+      "a round-up under $5 is not counted")
+check(RoundUps.plan(dollarSent: "4300000", saved: "4500000", step: 1) == .init(change: "700000", buy: "5200000", savedAfter: "0"),
+      "a round-up reaching $5 does not buy everything counted")
+check(RoundUps.plan(dollarSent: "4300000", saved: "4300000", step: 1) == .init(change: "700000", buy: "5000000", savedAfter: "0"),
+      "exactly $5 does not buy")
 var huge = op; huge.maxFeePerGas = UInt64.max
 check(huge.maxCost == nil && op.maxCost == 1320000000000, "maxCost overflows into a trap, or is wrong")
 check(YourAccountOp.spoken("500000000000", decimals: 18) == "0.0000005", "a real amount must never be spoken as 0")
@@ -283,7 +295,7 @@ check(YourAccountOp.abiString("0x4d4b5200000000000000000000000000000000000000000
 check(YourAccountOp.abiString("0x") == nil, "no answer is no symbol")
 exit(bad == 0 ? 0 : 1)
 SWIFT
-xcrun swiftc -O -o "$TMP/t" "$ACCOUNT" "$OP" "$SWAP" "$ADAPTER" "$TX" "$KECCAK" "$CLEARSIGN" "$WEBAUTHN" "$TYPED" "$TMP/main.swift" 2>"$TMP/err" \
+xcrun swiftc -O -o "$TMP/t" "$ACCOUNT" "$OP" "$SWAP" "$ADAPTER" "$TX" "$KECCAK" "$CLEARSIGN" "$WEBAUTHN" "$TYPED" "$ROUNDUPS" "$TMP/main.swift" 2>"$TMP/err" \
   || { cat "$TMP/err"; echo "✗ YourAccount.swift and YourAccountOp.swift do not compile alone (Foundation and the Safe encoders only)"; exit 1; }
 FIXTURES="$FIXTURES" "$TMP/t" || { echo "✗ your account's arithmetic drifted — see above"; exit 1; }
 

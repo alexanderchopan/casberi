@@ -235,6 +235,36 @@ struct MoveSentence: View {
 
     private var all: [Chain.Item] { items + (pendingItem.map { [$0] } ?? []) }
 
+    // MARK: - Round-ups (prd §1452)
+
+    /// This send's round-up: the dollars it sends on this network, rounded
+    /// up, added to what is counted; nil when round-ups are off or nothing
+    /// in it is the dollar.
+    private var roundUpPlan: RoundUps.Plan? {
+        let setting = RoundUps.setting
+        guard verb == .send, setting.on, !network.isTest else { return nil }
+        let dollar = Op.dollar(on: network)
+        let sent = all.compactMap { item -> String? in
+            if case .send(let p) = item, p.token == dollar { return p.amount }
+            return nil
+        }.reduce("0") { Op.sum($0, $1) }
+        guard sent != "0" else { return nil }
+        return RoundUps.plan(dollarSent: sent, saved: RoundUps.saved(on: network.chainId), step: setting.step)
+    }
+
+    /// The small print's word on round-ups: what is counted, or that this
+    /// send buys with it.
+    private var roundUpPrint: [String] {
+        guard let plan = roundUpPlan else { return [] }
+        let target = RoundUps.setting.target
+        if let buy = plan.buy {
+            let usd = Op.dollars(buy, decimals: RoundUps.dollarDecimals, price: 1)
+            return [String(localized: "\(Self.money(usd)) of round-ups buys \(target.symbol) on \(target.network)")]
+        }
+        let usd = Op.dollars(plan.savedAfter, decimals: RoundUps.dollarDecimals, price: 1)
+        return [String(localized: "\(Self.money(usd)) of round-ups so far, \(target.symbol) bought at $5")]
+    }
+
     // MARK: - The page
 
     var body: some View {
@@ -403,6 +433,32 @@ struct MoveSentence: View {
                     }
                 }
                 .padding(.top, groups.count > 1 ? DS.Space.s3 : 0)
+                // Round-ups (prd §1452): the change, then what the whole send
+                // comes to with it (user: "needs to be clear that the 5$ is
+                // the total tx").
+                if let plan = roundUpPlan, plan.change != "0" {
+                    let change = Op.dollars(plan.change, decimals: RoundUps.dollarDecimals, price: 1)
+                    row(nil) {
+                        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                            Text("Round-up, toward \(RoundUps.setting.target.symbol)")
+                                .dsText(.body17).foregroundStyle(DS.textPrimary)
+                            Spacer(minLength: 0)
+                            Text(verbatim: Self.money(change))
+                                .dsText(.body17).foregroundStyle(DS.textSecondary).monospacedDigit()
+                        }
+                    }
+                    .padding(.top, DS.Space.s3)
+                    if let sent = soldDollarsTotal {
+                        row(nil) {
+                            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                                Text("Total").dsText(.heading17).foregroundStyle(DS.textPrimary)
+                                Spacer(minLength: 0)
+                                Text(verbatim: Self.money(sent + change))
+                                    .dsText(.heading17).foregroundStyle(DS.textPrimary).monospacedDigit()
+                            }
+                        }
+                    }
+                }
             case .receive where fresh:
                 row(nil) {
                     HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
@@ -1079,7 +1135,7 @@ struct MoveSentence: View {
                 // the whole swap's (§1442g).
                 let print: [String] = switch verb {
                 case .swap: [feeTotal].compactMap { $0 }
-                case .send: peopleCount > 1 ? [String(localized: "To \(peopleCount) people")] : []
+                case .send: (peopleCount > 1 ? [String(localized: "To \(peopleCount) people")] : []) + roundUpPrint
                 case .receive: []
                 }
                 if !print.isEmpty {
@@ -1745,11 +1801,19 @@ struct MoveSentence: View {
         guard !batch.isEmpty else { return }
         let reason = faceIDWords(batch)
         let net = network
+        let roundUp = roundUpPlan
+        let target = RoundUps.setting.target
         stage = .preparing
         Task {
             do {
-                let done = try await Chain.transact(batch, reason: reason) { s in
+                let done = try await Chain.transact(batch, reason: reason,
+                                                    roundUp: roundUp?.buy.map { Chain.RoundUpBuy(units: $0, target: target) }) { s in
                     await MainActor.run { stage = s }
+                }
+                // The change is counted once the send has landed; a buy
+                // empties the count with it.
+                if let roundUp, case .landed = done.sent.outcome {
+                    RoundUps.setSaved(roundUp.savedAfter, on: net.chainId)
                 }
                 let sent = done.sent
                 stage = nil

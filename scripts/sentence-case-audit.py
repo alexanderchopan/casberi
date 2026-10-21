@@ -220,6 +220,10 @@ KNOWN_PHRASES: tuple[str, ...] = (
 )
 
 KNOWN_PROPER: set[str] = {
+    # Your account's second key (prd §1447, user: "well then it is a Signer"):
+    # the Security row is named "Signer", and every line that means that key
+    # names it so.
+    "Signer",
     # Relay, which settles Move's swaps (prd §1440): "Not verified by Relay"
     # names its token verification.
     "Relay",
