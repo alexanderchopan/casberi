@@ -738,6 +738,76 @@ enum YourAccountChain {
         return (try? JSONSerialization.jsonObject(with: data, options: .fragmentsAllowed), http.statusCode)
     }
 
+    /// A round-up's buy (prd §1452): `units` of the network's dollar, for
+    /// `target`.
+    struct RoundUpBuy: Equatable, Sendable {
+        let units: String
+        let target: RoundUps.Target
+    }
+
+    /// Relay's deposit address for a route (prd §1452): send `currency`
+    /// on `origin` to it and Relay delivers `target` to the account. The
+    /// answer is refused unless it names the account as the one that gets
+    /// it, the route asked for, and — where Relay hands back the transfer
+    /// itself — exactly a transfer of `amount` to that address.
+    struct Deposit: Equatable, Sendable {
+        let address: String
+        let outUSD: Double?
+        let feeUSD: Double?
+        let seconds: Int?
+    }
+
+    static func depositAddress(from origin: Network, currency: String, to target: RoundUps.Target,
+                               amount: String, account: String) async throws -> Deposit {
+        try await depositAddress(fromChain: origin.chainId, currency: currency, to: target, amount: amount, account: account,
+                                 name: origin.name)
+    }
+
+    static func depositAddress(fromChain chainId: Int, currency: String, to target: RoundUps.Target,
+                               amount: String, account: String, name: String) async throws -> Deposit {
+        let body: [String: Any] = [
+            "user": account, "recipient": account, "refundTo": account,
+            "originChainId": chainId, "originCurrency": currency,
+            "destinationChainId": target.chainId, "destinationCurrency": target.address,
+            "tradeType": "EXACT_INPUT", "amount": amount, "useDepositAddress": true,
+        ]
+        let (json, status) = await relay("quote/v2", body: body)
+        guard status == 200, let o = json as? [String: Any],
+              let step = (o["steps"] as? [[String: Any]])?.first,
+              let address = step["depositAddress"] as? String, SafeABI.word(address: address) != nil,
+              let details = o["details"] as? [String: Any] else {
+            let said = (json as? [String: Any])?["message"] as? String
+            throw said.map { Failure(message: $0, from: "Relay") } ?? Failure(message: String(localized: "Relay did not answer on \(name)"))
+        }
+        func side(_ key: String) -> (chain: Int, address: String)? {
+            guard let c = (details[key] as? [String: Any])?["currency"] as? [String: Any],
+                  let chain = c["chainId"] as? Int, let a = c["address"] as? String else { return nil }
+            return (chain, a)
+        }
+        let recipient = details["recipient"] as? String ?? ""
+        guard WalletWatch.sameAddress(recipient, account),
+              let input = side("currencyIn"), input.chain == chainId, input.address.caseInsensitiveCompare(currency) == .orderedSame,
+              let output = side("currencyOut"), output.chain == target.chainId,
+              output.address.caseInsensitiveCompare(target.address) == .orderedSame else {
+            throw Failure(message: String(localized: "Relay asked for something other than this swap, so nothing was signed"))
+        }
+        // An ERC-20 route hands back the transfer it expects: it must be the
+        // one this phone would write.
+        if let item = (step["items"] as? [[String: Any]])?.first, let data = item["data"] as? [String: Any],
+           let calldata = data["data"] as? String, calldata != "0x" {
+            let expected = YourAccountOp.transfer(to: address, amount: amount).map(SafeABI.hex)
+            guard let to = data["to"] as? String, to.caseInsensitiveCompare(currency) == .orderedSame,
+                  calldata.lowercased() == expected?.lowercased() else {
+                throw Failure(message: String(localized: "Relay asked for something other than this swap, so nothing was signed"))
+            }
+        }
+        func usd(_ any: Any?) -> Double? { (any as? String).flatMap(Double.init) ?? (any as? Double) }
+        let out = usd((details["currencyOut"] as? [String: Any])?["amountUsd"])
+        let fees = o["fees"] as? [String: Any]
+        let fee = ["gas", "relayer"].compactMap { usd((fees?[$0] as? [String: Any])?["amountUsd"]) }.reduce(0, +)
+        return Deposit(address: address, outUSD: out, feeUSD: fees == nil ? nil : fee, seconds: details["timeEstimate"] as? Int)
+    }
+
     /// Relay's token search for the sentence's For (prd §1440): its default
     /// list with nothing typed, matches as you type; verified tokens marked.
     static func relayCurrencies(_ net: Network, term: String) async -> [[String: Any]] {
@@ -906,6 +976,7 @@ enum YourAccountChain {
     /// simulated and refused unless every swap pays its minimum. Relay settles
     /// in the same transaction, so a landed operation is a finished swap.
     static func transact(_ items: [Item], reason: String, dryRun: Bool = false, coSigner: CoSigner? = nil,
+                         roundUp: RoundUpBuy? = nil,
                          report: @escaping @Sendable (String) -> Void = { _ in },
                          stage: @escaping @Sendable (Stage) async -> Void) async throws -> Transacted {
         guard let net = items.first?.network, items.allSatisfy({ $0.network == net }) else {
@@ -944,6 +1015,21 @@ enum YourAccountChain {
         }
         guard let approvalCalls = YourAccountSwap.approvalCalls(approvals) else {
             throw Failure(message: String(localized: "This swap could not be written"))
+        }
+        // Round-ups (prd §1452): what the change has reached, to Relay's
+        // deposit address for the route, last; its dollars counted with the
+        // sends' before any prompt.
+        if let roundUp {
+            let deposit = try await depositAddress(from: net, currency: net.dollar, to: roundUp.target,
+                                                   amount: roundUp.units, account: account)
+            let payment = YourAccountOp.Payment(network: net, token: YourAccountOp.dollar(on: net), amount: roundUp.units,
+                                                to: deposit.address, toName: "Relay")
+            guard let call = YourAccountOp.call(for: payment) else {
+                throw Failure(message: String(localized: "This send could not be written"))
+            }
+            payments.append(payment)
+            steps.append(([call], nil))
+            report("roundUp: \(roundUp.units) to \(deposit.address) for \(roundUp.target.symbol) on \(roundUp.target.network)")
         }
         let calls = approvalCalls + steps.flatMap(\.calls)
         let swaps = steps.compactMap(\.swap)

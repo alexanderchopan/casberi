@@ -1525,6 +1525,62 @@
         }
       }
     },
+    "%@ of round-ups buys %@ on %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ de redondeos compra %2$@ en %3$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "端数%1$@で%3$@の%2$@を購入"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "잔돈 %1$@로 %3$@의 %2$@ 구매"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ 的零钱在 %3$@ 上买入 %2$@"
+          }
+        }
+      }
+    },
+    "%@ of round-ups so far, %@ bought at $5" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ de redondeos hasta ahora, %2$@ se compra al llegar a $5"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "これまでの端数%1$@、$5で%2$@を購入"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "지금까지 잔돈 %1$@, $5가 되면 %2$@ 구매"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "目前零钱 %1$@，满 $5 买入 %2$@"
+          }
+        }
+      }
+    },
     "%@ on the card" : {
       "localizations" : {
         "es" : {
@@ -1891,6 +1947,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "今日 %@"
+          }
+        }
+      }
+    },
+    "%@ toward %@ · buys at $5" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%1$@ para %2$@ · compra al llegar a $5"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%2$@へ%1$@ · $5で購入"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%2$@에 %1$@ · $5에 구매"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已存 %1$@ 买 %2$@ · 满 $5 买入"
           }
         }
       }
@@ -5569,6 +5653,34 @@
         }
       }
     },
+    "Off · each dollar send rounds up, the change buys a token" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Desactivado · cada envío en dólares se redondea y el cambio compra un token"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "オフ · ドルの送金ごとに端数を切り上げ、差額でトークンを購入"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "끔 · 달러를 보낼 때마다 올림하고 잔돈으로 토큰 구매"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "关闭 · 每笔美元转账向上取整，零钱买入代币"
+          }
+        }
+      }
+    },
     "Open MetaMask" : {
       "localizations" : {
         "es" : {
@@ -5597,6 +5709,62 @@
         }
       }
     },
+    "Round-up, toward %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Redondeo, para %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "端数、%@へ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "잔돈, %@용"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "零钱，用于 %@"
+          }
+        }
+      }
+    },
+    "Round-ups" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Redondeos"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "端数の積み立て"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "잔돈 모으기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "零钱买入"
+          }
+        }
+      }
+    },
     "Scan with …%@ in its wallet, then approve." : {
       "localizations" : {
         "es" : {
@@ -5621,6 +5789,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "用 …%@ 的钱包扫描，然后批准。"
+          }
+        }
+      }
+    },
+    "Switches between the next one and the next five dollars" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cambia entre el siguiente dólar y los siguientes cinco"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "次の1ドルと次の5ドルを切り替えます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "다음 1달러와 다음 5달러 사이를 전환합니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在下一个 1 美元和下一个 5 美元之间切换"
+          }
+        }
+      }
+    },
+    "Total" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Total"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "合計"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "합계"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "合计"
           }
         }
       }
@@ -5681,6 +5905,34 @@
         }
       }
     },
+    "What round-ups buy" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Lo que compran los redondeos"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "端数で買うもの"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "잔돈으로 살 것"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "零钱买入的代币"
+          }
+        }
+      }
+    },
     "Your Signer signs too" : {
       "localizations" : {
         "es" : {
@@ -5705,6 +5957,90 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你的签名者也要签名"
+          }
+        }
+      }
+    },
+    "Your account is already on it" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu cuenta ya lo usa"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "あなたのアカウントはすでに使っています"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "계정이 이미 사용 중입니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的账户已在使用"
+          }
+        }
+      }
+    },
+    "Your change waits in your USDC and goes with the send that brings it to $5. Relay buys it, for a few cents." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu cambio espera en tu USDC y sale con el envío que lo lleva a $5. Relay lo compra por unos centavos."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "端数はUSDCのまま待ち、$5に達した送金と一緒に出ます。Relayが数セントで購入します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "잔돈은 USDC로 기다리다가 $5가 되는 송금과 함께 나갑니다. Relay가 몇 센트에 구매합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "零钱留在你的 USDC 中，随让它满 $5 的那笔转账一起发出。Relay 以几美分的费用买入。"
+          }
+        }
+      }
+    },
+    "and buy" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "y comprar"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "そして購入"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "그리고 구매"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "并买入"
           }
         }
       }
@@ -6097,6 +6433,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "如果失去 Casberi，由你持有的钱包里的密钥代为签名"
+          }
+        }
+      }
+    },
+    "every" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "cada"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ごとに"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "마다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "每"
           }
         }
       }
@@ -6913,6 +7277,34 @@
         }
       }
     },
+    "round up" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "redondear"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "切り上げ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "올림"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "取整到"
+          }
+        }
+      }
+    },
     "send" : {
       "localizations" : {
         "es" : {
@@ -7413,6 +7805,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "以美元输入"
+          }
+        }
+      }
+    },
+    "to the next $%lld" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "al siguiente $%lld"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "次の$%lldまで"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "다음 $%lld까지"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "下一个 $%lld"
           }
         }
       }

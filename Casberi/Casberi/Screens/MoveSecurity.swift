@@ -50,6 +50,8 @@ struct MoveSecurity: View {
     @State private var amountText = ""
     @State private var period: LimitPeriod = .month
     @FocusState private var amountFocused: Bool
+    @State private var roundUps = RoundUps.setting
+    @State private var roundUpChoices: [(network: YourAccountOp.Network, tokens: [YourAccountTokens.Listed])] = []
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -74,6 +76,7 @@ struct MoveSecurity: View {
             #if DEBUG
             if UserDefaults.standard.bool(forKey: "spendLimitOpen") { spendLimit }
             #endif
+            roundUpsRow
             // Said once, under the keys, only on a device that cannot open
             // them (§1442n item 3; user: "the user will have created their
             // account on the device they are reading this on"): the fact is
@@ -127,6 +130,103 @@ struct MoveSecurity: View {
         .frame(minHeight: 60)
         // A line that wraps to two keeps the air between rows.
         .padding(.vertical, DS.Space.s1)
+    }
+
+    // MARK: - Round-ups (prd §1452)
+
+    /// Under the spend limit (user: "same place we have spend limits"),
+    /// changed where it stands: the switch, $1 or $5, and what it buys.
+    @ViewBuilder private var roundUpsRow: some View {
+        DSToggleRow(title: Text("Round-ups"), detail: Text(verbatim: roundUpLine),
+                    isOn: Binding(get: { roundUps.on }, set: { on in
+                        withAnimation(DS.Motion.standard) { roundUps.on = on }
+                        RoundUps.setting = roundUps
+                    }))
+            .frame(minHeight: 60)
+            .padding(.vertical, DS.Space.s1)
+        if roundUps.on { roundUpSentence }
+    }
+
+    private var roundUpTarget: String {
+        "\(roundUps.target.symbol) on \(roundUps.target.network)"
+    }
+
+    private var roundUpLine: String {
+        guard roundUps.on else { return String(localized: "Off · each dollar send rounds up, the change buys a token") }
+        let saved = YourAccountOp.networks.map { RoundUps.saved(on: $0.chainId) }.reduce("0") { YourAccountOp.sum($0, $1) }
+        let usd = YourAccountOp.dollars(saved, decimals: RoundUps.dollarDecimals, price: 1)
+        return String(localized: "\(dollarsText(usd)) toward \(roundUps.target.symbol) · buys at $5")
+    }
+
+    private func dollarsText(_ usd: Double) -> String {
+        String(format: "$%.2f", usd)
+    }
+
+    private var roundUpSentence: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                Text("round up").dsText(.body17).foregroundStyle(DS.textPrimary).frame(width: 76, alignment: .leading)
+                Button {
+                    withAnimation(DS.Motion.standard) { roundUps.step = roundUps.step == 1 ? 5 : 1 }
+                    RoundUps.setting = roundUps
+                    DSHaptic.selection()
+                } label: {
+                    Text("to the next $\(roundUps.step)").dsText(.heading28).foregroundStyle(DS.pickInk)
+                        .contentTransition(.numericText())
+                        .frame(minHeight: 44)
+                }
+                .buttonStyle(RowPress())
+                .accessibilityHint(Text("Switches between the next one and the next five dollars"))
+            }
+            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                Text("and buy").dsText(.body17).foregroundStyle(DS.textPrimary).frame(width: 76, alignment: .leading)
+                Menu {
+                    ForEach(roundUpChoices, id: \.network.chainId) { group in
+                        Section(group.network.name) {
+                            ForEach(group.tokens) { listed in
+                                let target = RoundUps.Target(chainId: group.network.chainId,
+                                                             address: listed.token.contract ?? YourAccountSwap.native,
+                                                             symbol: listed.token.symbol, decimals: listed.token.decimals,
+                                                             network: group.network.name)
+                                Button {
+                                    withAnimation(DS.Motion.standard) { roundUps.target = target }
+                                    RoundUps.setting = roundUps
+                                } label: {
+                                    if target == roundUps.target { Label(listed.token.symbol, systemImage: "checkmark") }
+                                    else { Text(verbatim: listed.token.symbol) }
+                                }
+                            }
+                        }
+                    }
+                } label: {
+                    Text(verbatim: roundUpTarget).dsText(.heading28).foregroundStyle(DS.pickInk)
+                        .contentTransition(.opacity)
+                        .multilineTextAlignment(.leading)
+                }
+                .accessibilityLabel(Text("What round-ups buy"))
+            }
+            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                Text("every").dsText(.body17).foregroundStyle(DS.textPrimary).frame(width: 76, alignment: .leading)
+                Text(verbatim: "$5.").dsText(.heading28).foregroundStyle(DS.textPrimary)
+            }
+            Text("Your change waits in your USDC and goes with the send that brings it to $5. Relay buys it, for a few cents.")
+                .dsText(.subhead12).foregroundStyle(DS.textSecondary)
+                .padding(.leading, 76 + DS.Space.s2)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.bottom, DS.Space.s3)
+        .transition(.opacity.combined(with: .move(edge: .top)))
+        .task {
+            guard roundUpChoices.isEmpty else { return }
+            var groups: [(network: YourAccountOp.Network, tokens: [YourAccountTokens.Listed])] = []
+            for net in YourAccountOp.networks {
+                let listed = await YourAccountTokens.list(net).filter(\.onList)
+                // The dollar itself is what the change already is.
+                let picks = listed.filter { $0.token != YourAccountOp.dollar(on: net) }.prefix(10)
+                if !picks.isEmpty { groups.append((net, Array(picks))) }
+            }
+            roundUpChoices = groups
+        }
     }
 
     // MARK: - The lines
