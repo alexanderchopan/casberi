@@ -1205,6 +1205,34 @@
         }
       }
     },
+    "%@ in all" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ en total"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "合計 %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "총 %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "共 %@"
+          }
+        }
+      }
+    },
     "%@ in gas since you started following, plus %@ somebody else paid for you." : {
       "localizations" : {
         "es" : {
@@ -7637,6 +7665,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你已有的钱包。"
+          }
+        }
+      }
+    },
+    "and" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "y"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "と"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "및"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "和"
           }
         }
       }
