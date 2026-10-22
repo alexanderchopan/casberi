@@ -493,7 +493,8 @@ struct BandRow: View {
     /// says it — printing it twice was the first thing that looked wrong on
     /// screen. Display only: `thing.title` is untouched, so search, Spotlight,
     /// and the sheet all still read the full sentence.
-    /// An event's start, which rides the LINE since prd §767. It was glued to
+    /// An event's start, which rode the LINE from prd §767 and stands in the
+    /// trailing slot since §1472. It was glued to
     /// the title ("Joiner site visit · 11:07 AM"), so the one fact the row's
     /// mark cannot say sat in the name while the line under it said the name
     /// of the calendar the mark had already said.
@@ -777,6 +778,17 @@ struct BandRow: View {
                     // The Notes room's clock (prd §969) — the room has no day
                     // header to say when, so the row does, in the line's ink.
                     LiveTimeText(date: stamp, color: DS.textSecondary)
+                } else if let eventClock {
+                    // **AN EVENT'S START STANDS AT THE RIGHT EDGE (prd §1472,
+                    // moving §767's line).** Every other row in the Feed keeps
+                    // its time there, so Day's rows held the one clock out of
+                    // the column, under the title. The trailing slot is where
+                    // §902 keeps a clock, in the line's ink and size.
+                    Text(eventClock)
+                        .dsText(.label12)
+                        .monospacedDigit()
+                        .foregroundStyle(DS.textSecondary)
+                        .lineLimit(1)
                 }
             }
         } below: {
@@ -890,7 +902,8 @@ struct BandRow: View {
         // The qualifier leads the line (prd §915): what the title said after
         // its seam — the game, the board, the verb — in the line's own ink,
         // before the clock and the project.
-        let parts = [qualifier.map { Text(verbatim: $0) }, eventClock.map { Text($0) },
+        // An event's start left the line for the trailing slot (prd §1472).
+        let parts = [qualifier.map { Text(verbatim: $0) },
                      voiceLength.map { Text(verbatim: $0).monospacedDigit() }, labelled]
             .compactMap { $0 }
         guard let first = parts.first else { return nil }
