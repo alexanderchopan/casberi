@@ -235,7 +235,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1606 of 1675 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1607 of 1676 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -908,7 +908,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §608 — The setup screens had one vocabulary and forty-eight anatomies (part superseded by §639b)
 - §609 — The octopus's blue dot is gone
 - §610 — The Activity figure restated its own headline, the empty state was below the fold, and four scopes were invisible (part superseded by §1038)
-- §611 — Every scope is a chip on every room, and an empty scope says what it would hold (amended by §747, §761, §771, §1078)
+- §611 — Every scope is a chip on every room, and an empty scope says what it would hold (amended by §747, §761, §771, §1078, §1469)
 - §612 — The verify pass was mostly idle cores, and the answer to "should it take this long?" is no
 - §613 — The connect screens' verb is a component, not a hand-rolled fill (part superseded by §640) [+2 sub-entries]
 - §614 — Shield and View for the Privacy devnet, and why Unshield is deferred (part superseded by §1038)
@@ -1741,7 +1741,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1361 — A list the phone could not read is never saved over the one it holds
 - §1363 — A thing sheet says each thing once, says only what is true, and offers the door it lands on (the redundancy sweep)
 - §1364 — The Wallet tab always lands, and a Wallet with no account starts with any address (amends §611's "no door" for Home)
-- §1365 — The empty Feed's box is Library's "Start with any of these" (amends §1166's note, §1314)
+- §1365 — The empty Feed's box is Library's "Start with any of these" (amends §1166's note, §1314) (amended by §1469)
 - §1367 — Post on X is deleted from the share tray
 - §1368 — An open Logos conversation updates live, through `since_ms`
 - §1369 — An approval's status and grant day are the chain's, never assumed (amends §1360)
@@ -1842,7 +1842,8 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1465 — One gutter per screen: Move and the keys walk share `MoveSentence.gutter`, Security's two sentences share theirs (amended by §1466)
 - §1466 — Move is one running sentence: clauses that never split across a line, one size, the money as small print
 - §1467 — The one Search asks the market: coins, tokens and stocks for whatever you typed, a pasted contract included, followed…
-- §1468 — Spending is the Wallet's fifth tile: the month or the week against the last one to the same point, the recurring half…
+- §1468 — Spending is the Wallet's fifth tile: the month or the week against the last one to the same point, the recurring half… (amended by §1469)
+- §1469 — Spending's two groups and its start box: Recurring and The rest are rows, each the sum of a list (Subscriptions, then…
 
 ## Dead rulings → what replaced them (generated)
 

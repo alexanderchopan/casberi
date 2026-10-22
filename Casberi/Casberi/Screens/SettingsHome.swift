@@ -878,6 +878,7 @@ struct SettingsHome: View {
                     searchFocused = true
                 }
             case .calendar:     add(.calendars)
+            case .card:         add(.cards)
             case .subscription: add(.subscriptions)
             case .wallet:       add(.wallets)
             }
