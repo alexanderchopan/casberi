@@ -127,6 +127,11 @@ struct TokenSetupScreen: View {
             // door to the list.
             rows: [],
             tiles: actTiles,
+            // The row does the thing (prd §1464): where GitHub's own sign-in
+            // is offered, it starts as the page opens.
+            signIn: deviceFlowOffered ? {
+                if case .idle = devicePhase { startDeviceFlow() }
+            } : nil,
             teardown: {
                 TokenVault.delete(bridge.tokenKey)
                 bridge.onRemove()

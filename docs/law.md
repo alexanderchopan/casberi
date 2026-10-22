@@ -235,7 +235,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1601 of 1670 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1602 of 1671 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1838,6 +1838,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1461 — The opening operation sets six limit periods, not twelve
 - §1462 — Security's box is nine, three across, the figure centered over its word (amended by §1463)
 - §1463 — The wash says the state: a threat red, an ask orange, on green, nothing for a zero
+- §1464 — The row does the thing, and Return commits: GitHub, X and a site in three taps
 
 ## Dead rulings → what replaced them (generated)
 

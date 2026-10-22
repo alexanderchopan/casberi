@@ -151,8 +151,8 @@ final class JourneyTests: XCTestCase {
         // it: the band's search, RSS, its page's field (prd §1321).
         openApp(w, "RSS")
         w.focus(w.el(.textField, "label == %@ OR placeholderValue == %@", "Site or feed URL", "Site or feed URL"), "site field")
-        w.type("xkcd.com", "type a site")
-        w.tap(w.el(.button, "label == %@", "Follow"), "Follow")
+        // Return follows (prd §1464).
+        w.type("xkcd.com\n", "type a site, Return")
         w.see(w.el(.any, "label CONTAINS[c] %@", "xkcd"), "site followed")
         w.finish()
     }
@@ -208,7 +208,7 @@ final class JourneyTests: XCTestCase {
         let w = Walk("github", launch: [], test: self)
         leaveDemo(w)
         openApp(w, "GitHub")
-        w.tap(w.visible(.button, "label BEGINSWITH %@", "Sign in"), "Sign in")
+        // The row does the thing (prd §1464): the sign-in starts as the page opens.
         w.see(w.el(.any, "label BEGINSWITH %@", "Enter it on GitHub"), "GitHub's code")
         w.finish()
     }
@@ -219,7 +219,7 @@ final class JourneyTests: XCTestCase {
         let w = Walk("x", launch: [], test: self)
         leaveDemo(w)
         openApp(w, "X")
-        w.tap(w.visible(.button, "label BEGINSWITH %@", "Sign in"), "Sign in")
+        // The row does the thing (prd §1464): the sign-in starts as the page opens.
         w.see(w.app.webViews.firstMatch, "X's sign-in")
         w.finish()
     }

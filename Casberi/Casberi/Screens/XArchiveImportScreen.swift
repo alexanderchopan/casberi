@@ -76,6 +76,9 @@ struct XArchiveImportScreen: View {
             // Clears the LIVE half only — an imported archive's rows are
             // untouched, the "delete things vs. delete access" split every
             // other seat here follows (2026-07-13).
+            // The row does the thing (prd §1464): X's sign-in rises as the
+            // page opens, until the live read is connected.
+            signIn: { sheet = .card(id: "xLive") },
             teardown: { XLiveAuth.clear() },
             sheet: $sheet,
             // TWO VERBS, live first (prd §794, user: "it should be clear about

@@ -121,6 +121,12 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
     /// in that only this seat has. They lead the row; the chassis adds Open,
     /// Website and Pause after them, four at most.
     var tiles: [AccountTile] = []
+    /// **THE ROW DOES THE THING (prd §1464, user: "ok row does the thing").**
+    /// A sign-in page that is not connected starts its sign-in as it opens,
+    /// as a key page puts the caret in its field (§1302): the tap that
+    /// opened the page was the ask. Once per opening; a sign-in closed
+    /// unfinished leaves the page, and its tile, to start again.
+    var signIn: (() -> Void)? = nil
     /// The disconnect's teardown — clears the bridge's own store, so the
     /// next foreground can't re-register the seat (`BridgeDisconnectSection`).
     var teardown: () -> Void
@@ -211,6 +217,21 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
 
     /// One ask per opening of the page (prd §1302).
     @State private var askFocus = DSAskFocus()
+    /// The sign-in this opening started (prd §1464).
+    @State private var signInStarted = false
+
+    /// The sign-in, once, a beat after the page lands so its sheet rises over
+    /// a page that is there (a presentation mid-push is dropped).
+    private func startSignInIfAsked() {
+        guard let signIn, !signInStarted, mode == .signIn,
+              !state.connected || state.needsReconnecting else { return }
+        signInStarted = true
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(400))
+            guard onScreen else { return }
+            signIn()
+        }
+    }
 
     /// The act asks for something typed: a key, or a name with no account.
     private var asksForField: Bool {
@@ -318,6 +339,7 @@ struct AccountPage<Act: View, More: View, KeySheet: View>: View {
             note = AccountNotes.note(for: seatID) ?? ""
             onScreen = true
             if seat == nil { landingArmed = true }
+            startSignInIfAsked()
         }
         .onChange(of: note) { _, now in AccountNotes.set(now, for: seatID) }
         // Re-armed by a Disconnect on this same visit, so connecting again
