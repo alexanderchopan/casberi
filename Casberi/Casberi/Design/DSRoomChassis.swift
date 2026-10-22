@@ -182,8 +182,12 @@ enum DSRoomChassis {
     /// round things. The rows stand in `leadInset` again (the icons line up
     /// with the words inside the lead card), and the face is centred on the
     /// same column (`rowLeadCentre`, read by `DSDock.clusterInset`). Boxes —
-    /// the card, the tiles, the title, the tray — keep the outer line.
+    /// the card, the tiles, the tray — keep the outer line; the title stands
+    /// in the rows' column since prd §1471 (`titleIndent`).
     static let rowInset: CGFloat = leadInset
+    /// What a title row adds to the outer line its callers pad it by, so the
+    /// screen's name stands in the rows' column (prd §1471).
+    static let titleIndent: CGFloat = leadInset - inset
     /// The centre of a feed row's lead mark, measured from the screen edge.
     static var rowLeadCentre: CGFloat { rowInset + DS.Mark.row / 2 }
     /// The leading inset that centres a mark of `size` on `rowLeadCentre` —
