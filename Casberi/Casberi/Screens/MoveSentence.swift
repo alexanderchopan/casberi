@@ -340,8 +340,12 @@ struct MoveSentence: View {
     /// **E (§1442f, user: "it still looks kinda ghetto ... how would you
     /// improve it"; "build E").** Three sizes: the values large, the verbs
     /// and the small words `heading17`, the small print `body17`. The small
-    /// words stand in a gutter, so every value starts on one edge.
-    static let gutter: CGFloat = 40
+    /// words stand in a gutter, so every value starts on one edge. ONE width
+    /// for every sentence in this grammar — Move, Create, the keys walk and
+    /// Security's limit — so the values never shift between them (user,
+    /// 2026-10-21: "fix your nit"); sized to the widest word, "up to"
+    /// (40.5pt at `heading17`, measured).
+    static let gutter: CGFloat = 44
 
     /// One line of the sentence: its small word in the gutter, its value
     /// after it. A kept transaction numbers the line it is filling instead.

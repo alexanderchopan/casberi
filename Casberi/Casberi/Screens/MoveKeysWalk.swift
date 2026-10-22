@@ -44,9 +44,9 @@ struct MoveKeysWalk: View {
         #endif
     }
 
-    /// Wider than the sentence's, for "up to", and the same on every step
-    /// so the words never jump between them.
-    private let gutter: CGFloat = 56
+    /// The sentence's own gutter, so the values stand where Move's do when
+    /// the walk hands over to the Created sentence.
+    private let gutter = MoveSentence.gutter
 
     var body: some View {
         ScrollView {
@@ -142,8 +142,7 @@ struct MoveKeysWalk: View {
             .padding(.top, DS.Space.s4)
     }
 
-    /// A line in the sentence's gutter grammar (§1442f), the wider gutter
-    /// "up to" needs.
+    /// A line in the sentence's gutter grammar (§1442f).
     private func line<Value: View>(_ glue: String?, @ViewBuilder _ value: () -> Value) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
             Text(verbatim: glue ?? " ")
