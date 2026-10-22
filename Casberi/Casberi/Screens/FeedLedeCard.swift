@@ -754,12 +754,22 @@ struct FeedLedeCard: View {
     /// lines as prose at `body17`, as many as the box holds under the eyebrow
     /// and above the foot. The body is `NoteSheetSource.body(for:)` — the
     /// sheet's own words, never a model's (§645) — read once in `liveBody`.
+    ///
+    /// **A SHORT NOTE CLIMBS THE LADDER (prd §1472, amending §908's "no
+    /// ladder").** At seven lines of `body17` under a `heading17` title, a
+    /// two-line note left most of the box black. The large and mid tiers draw
+    /// the title at the ladder's statement rung (28, 24) and the whole note
+    /// at `body17` with no cut, so a note that does not fit at those sizes
+    /// falls through to the regular tier, which is Notes B as it was: a cover
+    /// keeps its content before its growth (§905).
     private func proseBlock(_ prose: String, fit: Fit) -> some View {
-        VStack(alignment: .leading, spacing: DS.Space.s2) {
+        let grown = fit.tier != .regular
+        return VStack(alignment: .leading, spacing: DS.Space.s2) {
             Text(words)
-                .dsText(.heading17)
+                .dsText(grown ? fit.statementRung : .heading17)
                 .foregroundStyle(DS.textPrimary)
-                .lineLimit(1)
+                .lineLimit(grown ? 2 : 1)
+                .fixedSize(horizontal: false, vertical: grown)
             if Pinboard.isNote(thing), NoteChecklist.progress(thing.content) != nil {
                 tickableProse(prose, fit: fit)
             } else {
@@ -767,7 +777,7 @@ struct FeedLedeCard: View {
                     .dsText(.body17)
                     .foregroundStyle(DS.textPrimary)
                     .multilineTextAlignment(.leading)
-                    .lineLimit(Self.proseLines(fit))
+                    .lineLimit(grown ? nil : Self.proseLines(fit))
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
@@ -782,7 +792,9 @@ struct FeedLedeCard: View {
     /// ordinal is offset by what the box does not show.
     @ViewBuilder
     private func tickableProse(_ prose: String, fit: Fit) -> some View {
-        let lines = Array(prose.components(separatedBy: "\n").prefix(Self.proseLines(fit)))
+        // A grown tier draws every line; it is only chosen when they fit.
+        let lines = Array(prose.components(separatedBy: "\n")
+            .prefix(fit.tier == .regular ? Self.proseLines(fit) : .max))
         let shownItems = prose.components(separatedBy: "\n").filter(Self.isItemLine).count
         let offset = max(0, (NoteChecklist.progress(thing.content)?.total ?? 0) - shownItems)
         // The rung's own leading between lines (prd §1099), as the prose
