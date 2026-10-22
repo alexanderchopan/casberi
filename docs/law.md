@@ -40,7 +40,7 @@ Privacy and Reddit. Frames and Logos are the devnets that remain.
 - Two pills only: `Chip` is a choice, `DSStamp` is a fact. A verb is a row (§746).
 - Every `Button` wears `RowPress` (a row or a word) or `PressSpring` (a disc, chip, face, tile or slab), never `.plain`. Exceptions are ratcheted in the audit (§965).
 - Becoming the pick is a crossfade on `DS.Motion.standard`, built into the template (§966).
-- One left edge: a title row stands in the rows' column (`titleIndent`). A scope tile's glyph is grey at rest and pink only when picked or a verb. The Wallet crown's number is `price40`, and its line ends on one dot over a fill floored at the series' low (§1471).
+- One left edge: a title row stands in the rows' column (`titleIndent`). The Wallet crown's number is `price40`, and its line ends on one dot over a fill floored at the series' low (§1471).
 - A status word takes the ink (`attentionInk`/`confirmInk`/`destructiveInk`). A glyph, dot or fill keeps the hue (§1004).
 - One ink for the pick: `DS.pickInk` (pink) says state and verb, a door is `textSecondary` with its chevron, and `DS.tint` (the theme blue) is for charts and in-text links only, plus the Exit demo pill. `ds-template-audit.py` check E (§1385).
 - The brand is pink; orange was declined (§899). The day header and the category's name are the two lines of type in `DS.brandInk` (§740, §742, §1129), the day header at `heading20` (§1006).
@@ -1632,7 +1632,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1249 — The Safe loop closes: the phone's key is an owner, the queue is read in the background, the gateway takes the signatu…
 - §1250 — The Watchlist prices a coin as itself, draws every row's line, alerts on more than a price, and travels: Reorder, gas…
 - §1251 — A Feed section's header names its choices
-- §1252 — White words, pink glyphs, Apple Music's pink (amended by §1471)
+- §1252 — White words, pink glyphs, Apple Music's pink
 - §1253 — Sources' apps are cards like the Feed's, by category or A–Z (amended by §1383)
 - §1254 — Setup pages take the Feed's cards
 - §1255 — The tray's category glyphs are pink, and the Wallet has one
@@ -1846,7 +1846,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1468 — Spending is the Wallet's fifth tile: the month or the week against the last one to the same point, the recurring half… (amended by §1469)
 - §1469 — Spending's two groups and its start box: Recurring and The rest are rows, each the sum of a list (Subscriptions, then…
 - §1470 — Receive from another network takes any coin Relay bridges, and lands what you pick: the network's dollar unless they…
-- §1471 — The polish pass, first four: one left edge, the figure outranks the name, pink is the pick, the crown's line says now
+- §1471 — The polish pass: one left edge, the figure outranks the name, the crown's line says now
 
 ## Dead rulings → what replaced them (generated)
 
