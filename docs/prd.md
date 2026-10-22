@@ -68018,3 +68018,22 @@ Guarded by `category-fold-selftest.sh` (proven by mutation). **Mac half:** the r
 3. A new sentence in this grammar takes one of those two constants, never a width of its own.
 
 **Seen** on the KeysWalk simulator clone (iOS 27): the walk's step 3 with "up to" on one line and its values on Create's edge; Security's limit sentence open above Round-ups, both in one column. Not seen: the Mac.
+
+## §1466 — Move is one running sentence: clauses that never split across a line, one size, the money as small print (amends §1442f item 2, §1442g items 1–2, §1442h item 1, §1442l item 2, §1457 item 1, §1465 item 1) (user, 2026-10-21, over the canvas "Move as a Sentence": "can we try to make the sentence thing work? i feel like that would be a differentiator"; "my brain tells me the gutter is better but my heart tells me the sentence is") — BUILT
+
+**Why.** §1438's running sentence was taken apart in three steps, none of them the grammar's own fault: the tray fitting to size (§1442a–b, fixed since by pinning the sentence at the top), the receipt's rows and dollar column (§1442g–h), and one thing per line (§1442f). Weighed against the gutter on the canvas "Move and Keys Flows" (centered, labelled rows, flush left), the gutter checks better and the sentence reads better; the user chose the sentence as the thing people remember.
+
+**The ruling.**
+1. **The sentence is a flow of clauses** (`MoveFlow`, `MoveClause`, `MoveWord`, `MovePhrase` in `Screens/MoveSentence.swift`): a number with its token, a small word with the value it introduces ("for 0.0112 ETH", "on Base."), a comma riding its piece. A clause never splits across a line; the flow wraps between clauses. One size for the whole sentence (`MoveSentence.size`); the verbs above keep `heading17`.
+2. **A value grows to the right and only the clauses after it move.** A clause that stops fitting hops to the next line whole, and the hop is a move, never a snap: every change that can re-wrap the flow animates it (`layoutKey`), typed digits included. **Measured 2026-10-21** on the KeysWalk clone: the $ · token switch re-laid the sentence over 17 frames at 60fps (0.29s), the standard motion; a slider drag rolls the digits frame by frame.
+3. **A list reads as a list** (`MoveSentence.joiner`): "0.004 USDC and 12 AERO for 0.0157 ETH on Base."; three or more take commas, "and" before the last. A send is person by person — "0.05 USDC to Ana and 0.1 ETH to Ben on Base." — the next person's first token after an "and" of its own. §1442g's "no and" is reversed: a sentence needs it.
+4. **The money is one line of small print, never a column** (`soldPrint`): the line being filled in its other unit ("$0.98", "0.00006523 ETH"), or "$34.21 in all" once a second line stands, then the fee. The per-line dollars and the For line's sum are gone.
+5. **The receipt is the same flow in the past tense**: "Swapped" grey leads the first clause; every value white. Receive is "at …7247 on Base, Ethereum, and Robinhood Chain."; Create is "Your account on Base, Ethereum, and Robinhood Chain."; the keys walk's steps are one sentence each ("Face ID alone up to $100 of each coin a month."). The numbered kept list of the other verb keeps its number inline, flush with the sentence.
+6. **A clause can never outgrow the line:** the slider writes at most eight places short of 100% (all of it keeps every place), so a 20-digit figure no longer clips at the edge (seen before the cap).
+7. **Security's card keeps its gutter** (§1465 item 2): a card in a list, not the tray; its two sentences stay aligned with each other.
+
+**Mac half.** The same views in the pane; not walked on the Mac.
+
+**Seen** on the KeysWalk simulator clone (iOS 27, live reads): "0 ETH for token on Base." on one line; "0.0004 ETH for token / on Base." with "$0.98"; "$0.16 of ETH for token / on Base." with "0.00006523 ETH"; Send "0.00002 ETH and 0 ETH / to …2725 on Base."; Receive, Create and the limit step as above. Not seen: a landed receipt (nothing signed), three tokens to one person, the Mac.
+
+Mock: the design canvas "Move as a Sentence" (nine boards; the last states the rules).

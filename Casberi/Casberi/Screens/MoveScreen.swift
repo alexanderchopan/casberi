@@ -159,25 +159,26 @@ struct MoveScreen: View {
     private var before: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: DS.Space.s1) {
-                line(nil) {
-                    HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                        Text("Your account")
-                            .dsText(MoveSentence.size).foregroundStyle(DS.textPrimary)
-                        if let recoverable {
-                            Text(verbatim: YourAccount.short(recoverable.address))
-                                .dsText(MoveSentence.size).foregroundStyle(DS.pickInk)
+                // The sentence as one flow of clauses (§1466): the account,
+                // then "on" the networks, wrapping between them.
+                MoveFlow {
+                    MoveClause {
+                        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                            Text("Your account")
+                                .dsText(MoveSentence.size).foregroundStyle(DS.textPrimary)
+                            if let recoverable {
+                                Text(verbatim: YourAccount.short(recoverable.address))
+                                    .dsText(MoveSentence.size).foregroundStyle(DS.pickInk)
+                            }
                         }
                     }
-                }
-                line(String(localized: "on")) {
                     // Creating, every network; recovering, only where the
                     // recovery key can bring it (§1442k).
-                    Text(verbatim: recoverable == nil
-                         ? YourAccountReach.words(YourAccountOp.networks.filter { !$0.isTest })
-                         : recoverableOn.map(YourAccountReach.words) ?? "…")
-                        .dsText(MoveSentence.size)
-                        .foregroundStyle(recoverable != nil && recoverableOn == nil ? DS.textTertiary : DS.textPrimary)
-                        .fixedSize(horizontal: false, vertical: true)
+                    MovePhrase(recoverable == nil
+                               ? YourAccountReach.words(YourAccountOp.networks.filter { !$0.isTest })
+                               : recoverableOn.map(YourAccountReach.words) ?? "…",
+                               glue: String(localized: "on"),
+                               ink: recoverable != nil && recoverableOn == nil ? DS.textTertiary : DS.textPrimary)
                 }
                 VStack(alignment: .leading, spacing: DS.Space.s3) {
                     if let recoverable {
@@ -204,7 +205,6 @@ struct MoveScreen: View {
                             .fixedSize(horizontal: false, vertical: true)
                     }
                 }
-                .padding(.leading, MoveSentence.gutter + DS.Space.s2)
                 .padding(.top, DS.Space.s4)
             }
             .padding(.horizontal, inTray ? DSRoomChassis.leadInset - DS.Space.s4 : DSRoomChassis.leadInset)
@@ -213,17 +213,6 @@ struct MoveScreen: View {
         }
         .scrollContentBackground(.hidden)
         .safeAreaInset(edge: .bottom, spacing: 0) { beforeFoot }
-    }
-
-    /// A line in the sentence's gutter grammar (§1442f).
-    private func line<Value: View>(_ glue: String?, @ViewBuilder _ value: () -> Value) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-            Text(verbatim: glue ?? " ")
-                .dsText(.heading17)
-                .foregroundStyle(DS.textPrimary)
-                .frame(width: MoveSentence.gutter, alignment: .leading)
-            value()
-        }
     }
 
     /// The one act, at the trailing edge; recovering, a quiet choice beside it.
