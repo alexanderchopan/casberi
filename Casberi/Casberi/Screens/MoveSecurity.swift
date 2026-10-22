@@ -164,7 +164,7 @@ struct MoveSecurity: View {
                     RoundUps.setting = roundUps
                     DSHaptic.selection()
                 } label: {
-                    Text("to the next $\(roundUps.step)").dsText(.heading28).foregroundStyle(DS.pickInk)
+                    Text("to the next $\(roundUps.step)").dsText(.heading28).monospacedDigit().foregroundStyle(DS.pickInk)
                         .contentTransition(.numericText())
                         .frame(minHeight: 44)
                 }

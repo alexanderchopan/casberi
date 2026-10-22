@@ -808,7 +808,8 @@ grep -q 'route.openAccount(' "$TMP/apps.nc" \
 # Every SettingsPage case is opened by a row, or it is a page nothing reaches.
 strip_comments "Casberi/Casberi/Screens/AccountScreen.swift" > "$TMP/settings.nc"
 # Feed order left Settings for the Feed's Reorder tile (prd §1345).
-for page in data notifications diagnostics language; do
+# Diagnostics is deleted (prd §1450), so no row opens it.
+for page in data notifications language; do
   grep -q "open(.$page)" "$TMP/settings.nc" \
     || { echo "✗ no Settings row opens .$page through open(_:sheet:) — on the Mac it"; \
          echo "  would still raise a sheet over the pane (prd §876)."; fail=1; }

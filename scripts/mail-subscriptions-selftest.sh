@@ -279,7 +279,10 @@ grep -q "MailSubscriptions.compose(mails, now: now)" Casberi/Casberi/Model/MailS
   || { grep -q "let added = MailSubscriptionStore.shared.addresses" Casberi/Casberi/Model/MailSubscriptionsReading.swift \
        && grep -q "MailSubscriptions.file(landed, added: added)" Casberi/Casberi/Model/MailSubscriptionsReading.swift; }; } \
   || fail "drift: the reading no longer files through MailSubscriptions.file with the added senders"
-grep -q "MailSubscriptionStore.shared.add(address: address, name: name)" Casberi/Casberi/Screens/ThingSheetView.swift \
+# The one write moved to the tray's own track() (ee7576ef): the sheet's Track
+# and a row's long press both reach it.
+{ grep -q "MailSubscriptionStore.shared.add(address: address, name: name)" Casberi/Casberi/Screens/ThingSheetView.swift \
+  || grep -q "MailSubscriptionStore.shared.add(address: candidate.address, name: candidate.name)" Casberi/Casberi/Screens/MailSubscriptionViews.swift; } \
   || fail "drift: a mail's sheet no longer adds its sender (prd §1115)"
 grep -q "MailSubscriptions.candidates(landed, added: added, now: now)" Casberi/Casberi/Model/MailSubscriptionsReading.swift \
   || fail "drift: the reading no longer offers senders through MailSubscriptions.candidates (prd §1117)"
