@@ -248,6 +248,11 @@ struct TokenChartPlot: View {
     /// 2026-07-11 ruling); a static dot only claims "this is the latest
     /// reading", which every one of these lines can honestly say.
     var endpointDot = false
+    /// The area falls from the line to the series' LOW, never to zero (prd
+    /// §1471). An area to zero widened the domain and pinned a $31K line to
+    /// the top tenth of its box (§1005's slab); floored at the low, the line
+    /// keeps the whole box and the fill falls through the height under it.
+    var fillsToLow = false
     /// Moments to mark on the curve (transactions, prd §155) — empty
     /// everywhere but the wallet balance line.
     var marks: [TokenChartMark] = []
@@ -330,7 +335,15 @@ struct TokenChartPlot: View {
             // No area at all when there is no fill (prd §1005): an AreaMark
             // runs down to zero, so even a CLEAR one widened the automatic
             // domain and pinned a $31K line to the top tenth of its box.
-            if fill > 0 {
+            if fill > 0, fillsToLow {
+                AreaMark(x: .value("t", Double(i)),
+                         yStart: .value("low", chart.closes.min() ?? close),
+                         yEnd: .value("price", close))
+                    .interpolationMethod(chart.coarse ? .linear : .catmullRom)
+                    .foregroundStyle(LinearGradient(
+                        colors: [accent.opacity(fill), accent.opacity(0)],
+                        startPoint: .top, endPoint: .bottom))
+            } else if fill > 0 {
                 AreaMark(x: .value("t", Double(i)), y: .value("price", close))
                     .interpolationMethod(chart.coarse ? .linear : .catmullRom)
                     .foregroundStyle(LinearGradient(

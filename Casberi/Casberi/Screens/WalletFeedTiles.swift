@@ -342,10 +342,16 @@ struct WalletBalanceHeadline: View {
                 // and the chips below have theirs (`layoutPriority(-1)`).
                 GeometryReader { geo in
                 TokenChartPlot(chart: chart, accent: accent, height: geo.size.height, pulses: false,
-                               // NO DOTS ON THE LINE (prd §1331, user: "dots
+                               // NO MARKS ON THE LINE (prd §1331, user: "dots
                                // are unnecessary"): no transaction marks, no
-                               // ring on the newest, no endpoint dot.
-                               lineWidth: 2.6, fillOpacity: 0,
+                               // ring on the newest. ONE dot says NOW (prd
+                               // §1471, amending §1331 and §1005): the line
+                               // ends on the latest reading, and a fill
+                               // floored at the series' low falls under it
+                               // as Stocks draws, so the line reads as the
+                               // total said twice rather than a decoration.
+                               lineWidth: 2.6, fillOpacity: 0.22,
+                               endpointDot: true, fillsToLow: true,
                                // Scrub (2026-08-03, §297): a press-then-drag —
                                // or a resting cursor on the Mac — rolls the
                                // crown number to that sample. The sheet
@@ -357,7 +363,10 @@ struct WalletBalanceHeadline: View {
                 .layoutPriority(-1)
                     .mask(alignment: .leading) {
                         GeometryReader { geo in
-                            Rectangle().frame(width: geo.size.width * drawn)
+                            // Past every edge by the end dot's radius, or the
+                            // mask cuts the dot in half at rest (prd §1471).
+                            Rectangle().frame(width: geo.size.width * drawn + 4)
+                                .padding(.vertical, -4)
                         }
                     }
                     // Two entrances, two owners: `draw` owns the line's own
@@ -442,8 +451,15 @@ struct WalletBalanceHeadline: View {
                     // draw are listed with their widths. It is still the
                     // biggest figure on its surface (nothing else on this
                     // card sets 24 bold), and still scales with Dynamic Type.
+                    //
+                    // **`price40` since prd §1471** (amending §551): the
+                    // figure IS the surface, so it outranks the screen's
+                    // name. §551's ask was one size across the room's scopes,
+                    // and Holdings' and every lead's number already stand at
+                    // `price40` (§766, `DSFigureReading`); the crown was the
+                    // one figure left at the headline rung.
                     Text(format(displayed ?? 0))
-                        .dsText(.stat24).foregroundStyle(DS.textPrimary)
+                        .dsText(.price40).foregroundStyle(DS.textPrimary)
                         .monospacedDigit()
                         .contentTransition(reduceMotion ? .identity
                                            : .numericText(value: displayed ?? 0))
