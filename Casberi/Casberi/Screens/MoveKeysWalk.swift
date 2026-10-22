@@ -44,16 +44,11 @@ struct MoveKeysWalk: View {
         #endif
     }
 
-    /// The sentence's own gutter, so the values stand where Move's do when
-    /// the walk hands over to the Created sentence.
-    private let gutter = MoveSentence.gutter
-
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: DS.Space.s1) {
                 Text("\(step.rawValue) of 3")
                     .dsText(.body17).foregroundStyle(DS.textSecondary)
-                    .padding(.leading, gutter + DS.Space.s2)
                     .padding(.bottom, DS.Space.s6)
                 content
                     .id(step)
@@ -62,7 +57,6 @@ struct MoveKeysWalk: View {
                     Text(verbatim: note)
                         .dsText(.body17).foregroundStyle(DS.attentionInk)
                         .fixedSize(horizontal: false, vertical: true)
-                        .padding(.leading, gutter + DS.Space.s2)
                         .padding(.top, DS.Space.s3)
                 }
             }
@@ -83,74 +77,61 @@ struct MoveKeysWalk: View {
     // MARK: - The steps
 
     @ViewBuilder private var content: some View {
+        // Each step is one running sentence (§1466): clauses that never
+        // split across a line, the pick pink.
         switch step {
         case .recovery:
-            title("A recovery key")
-            line(String(localized: "in")) { pick(String(localized: "iCloud Keychain.")) }
+            MoveFlow {
+                MoveWord(String(localized: "A recovery key"))
+                MoveClause(glue: String(localized: "in")) { MoveWord(String(localized: "iCloud Keychain."), ink: DS.pickInk) }
+            }
             small(String(localized: "Lose this iPhone, sign in on the next one."))
         case .signer:
-            title("Your Signer")
-            line(String(localized: "in")) { pick(String(localized: "a wallet you have.")) }
-        case .limit:
-            title("Face ID alone")
-            line(String(localized: "up to")) {
-                HStack(alignment: .firstTextBaseline, spacing: 0) {
-                    Text(verbatim: "$").dsText(MoveSentence.size).foregroundStyle(DS.pickInk)
-                    TextField("100", text: $amountText)
-                        .keyboardType(.numberPad)
-                        .focused($amountFocused)
-                        .dsText(MoveSentence.size)
-                        .foregroundStyle(DS.pickInk)
-                        .tint(DS.pickInk)
-                        .fixedSize()
-                        .accessibilityLabel(Text("Dollars"))
-                }
+            MoveFlow {
+                MoveWord(String(localized: "Your Signer"))
+                MoveClause(glue: String(localized: "in")) { MoveWord(String(localized: "a wallet you have."), ink: DS.pickInk) }
             }
-            line(nil) { Text("of each coin").dsText(MoveSentence.size).foregroundStyle(DS.textPrimary) }
-            line(String(localized: "a")) {
-                Menu {
-                    ForEach(Period.allCases, id: \.self) { p in
-                        Button { withAnimation(DS.Motion.standard) { period = p } } label: {
-                            if p == period { Label(p.word, systemImage: "checkmark") } else { Text(verbatim: p.word) }
-                        }
+        case .limit:
+            MoveFlow {
+                MoveWord(String(localized: "Face ID alone"))
+                MoveClause(glue: String(localized: "up to")) {
+                    HStack(alignment: .firstTextBaseline, spacing: 0) {
+                        Text(verbatim: "$").dsText(MoveSentence.size).foregroundStyle(DS.pickInk)
+                        TextField("100", text: $amountText)
+                            .keyboardType(.numberPad)
+                            .focused($amountFocused)
+                            .dsText(MoveSentence.size)
+                            .foregroundStyle(DS.pickInk)
+                            .tint(DS.pickInk)
+                            .fixedSize()
+                            .accessibilityLabel(Text("Dollars"))
                     }
-                } label: {
-                    Text(verbatim: period.word + ".").dsText(MoveSentence.size).foregroundStyle(DS.pickInk)
-                        .contentTransition(.opacity)
                 }
-                .accessibilityLabel(Text("How often it starts again"))
+                MoveWord(String(localized: "of each coin"))
+                MoveClause(glue: String(localized: "a")) {
+                    Menu {
+                        ForEach(Period.allCases, id: \.self) { p in
+                            Button { withAnimation(DS.Motion.standard) { period = p } } label: {
+                                if p == period { Label(p.word, systemImage: "checkmark") } else { Text(verbatim: p.word) }
+                            }
+                        }
+                    } label: {
+                        MoveWord(period.word + ".", ink: DS.pickInk)
+                            .contentTransition(.opacity)
+                    }
+                    .accessibilityLabel(Text("How often it starts again"))
+                }
             }
             // With the limit on, recovery needs the Signer too (prd §1456).
             small(String(localized: "Over it, your Signer signs too. So does recovery."))
         }
     }
 
-    private func title(_ words: LocalizedStringKey) -> some View {
-        line(nil) { Text(words).dsText(MoveSentence.size).foregroundStyle(DS.textPrimary) }
-    }
-
-    private func pick(_ words: String) -> some View {
-        Text(verbatim: words).dsText(MoveSentence.size).foregroundStyle(DS.pickInk)
-            .fixedSize(horizontal: false, vertical: true)
-    }
-
     private func small(_ words: String) -> some View {
         Text(verbatim: words)
             .dsText(.body17).foregroundStyle(DS.textSecondary)
             .fixedSize(horizontal: false, vertical: true)
-            .padding(.leading, gutter + DS.Space.s2)
             .padding(.top, DS.Space.s4)
-    }
-
-    /// A line in the sentence's gutter grammar (§1442f).
-    private func line<Value: View>(_ glue: String?, @ViewBuilder _ value: () -> Value) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-            Text(verbatim: glue ?? " ")
-                .dsText(.heading17)
-                .foregroundStyle(DS.textPrimary)
-                .frame(width: gutter, alignment: .leading)
-            value()
-        }
     }
 
     // MARK: - The foot

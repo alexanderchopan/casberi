@@ -337,25 +337,26 @@ struct MoveSentence: View {
 
     // MARK: - The sentence
 
-    /// **E (§1442f, user: "it still looks kinda ghetto ... how would you
-    /// improve it"; "build E").** Three sizes: the values large, the verbs
-    /// and the small words `heading17`, the small print `body17`. The small
-    /// words stand in a gutter, so every value starts on one edge. ONE width
-    /// for every sentence in this grammar — Move, Create, the keys walk and
-    /// Security's limit — so the values never shift between them (user,
-    /// 2026-10-21: "fix your nit"); sized to the widest word, "up to"
-    /// (40.5pt at `heading17`, measured).
-    static let gutter: CGFloat = 44
+    /// **ONE RUNNING SENTENCE (prd §1466, user: "my brain tells me the gutter
+    /// is better but my heart tells me the sentence is").** The gutter of
+    /// §1442f is gone: the sentence is a flow of CLAUSES at one size — a
+    /// number with its token, a small word with the value it introduces —
+    /// that never split across a line. A value grows to the right and only
+    /// the clauses after it move; a clause that stops fitting hops to the
+    /// next line whole, animated. The money is one line of small print
+    /// under it, never a column.
+    static let clauseGap: CGFloat = 9
 
-    /// One line of the sentence: its small word in the gutter, its value
-    /// after it. A kept transaction numbers the line it is filling instead.
+    /// A line under the sentence (the numbered kept list, the round-up
+    /// rows): its small word inline, then its content, flush left.
     private func row<Value: View>(_ glue: String?, ink: Color = DS.textPrimary,
                                   @ViewBuilder _ value: () -> Value) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-            Text(verbatim: glue ?? " ")
-                .dsText(.heading17)
-                .foregroundStyle(ink)
-                .frame(width: Self.gutter, alignment: .leading)
+            if let glue {
+                Text(verbatim: glue)
+                    .dsText(.heading17)
+                    .foregroundStyle(ink)
+            }
             value()
         }
     }
@@ -369,195 +370,177 @@ struct MoveSentence: View {
                     .padding(.bottom, DS.Space.s4)
                     .transition(.opacity)
             }
-            // What Add kept stands under the verbs, numbered, quieter than the
-            // sentence being filled (§1442c, §1442f).
+            // What Add kept of the other verb stands under the verbs,
+            // numbered, quieter than the sentence being filled (§1442c).
             if receipt == nil, !keptLines.filter(showsKept).isEmpty {
                 kept
                     .padding(.bottom, DS.Space.s4)
             }
-            if let receipt {
-                receiptLines(receipt)
-            } else if emptyEverywhere, verb != .receive {
-                row(nil) {
-                    FlowLayout(spacing: 7, lineSpacing: 0) {
-                        ForEach(Array((verb == .swap ? String(localized: "Nothing to swap yet.") : String(localized: "Nothing to send yet."))
-                            .split(separator: " ").enumerated()), id: \.offset) { _, w in
-                            word(String(w), ink: DS.textSecondary)
-                        }
-                    }
-                }
-            } else {
-            switch verb {
-            case .swap:
-                // **A RECEIPT (§1442g, user: "lets move to swapping multiple
-                // tokens"; "build it").** What you sell is a list, one line a
-                // token, each with its dollars at the end; what you get is
-                // said once, with the sum. No "and": a stack already says it.
-                ForEach(sellOrder, id: \.self) { line in
-                    switch line {
-                    case .kept(let id): keptSellRow(id)
-                    case .current: currentSellRows
-                    }
-                }
-                row(String(localized: "for")) {
-                    HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                        FlowLayout(spacing: 7, lineSpacing: 0) { buyWord }
-                        Spacer(minLength: 0)
-                        if !keptSwaps.isEmpty, let total = soldDollarsTotal {
-                            Text(verbatim: Self.money(total))
-                                .dsText(.body17).foregroundStyle(DS.textPrimary).monospacedDigit()
-                        }
-                    }
-                }
-                row(String(localized: "on")) { FlowLayout(spacing: 7, lineSpacing: 0) { networkWord } }
-            case .send:
-                // **THE SAME RECEIPT, GROUPED BY WHO IT GOES TO (§1442h, user:
-                // "send more than one token to a recipient"; "send multiple
-                // tokens to multiple recipients").** Each person's tokens,
-                // then "to <them>"; a little air between people.
-                let groups = sendGroups
-                ForEach(Array(groups.enumerated()), id: \.element.id) { n, group in
-                    VStack(alignment: .leading, spacing: DS.Space.s1) {
-                        ForEach(group.lines, id: \.self) { line in
-                            switch line {
-                            case .kept(let id): keptSellRow(id)
-                            case .current: currentSellRows
-                            }
-                        }
-                        row(String(localized: "to")) {
-                            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                                if group.hasCurrent {
-                                    toWord
-                                } else {
-                                    word(group.name ?? "", ink: DS.pickInk)
-                                }
-                                Spacer(minLength: 0)
-                                // One person and two lines: the sum is theirs.
-                                if groups.count == 1, group.lines.count > 1, let sum = dollars(of: group) {
-                                    Text(verbatim: Self.money(sum))
-                                        .dsText(.body17).foregroundStyle(DS.textPrimary).monospacedDigit()
-                                }
-                            }
-                        }
-                    }
-                    .padding(.top, n == 0 ? 0 : DS.Space.s3)
-                }
-                row(String(localized: "on")) {
-                    HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                        FlowLayout(spacing: 7, lineSpacing: 0) { networkWord }
-                        Spacer(minLength: 0)
-                        // Several people: the whole send's total closes it.
-                        if groups.count > 1, let total = soldDollarsTotal {
-                            Text(verbatim: Self.money(total))
-                                .dsText(.body17).foregroundStyle(DS.textPrimary).monospacedDigit()
-                        }
-                    }
-                }
-                .padding(.top, groups.count > 1 ? DS.Space.s3 : 0)
-                // Round-ups (prd §1452): the change, then what the whole send
-                // comes to with it (user: "needs to be clear that the 5$ is
-                // the total tx").
-                if let plan = roundUpPlan, plan.change != "0" {
-                    let change = Op.dollars(plan.change, decimals: RoundUps.dollarDecimals, price: 1)
-                    row(nil) {
-                        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                            Text("Round-up, toward \(RoundUps.setting.target.symbol)")
-                                .dsText(.body17).foregroundStyle(DS.textPrimary)
-                            Spacer(minLength: 0)
-                            Text(verbatim: Self.money(change))
-                                .dsText(.body17).foregroundStyle(DS.textSecondary).monospacedDigit()
-                        }
-                    }
-                    .padding(.top, DS.Space.s3)
-                    if let sent = soldDollarsTotal {
-                        row(nil) {
-                            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                                Text("Total").dsText(.heading17).foregroundStyle(DS.textPrimary)
-                                Spacer(minLength: 0)
-                                Text(verbatim: Self.money(sent + change))
-                                    .dsText(.heading17).foregroundStyle(DS.textPrimary).monospacedDigit()
-                            }
-                        }
-                    }
-                }
-            case .receive where fresh:
-                row(nil) {
-                    HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                        word(arrived ? (arrival == .broughtHere ? String(localized: "Ready") : String(localized: "Created"))
-                                     : String(localized: "Your account"),
-                             ink: arrived ? DS.textSecondary : DS.textPrimary)
-                        if arrived {
-                            Button { copy() } label: { word(YourAccount.short(account), ink: DS.pickInk) }
-                                .buttonStyle(RowPress())
-                                .accessibilityLabel(Text("Your address, \(account)"))
-                                .accessibilityHint(Text("Copies your address"))
-                                .transition(.asymmetric(insertion: .offset(y: 28).combined(with: .opacity), removal: .opacity))
-                        }
-                    }
-                }
-                row(String(localized: "on")) {
-                    receiveNetworks
-                }
-            case .receive:
-                if let route = elsewhere {
-                    // **FROM ANOTHER NETWORK (prd §1453, user: "for z1 we
-                    // wouldn't say 'send' we would say 'receive'").**
-                    // The tab says Receive, as Send's amount stands with no
-                    // word before it: the token leads.
-                    row(nil) {
-                        Button { switchElsewhereToken() } label: { word(route.token, ink: DS.pickInk) }
-                            .buttonStyle(RowPress())
-                            .accessibilityHint(Text("Switches between USDC and ETH"))
-                    }
-                    // Where the sender's money is (user: "'on' arbitrum would
-                    // be better").
-                    row(String(localized: "on")) {
-                        Button {
-                            withAnimation(DS.Motion.standard) { open = .elsewhere }
-                            DSHaptic.selection()
-                        } label: { word(route.from.name, ink: DS.pickInk) }
-                            .buttonStyle(RowPress())
-                    }
-                    row(String(localized: "as")) {
-                        word(String(localized: "\(route.arrives) on \(route.to.name)."), ink: DS.textPrimary)
-                    }
+            MoveFlow {
+                if let receipt {
+                    receiptClauses(receipt)
+                } else if emptyEverywhere, verb != .receive {
+                    MovePhrase(verb == .swap ? String(localized: "Nothing to swap yet.") : String(localized: "Nothing to send yet."),
+                               ink: DS.textSecondary)
                 } else {
-                    row(String(localized: "at")) {
-                        Button { copy() } label: { word(YourAccount.short(account), ink: DS.pickInk) }
-                            .buttonStyle(RowPress())
-                            .accessibilityLabel(Text("Your address, \(account)"))
-                            .accessibilityHint(Text("Copies your address"))
-                    }
-                    row(String(localized: "on")) {
-                        // A line of words, so it wraps between them.
-                        receiveNetworks
+                    switch verb {
+                    case .swap: swapClauses
+                    case .send: sendClauses
+                    case .receive: receiveClauses
                     }
                 }
             }
+            // A clause hops to the next line as one piece, and the hop is a
+            // move, never a snap: every change that can re-wrap the flow
+            // animates it, typed digits included.
+            .animation(DS.Motion.standard, value: layoutKey)
+            // Round-ups (prd §1452): the change, then what the whole send
+            // comes to with it (user: "needs to be clear that the 5$ is
+            // the total tx").
+            if verb == .send, receipt == nil, let plan = roundUpPlan, plan.change != "0" {
+                let change = Op.dollars(plan.change, decimals: RoundUps.dollarDecimals, price: 1)
+                row(nil) {
+                    HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                        Text("Round-up, toward \(RoundUps.setting.target.symbol)")
+                            .dsText(.body17).foregroundStyle(DS.textPrimary)
+                        Spacer(minLength: 0)
+                        Text(verbatim: Self.money(change))
+                            .dsText(.body17).foregroundStyle(DS.textSecondary).monospacedDigit()
+                    }
+                }
+                .padding(.top, DS.Space.s3)
+                if let sent = soldDollarsTotal {
+                    row(nil) {
+                        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                            Text("Total").dsText(.heading17).foregroundStyle(DS.textPrimary)
+                            Spacer(minLength: 0)
+                            Text(verbatim: Self.money(sent + change))
+                                .dsText(.heading17).foregroundStyle(DS.textPrimary).monospacedDigit()
+                        }
+                    }
+                }
             }
         }
         .animation(DS.Motion.standard, value: verb)
         .animation(DS.Motion.standard, value: receipt)
     }
 
-    /// "Swapped 0.004 USDC / for 12.3 AERO / on Base." — the verb rolls to the
-    /// past, the ≈ resolves to what was paid out.
-    /// The receipt in the sentence's own grammar (§1442l): its small words
-    /// in the gutter, the past tense leading the first line.
-    private func receiptLines(_ r: Receipt) -> some View {
-        VStack(alignment: .leading, spacing: DS.Space.s1) {
-            ForEach(Array(r.lines.enumerated()), id: \.offset) { n, line in
-                row(line.glue) {
-                    FlowLayout(spacing: 7, lineSpacing: 0) {
-                        if n == 0 { word(r.past, ink: DS.textSecondary) }
-                        ForEach(Array(line.text.split(separator: " ").enumerated()), id: \.offset) { _, w in
-                            word(String(w), ink: DS.textPrimary)
-                        }
-                    }
+    /// Everything that can change where the flow breaks a line.
+    private var layoutKey: String {
+        [amount, with?.token.symbol ?? "", buy?.token.symbol ?? "", String(network.chainId),
+         String(items.count), String(slot), to, resolved?.name ?? "", inDollars ? "$" : "",
+         quote?.buyAmount ?? "", String(reach?.count ?? -1), elsewhere?.token ?? ""].joined(separator: "|")
+    }
+
+    /// **A SWAP IS A SENTENCE (§1466, amends §1442g's "no and").** What you
+    /// sell, joined as a list reads — commas between, "and" before the last
+    /// — then "for" what you get, "on" the network.
+    @ViewBuilder private var swapClauses: some View {
+        let order = sellOrder
+        ForEach(Array(order.enumerated()), id: \.element) { n, line in
+            let join = Self.joiner(n, of: order.count)
+            switch line {
+            case .kept(let id): keptSellClause(id, glue: join.glue, trail: join.trail)
+            case .current: currentSellClauses(glue: join.glue, trail: join.trail)
+            }
+        }
+        MoveClause(glue: String(localized: "for")) { buyWord }
+        MoveClause(glue: String(localized: "on")) { networkWord }
+    }
+
+    /// **A SEND IS THE SAME SENTENCE, PERSON BY PERSON (§1466, amends
+    /// §1442h).** Each person's tokens, then "to" them; the next person's
+    /// first token follows an "and" of its own.
+    @ViewBuilder private var sendClauses: some View {
+        let groups = sendGroups
+        ForEach(Array(groups.enumerated()), id: \.element.id) { g, group in
+            ForEach(Array(group.lines.enumerated()), id: \.element) { n, line in
+                let join = Self.joiner(n, of: group.lines.count)
+                let glue = n == 0 && g > 0 ? String(localized: "and") : join.glue
+                switch line {
+                case .kept(let id): keptSellClause(id, glue: glue, trail: join.trail)
+                case .current: currentSellClauses(glue: glue, trail: join.trail)
+                }
+            }
+            MoveClause(glue: String(localized: "to")) {
+                if group.hasCurrent {
+                    toWord
+                } else {
+                    word(group.name ?? "", ink: DS.pickInk)
                 }
             }
         }
-        .transition(.opacity.combined(with: .offset(y: 8)))
+        MoveClause(glue: String(localized: "on")) { networkWord }
+    }
+
+    @ViewBuilder private var receiveClauses: some View {
+        if fresh {
+            MoveClause {
+                HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                    word(arrived ? (arrival == .broughtHere ? String(localized: "Ready") : String(localized: "Created"))
+                                 : String(localized: "Your account"),
+                         ink: arrived ? DS.textSecondary : DS.textPrimary)
+                    if arrived {
+                        Button { copy() } label: { word(YourAccount.short(account), ink: DS.pickInk) }
+                            .buttonStyle(RowPress())
+                            .accessibilityLabel(Text("Your address, \(account)"))
+                            .accessibilityHint(Text("Copies your address"))
+                            .transition(.asymmetric(insertion: .offset(y: 28).combined(with: .opacity), removal: .opacity))
+                    }
+                }
+            }
+            reachClauses
+        } else if let route = elsewhere {
+            // **FROM ANOTHER NETWORK (prd §1453, user: "for z1 we wouldn't say
+            // 'send' we would say 'receive'").** The tab says Receive, as
+            // Send's amount stands with no word before it: the token leads.
+            MoveClause {
+                Button { switchElsewhereToken() } label: { word(route.token, ink: DS.pickInk) }
+                    .buttonStyle(RowPress())
+                    .accessibilityHint(Text("Switches between USDC and ETH"))
+            }
+            // Where the sender's money is (user: "'on' arbitrum would be better").
+            MoveClause(glue: String(localized: "on")) {
+                Button {
+                    withAnimation(DS.Motion.standard) { open = .elsewhere }
+                    DSHaptic.selection()
+                } label: { word(route.from.name, ink: DS.pickInk) }
+                    .buttonStyle(RowPress())
+            }
+            MoveClause(glue: String(localized: "as")) {
+                word(String(localized: "\(route.arrives) on \(route.to.name)."), ink: DS.textPrimary)
+            }
+        } else {
+            MoveClause(glue: String(localized: "at")) {
+                Button { copy() } label: { word(YourAccount.short(account), ink: DS.pickInk) }
+                    .buttonStyle(RowPress())
+                    .accessibilityLabel(Text("Your address, \(account)"))
+                    .accessibilityHint(Text("Copies your address"))
+            }
+            reachClauses
+        }
+    }
+
+    /// Where this phone can receive (§1442k): only the networks it can use
+    /// the account on, as clauses so the line wraps between them.
+    @ViewBuilder private var reachClauses: some View {
+        if let reach {
+            MovePhrase(YourAccountReach.words(reach), glue: String(localized: "on"), ink: DS.textPrimary)
+        } else {
+            MoveClause(glue: String(localized: "on")) { word("…", ink: DS.textTertiary) }
+        }
+    }
+
+    /// "Swapped 0.004 USDC for 12.3 AERO on Base." — the verb rolls to the
+    /// past, the ≈ resolves to what was paid out. The receipt in the
+    /// sentence's own grammar (§1442l, §1466): the past tense leads the
+    /// first clause, grey; every value white.
+    @ViewBuilder private func receiptClauses(_ r: Receipt) -> some View {
+        ForEach(Array(r.lines.enumerated()), id: \.offset) { n, line in
+            MovePhrase(line.text, glue: n == 0 ? r.past : line.glue,
+                       glueInk: n == 0 ? DS.textSecondary : DS.textPrimary, ink: DS.textPrimary)
+                .transition(.opacity.combined(with: .offset(y: 8)))
+        }
     }
 
     /// The sentence is the verbs' size (§1442c, user: "simpler", "less
@@ -616,20 +599,6 @@ struct MoveSentence: View {
         .accessibilityLabel(label)
         // A pick rises into its blank from the list under it (§1438b).
         .transition(.asymmetric(insertion: .offset(y: 28).combined(with: .opacity), removal: .opacity))
-    }
-
-    /// Where this phone can receive (§1442k): only the networks it can use
-    /// the account on, a line of words so it wraps between them.
-    @ViewBuilder private var receiveNetworks: some View {
-        if let reach {
-            FlowLayout(spacing: 7, lineSpacing: 0) {
-                ForEach(Array(YourAccountReach.words(reach).split(separator: " ").enumerated()), id: \.offset) { _, w in
-                    word(String(w), ink: DS.textPrimary)
-                }
-            }
-        } else {
-            word("…", ink: DS.textTertiary)
-        }
     }
 
     // MARK: - The receipt (§1442g)
@@ -763,53 +732,43 @@ struct MoveSentence: View {
         return usd < 0.01 ? String(localized: "Fee under a cent") : String(localized: "Fee \(Self.money(usd))")
     }
 
-    /// The amount, its token beside it in its own units, and what it is
-    /// worth at the trailing end.
-    private func amountLine(trailing: String?) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 0) {
-            if inDollars { word("$", ink: amount.isEmpty ? DS.textTertiary : DS.pickInk) }
-            amountField
-            if !inDollars {
-                withWord.padding(.leading, 8)
-            }
-            Spacer(minLength: DS.Space.s2)
-            if let trailing {
-                Text(verbatim: trailing)
-                    .dsText(.body17).foregroundStyle(DS.textSecondary).monospacedDigit()
-            }
-        }
+    /// How a list reads inside a sentence: a comma after each but the last
+    /// two, "and" before the last.
+    static func joiner(_ n: Int, of count: Int) -> (glue: String?, trail: String?) {
+        (count > 1 && n == count - 1 ? String(localized: "and") : nil,
+         count > 2 && n < count - 2 ? "," : nil)
     }
 
-    /// The line being filled: the amount, then in dollars "of <token>".
-    @ViewBuilder private var currentSellRows: some View {
-        row(nil) {
-            amountLine(trailing: with.flatMap { units == nil ? nil : otherUnit($0) })
+    /// The line being filled: the amount with its token, one clause; typed
+    /// in dollars, "of <token>" is the clause after it.
+    @ViewBuilder private func currentSellClauses(glue: String?, trail: String?) -> some View {
+        MoveClause(glue: glue, trail: inDollars ? nil : trail) {
+            HStack(alignment: .firstTextBaseline, spacing: 0) {
+                if inDollars { word("$", ink: amount.isEmpty ? DS.textTertiary : DS.pickInk) }
+                amountField
+                if !inDollars {
+                    withWord.padding(.leading, 8)
+                }
+            }
+            .contentShape(Rectangle())
+            .onTapGesture { if stage == nil { focus = .amount } }
+            .dsCardLead(Text("Edits the amount")) { if stage == nil { focus = .amount } }
         }
-        .contentShape(Rectangle())
-        .onTapGesture { if stage == nil { focus = .amount } }
-        .dsCardLead(Text("Edits the amount")) { if stage == nil { focus = .amount } }
         if inDollars {
-            row(String(localized: "of")) { withWord }
+            MoveClause(glue: String(localized: "of"), trail: trail) { withWord }
         }
     }
 
     /// A kept line: tap it to edit it in place, hold it to remove it.
-    @ViewBuilder private func keptSellRow(_ id: UUID) -> some View {
-        let line: (amount: String, token: Op.Token, usd: Double?)? = {
-            if let s = keptSwaps.first(where: { $0.id == id }) { return (s.amount, s.sell, soldDollars(s)) }
-            if let p = keptSends.first(where: { $0.id == id }) { return (p.amount, p.token, sentDollars(p)) }
+    @ViewBuilder private func keptSellClause(_ id: UUID, glue: String?, trail: String?) -> some View {
+        let line: (amount: String, token: Op.Token)? = {
+            if let s = keptSwaps.first(where: { $0.id == id }) { return (s.amount, s.sell) }
+            if let p = keptSends.first(where: { $0.id == id }) { return (p.amount, p.token) }
             return nil
         }()
         if let s = line {
-            row(nil) {
-                HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                    word(Self.figure(s.amount, decimals: s.token.decimals) + " " + s.token.symbol, ink: DS.pickInk)
-                    Spacer(minLength: 0)
-                    if let d = s.usd {
-                        Text(verbatim: Self.money(d))
-                            .dsText(.body17).foregroundStyle(DS.textSecondary).monospacedDigit()
-                    }
-                }
+            MoveClause(glue: glue, trail: trail) {
+                word(Self.figure(s.amount, decimals: s.token.decimals) + " " + s.token.symbol, ink: DS.pickInk)
             }
             .contentShape(Rectangle())
             .onTapGesture { edit(id) }
@@ -1061,7 +1020,6 @@ struct MoveSentence: View {
                 .transition(.asymmetric(insertion: .offset(y: 24).combined(with: .opacity), removal: .opacity))
             } else {
                 line
-                    .padding(.leading, Self.gutter + DS.Space.s2)
                     .transition(.opacity)
             }
         }
@@ -1230,8 +1188,8 @@ struct MoveSentence: View {
                 // Swapping, the other unit is the receipt's column; the fee is
                 // the whole swap's (§1442g).
                 let print: [String] = switch verb {
-                case .swap: [feeTotal].compactMap { $0 }
-                case .send: (peopleCount > 1 ? [String(localized: "To \(peopleCount) people")] : []) + roundUpPrint
+                case .swap: [soldPrint, feeTotal].compactMap { $0 }
+                case .send: [soldPrint].compactMap { $0 } + (peopleCount > 1 ? [String(localized: "To \(peopleCount) people")] : []) + roundUpPrint
                 case .receive: []
                 }
                 if !print.isEmpty {
@@ -1269,6 +1227,16 @@ struct MoveSentence: View {
             if let imitates = resolved?.imitates { return String(localized: "Looks like \(imitates)'s — check it") }
         }
         return nil
+    }
+
+    /// What the line being filled is worth in its other unit, or, once a
+    /// second line stands, what the whole sentence sells: the money is one
+    /// line of small print, never a column (§1466, amends §1442g item 2).
+    private var soldPrint: String? {
+        let lines = (verb == .send ? keptSends.count : keptSwaps.count) + (units == nil ? 0 : 1)
+        if lines > 1, let total = soldDollarsTotal { return String(localized: "\(Self.money(total)) in all") }
+        guard let with, units != nil else { return nil }
+        return otherUnit(with)
     }
 
     /// "$0.004", or "0.004 USDC" when dollars are typed. nil when the token
@@ -1875,7 +1843,11 @@ struct MoveSentence: View {
                 if inDollars, let price = h.price {
                     amount = p == 0 ? "" : String(format: "%.2f", Op.dollars(part, decimals: h.token.decimals, price: price))
                 } else {
-                    amount = p == 0 ? "" : Op.display(part, decimals: h.token.decimals, places: h.token.decimals)
+                    // Every place at 100% (all of it, exactly); short of
+                    // that, as many as the sentence can carry — a 20-digit
+                    // figure is a clause wider than the line (§1466).
+                    amount = p == 0 ? "" : Op.display(part, decimals: h.token.decimals,
+                                                      places: p == 100 ? h.token.decimals : min(h.token.decimals, 8))
                 }
             })
     }
@@ -2350,4 +2322,79 @@ struct MoveSentence: View {
         NSLog("moveSwapDraft: added, %d in the transaction", items.count)
     }
     #endif
+}
+
+// MARK: - The running sentence's parts (prd §1466)
+
+/// A flow of clauses: wraps between them, never inside one.
+struct MoveFlow<Content: View>: View {
+    @ViewBuilder let content: () -> Content
+    var body: some View {
+        FlowLayout(spacing: MoveSentence.clauseGap, lineSpacing: 0) { content() }
+    }
+}
+
+/// One word of the sentence, at the sentence's size; digits roll.
+struct MoveWord: View {
+    let text: String
+    var ink: Color = DS.textPrimary
+    init(_ text: String, ink: Color = DS.textPrimary) { self.text = text; self.ink = ink }
+    var body: some View {
+        Text(verbatim: text)
+            .dsText(MoveSentence.size)
+            .foregroundStyle(ink)
+            .monospacedDigit()
+            .contentTransition(.numericText())
+            .fixedSize()
+    }
+}
+
+/// One clause: its small word (white, the sentence's), then its value, and
+/// a comma when a list needs one — one piece on one line, always.
+struct MoveClause<Value: View>: View {
+    var glue: String? = nil
+    var glueInk: Color = DS.textPrimary
+    var trail: String? = nil
+    @ViewBuilder let value: () -> Value
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 0) {
+            if let glue {
+                MoveWord(glue, ink: glueInk).padding(.trailing, MoveSentence.clauseGap)
+            }
+            value()
+            if let trail { MoveWord(trail) }
+        }
+        .fixedSize()
+    }
+}
+
+/// A phrase as clauses: split at its commas (each kept on its piece), an
+/// "and" or "or" riding the piece after it, so a line never ends on one.
+struct MovePhrase: View {
+    let text: String
+    var glue: String? = nil
+    var glueInk: Color = DS.textPrimary
+    var ink: Color = DS.textPrimary
+    init(_ text: String, glue: String? = nil, glueInk: Color = DS.textPrimary, ink: Color = DS.textPrimary) {
+        self.text = text; self.glue = glue; self.glueInk = glueInk; self.ink = ink
+    }
+    var body: some View {
+        let pieces = Self.pieces(text)
+        ForEach(Array(pieces.enumerated()), id: \.offset) { i, piece in
+            MoveClause(glue: i == 0 ? (glue ?? piece.glue) : piece.glue, glueInk: i == 0 ? glueInk : ink) {
+                MoveWord(piece.words, ink: ink)
+            }
+        }
+    }
+
+    static func pieces(_ text: String) -> [(glue: String?, words: String)] {
+        let raw = text.components(separatedBy: ", ")
+        return raw.enumerated().map { i, part in
+            let piece = i < raw.count - 1 ? part + "," : part
+            for word in [String(localized: "and"), String(localized: "or")] where piece.hasPrefix(word + " ") {
+                return (word, String(piece.dropFirst(word.count + 1)))
+            }
+            return (nil, piece)
+        }
+    }
 }
