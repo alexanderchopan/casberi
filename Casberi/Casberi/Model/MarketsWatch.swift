@@ -66,6 +66,23 @@ enum MarketsWatch {
         context.saveHonestly()
     }
 
+    /// Stops following a row by its ref (prd §1467): the row, its place in
+    /// My order and its alerts, the one rule the Follow tray's star and the
+    /// Search's Undo share.
+    static func unfollow(ref key: String, context: ModelContext) {
+        let source = TokenWatch.source
+        let descriptor = FetchDescriptor<Thing>(predicate: #Predicate {
+            $0.source == source && $0.sourceRef == key
+        })
+        for thing in (try? context.fetch(descriptor)) ?? [] where thing.isLive {
+            SpotlightIndex.remove(ids: [thing.id])
+            context.delete(thing)
+        }
+        context.saveHonestly()
+        TokenWatchOrder.shared.remove(key)
+        PriceAlertStore.shared.removeAll(ref: key, context: context)
+    }
+
     enum Failure: Error {
         case notTraded, already, demo
 

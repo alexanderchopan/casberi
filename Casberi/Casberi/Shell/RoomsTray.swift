@@ -170,6 +170,11 @@ struct RoomsTray: View {
                 for group in search(words) {
                     NSLog("[Casberi] traySearch| %@ | %@", group.title, group.hits.map(\.name).joined(separator: ", "))
                 }
+                // The market's rows (prd §1467): one line, the kinds counted.
+                let reading = await MarketsSearchRead.read(words)
+                NSLog("[Casberi] traySearch| Markets · market | %d rows | %@ | %@", reading.hits.count,
+                      MarketsSearch.showAllLine(chains: reading.chains, stocks: reading.stocks),
+                      reading.hits.prefix(6).map(\.name).joined(separator: ", "))
             }
         }
         #endif
@@ -754,6 +759,9 @@ struct RoomsTray: View {
         /// The page an "Everything" row opens, so its facts can be counted
         /// under it and Return can open it (prd §1211 item 7).
         var pivot: PivotQuery? = nil
+        /// A market row (prd §1467): whether you follow it; the row's tap
+        /// follows or unfollows, and the mark says which.
+        var follow: Bool? = nil
         let mark: Mark
         let act: () -> Void
     }
@@ -776,6 +784,8 @@ struct RoomsTray: View {
         case quote(CompanyPacks.Listing)
         /// A figure you hold or pay, already through Hide balances.
         case money(String)
+        /// A market row's price and day move, read with the row (prd §1467).
+        case market(price: Double?, change: Double?)
     }
 
     /// What a hit draws at its leading edge.
@@ -785,6 +795,8 @@ struct RoomsTray: View {
         case icon(String, symbol: String?)
         case asset(String)
         case dot(Color)
+        /// A coin's, token's or stock's face from the market (prd §1467).
+        case image(url: String?, lettered: String, onWhite: Bool)
     }
 
     /// One group of results as the tray draws it.
@@ -802,6 +814,19 @@ struct RoomsTray: View {
     /// The words `results` answers, so "nothing" is said only once the
     /// search for these words has run.
     @State private var resultsFor = ""
+    /// The groups before the market's rows join them (prd §1467), so the
+    /// market can land later without searching your things again.
+    @State private var baseResults: [Found] = []
+    /// The market's answer for `marketFor` (prd §1467), read after your
+    /// things, never in a body; the Markets group draws it.
+    @State private var market = MarketsSearchRead.Reading()
+    @State private var marketFor = ""
+    /// Show all pressed: the Markets group draws every market row.
+    @State private var marketsExpanded = false
+    /// The refs Markets follows, so a market row wears its mark.
+    @State private var followed: Set<String> = []
+    /// The row whose follow just landed, so its mark bounces once.
+    @State private var justFollowed: String? = nil
     /// What you hold, read with the other kinds when the field is focused.
     @State private var holdings: [WalletPortfolio.Position] = []
     /// Bumped when the kinds have been read, so a search typed before they
@@ -849,9 +874,8 @@ struct RoomsTray: View {
         #if DEBUG
         let began = Date.now
         #endif
-        let found = tokens.isEmpty ? pivotFound(words) + search(words) : tokenFound(words)
+        var found = tokens.isEmpty ? pivotFound(words) + search(words) : tokenFound(words)
         suggestions = tokenSuggestions(words)
-        results = found
         resultsFor = words
         // The top page's facts, counted (prd §1211 item 7) — read once the
         // rows are drawn, so the count never holds them up.
@@ -862,18 +886,112 @@ struct RoomsTray: View {
         }
         // A page of words nothing says is not offered: it would lead with
         // "Nothing yet" over what the words did find.
-        if tokens.isEmpty, let q = results.first?.hits.first?.pivot, case .words = q.subject,
+        if tokens.isEmpty, let q = found.first?.hits.first?.pivot, case .words = q.subject,
            preview[q.id] == String(localized: "Nothing yet") {
-            results = results.compactMap { group in
+            found = found.compactMap { group in
                 let hits = group.hits.filter { $0.pivot?.id != q.id }
                 return hits.isEmpty ? nil : Found(id: group.id, title: group.title, glyph: group.glyph, hits: hits)
             }
         }
+        baseResults = found
+        results = withMarket(found)
         #if DEBUG
         NSLog("[Casberi] traySearchTime| %@ | %d ms", words, Int(Date.now.timeIntervalSince(began) * 1000))
         #endif
         let companies = found.flatMap(\.hits).compactMap(\.company)
         if !companies.isEmpty { await CompanyQuotes.shared.load(companies) }
+        // Then the market (prd §1467): coins, tokens and stocks for the
+        // words, once per words, after your own things stand.
+        if tokens.isEmpty, marketFor != words { await readMarket(words) }
+    }
+
+    // MARK: - The market (prd §1467)
+
+    /// Asks the market for the words and lets its rows join the Markets
+    /// group. A newer word cancels this one (`.task(id: query)`).
+    private func readMarket(_ words: String) async {
+        let reading = await MarketsSearchRead.read(words)
+        guard !Task.isCancelled, query.trimmingCharacters(in: .whitespaces) == words else { return }
+        marketsExpanded = false
+        followed = MarketsSearchRead.followedRefs(context: context)
+        market = reading
+        marketFor = words
+        withAnimation(reduceMotion ? nil : DS.Motion.standard) { results = withMarket(baseResults) }
+    }
+
+    /// The groups with the market's rows in Markets: `MarketsSearch.shown`
+    /// of them, then "Show all N in Markets", which grows the group in place.
+    /// A stock the index already lists as a company stands once.
+    private func withMarket(_ base: [Found]) -> [Found] {
+        let words = query.trimmingCharacters(in: .whitespaces)
+        guard marketFor == words, !market.hits.isEmpty else { return base }
+        let standing = base.first { $0.id == Self.markets }
+        let listedTickers = Set((standing?.hits ?? []).compactMap { $0.company?.listing.ticker?.uppercased() })
+        let listedCoins = Set((standing?.hits ?? []).compactMap { hit -> String? in
+            if case .token(_, let id) = hit.company?.listing { return id }
+            return nil
+        })
+        let rows = market.hits.filter { hit in
+            switch hit.kind {
+            case .stock(let symbol, _): return !listedTickers.contains(symbol.uppercased())
+            case .coin(let id, _): return !listedCoins.contains(id)
+            case .token: return true
+            }
+        }
+        var hits = rows.prefix(marketsExpanded ? rows.count : MarketsSearch.shown).map { hit in
+            Hit(id: "market:" + hit.ref, group: Self.markets, name: hit.name, line: hit.line,
+                trailing: .market(price: hit.price, change: hit.change), follow: followed.contains(hit.ref),
+                mark: .image(url: hit.imageURL, lettered: hit.lettered, onWhite: hit.onWhite)) {
+                toggleFollow(hit)
+            }
+        }
+        if !marketsExpanded, rows.count > MarketsSearch.shown {
+            hits.append(Hit(id: "market:all", group: Self.markets,
+                            name: String(localized: "Show all \(rows.count) in Markets"),
+                            line: MarketsSearch.showAllLine(chains: market.chains, stocks: market.stocks),
+                            mark: .glyph("chevron.down")) {
+                withAnimation(reduceMotion ? nil : DS.Motion.standard) {
+                    marketsExpanded = true
+                    results = withMarket(baseResults)
+                }
+            })
+        }
+        if let standing, let at = base.firstIndex(where: { $0.id == Self.markets }) {
+            var out = base
+            out[at] = Found(id: standing.id, title: standing.title, glyph: standing.glyph, hits: standing.hits + hits)
+            return out
+        }
+        let group = Found(id: Self.markets, title: Self.markets, glyph: CategoryFold.glyph(for: Self.markets), hits: hits)
+        // After Everything and the place you stand in, before the rest.
+        let at = base.firstIndex { $0.id != Self.pivotGroup && $0.id != standingGroup } ?? base.count
+        var out = base
+        out.insert(group, at: at)
+        return out
+    }
+
+    /// The row's tap: follow it, or stop (prd §1467). The follow lands as
+    /// the Follow tray's star does: the mark fills with a bounce, the toast
+    /// names it with Undo.
+    private func toggleFollow(_ hit: MarketsSearchRead.Hit) {
+        if followed.contains(hit.ref) {
+            MarketsWatch.unfollow(ref: hit.ref, context: context)
+            followed.remove(hit.ref)
+            DSHaptic.tap()
+        } else {
+            guard let thing = MarketsSearchRead.follow(hit, context: context) else { return }
+            let ref = thing.sourceRef ?? hit.ref
+            followed.insert(ref)
+            justFollowed = "market:" + ref
+            DSHaptic.success()
+            TokenWatch.registerBridge(store: bridges, context: context)
+            chrome.flash(String(localized: "Following \(TokensAsk.name(of: thing.title))"),
+                         action: .init(label: String(localized: "Undo")) { [ref] in
+                MarketsWatch.unfollow(ref: ref, context: context)
+                followed.remove(ref)
+                results = withMarket(baseResults)
+            })
+        }
+        results = withMarket(baseResults)
     }
 
     /// The group the place you stand in leads with: your notes and You's
@@ -1480,24 +1598,14 @@ struct RoomsTray: View {
                             : .opacity.combined(with: .offset(y: 8))
                                 .animation(DS.Motion.standard.delay(Double(min(index, 5)) * 0.04)))
             }
-            // Nothing, said once the search for these words has run: what
-            // could look further — Markets' New for a word that could be a
-            // ticker — then Find.
+            // Nothing, said once the search for these words has run, then
+            // Find. The market's answer stands in its group (prd §1467): no
+            // look-up row to hand the words on.
             if results.isEmpty, resultsFor == words {
                 Text("Nothing you have is called “\(words)”.")
                     .dsText(.body17)
                     .foregroundStyle(DS.textSecondary)
                     .padding(.top, DS.Space.s3)
-                if TraySearch.looksLikeTicker(words) {
-                    let ticker = TraySearch.normalized(words).uppercased()
-                    hitRow(Hit(id: "lookup", group: Self.markets,
-                               name: String(localized: "Look up “\(ticker)” in Markets"),
-                               mark: .glyph(CategoryFold.glyph(for: Self.markets))) {
-                        chrome.searchDraft = ticker
-                        chrome.marketsRequest = .lookUp
-                        pickCategory(Self.markets)
-                    })
-                }
             }
             // Your things, through Find: the one search over everything kept.
             if !words.isEmpty {
@@ -1633,29 +1741,40 @@ struct RoomsTray: View {
                         AssetMark(name: symbol, size: Self.icon)
                     case .dot(let color):
                         Circle().fill(color).frame(width: 14, height: 14)
+                    case .image(let url, let lettered, let onWhite):
+                        WatchFace(url: url, lettered: lettered, size: Self.icon, onWhite: onWhite)
                     }
                 }
                 .frame(width: Self.icon, height: Self.icon)
+                // A market row's words wrap rather than cut (prd §1467): a
+                // tiny price is long, and "Purple Pepe" beside it was "Purple
+                // Pe…"; the figure itself never truncates.
+                let wraps = hit.follow != nil
                 VStack(alignment: .leading, spacing: 1) {
                     Text(Self.marked(hit.name, words))
                         .dsText(.body17)
                         .foregroundStyle(DS.textPrimary)
-                        .lineLimit(1)
+                        .lineLimit(wraps ? 2 : 1)
                     if !line.isEmpty {
                         Text(Self.marked(line, words))
                             .dsText(.subhead12)
                             .foregroundStyle(DS.textTertiary)
-                            .lineLimit(1)
+                            .lineLimit(wraps ? 2 : 1)
                     }
                 }
                 Spacer(minLength: DS.Space.s2)
                 trailing(hit.trailing)
+                if let on = hit.follow {
+                    DSFollowMark(on: on, bounce: justFollowed == hit.id)
+                        .padding(.leading, DS.Space.s1)
+                }
             }
             .frame(minHeight: Self.resultHeight)
             .contentShape(Rectangle())
         }
         .buttonStyle(RowPress())
         .accessibilityElement(children: .combine)
+        .accessibilityHint(hit.follow.map { Text($0 ? "Stop following" : "Follow") } ?? Text(""))
     }
 
     /// A hit's edge: Add, a figure, or a quote with its day's move.
@@ -1675,20 +1794,29 @@ struct RoomsTray: View {
                 .lineLimit(1)
         case .quote(let listing):
             if let quote = CompanyQuotes.shared.quote(listing) {
-                VStack(alignment: .trailing, spacing: 1) {
-                    Text(TokenChartStyle.priceText(quote.price))
-                        .dsText(.price17).monospacedDigit().foregroundStyle(DS.textPrimary)
-                        .lineLimit(1).minimumScaleFactor(0.7)
-                    if let change = quote.change {
-                        let flat = TokenChartStyle.isFlat(change)
-                        Text(TokenChartStyle.changeText(change))
-                            .dsText(.subhead12).fontWeight(.semibold).monospacedDigit()
-                            .foregroundStyle(flat ? DS.textTertiary : (change > 0 ? DS.confirmInk : DS.destructiveInk))
-                    }
-                }
+                figure(price: quote.price, change: quote.change)
+            }
+        case .market(let price, let change):
+            if let price {
+                figure(price: price, change: change)
             }
         case nil:
             EmptyView()
+        }
+    }
+
+    /// A price over its day move, the Markets rows' figure.
+    private func figure(price: Double, change: Double?) -> some View {
+        VStack(alignment: .trailing, spacing: 1) {
+            Text(TokenChartStyle.priceText(price))
+                .dsText(.price17).monospacedDigit().foregroundStyle(DS.textPrimary)
+                .lineLimit(1).minimumScaleFactor(0.7)
+            if let change {
+                let flat = TokenChartStyle.isFlat(change)
+                Text(TokenChartStyle.changeText(change))
+                    .dsText(.subhead12).fontWeight(.semibold).monospacedDigit()
+                    .foregroundStyle(flat ? DS.textTertiary : (change > 0 ? DS.confirmInk : DS.destructiveInk))
+            }
         }
     }
 

@@ -269,6 +269,39 @@ final class PriceAlertStore {
         thing.source == TokenWatch.source && thing.tags.contains(alertTag)
     }
 
+    /// The alert a Went off row was landed by, off its ref
+    /// (`alert:<id>:<when>`), or nil for any other row.
+    static func alertID(of thing: Thing) -> UUID? {
+        guard isAlertRow(thing), let ref = thing.sourceRef else { return nil }
+        let parts = ref.split(separator: ":", maxSplits: 2).map(String.init)
+        guard parts.count >= 2, parts[0] == "alert" else { return nil }
+        return UUID(uuidString: parts[1])
+    }
+
+    /// Whether the alert a Went off row names still exists (prd §1467): the
+    /// Alerts tile lists a history only under an alert that stands.
+    func stands(_ thing: Thing) -> Bool {
+        guard let id = Self.alertID(of: thing) else { return false }
+        return alerts.contains { $0.id == id }
+    }
+
+    /// EVERY LAUNCH (§647): the Went off rows of alerts deleted before the
+    /// rows went with them (§1395 shipped 2026-10-17; the alerts deleted
+    /// before it left their rows), or deleted on another device, by the
+    /// mirror's tombstones — a deletion somebody made, never an absence
+    /// (`delete-guard-audit.py`). Returns how many rows went.
+    @discardableResult
+    func sweepRemoved(context: ModelContext) -> Int {
+        let source = TokenWatch.source
+        let descriptor = FetchDescriptor<Thing>(predicate: #Predicate { $0.source == source })
+        let rows = ((try? context.fetch(descriptor)) ?? []).filter { row in
+            guard row.isLive, let id = Self.alertID(of: row) else { return false }
+            return mirror.wasRemoved(id.uuidString)
+        }
+        Self.deleteRows(rows, context: context)
+        return rows.count
+    }
+
     private func land(_ alert: PriceAlert, price: Double, change: Double?, volume: Double?,
                       watched: Thing, context: ModelContext) {
         let priceText = TokenChartStyle.priceText(price)

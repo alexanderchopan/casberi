@@ -235,7 +235,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1604 of 1673 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1605 of 1674 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1549,7 +1549,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1181 — The money receipt stands in the room's frame, its fourth tile keeps up with it, and its history is this year's totals (amended by §1217)
 - §1182 — A card spend draws its card, an open transfer its steps, and an event its day
 - §1184 — Every sheet's fourth tile keeps up with it, and a sheet is one row of four
-- §1185 — The tray's search stands its hits under their categories, and finds companies, what you hold and your things
+- §1185 — The tray's search stands its hits under their categories, and finds companies, what you hold and your things (amended by §1467)
 - §1186 — A song, a video and a picture stand in the room's frame
 - §1187 — A person, an app's wallet, a chain and a wallet stand in the room's frame; the grant sheet is deleted (amended by §1217)
 - §1188 — A price, an article, a post and a mail stand in the room's frame (amended by §1192)
@@ -1841,6 +1841,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1464 — The row does the thing, and Return commits: GitHub, X and a site in three taps
 - §1465 — One gutter per screen: Move and the keys walk share `MoveSentence.gutter`, Security's two sentences share theirs (amended by §1466)
 - §1466 — Move is one running sentence: clauses that never split across a line, one size, the money as small print
+- §1467 — The one Search asks the market: coins, tokens and stocks for whatever you typed, a pasted contract included, followed…
 
 ## Dead rulings → what replaced them (generated)
 

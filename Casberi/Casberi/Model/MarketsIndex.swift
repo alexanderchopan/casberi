@@ -87,15 +87,4 @@ enum MarketsIndex {
         }
         return entry.apps.contains { $0.lowercased().contains(q) }
     }
-
-    /// The index's answer to a query, the companies whose own name or ticker
-    /// matched before the ones found through an app.
-    static func search(_ query: String, in entries: [Entry]) -> [Entry] {
-        let found = entries.filter { matches(query, $0) }
-        let q = query.trimmingCharacters(in: .whitespaces).lowercased()
-        func direct(_ e: Entry) -> Bool {
-            e.name.lowercased().hasPrefix(q) || (e.ticker?.lowercased().hasPrefix(q) ?? false)
-        }
-        return found.filter(direct) + found.filter { !direct($0) }
-    }
 }

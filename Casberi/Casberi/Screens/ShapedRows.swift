@@ -1442,6 +1442,9 @@ struct RemoteThumb: View {
     var perishable = false
     /// A circle clip instead of the app-icon squircle — for author avatars.
     var circular = false
+    /// Told once the URL failed, so an owner with a face of its own (a
+    /// lettered coin, `WatchFace`) can draw that instead of the glyph.
+    var onFailed: (() -> Void)? = nil
     @State private var image: UIImage?
     @State private var failed = false
 
@@ -1469,7 +1472,7 @@ struct RemoteThumb: View {
     }
 
     private func load() async {
-        if RemoteImageLoader.isDead(urlString) { failed = true; return }
+        if RemoteImageLoader.isDead(urlString) { failed = true; onFailed?(); return }
         // Cache hit is instant and also covers a recycled row landing on a new
         // URL (its own key, so a stale pin never shows through) — no fade: an
         // already-known image re-appearing softly would read as re-loading.
@@ -1493,8 +1496,10 @@ struct RemoteThumb: View {
             // Glyph now, retry on recycle. A cancelled task is not a failure
             // — leave the state for the next appearance to reset.
             failed = !Task.isCancelled
+            if failed { onFailed?() }
         case .dead:
             failed = true
+            onFailed?()
         }
     }
 }

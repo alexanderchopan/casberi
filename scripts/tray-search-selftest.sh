@@ -119,8 +119,6 @@ check(TraySearch.distance("sptoify", "spotify", cap: 2) == 1, "two letters swapp
 // ── What the words are ───────────────────────────────────────────────
 check(TraySearch.isEVMAddress("0x71C7656EC7ab88b098defB751B7401B5f6d8976F"), "a pasted address is an address")
 check(!TraySearch.isEVMAddress("0x71C7"), "a stub is not")
-check(TraySearch.looksLikeTicker("$qzx"), "a short word could be a ticker")
-check(!TraySearch.looksLikeTicker("spotify"), "a long word is not")
 
 if failures > 0 { print("✗ tray search: \(failures) failing"); exit(1) }
 print("✓ tray search self-test passed")

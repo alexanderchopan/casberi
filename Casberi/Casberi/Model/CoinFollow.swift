@@ -44,10 +44,12 @@ enum CoinFollow {
         return parts[1]
     }
 
-    /// The coin's mark on CoinPaprika's own image host. UNMEASURED: the path
-    /// is the one CoinPaprika's pages draw; a coin without one answers 404 and
-    /// the row keeps its lettered face.
-    static func logo(_ id: String) -> String { "https://static.coinpaprika.com/coin/\(id)/logo.png" }
+    /// CoinPaprika's image host, MEASURED DOWN (2026-10-21, prd §1467): it
+    /// resolves and then times out, so every followed coin that pointed at
+    /// it wore the broken-image glyph. Nothing points at it any more; the
+    /// launch sweep clears the rows that did, and a coin's face is the DEX
+    /// token's image that is the coin, else its letters.
+    static let deadLogoHost = "https://static.coinpaprika.com/"
 
     struct Coin: Equatable {
         let id: String

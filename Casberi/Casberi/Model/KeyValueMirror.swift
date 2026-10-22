@@ -144,6 +144,11 @@ final class KeyValueMirror<Entry: KeyValueMirrored> {
         persistTombstones()
     }
 
+    /// Whether a key was deleted, here or on another device, within the
+    /// tombstone's life: what a store reads to clear what a deleted entry
+    /// left behind (`PriceAlertStore.sweepRemoved`, prd §1467).
+    func wasRemoved(_ key: String) -> Bool { tombstones[key] != nil }
+
     private func persistTombstones() {
         prune()
         UserDefaults.standard.set(

@@ -33,7 +33,7 @@ enum CoinWatch {
     /// ticker off the main path, or never lands (`StockWatch`'s precedent).
     @discardableResult
     static func add(id: String, name: String, symbol: String, price: Double?,
-                    context: ModelContext) -> Thing? {
+                    imageURL: String? = nil, context: ModelContext) -> Thing? {
         let ref = CoinFollow.ref(id)
         guard !IngestSupport.hasSourceRef(context, source: TokenWatch.source, ref: ref) else { return nil }
         let thing = Thing(
@@ -47,7 +47,9 @@ enum CoinWatch {
         )
         thing.watchPriceUsd = price.flatMap { $0 > 0 ? $0 : nil }
         thing.authorHandle = symbol
-        thing.previewImageURL = CoinFollow.logo(id)
+        // The DEX token's image when the search carried one (prd §1467),
+        // else none: the letters draw (CoinPaprika's host is down, measured).
+        thing.previewImageURL = imageURL
         context.insert(thing)
         context.saveHonestly()
         SpotlightIndex.index([thing])
@@ -80,6 +82,19 @@ enum CoinWatch {
     /// coin is already followed folds into that row: its place and alerts go
     /// to the coin, the copy goes. A store with nothing to converge costs one
     /// fetch of Markets' rows; a second run finds nothing.
+    /// EVERY LAUNCH (§647, prd §1467): a followed coin that pointed at
+    /// CoinPaprika's image host (down, measured) points at nothing, so its
+    /// letters draw instead of the broken-image glyph. Returns how many.
+    @discardableResult
+    static func clearDeadLogos(context: ModelContext) -> Int {
+        let source = TokenWatch.source
+        let rows = ((try? context.fetch(FetchDescriptor<Thing>(predicate: #Predicate { $0.source == source }))) ?? [])
+            .filter { $0.isLive && ($0.previewImageURL?.hasPrefix(CoinFollow.deadLogoHost) ?? false) }
+        for row in rows { row.previewImageURL = nil }
+        if !rows.isEmpty { context.saveHonestly() }
+        return rows.count
+    }
+
     @discardableResult
     static func converge(context: ModelContext) -> Int {
         let source = TokenWatch.source
@@ -117,7 +132,7 @@ enum CoinWatch {
             thing.content = CoinFollow.page(id)
             thing.title = TitleSeam.join(name, "$\(symbol)")
             thing.authorHandle = symbol
-            thing.previewImageURL = CoinFollow.logo(id)
+            // The token row's image stays: it is the coin's (prd §1467).
             moved.append(thing)
         }
         guard !map.isEmpty else { return 0 }

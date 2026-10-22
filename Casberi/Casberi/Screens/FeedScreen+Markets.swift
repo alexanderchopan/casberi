@@ -65,7 +65,6 @@ extension FeedScreen {
         chrome.marketsRequest = nil
         switch request {
         case .company(let company): openCompany(company)
-        case .lookUp: feedSheet = .watchAdd
         }
     }
 
@@ -187,7 +186,7 @@ extension FeedScreen {
         NSLog("[Casberi] marketsScope: %@", raw)
         switch raw {
         case "alerts":        chrome.tokensScope = .alerts
-        case "new", "add", "search": feedSheet = .watchAdd
+        case "new", "add": feedSheet = .watchAdd
         default:
             // A category's index by its name (`Work`).
             if let scope = TokensScope.all.first(where: { $0.category == raw }) {
@@ -228,7 +227,9 @@ extension FeedScreen {
                 }
             }
         }
-        let fired = visible.live.filter(PriceAlertStore.isAlertRow)
+        // Only an alert that still stands has a history (prd §1467): a row
+        // whose alert is gone names nothing on this list.
+        let fired = visible.live.filter { PriceAlertStore.isAlertRow($0) && PriceAlertStore.shared.stands($0) }
         if !fired.isEmpty {
             groupedSections([(String(localized: "Went off"), fired)],
                             nextEventID: nextEventID, dated: false)
