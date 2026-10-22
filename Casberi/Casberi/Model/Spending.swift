@@ -24,14 +24,41 @@ enum Spending {
         var name: String
         var usd: Double
         var count: Int
+        /// The same place last window to the same point (prd §1468), nil
+        /// when it had nothing then — the row says "first time".
+        var earlier: Double? = nil
+        /// A plan or a bill the Subscriptions tile or Billers already
+        /// believe recurs (prd §1468): the row says so instead of comparing,
+        /// because one price a month compares to itself.
+        var recurring: Bool = false
     }
 
     struct Reading: Equatable {
         var total: Double
-        /// Last month up to this day of it, or nil when nothing was read then.
+        /// Last window up to this point of it, or nil when nothing was read then.
         var earlier: Double?
         /// Largest first; a place whose refunds cancelled it is left out.
         var places: [Place]
+        /// **THE RECURRING HALF (prd §1468):** what went to places
+        /// Subscriptions and Billers already believe recur, this window.
+        /// Nothing new is classified here; the rest is the remainder, the
+        /// number people actually want.
+        var recurring: Double = 0
+        /// The same, last window to the same point; nil with `earlier`.
+        var earlierRecurring: Double? = nil
+
+        var rest: Double { max(0, total - recurring) }
+        var earlierRest: Double? { earlier.map { max(0, $0 - (earlierRecurring ?? 0)) } }
+    }
+
+    /// **THE WINDOW THE TILE READS (prd §1468, user: "we just compare to
+    /// last month"; "1 week 1 mo"; "get rid of 3 months b/c we won't have
+    /// people that long"; of a day, "a day is a list").** This week against
+    /// last week to the same point, or this month against last month to the
+    /// same day. Nothing longer, because nobody will hold the data; no day,
+    /// because a day's charges are a list, on Home and in the Feed.
+    enum Window: String, CaseIterable, Sendable {
+        case week, month
     }
 
     // MARK: - A wallet's sends
@@ -130,18 +157,42 @@ enum Spending {
         return out
     }
 
-    static func read(_ charges: [Charge], now: Date, calendar: Calendar = .current) -> Reading {
-        guard let month = calendar.dateInterval(of: .month, for: now),
-              let lastStart = calendar.date(byAdding: .month, value: -1, to: month.start)
+    /// The window's bounds: its start, and last window's start and the
+    /// same point in it. A month back is clamped by the calendar (Mar 31 →
+    /// Feb 28); a week back is seven days, to the minute.
+    static func bounds(_ window: Window, now: Date, calendar: Calendar = .current)
+        -> (start: Date, lastStart: Date, lastEnd: Date)? {
+        switch window {
+        case .month:
+            guard let month = calendar.dateInterval(of: .month, for: now),
+                  let lastStart = calendar.date(byAdding: .month, value: -1, to: month.start)
+            else { return nil }
+            let lastEnd = calendar.date(byAdding: .month, value: -1, to: now) ?? month.start
+            return (month.start, lastStart, lastEnd)
+        case .week:
+            guard let week = calendar.dateInterval(of: .weekOfYear, for: now),
+                  let lastStart = calendar.date(byAdding: .day, value: -7, to: week.start),
+                  let lastEnd = calendar.date(byAdding: .day, value: -7, to: now)
+            else { return nil }
+            return (week.start, lastStart, lastEnd)
+        }
+    }
+
+    /// `isRecurring` answers for a place's name as the caller keys it
+    /// (`Subscriptions.key`); the default believes nothing recurs, which is
+    /// Home's reading (§1201).
+    static func read(_ charges: [Charge], now: Date, calendar: Calendar = .current,
+                     window: Window = .month,
+                     isRecurring: (String) -> Bool = { _ in false }) -> Reading {
+        guard let (start, lastStart, lastEnd) = bounds(window, now: now, calendar: calendar)
         else { return Reading(total: 0, earlier: nil, places: []) }
-        // The same point a month back, clamped by the calendar (Mar 31 → Feb 28).
-        let lastEnd = calendar.date(byAdding: .month, value: -1, to: now) ?? month.start
 
         var byPlace: [String: Place] = [:]
+        var earlierByPlace: [String: Double] = [:]
         var earlier: Double = 0
         var sawEarlier = false
         for charge in charges {
-            if charge.at >= month.start && charge.at <= now {
+            if charge.at >= start && charge.at <= now {
                 let key = charge.place.lowercased()
                 var place = byPlace[key] ?? Place(name: charge.place, usd: 0, count: 0)
                 place.usd += charge.usd
@@ -149,14 +200,27 @@ enum Spending {
                 byPlace[key] = place
             } else if charge.at >= lastStart && charge.at <= lastEnd {
                 earlier += charge.usd
+                earlierByPlace[charge.place.lowercased(), default: 0] += charge.usd
                 sawEarlier = true
             }
         }
-        let places = byPlace.values
-            .filter { $0.usd >= 0.005 }
-            .sorted { $0.usd != $1.usd ? $0.usd > $1.usd : $0.name < $1.name }
+        var places: [Place] = []
+        for place in byPlace.values where place.usd >= 0.005 {
+            var p = place
+            let earlierUSD: Double? = earlierByPlace[place.name.lowercased()]
+            p.earlier = earlierUSD.map { max(0, $0) }
+            p.recurring = isRecurring(place.name)
+            places.append(p)
+        }
+        places.sort { $0.usd != $1.usd ? $0.usd > $1.usd : $0.name < $1.name }
+        var recurring: Double = 0
+        for p in places where p.recurring { recurring += p.usd }
+        var earlierRecurring: Double = 0
+        for (key, usd) in earlierByPlace where isRecurring(key) { earlierRecurring += max(0, usd) }
         return Reading(total: places.reduce(0) { $0 + $1.usd },
                        earlier: sawEarlier ? max(0, earlier) : nil,
-                       places: places)
+                       places: places,
+                       recurring: recurring,
+                       earlierRecurring: sawEarlier ? earlierRecurring : nil)
     }
 }

@@ -196,8 +196,9 @@ extension AgentRoomScope: DSTileScope {
     }
 }
 
-/// The Wallet's four (prd §1107, §1232): Home, Holdings, Markets, Security.
-/// Subscriptions keeps its glyph for the page Home's list opens.
+/// The Wallet's five (prd §1107, §1232, §1468): Home, Holdings, Markets,
+/// Security, Spending. Subscriptions keeps its glyph for the page Home's
+/// list opens.
 /// Watch is not a tile any more: it is the first row of the Accounts pill's
 /// list.
 extension WalletSection: DSTileScope {
@@ -209,6 +210,8 @@ extension WalletSection: DSTileScope {
         case .markets:  return CategoryFold.glyph(for: HomeScope.markets)
         case .subscriptions: return ScopeTileGlyph.subscriptions
         case .security: return ScopeTileGlyph.security
+        // The cart Home's Spending list wore (prd §1201), now the tile's (§1468).
+        case .spending: return ScopeTileGlyph.spending
         }
     }
 }

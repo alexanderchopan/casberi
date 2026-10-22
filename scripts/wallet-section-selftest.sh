@@ -53,8 +53,8 @@ func check(_ ok: Bool, _ what: String) {
 }
 
 // ORDER is a ruling, not an accident of declaration.
-check(WalletSection.order == [.home, .holdings, .markets, .security],
-      "order is home → holdings → markets → security (prd §1232)")
+check(WalletSection.order == [.home, .holdings, .markets, .security, .spending],
+      "order is home → holdings → markets → security → spending (prd §1232, §1468)")
 // **FOUR TILES, ONE ROW (prd §1107).** Positions folded into Holdings, the
 // loan risk with it; Permissions and Worth a look into Security; Watch into
 // the Accounts pill; and Coming up became Subscriptions (prd §1111), its
@@ -63,7 +63,11 @@ check(WalletSection.order == [.home, .holdings, .markets, .security],
 for gone in ["positions", "comingUp", "risk", "permissions", "watch", "cards", "activity", "accounts"] {
     check(WalletSection(rawValue: gone) == nil, "\(gone) is not a scope (prd §1107)")
 }
-check(WalletSection.order.count == 4, "the wallet has four tiles — one row (prd §1107)")
+// **FIVE SINCE prd §1468:** Spending, Home's list (§1201) as a tile with a
+// window and the recurring half, wearing the cart that list already wore.
+check(WalletSection.order.count == 5, "the wallet has five tiles — one row (prd §1107, §1468)")
+check(WalletSection.order.contains(.spending), "spending is a tile (prd §1468)")
+check(WalletSection.spending.label == "Spending", "the tile reads Spending — Home's list's own word (prd §1201)")
 // **SUBSCRIPTIONS IS A PAGE, NOT A TILE (prd §1232):** Home's list and
 // Sources' count open it in a sheet. It is the one case off the row.
 check(Set(WalletSection.order).union([.subscriptions]) == Set(WalletSection.allCases)
@@ -78,14 +82,14 @@ let firstConditional = WalletSection.order.firstIndex { $0.isConditional }!
 let lastUnconditional = WalletSection.order.lastIndex { !$0.isConditional }!
 check(lastUnconditional < firstConditional,
       "no conditional scope sits before an unconditional one")
-check(WalletSection.order.last == .security, "security is last")
+check(WalletSection.order.last == .spending, "spending is last — conditional, after security (prd §1468)")
 check(WalletSection.order.first == .home, "home leads")
 
 check(WalletSection.home.isAlwaysPresent, "home is always present")
 check(!WalletSection.home.isConditional, "home is not conditional")
 check(!WalletSection.holdings.isConditional, "holdings is not conditional")
 check(!WalletSection.markets.isConditional, "markets is not conditional")
-for s in [WalletSection.subscriptions, .security] {
+for s in [WalletSection.subscriptions, .security, .spending] {
     check(s.isConditional, "\(s.rawValue) is conditional")
 }
 
@@ -185,7 +189,9 @@ mutate() {
 }
 
 mutate "a conditional scope moved out of the tail (the strip reflows)" \
-  's/\[\.home, \.holdings, \.markets, \.security\]/[.home, .security, .holdings, .markets]/'
+  's/\[\.home, \.holdings, \.markets, \.security, \.spending\]/[.home, .security, .holdings, .markets, .spending]/'
+mutate "spending dropped from the row, its case still compiling (prd §1468)" \
+  's/\[\.home, \.holdings, \.markets, \.security, \.spending\]/[.home, .holdings, .markets, .security]/'
 mutate "home no longer leads" \
   's/\[\.home, \.holdings, \.markets/[.holdings, .home, .markets/'
 mutate "resolve falls back to the first present scope instead of home" \
@@ -195,7 +201,7 @@ mutate "a retired tile comes back as a scope (prd §1107)" \
 mutate "shows() lets a single scope draw a control" \
   's/present\.count > 1/present.count > 0/'
 mutate "security is marked unconditional, so the tail rule stops being enforced" \
-  's/case \.subscriptions, \.security: return true/case .subscriptions: return true\n        case .security: return false/'
+  's/case \.subscriptions, \.security, \.spending: return true/case .subscriptions, .spending: return true\n        case .security: return false/'
 mutate "every scope gated again, so two tiles vanish on the wallet that most needs them" \
   's/static func present\(\) -> \[WalletSection\] \{ order \}/static func present() -> [WalletSection] { order.filter { !\$0.isConditional } }/'
 mutate "an empty scope left with nothing to say — the dead control this ruling depends on avoiding" \

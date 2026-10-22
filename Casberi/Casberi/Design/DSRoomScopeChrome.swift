@@ -45,6 +45,10 @@ struct DSRoomScopeChrome<Scope: DSTileScope, Crown: View, Figure: View>: View {
     var inert: Set<Scope> = []
     /// The tiles as doors, with no backing (`DSScopeTiles.bare`, prd §1252).
     var bare: Bool = false
+    /// A row longer than four scrolls sideways, the next tile peeking
+    /// (`DSScopeTiles.scrollsColumns`, prd §1328; the Wallet's five since
+    /// §1468). Never a second row.
+    var scrollsColumns: Bool = false
     let onPick: (Scope) -> Void
 
     let accounts: [DSAccountSlot]
@@ -140,8 +144,9 @@ struct DSRoomScopeChrome<Scope: DSTileScope, Crown: View, Figure: View>: View {
                             Spacer(minLength: 0)
                         }
                     } else {
-                        DSScopeTiles(sections: sections, active: active,
-                                     attention: attention, inert: inert, bare: bare, onPick: onPick)
+                        DSScopeTiles(sections: sections, active: active, attention: attention,
+                                     scrollsColumns: scrollsColumns, inert: inert, bare: bare,
+                                     onPick: onPick)
                     }
                     accountLine
                 }
