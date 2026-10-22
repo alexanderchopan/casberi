@@ -25,9 +25,19 @@ final class SpendingReading {
     /// The dollar charges of the last fetch, so a window pick re-reads them
     /// with no fetch.
     private var charges: [Spending.Charge] = []
-    /// The merchants Subscriptions and Billers believe recur, as
-    /// `Subscriptions.key` spells them, as of the last fetch.
+    /// **A PLAN TRACKED BY HAND COUNTS ON ITS RENEWAL DAY (prd §1469):**
+    /// one charge per renewal at its price, for an item only you added —
+    /// nothing a card charged, which is already in `charges`. The tile's
+    /// alone: Home's list is what left your accounts (§1201).
+    private var tracked: [Spending.Charge] = []
+    /// The merchants the Subscriptions tile believes, as `Subscriptions.key`
+    /// spells them, as of the last fetch (prd §1469: subscriptions only; a
+    /// bill whose price moves is a place).
     private var recurringKeys: Set<String> = []
+    /// Whether anything could feed the tile: a card, Wise or wallet row in
+    /// the last two months, or a plan tracked by hand. Empty and unfed, the
+    /// tile offers its ways in (prd §1469); empty and fed, it says so.
+    private(set) var fed = false
     /// Home's Cards (prd §1232): each card's month, what it owes and its
     /// offers, in the order `WalletCardRoll` draws them.
     private(set) var cards: [WalletCardRoll.Card] = []
@@ -50,12 +60,22 @@ final class SpendingReading {
             sortBy: [SortDescriptor(\.capturedAt, order: .reverse)])
         let things = ((try? context.fetch(d)) ?? []).live
         let raw = SpendingSource.charges(from: things)
-        let codes = Set(raw.map(\.currency)).subtracting(["USD"])
+        // The day each was tracked or last changed (`Manual.at`).
+        let since = Dictionary(SubscriptionStore.shared.all.map { ($0.id, $0.at) },
+                               uniquingKeysWith: { a, _ in a })
+        let plans = SpendingSource.tracked(SubscriptionsReading.shared.items, since: since,
+                                           from: floor, to: now, calendar: calendar)
+        let codes = Set(raw.map(\.currency) + plans.map(\.currency)).subtracting(["USD"])
         let rates = codes.isEmpty ? [:] : await WalletCash.cachedRates(for: codes)
         let charges = raw.compactMap { c in
             WalletCash.usd(c.amount, c.currency, rates: rates)
-                .map { Spending.Charge(place: c.place, usd: $0, at: c.at) }
+                .map { Spending.Charge(place: c.place, usd: $0, at: c.at, via: c.card) }
         }
+        tracked = plans.compactMap { c in
+            WalletCash.usd(c.amount, c.currency, rates: rates)
+                .map { Spending.Charge(place: c.place, usd: $0, at: c.at, via: Subscriptions.byYou) }
+        }
+        fed = !things.isEmpty || !tracked.isEmpty
         let next = Spending.read(charges, now: now, calendar: calendar)
         if next != reading { reading = next }
         self.charges = charges
@@ -83,18 +103,16 @@ final class SpendingReading {
 
     private func readPage(now: Date, calendar: Calendar) {
         let keys = recurringKeys
-        let next = Spending.read(charges, now: now, calendar: calendar, window: window,
+        let next = Spending.read(charges + tracked, now: now, calendar: calendar, window: window,
                                  isRecurring: { keys.contains(Subscriptions.key($0)) })
         if next != page { page = next }
     }
 
-    /// What Subscriptions and Billers already believe recurs (prd §1468):
-    /// every item on the Subscriptions tile and every biller, by merchant
-    /// key. Snapshots of readings that ran before this one; the tile's
-    /// `.task` runs both first, Home never needs them.
+    /// What the Subscriptions tile believes (prd §1469): every item on it,
+    /// by merchant key. A snapshot of the reading the tile's `.task` runs
+    /// first; Home never needs it.
     private static func recurring() -> Set<String> {
         var keys = Set(SubscriptionsReading.shared.items.map { Subscriptions.key($0.name) })
-        for biller in BillersSource.byKey.values { keys.insert(Subscriptions.key(biller.item.name)) }
         keys.remove("")
         return keys
     }
@@ -125,6 +143,44 @@ final class SpendingReading {
 }
 
 enum SpendingSource {
+
+    /// **EACH RENEWAL OF A PLAN ONLY YOU TRACKED (prd §1469)**, from its next
+    /// renewal stepped back by its cadence — a month, a year, else its days —
+    /// to `from` or the day you tracked it (`since`, by the item's
+    /// `manualID`), whichever is later, none after `to`. Never before that
+    /// day: a plan tracked today claims no September payment you never
+    /// stated (seen on the simulator: "about the same as September"). Not
+    /// the renewal date you gave either: the tray stores the NEXT renewal, a
+    /// month ahead, so that floor dropped this month's charge too.
+    /// An item a card or a bill also found is left out: its charges are real
+    /// rows already. No price, no cadence or no next date, no charge (§83).
+    static func tracked(_ items: [Subscriptions.Item], since: [String: Date] = [:],
+                        from: Date, to: Date, calendar: Calendar = .current) -> [Raw] {
+        var out: [Raw] = []
+        for item in items {
+            guard !item.foundIn.isEmpty, item.foundIn.allSatisfy({ $0 == Subscriptions.byYou }),
+                  let amount = item.amount, amount > 0,
+                  let days = item.cadenceDays, days > 0, var at = item.next else { continue }
+            let tracked = item.manualID.flatMap { since[$0] }.map { calendar.startOfDay(for: $0) }
+            let floor = max(from, tracked ?? from)
+            var steps = 0
+            while at >= floor, steps < 400 {
+                if at <= to { out.append(Raw(place: item.name, amount: amount, currency: item.currency, at: at)) }
+                let back: Date?
+                if Subscriptions.monthlyDays.contains(days) {
+                    back = calendar.date(byAdding: .month, value: -1, to: at)
+                } else if days >= Subscriptions.yearlyFromDays {
+                    back = calendar.date(byAdding: .year, value: -1, to: at)
+                } else {
+                    back = calendar.date(byAdding: .day, value: -days, to: at)
+                }
+                guard let back else { break }
+                at = back
+                steps += 1
+            }
+        }
+        return out
+    }
 
     struct Raw {
         var place: String

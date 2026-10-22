@@ -121,7 +121,13 @@ check(month.places.first?.name == "Amazon", "largest first")
 let uber = month.places.first { $0.name == "Uber" }
 check(uber?.earlier == 20, "a place carries its own last-month figure (\(String(describing: uber?.earlier)))")
 check(uber?.recurring == false, "a shop is not recurring")
-check(month.places.first { $0.name == "Spotify" }?.recurring == true, "a plan is recurring")
+// **TWO GROUPS (prd §1469):** a plan stands in Subscriptions, never in
+// Places, and each box row is its group's sum.
+check(month.subscriptions.map(\.name) == ["Spotify"], "a plan stands in the Subscriptions group")
+check(month.places.first { $0.name == "Spotify" } == nil, "a plan is never also a place")
+check(month.recurring == month.subscriptions.reduce(0) { $0 + $1.usd }, "Recurring is the Subscriptions group's sum")
+check(month.rest == month.places.reduce(0) { $0 + $1.usd }, "The rest is the Places group's sum")
+check(month.total == month.recurring + month.rest, "the total is both groups")
 check(month.places.first { $0.name == "Amazon" }?.earlier == 10, "Amazon's Sep 12 charge is in last month to this day")
 
 let week = Spending.read(charges, now: now, calendar: cal, window: .week, isRecurring: isPlan)
@@ -132,6 +138,15 @@ check(week.total == 90, "the week runs from the calendar's week start (\(week.to
 check(week.earlier == 10, "last week to the same point (\(String(describing: week.earlier)))")
 check(week.places.first { $0.name == "Uber" }?.earlier == 10, "a place against last week")
 check(week.places.first { $0.name == "Amazon" } == nil, "a place with nothing this week is not listed")
+
+// A subscription says its newest charge and what paid it.
+let paid = Spending.read([C(place: "Netflix", usd: 13, at: day(8), via: "Apple Card"),
+                          C(place: "Netflix", usd: 13, at: day(1), via: "Apple Card"),
+                          C(place: "iCloud+", usd: 3, at: day(2), via: "You")],
+                         now: now, calendar: cal, window: .month, isRecurring: { _ in true })
+check(paid.subscriptions.first?.name == "Netflix" && paid.subscriptions.first?.lastAt == day(1),
+      "subscriptions are newest charge first, carrying its day")
+check(paid.subscriptions.first?.via == "Apple Card", "a subscription carries what paid it")
 
 let plain = Spending.read(charges, now: now, calendar: cal)
 check(plain.recurring == 0 && plain.places.allSatisfy { !$0.recurring }, "Home's reading believes nothing recurs")
@@ -165,3 +180,5 @@ mutate "the recurring half never told apart"   's/p\.recurring = isRecurring\(pl
 mutate "a week reads as a month"              's/case \.week:\n            guard let week = calendar\.dateInterval\(of: \.weekOfYear, for: now\)/case .week:\n            guard let week = calendar.dateInterval(of: .month, for: now)/'
 mutate "last window whole, not to this point" 's/let lastEnd = calendar\.date\(byAdding: \.month, value: -1, to: now\) \?\? month\.start/let lastEnd = month.start.addingTimeInterval(-1)/'
 mutate "a place forgets its last-window figure" 's/p\.earlier = earlierUSD\.map \{ max\(0, \$0\) \}/p.earlier = nil/'
+mutate "a plan also stands in Places"          's/if p\.recurring \{ subscriptions\.append\(p\) \} else \{ places\.append\(p\) \}/places.append(p); if p.recurring { subscriptions.append(p) }/'
+mutate "a subscription names its oldest charge" 's/charge\.at > \(place\.lastAt \?\? \.distantPast\)/charge.at < (place.lastAt ?? .distantFuture)/'

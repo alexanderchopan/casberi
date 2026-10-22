@@ -18,6 +18,10 @@ enum Spending {
         /// Dollars; a refund is negative.
         var usd: Double
         var at: Date
+        /// What paid it, as the person knows it ("Apple Card"), or
+        /// `Subscriptions.byYou` for a plan tracked by hand with no card
+        /// behind it (prd §1469); nil when nothing names it.
+        var via: String? = nil
     }
 
     struct Place: Equatable {
@@ -27,10 +31,13 @@ enum Spending {
         /// The same place last window to the same point (prd §1468), nil
         /// when it had nothing then — the row says "first time".
         var earlier: Double? = nil
-        /// A plan or a bill the Subscriptions tile or Billers already
-        /// believe recurs (prd §1468): the row says so instead of comparing,
-        /// because one price a month compares to itself.
+        /// A plan the Subscriptions tile already believes recurs (prd §1468,
+        /// §1469): it stands in the Subscriptions group, never in Places.
         var recurring: Bool = false
+        /// The newest charge in the window, and what paid it — a
+        /// subscription's line says both ("Oct 14 · Apple Card").
+        var lastAt: Date? = nil
+        var via: String? = nil
     }
 
     struct Reading: Equatable {
@@ -38,11 +45,15 @@ enum Spending {
         /// Last window up to this point of it, or nil when nothing was read then.
         var earlier: Double?
         /// Largest first; a place whose refunds cancelled it is left out.
+        /// Never a subscription once the caller names them (prd §1469).
         var places: [Place]
-        /// **THE RECURRING HALF (prd §1468):** what went to places
-        /// Subscriptions and Billers already believe recur, this window.
-        /// Nothing new is classified here; the rest is the remainder, the
-        /// number people actually want.
+        /// **THE SUBSCRIPTIONS GROUP (prd §1469):** the plans the
+        /// Subscriptions tile believes, charged this window, newest first.
+        /// Empty for Home's reading, which names none.
+        var subscriptions: [Place] = []
+        /// **RECURRING IS THE SUBSCRIPTIONS GROUP'S SUM (prd §1468, §1469)**,
+        /// and the rest is Places': each figure in the box is one list
+        /// under the tiles, added up.
         var recurring: Double = 0
         /// The same, last window to the same point; nil with `earlier`.
         var earlierRecurring: Double? = nil
@@ -197,6 +208,10 @@ enum Spending {
                 var place = byPlace[key] ?? Place(name: charge.place, usd: 0, count: 0)
                 place.usd += charge.usd
                 if charge.usd > 0 { place.count += 1 }
+                if charge.usd > 0, charge.at > (place.lastAt ?? .distantPast) {
+                    place.lastAt = charge.at
+                    place.via = charge.via
+                }
                 byPlace[key] = place
             } else if charge.at >= lastStart && charge.at <= lastEnd {
                 earlier += charge.usd
@@ -205,21 +220,29 @@ enum Spending {
             }
         }
         var places: [Place] = []
+        var subscriptions: [Place] = []
         for place in byPlace.values where place.usd >= 0.005 {
             var p = place
             let earlierUSD: Double? = earlierByPlace[place.name.lowercased()]
             p.earlier = earlierUSD.map { max(0, $0) }
             p.recurring = isRecurring(place.name)
-            places.append(p)
+            if p.recurring { subscriptions.append(p) } else { places.append(p) }
         }
         places.sort { $0.usd != $1.usd ? $0.usd > $1.usd : $0.name < $1.name }
+        subscriptions.sort { a, b in
+            let l = a.lastAt ?? .distantPast, r = b.lastAt ?? .distantPast
+            return l != r ? l > r : a.name < b.name
+        }
         var recurring: Double = 0
-        for p in places where p.recurring { recurring += p.usd }
+        for p in subscriptions { recurring += p.usd }
+        var rest: Double = 0
+        for p in places { rest += p.usd }
         var earlierRecurring: Double = 0
         for (key, usd) in earlierByPlace where isRecurring(key) { earlierRecurring += max(0, usd) }
-        return Reading(total: places.reduce(0) { $0 + $1.usd },
+        return Reading(total: recurring + rest,
                        earlier: sawEarlier ? max(0, earlier) : nil,
                        places: places,
+                       subscriptions: subscriptions,
                        recurring: recurring,
                        earlierRecurring: sawEarlier ? earlierRecurring : nil)
     }

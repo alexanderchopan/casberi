@@ -501,6 +501,9 @@ extension FeedScreen {
                 route.present(.apps)
             }
         case .calendar:     route.openSetup(forOffer: "Calendar")
+        // A card arrives through its app (§1234): the catalogue, Wallet's
+        // apps first (prd §1469, Spending's start box).
+        case .card:         route.present(.apps)
         case .subscription: feedSheet = .subscriptionAdd
         case .wallet:       feedSheet = .walletFollow
         }
