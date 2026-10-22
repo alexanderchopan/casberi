@@ -345,6 +345,64 @@ grep -q 'YourAccountSigning\|AllowanceModule' Casberi/Casberi/Model/*.swift Casb
 grep -q 'guard !calls.contains(where: YourAccount7579.approvesMulticall3) else' Casberi/Casberi/Model/YourAccountChain.swift || { echo "✗ operations no longer refuse an approval to Multicall3, which would ride the spend limit's ETH route (prd §1447 item 15)"; exit 1; }
 grep -q '(c\["vmType"\] as? String) == "evm", (c\["depositAddressEnabled"\] as? Bool) == true' Casberi/Casberi/Model/YourAccountElsewhere.swift || { echo "✗ receiving from another network offers a network Relay takes no keyless deposit address on (prd §1453: EVM only, no Relay key)"; exit 1; }
 grep -q 'WalletWatch.sameAddress(recipient, account)' Casberi/Casberi/Model/YourAccountChain.swift || { echo "✗ a Relay deposit address is taken without Relay naming the account as the one that gets it (prd §1452, §1453)"; exit 1; }
+
+# Receive from another network, widened (prd §1470): what they send is every
+# coin Relay bridges from their network, what arrives is your pick, the
+# network's dollar unless they send ETH. The pure half compiles against a
+# stub of YourAccountChain (the quote itself is a request) and reads Relay's
+# own chain records, saved 2026-10-22.
+ELSEWHERE="Casberi/Casberi/Model/YourAccountElsewhere.swift"
+cat > "$TMP/elsewhere-stubs.swift" <<'SWIFT'
+import Foundation
+enum ENS { static func isHexAddress(_ s: String) -> Bool { let t = s.lowercased(); return t.hasPrefix("0x") && t.count == 42 && t.dropFirst(2).allSatisfy(\.isHexDigit) } }
+enum YourAccountChain {
+    struct Failure: Error, Equatable { let message: String; var from: String? = nil; init(message: String, from: String? = nil) { self.message = message; self.from = from } }
+    struct Deposit: Equatable, Sendable { let address: String; let outUSD: Double?; let feeUSD: Double?; let seconds: Int? }
+    static func relayChains() async -> [[String: Any]] { [] }
+    static func depositAddress(fromChain chainId: Int, currency: String, to target: RoundUps.Target, amount: String, account: String, name: String) async throws -> Deposit { throw Failure(message: "stub") }
+}
+SWIFT
+mkdir -p "$TMP/elsewhere"; cat > "$TMP/elsewhere/main.swift" <<'SWIFT'
+import Foundation
+var bad = 0
+func check(_ ok: Bool, _ what: String) { if !ok { bad += 1; print("✗ \(what)") } }
+typealias E = YourAccountElsewhere
+let data = try! Data(contentsOf: URL(fileURLWithPath: ProcessInfo.processInfo.environment["FIXTURES"]! + "/relay-chains.json"))
+let chains = (try! JSONSerialization.jsonObject(with: data) as! [String: Any])["chains"] as! [[String: Any]]
+func chain(_ id: Int) -> [String: Any] { chains.first { ($0["id"] as? Int) == id }! }
+let polygon = E.coins(of: chain(137)), ethereum = E.coins(of: chain(1)), base = E.coins(of: chain(8453))
+let bnb = E.coins(of: chain(56)), arbitrum = E.coins(of: chain(42161))
+// The native coin obeys its OWN supportsBridging: POL is listed and not bridged.
+check(!polygon.contains { $0.isNative }, "POL is offered from Polygon though Relay does not bridge it")
+check(polygon.map(\.symbol) == ["pUSD", "USDC", "USDC.e", "USDT"], "Polygon's coins are not its bridged ERC-20s A–Z: \(polygon.map(\.symbol))")
+check(ethereum.first?.isNative == true && ethereum.first?.symbol == "ETH" && ethereum.count == 17, "Ethereum's coins are not ETH then its sixteen ERC-20s: \(ethereum.count)")
+check(ethereum.map(\.symbol).contains("USDT") && ethereum.map(\.symbol).contains("DAI") && ethereum.map(\.symbol).contains("PYUSD"), "USDT, DAI and PYUSD are not offered from Ethereum")
+check(!base.map(\.symbol).contains("DEGEN") && base.map(\.symbol).contains("cbBTC"), "Base's unbridged DEGEN is offered, or cbBTC is not")
+check(arbitrum.map(\.symbol) == ["ETH", "APE", "USDC", "USDe", "USDT", "WETH"], "Arbitrum's coins: \(arbitrum.map(\.symbol))")
+// What arrives unless you pick: the network's dollar, ETH for ETH.
+let usdt = arbitrum.first { $0.symbol == "USDT" }!, eth = arbitrum.first { $0.isNative }!
+check(E.defaultArrival(for: usdt, on: YourAccountOp.base) == YourAccountOp.dollar(on: YourAccountOp.base), "USDT does not land as USDC on Base by default")
+check(E.defaultArrival(for: usdt, on: YourAccountOp.robinhood).symbol == "USDG", "USDT does not land as USDG on Robinhood Chain by default")
+check(E.defaultArrival(for: eth, on: YourAccountOp.ethereum) == YourAccountOp.eth, "ETH does not land as ETH by default")
+check(E.defaultArrival(for: bnb.first { $0.isNative }!, on: YourAccountOp.base) == YourAccountOp.dollar(on: YourAccountOp.base), "BNB does not land as USDC by default")
+// The quote's amount: a fraction of a chain's coin or a bitcoin, ten of anything else, in that coin's units.
+check(E.quoteAmount(eth) == "5000000000000000", "ETH's quote amount: \(E.quoteAmount(eth))")
+check(E.quoteAmount(usdt) == "10000000", "USDT (6)'s quote amount: \(E.quoteAmount(usdt))")
+check(E.quoteAmount(bnb.first { $0.symbol == "USDT" }!) == "10000000000000000000", "USDT on BNB (18 decimals) quotes ten in 6-decimal units")
+check(E.quoteAmount(base.first { $0.symbol == "cbBTC" }!) == "50000", "cbBTC's quote amount: \(E.quoteAmount(base.first { $0.symbol == "cbBTC" }!))")
+// One address per PAIR: the kept key names what arrives.
+let k1 = E.keptKey("0xAbC", 42161, usdt, 8453, YourAccountOp.dollar(on: YourAccountOp.base)), k2 = E.keptKey("0xAbC", 42161, usdt, 8453, YourAccountOp.eth)
+check(k1 != k2 && k1.hasPrefix("yourAccount.elsewhere.0xabc.42161."), "the kept address is not keyed on what arrives: \(k1)")
+// The first coin offered on a network you switch to: what you were sending, where it has it, else USDC.
+check(E.Network(id: 137, name: "Polygon", coins: polygon).coin(like: usdt)?.symbol == "USDT", "switching networks drops the coin being sent")
+check(E.Network(id: 137, name: "Polygon", coins: polygon).coin(like: eth)?.symbol == "USDC", "a network without the coin being sent does not fall back to USDC")
+exit(bad == 0 ? 0 : 1)
+SWIFT
+xcrun swiftc -O -o "$TMP/e" "$ACCOUNT" "$OP" "$SWAP" "$ADAPTER" "$TX" "$KECCAK" "$CLEARSIGN" "$WEBAUTHN" "$TYPED" "$ROUNDUPS" "$ELSEWHERE" "$TMP/elsewhere-stubs.swift" "$TMP/elsewhere/main.swift" 2>"$TMP/err" \
+  || { cat "$TMP/err"; echo "✗ YourAccountElsewhere.swift does not compile against a stub of the chain (prd §1470)"; exit 1; }
+FIXTURES="$FIXTURES" "$TMP/e" || { echo "✗ receiving from another network drifted (prd §1470) — see above"; exit 1; }
+grep -q 'Picks what you receive' Casberi/Casberi/Screens/MoveSentence.swift && grep -q 'Picks what they send' Casberi/Casberi/Screens/MoveSentence.swift || { echo "✗ the receive sentence's two words are not both picks (prd §1470)"; exit 1; }
+grep -q 'at the price when it lands' Casberi/Casberi/Screens/MoveSentence.swift || { echo "✗ a route that swaps on the way no longer says so (prd §1470, §83)"; exit 1; }
 for f in requireBoth; do
   grep -A9 "static func $f" Casberi/Casberi/Model/YourAccountChain.swift | grep -q 'guard dryRun || throwaway(account) else' || { echo "✗ $f runs for real outside the throwaway (prd §1447 items 14–15)"; exit 1; }
 done
