@@ -40,6 +40,7 @@ Privacy and Reddit. Frames and Logos are the devnets that remain.
 - Two pills only: `Chip` is a choice, `DSStamp` is a fact. A verb is a row (§746).
 - Every `Button` wears `RowPress` (a row or a word) or `PressSpring` (a disc, chip, face, tile or slab), never `.plain`. Exceptions are ratcheted in the audit (§965).
 - Becoming the pick is a crossfade on `DS.Motion.standard`, built into the template (§966).
+- One left edge: a title row stands in the rows' column (`titleIndent`). A scope tile's glyph is grey at rest and pink only when picked or a verb. The Wallet crown's number is `price40`, and its line ends on one dot over a fill floored at the series' low (§1471).
 - A status word takes the ink (`attentionInk`/`confirmInk`/`destructiveInk`). A glyph, dot or fill keeps the hue (§1004).
 - One ink for the pick: `DS.pickInk` (pink) says state and verb, a door is `textSecondary` with its chevron, and `DS.tint` (the theme blue) is for charts and in-text links only, plus the Exit demo pill. `ds-template-audit.py` check E (§1385).
 - The brand is pink; orange was declined (§899). The day header and the category's name are the two lines of type in `DS.brandInk` (§740, §742, §1129), the day header at `heading20` (§1006).
@@ -235,7 +236,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1607 of 1676 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1608 of 1677 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -845,7 +846,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §546 — The Permissions slot stops repeating its own list — counts, big, no names (part superseded by §692, §944)
 - §549 — the demo's address book never leaves the device
 - §550 — The capsule above the bar stops being a daily headline and teaches the gesture, and the empty chat says where agents… (amended by §1047)
-- §551 — One rung for every scope headline, an empty Accounts scope that is a drawing rather than three tiers of text, and the…
+- §551 — One rung for every scope headline, an empty Accounts scope that is a drawing rather than three tiers of text, and the… (amended by §1471)
 - §552 — The send console fits the screen — and its height becomes a written-down sum
 - §552a — The keypad is the system's — the space has to come from below the slot, and 176pt of it was a keypad that was always…
 - §552b — The console was never in the demo — a scope's content, gated on a credential a tour cannot have
@@ -1351,7 +1352,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1000 — Markets: Tokens and Stocktwits are one app, and every catalogue category is a company pack (amended by §1082)
 - §1003 — The redundancy and wordiness sweep, the whole app
 - §1004 — A status word takes the INK, never the hue (amended by §1463)
-- §1005 — The vibecoded audit, first pass: the demo, the wallet crown, Settings (amended by §1039)
+- §1005 — The vibecoded audit, first pass: the demo, the wallet crown, Settings (amended by §1039, §1471)
 - §1006 — The polish pass: the screen's name leads, the day steps down, a deadline is a bar (amended by §1046)
 - §1007 — Logos: the testnet moved to LEZ v0.3, and the seat reads it
 - §1009 — While the tray is up the face is the octopus, photo or not
@@ -1631,7 +1632,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1249 — The Safe loop closes: the phone's key is an owner, the queue is read in the background, the gateway takes the signatu…
 - §1250 — The Watchlist prices a coin as itself, draws every row's line, alerts on more than a price, and travels: Reorder, gas…
 - §1251 — A Feed section's header names its choices
-- §1252 — White words, pink glyphs, Apple Music's pink
+- §1252 — White words, pink glyphs, Apple Music's pink (amended by §1471)
 - §1253 — Sources' apps are cards like the Feed's, by category or A–Z (amended by §1383)
 - §1254 — Setup pages take the Feed's cards
 - §1255 — The tray's category glyphs are pink, and the Wallet has one
@@ -1708,7 +1709,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1328 — The Feed's row is its categories (amends §1327 item 8)
 - §1329 — Day leads with Needs you, gathered from every place (builds §1327 item 9; Wallet's Home and Work's Coming up keep the…
 - §1330 — Spending counts only what you follow, and never a trade; an unfollow takes the Safes it led to (amends §1201 item 2,…
-- §1331 — The Wallet's Home, first pass: a bare line, the pick lit, Overview without sub-lines; the Feed's Newest is the Feed's…
+- §1331 — The Wallet's Home, first pass: a bare line, the pick lit, Overview without sub-lines; the Feed's Newest is the Feed's… (amended by §1471)
 - §1332 — A Wise transfer is a receipt; an empty history draws nothing
 - §1333 — "Needs you", never "Your turn"; nothing to follow on the lock screen when it waits on you (amends §1332)
 - §1334 — A Safe transaction is named by what it does
@@ -1844,6 +1845,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1467 — The one Search asks the market: coins, tokens and stocks for whatever you typed, a pasted contract included, followed…
 - §1468 — Spending is the Wallet's fifth tile: the month or the week against the last one to the same point, the recurring half… (amended by §1469)
 - §1469 — Spending's two groups and its start box: Recurring and The rest are rows, each the sum of a list (Subscriptions, then…
+- §1471 — The polish pass, first four: one left edge, the figure outranks the name, pink is the pick, the crown's line says now
 
 ## Dead rulings → what replaced them (generated)
 

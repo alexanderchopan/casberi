@@ -57,6 +57,17 @@ struct DSRoomTitleRow: View {
     @Environment(\.dsTitleWraps) private var wraps
 
     var body: some View {
+        // ONE LEFT EDGE (prd §1471): the title stands in the rows' column,
+        // where the lead's words, the section names and the row marks stand.
+        // It kept the box's outer line while the box drew a fill; since the
+        // box draws none (§1381) that line is invisible and the name read
+        // 14pt off everything under it.
+        titleContent
+            .padding(.leading, DSRoomChassis.titleIndent)
+    }
+
+    @ViewBuilder
+    private var titleContent: some View {
         if wraps {
             // A THING'S TITLE WRAPS (prd §1258, user, of the sheets' one cut
             // line: "ya do it"): a sheet is one thing, so its name reads
