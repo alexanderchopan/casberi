@@ -67,7 +67,7 @@ struct MoveSentence: View {
     typealias Tokens = YourAccountTokens
 
     enum Verb: CaseIterable { case swap, send, receive }
-    enum Blank: Equatable { case with, buy, to, network, exchange, elsewhere }
+    enum Blank: Equatable { case with, buy, to, network, exchange, elsewhere, elsewhereCoin, arrives }
     enum Field: Hashable { case amount, search, to }
 
     struct Recipient: Equatable {
@@ -119,6 +119,9 @@ struct MoveSentence: View {
     /// networks Relay takes deposits on, and which token.
     @State private var elsewhere: YourAccountElsewhere.Route?
     @State private var elsewhereNetworks: [YourAccountElsewhere.Network] = []
+    /// What you picked to receive (prd §1470); nil takes the default, the
+    /// network's dollar, or ETH for ETH.
+    @State private var elsewhereArrives: Op.Token?
     @State private var elsewhereFinding: String?
     /// What the sentence says back for a moment — what is missing, what
     /// failed — in its own line, because a toast draws under the tray
@@ -429,7 +432,7 @@ struct MoveSentence: View {
     private var layoutKey: String {
         [amount, with?.token.symbol ?? "", buy?.token.symbol ?? "", String(network.chainId),
          String(items.count), String(slot), to, resolved?.name ?? "", inDollars ? "$" : "",
-         quote?.buyAmount ?? "", String(reach?.count ?? -1), elsewhere?.token ?? ""].joined(separator: "|")
+         quote?.buyAmount ?? "", String(reach?.count ?? -1), elsewhere?.token.symbol ?? ""].joined(separator: "|")
     }
 
     /// **A SWAP IS A SENTENCE (§1466, amends §1442g's "no and").** What you
@@ -474,7 +477,40 @@ struct MoveSentence: View {
     }
 
     @ViewBuilder private var receiveClauses: some View {
-        if fresh {
+        // A route taken is the sentence (prd §1470), even on an account just made.
+        if let route = elsewhere {
+            // **FROM ANOTHER NETWORK (prd §1453, user: "for z1 we wouldn't say
+            // 'send' we would say 'receive'").** The tab says Receive, as
+            // Send's amount stands with no word before it: the token leads.
+            MoveClause {
+                Button {
+                    withAnimation(DS.Motion.standard) { open = .elsewhereCoin }
+                    DSHaptic.selection()
+                } label: { word(route.token.symbol, ink: DS.pickInk) }
+                    .buttonStyle(RowPress())
+                    .accessibilityHint(Text("Picks what they send"))
+            }
+            // Where the sender's money is (user: "'on' arbitrum would be better").
+            MoveClause(glue: String(localized: "on")) {
+                Button {
+                    withAnimation(DS.Motion.standard) { open = .elsewhere }
+                    DSHaptic.selection()
+                } label: { word(route.from.name, ink: DS.pickInk) }
+                    .buttonStyle(RowPress())
+            }
+            // What arrives is your pick (prd §1470): Relay swaps on the way.
+            MoveClause(glue: String(localized: "as")) {
+                HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                    Button {
+                        withAnimation(DS.Motion.standard) { open = .arrives }
+                        DSHaptic.selection()
+                    } label: { word(route.arrives.symbol, ink: DS.pickInk) }
+                        .buttonStyle(RowPress())
+                        .accessibilityHint(Text("Picks what you receive"))
+                    word(String(localized: "on \(route.to.name)."), ink: DS.textPrimary)
+                }
+            }
+        } else if fresh {
             MoveClause {
                 HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
                     word(arrived ? (arrival == .broughtHere ? String(localized: "Ready") : String(localized: "Created"))
@@ -490,26 +526,6 @@ struct MoveSentence: View {
                 }
             }
             reachClauses
-        } else if let route = elsewhere {
-            // **FROM ANOTHER NETWORK (prd §1453, user: "for z1 we wouldn't say
-            // 'send' we would say 'receive'").** The tab says Receive, as
-            // Send's amount stands with no word before it: the token leads.
-            MoveClause {
-                Button { switchElsewhereToken() } label: { word(route.token, ink: DS.pickInk) }
-                    .buttonStyle(RowPress())
-                    .accessibilityHint(Text("Switches between USDC and ETH"))
-            }
-            // Where the sender's money is (user: "'on' arbitrum would be better").
-            MoveClause(glue: String(localized: "on")) {
-                Button {
-                    withAnimation(DS.Motion.standard) { open = .elsewhere }
-                    DSHaptic.selection()
-                } label: { word(route.from.name, ink: DS.pickInk) }
-                    .buttonStyle(RowPress())
-            }
-            MoveClause(glue: String(localized: "as")) {
-                word(String(localized: "\(route.arrives) on \(route.to.name)."), ink: DS.textPrimary)
-            }
         } else {
             MoveClause(glue: String(localized: "at")) {
                 Button { copy() } label: { word(YourAccount.short(account), ink: DS.pickInk) }
@@ -1000,7 +1016,7 @@ struct MoveSentence: View {
     private func space(room: CGFloat) -> some View {
         ZStack(alignment: .topLeading) {
             if let open {
-                choices(room: choicesRoom(room), searches: open == .with || open == .buy || open == .to, which: open) {
+                choices(room: choicesRoom(room), searches: open == .with || open == .buy || open == .to || open == .arrives, which: open) {
                     ZStack(alignment: .topLeading) {
                         Group {
                             switch open {
@@ -1010,6 +1026,8 @@ struct MoveSentence: View {
                             case .network: networkList
                             case .exchange: exchangeList
                             case .elsewhere: elsewhereList
+                            case .elsewhereCoin: elsewhereCoinList
+                            case .arrives: arrivesList
                             }
                         }
                         .id(open)
@@ -1102,9 +1120,10 @@ struct MoveSentence: View {
                         .textSelection(.enabled)
                         .fixedSize(horizontal: false, vertical: true)
                     DSCopyRow(value: route.address, label: "Copy address", sensitive: false)
-                    Text(route.feeUSD.map { fee in
-                        String(localized: "Only \(route.token) on \(route.from.name) here. Relay brings it to your account in seconds, for about \(Self.money(max(fee, 0.01))).")
-                    } ?? String(localized: "Only \(route.token) on \(route.from.name) here. Relay brings it to your account in seconds."))
+                    // A wrong token sent here can be lost, so the line names
+                    // the one it takes; a swap on the way is said (§83), since
+                    // what lands is set by the price when it lands.
+                    Text(Self.elsewhereLine(route))
                         .dsText(.body17).foregroundStyle(DS.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
                     Button {
@@ -1510,7 +1529,7 @@ struct MoveSentence: View {
             ForEach(elsewhereNetworks) { n in
                 listRow(n.name, sub: String(localized: "through Relay"), mark: String(n.name.prefix(1))) {
                     pick {}
-                    takeRoute(from: n, token: elsewhere?.token == "ETH" && n.ethNative ? "ETH" : (n.usdc != nil ? "USDC" : "ETH"))
+                    takeRoute(from: n, token: n.coin(like: elsewhere?.token))
                 }
             }
             if elsewhereNetworks.isEmpty {
@@ -1526,13 +1545,19 @@ struct MoveSentence: View {
 
     /// Relay's address for the route, kept per route; on the network Receive
     /// stands on, Base when that is a test network.
-    private func takeRoute(from: YourAccountElsewhere.Network, token: String) {
+    private func takeRoute(from: YourAccountElsewhere.Network, token: YourAccountElsewhere.Coin?) {
+        guard let token else { return }
         let to = network.isTest ? Op.base : network
         let who = account
+        let arrives = elsewhereArrives
         elsewhereFinding = nil
         Task {
             do {
-                let route = try await YourAccountElsewhere.route(from: from, token: token, to: to, account: who)
+                let route = try await YourAccountElsewhere.route(from: from, token: token, to: to, arrives: arrives, account: who)
+                #if DEBUG
+                NSLog("moveReceiveFrom: route %@ on %@ as %@ on %@ at %@ fee=%@", route.token.symbol, route.from.name,
+                      route.arrives.symbol, route.to.name, route.address, route.feeUSD.map { String($0) } ?? "-")
+                #endif
                 withAnimation(DS.Motion.standard) { elsewhere = route }
                 DSHaptic.tap()
             } catch let failure as Chain.Failure {
@@ -1543,12 +1568,57 @@ struct MoveSentence: View {
         }
     }
 
-    /// USDC or ETH, where the route's network has both.
-    private func switchElsewhereToken() {
-        guard let route = elsewhere else { return }
-        let other = route.token == "USDC" ? "ETH" : "USDC"
-        guard other == "USDC" ? route.from.usdc != nil : route.from.ethNative else { return }
-        takeRoute(from: route.from, token: other)
+    /// What they send (prd §1470): every coin Relay bridges from the route's
+    /// network, its own coin first.
+    private var elsewhereCoinList: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            if let route = elsewhere {
+                ForEach(route.from.coins) { c in
+                    listRow(c.symbol, sub: c.isNative ? String(localized: "\(route.from.name)'s own coin") : nil,
+                            mark: c.symbol, dim: c == route.token) {
+                        pick {}
+                        if c != route.token { takeRoute(from: route.from, token: c) }
+                    }
+                }
+            }
+        }
+    }
+
+    /// What you receive (prd §1470): Relay's tokens on your network, as For
+    /// lists them, what you hold first; a search as you type.
+    private var arrivesList: some View {
+        let to = network.isTest ? Op.base : network
+        let typed = !search.trimmingCharacters(in: .whitespaces).isEmpty
+        let pool = (typed ? (found[to.chainId] ?? []) : []) + (listedBy[to.chainId] ?? [])
+        let rows = Tokens.matches(search, in: pool, held: heldBy[to.chainId] ?? [])
+        return VStack(alignment: .leading, spacing: 0) {
+            ForEach(rows) { l in
+                let about = l.onList ? (l.name == l.token.symbol ? nil : l.name) : String(localized: "Not verified by Relay")
+                listRow(l.token.symbol, sub: about, mark: l.token.symbol, dim: !l.onList || l.token == elsewhere?.arrives) {
+                    pick { elsewhereArrives = l.token }
+                    if let route = elsewhere, l.token != route.arrives { takeRoute(from: route.from, token: route.token) }
+                }
+            }
+            if rows.isEmpty {
+                HStack(spacing: DS.Space.s2) {
+                    DSSpinner()
+                    Text("Asking Relay").dsText(.body17).foregroundStyle(DS.textSecondary)
+                }
+                .frame(minHeight: 52)
+            }
+        }
+        .task { if listedBy[to.chainId] == nil { listedBy[to.chainId] = await Tokens.list(to) } }
+    }
+
+    /// The one line under a route's address: what it takes, what lands, the
+    /// fee. "Only USDT on Arbitrum here. Relay brings it to your account as
+    /// USDC on Base in seconds, at the price when it lands, for about $0.05."
+    static func elsewhereLine(_ route: YourAccountElsewhere.Route) -> String {
+        let brings = route.converts
+            ? String(localized: "Relay brings it to your account as \(route.arrives.symbol) on \(route.to.name) in seconds, at the price when it lands")
+            : String(localized: "Relay brings it to your account in seconds")
+        let fee = route.feeUSD.map { String(localized: ", for about \(money(max($0, 0.01)))") } ?? ""
+        return String(localized: "Only \(route.token.symbol) on \(route.from.name) here. \(brings)\(fee).")
     }
 
     private var networkList: some View {
@@ -2189,10 +2259,12 @@ struct MoveSentence: View {
     private func lookUpPasted() async {
         pasted = [:]
         let text = search.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard open == .buy, !text.isEmpty else { found = [:]; return }
+        guard open == .buy || open == .arrives, !text.isEmpty else { found = [:]; return }
         try? await Task.sleep(for: .milliseconds(ENS.isHexAddress(text) ? 300 : 250))
         guard !Task.isCancelled else { return }
-        let nets = lookIn
+        // What you receive (§1470) is searched on the one network it lands on.
+        let searched = open
+        let nets = searched == .arrives ? [network.isTest ? Op.base : network] : lookIn
         let isAddress = ENS.isHexAddress(text)
         var matches: [Int: [Tokens.Listed]] = [:]
         var looked: [Int: Tokens.Listed] = [:]
@@ -2208,7 +2280,7 @@ struct MoveSentence: View {
                 if let one { looked[id] = one }
             }
         }
-        guard !Task.isCancelled, nets == lookIn else { return }
+        guard !Task.isCancelled, open == searched, nets == (searched == .arrives ? [network.isTest ? Op.base : network] : lookIn) else { return }
         found = matches
         pasted = looked
     }
@@ -2287,6 +2359,33 @@ struct MoveSentence: View {
         } else if d.string(forKey: "moveSendDraft")?.isEmpty == false {
             verb = .send
             sendDraft()
+        } else if let from = d.string(forKey: "moveReceiveFrom"), !from.isEmpty {
+            verb = .receive
+            receiveDraft(from)
+        }
+    }
+
+    /// `-moveReceiveFrom "<Network>[|<COIN>[|<ARRIVES>]]"`: Receive from
+    /// another network with the route taken (prd §1470) — "Arbitrum|USDT",
+    /// "Polygon|USDT|ETH" — because no headless run can make the taps. Logs
+    /// `moveReceiveFrom:` with the route or the refusal.
+    private func receiveDraft(_ draft: String) {
+        let parts = draft.split(separator: "|").map(String.init)
+        Task {
+            let nets = await YourAccountElsewhere.networks()
+            guard let net = nets.first(where: { $0.name.caseInsensitiveCompare(parts[0]) == .orderedSame }) else {
+                NSLog("moveReceiveFrom: no network named %@ among %d", parts[0], nets.count); return
+            }
+            elsewhereNetworks = nets
+            let coin = parts.count > 1 ? net.coins.first { $0.symbol.caseInsensitiveCompare(parts[1]) == .orderedSame } : net.coin(like: nil)
+            if parts.count > 2 {
+                let to = network.isTest ? Op.base : network
+                let list = await Tokens.list(to)
+                elsewhereArrives = list.first { $0.token.symbol.caseInsensitiveCompare(parts[2]) == .orderedSame }?.token
+            }
+            NSLog("moveReceiveFrom: %@ coins=%@ coin=%@ arrives=%@", net.name, net.coins.map(\.symbol).joined(separator: ","),
+                  coin?.symbol ?? "-", elsewhereArrives?.symbol ?? "default")
+            takeRoute(from: net, token: coin)
         }
     }
 
