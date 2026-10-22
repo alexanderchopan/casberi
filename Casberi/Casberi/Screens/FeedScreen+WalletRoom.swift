@@ -201,6 +201,12 @@ extension FeedScreen {
                     subscriptionsProbe()
                     subscriptionsCategoryProbe()
                 }
+        // **SPENDING'S BOX IS A STATEMENT (prd §1468):** the window's total,
+        // the line against the last one, the recurring half and the rest,
+        // then the window's two words. Its own reading, started here, which
+        // decides its empty state as Subscriptions' does.
+        case .spending:
+            walletSpendingFigure
         // **THE EMPTY STATE IS IN THE SLOT (prd §611).** A tile onto a page
         // with nothing draws what would fill it, empty.
         case _ where walletScopeIsEmpty(section):
@@ -269,6 +275,10 @@ extension FeedScreen {
                 // §1267, §1331, user: "needs to mirror what we do on other
                 // pages"): Home white while you stand on it, the rest grey.
                 bare: false,
+                // **FIVE TILES SCROLL AS THE FEED'S DO (prd §1468, §1328):**
+                // Spending peeks past Security; a second row with one tile
+                // on it was the wrap this rules out.
+                scrollsColumns: true,
                 // Instant, for the reason §495 states at length: animating a
                 // swap between two slots of different natural height moves
                 // everything below and settles it back.
@@ -561,8 +571,9 @@ extension FeedScreen {
     /// acting on it, so it reads the section's own holders.
     func walletScopeIsEmpty(_ section: WalletSection) -> Bool {
         switch section {
-        // Subscriptions is decided by its own reading, in its figure.
-        case .home, .markets, .subscriptions: return false
+        // Subscriptions and Spending are decided by their own reading, in
+        // their figure.
+        case .home, .markets, .subscriptions, .spending: return false
         case .holdings:        return blockStream.els.isEmpty
         // Every kind the checkup counts, the same reads its sections draw on.
         // Your account's keys fill it too (§1436).
@@ -578,7 +589,9 @@ extension FeedScreen {
     /// Home never is. On All, nothing is inert: an empty
     /// scope there explains itself (§611).
     func walletInertSections(visible: [Thing], upcoming: [Thing]) -> Set<WalletSection> {
-        var out: Set<WalletSection> = [.security]
+        // Spending is every account's reading (§1201's cards and wallets
+        // together), so one app's page cannot stand on it (§1468).
+        var out: Set<WalletSection> = [.security, .spending]
         // Privy's apps are Holdings' too (§1124), with money or without, and
         // so is an account an app read (§1341): every state stands there.
         if walletScopeIsEmpty(.holdings),

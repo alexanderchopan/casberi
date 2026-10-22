@@ -558,7 +558,6 @@ extension FeedScreen {
     var walletSpendingSection: some View {
         let reading = SpendingReading.shared.reading
         if !reading.places.isEmpty {
-                let open = walletOpenSections.contains("spending")
                 let mask = BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil
                 walletPanel(Self.spendingName, glyph: Self.walletHomeGlyph(Self.spendingName), things: []) {
                 Section {
@@ -569,20 +568,24 @@ extension FeedScreen {
                         .listRowInsets(EdgeInsets())
                         .feedRowBackground()
                         .listRowSeparator(.hidden)
-                    ForEach(open ? reading.places : Array(reading.places.prefix(Self.walletHomeCap)),
-                            id: \.name) { place in
-                        SubscriptionRow(name: place.name, line: Text(verbatim: Self.spendingTimes(place.count))) {
-                            Text(verbatim: mask ?? AppleWalletRoom.money(place.usd, "USD"))
-                                .dsText(.price17).monospacedDigit().foregroundStyle(DS.textPrimary)
-                        }
-                        .listRowInsets(EdgeInsets(top: Self.rowAir, leading: DSRoomChassis.rowInset,
-                                                  bottom: Self.rowAir, trailing: DSRoomChassis.rowInset))
-                        .feedRowBackground()
-                        .listRowSeparator(.hidden)
+                    ForEach(Array(reading.places.prefix(Self.walletHomeCap)), id: \.name) { place in
+                        spendingPlaceRow(place, window: .month, mask: mask)
                     }
                 }
-                walletHomeDoor("spending", total: reading.places.count,
-                               noun: String(localized: "All \(reading.places.count) places"))
+                // **THE DOOR IS THE TILE (prd §1468):** every place, with its
+                // window and the recurring half, stands on Spending's page.
+                if reading.places.count > Self.walletHomeCap {
+                    Section {
+                        DSMoreRow(title: Text(verbatim: String(localized: "All \(reading.places.count) places")),
+                                  opens: true) {
+                            withAnimation(DS.Motion.standard) { chrome.walletSection = .spending }
+                        }
+                        .listRowInsets(.init(top: Self.rowAir, leading: DSRoomChassis.rowInset,
+                                             bottom: Self.rowAir, trailing: DSRoomChassis.rowInset))
+                        .listRowSeparator(.hidden)
+                        .feedRowBackground()
+                    }
+                }
                 }
         }
     }
@@ -590,28 +593,94 @@ extension FeedScreen {
     /// Re-read when the room's rows change or the demo flips.
     var walletSpendingKey: String { "\(DemoMode.isActive)|\(walletSubscriptionsKey)" }
 
-    /// "$3,410 in October · $280 less than this point in September".
-    static func spendingLine(_ reading: Spending.Reading, now: Date = .now, mask: String?) -> String {
-        let month = now.formatted(.dateTime.month(.wide))
-        let total = String(localized: "\(mask ?? AppleWalletRoom.money(reading.total, "USD")) in \(month)")
-        guard let compare = spendingCompare(reading, now: now, mask: mask) else { return total }
+    /// "$3,410 in October · $280 less than this point in September"; on the
+    /// week window (prd §1468) "$612 this week · $80 less than this point
+    /// last week".
+    static func spendingLine(_ reading: Spending.Reading, window: Spending.Window = .month,
+                             now: Date = .now, mask: String?) -> String {
+        let total = spendingTotal(reading, window: window, now: now, mask: mask)
+        guard let compare = spendingCompare(reading, window: window, now: now, mask: mask) else { return total }
         return "\(total) · \(compare)"
     }
 
-    /// "$280 less than this point in September", or nil under Hide balances
-    /// or with nothing read last month.
-    static func spendingCompare(_ reading: Spending.Reading, now: Date = .now, mask: String?) -> String? {
-        guard mask == nil, let earlier = reading.earlier,
-              let last = Calendar.current.date(byAdding: .month, value: -1, to: now) else { return nil }
-        let lastMonth = last.formatted(.dateTime.month(.wide))
-        let diff = reading.total - earlier
-        if abs(diff) < 1 {
-            return String(localized: "about the same as this point in \(lastMonth)")
-        } else if diff < 0 {
-            return String(localized: "\(AppleWalletRoom.money(-diff, "USD")) less than this point in \(lastMonth)")
-        } else {
-            return String(localized: "\(AppleWalletRoom.money(diff, "USD")) more than this point in \(lastMonth)")
+    /// "$3,410 in October" / "$612 this week".
+    static func spendingTotal(_ reading: Spending.Reading, window: Spending.Window = .month,
+                              now: Date = .now, mask: String?) -> String {
+        let money = mask ?? AppleWalletRoom.money(reading.total, "USD")
+        switch window {
+        case .month: return String(localized: "\(money) in \(now.formatted(.dateTime.month(.wide)))")
+        case .week:  return String(localized: "\(money) this week")
         }
+    }
+
+    /// "$280 less than this point in September", or nil under Hide balances
+    /// or with nothing read last window.
+    static func spendingCompare(_ reading: Spending.Reading, window: Spending.Window = .month,
+                                now: Date = .now, mask: String?) -> String? {
+        guard mask == nil, let earlier = reading.earlier else { return nil }
+        return spendingAgainst(reading.total, earlier: earlier, window: window, now: now,
+                               point: true)
+    }
+
+    /// The last window's name as the lines say it: "September" / "last week".
+    static func spendingLastWindow(_ window: Spending.Window, now: Date = .now) -> String {
+        switch window {
+        case .month:
+            let last = Calendar.current.date(byAdding: .month, value: -1, to: now) ?? now
+            return last.formatted(.dateTime.month(.wide))
+        case .week:
+            return String(localized: "last week")
+        }
+    }
+
+    /// "$64 more than September" / "$12 less than this point in September"
+    /// / "about the same as September" (within `spendingSameShare`, §83: a
+    /// change that rounds to nothing has no word). `point` adds "this point
+    /// in", the reading's own clause; a place's row leaves it out.
+    static func spendingAgainst(_ now_: Double, earlier: Double, window: Spending.Window,
+                                now: Date = .now, point: Bool) -> String {
+        let last = spendingLastWindow(window, now: now)
+        let name = point && window == .month ? String(localized: "this point in \(last)")
+                 : point ? String(localized: "this point \(last)") : last
+        let diff = now_ - earlier
+        if abs(diff) < 1 || abs(diff) <= max(now_, earlier) * spendingSameShare {
+            return String(localized: "about the same as \(name)")
+        } else if diff < 0 {
+            return String(localized: "\(AppleWalletRoom.money(-diff, "USD")) less than \(name)")
+        } else {
+            return String(localized: "\(AppleWalletRoom.money(diff, "USD")) more than \(name)")
+        }
+    }
+
+    /// Within a tenth, the two read as the same (prd §1468).
+    static let spendingSameShare = 0.10
+
+    /// A place's line (prd §1468): how many times, then how it compares with
+    /// the last window — more, less, about the same, "first time" when it
+    /// had nothing then, "recurring" for a plan or a bill. Under Hide
+    /// balances the count alone.
+    static func spendingPlaceLine(_ place: Spending.Place, window: Spending.Window,
+                                  now: Date = .now, mask: String?) -> String {
+        let times = spendingTimes(place.count)
+        guard mask == nil else { return times }
+        if place.recurring { return "\(times) · \(String(localized: "recurring"))" }
+        guard let earlier = place.earlier, earlier > 0 else {
+            return "\(times) · \(String(localized: "first time"))"
+        }
+        return "\(times) · \(spendingAgainst(place.usd, earlier: earlier, window: window, now: now, point: false))"
+    }
+
+    /// One place's row, on Home and on the tile.
+    func spendingPlaceRow(_ place: Spending.Place, window: Spending.Window, mask: String?) -> some View {
+        SubscriptionRow(name: place.name,
+                        line: Text(verbatim: Self.spendingPlaceLine(place, window: window, mask: mask))) {
+            Text(verbatim: mask ?? AppleWalletRoom.money(place.usd, "USD"))
+                .dsText(.price17).monospacedDigit().foregroundStyle(DS.textPrimary)
+        }
+        .listRowInsets(EdgeInsets(top: Self.rowAir, leading: DSRoomChassis.rowInset,
+                                  bottom: Self.rowAir, trailing: DSRoomChassis.rowInset))
+        .feedRowBackground()
+        .listRowSeparator(.hidden)
     }
 
     /// **THE MONTH, NEVER ONE PURCHASE (prd §1246, user: "what is the

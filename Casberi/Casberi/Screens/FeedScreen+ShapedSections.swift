@@ -314,7 +314,11 @@ extension FeedScreen {
                 // empty page that claims to be a section.
                 // An app pick dims the scopes with nothing for that app (prd
                 // §1078), and a remembered one of them resolves to Home.
-                let inert = seatPicked ? walletInertSections(visible: visible, upcoming: upcoming) : []
+                // One address picked dims Spending too (prd §1468): it reads
+                // every account, as Home's list does only on All (§1201).
+                let inert: Set<WalletSection> = seatPicked
+                    ? walletInertSections(visible: visible, upcoming: upcoming)
+                    : (selectedWallet != nil ? [.spending] : [])
                 let section = pinnedWalletSection ?? WalletSection.resolve(
                     chrome.walletSection,
                     present: WalletSection.pages(tiles: walletSectionPublication.sections)
@@ -440,6 +444,10 @@ extension FeedScreen {
                     // **SUBSCRIPTIONS AND NOTHING ELSE (prd §1111).** Add first,
                     // the person builds the list up, then every plan.
                     walletSubscriptionsSections
+                // **EVERY PLACE, LARGEST FIRST (prd §1468)**, each against
+                // the last window; no cap and no door, the tile is the page.
+                case .spending:
+                    walletSpendingPageSections
                 case .holdings:
                     let apps = walletAppRows(all)
                     let accounts = walletAccountRows(all)

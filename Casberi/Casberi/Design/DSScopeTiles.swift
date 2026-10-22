@@ -173,6 +173,9 @@ struct DSScopeTiles<Scope: DSTileScope>: View {
         RoundedRectangle(cornerRadius: DS.Radius.widget, style: .continuous)
     }
 
+    /// The column the scrolling row shows (`scrollsColumns`): the pick.
+    @State private var shownColumn: Scope.ID?
+
     var body: some View {
         if scrollsColumns, sections.count > 1 {
             ScrollView(.horizontal, showsIndicators: false) {
@@ -182,8 +185,14 @@ struct DSScopeTiles<Scope: DSTileScope>: View {
                             .containerRelativeFrame(.horizontal, count: Self.columns, spacing: DS.Space.s2)
                     }
                 }
+                .scrollTargetLayout()
             }
             .scrollClipDisabled()
+            // **THE PICK IS ON SCREEN (prd §1468):** a tile past the fourth
+            // (the Wallet's Spending) landed hidden off the edge when a door
+            // opened it; the row rolls to show it, clamped at the end.
+            .scrollPosition(id: $shownColumn, anchor: .leading)
+            .onChange(of: active.id, initial: true) { _, id in shownColumn = id }
         } else if strip, !sections.isEmpty, sections.allSatisfy({ verbs.contains($0) }) {
             // VERBS ALONE (prd §1138): Sources' Add · Search and Apps' Search,
             // whose filters are the counts in the box. Nothing scrolls.

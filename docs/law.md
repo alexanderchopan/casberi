@@ -235,7 +235,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1605 of 1674 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1606 of 1675 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1474,7 +1474,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1106 — Billers are addresses: every merchant that charges you on a schedule stands in Addresses, with how it bills and its c… (amended by §1106a, §1114, §1136)
 - §1106a — A biller files under the category of the app it bills for, and the filter is the same category bar
 - §1106b — A subscription that stopped is gone however long ago it stopped
-- §1107 — The Wallet in four tiles: Home · Coming up · Holdings · Security; Positions and its loan risk fold into Holdings, Sub… (amended by §1107a, §1111, §1124, §1133)
+- §1107 — The Wallet in four tiles: Home · Coming up · Holdings · Security; Positions and its loan risk fold into Holdings, Sub… (amended by §1107a, §1111, §1124, §1133, §1468)
 - §1107a — Security's checkup is the six counts alone, and the two fakes get their own glyphs
 - §1108 — Frames and Logos take four tiles: a verb that adds an account heads the Accounts menu, a verb that moves money leads…
 - §1109 — The Nostr seat is removed; Lightning keeps the relay client (amended by §1110)
@@ -1565,7 +1565,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1198 — Settings' and Markets' boxes fill the well, and the box's pick is a wash (amended by §1385)
 - §1199 — Things move when they change
 - §1200 — A share lands where you would look for it, and the pill names the place
-- §1201 — The Wallet's Home is four short lists, Spending is one of them, and Needs you holds what waits off chain too
+- §1201 — The Wallet's Home is four short lists, Spending is one of them, and Needs you holds what waits off chain too (amended by §1468)
 - §1202 — A merchant wears its own mark: an offer leads with the merchant, five App Store marks are bundled, and an "Apple" cha…
 - §1203 — Two poles: the Feed and the Wallet are the only pages you swipe between, everything else opens on top, and the face g… (amended by §1207)
 - §1204 — Reading folds into Media: one category, tiles All · Play · Read · Subscriptions, and Highlights is deleted
@@ -1842,6 +1842,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1465 — One gutter per screen: Move and the keys walk share `MoveSentence.gutter`, Security's two sentences share theirs (amended by §1466)
 - §1466 — Move is one running sentence: clauses that never split across a line, one size, the money as small print
 - §1467 — The one Search asks the market: coins, tokens and stocks for whatever you typed, a pasted contract included, followed…
+- §1468 — Spending is the Wallet's fifth tile: the month or the week against the last one to the same point, the recurring half…
 
 ## Dead rulings → what replaced them (generated)
 

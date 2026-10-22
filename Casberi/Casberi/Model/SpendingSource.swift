@@ -16,6 +16,18 @@ final class SpendingReading {
     private(set) var reading = Spending.Reading(total: 0, earlier: nil, places: [])
     /// True once a read has finished, so the section can tell "none" from "not yet".
     private(set) var read = false
+    /// **THE TILE'S READING (prd §1468):** the same charges over the picked
+    /// window, with the recurring half told apart. Home keeps `reading`, the
+    /// month with nothing split, as §1201 drew it.
+    private(set) var page = Spending.Reading(total: 0, earlier: nil, places: [])
+    /// The window the tile stands on; Month until picked.
+    private(set) var window: Spending.Window = .month
+    /// The dollar charges of the last fetch, so a window pick re-reads them
+    /// with no fetch.
+    private var charges: [Spending.Charge] = []
+    /// The merchants Subscriptions and Billers believe recur, as
+    /// `Subscriptions.key` spells them, as of the last fetch.
+    private var recurringKeys: Set<String> = []
     /// Home's Cards (prd §1232): each card's month, what it owes and its
     /// offers, in the order `WalletCardRoll` draws them.
     private(set) var cards: [WalletCardRoll.Card] = []
@@ -46,6 +58,9 @@ final class SpendingReading {
         }
         let next = Spending.read(charges, now: now, calendar: calendar)
         if next != reading { reading = next }
+        self.charges = charges
+        recurringKeys = Self.recurring()
+        readPage(now: now, calendar: calendar)
         let roll = WalletCardRoll.compose(
             spends: raw.compactMap { c in
                 guard let card = c.card, let usd = WalletCash.usd(c.amount, c.currency, rates: rates)
@@ -57,6 +72,31 @@ final class SpendingReading {
             now: now, calendar: calendar)
         if roll != cards { cards = roll }
         read = true
+    }
+
+    /// The tile's window (prd §1468): re-read from the cached charges, no fetch.
+    func pick(_ window: Spending.Window, now: Date = .now, calendar: Calendar = .current) {
+        guard window != self.window else { return }
+        self.window = window
+        readPage(now: now, calendar: calendar)
+    }
+
+    private func readPage(now: Date, calendar: Calendar) {
+        let keys = recurringKeys
+        let next = Spending.read(charges, now: now, calendar: calendar, window: window,
+                                 isRecurring: { keys.contains(Subscriptions.key($0)) })
+        if next != page { page = next }
+    }
+
+    /// What Subscriptions and Billers already believe recurs (prd §1468):
+    /// every item on the Subscriptions tile and every biller, by merchant
+    /// key. Snapshots of readings that ran before this one; the tile's
+    /// `.task` runs both first, Home never needs them.
+    private static func recurring() -> Set<String> {
+        var keys = Set(SubscriptionsReading.shared.items.map { Subscriptions.key($0.name) })
+        for biller in BillersSource.byKey.values { keys.insert(Subscriptions.key(biller.item.name)) }
+        keys.remove("")
+        return keys
     }
 
     /// What each Apple Wallet credit account owes and when, as FinanceKit

@@ -55,19 +55,26 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
     case subscriptions
     /// Who can act for you, and what is trying to fool you (prd §1107).
     case security
+    /// **THE FIFTH TILE (prd §1468, user: "for the spending page, we'd make
+    /// it new glyph under the header card").** What left your accounts and
+    /// cards, by place, against last month to the same day — Home's Spending
+    /// list (§1201), with a window and the recurring half told apart. It
+    /// wears the cart Home's list already wore. Conditional: a wallet with no
+    /// card and no priced send has nothing to show, so it sits at the tail.
+    case spending
 
     var id: String { rawValue }
 
     /// The publication's order. `allCases` already declares it, but the order
     /// is a RULING (see the type's doc), stated where a self-test can assert it.
-    static let order: [WalletSection] = [.home, .holdings, .markets, .security]
+    static let order: [WalletSection] = [.home, .holdings, .markets, .security, .spending]
 
     /// Which scopes can be EMPTY. They sit at the tail, and each must carry an
     /// `emptyBody`.
     var isConditional: Bool {
         switch self {
         case .home, .holdings, .markets: return false
-        case .subscriptions, .security: return true
+        case .subscriptions, .security, .spending: return true
         }
     }
 
@@ -85,6 +92,8 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
         case .subscriptions: return String(localized: "Subscriptions")
         // The word wallets use for approvals and scams (user, over "Safety").
         case .security: return String(localized: "Security")
+        // Home's list's own word (prd §1201), now the tile's (§1468).
+        case .spending: return String(localized: "Spending")
         }
     }
 
@@ -96,6 +105,7 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
         case .markets:  return String(localized: "What you follow")
         case .subscriptions: return String(localized: "What renews, and what it costs you")
         case .security: return String(localized: "Who can act for you, and what's trying to fool you")
+        case .spending: return String(localized: "What left your accounts, by place")
         }
     }
 
@@ -120,6 +130,7 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
         case .markets:  return nil
         case .subscriptions: return String(localized: "No subscriptions yet")
         case .security: return String(localized: "Nothing to review")
+        case .spending: return String(localized: "Nothing spent")
         }
     }
 
@@ -139,6 +150,10 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
             return String(localized: "Plans that renew on a card or account, the bills that repeat, and the ones you add.")
         case .security:
             return String(localized: "A Safe signature, a delegate, a token approval, or a transfer made to fool you.")
+        case .spending:
+            // What counts, and what is left out (§1201): a move of your own,
+            // a swap or a contract is never spending.
+            return String(localized: "What your cards and wallets paid to places this week or month, against the last one; a move of your own or a swap never counts.")
         }
     }
 
