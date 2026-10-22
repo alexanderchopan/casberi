@@ -404,16 +404,15 @@ final class ShellChrome {
     var walletFollowPending = false
 
     /// What the tray's search asks Markets to open (prd §1185): a company's
-    /// sheet, or New with the words already typed. Markets raises it once it
-    /// stands, and clears this.
+    /// sheet. Markets raises it once it stands, and clears this. The look-up
+    /// hand-off went with §1467: the search asks the market itself.
     enum MarketsRequest: Equatable {
         case company(CompanyPacks.Company)
-        case lookUp
     }
     var marketsRequest: MarketsRequest?
 
-    /// Words the tray's search hands to the sheet it opens (Markets' New,
-    /// Watch a wallet), typed into its field on appear and cleared there.
+    /// Words the tray's search hands to the sheet it opens (Watch a wallet),
+    /// typed into its field on appear and cleared there.
     var searchDraft: String?
 
     struct AccountRail: Equatable {

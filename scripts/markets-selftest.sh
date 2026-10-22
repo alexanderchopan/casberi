@@ -7,6 +7,9 @@
 #   Casberi/Casberi/Model/CoinFollow.swift  (compiled whole, prd §1250: a coin
 #     by its own price, CoinPaprika's answers and the launch sweep's plan)
 #   Casberi/Casberi/Model/GasPrice.swift    (compiled whole, prd §1250: gas)
+#   Casberi/Casberi/Model/MarketsSearch.swift (compiled whole, prd §1467: the
+#     one Search's market answer — what the words are, CoinPaprika's coins,
+#     the folds and the group's order)
 #
 # Since §1250 the alerts also hold: a custom move, a day volume, gas below a
 # level, and the iCloud merge in which a fired alert beats a copy still on.
@@ -27,7 +30,8 @@ LINE="Casberi/Casberi/Model/WatchLine.swift"
 INDEX="Casberi/Casberi/Model/MarketsIndex.swift"
 COIN="Casberi/Casberi/Model/CoinFollow.swift"
 GAS="Casberi/Casberi/Model/GasPrice.swift"
-for f in "$ALERT" "$LINE" "$INDEX" "$COIN" "$GAS"; do
+SEARCH="Casberi/Casberi/Model/MarketsSearch.swift"
+for f in "$ALERT" "$LINE" "$INDEX" "$COIN" "$GAS" "$SEARCH"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
 
@@ -41,8 +45,24 @@ grep -q 'WatchLine.pick(' Casberi/Casberi/Screens/FeedScreen+Markets.swift \
   || { echo "✗ the watchlist rows no longer pick their line through WatchLine"; exit 1; }
 grep -q 'MarketsIndex.sections(' Casberi/Casberi/Screens/FeedScreen+Markets.swift \
   || { echo "✗ the index no longer splits into your apps, everything else and not traded"; exit 1; }
-grep -q 'MarketsIndex.search(' Casberi/Casberi/Screens/WatchAddSheet.swift \
+grep -q 'MarketsIndex.matches(words, MarketsWatch.entry(company))' Casberi/Casberi/Shell/RoomsTray.swift \
   || { echo "✗ Search no longer finds a company by an app it makes"; exit 1; }
+# §1467: the one Search asks the market itself — no look-up hand-off, the
+# rows follow in place, Show all grows the group, a Went off row stands only
+# under an alert that exists, and the tombstoned ones are swept at launch.
+grep -q 'await MarketsSearchRead.read(words)' Casberi/Casberi/Shell/RoomsTray.swift \
+  && grep -q 'MarketsSearch.showAllLine(chains: market.chains, stocks: market.stocks)' Casberi/Casberi/Shell/RoomsTray.swift \
+  || { echo "✗ the tray's Search no longer asks the market (§1467) — a token typed finds nothing but what you hold"; exit 1; }
+! grep -q 'Look up “' Casberi/Casberi/Shell/RoomsTray.swift \
+  || { echo "✗ the look-up hand-off is back — the market answers in the group, not on a second screen"; exit 1; }
+grep -q 'MarketsWatch.unfollow(ref: hit.ref, context: context)' Casberi/Casberi/Shell/RoomsTray.swift \
+  && grep -q 'MarketsWatch.unfollow(ref: key, context: modelContext)' Casberi/Casberi/Screens/WatchAddSheet.swift \
+  || { echo "✗ unfollowing from Search and from the Follow tray no longer share one rule"; exit 1; }
+grep -q 'PriceAlertStore.isAlertRow(\$0) && PriceAlertStore.shared.stands(\$0)' Casberi/Casberi/Screens/FeedScreen+Markets.swift \
+  || { echo "✗ Went off lists rows for alerts that no longer exist"; exit 1; }
+grep -q 'PriceAlertStore.shared.sweepRemoved(context: modelContext)' Casberi/Casberi/Shell/RootShell.swift \
+  && grep -q 'mirror.wasRemoved(id.uuidString)' Casberi/Casberi/Model/MarketsAlerts.swift \
+  || { echo "✗ the launch no longer sweeps the Went off rows of deleted alerts"; exit 1; }
 grep -q 'PriceAlertStore.shared.removeAll(ref: ref, context: modelContext)' Casberi/Casberi/Screens/FeedScreen+Markets.swift \
   || { echo "✗ unwatching no longer takes the row's alerts with it — they would fire for a row you cannot see"; exit 1; }
 # 2026-10-17: deleting an alert clears its Went off rows, and a Went off row
@@ -74,7 +94,7 @@ grep -q 'await MarketsGas.shared.load()' Casberi/Casberi/Model/MarketsAlerts.swi
 
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
-cp "$ALERT" "$LINE" "$INDEX" "$COIN" "$GAS" "$TMP/"
+cp "$ALERT" "$LINE" "$INDEX" "$COIN" "$GAS" "$SEARCH" "$TMP/"
 cat > "$TMP/main.swift" <<'SWIFT'
 import Foundation
 
@@ -156,8 +176,6 @@ check(MarketsIndex.matches("$msft", msft), "a ticker finds it, with or without t
 check(MarketsIndex.matches("micro", msft), "a name finds it")
 check(!MarketsIndex.matches("m", msft), "one letter finds nothing")
 check(!MarketsIndex.matches("zzz", msft), "a stranger finds nothing")
-let found = MarketsIndex.search("git", in: [MarketsIndex.Entry(name: "GitLab", ticker: "GTLB", apps: ["GitLab"]), msft])
-check(found.map(\.name) == ["GitLab", "Microsoft"], "a direct match before one found through an app")
 let merged = MarketsIndex.merged([[msft], [MarketsIndex.Entry(name: "Microsoft", ticker: "MSFT", apps: ["npm", "Teams"])]])
 check(merged.count == 1 && merged[0].apps == ["GitHub", "npm", "Teams"], "All holds each company once, with all its apps")
 
@@ -322,11 +340,52 @@ check(both.steps == [.stay, .fold(into: "coin:btc-bitcoin")], "a token whose coi
 check(CoinFollow.rewrite(order: [wbtc, "coin:btc-bitcoin", pepe], map: both.map) == ["coin:btc-bitcoin", pepe],
       "the folded row's place is the coin's first place, once")
 
+// ── The one Search asks the market (prd §1467) ───────────────────────
+check(MarketsSearch.isAddress("0x6982508145454ce325ddbe47a25d4ec3d2311933"), "a contract address is an address")
+check(MarketsSearch.isAddress("So11111111111111111111111111111111111111112"), "a Solana mint is an address")
+check(!MarketsSearch.isAddress("pepe") && !MarketsSearch.isAddress("0x6982"), "a word or a stub is not")
+check(!MarketsSearch.isAddress("0OIl0OIl0OIl0OIl0OIl0OIl0OIl0OIl0OIl"), "base58 has no 0, O, I or l")
+check(MarketsSearch.searchURL("pepe coin") == "https://api.coinpaprika.com/v1/search/?q=pepe%20coin&c=currencies&limit=6",
+      "the search URL keeps its trailing slash (a 301 without it)")
+let paprika: [String: Any] = ["currencies": [
+    ["id": "purpe-purple-pepe", "name": "Purple Pepe", "symbol": "PURPE", "rank": 1049, "is_active": true,
+     "contract_address": [["type": "Other", "address": "HBoNJ5v8g71s2boRivrHnfSB5MVPLDHHyVjruPfhGkvL"]]],
+    ["id": "pepe-pepe", "name": "Pepe", "symbol": "pepe", "rank": 53, "is_active": true,
+     "contract_address": [["type": "ERC20", "address": "0x6982508145454CE325DDBE47A25D4EC3D2311933"],
+                          ["type": "BEP20", "address": "0x25d887ce7a35172c62febfd67a1856f20faebb00"]]],
+    ["id": "dead-pepe", "name": "Dead", "symbol": "DEAD", "rank": 0, "is_active": true],
+    ["id": "off-pepe", "name": "Off", "symbol": "OFF", "rank": 9, "is_active": false],
+]]
+let coins = MarketsSearch.coins(from: paprika)
+check(coins.map(\.id) == ["pepe-pepe", "purpe-purple-pepe"], "ranked, active coins in rank order (\(coins.map(\.id)))")
+check(coins[0].symbol == "PEPE", "a symbol is upper-cased")
+check(coins[0].contracts.map(\.chain) == ["ethereum", "bsc"], "ERC20 is Ethereum, BEP20 is BNB Chain")
+check(MarketsSearch.coin(ofTokenOn: "ethereum", address: "0x6982508145454ce325ddbe47a25d4ec3d2311933", among: coins)?.id == "pepe-pepe",
+      "the DEX token at the coin's contract is the coin, case-folded")
+check(MarketsSearch.coin(ofTokenOn: "base", address: "0x6982508145454ce325ddbe47a25d4ec3d2311933", among: coins) == nil,
+      "the same address on another chain is another token")
+check(MarketsSearch.coin(ofTokenOn: "solana", address: "HBoNJ5v8g71s2boRivrHnfSB5MVPLDHHyVjruPfhGkvL", among: coins)?.id == "purpe-purple-pepe",
+      "a contract whose chain CoinPaprika did not name matches by address")
+let dex = [MarketsSearch.Token(chain: "solana", address: "Pepe1111111111111111111111111111111111111111", liquidity: 2_100_000),
+           MarketsSearch.Token(chain: "ethereum", address: "0x6982508145454ce325ddbe47a25d4ec3d2311933", liquidity: 18_200_000),
+           MarketsSearch.Token(chain: "base", address: "0xbased", liquidity: 640_000)]
+let picked = MarketsSearch.picks(query: "pepe", coins: coins, tokens: dex, stocks: 1)
+check(picked == [.coin(0), .coin(1), .token(0), .token(2), .stock(0)],
+      "coins by rank, then tokens by liquidity less the one that is a coin, then stocks (\(picked))")
+let byAddress = MarketsSearch.picks(query: "0x6982508145454CE325DDBE47A25D4EC3D2311933", coins: coins, tokens: dex, stocks: 0)
+check(byAddress == [.token(1), .coin(0), .coin(1), .token(0), .token(2)],
+      "a pasted contract leads with that contract, then its coin, then the rest (\(byAddress))")
+check(MarketsSearch.picks(query: "x", coins: [], tokens: [], stocks: 0).isEmpty, "nothing found, nothing drawn")
+check(MarketsSearch.showAllLine(chains: [("Solana", 8), ("Ethereum", 9), ("Base", 4)], stocks: 1) == "Ethereum 9 · Solana 8 · Base 4 · 1 stock",
+      "the Show all line counts chains by size, then the stocks")
+check(MarketsSearch.showAllLine(chains: [], stocks: 2) == "2 stocks", "stocks alone are counted")
+check(MarketsSearch.shown == 4, "four market rows before Show all")
+
 if failures > 0 { print("✗ markets: \(failures) failing"); exit(1) }
 print("✓ markets self-test passed")
 SWIFT
 
 swiftc -O -o "$TMP/markets" "$TMP/PriceAlert.swift" "$TMP/WatchLine.swift" "$TMP/MarketsIndex.swift" \
-  "$TMP/CoinFollow.swift" "$TMP/GasPrice.swift" "$TMP/main.swift" 2>&1 | grep -v "^$" || true
+  "$TMP/CoinFollow.swift" "$TMP/GasPrice.swift" "$TMP/MarketsSearch.swift" "$TMP/main.swift" 2>&1 | grep -v "^$" || true
 [[ -x "$TMP/markets" ]] || { echo "✗ markets harness did not compile"; exit 1; }
 "$TMP/markets"

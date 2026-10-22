@@ -10,9 +10,8 @@ import SwiftData
 /// your apps first in each, every traded one a row with its star; the
 /// untraded are not listed, since there is nothing to follow. It has no
 /// field: the tab bar's Search is the one place to look anything up (§1171,
-/// §1185), and when Search hands a query over (`searchDraft`, `.lookUp`) the
-/// tray shows that query's tokens, stocks and index hits instead. The sheet
-/// stays open, so you can keep several.
+/// §1185), and since §1467 that Search asks the market itself, so nothing is
+/// handed here. The sheet stays open, so you can keep several.
 ///
 /// Optional environment only: on Mac Catalyst a sheet's content is evaluated
 /// where the presenter's `.environment` has not reached (prd §872).
@@ -21,12 +20,6 @@ struct WatchAddSheet: View {
     @Environment(ShellChrome.self) private var chrome: ShellChrome?
     @Environment(BridgeStore.self) private var store: BridgeStore?
 
-    @State private var query = ""
-    @State private var tokens: [TokenWatch.Resolved] = []
-    @State private var stocks: [StockWatch.Resolved] = []
-    @State private var searching = false
-    @State private var chain: String? = nil
-    @State private var stocksOnly = false
     @State private var watched: Set<String> = []
     @State private var watchedSymbols: Set<String> = []
     @State private var fromWallet: [TokenWatch.Resolved] = []
@@ -36,21 +29,12 @@ struct WatchAddSheet: View {
         DSTray(title: String(localized: "Follow"), height: 640, detents: [.large], scrollsItself: true) {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 0) {
-                    if query.trimmingCharacters(in: .whitespaces).isEmpty {
-                        packs
-                    } else {
-                        results
-                    }
+                    packs
                 }
                 .padding(.bottom, 96)
             }
         }
         .task { await loadSuggestions() }
-        .task(id: query) { await search() }
-        .onAppear {
-            // The words the tab bar's Search was holding (prd §1185).
-            if let draft = chrome?.searchDraft { query = draft; chrome?.searchDraft = nil }
-        }
     }
 
     // MARK: - The packs
@@ -92,95 +76,6 @@ struct WatchAddSheet: View {
         }
     }
 
-    /// The sheet's one explaining sentence (prd §748), for a query that
-    /// found nothing.
-    private var footnote: some View {
-        let text: Text = if DemoMode.isActive {
-            Text("Search works once you leave the demo.")
-        } else {
-            Text("Nothing by that name. Try a ticker, or paste the contract address.")
-        }
-        return DSFootnote(text)
-            .padding(.horizontal, DS.Space.s4)
-            .padding(.top, DS.Space.s4)
-    }
-
-    // MARK: - As you type
-
-    @ViewBuilder private var results: some View {
-        // The index first (prd §1082): a company, its ticker, or an app it
-        // makes — "slack" finds Salesforce — instant, from the catalogue.
-        let indexHits = Array(MarketsIndex.search(query, in: TokensScope.everyCompany.map(MarketsWatch.entry))
-            .prefix(5))
-        let byName = Dictionary(TokensScope.everyCompany.map { ($0.name, $0) }, uniquingKeysWith: { a, _ in a })
-        let companies = indexHits.compactMap { byName[$0.name] }
-        if !companies.isEmpty {
-            DSTrayGroup(String(localized: "Behind your apps"), glyph: "square.grid.2x2") {
-                ForEach(companies) { company in
-                    let on = company.listing.ticker.map { watchedSymbols.contains($0.uppercased()) } ?? false
-                    IndexRow(company: company, apps: company.seats,
-                             quote: CompanyQuotes.shared.quote(company.listing), watched: on,
-                             star: company.listing == .unlisted ? nil : { toggle(company: company, on: on) })
-                        .padding(.horizontal, DS.Space.s4)
-                }
-            }
-        }
-        let chains = Array(Set(tokens.map(\.chain))).sorted()
-        let shownTokens = stocksOnly ? [] : tokens.filter { chain == nil || $0.chain == chain }
-        let shownStocks = chain == nil ? stocks : []
-        if !shownTokens.isEmpty || chains.count > 1 {
-            DSTrayGroup(String(localized: "Tokens"), glyph: "bitcoinsign.circle") {
-                ForEach(shownTokens) { token in tokenRow(token) }
-            } trailing: {
-                if chains.count > 1 || !stocks.isEmpty { filterMenu(chains) }
-            }
-        }
-        if !shownStocks.isEmpty {
-            DSTrayGroup(String(localized: "Stocks"), glyph: "chart.line.uptrend.xyaxis") {
-                ForEach(shownStocks) { stock in stockRow(stock) }
-            }
-        }
-        if DemoMode.isActive || (!searching && tokens.isEmpty && stocks.isEmpty && companies.isEmpty) {
-            footnote
-        }
-    }
-
-    private func filterMenu(_ chains: [String]) -> some View {
-        Menu {
-            Button {
-                chain = nil; stocksOnly = false
-            } label: {
-                if chain == nil && !stocksOnly { Label("All chains", systemImage: "checkmark") }
-                else { Text("All chains") }
-            }
-            ForEach(chains, id: \.self) { c in
-                Button {
-                    chain = c; stocksOnly = false
-                } label: {
-                    if chain == c { Label(Self.chainName(c), systemImage: "checkmark") }
-                    else { Text(Self.chainName(c)) }
-                }
-            }
-            if !stocks.isEmpty {
-                Button {
-                    chain = nil; stocksOnly = true
-                } label: {
-                    if stocksOnly { Label("Stocks only", systemImage: "checkmark") }
-                    else { Text("Stocks only") }
-                }
-            }
-        } label: {
-            HStack(spacing: 4) {
-                Text(stocksOnly ? String(localized: "Stocks only")
-                     : chain.map(Self.chainName) ?? String(localized: "All chains"))
-                    .dsText(.body17)
-                Image(systemName: "chevron.down").dsGlyph(.caption)
-            }
-            .foregroundStyle(DS.pickInk)
-            .frame(minHeight: 44)
-        }
-    }
-
     // MARK: - Rows
 
     private func tokenRow(_ token: TokenWatch.Resolved) -> some View {
@@ -194,21 +89,6 @@ struct WatchAddSheet: View {
                          price: token.priceUsd.flatMap(Double.init), change: token.change24h,
                          label: "\(token.name) on \(Self.chainName(token.chain))") {
             toggle(token: token)
-        }
-    }
-
-    private func stockRow(_ stock: StockWatch.Resolved) -> some View {
-        let key = StockWatch.symbolRef(stock.symbol)
-        let quote = CompanyQuotes.shared.quote(.stock(stock.symbol))
-        let line = [stock.symbol, stock.exchange.capitalized,
-                    quote?.marketCap.map { String(localized: "\(TokenStats.compact($0)) cap") }]
-            .compactMap(\.self).joined(separator: " · ")
-        return resultRow(id: key,
-                         face: WatchFace(url: StockWatch.logoURL(stock.symbol), lettered: stock.symbol,
-                                         onWhite: true),
-                         name: stock.title, line: line,
-                         price: quote?.price, change: quote?.change, label: stock.title) {
-            toggle(stock: stock)
         }
     }
 
@@ -253,12 +133,7 @@ struct WatchAddSheet: View {
 
     /// The ref a token's follow lands under: a household coin's wrapped
     /// token is followed as the coin (prd §1250, `TokenWatch.add`).
-    private func ref(of token: TokenWatch.Resolved) -> String {
-        if let id = CoinFollow.wrappedCoin(chain: token.chain, address: token.address) {
-            return CoinFollow.ref(id)
-        }
-        return "tokens:\(token.chain):\(token.address.lowercased())"
-    }
+    private func ref(of token: TokenWatch.Resolved) -> String { MarketsSearchRead.tokenRef(token) }
 
     private func toggle(company: CompanyPacks.Company, on: Bool) {
         guard let ticker = company.listing.ticker?.uppercased() else { return }
@@ -290,16 +165,6 @@ struct WatchAddSheet: View {
         landed(key: thing.sourceRef ?? key, thing: thing)
     }
 
-    private func toggle(stock: StockWatch.Resolved) {
-        let key = StockWatch.symbolRef(stock.symbol)
-        if watched.contains(key) {
-            remove(ref: key)
-            return
-        }
-        guard let thing = StockWatch.add(stock, context: modelContext) else { return }
-        landed(key: key, thing: thing)
-    }
-
     /// The save lands (prd §1081): the star fills with a bounce and the
     /// success buzz, and the toast names it with an Undo.
     private func landed(key: String, thing: Thing) {
@@ -313,49 +178,12 @@ struct WatchAddSheet: View {
     }
 
     private func remove(ref key: String) {
-        let source = TokenWatch.source
-        let descriptor = FetchDescriptor<Thing>(predicate: #Predicate {
-            $0.source == source && $0.sourceRef == key
-        })
-        for thing in (try? modelContext.fetch(descriptor)) ?? [] where thing.isLive {
-            SpotlightIndex.remove(ids: [thing.id])
-            modelContext.delete(thing)
-        }
-        modelContext.saveHonestly()
-        TokenWatchOrder.shared.remove(key)
-        PriceAlertStore.shared.removeAll(ref: key, context: modelContext)
+        MarketsWatch.unfollow(ref: key, context: modelContext)
         watched.remove(key)
         DSHaptic.tap()
     }
 
     // MARK: - Reading
-
-    private func search() async {
-        let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        let hits = MarketsIndex.search(q, in: TokensScope.everyCompany.map(MarketsWatch.entry)).prefix(5)
-        let names = Set(hits.map(\.name))
-        Task { await CompanyQuotes.shared.load(TokensScope.everyCompany.filter { names.contains($0.name) }) }
-        // The demo reaches nothing (its pour is not your things to add to).
-        guard !q.isEmpty, !DemoMode.isActive else {
-            tokens = []; stocks = []; searching = false
-            return
-        }
-        try? await Task.sleep(for: .milliseconds(300))
-        guard !Task.isCancelled else { return }
-        searching = true
-        async let t = TokenWatch.search(q, limit: 8)
-        async let s = StockWatch.search(q, limit: 4)
-        let (foundTokens, foundStocks) = await (t, s)
-        guard !Task.isCancelled else { return }
-        tokens = foundTokens
-        stocks = foundStocks
-        searching = false
-        if let c = chain, !foundTokens.contains(where: { $0.chain == c }) { chain = nil }
-        let companies = foundStocks.map {
-            CompanyPacks.Company(name: $0.title, listing: .stock($0.symbol), seats: [])
-        }
-        await CompanyQuotes.shared.load(companies)
-    }
 
     private func loadSuggestions() async {
         let source = TokenWatch.source

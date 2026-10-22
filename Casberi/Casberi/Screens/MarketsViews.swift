@@ -106,6 +106,10 @@ struct WatchFace: View {
     /// A system symbol drawn in place of the logo — Apple's, which no third
     /// party may draw as a picture (`systemMark`).
     var symbol: String? = nil
+    /// The image failed: the letters stand (measured 2026-10-21, prd §1467:
+    /// CoinPaprika's logo host resolves and then times out, so every
+    /// followed coin wore the broken-image glyph until this).
+    @State private var dead = false
 
     /// The company whose mark is a system symbol, by ticker: Apple wears
     /// `apple.logo`, the glyph an Apple charge wears (prd §1202), never a
@@ -121,14 +125,16 @@ struct WatchFace: View {
                 Image(systemName: symbol)
                     .font(.system(size: size * 0.5, weight: .semibold))
                     .foregroundStyle(onWhite ? Color.black : Color.white)
-            } else if url == nil {
+            } else if url == nil || dead {
                 Text(verbatim: String(lettered.prefix(2)).uppercased())
                     .font(.system(size: size * 0.38, weight: .bold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(onWhite ? Color.black : Color.white)
             }
-            if symbol == nil, let url {
+            if symbol == nil, !dead, let url {
                 RemoteThumb(urlString: url, size: onWhite ? size * 0.72 : size,
-                            fallback: TokenWatch.source, circular: !onWhite)
+                            fallback: TokenWatch.source, circular: !onWhite,
+                            onFailed: { dead = true })
+                    .onChange(of: url) { _, _ in dead = false }
             }
         }
         .frame(width: size, height: size)

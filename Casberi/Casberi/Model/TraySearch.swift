@@ -265,11 +265,4 @@ enum TraySearch {
         guard q.count == 42, q.lowercased().hasPrefix("0x") else { return false }
         return q.dropFirst(2).allSatisfy(\.isHexDigit)
     }
-
-    /// Whether the words could be a ticker worth looking up in Markets: one
-    /// to five letters, an optional `$` before them.
-    static func looksLikeTicker(_ query: String) -> Bool {
-        let q = normalized(query)
-        return (1...5).contains(q.count) && q.allSatisfy { $0.isASCII && $0.isLetter }
-    }
 }

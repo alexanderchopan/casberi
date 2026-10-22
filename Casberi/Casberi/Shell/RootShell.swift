@@ -581,6 +581,8 @@ struct RootShell: View {
                 // native or an index coin followed as a DEX token converges
                 // onto its CoinPaprika follow, in place, before the dedupe.
                 CoinWatch.converge(context: modelContext)
+                CoinWatch.clearDeadLogos(context: modelContext)
+                PriceAlertStore.shared.sweepRemoved(context: modelContext)
                 // The seats deleted 2026-10-01 (prd §1038): their rows, seat
                 // records, address-book tags, defaults and devnet keys.
                 SourceRename.sweepRetiredSeats(context: modelContext, store: bridges)
