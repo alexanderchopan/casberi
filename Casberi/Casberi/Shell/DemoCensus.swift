@@ -325,6 +325,16 @@ enum DemoCensus {
                     else { offered += verbs.map(\.shortLabel) }
                 }
                 let detail = "\(Set(offered).sorted().joined(separator: ",")) · \(mute.count)/\(sample.count) offer none"
+                // A task that lives in its own app opens THERE and nowhere
+                // else (3dbebb91, 2026-10-16: Trello, Jira, Todoist, the
+                // card offers), and that door is gated on the app being
+                // installed — which no simulator has. The demo's newest
+                // reminders are all such tasks, so a mute sample here is the
+                // ruling, not a lost verb (2026-10-21).
+                if kind == .reminder, offered.isEmpty,
+                   sample.allSatisfy({ VerbDerivation.ownApps.contains($0.source) || $0.source == "CardPointers" }) {
+                    return .ok("own-app tasks open there; no app installed on this device · \(sample.count) sampled")
+                }
                 return offered.isEmpty ? .empty("none of the newest \(sample.count) offers a verb") : .ok(detail)
             })
         }
