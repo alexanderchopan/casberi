@@ -160,6 +160,12 @@ struct DSScopeTiles<Scope: DSTileScope>: View {
     /// ("E1", 2026-10-10); the hue left the words for the glyphs.
     static var pickInk: Color { DS.textPrimary }
     static var glyphInk: Color { DS.brandInk }
+    /// **PINK MEANS THE PICK (prd §1471, amending §1252's "pink on every").**
+    /// With every glyph pink, a row of four tiles drew four pink marks and the
+    /// one that said where you stand was told apart only by its fill. The pick
+    /// and a verb keep the hue (§1385: pink is state and verb); a tile at rest
+    /// is a door, and a door is grey.
+    static var restInk: Color { DS.textSecondary }
     /// **GLYPH OVER WORD, everywhere (user, 2026-09-26, reversing "remove
     /// the glyphs" within the hour: "we do need those glyphs b/c we have them
     /// elsewhere in the app, it's a language — the app categories, and in the
@@ -346,7 +352,8 @@ struct DSScopeTiles<Scope: DSTileScope>: View {
                                      : wants ? DS.attentionInk
                                      : (bare || isVerb) ? DS.textPrimary : DS.textTertiary)
             }
-            .foregroundStyle(isInert ? DS.textTertiary.opacity(0.6) : Self.glyphInk)
+            .foregroundStyle(isInert ? DS.textTertiary.opacity(0.6)
+                             : (isOn || isVerb) ? Self.glyphInk : Self.restInk)
             .frame(maxWidth: .infinity, minHeight: Self.tileHeight)
             // A disabled tile swaps its fill (§83), never only its ink.
             // No fill, picked or not (prd §1267): an inert tile is dimmed
