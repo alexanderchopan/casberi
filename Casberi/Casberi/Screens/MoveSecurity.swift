@@ -155,10 +155,16 @@ struct MoveSecurity: View {
         String(format: "$%.2f", usd)
     }
 
+    /// ONE gutter for this card's two sentences (the spend limit and
+    /// Round-ups), so their values stand in one column; sized to the widest
+    /// glue, "round up". Move and the keys walk share `MoveSentence.gutter`,
+    /// a narrower one, on their own screens.
+    static let sentenceGutter: CGFloat = 76
+
     private var roundUpSentence: some View {
         VStack(alignment: .leading, spacing: DS.Space.s2) {
             HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                Text("round up").dsText(.body17).foregroundStyle(DS.textPrimary).frame(width: 76, alignment: .leading)
+                Text("round up").dsText(.body17).foregroundStyle(DS.textPrimary).frame(width: Self.sentenceGutter, alignment: .leading)
                 Button {
                     withAnimation(DS.Motion.standard) { roundUps.step = roundUps.step == 1 ? 5 : 1 }
                     RoundUps.setting = roundUps
@@ -172,7 +178,7 @@ struct MoveSecurity: View {
                 .accessibilityHint(Text("Switches between the next one and the next five dollars"))
             }
             HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                Text("and buy").dsText(.body17).foregroundStyle(DS.textPrimary).frame(width: 76, alignment: .leading)
+                Text("and buy").dsText(.body17).foregroundStyle(DS.textPrimary).frame(width: Self.sentenceGutter, alignment: .leading)
                 Menu {
                     ForEach(roundUpChoices, id: \.network.chainId) { group in
                         Section(group.network.name) {
@@ -199,7 +205,7 @@ struct MoveSecurity: View {
                 .accessibilityLabel(Text("What round-ups buy"))
             }
             HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                Text("every").dsText(.body17).foregroundStyle(DS.textPrimary).frame(width: 76, alignment: .leading)
+                Text("every").dsText(.body17).foregroundStyle(DS.textPrimary).frame(width: Self.sentenceGutter, alignment: .leading)
                 Text(verbatim: "$5.").dsText(.heading28).foregroundStyle(DS.textPrimary)
             }
             Text("Change collects in your dollars. At $5, your next send buys \(roundUps.target.symbol) with it.")
@@ -496,9 +502,12 @@ struct MoveSecurity: View {
     }
 
     /// The amount, as Move says things (§1438): the glue in the gutter, the
-    /// value large, pink while it can be changed.
+    /// value large, pink while it can be changed. This card's two sentences
+    /// (the limit and Round-ups) share ONE gutter, so their values stand in
+    /// one column; "of each coin" is a line of the sentence as the keys
+    /// walk says it, not glue.
     private var limitSentence: some View {
-        let gutter: CGFloat = 64
+        let gutter = Self.sentenceGutter
         return VStack(alignment: .leading, spacing: DS.Space.s2) {
             HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
                 Text("up to").dsText(.body17).foregroundStyle(DS.textPrimary).frame(width: gutter, alignment: .leading)
@@ -524,8 +533,8 @@ struct MoveSecurity: View {
                 .disabled(amountDollars == nil || working != nil)
             }
             HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                Text("of each").dsText(.body17).foregroundStyle(DS.textPrimary).frame(width: gutter, alignment: .leading)
-                Text("coin").dsText(.heading28).foregroundStyle(DS.textPrimary)
+                Text(verbatim: " ").dsText(.body17).frame(width: gutter, alignment: .leading)
+                Text("of each coin").dsText(.heading28).foregroundStyle(DS.textPrimary)
             }
             HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
                 Text("a").dsText(.body17).foregroundStyle(DS.textPrimary).frame(width: gutter, alignment: .leading)

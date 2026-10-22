@@ -68007,3 +68007,14 @@ Guarded by `category-fold-selftest.sh` (proven by mutation). **Mac half:** the r
 2. **Return follows a site** (`RSSScreen`, the keyboard's Go): the field always submitted on Return; the journey now uses it.
 3. **Measured (`journeys.sh site github x`):** github 4 → 3 taps, x 4 → 3, site 4 → 3.
 4. **Kept at four:** Track a subscription — its price field is the number pad, which has no Return, and a tidier keyboard beat a tap; stop tracking — a write is confirmed in its menu (Swipe verbs are reads); note — Done closes the page, and the journey's proof is the note listed in Notes. The Sources and Track search fields stay a tap: the tray opens on every app's icon, not a keyboard.
+
+## §1465 — One gutter per screen: Move and the keys walk share `MoveSentence.gutter`, Security's two sentences share theirs (amends §1442f item 2, §1457 item 1, §1447 item 8, §1452 item 4) (user, 2026-10-21, over the canvas "Move and Keys Flows": "ok. keep as is and fix your nit") — BUILT
+
+**Why.** The sentence grammar had three gutter widths — Move 40pt, the keys walk 56pt (for "up to"), Security's limit 64pt — and a fourth, 76pt, under the Round-ups sentence on the same Security card. The walk hands over to the Created sentence, so its values stood 16pt to the right of where they land; on the Security card the limit and Round-ups sentences drew two value columns one above the other. The user weighed the gutter against a centered sentence, labelled rows (amount · token · for · token · network) and a running Mad Libs line on the canvas, and kept the gutter as built.
+
+**The ruling.**
+1. **Move, Create and the keys walk share `MoveSentence.gutter`, 44pt** — sized to the widest glue word, "up to" (40.3pt in Figtree SemiBold 17, measured). The walk's own 56 is gone.
+2. **Security's two sentences share `MoveSecurity.sentenceGutter`, 76pt**, sized to "round up"; the limit sentence's 64 is gone, and its glue is `body17` like Round-ups' beside it. Its "of each coin" is a line of the sentence, as the walk says it, never "of each" as glue.
+3. A new sentence in this grammar takes one of those two constants, never a width of its own.
+
+**Seen** on the KeysWalk simulator clone (iOS 27): the walk's step 3 with "up to" on one line and its values on Create's edge; Security's limit sentence open above Round-ups, both in one column. Not seen: the Mac.
