@@ -99,7 +99,9 @@ struct RSSScreen: View {
             if rss.feeds.isEmpty {
                 DSSlabField(placeholder: String(localized: "Site or feed URL"),
                             text: $newFeed, actionLabel: String(localized: "Follow"),
-                            keyboard: .URL, focus: $fieldFocused, action: addFeed)
+                            keyboard: .URL, focus: $fieldFocused,
+                            // Return follows (prd §1464): the keyboard's Go is the verb.
+                            submitLabel: .go, action: addFeed)
             } else {
                 // Where the list went (prd §1118): Reading's Subscriptions.
                 FollowListDoor(room: .reading, count: rss.feeds.count)
