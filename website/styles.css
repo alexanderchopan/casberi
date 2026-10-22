@@ -2112,5 +2112,7 @@ body { overflow-x: clip; }
 
 /* The Wallet page shows its reel under the hero (2026-10-03). */
 .w-reel { margin: 40px auto 0; }
+/* The Wallet page opens on its reel (2026-10-21): the hero is gone. */
+.w-reel.w-lead { margin-top: 22px; }
 #next .m-h2 { margin-bottom: 10px; }
 .next-sub { font-size: 19px; font-weight: 600; color: #c9c9ce; margin: 0 0 6px; }
