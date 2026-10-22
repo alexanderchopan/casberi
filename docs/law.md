@@ -40,7 +40,7 @@ Privacy and Reddit. Frames and Logos are the devnets that remain.
 - Two pills only: `Chip` is a choice, `DSStamp` is a fact. A verb is a row (§746).
 - Every `Button` wears `RowPress` (a row or a word) or `PressSpring` (a disc, chip, face, tile or slab), never `.plain`. Exceptions are ratcheted in the audit (§965).
 - Becoming the pick is a crossfade on `DS.Motion.standard`, built into the template (§966).
-- One left edge: a title row stands in the rows' column (`titleIndent`). The Wallet crown's number is `price40`, and its line ends on one dot over a fill floored at the series' low (§1471).
+- One left edge: a title row stands in the rows' column (`titleIndent`). A short note in the lead climbs the ladder's title rungs; an event's start stands in a row's trailing slot (§1472). The Wallet crown's number is `price40`, and its line ends on one dot over a fill floored at the series' low (§1471).
 - A status word takes the ink (`attentionInk`/`confirmInk`/`destructiveInk`). A glyph, dot or fill keeps the hue (§1004).
 - One ink for the pick: `DS.pickInk` (pink) says state and verb, a door is `textSecondary` with its chevron, and `DS.tint` (the theme blue) is for charts and in-text links only, plus the Exit demo pill. `ds-template-audit.py` check E (§1385).
 - The brand is pink; orange was declined (§899). The day header and the category's name are the two lines of type in `DS.brandInk` (§740, §742, §1129), the day header at `heading20` (§1006).
@@ -236,7 +236,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1609 of 1678 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1610 of 1679 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1087,7 +1087,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §764 — One row anatomy in every room: regular titles, a 12pt line, 24pt sections (part superseded by §796)
 - §765 — The section tiles land at one height on every page, because the chrome draws the figure
 - §766 — Every room's lead is one well: a statement, a body, and a foot pinned to the bottom (amended by §905, §1381; part superseded by §914)
-- §767 — The shell around the rows speaks the rooms' grammar: the dock's seat is the way back, a pushed screen names itself in… (amended by §1132)
+- §767 — The shell around the rows speaks the rooms' grammar: the dock's seat is the way back, a pushed screen names itself in… (amended by §1132, §1472)
 - §768 — The load screen says hello
 - §769 — An empty scope draws its own figure as a skeleton, its short state centred on it, and its list as skeleton rows (amended by §771)
 - §770 — Notifications are one digest, twice a day at most, with one switch per category (part superseded by §809, §870)
@@ -1260,7 +1260,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §905a — Three tiers, not two: the shelf grows even when the words cannot (part superseded by §1006)
 - §906 — One box, one position: every room's lead is the wallet's box at the wallet's height (amended by §938)
 - §907 — The face pass, batch one: Media A, Social C, Reading A
-- §908 — The face pass, batch two: Photos A, Life B, Work B, Notes B
+- §908 — The face pass, batch two: Photos A, Life B, Work B, Notes B (amended by §1472)
 - §909 — A GitHub events row names its object, opens it, and carries its words
 - §910 — The grid stands under the day, in the room's own shape, with its caption under the picture
 - §911 — Every room opens on a lead, and every room whose rows carry a kind gets its tiles
@@ -1847,6 +1847,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1469 — Spending's two groups and its start box: Recurring and The rest are rows, each the sum of a list (Subscriptions, then…
 - §1470 — Receive from another network takes any coin Relay bridges, and lands what you pick: the network's dollar unless they…
 - §1471 — The polish pass: one left edge, the figure outranks the name, the crown's line says now
+- §1472 — The polish pass, second half: a short note climbs the lead's ladder, and an event's start stands at the right edge
 
 ## Dead rulings → what replaced them (generated)
 
