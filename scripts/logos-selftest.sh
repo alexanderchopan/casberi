@@ -98,6 +98,9 @@ grep -q 'hosts: \["testnet.lez.logos.co"' "$REACH" || { echo "✗ the sequencer 
 grep -q 'LogosIngest.refresh(context: context)' "$REFRESH" || { echo "✗ BridgeRefresh does not sweep Logos"; guard_fail=1; }
 grep -q 'destination: .logos' "$ROUTING" || { echo "✗ no routing row for Logos"; guard_fail=1; }
 grep -q 'Offer(name: "Logos"' "$CATALOG" || { echo "✗ no catalog offer for Logos"; guard_fail=1; }
+# A node row carries no address (prd §1474): the node is a private IP and a
+# port, and the row reaches the feed, the sheet, Spotlight and a share.
+grep -q 'content: "", source: "Logos", capturedAt: now' "$BRIDGE" || { echo "✗ a node row carries the node's address again"; guard_fail=1; }
 # The cursor moves per BLOCK, after its rows are inserted — never per page.
 grep -q 'store.advance(to: block.id)' "$BRIDGE" || { echo "✗ the walk no longer advances per decoded block"; guard_fail=1; }
 # The room keeps the family's words and adds only Node (prd §991) and Rewards
@@ -332,7 +335,7 @@ check(zeroes.stage == .inSync, "zero stake is no stage")
 check(LogosWire.nodeEvents(old: nil, new: synced).isEmpty, "first sight lands nothing — a node already in sync did not just sync")
 check(LogosWire.nodeEvents(old: syncing, new: synced).map(\.title) == ["Your node is in sync — height 71,763"], "catching up lands once")
 check(LogosWire.nodeEvents(old: synced, new: syncing).map(\.title) == ["Your node fell behind"], "falling behind lands")
-check(LogosWire.nodeEvents(old: synced, new: .unreachable).map(\.title) == ["Your node stopped answering"], "going quiet lands")
+check(LogosWire.nodeEvents(old: synced, new: .unreachable).map(\.title) == ["Not on the same network as your node"], "going quiet lands")
 let downWhileSynced = synced.remembering(synced).remembering(nil)
 let keptDown = LogosWire.NodeSnapshot.unreachable.remembering(synced)
 check(downWhileSynced == synced && keptDown.phase == "Following" && !keptDown.reachable, "a reading while down keeps the last-known state, marked down")
@@ -373,7 +376,7 @@ var lost = won; lost.mining = nil; lost.tickets = nil
 check(LogosWire.nodeEvents(old: lost, new: won).isEmpty, "a failed mining read, then a good one, is not news")
 check(LogosWire.nodeEvents(old: synced, new: paid).first?.tags == ["Rewards", "Voucher"], "a voucher is a reward")
 check(LogosWire.nodeLine(won) == "In sync · height 71,763 · 8 peers · mining", "the roster line says mining")
-check(LogosWire.nodeLine(.unreachable) == "Not answering", "the roster line, unreachable")
+check(LogosWire.nodeLine(.unreachable) == "Not on the same network", "the roster line, unreachable")
 
 
 print("tokens — the 10-01 chain's own transactions (prd §1084)")

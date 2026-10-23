@@ -507,8 +507,11 @@ enum LogosIngest {
         let now = Date()
         for event in events {
             let ref = "logos:node:\(event.kind):\(Int(now.timeIntervalSince1970))"
+            // No address in the row (prd §1474): the node's address is a
+            // private IP and a port, and the row is read by the feed, the
+            // sheet, Spotlight and a share.
             let thing = Thing(kind: .note, title: IngestSupport.titleLine(event.title),
-                              content: base, source: "Logos", capturedAt: now,
+                              content: "", source: "Logos", capturedAt: now,
                               tags: event.tags, sourceRef: ref)
             thing.authorHandle = String(localized: "Your node")
             context.insert(thing)
@@ -516,6 +519,26 @@ enum LogosIngest {
         }
         store.rememberNode(snap.remembering(store.nodeSnapshot))
         return events.count
+    }
+
+    /// Rows landed before prd §1474 carry the node's address as their words
+    /// and the offline row its old title. Every launch, in `SourceRename`'s
+    /// shape: rows from another device still on an older build land after
+    /// any one-shot has run.
+    @MainActor
+    @discardableResult
+    static func scrubNodeRows(context: ModelContext) -> Int {
+        let rows = ((try? context.fetch(FetchDescriptor<Thing>(predicate: #Predicate { $0.source == "Logos" }))) ?? [])
+            .filter { $0.isLive && LogosRoom.isNodeRef($0.sourceRef)
+                && (!$0.content.isEmpty || $0.title == LogosWire.retiredOfflineTitle) }
+        guard !rows.isEmpty else { return 0 }
+        for row in rows {
+            row.content = ""
+            if row.title == LogosWire.retiredOfflineTitle { row.title = LogosWire.offlineTitle }
+        }
+        context.saveHonestly()
+        SpotlightIndex.index(rows)
+        return rows.count
     }
 
     @MainActor

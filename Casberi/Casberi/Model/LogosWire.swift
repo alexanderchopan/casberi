@@ -1114,6 +1114,13 @@ extension LogosWire {
         let tags: [String]
     }
 
+    /// A node is followed at a LAN address, so a node that stops answering
+    /// is most often a phone off its Wi-Fi, not a node that stopped (prd §1474).
+    static let offlineTitle = "Not on the same network as your node"
+    /// The title the offline row wore before §1474, retitled at launch
+    /// (`LogosIngest.scrubNodeRows`).
+    static let retiredOfflineTitle = "Your node stopped answering"
+
     /// `old` is the LAST-KNOWN state: a reading taken while the node was
     /// down keeps the phase and vouchers from before (`remembering`), so a
     /// node that comes back in sync, holding the vouchers it held, says only
@@ -1123,7 +1130,7 @@ extension LogosWire {
         guard let old else { return [] }
         var out: [NodeEvent] = []
         if old.reachable && !new.reachable {
-            return [NodeEvent(kind: "offline", title: "Your node stopped answering", tags: ["Node", "Offline"])]
+            return [NodeEvent(kind: "offline", title: offlineTitle, tags: ["Node", "Offline"])]
         }
         guard new.reachable else { return [] }
         if !old.reachable {
@@ -1160,7 +1167,7 @@ extension LogosWire {
     /// The roster's line for the node.
     static func nodeLine(_ snap: NodeSnapshot?) -> String {
         guard let snap else { return "Not read yet" }
-        guard snap.reachable else { return "Not answering" }
+        guard snap.reachable else { return "Not on the same network" }
         var parts: [String] = [snap.synced ? "In sync" : "Syncing"]
         if let h = snap.height { parts.append("height \(amount(Decimal(h)))") }
         if let p = snap.peers { parts.append(p == 1 ? "1 peer" : "\(p) peers") }
