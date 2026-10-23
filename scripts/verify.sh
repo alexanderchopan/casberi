@@ -924,6 +924,19 @@ step "Plate audit"
 "$ROOT/scripts/plate-audit.py" || fail "the elevated card is back on content — see the output above"
 print -P "%F{green}✓ plate audit%f"
 
+# Section-glyph audit (2026-10-23, user: "look how all this stuff has different
+# indentation on the headers"; "can you sweep the app and check everywhere"): a
+# section name's 17pt glyph drawn at its own width pushed each title to its own
+# x — Security's Signatures, Delegations and Approvals, Home's Overview and
+# Accounts. Six headers drew the shape by hand; every one frames the glyph at
+# `DSRoomChassis.headGlyph`. A screenshot shows a 3pt step only beside its
+# neighbour, so only a read of the source catches the seventh.
+step "Section-glyph audit"
+"$ROOT/scripts/section-glyph-audit.py" --self-test >/dev/null \
+  || fail "the section-glyph audit's own self-test failed — the check is broken, not the code"
+"$ROOT/scripts/section-glyph-audit.py" || fail "a section name's glyph stands at its own width — see the output above"
+print -P "%F{green}✓ section-glyph audit%f"
+
 # Verb-row audit (prd §1324): the slab buttons — `DSSlabButton`, `DSSlabDoor` —
 # draw as rows. A `.background(` or the slab's own shape coming back inside
 # either is the backed button the user retired; no screen sweep tells a row

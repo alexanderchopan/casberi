@@ -311,6 +311,7 @@ extension FeedScreen {
                     Image(systemName: "building.2")
                         .dsGlyph(.body)
                         .foregroundStyle(DS.brandInk)
+                        .frame(width: DSRoomChassis.headGlyph)
                         .accessibilityHidden(true)
                     Text(title).dsText(.heading20).foregroundStyle(DS.headInk)
                     Spacer(minLength: 0)

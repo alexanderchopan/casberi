@@ -110,6 +110,7 @@ struct DSTrayGroup<Content: View, Trailing: View>: View {
                 Image(systemName: glyph)
                     .dsGlyph(.body)
                     .foregroundStyle(DS.brandInk)
+                    .frame(width: DSRoomChassis.headGlyph)
                     .accessibilityHidden(true)
                 Text(verbatim: title)
                     .dsText(.heading20)
