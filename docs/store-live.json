@@ -1,63 +1,35 @@
 {
-  "readAt": "2026-10-16T07:47:01Z",
+  "readAt": "2026-10-23T17:02:42Z",
   "appId": "6788637831",
   "versions": {
     "IOS": {
       "live": {
-        "id": "fa58c99e-b0c0-4845-9747-5eda0915e6ca",
-        "version": "3.0.5",
+        "id": "b2485f29-c890-494e-aadc-ff7ada9d706b",
+        "version": "3.0.7",
         "state": "READY_FOR_SALE",
         "locales": {
           "en-US": {
-            "id": "0a10c0f0-ca95-4cb1-af42-0cf27502e23e",
-            "description": "Every subscription, in one place. Everything you do is scattered across apps, wallets and agents. Casberi brings it together on your iPhone, iPad and Mac, with no account, no servers and no tracking.\n\nEvery subscription, in one place.\nSee the newsletters and lists filling your inbox beside the software and services you pay for. What each one costs, when it renews, and which you haven't used in a month.\n\nOne wallet for all your money.\nYour wallets, exchanges, cards, savings and cash add up to one number. Follow any wallet address without a key or a signature. See what you hold, how it moved and what's at risk. Casberi can read, never spend.\n\nFollow the stocks behind your apps.\nEvery app you use is made by a company. Markets shows its stock or token, with a heat map of your day and price alerts.\n\nWallet, Work, Day, Life, Agents, Media, Social, Reading.\nMore than 100 apps, sorted into the categories you live in. Apple's apps connect with one tap; other services with a read-only key, so Casberi can see but never change.\n\nOne feed per category.\nEverything in a category lands in one feed, newest first: a deploy that failed, a payment that landed, a reply, a meeting coming up.\n\nOr one app at a time.\nPick one account from a category's menu to see only that.\n\nTry it first.\nCasberi opens with a demo you can browse. Clear it when you're ready and connect your own.\n\nYours.\nNo server, no account, no ads. Sync through your own iCloud. Export everything to one file, or delete it all for good.",
-            "keywords": "wallet,crypto,portfolio,tracker,feed,reader,rss,ai,agent,assistant,dashboard,private,notes,journal",
-            "promotionalText": "Everything you do is scattered across apps, agents, wallets. Casberi is an inbox for your apps and, soon, a rewards account for your subscriptions.",
-            "whatsNew": "Design and performance improvements"
-          }
-        }
-      },
-      "editable": {
-        "id": "e35f5b7b-b285-4a08-b1e4-c34c91a68d32",
-        "version": "3.0.6",
-        "state": "PREPARE_FOR_SUBMISSION",
-        "locales": {
-          "en-US": {
-            "id": "2ef91352-de54-4e0e-b2b1-c8523614f09e",
+            "id": "0e54692e-d979-4a2e-a89b-f925169886ca",
             "description": "Everything you do is scattered across apps, agents, wallets. Casberi is an inbox for your apps and, soon, a rewards account for your subscriptions. It all comes together on your iPhone, iPad and Mac, with no account, no servers and no tracking.\n\nEvery subscription, in one place.\nSee the newsletters and lists filling your inbox beside the software and services you pay for. What each one costs, when it renews, and which you haven't used in a month.\n\nOne wallet for all your money.\nYour wallets, exchanges, cards, savings and cash add up to one number. Follow any wallet address without a key or a signature. See what you hold, how it moved and what's at risk. Casberi can read, never spend.\n\nFollow the stocks behind your apps.\nEvery app you use is made by a company. Markets shows its stock or token, with a heat map of your day and price alerts.\n\nWallet, Work, Day, Life, Agents, Media, Social, Reading.\nMore than 100 apps, sorted into the categories you live in. Apple's apps connect with one tap; other services with a read-only key, so Casberi can see but never change.\n\nOne feed per category.\nEverything in a category lands in one feed, newest first: a deploy that failed, a payment that landed, a reply, a meeting coming up.\n\nOr one app at a time.\nPick one account from a category's menu to see only that.\n\nTry it first.\nCasberi opens with a demo you can browse. Clear it when you're ready and connect your own.\n\nYours.\nNo server, no account, no ads. Sync through your own iCloud. Export everything to one file, or delete it all for good.",
             "keywords": "wallet,crypto,portfolio,tracker,feed,reader,rss,ai,agent,assistant,dashboard,private,notes,journal",
-            "promotionalText": "Everything you do is scattered across apps, agents, wallets. Casberi is an inbox for your apps and, soon, a rewards account for your subscriptions.",
-            "whatsNew": "Design and performance improvements."
+            "promotionalText": null,
+            "whatsNew": "Design and performance improvements"
           }
         }
       }
     },
     "MAC_OS": {
       "live": {
-        "id": "53ece405-38d1-4096-b1ee-f7e3e3bfd5b1",
-        "version": "3.0.3",
-        "state": "READY_FOR_SALE",
-        "locales": {
-          "en-US": {
-            "id": "9b51eb86-ca9e-457d-90e9-fa7f411c67f5",
-            "description": "Everything you build is scattered across apps, wallets and accounts. Casberi is a productivity app for Mac that puts all your accounts in one private feed, and reads them back to you. No account, no servers, no tracking.\n\nTRY IT BEFORE YOU CONNECT ANYTHING\nOne tap fills Casberi with sample data, so you can feel the whole app first.\n\nONE FEED\nA deploy failing, an incident resolving, a dispute deadline, App Review's verdict — beside your posts, your reading and your notes. Read it all together, or one app at a time. No dashboard tour every morning. Rooms answer to the menu bar and the keyboard; a row copies, previews with Space, and drags out to any app.\n\nEVERY ACCOUNT GETS A ROOM\nNot a row of numbers — a reading. What moved and when, drawn as a real chart. What you hold, and how much of it is in one thing. Who you follow, and who they have both dealt with. What has been allowed to act on your accounts, and what already has. Every figure comes from your own device, and says so when it could not be read.\n\nCONNECT HONESTLY\nOver 90 apps across work, wallet, social, reading, notes, schedule, mail and storage. A tap for Apple apps. A read-only key for services. An import where there is no API. A pasted address for wallets, which can never trade or move funds. Never a password.\n\nCAPTURE WITHOUT FRICTION\nShare from any app and it lands instantly. Screenshots flow in on their own and become searchable by what is in them. Voice notes transcribe. Import your X, Instagram, TikTok and Snapchat archives, plus ChatGPT and Claude conversations, then search them like memory.\n\nYOURS, ACTUALLY\nThere is no Casberi server and no backend at all. No account, no ads, no tracking. Optional sync through your own iCloud. Export everything to one file. Delete everything for real.\n\nCasberi is your own things, in one feed, that you can actually read.",
-            "keywords": "feed,reader,rss,notes,journal,dashboard,tracker,agent,assistant,ai,private,portfolio,wallet,crypto",
-            "promotionalText": "Everything you do is scattered across apps, agents, wallets. Casberi is an inbox for your apps and, soon, a rewards account for your subscriptions.",
-            "whatsNew": "Design and performance improvements"
-          }
-        }
-      },
-      "inReview": {
         "id": "df665690-9d27-45a1-b142-52d72aef0a0b",
-        "version": "3.0.5",
-        "state": "IN_REVIEW",
+        "version": "3.0.7",
+        "state": "READY_FOR_SALE",
         "locales": {
           "en-US": {
             "id": "015487e7-0649-4665-8ad9-09b6b3e13c47",
             "description": "Everything you build is scattered across apps, wallets and accounts. Casberi is a productivity app for Mac that puts all your accounts in one private feed, and reads them back to you. No account, no servers, no tracking.\n\nTRY IT BEFORE YOU CONNECT ANYTHING\nOne tap fills Casberi with sample data, so you can feel the whole app first.\n\nONE FEED\nA deploy failing, an incident resolving, a dispute deadline, App Review's verdict — beside your posts, your reading and your notes. Read it all together, or one app at a time. No dashboard tour every morning. Rooms answer to the menu bar and the keyboard; a row copies, previews with Space, and drags out to any app.\n\nEVERY ACCOUNT GETS A ROOM\nNot a row of numbers — a reading. What moved and when, drawn as a real chart. What you hold, and how much of it is in one thing. Who you follow, and who they have both dealt with. What has been allowed to act on your accounts, and what already has. Every figure comes from your own device, and says so when it could not be read.\n\nCONNECT HONESTLY\nOver 90 apps across work, wallet, social, reading, notes, schedule, mail and storage. A tap for Apple apps. A read-only key for services. An import where there is no API. A pasted address for wallets, which can never trade or move funds. Never a password.\n\nCAPTURE WITHOUT FRICTION\nShare from any app and it lands instantly. Screenshots flow in on their own and become searchable by what is in them. Voice notes transcribe. Import your X, Instagram, TikTok and Snapchat archives, plus ChatGPT and Claude conversations, then search them like memory.\n\nYOURS, ACTUALLY\nThere is no Casberi server and no backend at all. No account, no ads, no tracking. Optional sync through your own iCloud. Export everything to one file. Delete everything for real.\n\nCasberi is your own things, in one feed, that you can actually read.",
             "keywords": "feed,reader,rss,notes,journal,dashboard,tracker,agent,assistant,ai,private,portfolio,wallet,crypto",
             "promotionalText": "Everything you do is scattered across apps, agents, wallets. Casberi is an inbox for your apps and, soon, a rewards account for your subscriptions.",
-            "whatsNew": "Design and performance improvements"
+            "whatsNew": "Design\n- Rail is the tab bar: Feed, Wallet, Library, Search\n- Box moves into the side pane; the list is a list\n- Verbs become a pill row at the pane's head\n- Scope pills under the title beside a pane\n- Accounts and people as menus on the title\n- Settings folder opens as a list in the pane\n- Type one notch down\n\nFixes\n- Remove the floating strip over the rows\n- Remove the back chevron at the pane's top\n- Remove the seam at the pane's top"
           }
         }
       }
@@ -65,22 +37,11 @@
   },
   "appInfo": {
     "live": {
-      "id": "e686a49b-a75f-48d8-a569-857a19c4bac6",
+      "id": "1413f6e9-a2b4-4777-a9bf-ab9e0a559aa5",
       "state": "READY_FOR_SALE",
       "locales": {
         "en-US": {
-          "id": "b621930a-2195-47ca-83eb-df0d5822e95e",
-          "name": "Casberi",
-          "subtitle": "Subscription tracker & wallet"
-        }
-      }
-    },
-    "inReview": {
-      "id": "01e0e5b2-aa45-49c1-8383-47eed1f3f6f9",
-      "state": "IN_REVIEW",
-      "locales": {
-        "en-US": {
-          "id": "4c4a4871-ee20-486f-805c-295d278042fc",
+          "id": "238ee7fb-562a-489a-8d03-a4a720ffdca1",
           "name": "Casberi",
           "subtitle": "Subscription tracker & wallet"
         }

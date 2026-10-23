@@ -170,3 +170,10 @@ Bankr answers about your onchain holdings and only answers. It never moves funds
 ### Promotional text — both platforms (147 chars) — the line (user, 2026-10-15), APPLIED 2026-10-15 (iOS 3.0.5 live, 3.0.6 in review; Mac 3.0.3 live, 3.0.5 in review)
 
 Everything you do is scattered across apps, agents, wallets. Casberi is an inbox for your apps and, soon, a rewards account for your subscriptions.
+
+## Read back 2026-10-23 (`asc-copy.py read` + `diff`, both platforms 3.0.7 READY_FOR_SALE, nothing in review)
+
+- **Live subtitle is `Subscription tracker & wallet`** (the user set it since 2026-10-05's "Every subscription, one place"; §16 above is superseded by the live page).
+- iOS description LIVE matches the draft; iOS promotional text is EMPTY on 3.0.7 (the 147-char line is the draft) — the ONE field writable today. Dry run passed; the write is the user's:
+  `scripts/dev-keys.sh get-file asc-p8 /tmp/asc-copy.p8 && ASC_KEY_PATH=/tmp/asc-copy.p8 scripts/asc-copy.py apply --platform IOS --field promotionalText --yes; rm -f /tmp/asc-copy.p8`
+- iOS keywords (reordered draft) and the Mac description (still "reads them back to you", "Over 90 apps") need a version in an editable state: `no version accepts it — open one with appstore-release.sh first`. Both ride the next ship, which waits on the org migration.
