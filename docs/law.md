@@ -236,7 +236,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1614 of 1683 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1615 of 1684 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1852,6 +1852,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1474 — A Logos node row names no address, and an unreachable node is "Not on the same network as your node"
 - §1475 — The demo has an account of its own
 - §1476 — Fees is Spending's third row: gas on every transaction your wallets sent, one per transaction, by network, apart from…
+- §1477 — The rating ask: Apple's own five-star sheet, for someone using the app on their own things on four different days, on…
 
 ## Dead rulings → what replaced them (generated)
 

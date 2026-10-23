@@ -3,6 +3,7 @@ import SwiftData
 import CoreSpotlight
 import WidgetKit
 import UIKit
+import StoreKit
 
 /// The shell (2026-07-13, drastic restructure: no tabs). `MainSurface` is the
 /// one destination — a fixed chip header over a body that swaps between the
@@ -94,6 +95,8 @@ struct RootShell: View {
     @State private var dropTargetedURL = false
     @State private var dropTargetedText = false
     @Environment(\.scenePhase) private var scenePhase
+    /// Apple's rating sheet (prd §1477), asked for from `askForRatingIfDue`.
+    @Environment(\.requestReview) private var requestReview
     @State private var hasBeenActive = false
     /// **THE SHELL IS NOT BUILT FOR A SCENE CONNECTED IN THE BACKGROUND**
     /// (prd §642, build 534's watchdog). False only on a background launch —
@@ -1951,6 +1954,47 @@ struct RootShell: View {
         }
     }
 
+    /// **THE RATING ASK (prd §1477).** Records today as a day of real use,
+    /// then — once the rule in `RatingAsk` says so, a few seconds into the
+    /// foreground and with a still hand — asks for Apple's rating sheet, and
+    /// remembers the version that asked. Apple decides whether it shows.
+    @MainActor
+    private func askForRatingIfDue() {
+        let defaults = UserDefaults.standard
+        let demo = DemoMode.isActive
+        let connected = bridges.connectedCount
+        let before = defaults.stringArray(forKey: RatingAsk.daysKey) ?? []
+        let days = RatingAsk.recording(RatingAsk.dayKey(.now), to: before, connected: connected, demo: demo)
+        if days != before { defaults.set(days, forKey: RatingAsk.daysKey) }
+        let version = (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? ""
+        let ruleSays = RatingAsk.shouldAsk(days: days, connected: connected, demo: demo,
+                                           askedVersion: defaults.string(forKey: RatingAsk.askedKey),
+                                           version: version)
+        #if DEBUG
+        // `-ratingAskProbe YES`: ask on this foreground whatever the rule
+        // says, so Apple's sheet can be seen (Debug always shows it).
+        let probe = defaults.bool(forKey: "ratingAskProbe")
+        NSLog("[Casberi] ratingAsk| days=%ld connected=%ld demo=%@ asked=%@ version=%@ → %@",
+              Set(days).count, connected, demo ? "YES" : "NO",
+              defaults.string(forKey: RatingAsk.askedKey) ?? "-", version,
+              ruleSays ? "ask" : probe ? "ask (probe)" : "wait")
+        #else
+        let probe = false
+        #endif
+        guard ruleSays || probe else { return }
+        Task { @MainActor in
+            // Not over the opening frames, and never under a finger.
+            try? await Task.sleep(for: .seconds(4))
+            await GestureGate.idle()
+            guard scenePhase == .active else { return }
+            defaults.set(version, forKey: RatingAsk.askedKey)
+            requestReview()
+            #if DEBUG
+            NSLog("[Casberi] ratingAsk| asked")
+            #endif
+        }
+    }
+
     /// Everything one foreground/activation runs — split from the scenePhase
     /// observer (2026-08-01) so the Mac's notification door and the phone's
     /// scenePhase door share one body. Debounced because the Mac has two
@@ -1991,6 +2035,7 @@ struct RootShell: View {
         // you were away" grounds on it; things landing from here on are
         // arriving while you're present.
         AppVisit.markOpened()
+        askForRatingIfDue()
         // A STRANDED POUR resumes here (2026-08-07, found while writing the
         // spec for this feature's next pass). `pourIfNeeded` originally had
         // ONE call site — the onboarding cover's `onDismiss` — on the

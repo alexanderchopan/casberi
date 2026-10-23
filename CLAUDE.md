@@ -219,6 +219,7 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - `-answerProbe "<query>"` — run the answer path headless, NSLog the result (`-probeDelay <s>` to wait first). Deterministic unless the Apple Intelligence seat answers (prd §833).
 - `-uiAnswerProbe "<query>"` — auto-open the composer and send through the real UI path (also read in `Shell/Composer.swift`).
 - `-forceBackgroundLaunch YES` — stamp this launch as a background launch so `RootShell`'s gate stays closed (NSLogs `backgroundLaunch: yes`, prd §642). The simulator cannot background-launch, so a pass proves the branch renders, never that the watchdog is beaten.
+- `-ratingAskProbe YES` — ask for Apple's rating sheet on the next foreground whatever the rule says (`Model/RatingAsk.swift`: four days of real use, never the demo, once per version; `rating-ask-selftest.sh`; NSLogs `ratingAsk|`) → prd §1477
 - `-storeVersionProbe <x.y.z>` — pretend the App Store has version x.y.z, so the shell flashes "Casberi x.y.z is out" at every foreground and Settings' colophon draws "Update to x.y.z" (`Model/StoreVersion.swift`; NSLogs `storeVersion:`). DEBUG never asks the store; every older TestFlight build expires on each beta ship (`testflight-expire-after.sh`) → prd §1104
 - `-fresh YES|NO` — sticky new-user mode (persists until flipped or reinstall); re-shows onboarding.
 - `-accountDetail <case>` — open a settings detail sheet (`Screens/AccountScreen.swift`, `SettingsRows`' own onAppear, so pair it with `-openSettings YES`).
