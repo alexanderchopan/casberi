@@ -339,11 +339,11 @@ check(LogosWire.nodeEvents(old: synced, new: .unreachable).map(\.title) == ["Not
 let downWhileSynced = synced.remembering(synced).remembering(nil)
 let keptDown = LogosWire.NodeSnapshot.unreachable.remembering(synced)
 check(downWhileSynced == synced && keptDown.phase == "Following" && !keptDown.reachable, "a reading while down keeps the last-known state, marked down")
-check(LogosWire.nodeEvents(old: keptDown, new: synced).map(\.title) == ["Your node is answering"], "coming back in sync says only that it is answering")
+check(LogosWire.nodeEvents(old: keptDown, new: synced).map(\.title) == ["On the same network as your node"], "coming back in sync says only that it is on the same network")
 var keptPaid = synced; keptPaid.vouchers = 2; keptPaid.claimable = 1200
 let paidDown = LogosWire.NodeSnapshot.unreachable.remembering(keptPaid)
-check(LogosWire.nodeEvents(old: paidDown, new: keptPaid).map(\.title) == ["Your node is answering"], "vouchers held before going down are not news on return")
-check(LogosWire.nodeEvents(old: .unreachable, new: synced).map(\.title) == ["Your node is answering", "Your node is in sync — height 71,763"], "first reachable reading after an unknown down: answering, and in sync")
+check(LogosWire.nodeEvents(old: paidDown, new: keptPaid).map(\.title) == ["On the same network as your node"], "vouchers held before going down are not news on return")
+check(LogosWire.nodeEvents(old: .unreachable, new: synced).map(\.title) == ["On the same network as your node", "Your node is in sync — height 71,763"], "first reachable reading after an unknown down: on the same network, and in sync")
 check(LogosWire.nodeEvents(old: keptDown, new: .unreachable).isEmpty, "still down is not news")
 var more = synced; more.peers = 30; more.height = 80000
 check(LogosWire.nodeEvents(old: synced, new: more).isEmpty, "peers and height moving are not rows")

@@ -1117,14 +1117,16 @@ extension LogosWire {
     /// A node is followed at a LAN address, so a node that stops answering
     /// is most often a phone off its Wi-Fi, not a node that stopped (prd §1474).
     static let offlineTitle = "Not on the same network as your node"
-    /// The title the offline row wore before §1474, retitled at launch
-    /// (`LogosIngest.scrubNodeRows`).
+    static let backTitle = "On the same network as your node"
+    /// The titles the offline and return rows wore before §1474, retitled
+    /// at launch (`LogosIngest.scrubNodeRows`).
     static let retiredOfflineTitle = "Your node stopped answering"
+    static let retiredBackTitle = "Your node is answering"
 
     /// `old` is the LAST-KNOWN state: a reading taken while the node was
     /// down keeps the phase and vouchers from before (`remembering`), so a
     /// node that comes back in sync, holding the vouchers it held, says only
-    /// that it is answering — measured against a stand-in node, the first cut
+    /// that it is on the same network — measured against a stand-in node, the first cut
     /// re-announced both as news.
     static func nodeEvents(old: NodeSnapshot?, new: NodeSnapshot) -> [NodeEvent] {
         guard let old else { return [] }
@@ -1134,7 +1136,7 @@ extension LogosWire {
         }
         guard new.reachable else { return [] }
         if !old.reachable {
-            out.append(NodeEvent(kind: "back", title: "Your node is answering", tags: ["Node"]))
+            out.append(NodeEvent(kind: "back", title: backTitle, tags: ["Node"]))
         }
         let wasSynced = old.phase == "Following"
         if new.synced && !wasSynced {
