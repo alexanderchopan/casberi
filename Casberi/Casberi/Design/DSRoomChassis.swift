@@ -185,6 +185,10 @@ enum DSRoomChassis {
     /// the card, the tiles, the tray — keep the outer line; the title stands
     /// in the rows' column since prd §1471 (`titleIndent`).
     static let rowInset: CGFloat = leadInset
+    /// A section name's glyph column (user, 2026-10-23: "look how all this stuff
+    /// has different indentation on the headers"): a 17pt symbol centered in one
+    /// width, so every section's name starts at one x.
+    static let headGlyph: CGFloat = 26
     /// What a title row adds to the outer line its callers pad it by, so the
     /// screen's name stands in the rows' column (prd §1471).
     static let titleIndent: CGFloat = leadInset - inset

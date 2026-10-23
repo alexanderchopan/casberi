@@ -357,6 +357,7 @@ extension FeedScreen {
                             Image(systemName: wallet ? Self.walletHomeGlyph(section) : CategoryFold.glyph(for: section))
                                 .dsGlyph(.body)
                                 .foregroundStyle(DS.brandInk)
+                                .frame(width: DSRoomChassis.headGlyph)
                                 .accessibilityHidden(true)
                             // No transition: the name changes where the list's
                             // own copy stands under it, and the push-off is the
@@ -725,9 +726,14 @@ struct SectionPanelName<Trailing: View>: View {
 
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+            // One glyph column (user, 2026-10-23: "look how all this stuff has
+            // different indentation on the headers"): a symbol drawn at its own
+            // width put every title at a different x. Centered in a fixed
+            // column, every section's name starts at one edge.
             Image(systemName: glyph)
                 .dsGlyph(.body)
                 .foregroundStyle(DS.brandInk)
+                .frame(width: DSRoomChassis.headGlyph)
                 .accessibilityHidden(true)
             if choices.isEmpty {
                 Text(verbatim: name)

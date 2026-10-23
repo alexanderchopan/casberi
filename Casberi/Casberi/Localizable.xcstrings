@@ -9013,6 +9013,34 @@
         }
       }
     },
+    "Use multiple signatures to approve sensitive actions." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Usa varias firmas para aprobar acciones delicadas."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "重要な操作は複数の署名で承認します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "민감한 작업은 여러 서명으로 승인합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "用多个签名批准敏感操作。"
+          }
+        }
+      }
+    },
     "Waiting for Bitrefill…" : {
       "localizations" : {
         "es" : {

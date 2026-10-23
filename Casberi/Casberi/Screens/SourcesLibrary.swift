@@ -217,6 +217,7 @@ struct SourcesOpenFolder: View {
                     Image(systemName: CategoryFold.glyph(for: folder.category))
                         .dsGlyph(.body, weight: .regular)
                         .foregroundStyle(DS.brandInk)
+                        .frame(width: DSRoomChassis.headGlyph)
                     Text(verbatim: folder.category)
                         .dsText(.heading24).foregroundStyle(DS.headInk)
                     Spacer(minLength: DS.Space.s2)

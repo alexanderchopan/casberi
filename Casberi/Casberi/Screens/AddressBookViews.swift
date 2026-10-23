@@ -1916,6 +1916,7 @@ struct AddressCard: View {
                 Image(systemName: "clock")
                     .dsGlyph(.body)
                     .foregroundStyle(DS.brandInk)
+                    .frame(width: DSRoomChassis.headGlyph)
                     .accessibilityHidden(true)
                 Text("Activity")
                     .dsText(.heading24)
