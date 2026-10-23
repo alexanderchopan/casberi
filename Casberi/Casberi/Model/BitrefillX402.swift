@@ -37,6 +37,7 @@ enum BitrefillX402 {
     /// Buy is offered to an account that exists on this phone (§83: a verb
     /// that cannot act is not drawn).
     static var available: Bool {
+        if YourAccountDemo.isOn { return true }
         #if DEBUG
         if sample { return true }
         #endif
@@ -90,6 +91,7 @@ enum BitrefillX402 {
     /// `q` empty: the 25 most popular in the country; a word: its matches.
     @MainActor
     static func search(_ query: String, country: String = country, account: String) async throws -> [Product] {
+        if YourAccountDemo.isOn { return BitrefillBuy.search(query, in: sampleCatalogue) }
         #if DEBUG
         if sample { return BitrefillBuy.search(query, in: sampleCatalogue) }
         #endif
@@ -309,8 +311,7 @@ enum BitrefillX402 {
         #endif
     }
 
-    #if DEBUG
-
+    /// The demo's catalogue too (prd §1475): Buy asks no host there.
     static let sampleCatalogue: [Product] = {
         func p(_ id: String, _ name: String, _ cats: [String], _ values: [Double], type: String = "giftcards", markup: Double = 1.0) -> Product {
             var x = Product(id: id, name: name, type: type, categories: cats, countries: ["US"], currency: "USD")
@@ -339,5 +340,4 @@ enum BitrefillX402 {
             p("atandt-usa", "AT&T USA", ["refill"], [10, 20, 40, 60], type: "refills")
         ]
     }()
-    #endif
 }

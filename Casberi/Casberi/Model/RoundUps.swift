@@ -49,19 +49,26 @@ enum RoundUps {
 
     static var setting: Setting {
         get {
-            UserDefaults.standard.data(forKey: settingKey).flatMap { try? JSONDecoder().decode(Setting.self, from: $0) } ?? Setting()
+            if YourAccountDemo.isOn { return YourAccountDemo.roundUps }
+            return UserDefaults.standard.data(forKey: settingKey).flatMap { try? JSONDecoder().decode(Setting.self, from: $0) } ?? Setting()
         }
         set {
+            // The demo's round-ups are its own (prd §1475): a change there
+            // draws, and this phone's setting is never touched.
+            guard !YourAccountDemo.isOn else { return }
             if let data = try? JSONEncoder().encode(newValue) { UserDefaults.standard.set(data, forKey: settingKey) }
         }
     }
 
     /// The change counted so far on a network, in its dollar's units.
     static func saved(on chainId: Int) -> String {
-        UserDefaults.standard.string(forKey: savedKey(chainId)) ?? "0"
+        // The demo's change so far: $2.60 of the $5 (§1475).
+        if YourAccountDemo.isOn { return chainId == YourAccountOp.base.chainId ? "2600000" : "0" }
+        return UserDefaults.standard.string(forKey: savedKey(chainId)) ?? "0"
     }
 
     static func setSaved(_ units: String, on chainId: Int) {
+        guard !YourAccountDemo.isOn else { return }
         UserDefaults.standard.set(units, forKey: savedKey(chainId))
     }
 

@@ -33,7 +33,7 @@ final class YourAccountProtection {
     }
 
     /// Drawn at all: an account here, and a network to protect.
-    static var shown: Bool { YourAccountKey.address != nil && !unprotected.isEmpty }
+    static var shown: Bool { YourAccountKey.address != nil && !unprotected.isEmpty && !YourAccountDemo.isOn }
 
     /// Money, for this rule: the network's own coin in any amount (it pays the
     /// fee, and it is never spam), or a token the Wallet prices at a cent or

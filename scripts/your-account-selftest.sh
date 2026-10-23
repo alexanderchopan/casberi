@@ -300,7 +300,14 @@ check(YourAccountOp.abiString("0x4d4b5200000000000000000000000000000000000000000
 check(YourAccountOp.abiString("0x") == nil, "no answer is no symbol")
 exit(bad == 0 ? 0 : 1)
 SWIFT
-xcrun swiftc -O -o "$TMP/t" "$ACCOUNT" "$OP" "$SWAP" "$ADAPTER" "$TX" "$KECCAK" "$CLEARSIGN" "$WEBAUTHN" "$TYPED" "$ROUNDUPS" "$TMP/main.swift" 2>"$TMP/err" \
+# Round-ups read the demo's own account (prd §1475), which needs the app; off here.
+cat > "$TMP/demo-stub.swift" <<'SWIFT'
+enum YourAccountDemo {
+    static var isOn: Bool { false }
+    static var roundUps: RoundUps.Setting { RoundUps.Setting() }
+}
+SWIFT
+xcrun swiftc -O -o "$TMP/t" "$ACCOUNT" "$OP" "$SWAP" "$ADAPTER" "$TX" "$KECCAK" "$CLEARSIGN" "$WEBAUTHN" "$TYPED" "$ROUNDUPS" "$TMP/demo-stub.swift" "$TMP/main.swift" 2>"$TMP/err" \
   || { cat "$TMP/err"; echo "✗ YourAccount.swift and YourAccountOp.swift do not compile alone (Foundation and the Safe encoders only)"; exit 1; }
 FIXTURES="$FIXTURES" "$TMP/t" || { echo "✗ your account's arithmetic drifted — see above"; exit 1; }
 
@@ -398,7 +405,7 @@ check(E.Network(id: 137, name: "Polygon", coins: polygon).coin(like: usdt)?.symb
 check(E.Network(id: 137, name: "Polygon", coins: polygon).coin(like: eth)?.symbol == "USDC", "a network without the coin being sent does not fall back to USDC")
 exit(bad == 0 ? 0 : 1)
 SWIFT
-xcrun swiftc -O -o "$TMP/e" "$ACCOUNT" "$OP" "$SWAP" "$ADAPTER" "$TX" "$KECCAK" "$CLEARSIGN" "$WEBAUTHN" "$TYPED" "$ROUNDUPS" "$ELSEWHERE" "$TMP/elsewhere-stubs.swift" "$TMP/elsewhere/main.swift" 2>"$TMP/err" \
+xcrun swiftc -O -o "$TMP/e" "$ACCOUNT" "$OP" "$SWAP" "$ADAPTER" "$TX" "$KECCAK" "$CLEARSIGN" "$WEBAUTHN" "$TYPED" "$ROUNDUPS" "$TMP/demo-stub.swift" "$ELSEWHERE" "$TMP/elsewhere-stubs.swift" "$TMP/elsewhere/main.swift" 2>"$TMP/err" \
   || { cat "$TMP/err"; echo "✗ YourAccountElsewhere.swift does not compile against a stub of the chain (prd §1470)"; exit 1; }
 FIXTURES="$FIXTURES" "$TMP/e" || { echo "✗ receiving from another network drifted (prd §1470) — see above"; exit 1; }
 grep -q 'Picks what you receive' Casberi/Casberi/Screens/MoveSentence.swift && grep -q 'Picks what they send' Casberi/Casberi/Screens/MoveSentence.swift || { echo "✗ the receive sentence's two words are not both picks (prd §1470)"; exit 1; }
@@ -435,5 +442,12 @@ grep -q 'String(localized: "Limit a \\($0)")' "$FIG" || { echo "✗ the limit's 
 grep -q 'tone: counts.poisoning > 0 ? .threat : .none' "$FIG" && grep -q 'tone: counts.fakeTransfers > 0 ? .threat : .none' "$FIG" && grep -q 'tone: counts.signatures > 0 ? .wants : .none' "$FIG" && grep -q 'tone: a.signers > 0 ? .on : .wants' "$FIG" || { echo "✗ Security's box no longer washes a threat red, an ask orange and what is on green (prd §1463)"; exit 1; }
 grep -q 'needsYouRow(glyph: kind.glyph, critical: true,' "$FIG" || { echo "✗ a fake transfer's row is no longer red with the other threats (prd §1463)"; exit 1; }
 awk '/case .threat: return DS.destructive/{a=1}/case .wants: return DS.attention$/{b=1}/case .on: return DS.confirm$/{c=1}END{exit !(a&&b&&c)}' Casberi/Casberi/Design/DSCountTile.swift || { echo "✗ DSCountTile's tones no longer map threat→destructive, wants→attention, on→confirm (prd §1463)"; exit 1; }
+# The demo's account (prd §1475): it holds the demo's table and reaches no node,
+# and nothing it shows can sign, copy or share — its address holds no key, so
+# money sent there would be lost.
+grep -q 'if YourAccountDemo.isDemo(account) { return YourAccountDemo.held(on: net) }' Casberi/Casberi/Model/YourAccountTokens.swift || { echo "✗ the demo account's holdings are read off a node, not the demo's table (prd §1475)"; exit 1; }
+grep -q 'if YourAccountDemo.isDemo(account) { say(YourAccountDemo.actsLater); return }' Casberi/Casberi/Screens/MoveSentence.swift || { echo "✗ Move can sign or copy the demo account's address (prd §1475)"; exit 1; }
+[[ $(grep -c 'if YourAccountDemo.isDemo(account) { say(YourAccountDemo.actsLater); return }' Casberi/Casberi/Screens/MoveSentence.swift) -ge 2 ]] || { echo "✗ Move's sign() and copy() no longer both refuse in the demo (prd §1475)"; exit 1; }
+[[ $(grep -c 'if demoSays() { return }' Casberi/Casberi/Screens/MoveSecurity.swift) -ge 5 ]] || { echo "✗ a Security act changes a key in the demo (prd §1475)"; exit 1; }
 grep -q 'walking = true' Casberi/Casberi/Screens/MoveScreen.swift || { echo "✗ Create no longer walks through your keys (prd §1457)"; exit 1; }
 echo "✓ your account: the address is the factory's, the send's bytes are the module's, amounts add up, Move is in every build, it names only networks this phone can use, and asks where money lacks the recovery key"

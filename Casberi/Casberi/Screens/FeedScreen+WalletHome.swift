@@ -305,7 +305,7 @@ extension FeedScreen {
     /// Keychain holds one's recovery key, taken back.
     var walletAccountAdds: [SectionAdd] {
         var adds: [SectionAdd] = []
-        if YourAccountKey.address == nil {
+        if YourAccountDemo.shownAddress == nil {
             adds.append(SectionAdd(label: String(localized: "Create an account"),
                                    glyph: ScopeTileGlyph.move) { chrome.moveTray = true })
         }

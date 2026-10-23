@@ -53,6 +53,7 @@ struct YourAccountFacts: Equatable {
     private static let signersKey = "yourAccount.signers"
 
     static var current: YourAccountFacts? {
+        if YourAccountDemo.isOn { return YourAccountDemo.facts }
         guard YourAccountKey.address != nil else { return nil }
         var dollars: Int?
         var period: String?

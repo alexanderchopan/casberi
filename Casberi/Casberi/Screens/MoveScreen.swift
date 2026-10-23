@@ -61,7 +61,8 @@ struct MoveScreen: View {
     /// Drawn in `MoveTray` rather than as a page.
     var inTray = false
     @Environment(ShellChrome.self) private var chrome
-    @State private var address: String? = YourAccountKey.address
+    /// The demo's own account in the demo (prd §1475), else this phone's.
+    @State private var address: String? = YourAccountDemo.shownAddress
     @State private var creating = false
     /// What setting up said, under its verb: a toast draws under the tray
     /// (§1442c), so the page says it in place.
@@ -117,6 +118,7 @@ struct MoveScreen: View {
         }
         .background { if !inTray { DSPageBackground() } }
         .task {
+            if YourAccountDemo.isOn { return }
             if address == nil { recoverable = YourAccountRecovery.accounts().first } else { YourAccountKey.ensureRecord() }
         }
         .task(id: recoverable?.address) {
