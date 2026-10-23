@@ -521,20 +521,22 @@ enum LogosIngest {
         return events.count
     }
 
-    /// Rows landed before prd §1474 carry the node's address as their words
-    /// and the offline row its old title. Every launch, in `SourceRename`'s
+    /// Rows landed before prd §1474 carry the node's address as their words,
+    /// and the offline and return rows their old titles. Every launch, in `SourceRename`'s
     /// shape: rows from another device still on an older build land after
     /// any one-shot has run.
     @MainActor
     @discardableResult
     static func scrubNodeRows(context: ModelContext) -> Int {
+        let retitled = [LogosWire.retiredOfflineTitle: LogosWire.offlineTitle,
+                        LogosWire.retiredBackTitle: LogosWire.backTitle]
         let rows = ((try? context.fetch(FetchDescriptor<Thing>(predicate: #Predicate { $0.source == "Logos" }))) ?? [])
             .filter { $0.isLive && LogosRoom.isNodeRef($0.sourceRef)
-                && (!$0.content.isEmpty || $0.title == LogosWire.retiredOfflineTitle) }
+                && (!$0.content.isEmpty || retitled[$0.title] != nil) }
         guard !rows.isEmpty else { return 0 }
         for row in rows {
             row.content = ""
-            if row.title == LogosWire.retiredOfflineTitle { row.title = LogosWire.offlineTitle }
+            if let title = retitled[row.title] { row.title = title }
         }
         context.saveHonestly()
         SpotlightIndex.index(rows)
