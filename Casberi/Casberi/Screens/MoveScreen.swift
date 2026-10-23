@@ -44,6 +44,16 @@ struct MoveTrayPresenter: ViewModifier {
                 .environment(\.modelContext, context)
                 .environment(\.locale, LanguageStore.shared.locale)
         }
+        #if DEBUG
+        // `-openMove YES`: raise Move at mount, no tap (prd §1473), so a
+        // drafted sentence can be photographed on a simctl-booted simulator.
+        .task {
+            guard UserDefaults.standard.bool(forKey: "openMove") else { return }
+            try? await Task.sleep(for: .seconds(1))
+            NSLog("[Casberi] openMove: raised")
+            chrome.moveTray = true
+        }
+        #endif
     }
 }
 

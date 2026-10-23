@@ -2568,6 +2568,11 @@ harness "Wallet card roll" "wallet card roll" "scripts/wallet-card-roll-selftest
 # as spending draws an ordinary list of places with a plausible total.
 harness "Wallet spending" "spending" "scripts/spending-selftest.sh" "the spending self-test failed — run scripts/spending-selftest.sh"
 
+# Buy, Move's fourth verb (prd §1473): Bitrefill's accountless door — the fold
+# of its forty category slugs, the sign-in message the server took byte for
+# byte, the invoice, the x402 authorization the account signs, the order.
+harness "Bitrefill Buy" "bitrefill-buy" "scripts/bitrefill-buy-selftest.sh" "the Buy self-test failed — run scripts/bitrefill-buy-selftest.sh"
+
 # Plasma One's settlement decoder (prd §1311), against a REAL batch of twenty
 # settlements: the amount read off the paired transfer, the hash that proves it,
 # the one recipient, a day keyed in UTC, and a part never counted twice. Each

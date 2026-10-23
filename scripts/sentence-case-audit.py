@@ -262,7 +262,7 @@ KNOWN_PROPER: set[str] = {
     "Morpho", "Uniswap", "Aave", "Spark", "Hyperliquid", "Aerodrome",
     "Bitcoin", "Ethereum", "Solana", "Base", "Optimism", "Polygon", "Arbitrum",
     "Gnosis", "Monad", "Robinhood", "HyperEVM", "Etherscan", "Solscan",
-    "Ethrex", "Reown", "WalletConnect", "Visa", "Metamask", "Delegator",
+    "Ethrex", "Reown", "WalletConnect", "Visa", "Mastercard", "Metamask", "Delegator",
     # The CHAIN is Hegotá; the SEAT is "Hegotá UTXO" since §629. The rename
     # took the accented spelling out of the catalog (which is where proper
     # nouns are derived from), leaving four sentences that name the network
@@ -295,7 +295,7 @@ KNOWN_PROPER: set[str] = {
     # covers every phrase they appear in.
     "ID", "API", "URL", "URI", "JSON", "XML", "HTML", "CSV", "TSV", "RSS",
     "OPML", "MCP", "DNS", "IAM", "HTTP", "HTTPS", "TLS", "NFT", "NFTs",
-    "UTXO", "UTXOs", "EIP", "ERC", "RPC", "ENS", "CDN", "PDF", "OCR", "AI",
+    "UTXO", "UTXOs", "EIP", "ERC", "RPC", "ENS", "CDN", "PDF", "OCR", "AI", "PIN",
     "UI", "UX", "CLI", "SDK", "JWT", "OAuth", "PKCE", "SIWE", "US", "UK",
     "EU", "EEA", "UTC", "IP", "VPN", "SSH", "P2SH", "OVM", "PoS", "PRT",
     "L2", "TXT", "IMAP", "AM", "PM", "BEGIN", "END", "AKIA", "Bearer",

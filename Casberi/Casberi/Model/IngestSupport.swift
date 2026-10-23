@@ -438,6 +438,26 @@ enum IngestSupport {
         return (try? JSONSerialization.jsonObject(with: data), http.statusCode)
     }
 
+    /// Any request, and its body WHATEVER the status (prd §1473): an x402 door
+    /// answers 402 with the payment it wants in the body, and a refusal with
+    /// its reason, so a caller that drops every non-200 body is blind on the
+    /// two answers it most needs to read. The same `send`, so the host is
+    /// recorded like every other.
+    static func requestJSON(_ url: String, method: String = "GET", body: [String: Any]? = nil,
+                            headers: [String: String] = [:], service: String? = nil) async -> (json: Any?, status: Int) {
+        guard let u = URL(string: url) else { return (nil, 0) }
+        var request = URLRequest(url: u)
+        request.httpMethod = method
+        if let body {
+            guard let payload = try? JSONSerialization.data(withJSONObject: body) else { return (nil, 0) }
+            request.httpBody = payload
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        }
+        apply(auth: nil, headers: headers, to: &request)
+        guard let (data, http) = await send(request, service: service) else { return (nil, 0) }
+        return (try? JSONSerialization.jsonObject(with: data), http.statusCode)
+    }
+
     /// Like `getJSONStatus`, but ALSO hands back the raw `HTTPURLResponse` —
     /// for a caller that needs a response HEADER, not just the status or the
     /// body (2026-08-09: GitHub's `X-RateLimit-Remaining`/`X-RateLimit-Limit`,
