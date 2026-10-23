@@ -582,6 +582,8 @@ struct RootShell: View {
                 // onto its CoinPaprika follow, in place, before the dedupe.
                 CoinWatch.converge(context: modelContext)
                 CoinWatch.clearDeadLogos(context: modelContext)
+                // Logos node rows lose the node's address (prd §1474).
+                LogosIngest.scrubNodeRows(context: modelContext)
                 PriceAlertStore.shared.sweepRemoved(context: modelContext)
                 // The seats deleted 2026-10-01 (prd §1038): their rows, seat
                 // records, address-book tags, defaults and devnet keys.
