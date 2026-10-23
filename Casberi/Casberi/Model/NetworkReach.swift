@@ -467,6 +467,16 @@ enum NetworkReach {
                          "sepolia.base.org", "base-sepolia-rpc.publicnode.com", "api.relay.link",
                          "rpc.mainnet.chain.robinhood.com", "robinhood-rpc.publicnode.com"],
                  credentialed: false),
+        // Bitrefill's accountless checkout (prd §1473): Move's Buy. Reached
+        // only when you tap Buy — a sign-in signed by your account, the
+        // catalogue, an invoice, and its payment as a signed USDC
+        // authorization. No account, no key; the codes are bound to the
+        // paying wallet. Separate from the keyed Bitrefill seat above.
+        Endpoint(service: "Bitrefill checkout",
+                 reach: .whenConnected(bridge: "Wallet"),
+                 purpose: "When you tap Buy on Move: signs you in to Bitrefill with your account's address, searches its gift cards, creates the invoice you asked for and pays it with a USDC authorization you signed. Then reads the code back for the wallet that paid. Carries your account's public address and what you bought, nothing else about you.",
+                 hosts: ["api.bitrefill.com"],
+                 credentialed: false),
         Endpoint(service: "Gnosis Chain",
                  reach: .whenConnected(bridge: "Wallet"),
                  purpose: "Asks a Safe on Gnosis Chain for its own hash of a transaction before this phone will sign it, through Gnosis Chain's public nodes. Carries the Safe's address and the transaction, nothing else about you.",

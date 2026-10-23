@@ -831,12 +831,20 @@ struct ThingSheetView: View {
                             .dsRoomBox()
                             .padding(.top, DS.Space.s6)
                             .settleIn(delay: 0.1)
+                        // A card bought from Move: its code, read on open (prd §1473).
+                        BitrefillCodeRows(thing: thing)
+                            .padding(.top, DS.Space.s4)
+                            .settleIn(delay: 0.12)
                     } else {
                         PurchaseStageView(thing: thing, reading: purchaseReading,
                                           recurrence: purchaseRecurrence, headDrawn: false)
                             .padding(.horizontal, DS.Space.s4)
                             .padding(.top, DS.Space.s3)
                             .settleIn(delay: 0.06)
+                        BitrefillCodeRows(thing: thing)
+                            .padding(.horizontal, DS.Space.s4)
+                            .padding(.top, DS.Space.s4)
+                            .settleIn(delay: 0.08)
                     }
                 } else if let workReading {
                     // The Work receipt (2026-08-12) — the §302 ledger's

@@ -66,8 +66,8 @@ struct MoveSentence: View {
     typealias Chain = YourAccountChain
     typealias Tokens = YourAccountTokens
 
-    enum Verb: CaseIterable { case swap, send, receive }
-    enum Blank: Equatable { case with, buy, to, network, exchange, elsewhere, elsewhereCoin, arrives }
+    enum Verb: CaseIterable { case swap, send, receive, buy }
+    enum Blank: Equatable { case with, buy, to, network, exchange, elsewhere, elsewhereCoin, arrives, group, merchant }
     enum Field: Hashable { case amount, search, to }
 
     struct Recipient: Equatable {
@@ -129,6 +129,23 @@ struct MoveSentence: View {
     struct Hint: Equatable { let text: String; let failure: Bool; var from: String? = nil; let id = UUID() }
     @State private var hint: Hint?
 
+    // MARK: - Buy (prd §1473)
+
+    /// Buy stands on the verbs' line only with an account on this phone.
+    @State private var buyAvailable = false
+    @State private var buyGroup: BitrefillBuy.Group?
+    @State private var buyProduct: BitrefillBuy.Product?
+    /// Bitrefill's 25 most popular in the country, read once per visit.
+    @State private var popular: [BitrefillBuy.Product] = []
+    /// What searches found: a group's seed words, a typed word, a place's name.
+    @State private var foundProducts: [BitrefillBuy.Product] = []
+    @State private var buyReading = false
+    /// The names Casberi already knows you pay: Spending's places,
+    /// Subscriptions, what you bought here before.
+    @State private var spendNames: [String] = []
+    /// After the payment: Bitrefill delivering, said at the foot.
+    @State private var delivering = false
+
     private func say(_ text: String, failure: Bool = false, seconds: Double = 3, from: String? = nil) {
         let h = Hint(text: text, failure: failure, from: from)
         withAnimation(DS.Motion.standard) { hint = h }
@@ -141,7 +158,14 @@ struct MoveSentence: View {
     /// A service's mark, in place of its name before its own words (§1442n):
     /// Relay's star on its white circle, as the swap credit draws it.
     @ViewBuilder static func mark(of service: String) -> some View {
-        if service == "Relay" {
+        if service == "Bitrefill" {
+            Image("brand-bitrefill")
+                .resizable()
+                .scaledToFill()
+                .frame(width: 16, height: 16)
+                .clipShape(Circle())
+                .accessibilityLabel(Text(verbatim: service))
+        } else if service == "Relay" {
             Image("brand-relay")
                 .resizable()
                 .scaledToFit()
@@ -176,6 +200,8 @@ struct MoveSentence: View {
         let detail: String
         var link: URL? = nil
         var linkName: String? = nil
+        /// Said instead of "View on <name>" when the door is not an explorer.
+        var linkTitle: String? = nil
     }
     #if DEBUG
     @State private var drafted = false
@@ -240,7 +266,7 @@ struct MoveSentence: View {
         case .send:
             guard let r = resolved, r.imitates == nil, stands(r) else { return nil }
             return .send(Op.Payment(network: network, token: with.token, amount: units, to: r.address, toName: r.name))
-        case .receive:
+        case .receive, .buy:
             return nil
         }
     }
@@ -322,8 +348,9 @@ struct MoveSentence: View {
             withAnimation(DS.Motion.standard) { arrived = true }
             DSHaptic.success()
         }
-        .onChange(of: verb) { _, _ in
+        .onChange(of: verb) { _, now in
             if fresh { withAnimation(DS.Motion.standard) { fresh = false; arrived = true } }
+            if now == .buy { enterBuy() }
         }
         .task(id: quoteKey) { await requote() }
         .task(id: to) { await resolve() }
@@ -383,13 +410,14 @@ struct MoveSentence: View {
                 if let receipt {
                     receiptClauses(receipt)
                 } else if emptyEverywhere, verb != .receive {
-                    MovePhrase(verb == .swap ? String(localized: "Nothing to swap yet.") : String(localized: "Nothing to send yet."),
+                    MovePhrase(verb == .swap ? String(localized: "Nothing to swap yet.") : verb == .buy ? String(localized: "Nothing to pay with yet.") : String(localized: "Nothing to send yet."),
                                ink: DS.textSecondary)
                 } else {
                     switch verb {
                     case .swap: swapClauses
                     case .send: sendClauses
                     case .receive: receiveClauses
+                    case .buy: buyClauses
                     }
                 }
             }
@@ -432,7 +460,8 @@ struct MoveSentence: View {
     private var layoutKey: String {
         [amount, with?.token.symbol ?? "", buy?.token.symbol ?? "", String(network.chainId),
          String(items.count), String(slot), to, resolved?.name ?? "", inDollars ? "$" : "",
-         quote?.buyAmount ?? "", String(reach?.count ?? -1), elsewhere?.token.symbol ?? ""].joined(separator: "|")
+         quote?.buyAmount ?? "", String(reach?.count ?? -1), elsewhere?.token.symbol ?? "",
+         buyGroup?.rawValue ?? "", buyProduct?.id ?? ""].joined(separator: "|")
     }
 
     /// **A SWAP IS A SENTENCE (§1466, amends §1442g's "no and").** What you
@@ -635,7 +664,7 @@ struct MoveSentence: View {
         switch verb {
         case .swap: line.id.hasPrefix("to|")
         case .send: line.id.hasPrefix("for|")
-        case .receive: true
+        case .receive, .buy: true
         }
     }
 
@@ -845,7 +874,7 @@ struct MoveSentence: View {
     /// sentence under it is what that verb does.
     private var verbs: some View {
         HStack(alignment: .firstTextBaseline, spacing: DS.Space.s4) {
-            ForEach(Verb.allCases, id: \.self) { v in
+            ForEach(Verb.allCases.filter { $0 != .buy || buyAvailable }, id: \.self) { v in
                 Button {
                     guard v != verb || receipt != nil else { return }
                     withAnimation(DS.Motion.standard) {
@@ -873,6 +902,7 @@ struct MoveSentence: View {
         case .swap: String(localized: "Swap")
         case .send: String(localized: "Send")
         case .receive: String(localized: "Receive")
+        case .buy: String(localized: "Buy")
         }
     }
 
@@ -1016,7 +1046,7 @@ struct MoveSentence: View {
     private func space(room: CGFloat) -> some View {
         ZStack(alignment: .topLeading) {
             if let open {
-                choices(room: choicesRoom(room), searches: open == .with || open == .buy || open == .to || open == .arrives, which: open) {
+                choices(room: choicesRoom(room), searches: open == .with || open == .buy || open == .to || open == .arrives || open == .merchant, which: open) {
                     ZStack(alignment: .topLeading) {
                         Group {
                             switch open {
@@ -1028,6 +1058,8 @@ struct MoveSentence: View {
                             case .elsewhere: elsewhereList
                             case .elsewhereCoin: elsewhereCoinList
                             case .arrives: arrivesList
+                            case .group: groupList
+                            case .merchant: merchantList
                             }
                         }
                         .id(open)
@@ -1091,7 +1123,7 @@ struct MoveSentence: View {
                 }
                 if let link = receipt.link, let name = receipt.linkName {
                     Button { openURL(link) } label: {
-                        Text("View on \(name)").dsText(.body17).foregroundStyle(DS.pickInk).frame(minHeight: 44)
+                        Text(verbatim: receipt.linkTitle ?? String(localized: "View on \(name)")).dsText(.body17).foregroundStyle(DS.pickInk).frame(minHeight: 44)
                     }
                     .buttonStyle(RowPress())
                 }
@@ -1210,6 +1242,7 @@ struct MoveSentence: View {
                 case .swap: [soldPrint, feeTotal].compactMap { $0 }
                 case .send: [soldPrint].compactMap { $0 } + (peopleCount > 1 ? [String(localized: "To \(peopleCount) people")] : []) + roundUpPrint
                 case .receive: []
+                case .buy: buyPrint
                 }
                 if !print.isEmpty {
                     Text(verbatim: print.joined(separator: " · "))
@@ -1400,6 +1433,8 @@ struct MoveSentence: View {
         .filter { q.isEmpty || $0.held.token.symbol.lowercased().hasPrefix(q) }
         // What the whole swap buys is never also what it sells.
         .filter { row in lockedBuy.map { row.held.token != $0 || verb != .swap } ?? true }
+        // Buy pays in USDC on Base, the one way Bitrefill's door takes (§1473).
+        .filter { row in verb != .buy || Self.paysBuy(row.held, on: row.net) }
         // Biggest first, whichever network it is on.
         .sorted { ($0.held.usd ?? -1) > ($1.held.usd ?? -1) }
         return VStack(alignment: .leading, spacing: 0) {
@@ -1811,7 +1846,7 @@ struct MoveSentence: View {
                     }
                     .buttonStyle(RowPress())
                     .accessibilityHint(Text("Shares your address"))
-                } else {
+                } else if verb != .buy {
                     Button { add() } label: {
                         // Pink is the values' and the signing verb's alone
                         // (§1442f): Add is white when ready, grey when not.
@@ -1850,6 +1885,18 @@ struct MoveSentence: View {
                 .frame(maxWidth: .infinity)
                 .padding(.top, DS.Space.s1)
             }
+            // Bitrefill's credit signs Buy's foot the same way (§1473, user:
+            // "put bitrefill logo like we do w/ relay").
+            if verb == .buy, receipt == nil {
+                HStack(spacing: DS.Space.s1) {
+                    Text("Powered by Bitrefill")
+                        .dsText(.label12)
+                        .foregroundStyle(DS.textTertiary)
+                    Self.mark(of: "Bitrefill")
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.top, DS.Space.s1)
+            }
         }
         .padding(.horizontal, inTray ? DSRoomChassis.leadInset - DS.Space.s4 : DSRoomChassis.leadInset)
         .padding(.bottom, footClearance)
@@ -1866,7 +1913,8 @@ struct MoveSentence: View {
     }
 
     private var footOn: Bool {
-        verb == .receive || (stage == nil && !all.isEmpty)
+        if verb == .buy { return stage == nil && buyReady }
+        return verb == .receive || (stage == nil && !all.isEmpty)
     }
 
     private var footVerb: String {
@@ -1874,10 +1922,11 @@ struct MoveSentence: View {
         case .preparing: return String(localized: "Preparing…")
         case .signing: return String(localized: "Confirm with Face ID")
         case .sending: return String(localized: "Sending…")
-        case .landing: return String(localized: "Waiting for \(network.name)…")
+        case .landing: return delivering ? String(localized: "Waiting for Bitrefill…") : String(localized: "Waiting for \(network.name)…")
         case nil: break
         }
         if verb == .receive { return String(localized: "Copy address") }
+        if verb == .buy { return String(localized: "Buy") }
         let batch = all
         let swaps = batch.filter { if case .swap = $0 { true } else { false } }.count
         let kind: Verb? = swaps == batch.count ? .swap : swaps == 0 ? .send : nil
@@ -1926,6 +1975,7 @@ struct MoveSentence: View {
 
     /// What the sentence still needs before Add can keep it.
     private var missing: String? {
+        if verb == .buy, let why = buyMissing { return why }
         if !networkPicked && with == nil { return String(localized: "Pick a token first") }
         if with == nil { return String(localized: "Pick a token to spend") }
         if amount.isEmpty || units == "0" { return String(localized: "Type an amount first") }
@@ -1938,7 +1988,7 @@ struct MoveSentence: View {
         case .send:
             if let imitates = resolved?.imitates { return String(localized: "Looks like \(imitates)'s — check it") }
             if resolved == nil { return String(localized: "Pick who it goes to") }
-        case .receive:
+        case .receive, .buy:
             break
         }
         return nil
@@ -1990,6 +2040,7 @@ struct MoveSentence: View {
 
     private func sign() {
         guard stage == nil else { return }
+        if verb == .buy { buyNow(); return }
         let batch = all
         guard !batch.isEmpty else { return }
         let reason = faceIDWords(batch)
@@ -2218,6 +2269,7 @@ struct MoveSentence: View {
             for await (id, list) in group { lists[id] = list }
         }
         listedBy = lists
+        buyAvailable = BitrefillX402.available
     }
 
     private func readNetwork() async {
@@ -2257,6 +2309,7 @@ struct MoveSentence: View {
     /// Relay's matches as you type, after a pause, on every network the list
     /// looks in; a pasted contract is read off each.
     private func lookUpPasted() async {
+        if open == .merchant { await searchMerchants(); return }
         pasted = [:]
         let text = search.trimmingCharacters(in: .whitespacesAndNewlines)
         guard open == .buy || open == .arrives, !text.isEmpty else { found = [:]; return }
@@ -2336,6 +2389,306 @@ struct MoveSentence: View {
         resolved = Recipient(address: EIP55.checksum(address), name: text, imitates: nil)
     }
 
+
+    // MARK: - Buy (prd §1473)
+
+    /// The one holding Buy pays with: USDC on Base.
+    static func paysBuy(_ h: Tokens.Held, on net: Op.Network) -> Bool {
+        net.chainId == BitrefillX402.network.chainId && h.token.contract?.lowercased() == net.dollar.lowercased()
+    }
+
+    private var buyAccount: String? {
+        YourAccountKey.address ?? (BitrefillX402.sample ? account : nil)
+    }
+
+    /// Buy's sentence: "$50 gift card for Travel at Delta with USDC on Base."
+    /// — the amount is the card's value, the category and the merchant are
+    /// words that open their lists, and the payment is a fact, not a choice.
+    @ViewBuilder private var buyClauses: some View {
+        MoveClause {
+            HStack(alignment: .firstTextBaseline, spacing: 0) {
+                word("$", ink: amount.isEmpty ? DS.textTertiary : DS.pickInk)
+                amountField
+                word(buyProduct?.noun ?? String(localized: "gift card"), ink: DS.textPrimary).padding(.leading, 8)
+            }
+            .contentShape(Rectangle())
+            .onTapGesture { if stage == nil { focus = .amount } }
+            .dsCardLead(Text("Edits the amount")) { if stage == nil { focus = .amount } }
+        }
+        MoveClause(glue: String(localized: "for")) {
+            blank(buyGroup?.title ?? String(localized: "category"), ink: buyGroup == nil ? DS.textTertiary : DS.pickInk,
+                  .group, label: Text("Pick a category"))
+        }
+        MoveClause(glue: String(localized: "at")) {
+            blank(buyProduct.map { BitrefillBuy.shortName($0.name) } ?? String(localized: "merchant"),
+                  ink: buyProduct == nil ? DS.textTertiary : DS.pickInk, .merchant, label: Text("Pick a merchant"))
+        }
+        MovePhrase(String(localized: "USDC on Base."), glue: String(localized: "with"), ink: DS.textPrimary)
+    }
+
+    /// Bitrefill's categories folded to seven, each with the cards people
+    /// know it by; a pick keeps a merchant only if it stands in the group.
+    private var groupList: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ForEach(BitrefillBuy.Group.allCases, id: \.self) { g in
+                listRow(g.title, sub: g.examples, dim: buyGroup == g) {
+                    pick {
+                        buyGroup = g
+                        if let p = buyProduct, BitrefillBuy.group(of: p) != g { buyProduct = nil }
+                    }
+                    Task { await seedGroup(g) }
+                }
+            }
+        }
+    }
+
+    /// What you already pay, then Bitrefill's popular cards in the group (or
+    /// every group), then what a typed word finds. Popularity is Bitrefill's
+    /// own order (measured: the search answers its top 25, no paging).
+    private var merchantList: some View {
+        let q = search.trimmingCharacters(in: .whitespaces)
+        let everything = Self.dedupe(popular + foundProducts)
+        let pool = buyGroup.map { BitrefillBuy.products(in: $0, of: everything) } ?? everything.filter(\.buyable)
+        let spend = q.isEmpty ? BitrefillBuy.whereYouSpend(spendNames, in: pool) : []
+        let rows = (q.isEmpty ? pool : BitrefillBuy.search(q, in: everything.filter(\.buyable)))
+            .filter { p in !spend.contains { $0.id == p.id } }
+        return VStack(alignment: .leading, spacing: 0) {
+            if !spend.isEmpty {
+                listHeader(String(localized: "Where you spend"))
+                ForEach(spend) { merchantRow($0) }
+                listHeader(buyGroup.map { String(localized: "\($0.title) · popular") } ?? String(localized: "Popular"))
+            }
+            ForEach(rows.prefix(60)) { merchantRow($0) }
+            if rows.isEmpty, spend.isEmpty {
+                HStack(spacing: DS.Space.s2) {
+                    if buyReading { DSSpinner() }
+                    Text(verbatim: buyReading ? String(localized: "Asking Bitrefill")
+                         : q.isEmpty ? String(localized: "Nothing here yet") : String(localized: "Nothing named \(q)"))
+                        .dsText(.body17).foregroundStyle(DS.textSecondary)
+                }
+                .frame(minHeight: 52)
+            }
+        }
+    }
+
+    private func listHeader(_ text: String) -> some View {
+        Text(verbatim: text)
+            .dsText(.label12)
+            .foregroundStyle(DS.textSecondary)
+            .frame(minHeight: 32, alignment: .bottomLeading)
+    }
+
+    private func merchantRow(_ p: BitrefillBuy.Product) -> some View {
+        let name = BitrefillBuy.shortName(p.name)
+        return listRow(name, sub: p.packages.isEmpty ? BitrefillBuy.group(of: p).title : p.denominationsLine,
+                       mark: SubscriptionFace.mark(for: name) ?? name, dim: buyProduct?.id == p.id) {
+            pick {}
+            Task { await chooseProduct(p) }
+        }
+    }
+
+    static func dedupe(_ products: [BitrefillBuy.Product]) -> [BitrefillBuy.Product] {
+        var seen = Set<String>()
+        return products.filter { seen.insert($0.id).inserted }
+    }
+
+    /// Buy picked: USDC on Base is the payment, the popular list is read,
+    /// and the names Casberi knows you pay are matched against it.
+    private func enterBuy() {
+        inDollars = true
+        if network != BitrefillX402.network { switchNetwork(BitrefillX402.network) }
+        networkPicked = true
+        if with.map({ Self.paysBuy($0, on: network) }) != true {
+            with = held.first { Self.paysBuy($0, on: network) }
+        }
+        spendNames = Self.spendNames()
+        guard popular.isEmpty, let account = buyAccount else { return }
+        Task { @MainActor in
+            buyReading = true
+            defer { buyReading = false }
+            do {
+                popular = try await BitrefillX402.search("", account: account)
+                // A place not among the popular is searched by name, a few.
+                let unmatched = spendNames.filter { BitrefillBuy.whereYouSpend([$0], in: popular).isEmpty }.prefix(4)
+                for name in unmatched {
+                    let key = BitrefillBuy.stem(name)
+                    guard key.count >= 3, let hits = try? await BitrefillX402.search(key, account: account) else { continue }
+                    foundProducts = Self.dedupe(foundProducts + hits)
+                }
+            } catch let failure as Chain.Failure {
+                say(failure.message, failure: true, seconds: 6, from: failure.from)
+            } catch {}
+        }
+    }
+
+    /// Spending's places, the subscriptions, and what was bought here before.
+    static func spendNames() -> [String] {
+        var names = SpendingReading.shared.reading.places.map(\.name)
+        names += SubscriptionsReading.shared.items.map(\.name)
+        if let context = SharedStore.live?.mainContext {
+            names += IngestSupport.thingsByRef(context, source: "Bitrefill").values
+                .filter { $0.isLive && BitrefillFetch.isOrderRef($0.sourceRef) }
+                .sorted { $0.capturedAt > $1.capturedAt }
+                .compactMap(\.transferCounterparty)
+        }
+        var seen = Set<String>()
+        return names.filter { seen.insert(BitrefillBuy.stem($0)).inserted }
+    }
+
+    /// A group's seed searches, once, so the list is more than the popular
+    /// cards that happen to fall in it.
+    private func seedGroup(_ g: BitrefillBuy.Group) async {
+        guard let account = buyAccount else { return }
+        for word in g.searches {
+            guard let hits = try? await BitrefillX402.search(word, account: account) else { continue }
+            foundProducts = Self.dedupe(foundProducts + hits)
+        }
+    }
+
+    /// Typing in the merchant list asks Bitrefill after a pause.
+    private func searchMerchants() async {
+        let text = search.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard text.count >= 2, let account = buyAccount else { return }
+        try? await Task.sleep(for: .milliseconds(450))
+        guard !Task.isCancelled else { return }
+        buyReading = true
+        defer { buyReading = false }
+        guard let hits = try? await BitrefillX402.search(text, account: account), !Task.isCancelled else { return }
+        foundProducts = Self.dedupe(foundProducts + hits)
+    }
+
+    /// A merchant picked: its group follows, its packages are read, and the
+    /// amount opens on a value it sells.
+    private func chooseProduct(_ p: BitrefillBuy.Product) async {
+        withAnimation(DS.Motion.standard) {
+            buyProduct = p
+            buyGroup = BitrefillBuy.group(of: p)
+        }
+        guard let account = buyAccount else { return }
+        if let full = try? await BitrefillX402.detail(p, account: account) {
+            withAnimation(DS.Motion.standard) { buyProduct = full }
+            foundProducts = foundProducts.map { $0.id == full.id ? full : $0 }
+            popular = popular.map { $0.id == full.id ? full : $0 }
+            let typed = buyValue
+            if typed.map({ full.package(for: $0) == nil }) ?? true, let v = full.suggestedValue {
+                amount = BitrefillBuy.Product.valueText(v)
+            }
+        }
+    }
+
+    private var buyValue: Double? { Double(amount.replacingOccurrences(of: ",", with: ".")) }
+
+    /// The USDC the card costs, in base units, once the detail priced it.
+    private var buyPackage: BitrefillBuy.Product.Package? {
+        guard let p = buyProduct, let v = buyValue else { return nil }
+        return p.package(for: v)
+    }
+
+    private var buyReady: Bool {
+        guard verb == .buy, let with, Self.paysBuy(with, on: network), let package = buyPackage,
+              let cost = Op.baseUnits(BitrefillBuy.Product.valueText(package.price), decimals: with.token.decimals) else { return false }
+        return Op.atMost(cost, left(with))
+    }
+
+    /// Why Buy is grey, in a sentence.
+    private var buyMissing: String? {
+        guard verb == .buy else { return nil }
+        if !buyAvailable { return String(localized: "Make your account first") }
+        if with == nil { return held.isEmpty && heldBy.isEmpty ? String(localized: "Reading…") : String(localized: "You have no USDC on Base") }
+        if buyProduct == nil { return String(localized: "Pick a merchant") }
+        if let p = buyProduct, let v = buyValue, let why = p.refusal(v) { return why }
+        if amount.isEmpty { return String(localized: "Type an amount first") }
+        if !buyReady { return String(localized: "More than you have") }
+        return nil
+    }
+
+    /// "Costs $52.50 · you have 312.40 USDC": what the card costs, and what
+    /// is there to pay it.
+    private var buyPrint: [String] {
+        var parts: [String] = []
+        if let package = buyPackage, let p = buyProduct {
+            parts.append(String(localized: "Costs \(BitrefillBuy.money(package.price, currency: package.currency))"))
+            if p.needsPhoneNumber { parts.append(String(localized: "needs a phone number")) }
+        }
+        if let with { parts.append(String(localized: "you have \(Op.spoken(left(with), decimals: with.token.decimals)) \(with.token.symbol)")) }
+        return parts
+    }
+
+    /// **BUY (prd §1473).** The invoice is created only now, never while
+    /// browsing; the account signs the USDC authorization at Face ID; then
+    /// Bitrefill delivers and the card lands in Wallet.
+    private func buyNow() {
+        guard stage == nil, let product = buyProduct, let value = buyValue, let package = buyPackage,
+              let account = buyAccount, buyReady else {
+            if let buyMissing { say(buyMissing) }
+            return
+        }
+        guard !product.needsPhoneNumber else {
+            say(String(localized: "Top-ups need a phone number: a later pass"), failure: true)
+            return
+        }
+        let spoken = Op.spoken(Op.baseUnits(BitrefillBuy.Product.valueText(package.price), decimals: 6) ?? "0", decimals: 6)
+        let reason = BitrefillBuy.faceWords(spoken: spoken, value: product.money(value), product: product)
+        let net = network
+        stage = .preparing
+        delivering = false
+        Task { @MainActor in
+            do {
+                let invoice = try await BitrefillX402.buy(product: product, value: value, account: account, reason: reason) { s in
+                    await MainActor.run { stage = s }
+                }
+                stage = .landing
+                delivering = true
+                chrome.refreshRooms()
+                let standing = await BitrefillX402.awaitDelivery(invoiceID: invoice.id, account: account)
+                let landed = BitrefillX402.land(invoice: invoice, product: product, value: value, delivered: standing?.delivered == true)
+                stage = nil
+                delivering = false
+                let made = Self.buyReceipt(product: product, value: value, invoice: invoice, net: net,
+                                           delivered: standing?.delivered == true, failed: standing?.failed == true, landed: landed)
+                withAnimation(DS.Motion.standard) {
+                    amount = ""
+                    buyProduct = nil
+                    receipt = made
+                }
+                DSHaptic.success()
+                chrome.rain(sources: ["Wallet"])
+                await readNetwork()
+            } catch let failure as Chain.Failure {
+                stage = nil
+                delivering = false
+                #if DEBUG
+                NSLog("moveBuy: failed %@", failure.message)
+                #endif
+                say(failure.message, failure: true, seconds: 6, from: failure.from)
+            } catch {
+                stage = nil
+                delivering = false
+                #if DEBUG
+                NSLog("moveBuy: not paid %@", String(describing: error))
+                #endif
+                say(String(localized: "Not paid"), failure: true)
+            }
+        }
+    }
+
+    /// "Bought a $50 Delta gift card with 52.50 USDC on Base." and where it is.
+    static func buyReceipt(product: BitrefillBuy.Product, value: Double, invoice: BitrefillBuy.Invoice, net: Op.Network,
+                           delivered: Bool, failed: Bool, landed: Thing?) -> Receipt {
+        typealias Line = Receipt.Line
+        let name = BitrefillBuy.shortName(product.name)
+        let lines = [Line(glue: nil, text: String(localized: "a \(product.money(value)) \(name) \(product.noun)")),
+                     Line(glue: String(localized: "with"), text: Op.spoken(invoice.priceUnits, decimals: 6) + " USDC"),
+                     Line(glue: String(localized: "on"), text: net.name + ".")]
+        let detail = failed ? String(localized: "Bitrefill could not deliver it · it will refund the wallet that paid")
+            : delivered ? String(localized: "Delivered · in Wallet")
+            : String(localized: "Paid · Bitrefill is still delivering · it lands in Wallet")
+        return Receipt(past: String(localized: "Bought"), lines: lines, detail: detail,
+                       link: landed.map { URL(string: "casberi://thing/\($0.id.uuidString)") } ?? nil,
+                       linkName: landed == nil ? nil : "Wallet",
+                       linkTitle: landed == nil ? nil : String(localized: "Open the \(product.noun)"))
+    }
+
     // MARK: - DEBUG drafts
 
     #if DEBUG
@@ -2362,6 +2715,32 @@ struct MoveSentence: View {
         } else if let from = d.string(forKey: "moveReceiveFrom"), !from.isEmpty {
             verb = .receive
             receiveDraft(from)
+        } else if let buyDraft = d.string(forKey: "moveBuyDraft"), !buyDraft.isEmpty {
+            verb = .buy
+            self.buyDraft(buyDraft)
+        }
+    }
+
+    /// `-moveBuyDraft "<merchant>[|<amount>]"`: Buy filled, because no
+    /// headless run can make the taps (prd §1473). Logs `moveBuyDraft:`.
+    private func buyDraft(_ draft: String) {
+        let parts = draft.split(separator: "|").map(String.init)
+        Task { @MainActor in
+            for _ in 0..<60 where popular.isEmpty { try? await Task.sleep(for: .milliseconds(100)) }
+            let name = parts.first ?? ""
+            var pool = popular + foundProducts
+            if BitrefillBuy.search(name, in: pool).isEmpty, let account = YourAccountKey.address ?? (BitrefillX402.sample ? "0x0" : nil) {
+                pool += (try? await BitrefillX402.search(name, account: account)) ?? []
+            }
+            guard let product = BitrefillBuy.search(name, in: pool).first else {
+                NSLog("moveBuyDraft: nothing named %@ among %d", name, pool.count); return
+            }
+            await chooseProduct(product)
+            if parts.count > 1, !parts[1].isEmpty { amount = parts[1] }
+            // A third part opens a list: `group` or `merchant`.
+            if parts.count > 2 { open = parts[2] == "group" ? .group : .merchant }
+            NSLog("moveBuyDraft: %@ %@ for %@ at %@ ready=%d missing=%@", amount, buyProduct?.noun ?? "-",
+                  buyGroup?.title ?? "-", buyProduct?.name ?? "-", buyReady ? 1 : 0, buyMissing ?? "-")
         }
     }
 

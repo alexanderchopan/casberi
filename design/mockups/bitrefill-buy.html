@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Buy · a gift card from Move</title><style>
+:root{--page:#000;--ink:#fff;--ink2:#8e8e93;--ink3:#636366;--pink:#ff2d55;--fill:#1c1c1e;--rounded:ui-rounded,"SF Pro Rounded",-apple-system,sans-serif}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#e4e3ea;color:#15141a;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;-webkit-font-smoothing:antialiased;padding:32px 16px 64px}
+header{max-width:1240px;margin:0 auto 22px} h1{font:700 28px/34px var(--rounded)}
+.desc{font-size:15px;line-height:22px;color:#56535f;max-width:900px;margin-top:6px}
+.stage{max-width:1240px;margin:14px auto 0;display:flex;flex-wrap:wrap;gap:30px 34px;align-items:flex-start}
+figure{width:362px} figcaption{font-size:13px;line-height:19px;color:#56535f;margin:14px 4px 0} figcaption b{color:#15141a}
+.ph{width:402px;height:874px;zoom:.9;border-radius:56px;overflow:hidden;position:relative;background:var(--page);box-shadow:0 24px 70px #00000033;color:var(--ink);font-family:var(--rounded)}
+.status{display:flex;justify-content:space-between;padding:22px 34px 0;font:600 17px/22px var(--rounded)}
+.title{padding:34px 20px 0} .title h3{font:700 34px/40px var(--rounded)}
+.title .back{font:400 15px/20px var(--rounded);color:var(--ink2);margin-bottom:4px}
+.panel{padding:20px 20px 0}
+/* Move's sentence: verbs heading17 on their own line, the sentence heading28 (§1438a, §1442c) */
+.verbs{display:flex;gap:16px;font:600 17px/22px var(--rounded);color:var(--ink3);min-height:44px;align-items:center}
+.verbs .on{color:var(--ink)}
+.sent{font:600 28px/34px var(--rounded);font-variant-numeric:tabular-nums;margin-top:6px}
+.sent div{min-height:38px}
+.sent .p{color:var(--pink)} .sent .g{color:var(--ink2);font-weight:400} .sent .b{color:var(--ink3)}
+.sent .open{color:#ff2d5599}
+.line{font:400 15px/20px var(--rounded);color:var(--ink2);margin-top:10px}
+.line .p{color:var(--pink)}
+.grp{font:400 15px/20px var(--rounded);color:var(--ink2);margin:22px 0 2px}
+.row{display:flex;align-items:center;gap:14px;min-height:52px;font:400 17px/22px var(--rounded)}
+.row .two{display:flex;flex-direction:column;min-width:0} .row .two small{font-size:12px;line-height:16px;color:var(--ink2)}
+.row .f{margin-left:auto;font-variant-numeric:tabular-nums;flex:none;color:var(--ink2)}
+.row .mk{width:32px;height:32px;border-radius:50%;flex:none;background:#2c2c2e;display:flex;align-items:center;justify-content:center;font:700 13px var(--rounded);color:var(--ink2)}
+.row .mk.a{background:#2c2c2e;color:#fff}
+.row.dim{color:var(--ink3)}
+.door{font:400 17px/22px var(--rounded);color:var(--ink2);min-height:48px;display:flex;align-items:center;gap:6px}
+.door::after{content:"›";color:var(--ink3)}
+.foot{position:absolute;left:20px;right:20px;bottom:116px;display:flex;align-items:center;justify-content:space-between;font:600 17px/22px var(--rounded)}
+.foot .verb{color:var(--pink)} .foot .add{color:var(--ink2)}
+.foot .verb.off{color:var(--ink3)}
+.tab{position:absolute;left:20px;right:20px;bottom:26px;display:flex;align-items:center;gap:14px}
+.tab .bar{flex:1;height:64px;border-radius:40px;background:#2a2a2d;display:flex;justify-content:space-around;align-items:center;font:500 13px var(--rounded);color:#fff}
+.tab .bar b{color:var(--pink);font-weight:500;background:#3a3a3d;border-radius:30px;padding:8px 18px}
+.tab .s{width:64px;height:64px;border-radius:50%;background:#2a2a2d}
+/* the sheet (PurchaseStageView, the receipt anatomy) */
+.sheet{position:absolute;left:0;right:0;bottom:0;top:120px;background:#1c1c1e;border-radius:40px 40px 0 0;padding:14px 20px 0}
+.grab{width:36px;height:5px;border-radius:3px;background:#48484a;margin:0 auto 22px}
+.eye{font:400 12px/16px var(--rounded);color:var(--ink2)}
+.sheet h4{font:700 28px/34px var(--rounded);margin-top:6px}
+.art{width:100%;height:170px;border-radius:18px;background:#232326;margin-top:18px;display:flex;align-items:center;justify-content:center;font:700 22px var(--rounded);color:#ff9900}
+.state{font:400 15px/20px var(--rounded);color:var(--ink2);margin-top:14px}
+.state b{color:var(--ink);font-weight:400}
+.code{font:600 22px/28px ui-monospace,SF Mono,monospace;letter-spacing:0;margin-top:22px;display:flex;align-items:center;gap:10px}
+.code span{font:400 15px/20px var(--rounded);color:var(--ink2);margin-left:auto}
+.chips{display:flex;gap:8px;overflow:hidden;margin:14px 0 2px;white-space:nowrap}
+.chips span{font:500 15px/20px var(--rounded);color:var(--ink2);padding:7px 14px;border-radius:20px;background:#1c1c1e}
+.chips span.on{color:#fff;background:#3a3a3d}
+.glass{margin-top:16px;padding:2px 16px 6px;border-radius:28px;background:#2a2a2dcc;box-shadow:inset 0 0 0 .5px #ffffff14}
+.glass .row{min-height:50px} .glass .grp{margin-top:12px}
+.search{display:flex;align-items:center;gap:8px;min-height:44px;font:400 17px/22px var(--rounded);color:var(--ink3);padding-top:6px}
+.new{outline:2px dashed #ff2d5588;outline-offset:6px;border-radius:6px}
+.notes{max-width:1240px;margin:34px auto 0;font-size:15px;line-height:22px;color:#36343c}
+.notes h2{font:700 20px/26px var(--rounded);margin-bottom:8px;color:#15141a}
+.notes li{margin:0 0 6px 20px}
+</style></head><body>
+<header>
+<h1>Buy · a gift card from Move</h1>
+<p class="desc">Bitrefill's API is headless (products, an invoice with an address and an exact amount, the code once it is paid), so nothing of Bitrefill's is drawn. <b>Buy is Move's fourth verb</b> (§1438, §1438a): the same sentence with two words of its own, the category and the merchant, each opening its choices under it, the same Send signing the invoice (§1436's path), and the code lands as the order thing §103 already draws as a receipt. A dashed outline marks what's new.</p>
+</header>
+
+<div class="stage">
+
+<figure><div class="ph">
+<div class="status"><span>9:41</span><span>●●● ▮</span></div>
+<div class="title"><h3>Move</h3></div>
+<div class="panel">
+<div class="verbs"><span>Swap</span><span>Send</span><span>Receive</span><span class="on new">Buy</span></div>
+<div class="new"><div class="sent">
+<div><span class="p">$50</span><span class="g"> gift card</span></div>
+<div><span class="g">for </span><span class="b">category</span></div>
+<div><span class="g">at </span><span class="b">merchant</span></div>
+<div><span class="g">with </span><span class="p">USDC</span></div>
+<div><span class="g">on </span><span class="p">Base.</span></div>
+</div></div>
+<div class="line new">≈ 50.21 USDC · you have 312.40</div>
+</div>
+<div class="foot new"><span class="verb off">Buy</span><span class="add">Add</span></div>
+<div class="tab"><div class="bar"><span>Feed</span><span>Wallet</span><b>Move</b><span>Library</span></div><div class="s"></div></div>
+</div><figcaption><b>The verb.</b> Buy joins the verbs' line. Its sentence leads with the noun, "$50 gift card", then the blanks: what it is <b>for</b> ("category" unfilled), <b>where</b> (the merchant, "a shop" unfilled), what you pay with, the network. Unfilled words are grey, as "a token" and "someone" are. Buy stays grey until the merchant is picked (§83).</figcaption></figure>
+
+<figure><div class="ph">
+<div class="status"><span>9:41</span><span>●●● ▮</span></div>
+<div class="title"><h3>Move</h3></div>
+<div class="panel">
+<div class="verbs"><span>Swap</span><span>Send</span><span>Receive</span><span class="on">Buy</span></div>
+<div class="sent">
+<div><span class="p">$50</span><span class="g"> gift card</span></div>
+<div><span class="g">for </span><span class="open">category</span></div>
+<div><span class="g">at </span><span class="b">merchant</span></div>
+<div><span class="g">with </span><span class="p">USDC</span></div>
+<div><span class="g">on </span><span class="p">Base.</span></div>
+</div>
+<div class="glass new">
+<div class="row"><span class="two">Shopping<small>Amazon, Apple, Best Buy, Target, Walmart · 2,140</small></span></div>
+<div class="row"><span class="two">Food<small>DoorDash, Starbucks, Uber Eats · 310</small></span></div>
+<div class="row"><span class="two">Travel<small>Airbnb, Delta, Hotels.com, Uber · 420</small></span></div>
+<div class="row"><span class="two">Games<small>Steam, PlayStation, Xbox, Nintendo · 260</small></span></div>
+<div class="row"><span class="two">Entertainment<small>Netflix, Spotify, Hulu · 180</small></span></div>
+<div class="row"><span class="two">Phone<small>top-ups, eSIMs, VoIP · 900 carriers</small></span></div>
+<div class="row"><span class="two">Money<small>prepaid Visa, Mastercard, crypto · 60</small></span></div>
+</div>
+</div>
+<div class="tab"><div class="bar"><span>Feed</span><span>Wallet</span><b>Move</b><span>Library</span></div><div class="s"></div></div>
+</div><figcaption><b>The category word, open.</b> Tapping "category" opens Bitrefill's categories on the choices glass under the sentence (the card every blank uses, §1442b: as tall as its rows, growing down only), folded to seven in its own words (Shopping takes eleven of its twenty-one), each row naming its best-known cards and its count. A pick writes the word: "for <b>Travel</b>". The noun on the first line follows the category: Phone makes it "$20 top-up" or "5 GB eSIM". The category is optional: pick the merchant first and this word fills itself.</figcaption></figure>
+
+<figure><div class="ph">
+<div class="status"><span>9:41</span><span>●●● ▮</span></div>
+<div class="title"><h3>Move</h3></div>
+<div class="panel">
+<div class="verbs"><span>Swap</span><span>Send</span><span>Receive</span><span class="on">Buy</span></div>
+<div class="sent">
+<div><span class="p">$50</span><span class="g"> gift card</span></div>
+<div><span class="g">for </span><span class="p">Travel</span></div>
+<div><span class="g">at </span><span class="open">merchant</span></div>
+<div><span class="g">with </span><span class="p">USDC</span></div>
+<div><span class="g">on </span><span class="p">Base.</span></div>
+</div>
+<div class="glass new">
+<div class="search">⌕ Search Travel</div>
+<div class="grp">Where you spend</div>
+<div class="row"><span class="mk">U</span><span class="two">Uber<small>connected · 6 rides in October</small></span></div>
+<div class="row"><span class="mk">A</span><span class="two">Airbnb<small>Apple Card paid it $640 in September</small></span></div>
+<div class="grp">Travel · A–Z</div>
+<div class="row"><span class="mk">A</span><span class="two">Air Canada<small>C$25 to C$500</small></span></div>
+<div class="row"><span class="mk">A</span><span class="two">Alaska Airlines<small>$25 to $1,000</small></span></div>
+<div class="row"><span class="mk">D</span><span class="two">Delta<small>$50 to $1,000</small></span></div>
+<div class="row"><span class="mk">H</span><span class="two">Hotels.com<small>$25 to $500</small></span></div>
+</div>
+</div>
+<div class="tab"><div class="bar"><span>Feed</span><span>Wallet</span><b>Move</b><span>Library</span></div><div class="s"></div></div>
+</div><figcaption><b>The merchant word, open.</b> Tapping "merchant" opens the same glass with a Search row leading, as a token list does (§1442b item 3): <b>Where you spend</b> first (Spending's places, Subscriptions and connected apps matched to the catalogue, Casberi's own list), then the category A–Z with each card's denominations in its line; typing narrows (§1438 item 2). With no category picked, the list is Where you spend, Bought before, then everything A–Z. The brand face is the product's own artwork (§103).</figcaption></figure>
+
+<figure><div class="ph">
+<div class="status"><span>9:41</span><span>●●● ▮</span></div>
+<div class="title"><h3>Move</h3></div>
+<div class="panel">
+<div class="verbs"><span>Swap</span><span>Send</span><span>Receive</span><span class="on">Buy</span></div>
+<div class="sent">
+<div><span class="p">$50</span><span class="g"> gift card</span></div>
+<div><span class="g">for </span><span class="p">Travel</span></div>
+<div><span class="g">at </span><span class="p">Delta</span></div>
+<div><span class="g">with </span><span class="p">USDC</span></div>
+<div><span class="g">on </span><span class="p">Base.</span></div>
+</div>
+<div class="line">≈ 50.21 USDC · you have 312.40 · Bitrefill's price, good 14 min</div>
+<div class="grp new">At Face ID</div>
+<div class="line new" style="margin-top:4px;color:var(--ink)">Send 50.21 USDC to Bitrefill for a $50 Delta card.</div>
+<div class="line new">Bitrefill delivers the code here, usually within a minute. A code cannot be returned.</div>
+</div>
+<div class="foot"><span class="verb">Buy</span><span class="add">Add</span></div>
+<div class="tab"><div class="bar"><span>Feed</span><span>Wallet</span><b>Move</b><span>Library</span></div><div class="s"></div></div>
+</div><figcaption><b>Filled, and what Face ID says.</b> "$50 gift card for Travel at Delta with USDC on Base." Every blank pink, Buy lit. The prompt is a Send: the invoice's address is the recipient, its amount the amount, nothing new signs. The two honesty lines sit here and nowhere on the page (§1438 item 3). Add works as for Send: a second card in the same transaction on one network.</figcaption></figure>
+
+<figure><div class="ph">
+<div class="status"><span>9:41</span><span>●●● ▮</span></div>
+<div class="title"><h3>Move</h3></div>
+<div class="sheet">
+<div class="grab"></div>
+<div class="eye">Bitrefill · Today, 9:42</div>
+<h4>Delta · $50</h4>
+<div class="art" style="color:#c8102e">DELTA</div>
+<div class="state new">Paid <b>50.21 USDC</b> from Your account · Base ›</div>
+<div class="code new">AQ4X-7PLM-2K9F-RT3C <span>Copy</span></div>
+<div class="door new" style="margin-top:8px">Redeem at Delta</div>
+<div class="door new">Bitrefill's receipt</div>
+<div class="line" style="margin-top:16px">Bitrefill doesn't know when a code is spent, so this page never says Used.</div>
+</div>
+</div><figcaption><b>The card, landed, in Wallet.</b> The invoice polls to <i>delivered</i> and the order is saved under <code>bitrefill:order:&lt;id&gt;</code>, so the Feed row and this sheet are §103's receipt anatomy (<code>PurchaseStageView</code>) with three rows added: the payment as a door to the Send, the code as a <code>DSCopyRow</code>, Redeem as the product's link. It is a spend, so it lands in Wallet whatever it is for. The last line is the §103 honesty ceiling, kept.</figcaption></figure>
+
+</div>
+
+<div class="notes">
+<h2>Rules the mockup implies</h2>
+<ul>
+<li><b>Buy is a verb of Move, not a room or a tile.</b> It appears only when a Bitrefill key is connected; without one the verbs' line stays three, and the Bitrefill offer in Sources gains the one sentence "Buy gift cards from Move". A verb that cannot act is not drawn (§83).</li>
+<li><b>The key is the person's own.</b> Their Bitrefill account creates the invoice and receives the code; Casberi holds no key, no code, no balance. This amends §103's offer line from "nothing here ever buys" to "buys only what you sign for".</li>
+<li><b>Paying is §1436's Send.</b> The invoice names an address, an exact amount and a network; the sentence's "with" lists only tokens Bitrefill takes (USDC, ETH, BTC via the Lightning seat later), and "on" only the networks it takes them on. Bitrefill takes USDC on Base (<code>usdc_base</code>), Arbitrum, Ethereum, Polygon and Solana (its crypto-payments docs and help centre, read 2026-10-22), so "on Base." stands; the invoice's own list is read live and the network blank offers only those.</li>
+<li><b>The amount is the product's.</b> Fixed denominations snap; a ranged product takes any figure in its range; the field opens in dollars and the grey line shows the token. No slider: a card is not a share of what you have.</li>
+<li><b>The quote expires.</b> The grey line counts the invoice down; past it, Buy greys and the line says "Ask Bitrefill again" (a tap re-quotes). A send after expiry is refused before Face ID, never after.</li>
+<li><b>The category word is Bitrefill's categories, folded to seven</b>: Shopping (Online Marketplaces, Department Stores, Multi-Brand, Fashion, Electronics, Home &amp; DIY, Health &amp; Beauty, Sports &amp; Outdoors, Gifts, Kids, Pets), Food (Food &amp; Groceries), Travel (Travel, Transportation, Gasoline), Games, Entertainment, Phone (VoIP, top-ups, eSIMs), Money (Payment Cards, Crypto, Privacy &amp; Tools). Never Casberi's category names: a card is a spend and lands in Wallet whatever it is for. The word is optional; a merchant picked first fills it.</li>
+<li><b>Landing is the §103 shape.</b> One new thing per order, the receipt anatomy, the code as a copy row, Redeem as the product's link. Nothing claims Used or an expiry Bitrefill does not report.</li>
+<li><b>Hosts are declared already</b> (<code>api-bitrefill.com</code>, <code>www.bitrefill.com</code> under the Bitrefill reach); the purpose line changes to say it also creates invoices you pay.</li>
+</ul>
+</div>
+</body></html>

@@ -187,7 +187,7 @@ enum YourAccountChain {
     /// The device key the chain says signs for the account on `net` — the
     /// account must exist there, or key 0 signs its creation (only on the
     /// phone that made it).
-    private static func deviceSigner(_ net: Network, _ account: String, deployed: Bool) async throws -> (index: Int, signer: Signer) {
+    static func deviceSigner(_ net: Network, _ account: String, deployed: Bool) async throws -> (index: Int, signer: Signer) {
         let index: Int
         if deployed {
             guard let x = try await configuredX(net, account), let i = YourAccountKey.index(matchingX: x) else {
