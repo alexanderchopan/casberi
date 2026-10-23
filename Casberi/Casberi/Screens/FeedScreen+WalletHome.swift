@@ -49,7 +49,8 @@ extension FeedScreen {
             if asks > 0 {
                 lines.append(OverviewLine(name: Self.needsYouGroup, figure: "\(asks)"))
             }
-            if let plan = plans.first { lines.append(Self.planGlance(plan)) }
+            if !plans.isEmpty,
+               let s = Self.planGlance(SubscriptionsReading.shared.total(of: plans)) { lines.append(s) }
             if onAll, let s = Self.spendingGlance(SpendingReading.shared.reading) { lines.append(s) }
             if let card = cards.first { lines.append(Self.cardGlance(card)) }
         }()
@@ -336,18 +337,15 @@ extension FeedScreen {
         }
     }
 
-    /// The plan that renews next: its price, its name and the day.
-    static func planGlance(_ item: Subscriptions.Item) -> OverviewLine {
+    /// **THE MONTH, NEVER ONE PLAN (§1246's rule for Spending, applied
+    /// here):** the row drew the next renewal's price under the word
+    /// "Subscriptions", read as the total beside Spending's month while the
+    /// page led with a different one. It draws what the page leads with.
+    static func planGlance(_ total: Subscriptions.Total) -> OverviewLine? {
+        guard total.counted > 0 else { return nil }
         let mask = BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil
-        let amount: String
-        if item.amount == 0 {
-            amount = SubscriptionWords.free
-        } else if let price = item.amount {
-            amount = mask ?? CardSpendRoom.money(price, code: item.currency)
-        } else {
-            amount = "—"
-        }
-        return OverviewLine(name: subscriptionsName, figure: amount)
+        return OverviewLine(name: subscriptionsName,
+                            figure: mask ?? CardSpendRoom.money(total.monthly, code: "USD"))
     }
 
     /// **SUBSCRIPTIONS ON HOME IS A LIST (prd §1232, user: "if subscriptions

@@ -24,10 +24,11 @@ struct DSCountTile: View {
     var glyph: String? = nil
     let isOn: Bool
     var wants: Bool = false
-    /// **THE WASH SAYS THE STATE (prd §1463), centered only:** nothing for a
-    /// zero, orange for what waits on you, red for a threat, green for what
-    /// is on — the three inks' meanings (§1004) as Markets' tiles wear a
-    /// move (§1391): a wash and an edge, never a plate (§782).
+    /// **THE WASH SAYS THE STATE (prd §1463):** nothing for a zero, orange
+    /// for what waits on you, red for a threat, green for what is on — the
+    /// three inks' meanings (§1004) as Markets' tiles wear a move (§1391): a
+    /// wash and an edge, never a plate (§782). Inline too: Security's six,
+    /// two across with no account on the phone, drew its threats orange.
     enum Tone { case none, wants, threat, on }
     var tone: Tone = .none
     /// The figure and its word on one line (Settings' eight kinds, two
@@ -140,9 +141,9 @@ struct DSCountTile: View {
             .contentShape(Rectangle())
     }
 
-    /// The state's hue, centered only; nil draws no wash.
+    /// The state's hue; nil draws no wash.
     private var hue: Color? {
-        guard centered, !isOn else { return nil }
+        guard centered || inline, !isOn else { return nil }
         switch tone {
         case .none: return nil
         case .wants: return DS.attention
@@ -159,7 +160,7 @@ struct DSCountTile: View {
 
     private var wordInk: Color {
         if isOn { return DS.pickInk }
-        if centered {
+        if centered || inline {
             switch tone {
             case .wants: return DS.attentionInk
             case .threat: return DS.destructiveInk
@@ -206,7 +207,7 @@ struct DSCountTile: View {
                             .dsText(.body17)
                             .lineLimit(1)
                             .minimumScaleFactor(0.8)
-                            .foregroundStyle(isOn ? DS.pickInk : wants ? DS.attentionInk : DS.textPrimary)
+                            .foregroundStyle(tone == .none ? (isOn ? DS.pickInk : wants ? DS.attentionInk : DS.textPrimary) : wordInk)
                         Spacer(minLength: DS.Space.s2)
                         Text((count ?? 0).formatted())
                             .dsText(.body17)
@@ -229,6 +230,10 @@ struct DSCountTile: View {
                 .padding(.leading, DS.Space.s1)
                 .padding(.trailing, add == nil && addMenu.isEmpty && !reservesPlus ? DS.Space.s2 : 0)
                 .frame(maxWidth: .infinity, minHeight: cellHeight, alignment: .leading)
+                // The state's wash and edge (prd §1463), Security's only: no
+                // other inline box passes a tone.
+                .background(shape.fill(hue?.opacity(0.14) ?? Color.clear))
+                .overlay { if let hue { shape.strokeBorder(hue.opacity(0.6), lineWidth: 1.5) } }
                 // No backing (prd §1268, user: "no backing"): the pick says
                 // itself in the tint of its figure and word.
                 .animation(DS.Motion.standard, value: isOn)

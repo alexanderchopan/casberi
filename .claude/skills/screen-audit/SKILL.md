@@ -20,6 +20,8 @@ Recurring sweep that catches regressions between working sessions. Everything ru
    - Sources (the apps catalogue and the counts box): `-deeplink casberi://apps`.
    - Rooms tray: `-openTray YES`; its search: `-openTray YES -traySearch "<words>"`.
    - Rooms: `-openRoom "<seat or category>"` (`Wallet`, `Work`, `Life`, `Your notes` — never "Notes", prd §975), with `-openSection <raw>` for a tile (`home`, `holdings`, `security`, `subscriptions`); `-walletScope <address | seat:Name>`, `-marketsScope alerts|<Category>|new`, `-notesScope folders|voice`.
+   - Move tab (prd §1422): `-openRoom "you:move"` (its page; the demo has an account, §1475); `-openMove YES` raises its tray; `-movePreview create|recover|keys` for its other shapes; `-moveSendDraft`, `-moveSwapDraft` for a filled sentence.
+   - Search tab: `-openComposer YES` (Find, its field and foot), `-findProbe "<words>"` for a filled result.
    - Note sheet: `-openNote YES` (with `-noteDraft "<text>"`, `-notePicture YES`, `-noteVoice YES` for its other shapes).
    - Addresses: `-openAddresses YES`. What this app reaches: `-openReach YES` (`-seedReceipts YES` for an undeclared host).
    - Thing sheet: `-deeplink casberi://thing/latest` (the newest thing's sheet). Its variants are keyed off the thing's kind (a wallet transfer, a social post); name a variant unreached if the corpus has none of that kind.

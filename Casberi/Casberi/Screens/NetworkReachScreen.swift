@@ -675,26 +675,25 @@ private struct ReachCard: View {
         // No disc. The only mark available here would be a monogram of the
         // service name printed directly beneath it, which restates its own
         // caption; see `DSTreemapLeader`'s doc.
-        VStack(alignment: .leading, spacing: 2) {
+        Group {
             if rank == 0 && !cell.isTail {
                 DSTreemapLeader(figure: cell.count.formatted(), name: cell.label)
             } else {
-                Text(cell.label)
-                    .dsText(.body17)
-                    .foregroundStyle(cell.isTail ? DS.textSecondary : DS.textPrimary)
-                    .lineLimit(2).minimumScaleFactor(0.8)
-                // The tail is a sum, not a service — printing its count beside a
-                // name would read as one thing that made that many requests.
-                if !cell.isTail {
-                    Text("\(cell.count)")
-                        .dsText(.subhead12).foregroundStyle(DS.textSecondary)
-                        .monospacedDigit()
+                // **A CELL NEVER SPILLS INTO ITS NEIGHBOUR (2026-10-22
+                // nightly, `walk-reach.png`).** A one-row cell is ~37pt and a
+                // name over its count with the s3 pad wants ~60, so the flexible
+                // frame grew to its content and the cell drew over the one under
+                // it. The count goes first, then the pad; the readout still
+                // names both (`UnitTreemap`'s own rule for its small cells).
+                ViewThatFits(in: .vertical) {
+                    tailFace(cell, count: true).padding(DS.Space.s3)
+                    tailFace(cell, count: false).padding(DS.Space.s3)
+                    tailFace(cell, count: false)
+                        .padding(.horizontal, DS.Space.s3).padding(.vertical, DS.Space.s1)
                 }
-                Spacer(minLength: 0)
             }
         }
-        .padding(rank == 0 && !cell.isTail ? 0 : DS.Space.s3)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity, alignment: .topLeading)
         .background {
             ZStack {
                 // The well, not the sheet: this card's own row background IS
@@ -705,9 +704,26 @@ private struct ReachCard: View {
             }
             .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
         }
+        .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
         .accessibilityElement(children: .combine)
         .accessibilityLabel(cell.isTail ? cell.label
                             : "\(cell.label), \(cell.count) requests\(cell.declared ? "" : ", not on the list")")
+    }
+
+    private func tailFace(_ cell: NetworkReceiptsInsight.Cell, count: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(cell.label)
+                .dsText(.body17)
+                .foregroundStyle(cell.isTail ? DS.textSecondary : DS.textPrimary)
+                .lineLimit(count ? 2 : 1).minimumScaleFactor(0.8)
+            // The tail is a sum, not a service — printing its count beside a
+            // name would read as one thing that made that many requests.
+            if count, !cell.isTail {
+                Text("\(cell.count)")
+                    .dsText(.subhead12).foregroundStyle(DS.textSecondary)
+                    .monospacedDigit()
+            }
+        }
     }
 
     /// Magnitude in the neutral ink ramp, STATE in the hue — the one place

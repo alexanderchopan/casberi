@@ -262,6 +262,10 @@ struct SubscriptionsSummary: View {
         let isLit = pick == tile.id
         // A narrow tile keeps its words and gives up its glyph.
         let roomy = tile.rect.width >= 112
+        // …and its side pad (2026-10-22 nightly, `walk-wallet-subscriptions.png`):
+        // a tile near `minSide` lost 24 of its 44pt to the s3 pad and drew
+        // its share as "1…".
+        let narrow = tile.rect.width < 72
         Button {
             DSHaptic.selection()
             withAnimation(reduceMotion ? nil : DS.Motion.standard) {
@@ -291,7 +295,7 @@ struct SubscriptionsSummary: View {
                 }
                 Spacer(minLength: 0)
             }
-            .padding(.horizontal, DS.Space.s3)
+            .padding(.horizontal, narrow ? DS.Space.s1 : DS.Space.s3)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
             .background(RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .fill(isLit ? DS.pickInk : DS.fillFaint))
