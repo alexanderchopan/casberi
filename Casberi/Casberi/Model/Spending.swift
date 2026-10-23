@@ -57,6 +57,16 @@ enum Spending {
         var recurring: Double = 0
         /// The same, last window to the same point; nil with `earlier`.
         var earlierRecurring: Double? = nil
+        /// **FEES (prd §1476):** gas, one row per network, largest first,
+        /// each against the last window as a place is; their sum; last
+        /// window's sum; and, when a send in this window carries no fee
+        /// (landed before the fact was kept), the day the fees start from,
+        /// so the row says so instead of counting low in silence (§83).
+        /// Never part of `total`: a fee is not a place you spent at.
+        var fees: [Place] = []
+        var feesTotal: Double = 0
+        var earlierFees: Double? = nil
+        var feesFrom: Date? = nil
 
         var rest: Double { max(0, total - recurring) }
         var earlierRest: Double? { earlier.map { max(0, $0 - (earlierRecurring ?? 0)) } }
@@ -100,8 +110,40 @@ enum Spending {
         var machinery: Bool = false
         /// Where it went, as Spending names it; nil leaves the move out.
         var place: String? = nil
+        /// What its transaction cost in gas, in USD, and on which network
+        /// (prd §1476): the `.fee` fact a sent leg carries; nil on a row
+        /// landed before the fact was kept, or one the read did not price.
+        var feeUSD: Double? = nil
+        var network: String? = nil
 
         enum Way: Equatable { case sent, received, swap }
+    }
+
+    /// One transaction's gas (prd §1476): the fee a wallet of yours paid,
+    /// once however many legs the transaction landed as.
+    struct Fee: Equatable {
+        var tx: String
+        var network: String
+        var usd: Double
+        var at: Date
+    }
+
+    /// **FEES (prd §1476): gas on every transaction a wallet you follow
+    /// sent**, one per transaction. Not only spending: a swap, a deposit and
+    /// a move between your own wallets all paid gas, and the fee is the one
+    /// part of them that left for good. A fee on a wallet you no longer
+    /// follow is not yours (§1330). The first leg of a transaction that
+    /// carries a fee speaks for it.
+    static func walletFees(_ moves: [Move], own: Set<String>) -> [Fee] {
+        var seen = Set<String>()
+        var out: [Fee] = []
+        for m in moves where own.contains(m.wallet) {
+            guard let usd = m.feeUSD, usd.isFinite, usd > 0, let network = m.network,
+                  !seen.contains(m.tx) else { continue }
+            seen.insert(m.tx)
+            out.append(Fee(tx: m.tx, network: network, usd: usd, at: m.at))
+        }
+        return out
     }
 
     /// How long after a send money may come back for the pair to read as one
@@ -194,7 +236,8 @@ enum Spending {
     /// Home's reading (§1201).
     static func read(_ charges: [Charge], now: Date, calendar: Calendar = .current,
                      window: Window = .month,
-                     isRecurring: (String) -> Bool = { _ in false }) -> Reading {
+                     isRecurring: (String) -> Bool = { _ in false },
+                     fees: [Fee] = [], unpricedSends: [Date] = []) -> Reading {
         guard let (start, lastStart, lastEnd) = bounds(window, now: now, calendar: calendar)
         else { return Reading(total: 0, earlier: nil, places: []) }
 
@@ -239,11 +282,42 @@ enum Spending {
         for p in places { rest += p.usd }
         var earlierRecurring: Double = 0
         for (key, usd) in earlierByPlace where isRecurring(key) { earlierRecurring += max(0, usd) }
-        return Reading(total: recurring + rest,
-                       earlier: sawEarlier ? max(0, earlier) : nil,
-                       places: places,
-                       subscriptions: subscriptions,
-                       recurring: recurring,
-                       earlierRecurring: sawEarlier ? earlierRecurring : nil)
+        var reading = Reading(total: recurring + rest,
+                              earlier: sawEarlier ? max(0, earlier) : nil,
+                              places: places,
+                              subscriptions: subscriptions,
+                              recurring: recurring,
+                              earlierRecurring: sawEarlier ? earlierRecurring : nil)
+        // Fees (prd §1476): by network, this window and the last.
+        var byNetwork: [String: Place] = [:]
+        var earlierByNetwork: [String: Double] = [:]
+        var feesTotal: Double = 0, earlierFees: Double = 0
+        var sawEarlierFee = false, firstFee: Date?
+        for fee in fees {
+            if fee.at >= start && fee.at <= now {
+                var row = byNetwork[fee.network] ?? Place(name: fee.network, usd: 0, count: 0)
+                row.usd += fee.usd
+                row.count += 1
+                if fee.at > (row.lastAt ?? .distantPast) { row.lastAt = fee.at }
+                byNetwork[fee.network] = row
+                feesTotal += fee.usd
+                if firstFee.map({ fee.at < $0 }) ?? true { firstFee = fee.at }
+            } else if fee.at >= lastStart && fee.at <= lastEnd {
+                earlierByNetwork[fee.network, default: 0] += fee.usd
+                earlierFees += fee.usd
+                sawEarlierFee = true
+            }
+        }
+        reading.fees = byNetwork.values.map { row in
+            var r = row
+            r.earlier = earlierByNetwork[row.name]
+            return r
+        }.sorted { $0.usd != $1.usd ? $0.usd > $1.usd : $0.name < $1.name }
+        reading.feesTotal = feesTotal
+        reading.earlierFees = sawEarlierFee ? earlierFees : nil
+        if let firstFee, unpricedSends.contains(where: { $0 >= start && $0 <= now && $0 < firstFee }) {
+            reading.feesFrom = firstFee
+        }
+        return reading
     }
 }

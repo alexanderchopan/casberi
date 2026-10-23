@@ -609,12 +609,17 @@ struct ThingFact: Hashable, Identifiable, Sendable {
         /// operation type, "trade", "deposit", "execute". Read by Spending
         /// (`SpendingSource.operation(of:)`), never drawn as a fact row.
         case operation
+        /// What a sent wallet leg's transaction cost in gas (prd §1476):
+        /// `label` the network's name, `value` the fee in USD as a plain
+        /// number. Read by Spending's Fees row (`SpendingSource.fee(of:)`),
+        /// never drawn as a fact row.
+        case fee
 
         /// Kept on the thing for a reader elsewhere, never drawn as a label
         /// and value row (`FactRows` skips these).
         var isRowless: Bool {
             switch self {
-            case .reminder, .edited, .list, .unsubscribe, .settlement, .operation: return true
+            case .reminder, .edited, .list, .unsubscribe, .settlement, .operation, .fee: return true
             default: return false
             }
         }

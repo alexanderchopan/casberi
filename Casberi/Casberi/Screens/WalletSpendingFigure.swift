@@ -33,6 +33,12 @@ struct WalletSpendingFigure: View {
             VStack(spacing: DS.Space.s2) {
                 row(String(localized: "Recurring"), mask ?? AppleWalletRoom.money(reading.recurring, "USD"))
                 row(restLine(mask), mask ?? AppleWalletRoom.money(reading.rest, "USD"))
+                // **FEES (prd §1476):** gas on what your wallets sent, apart
+                // from the total, drawn once there is any; "from <day>" while
+                // the window holds a send landed before the fee was kept.
+                if reading.feesTotal >= 0.005 {
+                    row(feesLine(mask), mask ?? AppleWalletRoom.money(reading.feesTotal, "USD"))
+                }
             }
             .padding(.top, DS.Space.s3)
             DSRangeChips(ranges: Spending.Window.allCases, range: window,
@@ -70,6 +76,14 @@ struct WalletSpendingFigure: View {
         case .week:
             return "\(word) · \(String(localized: "\(money) last week"))"
         }
+    }
+
+    /// "Fees", or "Fees · from Oct 23" when a send in the window carries no fee yet.
+    private func feesLine(_ mask: String?) -> String {
+        let word = String(localized: "Fees")
+        guard mask == nil, let from = reading.feesFrom else { return word }
+        let day = from.formatted(.dateTime.month(.abbreviated).day())
+        return String(localized: "\(word) · from \(day)")
     }
 
     static func label(_ window: Spending.Window) -> String {

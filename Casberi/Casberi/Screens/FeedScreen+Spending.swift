@@ -54,7 +54,7 @@ extension FeedScreen {
     var walletSpendingPageSections: some View {
         let reading = SpendingReading.shared
         let mask = BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil
-        if reading.page.places.isEmpty && reading.page.subscriptions.isEmpty {
+        if reading.page.places.isEmpty && reading.page.subscriptions.isEmpty && reading.page.fees.isEmpty {
             if reading.read { walletSkeletonRowsSection }
         } else {
             if !reading.page.subscriptions.isEmpty {
@@ -71,7 +71,41 @@ extension FeedScreen {
                     }
                 }
             }
+            // **FEES (prd §1476):** one row per network, largest first, the
+            // count of transactions and the comparison the places use.
+            if !reading.page.fees.isEmpty {
+                walletCard(String(localized: "Fees"), glyph: ScopeTileGlyph.spending) {
+                    ForEach(reading.page.fees, id: \.name) { network in
+                        spendingFeeRow(network, window: reading.window, mask: mask)
+                    }
+                }
+            }
         }
+    }
+
+    /// A network's fees (prd §1476): how many transactions, then how it
+    /// compares with the last window; under Hide balances the count alone.
+    func spendingFeeRow(_ network: Spending.Place, window: Spending.Window, mask: String?) -> some View {
+        SubscriptionRow(name: network.name,
+                        line: Text(verbatim: Self.spendingFeeLine(network, window: window, mask: mask))) {
+            Text(verbatim: mask ?? AppleWalletRoom.money(network.usd, "USD"))
+                .dsText(.price17).monospacedDigit().foregroundStyle(DS.textPrimary)
+        }
+        .listRowInsets(EdgeInsets(top: Self.rowAir, leading: DSRoomChassis.rowInset,
+                                  bottom: Self.rowAir, trailing: DSRoomChassis.rowInset))
+        .feedRowBackground()
+        .listRowSeparator(.hidden)
+    }
+
+    static func spendingFeeLine(_ network: Spending.Place, window: Spending.Window,
+                                now: Date = .now, mask: String?) -> String {
+        let count = network.count == 1 ? String(localized: "One transaction")
+                                       : String(localized: "\(network.count) transactions")
+        guard mask == nil else { return count }
+        guard let earlier = network.earlier, earlier > 0 else {
+            return "\(count) · \(String(localized: "first time"))"
+        }
+        return "\(count) · \(spendingAgainst(network.usd, earlier: earlier, window: window, now: now, point: false))"
     }
 
     /// A subscription's row (prd §1469): its newest charge's day and what

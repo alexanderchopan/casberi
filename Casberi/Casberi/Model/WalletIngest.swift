@@ -1563,6 +1563,9 @@ enum WalletIngest {
         // signal that this leg came from the fallback path and has no price
         // rather than a price of zero.
         if let usd = t.valueUSD { d["zerionValueUSD"] = usd }
+        // What the transaction cost in gas (prd §1476), Zerion-only like the
+        // price: the Alchemy arm reads no receipt here.
+        if let fee = t.feeUSD { d["zerionFeeUSD"] = fee }
         // That a price was ASKED FOR, separately from whether one came back
         // (2026-08-02, the fake-transfer flag). `zerionValueUSD`'s absence is
         // two different facts — "Zerion declined to price this token" on this
@@ -1837,7 +1840,11 @@ enum WalletIngest {
         // What the read called the whole transaction, on a send that was not
         // a plain one (prd §1330): a trade whose other leg never landed, a
         // deposit, a call. Spending reads it; nothing draws it.
-        if !received { SpendingSource.stampOperation(thing, t["zerionOperation"] as? String) }
+        if !received {
+            SpendingSource.stampOperation(thing, t["zerionOperation"] as? String)
+            // The gas it cost (prd §1476), on the sent leg, named for its network.
+            SpendingSource.stampFee(thing, t["zerionFeeUSD"] as? Double, network: chain.displayName)
+        }
         return thing
     }
 
@@ -1892,6 +1899,11 @@ enum WalletIngest {
             // (prd §1330).
             if !leg.received,
                SpendingSource.stampOperation(thing, leg.t["zerionOperation"] as? String) {
+                touched = true
+            }
+            // The fee, for sends landed before prd §1476 kept it.
+            if !leg.received,
+               SpendingSource.stampFee(thing, leg.t["zerionFeeUSD"] as? Double, network: leg.chain.displayName) {
                 touched = true
             }
             // THE VOID SHAPE, for rows landed before prd §516 (2026-08-28).

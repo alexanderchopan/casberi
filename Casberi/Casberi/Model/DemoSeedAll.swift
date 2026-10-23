@@ -3353,6 +3353,9 @@ enum DemoSeedAll {
                 // now agree by construction.
                 t.counterpartyAddress = counterpartyAddress(for: m.2)
                 t.transferUSD = m.3
+                // The gas a send paid (prd §1476), a few cents on Base as
+                // Zerion prices it, so Spending's Fees row draws in the demo.
+                if !m.0 { SpendingSource.stampFee(t, 0.004 + Double(i % 5) * 0.003, network: "Base") }
             }
         }
         // A send to an address nobody named: Spending's place is the short
@@ -3366,6 +3369,7 @@ enum DemoSeedAll {
             t.transferAmount = "150 USDC"
             t.counterpartyAddress = stranger
             t.transferUSD = 150
+            SpendingSource.stampFee(t, 0.011, network: "Base")
         })
         // A move between two of the person's own wallets (prd §1078): both
         // legs land, as they do live, and Home draws them as one row.

@@ -25,6 +25,11 @@ final class SpendingReading {
     /// The dollar charges of the last fetch, so a window pick re-reads them
     /// with no fetch.
     private var charges: [Spending.Charge] = []
+    /// **FEES (prd §1476):** gas on the transactions your wallets sent, one
+    /// per transaction, and the sends in the same two months that carry no
+    /// fee yet, so the row can say which day the fees start from.
+    private var fees: [Spending.Fee] = []
+    private var unpricedSends: [Date] = []
     /// **A PLAN TRACKED BY HAND COUNTS ON ITS RENEWAL DAY (prd §1469):**
     /// one charge per renewal at its price, for an item only you added —
     /// nothing a card charged, which is already in `charges`. The tile's
@@ -79,6 +84,9 @@ final class SpendingReading {
         let next = Spending.read(charges, now: now, calendar: calendar)
         if next != reading { reading = next }
         self.charges = charges
+        let followed = SpendingSource.followedWallets()
+        fees = SpendingSource.walletFees(things, followed: followed)
+        unpricedSends = SpendingSource.unpricedSends(things, followed: followed)
         recurringKeys = Self.recurring()
         readPage(now: now, calendar: calendar)
         let roll = WalletCardRoll.compose(
@@ -104,7 +112,8 @@ final class SpendingReading {
     private func readPage(now: Date, calendar: Calendar) {
         let keys = recurringKeys
         let next = Spending.read(charges + tracked, now: now, calendar: calendar, window: window,
-                                 isRecurring: { keys.contains(Subscriptions.key($0)) })
+                                 isRecurring: { keys.contains(Subscriptions.key($0)) },
+                                 fees: fees, unpricedSends: unpricedSends)
         if next != page { page = next }
     }
 
@@ -250,7 +259,33 @@ enum SpendingSource {
     /// rule for which onchain sends are spending (prd §1201, §1330).
     @MainActor
     static func walletCharges(_ things: [Thing], followed own: Set<String>) -> [Raw] {
-        let moves: [Spending.Move] = things.compactMap { thing in
+        Spending.walletSpends(walletMoves(things), own: own).compactMap { move in
+            guard let place = move.place, let usd = move.usd else { return nil }
+            return Raw(place: place, amount: usd, currency: "USD", at: move.at)
+        }
+    }
+
+    /// **FEES (prd §1476):** the gas your wallets' transactions paid, through
+    /// `Spending.walletFees` — one per transaction, followed wallets only.
+    @MainActor
+    static func walletFees(_ things: [Thing], followed own: Set<String>) -> [Spending.Fee] {
+        Spending.walletFees(walletMoves(things), own: own)
+    }
+
+    /// When a wallet of yours sent and the row carries no fee: landed before
+    /// prd §1476 kept it, or never priced. The Fees row says "from <day>"
+    /// while a window holds one of these.
+    @MainActor
+    static func unpricedSends(_ things: [Thing], followed own: Set<String>) -> [Date] {
+        walletMoves(things).compactMap { m in
+            m.way == .sent && own.contains(m.wallet) && m.feeUSD == nil ? m.at : nil
+        }
+    }
+
+    /// Every `Wallet` row as a move, the fee its sent leg carries included.
+    @MainActor
+    static func walletMoves(_ things: [Thing]) -> [Spending.Move] {
+        things.compactMap { thing in
             guard thing.kind == .transaction, thing.source == SpendingReading.walletSource,
                   let wallet = thing.walletAddress?.lowercased() else { return nil }
             let way: Spending.Move.Way
@@ -266,6 +301,7 @@ enum SpendingSource {
             // Every leg of one transaction opens the same explorer page.
             let tx = thing.content.isEmpty ? (thing.sourceRef ?? thing.id.uuidString) : thing.content.lowercased()
             let to = thing.counterpartyAddress?.lowercased()
+            let fee = Self.fee(of: thing)
             return Spending.Move(
                 wallet: wallet, tx: tx, way: way,
                 usd: thing.transferUSD, at: thing.capturedAt,
@@ -273,11 +309,8 @@ enum SpendingSource {
                 operation: operation(of: thing),
                 machinery: way == .sent && to.map(isMachinery) ?? false,
                 place: thing.transferCounterparty.flatMap { $0.isEmpty ? nil : $0 }
-                    ?? thing.counterpartyAddress.map(WalletStore.shortAddress))
-        }
-        return Spending.walletSpends(moves, own: own).compactMap { move in
-            guard let place = move.place, let usd = move.usd else { return nil }
-            return Raw(place: place, amount: usd, currency: "USD", at: move.at)
+                    ?? thing.counterpartyAddress.map(WalletStore.shortAddress),
+                feeUSD: fee?.usd, network: fee?.network)
         }
     }
 
@@ -316,6 +349,25 @@ enum SpendingSource {
         guard let operation, !operation.isEmpty, operation != "send",
               Self.operation(of: thing) == nil else { return false }
         thing.facts.append(ThingFact(operationLabel, operation, .operation).encoded)
+        return true
+    }
+
+    // MARK: - What the transaction cost (prd §1476)
+
+    /// The gas a sent leg's transaction cost, in USD, and the network it
+    /// was paid on: the `.fee` fact's value and label. Never drawn.
+    static func fee(of thing: Thing) -> (usd: Double, network: String)? {
+        guard let fact = thing.factList.first(where: { $0.action == .fee }),
+              let usd = Double(fact.value), usd.isFinite, usd > 0, !fact.label.isEmpty else { return nil }
+        return (usd, fact.label)
+    }
+
+    /// Stamps the fee on a sent leg, once; nothing for no fee or a zero one.
+    /// Returns whether the thing changed.
+    @discardableResult
+    static func stampFee(_ thing: Thing, _ usd: Double?, network: String) -> Bool {
+        guard let usd, usd.isFinite, usd > 0, !network.isEmpty, Self.fee(of: thing) == nil else { return false }
+        thing.facts.append(ThingFact(network, String(usd), .fee).encoded)
         return true
     }
 }

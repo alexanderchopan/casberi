@@ -466,6 +466,11 @@ enum ZerionAPI {
         /// nothing" and "nobody knows" are different facts and the band draws
         /// them differently.
         let valueUSD: Double?
+        /// What the whole TRANSACTION cost in gas, in USD — Zerion's own
+        /// `attributes.fee.value` (prd §1476, Spending's Fees row). One
+        /// figure per transaction, carried on every leg of it; nil when
+        /// Zerion priced no fee (a sponsored operation, an unpriced coin).
+        let feeUSD: Double?
     }
 
     /// A wallet's recent fungible activity across the EVM chains Casberi
@@ -529,6 +534,7 @@ enum ZerionAPI {
             let application = ((attrs["application_metadata"] as? [String: Any])?["name"] as? String)
                 .flatMap { $0.isEmpty ? nil : $0 }
             guard let transfers = attrs["transfers"] as? [[String: Any]] else { continue }
+            let fee = doubleValue((attrs["fee"] as? [String: Any])?["value"]).flatMap { $0 > 0 ? $0 : nil }
             for t in transfers {
                 // Fungible-only — an NFT transfer carries no `fungible_info`
                 // and is skipped (see the type doc above).
@@ -551,13 +557,13 @@ enum ZerionAPI {
                     out.append(Transfer(hash: hash, network: network, received: true,
                                         symbol: clean(symbol), contract: contract, amount: amount,
                                         counterparty: sender, when: when, operationType: operation,
-                                        applicationName: application, valueUSD: value))
+                                        applicationName: application, valueUSD: value, feeUSD: fee))
                 }
                 if direction == "out" || direction == "self" {
                     out.append(Transfer(hash: hash, network: network, received: false,
                                         symbol: clean(symbol), contract: contract, amount: amount,
                                         counterparty: recipient, when: when, operationType: operation,
-                                        applicationName: application, valueUSD: value))
+                                        applicationName: application, valueUSD: value, feeUSD: fee))
                 }
             }
         }

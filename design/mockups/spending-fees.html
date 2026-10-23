@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Spending · Fees</title>
+<style>
+body{margin:0;background:#1c1c1e;font-family:-apple-system,"SF Pro Text",system-ui;color:#f5f5f7;display:flex;gap:48px;justify-content:center;padding:40px}
+.phone{width:390px;background:#000;border-radius:44px;padding:52px 0 32px;box-sizing:border-box}
+.col{padding:0 20px}
+.title{font-size:34px;font-weight:700;margin:0 0 2px}
+.sub{font-size:13px;color:#8e8e93;margin:0 0 18px}
+.box{height:236px;display:flex;flex-direction:column;gap:4px}
+.total{font-size:24px;font-weight:700;font-variant-numeric:tabular-nums}
+.cmp{font-size:12px;color:#8e8e93}
+.rows{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+.row{display:flex;justify-content:space-between;font-size:17px}
+.row span:first-child{color:#aeaeb2}
+.row b{font-weight:600;font-variant-numeric:tabular-nums}
+.chips{display:flex;gap:14px;margin-top:10px;font-size:13px;color:#8e8e93}
+.chips .on{color:#f5f5f7;font-weight:600}
+.tiles{display:flex;gap:10px;margin:14px 0 22px;overflow:hidden}
+.tile{width:68px;height:52px;border-radius:14px;background:#1c1c1e;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:10px;color:#aeaeb2;flex:none}
+.tile i{width:16px;height:16px;border-radius:4px;background:#fb3a53;display:block}
+.tile.on{background:#f5f5f7;color:#000}.tile.on i{background:#fb3a53}
+.sec{display:flex;align-items:center;gap:8px;font-size:17px;font-weight:600;margin:16px 0 8px}
+.sec i{width:16px;height:16px;border-radius:4px;background:#fb3a53;display:block}
+.r{display:flex;align-items:center;gap:12px;padding:9px 0}
+.face{width:46px;height:46px;border-radius:12px;background:#2c2c2e;flex:none}
+.face.c{border-radius:23px}
+.words{flex:1;min-width:0}
+.name{font-size:17px}
+.line{font-size:13px;color:#8e8e93;margin-top:2px}
+.money{font-size:17px;font-weight:600;font-variant-numeric:tabular-nums}
+.note{width:360px;font-size:14px;line-height:1.5;color:#aeaeb2;align-self:center}
+.note b{color:#f5f5f7}
+</style></head><body>
+<div class="phone"><div class="col">
+  <p class="title">Wallet</p><p class="sub">Spending</p>
+  <div class="box">
+    <div class="total">$3,684 in October</div>
+    <div class="cmp">$2,939 more than this point in September</div>
+    <div class="rows">
+      <div class="row"><span>Recurring</span><b>$57.98</b></div>
+      <div class="row"><span>The rest · $690 in September</span><b>$3,626</b></div>
+      <div class="row"><span>Fees · from Oct 23</span><b>$4.12</b></div>
+    </div>
+    <div class="chips"><span>Week</span><span class="on">Month</span></div>
+  </div>
+  <div class="tiles"><div class="tile"><i></i>Home</div><div class="tile"><i></i>Holdings</div><div class="tile"><i></i>Markets</div><div class="tile"><i></i>Security</div><div class="tile on"><i></i>Spending</div></div>
+  <div class="sec"><i></i>Subscriptions</div>
+  <div class="r"><div class="face"></div><div class="words"><div class="name">iCloud+</div><div class="line">Oct 18 · Apple Card</div></div><div class="money">$2.99</div></div>
+  <div class="r"><div class="face"></div><div class="words"><div class="name">Netflix</div><div class="line">Oct 14 · Privacy.com</div></div><div class="money">$12.99</div></div>
+  <div class="sec"><i></i>Places</div>
+  <div class="r"><div class="face c"></div><div class="words"><div class="name">Plasma One</div><div class="line">6 times · $636 more than September</div></div><div class="money">$1,840</div></div>
+  <div class="r"><div class="face c"></div><div class="words"><div class="name">MetaMask Card</div><div class="line">3 times · $91.50 more than September</div></div><div class="money">$412</div></div>
+  <div class="sec"><i></i>Fees</div>
+  <div class="r"><div class="face c"></div><div class="words"><div class="name">Base</div><div class="line">12 transactions · first time</div></div><div class="money">$0.41</div></div>
+  <div class="r"><div class="face c"></div><div class="words"><div class="name">Ethereum</div><div class="line">2 transactions · first time</div></div><div class="money">$3.71</div></div>
+</div></div>
+<div class="note">
+<p><b>Fees, the third row.</b> Gas on every transaction one of your wallets sent, read off Zerion's own fee figure when the row lands, one fee per transaction however many legs it had. Not in the total: a fee is not a place you spent at.</p>
+<p><b>Honest about what it has.</b> Rows landed before today carry no fee, so the word says <b>from Oct 23</b> while a window still holds unstamped sends. The heal fills older rows as the read passes over them.</p>
+<p><b>The group</b> is one row per network, largest first, the count of transactions and the comparison the places already use. Wise's fee and a card's foreign-transaction line are not in the data the app holds today, so they are not drawn.</p>
+</div>
+</body></html>

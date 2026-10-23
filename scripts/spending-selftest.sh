@@ -152,6 +152,31 @@ let plain = Spending.read(charges, now: now, calendar: cal)
 check(plain.recurring == 0 && plain.places.allSatisfy { !$0.recurring }, "Home's reading believes nothing recurs")
 check(plain.total == month.total && plain.earlier == month.earlier, "Home's reading is the month, unchanged (§1201)")
 
+// ── Fees (prd §1476): gas on what your wallets sent, one per transaction. ──
+func gas(_ tx: String, _ fee: Double?, at m: Double, way: M.Way = .sent, wallet: String = mine, net: String = "Base") -> M {
+    M(wallet: wallet, tx: tx, way: way, usd: 100, at: at(m), counterparty: "0xfeed", place: "Somewhere",
+      feeUSD: fee, network: fee == nil ? nil : net)
+}
+let fees = Spending.walletFees([gas("f1", 0.10, at: 0), gas("f1", 0.10, at: 0), gas("f2", 0.25, at: 1, net: "Ethereum"),
+                                gas("f3", 0.05, at: 2, wallet: unfollowed), gas("f4", nil, at: 3),
+                                gas("f5", 0.02, at: 4, way: .swap)], own: own)
+check(fees.map(\.tx) == ["f1", "f2", "f5"], "one fee per transaction; an unfollowed wallet's and an unpriced one are left out (\(fees.map(\.tx)))")
+check(fees.first?.usd == 0.10, "two legs of one transaction pay its gas once")
+let feeRows = Spending.read([], now: now, calendar: cal, window: .month,
+                            fees: [Spending.Fee(tx: "a", network: "Base", usd: 0.30, at: day(1)),
+                                   Spending.Fee(tx: "b", network: "Base", usd: 0.10, at: day(2)),
+                                   Spending.Fee(tx: "c", network: "Ethereum", usd: 3.00, at: day(3)),
+                                   Spending.Fee(tx: "d", network: "Base", usd: 0.50, at: day(35))],
+                            unpricedSends: [day(10)])
+check(feeRows.fees.map(\.name) == ["Ethereum", "Base"], "fees stand by network, largest first (\(feeRows.fees.map(\.name)))")
+check(feeRows.fees.last?.count == 2 && abs((feeRows.fees.last?.usd ?? 0) - 0.40) < 1e-9, "a network's row counts its transactions and adds their gas")
+check(feeRows.fees.last?.earlier == 0.50, "a network carries last window's gas")
+check(abs(feeRows.feesTotal - 3.40) < 1e-9 && feeRows.earlierFees == 0.50, "the box's Fees row is the window's sum, against the last")
+check(feeRows.total == 0, "fees are never part of the total")
+check(feeRows.feesFrom == day(3), "an unpriced send before the first fee makes the row say which day fees start from")
+check(Spending.read([], now: now, calendar: cal, fees: [Spending.Fee(tx: "a", network: "Base", usd: 0.30, at: day(1))],
+                    unpricedSends: [day(0.5)]).feesFrom == nil, "an unpriced send after the first fee says nothing")
+
 if failures > 0 { print("\(failures) assertion(s) failed"); exit(1) }
 print("  ok   swaps, trades, deposits, round trips, unfollowed wallets, own moves, the window and the recurring half")
 SWIFT
@@ -182,3 +207,5 @@ mutate "last window whole, not to this point" 's/let lastEnd = calendar\.date\(b
 mutate "a place forgets its last-window figure" 's/p\.earlier = earlierUSD\.map \{ max\(0, \$0\) \}/p.earlier = nil/'
 mutate "a plan also stands in Places"          's/if p\.recurring \{ subscriptions\.append\(p\) \} else \{ places\.append\(p\) \}/places.append(p); if p.recurring { subscriptions.append(p) }/'
 mutate "a subscription names its oldest charge" 's/charge\.at > \(place\.lastAt \?\? \.distantPast\)/charge.at < (place.lastAt ?? .distantFuture)/'
+mutate "a transaction's gas counted once per leg"   's/seen\.insert\(m\.tx\)//'
+mutate "an unfollowed wallet's gas counts"           's/for m in moves where own\.contains\(m\.wallet\) \{/for m in moves {/'
