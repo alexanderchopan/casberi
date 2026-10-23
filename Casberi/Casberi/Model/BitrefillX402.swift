@@ -194,6 +194,44 @@ enum BitrefillX402 {
         return invoice
     }
 
+    // MARK: - The payment, measured for a fifth of a cent
+
+    /// **THE CHEAPEST PROOF OF THE PAYMENT PATH (prd §1473 item 8).** A
+    /// search with no token costs $0.002, paid exactly as an invoice is: the
+    /// 402, the account's signed USDC authorization, the facilitator settling
+    /// it on Base. One such search proves Bitrefill's facilitator takes a
+    /// Safe's ERC-1271 signature, with no card bought. `-bitrefillPayProbe
+    /// YES` runs it and logs `bitrefillPayProbe|`.
+    @MainActor
+    static func payProbe(account: String, log: @escaping (String) -> Void) async {
+        var parts = URLComponents(string: "\(base)/x402/gift-cards/search")!
+        parts.queryItems = [URLQueryItem(name: "q", value: "amazon"), URLQueryItem(name: "country", value: country)]
+        let url = parts.url!.absoluteString
+        let (challenge, status) = await IngestSupport.requestJSON(url, service: service)
+        guard status == 402 else { log("no challenge: \(status) \(BitrefillBuy.refusal(challenge, status: status) ?? "")"); return }
+        guard let requirement = BitrefillBuy.Requirement.payable(in: challenge, chainId: network.chainId, asset: network.dollar) else {
+            log("no USDC-on-Base requirement among \(BitrefillBuy.Requirement.all(in: challenge).count)"); return
+        }
+        log("challenge: \(requirement.amount) units to \(requirement.payTo) within \(requirement.maxTimeoutSeconds)s")
+        var nonce = [UInt8](repeating: 0, count: 32)
+        guard SecRandomCopyBytes(kSecRandomDefault, 32, &nonce) == errSecSuccess else { log("no randomness"); return }
+        let authorization = BitrefillBuy.Authorization.make(from: EIP55.checksum(account), requirement: requirement, nonce: nonce)
+        do {
+            let signature = try await YourAccountMessage.signTypedData(authorization.typedData(requirement: requirement),
+                                                                       on: network, account: account,
+                                                                       reason: "Pay 0.002 USDC to Bitrefill for one search")
+            log("signed: \(signature.count) bytes, the account accepts it")
+            guard let header = BitrefillBuy.paymentHeader(requirement: requirement, authorization: authorization, signature: signature,
+                                                          challenge: challenge) else { log("header not written"); return }
+            let (answer, status2) = await IngestSupport.requestJSON(url, headers: ["PAYMENT-SIGNATURE": header], service: service)
+            log("paid: \(status2) \(status2 == 200 ? "\(BitrefillBuy.products(in: answer).count) products" : (BitrefillBuy.refusal(answer, status: status2) ?? ""))")
+        } catch let failure as Failure {
+            log("refused: \(failure.message)")
+        } catch {
+            log("not signed: \(error)")
+        }
+    }
+
     // MARK: - The order
 
     /// Where the invoice stands, for the wallet that paid: the status route

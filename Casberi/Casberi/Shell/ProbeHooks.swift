@@ -1180,6 +1180,18 @@ enum ProbeHooks {
         // account fresh to this device never lands an alert on its FIRST run
         // — the high-water mark has just been seeded from that very read, so
         // there's no history yet to call the balance low relative to.
+        // `-bitrefillPayProbe YES` — the cheapest proof of Buy's payment path
+        // (prd §1473): one $0.002 search paid by the account's signed USDC
+        // authorization, as an invoice is. Needs the account on this phone,
+        // on Base, holding at least 0.002 USDC. Logs `bitrefillPayProbe|`.
+        Hook(key: "bitrefillPayProbe") { _, _ in
+            guard let account = YourAccountKey.address else {
+                NSLog("bitrefillPayProbe| no account on this phone"); return
+            }
+            Task { @MainActor in
+                await BitrefillX402.payProbe(account: account) { NSLog("bitrefillPayProbe| %@", $0) }
+            }
+        },
         Hook(key: "bitrefillBalanceProbe") { _, _ in
             guard let token = TokenVault.get(TokenBridge.bitrefill.tokenKey) else {
                 NSLog("[Casberi] bitrefillBalanceProbe: no stored token — connect via -tokenBridge \"Bitrefill:<key>\"")
