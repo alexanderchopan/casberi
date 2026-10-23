@@ -506,6 +506,9 @@ struct FeedScreen: View {
     @State var feedSheet: FeedSheetRoute?
     /// The Wallet Home sections opened past their five rows (`walletHomeDoor`).
     @State var walletOpenSections: Set<String> = []
+    /// The account the Accounts list's Rename is naming, and the draft.
+    @State var walletNaming: String?
+    @State var walletNameDraft = ""
     /// Whether this device holds a GitHub key — the Watch tile's gate (prd
     /// §1031), so a demo seat with no key never draws a verb that cannot
     /// act (§83). Read in a `.task`, never a body (a Keychain read, §628).
@@ -657,6 +660,9 @@ struct FeedScreen: View {
     /// the map it's standing under. Lands with the treemap doc, from the same
     /// read.
     @State var portfolio: WalletPortfolio?
+    /// The tokens hidden from Holdings (`HiddenTokens`), held here so a hide
+    /// redraws the list, the map and the total at once.
+    @State var walletHidden: Set<String> = HiddenTokens.symbols
     /// Chains the person follows that the last holdings read could not reach
     /// (prd §827) — the crown states them, because a total that quietly leaves
     /// a chain out is §83's false number. Filled by `streamBlock`.

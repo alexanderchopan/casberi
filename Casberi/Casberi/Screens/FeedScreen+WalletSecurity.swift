@@ -207,6 +207,10 @@ extension FeedScreen {
 struct WalletSecurityFigure: View {
     let counts: WalletSecurityCounts
     let onJump: (FeedScreen.SecurityAnchor) -> Void
+    /// The Signers figure as `MoveSecurity` stamps it, observed: the
+    /// page's read lands after the box first draws, and a box reading the
+    /// store once kept its zero (user: "i have signer set up but shows i don't").
+    @AppStorage(YourAccountFacts.signersKey) private var storedSigners = 0
 
     /// **NINE, THREE ACROSS, THE FIGURE CENTERED OVER ITS WORD (prd §1462,
     /// user: "F looks the cleanest").** The six counts (§1221), then your
@@ -255,7 +259,8 @@ struct WalletSecurityFigure: View {
                  word: String(localized: "Fake transfers"), wants: counts.fakeTransfers > 0,
                  tone: counts.fakeTransfers > 0 ? .threat : .none),
         ]
-        if let a = counts.account {
+        if var a = counts.account {
+            if !YourAccountDemo.isOn { a.signers = YourAccountFacts.signerCount(stored: storedSigners) }
             // "Limit a month" (user: "we can just say 'limit a month'"); Off
             // is a figure too, in the zero's ink.
             cells += [

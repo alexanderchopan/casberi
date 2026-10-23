@@ -35,7 +35,8 @@ extension FeedScreen {
 
     @ViewBuilder
     var walletTokenListSection: some View {
-        if let portfolio = portfolioShown, !portfolio.isEmpty {
+        let hiddenHere = (portfolioUnhidden?.positions ?? []).filter { walletHidden.contains($0.symbol.uppercased()) }
+        if let portfolio = portfolioShown ?? (hiddenHere.isEmpty ? nil : WalletPortfolio()) {
             let moves = walletHoldingMoves
             let fold = WalletTokenFold(portfolio.positions, total: portfolio.totalUSD)
             walletCard(String(localized: "Tokens"), glyph: ScopeTileGlyph.holdings) {
@@ -64,8 +65,44 @@ extension FeedScreen {
                     .feedRowBackground()
                     .listRowSeparator(.hidden)
                 }
+                if !hiddenHere.isEmpty { walletHiddenTokensRow(hiddenHere) }
             }
         }
+    }
+
+    /// The tokens you hid, named as one row: how many, and a menu that
+    /// brings each back. Their money is out of the total; this row is where
+    /// that is said.
+    func walletHiddenTokensRow(_ hidden: [WalletPortfolio.Position]) -> some View {
+        Menu {
+            ForEach(hidden) { position in
+                Button {
+                    walletSetHidden(position.symbol, hidden: false)
+                } label: {
+                    Label(String(localized: "Show \(position.symbol)"), systemImage: "eye")
+                }
+            }
+        } label: {
+            HStack(spacing: DS.Space.s3) {
+                Image(systemName: "eye.slash")
+                    .dsGlyph(.body, weight: .medium)
+                    .foregroundStyle(DS.textSecondary)
+                    .frame(width: DS.Face.list, height: DS.Face.list)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(String(localized: "Hidden · \(hidden.count)"))
+                        .dsText(.body17).foregroundStyle(DS.textPrimary)
+                    Text(String(localized: "\(WalletValue.money(hidden.reduce(0) { $0 + $1.usd })), not in the total"))
+                        .dsText(.subhead12).foregroundStyle(DS.textSecondary)
+                }
+                Spacer(minLength: 0)
+            }
+            .contentShape(Rectangle())
+        }
+        .listRowInsets(EdgeInsets(top: DS.Space.s2,
+                                  leading: DSRoomChassis.rowInset(forMark: DS.Face.list),
+                                  bottom: DS.Space.s2, trailing: DS.Space.s4))
+        .feedRowBackground()
+        .listRowSeparator(.hidden)
     }
 
     /// One token: the cell's own door, at row scale — a token's chart when it
@@ -86,6 +123,13 @@ extension FeedScreen {
             // ALERT ME (prd §1090): Markets' alerts, from the money you hold.
             // A token with no route has no price to watch, so it offers none.
             if position.route != nil { walletHoldingAlertMenu(position) }
+            // Out of the list, the map and the total (user: "should be able
+            // to long press and hide a token"); the Hidden row brings it back.
+            Button {
+                walletSetHidden(position.symbol, hidden: true)
+            } label: {
+                Label(String(localized: "Hide \(position.symbol)"), systemImage: "eye.slash")
+            }
         }
         .listRowInsets(EdgeInsets(top: DS.Space.s2,
                                   leading: DSRoomChassis.rowInset(forMark: DS.Face.list),

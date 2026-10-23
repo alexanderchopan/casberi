@@ -362,8 +362,11 @@ extension FeedScreen {
                 // Same animated landing as `loadWalletLive` — the treemap is
                 // the tallest late-arriving block, so ITS unanimated insert
                 // was the most jarring of the pops.
+                // The tokens you hid stay out of the map (`HiddenTokens`).
+                let hides = read.portfolio.positions.contains { walletHidden.contains($0.symbol.uppercased()) }
+                let shown = read.portfolio.hiding(walletHidden)
                 withAnimation(DS.Motion.standard) {
-                    blockStream.paint(read.doc)
+                    blockStream.paint(!hides ? read.doc : shown.isEmpty ? [] : WalletIngest.holdingsDoc(shown))
                     portfolio = read.portfolio
                 }
             } else if !blockStream.els.isEmpty || portfolio != nil {

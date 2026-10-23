@@ -142,15 +142,17 @@ struct ToastPill: View {
                             .foregroundStyle(.white)
                             .padding(.horizontal, DS.Space.s3)
                             .frame(minHeight: 28)
-                            .dsGlassProminent(tint: DS.pickInk, cornerRadius: DS.Radius.pill)
-                            .dsTapTarget(Capsule(style: .continuous))
+                            .dsGlassProminent(tint: DS.pickInk, cornerRadius: DS.Radius.control)
+                            .dsTapTarget(RoundedRectangle(cornerRadius: DS.Radius.control, style: .continuous))
                     }
                     .buttonStyle(PressSpring())
                 }
             }
             .padding(.horizontal, DS.Space.s4)
             .padding(.vertical, DS.Space.s2)
-            .dsGlass(cornerRadius: DS.Radius.pill)
+            // A tile's corners, never a pill (user: "they should be square like
+            // not pill shaped"): wrapped, a pill's ends swell into a lozenge.
+            .dsGlass(cornerRadius: DS.Radius.widget)
             // It MATERIALIZES (2026-08-06). A toast is the one piece of chrome
             // here that exists ONLY as an arrival — it appears because
             // something just happened and then it's gone. Applied inside the

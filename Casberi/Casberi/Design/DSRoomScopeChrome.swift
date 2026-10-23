@@ -220,7 +220,9 @@ struct DSRoomScopeChrome<Scope: DSTileScope, Crown: View, Figure: View>: View {
     private var accountLine: some View {
         if let showing = accounts.first(where: { $0.isShowing(scope) }),
            !showing.id.isEmpty, !RoomAccounts.isSeat(showing.id) {
-            CopyAddressButton(address: showing.id)
+            // Said as what it copies (user: "copy icon but user would never
+            // know it is for a wallet address"): a bare glyph read as nothing.
+            DSCopyRow(value: showing.id, label: "Copy address \(WalletStore.shortAddress(showing.id))")
         }
     }
 }

@@ -501,9 +501,13 @@ enum YourAccountChain {
     /// alone still signs. Nil when nothing was chosen.
     static func setupCalls(_ net: Network, _ account: String) async throws
         -> (calls: [YourAccountOp.Call], plan: YourAccount7579.Plan?)? {
-        guard let choice = YourAccountSetup.choice(for: account) else { return nil }
+        let choice = YourAccountSetup.choice(for: account) ?? YourAccountSetup.Choice()
         var calls: [YourAccountOp.Call] = []
-        if choice.recovery, let key = YourAccountRecovery.publicKey(for: account) {
+        // The recovery key rides whenever this phone holds one, chosen at
+        // Create or set up later in Security: a network opened after the key
+        // was made would otherwise open without it, and Security's Finish
+        // would spend a fee there for what the opening send could carry.
+        if let key = YourAccountRecovery.publicKey(for: account) {
             let signer = try await recoverySigner(x: key.x, y: key.y)
             calls += YourAccountOp.addRecoveryCalls(account: account, x: key.x, y: key.y, signer: signer, threshold: 1)
         }

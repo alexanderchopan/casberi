@@ -42,9 +42,28 @@ extension FeedScreen {
     /// the whole Wallet's total under one app's name (measured: "$44K" over
     /// a card app, which holds nothing in the total). `scoped` is idempotent.
     var portfolioShown: WalletPortfolio? {
+        guard let whole = portfolioUnhidden?.hiding(walletHidden), !whole.isEmpty else { return nil }
+        return whole
+    }
+
+    /// The same, with the tokens you hid still in: what Holdings' Hidden row
+    /// counts and brings back.
+    var portfolioUnhidden: WalletPortfolio? {
         guard let seat = selectedSeat else { return portfolio }
         guard let slice = portfolio.map({ Self.slice($0, for: seat) }), !slice.isEmpty else { return nil }
         return slice
+    }
+
+    /// Hide or show a token, and repaint the map the read painted (it is a
+    /// document drawn once per read) over what is now shown.
+    func walletSetHidden(_ symbol: String, hidden: Bool) {
+        HiddenTokens.set(symbol, hidden: hidden)
+        DSHaptic.selection()
+        withAnimation(DS.Motion.standard) {
+            walletHidden = HiddenTokens.symbols
+            if let shown = portfolioShown { blockStream.paint(WalletIngest.holdingsDoc(shown)) }
+            else if portfolio != nil { blockStream.paint([]) }
+        }
     }
 
     /// Whether an app the menu picked records a balance line of its own:

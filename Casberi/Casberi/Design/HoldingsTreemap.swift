@@ -274,6 +274,18 @@ struct HoldingsTreemap: View {
         let isLit = lit == tile.id
         let small = min(tile.rect.width, tile.rect.height) < 72
         let large = tile.rect.width >= 120 && tile.rect.height >= 90
+        // **A TILE DROPS WORDS, NEVER CLIPS THEM (user: "clipping").** What
+        // the tile's height holds, in order: the share goes first, then the
+        // mark; the money stays. A stack taller than its tile grew past it,
+        // its ground and edge spilling into the gaps.
+        let pad = small ? DS.Space.s2 : DS.Space.s3
+        // A line may take half the bottom padding before it is dropped.
+        let inner = tile.rect.height - 1.5 * pad
+        let mark = isOther ? 0 : HoldingsTreemapLayout.markSize(for: tile.rect)
+        let worthLine: CGFloat = large ? 29 : (small ? 15 : 21)
+        let shareLine: CGFloat = 15
+        let showsMark = !isOther && inner >= mark + worthLine
+        let showsShare = inner >= (showsMark ? mark : 0) + worthLine + shareLine
         Button {
             DSHaptic.selection()
             if isLit, !isOther, let holding = holdings.first(where: { $0.id == tile.id }) {
@@ -284,8 +296,8 @@ struct HoldingsTreemap: View {
             }
         } label: {
             VStack(alignment: .leading, spacing: 0) {
-                if !isOther {
-                    AssetMark(name: tile.id, size: HoldingsTreemapLayout.markSize(for: tile.rect))
+                if showsMark {
+                    AssetMark(name: tile.id, size: mark)
                 }
                 Spacer(minLength: 0)
                 // **A TILE SAYS WHAT AND HOW MUCH, NEVER THE DAY (prd §1338,
@@ -295,10 +307,14 @@ struct HoldingsTreemap: View {
                 // grey; a small tile keeps the dollars alone. "Other" names
                 // itself.
                 if isOther {
-                    Text("Other")
-                        .dsText(.label12)
-                        .foregroundStyle(isLit ? Color.white : DS.textSecondary)
-                        .lineLimit(1)
+                    // A column too narrow for the word keeps the money.
+                    ViewThatFits(in: .horizontal) {
+                        Text("Other")
+                            .dsText(.label12)
+                            .foregroundStyle(isLit ? Color.white : DS.textSecondary)
+                            .lineLimit(1)
+                        Color.clear.frame(width: 0, height: 0)
+                    }
                 }
                 if showsShares {
                     if let worth = worth(tile) {
@@ -309,7 +325,7 @@ struct HoldingsTreemap: View {
                             .lineLimit(1)
                             .minimumScaleFactor(0.6)
                     }
-                    if !small || worth(tile) == nil {
+                    if (!small || worth(tile) == nil) && showsShare {
                         Text(HoldingsTreemapLayout.percent(tile.share))
                             .dsText(.label12)
                             .monospacedDigit()
@@ -318,8 +334,9 @@ struct HoldingsTreemap: View {
                     }
                 }
             }
-            .padding(small ? DS.Space.s2 : DS.Space.s3)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .padding(pad)
+            .frame(width: tile.rect.width, height: tile.rect.height, alignment: .topLeading)
+            .clipped()
             .background(RoundedRectangle(cornerRadius: small ? 12 : 14, style: .continuous)
                 .fill(fill(tile.id, lit: isLit, widest: widest)))
             .overlay {

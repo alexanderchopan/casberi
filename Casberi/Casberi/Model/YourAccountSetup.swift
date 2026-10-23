@@ -50,7 +50,7 @@ struct YourAccountFacts: Equatable {
     var roundUpStep: Int?
     var roundUpSymbol: String?
 
-    private static let signersKey = "yourAccount.signers"
+    static let signersKey = "yourAccount.signers"
 
     static var current: YourAccountFacts? {
         if YourAccountDemo.isOn { return YourAccountDemo.facts }
@@ -65,9 +65,18 @@ struct YourAccountFacts: Equatable {
         }
         let setting = RoundUps.setting
         return YourAccountFacts(limitDollars: dollars, limitPeriod: period,
-                                signers: UserDefaults.standard.integer(forKey: signersKey),
+                                signers: signerCount(stored: UserDefaults.standard.integer(forKey: signersKey)),
                                 roundUpStep: setting.on ? setting.step : nil,
                                 roundUpSymbol: setting.on ? setting.target.symbol : nil)
+    }
+
+    /// The Signers as last read, or the one chosen at Create when no network
+    /// has it yet: the Signer row names it, so the box counts it (user: "i
+    /// have signer set up but shows i don't").
+    static func signerCount(stored: Int) -> Int {
+        guard stored == 0, let address = YourAccountKey.address,
+              YourAccountSetup.choice(for: address)?.signer != nil else { return stored }
+        return 1
     }
 
     /// Stamped by `MoveSecurity` after every read of the networks.

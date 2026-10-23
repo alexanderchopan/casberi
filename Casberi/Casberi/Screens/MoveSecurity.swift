@@ -52,6 +52,7 @@ struct MoveSecurity: View {
     @FocusState private var amountFocused: Bool
     @State private var roundUps = YourAccountDemo.isOn ? YourAccountDemo.roundUps : RoundUps.setting
     @State private var roundUpChoices: [(network: YourAccountOp.Network, tokens: [YourAccountTokens.Listed])] = []
+    @State private var roundUpMarks: [String: UIImage] = [:]
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -63,7 +64,7 @@ struct MoveSecurity: View {
                 verb: addingOutside ? nil : outsideVerb.map { word in
                     // Add opens the field; Finish puts the key already on one
                     // network on the rest.
-                    (word, { if live.allSatisfy({ $0.outside.isEmpty }) {
+                    (word, { if outsideOwner == nil {
                         withAnimation(DS.Motion.standard) { addingOutside = true }
                     } else { addOutside() } })
                 })
@@ -168,56 +169,48 @@ struct MoveSecurity: View {
     /// a narrower one, on their own screens.
     static let sentenceGutter: CGFloat = 76
 
+    /// **ROWS, IN THE PAGE'S OWN TYPE (user: "whole screen looks odd
+    /// different text sizes").** The sentence drew its values at 28pt among
+    /// 17pt rows; each value is now a row's trailing word that opens a glass
+    /// menu with the pick ticked (user: "unclear this is 1 or 5 b/c tapping
+    /// it changes it and should show glass menu"), the tokens with their marks.
     private var roundUpSentence: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s2) {
-            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                Text("round up").dsText(.body17).foregroundStyle(DS.textPrimary).frame(width: Self.sentenceGutter, alignment: .leading)
-                Button {
-                    withAnimation(DS.Motion.standard) { roundUps.step = roundUps.step == 1 ? 5 : 1 }
+        VStack(alignment: .leading, spacing: 0) {
+            menuRow(title: String(localized: "Round up"), value: String(localized: "To the next $\(roundUps.step)")) {
+                Picker(selection: Binding(get: { roundUps.step }, set: { step in
+                    withAnimation(DS.Motion.standard) { roundUps.step = step }
                     RoundUps.setting = roundUps
-                    DSHaptic.selection()
-                } label: {
-                    Text("to the next $\(roundUps.step)").dsText(.heading28).monospacedDigit().foregroundStyle(DS.pickInk)
-                        .contentTransition(.numericText())
-                        .frame(minHeight: 44)
-                }
-                .buttonStyle(RowPress())
-                .accessibilityHint(Text("Switches between the next one and the next five dollars"))
+                })) {
+                    ForEach([1, 5], id: \.self) { step in
+                        Text("To the next $\(step)").tag(step)
+                    }
+                } label: { EmptyView() }
+                .pickerStyle(.inline)
             }
-            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                Text("and buy").dsText(.body17).foregroundStyle(DS.textPrimary).frame(width: Self.sentenceGutter, alignment: .leading)
-                Menu {
-                    ForEach(roundUpChoices, id: \.network.chainId) { group in
-                        Section(group.network.name) {
-                            ForEach(group.tokens) { listed in
-                                let target = RoundUps.Target(chainId: group.network.chainId,
-                                                             address: listed.token.contract ?? YourAccountSwap.native,
-                                                             symbol: listed.token.symbol, decimals: listed.token.decimals,
-                                                             network: group.network.name)
-                                Button {
-                                    withAnimation(DS.Motion.standard) { roundUps.target = target }
-                                    RoundUps.setting = roundUps
-                                } label: {
-                                    if target == roundUps.target { Label(listed.token.symbol, systemImage: "checkmark") }
-                                    else { Text(verbatim: listed.token.symbol) }
+            menuRow(title: String(localized: "And buy"), value: roundUpTarget) {
+                // A section per network, named (Base's ETH is not Ethereum's),
+                // each token a toggle: it ticks the pick and keeps its mark.
+                ForEach(roundUpChoices, id: \.network.chainId) { group in
+                    Section(group.network.name) {
+                        ForEach(group.tokens) { listed in
+                            let target = Self.target(listed, on: group.network)
+                            Toggle(isOn: Binding(get: { roundUps.target == target }, set: { on in
+                                guard on else { return }
+                                withAnimation(DS.Motion.standard) { roundUps.target = target }
+                                RoundUps.setting = roundUps
+                            })) {
+                                Label {
+                                    Text(verbatim: listed.token.symbol)
+                                } icon: {
+                                    Image(uiImage: roundUpMarks[listed.token.symbol] ?? Self.menuMark(listed.token.symbol, image: nil))
                                 }
                             }
                         }
                     }
-                } label: {
-                    Text(verbatim: roundUpTarget).dsText(.heading28).foregroundStyle(DS.pickInk)
-                        .contentTransition(.opacity)
-                        .multilineTextAlignment(.leading)
                 }
-                .accessibilityLabel(Text("What round-ups buy"))
-            }
-            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                Text("every").dsText(.body17).foregroundStyle(DS.textPrimary).frame(width: Self.sentenceGutter, alignment: .leading)
-                Text(verbatim: "$5.").dsText(.heading28).foregroundStyle(DS.textPrimary)
             }
             Text("Change collects in your dollars. At $5, your next send buys \(roundUps.target.symbol) with it.")
                 .dsText(.subhead12).foregroundStyle(DS.textSecondary)
-                .padding(.leading, 76 + DS.Space.s2)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .padding(.bottom, DS.Space.s3)
@@ -232,7 +225,69 @@ struct MoveSecurity: View {
                 if !picks.isEmpty { groups.append((net, Array(picks))) }
             }
             roundUpChoices = groups
+            // A menu draws a picture it already has, never one it waits on:
+            // the bundled mark, else the one the holdings read named, else a
+            // monogram, each made before the menu can open.
+            var marks: [String: UIImage] = [:]
+            for symbol in Set(groups.flatMap { $0.tokens.map(\.token.symbol) }) {
+                var picture = BrandMark.image(for: symbol)
+                if picture == nil, !DemoMode.isActive, let url = TokenIconBook.url(for: symbol),
+                   case .image(let ui, _) = await RemoteImageLoader.load(urlString: url, targetSide: 72) {
+                    picture = ui
+                }
+                marks[symbol] = Self.menuMark(symbol, image: picture)
+            }
+            roundUpMarks = marks
         }
+    }
+
+    private static func target(_ listed: YourAccountTokens.Listed, on net: YourAccountOp.Network) -> RoundUps.Target {
+        RoundUps.Target(chainId: net.chainId, address: listed.token.contract ?? YourAccountSwap.native,
+                        symbol: listed.token.symbol, decimals: listed.token.decimals, network: net.name)
+    }
+
+    /// A row whose trailing word opens a menu: the name and the pick in the
+    /// rows' one size, the pick in the pick's ink.
+    private func menuRow<Content: View>(title: String, value: String, @ViewBuilder menu: () -> Content) -> some View {
+        HStack(spacing: DS.Space.s3) {
+            Text(verbatim: title).dsText(.body17).foregroundStyle(DS.textPrimary)
+            Spacer(minLength: DS.Space.s2)
+            Menu(content: menu) {
+                Text(verbatim: value)
+                    .dsText(.body17)
+                    .foregroundStyle(DS.pickInk)
+                    .contentTransition(.opacity)
+                    .lineLimit(1)
+                    .frame(minHeight: 44)
+            }
+            .layoutPriority(1)
+        }
+        .frame(minHeight: 52)
+    }
+
+    /// A token's mark at a menu's size, circular, its own colours kept (a
+    /// menu otherwise tints a picture to one ink); a monogram when the app
+    /// holds no picture for it, as Holdings draws one.
+    static func menuMark(_ symbol: String, image: UIImage?) -> UIImage {
+        let side: CGFloat = 24
+        let rect = CGRect(x: 0, y: 0, width: side, height: side)
+        let drawn = UIGraphicsImageRenderer(size: rect.size).image { _ in
+            UIBezierPath(ovalIn: rect).addClip()
+            if let image {
+                image.draw(in: rect)
+            } else {
+                UIColor.systemGray4.setFill()
+                UIRectFill(rect)
+                let words = String(symbol.prefix(2)).uppercased() as NSString
+                let attributes: [NSAttributedString.Key: Any] = [
+                    .font: UIFont.systemFont(ofSize: 10, weight: .semibold),
+                    .foregroundColor: UIColor.secondaryLabel,
+                ]
+                let size = words.size(withAttributes: attributes)
+                words.draw(at: CGPoint(x: (side - size.width) / 2, y: (side - size.height) / 2), withAttributes: attributes)
+            }
+        }
+        return drawn.withRenderingMode(.alwaysOriginal)
     }
 
     // MARK: - The lines
@@ -292,21 +347,35 @@ struct MoveSecurity: View {
     private var unopened: [Standing] { standings.filter { !$0.deployed && YourAccountKey.holdsOrigin } }
     private var withFirstSend: String { String(localized: "with your first send on \(names(unopened))") }
 
+    /// **A NETWORK NOT OPENED YET IS NOT "NOT YET" (user: "need to figure
+    /// out how we do this better").** With a recovery key on this phone the
+    /// opening send carries it (`YourAccountChain.setupCalls`), as it carries
+    /// the Signer, so those networks are said the Signer's way and never
+    /// offered as a Finish that spends a fee there.
+    private var recoveryRides: [Standing] { hasRecoveryKey ? unopened.filter { $0.recovery != .added } : [] }
+    private var recoveryTargets: [Standing] {
+        let rides = Set(recoveryRides.map(\.id))
+        return fixable.filter { !rides.contains($0.id) }
+    }
+
     private var recoveryLine: String {
         if standings.isEmpty { return String(localized: "Reading…") }
         let on = standings.filter { $0.recovery == .added }
-        if on.isEmpty, setup?.recovery == true, !unopened.isEmpty {
-            return String(localized: "In iCloud Keychain") + " · " + withFirstSend
+        let rides = recoveryRides.isEmpty ? nil : String(localized: "with your first send on \(names(recoveryRides))")
+        if on.isEmpty, let rides, recoveryTargets.isEmpty {
+            return String(localized: "In iCloud Keychain") + " · " + rides
         }
         if on.isEmpty { return String(localized: "Not set up · if you lose this \(ThisDevice.name)") }
         // The networks only another device can open are the account's fact,
         // said once under the rows, not this key's.
-        if fixable.isEmpty { return String(localized: "On \(names(on))") }
-        return String(localized: "On \(names(on)) · not yet on \(names(fixable))")
+        var line = String(localized: "On \(names(on))")
+        if !recoveryTargets.isEmpty { line += " · " + String(localized: "not yet on \(names(recoveryTargets))") }
+        if let rides { line += " · " + rides }
+        return line
     }
 
     private var recoveryVerb: String? {
-        guard !standings.isEmpty, !fixable.isEmpty else { return nil }
+        guard !standings.isEmpty, !recoveryTargets.isEmpty else { return nil }
         return standings.contains { $0.recovery == .added } ? String(localized: "Finish") : String(localized: "Set up")
     }
 
@@ -718,27 +787,43 @@ struct MoveSecurity: View {
 
     // MARK: - The outside key (prd §1432)
 
+    /// The Signer chosen at Create rides the opening send on a network not
+    /// opened yet (`setupCalls`); only a network already open needs Finish.
+    private var signerRides: [Standing] { setup?.signer == nil ? [] : unopened.filter { $0.outside.isEmpty } }
+    private var outsideTargets: [Standing] {
+        let rides = Set(signerRides.map(\.id))
+        return standings.filter { $0.outside.isEmpty && canFix($0) && !rides.contains($0.id) }
+    }
+    /// The key Finish puts on: one already on a network, else the one chosen.
+    private var outsideOwner: String? { live.flatMap(\.outside).first ?? setup?.signer }
+
     private var outsideLine: String {
         if standings.isEmpty { return String(localized: "Reading…") }
         let keys = Set(live.flatMap(\.outside).map { $0.lowercased() })
         let on = live.filter { !$0.outside.isEmpty }
-        let missing = standings.filter { $0.outside.isEmpty }
         guard let one = keys.first else {
-            if let chosen = setup?.signer, !unopened.isEmpty { return YourAccount.short(chosen) + " · " + withFirstSend }
+            // Chosen at Create (user: "i have signer set up but shows i
+            // don't"): the key, where it still has to go, and where the first
+            // send takes it.
+            if let chosen = setup?.signer {
+                var line = YourAccount.short(chosen)
+                if !outsideTargets.isEmpty { line += " · " + String(localized: "not yet on \(names(outsideTargets))") }
+                if !signerRides.isEmpty { line += " · " + String(localized: "with your first send on \(names(signerRides))") }
+                return line
+            }
             return String(localized: "None · if you lose Casberi, a key in a wallet you hold signs instead")
         }
         let who = keys.count == 1 ? YourAccount.short(one) : String(localized: "\(keys.count) keys")
         // The networks only another device can open are said once under the
         // rows, never here.
-        let here = missing.filter(canFix)
-        if here.isEmpty { return String(localized: "\(who) · on \(names(on))") }
-        return String(localized: "\(who) · not yet on \(names(here))")
+        if outsideTargets.isEmpty { return String(localized: "\(who) · on \(names(on))") }
+        return String(localized: "\(who) · not yet on \(names(outsideTargets))")
     }
 
     private var outsideVerb: String? {
         guard !standings.isEmpty else { return nil }
-        if live.allSatisfy({ $0.outside.isEmpty }) { return String(localized: "Add") }
-        return standings.contains { $0.outside.isEmpty && canFix($0) } ? String(localized: "Finish") : nil
+        if outsideOwner == nil { return String(localized: "Add") }
+        return outsideTargets.isEmpty ? nil : String(localized: "Finish")
     }
 
     /// The address to add, the one warning that matters, and the verb.
@@ -802,8 +887,8 @@ struct MoveSecurity: View {
     /// created where it is not there yet (§1427's rule: nothing stuck).
     private func addOutside() {
         if demoSays() { return }
-        guard working == nil, let owner = addingOutside ? outsideCandidate : live.flatMap(\.outside).first else { return }
-        let targets = standings.filter { $0.outside.isEmpty && canFix($0) }.map(\.network)
+        guard working == nil, let owner = addingOutside ? outsideCandidate : outsideOwner else { return }
+        let targets = outsideTargets.map(\.network)
         working = (String(localized: "Signer"), String(localized: "Adding…"))
         Task {
             var done: [String] = []
@@ -839,7 +924,7 @@ struct MoveSecurity: View {
     private func setUp() {
         if demoSays() { return }
         guard working == nil else { return }
-        let targets = fixable.map(\.network)
+        let targets = recoveryTargets.map(\.network)
         working = (String(localized: "Recovery key"), String(localized: "Setting up…"))
         Task {
             var done: [String] = []

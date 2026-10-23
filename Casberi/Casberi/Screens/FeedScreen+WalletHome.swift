@@ -242,6 +242,38 @@ extension FeedScreen {
             ForEach(shown) { slot in walletAccountRow(slot) }
             walletHomeDoor("accounts", total: slots.count)
         }
+        .alert(String(localized: "Name this account"),
+               isPresented: Binding(get: { walletNaming != nil }, set: { if !$0 { walletNaming = nil } })) {
+            TextField(String(localized: "Name"), text: $walletNameDraft)
+            Button(String(localized: "Save")) { saveWalletName() }
+            Button(String(localized: "Cancel"), role: .cancel) { walletNaming = nil }
+        } message: {
+            Text(walletNaming.map(Self.isYourAccount) == true
+                 ? String(localized: "Blank names it Your account.")
+                 : String(localized: "Blank shows the address instead."))
+        }
+    }
+
+    /// This phone's own account, or the demo's while the demo is on.
+    static func isYourAccount(_ address: String) -> Bool {
+        [YourAccountKey.address, YourAccountDemo.shownAddress].compactMap { $0 }
+            .contains { WalletWatch.sameAddress($0, address) }
+    }
+
+    /// Through the watched wallet's own rename, which names the address in
+    /// the book too, so the name is the name everywhere it is drawn. Your
+    /// own account's blank goes back to "Your account"; any other's to the
+    /// short address.
+    func saveWalletName() {
+        guard let address = walletNaming else { return }
+        let draft = walletNameDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+        let name = draft.isEmpty && Self.isYourAccount(address) ? String(localized: "Your account") : draft
+        if let watched = wallet.addresses.first(where: { WalletWatch.sameAddress($0.address, address) }) {
+            wallet.rename(watched.id, to: name)
+        } else if !name.isEmpty {
+            AddressBook.shared.setName(name, for: address)
+        }
+        walletNaming = nil
     }
 
     /// One account: its face, its name over the line the menu gives it, the
@@ -277,9 +309,18 @@ extension FeedScreen {
         .listRowSeparator(.hidden)
         .contextMenu {
             if case .wallet(let address)? = slot.faces.first {
+                // Any account takes a name (user: "should be able to name
+                // your account").
+                Button {
+                    walletNameDraft = slot.name == WalletStore.shortAddress(address) ? "" : slot.name
+                    walletNaming = address
+                } label: {
+                    Label(String(localized: "Rename"), systemImage: "pencil")
+                }
                 // What you follow goes from a hold on its row (prd §1302),
-                // through the book row's own unwatch, Undo included.
-                if let entry = AddressBook.shared.entry(for: address) {
+                // through the book row's own unwatch, Undo included. Never
+                // your own account: it holds this phone's keys.
+                if !Self.isYourAccount(address), let entry = AddressBook.shared.entry(for: address) {
                     Button(role: .destructive) {
                         WalletUnwatch.perform(entry, context: modelContext, chrome: chrome)
                     } label: {
