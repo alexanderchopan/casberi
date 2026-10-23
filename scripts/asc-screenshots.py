@@ -5,6 +5,8 @@
   asc-screenshots.py replace --iphone DIR --ipad DIR          (dry run)
   asc-screenshots.py replace --iphone DIR --ipad DIR --yes    (delete old, upload new)
   asc-screenshots.py replace --mac DIR [--yes]               (the Mac version, APP_DESKTOP)
+  asc-screenshots.py add --iphone67 DIR --iphone61 DIR --ipad DIR [--yes]
+                                                   append, keeping what the set holds
 
 Built for the 2.0 resubmission (prd §1077, the 4.1(a) rejection): the old sets
 carried an icon pile and a logo grid, and Apple's only remedy is new pictures.
@@ -25,7 +27,8 @@ APP_ID = "6788637831"
 KEY_ID = os.environ.get("ASC_KEY_ID", "TR287WZD72")
 ISSUER_ID = os.environ.get("ASC_ISSUER_ID", "2152ec98-0a7c-477a-9c4a-e1c478a3a106")
 EDITABLE = {"PREPARE_FOR_SUBMISSION", "REJECTED", "DEVELOPER_REJECTED", "METADATA_REJECTED"}
-SETS = {"iphone": "APP_IPHONE_65", "ipad": "APP_IPAD_PRO_3GEN_129", "mac": "APP_DESKTOP"}
+SETS = {"iphone": "APP_IPHONE_65", "iphone67": "APP_IPHONE_67", "iphone61": "APP_IPHONE_61",
+        "ipad": "APP_IPAD_PRO_3GEN_129", "mac": "APP_DESKTOP"}
 
 
 class ASC:
@@ -99,12 +102,13 @@ def upload(asc, set_id, path):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("verb", choices=["read", "replace"])
-    ap.add_argument("--iphone"); ap.add_argument("--ipad"); ap.add_argument("--mac"); ap.add_argument("--yes", action="store_true")
+    ap.add_argument("verb", choices=["read", "replace", "add"])
+    ap.add_argument("--iphone"); ap.add_argument("--iphone67"); ap.add_argument("--iphone61")
+    ap.add_argument("--ipad"); ap.add_argument("--mac"); ap.add_argument("--yes", action="store_true")
     a = ap.parse_args()
     asc = ASC(os.environ.get("ASC_KEY_PATH", "/tmp/asc.p8"))
     platform = "MAC_OS" if a.mac else "IOS"
-    if a.mac and (a.iphone or a.ipad):
+    if a.mac and (a.iphone or a.iphone67 or a.iphone61 or a.ipad):
         raise SystemExit("✗ --mac is its own version: run it apart from --iphone/--ipad")
     v = editable_version(asc, platform)
     loc = localization(asc, v["id"])
@@ -124,12 +128,17 @@ def main():
             raise SystemExit(f"✗ no PNG or JPEG screenshots in {folder}")
         plan.append((display, files))
         old = len(shots(asc, have[display]["id"])) if display in have else 0
-        print(f"→ {display}: delete {old}, upload {len(files)}: " + ", ".join(os.path.basename(f) for f in files))
+        if a.verb == "add" and old + len(files) > 10:
+            raise SystemExit(f"✗ {display} holds {old}; adding {len(files)} passes Apple's ten")
+        verb = f"keep {old}, add" if a.verb == "add" else f"delete {old}, upload"
+        print(f"→ {display}: {verb} {len(files)}: " + ", ".join(os.path.basename(f) for f in files))
     if not a.yes:
-        print("— dry run: pass --yes to replace —")
+        print(f"— dry run: pass --yes to {a.verb} —")
         return
     for display, files in plan:
-        if display in have:
+        if display in have and a.verb == "add":
+            set_id = have[display]["id"]
+        elif display in have:
             set_id = have[display]["id"]
             for s in shots(asc, set_id):
                 asc.call("DELETE", f"/appScreenshots/{s['id']}")
@@ -140,7 +149,7 @@ def main():
                     "type": "appStoreVersionLocalizations", "id": loc["id"]}}}}})["data"]["id"]
         for f in files:
             print(f"  ↑ {display} {os.path.basename(f)} → {upload(asc, set_id, f)}")
-    print("✓ replaced; re-reading")
+    print(f"✓ {'added' if a.verb == 'add' else 'replaced'}; re-reading")
     for t, s in sorted(sets_by_type(asc, loc["id"]).items()):
         print(f"  {t}: {len(shots(asc, s['id']))} screenshot(s)")
 

@@ -18,6 +18,113 @@ appInfo reads `One app for your things`; the subtitle rides the app, so it chang
 The iOS description's opening line below carries the same line; the Mac description's opening is owed the same edit
 when it is next rewritten.
 
+## iOS 3.0.8 — the wallet release, APPLIED 2026-10-23 (organisation account approved; prd §1439 item 4, §1440, §1473)
+
+The first version with an account of its own: send, receive, swap (Relay) and buy gift cards (Bitrefill). "Casberi can read, never spend" is gone from the page; following another wallet stays read-only, and the description says so. The opening line drops "soon, a rewards account for your subscriptions" (§1445 Stage 1 declined) for "a wallet of your own"; "no account" became "no sign-up", since the person now has an account. What's New leads with Wallet and credits Relay and Bitrefill (user, 2026-10-23). Review notes rewritten for 3.1.5(i): self-custodial, offered by an organisation, the demo's account as the no-funds path.
+
+**State, 2026-10-23:** iOS 3.0.8 submitted by the user with build 855 (WAITING_FOR_REVIEW), carrying everything below; the two wallet screenshots (7-swap, 8-buy, `~/Documents/casberi-deck/cards/appstore8.py`) did not make it — Swap was framed, Buy never drew on an overloaded simulator — so the live six stand. The Mac 3.0.8 record carries the same copy with Touch ID for Face ID, "on your Mac, iPhone and iPad" and "More than 90 apps", and its own review notes (the MCP/network.server and "no transfers" lines removed); its build is 856.
+
+### Description (iOS 3.0.8)
+
+Everything you do is scattered across apps, agents, wallets. Casberi is an inbox for your apps and a wallet of your own. It all comes together on your iPhone, iPad and Mac, with no sign-up, no servers and no tracking.
+
+A wallet of your own.
+Create your account in a tap and sign with Face ID. Send, receive and swap on Base, Ethereum and Robinhood Chain, and receive any token from another network, converted to the one you want. Only you hold the key: Casberi can never move your money.
+
+Swap in one sentence.
+"Swap $20 of USDC for ETH on Base." Fill in the blanks, see what you get, confirm with Face ID. Every swap is checked on the network first, so one that would fail or pay less than quoted is never signed. Swaps are powered by Relay.
+
+Buy gift cards with crypto.
+Pick a category and a merchant, and pay with USDC from your account. No card to add and no store account to make. Powered by Bitrefill.
+
+Safe by design.
+Add a recovery key so a lost phone never means lost money, add a second signer, and set a spend limit. Round up your transactions and save the change in any token.
+
+One wallet for all your money.
+Your wallets, exchanges, cards, savings and cash add up to one number. Follow any wallet address without a key or a signature; following only reads. See what you hold, what you spend and what's at risk.
+
+Every subscription, in one place.
+See the newsletters and lists filling your inbox beside the software and services you pay for. What each one costs, when it renews, and which you haven't used in a month.
+
+Follow the stocks behind your apps.
+Every app you use is made by a company. Markets shows its stock or token, with a heat map of your day and price alerts.
+
+Wallet, Work, Day, Life, Agents, Media, Social, Reading.
+More than 100 apps, sorted into the categories you live in. Apple's apps connect with one tap; other services with a read-only key, so Casberi can see but never change.
+
+One feed per category.
+Everything in a category lands in one feed, newest first: a deploy that failed, a payment that landed, a reply, a meeting coming up.
+
+Try it first.
+Casberi opens with a demo you can browse, wallet included. Clear it when you're ready and connect your own.
+
+Yours.
+No server, no sign-up, no ads. Sync through your own iCloud. Export everything to one file, or delete it all for good.
+
+### Keywords (97) — "wallet" and "subscription" ride the subtitle, so they are not repeated
+
+crypto,swap,ethereum,usdc,gift card,portfolio,defi,budget,spending,feed,reader,rss,ai,agent,notes
+
+### Promotional text (154)
+
+New: a wallet of your own. Send, swap and buy gift cards with Face ID on Base, Ethereum and Robinhood Chain, beside every app and subscription you follow.
+
+### What's New (3.0.8)
+
+Wallet
+• Create your own wallet, signed with Face ID
+• Send and receive on Base, Ethereum and Robinhood Chain
+• Swap any token, powered by Relay
+• Buy gift cards with USDC, powered by Bitrefill
+• Receive any token from another network and convert it to USDC, ETH or any token you pick
+• Add a recovery key, a second signer and a spend limit
+• Round up transactions and save the change in any token
+
+Features
+• Track spending by week or month, fees included
+• Search coins, tokens and stocks from one field
+
+Design
+• Show your account's keys and limits in Security
+• Line every title up with its rows
+• Move each event's start time to the right edge
+
+Fixes
+• Fit the reach and category maps in their cells
+• Show the Subscriptions monthly total
+
+### App Review notes (3.0.8)
+
+GUIDELINE 3.1.5(i) — THIS VERSION ADDS A SELF-CUSTODIAL WALLET, OFFERED BY AN ORGANIZATION
+Casberi's developer account was converted to an organization enrollment this week so that this version may offer a wallet.
+- The user creates their own account on the device: a Safe smart account whose signing key is a passkey in the Secure Enclave, used with Face ID. Casberi holds no key, custodies no assets and has no server; it cannot move a user's funds.
+- Move (the tab bar) sends, receives and swaps on Base, Ethereum and Robinhood Chain. Swap quotes and routes come from Relay (relay.link), a third-party on-chain protocol, and settle on-chain from the user's own account. Casberi adds no fee and takes no share. Every swap is simulated on the network before Face ID is asked, and one that would fail or pay less than quoted is refused.
+- Buy: digital gift cards for real-world merchants from Bitrefill, paid in USDC from the user's own account. The cards are redeemed at the merchant, outside the app; nothing unlocks features or content in Casberi, so In-App Purchase does not apply (3.1.3(e), goods and services consumed outside the app).
+- A spend limit, a recovery key and a second signer are optional protections the user adds in Wallet > Security.
+- Following another person's wallet address stays READ-ONLY.
+- No mining, no ICO, no rewards for downloading apps or completing tasks.
+
+HOW TO REVIEW THE WALLET WITHOUT FUNDS
+The app opens in a demo. The demo has a sample account: tap Move in the tab bar to see Swap, Send, Receive and Buy filled in; Wallet > Security shows its keys and spend limit. Every act in the demo answers "This works once you leave the demo." To create a real account, tap Exit demo, then Move, then Create.
+
+ABOUT
+Casberi is a personal, on-device organizer. No sign-up or login is required; the app is usable immediately. Everything is stored locally; there is no Casberi server. An optional "bring your own AI key" sends a query only to the provider the user chose, only when they tap send, directly from the device.
+
+PERMISSIONS
+Every system permission prompt follows an explicit user action; none appears at launch, and nothing is read until the user connects it.
+- Calendar calls EKEventStore.requestFullAccessToEvents().
+- Contacts calls CNContactStore.requestAccess(for: .contacts); contacts are search-only and never shown in the feed.
+- Photos, Apple Health and Reminders work the same way, each from its own row.
+- Face ID is asked only when the user creates or signs with their own account.
+All of it is read on device. Nothing is uploaded, transmitted or shared.
+
+BANKR is a third-party AI provider listed beside Anthropic, OpenAI and Google. It is answer-only: every prompt is prefixed "Answer only — never execute", no code path sends it an instruction, and a build-time test enforces that. It never moves funds or transacts on the user's behalf.
+
+SAFE CO-SIGNING adds one signature to a multi-signature transaction created elsewhere; it holds no funds and never broadcasts. Shipped in iOS 1.0.9, approved.
+
+BACKGROUND AUDIO (UIBackgroundModes: audio)
+Voice notes keep recording when the phone locks or the user leaves the app: open a new note, tap Record, then go to the Home Screen. Saved voice notes and the Listen control on saved articles keep playing with the screen locked.
+
 ## iOS — description REWRITTEN 2026-09-13 for §697b, REVISED 2026-09-27, NOT YET APPLIED
 
 **2026-09-27 revision (user):** the ask lives on through the keyed agents — each opens
