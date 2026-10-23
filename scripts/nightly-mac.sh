@@ -31,6 +31,29 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 LEDGER="$ROOT/scripts/output/nightly-mac.log"
 KEEP=14          # nights of output dirs to retain
 
+# THE NIGHT RUNS WHAT IS ON MAIN, NOT WHAT IS HALF-SAVED (2026-10-23). Every
+# red row from 13 to 20 October was a hand run on a working tree mid-edit, and
+# green at HEAD the next morning. So: fetch, cut a detached worktree at
+# origin/main beside the repo, point its (ignored) scripts/output at ours so the
+# ledger, run dirs, journeys and findings land where they always did, and run
+# THIS script from there. The worktree is removed on exit, every time.
+if [[ -z "${NIGHTLY_PINNED:-}" ]]; then
+  WT="$ROOT/../casberi-nightly"
+  git -C "$ROOT" fetch -q origin main 2>/dev/null
+  git -C "$ROOT" worktree remove --force "$WT" 2>/dev/null; rm -rf "$WT"
+  git -C "$ROOT" worktree prune 2>/dev/null
+  if git -C "$ROOT" worktree add -q --detach "$WT" origin/main 2>/dev/null; then
+    rm -rf "$WT/scripts/output"
+    ln -s "$ROOT/scripts/output" "$WT/scripts/output"
+    NIGHTLY_PINNED=1 "$WT/scripts/nightly-mac.sh"
+    STATUS=$?
+    git -C "$ROOT" worktree remove --force "$WT" 2>/dev/null; rm -rf "$WT"
+    git -C "$ROOT" worktree prune 2>/dev/null
+    exit $STATUS
+  fi
+  print -r -- "$(date +%Y-%m-%dT%H:%M:%S)  $(git -C "$ROOT" rev-parse --short HEAD)  WARN: could not pin a worktree at origin/main; running the working tree" >> "$LEDGER"
+fi
+
 mkdir -p "$ROOT/scripts/output"
 TS=$(date +%Y-%m-%dT%H:%M:%S)
 SHA=$(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null || echo unknown)
