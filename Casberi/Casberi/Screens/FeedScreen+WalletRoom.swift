@@ -577,7 +577,7 @@ extension FeedScreen {
         case .holdings:        return blockStream.els.isEmpty
         // Every kind the checkup counts, the same reads its sections draw on.
         // Your account's keys fill it too (§1436).
-        case .security:        return walletSecurityCounts.isEmpty && YourAccountKey.address == nil
+        case .security:        return walletSecurityCounts.isEmpty && YourAccountDemo.shownAddress == nil
         }
     }
 

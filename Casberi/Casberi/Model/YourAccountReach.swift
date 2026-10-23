@@ -24,6 +24,8 @@ enum YourAccountReach {
     /// The networks this phone can use the account on.
     @MainActor
     static func usable(_ account: String) async -> [Op.Network] {
+        // The demo's account is on every network, read off no node (§1475).
+        if YourAccountDemo.isDemo(account) { return live }
         if YourAccountKey.holdsOrigin { return live }
         var out: [Op.Network] = []
         for net in live where (try? await YourAccountChain.isDeployed(net, account)) == true {

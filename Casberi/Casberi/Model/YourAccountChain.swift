@@ -1094,6 +1094,13 @@ enum YourAccountChain {
         guard YourAccountSwap.supported(net) else {
             throw Failure(message: String(localized: "Swaps are not on \(net.name)"))
         }
+        // The demo's estimate comes off its own prices (§1475), never Relay.
+        if YourAccountDemo.isDemo(account) {
+            guard let q = YourAccountDemo.quote(sell: sell, buy: buy, amount: amount) else {
+                throw Failure(message: String(localized: "No price for this in the demo"))
+            }
+            return q
+        }
         let body: [String: Any] = [
             "user": account, "recipient": account,
             "originChainId": net.chainId, "destinationChainId": net.chainId,

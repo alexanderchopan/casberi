@@ -7165,6 +7165,34 @@
         }
       }
     },
+    "No price for this in the demo" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No hay precio para esto en la demo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "デモではこの価格はありません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "데모에는 이 가격이 없습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "演示中没有此价格"
+          }
+        }
+      }
+    },
     "No wallet connected. Try again, or add one later." : {
       "localizations" : {
         "es" : {
@@ -8813,6 +8841,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "这笔发送已在 %@ 上进行中"
+          }
+        }
+      }
+    },
+    "This works once you leave the demo." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Esto funciona cuando salgas de la demo."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "デモを終了すると使えます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "데모를 종료하면 사용할 수 있습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "退出演示后即可使用。"
           }
         }
       }

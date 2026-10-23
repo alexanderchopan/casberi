@@ -1176,7 +1176,11 @@ struct MoveSentence: View {
                     .foregroundStyle(DS.textSecondary)
                     .textSelection(.enabled)
                     .fixedSize(horizontal: false, vertical: true)
-                DSCopyRow(value: account, label: "Copy address", sensitive: false)
+                if YourAccountDemo.isDemo(account) {
+                    DSDoorRow(icon: "doc.on.doc", label: "Copy address") { say(YourAccountDemo.actsLater) }
+                } else {
+                    DSCopyRow(value: account, label: "Copy address", sensitive: false)
+                }
                 // Never an address the account cannot follow (§1442k).
                 if let reach, !YourAccountReach.isAll(reach) {
                     Text(reach.isEmpty
@@ -1575,7 +1579,8 @@ struct MoveSentence: View {
                 .frame(minHeight: 52)
             }
         }
-        .task { if elsewhereNetworks.isEmpty { elsewhereNetworks = await YourAccountElsewhere.networks() } }
+        // Relay's networks are asked for outside the demo only (§1475).
+        .task { if elsewhereNetworks.isEmpty, !YourAccountDemo.isOn { elsewhereNetworks = await YourAccountElsewhere.networks() } }
     }
 
     /// Relay's address for the route, kept per route; on the network Receive
@@ -1838,14 +1843,24 @@ struct MoveSentence: View {
                     // Copying is beside the address (§1442i); the foot's one
                     // act hands it to someone.
                     Spacer(minLength: 0)
-                    ShareLink(item: receiveAddress) {
-                        Text("Share")
-                            .dsText(.heading28)
-                            .foregroundStyle(DS.pickInk)
-                            .frame(minHeight: 48, alignment: .trailing)
+                    if YourAccountDemo.isDemo(account) {
+                        Button { say(YourAccountDemo.actsLater) } label: {
+                            Text("Share")
+                                .dsText(.heading28)
+                                .foregroundStyle(DS.pickInk)
+                                .frame(minHeight: 48, alignment: .trailing)
+                        }
+                        .buttonStyle(RowPress())
+                    } else {
+                        ShareLink(item: receiveAddress) {
+                            Text("Share")
+                                .dsText(.heading28)
+                                .foregroundStyle(DS.pickInk)
+                                .frame(minHeight: 48, alignment: .trailing)
+                        }
+                        .buttonStyle(RowPress())
+                        .accessibilityHint(Text("Shares your address"))
                     }
-                    .buttonStyle(RowPress())
-                    .accessibilityHint(Text("Shares your address"))
                 } else if verb != .buy {
                     Button { add() } label: {
                         // Pink is the values' and the signing verb's alone
@@ -2040,6 +2055,8 @@ struct MoveSentence: View {
 
     private func sign() {
         guard stage == nil else { return }
+        // The demo's account signs nothing (§1475): it says so, as every demo act does.
+        if YourAccountDemo.isDemo(account) { say(YourAccountDemo.actsLater); return }
         if verb == .buy { buyNow(); return }
         let batch = all
         guard !batch.isEmpty else { return }
@@ -2232,6 +2249,9 @@ struct MoveSentence: View {
     private var receiveAddress: String { elsewhere?.address ?? account }
 
     private func copy() {
+        // The demo's address holds no key: money sent there is lost, so it
+        // is never copied (§1475).
+        if YourAccountDemo.isDemo(account) { say(YourAccountDemo.actsLater); return }
         UIPasteboard.general.string = receiveAddress
         DSHaptic.tap()
         say(String(localized: "Address copied"))
@@ -2398,7 +2418,8 @@ struct MoveSentence: View {
     }
 
     private var buyAccount: String? {
-        YourAccountKey.address ?? (BitrefillX402.sample ? account : nil)
+        if YourAccountDemo.isOn { return account }
+        return YourAccountKey.address ?? (BitrefillX402.sample ? account : nil)
     }
 
     /// Buy's sentence: "$50 gift card for Travel at Delta with USDC on Base."

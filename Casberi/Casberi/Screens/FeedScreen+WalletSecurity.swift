@@ -90,7 +90,8 @@ extension FeedScreen {
     /// picked; a followed wallet's Security is a reading, never a key.
     @ViewBuilder
     var walletAccountSection: some View {
-        if let account = YourAccountKey.address,
+        // The demo's own account in the demo (prd §1475), else this phone's.
+        if let account = YourAccountDemo.shownAddress,
            chrome.walletScope == nil || WalletWatch.sameAddress(chrome.walletScope ?? "", account) {
             walletCard(String(localized: "Your account"), glyph: ScopeTileGlyph.move, anchor: SecurityAnchor.account.id) {
                 MoveSecurity(account: account)
@@ -320,7 +321,7 @@ extension FeedScreen {
     /// The grants your own account can take back here: its own, on a network
     /// it acts on (Base, Ethereum). Every other grant keeps its prepare card.
     var walletRevocable: [UUID: Thing] {
-        guard let account = YourAccountKey.address else { return [:] }
+        guard let account = YourAccountDemo.shownAddress else { return [:] }
         var out: [UUID: Thing] = [:]
         for thing in walletLive.activeApprovals where thing.isLive
             && WalletWatch.sameAddress(thing.walletAddress ?? "", account)

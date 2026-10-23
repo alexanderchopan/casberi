@@ -50,7 +50,7 @@ struct MoveSecurity: View {
     @State private var amountText = ""
     @State private var period: LimitPeriod = .month
     @FocusState private var amountFocused: Bool
-    @State private var roundUps = RoundUps.setting
+    @State private var roundUps = YourAccountDemo.isOn ? YourAccountDemo.roundUps : RoundUps.setting
     @State private var roundUpChoices: [(network: YourAccountOp.Network, tokens: [YourAccountTokens.Listed])] = []
 
     var body: some View {
@@ -123,6 +123,13 @@ struct MoveSecurity: View {
         .frame(minHeight: 60)
         // A line that wraps to two keeps the air between rows.
         .padding(.vertical, DS.Space.s1)
+    }
+
+    /// The demo's account changes no key (§1475): it says so, and nothing runs.
+    private func demoSays() -> Bool {
+        guard YourAccountDemo.isDemo(account) else { return false }
+        chrome.flash(YourAccountDemo.actsLater)
+        return true
     }
 
     // MARK: - Round-ups (prd §1452)
@@ -312,6 +319,20 @@ struct MoveSecurity: View {
     // MARK: - Reading
 
     private func read() async {
+        // The demo's account (§1475): every network on, its key here, the
+        // recovery key and a Signer on, the limit standing — read off no node,
+        // and nothing of it noted for this phone's own account.
+        if YourAccountDemo.isDemo(account) {
+            hasRecoveryKey = true
+            let now = Int(Date().timeIntervalSince1970)
+            standings = Op.networks.filter { !$0.isTest }.map { net in
+                let plan = YourAccountDemo.plan(on: net)
+                return Standing(network: net, deployed: true, keyIndex: 3, recovery: .added,
+                                outside: [YourAccountDemo.signer], threshold: 2,
+                                limit: .on(plan, current: plan.window(at: now)))
+            }
+            return
+        }
         let recovery = YourAccountRecovery.publicKey(for: account)
         hasRecoveryKey = recovery != nil
         let signer = try? await recovery.asyncMap { try await Chain.recoverySigner(x: $0.x, y: $0.y) }
@@ -593,6 +614,7 @@ struct MoveSecurity: View {
     /// One network at a time, each its own transaction: on, this phone alone
     /// while one key still signs; a new amount where it stands, the Signer too.
     private func applyLimit(_ targets: [Standing], dollars n: Int, minutes: Int) {
+        if demoSays() { return }
         guard working == nil, !targets.isEmpty else { return }
         amountFocused = false
         working = ("limit", String(localized: "Setting…"))
@@ -659,6 +681,7 @@ struct MoveSecurity: View {
     /// Off on every network: each its sessions removed and one key again —
     /// the Signer signs each.
     private func turnOffLimit() {
+        if demoSays() { return }
         guard working == nil else { return }
         let targets = limited
         let batch = Self.sharedSigner(targets).map {
@@ -778,6 +801,7 @@ struct MoveSecurity: View {
     /// The outside key on every network it is missing from — the account
     /// created where it is not there yet (§1427's rule: nothing stuck).
     private func addOutside() {
+        if demoSays() { return }
         guard working == nil, let owner = addingOutside ? outsideCandidate : live.flatMap(\.outside).first else { return }
         let targets = standings.filter { $0.outside.isEmpty && canFix($0) }.map(\.network)
         working = (String(localized: "Signer"), String(localized: "Adding…"))
@@ -813,6 +837,7 @@ struct MoveSecurity: View {
     /// Put the recovery key on every network it is missing from, one signed
     /// operation each; a network that cannot pay its fee is named, not fatal.
     private func setUp() {
+        if demoSays() { return }
         guard working == nil else { return }
         let targets = fixable.map(\.network)
         working = (String(localized: "Recovery key"), String(localized: "Setting up…"))
@@ -844,6 +869,7 @@ struct MoveSecurity: View {
     /// The recovery key moves the account to this phone on every network
     /// another device signs on.
     private func moveHere() {
+        if demoSays() { return }
         guard working == nil else { return }
         let targets = movable.map(\.network)
         working = (ThisDevice.title, String(localized: "Setting up…"))
@@ -911,7 +937,7 @@ struct OutsideKeyNudge: View {
     @Environment(ShellChrome.self) private var chrome
 
     /// Drawn at all: the account needs the key.
-    static var shown: Bool { YourAccountKey.needsOutsideKey }
+    static var shown: Bool { YourAccountKey.needsOutsideKey && !YourAccountDemo.isOn }
 
     var body: some View {
         Button {

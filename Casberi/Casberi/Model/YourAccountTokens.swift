@@ -47,6 +47,13 @@ enum YourAccountTokens {
     @MainActor
     static func list(_ net: Op.Network, term: String = "") async -> [Listed] {
         guard YourAccountSwap.supported(net) else { return [] }
+        // The demo asks Relay nothing (§1475): its own few tokens.
+        if YourAccountDemo.isOn {
+            let q = term.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            return YourAccountDemo.list(net).filter {
+                q.isEmpty || $0.token.symbol.lowercased().contains(q) || $0.name.lowercased().contains(q)
+            }
+        }
         let q = term.trimmingCharacters(in: .whitespacesAndNewlines)
         if q.isEmpty, let cached = lists[net.chainId], cached.at.timeIntervalSinceNow > -3_600 { return cached.tokens }
         var seen: Set<String> = []
@@ -147,6 +154,8 @@ enum YourAccountTokens {
     /// The account's tokens on `net` with something in them, biggest first.
     @MainActor
     static func held(_ account: String, on net: Op.Network) async -> [Held] {
+        // The demo's account holds the demo's table, read off no node (§1475).
+        if YourAccountDemo.isDemo(account) { return YourAccountDemo.held(on: net) }
         let reading = await WalletIngest.lastKnownHoldings(owner: account)
             .filter { $0.network == Op.appName(net) }
         func price(_ token: Op.Token) -> Double? {
