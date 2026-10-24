@@ -68242,3 +68242,10 @@ The rule under all of it: **every page shows every account at once, and the acco
 2. **Fifty-seven network marks, `brand-net-<slug>`**, from web3icons (`@web3icons/core` 4.0.58, MIT, its `background` variant: the mark on its brand square, clipped to the row's circle), rendered at 256px. Bundled, never fetched: Relay's own `iconUrl` would add a host to `NetworkReach` for a picture.
 3. **Buy.** Instacart and Valorant: Simple Icons' marks (16.35.0, CC0) in their brand colour on white (`brand-instacart`, `brand-valorant`); `BridgeIcon` finds them by name. The App Store, §1481's source, was out of this session's reach. **The Home Depot keeps its letters:** no icon set carries its mark, and a drawn one is a lookalike.
 4. **Not built here:** the coins under a Relay network (AVAX, BNB, APE, BERA) still draw `AssetMark`'s letters. Arc's mark is web3icons' `arc`, taken to be Circle's Arc by name. Not built or seen on the simulator: this session had no Xcode.
+
+## §1484 — Swap's For offers the main tokens; everything else is a search (amends §1440, §1470) (user, 2026-10-24: "for swap let's just show the main tokens and not this other crap. user can search for what they want", over a For list of unverified tokens: xdp, AXIS, MSTRc, METAc)
+
+1. **With nothing typed**, For lists what you hold, then the main tokens Relay verifies on that network: ETH, WETH, USDC, USDT, DAI, EURC, cbBTC, WBTC, cbETH, wstETH (`YourAccountTokens.main`, matched on the symbol, uppercased). A token Relay does not verify is never in the list unless you hold it.
+2. **Typed**, nothing changes: Relay's matches, verified first, an unverified one said so; a pasted contract still reads off the chain.
+3. Receive's "as" list (§1470) reads the same `matches`, so it lists the same.
+4. Not built or seen on the simulator: this session had no Xcode.

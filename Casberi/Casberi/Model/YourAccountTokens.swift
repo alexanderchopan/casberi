@@ -10,8 +10,9 @@ import Foundation
 /// priced only by that reading (dollars over amount); one it never priced
 /// offers no dollars.
 ///
-/// *For* is Relay's token search (prd §1440): its list for the network
-/// with nothing typed, its matches as you type, each marked verified or not.
+/// *For* is Relay's token search (prd §1440): with nothing typed, what you
+/// hold and the main tokens Relay verifies (§1484); its matches as you type,
+/// each marked verified or not.
 /// A pasted address Relay does not know is read off the chain (`symbol()`,
 /// `decimals()`) and says it is "Not verified by Relay", so a look-alike
 /// never passes as the real one.
@@ -102,15 +103,20 @@ enum YourAccountTokens {
         return Op.Token(symbol: symbol, decimals: decimals, contract: EIP55.checksum(address))
     }
 
+    /// The tokens For offers with nothing typed (prd §1484): the money
+    /// people swap between, verified by Relay. Anything else is a search.
+    static let main: Set<String> = ["ETH", "WETH", "USDC", "USDT", "DAI", "EURC", "CBBTC", "WBTC", "CBETH", "WSTETH"]
+
     /// What a search in For shows: with nothing typed, what you hold then
-    /// the list's head; typed, symbols that start with it, then names that
-    /// hold it, what you hold first in each. Forty at most.
+    /// the main tokens Relay verifies; typed, symbols that start with it,
+    /// then names that hold it, what you hold first in each. Forty at most.
     static func matches(_ query: String, in list: [Listed], held: [Held]) -> [Listed] {
         let q = query.trimmingCharacters(in: .whitespaces).lowercased()
         let heldIDs = Set(held.map(\.id))
         let mine = held.map { h in list.first { $0.id == h.id } ?? Listed(token: h.token, name: h.token.symbol, onList: false) }
         guard !q.isEmpty else {
-            return Array((mine + list.filter { !heldIDs.contains($0.id) }).prefix(40))
+            let head = list.filter { !heldIDs.contains($0.id) && $0.onList && main.contains($0.token.symbol.uppercased()) }
+            return Array((mine + head).prefix(40))
         }
         func rank(_ l: Listed) -> Int? {
             let symbol = l.token.symbol.lowercased(), name = l.name.lowercased()
