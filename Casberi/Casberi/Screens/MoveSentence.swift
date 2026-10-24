@@ -1597,7 +1597,8 @@ struct MoveSentence: View {
                 }
             }
             ForEach(elsewhereNetworks) { n in
-                listRow(n.name, sub: String(localized: "through Relay"), mark: String(n.name.prefix(1))) {
+                listRow(n.name, sub: String(localized: "through Relay"), mark: String(n.name.prefix(1)),
+                        image: Self.elsewhereMark(n.name)) {
                     pick {}
                     takeRoute(from: n, token: n.coin(like: elsewhere?.token))
                 }
@@ -1714,6 +1715,38 @@ struct MoveSentence: View {
         default: nil
         }
     }
+
+    /// A network Relay names, by its name (prd §1483): web3icons' mark,
+    /// bundled as `brand-net-<slug>`; a name off the table keeps its letter.
+    static func elsewhereMark(_ name: String) -> String? {
+        let key = name.lowercased().filter { $0.isLetter || $0.isNumber }
+        return elsewhereSlugs[key].map { "brand-net-" + $0 }
+    }
+
+    private static let elsewhereSlugs: [String: String] = [
+        "abstract": "abstract", "apechain": "apechain",
+        "arbitrum": "arbitrum-one", "arbitrumone": "arbitrum-one", "arbitrumnova": "arbitrum-nova",
+        "arc": "arc", "avalanche": "avalanche", "avalanchecchain": "avalanche",
+        "berachain": "berachain", "bitcoin": "bitcoin", "blast": "blast",
+        "bnb": "binance-smart-chain", "bnbchain": "binance-smart-chain", "bnbsmartchain": "binance-smart-chain",
+        "bsc": "binance-smart-chain",
+        "bob": "bob", "boba": "boba", "bobanetwork": "boba", "celo": "celo", "corn": "corn",
+        "cronos": "cronos", "cronoszkevm": "cronos-zkevm", "flare": "flare", "gnosis": "gnosis",
+        "gravity": "gravity", "hemi": "hemi", "hyperevm": "hyper-evm", "hyperliquid": "hyper-evm",
+        "ink": "ink", "katana": "katana", "lens": "lens", "lightlink": "lightlink", "linea": "linea",
+        "lisk": "lisk", "manta": "manta-pacific", "mantapacific": "manta-pacific", "mantle": "mantle",
+        "megaeth": "mega-eth", "metis": "metis-andromeda", "mode": "mode", "monad": "monad",
+        "optimism": "optimism", "op": "optimism", "opmainnet": "optimism",
+        "plasma": "plasma", "plume": "plume",
+        "polygon": "polygon", "polygonpos": "polygon", "polygonzkevm": "polygon-zkevm",
+        "ronin": "ronin", "scroll": "scroll", "sei": "sei-network", "soneium": "soneium",
+        "solana": "solana", "sonic": "sonic", "stable": "stable", "sui": "sui",
+        "superseed": "super-seed", "swell": "swell", "swellchain": "swell", "taiko": "taiko",
+        "tempo": "tempo", "tron": "tron", "unichain": "unichain",
+        "world": "world", "worldchain": "world", "xlayer": "x-layer",
+        "zero": "zero-network", "zeronetwork": "zero-network",
+        "zksync": "zksync", "zksyncera": "zksync", "zora": "zora",
+    ]
 
     /// Where you hold the most first; the test network last.
     private var networksByWorth: [Op.Network] {
