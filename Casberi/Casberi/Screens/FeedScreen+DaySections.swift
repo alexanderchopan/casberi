@@ -778,8 +778,10 @@ extension FeedScreen {
         chrome.sourceRequest = category
     }
 
-    /// Home's lead (prd §1157): the app's icon at `DS.Mark.notice`, its own
-    /// door to the app's room (§1103's header tap). A row with no app beside
+    /// Home's lead (prd §1157): the app's icon at the one row size,
+    /// `DS.Mark.row` (§1496: it was §1157's 38pt notification icon, which put
+    /// these rows' words 8pt right of every other list and of their own
+    /// section's name), its own door to the app's room (§1103's header tap). A row with no app beside
     /// it keeps the column empty, so every row's words share one left edge.
     @ViewBuilder
     func appLead(_ source: String?) -> some View {
@@ -788,15 +790,15 @@ extension FeedScreen {
                 DSHaptic.selection()
                 withAnimation(DS.Motion.standard) { filter.source = source }
             } label: {
-                BridgeIcon(name: source, size: DS.Mark.notice)
-                    // The icon is 38pt; the door is a finger tall.
+                BridgeIcon(name: source, size: DS.Mark.row)
+                    // The icon is the row's 30pt; the door is a finger tall.
                     .frame(minHeight: DS.Hit.min, alignment: .top)
                     .contentShape(Rectangle())
             }
             .buttonStyle(PressSpring())
             .accessibilityLabel(Text(verbatim: BridgeCatalog.seatName(forSource: source)))
         } else {
-            Color.clear.frame(width: DS.Mark.notice, height: DS.Mark.notice)
+            Color.clear.frame(width: DS.Mark.row, height: DS.Mark.row)
         }
     }
 

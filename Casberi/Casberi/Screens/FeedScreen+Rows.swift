@@ -308,7 +308,7 @@ extension FeedScreen {
         // Zoom source removed with the thing-open zoom (prd 232, 2026-07-30).
         //
         // HOME READS AS NOTIFICATIONS (prd §1157, user: "what would apple
-        // do", "make the change"): the app's icon leads at `DS.Mark.notice`,
+        // do", "make the change"): the app's icon leads at `DS.Mark.row` (§1496),
         // level with the app's name, and spans the name, the title and the
         // line; the name and the time ride the top line inside the row. The
         // icon is its own door to the app's room, the header's tap (§1103);

@@ -933,7 +933,7 @@ struct SettingsHome: View {
             DSPushRow(title: Text(verbatim: name), fact: Text("Add"), factTone: DS.pickInk) {
                 setup(name)
             } leading: {
-                BridgeIcon(name: name, size: DS.Mark.notice)
+                BridgeIcon(name: name, size: DS.Mark.row)
             }
         }
     }
@@ -1063,7 +1063,7 @@ struct SettingsHome: View {
         } else {
             DSPushRow(title: Text(verbatim: app.name),
                       fact: Text(verbatim: app.statusLine), factTone: tone, action: open) {
-                BridgeIcon(name: app.name, size: DS.Mark.notice)
+                BridgeIcon(name: app.name, size: DS.Mark.row)
             }
         }
         }

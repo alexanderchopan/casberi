@@ -230,8 +230,8 @@ guard "Home draws the whole day, no window and no Show older (§1154)" \
       "$FEED" 'let window = \(shown: byApp\.groups, more: false, hidden: 0\)'
 guard "the app's icon leads its row on Home (§1157)" \
       "$FEED" 'if grouped \{ appLead\(app\?\.source\) \}'
-guard "the icon draws at the notification's rung, a door to the app's room (§1157)" \
-      "$FEED" 'BridgeIcon\(name: source, size: DS\.Mark\.notice\)'
+guard "the icon draws at the one row lead, a door to the app's room (§1157, §1496)" \
+      "$FEED" 'BridgeIcon\(name: source, size: DS\.Mark\.row\)'
 guard "a row under a header is told whose header it stands under" \
       "$FEED" '\.environment\(\\\.dsGroupedSource, row\.source\)'
 guard "a row under a header draws no lead, a face included (§1103a)" \
