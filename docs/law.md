@@ -239,7 +239,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1637 of 1706 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1638 of 1707 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1837,7 +1837,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1456 — Both keys for everything at 2, one scan for every network, and a key added never lowers the threshold (amended by §1458)
 - §1457 — Your keys, right after Create: chosen once, on with the first send (amended by §1459, §1460, §1461, §1465, §1466, §1499)
 - §1458 — The spend limit fits the bundler: a change in two operations, a renewal that leaves ended periods be, Finish that kee…
-- §1459 — Two lines cut from creating your account
+- §1459 — Two lines cut from creating your account (amended by §1500)
 - §1460 — No summary after your keys: the Created sentence says it in one line
 - §1461 — The opening operation sets six limit periods, not twelve
 - §1462 — Security's box is nine, three across, the figure centered over its word (amended by §1463, §1480)
@@ -1878,6 +1878,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1497 — The Feed is titles and icons: no app name over a Newest row, no line under any Feed row
 - §1498 — Markets is a Wallet tile again, its list the Watchlist, and Home draws no Markets door
 - §1499 — A co-signer chosen at Create says it activates on the first send, and its step says only what it does
+- §1500 — Create's small print is "Face ID approves every move."
 
 ## Dead rulings → what replaced them (generated)
 

@@ -204,8 +204,11 @@ struct MoveScreen: View {
                             .fixedSize(horizontal: false, vertical: true)
                     } else {
                         // The one fact that decides the tap (§1442j); the rest
-                        // is said once the account exists.
-                        Text("Face ID signs.")
+                        // is said once the account exists. "Approves every
+                        // move", not "signs": signing is crypto's word, and a
+                        // move is the app's — swap, send, buy, a key or a
+                        // limit changed (prd §1500).
+                        Text("Face ID approves every move.")
                             .dsText(.body17).foregroundStyle(DS.textSecondary)
                     }
                     if let note {

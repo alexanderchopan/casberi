@@ -68403,3 +68403,11 @@ The rule under all of it: **every page shows every account at once, and the acco
 4. **Not changed:** when the key lands, who signs what, and the threshold rules (§1455–§1458). A spend limit chosen at Create still draws its amount on the Spend limit row before the first send carries it — the same face of a thing that stands, left for a ruling.
 
 **Not compiled and not seen:** written in a cloud session with no Xcode; build, `scripts/verify.sh` and a look at Security on a new account with a co-signer chosen and no send are owed before a ship.
+
+## §1500 — Create's small print is "Face ID approves every move." (amends §1459 item 1) (user, 2026-10-24, walking the create flow word by word: "here is it useful to say faceID signs?"; on "Face ID approves every send.", "i dunno we say send b/c there is more than send. is it transaction?"; on "every move", "ok") — BUILT, SEEN ON THE SIMULATOR
+
+1. **The line stays, the word changes.** It answers the one question before Create — what protects this account — and its answer (your face, not a password or a phrase) is the account's best fact. "Signs" is crypto's word: someone who doesn't know a transaction is signed reads a blank.
+2. **"Every move", not "every send" or "every transaction".** Send is one of several things Face ID approves (swap, buy, a key or a limit changed); "transaction" is a bank statement's word. A move is the app's own word — the tab where every one of them happens is Move — and nobody reads it as covering money coming in, which needs no approval.
+3. The catalog's "Face ID signs." is renamed, its four translations rewritten (needs review).
+
+**Seen** on a fresh simulator with no account and no demo: Move opens on "Your account on Base, Ethereum, and Robinhood." over "Face ID approves every move." and Create.

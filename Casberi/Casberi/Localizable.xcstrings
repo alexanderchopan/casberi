@@ -79111,6 +79111,34 @@
         }
       }
     },
+    "Face ID approves every move." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Face ID aprueba cada movimiento."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "すべての操作を Face ID で承認します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "모든 이동을 Face ID로 승인합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "每一笔操作都由面容 ID 批准。"
+          }
+        }
+      }
+    },
     "Face ID didn't unlock the key." : {
       "localizations" : {
         "es" : {
@@ -79163,34 +79191,6 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "Face ID 未能解锁安全芯片密钥。"
-          }
-        }
-      }
-    },
-    "Face ID signs." : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Face ID firma."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Face IDで署名します。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Face ID로 서명합니다."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "由面容 ID 签名。"
           }
         }
       }
