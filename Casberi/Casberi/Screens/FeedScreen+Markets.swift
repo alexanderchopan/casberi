@@ -102,53 +102,29 @@ extension FeedScreen {
     /// "Watchlist" and its order, one menu, on the rows' line (prd §1081:
     /// the three chips on the account page became this).
     var marketsListHead: some View {
-        Section {
-            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s3) {
-                // The Feed's section name (prd §1268): a pink glyph first.
-                Image(systemName: ScopeTileGlyph.watch)
-                    .dsGlyph(.body)
-                    .foregroundStyle(DS.brandInk)
-                    .accessibilityHidden(true)
-                // **FOLLOWING · ALERTS ARE THE HEAD'S TWO WORDS (prd §1391):**
-                // the Feed's choice grammar (§1251), the picked word in the
-                // head ink, the other grey; an alert is one more place to
-                // go, in no colour of its own. The Movers menu is deleted:
-                // the box says who moved, the list keeps your order.
-                ForEach([TokensScope.watchlist, .alerts]) { choice in
-                    let on = chrome.tokensScope == choice
-                    Button {
-                        DSHaptic.selection()
-                        withAnimation(DS.Motion.standard) { chrome.tokensScope = choice }
-                    } label: {
-                        Text(verbatim: choice.label)
-                            .dsText(.heading20)
-                            .foregroundStyle(on ? DS.headInk : DS.textTertiary)
-                            .lineLimit(1)
-                    }
-                    .buttonStyle(RowPress())
-                    .accessibilityAddTraits(on ? [.isSelected] : [])
-                }
-                Spacer(minLength: 0)
-                // Follow, from the head's + (prd §1386), the one word (prd
-                // §1391, user: "could we just say follow? its follow a
-                // market regardless").
-                Button {
-                    DSHaptic.selection()
-                    feedSheet = .watchAdd
-                } label: {
-                    Image(systemName: "plus")
-                        .dsGlyph(.body, weight: .regular)
-                        .foregroundStyle(DS.brandInk)
-                        .frame(width: DS.Hit.min, height: DS.Hit.min)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(PressSpring())
-                .accessibilityLabel(Text("Follow"))
+        // **THE FEED'S SECTION NAME, NOT A COPY OF IT (prd §1496).** It was
+        // drawn by hand at the day's rung with its glyph off the column; it is
+        // `SectionPanelName` now, so it takes the section rung, the row's lead
+        // column and gap, and the Feed's own choices and +.
+        // **FOLLOWING · ALERTS ARE THE HEAD'S TWO WORDS (prd §1391):** the
+        // Feed's choice grammar (§1251), the picked word in the head ink, the
+        // other grey. Follow, from the head's + (prd §1386), the one word
+        // (prd §1391, user: "could we just say follow? its follow a market
+        // regardless").
+        let choices = [TokensScope.watchlist, .alerts].map { choice in
+            SectionChoice(id: choice.id, label: choice.label, on: chrome.tokensScope == choice) {
+                chrome.tokensScope = choice
             }
-            .feedRowBackground()
-            .listRowInsets(.init(top: DS.Space.s2, leading: DSRoomChassis.rowInset,
-                                 bottom: 0, trailing: DSRoomChassis.rowInset))
-            .listRowSeparator(.hidden)
+        }
+        return Section {
+            SectionPanelName(name: TokensScope.watchlist.label, glyph: ScopeTileGlyph.watch,
+                             choices: choices,
+                             adds: [SectionAdd(label: String(localized: "Follow"), glyph: "plus") {
+                                 feedSheet = .watchAdd
+                             }]) { EmptyView() }
+                .feedRowBackground()
+                .listRowInsets(EdgeInsets())
+                .listRowSeparator(.hidden)
         }
     }
 
@@ -261,7 +237,7 @@ extension FeedScreen {
                           onWhite: watched.flatMap { StockWatch.symbol(of: $0) } != nil,
                           // A gas alert's face is the pump (prd §1250): it watches a chain.
                           symbol: alert.kind == .gasBelow ? MarketsGasHead.glyph : nil)
-                VStack(alignment: .leading, spacing: 1) {
+                VStack(alignment: .leading, spacing: 2) {
                     Text(verbatim: alert.name).dsText(.body17).foregroundStyle(DS.textPrimary)
                         .dsCardLead(Text("Opens its page"), perform: open)
                     Text("\(WatchAlertsSection.title(alert))\(WatchAlertsSection.subtitle(alert, price: price).map { " · " + $0 } ?? "")")

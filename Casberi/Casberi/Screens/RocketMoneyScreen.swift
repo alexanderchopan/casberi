@@ -112,7 +112,7 @@ struct RocketMoneyScreen: View {
 
     @ViewBuilder private var unreadableBlock: some View {
         if !reading.unreadable.isEmpty {
-            VStack(alignment: .leading, spacing: DS.Space.s1) {
+            VStack(alignment: .leading, spacing: 2) {
                 DSProse.text("Rocket Money answered, but Casberi didn't recognise the shape.")
                     .dsText(.body17).foregroundStyle(DS.textPrimary)
                 ForEach(reading.unreadable.keys.sorted(), id: \.self) { op in

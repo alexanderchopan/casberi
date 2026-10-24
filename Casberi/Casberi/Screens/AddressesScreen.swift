@@ -240,7 +240,7 @@ struct AddressesSection: View {
         } label: {
             HStack(spacing: DS.Space.s3) {
                 PairFace(a: a, b: b)
-                VStack(alignment: .leading, spacing: 1) {
+                VStack(alignment: .leading, spacing: 2) {
                     Text("Same person?")
                         .dsText(.body17).foregroundStyle(DS.textPrimary).lineLimit(1)
                     Text("\(Self.where(a, link)) · \(Self.where(b, link))")
@@ -367,7 +367,7 @@ struct AddressesSection: View {
             LetterHead(text: Text("Not in your addresses"), tone: DS.textTertiary)
             HStack(spacing: DS.Space.s3) {
                 ContactFace(contact: hit.contact, size: DS.Face.list)
-                VStack(alignment: .leading, spacing: 1) {
+                VStack(alignment: .leading, spacing: 2) {
                     Text(hit.name).dsText(.body17).foregroundStyle(DS.textPrimary).lineLimit(1)
                     if let line = Self.line(of: hit.contact) {
                         Text(line).dsText(.subhead12).foregroundStyle(DS.textTertiary).lineLimit(1)
@@ -476,9 +476,10 @@ struct AddressesSection: View {
         s.folding(options: [.diacriticInsensitive, .caseInsensitive, .widthInsensitive], locale: .current)
     }
 
-    /// One row's height: a 44pt target with 12pt of air, so 36pt faces stand
-    /// 20pt apart (they were 6pt apart on 46pt rows — "overlapping").
-    static let rowPitch: CGFloat = 56
+    /// One row's height: the 44pt head and 4pt of air either side, every
+    /// list's pitch (prd §1496; it was 56 for 36pt faces, which are 30 since
+    /// §1071, so the faces still stand apart).
+    static let rowPitch: CGFloat = DSFeed.headHeight + 2 * FeedScreen.rowAir
 
     // MARK: - The list (section 1: Recent, then Everyone alphabetical)
 

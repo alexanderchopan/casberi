@@ -190,7 +190,7 @@ struct AztecScreen: View {
             // What this phone signed (prd §1419): the signer's own record,
             // newest first, as the sheet showed each one.
             ForEach(signedLog.prefix(5)) { entry in
-                VStack(alignment: .leading, spacing: DS.Space.s1) {
+                VStack(alignment: .leading, spacing: 2) {
                     Text(verbatim: entry.lines.joined(separator: ", "))
                         .dsText(.body17)
                         .foregroundStyle(DS.textPrimary)

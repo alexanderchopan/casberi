@@ -63,7 +63,7 @@ def findings(files):
                 if not s.startswith("."):
                     break
                 mods.append(s)
-            ahead = "\n".join(lines[i:i + 14])
+            ahead = "\n".join(lines[i:i + 30])  # a choice loop puts the name 16 lines down (Markets, §1496)
             rung = HEADING.search(ahead)
             if not rung:
                 continue
@@ -134,6 +134,29 @@ def self_test():
          SELF_TEST.replace(".dsText(.heading24)", ".dsText(.heading28)", 1), 1)
     case("a section name on the screen's rung is flagged (prd §1496)",
          SELF_TEST.replace(".dsText(.heading24)", ".dsText(.heading34)", 1), 1)
+    case("a hand header whose name sits past a choice loop is still seen (Markets, §1496)",
+         """struct M: View {
+    var body: some View {
+        HStack(spacing: DS.Space.s3) {
+            Image(systemName: "eye")
+                .dsGlyph(.body)
+                .foregroundStyle(DS.brandInk)
+            // one
+            // two
+            // three
+            // four
+            // five
+            ForEach(choices) { choice in
+                Button {
+                    pick(choice)
+                } label: {
+                    Text(choice.label)
+                        .dsText(.heading20)
+                }
+            }
+        }
+    }
+}""", 3)  # its column, its rung and its gap
     case("a header gapped by hand, off the row's gap, is flagged (prd §1496)",
          SELF_TEST.replace("HStack(spacing: DSRoomChassis.headGap)", "HStack(spacing: DS.Space.s2)", 1), 1)
     chassis = "static let headGlyph: CGFloat = DS.Mark.row\nstatic let headGap: CGFloat = DS.Space.s3"

@@ -402,7 +402,7 @@ struct ReceiptLadder: View {
                         }
                     }
                     .frame(width: 20)
-                    VStack(alignment: .leading, spacing: 1) {
+                    VStack(alignment: .leading, spacing: 2) {
                         Text(verbatim: step.1)
                             .dsText(.body17)
                             .foregroundStyle(mark == 0 ? DS.textTertiary : DS.textPrimary)

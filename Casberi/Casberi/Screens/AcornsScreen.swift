@@ -102,7 +102,7 @@ struct AcornsScreen: View {
     /// furniture on a seat that is working.
     @ViewBuilder private var unreadableBlock: some View {
         if !reading.unreadable.isEmpty {
-            VStack(alignment: .leading, spacing: DS.Space.s1) {
+            VStack(alignment: .leading, spacing: 2) {
                 Text("Acorns answered, but Casberi didn't recognise the shape.")
                     .dsText(.body17).foregroundStyle(DS.textPrimary)
                 ForEach(reading.unreadable.keys.sorted(), id: \.self) { path in

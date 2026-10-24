@@ -209,7 +209,7 @@ struct WalletbeatWalletSheet<Tiles: View>: View {
                     ForEach(shortfalls.prefix(2)) { attribute in
                         HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
                             CheckVerdictGlyph(verdict: attribute.verdict)
-                            VStack(alignment: .leading, spacing: 0) {
+                            VStack(alignment: .leading, spacing: 2) {
                                 Text(verbatim: attribute.name)
                                     .dsText(.body17)
                                     .foregroundStyle(DS.textPrimary)

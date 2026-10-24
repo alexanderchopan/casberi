@@ -1043,11 +1043,12 @@ extension View {
 }
 
 
-/// disc glyph · heading17 title · trailing subhead12 fact · chevron only if
-/// it opens a screen. 56pt, no background. A row with no action is a READ,
+/// disc glyph · body17 title over its subhead12 fact (`DSPushRowLabel`) ·
+/// chevron only if it opens a screen. Every list's pitch, 52 (prd §1496;
+/// it was 56), no background. A row with no action is a READ,
 /// drawn without a button so nothing on it can be mistaken for a control.
 struct AccountFactRow: View {
-    static let height: CGFloat = 56
+    static let height: CGFloat = DSFeed.headHeight + 2 * FeedScreen.rowAir
     let glyph: String
     let title: String
     let fact: String

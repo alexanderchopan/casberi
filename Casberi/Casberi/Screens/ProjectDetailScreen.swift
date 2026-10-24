@@ -101,7 +101,7 @@ struct ProjectDetailScreen: View {
     /// here, where a `let` is legal, and passed to the two that need it.
     private var header: some View {
         let members = self.members
-        return VStack(alignment: .leading, spacing: DS.Space.s1) {
+        return VStack(alignment: .leading, spacing: 2) {
             Text(projectName)
                 .dsText(.heading40).foregroundStyle(DS.textPrimary)
             Text(kindLine(members))

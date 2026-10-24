@@ -273,14 +273,8 @@ extension FeedScreen {
             // What went quiet stands last, under its own name (prd §1160):
             // still a door to its mail and its way out, counted in no figure.
             if !stopped.isEmpty {
-                Text("Stopped")
-                    .dsText(.heading20)
-                    .foregroundStyle(DS.textPrimary)
-                    .accessibilityAddTraits(.isHeader)
-                    .listRowInsets(EdgeInsets(top: DS.Space.s6, leading: DSRoomChassis.rowInset,
-                                              bottom: DS.Space.s1, trailing: DSRoomChassis.rowInset))
-                    .feedRowBackground()
-                    .listRowSeparator(.hidden)
+                // The group header's template, not a copy of it (prd §1496).
+                DSGroupHeader(word: String(localized: "Stopped"))
                 ForEach(stopped) { item in mailSubscriptionRow(item) }
             }
         }

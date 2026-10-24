@@ -98,7 +98,7 @@ struct WatchAddSheet: View {
         let on = watched.contains(id)
         return HStack(spacing: DS.Space.s3) {
             face
-            VStack(alignment: .leading, spacing: 1) {
+            VStack(alignment: .leading, spacing: 2) {
                 Text(verbatim: name).dsText(.body17).fontWeight(.semibold)
                     .foregroundStyle(DS.textPrimary).lineLimit(1)
                 Text(verbatim: line).dsText(.subhead12).foregroundStyle(DS.textTertiary).lineLimit(1)
@@ -125,7 +125,7 @@ struct WatchAddSheet: View {
                                         : String(localized: "Follow \(label)")))
             .accessibilityAddTraits(on ? .isSelected : [])
         }
-        .frame(minHeight: 64)
+        .frame(minHeight: DSFeed.headHeight)
         .padding(.horizontal, DS.Space.s4)
     }
 

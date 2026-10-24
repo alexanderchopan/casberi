@@ -134,6 +134,10 @@ extension FeedScreen {
             return SocialRoomSource.standsAlone(thing)
         }
         if shape == .chat && thing.mark == .doing { return true }          // TakeawayCard
+        // Markets draws its own row, the plain one (prd §1081): it is no card,
+        // so it takes the one pitch (§1496); the fat anatomy below is the
+        // rest of the app's.
+        if drawsMarketsRow(thing), !PriceAlertStore.isAlertRow(thing) { return false }
         if TokenPulse.shared.pulse(for: thing) != nil { return true }      // TokenRow fat anatomy
         if StockWatch.symbol(of: thing) != nil { return true }             // its twin for a stock
         return false

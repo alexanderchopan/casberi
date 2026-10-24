@@ -223,7 +223,7 @@ struct WalletbeatScreen: View {
 				Button(action: { watch(entry) }) {
 					HStack(spacing: DS.Space.s3) {
 						WalletbeatMark(name: entry.name, walletID: entry.id)
-						VStack(alignment: .leading, spacing: 0) {
+						VStack(alignment: .leading, spacing: 2) {
 							Text(entry.name).dsText(.body17)
 								.foregroundStyle(DS.textPrimary).lineLimit(1)
 							Text(subtitle(entry)).dsText(.subhead12)

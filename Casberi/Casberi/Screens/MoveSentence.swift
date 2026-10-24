@@ -1171,7 +1171,7 @@ struct MoveSentence: View {
                     .task(id: search) { await lookUpPasted() }
             }
         }
-        .frame(minHeight: 52)
+        .frame(minHeight: DSFeed.headHeight)
         .padding(.horizontal, DS.Space.s4)
     }
 
@@ -1549,7 +1549,7 @@ struct MoveSentence: View {
                 } else if let mark {
                     AssetMark(name: mark, size: DS.Face.list)
                 }
-                VStack(alignment: .leading, spacing: 1) {
+                VStack(alignment: .leading, spacing: 2) {
                     Text(verbatim: title).dsText(.body17).foregroundStyle(DS.textPrimary).lineLimit(1)
                     if let sub { Text(verbatim: sub).dsText(.subhead12).foregroundStyle(DS.textSecondary).lineLimit(1) }
                 }
@@ -1558,7 +1558,7 @@ struct MoveSentence: View {
                     Text(verbatim: trailing).dsText(.body17).foregroundStyle(DS.textSecondary).monospacedDigit()
                 }
             }
-            .frame(minHeight: 56)
+            .frame(minHeight: DSFeed.headHeight)
             .contentShape(Rectangle())
             .opacity(dim ? 0.55 : 1)
         }
@@ -1703,7 +1703,7 @@ struct MoveSentence: View {
                     DSSpinner()
                     Text("Asking Relay").dsText(.body17).foregroundStyle(DS.textSecondary)
                 }
-                .frame(minHeight: 52)
+                .frame(minHeight: DSFeed.headHeight)
             }
         }
         // Relay's networks are asked for outside the demo only (§1475).
@@ -1771,7 +1771,7 @@ struct MoveSentence: View {
                     DSSpinner()
                     Text("Asking Relay").dsText(.body17).foregroundStyle(DS.textSecondary)
                 }
-                .frame(minHeight: 52)
+                .frame(minHeight: DSFeed.headHeight)
             }
         }
         .task { if listedBy[to.chainId] == nil { listedBy[to.chainId] = await Tokens.list(to) } }
@@ -2691,7 +2691,7 @@ struct MoveSentence: View {
                          : q.isEmpty ? String(localized: "Nothing here yet") : String(localized: "Nothing named \(q)"))
                         .dsText(.body17).foregroundStyle(DS.textSecondary)
                 }
-                .frame(minHeight: 52)
+                .frame(minHeight: DSFeed.headHeight)
             }
         }
     }
