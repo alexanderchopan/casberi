@@ -68242,3 +68242,10 @@ The rule under all of it: **every page shows every account at once, and the acco
 2. **The rule.** `YourAccountElsewhere.quoteAmount` sizes the quote by what the coin is: anything named BTC 0.0005, a chain's own coin 0.005 unless its symbol names a dollar, else ten. Arc's USDC quotes ten.
 3. **The check.** `your-account-selftest.sh` holds a native 18-decimal USDC to ten whole units. Relay's saved records (`relay-chains.json`) carry no Arc record; none was invented.
 4. **UNMEASURED:** Relay's `/chains` was not reachable from the session that wrote this, so it is not measured that Relay lists Arc with `depositAddressEnabled`, nor whether it lists Arc's USDC ERC-20 interface (`0x3600…0000`) beside the native coin, which would draw two USDC rows under what they send. Measure with `-moveReceiveFrom "Arc"` on the simulator.
+
+## §1484 — Receive has no exchange door (amends §1442i item 4, §1453's "beside From an exchange") (user, 2026-10-24: "let's get rid of this from exchange thing because all it does is open the Coinbase app and it doesn't pre-populate the transaction"; "this other thing from another wallet. It just says it just copies the address, so what's the point of even having it there this whole menu is dumb") — BUILT, NOT SEEN
+
+1. **"From an exchange" and its list are deleted.** Coinbase copied the address and opened coinbase.com with nothing filled in; Another wallet copied the address. The address's own Copy row does the second, and the first adds a page that asks you to do the rest by hand.
+2. **Receive is the address, its Copy, "From another network", and Share.** `MoveSentence.Blank.exchange`, `exchangeList` and `addFrom` are gone with it, and the three strings from `Localizable.xcstrings` (§723: deleted from the surface, deleted from the model).
+3. **A door to an exchange returns only if it fills the withdrawal**: the address, the network and the amount, landing on the exchange's send form.
+4. **Not seen:** written in a Linux session with no simulator or Xcode; not built, not run.

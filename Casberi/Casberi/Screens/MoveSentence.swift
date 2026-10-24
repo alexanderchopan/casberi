@@ -67,7 +67,7 @@ struct MoveSentence: View {
     typealias Tokens = YourAccountTokens
 
     enum Verb: CaseIterable { case swap, send, receive, buy }
-    enum Blank: Equatable { case with, buy, to, network, exchange, elsewhere, elsewhereCoin, arrives, group, merchant }
+    enum Blank: Equatable { case with, buy, to, network, elsewhere, elsewhereCoin, arrives, group, merchant }
     enum Field: Hashable { case amount, search, to }
 
     struct Recipient: Equatable {
@@ -1073,7 +1073,6 @@ struct MoveSentence: View {
                             case .buy: buyList
                             case .to: toList
                             case .network: networkList
-                            case .exchange: exchangeList
                             case .elsewhere: elsewhereList
                             case .elsewhereCoin: elsewhereCoinList
                             case .arrives: arrivesList
@@ -1160,9 +1159,8 @@ struct MoveSentence: View {
             // address. and somewhere on the page complete address should be
             // displayed. also with a copy button").** The sentence says
             // "…9f12"; the whole address stands here, readable, with its own
-            // copy; the exchange door is a line, and opens a list like
-            // every blank's (the system menu was the one control on Move that
-            // matched nothing else).
+            // copy. No exchange door: it only copied and opened Coinbase,
+            // which the copy row already does (prd §1484).
             if let route = elsewhere {
                 VStack(alignment: .leading, spacing: DS.Space.s3) {
                     Text(verbatim: route.address)
@@ -1221,16 +1219,6 @@ struct MoveSentence: View {
                         .fixedSize(horizontal: false, vertical: true)
                         .transition(.opacity)
                 }
-                Button {
-                    withAnimation(DS.Motion.standard) { open = .exchange }
-                    DSHaptic.selection()
-                } label: {
-                    Text("From an exchange")
-                        .dsText(.body17)
-                        .foregroundStyle(DS.pickInk)
-                        .frame(minHeight: 44, alignment: .leading)
-                }
-                .buttonStyle(RowPress())
                 if !network.isTest {
                     Button {
                         withAnimation(DS.Motion.standard) { open = .elsewhere }
@@ -1567,22 +1555,6 @@ struct MoveSentence: View {
                 }
             }
             pasteRow { to = $0 }
-        }
-    }
-
-    /// Where the money comes from (§1442i): each row says what it does.
-    /// Coinbase and any other wallet; not a directory of every exchange
-    /// the app reads (user: "just use coinbase and another wallet").
-    private var exchangeList: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            listRow("Coinbase", sub: String(localized: "Copies your address, opens Coinbase"), image: "brand-coinbase") {
-                pick {}
-                addFrom("https://www.coinbase.com")
-            }
-            listRow(String(localized: "Another wallet"), sub: String(localized: "Copies your address"), mark: "W") {
-                pick {}
-                copy()
-            }
         }
     }
 
@@ -2286,13 +2258,6 @@ struct MoveSentence: View {
         UIPasteboard.general.string = receiveAddress
         DSHaptic.tap()
         say(String(localized: "Address copied"))
-    }
-
-    /// The address on the clipboard, then the exchange: paste it as the
-    /// destination of a withdrawal there, on any network the account is on.
-    private func addFrom(_ site: String) {
-        copy()
-        if let url = URL(string: site) { openURL(url) }
     }
 
     // MARK: - Reads
