@@ -847,10 +847,21 @@ final class WalletStore {
     /// balance, moves and approvals never reached the Wallet, so Security had
     /// nothing to revoke. Every launch puts it back if it is missing.
     func keepYourAccount() {
-        guard let account = YourAccountKey.address,
-              !addresses.contains(where: { WalletWatch.sameAddress($0.address, account) }) else { return }
-        outcome(ofAdding: account, label: String(localized: "Your account"))
+        guard let account = YourAccountKey.address else { return }
+        guard let kept = addresses.first(where: { WalletWatch.sameAddress($0.address, account) }) else {
+            outcome(ofAdding: account, label: Self.yourAccountName)
+            return
+        }
+        // Named "Your account" until prd §1487; a name you gave it stays.
+        if kept.label == "Your account" || kept.label == String(localized: "Your account") {
+            rename(kept.id, to: Self.yourAccountName)
+        }
     }
+
+    /// **YOUR ACCOUNT IS NAMED YOU (prd §1487, user: "shouldn't the name be
+    /// you").** The name it is followed under until you give it one, as the
+    /// tab bar's face is You.
+    static var yourAccountName: String { String(localized: "You") }
 
     /// Your own account is not a wallet you follow: the limit never counts it
     /// and never refuses it.

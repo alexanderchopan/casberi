@@ -33,6 +33,12 @@ enum YourAccountDemo {
     /// The account the screens show: the demo's in the demo, else this phone's.
     static var shownAddress: String? { isOn ? address : YourAccountKey.address }
 
+    /// This phone's own account, or the demo's while the demo is on.
+    static func isYours(_ account: String) -> Bool {
+        [YourAccountKey.address, shownAddress].compactMap { $0 }
+            .contains { WalletWatch.sameAddress($0, account) }
+    }
+
     static let cbBTC = Op.Token(symbol: "cbBTC", decimals: 8, contract: "0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf")
     static let aero = Op.Token(symbol: "AERO", decimals: 18, contract: "0x940181a94A35A4569E4529A3CDfB74e38FD98631")
     static let mag7 = Op.Token(symbol: "MAG7", decimals: 18, contract: "0x152f7613f362Abf1C05DB2EF2D6ef220302bf840")

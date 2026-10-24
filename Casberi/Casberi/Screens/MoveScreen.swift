@@ -290,7 +290,7 @@ struct MoveScreen: View {
                     }
                 }
                 failed += await MoveRecovery.move(targets, to: index)
-                WalletStore.shared.add(found.address, label: String(localized: "Your account"))
+                WalletStore.shared.add(found.address, label: WalletStore.yourAccountName)
                 arrival = .broughtHere
                     withAnimation(DS.Motion.standard) { address = found.address }
                 if failed.isEmpty {
@@ -314,7 +314,7 @@ struct MoveScreen: View {
             let made = try YourAccountKey.create()
             // Followed in the Wallet from the start, so its balance and moves
             // land where every account's do.
-            WalletStore.shared.add(made, label: String(localized: "Your account"))
+            WalletStore.shared.add(made, label: WalletStore.yourAccountName)
             arrival = .created
             walking = true
             withAnimation(DS.Motion.standard) { address = made }

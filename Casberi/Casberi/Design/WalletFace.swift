@@ -49,7 +49,20 @@ struct WalletFace: View {
         WalletStore.shared.avatarURL(for: address).flatMap(URL.init(string:))
     }
 
+    /// **YOUR OWN ACCOUNT WEARS YOUR FACE (prd §1487, user: "shouldn't we
+    /// use the avatar that a person picked for the app").** The photo you
+    /// picked, else the app's mark: `YouFace`, the tab bar's, so the account
+    /// and the You it belongs to are one face. Every other address keeps its
+    /// tinted glyph or monogram.
     var body: some View {
+        if YourAccountDemo.isYours(address) {
+            YouFace(size: size).accessibilityHidden(true)
+        } else {
+            addressFace
+        }
+    }
+
+    private var addressFace: some View {
         identicon
             .overlay {
                 // The demo's bundled faces (2026-08-12). An ENS avatar is a

@@ -72,25 +72,24 @@ extension FeedScreen {
             Button(String(localized: "Cancel"), role: .cancel) { walletNaming = nil }
         } message: {
             Text(walletNaming.map(Self.isYourAccount) == true
-                 ? String(localized: "Blank names it Your account.")
+                 ? String(localized: "Blank names it You.")
                  : String(localized: "Blank shows the address instead."))
         }
     }
 
     /// This phone's own account, or the demo's while the demo is on.
     static func isYourAccount(_ address: String) -> Bool {
-        [YourAccountKey.address, YourAccountDemo.shownAddress].compactMap { $0 }
-            .contains { WalletWatch.sameAddress($0, address) }
+        YourAccountDemo.isYours(address)
     }
 
     /// Through the watched wallet's own rename, which names the address in
     /// the book too, so the name is the name everywhere it is drawn. Your
-    /// own account's blank goes back to "Your account"; any other's to the
+    /// own account's blank goes back to "You" (prd §1487); any other's to the
     /// short address.
     func saveWalletName() {
         guard let address = walletNaming else { return }
         let draft = walletNameDraft.trimmingCharacters(in: .whitespacesAndNewlines)
-        let name = draft.isEmpty && Self.isYourAccount(address) ? String(localized: "Your account") : draft
+        let name = draft.isEmpty && Self.isYourAccount(address) ? WalletStore.yourAccountName : draft
         if let watched = wallet.addresses.first(where: { WalletWatch.sameAddress($0.address, address) }) {
             wallet.rename(watched.id, to: name)
         } else if !name.isEmpty {

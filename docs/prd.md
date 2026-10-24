@@ -68266,3 +68266,11 @@ The rule under all of it: **every page shows every account at once, and the acco
 4. **Under the sentence:** nothing until a network is picked (a route Relay refused still says why). Then the whole address, Copy address, and "Any coin on Base." §1442k's "Send to it only on …" line is dropped there, since the list offers only networks this phone can use; "Not on any network from this iPhone yet." stays.
 5. **Share** hands on no address before a pick: it is grey and says "Pick a network first", opening the list.
 6. **Not changed:** the arrival sentence (§1442j, "Created …3416 on Base, Ethereum and Robinhood Chain.") states where the account lives and keeps its copy. The demo draws no "Asking Relay" spinner in the list, since the demo asks Relay nothing (§1475).
+
+## §1487 — Your account wears your face and is named You (amends §1388 for your own account, §1442l's name) (user, 2026-10-24: "for your account, we use YA, but shouldn't we use the avatar that a person picked for the app, and shouldn't the name be you") — BUILT, NOT SEEN
+
+1. **The cause.** The rooms tray draws a wallet with no caption as its monogram (§1388), and your own account was followed under the label "Your account", so it read "YA". Everywhere else it wore the tinted person glyph every address wears.
+2. **The face.** `WalletFace` draws `YouFace` for your own account (`YourAccountDemo.isYours`: this phone's, or the demo's while the demo is on): the photo you picked for the app, else the app's mark, as the tab bar's You does. The tray, the Accounts list, the account's box and every row that draws its face agree.
+3. **The name.** Your account is followed as "You" (`WalletStore.yourAccountName`), on create, on recovery and when a blank rename puts the default back. `keepYourAccount` renames a stored "Your account" to "You" at launch; a name you gave it stays. The account's box draws its name, not the words "Your account".
+4. **What keeps "Your account".** The Move sentence ("Your account …3416 on Base"), the Wallet page called Your account, and its errors: those are sentences about the account, not its name.
+5. **Not seen:** written in a Linux session with no simulator or Xcode; not built, not run.

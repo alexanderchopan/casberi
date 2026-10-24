@@ -583,7 +583,8 @@ struct WalletYourAccountFigure: View {
             if let address {
                 // A profile's face (`DS.Face.profile`), as a person's page opens.
                 WalletFace(address: address, size: DS.Face.profile, circular: true)
-                Text("Your account").dsText(.heading24).foregroundStyle(DS.textPrimary)
+                Text(verbatim: WalletStore.shared.displayName(forWatched: address) ?? WalletStore.yourAccountName)
+                    .dsText(.heading24).foregroundStyle(DS.textPrimary)
                 Button {
                     DSHaptic.selection()
                     UIPasteboard.general.string = address
