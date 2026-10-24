@@ -68153,3 +68153,27 @@ Not built here: the canvas's moves 5–10 (the lead's large rung, one mark shape
 
 **Seen** on the simulator (iOS 27, Debug, the demo): with the probe, the rule logged "days=0 connected=98 demo=YES … → ask (probe)", asked 4.3s later, and Apple's sheet stood over the Feed with the octopus icon, "Enjoying Casberi?", "Tap a star to rate it on the App Store." and Not Now.
 
+
+## §1479 — The Wallet restructured: Home is the overview, four tiles, every list behind a door, and Security, Cards and the category index dissolved into what they are (amends §1107, §1111, §1219, §1232, §1257, §1410, §1436, §1462, §1468, §1469, §1082, §1337; the design canvas "Wallet Home, Apple's way") (user, 2026-10-23: "i want to totally refactor wallet. it has the right things, but has redundancy, shows too much"; "lets just act like [home] doesn't exist"; "we are starting from first principles"; "the goal is we have aggregated view and sliced view"; "i think we will not have it be called security anymore. i think we will break those out into what they are"; "we have your account and then 'following' for the other accounts"; "Build it with your defaults in its own worktree") — PLANNED
+
+The rule under all of it: **every page shows every account at once, and the account menu narrows it to one** (the "aggregated view and sliced view"); **an action has one home**; **a page fits one screen, and a list longer than its screen is behind a door**.
+
+1. **Four tiles: Home · Activity · Holdings · Spending** (A–Z after Home, §995). Security and Markets stop being tiles. `WalletSection` gains `activity` and the pages below; `security` is deleted, and a remembered "security" resolves to Home.
+2. **Home is the overview.** The box is the balance and its line (7d · 30d · Followed), as today. Under the tiles, six doors, each a row with a figure and a chevron, opening a page:
+   - **Your account** — the account the app made you: its line says the controls ("Recovery on · 2 signers · $500 a month · round-ups $1"), a missing one in amber. Shown on All or with your account picked; a followed wallet has no keys (§1436). With none yet, the row reads **Create an account** with a plus and opens Move's create.
+   - **Following** — every other account the Wallet reads: watched wallets, a Safe you co-sign, the apps folded in. Where you add (Follow an account), rename and remove. Empty, it reads **Follow an account**.
+   - **Needs you** — every ask, from every page: what was Signatures (a Safe transaction waiting on your signature, sorted first), a stuck transfer, a missing recovery key or Signer, a renewal, a card's amount due, an offer about to end.
+   - **Permissions** — approvals and delegations: who can spend from you.
+   - **Threats** — address poisoning, fake tokens, fake transfers.
+   - **Markets** — what you watch.
+   Needs you, Permissions and Threats draw no row while empty. Holdings' and Spending's lists are not on Home.
+3. **Activity is the stream.** The box is transactions per day for the window (Week · Month) and the count against last window to the same day. The list is every transaction by day, no header, no cap.
+4. **Holdings is what the money is.** The box keeps the treemap. Under the tiles, five doors: **Accounts** (each account's balance, the wallets and the app accounts like Wise or Acorns), **Tokens**, **Positions**, **Apps** (the apps that made you a wallet, §1124), **NFTs**. "Accounts" keeps its word here because it means where the money sits.
+5. **Spending is a reading of Activity.** The box is the window's total and the comparison, Week · Month. Under the tiles, three doors: **Subscriptions**, **Places**, **Fees** (one name per group; the box no longer says Recurring and The rest). A charge is in Subscriptions or in Places, never both (`Spending.compose`, unchanged).
+6. **Your account's page** holds the controls §1436 put in Security: who it is (face, name, the address to copy, its networks), then **Keys** — This iPhone, Recovery key, Signer — and **Sending** — Spend limit (amount, period) and Round-ups (round up, and buy). The spend limit is the two-key rule (§1455): under it this phone signs alone, over it the Signer signs too. Nothing else changes in `MoveSecurity`.
+7. **Markets' page** keeps the heat map and the watchlist, and the index becomes **From your apps**: one list of the companies behind the apps you connected ("Amazon · AMZN · Kindle, Twitch, AWS"), each with its price and star. The category tiles, Everything else and Not traded go; Search finds any other company.
+8. **Cards is deleted as a section.** A card's spending is Places and Subscriptions narrowed by the menu; what it owes and when, and an offer about to end, are dated Needs you rows.
+9. **A page's title is its way back** ("Wallet · Tokens"): the category word returns to the page it opened from (Holdings, Spending, else Home).
+10. **Move** (§1436): the recovery and Signer nudges open Your account; nothing else moves into Move.
+11. **The Mac and iPad (§1402):** beside a pane, Home's doors stand in the pane's box as Overview did (§1407), and each page opens in the list column. The rail is unchanged.
+12. **Not changed:** Logos and Aztec keep their own tiles (`LogosSection`, `AztecSection`); a picked app's head still replaces Home's balance (§1048d); Privy still counts only on All (§1048).
