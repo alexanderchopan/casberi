@@ -546,7 +546,11 @@ def audit_text(path: str, raw: str, floor: int, label_names=None):
         key = f"{os.path.basename(path)}:{line}"
         if key in KNOWN_EXEMPT:
             continue
-        if not (glyph or face) or WORDS.search(body):
+        # A `DSFeedRow` label is a row: it draws its title, a variable no
+        # WORDS literal sees, at the 44pt head (`DSFeed.headHeight`, prd
+        # §1482), so its face is a lead, not the button (the Accounts rows,
+        # FeedScreen+WalletPages.swift).
+        if not (glyph or face) or WORDS.search(body) or "DSFeedRow(" in body:
             # CHECK 3b — a button with words is labelled and as WIDE as its
             # text by construction, but not as TALL: a word in a 32pt capsule
             # is a 32pt target (2026-09-13).
