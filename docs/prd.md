@@ -68274,3 +68274,11 @@ The rule under all of it: **every page shows every account at once, and the acco
 3. **The name.** Your account is followed as "You" (`WalletStore.yourAccountName`), on create, on recovery and when a blank rename puts the default back. `keepYourAccount` renames a stored "Your account" to "You" at launch; a name you gave it stays. The account's box draws its name, not the words "Your account".
 4. **What keeps "Your account".** The Move sentence ("Your account …3416 on Base"), the Wallet page called Your account, and its errors: those are sentences about the account, not its name.
 5. **Not seen:** written in a Linux session with no simulator or Xcode; not built, not run.
+
+## §1488 — The arrival copies nothing until a network is picked (amends §1442j item 1, §1486 item 6) (user, 2026-10-24: "please explain and what do you recommend"; "ok") — WRITTEN, NOT YET COMPILED
+
+1. **Why:** right after Create or Recover, Move stood on Receive with "Created …3416 on Base, Ethereum and Robinhood Chain.", the whole address and Copy address under it, and the short address copying on a tap: an address with no one network, the confusion §1486 removed from Receive. The arrival also never ended from Receive, since it already stood there and only a verb change ended it.
+2. **The sentence stays** as the confirmation of where the account is, the networks this phone can use (§1442k).
+3. **No copy on the arrival:** the short address is white and a tap opens §1486's network list; the whole address and Copy address are not drawn; Share is grey and says "Pick a network first". "Nothing in it yet.", the keys line (§1457) and §1442k's reach line stay.
+4. **A pick ends the arrival:** one of your own networks lands on "at …3416 on Base." with the address and Copy under it; a Relay network lands on §1470's route sentence.
+5. **The cost:** funding a new account takes one more tap, the network, the same tap Receive asks for everywhere else.

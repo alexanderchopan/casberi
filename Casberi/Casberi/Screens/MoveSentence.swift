@@ -546,10 +546,16 @@ struct MoveSentence: View {
                                  : String(localized: "Your account"),
                          ink: arrived ? DS.textSecondary : DS.textPrimary)
                     if arrived {
-                        Button { copy() } label: { word(YourAccount.short(account), ink: DS.pickInk) }
+                        // Never a copy without its network (prd §1488): the
+                        // address opens the network list, and a pick there
+                        // ends the arrival on Receive's own sentence.
+                        Button {
+                            withAnimation(DS.Motion.standard) { open = .elsewhere }
+                            DSHaptic.selection()
+                        } label: { word(YourAccount.short(account), ink: DS.textPrimary) }
                             .buttonStyle(RowPress())
                             .accessibilityLabel(Text("Your address, \(account)"))
-                            .accessibilityHint(Text("Copies your address"))
+                            .accessibilityHint(Text("Pick a network first"))
                             .transition(.asymmetric(insertion: .offset(y: 28).combined(with: .opacity), removal: .opacity))
                     }
                 }
@@ -1206,18 +1212,20 @@ struct MoveSentence: View {
                 }
             } else {
             VStack(alignment: .leading, spacing: DS.Space.s3) {
-                Text(verbatim: account)
-                    .dsText(.mono12)
-                    .foregroundStyle(DS.textSecondary)
-                    .textSelection(.enabled)
-                    .fixedSize(horizontal: false, vertical: true)
-                if YourAccountDemo.isDemo(account) {
-                    DSDoorRow(icon: "doc.on.doc", label: "Copy address") { say(YourAccountDemo.actsLater) }
-                } else {
-                    DSCopyRow(value: account, label: "Copy address", sensitive: false)
-                }
-                // The network the sentence names (prd §1486).
+                // The arrival names no one network, so it shows no address to
+                // copy (prd §1488).
                 if !fresh {
+                    Text(verbatim: account)
+                        .dsText(.mono12)
+                        .foregroundStyle(DS.textSecondary)
+                        .textSelection(.enabled)
+                        .fixedSize(horizontal: false, vertical: true)
+                    if YourAccountDemo.isDemo(account) {
+                        DSDoorRow(icon: "doc.on.doc", label: "Copy address") { say(YourAccountDemo.actsLater) }
+                    } else {
+                        DSCopyRow(value: account, label: "Copy address", sensitive: false)
+                    }
+                    // The network the sentence names (prd §1486).
                     Text("Any coin on \(network.name).")
                         .dsText(.body17).foregroundStyle(DS.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -1583,6 +1591,8 @@ struct MoveSentence: View {
                     pick {
                         elsewhere = nil
                         switchNetwork(n)
+                        // A pick ends the arrival (prd §1488).
+                        if fresh { fresh = false; arrived = true }
                     }
                 }
             }
@@ -1872,8 +1882,9 @@ struct MoveSentence: View {
                                 .frame(minHeight: 48, alignment: .trailing)
                         }
                         .buttonStyle(RowPress())
-                    } else if elsewhere == nil, !networkPicked, !fresh {
-                        // Never an address without its network (prd §1486).
+                    } else if elsewhere == nil, fresh || !networkPicked {
+                        // Never an address without its network (prd §1486,
+                        // the arrival too since §1488).
                         Button {
                             say(String(localized: "Pick a network first"))
                             withAnimation(DS.Motion.standard) { open = .elsewhere }

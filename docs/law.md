@@ -236,7 +236,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1625 of 1694 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1626 of 1695 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1861,8 +1861,9 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1483 — Receive from Arc: a chain's own coin that is a dollar quotes ten, not a fraction (amended by §1485)
 - §1484 — Receive has no exchange door (amended by §1486)
 - §1485 — Receive from another network: a chain's own coin quotes 0.01, a floor refusal is asked again over it, and Relay's raw…
-- §1486 — Receive picks its network, always
+- §1486 — Receive picks its network, always (amended by §1488)
 - §1487 — Your account wears your face and is named You
+- §1488 — The arrival copies nothing until a network is picked
 
 ## Dead rulings → what replaced them (generated)
 
