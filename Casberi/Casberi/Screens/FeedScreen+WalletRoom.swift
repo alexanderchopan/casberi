@@ -59,13 +59,10 @@ extension FeedScreen {
                 }
                 Spacer(minLength: 0)
             }
+            .frame(minHeight: DSFeed.headHeight)
             .contentShape(Rectangle())
         }
-        .listRowInsets(EdgeInsets(top: DS.Space.s2,
-                                  leading: DSRoomChassis.rowInset(forMark: DS.Face.list),
-                                  bottom: DS.Space.s2, trailing: DS.Space.s4))
-        .feedRowBackground()
-        .listRowSeparator(.hidden)
+        .walletListRow()
     }
 
     /// One token: the cell's own door, at row scale — a token's chart when it
@@ -78,6 +75,7 @@ extension FeedScreen {
         } label: {
             WalletTokenRowLabel(position: position, total: portfolio.totalUSD,
                                 move: moves[HoldingMoves.key(position.symbol)])
+                .frame(minHeight: DSFeed.headHeight)
                 .contentShape(Rectangle())
         }
         .buttonStyle(RowPress())
@@ -94,11 +92,7 @@ extension FeedScreen {
                 Label(String(localized: "Hide \(position.symbol)"), systemImage: "eye.slash")
             }
         }
-        .listRowInsets(EdgeInsets(top: DS.Space.s2,
-                                  leading: DSRoomChassis.rowInset(forMark: DS.Face.list),
-                                  bottom: DS.Space.s2, trailing: DS.Space.s4))
-        .feedRowBackground()
-        .listRowSeparator(.hidden)
+        .walletListRow()
     }
 
     func walletOpenToken(_ position: WalletPortfolio.Position) {
@@ -452,59 +446,34 @@ extension FeedScreen {
             let open = walletSecurityOpen(.signatures)
             let shown = open ? waiting : Array(waiting.prefix(Self.walletHomeCap))
             walletCard(String(localized: "Signatures"), glyph: WalletWarning.Kind.safe.glyph, anchor: SecurityAnchor.signatures.id) {
-                VStack(alignment: .leading, spacing: 0) {
-                    ForEach(shown) { warning in
-                        needsYouRow(glyph: warning.kind.glyph, critical: false,
-                                    title: warning.rowName ?? warning.title,
-                                    line: warning.rowLine ?? warning.subtitle) {
-                            if let action = warning.action, let url = URL(string: action.url) {
-                                openExternal(url)
-                            } else {
-                                feedSheet = .worthALook
-                            }
+                // One list row each, at the Wallet's pitch (prd §1482).
+                ForEach(shown) { warning in
+                    needsYouRow(glyph: warning.kind.glyph, critical: false,
+                                title: warning.rowName ?? warning.title,
+                                line: warning.rowLine ?? warning.subtitle) {
+                        if let action = warning.action, let url = URL(string: action.url) {
+                            openExternal(url)
+                        } else {
+                            feedSheet = .worthALook
                         }
                     }
-                    walletSecurityDoor(.signatures, total: waiting.count)
+                    .walletListRow()
                 }
-                .listRowInsets(WalletCardStyle.rowInsets)
-                .feedRowBackground()
-                .listRowSeparator(.hidden)
+                walletSecurityDoor(.signatures, total: waiting.count)
             }
         }
     }
 
+    /// A Signatures or Threats row: the one push row (prd §1482), its title
+    /// wrapping to two lines (prd §1377), a bare glyph lead (prd §1272) —
+    /// red for a threat (prd §1463).
     func needsYouRow(glyph: String, critical: Bool, title: String, line: String?,
-                             action: @escaping () -> Void) -> some View {
-        Button {
-            DSHaptic.selection()
-            action()
-        } label: {
-            HStack(spacing: DS.Space.s3) {
-                ZStack {
-                    // Bare and pink (prd §1272).
-                    Image(systemName: glyph)
-                        .dsGlyph(.body, weight: .semibold)
-                        .foregroundStyle(critical ? DS.destructive : DS.brandInk)
-                        .accessibilityHidden(true)
-                }
-                .frame(width: DS.Face.list, height: DS.Face.list)
-                VStack(alignment: .leading, spacing: 1) {
-                    // Wraps, never truncates (prd §1377).
-                    Text(title)
-                        .dsText(.body17).foregroundStyle(DS.textPrimary)
-                        .lineLimit(2)
-                    if let line {
-                        Text(line)
-                            .dsText(.subhead12).foregroundStyle(DS.textTertiary)
-                            .lineLimit(2)
-                    }
-                }
-                Spacer(minLength: 0)
-            }
-            .padding(.vertical, DS.Space.s2)
-            .contentShape(Rectangle())
+                     action: @escaping () -> Void) -> some View {
+        DSPushRow(title: Text(verbatim: title),
+                  subtitle: line.map { Text(verbatim: $0) },
+                  action: action) {
+            walletDoorLead(glyph, tint: critical ? DS.destructive : DS.brandInk)
         }
-        .buttonStyle(RowPress())
     }
 
     /// "Tell me below …" — the health line a borrow notifies under, one
@@ -627,10 +596,7 @@ extension FeedScreen {
     var walletSkeletonRowsSection: some View {
         Section {
             DSSkeletonRows()
-                .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.rowInset(forMark: DS.Face.list),
-                                          bottom: 0, trailing: DS.Space.s4))
-                .feedRowBackground()
-                .listRowSeparator(.hidden)
+                .walletStackRow()
         }
     }
 
@@ -653,7 +619,7 @@ extension FeedScreen {
                           }) {
                     walletDoorLead("square.grid.2x2")
                 }
-                .modifier(WalletDoorRow())
+                .walletListRow()
             }
         }
     }
@@ -662,7 +628,7 @@ extension FeedScreen {
     static let nftGlyph = "photo.on.rectangle.angled"
 
     /// The 26pt disc every verb row in this room leads with.
-    func walletDoorLead(_ glyph: String) -> some View {
+    func walletDoorLead(_ glyph: String, tint: Color = DS.brandInk) -> some View {
         ZStack {
             // Bare and pink (prd §1272): no disc behind the glyph.
             Color.clear
@@ -670,17 +636,7 @@ extension FeedScreen {
             Image(systemName: glyph)
                 .accessibilityHidden(true)
                 .dsGlyph(.body, weight: .semibold)
-                .foregroundStyle(DS.brandInk)
-        }
-    }
-
-    struct WalletDoorRow: ViewModifier {
-        func body(content: Content) -> some View {
-            content
-                .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.rowInset(forMark: DS.Face.list),
-                                          bottom: 0, trailing: DS.Space.s4))
-                .feedRowBackground()
-                .listRowSeparator(.hidden)
+                .foregroundStyle(tint)
         }
     }
 
@@ -852,9 +808,7 @@ extension FeedScreen {
                     onOpen: { collection, name in
                         route.pushBridge(.nftCollection(wallet: entry.address, collection: collection, name: name))
                     })
-                    .feedRowBackground()
-                    .listRowSeparator(.hidden)
-                    .listRowInsets(WalletCardStyle.rowInsets)
+                    .walletStackRow()
             }
         }
     }
@@ -877,9 +831,7 @@ extension FeedScreen {
                                         cap: Self.walletHomeCap, open: walletSecurityOpen(.delegations),
                                         more: { walletSecurityToggle(.delegations) })
                     .modifier(rowEntrance(2))
-                    .feedRowBackground()
-                    .listRowSeparator(.hidden)
-                    .listRowInsets(WalletCardStyle.rowInsets)
+                    .walletStackRow()
             }
         }
     }
@@ -920,9 +872,7 @@ extension FeedScreen {
                     feedSheet = .thing(thing, walk: .none)
                 }
                 .modifier(rowEntrance(2))
-                .feedRowBackground()
-                .listRowSeparator(.hidden)
-                .listRowInsets(WalletCardStyle.rowInsets)
+                .walletStackRow()
             }
         }
     }
@@ -1031,7 +981,7 @@ extension FeedScreen {
                 // so the air between two kinds was three times the air
                 // between two rows. They stand in one stack now, every row
                 // the same distance from the next.
-                VStack(alignment: .leading, spacing: DS.Space.s1) {
+                VStack(alignment: .leading, spacing: 0) {
                     if lending {
                         WalletLendingCard(aave: walletLive.positions, morpho: walletLive.morpho,
                                           falls: walletLendingFalls,
@@ -1042,11 +992,8 @@ extension FeedScreen {
                     if staking { WalletAztecStakingCard(book: walletLive.aztecStaking) }
                     if orders { WalletZFiOrdersCard(book: walletLive.zfiOrders) }
                 }
-                .padding(.bottom, DS.Space.s4)
                 .modifier(rowEntrance(2))
-                .feedRowBackground()
-                .listRowSeparator(.hidden)
-                .listRowInsets(WalletCardStyle.rowInsets)
+                .walletStackRow()
             }
         }
     }
@@ -1419,7 +1366,7 @@ extension FeedScreen {
             HStack(spacing: DS.Space.s3) {
                 WalletMarkView(mark: .symbol("arrow.left.arrow.right", tint: DS.textSecondary),
                                size: DS.Face.list)
-                VStack(alignment: .leading, spacing: 1) {
+                VStack(alignment: .leading, spacing: 2) {
                     Text(amount.isEmpty ? String(localized: "Moved") : String(localized: "Moved \(amount)"))
                         .dsText(.body17).foregroundStyle(DS.textPrimary)
                         .lineLimit(1)
@@ -1435,17 +1382,14 @@ extension FeedScreen {
                         .lineLimit(1)
                 }
             }
+            .frame(minHeight: DSFeed.headHeight)
             .contentShape(Rectangle())
         }
         .buttonStyle(RowPress())
         .dsHover()
         .modifier(rowEntrance(index))
         .accessibilityLabel(Text("Moved \(amount), \(route)"))
-        .listRowInsets(EdgeInsets(top: DS.Space.s2,
-                                  leading: DSRoomChassis.rowInset(forMark: DS.Face.list),
-                                  bottom: DS.Space.s2, trailing: DSRoomChassis.rowInset))
-        .feedRowBackground()
-        .listRowSeparator(.hidden)
+        .walletListRow()
     }
 
     /// An account's name on a move: the watched address's label, else its
@@ -1544,7 +1488,7 @@ extension FeedScreen {
                 } else {
                     AssetMark(name: symbol, size: DS.Face.list)
                 }
-                VStack(alignment: .leading, spacing: 1) {
+                VStack(alignment: .leading, spacing: 2) {
                     Text(who)
                         .dsText(.body17).foregroundStyle(DS.textPrimary)
                         .lineLimit(1)
@@ -1561,17 +1505,14 @@ extension FeedScreen {
                     .monospacedDigit()
                     .lineLimit(1)
             }
+            .frame(minHeight: DSFeed.headHeight)
             .contentShape(Rectangle())
         }
         .buttonStyle(RowPress())
         .dsHover()
         .modifier(rowEntrance(index))
         .accessibilityLabel(Text("\(received ? String(localized: "Received from") : String(localized: "Sent to")) \(who), \(trailing)"))
-        .listRowInsets(EdgeInsets(top: DS.Space.s2,
-                                  leading: DSRoomChassis.rowInset(forMark: DS.Face.list),
-                                  bottom: DS.Space.s2, trailing: DSRoomChassis.rowInset))
-        .feedRowBackground()
-        .listRowSeparator(.hidden)
+        .walletListRow()
     }
 
     /// The due rows grouped under the day each falls due, soonest first.
@@ -1622,13 +1563,11 @@ extension FeedScreen {
     func walletSeeAllSection(total: Int) -> some View {
         if total > Self.walletPreviewRows {
             Section {
-                WalletSeeAllRow(count: total) {
+                // The one More row (prd §1386), at the rows' pitch (prd §1482).
+                DSMoreRow(title: Text("See all \(total) transactions")) {
                     route.pushBridge(.walletHistory(scope: walletHistoryScope))
                 }
-                .listRowSeparator(.hidden)
-                // On the page itself, not in a card — a quiet continuation
-                // line, not another surface (user, 2026-07-20, twice).
-                .feedRowBackground()
+                .walletListRow()
             }
         }
     }

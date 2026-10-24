@@ -97,7 +97,7 @@ struct WalletTokenFoldRow: View {
             }
             .frame(width: DS.Face.list, height: DS.Face.list)
             .accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: 1) {
+            VStack(alignment: .leading, spacing: 2) {
                 Text("\(fold.rest.count) more tokens")
                     .dsText(.body17).foregroundStyle(DS.textPrimary)
                     .lineLimit(1)
@@ -182,7 +182,7 @@ struct WalletTokensSheet: View {
         } label: {
             WalletTokenRowLabel(position: position, total: total,
                                 move: moves[HoldingMoves.key(position.symbol)])
-                .padding(.vertical, DS.Space.s2)
+                .walletRowPitch()
                 .contentShape(Rectangle())
         }
         .buttonStyle(RowPress())
@@ -205,7 +205,7 @@ struct WalletTokensSheet: View {
                 }
                 .frame(width: DS.Face.list, height: DS.Face.list)
                 .accessibilityHidden(true)
-                VStack(alignment: .leading, spacing: 1) {
+                VStack(alignment: .leading, spacing: 2) {
                     Text("Under $1")
                         .dsText(.body17).foregroundStyle(DS.textPrimary)
                     Text(dust.count == 1 ? String(localized: "1 token")
@@ -217,7 +217,7 @@ struct WalletTokensSheet: View {
                     .dsText(.price17).foregroundStyle(DS.textPrimary)
                     .monospacedDigit()
             }
-            .padding(.vertical, DS.Space.s2)
+            .walletRowPitch()
             .contentShape(Rectangle())
         }
         .buttonStyle(RowPress())

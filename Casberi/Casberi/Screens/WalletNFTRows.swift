@@ -73,7 +73,7 @@ struct WalletNFTCollectionRows: View {
                     Text(String(localized: "Choose collections"))
                         .dsText(.subhead12)
                         .foregroundStyle(DS.pickInk)
-                        .padding(.vertical, DS.Space.s3)
+                        .walletRowPitch()
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(PressSpring())
@@ -108,7 +108,7 @@ struct WalletNFTCollectionRows: View {
                 .lineLimit(1)
             Spacer(minLength: 0)
         }
-        .padding(.vertical, DS.Space.s2)
+        .walletRowPitch()
         if let onOpen {
             Button {
                 DSHaptic.selection()

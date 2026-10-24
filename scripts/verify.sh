@@ -1157,6 +1157,18 @@ python3 "$ROOT/scripts/primary-verb-audit.py" \
   || fail "a screen's filled verb is hand-rolled — use DSSlabButton / DSActVerb (prd §613)"
 print -P "%F{green}✓ primary verb audit%f"
 
+# Every Wallet list row at one pitch (prd §1482). Static, no build. The user
+# reported it three times ("the spacing of text is different on each screen
+# in wallet"); two passes fixed the rows they looked at and nothing held the
+# rest, so the fourth row written drifted again. A screenshot sweep cannot
+# see a 55pt row beside a 52pt one; a check that names the numbers can.
+step "Wallet row audit"
+python3 "$ROOT/scripts/wallet-row-audit.py" --self-test >/dev/null \
+  || fail "the wallet row audit's own self-test failed — the check is broken, not the code"
+python3 "$ROOT/scripts/wallet-row-audit.py" \
+  || fail "a Wallet row stands off the one pitch — use walletListRow() / walletStackRow() / walletRowPitch() (prd §1482)"
+print -P "%F{green}✓ wallet row audit%f"
+
 # Keeps every Keychain write device-only and non-syncing (prd §277). Static,
 # no build. The failure it catches is invisible at runtime — a key stored with
 # the wrong accessibility works perfectly and also rides an encrypted backup

@@ -72,9 +72,7 @@ extension FeedScreen {
            chrome.walletScope == nil || WalletWatch.sameAddress(chrome.walletScope ?? "", account) {
             walletCard(String(localized: "Your account"), glyph: ScopeTileGlyph.move, anchor: SecurityAnchor.account.id) {
                 MoveSecurity(account: account)
-                    .listRowInsets(WalletCardStyle.rowInsets)
-                    .feedRowBackground()
-                    .listRowSeparator(.hidden)
+                    .walletStackRow()
                     // The nudge's landing (`ShellChrome.openYourAccount`, prd §1480).
                     .task(id: chrome.walletScrollRequest) {
                         guard chrome.walletScrollRequest == SecurityAnchor.account.id else { return }
@@ -106,22 +104,19 @@ extension FeedScreen {
             let open = walletSecurityOpen(anchor)
             let shown = open ? things : Array(things.prefix(Self.walletHomeCap))
             walletCard(word, glyph: kind.glyph, anchor: anchor.id) {
-                VStack(alignment: .leading, spacing: 0) {
-                    ForEach(shown.keyed) { row in
-                        if let thing = row.live {
-                            let words = Self.flaggedRowWords(thing, kind: kind)
-                            // Every threat's glyph is red (prd §1463), fake transfers too.
-                            needsYouRow(glyph: kind.glyph, critical: true,
-                                        title: words.title, line: words.line) {
-                                feedSheet = .thing(thing, walk: .none)
-                            }
+                // One list row each, at the Wallet's pitch (prd §1482).
+                ForEach(shown.keyed) { row in
+                    if let thing = row.live {
+                        let words = Self.flaggedRowWords(thing, kind: kind)
+                        // Every threat's glyph is red (prd §1463), fake transfers too.
+                        needsYouRow(glyph: kind.glyph, critical: true,
+                                    title: words.title, line: words.line) {
+                            feedSheet = .thing(thing, walk: .none)
                         }
+                        .walletListRow()
                     }
-                    walletSecurityDoor(anchor, total: things.count)
                 }
-                .listRowInsets(WalletCardStyle.rowInsets)
-                .feedRowBackground()
-                .listRowSeparator(.hidden)
+                walletSecurityDoor(anchor, total: things.count)
             }
         }
     }
@@ -150,6 +145,7 @@ extension FeedScreen {
             DSMoreRow(title: open ? Text("Show fewer")
                                   : Text(verbatim: String(localized: "See all \(total)")),
                       opens: !open) { walletSecurityToggle(anchor) }
+            .walletListRow()
         }
     }
 

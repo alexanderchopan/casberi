@@ -106,7 +106,7 @@ struct WalletRow<Trailing: View>: View {
     var body: some View {
         HStack(alignment: titleWraps ? .top : .center, spacing: DS.Space.s3) {
             markView
-            VStack(alignment: .leading, spacing: 1) {
+            VStack(alignment: .leading, spacing: 2) {
                 Text(title)
                     .dsText(.body17).foregroundStyle(DS.textPrimary)
                     .lineLimit(titleWraps ? nil : 1)
@@ -124,7 +124,7 @@ struct WalletRow<Trailing: View>: View {
             Spacer(minLength: DS.Space.s2)
             trailing
         }
-        .padding(.vertical, DS.Space.s2)
+        .walletRowPitch()
         .contentShape(Rectangle())
     }
 

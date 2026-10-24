@@ -135,10 +135,7 @@ extension FeedScreen {
                     guard subscriptionsMapWidth > 0 else { return }
                     SubscriptionsSummary.log(reading, tiles: tiles)
                 }
-                .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DSRoomChassis.rowInset,
-                                          bottom: DS.Space.s2, trailing: DSRoomChassis.rowInset))
-                .feedRowBackground()
-                .listRowSeparator(.hidden)
+                .walletListRow()
             }
             ForEach(items) { item in
                 Button {
@@ -152,10 +149,7 @@ extension FeedScreen {
                 .buttonStyle(RowPress())
                 .contextMenu { stopTrackingMenu(item) }
                 .dsHover()
-                .listRowInsets(EdgeInsets(top: Self.rowAir, leading: DSRoomChassis.rowInset,
-                                          bottom: Self.rowAir, trailing: DSRoomChassis.rowInset))
-                .feedRowBackground()
-                .listRowSeparator(.hidden)
+                .walletListRow()
             }
         }
     }

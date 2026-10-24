@@ -33,7 +33,7 @@ struct WalletPerpsCard: View {
         if !shown.isEmpty {
             // The group's name is the room's `DSGroupHeader` (prd §945); the
             // second headline restated the first row's own line.
-            VStack(alignment: .leading, spacing: DS.Space.s1) {
+            VStack(alignment: .leading, spacing: 0) {
                 ForEach(shown, id: \.key) { position in
                     positionRow(position)
                 }

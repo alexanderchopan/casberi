@@ -12,7 +12,9 @@ import SwiftUI
 ///
 /// It draws NO padding and NO background — a List row, a room card and a
 /// sheet each own their own insets, and a template that guessed would be
-/// overridden at every call site.
+/// overridden at every call site. It does hold ONE height: the feed row's
+/// 44pt head (prd §1482), the tap minimum, so no push row is shorter than
+/// the row beside it.
 ///
 /// Titles are `Text`, never `String`, so a literal stays localizable and a
 /// runtime string stays verbatim — the choice `DSSpecRow` made.
@@ -38,7 +40,7 @@ struct DSPushRowLabel<Leading: View>: View {
     var body: some View {
         HStack(spacing: DS.Space.s3) {
             leading()
-            VStack(alignment: .leading, spacing: 1) {
+            VStack(alignment: .leading, spacing: 2) {
                 title
                     .dsText(.body17)
                     .foregroundStyle(tint)
@@ -55,6 +57,10 @@ struct DSPushRowLabel<Leading: View>: View {
             DSPushRowTrail(fact: fact, factTone: factTone, busy: busy, opens: opens)
                 .fixedSize(horizontal: factFits, vertical: false)
         }
+        // **NO SHORTER THAN A FINGER (prd §1482):** the feed row's head
+        // (`DSFeed.headHeight`), so a row with no line stands as tall as
+        // one with, and a list of both keeps one pitch.
+        .frame(minHeight: DSFeed.headHeight)
         .contentShape(Rectangle())
     }
 }

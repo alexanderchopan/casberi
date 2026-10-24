@@ -52,10 +52,7 @@ extension FeedScreen {
             Text(verbatim: mask ?? AppleWalletRoom.money(network.usd, "USD"))
                 .dsText(.price17).monospacedDigit().foregroundStyle(DS.textPrimary)
         }
-        .listRowInsets(EdgeInsets(top: Self.rowAir, leading: DSRoomChassis.rowInset,
-                                  bottom: Self.rowAir, trailing: DSRoomChassis.rowInset))
-        .feedRowBackground()
-        .listRowSeparator(.hidden)
+        .walletListRow()
     }
 
     static func spendingFeeLine(_ network: Spending.Place, window: Spending.Window,
@@ -77,10 +74,7 @@ extension FeedScreen {
             Text(verbatim: mask ?? AppleWalletRoom.money(plan.usd, "USD"))
                 .dsText(.price17).monospacedDigit().foregroundStyle(DS.textPrimary)
         }
-        .listRowInsets(EdgeInsets(top: Self.rowAir, leading: DSRoomChassis.rowInset,
-                                  bottom: Self.rowAir, trailing: DSRoomChassis.rowInset))
-        .feedRowBackground()
-        .listRowSeparator(.hidden)
+        .walletListRow()
     }
 
     static func spendingSubscriptionLine(_ plan: Spending.Place) -> String {

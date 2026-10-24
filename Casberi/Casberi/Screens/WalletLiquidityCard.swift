@@ -32,7 +32,7 @@ struct WalletLiquidityCard: View {
             // The group's name is the room's `DSGroupHeader` (prd §945), and
             // the second headline ("1 of 2 positions idle") is each row's own
             // first word now.
-            VStack(alignment: .leading, spacing: DS.Space.s1) {
+            VStack(alignment: .leading, spacing: 0) {
                 ForEach(sorted, id: \.key) { position in
                     positionRow(position)
                 }

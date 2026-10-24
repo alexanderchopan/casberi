@@ -56,7 +56,6 @@ struct WalletActingPartiesRows: View {
                               opens: !open, action: more)
                 }
             }
-            .padding(.bottom, DS.Space.s4)
         }
     }
 
@@ -67,7 +66,7 @@ struct WalletActingPartiesRows: View {
     private func row(_ holder: WalletPermissions.Holder) -> some View {
         HStack(spacing: DS.Space.s3) {
             AssetMark(name: holder.name, size: DS.Face.list)
-            VStack(alignment: .leading, spacing: 1) {
+            VStack(alignment: .leading, spacing: 2) {
                 Text(holder.name)
                     .dsText(.body17)
                     .foregroundStyle(DS.textPrimary)
@@ -80,7 +79,7 @@ struct WalletActingPartiesRows: View {
             }
             Spacer(minLength: 0)
         }
-        .padding(.vertical, DS.Space.s2)
+        .walletRowPitch()
         .accessibilityElement(children: .combine)
     }
 

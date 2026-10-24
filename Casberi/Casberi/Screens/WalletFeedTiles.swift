@@ -15,36 +15,65 @@ import SwiftUI
 /// (`TokenChartStyle.accent` already refuses to colour a flat change), the
 /// warning glyph is the one `DS.attention` mark, and nothing else is tinted.
 
-/// The wallet room's card recipe, in one place (prd §160, 2026-07-21) — every
-/// card in this room is TRANSLUCENT so the crown pour (§159) travels under it
-/// instead of being punched out. Shared by the balance card, the holdings
-/// card, and the DeFi tiles below, because a room of cards at two different
-/// opacities reads as a bug (caught on screen the moment Aave and Morpho
-/// landed beside the two new cards).
+/// **THE WALLET'S ONE ROW PITCH (prd §1482, user: "the spacing of text is
+/// different on each screen in wallet").** Every list row on every Wallet
+/// page — Home's doors, Your account's keys, Following's accounts, a threat,
+/// a grant, a position, a token, a place — stands in one anatomy:
 ///
-/// **The recipe is THREE values now, not one (2026-08-22), for the reason the
-/// paragraph above already gives.** It drifted anyway: the NFT shelf shipped
-/// opaque (the brightest card in a room whose sharpest reading is a
-/// liquidation axis), the flow band and the risk strip shipped on `fillFaint`
-/// — which in light resolves to a ~3% black wash on a #f2f2f7 page, a card
-/// DARKER than the page with no lift, and on a coloured page no card at all —
-/// and the inner padding ran 14pt on three cards against 18pt on five, which
-/// reads as the text column jogging sideways as the room scrolls. A prose
-/// ruling could not stop that; a constant every card must name can.
+///     title     `body17`, its line `subhead12`, 2pt apart
+///     head      `DSFeed.headHeight` (44) at least, the lead centred in it
+///     air       `FeedScreen.rowAir` (4) above and below — a 52pt pitch
+///     insets    `DSRoomChassis.rowInset` both sides
 ///
-/// `rowInsets` is the one that had TEN hand-written copies. Its top is s3
-/// rather than the feed's usual s2 on purpose: two cards stop reading as two
-/// objects once the space BETWEEN them is smaller than the space inside them,
-/// and this room's cards carry 18pt of it. Bottom stays 0 — the top inset is
-/// the whole gap, so a card's spacing can never depend on which card precedes.
+/// Before this the pages drew four pitches: a push row with no floor (30pt
+/// with no line, 47 with one), the feed row's 52, a hand-drawn row's 55
+/// (8pt padding, a 1pt gap) and Your account's 68 (a 60pt frame plus air),
+/// and the groups inside one list row ended 15pt from the edge where every
+/// other row ended 27. Read across screens that is the text column jogging
+/// and the rhythm changing page to page, three fixes deep. A constant every
+/// row must name is the fix a prose ruling never was (§160's lesson).
+///
+/// `rowInsets` is a list row of its own; `stackInsets` is a list row holding a
+/// `VStack` of rows that each wear `walletRowPitch()`. `fill` and `pad` are
+/// the balance card's, unchanged.
 enum WalletCardStyle {
     static let fill = 0.82
     static let pad = DS.Space.s4
-    /// A wallet row's 36pt mark centres on the column the face and every
-    /// feed row's mark share (`DSRoomChassis.rowLeadCentre`).
+    /// A row of its own in the List: the air above and below is the row's.
     static var rowInsets: EdgeInsets {
-        EdgeInsets(top: DS.Space.s3, leading: DSRoomChassis.rowInset(forMark: DS.Face.list),
-                   bottom: 0, trailing: DS.Space.s4)
+        EdgeInsets(top: FeedScreen.rowAir, leading: DSRoomChassis.rowInset,
+                   bottom: FeedScreen.rowAir, trailing: DSRoomChassis.rowInset)
+    }
+    /// A stack of rows in one List row: each row carries its own air.
+    static var stackInsets: EdgeInsets {
+        EdgeInsets(top: 0, leading: DSRoomChassis.rowInset, bottom: 0, trailing: DSRoomChassis.rowInset)
+    }
+}
+
+extension View {
+    /// A Wallet list row of its own (prd §1482): the one insets, bare, no
+    /// separator. The row inside is a template (`DSPushRow`, `DSFeedRow`,
+    /// `DSMoreRow`, `DSToggleRow`) and already holds the 44pt head.
+    func walletListRow() -> some View {
+        self.listRowInsets(WalletCardStyle.rowInsets)
+            .feedRowBackground()
+            .listRowSeparator(.hidden)
+    }
+
+    /// A Wallet list row holding a stack of rows that each wear
+    /// `walletRowPitch()` (prd §1482).
+    func walletStackRow() -> some View {
+        self.listRowInsets(WalletCardStyle.stackInsets)
+            .feedRowBackground()
+            .listRowSeparator(.hidden)
+    }
+
+    /// A hand-drawn row's height inside a stack (prd §1482): the feed row's
+    /// head, then the list's air above and below. Applied INSIDE a `Button`'s
+    /// label, so the air is part of the hit.
+    func walletRowPitch() -> some View {
+        self.frame(minHeight: DSFeed.headHeight)
+            .padding(.vertical, FeedScreen.rowAir)
     }
 }
 
@@ -877,7 +906,7 @@ struct WalletLendingCard: View {
             // row that needs you says so in red.
             // **CLOSEST TO LIQUIDATION FIRST (prd §1107)**, the order Risk's
             // rows kept; a protocol with no debt follows, in the given order.
-            VStack(alignment: .leading, spacing: DS.Space.s1) {
+            VStack(alignment: .leading, spacing: 0) {
                 ForEach(rowOrder, id: \.self) { name in
                     switch name {
                     case "Aave":  aaveRow
@@ -1412,7 +1441,7 @@ struct WalletWorthALookTray: View {
                             .foregroundStyle(DS.textSecondary)
                             .frame(width: 28, height: 28)
                             .background(Circle().fill(DS.fillLine))
-                        VStack(alignment: .leading, spacing: 1) {
+                        VStack(alignment: .leading, spacing: 2) {
                             Text(awareTitle)
                                 .dsText(.body17)
                                 .foregroundStyle(DS.textPrimary)
@@ -1698,27 +1727,6 @@ struct WalletWorthALookTray: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(RowPress())
-    }
-}
-
-/// The stream's door: five rows above, everything behind this (2026-07-20).
-/// One centered phrase carrying its own count — the first cut scattered blue
-/// text, a gray number, and a chevron across the row's full width, which read
-/// as three strays rather than one door (user: "this looks like crap"). The
-/// centered single-verb form is the app's own terminal-action grammar
-/// ("Stop watching this wallet", "Disconnect Wallet").
-struct WalletSeeAllRow: View {
-    let count: Int
-    let onOpen: () -> Void
-
-    var body: some View {
-        // No card, no slab (user, twice: "this looks like crap / still looks
-        // bad") — a quiet inline door floating on the page itself, sized like
-        // the section labels around it. The stream above it is the content;
-        // this is just where it continues.
-        DSMoreLink(title: Text("See all \(count) transactions"), action: onOpen)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, DS.Space.s1)
     }
 }
 

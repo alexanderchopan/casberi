@@ -134,10 +134,7 @@ extension FeedScreen {
         .dsHover()
         .accessibilityLabel(Text(verbatim: picked ? "\(slot.name), showing" : slot.name))
         // The air the Subscriptions rows take, so the two lists read alike.
-        .listRowInsets(EdgeInsets(top: Self.rowAir, leading: DSRoomChassis.rowInset,
-                                  bottom: Self.rowAir, trailing: DSRoomChassis.rowInset))
-        .feedRowBackground()
-        .listRowSeparator(.hidden)
+        .walletListRow()
         .contextMenu {
             if case .wallet(let address)? = slot.faces.first {
                 // Any account takes a name (user: "should be able to name
@@ -279,10 +276,7 @@ extension FeedScreen {
                         if open { walletOpenSections.remove(key) } else { walletOpenSections.insert(key) }
                     }
                 }
-                .listRowInsets(.init(top: Self.rowAir, leading: DSRoomChassis.rowInset,
-                                     bottom: Self.rowAir, trailing: DSRoomChassis.rowInset))
-                .listRowSeparator(.hidden)
-                .feedRowBackground()
+                .walletListRow()
             }
         }
     }
@@ -376,10 +370,7 @@ extension FeedScreen {
             Text(verbatim: mask ?? AppleWalletRoom.money(place.usd, "USD"))
                 .dsText(.price17).monospacedDigit().foregroundStyle(DS.textPrimary)
         }
-        .listRowInsets(EdgeInsets(top: Self.rowAir, leading: DSRoomChassis.rowInset,
-                                  bottom: Self.rowAir, trailing: DSRoomChassis.rowInset))
-        .feedRowBackground()
-        .listRowSeparator(.hidden)
+        .walletListRow()
     }
 
     static func spendingTimes(_ count: Int) -> String {

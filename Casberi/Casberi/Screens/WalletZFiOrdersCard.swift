@@ -16,7 +16,7 @@ struct WalletZFiOrdersCard: View {
 
     var body: some View {
         if !book.isEmpty {
-            VStack(alignment: .leading, spacing: DS.Space.s1) {
+            VStack(alignment: .leading, spacing: 0) {
                 ForEach(book.orders, id: \.key) { order in
                     row(order)
                 }

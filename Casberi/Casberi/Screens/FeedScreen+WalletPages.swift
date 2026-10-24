@@ -44,10 +44,7 @@ extension FeedScreen {
         .dsHover()
         .accessibilityLabel(Text(verbatim: [name ?? section.label, figure, line]
             .compactMap { $0 }.joined(separator: ". ")))
-        .listRowInsets(EdgeInsets(top: Self.rowAir, leading: DSRoomChassis.rowInset,
-                                  bottom: Self.rowAir, trailing: DSRoomChassis.rowInset))
-        .feedRowBackground()
-        .listRowSeparator(.hidden)
+        .walletListRow()
     }
 
     /// A Wallet row's figure: Activity's money rung, tabular, one line.
@@ -407,10 +404,7 @@ extension FeedScreen {
                 } leading: {
                     walletDoorLead(add.glyph ?? ScopeTileGlyph.new)
                 }
-                .listRowInsets(EdgeInsets(top: Self.rowAir, leading: DSRoomChassis.rowInset,
-                                          bottom: Self.rowAir, trailing: DSRoomChassis.rowInset))
-                .feedRowBackground()
-                .listRowSeparator(.hidden)
+                .walletListRow()
             }
         }
     }
@@ -449,10 +443,7 @@ extension FeedScreen {
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(RowPress())
-                    .listRowInsets(EdgeInsets(top: Self.rowAir, leading: DSRoomChassis.rowInset,
-                                              bottom: Self.rowAir, trailing: DSRoomChassis.rowInset))
-                    .feedRowBackground()
-                    .listRowSeparator(.hidden)
+                    .walletListRow()
                 }
             }
         }
@@ -497,10 +488,7 @@ extension FeedScreen {
                     }
                     .buttonStyle(RowPress())
                     .dsHover()
-                    .listRowInsets(EdgeInsets(top: Self.rowAir, leading: DSRoomChassis.rowInset,
-                                              bottom: Self.rowAir, trailing: DSRoomChassis.rowInset))
-                    .feedRowBackground()
-                    .listRowSeparator(.hidden)
+                    .walletListRow()
                 }
             }
         }

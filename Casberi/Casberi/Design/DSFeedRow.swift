@@ -84,7 +84,7 @@ struct DSFeedRow<Lead: View, Trailing: View, Below: View>: View {
     /// since §1071, the 30pt lead with the same 7pt, so a third more rows fit
     /// a screen — and 44 is the tap minimum, so no row gets smaller than a
     /// finger.
-    static var headHeight: CGFloat { 44 }
+    static var headHeight: CGFloat { DSFeed.headHeight }
 
     /// The app this row stands for on Home (prd §1103a, §1157). Home draws
     /// the app's icon as the lead, beside the app's name over these words, as
@@ -214,6 +214,10 @@ struct DSGlyphLead: View {
 /// The feed row's plain helpers, outside the generic so a call site names no
 /// type parameters.
 enum DSFeed {
+    /// The head every row shares (prd §902, §1071, §1482): 44pt, the tap
+    /// minimum. Here, off the generic, so a row drawn by hand can name it.
+    static let headHeight: CGFloat = 44
+
     /// The line from whatever clauses a row has, joined the way every row
     /// joins them. Nil when there are none, so no row draws an empty line.
     static func line(_ parts: String?...) -> Text? {

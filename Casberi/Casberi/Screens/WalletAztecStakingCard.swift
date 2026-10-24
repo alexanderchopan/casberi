@@ -17,7 +17,7 @@ struct WalletAztecStakingCard: View {
 
     var body: some View {
         if !book.isEmpty {
-            VStack(alignment: .leading, spacing: DS.Space.s1) {
+            VStack(alignment: .leading, spacing: 0) {
                 ForEach(book.stakes, id: \.attester) { stake in
                     row(stake)
                 }

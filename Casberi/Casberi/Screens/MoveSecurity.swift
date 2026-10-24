@@ -121,9 +121,7 @@ struct MoveSecurity: View {
                 .layoutPriority(1)
             }
         }
-        .frame(minHeight: 60)
-        // A line that wraps to two keeps the air between rows.
-        .padding(.vertical, DS.Space.s1)
+        .walletRowPitch()
     }
 
     /// The demo's account changes no key (§1475): it says so, and nothing runs.
@@ -143,8 +141,7 @@ struct MoveSecurity: View {
                         withAnimation(DS.Motion.standard) { roundUps.on = on }
                         RoundUps.setting = roundUps
                     }))
-            .frame(minHeight: 60)
-            .padding(.vertical, DS.Space.s1)
+            .walletRowPitch()
         if roundUps.on { roundUpSentence }
     }
 
@@ -262,7 +259,7 @@ struct MoveSecurity: View {
             }
             .layoutPriority(1)
         }
-        .frame(minHeight: 52)
+        .walletRowPitch()
     }
 
     /// A token's mark at a menu's size, circular, its own colours kept (a
@@ -517,8 +514,7 @@ struct MoveSecurity: View {
         } else if !limitNetworks.isEmpty {
             DSToggleRow(title: Text("Spend limit"), detail: Text(verbatim: limitLine), isOn: limitBinding)
                 .disabled(working != nil || (limited.isEmpty && notYet.isEmpty))
-                .frame(minHeight: 60)
-                .padding(.vertical, DS.Space.s1)
+                .walletRowPitch()
             if limitEditing {
                 limitSentence
             } else if !limited.isEmpty {
@@ -528,6 +524,7 @@ struct MoveSecurity: View {
                     }
                     if !notYet.isEmpty { limitVerb(String(localized: "Finish")) { finishLimit() } }
                 }
+                .padding(.vertical, FeedScreen.rowAir)
             }
         }
     }
@@ -1048,10 +1045,7 @@ struct OutsideKeyNudge: View {
     /// As a row of a `List`, in the feed's insets.
     var listRow: some View {
         self
-            .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DSRoomChassis.rowInset,
-                                      bottom: DS.Space.s2, trailing: DSRoomChassis.rowInset))
-            .feedRowBackground()
-            .listRowSeparator(.hidden)
+            .walletListRow()
     }
 }
 
@@ -1092,10 +1086,7 @@ struct RecoveryKeyNudge: View {
     /// As a row of a `List`, in the feed's insets.
     var listRow: some View {
         self
-            .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DSRoomChassis.rowInset,
-                                      bottom: DS.Space.s2, trailing: DSRoomChassis.rowInset))
-            .feedRowBackground()
-            .listRowSeparator(.hidden)
+            .walletListRow()
     }
 }
 

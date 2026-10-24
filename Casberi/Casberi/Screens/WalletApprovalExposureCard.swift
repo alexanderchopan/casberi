@@ -106,23 +106,6 @@ struct WalletApprovalExposureCard: View {
                 }
 
             }
-            // **HEADERS, NO CARD (user ruling, prd §493: "Lets do headers no
-            // cards").** Applied to EVERY scope list in both rooms, not to this
-            // one section — the ask was consistency, and a single de-carded
-            // list beside two carded ones is the drift it was meant to end.
-            //
-            // The reasoning, since "what would Apple do" was the question:
-            // Apple uses cards where each is a DIFFERENT KIND of reading you
-            // might act on separately (Health, Fitness). Its MONEY screens —
-            // Wallet transactions, Stocks — are plain rows under section
-            // headers. A scope's list is groups of ONE kind of thing, so it
-            // takes the money-screen treatment.
-            //
-            // It is also what the room already did everywhere else: every
-            // scope's drawing is bare (§483), Holdings' list is bare,
-            // Permissions' list is bare. These were the last three surfaces
-            // disagreeing with their own room.
-            .padding(.bottom, DS.Space.s4)
         }
     }
 
@@ -142,7 +125,7 @@ struct WalletApprovalExposureCard: View {
         } label: {
             HStack(spacing: DS.Space.s3) {
                 AssetMark(name: grant.spender, size: DS.Face.list)
-                VStack(alignment: .leading, spacing: 1) {
+                VStack(alignment: .leading, spacing: 2) {
                     Text(grant.spender)
                         .dsText(.body17)
                         .foregroundStyle(DS.textPrimary)
@@ -162,10 +145,10 @@ struct WalletApprovalExposureCard: View {
                     revokeWord(grant, revoke)
                 }
             }
+            .walletRowPitch()
             .contentShape(Rectangle())
         }
         .buttonStyle(RowPress())
-        .padding(.vertical, DS.Space.s2)
     }
 
     /// The verb at the row's trailing edge, in the pick's ink; in flight it
@@ -210,11 +193,11 @@ struct WalletApprovalExposureCard: View {
                     .foregroundStyle(revoking == nil ? DS.textSecondary : DS.textTertiary)
                 Spacer(minLength: 0)
             }
+            .walletRowPitch()
             .contentShape(Rectangle())
         }
         .buttonStyle(RowPress())
         .disabled(revoking != nil)
-        .padding(.vertical, DS.Space.s2)
     }
 
     /// "No limit · USDC", "Capped · USDT", "All Field Notes".
@@ -251,10 +234,10 @@ struct WalletApprovalExposureCard: View {
                     .foregroundStyle(DS.textSecondary)
                 Spacer(minLength: 0)
             }
+            .walletRowPitch()
             .contentShape(Rectangle())
         }
         .buttonStyle(RowPress())
-        .padding(.vertical, DS.Space.s2)
     }
 }
 
