@@ -394,7 +394,10 @@ check(E.defaultArrival(for: usdt, on: YourAccountOp.robinhood).symbol == "USDG",
 check(E.defaultArrival(for: eth, on: YourAccountOp.ethereum) == YourAccountOp.eth, "ETH does not land as ETH by default")
 check(E.defaultArrival(for: bnb.first { $0.isNative }!, on: YourAccountOp.base) == YourAccountOp.dollar(on: YourAccountOp.base), "BNB does not land as USDC by default")
 // The quote's amount: a fraction of a chain's coin or a bitcoin, ten of anything else, in that coin's units.
-check(E.quoteAmount(eth) == "5000000000000000", "ETH's quote amount: \(E.quoteAmount(eth))")
+check(E.quoteAmount(eth) == "10000000000000000", "ETH's quote amount is not over Relay's 0.005 floor (prd §1485): \(E.quoteAmount(eth))")
+// Relay's floor refusal is asked again over it, never shown (prd §1485).
+check(E.overFloor("Amount must be greater than 5000000000000000 for deposit address quotes") == "10000000000000000", "Relay's floor is not read off its refusal")
+check(E.overFloor("Route not supported") == nil, "a refusal with no floor is asked again")
 check(E.quoteAmount(usdt) == "10000000", "USDT (6)'s quote amount: \(E.quoteAmount(usdt))")
 check(E.quoteAmount(bnb.first { $0.symbol == "USDT" }!) == "10000000000000000000", "USDT on BNB (18 decimals) quotes ten in 6-decimal units")
 check(E.quoteAmount(base.first { $0.symbol == "cbBTC" }!) == "50000", "cbBTC's quote amount: \(E.quoteAmount(base.first { $0.symbol == "cbBTC" }!))")

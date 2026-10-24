@@ -48216,34 +48216,6 @@
         }
       }
     },
-    "Another wallet" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Otra cartera"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "別のウォレット"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "다른 지갑"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "其他钱包"
-          }
-        }
-      }
-    },
     "Answer on %@" : {
       "localizations" : {
         "es" : {
@@ -62977,34 +62949,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "复制你的地址"
-          }
-        }
-      }
-    },
-    "Copies your address, opens Coinbase" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Copia tu dirección y abre Coinbase"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "アドレスをコピーして Coinbase を開きます"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "주소를 복사하고 Coinbase를 엽니다"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "复制你的地址并打开 Coinbase"
           }
         }
       }
@@ -84189,34 +84133,6 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "来自之前的会话"
-          }
-        }
-      }
-    },
-    "From an exchange" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Desde un exchange"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "取引所から"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "거래소에서"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "从交易所"
           }
         }
       }
@@ -137282,6 +137198,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "Relay 表示:%@"
+          }
+        }
+      }
+    },
+    "Relay would not open an address for %@ from %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Relay no abrió una dirección para %1$@ desde %2$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Relayは%2$@からの%1$@のアドレスを開きませんでした"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Relay가 %2$@에서 보내는 %1$@의 주소를 열지 않았습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Relay 未为来自 %2$@ 的 %1$@ 开设地址"
           }
         }
       }
