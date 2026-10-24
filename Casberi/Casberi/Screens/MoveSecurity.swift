@@ -1027,7 +1027,7 @@ struct OutsideKeyNudge: View {
     var body: some View {
         Button {
             DSHaptic.selection()
-            chrome.openWalletSecurity(at: FeedScreen.SecurityAnchor.account.id)
+            chrome.openYourAccount(at: FeedScreen.SecurityAnchor.account.id)
         } label: {
             DSFeedRow(name: String(localized: "Add a signer"),
                       line: Text("If you lose Casberi, a key in a wallet you hold signs instead")) {
@@ -1069,7 +1069,7 @@ struct RecoveryKeyNudge: View {
         let names = YourAccountProtection.unprotected.map(\.name).formatted(.list(type: .and))
         Button {
             DSHaptic.selection()
-            chrome.openWalletSecurity(at: FeedScreen.SecurityAnchor.account.id)
+            chrome.openYourAccount(at: FeedScreen.SecurityAnchor.account.id)
         } label: {
             // One line each (§902): the verb is the title, as the outside
             // key's row; where the money is rides the line.

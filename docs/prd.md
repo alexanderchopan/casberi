@@ -68175,5 +68175,5 @@ The rule under all of it: **every page shows every account at once, and the acco
 8. **Cards is deleted as a section.** A card's spending is Places and Subscriptions narrowed by the menu; what it owes and when, and an offer about to end, are dated Needs you rows.
 9. **A page's title is its way back** ("Wallet · Tokens"): the category word returns to the page it opened from (Holdings, Spending, else Home).
 10. **Move** (§1436): the recovery and Signer nudges open Your account; nothing else moves into Move.
-11. **The Mac and iPad (§1402):** beside a pane, Home's doors stand in the pane's box as Overview did (§1407), and each page opens in the list column. The rail is unchanged.
+11. **The Mac and iPad (§1402):** beside a pane, the pane keeps the balance and its line; Home's doors are its only list, so they stay in the list column (Overview stood in the pane, §1407, while Home had lists under it), and each page opens there. The rail is unchanged.
 12. **Not changed:** Logos and Aztec keep their own tiles (`LogosSection`, `AztecSection`); a picked app's head still replaces Home's balance (§1048d); Privy still counts only on All (§1048).

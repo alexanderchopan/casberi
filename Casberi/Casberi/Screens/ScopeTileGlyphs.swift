@@ -19,10 +19,26 @@ enum ScopeTileGlyph {
     static let activity    = "clock.arrow.circlepath"
     static let holdings    = "chart.pie"
     static let accounts    = "person.2"
-    /// The Wallet's Security tile (prd §1107): approvals, delegations, Safe
-    /// signatures and the transfers made to fool you. It took Permissions'
-    /// and Risk's tiles; neither of their glyphs (`key`, `shield`) is its own.
-    static let security    = "lock.shield"
+    // The Wallet's Security tile is deleted (prd §1479): its parts are Your
+    // account, Permissions and Threats, each wearing its own glyph.
+    /// The account the app made you, and the controls on it (prd §1479).
+    static let yourAccount = "person.badge.shield.checkmark"
+    /// Approvals and delegations: who can spend from you (prd §1479). The key
+    /// the user reserved for Permissions (2026-09-18) is its own again.
+    static let permissions = "key"
+    /// The three kinds of transfer made to fool you (prd §1479).
+    static let threats     = "exclamationmark.shield"
+    /// Money lent, pooled, staked or held as a perp — the columns the user
+    /// reserved for Positions (2026-09-18), a door on Holdings (prd §1479).
+    static let positions   = "building.columns"
+    /// Each account's balance on Holdings: where the money sits (prd §1479),
+    /// the banknote its section already wore (§1341).
+    static let holdingAccounts = "banknote"
+    static let nfts        = "photo.on.rectangle.angled"
+    /// Spending's Places door (prd §1479).
+    static let places      = "mappin.and.ellipse"
+    /// Spending's Fees door: gas (prd §1476, §1479).
+    static let fees        = "fuelpump"
     /// Privy's Apps — "every app that made you a wallet" (user, 2026-09-19:
     /// *"on the privy screen, you're using the same icon for apps that we use
     /// for frames. We need a different icon for apps there"*, prd §831).
@@ -196,22 +212,30 @@ extension AgentRoomScope: DSTileScope {
     }
 }
 
-/// The Wallet's five (prd §1107, §1232, §1468): Home, Holdings, Markets,
-/// Security, Spending. Subscriptions keeps its glyph for the page Home's
-/// list opens.
-/// Watch is not a tile any more: it is the first row of the Accounts pill's
-/// list.
+/// The Wallet's four tiles and the pages behind its doors (prd §1479). Watch
+/// is not a tile: it is the first row of the Accounts pill's list.
 extension WalletSection: DSTileScope {
     var glyph: String {
         switch self {
-        case .home:     return ScopeTileGlyph.home
-        case .holdings: return ScopeTileGlyph.holdings
-        // Markets' own dock glyph (prd §1232): the tile opens Markets.
-        case .markets:  return CategoryFold.glyph(for: HomeScope.markets)
-        case .subscriptions: return ScopeTileGlyph.subscriptions
-        case .security: return ScopeTileGlyph.security
-        // The cart Home's Spending list wore (prd §1201), now the tile's (§1468).
-        case .spending: return ScopeTileGlyph.spending
+        case .home:            return ScopeTileGlyph.home
+        case .activity:        return ScopeTileGlyph.activity
+        case .holdings:        return ScopeTileGlyph.holdings
+        // The cart Home's Spending list wore (prd §1201), the tile's (§1468).
+        case .spending:        return ScopeTileGlyph.spending
+        case .yourAccount:     return ScopeTileGlyph.yourAccount
+        case .following:       return ScopeTileGlyph.accounts
+        case .needsYou:        return ScopeTileGlyph.alerts
+        case .permissions:     return ScopeTileGlyph.permissions
+        case .threats:         return ScopeTileGlyph.threats
+        // Markets' own dock glyph (prd §1232).
+        case .markets:         return CategoryFold.glyph(for: HomeScope.markets)
+        case .holdingAccounts: return ScopeTileGlyph.holdingAccounts
+        case .positions:       return ScopeTileGlyph.positions
+        case .apps:            return ScopeTileGlyph.apps
+        case .nfts:            return ScopeTileGlyph.nfts
+        case .subscriptions:   return ScopeTileGlyph.subscriptions
+        case .places:          return ScopeTileGlyph.places
+        case .fees:            return ScopeTileGlyph.fees
         }
     }
 }

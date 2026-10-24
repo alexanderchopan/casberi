@@ -223,15 +223,24 @@ extension FeedScreen {
     /// visual of some kind and then a list below it".** Home's visual is the
     /// crown's line, drawn by the crown itself, so this returns nothing there.
     @ViewBuilder
-    func walletScopeVisualSection(_ section: WalletSection, upcoming: [Thing] = []) -> some View {
+    func walletScopeVisualSection(_ section: WalletSection, visible: [Thing] = [],
+                                  upcoming: [Thing] = []) -> some View {
         switch section {
         case .home:
             EmptyView()
-        // **MARKETS' BOX IS ITS TILES (prd §1337)**: Following, Alerts and
-        // the categories two across, as its room's box stood (§1167), in the
-        // Wallet's box the way Security's checkup stands in it.
+        // **MARKETS' BOX IS WHAT YOU WATCH, TODAY (prd §1479 item 7)**: the
+        // watchlist as a heat map; the category boxes are deleted.
         case .markets:
             walletMarketsFigure
+        // **ACTIVITY'S BOX IS HOW BUSY IT WAS (prd §1479 item 3).**
+        case .activity:
+            WalletActivityFigure(moves: Self.walletMoves(visible.live))
+        // Home's doors state their own count (prd §1479).
+        case .yourAccount, .following, .needsYou, .permissions, .threats:
+            walletPageFigure(section, upcoming: upcoming)
+        // Spending's pages keep Spending's box: the window and its total.
+        case .places, .fees:
+            walletSpendingFigure
         // **SUBSCRIPTIONS, AND ONLY THEM (prd §1111).** The calendar shows
         // each renewal on its day and the statement what they cost a month;
         // what waits on you and the dated rows moved to Home. It starts the
@@ -255,12 +264,10 @@ extension FeedScreen {
         // with nothing draws what would fill it, empty.
         case _ where walletScopeIsEmpty(section):
             WalletScopeEmptyFigure(section: section)
-        case .holdings:
+        // Holdings' pages keep Holdings' box: the treemap says which tile
+        // you are in (prd §1479).
+        case .holdings, .holdingAccounts, .positions, .apps, .nfts:
             holdingsBlockSection
-        // **SECURITY'S BOX IS A CHECKUP (prd §1107, user: "checkup is the
-        // best").** Six counts, one per kind, each a door to its section.
-        case .security:
-            walletSecurityFigure
         }
     }
 
@@ -383,7 +390,7 @@ extension FeedScreen {
                     // `reservesHeadline: false` (prd §495): Wallet's figures
                     // name themselves inside their own drawing.
                     DSRoomSlot(headline: nil, reservesHeadline: false) {
-                        walletScopeVisualSection(scope, upcoming: upcoming)
+                        walletScopeVisualSection(scope, visible: visible, upcoming: upcoming)
                     }
                 }
             )
@@ -616,12 +623,13 @@ extension FeedScreen {
     func walletScopeIsEmpty(_ section: WalletSection) -> Bool {
         switch section {
         // Subscriptions and Spending are decided by their own reading, in
-        // their figure.
-        case .home, .markets, .subscriptions, .spending: return false
-        case .holdings:        return blockStream.els.isEmpty
-        // Every kind the checkup counts, the same reads its sections draw on.
-        // Your account's keys fill it too (§1436).
-        case .security:        return walletSecurityCounts.isEmpty && YourAccountDemo.shownAddress == nil
+        // their figure; Activity and Home's doors state their own count
+        // (prd §1479), an empty one included.
+        case .home, .markets, .subscriptions, .spending, .places, .fees,
+             .activity, .yourAccount, .following, .needsYou, .permissions, .threats:
+            return false
+        case .holdings, .holdingAccounts, .positions, .apps, .nfts:
+            return blockStream.els.isEmpty
         }
     }
 
@@ -635,7 +643,9 @@ extension FeedScreen {
     func walletInertSections(visible: [Thing], upcoming: [Thing]) -> Set<WalletSection> {
         // Spending is every account's reading (§1201's cards and wallets
         // together), so one app's page cannot stand on it (§1468).
-        var out: Set<WalletSection> = [.security, .spending]
+        // Permissions, Threats and Your account are an address's readings,
+        // which an app pick clears (§1067), as Security was.
+        var out: Set<WalletSection> = [.spending, .places, .fees, .permissions, .threats, .yourAccount]
         // Privy's apps are Holdings' too (§1124), with money or without, and
         // so is an account an app read (§1341): every state stands there.
         if walletScopeIsEmpty(.holdings),
@@ -1294,7 +1304,10 @@ extension FeedScreen {
     /// Home's rows with each move between your own accounts drawn once (prd
     /// §1078, `WalletOwnMoves`): the received leg leaves the list, and the
     /// sent leg's row carries it in `ownMoves`, keyed by the sent leg's id.
-    func walletStream(_ things: [Thing]) -> (rows: [FeedRow], ownMoves: [UUID: KeyedThing]) {
+    /// `cap` is Home's preview count by default; Activity's page passes nil,
+    /// the whole stream (prd §1479 item 3).
+    func walletStream(_ things: [Thing], cap: Int? = FeedScreen.walletPreviewRows) -> (rows: [FeedRow], ownMoves: [UUID: KeyedThing]) {
+        let cap = cap ?? Int.max
         let legs = things.compactMap { thing -> WalletOwnMoves.Leg? in
             guard let direction = thing.transferDirection,
                   direction == "sent" || direction == "received" else { return nil }
@@ -1304,7 +1317,7 @@ extension FeedScreen {
         }
         let pairs = WalletOwnMoves.pairs(legs)
         guard !pairs.isEmpty else {
-            return (things.prefix(Self.walletPreviewRows).map(FeedRow.single), [:])
+            return (things.prefix(cap).map(FeedRow.single), [:])
         }
         let byID = Dictionary(things.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
         let folded = Set(pairs.map(\.received))
@@ -1313,7 +1326,7 @@ extension FeedScreen {
             if let received = byID[pair.received] { ownMoves[pair.sent] = KeyedThing(received) }
         }
         let rows = things.filter { !folded.contains($0.id) }
-            .prefix(Self.walletPreviewRows).map(FeedRow.single)
+            .prefix(cap).map(FeedRow.single)
         return (rows, ownMoves)
     }
 

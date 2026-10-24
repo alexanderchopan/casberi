@@ -318,7 +318,7 @@ extension FeedScreen {
                 // every account, as Home's list does only on All (§1201).
                 let inert: Set<WalletSection> = seatPicked
                     ? walletInertSections(visible: visible, upcoming: upcoming)
-                    : (selectedWallet != nil ? [.spending] : [])
+                    : (selectedWallet != nil ? [.spending, .places, .fees] : [])
                 let section = pinnedWalletSection ?? WalletSection.resolve(
                     chrome.walletSection,
                     present: WalletSection.pages(tiles: walletSectionPublication.sections)
@@ -428,13 +428,16 @@ extension FeedScreen {
                     // **FOUR SHORT LISTS (user, 2026-10-08):** Needs you, Coming
                     // up, Spending, Transactions, five rows each and a door
                     // (`Screens/FeedScreen+WalletHome.swift`).
-                    walletHomeSections(upcoming: upcoming, all: all, nextEventID: nextEventID)
-                    // **AN EMPTY LIST DRAWS ITS ROWS EMPTY (prd §769).** Watch a
-                    // wallet, at the head of the Accounts pill's list, is the
-                    // remedy, one tap away (§1107).
-                    if all.isEmpty {
-                        walletSkeletonRowsSection
-                    }
+                    // **HOME IS THE OVERVIEW (prd §1479 item 2).** Six doors,
+                    // no list: the stream is Activity's, the readings
+                    // Spending's, what the money is Holdings'.
+                    walletHomeDoors(upcoming: upcoming)
+                case .activity:
+                    walletActivitySections(all, nextEventID: nextEventID)
+                case .yourAccount, .following, .needsYou, .permissions, .threats,
+                     .holdingAccounts, .positions, .apps, .nfts, .places, .fees:
+                    walletPageSections(section, all: all, upcoming: upcoming,
+                                       nextEventID: nextEventID)
                 // **MARKETS STANDS HERE, IN PLACE (prd §1337, retiring §1232's
                 // own page).** Its tiles are the box's figure; what you follow,
                 // its alerts or a category's companies follow under the row.
@@ -446,8 +449,13 @@ extension FeedScreen {
                     walletSubscriptionsSections
                 // **EVERY PLACE, LARGEST FIRST (prd §1468)**, each against
                 // the last window; no cap and no door, the tile is the page.
+                // **THREE DOORS (prd §1479 item 5):** Subscriptions, Places,
+                // Fees, each its own page.
                 case .spending:
-                    walletSpendingPageSections
+                    walletSpendingDoors
+                // **FIVE DOORS (prd §1479 item 4):** Accounts, Tokens,
+                // Positions, Apps, NFTs — the lists behind them are the ones
+                // that shipped here (§1107, §1124, §1341), each on its page.
                 case .holdings:
                     let apps = walletAppRows(all)
                     let accounts = walletAccountRows(all)
@@ -455,32 +463,7 @@ extension FeedScreen {
                        walletLive.hyperliquid.positions.isEmpty, apps.isEmpty, accounts.isEmpty {
                         walletSkeletonRowsSection
                     }
-                    // **TOKENS, THEN POSITIONS (prd §1107, user: "tokens then
-                    // positions").** Positions' tile folded in, the loan risk with
-                    // it; then the apps that hold a wallet for you (§1124); NFTs
-                    // still read under them (prd §1048).
-                    walletTokenListSection
-                    walletPositionsSections
-                    // What an app holds for you, as it read it (prd §1341): a
-                    // balance is a holding, never a transaction.
-                    walletAccountsSection(accounts, nextEventID: nextEventID)
-                    walletAppsSection(apps, nextEventID: nextEventID)
-                    // An app the menu picked holds no collections (prd §1048b).
-                    if !seatPicked {
-                        if nftShelfEntry == nil {
-                            walletNFTDoorSection
-                        }
-                        walletNFTListSection
-                    }
-                case .security:
-                    // **WHO CAN ACT FOR YOU, THEN WHAT IS TRYING TO FOOL YOU (prd
-                    // §947, §1107).** Signatures, Delegations, Approvals, then
-                    // Address poisoning, Fake tokens, Fake transfers — the box's
-                    // six cells, in the box's order.
-                    if walletScopeIsEmpty(.security) {
-                        walletSkeletonRowsSection
-                    }
-                    walletSecuritySections
+                    walletHoldingsDoors(all: all)
                 }
             })
         default:

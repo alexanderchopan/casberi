@@ -1149,14 +1149,14 @@ final class ShellChrome {
         sourceRequest = CategoryFold.walletRoom
     }
 
-    /// The Wallet's Security tile, scrolled to one of its sections (prd
-    /// §1436: your account's keys live there; the Needs you nudge lands on
-    /// them). The section's card reads `walletScrollRequest` as it appears.
+    /// The Wallet's Your account page (prd §1479 item 10, was Security's
+    /// card under §1436): the recovery and Signer nudges land on its keys.
+    /// The section's card reads `walletScrollRequest` as it appears.
     var walletScrollRequest: String?
-    func openWalletSecurity(at anchor: String) {
+    func openYourAccount(at anchor: String) {
         roomsTray = false
         walletScope = nil
-        walletSection = .security
+        walletSection = .yourAccount
         walletScrollRequest = anchor
         sourceRequest = CategoryFold.walletRoom
     }

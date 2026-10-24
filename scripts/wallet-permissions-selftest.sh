@@ -308,12 +308,11 @@ mutate "a grant is offered to the acting list as well as to the approvals list" 
 # ── drift guards: the wiring the compiled arithmetic cannot prove ────────────
 strip() { sed -E 's://.*::' "$1" | sed -E '/^[[:space:]]*\/\/\//d'; }
 
-# **PERMISSIONS IS SECURITY'S UPPER HALF SINCE prd §1107**: its lists stand
-# in Security, and the ringed-faces card that led them is deleted (user: "i
-# HATE the image we have there"); the checkup's counts lead instead.
+# **PERMISSIONS IS A PAGE OFF HOME AGAIN SINCE prd §1479** (it was Security's
+# upper half under §1107): what acts as you, then what can spend for you.
 grep -q 'walletActingSection' "$FEED" && grep -q 'walletApprovalsSection' "$FEED" \
-  && grep -q 'case .security:' "$FEED" && grep -q 'walletSecuritySections' "$FEED" \
-  || fail "Security no longer lists what acts as you and what can spend for you (prd §1107)"
+  && grep -q 'case .permissions:' "$FEED" \
+  || fail "Permissions no longer lists what acts as you and what can spend for you (prd §1479)"
 
 # The scope's EMPTY flag must be the section's OWN gate, computed from the same
 # source with the same arguments — §483's rule, whose failure was a chip that
@@ -338,10 +337,11 @@ grep -q 'walletActingSection' "$FEED" && grep -q 'walletApprovalsSection' "$FEED
 FEED_BARE="$(mktemp -t wallet-perm-feed)"
 strip "$FEED" > "$FEED_BARE"
 
-# Since prd §1107 the gate is Security's: its emptiness is the checkup's own
-# counts, and the delegations count is the acting list's own split.
-grep -q 'case .security:        return walletSecurityCounts.isEmpty' "$FEED_BARE" \
-  || fail "Security's empty flag has drifted from the checkup's counts"
+# Since prd §1479 the gate is the Permissions page's: its skeleton draws on
+# the checkup's own counts, and the delegations count is the acting list's
+# own split.
+grep -q 'if counts(\\.delegations) + counts(\\.approvals) == 0 { walletSkeletonRowsSection }' "$FEED_BARE" \
+  || fail "the Permissions page's empty gate has drifted from the checkup's counts"
 grep -q 'delegations: WalletPermissions.actingHolders(holders).count' "$FEED_BARE" \
   || fail "the checkup's delegations no longer count the acting list's own holders"
 
@@ -387,16 +387,16 @@ grep -q 'walletActingSection' "$FEED" \
 # match is no longer the room's rows. Take the block that draws the acting list.
 # The empty scope's skeleton gate (prd §769/§771) sits between the case and the
 # lists, so the window is wide enough to reach past it.
-# Since prd §1107 the lists stand in Security's `walletSecuritySections`:
-# signatures, then the acting list, then the approvals.
-order=$(strip "$FEED" | sed '/^[[:space:]]*$/d' | grep -A 4 'var walletSecuritySections: some View {' \
-        | grep -B 1 -A 1 'walletActingSection' | head -3)
-print -r -- "$order" | sed -n '1p' | grep -q 'walletSignaturesSection' \
-  || fail "signatures no longer lead Security's rows (prd §947, §1107)"
-print -r -- "$order" | sed -n '2p' | grep -q 'walletActingSection' \
-  || fail "the acting list no longer follows the signatures in Security"
-print -r -- "$order" | sed -n '3p' | grep -q 'walletApprovalsSection' \
-  || fail "the approvals list no longer follows it in Security"
+# Since prd §1479 the lists stand on the Permissions page: the acting list,
+# then the approvals. Signatures waiting on you lead Needs you instead.
+order=$(strip "$FEED" | sed '/^[[:space:]]*$/d' | grep -A 3 'case .permissions:$' \
+        | grep -A 1 'walletActingSection' | head -2)
+print -r -- "$order" | sed -n '1p' | grep -q 'walletActingSection' \
+  || fail "the acting list no longer leads the Permissions page (prd §1479)"
+print -r -- "$order" | sed -n '2p' | grep -q 'walletApprovalsSection' \
+  || fail "the approvals list no longer follows it on the Permissions page"
+strip "$FEED" | sed '/^[[:space:]]*$/d' | grep -A 8 'func walletNeedsYouPage(' | grep -q 'walletSignaturesSection' \
+  || fail "signatures waiting on you no longer lead Needs you (prd §947, §1479)"
 
 # A LIST, NOT A CONTROL (§112/§293): nothing here signs, revokes or opens.
 # A delegate is undone from the wallet app that set it, so a chevron here

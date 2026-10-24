@@ -21,11 +21,25 @@ extension FeedScreen {
     /// each, two across) is the Wallet's box while Markets is picked, the way
     /// Security's checkup stands there: the Wallet's row stays under it with
     /// Markets lit, and pressing a tile lists it below.
+    @ViewBuilder
     var walletMarketsFigure: some View {
-        // THE BOX IS THE SECTORS' DAY (prd §1391): the eight packs four
-        // across, each its day move; Following and Alerts are the list
-        // head's two words, not tiles.
-        MarketsSectorsBox(packs: TokensScope.box, picked: chrome.tokensScope) { pickTokensScope($0) }
+        // **THE BOX IS WHAT YOU WATCH, TODAY (prd §1479 item 7, retiring
+        // §1391's sectors box):** every watched coin and stock one tile, the
+        // day's move its wash and edge — the treemap Holdings draws, sized
+        // alike because a watch is not a holding. The category boxes are
+        // deleted; their companies are From your apps, under the watchlist.
+        let watches = marketsWatches(walletMarketsRows)
+        let moves = Dictionary(watches.compactMap { thing -> (String, Double)? in
+            guard let change = Self.watchChange(thing) else { return nil }
+            return (HoldingMoves.key(TokensAsk.name(of: thing.title)), change)
+        }, uniquingKeysWith: { a, _ in a })
+        HoldingsTreemap(total: watches.count == 1 ? String(localized: "1 watched")
+                                                  : String(localized: "\(watches.count) watched"),
+                        holdings: watches.map {
+                            .init(id: TokensAsk.name(of: $0.title), usd: 1, route: nil, display: "")
+                        },
+                        showsShares: false)
+            .environment(\.holdingsDayMoves, moves)
         // Markets' rows are a different source from the Wallet's, so the
         // tile reads them here, keyed on their own count and the corpus
         // signal (a SQL COUNT, no model built), never in a body (§628).
@@ -74,12 +88,14 @@ extension FeedScreen {
     @ViewBuilder
     func walletMarketsSections(nextEventID: UUID?) -> some View {
         let rows = walletMarketsRows.live
-        if chrome.tokensScope.isPack {
-            marketsIndexSections(chrome.tokensScope, visible: rows)
-        } else if chrome.tokensScope == .alerts {
+        if chrome.tokensScope == .alerts {
             marketsAlertsSections(rows, nextEventID: nextEventID)
         } else {
             marketsWatchlistSections(rows, nextEventID: nextEventID)
+            // **FROM YOUR APPS (prd §1479 item 7):** the index's one part
+            // that is yours — the companies behind the apps you connected,
+            // one list, no category boxes. Search finds any other company.
+            marketsFromYourAppsSection(visible: rows)
         }
     }
 
@@ -273,6 +289,22 @@ extension FeedScreen {
         .listRowInsets(.init(top: Self.rowAir, leading: DSRoomChassis.rowInset,
                              bottom: Self.rowAir, trailing: DSRoomChassis.rowInset))
         .listRowSeparator(.hidden)
+    }
+
+    // MARK: - From your apps (prd §1479 item 7)
+
+    /// The companies behind the apps you connected, across every category,
+    /// each once with all its apps — one list under the watchlist, starred in
+    /// one tap. Nothing when no app you connected is made by a listed company.
+    @ViewBuilder
+    func marketsFromYourAppsSection(visible: [Thing]) -> some View {
+        let pack = TokensScope.box.flatMap(\.pack)
+        let connected = connectedSeatNames
+        let byName = Dictionary(pack.map { ($0.name, $0) }, uniquingKeysWith: { a, _ in a })
+        let merged = MarketsIndex.merged(TokensScope.box.map { $0.pack.map(MarketsWatch.entry) })
+        let split = MarketsIndex.sections(merged, connected: connected)
+        indexSection(String(localized: "From your apps"), split.yours, byName: byName,
+                     connected: connected, watched: MarketsWatch.watchedTickers(visible), watchAll: true)
     }
 
     // MARK: - The index (prd §1082)

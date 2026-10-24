@@ -53,28 +53,40 @@ func check(_ ok: Bool, _ what: String) {
 }
 
 // ORDER is a ruling, not an accident of declaration.
-check(WalletSection.order == [.home, .holdings, .markets, .security, .spending],
-      "order is home → holdings → markets → security → spending (prd §1232, §1468)")
-// **FOUR TILES, ONE ROW (prd §1107).** Positions folded into Holdings, the
-// loan risk with it; Permissions and Worth a look into Security; Watch into
-// the Accounts pill; and Coming up became Subscriptions (prd §1111), its
-// dated rows moved to Home. None may come back as a scope — a remembered raw
-// value must resolve to Home, never to a page.
-for gone in ["positions", "comingUp", "risk", "permissions", "watch", "cards", "activity", "accounts"] {
-    check(WalletSection(rawValue: gone) == nil, "\(gone) is not a scope (prd §1107)")
+check(WalletSection.order == [.home, .holdings, .activity, .spending],
+      "order is home → holdings → activity → spending (prd §1479)")
+// **FOUR TILES (prd §1479).** Security is deleted — its parts are Your
+// account, Permissions and Threats, each a page off Home — and Markets is a
+// page off Home. A remembered "security" must resolve to Home, never to a
+// page that claims to be it.
+for gone in ["security", "comingUp", "risk", "watch", "cards", "accounts"] {
+    check(WalletSection(rawValue: gone) == nil, "\(gone) is not a scope (prd §1107, §1479)")
 }
-// **FIVE SINCE prd §1468:** Spending, Home's list (§1201) as a tile with a
-// window and the recurring half, wearing the cart that list already wore.
-check(WalletSection.order.count == 5, "the wallet has five tiles — one row (prd §1107, §1468)")
-check(WalletSection.order.contains(.spending), "spending is a tile (prd §1468)")
+check(WalletSection.order.count == 4, "the wallet has four tiles (prd §1479)")
+check(!WalletSection.order.contains(.markets), "markets is a page off Home, not a tile (prd §1479)")
+check(WalletSection.activity.label == "Activity", "the stream's tile reads Activity (prd §1479)")
 check(WalletSection.spending.label == "Spending", "the tile reads Spending — Home's list's own word (prd §1201)")
-// **SUBSCRIPTIONS IS A PAGE, NOT A TILE (prd §1232):** Home's list and
-// Sources' count open it in a sheet. It is the one case off the row.
-check(Set(WalletSection.order).union([.subscriptions]) == Set(WalletSection.allCases)
-      && !WalletSection.order.contains(.subscriptions),
-      "order lists every case but Subscriptions once — a new scope cannot be silently unlisted")
-check(WalletSection.security.label == "Security", "the tile reads Security, not Safety or Risk (user)")
-check(WalletSection.subscriptions.label == "Subscriptions", "the tile reads Subscriptions — Day's tile says it too (prd §1111)")
+// **EVERY OTHER CASE IS A PAGE BEHIND A DOOR (prd §1479).** Home's six,
+// Holdings' four and Spending's three; together with the tiles they are
+// every case, each once, so a new scope cannot be silently unlisted.
+let doors = WalletSection.homeDoors + WalletSection.holdingsDoors + WalletSection.spendingDoors
+check(Set(WalletSection.order).union(doors) == Set(WalletSection.allCases)
+      && WalletSection.order.count + doors.count == WalletSection.allCases.count,
+      "the tiles and the doors list every case once (prd §1479)")
+check(WalletSection.homeDoors == [.yourAccount, .following, .needsYou, .permissions, .threats, .markets],
+      "Home's doors are Your account, Following, Needs you, Permissions, Threats, Markets (prd §1479)")
+check(WalletSection.holdingsDoors == [.holdingAccounts, .positions, .apps, .nfts],
+      "Holdings' pages are Accounts, Positions, Apps, NFTs (Tokens is its sheet) (prd §1479)")
+check(WalletSection.spendingDoors == [.subscriptions, .places, .fees],
+      "Spending's doors are Subscriptions, Places, Fees (prd §1479)")
+// A page goes back to the page it opened from (prd §1479 item 9).
+for s in WalletSection.order { check(s.parent == nil && s.isTile, "\(s.rawValue) is a tile with no parent") }
+for s in WalletSection.homeDoors { check(s.parent == .home, "\(s.rawValue) goes back to Home") }
+for s in WalletSection.holdingsDoors { check(s.parent == .holdings, "\(s.rawValue) goes back to Holdings") }
+for s in WalletSection.spendingDoors { check(s.parent == .spending, "\(s.rawValue) goes back to Spending") }
+check(WalletSection.holdingAccounts.label == "Accounts", "Holdings' Accounts keeps the word: where the money sits (prd §1479)")
+check(WalletSection.following.label == "Following", "what you follow reads Following, never Accounts (prd §1479)")
+check(WalletSection.subscriptions.label == "Subscriptions", "the page reads Subscriptions — Day's tile says it too (prd §1111)")
 
 // Conditional scopes sit at the tail, so the strip's head is the same on every
 // wallet.
@@ -82,26 +94,26 @@ let firstConditional = WalletSection.order.firstIndex { $0.isConditional }!
 let lastUnconditional = WalletSection.order.lastIndex { !$0.isConditional }!
 check(lastUnconditional < firstConditional,
       "no conditional scope sits before an unconditional one")
-check(WalletSection.order.last == .spending, "spending is last — conditional, after security (prd §1468)")
+check(WalletSection.order.last == .spending, "spending is last — conditional (prd §1468)")
 check(WalletSection.order.first == .home, "home leads")
 
 check(WalletSection.home.isAlwaysPresent, "home is always present")
 check(!WalletSection.home.isConditional, "home is not conditional")
 check(!WalletSection.holdings.isConditional, "holdings is not conditional")
 check(!WalletSection.markets.isConditional, "markets is not conditional")
-for s in [WalletSection.subscriptions, .security, .spending] {
+for s in [WalletSection.subscriptions, .activity, .spending, .permissions, .threats] {
     check(s.isConditional, "\(s.rawValue) is conditional")
 }
 
-// EVERY SCOPE IS PRESENT, ALWAYS (prd §611).
+// EVERY TILE IS PRESENT, ALWAYS (prd §611).
 let all = WalletSection.present()
-check(all == WalletSection.order, "every scope is present, in order")
-check(all.count == WalletSection.order.count, "no scope is hidden from anybody")
+check(all == WalletSection.order, "every tile is present, in order")
+check(all.count == WalletSection.order.count, "no tile is hidden from anybody")
 
 // Every scope that CAN BE EMPTY teaches its own empty state (prd §611, §799).
-// Markets is drawn in place (prd §1337, retiring §1232's own page) and is
-// never empty — its index needs nothing followed (§1167) — so it has none.
-let drawn = WalletSection.order.filter { $0 != .markets }
+// Markets is never empty — its list needs nothing followed (§1167) — so it
+// has none.
+let drawn = WalletSection.allCases.filter { $0 != .markets }
 check(WalletSection.markets.emptyHeadline == nil && WalletSection.markets.emptyBody == nil,
       "markets draws no empty state — it is never empty (prd §1167, §1337)")
 for s in drawn {
@@ -126,21 +138,22 @@ for s in WalletSection.order {
 
 // RESOLVE falls back to Home, never to "the first present scope".
 check(WalletSection.resolve(nil, present: all) == .home, "nothing remembered resolves to home")
-check(WalletSection.resolve(.security, present: all) == .security, "a present scope resolves to itself")
-check(WalletSection.resolve(.security, present: [.home, .holdings]) == .home,
+check(WalletSection.resolve(.spending, present: all) == .spending, "a present scope resolves to itself")
+check(WalletSection.resolve(.spending, present: [.home, .holdings]) == .home,
       "an absent scope resolves to home")
-check(WalletSection.resolve(.holdings, present: [.holdings, .security]) == .holdings,
+check(WalletSection.resolve(.holdings, present: [.holdings, .spending]) == .holdings,
       "a present scope resolves to itself even without home")
 // The pair that tells "falls back to home" from "falls back to the first
 // present scope" — without it, both implementations pass every case above.
-check(WalletSection.resolve(.security, present: [.holdings, .home]) == .home,
+check(WalletSection.resolve(.spending, present: [.holdings, .home]) == .home,
       "an absent scope resolves to home, not to the first present scope")
-// Subscriptions has no tile since §1232, but Home's "See all" opens it: a
-// door that resolves against the tiles alone drew Home under its title.
-check(WalletSection.resolve(.subscriptions, present: WalletSection.pages(tiles: WalletSection.present())) == .subscriptions,
-      "Home's See all opens Subscriptions, a page with no tile")
-check(WalletSection.pages(tiles: WalletSection.present()).filter { $0 == .subscriptions }.count == 1,
-      "pages lists Subscriptions once")
+// A page has no tile, but its door opens it: a door that resolves against
+// the tiles alone draws Home under its title.
+let pages = WalletSection.pages(tiles: WalletSection.present())
+for door in doors {
+    check(WalletSection.resolve(door, present: pages) == door, "\(door.rawValue)'s door opens its page, a page with no tile")
+    check(pages.filter { $0 == door }.count == 1, "pages lists \(door.rawValue) once")
+}
 
 check(!WalletSection.shows(present: [.home]), "one scope draws no strip")
 check(!WalletSection.shows(present: []), "no scopes draw no strip")
@@ -154,7 +167,7 @@ for s in WalletSection.allCases {
     check(!s.summary.isEmpty, "\(s.rawValue) carries an accessibility summary")
     check(s.summary != s.label, "\(s.rawValue)'s summary says more than its label")
 }
-check(WalletSection.security.id == "security", "id is the raw value")
+check(WalletSection.spending.id == "spending", "id is the raw value")
 
 if failures > 0 { print("\(failures) assertion(s) failed"); exit(1) }
 print("  ok   \(WalletSection.allCases.count) scopes, order, presence, resolve, shows, labels")
@@ -188,26 +201,30 @@ mutate() {
   echo "  ok   catches  $why"
 }
 
-mutate "a conditional scope moved out of the tail (the strip reflows)" \
-  's/\[\.home, \.holdings, \.markets, \.security, \.spending\]/[.home, .security, .holdings, .markets, .spending]/'
+mutate "a conditional tile moved ahead of an unconditional one (the strip reflows)" \
+  's/\[\.home, \.holdings, \.activity, \.spending\]/[.home, .activity, .holdings, .spending]/'
 mutate "spending dropped from the row, its case still compiling (prd §1468)" \
-  's/\[\.home, \.holdings, \.markets, \.security, \.spending\]/[.home, .holdings, .markets, .security]/'
+  's/\[\.home, \.holdings, \.activity, \.spending\]/[.home, .holdings, .activity]/'
 mutate "home no longer leads" \
-  's/\[\.home, \.holdings, \.markets/[.holdings, .home, .markets/'
+  's/\[\.home, \.holdings, \.activity/[.holdings, .home, .activity/'
 mutate "resolve falls back to the first present scope instead of home" \
   's/guard let wanted, present\.contains\(wanted\) else \{ return \.home \}/guard let wanted, present.contains(wanted) else { return present.first ?? .home }/'
-mutate "a retired tile comes back as a scope (prd §1107)" \
-  's/    case security\n/    case security\n    case positions\n/'
+mutate "the retired Security tile comes back as a scope (prd §1479)" \
+  's/    case spending\n/    case spending\n    case security\n/'
 mutate "shows() lets a single scope draw a control" \
   's/present\.count > 1/present.count > 0/'
-mutate "security is marked unconditional, so the tail rule stops being enforced" \
-  's/case \.subscriptions, \.security, \.spending: return true/case .subscriptions, .spending: return true\n        case .security: return false/'
-mutate "every scope gated again, so two tiles vanish on the wallet that most needs them" \
+mutate "every tile gated again, so tiles vanish on the wallet that most needs them" \
   's/static func present\(\) -> \[WalletSection\] \{ order \}/static func present() -> [WalletSection] { order.filter { !\$0.isConditional } }/'
-mutate "an empty scope left with nothing to say — the dead control this ruling depends on avoiding" \
-  's/A Safe signature, a delegate, a token approval, or a transfer made to fool you\./ /'
-mutate "the tile is renamed off the user's word" \
-  's/String\(localized: "Security"\)/String(localized: "Safety")/'
+mutate "an empty page left with nothing to say — the dead control this ruling depends on avoiding" \
+  's/An address made to look like yours, a fake token or a fake transfer\./ /'
+mutate "a Holdings page goes back to Home instead of Holdings (prd §1479 item 9)" \
+  's/if Self\.holdingsDoors\.contains\(self\) \{ return \.holdings \}/if Self.holdingsDoors.contains(self) { return .home }/'
+mutate "a door dropped from Home's row, its page unreachable (prd §1479)" \
+  's/\.permissions, \.threats, \.markets\]/.permissions, .markets]/'
+mutate "what you follow is named Accounts again, beside Holdings' Accounts (prd §1479)" \
+  's/case \.following:       return String\(localized: "Following"\)/case .following:       return String(localized: "Accounts")/'
+mutate "Markets made a tile again (prd §1479)" \
+  's/\[\.home, \.holdings, \.activity, \.spending\]/[.home, .holdings, .markets, .activity, .spending]/'
 mutate "home loses its empty copy again, so the wallet room says nothing when nothing came back (prd §761)" \
   's/case \.home:     return String\(localized: "No balance yet"\)/case .home:     return nil/'
 mutate "home's empty copy promises a load state it cannot know (§83)" \
@@ -449,10 +466,15 @@ guard FeedScreen.swift "WalletSection.present()" \
   "the strip is deriving its scopes from evidence again — five chips vanish on the wallet that most needs to learn what they are (§611)"
 deny  FeedScreen.swift "WalletSection.present(holdings:" \
   "present() is being handed evidence again — the gate §611 removed"
-guard FeedScreen.swift "case .holdings:        return blockStream.els.isEmpty" \
+guard FeedScreen.swift "case .holdings, .holdingAccounts, .positions, .apps, .nfts:" \
+  "Holdings' pages no longer share Holdings' empty gate — a page and its tile could disagree (prd §1479)"
+guard FeedScreen.swift "return blockStream.els.isEmpty" \
   "holdings' empty gate no longer reads the treemap's own doc — figure and empty state drift, and the slot shows both or neither"
-guard FeedScreen.swift "case .security:        return walletSecurityCounts.isEmpty" \
-  "security's empty gate no longer reads the checkup's own counts — a cell and its empty state could both draw (prd §1107)"
+# Permissions and Threats count off the checkup's own reads (prd §1479).
+guard FeedScreen.swift "Self.permissionsLine(counts)" \
+  "the Permissions door no longer reads the checkup's counts — its line and its page could disagree (prd §1479)"
+guard FeedScreen.swift "Self.threatsLine(counts)" \
+  "the Threats door no longer reads the checkup's counts (prd §1479)"
 guard FeedScreen.swift "case _ where walletScopeIsEmpty(section):" \
   "the slot no longer draws a scope's empty state — a chip onto an empty scope opens 258 blank points (§611)"
 guard FeedScreen.swift "WalletScopeEmptyFigure(section: section)" \
@@ -466,18 +488,25 @@ guard FeedScreen.swift "walletLive.warnings" \
   "the dot no longer rides warnings — presence-lighting is the §83 overclaim that retired 'Needs attention'"
 guard FeedScreen.swift "case .holdings:" \
   "the wallet block no longer switches on the scope"
-# Coming up is one of Home's four short lists since prd §1201, which amends
-# §1041's placement; it still lists only what is ahead, soonest first.
-guard FeedScreen+WalletHome.swift "walletComingUpDays(upcoming)" \
-  "Coming up no longer lists what's ahead (prd §1041, §1201)"
-# Spending's tile is the month's sum, never one purchase: the newest purchase
-# is most days the newest move, so the tile read as Transactions' (prd §1246).
-guard FeedScreen+WalletHome.swift "Self.spendingGlance(SpendingReading.shared.reading)" \
-  "Spending's tile no longer draws the month — it matches Transactions' tile again (prd §1246)"
-guard FeedScreen+WalletHome.swift "figure: mask ?? AppleWalletRoom.money(reading.total, \"USD\")" \
-  "Spending's Overview row no longer leads with the month's total, through Hide balances (prd §1246, §1257)"
-deny FeedScreen+WalletHome.swift "SpendingReading.shared.latest" \
-  "Spending's tile is one purchase again — the same row and figure as Transactions' (prd §1246)"
+# What is ahead is Needs you's since prd §1479: its page and Home's count read
+# the same groups, so the door and the page cannot disagree.
+guard FeedScreen.swift "walletComingUpDays(upcoming)" \
+  "Needs you no longer lists what's ahead (prd §1041, §1479)"
+# Spending's doors are groups' sums through Hide balances, never one purchase
+# (prd §1246, §1479).
+guard FeedScreen.swift "figure: mask ?? AppleWalletRoom.money(page.recurring, \"USD\")" \
+  "Spending's Subscriptions door no longer leads with what recurs, through Hide balances (prd §1479)"
+guard FeedScreen.swift "figure: mask ?? AppleWalletRoom.money(page.rest, \"USD\")" \
+  "Spending's Places door no longer leads with the rest, through Hide balances (prd §1479)"
+deny FeedScreen.swift "SpendingReading.shared.latest" \
+  "a Spending door is one purchase again — the same row and figure as Activity's (prd §1246)"
+# Home is the overview, no list (prd §1479): the stream is Activity's.
+guard FeedScreen.swift "walletHomeDoors(upcoming: upcoming)" \
+  "Home no longer draws its six doors (prd §1479)"
+deny FeedScreen.swift "func walletHomeSections(" \
+  "Home's lists are back — the stream is Activity's, the readings Spending's (prd §1479)"
+guard FeedScreen.swift "walletStream(moves, cap: nil)" \
+  "Activity's list is capped again — the page is the list (prd §1479 item 3)"
 deny FeedScreen.swift "ahead: upcoming" \
   "what's ahead is back on Home — Home is only what happened (prd §1041)"
 guard FeedScreen.swift "let all = visible.live.filter { !promoted.contains(\$0.id) }" \
@@ -503,19 +532,15 @@ guard FeedScreen.swift ".task(id: walletSubscriptionsKey) {" \
   "Subscriptions no longer refreshes its reading — it stands on whatever was read first (prd §1105, §1111)"
 guard FeedScreen.swift "subscriptions: subscriptions," \
   "the Subscriptions box lost the subscriptions — their renewals are off the calendar (prd §1111)"
-python3 - "$work/FeedScreen.swift.bare" <<'PY' || fail "drift: Home no longer leads with what's ahead, or Subscriptions holds more than subscriptions (prd §1111)"
+python3 - "$work/FeedScreen.swift.bare" <<'PY' || fail "drift: Activity no longer reads the moves alone, or Subscriptions holds more than subscriptions (prd §1111, §1479)"
 import re, sys
 src = open(sys.argv[1]).read()
-home = re.search(r"case \.home:(.*?)case \.subscriptions:", src, re.S)
-subs = re.search(r"case \.subscriptions:(.*?)case \.holdings:", src, re.S)
-# Home is four short lists since prd §1201 (`walletHomeSections`): what is
-# ahead (`walletComingUpDays`) is built before what happened (`walletStream`),
-# which since prd §1341 reads the moves alone (`walletMoves`), never a balance.
-lists = re.search(r"func walletHomeSections\(.*?\n    }\n", src, re.S)
-ok = home and subs and lists \
-    and "walletHomeSections(upcoming: upcoming, all: all" in home.group(1) \
-    and "walletComingUpDays(upcoming)" in lists.group(0) and "walletStream(moves)" in lists.group(0) \
-    and lists.group(0).index("walletComingUpDays(upcoming)") < lists.group(0).index("walletStream(moves)") \
+subs = re.search(r"case \.subscriptions:(.*?)case \.spending:", src, re.S)
+# Activity is the stream since prd §1479 (`walletActivitySections`), which
+# since prd §1341 reads the moves alone (`walletMoves`), never a balance.
+act = re.search(r"func walletActivitySections\(.*?\n    }\n", src, re.S)
+ok = subs and act \
+    and "Self.walletMoves(all)" in act.group(0) and "walletStream(moves, cap: nil)" in act.group(0) \
     and "walletSubscriptionsSections" in subs.group(1) and "walletComingUp" not in subs.group(1)
 sys.exit(0 if ok else 1)
 PY
@@ -525,13 +550,13 @@ guard FeedScreen.swift "!SubscriptionsSource.isBill(\$0, now: now)" \
 guard FeedScreen.swift ".union(visible.filter { SubscriptionsSource.isBill(\$0) }" \
   "Home's stream lists a repeating bill again — it belongs to Subscriptions (prd §1105)"
 
-python3 - "$work/FeedScreen.swift.bare" <<'PY' || fail "drift: Holdings is not tokens, then Positions, then Privy's apps, then NFTs (prd §1048, §1107, §1124)"
+python3 - "$work/FeedScreen.swift.bare" <<'PY' || fail "drift: Holdings' doors are not Accounts, Tokens, Positions, Apps, then NFTs (prd §1479)"
 import re, sys
 src = open(sys.argv[1]).read()
-m = re.search(r"case \.holdings:\n(.*?)case \.security:", src, re.S)
-body = m.group(1) if m else ""
-order = [body.find(k) for k in ("walletTokenListSection", "walletPositionsSections",
-                                "walletAppsSection(apps", "walletNFTListSection")]
+m = re.search(r"func walletHoldingsDoors\(.*?\n    }\n", src, re.S)
+body = m.group(0) if m else ""
+order = [body.find(k) for k in ("walletDoor(.holdingAccounts", "feedSheet = .walletTokens",
+                                "walletDoor(.positions", "walletDoor(.apps", "walletDoor(.nfts")]
 sys.exit(0 if all(i >= 0 for i in order) and order == sorted(order) else 1)
 PY
 # A long tail is ONE row (prd §1107): the list draws the fold's shown tokens,
