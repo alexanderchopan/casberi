@@ -444,6 +444,18 @@ enum YourAccountOp {
              data: YourAccount.sel("addOwnerWithThreshold(address,uint256)") + w(owner) + w(max(threshold, 1)))
     }
 
+    /// Safe's owners are a linked list: `removeOwner` names the owner before
+    /// the one removed (the sentinel `0x…01` before the first, in
+    /// `getOwners` order) and the threshold to keep. Nil when `owner` is not
+    /// one, or removing it would leave fewer owners than the threshold.
+    static func removeOwnerCall(account: String, owners: [String], owner: String, threshold: Int) -> Call? {
+        guard let i = owners.firstIndex(where: { $0.caseInsensitiveCompare(owner) == .orderedSame }),
+              owners.count - 1 >= max(threshold, 1) else { return nil }
+        let previous = i == 0 ? "0x0000000000000000000000000000000000000001" : owners[i - 1]
+        return Call(operation: 0, to: account, value: w(0),
+                    data: YourAccount.sel("removeOwner(address,address,uint256)") + w(previous) + w(owner) + w(max(threshold, 1)))
+    }
+
     /// Whether `code` (`eth_getCode`'s answer) is a contract's: anything but
     /// nothing, or an EIP-7702 delegation of a key-held wallet.
     static func isContractCode(_ code: String) -> Bool {

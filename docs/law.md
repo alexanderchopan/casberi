@@ -237,7 +237,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1630 of 1699 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1631 of 1700 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1798,7 +1798,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1418 — An app you have GOES: a tap in Library lands where the tray's icon does, a long press holds Open and Settings, and Ca… (amended by §1444)
 - §1419 — Aztec's testnet, round three: the signer follows a reset testnet, keeps a log of what it signed, follows the account… (amended by §1446)
 - §1420 — The generic empty start screen is deleted: an app's page with nothing yet says so in one line
-- §1421 — Your account has no phrase: recovery is your other devices and an iCloud-synced passkey (amends `docs/safe-wallet-spe…
+- §1421 — Your account has no phrase: recovery is your other devices and an iCloud-synced passkey (amends `docs/safe-wallet-spe… (amended by §1493)
 - §1422 — Five equal tabs: Feed · Wallet · Move · Library · Search; Move is a page (amends §1327's three tabs and Search apart,…
 - §1423 — Move wears the dollar sign; the Wallet category takes its tab's wallet; the tabs answer the hand (amends §1063's doll…
 - §1424 — Your account sends: ETH and USDC on Base and Ethereum, several in one transaction, a new key with every send (builds…
@@ -1869,6 +1869,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1490 — No tab wears a badge: the Wallet's dot and Library's broken-app ring are deleted
 - §1491 — Following and Markets stand on the Wallet's All only (amends §1480 item 2)
 - §1492 — One account with nothing on Home says so (amends §1491)
+- §1493 — A private key to take away: Export creates a new key, adds it as an owner, and shows it once — the way out without Ca…
 
 ## Dead rulings → what replaced them (generated)
 

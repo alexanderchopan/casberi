@@ -25,8 +25,11 @@ struct MoveSecurity: View {
         let keyIndex: Int?
         let recovery: Chain.RecoveryState
         /// Owners that are plain addresses: keys the person holds outside
-        /// Casberi (the shared signer and the recovery key are contracts).
+        /// Casberi (the shared signer and the recovery key are contracts),
+        /// less the keys exported from this phone.
         let outside: [String]
+        /// Plain-key owners this phone exported (prd §1493).
+        let exported: [String]
         /// How many keys a send needs (prd §1447); nil when not there yet.
         let threshold: Int?
         /// The spend limit there (prd §1455); nil when it could not be read.
@@ -69,6 +72,8 @@ struct MoveSecurity: View {
                     } else { addOutside() } })
                 })
             if addingOutside { outsideField }
+            row(title: String(localized: "Private key"), line: exportLine,
+                verb: exportVerb.map { word in (word, { exportedKey == nil ? export() : removeExported() }) })
             spendLimit
             roundUpsRow
             // Said once, under the keys, only on a device that cannot open
@@ -93,6 +98,20 @@ struct MoveSecurity: View {
             if let draft = UserDefaults.standard.string(forKey: "moveOutsideDraft"), outsideText.isEmpty {
                 addingOutside = true
                 outsideText = draft
+            }
+            // `-exportKeyPreview intro|shown`: the export page raised at mount,
+            // `shown` with a key created here and put on no network — the
+            // page's look, never a key that opens anything.
+            if let preview = UserDefaults.standard.string(forKey: "exportKeyPreview") {
+                UserDefaults.standard.removeObject(forKey: "exportKeyPreview")
+                try? await Task.sleep(for: .seconds(1.5))
+                let nets = Op.networks.filter(YourAccountExport.eligible)
+                var stage = MoveExportKey.Stage.intro
+                if preview == "shown", let key = try? YourAccountExport.create() {
+                    stage = .shown(key, on: nets.map(\.name), failed: [])
+                }
+                NSLog("exportKey: preview %@", preview)
+                MoveExportKey.present(account: account, networks: nets, stage: stage) {}
             }
             #endif
         }
@@ -394,7 +413,7 @@ struct MoveSecurity: View {
             standings = Op.networks.filter { !$0.isTest }.map { net in
                 let plan = YourAccountDemo.plan(on: net)
                 return Standing(network: net, deployed: true, keyIndex: 3, recovery: .added,
-                                outside: [YourAccountDemo.signer], threshold: 2,
+                                outside: [YourAccountDemo.signer], exported: [], threshold: 2,
                                 limit: .on(plan, current: plan.window(at: now)))
             }
             return
@@ -416,9 +435,11 @@ struct MoveSecurity: View {
                     var state: Chain.RecoveryState = deployed ? .missing : .notThere
                     if deployed, let signer, let s = try? await Chain.recoveryState(net, account, signer: signer) { state = s }
                     var outside: [String] = []
+                    var exported: [String] = []
                     if deployed, let all = try? await Chain.owners(net, account) {
                         for owner in all where owner.caseInsensitiveCompare(YourAccount.sharedSigner) != .orderedSame {
-                            if (try? await Chain.isContract(net, owner)) == false { outside.append(owner) }
+                            if YourAccountExport.isExported(owner, for: account) { exported.append(owner) }
+                            else if (try? await Chain.isContract(net, owner)) == false { outside.append(owner) }
                         }
                     }
                     var threshold: Int?
@@ -428,7 +449,7 @@ struct MoveSecurity: View {
                         limit = threshold == 2 ? try? await Chain.limitState(net, account) : .off
                     }
                     return Standing(network: net, deployed: deployed, keyIndex: index, recovery: state, outside: outside,
-                                    threshold: threshold, limit: limit)
+                                    exported: exported, threshold: threshold, limit: limit)
                 }
             }
             for await s in group { if let s { found.append(s) } }
@@ -436,9 +457,10 @@ struct MoveSecurity: View {
         let order = Op.networks.map(\.chainId)
         standings = found.sorted { (order.firstIndex(of: $0.network.chainId) ?? 0) < (order.firstIndex(of: $1.network.chainId) ?? 0) }
         // The Wallet's Needs you asks for an outside key until every network
-        // the account is on has one (prd §1432).
+        // the account is on has one (prd §1432); an exported key is one
+        // (prd §1493: the same way out, held in another wallet).
         let live = standings.filter(\.deployed)
-        YourAccountKey.noteOutsideKey(held: !live.isEmpty && live.allSatisfy { !$0.outside.isEmpty })
+        YourAccountKey.noteOutsideKey(held: !live.isEmpty && live.allSatisfy { !$0.outside.isEmpty || !$0.exported.isEmpty })
         // The box's Signers figure (prd §1462): distinct keys across the networks.
         YourAccountFacts.noteSigners(Set(live.flatMap(\.outside).map { $0.lowercased() }).count)
         // And for the recovery key where money sits (prd §1442m), so Finish
@@ -910,6 +932,55 @@ struct MoveSecurity: View {
                 chrome.flash(String(localized: "Signer on \(done.formatted(.list(type: .and)))"), tone: .success)
             } else {
                 chrome.flash(failed.joined(separator: " · "), tone: done.isEmpty ? .failure : .neutral, seconds: 6)
+            }
+        }
+    }
+
+    // MARK: - The private key (prd §1493)
+
+    /// Where Export puts the key: every network the account can be on but
+    /// Robinhood, created where it is not there yet (§1427's rule).
+    private var exportTargets: [Standing] {
+        standings.filter { YourAccountExport.eligible($0.network) && canFix($0) }
+    }
+    /// The exported key on chain, one at a time: Remove comes before another.
+    private var exportedKey: String? { live.flatMap(\.exported).first }
+
+    private var exportLine: String {
+        if standings.isEmpty { return String(localized: "Reading…") }
+        guard let key = exportedKey else { return String(localized: "Open this account in another wallet") }
+        let on = live.filter { s in s.exported.contains { $0.caseInsensitiveCompare(key) == .orderedSame } }
+        return "\(YourAccount.short(key)) · \(names(on))"
+    }
+
+    private var exportVerb: String? {
+        guard !standings.isEmpty else { return nil }
+        if exportedKey != nil { return String(localized: "Remove") }
+        return exportTargets.isEmpty ? nil : String(localized: "Export")
+    }
+
+    private func export() {
+        if demoSays() { return }
+        guard working == nil, !exportTargets.isEmpty else { return }
+        MoveExportKey.present(account: account, networks: exportTargets.map(\.network)) {
+            Task { await read() }
+        }
+    }
+
+    /// Off every network it is on, one Face ID each.
+    private func removeExported() {
+        if demoSays() { return }
+        guard working == nil, let key = exportedKey else { return }
+        let on = live.filter { s in s.exported.contains { $0.caseInsensitiveCompare(key) == .orderedSame } }.map(\.network)
+        working = (String(localized: "Private key"), String(localized: "Removing…"))
+        Task {
+            let failed = await MoveExportKey.remove(key, account: account, from: on)
+            working = nil
+            await read()
+            if failed.isEmpty {
+                chrome.flash(String(localized: "Private key removed"), tone: .success)
+            } else {
+                chrome.flash(failed.joined(separator: " · "), tone: .failure, seconds: 6)
             }
         }
     }
