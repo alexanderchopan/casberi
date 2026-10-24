@@ -68311,3 +68311,11 @@ The rule under all of it: **every page shows every account at once, and the acco
 4. **Mac half (§1402):** the Mac's Wallet Home is the same list, so the gate is the same.
 5. **The check.** `wallet-section-selftest.sh` passes unchanged (its guards match the door text, not its gate). Seen on the iPhone 17 Pro simulator in the demo: All draws both; each of 23 of the 25 accounts picked through `-walletScope` (the three wallets and 20 apps, Railgun and Gemini Exchange among them) draws neither. Coinbase and Apple Wallet did not take the launch pick and were not seen picked.
 6. **Left open.** With one app picked, Home is often empty under the tiles (Railgun, Privy, Lightning, Kraken, Binance and most others have no asks, grants or threats of their own).
+
+## §1492 — One account with nothing on Home says so (amends §1491) (user, 2026-10-24: "ok" to "Nothing needs you on Railgun", after "if it shows activity then what shows on the activity screen?")
+
+1. **The cause.** With Following and Markets on All only (§1491), an app with no asks, grants or threats (Railgun, Kraken, Privy and most others in the demo) left Home blank under the tiles.
+2. **The rule.** §769's empty state fills it: three skeleton rows under "Nothing needs you on <account>", the account named as the title names it (`roomPick`), Needs you's clause as the spoken words (`walletHomeQuiet`). It draws only when one account is picked and no door would.
+3. **Declined.** Showing the account's activity on Home would repeat the Activity tile. Landing a quiet account on Activity would make the same tap land in two places depending on data you cannot see.
+4. **Mac half (§1402):** the Mac's Wallet Home is the same list.
+5. **Seen** on the iPhone 17 Pro simulator in the demo: Railgun, Kraken and Privy draw the empty state; Wise (one ask) and Everyday (asks, grants, threats) draw their rows and no empty state.

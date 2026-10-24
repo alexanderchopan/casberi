@@ -56,6 +56,17 @@ extension FeedScreen {
             .lineLimit(1)
     }
 
+    /// Home's empty state for one account (prd §1492): the doors' rows drawn
+    /// empty, under "Nothing needs you on <account>".
+    var walletHomeQuiet: some View {
+        let headline = roomPick.map { String(localized: "Nothing needs you on \($0)") }
+            ?? String(localized: "Nothing needs you")
+        return DSEmptyState(headline: Text(verbatim: headline),
+                            words: Text(WalletSection.needsYou.emptyBody ?? ""),
+                            scale: .list(rows: 3))
+            .walletListRow()
+    }
+
     /// The doors as one section under the tiles, no header: the title above
     /// already names the page (prd §1480, user: "do we even need to say
     /// 'Overview'").
@@ -226,6 +237,15 @@ extension FeedScreen {
                 let watched = marketsWatches(walletMarketsRows).count
                 walletDoor(.markets, line: watched == 0 ? String(localized: "Follow a coin or a stock") : nil,
                            figure: watched == 0 ? nil : "\(watched)")
+            }
+            // **ONE ACCOUNT WITH NOTHING ON HOME SAYS SO (prd §1492, user: "ok"
+            // to "Nothing needs you on Railgun").** With Following and Markets
+            // on All only (§1491), an app with no asks, grants or threats left
+            // Home blank under the tiles. §769's empty state fills it: what
+            // would stand here, empty, and the account named. The pick still
+            // lands on Home; it never jumps to Activity.
+            if !onAll, !(yours != nil && yoursPicked), needs == 0, permissions == 0, counts.flagged == 0 {
+                walletHomeQuiet
             }
         }
         // **BESIDE A PANE THE DOORS STAY IN THE LIST (prd §1480 item 11):**
