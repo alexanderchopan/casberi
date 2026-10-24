@@ -88,7 +88,7 @@ struct MoveKeysWalk: View {
             small(String(localized: "Lose this iPhone, sign in on the next one."))
         case .signer:
             MoveFlow {
-                MoveWord(String(localized: "Your Signer"))
+                MoveWord(String(localized: "Your co-signer"))
                 MoveClause(glue: String(localized: "in")) { MoveWord(String(localized: "a wallet you have."), ink: DS.pickInk) }
             }
             // Why (user, 2026-10-23: "this needs helper text of why do it").
@@ -127,7 +127,7 @@ struct MoveKeysWalk: View {
                 }
             }
             // With the limit on, recovery needs the Signer too (prd §1456).
-            small(String(localized: "Over it, your Signer signs too. So does recovery."))
+            small(String(localized: "Over it, your co-signer signs too. So does recovery."))
         }
     }
 

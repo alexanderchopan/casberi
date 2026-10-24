@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Section-glyph audit — every section name's glyph stands in ONE column.
+"""Section-glyph audit — every section name's glyph stands in ONE column, and
+every section name is ONE rung (prd §1495).
 
 WHY THIS EXISTS (user, 2026-10-23: "look how all this stuff has different
 indentation on the headers"; "it's on home too. can you sweep the app and
@@ -15,6 +16,13 @@ in a heading rung (`heading20` and up), must carry
 `.frame(width: DSRoomChassis.headGlyph)` among its own modifiers. A warning
 callout (`heading17`, a `.subhead` glyph) is not a section name.
 
+THE SECOND CHECK (prd §1495, user: "i don't want to be hand rolling any of
+this. i want to use rules"). The heading the glyph introduces must be
+`heading24`: the ramp's section rung, which the Feed's header, the Wallet's
+doors (`walletDoor`) and Your account's Keys and Spending share. The Feed had
+borrowed `heading28` (the lede's fit ladder), so every Feed section stood a
+step over every other section in the app; a name on any other rung beside a
+section glyph is that drift again, wherever it is written next.
 WHAT IT DOES NOT CHECK. A row's lead (`DSFeedRow` and the room rows own
 theirs), a glyph after the title, or a header built without an HStack.
 """
@@ -48,10 +56,13 @@ def findings(files):
                     break
                 mods.append(s)
             ahead = "\n".join(lines[i:i + 14])
-            if not HEADING.search(ahead):
+            rung = HEADING.search(ahead)
+            if not rung:
                 continue
             if not any(m.startswith(".frame(width: DSRoomChassis.headGlyph)") for m in mods):
-                out.append(f"{path}:{i + 1}")
+                out.append((f"{path}:{i + 1}", "column"))
+            if rung.group(1) != "24":
+                out.append((f"{path}:{i + 1}", f"rung heading{rung.group(1)}"))
     return out
 
 
@@ -99,6 +110,10 @@ def self_test():
          SELF_TEST.replace("DSRoomChassis.headGlyph", "24", 1), 1)
     case("a COMMENTED frame does not satisfy it",
          SELF_TEST.replace(".frame(width: DSRoomChassis.headGlyph)", "// .frame(width: DSRoomChassis.headGlyph)", 1), 1)
+    case("a section name on the lede's rung is flagged (prd §1495)",
+         SELF_TEST.replace(".dsText(.heading24)", ".dsText(.heading28)", 1), 1)
+    case("a section name on the screen's rung is flagged (prd §1495)",
+         SELF_TEST.replace(".dsText(.heading24)", ".dsText(.heading34)", 1), 1)
     return ok
 
 
@@ -112,11 +127,14 @@ def main():
              for p in sorted(SRC.rglob("*.swift"))]
     hits = findings(files)
     if hits:
-        for h in hits:
-            print(f"✗ {h}: a section name's glyph at its own width — frame it at DSRoomChassis.headGlyph")
-        print(f"section-glyph-audit: {len(hits)} header(s) off the one column")
+        for where, why in hits:
+            if why == "column":
+                print(f"✗ {where}: a section name's glyph at its own width — frame it at DSRoomChassis.headGlyph")
+            else:
+                print(f"✗ {where}: a section name at {why.split()[1]} — every section name is heading24 (prd §1495)")
+        print(f"section-glyph-audit: {len(hits)} header(s) off the one column or the one rung")
         sys.exit(1)
-    print("✓ section-glyph audit: every section name's glyph stands in one column")
+    print("✓ section-glyph audit: every section name's glyph stands in one column, at heading24")
 
 
 if __name__ == "__main__":

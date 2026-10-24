@@ -237,7 +237,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1632 of 1701 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1633 of 1702 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1632,7 +1632,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1248 — Notes' Folders shows Obsidian's vault folders
 - §1249 — The Safe loop closes: the phone's key is an owner, the queue is read in the background, the gateway takes the signatu…
 - §1250 — The Watchlist prices a coin as itself, draws every row's line, alerts on more than a price, and travels: Reorder, gas…
-- §1251 — A Feed section's header names its choices
+- §1251 — A Feed section's header names its choices (amended by §1495)
 - §1252 — White words, pink glyphs, Apple Music's pink
 - §1253 — Sources' apps are cards like the Feed's, by category or A–Z (amended by §1383)
 - §1254 — Setup pages take the Feed's cards
@@ -1856,7 +1856,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1477 — The rating ask: Apple's own five-star sheet, for someone using the app on their own things on four different days, on…
 - §1478 — Your own model: the person's own OpenAI-compatible server as an agent seat — an address, an optional key, a model
 - §1479 — Move's sentence is one size, picked by fit: 52, 44, then 34; the verbs and Add at 24, the foot's acts at 34; the quot…
-- §1480 — The Wallet restructured: Home is the overview, four tiles, every list behind a door, and Security, Cards and the cate…
+- §1480 — The Wallet restructured: Home is the overview, four tiles, every list behind a door, and Security, Cards and the cate… (amended by §1495)
 - §1481 — Buy's merchants wear their marks, and Buy's sentence is Swap's size (amends §1473; applies §1479)
 - §1482 — Every Wallet list row stands at one pitch: a 44pt head, 4pt of air, the room's inset both sides, a 2pt gap under the…
 - §1483 — Receive from Arc: a chain's own coin that is a dollar quotes ten, not a fraction (amended by §1485)
@@ -1871,6 +1871,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1492 — One account with nothing on Home says so (amends §1491)
 - §1493 — A private key to take away: Export creates a new key, adds it as an owner, and shows it once — the way out without Ca…
 - §1494 — Move says each thing once: one row per token, like swaps fold into one, and a second move is a second sentence
+- §1495 — One section rung: every section name and every Wallet door is `heading24` with its glyph, no door carries a line, and…
 
 ## Dead rulings → what replaced them (generated)
 

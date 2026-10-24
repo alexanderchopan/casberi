@@ -255,8 +255,9 @@ extension FeedScreen {
     static var pinLine: CGFloat { topInset + DSDemoMark.screenClearance }
 
     /// The pinned header's height before it has measured itself: the name's
-    /// air above (`s4`), one `heading28` line, its air below (`s2`).
-    static let pinnedHeaderHeight: CGFloat = 57
+    /// air above (`s4`), one `heading24` line (28pt, prd §1495), its air
+    /// below (`s2`).
+    static let pinnedHeaderHeight: CGFloat = 51
 
     /// The window's top inset, read once: the overlay stands at the list's
     /// top, which is the safe area's.
@@ -352,7 +353,7 @@ extension FeedScreen {
                             // own copy stands under it, and the push-off is the
                             // motion. An animated word here drew two names at once.
                             Text(verbatim: section)
-                                .dsText(.heading28)
+                                .dsText(.heading24)
                                 .foregroundStyle(DS.headInk)
                                 .lineLimit(1)
                                 .id(section)
@@ -700,6 +701,14 @@ struct GlanceShell<Top: View, Mark: View, Words: View>: View {
 struct SectionPanelName<Trailing: View>: View {
     let name: String
     let glyph: String
+    /// **A SECTION'S NAME IS `heading24` (prd §1495, user: "would that mean
+    /// dropping feed headers to 24?"; "i am now starting to feel the experience
+    /// i wanted in the app from the very beginning, the stupid simple").** The
+    /// ramp's own rung for a card's name; `heading28` was the lede's fit
+    /// ladder borrowed, which put every Feed section a step over every other
+    /// section in the app. The Wallet's doors stand on the same rung
+    /// (`walletDoor`), so a Feed section and a Wallet door are one anatomy.
+    ///
     /// **THE HEADER NAMES ITS CHOICES (prd §1251, user: "s4 is gorgeous").**
     /// In the Feed a section's tiles stand down and its header reads every
     /// choice at the title's own size, the picked one in the pink and the
@@ -726,7 +735,7 @@ struct SectionPanelName<Trailing: View>: View {
                 .accessibilityHidden(true)
             if choices.isEmpty {
                 Text(verbatim: name)
-                    .dsText(.heading28)
+                    .dsText(.heading24)
                     .foregroundStyle(DS.headInk)
                     .lineLimit(1)
             } else {
@@ -737,7 +746,7 @@ struct SectionPanelName<Trailing: View>: View {
                             withAnimation(DS.Motion.standard) { choice.pick() }
                         } label: {
                             Text(verbatim: choice.label)
-                                .dsText(.heading28)
+                                .dsText(.heading24)
                                 .foregroundStyle(choice.on ? DS.headInk : DS.textTertiary)
                                 .lineLimit(1)
                         }

@@ -112,8 +112,9 @@ struct DSTrayGroup<Content: View, Trailing: View>: View {
                     .foregroundStyle(DS.brandInk)
                     .frame(width: DSRoomChassis.headGlyph)
                     .accessibilityHidden(true)
+                // The section rung, as every group name (prd §1495).
                 Text(verbatim: title)
-                    .dsText(.heading20)
+                    .dsText(.heading24)
                     .foregroundStyle(DS.headInk)
                     .lineLimit(1)
                     .accessibilityAddTraits(.isHeader)

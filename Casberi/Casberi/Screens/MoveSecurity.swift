@@ -57,13 +57,24 @@ struct MoveSecurity: View {
     @State private var roundUpChoices: [(network: YourAccountOp.Network, tokens: [YourAccountTokens.Listed])] = []
     @State private var roundUpMarks: [String: UIImage] = [:]
 
+    /// **TWO SECTIONS, SEVEN ROWS, NO LINES (prd §1495, user: "the two
+    /// sections … is better b/c spend limit and round ups are different type
+    /// than the key stuff"; "perhaps those things don't need subtext either").**
+    /// Keys and Spending are the Feed's section names (`SectionPanelName`,
+    /// `heading24`, the glyph in its column); every row is a name and ONE
+    /// trailing word — a fact in grey, the verb in the pick's ink where there
+    /// is something to do, a state in amber where something is missing. The
+    /// lines that read as technical (key indexes, "a new key with every
+    /// send", the network list on every row) are gone; the networks are one
+    /// row, said once.
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            row(title: ThisDevice.title, line: deviceLine,
+            SectionPanelName(name: String(localized: "Keys"), glyph: Self.keysGlyph, inset: 0)
+            row(title: String(localized: "Signs from"), value: deviceValue,
                 verb: canMoveHere ? (ThisDevice.use, moveHere) : nil)
-            row(title: String(localized: "Recovery key"), line: recoveryLine,
+            row(title: String(localized: "Recovery key"), value: recoveryValue.text, tone: recoveryValue.tone,
                 verb: recoveryVerb.map { ($0, setUp) })
-            row(title: String(localized: "Signer"), line: outsideLine,
+            row(title: String(localized: "Co-signer"), value: outsideValue.text, tone: outsideValue.tone,
                 verb: addingOutside ? nil : outsideVerb.map { word in
                     // Add opens the field; Finish puts the key already on one
                     // network on the rest.
@@ -72,8 +83,11 @@ struct MoveSecurity: View {
                     } else { addOutside() } })
                 })
             if addingOutside { outsideField }
-            row(title: String(localized: "Private key"), line: exportLine,
+            row(title: String(localized: "Networks"), value: networksValue, verb: nil)
+            row(title: String(localized: "Private key"), value: exportValue,
                 verb: exportVerb.map { word in (word, { exportedKey == nil ? export() : removeExported() }) })
+            SectionPanelName(name: String(localized: "Spending"), glyph: ScopeTileGlyph.spending, inset: 0)
+                .padding(.top, DS.Space.s3)
             spendLimit
             roundUpsRow
             // Said once, under the keys, only on a device that cannot open
@@ -117,13 +131,26 @@ struct MoveSecurity: View {
         }
     }
 
-    private func row(title: String, line: String, verb: (String, () -> Void)?) -> some View {
+    /// Who signs, as a section's glyph: a person with a key. Not Permissions'
+    /// bare key (who can spend FROM you) and not Your account's shield.
+    static let keysGlyph = "person.badge.key"
+
+    /// A row (prd §1495): its name, then the fact in grey and, where there is
+    /// something to do, the verb in the pick's ink — both when a fact stands
+    /// beside a verb ("…d203" then "Finish"). A row acting shows its word
+    /// ("Setting up…") in the verb's place, grey.
+    private func row(title: String, value: String?, tone: Color = DS.textSecondary,
+                     verb: (String, () -> Void)?) -> some View {
         HStack(spacing: DS.Space.s3) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(verbatim: title).dsText(.body17).foregroundStyle(DS.textPrimary)
-                Text(verbatim: line).dsText(.subhead12).foregroundStyle(DS.textSecondary)
-            }
+            Text(verbatim: title).dsText(.body17).foregroundStyle(DS.textPrimary)
             Spacer(minLength: DS.Space.s2)
+            if let value, working?.row != title {
+                Text(verbatim: value)
+                    .dsText(.body17)
+                    .foregroundStyle(tone)
+                    .multilineTextAlignment(.trailing)
+                    .lineLimit(2)
+            }
             if let (word, action) = verb {
                 Button(action: action) {
                     Text(verbatim: working?.row == title ? working!.label : word)
@@ -136,7 +163,7 @@ struct MoveSecurity: View {
                 .buttonStyle(RowPress())
                 .disabled(working != nil)
                 // The verb keeps its width ("Setting up…" is longer than
-                // "Finish"); the line beside it wraps instead.
+                // "Finish"); the fact beside it wraps instead.
                 .layoutPriority(1)
             }
         }
@@ -152,85 +179,64 @@ struct MoveSecurity: View {
 
     // MARK: - Round-ups (prd §1452)
 
-    /// Under the spend limit (user: "same place we have spend limits"),
-    /// changed where it stands: the switch, $1 or $5, and what it buys.
+    /// Under the spend limit (user: "same place we have spend limits"): one
+    /// row whose trailing word says the setting ("$1, buys ETH", or Off) and
+    /// opens the one glass menu — the switch, $1 or $5, and what it buys,
+    /// the tokens with their marks (prd §1452, §1495). The sentence under it
+    /// says the one thing the word cannot: when the change is spent.
     @ViewBuilder private var roundUpsRow: some View {
-        DSToggleRow(title: Text("Round-ups"), detail: Text(verbatim: roundUpLine),
-                    isOn: Binding(get: { roundUps.on }, set: { on in
-                        withAnimation(DS.Motion.standard) { roundUps.on = on }
-                        RoundUps.setting = roundUps
-                    }))
-            .walletRowPitch()
-        if roundUps.on { roundUpSentence }
-    }
-
-    private var roundUpTarget: String {
-        "\(roundUps.target.symbol) on \(roundUps.target.network)"
-    }
-
-    private var roundUpLine: String {
-        guard roundUps.on else { return String(localized: "Off · each dollar send rounds up, the change buys a token") }
-        let saved = YourAccountOp.networks.map { RoundUps.saved(on: $0.chainId) }.reduce("0") { YourAccountOp.sum($0, $1) }
-        let usd = YourAccountOp.dollars(saved, decimals: RoundUps.dollarDecimals, price: 1)
-        return String(localized: "\(dollarsText(usd)) toward \(roundUps.target.symbol) · buys at $5")
-    }
-
-    private func dollarsText(_ usd: Double) -> String {
-        String(format: "$%.2f", usd)
-    }
-
-    /// ONE gutter for this card's two sentences (the spend limit and
-    /// Round-ups), so their values stand in one column; sized to the widest
-    /// glue, "round up". Move and the keys walk share `MoveSentence.gutter`,
-    /// a narrower one, on their own screens.
-    static let sentenceGutter: CGFloat = 76
-
-    /// **ROWS, IN THE PAGE'S OWN TYPE (user: "whole screen looks odd
-    /// different text sizes").** The sentence drew its values at 28pt among
-    /// 17pt rows; each value is now a row's trailing word that opens a glass
-    /// menu with the pick ticked (user: "unclear this is 1 or 5 b/c tapping
-    /// it changes it and should show glass menu"), the tokens with their marks.
-    private var roundUpSentence: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            menuRow(title: String(localized: "Round up"), value: String(localized: "To the next $\(roundUps.step)")) {
-                Picker(selection: Binding(get: { roundUps.step }, set: { step in
-                    withAnimation(DS.Motion.standard) { roundUps.step = step }
+        HStack(spacing: DS.Space.s3) {
+            Text("Round-ups").dsText(.body17).foregroundStyle(DS.textPrimary)
+            Spacer(minLength: DS.Space.s2)
+            Menu {
+                Toggle(isOn: Binding(get: { roundUps.on }, set: { on in
+                    withAnimation(DS.Motion.standard) { roundUps.on = on }
                     RoundUps.setting = roundUps
-                })) {
-                    ForEach([1, 5], id: \.self) { step in
-                        Text("To the next $\(step)").tag(step)
-                    }
-                } label: { EmptyView() }
-                .pickerStyle(.inline)
-            }
-            menuRow(title: String(localized: "And buy"), value: roundUpTarget) {
-                // A section per network, named (Base's ETH is not Ethereum's),
-                // each token a toggle: it ticks the pick and keeps its mark.
-                ForEach(roundUpChoices, id: \.network.chainId) { group in
-                    Section(group.network.name) {
-                        ForEach(group.tokens) { listed in
-                            let target = Self.target(listed, on: group.network)
-                            Toggle(isOn: Binding(get: { roundUps.target == target }, set: { on in
-                                guard on else { return }
-                                withAnimation(DS.Motion.standard) { roundUps.target = target }
-                                RoundUps.setting = roundUps
-                            })) {
-                                Label {
-                                    Text(verbatim: listed.token.symbol)
-                                } icon: {
-                                    Image(uiImage: roundUpMarks[listed.token.symbol] ?? Self.menuMark(listed.token.symbol, image: nil))
+                })) { Text("Round up each send") }
+                if roundUps.on {
+                    Picker(selection: Binding(get: { roundUps.step }, set: { step in
+                        withAnimation(DS.Motion.standard) { roundUps.step = step }
+                        RoundUps.setting = roundUps
+                    })) {
+                        ForEach([1, 5], id: \.self) { step in
+                            Text("To the next $\(step)").tag(step)
+                        }
+                    } label: { EmptyView() }
+                    .pickerStyle(.inline)
+                    // A section per network, named (Base's ETH is not
+                    // Ethereum's), each token a toggle: it ticks the pick and
+                    // keeps its mark.
+                    ForEach(roundUpChoices, id: \.network.chainId) { group in
+                        Section(group.network.name) {
+                            ForEach(group.tokens) { listed in
+                                let target = Self.target(listed, on: group.network)
+                                Toggle(isOn: Binding(get: { roundUps.target == target }, set: { on in
+                                    guard on else { return }
+                                    withAnimation(DS.Motion.standard) { roundUps.target = target }
+                                    RoundUps.setting = roundUps
+                                })) {
+                                    Label {
+                                        Text(verbatim: listed.token.symbol)
+                                    } icon: {
+                                        Image(uiImage: roundUpMarks[listed.token.symbol] ?? Self.menuMark(listed.token.symbol, image: nil))
+                                    }
                                 }
                             }
                         }
                     }
                 }
+            } label: {
+                Text(verbatim: roundUpWord)
+                    .dsText(.body17)
+                    .foregroundStyle(DS.pickInk)
+                    .contentTransition(.opacity)
+                    .lineLimit(1)
+                    .frame(minHeight: 44)
             }
-            Text("Change collects in your dollars. At $5, your next send buys \(roundUps.target.symbol) with it.")
-                .dsText(.subhead12).foregroundStyle(DS.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
+            .layoutPriority(1)
+            .accessibilityLabel(Text("Round-ups, \(roundUpWord)"))
         }
-        .padding(.bottom, DS.Space.s3)
-        .transition(.opacity.combined(with: .move(edge: .top)))
+        .walletRowPitch()
         .task {
             guard roundUpChoices.isEmpty else { return }
             var groups: [(network: YourAccountOp.Network, tokens: [YourAccountTokens.Listed])] = []
@@ -255,30 +261,29 @@ struct MoveSecurity: View {
             }
             roundUpMarks = marks
         }
+        if roundUps.on {
+            Text("Change collects in your dollars. At $5, your next send buys \(roundUps.target.symbol) with it.")
+                .dsText(.subhead12).foregroundStyle(DS.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.bottom, DS.Space.s2)
+                .transition(.opacity.combined(with: .move(edge: .top)))
+        }
     }
+
+    /// "$1, buys ETH", or Off.
+    private var roundUpWord: String {
+        guard roundUps.on else { return String(localized: "Off") }
+        return String(localized: "$\(roundUps.step), buys \(roundUps.target.symbol)")
+    }
+
+    /// ONE gutter for this card's limit sentence; sized to the widest glue,
+    /// "up to". Move and the keys walk share `MoveSentence.gutter`, a
+    /// narrower one, on their own screens.
+    static let sentenceGutter: CGFloat = 76
 
     private static func target(_ listed: YourAccountTokens.Listed, on net: YourAccountOp.Network) -> RoundUps.Target {
         RoundUps.Target(chainId: net.chainId, address: listed.token.contract ?? YourAccountSwap.native,
                         symbol: listed.token.symbol, decimals: listed.token.decimals, network: net.name)
-    }
-
-    /// A row whose trailing word opens a menu: the name and the pick in the
-    /// rows' one size, the pick in the pick's ink.
-    private func menuRow<Content: View>(title: String, value: String, @ViewBuilder menu: () -> Content) -> some View {
-        HStack(spacing: DS.Space.s3) {
-            Text(verbatim: title).dsText(.body17).foregroundStyle(DS.textPrimary)
-            Spacer(minLength: DS.Space.s2)
-            Menu(content: menu) {
-                Text(verbatim: value)
-                    .dsText(.body17)
-                    .foregroundStyle(DS.pickInk)
-                    .contentTransition(.opacity)
-                    .lineLimit(1)
-                    .frame(minHeight: 44)
-            }
-            .layoutPriority(1)
-        }
-        .walletRowPitch()
     }
 
     /// A token's mark at a menu's size, circular, its own colours kept (a
@@ -314,16 +319,15 @@ struct MoveSecurity: View {
         list.map(\.network.name).formatted(.list(type: .and))
     }
 
-    private var deviceLine: String {
+    /// Who signs: this device, your other one, or both — the fact alone (the
+    /// key index and "a new key with every send" read as technical, §1495).
+    private var deviceValue: String {
         if standings.isEmpty { return String(localized: "Reading…") }
         let here = live.filter { $0.keyIndex != nil }
         let elsewhere = live.filter { $0.keyIndex == nil }
-        if live.isEmpty { return String(localized: "Signs your first send, Face ID each time") }
-        // The key that changes with every send rides this line (§1436:
-        // Rotate's own row folded in).
-        if elsewhere.isEmpty { return String(localized: "Signs on \(names(here)) · \(rotateLine)") }
-        if here.isEmpty { return String(localized: "Your other device signs for it now") }
-        return String(localized: "Signs on \(names(here)) · your other device on \(names(elsewhere))")
+        if live.isEmpty || elsewhere.isEmpty { return ThisDevice.title }
+        if here.isEmpty { return String(localized: "Your other device") }
+        return String(localized: "\(ThisDevice.title) and another")
     }
 
     /// Networks another device signs on that the recovery key can move here.
@@ -374,31 +378,25 @@ struct MoveSecurity: View {
         return fixable.filter { !rides.contains($0.id) }
     }
 
-    private var recoveryLine: String {
-        if standings.isEmpty { return String(localized: "Reading…") }
+    /// Where the recovery key is: iCloud Keychain once it stands anywhere (or
+    /// rides the first send there); "Not yet on …" in amber where this phone
+    /// can still put it (Finish stands beside); nothing beside Set up.
+    private var recoveryValue: (text: String?, tone: Color) {
+        if standings.isEmpty { return (String(localized: "Reading…"), DS.textSecondary) }
         let on = standings.filter { $0.recovery == .added }
-        let rides = recoveryRides.isEmpty ? nil : String(localized: "with your first send on \(names(recoveryRides))")
-        if on.isEmpty, let rides, recoveryTargets.isEmpty {
-            return String(localized: "In iCloud Keychain") + " · " + rides
+        if !recoveryTargets.isEmpty, !on.isEmpty {
+            return (String(localized: "Not yet on \(names(recoveryTargets))"), DS.attentionInk)
         }
-        if on.isEmpty { return String(localized: "Not set up · if you lose this \(ThisDevice.name)") }
-        // The networks only another device can open are the account's fact,
-        // said once under the rows, not this key's.
-        var line = String(localized: "On \(names(on))")
-        if !recoveryTargets.isEmpty { line += " · " + String(localized: "not yet on \(names(recoveryTargets))") }
-        if let rides { line += " · " + rides }
-        return line
+        if on.isEmpty, recoveryTargets.isEmpty, !recoveryRides.isEmpty {
+            return (String(localized: "iCloud Keychain"), DS.textSecondary)
+        }
+        if on.isEmpty { return (recoveryVerb == nil ? String(localized: "Not set up") : nil, DS.attentionInk) }
+        return (String(localized: "iCloud Keychain"), DS.textSecondary)
     }
 
     private var recoveryVerb: String? {
         guard !standings.isEmpty, !recoveryTargets.isEmpty else { return nil }
         return standings.contains { $0.recovery == .added } ? String(localized: "Finish") : String(localized: "Set up")
-    }
-
-    private var rotateLine: String {
-        let highest = live.compactMap(\.keyIndex).max()
-        guard let highest else { return String(localized: "a new key with every send") }
-        return String(localized: "a new key with every send · key \(highest)")
     }
 
     // MARK: - Reading
@@ -519,7 +517,7 @@ struct MoveSecurity: View {
     private var notYet: [Standing] { limitNetworks.filter { $0.limit == .off && !$0.outside.isEmpty } }
     private var shown: YourAccount7579.Plan? { limited.compactMap { plan(of: $0)?.plan }.first }
     private var signerShort: String {
-        limitNetworks.flatMap(\.outside).first.map(YourAccount.short) ?? String(localized: "your signer")
+        limitNetworks.flatMap(\.outside).first.map(YourAccount.short) ?? String(localized: "your co-signer")
     }
 
     /// **ONE SWITCH FOR EVERY NETWORK (prd §1455, user: "we want one switch
@@ -529,54 +527,80 @@ struct MoveSecurity: View {
     /// beside it.
     @ViewBuilder private var spendLimit: some View {
         if limitNetworks.isEmpty, let limit = setup?.limit, !unopened.isEmpty {
+            // Chosen at Create, landing with the first send (prd §1457).
             row(title: String(localized: "Spend limit"),
-                line: String(localized: "Up to \(MoveSentence.money(Double(limit.dollars))) of each coin a \(LimitPeriod.of(seconds: limit.minutes * 60).word)")
-                    + " · " + withFirstSend,
+                value: String(localized: "\(MoveSentence.money(Double(limit.dollars))) a \(LimitPeriod.of(seconds: limit.minutes * 60).word)"),
                 verb: nil)
         } else if !limitNetworks.isEmpty {
-            DSToggleRow(title: Text("Spend limit"), detail: Text(verbatim: limitLine), isOn: limitBinding)
-                .disabled(working != nil || (limited.isEmpty && notYet.isEmpty))
-                .walletRowPitch()
-            if limitEditing {
-                limitSentence
-            } else if !limited.isEmpty {
-                HStack(spacing: DS.Space.s4) {
-                    limitVerb(String(localized: "Change")) {
-                        withAnimation(DS.Motion.standard) { limitEditing = true; amountText = ""; period = .month }
-                    }
-                    if !notYet.isEmpty { limitVerb(String(localized: "Finish")) { finishLimit() } }
-                }
-                .padding(.vertical, FeedScreen.rowAir)
-            }
+            limitRow
+            if limitEditing { limitSentence }
         }
     }
 
-    private func limitVerb(_ word: String, _ act: @escaping () -> Void) -> some View {
-        Button { act(); DSHaptic.selection() } label: {
-            Text(verbatim: word).dsText(.body17).foregroundStyle(working == nil ? DS.pickInk : DS.textTertiary)
-                .frame(minHeight: 44, alignment: .leading)
+    /// The row's one word: the amount and period in the pick's ink, opening
+    /// the menu (Change, Finish where it is not yet, Turn off); Off opens the
+    /// amount; "Add a co-signer first" grey, because over the limit a send
+    /// waits on that key (prd §1455).
+    private var limitRow: some View {
+        HStack(spacing: DS.Space.s3) {
+            Text("Spend limit").dsText(.body17).foregroundStyle(DS.textPrimary)
+            Spacer(minLength: DS.Space.s2)
+            if working?.row == "limit" {
+                Text(verbatim: working!.label).dsText(.body17).foregroundStyle(DS.textTertiary)
+                    .lineLimit(1).frame(minHeight: 44)
+            } else if (limited.isEmpty && notYet.isEmpty) {
+                Text("Add a co-signer first").dsText(.body17).foregroundStyle(DS.textTertiary)
+                    .lineLimit(1).frame(minHeight: 44)
+            } else {
+                Menu {
+                    if limited.isEmpty {
+                        Button { openLimit() } label: { Label(String(localized: "Set a limit"), systemImage: "plus") }
+                    } else {
+                        Button { openLimit() } label: { Label(String(localized: "Change"), systemImage: "pencil") }
+                        if !notYet.isEmpty {
+                            Button { finishLimit() } label: {
+                                Label(String(localized: "Finish on \(notYet.map(\.network.name).formatted(.list(type: .and)))"),
+                                      systemImage: "checkmark")
+                            }
+                        }
+                        Button(role: .destructive) { turnOffLimit() } label: {
+                            Label(String(localized: "Turn off"), systemImage: "xmark")
+                        }
+                    }
+                } label: {
+                    Text(verbatim: limitWord)
+                        .dsText(.body17)
+                        .foregroundStyle(DS.pickInk)
+                        .contentTransition(.opacity)
+                        .lineLimit(1)
+                        .frame(minHeight: 44)
+                }
+                .layoutPriority(1)
+                .accessibilityLabel(Text("Spend limit, \(limitWord)"))
+            }
         }
-        .buttonStyle(RowPress())
-        .disabled(working != nil)
+        .walletRowPitch()
+    }
+
+    /// "$100 a month", or Off; "Set below" while the amount is being typed.
+    private var limitWord: String {
+        if limitEditing { return String(localized: "Set below") }
+        guard let standing = shown else { return String(localized: "Off") }
+        return String(localized: "\(dollars(standing.dollarCap)) a \(period(of: standing).word)")
+    }
+
+    /// On, or a new amount: the sentence opens with the amount focused.
+    private func openLimit() {
+        guard !limitEditing else { return }
+        withAnimation(DS.Motion.standard) { limitEditing = true; amountText = ""; period = .month }
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(250))
+            amountFocused = true
+        }
     }
 
     private func period(of plan: YourAccount7579.Plan) -> LimitPeriod {
         LimitPeriod.of(seconds: plan.windows.first.map { $0.until - $0.from } ?? 0)
-    }
-
-    private var limitLine: String {
-        if working?.row == "limit" { return working!.label }
-        guard let standing = shown else {
-            if limitEditing { return String(localized: "Set the amount below") }
-            return notYet.isEmpty ? String(localized: "Add a signer first") : String(localized: "Off · any one key signs")
-        }
-        var line = String(localized: "Up to \(dollars(standing.dollarCap)) of each coin a \(period(of: standing).word)")
-        let spent = limited.filter { plan(of: $0)?.current == nil }
-        // One setting (user: "needs to be one setting"): periods that ran out
-        // renew with the next send, which the Signer signs once.
-        if !spent.isEmpty { line += " · " + String(localized: "renews with your next send on \(spent.map(\.network.name).formatted(.list(type: .and)))") }
-        if !notYet.isEmpty { line += " · " + String(localized: "not yet on \(notYet.map(\.network.name).formatted(.list(type: .and)))") }
-        return line
     }
 
     private func dollars(_ units: String) -> String {
@@ -588,26 +612,6 @@ struct MoveSecurity: View {
         let text = amountText.trimmingCharacters(in: .whitespaces).replacingOccurrences(of: "$", with: "")
         guard let n = Int(text), n >= 1, n <= 1_000_000 else { return nil }
         return n
-    }
-
-    /// On opens the amount; off before it is set drops it, nothing sent; off
-    /// once it stands is a change to the keys, so the Signer signs it too.
-    private var limitBinding: Binding<Bool> {
-        Binding(get: { !limited.isEmpty || limitEditing }, set: { on in
-            if on {
-                guard !limitEditing else { return }
-                withAnimation(DS.Motion.standard) { limitEditing = true; amountText = ""; period = .month }
-                Task { @MainActor in
-                    try? await Task.sleep(for: .milliseconds(250))
-                    amountFocused = true
-                }
-            } else if limited.isEmpty {
-                withAnimation(DS.Motion.standard) { limitEditing = false; amountText = "" }
-                amountFocused = false
-            } else {
-                turnOffLimit()
-            }
-        })
     }
 
     /// The amount, as Move says things (§1438): the glue in the gutter, the
@@ -816,27 +820,29 @@ struct MoveSecurity: View {
     /// The key Finish puts on: one already on a network, else the one chosen.
     private var outsideOwner: String? { live.flatMap(\.outside).first ?? setup?.signer }
 
-    private var outsideLine: String {
-        if standings.isEmpty { return String(localized: "Reading…") }
+    /// The co-signer: its short address (or how many), "Not yet on …" in
+    /// amber where it still has to go (Finish stands beside), nothing beside
+    /// Add. A key chosen at Create is named before it lands (user: "i have
+    /// signer set up but shows i don't").
+    private var outsideValue: (text: String?, tone: Color) {
+        if standings.isEmpty { return (String(localized: "Reading…"), DS.textSecondary) }
         let keys = Set(live.flatMap(\.outside).map { $0.lowercased() })
-        let on = live.filter { !$0.outside.isEmpty }
-        guard let one = keys.first else {
-            // Chosen at Create (user: "i have signer set up but shows i
-            // don't"): the key, where it still has to go, and where the first
-            // send takes it.
-            if let chosen = setup?.signer {
-                var line = YourAccount.short(chosen)
-                if !outsideTargets.isEmpty { line += " · " + String(localized: "not yet on \(names(outsideTargets))") }
-                if !signerRides.isEmpty { line += " · " + String(localized: "with your first send on \(names(signerRides))") }
-                return line
-            }
-            return String(localized: "None · if you lose Casberi, a key in a wallet you hold signs instead")
+        let who: String
+        if let one = keys.first {
+            who = keys.count == 1 ? YourAccount.short(one) : String(localized: "\(keys.count) keys")
+        } else if let chosen = setup?.signer {
+            who = YourAccount.short(chosen)
+        } else {
+            return (nil, DS.textSecondary)
         }
-        let who = keys.count == 1 ? YourAccount.short(one) : String(localized: "\(keys.count) keys")
-        // The networks only another device can open are said once under the
-        // rows, never here.
-        if outsideTargets.isEmpty { return String(localized: "\(who) · on \(names(on))") }
-        return String(localized: "\(who) · not yet on \(names(outsideTargets))")
+        if !outsideTargets.isEmpty { return (String(localized: "Not yet on \(names(outsideTargets))"), DS.attentionInk) }
+        return (who, DS.textSecondary)
+    }
+
+    /// The networks the account is on, said once (§1495).
+    private var networksValue: String {
+        if standings.isEmpty { return String(localized: "Reading…") }
+        return live.isEmpty ? String(localized: "None yet") : names(live)
     }
 
     private var outsideVerb: String? {
@@ -908,7 +914,7 @@ struct MoveSecurity: View {
         if demoSays() { return }
         guard working == nil, let owner = addingOutside ? outsideCandidate : outsideOwner else { return }
         let targets = outsideTargets.map(\.network)
-        working = (String(localized: "Signer"), String(localized: "Adding…"))
+        working = (String(localized: "Co-signer"), String(localized: "Adding…"))
         Task {
             var done: [String] = []
             var failed: [String] = []
@@ -929,7 +935,7 @@ struct MoveSecurity: View {
             outsideText = ""
             await read()
             if failed.isEmpty {
-                chrome.flash(String(localized: "Signer on \(done.formatted(.list(type: .and)))"), tone: .success)
+                chrome.flash(String(localized: "Co-signer on \(done.formatted(.list(type: .and)))"), tone: .success)
             } else {
                 chrome.flash(failed.joined(separator: " · "), tone: done.isEmpty ? .failure : .neutral, seconds: 6)
             }
@@ -946,11 +952,12 @@ struct MoveSecurity: View {
     /// The exported key on chain, one at a time: Remove comes before another.
     private var exportedKey: String? { live.flatMap(\.exported).first }
 
-    private var exportLine: String {
+    /// The exported key's short address once one is out; nothing beside
+    /// Export; "None" where there is nothing to export yet.
+    private var exportValue: String? {
         if standings.isEmpty { return String(localized: "Reading…") }
-        guard let key = exportedKey else { return String(localized: "Open this account in another wallet") }
-        let on = live.filter { s in s.exported.contains { $0.caseInsensitiveCompare(key) == .orderedSame } }
-        return "\(YourAccount.short(key)) · \(names(on))"
+        if let key = exportedKey { return YourAccount.short(key) }
+        return exportTargets.isEmpty ? String(localized: "None") : nil
     }
 
     private var exportVerb: String? {
@@ -1025,7 +1032,7 @@ struct MoveSecurity: View {
         if demoSays() { return }
         guard working == nil else { return }
         let targets = movable.map(\.network)
-        working = (ThisDevice.title, String(localized: "Setting up…"))
+        working = (String(localized: "Signs from"), String(localized: "Setting up…"))
         Task {
             // A key made now: never one that might be dead or in use.
             guard let index = try? YourAccountKey.freshKey() else {
@@ -1097,7 +1104,7 @@ struct OutsideKeyNudge: View {
             DSHaptic.selection()
             chrome.openYourAccount(at: FeedScreen.SecurityAnchor.account.id)
         } label: {
-            DSFeedRow(name: String(localized: "Add a signer"),
+            DSFeedRow(name: String(localized: "Add a co-signer"),
                       line: Text("If you lose Casberi, a key in a wallet you hold signs instead")) {
                 if let address = YourAccountKey.address {
                     WalletFace(address: address, size: DS.Face.seat, circular: true)

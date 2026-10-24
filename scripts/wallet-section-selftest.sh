@@ -471,9 +471,9 @@ guard FeedScreen.swift "case .holdings, .holdingAccounts, .positions, .apps, .nf
 guard FeedScreen.swift "return blockStream.els.isEmpty" \
   "holdings' empty gate no longer reads the treemap's own doc — figure and empty state drift, and the slot shows both or neither"
 # Permissions and Threats count off the checkup's own reads (prd §1480).
-guard FeedScreen.swift "Self.permissionsLine(counts)" \
+guard FeedScreen.swift "figureTone: counts.unlimited > 0 ? DS.attentionInk : DS.textPrimary" \
   "the Permissions door no longer reads the checkup's counts — its line and its page could disagree (prd §1480)"
-guard FeedScreen.swift "Self.threatsLine(counts)" \
+guard FeedScreen.swift "figureTone: DS.destructiveInk" \
   "the Threats door no longer reads the checkup's counts (prd §1480)"
 guard FeedScreen.swift "case _ where walletScopeIsEmpty(section):" \
   "the slot no longer draws a scope's empty state — a chip onto an empty scope opens 258 blank points (§611)"
@@ -608,8 +608,20 @@ guard DSChip.swift "if ranges.count > 1" \
 # §1489, and the menu is the Accounts header's alone). Since prd §1480 the list
 # is Following, a door on Home: your own account apart (it is Your account's),
 # every other account a row with its Rename and Stop following.
-guard FeedScreen.swift "walletDoor(.following, line: followingLine(following)" \
+guard FeedScreen.swift "walletDoor(.following, figure:" \
   "Home lost its Following door (prd §1410, §1480)"
+# A door is a section's name with a figure (prd §1495): the glyph in the head
+# column, the name at the section rung, the figure at its peer rung, one pitch,
+# no line. Every page's doors come from this one row, so the rule is held here
+# and nowhere else.
+guard FeedScreen.swift ".frame(width: DSRoomChassis.headGlyph)" \
+  "the door's glyph left the header's column (prd §1495)"
+guard FeedScreen.swift ".dsText(.heading24)" \
+  "a door's name is no longer the section rung (prd §1495)"
+guard FeedScreen.swift ".dsText(.stat24)" \
+  "a door's figure is no longer the section rung's peer (prd §1495)"
+deny FeedScreen.swift "lineTone:" \
+  "a door carries a line again (prd §1495: a door has no line; its state is the figure's ink)"
 guard FeedScreen.swift "ForEach(slots) { slot in walletAccountRow(slot) }" \
   "the Following page no longer lists the accounts you follow (prd §1410, §1480)"
 guard FeedScreen+WalletHome.swift "glyph: ScopeTileGlyph.wallets) { feedSheet = .walletFollow }" \

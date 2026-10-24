@@ -17,32 +17,56 @@ extension FeedScreen {
 
     // MARK: - The door row
 
-    /// One door: the page's glyph, its name, an optional line, its figure
-    /// trailing and the chevron. `act` replaces opening the page (a verb row:
-    /// Create an account, Follow an account, the Tokens sheet).
+    /// **A DOOR IS A SECTION'S NAME WITH A FIGURE (prd §1495, user: "i think
+    /// the 24 size is good"; "would apple show the subtext on home?").** The
+    /// page's glyph in the Feed header's column, its name at the section
+    /// rung, its figure trailing at the same rung, no line, every door one
+    /// height: a Feed section and a Wallet door are one anatomy, and Home
+    /// scans as a list of names and numbers. What a door's line said (a count
+    /// by kind, a state) is the page's; the state Home must show rides the
+    /// figure's ink (`figureTone`, §1004: a status takes the ink), or a short
+    /// `word` at the row rung in its ink where there is no figure ("No
+    /// recovery key", amber — the way Apple trails "Off"). `act` replaces
+    /// opening the page (a verb row: Create an account, Follow an account,
+    /// the Tokens sheet).
     @ViewBuilder
-    func walletDoor(_ section: WalletSection, name: String? = nil, line: String? = nil,
-                    lineTone: Color = DS.textTertiary, figure: String? = nil,
-                    act: (() -> Void)? = nil) -> some View {
-        // The Feed's row (prd §744), not a settings row: its 44pt head, its
-        // line, and the figure in Activity's money rung, so a door and the
-        // transaction under it share one pitch and one figure size.
+    func walletDoor(_ section: WalletSection, name: String? = nil, figure: String? = nil,
+                    figureTone: Color = DS.textPrimary, word: String? = nil,
+                    wordTone: Color = DS.textSecondary, act: (() -> Void)? = nil) -> some View {
         Button {
             DSHaptic.selection()
             if let act { act() } else { chrome.walletSection = section }
         } label: {
-            DSFeedRow(name: name ?? section.label,
-                      line: line.map { Text(verbatim: $0).foregroundStyle(lineTone) },
-                      trailingBesideLine: true) {
-                walletDoorLead(section.glyph)
-            } trailing: {
-                if let figure { walletRowFigure(figure) }
+            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                Image(systemName: section.glyph)
+                    .dsGlyph(.body)
+                    .foregroundStyle(DS.brandInk)
+                    .frame(width: DSRoomChassis.headGlyph)
+                    .accessibilityHidden(true)
+                Text(verbatim: name ?? section.label)
+                    .dsText(.heading24)
+                    .foregroundStyle(DS.headInk)
+                    .lineLimit(1)
+                Spacer(minLength: DS.Space.s2)
+                if let figure {
+                    Text(verbatim: figure)
+                        .dsText(.stat24)
+                        .monospacedDigit()
+                        .foregroundStyle(figureTone)
+                        .lineLimit(1)
+                } else if let word {
+                    Text(verbatim: word)
+                        .dsText(.body17)
+                        .foregroundStyle(wordTone)
+                        .lineLimit(1)
+                }
             }
+            .walletRowPitch()
             .contentShape(Rectangle())
         }
         .buttonStyle(RowPress())
         .dsHover()
-        .accessibilityLabel(Text(verbatim: [name ?? section.label, figure, line]
+        .accessibilityLabel(Text(verbatim: [name ?? section.label, figure ?? word]
             .compactMap { $0 }.joined(separator: ". ")))
         .walletListRow()
     }
@@ -77,34 +101,18 @@ extension FeedScreen {
 
     // MARK: - Home's six doors
 
-    /// Your account's line: each control's state, a missing one in amber
-    /// (prd §1480 item 2). Recovery leads, because losing the phone is the
-    /// one thing the others cannot undo.
-    var yourAccountLine: (text: String, wants: Bool) {
+    /// What Your account's door trails, in amber: the control that is missing
+    /// (prd §1480 item 2, §1495), nothing when every key stands. Recovery
+    /// leads, because losing the phone is the one thing the others cannot
+    /// undo; the rest of the line ("1 signer · $100 a month · round-ups $1")
+    /// is the page's.
+    var yourAccountWants: String? {
         var parts: [String] = []
-        var wants = false
-        if RecoveryKeyNudge.shown {
-            parts.append(String(localized: "No recovery key"))
-            wants = true
-        } else {
-            parts.append(String(localized: "Recovery on"))
+        if RecoveryKeyNudge.shown { parts.append(String(localized: "No recovery key")) }
+        if let facts = YourAccountFacts.current, facts.signers == 0 {
+            parts.append(parts.isEmpty ? String(localized: "No co-signer") : String(localized: "no co-signer"))
         }
-        if let facts = YourAccountFacts.current {
-            if facts.signers > 0 {
-                parts.append(facts.signers == 1 ? String(localized: "1 signer")
-                                                : String(localized: "\(facts.signers) signers"))
-            } else {
-                parts.append(String(localized: "No signer"))
-                wants = true
-            }
-            if let dollars = facts.limitDollars, let period = facts.limitPeriod {
-                parts.append(String(localized: "$\(dollars) a \(period)"))
-            }
-            if let step = facts.roundUpStep {
-                parts.append(String(localized: "round-ups $\(step)"))
-            }
-        }
-        return (parts.joined(separator: " · "), wants)
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 
     /// The accounts Following lists: every slot but All and your own.
@@ -114,7 +122,8 @@ extension FeedScreen {
         }
     }
 
-    /// "3 wallets · 2 apps": what Following holds, by kind.
+    /// "3 wallets · 2 apps": what Following holds, by kind — the Following
+    /// page's caption (its door carries no line, §1495).
     func followingLine(_ slots: [DSAccountSlot]) -> String {
         let apps = slots.filter { RoomAccounts.isSeat($0.id) }.count
         let wallets = slots.count - apps
@@ -124,35 +133,6 @@ extension FeedScreen {
         }
         if apps > 0 {
             parts.append(apps == 1 ? String(localized: "1 app") : String(localized: "\(apps) apps"))
-        }
-        return parts.joined(separator: " · ")
-    }
-
-    /// "3 approvals · 2 delegations": the Permissions door's line.
-    static func permissionsLine(_ counts: WalletSecurityCounts) -> String {
-        var parts: [String] = []
-        if counts.approvals > 0 {
-            parts.append(counts.approvals == 1 ? String(localized: "1 approval")
-                                               : String(localized: "\(counts.approvals) approvals"))
-        }
-        if counts.delegations > 0 {
-            parts.append(counts.delegations == 1 ? String(localized: "1 delegation")
-                                                 : String(localized: "\(counts.delegations) delegations"))
-        }
-        return parts.joined(separator: " · ")
-    }
-
-    /// "1 poisoning · 1 fake token · 1 fake transfer": the Threats door's line.
-    static func threatsLine(_ counts: WalletSecurityCounts) -> String {
-        var parts: [String] = []
-        if counts.poisoning > 0 { parts.append(String(localized: "\(counts.poisoning) poisoning")) }
-        if counts.fakeTokens > 0 {
-            parts.append(counts.fakeTokens == 1 ? String(localized: "1 fake token")
-                                                : String(localized: "\(counts.fakeTokens) fake tokens"))
-        }
-        if counts.fakeTransfers > 0 {
-            parts.append(counts.fakeTransfers == 1 ? String(localized: "1 fake transfer")
-                                                   : String(localized: "\(counts.fakeTransfers) fake transfers"))
         }
         return parts.joined(separator: " · ")
     }
@@ -200,9 +180,7 @@ extension FeedScreen {
         let permissions = counts.delegations + counts.approvals
         walletDoorsSection {
             if yours != nil, onAll || yoursPicked {
-                let line = yourAccountLine
-                walletDoor(.yourAccount, line: line.text,
-                           lineTone: line.wants ? DS.attentionInk : DS.textTertiary)
+                walletDoor(.yourAccount, word: yourAccountWants, wordTone: DS.attentionInk)
             } else if yours == nil, onAll {
                 // **NONE YET: THE VERB (prd §1480 item 2).** Move makes it.
                 walletDoor(.yourAccount, name: String(localized: "Create an account"),
@@ -216,27 +194,25 @@ extension FeedScreen {
                     walletDoor(.following, name: String(localized: "Follow an account"),
                                act: { feedSheet = .walletFollow })
                 } else {
-                    walletDoor(.following, line: followingLine(following), figure: "\(following.count)")
+                    walletDoor(.following, figure: "\(following.count)")
                 }
             }
             if needs > 0 {
-                walletDoor(.needsYou, figure: "\(needs)")
+                // What waits on you is the pick's ink (§1385: pink says state).
+                walletDoor(.needsYou, figure: "\(needs)", figureTone: DS.pickInk)
             }
             if permissions > 0 {
                 // A grant with no limit wants you (prd §1107a).
-                walletDoor(.permissions, line: Self.permissionsLine(counts),
-                           lineTone: counts.unlimited > 0 ? DS.attentionInk : DS.textTertiary,
-                           figure: "\(permissions)")
+                walletDoor(.permissions, figure: "\(permissions)",
+                           figureTone: counts.unlimited > 0 ? DS.attentionInk : DS.textPrimary)
             }
             if counts.flagged > 0 {
                 // Every threat is red (prd §1463).
-                walletDoor(.threats, line: Self.threatsLine(counts),
-                           lineTone: DS.destructiveInk, figure: "\(counts.flagged)")
+                walletDoor(.threats, figure: "\(counts.flagged)", figureTone: DS.destructiveInk)
             }
             if onAll {
                 let watched = marketsWatches(walletMarketsRows).count
-                walletDoor(.markets, line: watched == 0 ? String(localized: "Follow a coin or a stock") : nil,
-                           figure: watched == 0 ? nil : "\(watched)")
+                walletDoor(.markets, figure: watched == 0 ? nil : "\(watched)")
             }
             // **ONE ACCOUNT WITH NOTHING ON HOME SAYS SO (prd §1492, user: "ok"
             // to "Nothing needs you on Railgun").** With Following and Markets
@@ -305,8 +281,6 @@ extension FeedScreen {
             }
             if !tokens.isEmpty || anyHidden {
                 walletDoor(.holdings, name: String(localized: "Tokens"),
-                           line: tokens.count == 1 ? String(localized: "1 token")
-                                                   : String(localized: "\(tokens.count) tokens"),
                            figure: mask ?? WalletValue.money(tokensUSD),
                            act: { feedSheet = .walletTokens })
             }
@@ -345,20 +319,15 @@ extension FeedScreen {
         if !(page.places.isEmpty && page.subscriptions.isEmpty && page.fees.isEmpty) {
             walletDoorsSection {
                 if !page.subscriptions.isEmpty {
-                    walletDoor(.subscriptions,
-                               line: page.subscriptions.count == 1 ? String(localized: "1 plan")
-                                                                   : String(localized: "\(page.subscriptions.count) plans"),
-                               figure: mask ?? AppleWalletRoom.money(page.recurring, "USD"))
+                    walletDoor(.subscriptions, figure: mask ?? AppleWalletRoom.money(page.recurring, "USD"))
                 }
                 if !page.places.isEmpty {
-                    walletDoor(.places,
-                               line: page.places.first.map { String(localized: "\($0.name) the most") },
-                               figure: mask ?? AppleWalletRoom.money(page.rest, "USD"))
+                    walletDoor(.places, figure: mask ?? AppleWalletRoom.money(page.rest, "USD"))
                 }
                 if !page.fees.isEmpty {
-                    // Not in the total (prd §1476 item 1), and said so.
-                    walletDoor(.fees, line: WalletSpendingFigure.feesLine(page, mask: mask),
-                               figure: mask ?? AppleWalletRoom.money(page.feesTotal, "USD"))
+                    // Not in the total (prd §1476 item 1): the Fees page's box
+                    // says so (`feesLine`); a door carries no line (§1495).
+                    walletDoor(.fees, figure: mask ?? AppleWalletRoom.money(page.feesTotal, "USD"))
                 }
             }
         } else if reading.read {
