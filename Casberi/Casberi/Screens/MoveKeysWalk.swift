@@ -1,32 +1,41 @@
 import SwiftUI
 
-/// **YOUR KEYS, RIGHT AFTER CREATE (prd §1457, the K1–K4 canvas; user:
-/// "with the first send").** Three steps in the sentence's grammar, each one
-/// that can wait: a recovery key in iCloud Keychain, a Signer in a wallet
-/// the person already has, and — with a Signer — a spend limit. Nothing here
-/// touches a chain: the recovery key is made at once (free), and the rest is
-/// kept in `YourAccountSetup` and rides the first send on each network.
-/// The last step hands straight over to the Created sentence, which says
-/// the keys go on with the first send (user: "No summary").
+/// **YOUR ACCOUNT, RIGHT AFTER CREATE (prd §1457, rebuilt by §1501).**
+/// Four steps in the sentence's grammar, each one that can wait — a recovery
+/// key in iCloud Keychain, a co-signer in another wallet, with a co-signer a
+/// spend limit, and round-ups — then the account itself, Created, with Done.
+/// Nothing here touches a chain: the recovery key is made at once (free), the
+/// co-signer and the limit are kept in `YourAccountSetup` and ride the first
+/// move on each network, and round-ups are this phone's setting.
+///
+/// The walk was reviewed word by word (user, 2026-10-24: "i want to talk
+/// about every word"); §1501 records each line and why.
 struct MoveKeysWalk: View {
     let account: String
     var inTray = false
     /// Inert (DEBUG's `-movePreview keys`): every step draws, nothing is kept.
     var inert = false
-    let done: () -> Void
+    /// How the walk ends: Done closes Move, Receive opens it on Receive.
+    enum Ending { case close, receive }
+    let done: (Ending) -> Void
 
-    enum Step: Int { case recovery = 1, signer, limit }
+    enum Step: Int { case recovery = 1, signer, limit, roundUps, created }
     typealias Period = MoveSecurity.LimitPeriod
 
+    @Environment(ShellChrome.self) private var chrome
     @State private var step: Step
     @State private var choice = YourAccountSetup.Choice()
     @State private var connecting = false
     @State private var note: String?
     @State private var amountText = ""
     @State private var period: Period = .month
+    @State private var roundUps = RoundUps.Setting(on: true)
+    @State private var roundUpChoices: [(network: YourAccountOp.Network, tokens: [YourAccountTokens.Listed])] = []
+    @State private var roundUpMarks: [String: UIImage] = [:]
     @FocusState private var amountFocused: Bool
 
-    init(account: String, inTray: Bool = false, inert: Bool = false, step: Step = .recovery, done: @escaping () -> Void) {
+    init(account: String, inTray: Bool = false, inert: Bool = false, step: Step = .recovery,
+         done: @escaping (Ending) -> Void) {
         self.account = account
         self.inTray = inTray
         self.inert = inert
@@ -44,12 +53,23 @@ struct MoveKeysWalk: View {
         #endif
     }
 
+    /// The networks this phone's account is on, as the Create screen names them.
+    private var networks: [YourAccountOp.Network] { YourAccountOp.networks.filter { !$0.isTest } }
+
+    /// "1 of 4": the limit is a step only with a co-signer, so once the
+    /// co-signer is skipped the walk is three steps long.
+    private var stepCount: Int { step.rawValue <= Step.signer.rawValue || choice.signer != nil ? 4 : 3 }
+    private var stepNumber: Int { step == .roundUps && choice.signer == nil ? 3 : step.rawValue }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: DS.Space.s1) {
-                Text("\(step.rawValue) of 3")
-                    .dsText(.body17).foregroundStyle(DS.textSecondary)
-                    .padding(.bottom, DS.Space.s6)
+                // Created is the account, not a step: no counter.
+                if step != .created {
+                    Text("\(stepNumber) of \(stepCount)")
+                        .dsText(.body17).foregroundStyle(DS.textSecondary)
+                        .padding(.bottom, DS.Space.s6)
+                }
                 content
                     .id(step)
                     .transition(.opacity)
@@ -77,29 +97,31 @@ struct MoveKeysWalk: View {
     // MARK: - The steps
 
     @ViewBuilder private var content: some View {
-        // Each step is one running sentence (§1466): clauses that never
-        // split across a line, the pick pink.
+        // Each step is one running sentence at Move's one size (§1501), the
+        // pick pink, and one line of small print at most.
         switch step {
         case .recovery:
             MoveFlow {
                 MoveWord(String(localized: "A recovery key"))
                 MoveClause(glue: String(localized: "in")) { MoveWord(String(localized: "iCloud Keychain."), ink: DS.pickInk) }
             }
-            small(String(localized: "Lose this iPhone, sign in on the next one."))
+            // "Device", not "iPhone": the key opens it on an iPad or a Mac on
+            // the same Apple Account too. No "sign in": there is no Casberi
+            // login to sign into (§1501).
+            small(String(localized: "If you lose this device, your account opens on another."))
         case .signer:
             MoveFlow {
-                MoveWord(String(localized: "Your co-signer"))
-                MoveClause(glue: String(localized: "in")) { MoveWord(String(localized: "a wallet you have."), ink: DS.pickInk) }
+                MoveWord(String(localized: "A co-signer"))
+                MoveClause(glue: String(localized: "in")) { MoveWord(String(localized: "another wallet."), ink: DS.pickInk) }
             }
-            // Why (user, 2026-10-23: "this needs helper text of why do it"),
-            // and only what is true: at one key it signs alone, and only over
-            // a limit does it sign with this iPhone (prd §1499; user: "don't
-            // say 'big sends'").
-            small(String(localized: "Signs if you can't use Casberi, and co-signs transactions above your spend limit."))
+            // Its own job, never the recovery key's; and when it lands —
+            // connecting signs nothing (prd §1499).
+            small(String(localized: "Co-signs any move over your spend limit. Activates on your first move."))
         case .limit:
             MoveFlow {
-                MoveWord(String(localized: "Face ID alone"))
-                MoveClause(glue: String(localized: "up to")) {
+                MoveWord(String(localized: "Require a co-signer"))
+                MoveWord(String(localized: "for moves"))
+                MoveClause(glue: String(localized: "over")) {
                     MoveRungReader { rung in
                         HStack(alignment: .firstTextBaseline, spacing: 0) {
                             Text(verbatim: "$").dsText(rung).foregroundStyle(DS.pickInk)
@@ -114,6 +136,8 @@ struct MoveKeysWalk: View {
                         }
                     }
                 }
+                // Each coin counts apart (prd §1455): without it the sentence
+                // promises a total the account does not keep.
                 MoveWord(String(localized: "of each coin"))
                 MoveClause(glue: String(localized: "a")) {
                     Menu {
@@ -129,9 +153,101 @@ struct MoveKeysWalk: View {
                     .accessibilityLabel(Text("How often it starts again"))
                 }
             }
-            // With the limit on, recovery needs the Signer too (prd §1456).
-            small(String(localized: "Over it, your co-signer signs too. So does recovery."))
+            // With the limit on, recovery needs the co-signer too (prd §1456):
+            // the one consequence nobody would guess.
+            small(String(localized: "Getting your account back needs it too."))
+        case .roundUps:
+            MoveFlow {
+                MoveWord(String(localized: "Round up each move"))
+                MoveClause(glue: String(localized: "to the next")) {
+                    Menu {
+                        Picker(selection: $roundUps.step) {
+                            ForEach([1, 5], id: \.self) { step in Text(verbatim: "$\(step)").tag(step) }
+                        } label: { EmptyView() }
+                        .pickerStyle(.inline)
+                    } label: {
+                        MoveWord("$\(roundUps.step)", ink: DS.pickInk).contentTransition(.opacity)
+                    }
+                    .accessibilityLabel(Text("Round up to"))
+                }
+                MoveClause(glue: String(localized: "and buy")) {
+                    Menu { tokenMenu } label: {
+                        MoveWord(roundUps.target.symbol + ".", ink: DS.pickInk).contentTransition(.opacity)
+                    }
+                    .accessibilityLabel(Text("What the change buys"))
+                }
+            }
+            .task { await loadRoundUpChoices() }
+        case .created:
+            MoveFlow {
+                MoveWord(String(localized: "Created"), ink: DS.textSecondary)
+                // Pink is a tap (§1385); the tap copies, naming the networks
+                // the address works on (prd §1501).
+                Button { copyAddress() } label: { MoveWord(YourAccount.short(account), ink: DS.pickInk) }
+                    .buttonStyle(RowPress())
+                    .accessibilityLabel(Text("Your address, \(account)"))
+                    .accessibilityHint(Text("Copies your address"))
+                MovePhrase(networks.map(\.name).formatted(.list(type: .and)) + ".", glue: String(localized: "on"))
+            }
+            small(createdLine)
         }
+    }
+
+    /// Where the address works, and where to go for the rest: a deposit
+    /// address in Receive (§1453, §1470).
+    private var createdLine: String {
+        let short = YourAccount.short(account)
+        return networks.count == 3
+            ? String(localized: "Use \(short) on these three. On any other network, get a deposit address in Receive and pick the token and network to receive on.")
+            : String(localized: "Use \(short) on these networks. On any other network, get a deposit address in Receive and pick the token and network to receive on.")
+    }
+
+    /// A section per network, named (Base's ETH is not Ethereum's), each
+    /// token a toggle that ticks the pick and keeps its mark — Security's
+    /// Round-ups menu (prd §1452).
+    @ViewBuilder private var tokenMenu: some View {
+        ForEach(roundUpChoices, id: \.network.chainId) { group in
+            Section(group.network.name) {
+                ForEach(group.tokens) { listed in
+                    let target = MoveSecurity.target(listed, on: group.network)
+                    Toggle(isOn: Binding(get: { roundUps.target == target }, set: { on in
+                        guard on else { return }
+                        withAnimation(DS.Motion.standard) { roundUps.target = target }
+                    })) {
+                        Label {
+                            Text(verbatim: listed.token.symbol)
+                        } icon: {
+                            Image(uiImage: roundUpMarks[listed.token.symbol] ?? MoveSecurity.menuMark(listed.token.symbol, image: nil))
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private func loadRoundUpChoices() async {
+        guard roundUpChoices.isEmpty else { return }
+        var groups: [(network: YourAccountOp.Network, tokens: [YourAccountTokens.Listed])] = []
+        for net in YourAccountOp.networks {
+            let listed = await YourAccountTokens.list(net).filter(\.onList)
+            // The dollar itself is what the change already is.
+            let picks = listed.filter { $0.token != YourAccountOp.dollar(on: net) }.prefix(10)
+            if !picks.isEmpty { groups.append((net, Array(picks))) }
+        }
+        roundUpChoices = groups
+        var marks: [String: UIImage] = [:]
+        for symbol in Set(groups.flatMap { $0.tokens.map(\.token.symbol) }) {
+            marks[symbol] = MoveSecurity.menuMark(symbol, image: BrandMark.image(for: symbol))
+        }
+        roundUpMarks = marks
+    }
+
+    private func copyAddress() {
+        // The demo's address holds no key: never copied (§1475).
+        if YourAccountDemo.isDemo(account) { chrome.flash(YourAccountDemo.actsLater); return }
+        UIPasteboard.general.string = account
+        DSHaptic.tap()
+        chrome.flash(String(localized: "Copied · only on \(networks.map(\.name).formatted(.list(type: .or)))"))
     }
 
     private func small(_ words: String) -> some View {
@@ -145,8 +261,9 @@ struct MoveKeysWalk: View {
 
     private var foot: some View {
         HStack(alignment: .firstTextBaseline) {
-            Button { advance() } label: {
-                Text("Later").dsText(.heading17).foregroundStyle(DS.textSecondary).frame(minHeight: 48)
+            Button { step == .created ? done(.receive) : advance() } label: {
+                Text(step == .created ? String(localized: "Receive") : String(localized: "Later"))
+                    .dsText(.heading17).foregroundStyle(DS.textSecondary).frame(minHeight: 48)
             }
             .buttonStyle(RowPress())
             .disabled(connecting)
@@ -172,6 +289,8 @@ struct MoveKeysWalk: View {
         case .recovery: String(localized: "Add")
         case .signer: connecting ? String(localized: "Connecting…") : String(localized: "Connect")
         case .limit: String(localized: "Set")
+        case .roundUps: String(localized: "Turn on")
+        case .created: String(localized: "Done")
         }
     }
 
@@ -198,7 +317,7 @@ struct MoveKeysWalk: View {
                 do {
                     try YourAccountRecovery.make(for: account)
                 } catch {
-                    note = String(localized: "iCloud Keychain did not take the key. Add it later in Wallet › Security.")
+                    note = String(localized: "iCloud Keychain did not take the key. Add it later in Wallet › Your account.")
                     return
                 }
             }
@@ -211,7 +330,7 @@ struct MoveKeysWalk: View {
             Task {
                 defer { connecting = false }
                 do {
-                    let owner = try await SignerRequestSheet.choose(on: YourAccountOp.networks.filter { !$0.isTest }.map(\.chainId))
+                    let owner = try await SignerRequestSheet.choose(on: networks.map(\.chainId))
                     // A contract (a smart wallet) cannot sign for the account.
                     if try await YourAccountChain.isContract(YourAccountOp.base, owner) {
                         note = String(localized: "That wallet is a contract, not one whose key you hold")
@@ -235,25 +354,32 @@ struct MoveKeysWalk: View {
             choice.limitMinutes = period.minutes
             DSHaptic.success()
             advance()
+        case .roundUps:
+            if !inert { RoundUps.setting = roundUps }
+            DSHaptic.success()
+            advance()
+        case .created:
+            done(.close)
         }
     }
 
-    /// The next step, kept as it goes; the limit only stands with a Signer,
-    /// and the last step hands over to the Created sentence.
+    /// The next step, kept as it goes; the limit only stands with a
+    /// co-signer, and Created ends the walk.
     private func advance() {
         note = nil
         if !inert { YourAccountSetup.save(choice, for: account) }
-        let next: Step?
+        let next: Step
         switch step {
         case .recovery: next = .signer
-        case .signer: next = choice.signer == nil ? nil : .limit
-        case .limit: next = nil
+        case .signer: next = choice.signer == nil ? .roundUps : .limit
+        case .limit: next = .roundUps
+        case .roundUps, .created: next = .created
         }
         #if DEBUG
-        NSLog("keysWalk: step %d recovery=%@ signer=%@ limit=%@", next?.rawValue ?? 0, choice.recovery ? "yes" : "no",
-              choice.signer ?? "none", choice.limit.map { "\($0.dollars)/\($0.minutes)" } ?? "none")
+        NSLog("keysWalk: step %d recovery=%@ signer=%@ limit=%@ roundUps=%@", next.rawValue, choice.recovery ? "yes" : "no",
+              choice.signer ?? "none", choice.limit.map { "\($0.dollars)/\($0.minutes)" } ?? "none",
+              RoundUps.setting.on ? "\(RoundUps.setting.step)/\(RoundUps.setting.target.symbol)" : "off")
         #endif
-        guard let next else { done(); return }
         withAnimation(DS.Motion.standard) { step = next }
         if next == .limit {
             Task { @MainActor in

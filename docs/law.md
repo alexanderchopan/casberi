@@ -239,7 +239,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1638 of 1707 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1639 of 1708 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1835,16 +1835,16 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1454 — Robinhood Chain comes back to the account with every feature
 - §1455 — The spend limit, in the app: one switch for every network (amended by §1456, §1458)
 - §1456 — Both keys for everything at 2, one scan for every network, and a key added never lowers the threshold (amended by §1458)
-- §1457 — Your keys, right after Create: chosen once, on with the first send (amended by §1459, §1460, §1461, §1465, §1466, §1499)
+- §1457 — Your keys, right after Create: chosen once, on with the first send (amended by §1459, §1460, §1461, §1465, §1466, §1499, §1501)
 - §1458 — The spend limit fits the bundler: a change in two operations, a renewal that leaves ended periods be, Finish that kee…
-- §1459 — Two lines cut from creating your account (amended by §1500)
+- §1459 — Two lines cut from creating your account (amended by §1500, §1501)
 - §1460 — No summary after your keys: the Created sentence says it in one line
 - §1461 — The opening operation sets six limit periods, not twelve
 - §1462 — Security's box is nine, three across, the figure centered over its word (amended by §1463, §1480)
 - §1463 — The wash says the state: a threat red, an ask orange, on green, nothing for a zero
 - §1464 — The row does the thing, and Return commits: GitHub, X and a site in three taps
 - §1465 — One gutter per screen: Move and the keys walk share `MoveSentence.gutter`, Security's two sentences share theirs (amended by §1466)
-- §1466 — Move is one running sentence: clauses that never split across a line, one size, the money as small print (amended by §1479, §1494)
+- §1466 — Move is one running sentence: clauses that never split across a line, one size, the money as small print (amended by §1479, §1494; part superseded by §1501)
 - §1467 — The one Search asks the market: coins, tokens and stocks for whatever you typed, a pasted contract included, followed…
 - §1468 — Spending is the Wallet's fifth tile: the month or the week against the last one to the same point, the recurring half… (amended by §1469, §1480)
 - §1469 — Spending's two groups and its start box: Recurring and The rest are rows, each the sum of a list (Subscriptions, then… (amended by §1480)
@@ -1857,16 +1857,16 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1476 — Fees is Spending's third row: gas on every transaction your wallets sent, one per transaction, by network, apart from…
 - §1477 — The rating ask: Apple's own five-star sheet, for someone using the app on their own things on four different days, on…
 - §1478 — Your own model: the person's own OpenAI-compatible server as an agent seat — an address, an optional key, a model
-- §1479 — Move's sentence is one size, picked by fit: 52, 44, then 34; the verbs and Add at 24, the foot's acts at 34; the quot…
+- §1479 — Move's sentence is one size, picked by fit: 52, 44, then 34; the verbs and Add at 24, the foot's acts at 34; the quot… (part superseded by §1501)
 - §1480 — The Wallet restructured: Home is the overview, four tiles, every list behind a door, and Security, Cards and the cate… (amended by §1496, §1498)
 - §1481 — Buy's merchants wear their marks, and Buy's sentence is Swap's size (amends §1473; applies §1479)
 - §1482 — Every Wallet list row stands at one pitch: a 44pt head, 4pt of air, the room's inset both sides, a 2pt gap under the…
 - §1483 — Receive from Arc: a chain's own coin that is a dollar quotes ten, not a fraction (amended by §1485)
 - §1484 — Receive has no exchange door (amended by §1486)
 - §1485 — Receive from another network: a chain's own coin quotes 0.01, a floor refusal is asked again over it, and Relay's raw…
-- §1486 — Receive picks its network, always (amended by §1488)
+- §1486 — Receive picks its network, always (amended by §1488, §1501)
 - §1487 — Your account wears your face and is named You
-- §1488 — The arrival copies nothing until a network is picked
+- §1488 — The arrival copies nothing until a network is picked (amended by §1501)
 - §1489 — The Feed has no Wallet section; the Wallet's asks light its tab with a dot (amended by §1490)
 - §1490 — No tab wears a badge: the Wallet's dot and Library's broken-app ring are deleted
 - §1491 — Following and Markets stand on the Wallet's All only (amends §1480 item 2) (amended by §1498)
@@ -1877,8 +1877,9 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1496 — One section rung: every section name and every Wallet door is `heading24` with its glyph, no door carries a line, and… (amended by §1499)
 - §1497 — The Feed is titles and icons: no app name over a Newest row, no line under any Feed row
 - §1498 — Markets is a Wallet tile again, its list the Watchlist, and Home draws no Markets door
-- §1499 — A co-signer chosen at Create says it activates on the first send, and its step says only what it does
+- §1499 — A co-signer chosen at Create says it activates on the first send, and its step says only what it does (amended by §1501)
 - §1500 — Create's small print is "Face ID approves every move."
+- §1501 — The create flow, word by word: four steps and Created with Done, and Move is one size, always
 
 ## Dead rulings → what replaced them (generated)
 

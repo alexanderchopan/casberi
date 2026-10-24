@@ -70,10 +70,13 @@ struct MoveScreen: View {
     /// An account whose recovery key this phone's iCloud Keychain holds,
     /// when this phone has none of its own yet (prd §1427).
     @State private var recoverable: (address: String, origin: String)?
-    /// Made or brought here in this tray: the sentence finishes itself
-    /// ("Your account" → "Created …3416", §1442j).
+    /// Brought here in this tray: the sentence finishes itself ("Your
+    /// account" → "Ready …3416", §1442j). A made account ends on the walk's
+    /// own Created page instead (prd §1501).
     @State private var arrival: MoveSentence.Arrival?
-    /// Just created: your keys first (prd §1457), then the Created sentence.
+    /// The walk ended on Receive (prd §1501): Move opens there.
+    @State private var opening: MoveSentence.Verb?
+    /// Just created: the walk (prd §1457, §1501), which ends on Created.
     @State private var walking = false
     #if DEBUG
     /// `-keysWalk YES` (DEBUG): the walk again for this phone's account, at
@@ -84,7 +87,7 @@ struct MoveScreen: View {
     @State private var recoverableOn: [YourAccountOp.Network]?
 
     #if DEBUG
-    /// `-movePreview create|recover|created|ready` (DEBUG): draw a screen
+    /// `-movePreview create|recover|keys|ready` (DEBUG): draw a screen
     /// of §1442j over a phone that already has an account, without touching
     /// its key — create and recover are inert here, so the preview can never
     /// make or move an account.
@@ -106,9 +109,11 @@ struct MoveScreen: View {
                 // `-keysStep 1…4` opens on a step; inert, nothing is kept.
                 let n = UserDefaults.standard.integer(forKey: "keysStep")
                 MoveKeysWalk(account: address, inTray: inTray, inert: true,
-                             step: MoveKeysWalk.Step(rawValue: n) ?? .recovery) { NSLog("movePreview: keys done") }
-            } else if let preview, let address, preview == "created" || preview == "ready" {
-                MoveSentence(account: address, inTray: inTray, arrival: preview == "ready" ? .broughtHere : .created)
+                             step: MoveKeysWalk.Step(rawValue: n) ?? .recovery) { ending in
+                    NSLog("movePreview: keys done, %@", ending == .close ? "close" : "receive")
+                }
+            } else if let preview, let address, preview == "ready" {
+                MoveSentence(account: address, inTray: inTray, arrival: .broughtHere)
             } else {
                 shown
             }
@@ -130,15 +135,19 @@ struct MoveScreen: View {
     @ViewBuilder private var shown: some View {
         Group {
             if let address, walking || walkAgainNow {
-                MoveKeysWalk(account: address, inTray: inTray, step: walkStep) {
+                MoveKeysWalk(account: address, inTray: inTray, step: walkStep) { ending in
                     walkAgainDone = true
+                    // Done closes Move — it rose over wherever you were —
+                    // and Receive opens it there (prd §1501).
+                    opening = ending == .receive ? .receive : nil
                     withAnimation(DS.Motion.standard) { walking = false }
+                    if ending == .close, inTray { chrome.moveTray = false }
                 }
                 .transition(.opacity)
             } else if let address {
                 // The account exists: the page is the sentence (prd §1438),
                 // no head — it is this phone's account, there is no other.
-                MoveSentence(account: address, inTray: inTray, arrival: arrival)
+                MoveSentence(account: address, inTray: inTray, arrival: arrival, opening: opening)
                     .transition(.opacity)
             } else {
                 before
@@ -318,7 +327,6 @@ struct MoveScreen: View {
             // Followed in the Wallet from the start, so its balance and moves
             // land where every account's do.
             WalletStore.shared.add(made, label: WalletStore.yourAccountName)
-            arrival = .created
             walking = true
             withAnimation(DS.Motion.standard) { address = made }
             DSHaptic.success()

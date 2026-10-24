@@ -495,52 +495,35 @@ grep -q 'if YourAccountDemo.isDemo(account) { say(YourAccountDemo.actsLater); re
 [[ $(grep -c 'if YourAccountDemo.isDemo(account) { say(YourAccountDemo.actsLater); return }' Casberi/Casberi/Screens/MoveSentence.swift) -ge 2 ]] || { echo "✗ Move's sign() and copy() no longer both refuse in the demo (prd §1475)"; exit 1; }
 [[ $(grep -c 'if demoSays() { return }' Casberi/Casberi/Screens/MoveSecurity.swift) -ge 5 ]] || { echo "✗ a Security act changes a key in the demo (prd §1475)"; exit 1; }
 grep -q 'walking = true' Casberi/Casberi/Screens/MoveScreen.swift || { echo "✗ Create no longer walks through your keys (prd §1457)"; exit 1; }
-# The sentence is one size, picked by fit (prd §1479): the ladder's pick is
-# pure (`MoveFit`), so it is run here, and the views are held to reading it.
-FIT=Casberi/Casberi/Model/MoveFit.swift
+# ONE SIZE, ALWAYS (prd §1501, retiring §1479's pick-by-fit): every Move
+# sentence and every screen of the create flow is heading52; a clause wider
+# than a whole line wraps inside itself and a word wider than a line shrinks,
+# so nothing ever steps the sentence down. These guards hold the mechanism,
+# not the look: a fit returning (a ladder, a measurement feeding a pick) is
+# the rule undone without anyone deciding it.
 SENTENCE=Casberi/Casberi/Screens/MoveSentence.swift
-RAMP=Casberi/Shared/Typography.swift
-mkdir -p "$TMP/fit-harness"
-cat > "$TMP/fit-harness/main.swift" <<'SWIFT'
-import Foundation
-var bad = 0
-func check(_ ok: Bool, _ what: String) { if !ok { print("✗ " + what); bad += 1 } }
-check(MoveFit.ladder == [52, 44, 34], "the ladder is not 52, 44, 34")
-// "$25 of ETH / for 24.9 USDC / on Base." measured 300 wide at 52 in 342: stays at 52.
-check(MoveFit.pick(widest: 300, drawnAt: 52, width: 342) == 52, "a sentence that fits at 52 was shrunk")
-// "on Robinhood." measured 363 at 52: 44 fits (307), so 44.
-check(MoveFit.pick(widest: 363, drawnAt: 52, width: 342) == 44, "a clause too wide for 52 did not drop to 44")
-// A long quote measured 480 at 52: not even 44 (406), so the floor.
-check(MoveFit.pick(widest: 480, drawnAt: 52, width: 342) == 34, "a clause too wide for 44 did not reach the floor")
-// Drawn at the floor and narrow enough for 52 (240 → 367 at 52? no; 240 → 310 at 44): climbs to 44, not 52.
-check(MoveFit.pick(widest: 240, drawnAt: 34, width: 342) == 44, "a sentence at the floor did not climb to the rung it fits")
-// Drawn at 44, the widest clause predicts 341.8 at 52 in 342: within slack, so it stays at 44 (no flip-flop).
-check(MoveFit.pick(widest: 289.2, drawnAt: 44, width: 342) == 44, "a rounding-error fit stepped up — the sentence would flap between rungs")
-// The same clause, four points narrower, climbs.
-check(MoveFit.pick(widest: 285, drawnAt: 44, width: 342) == 52, "a clause with room to climb stayed down")
-// Nothing measured or no width: stay put.
-check(MoveFit.pick(widest: 0, drawnAt: 44, width: 342) == 44, "an unmeasured flow moved")
-check(MoveFit.pick(widest: 300, drawnAt: 52, width: 0) == 52, "a flow with no width moved")
-// Every rung on the ladder is a rung of the ramp.
-exit(bad == 0 ? 0 : 1)
-SWIFT
-xcrun swiftc -O -o "$TMP/fit" "$FIT" "$TMP/fit-harness/main.swift" 2>"$TMP/err" \
-  || { cat "$TMP/err"; echo "✗ MoveFit.swift does not compile alone (Foundation only)"; exit 1; }
-"$TMP/fit" || { echo "✗ the sentence's fit ladder drifted — see above"; exit 1; }
-for r in heading52 heading44 heading34; do
-  grep -q "static let $r = DSTextStyle" "$RAMP" || { echo "✗ the ladder's rung $r is not on the ramp (prd §1479)"; exit 1; }
-done
-grep -q 'case 52: .heading52' "$SENTENCE" && grep -q 'case 44: .heading44' "$SENTENCE" && grep -q 'default: .heading34' "$SENTENCE" \
-  || { echo "✗ MoveSentence.rung no longer maps the ladder to heading52 · heading44 · heading34 (prd §1479)"; exit 1; }
-grep -q 'static let size: DSTextStyle' "$SENTENCE" && { echo "✗ MoveSentence.size is back — a fixed rung bypasses the fit (prd §1479)"; exit 1; }
-grep -q 'MoveFit.pick(widest: widest, drawnAt: rung, width: width)' "$SENTENCE" || { echo "✗ MoveFlow no longer picks the rung by fit (prd §1479)"; exit 1; }
-grep -q 'onPreferenceChange(MoveClauseWidth.self)' "$SENTENCE" || { echo "✗ MoveFlow no longer reads its clauses' widths (prd §1479)"; exit 1; }
-[[ $(grep -c 'modifier(MoveMeasured())' "$SENTENCE") -ge 2 ]] || { echo "✗ a word or a clause no longer reports its width — the fit would measure nothing (prd §1479)"; exit 1; }
-grep -q '@Environment(\\.moveRung) private var rung' "$SENTENCE" || { echo "✗ MoveWord no longer reads the flow's rung (prd §1479)"; exit 1; }
-grep -rq 'dsText(MoveSentence.size)\|dsText(.heading28)\|dsText(.heading52)\|dsText(.heading44)' Casberi/Casberi/Screens/MoveSentence.swift Casberi/Casberi/Screens/MoveScreen.swift Casberi/Casberi/Screens/MoveKeysWalk.swift \
-  && { echo "✗ a Move view names the sentence's rung itself instead of reading the flow's pick (prd §1479)"; exit 1; }
+FLOW=Casberi/Casberi/Screens/ThingSheetView.swift
+WALK=Casberi/Casberi/Screens/MoveKeysWalk.swift
+[[ -f Casberi/Casberi/Model/MoveFit.swift ]] && { echo "✗ MoveFit is back — the sentence picks a size again (prd §1501)"; exit 1; }
+grep -q 'static let rung: DSTextStyle = .heading52' "$SENTENCE" || { echo "✗ Move's one size is no longer heading52 (prd §1501)"; exit 1; }
+grep -q '.environment(\\.moveRung, MoveSentence.rung)' "$SENTENCE" || { echo "✗ MoveFlow no longer sets the one size for every word under it (prd §1501)"; exit 1; }
+grep -q 'fitsWide: true' "$SENTENCE" && grep -q 'var fitsWide = false' "$FLOW" \
+  || { echo "✗ a clause wider than a line is no longer offered the line — it would overflow the screen (prd §1501)"; exit 1; }
+grep -q 'MoveClauseLayout(spacing: MoveSentence.clauseGap)' "$SENTENCE" || { echo "✗ a clause can no longer wrap inside itself (prd §1501)"; exit 1; }
+grep -q '\.minimumScaleFactor(0.5)' "$SENTENCE" || { echo "✗ a word wider than a line no longer shrinks — it would clip (prd §1501)"; exit 1; }
+grep -q '@Environment(\\.moveRung) private var rung' "$SENTENCE" || { echo "✗ MoveWord no longer reads the flow's size (prd §1501)"; exit 1; }
+grep -rq 'dsText(.heading28)\|dsText(.heading52)\|dsText(.heading44)' "$SENTENCE" Casberi/Casberi/Screens/MoveScreen.swift "$WALK" \
+  && { echo "✗ a Move view names a sentence size itself instead of reading the flow's (prd §1501)"; exit 1; }
+# The walk (prd §1501): the limit only with a co-signer, round-ups always,
+# Created last; Done closes Move, Receive opens it on Receive.
+grep -q 'case .signer: next = choice.signer == nil ? .roundUps : .limit' "$WALK" || { echo "✗ the walk's order drifted: the limit needs a co-signer, round-ups always follow (prd §1501)"; exit 1; }
+grep -q 'case .created: String(localized: "Done")' "$WALK" && grep -q 'done(.close)' "$WALK" && grep -q 'done(.receive)' "$WALK" \
+  || { echo "✗ Created no longer ends the walk with Done and Receive (prd §1501)"; exit 1; }
+grep -q 'if ending == .close, inTray { chrome.moveTray = false }' Casberi/Casberi/Screens/MoveScreen.swift \
+  || { echo "✗ Done no longer closes Move (prd §1501)"; exit 1; }
+grep -q 'case created' "$SENTENCE" && { echo "✗ Move's Created arrival is back beside the walk's Created page (prd §1501, §723)"; exit 1; }
 grep -q 'Self.short($0, decimals: buy.token.decimals)' "$SENTENCE" || { echo "✗ the For word draws the exact quote again — the clause outgrows 52 (prd §1479)"; exit 1; }
 grep -q 'return "≈ " + Self.figure(back, decimals: buy.token.decimals)' "$SENTENCE" || { echo "✗ the print line no longer carries the ≈ and the exact quote (prd §1479, §83)"; exit 1; }
 grep -q 'case .swap: \[soldPrint, quotePrint, feeTotal\]' "$SENTENCE" || { echo "✗ the swap's print line dropped the exact quote (prd §1479)"; exit 1; }
 
-echo "✓ your account: the address is the factory's, the send's bytes are the module's, amounts add up, Move is in every build, it names only networks this phone can use, asks where money lacks the recovery key, the sentence is one size picked by fit, and an exported key is kept apart and shown only once it landed"
+echo "✓ your account: the address is the factory's, the send's bytes are the module's, amounts add up, Move is in every build, it names only networks this phone can use, asks where money lacks the recovery key, the sentence is one size that wraps, the create walk ends on Created, and an exported key is kept apart and shown only once it landed"

@@ -5206,12 +5206,23 @@ struct FlowLayout: Layout {
     var lineSpacing: CGFloat? = nil
     /// Added above a piece marked `FlowBreak`: the air between two sentences.
     var breakGap: CGFloat = 0
+    /// A piece wider than a whole line is offered the line's width, so it
+    /// can wrap or shrink inside it (Move's sentence, prd §1501). Off for
+    /// every other flow, which lays out as it always has.
+    var fitsWide = false
+
+    private func measure(_ view: LayoutSubview, _ width: CGFloat) -> (CGSize, ProposedViewSize) {
+        let natural = view.sizeThatFits(.unspecified)
+        guard fitsWide, width.isFinite, natural.width > width else { return (natural, .unspecified) }
+        let offer = ProposedViewSize(width: width, height: nil)
+        return (view.sizeThatFits(offer), offer)
+    }
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
         let width = proposal.width ?? .infinity
         var x: CGFloat = 0, y: CGFloat = 0, rowH: CGFloat = 0
         for view in subviews {
-            let size = view.sizeThatFits(.unspecified)
+            let (size, _) = measure(view, width)
             let breaks = view[FlowBreak.self] && x > 0
             if breaks || (x + size.width > width && x > 0) {
                 x = 0; y += rowH + (lineSpacing ?? spacing) + (breaks ? breakGap : 0); rowH = 0
@@ -5225,12 +5236,12 @@ struct FlowLayout: Layout {
     func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
         var x = bounds.minX, y = bounds.minY, rowH: CGFloat = 0
         for view in subviews {
-            let size = view.sizeThatFits(.unspecified)
+            let (size, offer) = measure(view, bounds.width)
             let breaks = view[FlowBreak.self] && x > bounds.minX
             if breaks || (x + size.width > bounds.maxX && x > bounds.minX) {
                 x = bounds.minX; y += rowH + (lineSpacing ?? spacing) + (breaks ? breakGap : 0); rowH = 0
             }
-            view.place(at: CGPoint(x: x, y: y), proposal: .unspecified)
+            view.place(at: CGPoint(x: x, y: y), proposal: offer)
             x += size.width + spacing
             rowH = max(rowH, size.height)
         }

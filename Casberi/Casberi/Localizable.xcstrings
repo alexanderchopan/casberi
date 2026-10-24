@@ -38829,6 +38829,34 @@
         }
       }
     },
+    "A co-signer" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Un cofirmante"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "共同署名者"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "공동 서명자"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "一位共同签名者"
+          }
+        }
+      }
+    },
     "A column per month, %@ to %@" : {
       "localizations" : {
         "en" : {
@@ -42730,6 +42758,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "操作"
+          }
+        }
+      }
+    },
+    "Activates on first move" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Se activa con el primer movimiento"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "最初の移動で有効"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "첫 이동 시 활성화"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "首次转移时启用"
           }
         }
       }
@@ -61462,6 +61518,34 @@
         }
       }
     },
+    "Co-signs any move over your spend limit. Activates on your first move." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cofirma cualquier movimiento por encima de tu límite de gasto. Se activa con tu primer movimiento."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "利用上限を超える移動に共同署名します。最初の移動で有効になります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "지출 한도를 넘는 모든 이동에 공동 서명합니다. 첫 이동 시 활성화됩니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "为超出支出上限的每笔转移共同签名。首次转移时启用。"
+          }
+        }
+      }
+    },
     "CoW did not answer on %@" : {
       "localizations" : {
         "es" : {
@@ -63765,6 +63849,34 @@
         }
       }
     },
+    "Copied · only on %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Copiado · solo en %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "コピーしました · %@のみ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "복사됨 · %@에서만"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已复制 · 仅限 %@"
+          }
+        }
+      }
+    },
     "Copied — couldn't open the app" : {
       "localizations" : {
         "es" : {
@@ -64069,6 +64181,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "复制代码"
+          }
+        }
+      }
+    },
+    "Copy deposit address" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Copiar dirección de depósito"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "入金アドレスをコピー"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "입금 주소 복사"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "复制充值地址"
           }
         }
       }
@@ -87008,6 +87148,34 @@
         }
       }
     },
+    "Getting your account back needs it too." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "También hace falta para recuperar tu cuenta."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アカウントの復元にも必要です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "계정을 되찾을 때도 필요합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "找回账户时也需要它。"
+          }
+        }
+      }
+    },
     "Getting your code…" : {
       "localizations" : {
         "es" : {
@@ -89708,6 +89876,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "如果失去 Casberi，由你持有的钱包里的密钥代为签名"
+          }
+        }
+      }
+    },
+    "If you lose this device, your account opens on another." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Si pierdes este dispositivo, tu cuenta se abre en otro."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "このデバイスをなくしても、アカウントは別のデバイスで開けます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 기기를 잃어버려도 다른 기기에서 계정이 열립니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "如果丢失这台设备，你的账户可在另一台设备上打开。"
           }
         }
       }
@@ -98837,34 +99033,6 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "看起来是你用过的某个地址的仿冒品——这是另一个钱包。"
-          }
-        }
-      }
-    },
-    "Lose this iPhone, sign in on the next one." : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Si pierdes este iPhone, entra en el siguiente."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "このiPhoneをなくしても、次のiPhoneで続けられます。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "이 iPhone을 잃어버려도 다음 iPhone에서 이어서 쓸 수 있습니다."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "丢了这台 iPhone，也能在下一台上继续使用。"
           }
         }
       }
@@ -120960,34 +121128,6 @@
         }
       }
     },
-    "Only %@ on %@ here. %@%@." : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Aquí solo %1$@ en %2$@. %3$@%4$@."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ここには%2$@の%1$@のみ。%3$@%4$@。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "여기에는 %2$@의 %1$@만 보내세요. %3$@%4$@."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "此处只收 %2$@ 上的 %1$@。%3$@%4$@。"
-          }
-        }
-      }
-    },
     "Only %@ on %@ here. Relay brings it to your account in seconds, for about %@." : {
       "localizations" : {
         "es" : {
@@ -125320,34 +125460,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "超出后，你的签名者也要签名。恢复时也一样。"
-          }
-        }
-      }
-    },
-    "Over it, your co-signer signs too. So does recovery." : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Por encima, tu cofirmante también firma. La recuperación también."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "それを超えると共同署名者も署名します。復旧も同様です。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "이를 넘으면 공동 서명자도 서명합니다. 복구도 마찬가지입니다."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "超出后，你的共同签名人也会签名。恢复也一样。"
           }
         }
       }
@@ -141892,6 +142004,34 @@
         }
       }
     },
+    "Require a co-signer" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Exigir un cofirmante"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "共同署名者を必須に"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "공동 서명자 필요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "需要共同签名者"
+          }
+        }
+      }
+    },
     "Require both keys" : {
       "localizations" : {
         "es" : {
@@ -143462,6 +143602,34 @@
         }
       }
     },
+    "Round up each move" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Redondea cada movimiento"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "各移動を切り上げ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "각 이동을 올림"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "每笔转移向上取整"
+          }
+        }
+      }
+    },
     "Round up each send" : {
       "localizations" : {
         "es" : {
@@ -143486,6 +143654,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "每次发送时凑整"
+          }
+        }
+      }
+    },
+    "Round up to" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Redondear a"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "切り上げ単位"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "올림 단위"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "取整到"
           }
         }
       }
@@ -169186,6 +169382,34 @@
         }
       }
     },
+    "This deposit address takes only %@ on %@. %@%@." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Esta dirección de depósito solo acepta %1$@ en %2$@. %3$@%4$@."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "この入金アドレスは%2$@の%1$@のみ受け取れます。%3$@%4$@。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 입금 주소는 %2$@의 %1$@만 받습니다. %3$@%4$@."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "此充值地址只收 %2$@ 上的 %1$@。%3$@%4$@。"
+          }
+        }
+      }
+    },
     "This device can't use it" : {
       "localizations" : {
         "es" : {
@@ -175999,6 +176223,62 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "使用"
+          }
+        }
+      }
+    },
+    "Use %@ on these networks. On any other network, get a deposit address in Receive and pick the token and network to receive on." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Usa %@ en estas redes. En cualquier otra red, obtén una dirección de depósito en Recibir y elige el token y la red en la que recibir."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "これらのネットワークでは%@を使います。その他のネットワークでは、「受け取る」で入金アドレスを取得し、受け取るトークンとネットワークを選んでください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 네트워크에서는 %@을(를) 사용하세요. 다른 네트워크에서는 받기에서 입금 주소를 받고, 받을 토큰과 네트워크를 고르세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在这些网络上使用 %@。在其他网络上，请在“接收”中获取充值地址，并选择要接收的代币和网络。"
+          }
+        }
+      }
+    },
+    "Use %@ on these three. On any other network, get a deposit address in Receive and pick the token and network to receive on." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Usa %@ en estas tres. En cualquier otra red, obtén una dirección de depósito en Recibir y elige el token y la red en la que recibir."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "この3つでは%@を使います。その他のネットワークでは、「受け取る」で入金アドレスを取得し、受け取るトークンとネットワークを選んでください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 세 곳에서는 %@을(를) 사용하세요. 다른 네트워크에서는 받기에서 입금 주소를 받고, 받을 토큰과 네트워크를 고르세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在这三个网络上使用 %@。在其他网络上，请在“接收”中获取充值地址，并选择要接收的代币和网络。"
           }
         }
       }
@@ -183625,6 +183905,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你关注的账户价值多少，以及该价值的走势线。未找到任何有价格的资产。"
+          }
+        }
+      }
+    },
+    "What the change buys" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Qué compra el cambio"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "おつりで買うもの"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "잔돈으로 살 것"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "零钱买入什么"
           }
         }
       }
@@ -193585,34 +193893,6 @@
         }
       }
     },
-    "Your co-signer" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Tu cofirmante"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "あなたの共同署名者"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "당신의 공동 서명자"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "你的共同签名人"
-          }
-        }
-      }
-    },
     "Your code" : {
       "localizations" : {
         "es" : {
@@ -194176,34 +194456,6 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你的信息流"
-          }
-        }
-      }
-    },
-    "Your first send activates your %@." : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Tu primer envío activa tu %@."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "最初の送金で%@が有効になります。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "첫 송금으로 %@이(가) 활성화됩니다."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "你的第一次发送会启用你的%@。"
           }
         }
       }
@@ -198833,34 +199085,6 @@
         }
       }
     },
-    "a wallet you have." : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "una cartera que ya tienes."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "お持ちのウォレット。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "가지고 있는 지갑."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "你已有的钱包。"
-          }
-        }
-      }
-    },
     "a week" : {
       "localizations" : {
         "es" : {
@@ -199967,6 +200191,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "以及你的密钥"
+          }
+        }
+      }
+    },
+    "another wallet." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "otra billetera."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "別のウォレットに。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "다른 지갑에."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "另一个钱包中。"
           }
         }
       }
@@ -203401,6 +203653,34 @@
         }
       }
     },
+    "for moves" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "para movimientos"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "移動に"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이동에"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "用于转移"
+          }
+        }
+      }
+    },
     "frame" : {
       "localizations" : {
         "es" : {
@@ -204221,30 +204501,30 @@
         }
       }
     },
-    "iCloud Keychain did not take the key. Add it later in Wallet › Security." : {
+    "iCloud Keychain did not take the key. Add it later in Wallet › Your account." : {
       "localizations" : {
         "es" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "El llavero de iCloud no aceptó la clave. Añádela más tarde en Cartera › Seguridad."
+            "state" : "needs_review",
+            "value" : "El llavero de iCloud no aceptó la clave. Añádela más tarde en Cartera › Tu cuenta."
           }
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "iCloudキーチェーンに鍵を保存できませんでした。あとでウォレット › セキュリティで追加してください。"
+            "state" : "needs_review",
+            "value" : "iCloudキーチェーンが鍵を受け付けませんでした。後で「ウォレット › あなたのアカウント」で追加してください。"
           }
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "iCloud 키체인에 키를 저장하지 못했습니다. 나중에 지갑 › 보안에서 추가하세요."
+            "state" : "needs_review",
+            "value" : "iCloud 키체인이 키를 받지 않았습니다. 나중에 지갑 › 내 계정에서 추가하세요."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "translated",
-            "value" : "iCloud 钥匙串未能保存该密钥。请稍后在“钱包 › 安全”中添加。"
+            "state" : "needs_review",
+            "value" : "iCloud 钥匙串未接受该密钥。稍后在“钱包 › 你的账户”中添加。"
           }
         }
       }
@@ -209872,6 +210152,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "已超出范围一天"
+          }
+        }
+      }
+    },
+    "over" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "por encima de"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "超過"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "초과"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "超过"
           }
         }
       }
@@ -215598,6 +215906,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "无限额花费"
+          }
+        }
+      }
+    },
+    "to the next" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "al siguiente"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "次の"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "다음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "到下一个"
           }
         }
       }

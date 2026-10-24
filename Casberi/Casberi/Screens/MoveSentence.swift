@@ -27,30 +27,20 @@ struct MoveSentence: View {
     /// there is no tab bar to clear.
     var inTray = false
 
-    /// The account was just made, or just brought to this phone (§1442j):
-    /// the sentence opens on Receive and finishes itself, "Your account"
-    /// turning into "Created …3416" (or "Ready …3416"), the verbs arriving.
-    enum Arrival { case created, broughtHere }
+    /// The account was just brought to this phone (§1442j): the sentence
+    /// opens on Receive and finishes itself, "Your account" turning into
+    /// "Ready …3416", the verbs arriving. A made account has no arrival here:
+    /// it ends on the walk's own Created page (prd §1501), and its line about
+    /// what the first move activates went with it — the co-signer step says it.
+    enum Arrival { case broughtHere }
     var arrival: Arrival?
 
-    init(account: String, inTray: Bool = false, arrival: Arrival? = nil) {
+    init(account: String, inTray: Bool = false, arrival: Arrival? = nil, opening: Verb? = nil) {
         self.account = account
         self.inTray = inTray
         self.arrival = arrival
-        _verb = State(initialValue: arrival == nil ? .swap : .receive)
+        _verb = State(initialValue: opening ?? (arrival == nil ? .swap : .receive))
         _fresh = State(initialValue: arrival != nil)
-    }
-
-    /// What was chosen at Create, named, and when it turns on (user: "it's
-    /// not clear what 'your keys go on with your first send' means").
-    private var keysWaiting: String? {
-        guard let choice = YourAccountSetup.choice(for: account) else { return nil }
-        var named: [String] = []
-        if choice.recovery { named.append(String(localized: "recovery key")) }
-        if choice.signer != nil { named.append(String(localized: "Signer")) }
-        if choice.limit != nil { named.append(String(localized: "spend limit")) }
-        guard !named.isEmpty else { return nil }
-        return String(localized: "Your first send activates your \(named.formatted(.list(type: .and))).")
     }
 
     /// Still the arrival's sentence: until a verb is picked.
@@ -635,8 +625,7 @@ struct MoveSentence: View {
         } else if fresh {
             MoveClause {
                 HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                    word(arrived ? (arrival == .broughtHere ? String(localized: "Ready") : String(localized: "Created"))
-                                 : String(localized: "Your account"),
+                    word(arrived ? String(localized: "Ready") : String(localized: "Your account"),
                          ink: arrived ? DS.textSecondary : DS.textPrimary)
                     if arrived {
                         // Never a copy without its network (prd §1488): the
@@ -709,23 +698,17 @@ struct MoveSentence: View {
         }
     }
 
-    /// **ONE SIZE, PICKED BY FIT (prd §1479).** The sentence wears the
-    /// largest rung at which every clause stays whole on its line: 52, 44,
-    /// then 34 (`MoveFit`). `MoveFlow` measures and picks; every word reads
-    /// the pick through `\.moveRung`, so nothing in the sentence names a
-    /// rung of its own.
-    static func rung(_ size: Double) -> DSTextStyle {
-        switch size {
-        case 52: .heading52
-        case 44: .heading44
-        default: .heading34
-        }
-    }
+    /// **THE SENTENCE'S ONE SIZE (prd §1501).** Every word of every Move
+    /// sentence, and of the create flow, wears it; nothing picks another.
+    static let rung: DSTextStyle = .heading52
+    /// The space between a phrase's words, as a share of the size: Figtree's
+    /// own space advance (measured 0.231em, Figtree Bold).
+    static let wordSpace: CGFloat = 0.231
 
     /// A quote's figure for the sentence: three significant figures, whole
     /// above a hundred — "24.9 USDC", "0.00104 ETH", "1,235 USDC". The ≈ and
     /// the exact figure are the print line's (§1479), so the sentence's
-    /// longest clause stays short enough to stand at 52.
+    /// clauses stay short.
     static func short(_ units: String, decimals: Int) -> String {
         let v = Double(Op.display(units, decimals: decimals, places: min(decimals, 12))) ?? 0
         if v == 0 { return "0" }
@@ -1291,7 +1274,9 @@ struct MoveSentence: View {
                         .foregroundStyle(DS.textSecondary)
                         .textSelection(.enabled)
                         .fixedSize(horizontal: false, vertical: true)
-                    DSCopyRow(value: route.address, label: "Copy address", sensitive: false)
+                    // A deposit address, named so: it is not your account's
+                    // own (prd §1501, the Created page's line points here).
+                    DSCopyRow(value: route.address, label: "Copy deposit address", sensitive: false)
                     // A wrong token sent here can be lost, so the line names
                     // the one it takes; a swap on the way is said (§83), since
                     // what lands is set by the price when it lands.
@@ -1338,14 +1323,6 @@ struct MoveSentence: View {
                 if fresh, arrived, emptyEverywhere {
                     Text("Nothing in it yet.")
                         .dsText(.body17).foregroundStyle(DS.textSecondary)
-                        .transition(.opacity)
-                }
-                // The keys chosen right after Create (prd §1457, §1460): the
-                // one line that stands for a summary.
-                if fresh, arrived, arrival == .created, let keysWaiting {
-                    Text(verbatim: keysWaiting)
-                        .dsText(.body17).foregroundStyle(DS.textSecondary)
-                        .fixedSize(horizontal: false, vertical: true)
                         .transition(.opacity)
                 }
                 if let elsewhereFinding {
@@ -1778,14 +1755,14 @@ struct MoveSentence: View {
     }
 
     /// The one line under a route's address: what it takes, what lands, the
-    /// fee. "Only USDT on Arbitrum here. Relay brings it to your account as
+    /// fee. "This deposit address takes only USDT on Arbitrum. Relay brings it to your account as
     /// USDC on Base in seconds, at the price when it lands, for about $0.05."
     static func elsewhereLine(_ route: YourAccountElsewhere.Route) -> String {
         let brings = route.converts
             ? String(localized: "Relay brings it to your account as \(route.arrives.symbol) on \(route.to.name) in seconds, at the price when it lands")
             : String(localized: "Relay brings it to your account in seconds")
         let fee = route.feeUSD.map { String(localized: ", for about \(money(max($0, 0.01)))") } ?? ""
-        return String(localized: "Only \(route.token.symbol) on \(route.from.name) here. \(brings)\(fee).")
+        return String(localized: "This deposit address takes only \(route.token.symbol) on \(route.from.name). \(brings)\(fee).")
     }
 
     private var networkList: some View {
@@ -3039,28 +3016,21 @@ struct MoveSentence: View {
 
 // MARK: - The running sentence's parts (prd §1466)
 
-/// A flow of clauses: wraps between them, never inside one.
-/// **THE FLOW PICKS THE SENTENCE'S SIZE (prd §1479).** Every clause reports
-/// its width; the widest, against the width the flow has, picks the rung
-/// (`MoveFit`), and every word under the flow reads it through `\.moveRung`.
-/// One size for the whole sentence, the largest at which no clause has to
-/// break — and the words never name a rung themselves.
+/// **ONE SIZE, ALWAYS (prd §1501, retiring §1479's pick-by-fit; user: "it
+/// can go on more than one row"; "same for move it should be same size
+/// regardless").** Every Move sentence and every screen of the create flow
+/// is `heading52`. A clause that fits the line it would start keeps to it;
+/// one that does not hops to the next line whole, as §1466 ruled; and a
+/// clause wider than a whole line — "in iCloud Keychain.", "Round up each
+/// move" — wraps inside itself (`MoveClauseLayout`), so nothing steps the
+/// sentence down to make it fit. A single word wider than a line shrinks,
+/// that word alone (measured: the widest Move draws, "1,234,567.89", is
+/// 304pt of the phone's 348).
 struct MoveFlow<Content: View>: View {
     @ViewBuilder let content: () -> Content
-    @State private var rung = MoveFit.ladder[0]
-    @State private var width: CGFloat = 0
-    @State private var widest: CGFloat = 0
     var body: some View {
-        FlowLayout(spacing: MoveSentence.clauseGap, lineSpacing: 0, breakGap: DS.Space.s4) { content() }
-            .environment(\.moveRung, MoveSentence.rung(rung))
-            .onPreferenceChange(MoveClauseWidth.self) { widest = $0; refit() }
-            .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0; refit() }
-    }
-
-    private func refit() {
-        let next = MoveFit.pick(widest: widest, drawnAt: rung, width: width)
-        guard next != rung else { return }
-        withAnimation(DS.Motion.standard) { rung = next }
+        FlowLayout(spacing: MoveSentence.clauseGap, lineSpacing: 0, breakGap: DS.Space.s4, fitsWide: true) { content() }
+            .environment(\.moveRung, MoveSentence.rung)
     }
 }
 
@@ -3083,54 +3053,97 @@ struct MoveRungReader<Content: View>: View {
     var body: some View { content(rung) }
 }
 
-/// The widest piece under a flow, in points, at the rung it was drawn at.
-struct MoveClauseWidth: PreferenceKey {
-    static let defaultValue: CGFloat = 0
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = max(value, nextValue()) }
-}
+/// A clause's pieces in one line when they fit the width offered, wrapped
+/// inside it when they do not (prd §1501). Asked for its size with no width,
+/// it answers with its one-line width, so the outer flow sees a clause as one
+/// piece until the clause is wider than a whole line.
+struct MoveClauseLayout: Layout {
+    var spacing: CGFloat
 
-private struct MoveMeasured: ViewModifier {
-    func body(content: Content) -> some View {
-        content.background(GeometryReader { g in
-            Color.clear.preference(key: MoveClauseWidth.self, value: g.size.width)
-        })
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        rows(proposal.width, subviews).size
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        for (view, frame) in rows(bounds.width, subviews).frames {
+            view.place(at: CGPoint(x: bounds.minX + frame.minX, y: bounds.minY + frame.minY),
+                       anchor: .topLeading, proposal: ProposedViewSize(frame.size))
+        }
+    }
+
+    private func rows(_ width: CGFloat?, _ subviews: Subviews) -> (size: CGSize, frames: [(LayoutSubview, CGRect)]) {
+        let limit = width ?? .infinity
+        var frames: [(LayoutSubview, CGRect)] = []
+        var x: CGFloat = 0, y: CGFloat = 0, rowH: CGFloat = 0, widest: CGFloat = 0
+        for view in subviews {
+            var size = view.sizeThatFits(.unspecified)
+            // A piece wider than the whole line is offered the line: a word
+            // shrinks, a phrase wraps.
+            if size.width > limit { size = view.sizeThatFits(ProposedViewSize(width: limit, height: nil)) }
+            if x > 0, x + size.width > limit {
+                x = 0; y += rowH; rowH = 0
+            }
+            frames.append((view, CGRect(x: x, y: y, width: size.width, height: size.height)))
+            widest = max(widest, x + size.width)
+            x += size.width + spacing
+            rowH = max(rowH, size.height)
+        }
+        return (CGSize(width: widest, height: y + rowH), frames)
     }
 }
 
-/// One word of the sentence, at the sentence's size; digits roll.
+/// One word or phrase of the sentence, at the sentence's size; digits roll.
+/// A phrase is its words, so a phrase wider than a line can wrap between
+/// them (prd §1501); VoiceOver reads it as one phrase.
 struct MoveWord: View {
     let text: String
     var ink: Color = DS.textPrimary
     @Environment(\.moveRung) private var rung
     init(_ text: String, ink: Color = DS.textPrimary) { self.text = text; self.ink = ink }
     var body: some View {
-        Text(verbatim: text)
+        let words = text.split(separator: " ", omittingEmptySubsequences: true).map(String.init)
+        if words.count > 1 {
+            MoveClauseLayout(spacing: rung.size * MoveSentence.wordSpace) {
+                ForEach(Array(words.enumerated()), id: \.offset) { _, word in piece(word) }
+            }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(Text(verbatim: text))
+        } else {
+            piece(text)
+        }
+    }
+
+    private func piece(_ word: String) -> some View {
+        Text(verbatim: word)
             .dsText(rung)
             .foregroundStyle(ink)
             .monospacedDigit()
             .contentTransition(.numericText())
-            .fixedSize()
-            .modifier(MoveMeasured())
+            .lineLimit(1)
+            .minimumScaleFactor(0.5)
     }
 }
 
 /// One clause: its small word (white, the sentence's), then its value, and
-/// a comma when a list needs one — one piece on one line, always.
+/// a comma when a list needs one — one piece that keeps to one line, and
+/// wraps inside itself only when it is wider than a whole line (§1501).
 struct MoveClause<Value: View>: View {
     var glue: String? = nil
     var glueInk: Color = DS.textPrimary
     var trail: String? = nil
     @ViewBuilder let value: () -> Value
     var body: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 0) {
-            if let glue {
-                MoveWord(glue, ink: glueInk).padding(.trailing, MoveSentence.clauseGap)
+        MoveClauseLayout(spacing: MoveSentence.clauseGap) {
+            if let glue { MoveWord(glue, ink: glueInk) }
+            if let trail {
+                HStack(alignment: .firstTextBaseline, spacing: 0) {
+                    value()
+                    MoveWord(trail)
+                }
+            } else {
+                value()
             }
-            value()
-            if let trail { MoveWord(trail) }
         }
-        .fixedSize()
-        .modifier(MoveMeasured())
     }
 }
 

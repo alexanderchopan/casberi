@@ -303,7 +303,7 @@ struct MoveSecurity: View {
     /// narrower one, on their own screens.
     static let sentenceGutter: CGFloat = 76
 
-    private static func target(_ listed: YourAccountTokens.Listed, on net: YourAccountOp.Network) -> RoundUps.Target {
+    static func target(_ listed: YourAccountTokens.Listed, on net: YourAccountOp.Network) -> RoundUps.Target {
         RoundUps.Target(chainId: net.chainId, address: listed.token.contract ?? YourAccountSwap.native,
                         symbol: listed.token.symbol, decimals: listed.token.decimals, network: net.name)
     }
@@ -859,7 +859,7 @@ struct MoveSecurity: View {
             who = keys.count == 1 ? YourAccount.short(one) : String(localized: "\(keys.count) keys")
         } else if let chosen = setup?.signer {
             if outsideTargets.isEmpty, !signerRides.isEmpty {
-                return (String(localized: "Activates on first send"), DS.textSecondary)
+                return (String(localized: "Activates on first move"), DS.textSecondary)  // prd §1501: the flow's one word
             }
             who = YourAccount.short(chosen)
         } else {
