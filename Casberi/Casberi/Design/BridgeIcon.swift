@@ -23,8 +23,16 @@ private enum BridgeIconArt {
     private static var images: [String: UIImage?] = [:]
 
     /// A name that wears another brand's mark: one company's second service
-    /// (prd §1205), never a lookalike.
-    private static let aliases: [String: String] = ["uber eats": "brand-uber"]
+    /// (prd §1205), never a lookalike. Bitrefill names its cards in full
+    /// ("Delta Air Lines", "PlayStation Store", "Digital Prepaid Visa"), and
+    /// "AT&T" has a character no asset name carries (prd §1481).
+    private static let aliases: [String: String] = [
+        "uber eats": "brand-uber",
+        "delta air lines": "brand-delta",
+        "playstation store": "brand-playstation",
+        "digital prepaid visa": "brand-visa",
+        "at&t": "brand-att",
+    ]
 
     static func assetName(for name: String) -> String {
         if let hit = names[name] { return hit }

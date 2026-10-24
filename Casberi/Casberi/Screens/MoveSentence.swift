@@ -1425,11 +1425,16 @@ struct MoveSentence: View {
     // MARK: - The choices
 
     private func listRow(_ title: String, sub: String? = nil, trailing: String? = nil,
-                         mark: String? = nil, image: String? = nil, dim: Bool = false,
+                         mark: String? = nil, image: String? = nil, brand: String? = nil, dim: Bool = false,
                          act: @escaping () -> Void) -> some View {
         Button(action: act) {
             HStack(spacing: DS.Space.s3) {
-                if let image {
+                if let brand {
+                    // An app's or a company's own mark (`BridgeIcon`), not a
+                    // token's (`AssetMark` reads token art only, prd §1481).
+                    BridgeIcon(name: brand, size: DS.Face.list, circular: true)
+                        .accessibilityHidden(true)
+                } else if let image {
                     Image(image)
                         .resizable()
                         .scaledToFill()
@@ -2456,12 +2461,16 @@ struct MoveSentence: View {
             HStack(alignment: .firstTextBaseline, spacing: 0) {
                 word("$", ink: amount.isEmpty ? DS.textTertiary : DS.pickInk)
                 amountField
-                word(buyProduct?.noun ?? String(localized: "gift card"), ink: DS.textPrimary).padding(.leading, 8)
             }
             .contentShape(Rectangle())
             .onTapGesture { if stage == nil { focus = .amount } }
             .dsCardLead(Text("Edits the amount")) { if stage == nil { focus = .amount } }
         }
+        // The noun is its own clause, and so are "with USDC" and "on Base.":
+        // the flow sizes the sentence by its widest clause (§1479), and one
+        // unbreakable "with USDC on Base." drew Buy a size under Swap, Send
+        // and Receive (prd §1481).
+        MoveClause { word(buyProduct?.noun ?? String(localized: "gift card"), ink: DS.textPrimary) }
         MoveClause(glue: String(localized: "for")) {
             blank(buyGroup?.title ?? String(localized: "category"), ink: buyGroup == nil ? DS.textTertiary : DS.pickInk,
                   .group, label: Text("Pick a category"))
@@ -2470,7 +2479,8 @@ struct MoveSentence: View {
             blank(buyProduct.map { BitrefillBuy.shortName($0.name) } ?? String(localized: "merchant"),
                   ink: buyProduct == nil ? DS.textTertiary : DS.pickInk, .merchant, label: Text("Pick a merchant"))
         }
-        MovePhrase(String(localized: "USDC on Base."), glue: String(localized: "with"), ink: DS.textPrimary)
+        MoveClause(glue: String(localized: "with")) { word("USDC", ink: DS.textPrimary) }
+        MoveClause(glue: String(localized: "on")) { word(String(localized: "Base."), ink: DS.textPrimary) }
     }
 
     /// Bitrefill's categories folded to seven, each with the cards people
@@ -2528,10 +2538,20 @@ struct MoveSentence: View {
     private func merchantRow(_ p: BitrefillBuy.Product) -> some View {
         let name = BitrefillBuy.shortName(p.name)
         return listRow(name, sub: p.packages.isEmpty ? BitrefillBuy.group(of: p).title : p.denominationsLine,
-                       mark: SubscriptionFace.mark(for: name) ?? name, dim: buyProduct?.id == p.id) {
+                       mark: name, brand: Self.merchantMark(name), dim: buyProduct?.id == p.id) {
             pick {}
             Task { await chooseProduct(p) }
         }
+    }
+
+    /// The mark a merchant wears: its name as Bitrefill writes it (less the
+    /// country), else its first word, the company ("Delta Air Lines",
+    /// "Target Canada"); a name with neither keeps its letters (prd §1481).
+    static func merchantMark(_ name: String) -> String? {
+        if let hit = SubscriptionFace.mark(for: name) { return hit }
+        guard let first = name.split(separator: " ").first.map(String.init),
+              first.count >= 3, first != name else { return nil }
+        return SubscriptionFace.mark(for: first)
     }
 
     static func dedupe(_ products: [BitrefillBuy.Product]) -> [BitrefillBuy.Product] {
