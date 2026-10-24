@@ -255,7 +255,7 @@ extension FeedScreen {
     static var pinLine: CGFloat { topInset + DSDemoMark.screenClearance }
 
     /// The pinned header's height before it has measured itself: the name's
-    /// air above (`s4`), one `heading24` line (28pt, prd §1495), its air
+    /// air above (`s4`), one `heading24` line (28pt, prd §1496), its air
     /// below (`s2`).
     static let pinnedHeaderHeight: CGFloat = 51
 
@@ -701,7 +701,7 @@ struct GlanceShell<Top: View, Mark: View, Words: View>: View {
 struct SectionPanelName<Trailing: View>: View {
     let name: String
     let glyph: String
-    /// **A SECTION'S NAME IS `heading24` (prd §1495, user: "would that mean
+    /// **A SECTION'S NAME IS `heading24` (prd §1496, user: "would that mean
     /// dropping feed headers to 24?"; "i am now starting to feel the experience
     /// i wanted in the app from the very beginning, the stupid simple").** The
     /// ramp's own rung for a card's name; `heading28` was the lede's fit

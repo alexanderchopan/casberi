@@ -594,10 +594,6 @@ extension FeedScreen {
     /// still not the case).
     static let rowAir: CGFloat = DS.Space.s1
 
-    /// The air above and below each of Home's rows (prd §1157): the gap
-    /// between two apps, which the app's header row held until the icon
-    /// moved into the row.
-    static let groupAir: CGFloat = DS.Space.s3
 
     /// Whether a row steps back on a skim — ambient, or already read.
     ///

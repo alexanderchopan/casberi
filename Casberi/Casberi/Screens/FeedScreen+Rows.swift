@@ -368,12 +368,13 @@ extension FeedScreen {
                                              skin: skin)))
             // Feed rhythm: `rowAir` (prd §900, see its doc). A card that
             // stands alone keeps s2 — it has no padding of its own inside.
-            // On Home every row takes `groupAir` (prd §1157), a post
-            // included: the header row that held the gap between apps is
-            // gone, so the row carries it, the same above and below.
-            .listRowInsets(.init(top: grouped ? Self.groupAir : standsAlone(thing) ? DS.Space.s2 : Self.rowAir,
+            // **ONE PITCH, HOME INCLUDED (prd §1496, retiring §1157's
+            // `groupAir`):** a row is 52 on the Feed's front page as on every
+            // Wallet and Feed page; the 24pt section names separate the
+            // groups the 12pt of air once did.
+            .listRowInsets(.init(top: standsAlone(thing) ? DS.Space.s2 : Self.rowAir,
                                  leading: DSRoomChassis.rowInset,
-                                 bottom: grouped ? Self.groupAir : standsAlone(thing) ? DS.Space.s2 : Self.rowAir,
+                                 bottom: standsAlone(thing) ? DS.Space.s2 : Self.rowAir,
                                  trailing: DSRoomChassis.rowInset))
             .listRowSeparator(.hidden)
             // A row is draggable OUT of the window on Mac (prd §631) — its

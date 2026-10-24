@@ -610,18 +610,18 @@ guard DSChip.swift "if ranges.count > 1" \
 # every other account a row with its Rename and Stop following.
 guard FeedScreen.swift "walletDoor(.following, figure:" \
   "Home lost its Following door (prd §1410, §1480)"
-# A door is a section's name with a figure (prd §1495): the glyph in the head
+# A door is a section's name with a figure (prd §1496): the glyph in the head
 # column, the name at the section rung, the figure at its peer rung, one pitch,
 # no line. Every page's doors come from this one row, so the rule is held here
 # and nowhere else.
 guard FeedScreen.swift ".frame(width: DSRoomChassis.headGlyph)" \
-  "the door's glyph left the header's column (prd §1495)"
+  "the door's glyph left the header's column (prd §1496)"
 guard FeedScreen.swift ".dsText(.heading24)" \
-  "a door's name is no longer the section rung (prd §1495)"
+  "a door's name is no longer the section rung (prd §1496)"
 guard FeedScreen.swift ".dsText(.stat24)" \
-  "a door's figure is no longer the section rung's peer (prd §1495)"
+  "a door's figure is no longer the section rung's peer (prd §1496)"
 deny FeedScreen.swift "lineTone:" \
-  "a door carries a line again (prd §1495: a door has no line; its state is the figure's ink)"
+  "a door carries a line again (prd §1496: a door has no line; its state is the figure's ink)"
 guard FeedScreen.swift "ForEach(slots) { slot in walletAccountRow(slot) }" \
   "the Following page no longer lists the accounts you follow (prd §1410, §1480)"
 guard FeedScreen+WalletHome.swift "glyph: ScopeTileGlyph.wallets) { feedSheet = .walletFollow }" \

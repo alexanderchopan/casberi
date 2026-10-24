@@ -240,8 +240,8 @@ guard "a picture lead rides the trailing edge as a thumbnail (§1103b)" \
       "$ROW" 'if groupedSource != nil, leadIsPicture \{'
 guard "the words start at the column's edge, the icon beside them (§1157)" \
       "$ROW" 'groupedSource == nil \? Self\.leadSize \+ DS\.Space\.s3 : 0'
-guard "every row on Home takes the same air, a post included (§1157)" \
-      "$FEED" 'top: grouped \? Self\.groupAir : standsAlone\(thing\)'
+guard "a row on Home stands at the one pitch, as on every other page (§1157, §1496)" \
+      "$FEED" 'top: standsAlone\(thing\) \? DS\.Space\.s2 : Self\.rowAir'
 guard "a person's face rides inline before the title under a header (§1103c)" \
       "$ROW" 'if let groupedSource, let face \{'
 guard "a notice on a post network hands in its author's face (§1103c)" \

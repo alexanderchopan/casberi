@@ -4280,6 +4280,47 @@ enum ProbeHooks {
                 }
             }
         },
+        // `-torProbe YES` — start Tor and prove the route (prd §1495). Logs the
+        // connect time, then Relay's `/chains` over Tor and directly: Relay
+        // refuses every exit, so a 403 over Tor and a 200 direct is the proof
+        // the request left by Tor. Then a wallet read through the funnel
+        // (MEV Blocker's chain id), and how many of that host's receipts went
+        // through Tor. `-torProbe fail` stands the failed state up for the
+        // Needs you door. Logs `torProbe|` lines.
+        Hook(key: "torProbe") { raw, _ in
+            Task { @MainActor in
+                func log(_ line: String) { NSLog("torProbe| %@", line) }
+                if raw == "fail" {
+                    TorStatus.publish(.failed)
+                    log("state=failed (stood up)")
+                    return
+                }
+                let start = Date()
+                guard let tor = await TorClient.shared.session(isolation: "torProbe") else {
+                    log("no Tor session · state=\(TorStatus.shared.state)")
+                    return
+                }
+                log(String(format: "connected after %.1fs · %@", Date().timeIntervalSince(start), TorClient.version))
+                let relay = URL(string: "https://api.relay.link/chains")!
+                NetworkLedger.shared.record(relay, throughTor: true)
+                let viaTor = ((try? await tor.data(from: relay))?.1 as? HTTPURLResponse)?.statusCode ?? 0
+                NetworkLedger.shared.record(relay)
+                let direct = ((try? await URLSession.shared.data(from: relay))?.1 as? HTTPURLResponse)?.statusCode ?? 0
+                log("relay /chains · tor=\(viaTor) direct=\(direct)")
+                let rpc = "https://rpc.mevblocker.io"
+                var request = URLRequest(url: URL(string: rpc)!)
+                request.httpMethod = "POST"
+                log("way(\(rpc))=\(TorRoute.way(for: request))")
+                let readStart = Date()
+                let answer = await IngestSupport.postJSON(
+                    rpc, body: ["jsonrpc": "2.0", "id": 1, "method": "eth_chainId", "params": []])
+                    as? [String: Any]
+                log(String(format: "funnel eth_chainId=%@ in %.1fs",
+                           (answer?["result"] as? String) ?? "nil", Date().timeIntervalSince(readStart)))
+                let entry = NetworkLedger.shared.snapshot().first { $0.host == "rpc.mevblocker.io" }
+                log("receipts rpc.mevblocker.io · \(entry?.throughTor ?? 0) of \(entry?.count ?? 0) through Tor")
+            }
+        },
         // `-recoveryNudgePreview "<chainId,…>"` — draw Needs you's recovery-key
         // row for these networks (prd §1442m) on a phone that cannot fix them.
         Hook(key: "recoveryNudgePreview") { raw, _ in

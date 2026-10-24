@@ -325,7 +325,7 @@ extension FeedScreen {
                         .foregroundStyle(DS.brandInk)
                         .frame(width: DSRoomChassis.headGlyph)
                         .accessibilityHidden(true)
-                    Text(title).dsText(.heading24).foregroundStyle(DS.headInk)  // the section rung (prd §1495)
+                    Text(title).dsText(.heading24).foregroundStyle(DS.headInk)  // the section rung (prd §1496)
                     Spacer(minLength: 0)
                     if watchAll, unwatched.count > 1 {
                         Button {

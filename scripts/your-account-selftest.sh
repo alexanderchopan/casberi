@@ -476,15 +476,15 @@ grep -q 'last = worded(error, on: net)' Casberi/Casberi/Model/YourAccountChain.s
 # the six counts and your account's limit, Signers and round-ups; the Signers
 # figure is a last reading MoveSecurity stamps, never a zero it did not read.
 # Security's box went with Security (prd §1480); the facts now trail Your
-# account's door on Home as the one missing control, in amber (prd §1495).
+# account's door on Home as the one missing control, in amber (prd §1496).
 FIG=Casberi/Casberi/Screens/FeedScreen+WalletPages.swift
-grep -q 'if let facts = YourAccountFacts.current, facts.signers == 0' "$FIG" && grep -q 'walletDoor(.yourAccount, word: yourAccountWants, wordTone: DS.attentionInk)' "$FIG" || { echo "✗ Home's Your account door no longer trails the missing co-signer off the last reading (prd §1462, §1495)"; exit 1; }
+grep -q 'if let facts = YourAccountFacts.current, facts.signers == 0' "$FIG" && grep -q 'walletDoor(.yourAccount, word: yourAccountWants, wordTone: DS.attentionInk)' "$FIG" || { echo "✗ Home's Your account door no longer trails the missing co-signer off the last reading (prd §1462, §1496)"; exit 1; }
 grep -q 'YourAccountFacts.noteSigners(Set(live.flatMap' Casberi/Casberi/Screens/MoveSecurity.swift || { echo "✗ the box's Signers figure is no longer stamped by Security's read (prd §1462)"; exit 1; }
-# The box's "Limit a month" went with the box (prd §1480); the limit is Your account's row word (prd §1495).
-grep -q 'return String(localized: "\\(dollars(standing.dollarCap)) a \\(period(of: standing).word)")' Casberi/Casberi/Screens/MoveSecurity.swift || { echo "✗ the Spend limit row's word is no longer the amount and its period (prd §1462, §1495)"; exit 1; }
+# The box's "Limit a month" went with the box (prd §1480); the limit is Your account's row word (prd §1496).
+grep -q 'return String(localized: "\\(dollars(standing.dollarCap)) a \\(period(of: standing).word)")' Casberi/Casberi/Screens/MoveSecurity.swift || { echo "✗ the Spend limit row's word is no longer the amount and its period (prd §1462, §1496)"; exit 1; }
 # The wash says the state (prd §1463): a threat red, an ask orange, on green, nothing for a zero.
-# The state is the figure's ink on Home's doors (prd §1463, §1495): a threat red, a grant with no limit amber, what waits on you pink.
-grep -q 'figureTone: DS.destructiveInk' "$FIG" && grep -q 'figureTone: counts.unlimited > 0 ? DS.attentionInk : DS.textPrimary' "$FIG" && grep -q 'figureTone: DS.pickInk' "$FIG" || { echo "✗ Home's doors no longer carry the state in the figure's ink (prd §1463, §1495)"; exit 1; }
+# The state is the figure's ink on Home's doors (prd §1463, §1496): a threat red, a grant with no limit amber, what waits on you pink.
+grep -q 'figureTone: DS.destructiveInk' "$FIG" && grep -q 'figureTone: counts.unlimited > 0 ? DS.attentionInk : DS.textPrimary' "$FIG" && grep -q 'figureTone: DS.pickInk' "$FIG" || { echo "✗ Home's doors no longer carry the state in the figure's ink (prd §1463, §1496)"; exit 1; }
 grep -q 'needsYouRow(glyph: kind.glyph, critical: true,' Casberi/Casberi/Screens/FeedScreen+WalletSecurity.swift || { echo "✗ a fake transfer's row is no longer red with the other threats (prd §1463)"; exit 1; }
 awk '/case .threat: return DS.destructive/{a=1}/case .wants: return DS.attention$/{b=1}/case .on: return DS.confirm$/{c=1}END{exit !(a&&b&&c)}' Casberi/Casberi/Design/DSCountTile.swift || { echo "✗ DSCountTile's tones no longer map threat→destructive, wants→attention, on→confirm (prd §1463)"; exit 1; }
 # The demo's account (prd §1475): it holds the demo's table and reaches no node,

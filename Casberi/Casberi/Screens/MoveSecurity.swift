@@ -57,7 +57,7 @@ struct MoveSecurity: View {
     @State private var roundUpChoices: [(network: YourAccountOp.Network, tokens: [YourAccountTokens.Listed])] = []
     @State private var roundUpMarks: [String: UIImage] = [:]
 
-    /// **TWO SECTIONS, SEVEN ROWS, NO LINES (prd §1495, user: "the two
+    /// **TWO SECTIONS, SEVEN ROWS, NO LINES (prd §1496, user: "the two
     /// sections … is better b/c spend limit and round ups are different type
     /// than the key stuff"; "perhaps those things don't need subtext either").**
     /// Keys and Spending are the Feed's section names (`SectionPanelName`,
@@ -84,6 +84,10 @@ struct MoveSecurity: View {
                 })
             if addingOutside { outsideField }
             row(title: String(localized: "Networks"), value: networksValue, verb: nil)
+            // Already on, never a choice (prd §1495 item 6, placed by §1496):
+            // its state where a setting's value stands, no line.
+            row(title: String(localized: "Tor"), value: TorFact.word(TorStatus.shared.state),
+                tone: TorFact.ink(TorStatus.shared.state), verb: nil)
             row(title: String(localized: "Private key"), value: exportValue,
                 verb: exportVerb.map { word in (word, { exportedKey == nil ? export() : removeExported() }) })
             SectionPanelName(name: String(localized: "Spending"), glyph: ScopeTileGlyph.spending, inset: 0)
@@ -135,7 +139,7 @@ struct MoveSecurity: View {
     /// bare key (who can spend FROM you) and not Your account's shield.
     static let keysGlyph = "person.badge.key"
 
-    /// A row (prd §1495): its name, then the fact in grey and, where there is
+    /// A row (prd §1496): its name, then the fact in grey and, where there is
     /// something to do, the verb in the pick's ink — both when a fact stands
     /// beside a verb ("…d203" then "Finish"). A row acting shows its word
     /// ("Setting up…") in the verb's place, grey.
@@ -182,7 +186,7 @@ struct MoveSecurity: View {
     /// Under the spend limit (user: "same place we have spend limits"): one
     /// row whose trailing word says the setting ("$1, buys ETH", or Off) and
     /// opens the one glass menu — the switch, $1 or $5, and what it buys,
-    /// the tokens with their marks (prd §1452, §1495). The sentence under it
+    /// the tokens with their marks (prd §1452, §1496). The sentence under it
     /// says the one thing the word cannot: when the change is spent.
     @ViewBuilder private var roundUpsRow: some View {
         HStack(spacing: DS.Space.s3) {
@@ -320,7 +324,7 @@ struct MoveSecurity: View {
     }
 
     /// Who signs: this device, your other one, or both — the fact alone (the
-    /// key index and "a new key with every send" read as technical, §1495).
+    /// key index and "a new key with every send" read as technical, §1496).
     private var deviceValue: String {
         if standings.isEmpty { return String(localized: "Reading…") }
         let here = live.filter { $0.keyIndex != nil }
@@ -839,7 +843,7 @@ struct MoveSecurity: View {
         return (who, DS.textSecondary)
     }
 
-    /// The networks the account is on, said once (§1495).
+    /// The networks the account is on, said once (§1496).
     private var networksValue: String {
         if standings.isEmpty { return String(localized: "Reading…") }
         return live.isEmpty ? String(localized: "None yet") : names(live)

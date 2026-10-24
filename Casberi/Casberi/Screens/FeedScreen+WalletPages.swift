@@ -17,7 +17,7 @@ extension FeedScreen {
 
     // MARK: - The door row
 
-    /// **A DOOR IS A SECTION'S NAME WITH A FIGURE (prd §1495, user: "i think
+    /// **A DOOR IS A SECTION'S NAME WITH A FIGURE (prd §1496, user: "i think
     /// the 24 size is good"; "would apple show the subtext on home?").** The
     /// page's glyph in the Feed header's column, its name at the section
     /// rung, its figure trailing at the same rung, no line, every door one
@@ -102,7 +102,7 @@ extension FeedScreen {
     // MARK: - Home's six doors
 
     /// What Your account's door trails, in amber: the control that is missing
-    /// (prd §1480 item 2, §1495), nothing when every key stands. Recovery
+    /// (prd §1480 item 2, §1496), nothing when every key stands. Recovery
     /// leads, because losing the phone is the one thing the others cannot
     /// undo; the rest of the line ("1 signer · $100 a month · round-ups $1")
     /// is the page's.
@@ -123,7 +123,7 @@ extension FeedScreen {
     }
 
     /// "3 wallets · 2 apps": what Following holds, by kind — the Following
-    /// page's caption (its door carries no line, §1495).
+    /// page's caption (its door carries no line, §1496).
     func followingLine(_ slots: [DSAccountSlot]) -> String {
         let apps = slots.filter { RoomAccounts.isSeat($0.id) }.count
         let wallets = slots.count - apps
@@ -326,7 +326,7 @@ extension FeedScreen {
                 }
                 if !page.fees.isEmpty {
                     // Not in the total (prd §1476 item 1): the Fees page's box
-                    // says so (`feesLine`); a door carries no line (§1495).
+                    // says so (`feesLine`); a door carries no line (§1496).
                     walletDoor(.fees, figure: mask ?? AppleWalletRoom.money(page.feesTotal, "USD"))
                 }
             }

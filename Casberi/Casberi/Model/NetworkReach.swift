@@ -70,6 +70,13 @@ enum NetworkReach {
         /// That exception was once spelled by keying those entries with the
         /// seat id, which no reader matched; a flag says it out loud.
         var credentialed = true
+        /// These calls name a wallet, so they go through Tor (prd §1495,
+        /// `TorRoute`) — on iOS; the Mac has no Tor yet and says so.
+        var throughTor = false
+        /// This entry's hosts measured refusing every Tor exit (403 on all of
+        /// ~18 exits, 2026-10-24), read directly and listed as such. A host
+        /// leaves this list only on a new measurement.
+        var refusesTor: [String] = []
 
         var id: String { service }
 
@@ -256,7 +263,9 @@ enum NetworkReach {
                          // "apply an API key" (2026-10-14): Tenderly's public
                          // gateway for Ethereum, Polygon and Base, publicnode
                          // for Base's recent logs.
-                         "gateway.tenderly.co", "base-rpc.publicnode.com"]),
+                         "gateway.tenderly.co", "base-rpc.publicnode.com"],
+                 throughTor: true,
+                 refusesTor: ["mainnet.optimism.io", "gateway.tenderly.co", "api.geckoterminal.com"]),
         // World ID (2026-09-16, prd §785). ITS OWN HOST, and that is a fix
         // rather than a preference (`/code-review`, same day). This read
         // happens whether or not you watch a wallet — opening an address card
@@ -272,7 +281,8 @@ enum NetworkReach {
         Endpoint(service: "World ID",
                  reach: .always,
                  purpose: "Opening an address card or a person's room asks World Chain one question about that address: whether World ID's public address book holds a verification for it. The request carries the address and nothing about you — no key, no account, and nothing is written. Almost every address is absent from that book, and nothing is drawn when it is.",
-                 hosts: ["worldchain.drpc.org"]),
+                 hosts: ["worldchain.drpc.org"],
+                 throughTor: true),
         // Disclosed 2026-08-01, and it should have been here all along: these
         // hosts have been reached since WalletConnect shipped, but the reach
         // audit only reads THIS app's source and every one of these literals
@@ -307,7 +317,8 @@ enum NetworkReach {
                  hosts: ["api.web3.bio", "api.ensideas.com", "metadata.ens.domains", "app.ens.domains",
                          "lite-api.jup.ag",
                          "usernames.worldcoin.org",
-                         "static.usernames.app-backend.toolsforhumanity.com"]),
+                         "static.usernames.app-backend.toolsforhumanity.com"],
+                 throughTor: true),
         // Aztec staking (prd §1277, §1279) — the contracts are read through
         // the mainnet hosts under "Wallet activity"; this host is Aztec's own
         // public mainnet node, asked one staked sequencer at a time.
@@ -315,7 +326,8 @@ enum NetworkReach {
                  reach: .whenConnected(bridge: "Wallet"),
                  purpose: "Reads the attestation record of each Aztec sequencer that holds AZTEC staked by an account you follow, from dRPC's public Aztec mainnet node. Carries the sequencer's address and nothing else about you.",
                  hosts: ["aztec-mainnet.drpc.org"],
-                 credentialed: false),
+                 credentialed: false,
+                 throughTor: true),
         Endpoint(service: "Wallet DeFi & Safe",
                  reach: .whenConnected(bridge: "Wallet"),
                  // A SEND in a registry that is otherwise all reads, and it is
@@ -341,7 +353,8 @@ enum NetworkReach {
                          "api.hyperliquid.xyz",
                          // A CoW order a Safe transaction pre-signs (prd §1285):
                          // read by its id, drawn only if it hashes to that id.
-                         "api.cow.fi"]),
+                         "api.cow.fi"],
+                 throughTor: true),
         // Markets (2026-09-29) is the Tokens seat with Stocktwits' watched
         // stocks folded in, so it carries both seats' hosts. Yahoo's two chart
         // hosts are built at runtime (`StockChart` tries
@@ -430,11 +443,14 @@ enum NetworkReach {
         Endpoint(service: "Aztec",
                  reach: .whenConnected(bridge: "Aztec"),
                  purpose: "Reads the Aztec testnet's block heights, proving and minimum fee, the attestation and proposal record of the sequencers you follow and the public Fee Juice of the accounts you follow, from dRPC's public Aztec testnet node; and those sequencers' stake, rewards, committee seat and proposal schedule from the Aztec Rollup contract, through a public Sepolia node. Carries the addresses you asked about and nothing else about you.",
-                 hosts: ["aztec-testnet.drpc.org", "ethereum-sepolia-rpc.publicnode.com"]),
+                 hosts: ["aztec-testnet.drpc.org", "ethereum-sepolia-rpc.publicnode.com"],
+                 throughTor: true),
         Endpoint(service: "0xBow Privacy Pools",
                  reach: .whenConnected(bridge: "0xBow Privacy Pools"),
                  purpose: "Reads your Privacy Pools deposits, v1 and v2, from the public chain and their review status from 0xBow's public APIs, for the accounts you follow.",
-                 hosts: ["api.0xbow.io", "api-v2.0xbow.io", "rpc.mevblocker.io", "gateway.tenderly.co"]),
+                 hosts: ["api.0xbow.io", "api-v2.0xbow.io", "rpc.mevblocker.io", "gateway.tenderly.co"],
+                 throughTor: true,
+                 refusesTor: ["gateway.tenderly.co"]),
         // Reach is WALLET, not "Railgun" — MetaMask Card's reason below: the seat
         // appears only once a shield has been seen, but the read that
         // discovers one runs for every watched wallet, so declaring it under
@@ -443,11 +459,15 @@ enum NetworkReach {
         Endpoint(service: "Railgun",
                  reach: .whenConnected(bridge: "Wallet"),
                  purpose: "Reads what you shield into Railgun and what comes back out, off Ethereum's public chain, for the accounts you follow — the two public doors, never anything inside the pool.",
-                 hosts: ["rpc.mevblocker.io", "gateway.tenderly.co"]),
+                 hosts: ["rpc.mevblocker.io", "gateway.tenderly.co"],
+                 throughTor: true,
+                 refusesTor: ["gateway.tenderly.co"]),
         Endpoint(service: "Peer",
                  reach: .whenConnected(bridge: "Peer"),
                  purpose: "Reads your settled Peer trades off Base's public chain, for the accounts you follow.",
-                 hosts: ["mainnet.base.org", "base-rpc.publicnode.com", "gateway.tenderly.co"]),
+                 hosts: ["mainnet.base.org", "base-rpc.publicnode.com", "gateway.tenderly.co"],
+                 throughTor: true,
+                 refusesTor: ["gateway.tenderly.co"]),
         // Gnosis Chain's two public nodes, kept when the Gnosis Pay seat that
         // measured them went (prd §1318): `SafeSigner` asks a Safe on Gnosis
         // Chain for its own transaction hash through them (`GnosisChainRPC`),
@@ -466,7 +486,9 @@ enum NetworkReach {
                          "rpc.mevblocker.io", "ethereum-rpc.publicnode.com",
                          "sepolia.base.org", "base-sepolia-rpc.publicnode.com", "api.relay.link",
                          "rpc.mainnet.chain.robinhood.com", "robinhood-rpc.publicnode.com"],
-                 credentialed: false),
+                 credentialed: false,
+                 throughTor: true,
+                 refusesTor: ["api.relay.link"]),
         // Bitrefill's accountless checkout (prd §1473): Move's Buy. Reached
         // only when you tap Buy — a sign-in signed by your account, the
         // catalogue, an invoice, and its payment as a signed USDC
@@ -480,7 +502,9 @@ enum NetworkReach {
         Endpoint(service: "Gnosis Chain",
                  reach: .whenConnected(bridge: "Wallet"),
                  purpose: "Asks a Safe on Gnosis Chain for its own hash of a transaction before this phone will sign it, through Gnosis Chain's public nodes. Carries the Safe's address and the transaction, nothing else about you.",
-                 hosts: ["rpc.gnosischain.com", "rpc.gnosis.gateway.fm"]),
+                 hosts: ["rpc.gnosischain.com", "rpc.gnosis.gateway.fm"],
+                 throughTor: true,
+                 refusesTor: ["rpc.gnosischain.com", "rpc.gnosis.gateway.fm"]),
         // Reach is WALLET, not "MetaMask Card": the seat only appears once a
         // card spend has been seen, but the read that discovers one runs for
         // every watched wallet. Declaring it under its own seat would say
@@ -491,7 +515,9 @@ enum NetworkReach {
         Endpoint(service: "Plasma One",
                  reach: .whenConnected(bridge: "Wallet"),
                  purpose: "Reads what your Plasma One card settles on Plasma, for the accounts you follow — one total a day, and what the card still holds. The card settles once a day, so no purchase and no merchant ever reaches the chain. Read-only: nothing here spends, tops up, or changes a limit.",
-                 hosts: ["rpc.plasma.to", "9745.rpc.thirdweb.com"]),
+                 hosts: ["rpc.plasma.to", "9745.rpc.thirdweb.com"],
+                 throughTor: true,
+                 refusesTor: ["9745.rpc.thirdweb.com"]),
         Endpoint(service: "MetaMask Card",
                  reach: .whenConnected(bridge: "Wallet"),
                  purpose: "Reads your MetaMask Card spending off the public chains it settles on — Linea, Base and Monad — for the accounts you follow. Monad is read through Alchemy's index, the same host the Wallet's own reads use. The amount, the token and the moment, which is all the chain carries; the merchant is never on the chain, so it is never read. Read-only: nothing here spends, tops up, or changes a card's spending cap.",
@@ -499,7 +525,9 @@ enum NetworkReach {
                          // Base's three: `mainnet.base.org` for the block
                          // number, publicnode and Tenderly for the logs it
                          // stopped serving (2026-10-14).
-                         "mainnet.base.org", "base-rpc.publicnode.com", "gateway.tenderly.co"]),
+                         "mainnet.base.org", "base-rpc.publicnode.com", "gateway.tenderly.co"],
+                 throughTor: true,
+                 refusesTor: ["gateway.tenderly.co"]),
         // Both ether.fi entries reach under WALLET, not their own seats, for
         // MetaMask Card's reason above: each seat appears only once there's
         // evidence (an unstake request / a Cash account), but the read that
@@ -507,11 +535,15 @@ enum NetworkReach {
         Endpoint(service: "ether.fi",
                  reach: .whenConnected(bridge: "Wallet"),
                  purpose: "Reads your ether.fi unstake requests off Ethereum's public chain, for the accounts you follow — how much is queued, and when it becomes claimable. Read-only: claiming happens in ether.fi's own app.",
-                 hosts: ["rpc.mevblocker.io", "gateway.tenderly.co"]),
+                 hosts: ["rpc.mevblocker.io", "gateway.tenderly.co"],
+                 throughTor: true,
+                 refusesTor: ["gateway.tenderly.co"]),
         Endpoint(service: "ether.fi Cash",
                  reach: .whenConnected(bridge: "Wallet"),
                  purpose: "Reads your ether.fi Cash card spending and credit position off Optimism's public chain, for the accounts you follow — the amount and the moment, which is all the chain carries.",
-                 hosts: ["optimism.gateway.tenderly.co", "mainnet.optimism.io"]),
+                 hosts: ["optimism.gateway.tenderly.co", "mainnet.optimism.io"],
+                 throughTor: true,
+                 refusesTor: ["gateway.tenderly.co", "mainnet.optimism.io"]),
         Endpoint(service: "Exchange rates",
                  reach: .whenConnected(bridge: "Markets"),
                  purpose: "Fetches public reference prices to show token and account values in your currency. Carries only the pair being priced.",
@@ -531,14 +563,16 @@ enum NetworkReach {
         Endpoint(service: "ETH Validators",
                  reach: .whenConnected(bridge: "ETH Validators"),
                  purpose: "Reads the balance and status of the validator indices you follow, off a public beacon-chain API. No account, no key.",
-                 hosts: ["ethereum-beacon-api.publicnode.com"]),
+                 hosts: ["ethereum-beacon-api.publicnode.com"],
+                 throughTor: true),
         // Reach is WALLET, not a Bitcoin-specific seat — Bitcoin has no
         // connect switch of its own, it rides watched wallet addresses the
         // same way MetaMask Card's entry above does.
         Endpoint(service: "Bitcoin",
                  reach: .whenConnected(bridge: "Wallet"),
                  purpose: "Reads balance, sends/receives, and confirmation status for the Bitcoin addresses you follow, off two public Esplora APIs. No account, no key.",
-                 hosts: ["mempool.space", "blockstream.info"]),
+                 hosts: ["mempool.space", "blockstream.info"],
+                 throughTor: true),
         // Host is user-configurable (self-hosted PostHog exists) — the
         // default cloud host is what's disclosed; a self-hosted host is
         // one the person named themselves in setup, not an undisclosed one.
@@ -633,7 +667,8 @@ enum NetworkReach {
         Endpoint(service: "ENS",
                  reach: .whenConnected(bridge: "ENS"),
                  purpose: "Reads the registrar's own public record for the names you follow — when a name expires, and whether it's been renewed or released. Public data, read-only: nothing here registers or renews.",
-                 hosts: ["metadata.ens.domains"]),
+                 hosts: ["metadata.ens.domains"],
+                 throughTor: true),
 
         // MARK: Social — public accounts and feeds you follow
 
