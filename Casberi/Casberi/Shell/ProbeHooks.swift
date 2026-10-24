@@ -1192,6 +1192,33 @@ enum ProbeHooks {
                 await BitrefillX402.payProbe(account: account) { NSLog("bitrefillPayProbe| %@", $0) }
             }
         },
+        // `-buyMarksProbe YES` — every merchant Buy lists with nothing typed
+        // (the popular cards and each group's seed searches) and the mark it
+        // draws, so a gap is a list, not a scroll (prd §1489). Each search is
+        // a paid x402 call, $0.002, fifteen in all. Logs `buyMark|` per
+        // merchant, then `buyMarks|` with the count drawing letters.
+        Hook(key: "buyMarksProbe") { _, _ in
+            guard let account = YourAccountKey.address ?? (BitrefillX402.sample ? "0x0" : nil) else {
+                NSLog("buyMarks| no account on this phone"); return
+            }
+            Task { @MainActor in
+                var all: [BitrefillBuy.Product] = []
+                for word in [""] + BitrefillBuy.Group.allCases.flatMap(\.searches) {
+                    guard let hits = try? await BitrefillX402.search(word, account: account) else {
+                        NSLog("buyMarks| search \"%@\" failed", word); continue
+                    }
+                    all = MoveSentence.dedupe(all + hits)
+                }
+                var letters = 0
+                for p in all.filter(\.buyable) {
+                    let name = BitrefillBuy.shortName(p.name)
+                    let mark = MoveSentence.merchantMark(name)
+                    if mark == nil { letters += 1 }
+                    NSLog("buyMark| %@ | %@ | %@", name, p.id, mark ?? "letters")
+                }
+                NSLog("buyMarks| %d merchants, %d drawing letters", all.filter(\.buyable).count, letters)
+            }
+        },
         Hook(key: "bitrefillBalanceProbe") { _, _ in
             guard let token = TokenVault.get(TokenBridge.bitrefill.tokenKey) else {
                 NSLog("[Casberi] bitrefillBalanceProbe: no stored token — connect via -tokenBridge \"Bitrefill:<key>\"")

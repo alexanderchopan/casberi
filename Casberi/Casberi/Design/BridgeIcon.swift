@@ -32,6 +32,42 @@ private enum BridgeIconArt {
         "playstation store": "brand-playstation",
         "digital prepaid visa": "brand-visa",
         "at&t": "brand-att",
+        // Bitrefill's merchants an asset name cannot spell, or spell short
+        // (prd §1489).
+        "mcdonald's": "brand-mcdonalds",
+        "macy's": "brand-macys",
+        "sam's club": "brand-sams-club",
+        "o'reilly auto parts": "brand-oreilly-auto-parts",
+        "h&m": "brand-handm",
+        "ea play": "brand-ea",
+        "ea app": "brand-ea",
+        "southwest": "brand-southwest-airlines",
+        "fubotv": "brand-fubo",
+        "protonvpn": "brand-proton-vpn",
+        "digital prepaid mastercard": "brand-mastercard",
+        // Marks `scripts/brand-marks.py` fetches from the App Store; until it
+        // runs, the alias finds nothing and the row keeps its letters.
+        "home depot": "brand-the-home-depot",
+        "lowe's": "brand-lowes",
+        "domino's": "brand-dominos",
+        "papa john's": "brand-papa-johns",
+        "dunkin'": "brand-dunkin",
+        "chili's": "brand-chilis",
+        "applebee's": "brand-applebees",
+        "wendy's": "brand-wendys",
+        "kohl's": "brand-kohls",
+        "dick's sporting goods": "brand-dicks-sporting-goods",
+        "denny's": "brand-dennys",
+        "victoria's secret": "brand-victorias-secret",
+        "levi's": "brand-levis",
+        "barnes & noble": "brand-barnes-and-noble",
+        "bath & body works": "brand-bath-and-body-works",
+        "cheesecake factory": "brand-the-cheesecake-factory",
+        "whole foods": "brand-whole-foods-market",
+        "cvs": "brand-cvs-pharmacy",
+        "nintendo": "brand-nintendo-eshop",
+        "exxonmobil": "brand-exxon-mobil",
+        "tjmaxx": "brand-tj-maxx",
     ]
 
     static func assetName(for name: String) -> String {

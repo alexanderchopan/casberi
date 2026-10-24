@@ -1,0 +1,487 @@
+[
+ {
+  "asset": "the-home-depot",
+  "term": "The Home Depot",
+  "seller": "Home Depot"
+ },
+ {
+  "asset": "lowes",
+  "term": "Lowe's Home Improvement",
+  "seller": "Lowe"
+ },
+ {
+  "asset": "best-buy",
+  "term": "Best Buy",
+  "seller": "Best Buy"
+ },
+ {
+  "asset": "wayfair",
+  "term": "Wayfair",
+  "seller": "Wayfair"
+ },
+ {
+  "asset": "costco",
+  "term": "Costco",
+  "seller": "Costco"
+ },
+ {
+  "asset": "kroger",
+  "term": "Kroger",
+  "seller": "Kroger"
+ },
+ {
+  "asset": "safeway",
+  "term": "Safeway",
+  "seller": "Albertsons"
+ },
+ {
+  "asset": "whole-foods-market",
+  "term": "Whole Foods Market",
+  "seller": "Whole Foods"
+ },
+ {
+  "asset": "grubhub",
+  "term": "Grubhub",
+  "seller": "Grubhub"
+ },
+ {
+  "asset": "chipotle",
+  "term": "Chipotle",
+  "seller": "Chipotle"
+ },
+ {
+  "asset": "dominos",
+  "term": "Domino's Pizza USA",
+  "seller": "Domino"
+ },
+ {
+  "asset": "papa-johns",
+  "term": "Papa Johns Pizza",
+  "seller": "Papa John"
+ },
+ {
+  "asset": "panera-bread",
+  "term": "Panera Bread",
+  "seller": "Panera"
+ },
+ {
+  "asset": "subway",
+  "term": "Subway",
+  "seller": "Subway"
+ },
+ {
+  "asset": "dunkin",
+  "term": "Dunkin'",
+  "seller": "Dunkin"
+ },
+ {
+  "asset": "chilis",
+  "term": "Chili's",
+  "seller": "Brinker"
+ },
+ {
+  "asset": "applebees",
+  "term": "Applebee's",
+  "seller": "Applebee"
+ },
+ {
+  "asset": "olive-garden",
+  "term": "Olive Garden",
+  "seller": "Darden"
+ },
+ {
+  "asset": "wendys",
+  "term": "Wendy's",
+  "seller": "Wendy"
+ },
+ {
+  "asset": "pizza-hut",
+  "term": "Pizza Hut",
+  "seller": "Pizza Hut"
+ },
+ {
+  "asset": "sephora",
+  "term": "Sephora",
+  "seller": "Sephora"
+ },
+ {
+  "asset": "ulta-beauty",
+  "term": "Ulta Beauty",
+  "seller": "Ulta"
+ },
+ {
+  "asset": "gap",
+  "term": "Gap",
+  "seller": "Gap"
+ },
+ {
+  "asset": "old-navy",
+  "term": "Old Navy",
+  "seller": "Gap"
+ },
+ {
+  "asset": "nordstrom",
+  "term": "Nordstrom",
+  "seller": "Nordstrom"
+ },
+ {
+  "asset": "kohls",
+  "term": "Kohl's",
+  "seller": "Kohl"
+ },
+ {
+  "asset": "tj-maxx",
+  "term": "TJ Maxx",
+  "seller": "TJX"
+ },
+ {
+  "asset": "lululemon",
+  "term": "lululemon",
+  "seller": "lululemon"
+ },
+ {
+  "asset": "foot-locker",
+  "term": "Foot Locker",
+  "seller": "Foot Locker"
+ },
+ {
+  "asset": "american-eagle",
+  "term": "American Eagle",
+  "seller": "American Eagle"
+ },
+ {
+  "asset": "petco",
+  "term": "Petco",
+  "seller": "Petco"
+ },
+ {
+  "asset": "petsmart",
+  "term": "PetSmart",
+  "seller": "PetSmart"
+ },
+ {
+  "asset": "chewy",
+  "term": "Chewy",
+  "seller": "Chewy"
+ },
+ {
+  "asset": "cvs-pharmacy",
+  "term": "CVS Pharmacy",
+  "seller": "CVS"
+ },
+ {
+  "asset": "walgreens",
+  "term": "Walgreens",
+  "seller": "Walgreen"
+ },
+ {
+  "asset": "gamestop",
+  "term": "GameStop",
+  "seller": "GameStop"
+ },
+ {
+  "asset": "minecraft",
+  "term": "Minecraft",
+  "seller": "Mojang"
+ },
+ {
+  "asset": "nintendo-eshop",
+  "term": "Nintendo Switch Online",
+  "seller": "Nintendo"
+ },
+ {
+  "asset": "blizzard",
+  "term": "Battle.net",
+  "seller": "Blizzard"
+ },
+ {
+  "asset": "amc-theatres",
+  "term": "AMC Theatres",
+  "seller": "AMC"
+ },
+ {
+  "asset": "alaska-airlines",
+  "term": "Alaska Airlines",
+  "seller": "Alaska Airlines"
+ },
+ {
+  "asset": "chevron",
+  "term": "Chevron",
+  "seller": "Chevron"
+ },
+ {
+  "asset": "exxon-mobil",
+  "term": "Exxon Mobil Rewards+",
+  "seller": "Exxon"
+ },
+ {
+  "asset": "bp",
+  "term": "BPme",
+  "seller": "BP"
+ },
+ {
+  "asset": "ihg",
+  "term": "IHG Hotels",
+  "seller": "InterContinental"
+ },
+ {
+  "asset": "carnival",
+  "term": "Carnival HUB",
+  "seller": "Carnival"
+ },
+ {
+  "asset": "royal-caribbean",
+  "term": "Royal Caribbean",
+  "seller": "Royal Caribbean"
+ },
+ {
+  "asset": "rei",
+  "term": "REI Co-op",
+  "seller": "Recreational Equipment"
+ },
+ {
+  "asset": "dicks-sporting-goods",
+  "term": "DICK'S Sporting Goods",
+  "seller": "DICK"
+ },
+ {
+  "asset": "barnes-and-noble",
+  "term": "Barnes & Noble",
+  "seller": "Barnes"
+ },
+ {
+  "asset": "microsoft",
+  "term": "Microsoft Store",
+  "seller": "Microsoft"
+ },
+ {
+  "asset": "t-mobile",
+  "term": "T-Mobile",
+  "seller": "T-Mobile"
+ },
+ {
+  "asset": "cricket-wireless",
+  "term": "myCricket",
+  "seller": "Cricket"
+ },
+ {
+  "asset": "boost-mobile",
+  "term": "Boost Mobile",
+  "seller": "Boost"
+ },
+ {
+  "asset": "mint-mobile",
+  "term": "Mint Mobile",
+  "seller": "Mint Mobile"
+ },
+ {
+  "asset": "tracfone",
+  "term": "Tracfone",
+  "seller": "TracFone"
+ },
+ {
+  "asset": "vrbo",
+  "term": "Vrbo",
+  "seller": "Expedia"
+ },
+ {
+  "asset": "shein",
+  "term": "SHEIN",
+  "seller": "SHEIN"
+ },
+ {
+  "asset": "temu",
+  "term": "Temu",
+  "seller": "Temu"
+ },
+ {
+  "asset": "zappos",
+  "term": "Zappos",
+  "seller": "Zappos"
+ },
+ {
+  "asset": "candy-crush",
+  "term": "Candy Crush Saga",
+  "seller": "King"
+ },
+ {
+  "asset": "free-fire",
+  "term": "Free Fire",
+  "seller": "Garena"
+ },
+ {
+  "asset": "genshin-impact",
+  "term": "Genshin Impact",
+  "seller": "COGNOSPHERE"
+ },
+ {
+  "asset": "call-of-duty",
+  "term": "Call of Duty: Mobile",
+  "seller": "Activision"
+ },
+ {
+  "asset": "chick-fil-a",
+  "term": "Chick-fil-A",
+  "seller": "Chick-fil-A"
+ },
+ {
+  "asset": "popeyes",
+  "term": "Popeyes",
+  "seller": "Popeyes"
+ },
+ {
+  "asset": "five-guys",
+  "term": "Five Guys",
+  "seller": "Five Guys"
+ },
+ {
+  "asset": "wingstop",
+  "term": "Wingstop",
+  "seller": "Wingstop"
+ },
+ {
+  "asset": "buffalo-wild-wings",
+  "term": "Buffalo Wild Wings",
+  "seller": "Buffalo Wild Wings"
+ },
+ {
+  "asset": "texas-roadhouse",
+  "term": "Texas Roadhouse",
+  "seller": "Texas Roadhouse"
+ },
+ {
+  "asset": "outback-steakhouse",
+  "term": "Outback Steakhouse",
+  "seller": "Bloomin"
+ },
+ {
+  "asset": "the-cheesecake-factory",
+  "term": "The Cheesecake Factory",
+  "seller": "Cheesecake Factory"
+ },
+ {
+  "asset": "ihop",
+  "term": "IHOP",
+  "seller": "IHOP"
+ },
+ {
+  "asset": "dennys",
+  "term": "Denny's",
+  "seller": "Denny"
+ },
+ {
+  "asset": "krispy-kreme",
+  "term": "Krispy Kreme",
+  "seller": "Krispy Kreme"
+ },
+ {
+  "asset": "dairy-queen",
+  "term": "Dairy Queen",
+  "seller": "Dairy Queen"
+ },
+ {
+  "asset": "tim-hortons",
+  "term": "Tim Hortons",
+  "seller": "Tim Hortons"
+ },
+ {
+  "asset": "regal",
+  "term": "Regal",
+  "seller": "Regal"
+ },
+ {
+  "asset": "cinemark",
+  "term": "Cinemark",
+  "seller": "Cinemark"
+ },
+ {
+  "asset": "bath-and-body-works",
+  "term": "Bath & Body Works",
+  "seller": "Bath & Body Works"
+ },
+ {
+  "asset": "victorias-secret",
+  "term": "Victoria's Secret",
+  "seller": "Victoria"
+ },
+ {
+  "asset": "levis",
+  "term": "Levi's",
+  "seller": "Levi"
+ },
+ {
+  "asset": "vans",
+  "term": "Vans",
+  "seller": "Vans"
+ },
+ {
+  "asset": "converse",
+  "term": "Converse",
+  "seller": "Converse"
+ },
+ {
+  "asset": "patagonia",
+  "term": "Patagonia",
+  "seller": "Patagonia"
+ },
+ {
+  "asset": "columbia",
+  "term": "Columbia Sportswear",
+  "seller": "Columbia"
+ },
+ {
+  "asset": "staples",
+  "term": "Staples",
+  "seller": "Staples"
+ },
+ {
+  "asset": "dollar-general",
+  "term": "Dollar General",
+  "seller": "Dollar General"
+ },
+ {
+  "asset": "publix",
+  "term": "Publix",
+  "seller": "Publix"
+ },
+ {
+  "asset": "jcpenney",
+  "term": "JCPenney",
+  "seller": "Penney"
+ },
+ {
+  "asset": "marshalls",
+  "term": "Marshalls",
+  "seller": "TJX"
+ },
+ {
+  "asset": "hertz",
+  "term": "Hertz",
+  "seller": "Hertz"
+ },
+ {
+  "asset": "avis",
+  "term": "Avis",
+  "seller": "Avis"
+ },
+ {
+  "asset": "amtrak",
+  "term": "Amtrak",
+  "seller": "Amtrak"
+ },
+ {
+  "asset": "spirit-airlines",
+  "term": "Spirit Airlines",
+  "seller": "Spirit"
+ },
+ {
+  "asset": "hyatt",
+  "term": "World of Hyatt",
+  "seller": "Hyatt"
+ },
+ {
+  "asset": "cryptocom",
+  "term": "Crypto.com",
+  "seller": "Crypto.com"
+ }
+]
