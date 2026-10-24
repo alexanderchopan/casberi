@@ -121,7 +121,7 @@ struct MoneyHistoryRows: View {
         }
         .frame(width: 50, height: 40, alignment: .topLeading)
         .accessibilityHidden(true)
-        VStack(alignment: .leading, spacing: 1) {
+        VStack(alignment: .leading, spacing: 2) {
             Text(verbatim: String(localized: "\(outName) for \(inName)"))
                 .dsText(.body17).foregroundStyle(DS.textPrimary)
                 .lineLimit(1)

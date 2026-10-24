@@ -184,7 +184,7 @@ struct WalletFollowSheet: View {
         let title = name ?? WalletStore.shortAddress(address)
         return HStack(spacing: DS.Space.s3) {
             WalletFace(address: address, size: DS.Face.list, circular: true)
-            VStack(alignment: .leading, spacing: 1) {
+            VStack(alignment: .leading, spacing: 2) {
                 Text(verbatim: title).dsText(.body17)
                     .foregroundStyle(DS.textPrimary).lineLimit(1)
                 Text(verbatim: on ? String(localized: "Following") : line)
@@ -202,7 +202,7 @@ struct WalletFollowSheet: View {
             .accessibilityLabel(Text(on ? String(localized: "Following \(title)")
                                         : String(localized: "Follow \(title)")))
         }
-        .frame(minHeight: 64)
+        .frame(minHeight: DSFeed.headHeight)
         .padding(.horizontal, DS.Space.s4)
     }
 

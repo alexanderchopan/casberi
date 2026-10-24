@@ -229,7 +229,7 @@ struct SafeStatementBlock: View {
     @ViewBuilder private func statementLines(_ statement: SafeStatement) -> some View {
         switch statement {
         case .signIn(let siwe):
-            VStack(alignment: .leading, spacing: DS.Space.s1) {
+            VStack(alignment: .leading, spacing: 2) {
                 DSProse.text("Sign in to \(siwe.domain) as your Safe.")
                     .dsText(.body17).foregroundStyle(DS.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)

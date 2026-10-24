@@ -115,7 +115,7 @@ struct SocialFollowSheet: View {
         let on = FeedFollowStore.telegram.inputs.contains { $0.caseInsensitiveCompare(handle) == .orderedSame }
         return HStack(spacing: DS.Space.s3) {
             BridgeIcon(name: "Telegram", size: DS.Face.rowCircle, circular: true)
-            VStack(alignment: .leading, spacing: 1) {
+            VStack(alignment: .leading, spacing: 2) {
                 Text(verbatim: "@\(handle)").dsText(.body17).foregroundStyle(DS.textPrimary).lineLimit(1)
                 Text(on ? "Following" : "Public channel")
                     .dsText(.subhead12).foregroundStyle(DS.textTertiary).lineLimit(1)
@@ -135,7 +135,7 @@ struct SocialFollowSheet: View {
                                             : String(localized: "Follow \(handle) on Telegram")))
             }
         }
-        .frame(minHeight: 64)
+        .frame(minHeight: DSFeed.headHeight)
         .padding(.horizontal, DS.Space.s4)
     }
 
@@ -176,7 +176,7 @@ struct SocialFollowSheet: View {
         let on = (watched[person.source] ?? []).contains(SocialToYou.normalized(person.handle))
         return HStack(spacing: DS.Space.s3) {
             WatchFace(url: person.avatarURL, lettered: person.name ?? person.handle)
-            VStack(alignment: .leading, spacing: 1) {
+            VStack(alignment: .leading, spacing: 2) {
                 Text(verbatim: person.name ?? "@\(person.handle)").dsText(.body17)
                     .foregroundStyle(DS.textPrimary).lineLimit(1)
                 Text(verbatim: on ? String(localized: "Following") : person.line)
@@ -193,7 +193,7 @@ struct SocialFollowSheet: View {
             .accessibilityLabel(Text(on ? String(localized: "Following \(person.handle)")
                                         : String(localized: "Follow \(person.handle) on \(person.source)")))
         }
-        .frame(minHeight: 64)
+        .frame(minHeight: DSFeed.headHeight)
         .padding(.horizontal, DS.Space.s4)
     }
 

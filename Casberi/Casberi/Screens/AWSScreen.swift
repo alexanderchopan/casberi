@@ -118,7 +118,7 @@ struct AWSScreen: View {
     // MARK: - Connected: what's standing
 
     @ViewBuilder private var standingBlock: some View {
-        VStack(alignment: .leading, spacing: DS.Space.s2) {
+        VStack(alignment: .leading, spacing: 2) {
             if let standing {
                 Text(AWSRoom.headline(standing))
                     .dsText(.body17).foregroundStyle(DS.textPrimary)

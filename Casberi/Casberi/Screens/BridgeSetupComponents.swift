@@ -383,7 +383,7 @@ struct BridgeSearchResultRow: View {
         Button(action: action) {
             HStack(spacing: DS.Space.s3) {
                 BridgeLogo(imageURL: imageURL, fallbackIcon: fallbackIcon)
-                VStack(alignment: .leading, spacing: 0) {
+                VStack(alignment: .leading, spacing: 2) {
                     Text(title).dsText(.body17).foregroundStyle(DS.textPrimary)
                         .lineLimit(1)
                     Text(subtitle).dsText(.subhead12).foregroundStyle(DS.textTertiary)

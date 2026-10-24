@@ -3145,7 +3145,7 @@ private struct PostHogMetricContent: View {
                 MetricDisc(series: reading.series,
                            progress: PostHogMilestone.progress(reading.total),
                            change: chart?.change, size: 34)
-                VStack(alignment: .leading, spacing: 1) {
+                VStack(alignment: .leading, spacing: 2) {
                     CountUpText(text: PostHogIngest.formatted(reading.total))
                         .dsText(.body17).monospacedDigit()
                         .foregroundStyle(DS.textPrimary)

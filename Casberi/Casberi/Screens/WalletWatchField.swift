@@ -216,7 +216,7 @@ struct WalletWatchField: View {
                 let known = book.entry(for: address)
                 HStack(spacing: DS.Space.s3) {
                     WalletFace(address: address, size: DS.Face.list, circular: true)
-                    VStack(alignment: .leading, spacing: 1) {
+                    VStack(alignment: .leading, spacing: 2) {
                         Text(known?.name ?? worldAppName ?? draft)
                             .dsText(.body17)
                             .foregroundStyle(DS.textPrimary)

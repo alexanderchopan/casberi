@@ -194,7 +194,7 @@ struct WatchAlertsSection: View {
             Button {
                 tray = .edit(alert)
             } label: {
-                VStack(alignment: .leading, spacing: 1) {
+                VStack(alignment: .leading, spacing: 2) {
                     Text(Self.title(alert))
                         .dsText(.body17).foregroundStyle(DS.textPrimary)
                     if let sub = Self.subtitle(alert, price: price) {
@@ -212,7 +212,7 @@ struct WatchAlertsSection: View {
             }
             .labelsHidden()
         }
-        .frame(minHeight: 52)
+        .frame(minHeight: DSFeed.headHeight)
         .contextMenu {
             Button(role: .destructive) {
                 store.remove(alert.id, context: modelContext)
@@ -628,7 +628,7 @@ struct IndexRow: View {
     var body: some View {
         HStack(spacing: DS.Space.s3) {
             BridgeIcon(name: company.seats.first ?? company.name, size: DS.Mark.row)
-            VStack(alignment: .leading, spacing: 1) {
+            VStack(alignment: .leading, spacing: 2) {
                 Text(verbatim: company.name)
                     .dsText(.body17).foregroundStyle(DS.textPrimary).lineLimit(1)
                 Text(verbatim: ([company.listing.ticker].compactMap(\.self) + [apps.joined(separator: ", ")])
@@ -661,7 +661,7 @@ struct IndexRow: View {
                 .accessibilityAddTraits(watched ? .isSelected : [])
             }
         }
-        .frame(minHeight: 56)
+        .frame(minHeight: DSFeed.headHeight)
         // Each company's quote lands as its own answer comes back (prd §1199).
         .animation(reduceMotion ? nil : DS.Motion.standard, value: quote == nil)
     }

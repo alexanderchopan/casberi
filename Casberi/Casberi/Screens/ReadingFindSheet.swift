@@ -147,7 +147,7 @@ struct ReadingFindSheet: View {
         let busy = following == host
         return HStack(spacing: DS.Space.s3) {
             WatchFace(url: nil, lettered: host)
-            VStack(alignment: .leading, spacing: 1) {
+            VStack(alignment: .leading, spacing: 2) {
                 Text(verbatim: host).dsText(.body17).foregroundStyle(DS.textPrimary).lineLimit(1)
                 if on || !line.isEmpty {
                     Text(verbatim: on ? String(localized: "Following") : line)
@@ -169,7 +169,7 @@ struct ReadingFindSheet: View {
                                             : String(localized: "Follow \(host)")))
             }
         }
-        .frame(minHeight: 64)
+        .frame(minHeight: DSFeed.headHeight)
         .padding(.horizontal, DS.Space.s4)
     }
 

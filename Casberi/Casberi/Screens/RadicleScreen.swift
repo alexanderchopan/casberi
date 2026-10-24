@@ -126,7 +126,7 @@ struct RadicleScreen: View {
             // Square, not round — a repo is a project, not a person (the mark
             // grammar ruling, prd §184).
             BridgeIcon(name: "Radicle", size: DS.Mark.list, circular: false)
-            VStack(alignment: .leading, spacing: 1) {
+            VStack(alignment: .leading, spacing: 2) {
                 Text(name)
                     .dsText(.body17).foregroundStyle(DS.textPrimary)
                     .lineLimit(1)

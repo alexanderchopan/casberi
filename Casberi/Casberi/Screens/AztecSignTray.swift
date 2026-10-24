@@ -35,7 +35,7 @@ struct AztecSignTray: View {
                         .foregroundStyle(DS.textPrimary)
                         .padding(.top, DS.Space.s2)
                     ForEach(Array(request.calls.enumerated()), id: \.offset) { _, call in
-                        VStack(alignment: .leading, spacing: DS.Space.s1) {
+                        VStack(alignment: .leading, spacing: 2) {
                             Text(verbatim: AztecSignRequest.line(call, account: request.account))
                                 .dsText(.body17)
                                 .foregroundStyle(DS.textPrimary)

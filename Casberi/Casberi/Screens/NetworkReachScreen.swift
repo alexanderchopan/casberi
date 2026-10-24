@@ -532,7 +532,7 @@ struct NetworkReachScreen: View {
                         .dsGlyph(.subhead)
                         .foregroundStyle(DS.attention)
                 }
-            VStack(alignment: .leading, spacing: 1) {
+            VStack(alignment: .leading, spacing: 2) {
                 Text(receipt.entry.host)
                     .dsText(.body17).foregroundStyle(DS.textPrimary)
                 Text(summary(receipt.entry))

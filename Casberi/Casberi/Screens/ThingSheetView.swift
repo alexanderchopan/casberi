@@ -4809,7 +4809,7 @@ struct ThingSheetView: View {
                             .accessibilityHidden(true)
                             .dsGlyph(.caption)
                             .foregroundStyle(DS.textTertiary)
-                        VStack(alignment: .leading, spacing: 1) {
+                        VStack(alignment: .leading, spacing: 2) {
                             Text(tie.title)
                                 .dsText(.body17)
                                 .foregroundStyle(DS.textPrimary)
