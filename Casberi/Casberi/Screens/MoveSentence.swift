@@ -1724,7 +1724,7 @@ struct MoveSentence: View {
     }
 
     private static let elsewhereSlugs: [String: String] = [
-        "abstract": "abstract", "apechain": "apechain",
+        "apechain": "apechain",
         "arbitrum": "arbitrum-one", "arbitrumone": "arbitrum-one", "arbitrumnova": "arbitrum-nova",
         "arc": "arc", "avalanche": "avalanche", "avalanchecchain": "avalanche",
         "berachain": "berachain", "bitcoin": "bitcoin", "blast": "blast",

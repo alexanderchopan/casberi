@@ -71,6 +71,10 @@ enum YourAccountElsewhere {
 
     @MainActor private static var listed: (networks: [Network], at: Date)?
 
+    /// Networks Relay still lists that are closing down, left out so no one
+    /// sends money onto them (prd §1485): Abstract (2741).
+    static let closing: Set<Int> = [2741]
+
     /// Relay's EVM networks that take deposit addresses, without the
     /// account's own (those take your own address), A–Z; each with the coins
     /// Relay bridges from it (`supportsBridging`, the coin's own flag — POL on
@@ -82,7 +86,7 @@ enum YourAccountElsewhere {
         var out: [Network] = []
         for c in await YourAccountChain.relayChains() {
             guard (c["vmType"] as? String) == "evm", (c["depositAddressEnabled"] as? Bool) == true,
-                  (c["disabled"] as? Bool) != true, let id = c["id"] as? Int, !own.contains(id),
+                  (c["disabled"] as? Bool) != true, let id = c["id"] as? Int, !own.contains(id), !closing.contains(id),
                   let name = (c["displayName"] as? String) ?? (c["name"] as? String) else { continue }
             let tags = (c["tags"] as? [String]) ?? []
             guard !tags.contains("testnet") else { continue }

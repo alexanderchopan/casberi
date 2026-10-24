@@ -68239,7 +68239,7 @@ The rule under all of it: **every page shows every account at once, and the acco
 ## §1483 — Receive's networks and Buy's last merchants wear their marks (applies §1481, §1453) (user, 2026-10-24: "need icons", over Buy's merchant list and Receive's network list)
 
 1. **Receive.** Every network Relay takes deposits on drew its first letter. `MoveSentence.elsewhereMark` names a bundled mark by the network's name (lowercased, letters and digits only, with Relay's other spellings: "BNB", "OP Mainnet", "zkSync Era", "World Chain"); a name off the table keeps its letter. Your own three networks keep `networkMark`.
-2. **Fifty-seven network marks, `brand-net-<slug>`**, from web3icons (`@web3icons/core` 4.0.58, MIT, its `background` variant: the mark on its brand square, clipped to the row's circle), rendered at 256px. Bundled, never fetched: Relay's own `iconUrl` would add a host to `NetworkReach` for a picture.
+2. **Fifty-seven network marks (fifty-six since §1485), `brand-net-<slug>`**, from web3icons (`@web3icons/core` 4.0.58, MIT, its `background` variant: the mark on its brand square, clipped to the row's circle), rendered at 256px. Bundled, never fetched: Relay's own `iconUrl` would add a host to `NetworkReach` for a picture.
 3. **Buy.** Instacart and Valorant: Simple Icons' marks (16.35.0, CC0) in their brand colour on white (`brand-instacart`, `brand-valorant`); `BridgeIcon` finds them by name. The App Store, §1481's source, was out of this session's reach. **The Home Depot keeps its letters:** no icon set carries its mark, and a drawn one is a lookalike.
 4. **Not built here:** the coins under a Relay network (AVAX, BNB, APE, BERA) still draw `AssetMark`'s letters. Arc's mark is web3icons' `arc`, taken to be Circle's Arc by name. Not built or seen on the simulator: this session had no Xcode.
 
@@ -68249,3 +68249,9 @@ The rule under all of it: **every page shows every account at once, and the acco
 2. **Typed**, nothing changes: Relay's matches, verified first, an unverified one said so; a pasted contract still reads off the chain.
 3. Receive's "as" list (§1470) reads the same `matches`, so it lists the same.
 4. Not built or seen on the simulator: this session had no Xcode.
+
+## §1485 — Receive leaves out a network that is closing: Abstract (amends §1453, §1483) (user, 2026-10-24: "remove abstract chain too. it's closing down. i'm surprised relay still offers it")
+
+1. Relay still lists Abstract (chain 2741) as taking deposits. `YourAccountElsewhere.closing` leaves it out of Receive's networks by id, so no one routes money onto a chain that is shutting down. We don't wait for Relay to drop it; once Relay does, the entry does nothing and can be deleted.
+2. Its mark (`brand-net-abstract`) and its row in `elsewhereSlugs` are deleted with it.
+3. Not built or seen on the simulator: this session had no Xcode.
