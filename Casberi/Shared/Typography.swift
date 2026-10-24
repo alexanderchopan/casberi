@@ -224,14 +224,12 @@ extension DSTextStyle {
     static let price64 = DSTextStyle(size: 64, weight: .heavy, tracking: 0, lineHeight: 64, relative: .largeTitle)
 
     // ====================================================== 52 · 44 · SENTENCE
-    /// **MOVE'S SENTENCE, THE TOP OF ITS LADDER (prd §1479).** The sentence you
-    /// fill in — "$25 of ETH / for 24.9 USDC / on Base." — is ONE size for
-    /// every word, the largest at which every clause stays whole on its line
-    /// (`MoveFit`: 52, then 44, then `heading34`). Bold, not heavy, because
-    /// the sentence is words, not a head's statement; `.largeTitle` so the
-    /// three rungs scale together and the fit stays a ratio. Nothing else
-    /// may take these: a sentence that fits at 52 is the only thing that
-    /// has earned 52.
+    /// **MOVE'S SENTENCE (prd §1479, §1501).** The sentence you fill in —
+    /// "$25 of ETH / for 24.9 USDC / on Base." — and every page of the create
+    /// walk draw at ONE size, `heading52` (`MoveSentence.rung`); a phrase
+    /// wider than the line wraps inside itself rather than shrinking the
+    /// sentence. Bold, not heavy, because the sentence is words, not a head's
+    /// statement. Nothing else may take 52.
     static let heading52 = DSTextStyle(size: 52, weight: .bold, tracking: 0, lineHeight: 58, relative: .largeTitle)
     /// The ladder's middle rung: "on Robinhood." fits here, not at 52.
     static let heading44 = DSTextStyle(size: 44, weight: .bold, tracking: 0, lineHeight: 50, relative: .largeTitle)
