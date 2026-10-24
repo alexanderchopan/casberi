@@ -19,25 +19,25 @@ enum ScopeTileGlyph {
     static let activity    = "clock.arrow.circlepath"
     static let holdings    = "chart.pie"
     static let accounts    = "person.2"
-    // The Wallet's Security tile is deleted (prd §1479): its parts are Your
+    // The Wallet's Security tile is deleted (prd §1480): its parts are Your
     // account, Permissions and Threats, each wearing its own glyph.
-    /// The account the app made you, and the controls on it (prd §1479).
+    /// The account the app made you, and the controls on it (prd §1480).
     static let yourAccount = "person.badge.shield.checkmark"
-    /// Approvals and delegations: who can spend from you (prd §1479). The key
+    /// Approvals and delegations: who can spend from you (prd §1480). The key
     /// the user reserved for Permissions (2026-09-18) is its own again.
     static let permissions = "key"
-    /// The three kinds of transfer made to fool you (prd §1479).
+    /// The three kinds of transfer made to fool you (prd §1480).
     static let threats     = "exclamationmark.shield"
     /// Money lent, pooled, staked or held as a perp — the columns the user
-    /// reserved for Positions (2026-09-18), a door on Holdings (prd §1479).
+    /// reserved for Positions (2026-09-18), a door on Holdings (prd §1480).
     static let positions   = "building.columns"
-    /// Each account's balance on Holdings: where the money sits (prd §1479),
+    /// Each account's balance on Holdings: where the money sits (prd §1480),
     /// the banknote its section already wore (§1341).
     static let holdingAccounts = "banknote"
     static let nfts        = "photo.on.rectangle.angled"
-    /// Spending's Places door (prd §1479).
+    /// Spending's Places door (prd §1480).
     static let places      = "mappin.and.ellipse"
-    /// Spending's Fees door: gas (prd §1476, §1479).
+    /// Spending's Fees door: gas (prd §1476, §1480).
     static let fees        = "fuelpump"
     /// Privy's Apps — "every app that made you a wallet" (user, 2026-09-19:
     /// *"on the privy screen, you're using the same icon for apps that we use
@@ -212,7 +212,7 @@ extension AgentRoomScope: DSTileScope {
     }
 }
 
-/// The Wallet's four tiles and the pages behind its doors (prd §1479). Watch
+/// The Wallet's four tiles and the pages behind its doors (prd §1480). Watch
 /// is not a tile: it is the first row of the Accounts pill's list.
 extension WalletSection: DSTileScope {
     var glyph: String {

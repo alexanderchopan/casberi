@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// **ACTIVITY'S BOX: HOW BUSY IT WAS (prd §1479 item 3).** The window's
+/// **ACTIVITY'S BOX: HOW BUSY IT WAS (prd §1480 item 3).** The window's
 /// transactions — "99 transactions this month" — the count against the last
 /// window to the same point, then one bar per day of the window, today's in
 /// the primary ink and the days still ahead an empty floor. Week · Month as

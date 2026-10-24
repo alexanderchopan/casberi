@@ -3,7 +3,7 @@ import SwiftUI
 /// The Wallet's shared row parts: the accounts list's rows and its Rename,
 /// the ways in, a subscription's and a place's row, the moves filter.
 ///
-/// **HOME'S FIVE SHORT LISTS ARE DELETED (prd §1479, retiring §1232's):**
+/// **HOME'S FIVE SHORT LISTS ARE DELETED (prd §1480, retiring §1232's):**
 /// Home is the overview, six doors (`FeedScreen+WalletPages.swift`); the
 /// transactions are Activity's, Subscriptions and the places Spending's,
 /// Cards' asks Needs you's, and the accounts Following's.

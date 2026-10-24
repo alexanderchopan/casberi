@@ -191,14 +191,14 @@ extension FeedScreen {
         switch section {
         case .home:
             EmptyView()
-        // **MARKETS' BOX IS WHAT YOU WATCH, TODAY (prd §1479 item 7)**: the
+        // **MARKETS' BOX IS WHAT YOU WATCH, TODAY (prd §1480 item 7)**: the
         // watchlist as a heat map; the category boxes are deleted.
         case .markets:
             walletMarketsFigure
-        // **ACTIVITY'S BOX IS HOW BUSY IT WAS (prd §1479 item 3).**
+        // **ACTIVITY'S BOX IS HOW BUSY IT WAS (prd §1480 item 3).**
         case .activity:
             WalletActivityFigure(moves: Self.walletMoves(visible.live))
-        // Home's doors state their own count (prd §1479).
+        // Home's doors state their own count (prd §1480).
         case .yourAccount, .following, .needsYou, .permissions, .threats:
             walletPageFigure(section, upcoming: upcoming)
         // Spending's pages keep Spending's box: the window and its total.
@@ -228,7 +228,7 @@ extension FeedScreen {
         case _ where walletScopeIsEmpty(section):
             WalletScopeEmptyFigure(section: section)
         // Holdings' pages keep Holdings' box: the treemap says which tile
-        // you are in (prd §1479).
+        // you are in (prd §1480).
         case .holdings, .holdingAccounts, .positions, .apps, .nfts:
             holdingsBlockSection
         }
@@ -587,7 +587,7 @@ extension FeedScreen {
         switch section {
         // Subscriptions and Spending are decided by their own reading, in
         // their figure; Activity and Home's doors state their own count
-        // (prd §1479), an empty one included.
+        // (prd §1480), an empty one included.
         case .home, .markets, .subscriptions, .spending, .places, .fees,
              .activity, .yourAccount, .following, .needsYou, .permissions, .threats:
             return false
@@ -1268,7 +1268,7 @@ extension FeedScreen {
     /// §1078, `WalletOwnMoves`): the received leg leaves the list, and the
     /// sent leg's row carries it in `ownMoves`, keyed by the sent leg's id.
     /// `cap` is Home's preview count by default; Activity's page passes nil,
-    /// the whole stream (prd §1479 item 3).
+    /// the whole stream (prd §1480 item 3).
     func walletStream(_ things: [Thing], cap: Int? = FeedScreen.walletPreviewRows) -> (rows: [FeedRow], ownMoves: [UUID: KeyedThing]) {
         let cap = cap ?? Int.max
         let legs = things.compactMap { thing -> WalletOwnMoves.Leg? in
@@ -1780,7 +1780,7 @@ extension FeedScreen {
     /// Home's lists do; white is left for a group inside a card. `anchor` is
     /// where a checkup count lands.
     ///
-    /// **A CARD NAMED LIKE ITS PAGE DRAWS NO NAME (prd §1479):** on a page a
+    /// **A CARD NAMED LIKE ITS PAGE DRAWS NO NAME (prd §1480):** on a page a
     /// door opened, the title already says "Wallet · Positions", so the one
     /// list under it says nothing twice (§208). A page holding several groups
     /// (Needs you, Permissions, Threats) keeps each group's name.

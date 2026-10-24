@@ -428,7 +428,7 @@ extension FeedScreen {
                     // **FOUR SHORT LISTS (user, 2026-10-08):** Needs you, Coming
                     // up, Spending, Transactions, five rows each and a door
                     // (`Screens/FeedScreen+WalletHome.swift`).
-                    // **HOME IS THE OVERVIEW (prd §1479 item 2).** Six doors,
+                    // **HOME IS THE OVERVIEW (prd §1480 item 2).** Six doors,
                     // no list: the stream is Activity's, the readings
                     // Spending's, what the money is Holdings'.
                     walletHomeDoors(upcoming: upcoming)
@@ -449,11 +449,11 @@ extension FeedScreen {
                     walletSubscriptionsSections
                 // **EVERY PLACE, LARGEST FIRST (prd §1468)**, each against
                 // the last window; no cap and no door, the tile is the page.
-                // **THREE DOORS (prd §1479 item 5):** Subscriptions, Places,
+                // **THREE DOORS (prd §1480 item 5):** Subscriptions, Places,
                 // Fees, each its own page.
                 case .spending:
                     walletSpendingDoors
-                // **FIVE DOORS (prd §1479 item 4):** Accounts, Tokens,
+                // **FIVE DOORS (prd §1480 item 4):** Accounts, Tokens,
                 // Positions, Apps, NFTs — the lists behind them are the ones
                 // that shipped here (§1107, §1124, §1341), each on its page.
                 case .holdings:

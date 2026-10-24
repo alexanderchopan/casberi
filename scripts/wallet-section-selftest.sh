@@ -54,38 +54,38 @@ func check(_ ok: Bool, _ what: String) {
 
 // ORDER is a ruling, not an accident of declaration.
 check(WalletSection.order == [.home, .holdings, .activity, .spending],
-      "order is home → holdings → activity → spending (prd §1479)")
-// **FOUR TILES (prd §1479).** Security is deleted — its parts are Your
+      "order is home → holdings → activity → spending (prd §1480)")
+// **FOUR TILES (prd §1480).** Security is deleted — its parts are Your
 // account, Permissions and Threats, each a page off Home — and Markets is a
 // page off Home. A remembered "security" must resolve to Home, never to a
 // page that claims to be it.
 for gone in ["security", "comingUp", "risk", "watch", "cards", "accounts"] {
-    check(WalletSection(rawValue: gone) == nil, "\(gone) is not a scope (prd §1107, §1479)")
+    check(WalletSection(rawValue: gone) == nil, "\(gone) is not a scope (prd §1107, §1480)")
 }
-check(WalletSection.order.count == 4, "the wallet has four tiles (prd §1479)")
-check(!WalletSection.order.contains(.markets), "markets is a page off Home, not a tile (prd §1479)")
-check(WalletSection.activity.label == "Activity", "the stream's tile reads Activity (prd §1479)")
+check(WalletSection.order.count == 4, "the wallet has four tiles (prd §1480)")
+check(!WalletSection.order.contains(.markets), "markets is a page off Home, not a tile (prd §1480)")
+check(WalletSection.activity.label == "Activity", "the stream's tile reads Activity (prd §1480)")
 check(WalletSection.spending.label == "Spending", "the tile reads Spending — Home's list's own word (prd §1201)")
-// **EVERY OTHER CASE IS A PAGE BEHIND A DOOR (prd §1479).** Home's six,
+// **EVERY OTHER CASE IS A PAGE BEHIND A DOOR (prd §1480).** Home's six,
 // Holdings' four and Spending's three; together with the tiles they are
 // every case, each once, so a new scope cannot be silently unlisted.
 let doors = WalletSection.homeDoors + WalletSection.holdingsDoors + WalletSection.spendingDoors
 check(Set(WalletSection.order).union(doors) == Set(WalletSection.allCases)
       && WalletSection.order.count + doors.count == WalletSection.allCases.count,
-      "the tiles and the doors list every case once (prd §1479)")
+      "the tiles and the doors list every case once (prd §1480)")
 check(WalletSection.homeDoors == [.yourAccount, .following, .needsYou, .permissions, .threats, .markets],
-      "Home's doors are Your account, Following, Needs you, Permissions, Threats, Markets (prd §1479)")
+      "Home's doors are Your account, Following, Needs you, Permissions, Threats, Markets (prd §1480)")
 check(WalletSection.holdingsDoors == [.holdingAccounts, .positions, .apps, .nfts],
-      "Holdings' pages are Accounts, Positions, Apps, NFTs (Tokens is its sheet) (prd §1479)")
+      "Holdings' pages are Accounts, Positions, Apps, NFTs (Tokens is its sheet) (prd §1480)")
 check(WalletSection.spendingDoors == [.subscriptions, .places, .fees],
-      "Spending's doors are Subscriptions, Places, Fees (prd §1479)")
-// A page goes back to the page it opened from (prd §1479 item 9).
+      "Spending's doors are Subscriptions, Places, Fees (prd §1480)")
+// A page goes back to the page it opened from (prd §1480 item 9).
 for s in WalletSection.order { check(s.parent == nil && s.isTile, "\(s.rawValue) is a tile with no parent") }
 for s in WalletSection.homeDoors { check(s.parent == .home, "\(s.rawValue) goes back to Home") }
 for s in WalletSection.holdingsDoors { check(s.parent == .holdings, "\(s.rawValue) goes back to Holdings") }
 for s in WalletSection.spendingDoors { check(s.parent == .spending, "\(s.rawValue) goes back to Spending") }
-check(WalletSection.holdingAccounts.label == "Accounts", "Holdings' Accounts keeps the word: where the money sits (prd §1479)")
-check(WalletSection.following.label == "Following", "what you follow reads Following, never Accounts (prd §1479)")
+check(WalletSection.holdingAccounts.label == "Accounts", "Holdings' Accounts keeps the word: where the money sits (prd §1480)")
+check(WalletSection.following.label == "Following", "what you follow reads Following, never Accounts (prd §1480)")
 check(WalletSection.subscriptions.label == "Subscriptions", "the page reads Subscriptions — Day's tile says it too (prd §1111)")
 
 // Conditional scopes sit at the tail, so the strip's head is the same on every
@@ -209,7 +209,7 @@ mutate "home no longer leads" \
   's/\[\.home, \.holdings, \.activity/[.holdings, .home, .activity/'
 mutate "resolve falls back to the first present scope instead of home" \
   's/guard let wanted, present\.contains\(wanted\) else \{ return \.home \}/guard let wanted, present.contains(wanted) else { return present.first ?? .home }/'
-mutate "the retired Security tile comes back as a scope (prd §1479)" \
+mutate "the retired Security tile comes back as a scope (prd §1480)" \
   's/    case spending\n/    case spending\n    case security\n/'
 mutate "shows() lets a single scope draw a control" \
   's/present\.count > 1/present.count > 0/'
@@ -217,13 +217,13 @@ mutate "every tile gated again, so tiles vanish on the wallet that most needs th
   's/static func present\(\) -> \[WalletSection\] \{ order \}/static func present() -> [WalletSection] { order.filter { !\$0.isConditional } }/'
 mutate "an empty page left with nothing to say — the dead control this ruling depends on avoiding" \
   's/An address made to look like yours, a fake token or a fake transfer\./ /'
-mutate "a Holdings page goes back to Home instead of Holdings (prd §1479 item 9)" \
+mutate "a Holdings page goes back to Home instead of Holdings (prd §1480 item 9)" \
   's/if Self\.holdingsDoors\.contains\(self\) \{ return \.holdings \}/if Self.holdingsDoors.contains(self) { return .home }/'
-mutate "a door dropped from Home's row, its page unreachable (prd §1479)" \
+mutate "a door dropped from Home's row, its page unreachable (prd §1480)" \
   's/\.permissions, \.threats, \.markets\]/.permissions, .markets]/'
-mutate "what you follow is named Accounts again, beside Holdings' Accounts (prd §1479)" \
+mutate "what you follow is named Accounts again, beside Holdings' Accounts (prd §1480)" \
   's/case \.following:       return String\(localized: "Following"\)/case .following:       return String(localized: "Accounts")/'
-mutate "Markets made a tile again (prd §1479)" \
+mutate "Markets made a tile again (prd §1480)" \
   's/\[\.home, \.holdings, \.activity, \.spending\]/[.home, .holdings, .markets, .activity, .spending]/'
 mutate "home loses its empty copy again, so the wallet room says nothing when nothing came back (prd §761)" \
   's/case \.home:            return String\(localized: "No balance yet"\)/case .home:            return nil/'
@@ -467,14 +467,14 @@ guard FeedScreen.swift "WalletSection.present()" \
 deny  FeedScreen.swift "WalletSection.present(holdings:" \
   "present() is being handed evidence again — the gate §611 removed"
 guard FeedScreen.swift "case .holdings, .holdingAccounts, .positions, .apps, .nfts:" \
-  "Holdings' pages no longer share Holdings' empty gate — a page and its tile could disagree (prd §1479)"
+  "Holdings' pages no longer share Holdings' empty gate — a page and its tile could disagree (prd §1480)"
 guard FeedScreen.swift "return blockStream.els.isEmpty" \
   "holdings' empty gate no longer reads the treemap's own doc — figure and empty state drift, and the slot shows both or neither"
-# Permissions and Threats count off the checkup's own reads (prd §1479).
+# Permissions and Threats count off the checkup's own reads (prd §1480).
 guard FeedScreen.swift "Self.permissionsLine(counts)" \
-  "the Permissions door no longer reads the checkup's counts — its line and its page could disagree (prd §1479)"
+  "the Permissions door no longer reads the checkup's counts — its line and its page could disagree (prd §1480)"
 guard FeedScreen.swift "Self.threatsLine(counts)" \
-  "the Threats door no longer reads the checkup's counts (prd §1479)"
+  "the Threats door no longer reads the checkup's counts (prd §1480)"
 guard FeedScreen.swift "case _ where walletScopeIsEmpty(section):" \
   "the slot no longer draws a scope's empty state — a chip onto an empty scope opens 258 blank points (§611)"
 guard FeedScreen.swift "WalletScopeEmptyFigure(section: section)" \
@@ -488,25 +488,25 @@ guard FeedScreen.swift "walletLive.warnings" \
   "the dot no longer rides warnings — presence-lighting is the §83 overclaim that retired 'Needs attention'"
 guard FeedScreen.swift "case .holdings:" \
   "the wallet block no longer switches on the scope"
-# What is ahead is Needs you's since prd §1479: its page and Home's count read
+# What is ahead is Needs you's since prd §1480: its page and Home's count read
 # the same groups, so the door and the page cannot disagree.
 guard FeedScreen.swift "walletComingUpDays(upcoming)" \
-  "Needs you no longer lists what's ahead (prd §1041, §1479)"
+  "Needs you no longer lists what's ahead (prd §1041, §1480)"
 # Spending's doors are groups' sums through Hide balances, never one purchase
-# (prd §1246, §1479).
+# (prd §1246, §1480).
 guard FeedScreen.swift "figure: mask ?? AppleWalletRoom.money(page.recurring, \"USD\")" \
-  "Spending's Subscriptions door no longer leads with what recurs, through Hide balances (prd §1479)"
+  "Spending's Subscriptions door no longer leads with what recurs, through Hide balances (prd §1480)"
 guard FeedScreen.swift "figure: mask ?? AppleWalletRoom.money(page.rest, \"USD\")" \
-  "Spending's Places door no longer leads with the rest, through Hide balances (prd §1479)"
+  "Spending's Places door no longer leads with the rest, through Hide balances (prd §1480)"
 deny FeedScreen.swift "SpendingReading.shared.latest" \
   "a Spending door is one purchase again — the same row and figure as Activity's (prd §1246)"
-# Home is the overview, no list (prd §1479): the stream is Activity's.
+# Home is the overview, no list (prd §1480): the stream is Activity's.
 guard FeedScreen.swift "walletHomeDoors(upcoming: upcoming)" \
-  "Home no longer draws its six doors (prd §1479)"
+  "Home no longer draws its six doors (prd §1480)"
 deny FeedScreen.swift "func walletHomeSections(" \
-  "Home's lists are back — the stream is Activity's, the readings Spending's (prd §1479)"
+  "Home's lists are back — the stream is Activity's, the readings Spending's (prd §1480)"
 guard FeedScreen.swift "walletStream(moves, cap: nil)" \
-  "Activity's list is capped again — the page is the list (prd §1479 item 3)"
+  "Activity's list is capped again — the page is the list (prd §1480 item 3)"
 deny FeedScreen.swift "ahead: upcoming" \
   "what's ahead is back on Home — Home is only what happened (prd §1041)"
 guard FeedScreen.swift "let all = visible.live.filter { !promoted.contains(\$0.id) }" \
@@ -532,11 +532,11 @@ guard FeedScreen.swift ".task(id: walletSubscriptionsKey) {" \
   "Subscriptions no longer refreshes its reading — it stands on whatever was read first (prd §1105, §1111)"
 guard FeedScreen.swift "subscriptions: subscriptions," \
   "the Subscriptions box lost the subscriptions — their renewals are off the calendar (prd §1111)"
-python3 - "$work/FeedScreen.swift.bare" <<'PY' || fail "drift: Activity no longer reads the moves alone, or Subscriptions holds more than subscriptions (prd §1111, §1479)"
+python3 - "$work/FeedScreen.swift.bare" <<'PY' || fail "drift: Activity no longer reads the moves alone, or Subscriptions holds more than subscriptions (prd §1111, §1480)"
 import re, sys
 src = open(sys.argv[1]).read()
 subs = re.search(r"case \.subscriptions:(.*?)case \.spending:", src, re.S)
-# Activity is the stream since prd §1479 (`walletActivitySections`), which
+# Activity is the stream since prd §1480 (`walletActivitySections`), which
 # since prd §1341 reads the moves alone (`walletMoves`), never a balance.
 act = re.search(r"func walletActivitySections\(.*?\n    }\n", src, re.S)
 ok = subs and act \
@@ -550,7 +550,7 @@ guard FeedScreen.swift "!SubscriptionsSource.isBill(\$0, now: now)" \
 guard FeedScreen.swift ".union(visible.filter { SubscriptionsSource.isBill(\$0) }" \
   "Home's stream lists a repeating bill again — it belongs to Subscriptions (prd §1105)"
 
-python3 - "$work/FeedScreen.swift.bare" <<'PY' || fail "drift: Holdings' doors are not Accounts, Tokens, Positions, Apps, then NFTs (prd §1479)"
+python3 - "$work/FeedScreen.swift.bare" <<'PY' || fail "drift: Holdings' doors are not Accounts, Tokens, Positions, Apps, then NFTs (prd §1480)"
 import re, sys
 src = open(sys.argv[1]).read()
 m = re.search(r"func walletHoldingsDoors\(.*?\n    }\n", src, re.S)
@@ -559,7 +559,7 @@ order = [body.find(k) for k in ("walletDoor(.holdingAccounts", "feedSheet = .wal
                                 "walletDoor(.positions", "walletDoor(.apps", "walletDoor(.nfts")]
 sys.exit(0 if all(i >= 0 for i in order) and order == sorted(order) else 1)
 PY
-# Tokens is a door on Holdings since prd §1479, opening every token in its
+# Tokens is a door on Holdings since prd §1480, opening every token in its
 # sheet; Holdings itself never lists them, or Positions sink under forty rows.
 deny FeedScreen.swift "ForEach(portfolio.positions)" \
   "Holdings lists every token again — on a wallet of forty, Positions are forty rows down (prd §1107)"
@@ -604,13 +604,13 @@ guard DSChip.swift "if ranges.count > 1" \
 # Overview's first row counts the accounts, the Accounts list stands under
 # Overview, and its header's + is the Feed's with two rows — Follow an account
 # (the tray) and Connect an app (the catalogue on its Wallet card) — the same
-# two the Feed's Wallet section offers (§1347 grew). Since prd §1479 the list
+# two the Feed's Wallet section offers (§1347 grew). Since prd §1480 the list
 # is Following, a door on Home: your own account apart (it is Your account's),
 # every other account a row with its Rename and Stop following.
 guard FeedScreen.swift "walletDoor(.following, line: followingLine(following)" \
-  "Home lost its Following door (prd §1410, §1479)"
+  "Home lost its Following door (prd §1410, §1480)"
 guard FeedScreen.swift "ForEach(slots) { slot in walletAccountRow(slot) }" \
-  "the Following page no longer lists the accounts you follow (prd §1410, §1479)"
+  "the Following page no longer lists the accounts you follow (prd §1410, §1480)"
 guard FeedScreen+WalletHome.swift "glyph: ScopeTileGlyph.wallets) { feedSheet = .walletFollow }" \
   "the Accounts header's + no longer raises Follow an account (prd §1410, §1090)"
 guard FeedScreen+WalletHome.swift "route.present(.apps)" \

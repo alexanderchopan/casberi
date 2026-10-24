@@ -75,7 +75,7 @@ extension FeedScreen {
                     .listRowInsets(WalletCardStyle.rowInsets)
                     .feedRowBackground()
                     .listRowSeparator(.hidden)
-                    // The nudge's landing (`ShellChrome.openYourAccount`, prd §1479).
+                    // The nudge's landing (`ShellChrome.openYourAccount`, prd §1480).
                     .task(id: chrome.walletScrollRequest) {
                         guard chrome.walletScrollRequest == SecurityAnchor.account.id else { return }
                         try? await Task.sleep(for: .milliseconds(300))

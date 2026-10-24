@@ -2,7 +2,7 @@ import Foundation
 
 /// The wallet room's SCOPE — which of its pages is on screen (prd §483).
 ///
-/// **FOUR TILES, EVERY LIST BEHIND A DOOR (prd §1479, user: "i want to totally
+/// **FOUR TILES, EVERY LIST BEHIND A DOOR (prd §1480, user: "i want to totally
 /// refactor wallet. it has the right things, but has redundancy, shows too
 /// much").** The tiles are Home · Activity · Holdings · Spending, and each
 /// answers one question:
@@ -21,7 +21,7 @@ import Foundation
 ///
 /// **A PAGE IS A SCOPE WITH NO TILE.** Subscriptions was the first (§1232);
 /// every door opens one. A page names the page it opened from (`parent`), and
-/// its title's category word goes back there (prd §1479 item 9).
+/// its title's category word goes back there (prd §1480 item 9).
 ///
 /// **ORDER is the publication's**; the tiles DRAW A–Z after Home
 /// (`DSScopeTiles.alphabetical`, §995), and the self-test pins it.
@@ -31,15 +31,15 @@ import Foundation
 enum WalletSection: String, CaseIterable, Identifiable, Sendable {
     // ── The tiles ────────────────────────────────────────────────────────────
     case home
-    /// Every transaction by day, pending first (prd §1479 item 3).
+    /// Every transaction by day, pending first (prd §1480 item 3).
     case activity
-    /// What the money is (prd §1479 item 4).
+    /// What the money is (prd §1480 item 4).
     case holdings
-    /// A reading of Activity: subscriptions, places, fees (prd §1468, §1479).
+    /// A reading of Activity: subscriptions, places, fees (prd §1468, §1480).
     case spending
 
     // ── Home's doors ─────────────────────────────────────────────────────────
-    /// The account the app made you, and its controls (prd §1479 item 6).
+    /// The account the app made you, and its controls (prd §1480 item 6).
     case yourAccount
     /// Every other account the Wallet reads, where you add, rename and remove.
     case following
@@ -49,7 +49,7 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
     case permissions
     /// Address poisoning, fake tokens, fake transfers.
     case threats
-    /// What you watch, and the companies behind your apps (prd §1479 item 7).
+    /// What you watch, and the companies behind your apps (prd §1480 item 7).
     case markets
 
     // ── Holdings' doors ──────────────────────────────────────────────────────
@@ -75,12 +75,12 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
     /// adds the pages.
     static let order: [WalletSection] = [.home, .holdings, .activity, .spending]
 
-    /// Home's doors, in the row's order (prd §1479 item 2).
+    /// Home's doors, in the row's order (prd §1480 item 2).
     static let homeDoors: [WalletSection] = [.yourAccount, .following, .needsYou,
                                              .permissions, .threats, .markets]
-    /// Holdings' doors (prd §1479 item 4).
+    /// Holdings' doors (prd §1480 item 4).
     static let holdingsDoors: [WalletSection] = [.holdingAccounts, .positions, .apps, .nfts]
-    /// Spending's doors (prd §1479 item 5).
+    /// Spending's doors (prd §1480 item 5).
     static let spendingDoors: [WalletSection] = [.subscriptions, .places, .fees]
 
     /// The page a page was opened from, where its title goes back: nil for a
@@ -117,7 +117,7 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
         case .permissions:     return String(localized: "Permissions")
         case .threats:         return String(localized: "Threats")
         case .markets:         return String(localized: "Markets")
-        // Where the money sits: a wallet, or an account an app holds (§1479).
+        // Where the money sits: a wallet, or an account an app holds (§1480).
         case .holdingAccounts: return String(localized: "Accounts")
         case .positions:       return String(localized: "Positions")
         case .apps:            return String(localized: "Apps")
@@ -228,7 +228,7 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
     /// Resolve the scope actually shown from the one the person last picked.
     ///
     /// **Falls back to `.home`, never to "the first present scope."** A
-    /// remembered scope the room no longer has — Security since §1479 — fails
+    /// remembered scope the room no longer has — Security since §1480 — fails
     /// its raw value and resolves to Home rather than to an empty page.
     static func resolve(_ wanted: WalletSection?, present: [WalletSection]) -> WalletSection {
         guard let wanted, present.contains(wanted) else { return .home }

@@ -23,7 +23,7 @@ extension FeedScreen {
     /// Markets lit, and pressing a tile lists it below.
     @ViewBuilder
     var walletMarketsFigure: some View {
-        // **THE BOX IS WHAT YOU WATCH, TODAY (prd §1479 item 7, retiring
+        // **THE BOX IS WHAT YOU WATCH, TODAY (prd §1480 item 7, retiring
         // §1391's sectors box):** every watched coin and stock one tile, the
         // day's move its wash and edge — the treemap Holdings draws, sized
         // alike because a watch is not a holding. The category boxes are
@@ -92,7 +92,7 @@ extension FeedScreen {
             marketsAlertsSections(rows, nextEventID: nextEventID)
         } else {
             marketsWatchlistSections(rows, nextEventID: nextEventID)
-            // **FROM YOUR APPS (prd §1479 item 7):** the index's one part
+            // **FROM YOUR APPS (prd §1480 item 7):** the index's one part
             // that is yours — the companies behind the apps you connected,
             // one list, no category boxes. Search finds any other company.
             marketsFromYourAppsSection(visible: rows)
@@ -291,7 +291,7 @@ extension FeedScreen {
         .listRowSeparator(.hidden)
     }
 
-    // MARK: - From your apps (prd §1479 item 7)
+    // MARK: - From your apps (prd §1480 item 7)
 
     /// The companies behind the apps you connected, across every category,
     /// each once with all its apps — one list under the watchlist, starred in

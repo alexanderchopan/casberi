@@ -308,11 +308,11 @@ mutate "a grant is offered to the acting list as well as to the approvals list" 
 # ── drift guards: the wiring the compiled arithmetic cannot prove ────────────
 strip() { sed -E 's://.*::' "$1" | sed -E '/^[[:space:]]*\/\/\//d'; }
 
-# **PERMISSIONS IS A PAGE OFF HOME AGAIN SINCE prd §1479** (it was Security's
+# **PERMISSIONS IS A PAGE OFF HOME AGAIN SINCE prd §1480** (it was Security's
 # upper half under §1107): what acts as you, then what can spend for you.
 grep -q 'walletActingSection' "$FEED" && grep -q 'walletApprovalsSection' "$FEED" \
   && grep -q 'case .permissions:' "$FEED" \
-  || fail "Permissions no longer lists what acts as you and what can spend for you (prd §1479)"
+  || fail "Permissions no longer lists what acts as you and what can spend for you (prd §1480)"
 
 # The scope's EMPTY flag must be the section's OWN gate, computed from the same
 # source with the same arguments — §483's rule, whose failure was a chip that
@@ -337,7 +337,7 @@ grep -q 'walletActingSection' "$FEED" && grep -q 'walletApprovalsSection' "$FEED
 FEED_BARE="$(mktemp -t wallet-perm-feed)"
 strip "$FEED" > "$FEED_BARE"
 
-# Since prd §1479 the gate is the Permissions page's: its skeleton draws on
+# Since prd §1480 the gate is the Permissions page's: its skeleton draws on
 # the checkup's own counts, and the delegations count is the acting list's
 # own split.
 grep -q 'if counts(\\.delegations) + counts(\\.approvals) == 0 { walletSkeletonRowsSection }' "$FEED_BARE" \
@@ -387,16 +387,16 @@ grep -q 'walletActingSection' "$FEED" \
 # match is no longer the room's rows. Take the block that draws the acting list.
 # The empty scope's skeleton gate (prd §769/§771) sits between the case and the
 # lists, so the window is wide enough to reach past it.
-# Since prd §1479 the lists stand on the Permissions page: the acting list,
+# Since prd §1480 the lists stand on the Permissions page: the acting list,
 # then the approvals. Signatures waiting on you lead Needs you instead.
 order=$(strip "$FEED" | sed '/^[[:space:]]*$/d' | grep -A 3 'case .permissions:$' \
         | grep -A 1 'walletActingSection' | head -2)
 print -r -- "$order" | sed -n '1p' | grep -q 'walletActingSection' \
-  || fail "the acting list no longer leads the Permissions page (prd §1479)"
+  || fail "the acting list no longer leads the Permissions page (prd §1480)"
 print -r -- "$order" | sed -n '2p' | grep -q 'walletApprovalsSection' \
   || fail "the approvals list no longer follows it on the Permissions page"
 strip "$FEED" | sed '/^[[:space:]]*$/d' | grep -A 8 'func walletNeedsYouPage(' | grep -q 'walletSignaturesSection' \
-  || fail "signatures waiting on you no longer lead Needs you (prd §947, §1479)"
+  || fail "signatures waiting on you no longer lead Needs you (prd §947, §1480)"
 
 # A LIST, NOT A CONTROL (§112/§293): nothing here signs, revokes or opens.
 # A delegate is undone from the wallet app that set it, so a chevron here

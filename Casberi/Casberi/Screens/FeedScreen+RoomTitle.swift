@@ -164,7 +164,7 @@ extension FeedScreen {
         }
         if source == CategoryFold.walletRoom, selectedSeat == nil,
            let section = chrome.walletSection, section != .home {
-            // A page goes back to the page it opened from (prd §1479 item 9):
+            // A page goes back to the page it opened from (prd §1480 item 9):
             // Tokens to Holdings, Places to Spending, Home's doors to Home.
             return {
                 DSHaptic.selection()

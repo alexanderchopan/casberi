@@ -70,7 +70,7 @@ Privacy and Reddit. Frames and Logos are the devnets that remain.
 - The lead has no count foot, and day headers show no counts (§914).
 - Every room opens on a lead, with no exception for a shape. A room's tiles never depend on its head (`standaloneLead`) (§911).
 - Kind tiles show when a pick would change the list (§822). Tiles keep their glyphs (§938).
-- Tiles read A–Z, with All/Home first and the verbs (New, Watch, Follow, Search) last, A–Z among themselves (§995, §1039). The Wallet's are Home · Activity · Holdings · Spending, one row, no verb (§1479). Day's are All · Subscriptions · New (§1111). Spans of time keep their given order (`readsInTime`) (§999).
+- Tiles read A–Z, with All/Home first and the verbs (New, Watch, Follow, Search) last, A–Z among themselves (§995, §1039). The Wallet's are Home · Activity · Holdings · Spending, one row, no verb (§1480). Day's are All · Subscriptions · New (§1111). Spans of time keep their given order (`readsInTime`) (§999).
 - Tiles never rise: when nothing is open, the lead holds its empty well over the tiles (§979, §997).
 - Every empty state draws a skeleton of what would fill it (`.room`/`.list`). A door appears only where it is the remedy (§771).
 - Every connected seat keeps a room, empty or not. The exceptions are `LiveRoomSources.landsNothing`: Apple Intelligence, ETH Validators and the four exchanges (§1036).
@@ -133,8 +133,8 @@ Privacy and Reddit. Frames and Logos are the devnets that remain.
 - Tempo is on, read through Zerion only, with no native balance (§810). Arc rides Alchemy and Zerion (§808a). World Chain is on by default (§788).
 - A transfer with no timestamp is read off its block, and dropped if the block can't be read, never dated now (§790).
 - Holdings is a true-area treemap: the total alone, grey tiles showing mark and share, the tail as Other, blue when pressed (§939). A tile's mark is 0.3 of its shorter side, 16–56pt (§957).
-- Every Wallet page shows every account at once, and the menu under the tiles narrows it to one (§1479). Home is the overview, no list: the balance and its line, then six doors — Your account (its controls in the line), Following (every other account and app; add, rename, remove), Needs you (every ask, a Safe signature first), Permissions (approvals and delegations), Threats (poisoning, fake tokens, fake transfers), Markets (§1479). Activity is the stream: transactions per day in the box, every transaction by day below (§1479). A page a door opens draws no tiles of its own, its title's category word goes back to the page it came from, and a list named like its page draws no name (§1479).
-- Holdings is the treemap, then five doors: Accounts (each account's balance), Tokens (the sheet of every token), Positions (lending closest to liquidation first), Apps (§1124), NFTs (§1479). Spending is the window's total against the last, then three doors: Subscriptions, Places, Fees (§1468, §1476, §1479); Subscriptions tracks subscriptions and nothing else (§1111, §1117). Security and Cards are deleted: your account's controls are Your account's page (§1436, §1455), a card's amount due and an offer ending are Needs you rows (§1479). Markets' box is the watchlist's day; its index is one From your apps list (§1479). Watch a wallet is the Accounts pill's first row, never a tile (§1107).
+- Every Wallet page shows every account at once, and the menu under the tiles narrows it to one (§1480). Home is the overview, no list: the balance and its line, then six doors — Your account (its controls in the line), Following (every other account and app; add, rename, remove), Needs you (every ask, a Safe signature first), Permissions (approvals and delegations), Threats (poisoning, fake tokens, fake transfers), Markets (§1480). Activity is the stream: transactions per day in the box, every transaction by day below (§1480). A page a door opens draws no tiles of its own, its title's category word goes back to the page it came from, and a list named like its page draws no name (§1480).
+- Holdings is the treemap, then five doors: Accounts (each account's balance), Tokens (the sheet of every token), Positions (lending closest to liquidation first), Apps (§1124), NFTs (§1480). Spending is the window's total against the last, then three doors: Subscriptions, Places, Fees (§1468, §1476, §1480); Subscriptions tracks subscriptions and nothing else (§1111, §1117). Security and Cards are deleted: your account's controls are Your account's page (§1436, §1455), a card's amount due and an offer ending are Needs you rows (§1480). Markets' box is the watchlist's day; its index is one From your apps list (§1480). Watch a wallet is the Accounts pill's first row, never a tile (§1107).
 - The Wallet's account menu lists its addresses and the apps it folded in (`RoomAccounts`, one table per merged room); an app pick narrows the rows, the box and Holdings to that app, the box names it, and an app with nothing in the total shows the empty box, never the Wallet's total (§1048b). An app that had a room head draws it in the box when picked (Safe's queue and co-signers, Privacy Pools' errands, a card's spending), inside the box's own well (§1048d).
 - The rooms tray is the doors row and one entry per category (glyph and word, primary ink), which opens its room. A merged category draws no app marks; an unmerged one keeps its marks, each landing in that app's room, until it merges, keyed on `RoomAccounts.mergedRooms` (§1050e, §1050f, §1048c).
 - A folded app has no room: every door that names it lands in the Wallet scoped to it; Home lists every folded app's rows and its history screen reads the same sources; Home leads with what is pending and undated (queued Safe transactions, uncleared Privacy Pools deposits) under Needs you (§1048c, §1111). Peer's settling sales (due at the escrow's 6.5h deadline, removed when the outcome lands) are dated items there (§1048f); Rocket Money's repeating bills are Subscriptions' (§1105).
@@ -1443,7 +1443,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1079 — Work and Reading show one row per object, Work's box is its newest event, and Social gets its threads and faces back (amended by §1080, §1109, §1450)
 - §1080 — Work's Coming up leads with what needs you, then what is due
 - §1081 — Markets, find it in one tap and keep it in one more: the day as a heat map, Add in the room, alerts, stock logos (amended by §1082, §1177)
-- §1082 — Markets' categories are an index of the companies behind every app, your apps first, and Add becomes Search over the… (amended by §1479)
+- §1082 — Markets' categories are an index of the companies behind every app, your apps first, and Add becomes Search over the… (amended by §1480)
 - §1083 — The cover says "Here's a demo." in words
 - §1084 — Logos: tokens named, Holdings, Create and Send from this phone, and a stopped node or a reset notifies
 - §1085 — Reading gets its tiles: All · Highlights · Follow · Search; the box keeps the newest thing (amended by §1118)
@@ -1475,12 +1475,12 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1106 — Billers are addresses: every merchant that charges you on a schedule stands in Addresses, with how it bills and its c… (amended by §1106a, §1114, §1136)
 - §1106a — A biller files under the category of the app it bills for, and the filter is the same category bar
 - §1106b — A subscription that stopped is gone however long ago it stopped
-- §1107 — The Wallet in four tiles: Home · Coming up · Holdings · Security; Positions and its loan risk fold into Holdings, Sub… (amended by §1107a, §1111, §1124, §1133, §1468, §1479)
+- §1107 — The Wallet in four tiles: Home · Coming up · Holdings · Security; Positions and its loan risk fold into Holdings, Sub… (amended by §1107a, §1111, §1124, §1133, §1468, §1480)
 - §1107a — Security's checkup is the six counts alone, and the two fakes get their own glyphs
 - §1108 — Frames and Logos take four tiles: a verb that adds an account heads the Accounts menu, a verb that moves money leads…
 - §1109 — The Nostr seat is removed; Lightning keeps the relay client (amended by §1110)
 - §1110 — Farcaster leaves the app: the seat, its rows, and Farcaster as an identity in Addresses
-- §1111 — Subscriptions get a place: Apps is its own door again and Settings is Casberi's alone, the Wallet's Coming up becomes… (amended by §1112, §1113, §1115, §1117, §1136, §1160, §1201, §1479)
+- §1111 — Subscriptions get a place: Apps is its own door again and Settings is Casberi's alone, the Wallet's Coming up becomes… (amended by §1112, §1113, §1115, §1117, §1136, §1160, §1201, §1480)
 - §1112 — The Wallet's Subscriptions tile maps where the money goes: categories by monthly cost, a press filters the list (amended by §1117)
 - §1113 — One identity per service: a plan, its app and its mailing list open each other, and both Subscriptions tiles are one… (amended by §1118)
 - §1114 — A biller that is a subscription opens the Wallet's sheet from Addresses
@@ -1599,7 +1599,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1216 — The Node box reads the stake: Funded, aging, Eligible to propose (amended by §1448)
 - §1217 — Each kind that keeps coming has one home, and one verb
 - §1218 — The picked tile is the page's ink
-- §1219 — The Wallet's Home takes the Feed's shape, from the Feed's own parts (amended by §1479)
+- §1219 — The Wallet's Home takes the Feed's shape, from the Feed's own parts (amended by §1480)
 - §1220 — On the phone, a Wallet tile rises as a sheet
 - §1221 — Security's box is Settings' count grid (amended by §1462)
 - §1222 — What this app reaches takes the Feed's shape
@@ -1612,7 +1612,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1229 — Day's box is a calendar (amended by §1344)
 - §1230 — Follow and subscriptions, one standard
 - §1231 — The Feed's row is Feed · Day · Notes · Sources; Day is a door, mail lives in Life
-- §1232 — Markets is a Wallet tile; Wallet Home is Needs you · Subscriptions · Spending · Cards · Transactions (amended by §1450, §1479)
+- §1232 — Markets is a Wallet tile; Wallet Home is Needs you · Subscriptions · Spending · Cards · Transactions (amended by §1450, §1480)
 - §1233 — An empty Day is Day, and New needs no connect; Apps' categories are the two-across box
 - §1234 — The catalogue is Sources › Apps; the Apps screen is deleted
 - §1235 — Notes holds everything you write: your notes, Obsidian, Apple Journal, Day One and Notion
@@ -1637,7 +1637,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1254 — Setup pages take the Feed's cards
 - §1255 — The tray's category glyphs are pink, and the Wallet has one
 - §1256 — Home's glance tiles become one Newest card
-- §1257 — The Wallet's Home tiles become one Overview card (amended by §1479)
+- §1257 — The Wallet's Home tiles become one Overview card (amended by §1480)
 - §1258 — Every thing sheet takes the Feed's style
 - §1259 — The wallet balance line is green
 - §1260 — Day's calendar carries your subscriptions (amends §1229)
@@ -1715,7 +1715,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1334 — A Safe transaction is named by what it does
 - §1335 — Day's Coming up carries what the app computes: renewals with their price, card payments, and Track a subscription (bu…
 - §1336 — A room's row of tiles speaks at the page's volume
-- §1337 — Markets opens in place, a Wallet tile like Holdings (amends §1232 item 1, §1325, §1167) (amended by §1479)
+- §1337 — Markets opens in place, a Wallet tile like Holdings (amends §1232 item 1, §1325, §1167) (amended by §1480)
 - §1338 — Holdings, made over: the box says what and how much, a row says one fact, Positions keep one rhythm, NFTs stand under…
 - §1339 — Fileverse reopens for read AND write, and the measured read goes through the documents portal's own key, not the Deve…
 - §1340 — Day: Needs you is one card with a section per place, only what waits on you; the calendar is a dot a day, and a day o… (amended by §1344)
@@ -1786,7 +1786,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1407 — The Mac pane, finished: Library's box, the Wallet's Overview and Coming up, pills for the scopes, people on the title…
 - §1408 — The Security tile's flagged sections show five rows, then one door (amends §1107's Security list; applies §1386's one…
 - §1409 — A Safe's queue is one Signatures block in the sheet's column (amends §425's queue card and the Safe arm of §887's com…
-- §1410 — The Wallet adds accounts where the Feed adds follows: Accounts leads Overview, its list stands under it, and its + is… (amended by §1479)
+- §1410 — The Wallet adds accounts where the Feed adds follows: Accounts leads Overview, its list stands under it, and its + is… (amended by §1480)
 - §1411 — An unfollow's memory outlives the pass that is still landing the wallet's rows, and every pass ends with its own prun…
 - §1412 — A wallet you watch is yours: its Safe queue needs you, and "you" is any watched owner (closes §1411 item 3; confirms…
 - §1413 — Day is dated rows like every section: the week strip and the five weeks that opened in place are deleted, Needs you l…
@@ -1812,7 +1812,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1433 — The Wallet's + leads with Create an account (builds §1422 item 4)
 - §1434 — Recovery says what it means: "Use on this iPhone", and the other one is "your other device" (rewords §1427's "Move it…
 - §1435 — Move is in every build: no hidden or dormant feature in a release (retires §1422's DEBUG gate)
-- §1436 — Move does, the Wallet keeps: Send · Swap and Receive are Move's two sections, the keys live in Wallet › Security, and… (amended by §1479)
+- §1436 — Move does, the Wallet keeps: Send · Swap and Receive are Move's two sections, the keys live in Wallet › Security, and… (amended by §1480)
 - §1437 — Revoke in the app: your account takes back what it let others spend, in Wallet › Security (builds §1436 item 2; the p…
 - §1438 — Move is a sentence you fill in: Swap · Send · Receive as words, the choices opening under it, Add for the next line (… [+3 sub-entries]
 - §1439 — Base Sepolia ships: one test network and two live ones in every build (amends §1435 item 2) [+1 sub-entries]
@@ -1837,14 +1837,14 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1459 — Two lines cut from creating your account
 - §1460 — No summary after your keys: the Created sentence says it in one line
 - §1461 — The opening operation sets six limit periods, not twelve
-- §1462 — Security's box is nine, three across, the figure centered over its word (amended by §1463, §1479)
+- §1462 — Security's box is nine, three across, the figure centered over its word (amended by §1463, §1480)
 - §1463 — The wash says the state: a threat red, an ask orange, on green, nothing for a zero
 - §1464 — The row does the thing, and Return commits: GitHub, X and a site in three taps
 - §1465 — One gutter per screen: Move and the keys walk share `MoveSentence.gutter`, Security's two sentences share theirs (amended by §1466)
 - §1466 — Move is one running sentence: clauses that never split across a line, one size, the money as small print
 - §1467 — The one Search asks the market: coins, tokens and stocks for whatever you typed, a pasted contract included, followed…
-- §1468 — Spending is the Wallet's fifth tile: the month or the week against the last one to the same point, the recurring half… (amended by §1469, §1479)
-- §1469 — Spending's two groups and its start box: Recurring and The rest are rows, each the sum of a list (Subscriptions, then… (amended by §1479)
+- §1468 — Spending is the Wallet's fifth tile: the month or the week against the last one to the same point, the recurring half… (amended by §1469, §1480)
+- §1469 — Spending's two groups and its start box: Recurring and The rest are rows, each the sum of a list (Subscriptions, then… (amended by §1480)
 - §1470 — Receive from another network takes any coin Relay bridges, and lands what you pick: the network's dollar unless they…
 - §1471 — The polish pass: one left edge, the figure outranks the name, the crown's line says now
 - §1472 — The polish pass, second half: a short note climbs the lead's ladder, and an event's start stands at the right edge
@@ -1853,7 +1853,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1475 — The demo has an account of its own
 - §1476 — Fees is Spending's third row: gas on every transaction your wallets sent, one per transaction, by network, apart from…
 - §1477 — The rating ask: Apple's own five-star sheet, for someone using the app on their own things on four different days, on…
-- §1479 — The Wallet restructured: Home is the overview, four tiles, every list behind a door, and Security, Cards and the cate…
+- §1480 — The Wallet restructured: Home is the overview, four tiles, every list behind a door, and Security, Cards and the cate…
 
 ## Dead rulings → what replaced them (generated)
 

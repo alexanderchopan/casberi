@@ -1149,7 +1149,7 @@ final class ShellChrome {
         sourceRequest = CategoryFold.walletRoom
     }
 
-    /// The Wallet's Your account page (prd §1479 item 10, was Security's
+    /// The Wallet's Your account page (prd §1480 item 10, was Security's
     /// card under §1436): the recovery and Signer nudges land on its keys.
     /// The section's card reads `walletScrollRequest` as it appears.
     var walletScrollRequest: String?

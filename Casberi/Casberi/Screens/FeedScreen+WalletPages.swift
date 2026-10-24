@@ -1,7 +1,7 @@
 import SwiftUI
 import SwiftData
 
-/// **THE WALLET'S DOORS AND THE PAGES BEHIND THEM (prd §1479).**
+/// **THE WALLET'S DOORS AND THE PAGES BEHIND THEM (prd §1480).**
 ///
 /// Home is the overview: the balance and its line in the box, then six doors.
 /// Holdings and Spending put their lists behind doors too, so every page fits
@@ -44,7 +44,7 @@ extension FeedScreen {
     }
 
     /// The doors as one section under the tiles, no header: the title above
-    /// already names the page (prd §1479, user: "do we even need to say
+    /// already names the page (prd §1480, user: "do we even need to say
     /// 'Overview'").
     @ViewBuilder
     func walletDoorsSection<Rows: View>(@ViewBuilder _ rows: () -> Rows) -> some View {
@@ -54,7 +54,7 @@ extension FeedScreen {
     // MARK: - Home's six doors
 
     /// Your account's line: each control's state, a missing one in amber
-    /// (prd §1479 item 2). Recovery leads, because losing the phone is the
+    /// (prd §1480 item 2). Recovery leads, because losing the phone is the
     /// one thing the others cannot undo.
     var yourAccountLine: (text: String, wants: Bool) {
         var parts: [String] = []
@@ -133,7 +133,7 @@ extension FeedScreen {
         return parts.joined(separator: " · ")
     }
 
-    /// A card's ask (prd §1479 item 8): an amount due, or an offer ending
+    /// A card's ask (prd §1480 item 8): an amount due, or an offer ending
     /// within a week. Nil when the card asks nothing.
     static func cardAsk(_ card: WalletCardRoll.Card, now: Date = .now) -> String? {
         let mask = BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil
@@ -161,7 +161,7 @@ extension FeedScreen {
         return rows + walletSignatureWarnings.count + nudges + cards
     }
 
-    /// **HOME, THE OVERVIEW (prd §1479 item 2).** Under the box and the
+    /// **HOME, THE OVERVIEW (prd §1480 item 2).** Under the box and the
     /// tiles, six doors: Your account, Following, Needs you, Permissions,
     /// Threats, Markets. Needs you, Permissions and Threats draw no row while
     /// empty; Your account stands on All or with your account picked.
@@ -180,7 +180,7 @@ extension FeedScreen {
                 walletDoor(.yourAccount, line: line.text,
                            lineTone: line.wants ? DS.attentionInk : DS.textTertiary)
             } else if yours == nil, onAll {
-                // **NONE YET: THE VERB (prd §1479 item 2).** Move makes it.
+                // **NONE YET: THE VERB (prd §1480 item 2).** Move makes it.
                 walletDoor(.yourAccount, name: String(localized: "Create an account"),
                            act: { chrome.moveTray = true })
             }
@@ -208,7 +208,7 @@ extension FeedScreen {
             walletDoor(.markets, line: watched == 0 ? String(localized: "Follow a coin or a stock") : nil,
                        figure: watched == 0 ? nil : "\(watched)")
         }
-        // **BESIDE A PANE THE DOORS STAY IN THE LIST (prd §1479 item 11):**
+        // **BESIDE A PANE THE DOORS STAY IN THE LIST (prd §1480 item 11):**
         // they are Home's only list, so the list column keeps them and the
         // pane keeps the balance; a page opens in the list column.
         .task(id: walletMarketsKey) { loadWalletMarkets() }
@@ -233,7 +233,7 @@ extension FeedScreen {
             .sorted { $0.usd > $1.usd }
     }
 
-    /// **HOLDINGS, WHAT THE MONEY IS (prd §1479 item 4).** The treemap in the
+    /// **HOLDINGS, WHAT THE MONEY IS (prd §1480 item 4).** The treemap in the
     /// box, then five doors: Accounts, Tokens, Positions, Apps, NFTs.
     @ViewBuilder
     func walletHoldingsDoors(all: [Thing]) -> some View {
@@ -279,7 +279,7 @@ extension FeedScreen {
 
     // MARK: - Spending's doors
 
-    /// **SPENDING, A READING OF ACTIVITY (prd §1479 item 5).** The window's
+    /// **SPENDING, A READING OF ACTIVITY (prd §1480 item 5).** The window's
     /// total in the box, then three doors: Subscriptions, Places, Fees — one
     /// name per group, the box's Recurring and The rest retired.
     @ViewBuilder
@@ -313,7 +313,7 @@ extension FeedScreen {
 
     // MARK: - The pages
 
-    /// **THE LIST UNDER A PAGE (prd §1479).** Each page draws the sections
+    /// **THE LIST UNDER A PAGE (prd §1480).** Each page draws the sections
     /// that shipped elsewhere, moved and not redrawn: Your account is
     /// `MoveSecurity`, Permissions and Threats are Security's groups, Places
     /// and Fees are Spending's.
@@ -490,7 +490,7 @@ extension FeedScreen {
 
     // MARK: - The pages' boxes
 
-    /// **A PAGE'S BOX (prd §1479).** A page with a figure of its own draws
+    /// **A PAGE'S BOX (prd §1480).** A page with a figure of its own draws
     /// it; a door's page states its count; Holdings' and Spending's pages
     /// keep their tile's figure, so the box says which tile you are in.
     @ViewBuilder
@@ -549,7 +549,7 @@ extension FeedScreen {
 
     // MARK: - Activity
 
-    /// **ACTIVITY, THE STREAM (prd §1479 item 3).** Every transaction by day,
+    /// **ACTIVITY, THE STREAM (prd §1480 item 3).** Every transaction by day,
     /// no header, no cap but the room's own fetch, then the door to the whole
     /// history behind it.
     @ViewBuilder
@@ -565,7 +565,7 @@ extension FeedScreen {
     }
 }
 
-/// **YOUR ACCOUNT'S BOX (prd §1479 item 6):** who it is — the face, the name,
+/// **YOUR ACCOUNT'S BOX (prd §1480 item 6):** who it is — the face, the name,
 /// the address to copy — the way Apple's own account page opens.
 struct WalletYourAccountFigure: View {
     let address: String?
