@@ -70,6 +70,7 @@ struct MoveSecurity: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             SectionPanelName(name: String(localized: "Keys"), glyph: Self.keysGlyph, inset: 0)
+            VStack(alignment: .leading, spacing: 0) {
             row(title: String(localized: "Signs from"), value: deviceValue,
                 verb: canMoveHere ? (ThisDevice.use, moveHere) : nil)
             row(title: String(localized: "Recovery key"), value: recoveryValue.text, tone: recoveryValue.tone,
@@ -83,17 +84,23 @@ struct MoveSecurity: View {
                     } else { addOutside() } })
                 })
             if addingOutside { outsideField }
-            row(title: String(localized: "Networks"), value: networksValue, verb: nil)
+            row(title: String(localized: "Networks"), value: networksValue,
+                short: live.count > 1 ? String(localized: "\(live.count) networks") : nil, verb: nil)
             // Already on, never a choice (prd §1495 item 6, placed by §1496):
             // its state where a setting's value stands, no line.
             row(title: String(localized: "Tor"), value: TorFact.word(TorStatus.shared.state),
                 tone: TorFact.ink(TorStatus.shared.state), verb: nil)
             row(title: String(localized: "Private key"), value: exportValue,
                 verb: exportVerb.map { word in (word, { exportedKey == nil ? export() : removeExported() }) })
+            }
+            .padding(.leading, Self.rowIndent)
             SectionPanelName(name: String(localized: "Spending"), glyph: ScopeTileGlyph.spending, inset: 0)
                 .padding(.top, DS.Space.s3)
-            spendLimit
-            roundUpsRow
+            VStack(alignment: .leading, spacing: 0) {
+                spendLimit
+                roundUpsRow
+            }
+            .padding(.leading, Self.rowIndent)
             // Said once, under the keys, only on a device that cannot open
             // them (§1442n item 3; user: "the user will have created their
             // account on the device they are reading this on"): the fact is
@@ -135,6 +142,13 @@ struct MoveSecurity: View {
         }
     }
 
+    /// **A ROW STARTS UNDER ITS SECTION'S NAME (§1496, user: "it looks
+    /// weirdly indented").** These rows have no lead of their own, so at the
+    /// margin they stood under the header's glyph, left of the name they
+    /// belong to; the glyph's column and its gap in `SectionPanelName` put
+    /// them under the name, as a Feed row's words stand beside its mark.
+    static let rowIndent: CGFloat = DSRoomChassis.headGlyph + DS.Space.s2
+
     /// Who signs, as a section's glyph: a person with a key. Not Permissions'
     /// bare key (who can spend FROM you) and not Your account's shield.
     static let keysGlyph = "person.badge.key"
@@ -143,17 +157,21 @@ struct MoveSecurity: View {
     /// something to do, the verb in the pick's ink — both when a fact stands
     /// beside a verb ("…d203" then "Finish"). A row acting shows its word
     /// ("Setting up…") in the verb's place, grey.
-    private func row(title: String, value: String?, tone: Color = DS.textSecondary,
+    private func row(title: String, value: String?, tone: Color = DS.textSecondary, short: String? = nil,
                      verb: (String, () -> Void)?) -> some View {
         HStack(spacing: DS.Space.s3) {
             Text(verbatim: title).dsText(.body17).foregroundStyle(DS.textPrimary)
             Spacer(minLength: DS.Space.s2)
             if let value, working?.row != title {
-                Text(verbatim: value)
-                    .dsText(.body17)
-                    .foregroundStyle(tone)
-                    .multilineTextAlignment(.trailing)
-                    .lineLimit(2)
+                // One line, always (§1496): a value too wide for it says its
+                // short form, never a second line ("Base, Ethereum, and
+                // Robinhood" → "3 networks").
+                ViewThatFits(in: .horizontal) {
+                    Text(verbatim: value).lineLimit(1).fixedSize()
+                    Text(verbatim: short ?? value).lineLimit(1)
+                }
+                .dsText(.body17)
+                .foregroundStyle(tone)
             }
             if let (word, action) = verb {
                 Button(action: action) {
@@ -590,7 +608,10 @@ struct MoveSecurity: View {
     private var limitWord: String {
         if limitEditing { return String(localized: "Set below") }
         guard let standing = shown else { return String(localized: "Off") }
-        return String(localized: "\(dollars(standing.dollarCap)) a \(period(of: standing).word)")
+        // A limit is whole dollars (`amountDollars`), so it says no cents.
+        let usd = Op.dollars(standing.dollarCap, decimals: 6, price: 1)
+        let amount = usd == usd.rounded() ? "$\(Int(usd))" : dollars(standing.dollarCap)
+        return String(localized: "\(amount) a \(period(of: standing).word)")
     }
 
     /// On, or a new amount: the sentence opens with the amount focused.

@@ -381,7 +381,7 @@ grep -q 'RecoveryKeyNudge().listRow' Casberi/Casberi/Screens/FeedScreen+WalletPa
 # over it would wait on nobody); the row is drawn in every build (no hidden
 # feature, §1435); the adapter's publish stays a throwaway's alone.
 grep -q 'Add a signer first: over the limit, a send waits on it' Casberi/Casberi/Model/YourAccountChain.swift || { echo "✗ turning the limit on no longer refuses an account with no Signer (prd §1455)"; exit 1; }
-grep -q '^            spendLimit$' "$SEC" || { echo "✗ the Spend limit row is not drawn in every build (prd §1455, §1435)"; exit 1; }
+grep -q '^                spendLimit$' "$SEC" || { echo "✗ the Spend limit row is not drawn in every build (prd §1455, §1435)"; exit 1; }
 grep -A9 'static func publishAdapter' Casberi/Casberi/Model/YourAccountChain.swift | grep -q 'guard dryRun || throwaway(account) else' || { echo "✗ publishing Safe's adapter runs outside the throwaway (prd §1447 item 18)"; exit 1; }
 grep -q 'YourAccountSigning\|AllowanceModule' Casberi/Casberi/Model/*.swift Casberi/Casberi/Screens/*.swift && { echo "✗ the dropped Allowance-module design is back (prd §1447 item 9, §1455)"; exit 1; }
 grep -q 'guard !calls.contains(where: YourAccount7579.approvesMulticall3) else' Casberi/Casberi/Model/YourAccountChain.swift || { echo "✗ operations no longer refuse an approval to Multicall3, which would ride the spend limit's ETH route (prd §1447 item 15)"; exit 1; }
@@ -481,7 +481,7 @@ FIG=Casberi/Casberi/Screens/FeedScreen+WalletPages.swift
 grep -q 'if let facts = YourAccountFacts.current, facts.signers == 0' "$FIG" && grep -q 'walletDoor(.yourAccount, word: yourAccountWants, wordTone: DS.attentionInk)' "$FIG" || { echo "✗ Home's Your account door no longer trails the missing co-signer off the last reading (prd §1462, §1496)"; exit 1; }
 grep -q 'YourAccountFacts.noteSigners(Set(live.flatMap' Casberi/Casberi/Screens/MoveSecurity.swift || { echo "✗ the box's Signers figure is no longer stamped by Security's read (prd §1462)"; exit 1; }
 # The box's "Limit a month" went with the box (prd §1480); the limit is Your account's row word (prd §1496).
-grep -q 'return String(localized: "\\(dollars(standing.dollarCap)) a \\(period(of: standing).word)")' Casberi/Casberi/Screens/MoveSecurity.swift || { echo "✗ the Spend limit row's word is no longer the amount and its period (prd §1462, §1496)"; exit 1; }
+grep -q 'return String(localized: "\\(amount) a \\(period(of: standing).word)")' Casberi/Casberi/Screens/MoveSecurity.swift || { echo "✗ the Spend limit row's word is no longer the amount and its period (prd §1462, §1496)"; exit 1; }
 # The wash says the state (prd §1463): a threat red, an ask orange, on green, nothing for a zero.
 # The state is the figure's ink on Home's doors (prd §1463, §1496): a threat red, a grant with no limit amber, what waits on you pink.
 grep -q 'figureTone: DS.destructiveInk' "$FIG" && grep -q 'figureTone: counts.unlimited > 0 ? DS.attentionInk : DS.textPrimary' "$FIG" && grep -q 'figureTone: DS.pickInk' "$FIG" || { echo "✗ Home's doors no longer carry the state in the figure's ink (prd §1463, §1496)"; exit 1; }
