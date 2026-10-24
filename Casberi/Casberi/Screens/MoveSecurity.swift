@@ -847,8 +847,10 @@ struct MoveSecurity: View {
 
     /// The co-signer: its short address (or how many), "Not yet on …" in
     /// amber where it still has to go (Finish stands beside), nothing beside
-    /// Add. A key chosen at Create is named before it lands (user: "i have
-    /// signer set up but shows i don't").
+    /// Add. A key chosen at Create and on no network yet says when it lands,
+    /// never its address alone, which read as a key already standing (prd
+    /// §1499; user: "it connects, but it doesn't sign"), and never "Waiting",
+    /// which reads as waiting on the wallet to sign.
     private var outsideValue: (text: String?, tone: Color) {
         if standings.isEmpty { return (String(localized: "Reading…"), DS.textSecondary) }
         let keys = Set(live.flatMap(\.outside).map { $0.lowercased() })
@@ -856,6 +858,9 @@ struct MoveSecurity: View {
         if let one = keys.first {
             who = keys.count == 1 ? YourAccount.short(one) : String(localized: "\(keys.count) keys")
         } else if let chosen = setup?.signer {
+            if outsideTargets.isEmpty, !signerRides.isEmpty {
+                return (String(localized: "Activates on first send"), DS.textSecondary)
+            }
             who = YourAccount.short(chosen)
         } else {
             return (nil, DS.textSecondary)

@@ -91,8 +91,11 @@ struct MoveKeysWalk: View {
                 MoveWord(String(localized: "Your co-signer"))
                 MoveClause(glue: String(localized: "in")) { MoveWord(String(localized: "a wallet you have."), ink: DS.pickInk) }
             }
-            // Why (user, 2026-10-23: "this needs helper text of why do it").
-            small(String(localized: "Use multiple signatures to approve sensitive actions."))
+            // Why (user, 2026-10-23: "this needs helper text of why do it"),
+            // and only what is true: at one key it signs alone, and only over
+            // a limit does it sign with this iPhone (prd §1499; user: "don't
+            // say 'big sends'").
+            small(String(localized: "Signs if you can't use Casberi, and co-signs transactions above your spend limit."))
         case .limit:
             MoveFlow {
                 MoveWord(String(localized: "Face ID alone"))
