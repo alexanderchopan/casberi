@@ -224,7 +224,7 @@ struct WalletTokensSheet: View {
                     .foregroundStyle(DS.textSecondary)
                     .frame(width: DS.Face.list, height: DS.Face.list)
                     .accessibilityHidden(true)
-                VStack(alignment: .leading, spacing: 1) {
+                VStack(alignment: .leading, spacing: 2) {
                     Text(String(localized: "Hidden · \(hidden.count)"))
                         .dsText(.body17).foregroundStyle(DS.textPrimary)
                     Text(String(localized: "\(WalletValue.money(hidden.reduce(0) { $0 + $1.usd })), not in the total"))
@@ -232,7 +232,8 @@ struct WalletTokensSheet: View {
                 }
                 Spacer(minLength: DS.Space.s2)
             }
-            .padding(.vertical, DS.Space.s2)
+            // The Tokens rows' one pitch (prd §1482), as the dust row's.
+            .walletRowPitch()
             .contentShape(Rectangle())
         }
         .buttonStyle(RowPress())
