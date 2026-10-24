@@ -197,19 +197,27 @@ ok "the demo shows the shelf and not the picker"
 #    is drawn — the pair, rather than a position in a list that is gone.
 #    **AMENDED AGAIN (prd §1048).** Cards took the NFTs tile, so the pair is
 #    tokens and collections under ONE scope, Holdings — §124a's "what you hold"
-#    pair, back where it started. The check: no `.nfts` scope remains, and
-#    Holdings' list draws the NFT rows.
+#    pair, back where it started.
+#    **AMENDED A THIRD TIME (prd §1479).** Every Holdings list is behind a door
+#    now, so NFTs is a PAGE again — never a tile — opened from Holdings' NFTs
+#    door, its box Holdings' own treemap. The check: `.nfts` is a Holdings
+#    door, its page draws the shelf's door and the NFT rows, and its box is
+#    Holdings'.
 python3 - "$TMP/feed.nc" <<'PY'
 import sys, re
 src = open(sys.argv[1]).read()
-if re.search(r'case \.nfts\b', src):
-    sys.exit("  ✗ an NFTs scope is back — Cards holds that tile and NFTs read under Holdings (prd §1048)")
-# Holdings is followed by Security since prd §1107 (Positions folded in).
-m = re.search(r'case \.holdings:(.*?)case \.security:', src, re.S)
-if not m or "walletNFTListSection" not in m.group(1):
-    sys.exit("  ✗ the NFT rows are not under Holdings (prd §1048)")
+page = re.search(r'case \.nfts:\n(.*?)case \.places:', src, re.S)
+if not page or "walletNFTListSection" not in page.group(1) or "walletNFTDoorSection" not in page.group(1):
+    sys.exit("  ✗ the NFTs page does not draw the shelf's door and the NFT rows (prd §1479)")
+if "walletDoor(.nfts)" not in src:
+    sys.exit("  ✗ Holdings lost its NFTs door (prd §1479)")
+if not re.search(r'case \.holdings, \.holdingAccounts, \.positions, \.apps, \.nfts:\s*holdingsBlockSection', src):
+    sys.exit("  ✗ the NFTs page's box is not Holdings' — it would say a different tile (prd §1479)")
 PY
-ok "the NFT rows stand under the tokens, in Holdings (§124a, §1048)"
+grep -q 'static let holdingsDoors: \[WalletSection\] = \[.holdingAccounts, .positions, .apps, .nfts\]' \
+  Casberi/Casberi/Model/WalletSection.swift \
+  || fail "NFTs is not one of Holdings' doors — it would be a tile again (prd §1048, §1479)"
+ok "the NFT rows stand behind Holdings' NFTs door, in Holdings' box (§124a, §1048, §1479)"
 
 # 7. ONE SCREEN, ONE PRESENTATION. A `.sheet` on a view inside the feed's List
 #    resolves to the same presenting controller as the screen's own, and rises

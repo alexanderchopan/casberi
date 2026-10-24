@@ -44,45 +44,6 @@ extension FeedScreen {
         }
     }
 
-    /// **TWO GROUPS, EACH ONE OF THE BOX'S ROWS (prd §1469, user: "you have
-    /// places, but we could also have subscriptions").** Subscriptions first,
-    /// newest charge first, each saying its day and what paid it; then every
-    /// place, largest first, against the last window (§1468). No cap and no
-    /// door: the tile is the page. Empty rows (§769) once the reading has
-    /// landed on nothing.
-    @ViewBuilder
-    var walletSpendingPageSections: some View {
-        let reading = SpendingReading.shared
-        let mask = BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil
-        if reading.page.places.isEmpty && reading.page.subscriptions.isEmpty && reading.page.fees.isEmpty {
-            if reading.read { walletSkeletonRowsSection }
-        } else {
-            if !reading.page.subscriptions.isEmpty {
-                walletCard(Self.subscriptionsName, glyph: ScopeTileGlyph.subscriptions) {
-                    ForEach(reading.page.subscriptions, id: \.name) { plan in
-                        spendingSubscriptionRow(plan, mask: mask)
-                    }
-                }
-            }
-            if !reading.page.places.isEmpty {
-                walletCard(String(localized: "Places"), glyph: ScopeTileGlyph.spending) {
-                    ForEach(reading.page.places, id: \.name) { place in
-                        spendingPlaceRow(place, window: reading.window, mask: mask)
-                    }
-                }
-            }
-            // **FEES (prd §1476):** one row per network, largest first, the
-            // count of transactions and the comparison the places use.
-            if !reading.page.fees.isEmpty {
-                walletCard(String(localized: "Fees"), glyph: ScopeTileGlyph.spending) {
-                    ForEach(reading.page.fees, id: \.name) { network in
-                        spendingFeeRow(network, window: reading.window, mask: mask)
-                    }
-                }
-            }
-        }
-    }
-
     /// A network's fees (prd §1476): how many transactions, then how it
     /// compares with the last window; under Hide balances the count alone.
     func spendingFeeRow(_ network: Spending.Place, window: Spending.Window, mask: String?) -> some View {

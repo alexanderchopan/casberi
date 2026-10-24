@@ -372,7 +372,7 @@ extension FeedScreen {
     var walletFollowingPage: some View {
         let slots = walletFollowingSlots
         if slots.isEmpty { walletSkeletonRowsSection }
-        walletPanel(WalletSection.following.label, glyph: WalletSection.following.glyph, things: []) {
+        walletCard(WalletSection.following.label, glyph: WalletSection.following.glyph) {
             ForEach(slots) { slot in walletAccountRow(slot) }
         }
         .alert(String(localized: "Name this account"),
@@ -574,7 +574,8 @@ struct WalletYourAccountFigure: View {
     var body: some View {
         VStack(spacing: DS.Space.s2) {
             if let address {
-                WalletFace(address: address, size: 72, circular: true)
+                // A profile's face (`DS.Face.profile`), as a person's page opens.
+                WalletFace(address: address, size: DS.Face.profile, circular: true)
                 Text("Your account").dsText(.heading24).foregroundStyle(DS.textPrimary)
                 Button {
                     DSHaptic.selection()
@@ -594,7 +595,7 @@ struct WalletYourAccountFigure: View {
                 .accessibilityLabel(Text("Copy address"))
             } else {
                 DSFigureReading(number: String(localized: "No account yet"),
-                                caption: String(localized: "Create one in Move"))
+                                caption: String(localized: "Move makes one"))
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

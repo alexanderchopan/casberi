@@ -309,26 +309,6 @@ extension FeedScreen {
 
     // MARK: - The index (prd §1082)
 
-    /// A category's companies as an index under the box's tiles: From your
-    /// apps, Everything else and Not traded (`MarketsIndex.sections`), each row starred in one tap.
-    @ViewBuilder
-    func marketsIndexSections(_ scope: TokensScope, visible: [Thing]) -> some View {
-        let pack = scope.pack
-        let connected = connectedSeatNames
-        let byName = Dictionary(pack.map { ($0.name, $0) }, uniquingKeysWith: { a, _ in a })
-        let split = MarketsIndex.sections(pack.map(MarketsWatch.entry), connected: connected)
-        let watched = MarketsWatch.watchedTickers(visible)
-        // The box is the tiles on every Markets list (prd §1138, §1337):
-        // the pack's own heat map and its lede gave way to it, and the
-        // figure reads the pack's quotes.
-        indexSection(String(localized: "From your apps"), split.yours, byName: byName,
-                     connected: connected, watched: watched, watchAll: true)
-        indexSection(split.yours.isEmpty ? scope.label : String(localized: "Everything else"),
-                     split.rest, byName: byName, connected: connected, watched: watched, watchAll: false)
-        indexSection(String(localized: "Not traded"), split.untraded, byName: byName,
-                     connected: connected, watched: watched, watchAll: false)
-    }
-
     @ViewBuilder
     private func indexSection(_ title: String, _ entries: [MarketsIndex.Entry],
                               byName: [String: CompanyPacks.Company], connected: Set<String>,

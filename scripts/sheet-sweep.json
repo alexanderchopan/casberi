@@ -1325,13 +1325,10 @@
      "tap": "button:=Wallet"
     },
     {
-     "tap": "button:^Security, Who"
+     "tap": "button:^Needs you"
     },
     {
-     "tap": "button:=1, Poisoning"
-    },
-    {
-     "tap": "button:^1 lookalike address, "
+     "tap": "button:^Everyday's Safe"
     }
    ],
    "anchor": "text:=Worth a look"

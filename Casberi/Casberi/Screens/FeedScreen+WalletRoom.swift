@@ -33,43 +33,6 @@ extension FeedScreen {
         DemoMode.isActive ? HoldingMoves.demo : HoldingMoves.current()
     }
 
-    @ViewBuilder
-    var walletTokenListSection: some View {
-        let hiddenHere = (portfolioUnhidden?.positions ?? []).filter { walletHidden.contains($0.symbol.uppercased()) }
-        if let portfolio = portfolioShown ?? (hiddenHere.isEmpty ? nil : WalletPortfolio()) {
-            let moves = walletHoldingMoves
-            let fold = WalletTokenFold(portfolio.positions, total: portfolio.totalUSD)
-            walletCard(String(localized: "Tokens"), glyph: ScopeTileGlyph.holdings) {
-                // **TOKENS LEAD HOLDINGS, AND A LONG TAIL IS ONE ROW (prd
-                // §1107, user: "what if someone has dozens of tokens").** The
-                // list drew every token, so on a wallet holding forty the
-                // Positions under them were forty rows down. Each token worth
-                // a twentieth of the whole draws, five at most; the rest fold
-                // into one row that opens every one.
-                ForEach(fold.shown) { position in
-                    walletTokenRow(position, portfolio: portfolio, moves: moves)
-                }
-                if !fold.rest.isEmpty {
-                    Button {
-                        DSHaptic.selection()
-                        feedSheet = .walletTokens
-                    } label: {
-                        WalletTokenFoldRow(fold: fold)
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(RowPress())
-                    .dsHover()
-                    .listRowInsets(EdgeInsets(top: DS.Space.s2,
-                                              leading: DSRoomChassis.rowInset(forMark: DS.Face.list),
-                                              bottom: DS.Space.s2, trailing: DS.Space.s4))
-                    .feedRowBackground()
-                    .listRowSeparator(.hidden)
-                }
-                if !hiddenHere.isEmpty { walletHiddenTokensRow(hiddenHere) }
-            }
-        }
-    }
-
     /// The tokens you hid, named as one row: how many, and a menu that
     /// brings each back. Their money is out of the total; this row is where
     /// that is said.
@@ -1816,15 +1779,35 @@ extension FeedScreen {
     /// (prd §1225, user: "pk do it")**, its name in pink with its glyph, as
     /// Home's lists do; white is left for a group inside a card. `anchor` is
     /// where a checkup count lands.
+    ///
+    /// **A CARD NAMED LIKE ITS PAGE DRAWS NO NAME (prd §1479):** on a page a
+    /// door opened, the title already says "Wallet · Positions", so the one
+    /// list under it says nothing twice (§208). A page holding several groups
+    /// (Needs you, Permissions, Threats) keeps each group's name.
+    @ViewBuilder
     func walletCard<Rows: View>(_ name: String, glyph: String, anchor: String? = nil,
                                 @ViewBuilder rows: () -> Rows) -> some View {
-        SectionPanelGroup(anchor: anchor) {
-            SectionPanelName(name: name, glyph: glyph)
-        } rows: {
+        if walletPageNames(name) {
             Section { rows() }
+                .id(anchor ?? name)
+                .environment(\.feedSectionPanelFilled, false)
+        } else {
+            SectionPanelGroup(anchor: anchor) {
+                SectionPanelName(name: name, glyph: glyph)
+            } rows: {
+                Section { rows() }
+            }
+            // Bare, as the Feed's (prd §1382).
+            .environment(\.feedSectionPanelFilled, false)
         }
-        // Bare, as the Feed's (prd §1382).
-        .environment(\.feedSectionPanelFilled, false)
+    }
+
+    /// Whether `name` is the title of the Wallet page on screen — a page a
+    /// door opened, not a tile, which names its own list in its box.
+    func walletPageNames(_ name: String) -> Bool {
+        guard source == CategoryFold.walletRoom, pinnedWalletSection == nil,
+              let page = chrome.walletSection, !page.isTile else { return false }
+        return page.label == name
     }
 }
 

@@ -1,147 +1,16 @@
 import SwiftUI
 
-/// **HOME IS FIVE SHORT LISTS (prd §1232, amends the four of 2026-10-08):
-/// Needs you, Subscriptions, Spending, Cards, Transactions — five rows each,
-/// then a door**, in the Feed's shape since prd §1219: a glance tile per
-/// list, each list on a panel. Needs you took Coming up (user: "'needs you'
-/// and 'coming up' are they really materially different?"): what waits
-/// first, then what is dated, by day. Subscriptions is a plain list (no
-/// calendar), its whole page one door down; Transactions keeps its history.
+/// The Wallet's shared row parts: the accounts list's rows and its Rename,
+/// the ways in, a subscription's and a place's row, the moves filter.
+///
+/// **HOME'S FIVE SHORT LISTS ARE DELETED (prd §1479, retiring §1232's):**
+/// Home is the overview, six doors (`FeedScreen+WalletPages.swift`); the
+/// transactions are Activity's, Subscriptions and the places Spending's,
+/// Cards' asks Needs you's, and the accounts Following's.
 extension FeedScreen {
 
     /// Rows a Home section shows before its door.
     static let walletHomeCap = 5
-
-    @ViewBuilder
-    func walletHomeSections(upcoming: [Thing], all: [Thing], nextEventID: UUID?) -> some View {
-        let groups = walletComingUpDays(upcoming)
-        let needs = groups.first { $0.0 == Self.needsYouGroup }?.1 ?? []
-        let dated = groups.filter { $0.0 != Self.needsYouGroup }.flatMap(\.1)
-        // Spending and Cards read every card and wallet together, so they
-        // stand on All.
-        let onAll = selectedSeat == nil && selectedWallet == nil
-        // **A BALANCE IS NOT A TRANSACTION (prd §1341, user, of an Acorns
-        // account under Transactions: "this is terrible").** An account and
-        // an app that made you a wallet are states; Holdings lists them.
-        let moves = Self.walletMoves(all)
-        let stream = walletStream(moves)
-        // An address pays no subscription a reading here can see (§1105).
-        let sources = walletSubscriptionSources
-        let tracks = sources.map { !$0.isEmpty } ?? true
-        let plans = tracks ? Self.walletHomePlans(SubscriptionsReading.shared.items(in: sources)) : []
-        let cards = onAll ? SpendingReading.shared.cards : []
-        // **OVERVIEW (prd §1257, user: "ok do the overview card").** One
-        // card, a row per list — what it is, its figure, one line — each a
-        // jump to its list, where the tiles stood (§1219). The lists under it
-        // keep every row: a row here names a list, it does not show its items.
-        var lines: [OverviewLine] = []
-        // **ACCOUNTS LEADS OVERVIEW (prd §1410, user: "a line that says
-        // 'accounts' and has how many you are tracking").** What the balance
-        // is made of: the addresses you follow and the apps folded in, as the
-        // accounts menu lists them, never the All slot.
-        let accounts = walletAccountSlots.filter { !$0.id.isEmpty }
-        let _ = {
-            if !accounts.isEmpty {
-                lines.append(OverviewLine(name: Self.accountsName, figure: "\(accounts.count)"))
-            }
-            let waiting = Self.things(needs + dated).filter(\.isLive)
-            let asks = waiting.count + (OutsideKeyNudge.shown ? 1 : 0) + (RecoveryKeyNudge.shown ? 1 : 0)
-            if asks > 0 {
-                lines.append(OverviewLine(name: Self.needsYouGroup, figure: "\(asks)"))
-            }
-            if !plans.isEmpty,
-               let s = Self.planGlance(SubscriptionsReading.shared.total(of: plans)) { lines.append(s) }
-            if onAll, let s = Self.spendingGlance(SpendingReading.shared.reading) { lines.append(s) }
-            if let card = cards.first { lines.append(Self.cardGlance(card)) }
-        }()
-
-        // THE PANE'S WALLET BOX CARRIES OVERVIEW, THEN COMING UP (prd
-        // §1407): under the balance and its line, where the mockup draws
-        // them; beside a pane the list column keeps Needs you and the
-        // transactions. `dsPaneBoxRow` is the one mechanism (§1403).
-        Group {
-            walletOverview(lines)
-        }
-        .environment(\.dsPaneBoxRow, true)
-        // The Spending reading (and the cards it reads) starts here, whatever
-        // Home shows; Subscriptions reads its own.
-        .task(id: walletSpendingKey) { await SpendingReading.shared.refresh(modelContext) }
-        .task(id: walletSubscriptionsKey) {
-            guard tracks else { return }
-            await ServiceLinks.shared.refresh(modelContext, seats: bridges.bridges.map(\.name))
-        }
-
-        // The Accounts list stands first, where its Overview row points
-        // (prd §1410): a state, not news, so it does not displace Needs you
-        // from leading what happened.
-        if !accounts.isEmpty {
-            walletAccountsSection(accounts)
-        }
-
-        // **NEEDS YOU, THEN WHAT IS DATED (prd §1232).** One list: what
-        // waits on you, undated, leads; the dated rows follow under their
-        // days. Five rows across both, then the door.
-        let restNeeds = needs
-        // Beside a pane the dated rows are the pane's Coming up (prd §1407).
-        let paned = roomBoxPlace != .list
-        let restDated = paned ? [] : dated
-        if paned, !dated.isEmpty {
-            walletPanel(Self.comingUpName, glyph: ScopeTileGlyph.comingUp, things: Self.things(dated)) {
-                walletDaySections(walletRowDays(dated), boundary: nil, panelled: true,
-                                  nextEventID: nextEventID)
-            }
-            .environment(\.dsPaneBoxRow, true)
-        }
-        // Your account's outside key leads Needs you while it has none
-        // (prd §1432), on All, where the account stands among the rest.
-        let nudge = onAll && OutsideKeyNudge.shown
-        // Money on a network without the recovery key leads (prd §1442m).
-        let unprotected = onAll && RecoveryKeyNudge.shown
-        if !restNeeds.isEmpty || !restDated.isEmpty || nudge || unprotected {
-            let open = walletOpenSections.contains("needs")
-            let total = restNeeds.count + restDated.count
-            let firstNeeds = open ? restNeeds : Array(restNeeds.prefix(Self.walletHomeCap))
-            let firstDated = open ? restDated : Array(restDated.prefix(max(0, Self.walletHomeCap - firstNeeds.count)))
-            walletPanel(Self.needsYouGroup, glyph: Self.walletHomeGlyph(Self.needsYouGroup),
-                        things: Self.things(restNeeds + restDated)) {
-                if unprotected { RecoveryKeyNudge().listRow }
-                if nudge { OutsideKeyNudge().listRow }
-                if !firstNeeds.isEmpty {
-                    walletDaySections([(Self.needsYouGroup, firstNeeds)],
-                                      boundary: nil, named: [Self.needsYouGroup], headless: true,
-                                      nextEventID: nextEventID)
-                }
-                if !firstDated.isEmpty {
-                    walletDaySections(walletRowDays(firstDated), boundary: nil, panelled: true,
-                                      nextEventID: nextEventID)
-                }
-                walletHomeDoor("needs", total: total)
-            }
-        }
-
-        // A Wallet with no account offers one thing, in its box (prd §1364):
-        // Track waits for the first account unless something is tracked.
-        if tracks, !plans.isEmpty || !walletAccountSlots.allSatisfy(\.id.isEmpty) {
-            walletHomeSubscriptionsSection(plans)
-        }
-
-        if onAll {
-            walletSpendingSection
-        }
-
-        if !cards.isEmpty {
-            walletCardsSection(cards)
-        }
-
-        let restMoves = stream.rows
-        if !restMoves.isEmpty {
-            walletPanel(Self.transactionsName, glyph: Self.walletHomeGlyph(Self.transactionsName), things: Self.things(restMoves)) {
-                walletStreamSections(restMoves, ownMoves: stream.ownMoves, panelled: true, nextEventID: nextEventID)
-                walletSeeAllSection(total: moves.count)
-            }
-        }
-        jumpRoom
-    }
 
     /// What happened, without the states (`MoneyReceipt.isState`): the one
     /// filter Transactions and the history behind its door share (§837).
@@ -175,52 +44,6 @@ extension FeedScreen {
     static var transactionsName: String { String(localized: "Transactions") }
 
     // MARK: - Overview (prd §1257)
-
-    /// One of Overview's rows: a list's name and its figure. **No sub-line
-    /// (prd §1331, user: "don't need the subtext")**: the line under each
-    /// name restated the list's first item (a raw status, a truncated
-    /// comparison); the list itself is right below.
-    struct OverviewLine {
-        let name: String
-        let figure: String
-    }
-
-    /// The card: the Feed's panel, a row per list with its pink glyph, the
-    /// name over the line and the figure trailing; a press lands on the list.
-    @ViewBuilder
-    func walletOverview(_ lines: [OverviewLine]) -> some View {
-        if !lines.isEmpty {
-            walletPanel(Self.overviewName, glyph: ScopeTileGlyph.home, things: []) {
-                ForEach(lines, id: \.name) { item in
-                    Button {
-                        DSHaptic.selection()
-                        walletHomeJump(item.name)
-                    } label: {
-                        HStack(spacing: DS.Space.s3) {
-                            DSActRow.disc(Self.walletHomeGlyph(item.name))
-                            Text(verbatim: item.name)
-                                .dsText(.body17)
-                                .foregroundStyle(DS.textPrimary)
-                            Spacer(minLength: DS.Space.s2)
-                            Text(verbatim: item.figure)
-                                .dsText(.heading17)
-                                .monospacedDigit()
-                                .foregroundStyle(DS.textPrimary)
-                                .lineLimit(1)
-                        }
-                        .frame(minHeight: DSActRow.height)
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(RowPress())
-                    .accessibilityLabel(Text(verbatim: "\(item.name). \(item.figure)"))
-                    .listRowInsets(EdgeInsets(top: 0, leading: DSRoomChassis.rowInset,
-                                              bottom: 0, trailing: DSRoomChassis.rowInset))
-                    .feedRowBackground()
-                    .listRowSeparator(.hidden)
-                }
-            }
-        }
-    }
 
     // MARK: - Accounts (prd §1410)
 
@@ -361,93 +184,9 @@ extension FeedScreen {
     }
 
     static var overviewName: String { String(localized: "Overview") }
-    /// The pane's dated group beside a pane (prd §1407).
-    static var comingUpName: String { String(localized: "Coming up") }
-
     // MARK: - Subscriptions
 
-    /// What renews soonest first, then what has no date, most expensive first.
-    static func walletHomePlans(_ items: [Subscriptions.Item]) -> [Subscriptions.Item] {
-        items.sorted { a, b in
-            switch (a.next, b.next) {
-            case let (x?, y?) where x != y: return x < y
-            case (_?, nil): return true
-            case (nil, _?): return false
-            default: return (a.monthly ?? 0) > (b.monthly ?? 0)
-            }
-        }
-    }
-
-    /// **THE MONTH, NEVER ONE PLAN (§1246's rule for Spending, applied
-    /// here):** the row drew the next renewal's price under the word
-    /// "Subscriptions", read as the total beside Spending's month while the
-    /// page led with a different one. It draws what the page leads with.
-    static func planGlance(_ total: Subscriptions.Total) -> OverviewLine? {
-        guard total.counted > 0 else { return nil }
-        let mask = BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil
-        return OverviewLine(name: subscriptionsName,
-                            figure: mask ?? CardSpendRoom.money(total.monthly, code: "USD"))
-    }
-
-    /// **SUBSCRIPTIONS ON HOME IS A LIST (prd §1232, user: "if subscriptions
-    /// goes on home i don't think it needs a calendar it can just be a list
-    /// section").** Track first, the plans that renew soonest, then the
-    /// whole page — the calendar and the map — one door down, in its sheet.
-    @ViewBuilder
-    func walletHomeSubscriptionsSection(_ plans: [Subscriptions.Item]) -> some View {
-        walletPanel(Self.subscriptionsName, glyph: Self.walletHomeGlyph(Self.subscriptionsName), things: []) {
-            Section {
-                // Track leads from the header's + (prd §1386), not a row.
-                ForEach(Array(plans.prefix(Self.walletHomeCap))) { item in
-                    Button {
-                        feedSheet = .subscription(item.id)
-                    } label: {
-                        WalletSubscriptionRow(item: item, writes: Self.walletSubscriptionWrites(item))
-                            .contentShape(Rectangle())
-                            .arrivalWash(SubscriptionStore.shared.justTracked(item.id), hue: DS.brand)
-                    }
-                    .buttonStyle(RowPress())
-                    .contextMenu { stopTrackingMenu(item) }
-                    .dsHover()
-                    .listRowInsets(EdgeInsets(top: Self.rowAir, leading: DSRoomChassis.rowInset,
-                                              bottom: Self.rowAir, trailing: DSRoomChassis.rowInset))
-                    .feedRowBackground()
-                    .listRowSeparator(.hidden)
-                }
-            }
-            if !plans.isEmpty {
-                Section {
-                    // The count only when the list holds back some.
-                    // The one More row (prd §1386), never centred.
-                    DSMoreRow(title: plans.count > Self.walletHomeCap
-                                  ? Text(verbatim: String(localized: "See all \(plans.count)"))
-                                  : Text("See all"), opens: true) {
-                        chrome.walletSection = .subscriptions
-                    }
-                    .listRowInsets(.init(top: Self.rowAir, leading: DSRoomChassis.rowInset,
-                                         bottom: Self.rowAir, trailing: DSRoomChassis.rowInset))
-                    .listRowSeparator(.hidden)
-                    .feedRowBackground()
-                }
-            }
-        }
-    }
-
     // MARK: - Cards
-
-    /// The card that asks something of you soonest, else the most used.
-    static func cardGlance(_ card: WalletCardRoll.Card) -> OverviewLine {
-        let mask = BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil
-        if let owed = card.owed, card.due != nil {
-            return OverviewLine(name: cardsName,
-                                figure: mask ?? CardSpendRoom.money(owed, code: card.owedCurrency))
-        }
-        if card.spent > 0 || card.offers == 0 {
-            return OverviewLine(name: cardsName,
-                                figure: mask ?? AppleWalletRoom.money(max(card.spent, 0), "USD"))
-        }
-        return OverviewLine(name: cardsName, figure: cardOffersWords(card.offers))
-    }
 
     static func cardOffersWords(_ count: Int) -> String {
         count == 1 ? String(localized: "1 offer") : String(localized: "\(count) offers")
@@ -478,42 +217,6 @@ extension FeedScreen {
                                              : spendingTimes(card.purchases))
         }
         return parts.joined(separator: " · ")
-    }
-
-    /// **CARDS (prd §1232).** Each card: what it spent this month (the
-    /// figure), what it owes and when, and the offers on it. A row opens the
-    /// app that reads the card.
-    @ViewBuilder
-    func walletCardsSection(_ cards: [WalletCardRoll.Card]) -> some View {
-        let open = walletOpenSections.contains("cards")
-        let mask = BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil
-        walletPanel(Self.cardsName, glyph: Self.walletHomeGlyph(Self.cardsName), things: []) {
-            Section {
-                ForEach(open ? cards : Array(cards.prefix(Self.walletHomeCap))) { card in
-                    let app = BridgeCatalog.seatName(forSource: card.app)
-                    Button {
-                        route.openSetup(forOffer: app)
-                    } label: {
-                        DSFeedRow(name: card.name, line: Text(verbatim: Self.cardLine(card, mask: mask))) {
-                            BridgeIcon(name: app, size: DS.Face.row, circular: true)
-                        } trailing: {
-                            if card.spent > 0 {
-                                Text(verbatim: mask ?? AppleWalletRoom.money(card.spent, "USD"))
-                                    .dsText(.price17).monospacedDigit().foregroundStyle(DS.textPrimary)
-                            }
-                        }
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(RowPress())
-                    .dsHover()
-                    .listRowInsets(EdgeInsets(top: Self.rowAir, leading: DSRoomChassis.rowInset,
-                                              bottom: Self.rowAir, trailing: DSRoomChassis.rowInset))
-                    .feedRowBackground()
-                    .listRowSeparator(.hidden)
-                }
-            }
-            walletHomeDoor("cards", total: cards.count)
-        }
     }
 
     /// The live things behind a list's rows, in order.
@@ -552,19 +255,6 @@ extension FeedScreen {
         }
     }
 
-    /// The due rows under the day each falls due, in the order given.
-    func walletRowDays(_ rows: [FeedRow]) -> [(String, [FeedRow])] {
-        var order: [String] = []
-        var groups: [String: [FeedRow]] = [:]
-        for row in rows {
-            guard case .single(let item) = row.kind, let due = item.live?.dueAt else { continue }
-            let label = dayLabel(due)
-            if groups[label] == nil { order.append(label) }
-            groups[label, default: []].append(row)
-        }
-        return order.map { ($0, groups[$0] ?? []) }
-    }
-
     /// "See all 9" under a capped section, "Show fewer" once it is open; no
     /// door when the cap already shows everything.
     @ViewBuilder
@@ -590,44 +280,6 @@ extension FeedScreen {
     }
 
     // MARK: - Spending
-
-    /// What left your accounts this month, by place (`Spending`): a line
-    /// against last month to the same day, then the places, largest first.
-    @ViewBuilder
-    var walletSpendingSection: some View {
-        let reading = SpendingReading.shared.reading
-        if !reading.places.isEmpty {
-                let mask = BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil
-                walletPanel(Self.spendingName, glyph: Self.walletHomeGlyph(Self.spendingName), things: []) {
-                Section {
-                    Text(verbatim: Self.spendingLine(reading, mask: mask))
-                        .dsText(.label12).foregroundStyle(DS.textSecondary)
-                        .padding(.leading, DSRoomChassis.rowInset)
-                        .padding(.bottom, DS.Space.s1)
-                        .listRowInsets(EdgeInsets())
-                        .feedRowBackground()
-                        .listRowSeparator(.hidden)
-                    ForEach(Array(reading.places.prefix(Self.walletHomeCap)), id: \.name) { place in
-                        spendingPlaceRow(place, window: .month, mask: mask)
-                    }
-                }
-                // **THE DOOR IS THE TILE (prd §1468):** every place, with its
-                // window and the recurring half, stands on Spending's page.
-                if reading.places.count > Self.walletHomeCap {
-                    Section {
-                        DSMoreRow(title: Text(verbatim: String(localized: "All \(reading.places.count) places")),
-                                  opens: true) {
-                            withAnimation(DS.Motion.standard) { chrome.walletSection = .spending }
-                        }
-                        .listRowInsets(.init(top: Self.rowAir, leading: DSRoomChassis.rowInset,
-                                             bottom: Self.rowAir, trailing: DSRoomChassis.rowInset))
-                        .listRowSeparator(.hidden)
-                        .feedRowBackground()
-                    }
-                }
-                }
-        }
-    }
 
     /// Re-read when the room's rows change or the demo flips.
     var walletSpendingKey: String { "\(DemoMode.isActive)|\(walletSubscriptionsKey)" }
@@ -720,18 +372,6 @@ extension FeedScreen {
                                   bottom: Self.rowAir, trailing: DSRoomChassis.rowInset))
         .feedRowBackground()
         .listRowSeparator(.hidden)
-    }
-
-    /// **THE MONTH, NEVER ONE PURCHASE (prd §1246, user: "what is the
-    /// difference between spending and transactions they show same
-    /// number").** The tile drew the newest purchase, which is most days the
-    /// newest move, so it matched Transactions' tile. It draws what the list
-    /// leads with: this month's total over last month to the same day.
-    static func spendingGlance(_ reading: Spending.Reading, now: Date = .now) -> OverviewLine? {
-        guard !reading.places.isEmpty else { return nil }
-        let mask = BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil
-        return OverviewLine(name: spendingName,
-                            figure: mask ?? AppleWalletRoom.money(reading.total, "USD"))
     }
 
     static func spendingTimes(_ count: Int) -> String {

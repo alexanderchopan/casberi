@@ -60,29 +60,6 @@ extension FeedScreen {
         var id: String { "wallet.security.\(rawValue)" }
     }
 
-    var walletSecurityFigure: some View {
-        WalletSecurityFigure(counts: walletSecurityCounts) { anchor in
-            cardScrollTarget = anchor.id
-        }
-    }
-
-    /// The list, in the box's order: what waits on you, what acts as you,
-    /// what can spend for you, then the three kinds of transfer made to fool
-    /// you. Each section draws only when it has rows.
-    @ViewBuilder
-    var walletSecuritySections: some View {
-        walletAccountSection
-        walletSignaturesSection
-        walletActingSection
-        walletApprovalsSection
-        walletFlaggedSection(.poisoning, anchor: .poisoning,
-                             word: String(localized: "Address poisoning"))
-        walletFlaggedSection(.spoofedSymbol, anchor: .fakeTokens,
-                             word: String(localized: "Fake tokens"))
-        walletFlaggedSection(.fakeTransfer, anchor: .fakeTransfers,
-                             word: String(localized: "Fake transfers"))
-    }
-
     /// **YOUR ACCOUNT'S KEYS LEAD SECURITY (prd §1436, user: "ya this makes a
     /// lot more sense").** This iPhone, the recovery key, the outside key —
     /// `MoveSecurity`'s rows, moved here from Move so Move is the acts alone
@@ -195,105 +172,6 @@ extension FeedScreen {
         default:
             return (amount ?? WalletValue.title(thing),
                     String(localized: "You didn't send this · \(day)"))
-        }
-    }
-}
-
-/// The checkup: six counts in two rows of three — what can act for you over
-/// what is trying to fool you — and nothing else (prd §1107a, user: "i'm not
-/// even sure if we need to say n Needs you"). The amber counts and the tile's
-/// amber word already say what needs you, so the box gives the counts its
-/// whole height.
-struct WalletSecurityFigure: View {
-    let counts: WalletSecurityCounts
-    let onJump: (FeedScreen.SecurityAnchor) -> Void
-    /// The Signers figure as `MoveSecurity` stamps it, observed: the
-    /// page's read lands after the box first draws, and a box reading the
-    /// store once kept its zero (user: "i have signer set up but shows i don't").
-    @AppStorage(YourAccountFacts.signersKey) private var storedSigners = 0
-
-    /// **NINE, THREE ACROSS, THE FIGURE CENTERED OVER ITS WORD (prd §1462,
-    /// user: "F looks the cleanest").** The six counts (§1221), then your
-    /// account's three — the spend limit, the Signers, the round-ups — each
-    /// a figure over a word in one grammar; a count that wants you says so
-    /// in its word (§1004), and a zero is a fact, not a door (§83).
-    struct Cell: Identifiable {
-        let id: String
-        let anchor: FeedScreen.SecurityAnchor
-        let count: Int
-        let figure: String?
-        let word: String
-        let wants: Bool
-        /// The wash (prd §1463): a threat is red, an ask orange, on green.
-        var tone: DSCountTile.Tone = .none
-    }
-
-    /// Whole dollars: "$2", never "$2.00" (the limit and the step are whole).
-    private static func dollars(_ n: Int) -> String {
-        n.formatted(.currency(code: "USD").precision(.fractionLength(0)))
-    }
-
-    private var cells: [Cell] {
-        var cells: [Cell] = [
-            Cell(id: "signatures", anchor: .signatures, count: counts.signatures, figure: nil,
-                 word: String(localized: "Signatures"), wants: counts.signatures > 0,
-                 tone: counts.signatures > 0 ? .wants : .none),
-            Cell(id: "delegations", anchor: .delegations, count: counts.delegations, figure: nil,
-                 word: String(localized: "Delegations"), wants: false),
-            // A grant with no limit wants you.
-            Cell(id: "approvals", anchor: .approvals, count: counts.approvals, figure: nil,
-                 word: String(localized: "Approvals"), wants: counts.unlimited > 0,
-                 tone: counts.unlimited > 0 ? .wants : .none),
-            // The tile's short word; the list under it keeps the full name.
-            // The three threats are RED (prd §1463, user: "by this logic tho
-            // the poisoning etc should be red"): a danger with nothing to do,
-            // never an ask; all three alike (user, 2026-10-20: "fake tokens
-            // are just as much spam as fake transfers").
-            Cell(id: "poisoning", anchor: .poisoning, count: counts.poisoning, figure: nil,
-                 word: String(localized: "Poisoning"), wants: counts.poisoning > 0,
-                 tone: counts.poisoning > 0 ? .threat : .none),
-            Cell(id: "fakeTokens", anchor: .fakeTokens, count: counts.fakeTokens, figure: nil,
-                 word: String(localized: "Fake tokens"), wants: counts.fakeTokens > 0,
-                 tone: counts.fakeTokens > 0 ? .threat : .none),
-            Cell(id: "fakeTransfers", anchor: .fakeTransfers, count: counts.fakeTransfers, figure: nil,
-                 word: String(localized: "Fake transfers"), wants: counts.fakeTransfers > 0,
-                 tone: counts.fakeTransfers > 0 ? .threat : .none),
-        ]
-        if var a = counts.account {
-            if !YourAccountDemo.isOn { a.signers = YourAccountFacts.signerCount(stored: storedSigners) }
-            // "Limit a month" (user: "we can just say 'limit a month'"); Off
-            // is a figure too, in the zero's ink.
-            cells += [
-                Cell(id: "limit", anchor: .account, count: a.limitDollars ?? 0,
-                     figure: a.limitDollars.map(Self.dollars) ?? String(localized: "Off"),
-                     word: a.limitPeriod.map { String(localized: "Limit a \($0)") } ?? String(localized: "Limit"),
-                     // Off with a Signer standing: it could be on.
-                     wants: a.limitDollars == nil && a.signers > 0,
-                     tone: a.limitDollars != nil ? .on : a.signers > 0 ? .wants : .none),
-                Cell(id: "signers", anchor: .account, count: a.signers, figure: nil,
-                     word: String(localized: "Signers"), wants: a.signers == 0,
-                     tone: a.signers > 0 ? .on : .wants),
-                Cell(id: "roundUps", anchor: .account, count: a.roundUpStep ?? 0,
-                     figure: a.roundUpStep.map(Self.dollars) ?? String(localized: "Off"),
-                     word: a.roundUpSymbol.map { String(localized: "Round-ups to \($0)") } ?? String(localized: "Round-ups"),
-                     wants: false, tone: a.roundUpStep != nil ? .on : .none),
-            ]
-        }
-        return cells
-    }
-
-    var body: some View {
-        let cells = cells
-        DSCountGrid(items: cells.count, columns: counts.account == nil ? 2 : 3, bare: true) {
-            ForEach(cells) { cell in
-                DSCountTile(count: cell.count, label: cell.word, figure: cell.figure, centered: counts.account != nil,
-                            isOn: false, wants: cell.wants, tone: cell.tone, inline: counts.account == nil) {
-                    DSHaptic.selection()
-                    onJump(cell.anchor)
-                }
-                // Your account's cells are doors to its rows at Off too.
-                .disabled(cell.count == 0 && cell.anchor != .account)
-            }
         }
     }
 }

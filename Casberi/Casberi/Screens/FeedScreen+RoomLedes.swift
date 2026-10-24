@@ -6,21 +6,6 @@ import SwiftData
 // FeedScreen.swift (prd §718). Nothing here changed but the file it lives
 // in and, where another file reads a member, its access level.
 extension FeedScreen {
-    /// A Markets tile pressed in the Wallet's box (prd §1337). Its room's
-    /// bar (Watchlist · Alerts · New where the rail stood) is deleted with
-    /// the room: Following and Alerts stand in the box on every size class,
-    /// and Follow a company leads the Following list.
-    func pickTokensScope(_ picked: TokensScope) {
-        // New is a verb (prd §1081, §1171b): it opens the sheet, never lights.
-        if picked == .new {
-            feedSheet = .watchAdd
-            return
-        }
-        // Pressing the picked category again is the watchlist (prd §1138).
-        let next = picked == chrome.tokensScope && picked.isPack ? TokensScope.watchlist : picked
-        withAnimation(DS.Motion.standard) { chrome.tokensScope = next }
-    }
-
     /// A watched row's day change, token or stock — what the Markets lede
     /// counts and the watchlist's movers order sorts by.
     @MainActor

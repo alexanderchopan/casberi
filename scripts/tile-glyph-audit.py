@@ -64,6 +64,12 @@ ALIASES = {
     # Media's Following (prd §1230; the case keeps its `subscriptions` name
     # for its hooks): what you follow wears Follow's eye, as Work's does.
     ("MediaScope", "subscriptions"): "watch",
+    # The Wallet's Following (prd §1479) is Home's Accounts list renamed —
+    # the accounts you follow — so it wears the Accounts glyph it wore.
+    ("WalletSection", "following"): "accounts",
+    # The Wallet's Needs you (prd §1479) is Home's Needs you list as a page:
+    # what waits on you, the bell it wore since §1111.
+    ("WalletSection", "needsYou"): "alerts",
 }
 
 # Symbols the user named as one meaning's own (2026-09-18; the Wallet's

@@ -226,7 +226,7 @@ mutate "what you follow is named Accounts again, beside Holdings' Accounts (prd 
 mutate "Markets made a tile again (prd §1479)" \
   's/\[\.home, \.holdings, \.activity, \.spending\]/[.home, .holdings, .markets, .activity, .spending]/'
 mutate "home loses its empty copy again, so the wallet room says nothing when nothing came back (prd §761)" \
-  's/case \.home:     return String\(localized: "No balance yet"\)/case .home:     return nil/'
+  's/case \.home:            return String\(localized: "No balance yet"\)/case .home:            return nil/'
 mutate "home's empty copy promises a load state it cannot know (§83)" \
   's/What these accounts are worth, and the line it traces\./The balance will appear once the read lands./'
 
@@ -559,10 +559,8 @@ order = [body.find(k) for k in ("walletDoor(.holdingAccounts", "feedSheet = .wal
                                 "walletDoor(.positions", "walletDoor(.apps", "walletDoor(.nfts")]
 sys.exit(0 if all(i >= 0 for i in order) and order == sorted(order) else 1)
 PY
-# A long tail is ONE row (prd §1107): the list draws the fold's shown tokens,
-# never every position, or Positions sink under forty rows again.
-guard FeedScreen.swift "ForEach(fold.shown)" \
-  "Holdings lists every token again — on a wallet of forty, Positions are forty rows down (prd §1107)"
+# Tokens is a door on Holdings since prd §1479, opening every token in its
+# sheet; Holdings itself never lists them, or Positions sink under forty rows.
 deny FeedScreen.swift "ForEach(portfolio.positions)" \
   "Holdings lists every token again — on a wallet of forty, Positions are forty rows down (prd §1107)"
 
@@ -606,11 +604,13 @@ guard DSChip.swift "if ranges.count > 1" \
 # Overview's first row counts the accounts, the Accounts list stands under
 # Overview, and its header's + is the Feed's with two rows — Follow an account
 # (the tray) and Connect an app (the catalogue on its Wallet card) — the same
-# two the Feed's Wallet section offers (§1347 grew).
-guard FeedScreen+WalletHome.swift "OverviewLine(name: Self.accountsName, figure:" \
-  "Overview lost its Accounts row (prd §1410)"
-guard FeedScreen+WalletHome.swift "walletAccountsSection(accounts)" \
-  "the Accounts list left Home (prd §1410)"
+# two the Feed's Wallet section offers (§1347 grew). Since prd §1479 the list
+# is Following, a door on Home: your own account apart (it is Your account's),
+# every other account a row with its Rename and Stop following.
+guard FeedScreen.swift "walletDoor(.following, line: followingLine(following)" \
+  "Home lost its Following door (prd §1410, §1479)"
+guard FeedScreen.swift "ForEach(slots) { slot in walletAccountRow(slot) }" \
+  "the Following page no longer lists the accounts you follow (prd §1410, §1479)"
 guard FeedScreen+WalletHome.swift "glyph: ScopeTileGlyph.wallets) { feedSheet = .walletFollow }" \
   "the Accounts header's + no longer raises Follow an account (prd §1410, §1090)"
 guard FeedScreen+WalletHome.swift "route.present(.apps)" \
