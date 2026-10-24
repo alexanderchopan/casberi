@@ -72,7 +72,7 @@ enum YourAccountElsewhere {
     @MainActor private static var listed: (networks: [Network], at: Date)?
 
     /// Networks Relay still lists that are closing down, left out so no one
-    /// sends money onto them (prd §1485): Abstract (2741).
+    /// sends money onto them (prd §1486): Abstract (2741).
     static let closing: Set<Int> = [2741]
 
     /// Relay's EVM networks that take deposit addresses, without the
@@ -135,12 +135,16 @@ enum YourAccountElsewhere {
     /// The amount a route's quote names — an open address takes any amount
     /// on its route, but Relay will not quote under about $0.05 or beyond a
     /// pool's depth: a small fraction of a chain's own coin or a bitcoin,
-    /// ten of anything else (a dollar, mostly). Pure, for the self-test.
+    /// ten of anything else (a dollar, mostly). A dollar is ten even where it
+    /// is the chain's own coin: Arc's gas coin is USDC, and 0.005 of it is
+    /// half a cent, under Relay's floor, so no Arc route was ever quoted
+    /// (prd §1483). Pure, for the self-test.
     static func quoteAmount(_ coin: Coin) -> String {
         let whole = Decimal(sign: .plus, exponent: coin.decimals, significand: 1)
+        let symbol = coin.symbol.uppercased()
         let units: Decimal
-        if coin.isNative { units = whole * Decimal(string: "0.005")! }
-        else if coin.symbol.uppercased().contains("BTC") { units = whole * Decimal(string: "0.0005")! }
+        if symbol.contains("BTC") { units = whole * Decimal(string: "0.0005")! }
+        else if coin.isNative, !symbol.contains("USD") { units = whole * Decimal(string: "0.005")! }
         else { units = whole * 10 }
         var rounded = Decimal()
         var source = units

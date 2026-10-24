@@ -68236,21 +68236,28 @@ The rule under all of it: **every page shows every account at once, and the acco
 
 **Seen** on the simulator (iOS 27, Debug, the demo): Home's six doors stand at one pitch, Needs you and Markets as tall as the doors with a line; Your account's This iPhone, Recovery key, Signer, Spend limit and Round-ups at that same pitch under the box, their text starting in the doors' column; Threats' rows one list row each under their groups; Positions' Morpho, Aave, Spark, ETH long and the two pools evenly spaced, the money trailing at the rows' edge. Build green; `wallet-row-audit.py` clean, 8/8 mutations caught.
 
-## §1483 — Receive's networks and Buy's last merchants wear their marks (applies §1481, §1453) (user, 2026-10-24: "need icons", over Buy's merchant list and Receive's network list)
+## §1483 — Receive from Arc: a chain's own coin that is a dollar quotes ten, not a fraction (amends §1470 item 6) (user, 2026-10-24: "arc isn't working as a chain on receive") — FIXED, UNMEASURED
+
+1. **The cause.** §1470 item 6 quotes a route at 0.005 of a chain's own coin, because a chain's own coin was ETH-like. Arc's own coin is USDC (18 decimals, §808), so a route from Arc asked Relay to quote half a cent of USDC, under the ~$0.05 floor Relay quotes at, and every Arc route was refused before an address came back.
+2. **The rule.** `YourAccountElsewhere.quoteAmount` sizes the quote by what the coin is: anything named BTC 0.0005, a chain's own coin 0.005 unless its symbol names a dollar, else ten. Arc's USDC quotes ten.
+3. **The check.** `your-account-selftest.sh` holds a native 18-decimal USDC to ten whole units. Relay's saved records (`relay-chains.json`) carry no Arc record; none was invented.
+4. **UNMEASURED:** Relay's `/chains` was not reachable from the session that wrote this, so it is not measured that Relay lists Arc with `depositAddressEnabled`, nor whether it lists Arc's USDC ERC-20 interface (`0x3600…0000`) beside the native coin, which would draw two USDC rows under what they send. Measure with `-moveReceiveFrom "Arc"` on the simulator.
+
+## §1484 — Receive's networks and Buy's last merchants wear their marks (applies §1481, §1453) (user, 2026-10-24: "need icons", over Buy's merchant list and Receive's network list)
 
 1. **Receive.** Every network Relay takes deposits on drew its first letter. `MoveSentence.elsewhereMark` names a bundled mark by the network's name (lowercased, letters and digits only, with Relay's other spellings: "BNB", "OP Mainnet", "zkSync Era", "World Chain"); a name off the table keeps its letter. Your own three networks keep `networkMark`.
-2. **Fifty-seven network marks (fifty-six since §1485), `brand-net-<slug>`**, from web3icons (`@web3icons/core` 4.0.58, MIT, its `background` variant: the mark on its brand square, clipped to the row's circle), rendered at 256px. Bundled, never fetched: Relay's own `iconUrl` would add a host to `NetworkReach` for a picture.
+2. **Fifty-seven network marks (fifty-six since §1486), `brand-net-<slug>`**, from web3icons (`@web3icons/core` 4.0.58, MIT, its `background` variant: the mark on its brand square, clipped to the row's circle), rendered at 256px. Bundled, never fetched: Relay's own `iconUrl` would add a host to `NetworkReach` for a picture.
 3. **Buy.** Instacart and Valorant: Simple Icons' marks (16.35.0, CC0) in their brand colour on white (`brand-instacart`, `brand-valorant`); `BridgeIcon` finds them by name. The App Store, §1481's source, was out of this session's reach. **The Home Depot keeps its letters:** no icon set carries its mark, and a drawn one is a lookalike.
 4. **Not built here:** the coins under a Relay network (AVAX, BNB, APE, BERA) still draw `AssetMark`'s letters. Arc's mark is web3icons' `arc`, taken to be Circle's Arc by name. Not built or seen on the simulator: this session had no Xcode.
 
-## §1484 — Swap's For offers the main tokens; everything else is a search (amends §1440, §1470) (user, 2026-10-24: "for swap let's just show the main tokens and not this other crap. user can search for what they want", over a For list of unverified tokens: xdp, AXIS, MSTRc, METAc)
+## §1485 — Swap's For offers the main tokens; everything else is a search (amends §1440, §1470) (user, 2026-10-24: "for swap let's just show the main tokens and not this other crap. user can search for what they want", over a For list of unverified tokens: xdp, AXIS, MSTRc, METAc)
 
 1. **With nothing typed**, For lists what you hold, then the main tokens Relay verifies on that network: ETH, WETH, USDC, USDT, DAI, EURC, cbBTC, WBTC, cbETH, wstETH (`YourAccountTokens.main`, matched on the symbol, uppercased). A token Relay does not verify is never in the list unless you hold it.
 2. **Typed**, nothing changes: Relay's matches, verified first, an unverified one said so; a pasted contract still reads off the chain.
 3. Receive's "as" list (§1470) reads the same `matches`, so it lists the same.
 4. Not built or seen on the simulator: this session had no Xcode.
 
-## §1485 — Receive leaves out a network that is closing: Abstract (amends §1453, §1483) (user, 2026-10-24: "remove abstract chain too. it's closing down. i'm surprised relay still offers it")
+## §1486 — Receive leaves out a network that is closing: Abstract (amends §1453, §1484) (user, 2026-10-24: "remove abstract chain too. it's closing down. i'm surprised relay still offers it")
 
 1. Relay still lists Abstract (chain 2741) as taking deposits. `YourAccountElsewhere.closing` leaves it out of Receive's networks by id, so no one routes money onto a chain that is shutting down. We don't wait for Relay to drop it; once Relay does, the entry does nothing and can be deleted.
 2. Its mark (`brand-net-abstract`) and its row in `elsewhereSlugs` are deleted with it.

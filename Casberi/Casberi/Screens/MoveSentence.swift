@@ -1716,7 +1716,7 @@ struct MoveSentence: View {
         }
     }
 
-    /// A network Relay names, by its name (prd §1483): web3icons' mark,
+    /// A network Relay names, by its name (prd §1484): web3icons' mark,
     /// bundled as `brand-net-<slug>`; a name off the table keeps its letter.
     static func elsewhereMark(_ name: String) -> String? {
         let key = name.lowercased().filter { $0.isLetter || $0.isNumber }
