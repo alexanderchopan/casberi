@@ -176,11 +176,9 @@ struct MoveScreen: View {
                 MoveFlow {
                     MoveClause {
                         HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
-                            Text("Your account")
-                                .dsText(MoveSentence.size).foregroundStyle(DS.textPrimary)
+                            MoveWord(String(localized: "Your account"))
                             if let recoverable {
-                                Text(verbatim: YourAccount.short(recoverable.address))
-                                    .dsText(MoveSentence.size).foregroundStyle(DS.pickInk)
+                                MoveWord(YourAccount.short(recoverable.address), ink: DS.pickInk)
                             }
                         }
                     }
@@ -249,7 +247,7 @@ struct MoveScreen: View {
                 Text(verbatim: creating
                      ? (recoverable == nil ? String(localized: "Creating…") : String(localized: "Setting up…"))
                      : (recoverable == nil ? String(localized: "Create") : ThisDevice.use))
-                    .dsText(.heading28)
+                    .dsText(.heading34)
                     .foregroundStyle(creating ? DS.textTertiary : DS.pickInk)
                     // One line, as every foot verb is.
                     .lineLimit(1)

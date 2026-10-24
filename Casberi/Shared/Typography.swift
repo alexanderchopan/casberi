@@ -223,6 +223,19 @@ extension DSTextStyle {
     /// is the real defect.
     static let price64 = DSTextStyle(size: 64, weight: .heavy, tracking: 0, lineHeight: 64, relative: .largeTitle)
 
+    // ====================================================== 52 · 44 · SENTENCE
+    /// **MOVE'S SENTENCE, THE TOP OF ITS LADDER (prd §1479).** The sentence you
+    /// fill in — "$25 of ETH / for 24.9 USDC / on Base." — is ONE size for
+    /// every word, the largest at which every clause stays whole on its line
+    /// (`MoveFit`: 52, then 44, then `heading34`). Bold, not heavy, because
+    /// the sentence is words, not a head's statement; `.largeTitle` so the
+    /// three rungs scale together and the fit stays a ratio. Nothing else
+    /// may take these: a sentence that fits at 52 is the only thing that
+    /// has earned 52.
+    static let heading52 = DSTextStyle(size: 52, weight: .bold, tracking: 0, lineHeight: 58, relative: .largeTitle)
+    /// The ladder's middle rung: "on Robinhood." fits here, not at 52.
+    static let heading44 = DSTextStyle(size: 44, weight: .bold, tracking: 0, lineHeight: 50, relative: .largeTitle)
+
     // ============================================================== 40 · HEAD
     /// The head of a tray, a sheet or a room — the rung that says WHERE YOU
     /// ARE. Line height is 1.0: a head is one or two words and tight leading is

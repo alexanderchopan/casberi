@@ -97,16 +97,18 @@ struct MoveKeysWalk: View {
             MoveFlow {
                 MoveWord(String(localized: "Face ID alone"))
                 MoveClause(glue: String(localized: "up to")) {
-                    HStack(alignment: .firstTextBaseline, spacing: 0) {
-                        Text(verbatim: "$").dsText(MoveSentence.size).foregroundStyle(DS.pickInk)
-                        TextField("100", text: $amountText)
-                            .keyboardType(.numberPad)
-                            .focused($amountFocused)
-                            .dsText(MoveSentence.size)
-                            .foregroundStyle(DS.pickInk)
-                            .tint(DS.pickInk)
-                            .fixedSize()
-                            .accessibilityLabel(Text("Dollars"))
+                    MoveRungReader { rung in
+                        HStack(alignment: .firstTextBaseline, spacing: 0) {
+                            Text(verbatim: "$").dsText(rung).foregroundStyle(DS.pickInk)
+                            TextField("100", text: $amountText)
+                                .keyboardType(.numberPad)
+                                .focused($amountFocused)
+                                .dsText(rung)
+                                .foregroundStyle(DS.pickInk)
+                                .tint(DS.pickInk)
+                                .fixedSize()
+                                .accessibilityLabel(Text("Dollars"))
+                        }
                     }
                 }
                 MoveWord(String(localized: "of each coin"))
@@ -148,7 +150,7 @@ struct MoveKeysWalk: View {
             Spacer(minLength: DS.Space.s3)
             Button { act() } label: {
                 Text(verbatim: verb)
-                    .dsText(.heading28)
+                    .dsText(.heading34)
                     .foregroundStyle(verbEnabled ? DS.pickInk : DS.textTertiary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.75)

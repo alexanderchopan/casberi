@@ -333,8 +333,9 @@ grep -q 'reach = await YourAccountReach.usable(account)' Casberi/Casberi/Screens
 # Security offers only the networks this phone can sign on (prd §1442m): a
 # Finish aimed at the rest is offered and then refused.
 SEC=Casberi/Casberi/Screens/MoveSecurity.swift
-grep -q 'let targets = fixable.map(\\.network)' "$SEC" || { echo "✗ the recovery row's Finish no longer aims only at this phone's networks (prd §1442m)"; exit 1; }
-grep -q 'outside.isEmpty && canFix($0) }.map(\\.network)' "$SEC" || { echo "✗ the outside key's Finish no longer aims only at this phone's networks (prd §1442m)"; exit 1; }
+# (the lists moved behind `recoveryTargets`/`outsideTargets` when the opening operation took its rides, §1475; the rule is unchanged)
+grep -q 'let targets = recoveryTargets.map(\\.network)' "$SEC" && grep -q 'return fixable.filter { !rides.contains($0.id) }' "$SEC" || { echo "✗ the recovery row's Finish no longer aims only at this phone's networks (prd §1442m)"; exit 1; }
+grep -q 'let targets = outsideTargets.map(\\.network)' "$SEC" && grep -q 'outside.isEmpty && canFix($0) && !rides.contains($0.id) }' "$SEC" || { echo "✗ the outside key's Finish no longer aims only at this phone's networks (prd §1442m)"; exit 1; }
 # Money on a network without the recovery key is asked about, from the sweep,
 # and never signed for on its own (prd §1442m).
 grep -q 'await YourAccountProtection.check()' Casberi/Casberi/Model/BridgeRefresh.swift || { echo "✗ the foreground sweep no longer checks for money the recovery key does not cover (prd §1442m)"; exit 1; }
@@ -450,4 +451,52 @@ grep -q 'if YourAccountDemo.isDemo(account) { say(YourAccountDemo.actsLater); re
 [[ $(grep -c 'if YourAccountDemo.isDemo(account) { say(YourAccountDemo.actsLater); return }' Casberi/Casberi/Screens/MoveSentence.swift) -ge 2 ]] || { echo "✗ Move's sign() and copy() no longer both refuse in the demo (prd §1475)"; exit 1; }
 [[ $(grep -c 'if demoSays() { return }' Casberi/Casberi/Screens/MoveSecurity.swift) -ge 5 ]] || { echo "✗ a Security act changes a key in the demo (prd §1475)"; exit 1; }
 grep -q 'walking = true' Casberi/Casberi/Screens/MoveScreen.swift || { echo "✗ Create no longer walks through your keys (prd §1457)"; exit 1; }
-echo "✓ your account: the address is the factory's, the send's bytes are the module's, amounts add up, Move is in every build, it names only networks this phone can use, and asks where money lacks the recovery key"
+# The sentence is one size, picked by fit (prd §1479): the ladder's pick is
+# pure (`MoveFit`), so it is run here, and the views are held to reading it.
+FIT=Casberi/Casberi/Model/MoveFit.swift
+SENTENCE=Casberi/Casberi/Screens/MoveSentence.swift
+RAMP=Casberi/Shared/Typography.swift
+mkdir -p "$TMP/fit-harness"
+cat > "$TMP/fit-harness/main.swift" <<'SWIFT'
+import Foundation
+var bad = 0
+func check(_ ok: Bool, _ what: String) { if !ok { print("✗ " + what); bad += 1 } }
+check(MoveFit.ladder == [52, 44, 34], "the ladder is not 52, 44, 34")
+// "$25 of ETH / for 24.9 USDC / on Base." measured 300 wide at 52 in 342: stays at 52.
+check(MoveFit.pick(widest: 300, drawnAt: 52, width: 342) == 52, "a sentence that fits at 52 was shrunk")
+// "on Robinhood." measured 363 at 52: 44 fits (307), so 44.
+check(MoveFit.pick(widest: 363, drawnAt: 52, width: 342) == 44, "a clause too wide for 52 did not drop to 44")
+// A long quote measured 480 at 52: not even 44 (406), so the floor.
+check(MoveFit.pick(widest: 480, drawnAt: 52, width: 342) == 34, "a clause too wide for 44 did not reach the floor")
+// Drawn at the floor and narrow enough for 52 (240 → 367 at 52? no; 240 → 310 at 44): climbs to 44, not 52.
+check(MoveFit.pick(widest: 240, drawnAt: 34, width: 342) == 44, "a sentence at the floor did not climb to the rung it fits")
+// Drawn at 44, the widest clause predicts 341.8 at 52 in 342: within slack, so it stays at 44 (no flip-flop).
+check(MoveFit.pick(widest: 289.2, drawnAt: 44, width: 342) == 44, "a rounding-error fit stepped up — the sentence would flap between rungs")
+// The same clause, four points narrower, climbs.
+check(MoveFit.pick(widest: 285, drawnAt: 44, width: 342) == 52, "a clause with room to climb stayed down")
+// Nothing measured or no width: stay put.
+check(MoveFit.pick(widest: 0, drawnAt: 44, width: 342) == 44, "an unmeasured flow moved")
+check(MoveFit.pick(widest: 300, drawnAt: 52, width: 0) == 52, "a flow with no width moved")
+// Every rung on the ladder is a rung of the ramp.
+exit(bad == 0 ? 0 : 1)
+SWIFT
+xcrun swiftc -O -o "$TMP/fit" "$FIT" "$TMP/fit-harness/main.swift" 2>"$TMP/err" \
+  || { cat "$TMP/err"; echo "✗ MoveFit.swift does not compile alone (Foundation only)"; exit 1; }
+"$TMP/fit" || { echo "✗ the sentence's fit ladder drifted — see above"; exit 1; }
+for r in heading52 heading44 heading34; do
+  grep -q "static let $r = DSTextStyle" "$RAMP" || { echo "✗ the ladder's rung $r is not on the ramp (prd §1479)"; exit 1; }
+done
+grep -q 'case 52: .heading52' "$SENTENCE" && grep -q 'case 44: .heading44' "$SENTENCE" && grep -q 'default: .heading34' "$SENTENCE" \
+  || { echo "✗ MoveSentence.rung no longer maps the ladder to heading52 · heading44 · heading34 (prd §1479)"; exit 1; }
+grep -q 'static let size: DSTextStyle' "$SENTENCE" && { echo "✗ MoveSentence.size is back — a fixed rung bypasses the fit (prd §1479)"; exit 1; }
+grep -q 'MoveFit.pick(widest: widest, drawnAt: rung, width: width)' "$SENTENCE" || { echo "✗ MoveFlow no longer picks the rung by fit (prd §1479)"; exit 1; }
+grep -q 'onPreferenceChange(MoveClauseWidth.self)' "$SENTENCE" || { echo "✗ MoveFlow no longer reads its clauses' widths (prd §1479)"; exit 1; }
+[[ $(grep -c 'modifier(MoveMeasured())' "$SENTENCE") -ge 2 ]] || { echo "✗ a word or a clause no longer reports its width — the fit would measure nothing (prd §1479)"; exit 1; }
+grep -q '@Environment(\\.moveRung) private var rung' "$SENTENCE" || { echo "✗ MoveWord no longer reads the flow's rung (prd §1479)"; exit 1; }
+grep -rq 'dsText(MoveSentence.size)\|dsText(.heading28)\|dsText(.heading52)\|dsText(.heading44)' Casberi/Casberi/Screens/MoveSentence.swift Casberi/Casberi/Screens/MoveScreen.swift Casberi/Casberi/Screens/MoveKeysWalk.swift \
+  && { echo "✗ a Move view names the sentence's rung itself instead of reading the flow's pick (prd §1479)"; exit 1; }
+grep -q 'Self.short($0, decimals: buy.token.decimals)' "$SENTENCE" || { echo "✗ the For word draws the exact quote again — the clause outgrows 52 (prd §1479)"; exit 1; }
+grep -q 'return "≈ " + Self.figure(back, decimals: buy.token.decimals)' "$SENTENCE" || { echo "✗ the print line no longer carries the ≈ and the exact quote (prd §1479, §83)"; exit 1; }
+grep -q 'case .swap: \[soldPrint, quotePrint, feeTotal\]' "$SENTENCE" || { echo "✗ the swap's print line dropped the exact quote (prd §1479)"; exit 1; }
+
+echo "✓ your account: the address is the factory's, the send's bytes are the module's, amounts add up, Move is in every build, it names only networks this phone can use, asks where money lacks the recovery key, and the sentence is one size picked by fit"

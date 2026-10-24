@@ -588,19 +588,32 @@ struct MoveSentence: View {
         }
     }
 
-    /// The sentence is the verbs' size (§1442c, user: "simpler", "less
-    /// overwhelming").
-    static let size: DSTextStyle = .heading28
+    /// **ONE SIZE, PICKED BY FIT (prd §1479).** The sentence wears the
+    /// largest rung at which every clause stays whole on its line: 52, 44,
+    /// then 34 (`MoveFit`). `MoveFlow` measures and picks; every word reads
+    /// the pick through `\.moveRung`, so nothing in the sentence names a
+    /// rung of its own.
+    static func rung(_ size: Double) -> DSTextStyle {
+        switch size {
+        case 52: .heading52
+        case 44: .heading44
+        default: .heading34
+        }
+    }
+
+    /// A quote's figure for the sentence: three significant figures, whole
+    /// above a hundred — "24.9 USDC", "0.00104 ETH", "1,235 USDC". The ≈ and
+    /// the exact figure are the print line's (§1479), so the sentence's
+    /// longest clause stays short enough to stand at 52.
+    static func short(_ units: String, decimals: Int) -> String {
+        let v = Double(Op.display(units, decimals: decimals, places: min(decimals, 12))) ?? 0
+        if v == 0 { return "0" }
+        if v >= 100 { return v.formatted(.number.precision(.fractionLength(0))) }
+        return v.formatted(.number.precision(.significantDigits(1...3)))
+    }
 
     private func word(_ text: String, ink: Color) -> some View {
-        Text(verbatim: text)
-            .dsText(Self.size)
-            .foregroundStyle(ink)
-            // Digits roll as a figure changes: the quote landing, a slider
-            // drag — tabular, so the line holds still while they do.
-            .monospacedDigit()
-            .contentTransition(.numericText())
-            .fixedSize()
+        MoveWord(text, ink: ink)
     }
 
     /// A word that opens its choices under the sentence.
@@ -884,8 +897,10 @@ struct MoveSentence: View {
                     }
                     DSHaptic.selection()
                 } label: {
+                    // A step under the sentence's floor (§1479): the verbs
+                    // name what the sentence does, they are not the sentence.
                     Text(verbatim: title(v))
-                        .dsText(.heading17)
+                        .dsText(.heading24)
                         .foregroundStyle(v == verb ? DS.textPrimary
                                          : v == .receive && emptyEverywhere ? DS.pickInk : DS.textTertiary)
                 }
@@ -908,17 +923,18 @@ struct MoveSentence: View {
 
     private var amountField: some View {
         let typing = focus == .amount
-        return TextField(text: $amount, prompt: Text(verbatim: "0").foregroundStyle(DS.textTertiary)) { Text(verbatim: "0") }
+        return MoveRungReader { rung in
+            TextField(text: $amount, prompt: Text(verbatim: "0").foregroundStyle(DS.textTertiary)) { Text(verbatim: "0") }
             .keyboardType(.decimalPad)
             .focused($focus, equals: .amount)
-            .dsText(Self.size)
+            .dsText(rung)
             // Not typing, the figure is drawn over the field so its digits
             // roll as the slider moves (§1438b); the field still takes the tap.
             .foregroundStyle(typing || amount.isEmpty ? DS.pickInk : .clear)
             .overlay(alignment: .leading) {
                 if !typing, !amount.isEmpty {
                     Text(verbatim: amount)
-                        .dsText(Self.size)
+                        .dsText(rung)
                         .foregroundStyle(DS.pickInk)
                         .monospacedDigit()
                         .contentTransition(.numericText())
@@ -927,6 +943,7 @@ struct MoveSentence: View {
                 }
             }
             .fixedSize()
+        }
             .disabled(stage != nil)
             .accessibilityLabel(Text(inDollars ? "Amount in dollars" : "Amount"))
             .onChange(of: amount) { _, now in
@@ -947,7 +964,9 @@ struct MoveSentence: View {
 
     @ViewBuilder private var buyWord: some View {
         if let buy {
-            let back = buyTotal.map { "≈ " + Self.figure($0, decimals: buy.token.decimals) + " " }
+            // Short in the sentence, the ≈ and the exact figure in the
+            // print (§1479), so the clause stays whole at the biggest rung.
+            let back = buyTotal.map { Self.short($0, decimals: buy.token.decimals) + " " }
             // The whole swap's result, pink like every value; locked by a
             // kept swap (§1442c), a tap says so (§1442g).
             let word = blank((back ?? "") + buy.token.symbol, ink: DS.pickInk,
@@ -1243,7 +1262,7 @@ struct MoveSentence: View {
                 // Swapping, the other unit is the receipt's column; the fee is
                 // the whole swap's (§1442g).
                 let print: [String] = switch verb {
-                case .swap: [soldPrint, feeTotal].compactMap { $0 }
+                case .swap: [soldPrint, quotePrint, feeTotal].compactMap { $0 }
                 case .send: [soldPrint].compactMap { $0 } + (peopleCount > 1 ? [String(localized: "To \(peopleCount) people")] : []) + roundUpPrint
                 case .receive: []
                 case .buy: buyPrint
@@ -1293,6 +1312,13 @@ struct MoveSentence: View {
         if lines > 1, let total = soldDollarsTotal { return String(localized: "\(Self.money(total)) in all") }
         guard let with, units != nil else { return nil }
         return otherUnit(with)
+    }
+
+    /// The quote exactly, with its ≈: "≈ 24.86 USDC" (§1479). The sentence
+    /// says "24.9 USDC"; this is where the places went.
+    private var quotePrint: String? {
+        guard let buy, let back = buyTotal else { return nil }
+        return "≈ " + Self.figure(back, decimals: buy.token.decimals) + " " + buy.token.symbol
     }
 
     /// "$0.004", or "0.004 USDC" when dollars are typed. nil when the token
@@ -1830,7 +1856,7 @@ struct MoveSentence: View {
                         withAnimation(DS.Motion.standard) { receipt = nil }
                         DSHaptic.selection()
                     } label: {
-                        Text("Done").dsText(.heading28).foregroundStyle(DS.textSecondary).frame(minHeight: 48, alignment: .trailing)
+                        Text("Done").dsText(.heading34).foregroundStyle(DS.textSecondary).frame(minHeight: 48, alignment: .trailing)
                     }
                     .buttonStyle(RowPress())
                 }
@@ -1846,7 +1872,7 @@ struct MoveSentence: View {
                     if YourAccountDemo.isDemo(account) {
                         Button { say(YourAccountDemo.actsLater) } label: {
                             Text("Share")
-                                .dsText(.heading28)
+                                .dsText(.heading34)
                                 .foregroundStyle(DS.pickInk)
                                 .frame(minHeight: 48, alignment: .trailing)
                         }
@@ -1854,7 +1880,7 @@ struct MoveSentence: View {
                     } else {
                         ShareLink(item: receiveAddress) {
                             Text("Share")
-                                .dsText(.heading28)
+                                .dsText(.heading34)
                                 .foregroundStyle(DS.pickInk)
                                 .frame(minHeight: 48, alignment: .trailing)
                         }
@@ -1866,7 +1892,7 @@ struct MoveSentence: View {
                         // Pink is the values' and the signing verb's alone
                         // (§1442f): Add is white when ready, grey when not.
                         Text("Add")
-                            .dsText(.heading17)
+                            .dsText(.heading24)
                             .foregroundStyle(pendingItem != nil && stage == nil ? DS.textPrimary : DS.textSecondary)
                             .frame(minHeight: 48)
                     }
@@ -1879,7 +1905,7 @@ struct MoveSentence: View {
                     Spacer(minLength: DS.Space.s3)
                     Button { sign() } label: {
                         Text(verbatim: footVerb)
-                            .dsText(.heading28)
+                            .dsText(.heading34)
                             .foregroundStyle(footOn ? DS.pickInk : DS.textTertiary)
                             .frame(minHeight: 48, alignment: .trailing)
                     }
@@ -2826,10 +2852,60 @@ struct MoveSentence: View {
 // MARK: - The running sentence's parts (prd §1466)
 
 /// A flow of clauses: wraps between them, never inside one.
+/// **THE FLOW PICKS THE SENTENCE'S SIZE (prd §1479).** Every clause reports
+/// its width; the widest, against the width the flow has, picks the rung
+/// (`MoveFit`), and every word under the flow reads it through `\.moveRung`.
+/// One size for the whole sentence, the largest at which no clause has to
+/// break — and the words never name a rung themselves.
 struct MoveFlow<Content: View>: View {
     @ViewBuilder let content: () -> Content
+    @State private var rung = MoveFit.ladder[0]
+    @State private var width: CGFloat = 0
+    @State private var widest: CGFloat = 0
     var body: some View {
         FlowLayout(spacing: MoveSentence.clauseGap, lineSpacing: 0) { content() }
+            .environment(\.moveRung, MoveSentence.rung(rung))
+            .onPreferenceChange(MoveClauseWidth.self) { widest = $0; refit() }
+            .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0; refit() }
+    }
+
+    private func refit() {
+        let next = MoveFit.pick(widest: widest, drawnAt: rung, width: width)
+        guard next != rung else { return }
+        withAnimation(DS.Motion.standard) { rung = next }
+    }
+}
+
+/// The rung the sentence is drawn at, set by `MoveFlow`; the floor outside one.
+private struct MoveRungKey: EnvironmentKey {
+    static let defaultValue: DSTextStyle = .heading34
+}
+
+extension EnvironmentValues {
+    var moveRung: DSTextStyle {
+        get { self[MoveRungKey.self] }
+        set { self[MoveRungKey.self] = newValue }
+    }
+}
+
+/// A field or a glyph that must wear the sentence's size reads it here.
+struct MoveRungReader<Content: View>: View {
+    @Environment(\.moveRung) private var rung
+    @ViewBuilder let content: (DSTextStyle) -> Content
+    var body: some View { content(rung) }
+}
+
+/// The widest piece under a flow, in points, at the rung it was drawn at.
+struct MoveClauseWidth: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = max(value, nextValue()) }
+}
+
+private struct MoveMeasured: ViewModifier {
+    func body(content: Content) -> some View {
+        content.background(GeometryReader { g in
+            Color.clear.preference(key: MoveClauseWidth.self, value: g.size.width)
+        })
     }
 }
 
@@ -2837,14 +2913,16 @@ struct MoveFlow<Content: View>: View {
 struct MoveWord: View {
     let text: String
     var ink: Color = DS.textPrimary
+    @Environment(\.moveRung) private var rung
     init(_ text: String, ink: Color = DS.textPrimary) { self.text = text; self.ink = ink }
     var body: some View {
         Text(verbatim: text)
-            .dsText(MoveSentence.size)
+            .dsText(rung)
             .foregroundStyle(ink)
             .monospacedDigit()
             .contentTransition(.numericText())
             .fixedSize()
+            .modifier(MoveMeasured())
     }
 }
 
@@ -2864,6 +2942,7 @@ struct MoveClause<Value: View>: View {
             if let trail { MoveWord(trail) }
         }
         .fixedSize()
+        .modifier(MoveMeasured())
     }
 }
 
