@@ -24,6 +24,8 @@ The first version with an account of its own: send, receive, swap (Relay) and bu
 
 **State, 2026-10-23:** iOS 3.0.8 submitted by the user with build 855 (WAITING_FOR_REVIEW), carrying everything below; the two wallet screenshots (7-swap, 8-buy, `~/Documents/casberi-deck/cards/appstore8.py`) did not make it — Swap was framed, Buy never drew on an overloaded simulator — so the live six stand. The Mac 3.0.8 record carries the same copy with Touch ID for Face ID, "on your Mac, iPhone and iPad" and "More than 90 apps", and its own review notes (the MCP/network.server and "no transfers" lines removed); its build is 856.
 
+**3.0.8 → 3.0.9, 2026-10-23 evening:** iOS 3.0.8 was approved and released by hand (READY_FOR_SALE). iOS 3.0.9 (build 857, AFTER_APPROVAL) carries the same description and keywords, the promotional text re-applied (it did not carry over), review notes retitled "approved in 3.0.8" with a line for Your own model (§1478), its own What's New (own model, hide a token, rename, round-up menus, the Wallet reorganised, Move's sentence by fit), and the two wallet shots: 7-swap and 8-buy appended to the iPhone 6.9" and 6.3" sets (eight each; iPad keeps six, user: "we don't need the ipad shots"), shot on `e759e6e1` with Amazon as the merchant (the sample catalogue has no Delta) and 200px of empty black cut so "Powered by …" shows whole.
+
 ### Description (iOS 3.0.8)
 
 Everything you do is scattered across apps, agents, wallets. Casberi is an inbox for your apps and a wallet of your own. It all comes together on your iPhone, iPad and Mac, with no sign-up, no servers and no tracking.
