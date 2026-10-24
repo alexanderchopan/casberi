@@ -194,7 +194,13 @@ struct MoveSentence: View {
     /// The sentence in the past tense, and how it went.
     struct Receipt: Equatable {
         /// One line: its small word for the gutter, and its value.
-        struct Line: Equatable { var glue: String?; var text: String }
+        struct Line: Equatable {
+            var glue: String?
+            var text: String
+            /// A second sentence starts here: its glue is its verb ("Then
+            /// sent"), grey, on a line of its own (prd §1494).
+            var starts = false
+        }
         let past: String
         let lines: [Line]
         let detail: String
@@ -401,8 +407,10 @@ struct MoveSentence: View {
                     .transition(.opacity)
             }
             // What Add kept of the other verb stands under the verbs,
-            // numbered, quieter than the sentence being filled (§1442c).
-            if receipt == nil, !keptLines.filter(showsKept).isEmpty {
+            // numbered, quieter than the sentence being filled (§1442c) —
+            // on Receive and Buy; Swap and Send say it as a sentence of
+            // its own (prd §1494).
+            if receipt == nil, verb == .receive || verb == .buy, !keptLines.filter(showsKept).isEmpty {
                 kept
                     .padding(.bottom, DS.Space.s4)
             }
@@ -414,8 +422,12 @@ struct MoveSentence: View {
                                ink: DS.textSecondary)
                 } else {
                     switch verb {
-                    case .swap: swapClauses
-                    case .send: sendClauses
+                    case .swap:
+                        otherSentence
+                        swapClauses(lead: thenWord)
+                    case .send:
+                        otherSentence
+                        sendClauses(lead: thenWord)
                     case .receive: receiveClauses
                     case .buy: buyClauses
                     }
@@ -467,13 +479,14 @@ struct MoveSentence: View {
     /// **A SWAP IS A SENTENCE (§1466, amends §1442g's "no and").** What you
     /// sell, joined as a list reads — commas between, "and" before the last
     /// — then "for" what you get, "on" the network.
-    @ViewBuilder private var swapClauses: some View {
+    @ViewBuilder private func swapClauses(lead: String?) -> some View {
         let order = sellOrder
         ForEach(Array(order.enumerated()), id: \.element) { n, line in
             let join = Self.joiner(n, of: order.count)
+            let glue = n == 0 ? lead : join.glue
             switch line {
-            case .kept(let id): keptSellClause(id, glue: join.glue, trail: join.trail)
-            case .current: currentSellClauses(glue: join.glue, trail: join.trail)
+            case .kept(let id): keptSellClause(id, glue: glue, trail: join.trail, leads: n == 0 && lead != nil)
+            case .current: currentSellClauses(glue: glue, trail: join.trail, leads: n == 0 && lead != nil)
             }
         }
         MoveClause(glue: String(localized: "for")) { buyWord }
@@ -483,15 +496,16 @@ struct MoveSentence: View {
     /// **A SEND IS THE SAME SENTENCE, PERSON BY PERSON (§1466, amends
     /// §1442h).** Each person's tokens, then "to" them; the next person's
     /// first token follows an "and" of its own.
-    @ViewBuilder private var sendClauses: some View {
+    @ViewBuilder private func sendClauses(lead: String?) -> some View {
         let groups = sendGroups
         ForEach(Array(groups.enumerated()), id: \.element.id) { g, group in
             ForEach(Array(group.lines.enumerated()), id: \.element) { n, line in
                 let join = Self.joiner(n, of: group.lines.count)
-                let glue = n == 0 && g > 0 ? String(localized: "and") : join.glue
+                let first = n == 0 && g == 0
+                let glue = first ? lead : n == 0 ? String(localized: "and") : join.glue
                 switch line {
-                case .kept(let id): keptSellClause(id, glue: glue, trail: join.trail)
-                case .current: currentSellClauses(glue: glue, trail: join.trail)
+                case .kept(let id): keptSellClause(id, glue: glue, trail: join.trail, leads: first && lead != nil)
+                case .current: currentSellClauses(glue: glue, trail: join.trail, leads: first && lead != nil)
                 }
             }
             MoveClause(glue: String(localized: "to")) {
@@ -503,6 +517,85 @@ struct MoveSentence: View {
             }
         }
         MoveClause(glue: String(localized: "on")) { networkWord }
+    }
+
+    /// **A SECOND MOVE IS A SECOND SENTENCE (prd §1494, user: "this should
+    /// turn into two separate sentences if someone is adding a second swap
+    /// or send").** What Add kept of the other verb reads first, as a
+    /// sentence of its own — its verb grey, as the receipt's is — and the
+    /// one being filled starts a new line with "Then": "Swap 0.0004 ETH for
+    /// ≈ 0.99 USDC. Then send $5 of USDC to ana.eth on Base." The network
+    /// is said once, at the end: one transaction is on one network. Hold a
+    /// kept line to take it out.
+    @ViewBuilder private var otherSentence: some View {
+        let pieces = otherPieces
+        ForEach(Array(pieces.enumerated()), id: \.offset) { n, piece in
+            MoveClause(glue: piece.glue, glueInk: n == 0 ? DS.textSecondary : DS.textPrimary) {
+                MoveWord(piece.text + (n == pieces.count - 1 ? "." : ""), ink: DS.textPrimary)
+            }
+            .contextMenu {
+                Button(role: .destructive) {
+                    withAnimation(DS.Motion.standard) {
+                        items.removeAll { piece.ids.contains($0.id) }
+                        slot = min(slot, items.count)
+                    }
+                    DSHaptic.selection()
+                } label: { Label("Remove", systemImage: "trash") }
+            }
+            .disabled(stage != nil)
+            .transition(.opacity.combined(with: .offset(y: -8)))
+        }
+    }
+
+    /// The other verb's sentence as clauses, so it wraps as this one does:
+    /// each token once with its amounts summed, joined as a list reads, then
+    /// "for ≈ what comes back" or "to whom". A piece removes its group.
+    private var otherPieces: [(glue: String?, text: String, ids: [UUID])] {
+        func amount(_ units: String, _ token: Op.Token) -> String { Self.figure(units, decimals: token.decimals) + " " + token.symbol }
+        var out: [(glue: String?, text: String, ids: [UUID])] = []
+        if verb == .send {
+            let swaps = keptSwaps
+            let buys = swaps.reduce(into: [Op.Token]()) { if !$0.contains($1.buy) { $0.append($1.buy) } }
+            for (b, buyToken) in buys.enumerated() {
+                let group = swaps.filter { $0.buy == buyToken }
+                let ids = group.map(\.id)
+                let sells = group.reduce(into: [Op.Token]()) { if !$0.contains($1.sell) { $0.append($1.sell) } }
+                for (n, sell) in sells.enumerated() {
+                    let units = group.filter { $0.sell == sell }.reduce("0") { Op.sum($0, $1.amount) }
+                    let join = Self.joiner(n, of: sells.count)
+                    out.append((n == 0 ? (b == 0 ? String(localized: "Swap") : String(localized: "and")) : join.glue,
+                                amount(units, sell) + (join.trail ?? ""), ids))
+                }
+                let back = group.reduce("0") { Op.sum($0, $1.quote.buyAmount) }
+                out.append((String(localized: "for"), "≈ " + amount(back, buyToken), ids))
+            }
+        } else if verb == .swap {
+            let sends = keptSends
+            var at = 0
+            while at < sends.count {
+                let to = sends[at].to
+                var end = at
+                while end < sends.count, WalletWatch.sameAddress(sends[end].to, to) { end += 1 }
+                let group = Array(sends[at..<end])
+                let ids = group.map(\.id)
+                for (n, p) in group.enumerated() {
+                    let join = Self.joiner(n, of: group.count)
+                    out.append((n == 0 ? (at == 0 ? String(localized: "Send") : String(localized: "and")) : join.glue,
+                                amount(p.amount, p.token) + (join.trail ?? ""), ids))
+                }
+                out.append((String(localized: "to"), sends[at].toName ?? YourAccount.short(to), ids))
+                at = end
+            }
+        }
+        return out
+    }
+
+    /// "Then send" or "Then swap", when the other verb's sentence stands
+    /// before this one; nil when this is the only sentence.
+    private var thenWord: String? {
+        let other = verb == .swap ? !keptSends.isEmpty : !keptSwaps.isEmpty
+        guard other else { return nil }
+        return verb == .swap ? String(localized: "Then swap") : String(localized: "Then send")
     }
 
     @ViewBuilder private var receiveClauses: some View {
@@ -610,7 +703,8 @@ struct MoveSentence: View {
     @ViewBuilder private func receiptClauses(_ r: Receipt) -> some View {
         ForEach(Array(r.lines.enumerated()), id: \.offset) { n, line in
             MovePhrase(line.text, glue: n == 0 ? r.past : line.glue,
-                       glueInk: n == 0 ? DS.textSecondary : DS.textPrimary, ink: DS.textPrimary)
+                       glueInk: n == 0 || line.starts ? DS.textSecondary : DS.textPrimary, ink: DS.textPrimary,
+                       breaks: line.starts)
                 .transition(.opacity.combined(with: .offset(y: 8)))
         }
     }
@@ -826,8 +920,8 @@ struct MoveSentence: View {
 
     /// The line being filled: the amount with its token, one clause; typed
     /// in dollars, "of <token>" is the clause after it.
-    @ViewBuilder private func currentSellClauses(glue: String?, trail: String?) -> some View {
-        MoveClause(glue: glue, trail: inDollars ? nil : trail) {
+    @ViewBuilder private func currentSellClauses(glue: String?, trail: String?, leads: Bool = false) -> some View {
+        MoveClause(glue: glue, glueInk: leads ? DS.textSecondary : DS.textPrimary, trail: inDollars ? nil : trail) {
             HStack(alignment: .firstTextBaseline, spacing: 0) {
                 if inDollars { word("$", ink: amount.isEmpty ? DS.textTertiary : DS.pickInk) }
                 amountField
@@ -839,22 +933,24 @@ struct MoveSentence: View {
             .onTapGesture { if stage == nil { focus = .amount } }
             .dsCardLead(Text("Edits the amount")) { if stage == nil { focus = .amount } }
         }
+        .layoutValue(key: FlowBreak.self, value: leads)
         if inDollars {
             MoveClause(glue: String(localized: "of"), trail: trail) { withWord }
         }
     }
 
     /// A kept line: tap it to edit it in place, hold it to remove it.
-    @ViewBuilder private func keptSellClause(_ id: UUID, glue: String?, trail: String?) -> some View {
+    @ViewBuilder private func keptSellClause(_ id: UUID, glue: String?, trail: String?, leads: Bool = false) -> some View {
         let line: (amount: String, token: Op.Token)? = {
             if let s = keptSwaps.first(where: { $0.id == id }) { return (s.amount, s.sell) }
             if let p = keptSends.first(where: { $0.id == id }) { return (p.amount, p.token) }
             return nil
         }()
         if let s = line {
-            MoveClause(glue: glue, trail: trail) {
+            MoveClause(glue: glue, glueInk: leads ? DS.textSecondary : DS.textPrimary, trail: trail) {
                 word(Self.figure(s.amount, decimals: s.token.decimals) + " " + s.token.symbol, ink: DS.pickInk)
             }
+            .layoutValue(key: FlowBreak.self, value: leads)
             .contentShape(Rectangle())
             .onTapGesture { edit(id) }
             .contextMenu {
@@ -2067,7 +2163,19 @@ struct MoveSentence: View {
             return
         }
         withAnimation(DS.Motion.standard) {
-            items.insert(item, at: min(slot, items.count))
+            // **A LIKE SWAP IS ONE SWAP (prd §1494, user: "i made two swaps
+            // both eth, which shouldn't show as two").** The same token for
+            // the same token adds to the line already kept: one clause, one
+            // swap signed. Its quote is the two summed for the sentence;
+            // Relay is asked afresh for the whole at signing.
+            if case .swap(let new) = item, let at = items.firstIndex(where: {
+                if case .swap(let s) = $0 { return s.sell == new.sell && s.buy == new.buy }
+                return false
+            }), case .swap(let old) = items[at] {
+                items[at] = .swap(Self.folded(old, new))
+            } else {
+                items.insert(item, at: min(slot, items.count))
+            }
             slot = items.count
         }
         DSHaptic.tap()
@@ -2095,6 +2203,19 @@ struct MoveSentence: View {
             try? await Task.sleep(for: .milliseconds(120))
             focus = .amount
         }
+    }
+
+    /// Two swaps of one token for one token as one: the amounts summed,
+    /// the quote's figures summed for the sentence, no calls (signing asks
+    /// Relay for the whole amount, `Chain.transact`).
+    static func folded(_ a: Chain.Swap, _ b: Chain.Swap) -> Chain.Swap {
+        let q = YourAccountSwap.Quote(sellAmount: Op.sum(a.quote.sellAmount, b.quote.sellAmount),
+                                      buyAmount: Op.sum(a.quote.buyAmount, b.quote.buyAmount),
+                                      minimumBuy: Op.sum(a.quote.minimumBuy, b.quote.minimumBuy),
+                                      fee: Op.sum(a.quote.fee, b.quote.fee),
+                                      requestId: nil, calls: [])
+        return Chain.Swap(id: a.id, network: a.network, sell: a.sell, buy: a.buy,
+                          amount: Op.sum(a.amount, b.amount), quote: q)
     }
 
     private func sign() {
@@ -2226,41 +2347,75 @@ struct MoveSentence: View {
         let sends = batch.compactMap { if case .send(let p) = $0 { p } else { nil } }
         func amount(_ units: String, _ token: Op.Token) -> String { Self.figure(units, decimals: token.decimals) + " " + token.symbol }
 
-        // Swaps, one or several for one (§1442g): each sold line, then what
-        // came back — measured when every swap was, else the quotes, ≈.
-        if sends.isEmpty, let first = swaps.first, swaps.allSatisfy({ $0.buy == first.buy }) {
-            let paid = done.bought.compactMap { $0 }
-            let measured = paid.count == swaps.count
-            let back = measured ? paid.reduce("0") { Op.sum($0, $1) }
-                                : swaps.map(\.quote.buyAmount).reduce("0") { Op.sum($0, $1) }
-            let quoted = swaps.map(\.quote.buyAmount).reduce("0") { Op.sum($0, $1) }
-            var detail: [String] = []
-            // More than quoted is the honest surprise: the route paid more.
-            if measured, Op.atMost(quoted, back), back != quoted {
-                detail.append(String(localized: "\(Self.figure(Op.difference(back, quoted), decimals: first.buy.decimals)) \(first.buy.symbol) more than quoted"))
+        // What each swap paid the account: `bought` is in the batch's order,
+        // nil for a send.
+        var bought: [String?] = done.bought
+        if done.bought.count == batch.count {
+            bought = zip(batch, done.bought).compactMap { item, paid -> String?? in
+                if case .swap = item { return .some(paid) }
+                return nil
             }
-            return made(measured ? String(localized: "Swapped") : String(localized: "Swapping"),
-                        swaps.map { Line(glue: nil, text: amount($0.amount, $0.sell)) }
-                        + [Line(glue: String(localized: "for"), text: (measured ? "" : "≈ ") + amount(back, first.buy)), on],
-                        detail)
+        }
+        var paidBy: [UUID: String] = [:]
+        if bought.count == swaps.count {
+            for (x, paid) in zip(swaps, bought) { if let paid { paidBy[x.id] = paid } }
+        }
+        let measured = !swaps.isEmpty && swaps.allSatisfy { paidBy[$0.id] != nil }
+
+        // **SWAPS (§1442g, prd §1494).** By what they bought; under each,
+        // what they sold, one token once with its amounts summed ("two swaps
+        // both eth … should have just done it as one"), joined as a list
+        // reads; then "for" what came back — measured when every swap was,
+        // else the quotes, ≈.
+        var swapLines: [Line] = []
+        var detail: [String] = []
+        let buys = swaps.reduce(into: [Op.Token]()) { if !$0.contains($1.buy) { $0.append($1.buy) } }
+        for (b, buyToken) in buys.enumerated() {
+            let group = swaps.filter { $0.buy == buyToken }
+            let sells = group.reduce(into: [Op.Token]()) { if !$0.contains($1.sell) { $0.append($1.sell) } }
+            for (n, sell) in sells.enumerated() {
+                let units = group.filter { $0.sell == sell }.reduce("0") { Op.sum($0, $1.amount) }
+                let join = Self.joiner(n, of: sells.count)
+                swapLines.append(Line(glue: n == 0 ? (b == 0 ? nil : String(localized: "and")) : join.glue,
+                                      text: amount(units, sell) + (join.trail ?? "")))
+            }
+            let quoted = group.map(\.quote.buyAmount).reduce("0") { Op.sum($0, $1) }
+            let back = measured ? group.compactMap { paidBy[$0.id] }.reduce("0") { Op.sum($0, $1) } : quoted
+            swapLines.append(Line(glue: String(localized: "for"), text: (measured ? "" : "≈ ") + amount(back, buyToken)))
+            // More than quoted is the honest surprise: the route paid more.
+            if buys.count == 1, measured, Op.atMost(quoted, back), back != quoted {
+                detail.append(String(localized: "\(Self.figure(Op.difference(back, quoted), decimals: buyToken.decimals)) \(buyToken.symbol) more than quoted"))
+            }
         }
         // Sends (§1442h): each person's tokens, then "to <them>".
-        if swaps.isEmpty, !sends.isEmpty {
-            var lines: [Line] = []
-            var at = 0
-            while at < sends.count {
-                let to = sends[at].to
-                var end = at
-                while end < sends.count, WalletWatch.sameAddress(sends[end].to, to) {
-                    lines.append(Line(glue: nil, text: amount(sends[end].amount, sends[end].token)))
-                    end += 1
-                }
-                lines.append(Line(glue: String(localized: "to"), text: sends[at].toName ?? YourAccount.short(to)))
-                at = end
+        var sendLines: [Line] = []
+        var at = 0
+        while at < sends.count {
+            let to = sends[at].to
+            var end = at
+            while end < sends.count, WalletWatch.sameAddress(sends[end].to, to) {
+                sendLines.append(Line(glue: nil, text: amount(sends[end].amount, sends[end].token)))
+                end += 1
             }
-            return made(String(localized: "Sent"), lines + [on])
+            sendLines.append(Line(glue: String(localized: "to"), text: sends[at].toName ?? YourAccount.short(to)))
+            at = end
         }
-        return made(String(localized: "Signed"), [Line(glue: nil, text: String(localized: "\(batch.count) in one transaction")), on])
+        let swapped = measured ? String(localized: "Swapped") : String(localized: "Swapping")
+        if sends.isEmpty, !swaps.isEmpty { return made(swapped, swapLines + [on], detail) }
+        if swaps.isEmpty, !sends.isEmpty { return made(String(localized: "Sent"), sendLines + [on]) }
+        guard !swaps.isEmpty else {
+            return made(String(localized: "Signed"), [Line(glue: nil, text: String(localized: "\(batch.count) in one transaction")), on])
+        }
+        // **BOTH: TWO SENTENCES (prd §1494).** The one signed first leads and
+        // says the network; the other starts a line with "Then".
+        let swapFirst: Bool = { if case .swap = batch.first { return true } else { return false } }()
+        var second = swapFirst ? sendLines : swapLines
+        second[0].glue = swapFirst ? String(localized: "Then sent")
+                                   : (measured ? String(localized: "Then swapped") : String(localized: "Then swapping"))
+        second[0].starts = true
+        second[second.count - 1].text += "."
+        return made(swapFirst ? swapped : String(localized: "Sent"),
+                    (swapFirst ? swapLines : sendLines) + [on] + second, swapFirst ? detail : [])
     }
 
     /// What Face ID says: the whole sentence, the least a swap returns.
@@ -2889,7 +3044,7 @@ struct MoveFlow<Content: View>: View {
     @State private var width: CGFloat = 0
     @State private var widest: CGFloat = 0
     var body: some View {
-        FlowLayout(spacing: MoveSentence.clauseGap, lineSpacing: 0) { content() }
+        FlowLayout(spacing: MoveSentence.clauseGap, lineSpacing: 0, breakGap: DS.Space.s4) { content() }
             .environment(\.moveRung, MoveSentence.rung(rung))
             .onPreferenceChange(MoveClauseWidth.self) { widest = $0; refit() }
             .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0; refit() }
@@ -2979,8 +3134,11 @@ struct MovePhrase: View {
     var glue: String? = nil
     var glueInk: Color = DS.textPrimary
     var ink: Color = DS.textPrimary
-    init(_ text: String, glue: String? = nil, glueInk: Color = DS.textPrimary, ink: Color = DS.textPrimary) {
-        self.text = text; self.glue = glue; self.glueInk = glueInk; self.ink = ink
+    /// Starts a new line: a second sentence's first piece (prd §1494).
+    var breaks = false
+    init(_ text: String, glue: String? = nil, glueInk: Color = DS.textPrimary, ink: Color = DS.textPrimary,
+         breaks: Bool = false) {
+        self.text = text; self.glue = glue; self.glueInk = glueInk; self.ink = ink; self.breaks = breaks
     }
     var body: some View {
         let pieces = Self.pieces(text)
@@ -2988,6 +3146,7 @@ struct MovePhrase: View {
             MoveClause(glue: i == 0 ? (glue ?? piece.glue) : piece.glue, glueInk: i == 0 ? glueInk : ink) {
                 MoveWord(piece.words, ink: ink)
             }
+            .layoutValue(key: FlowBreak.self, value: breaks && i == 0)
         }
     }
 

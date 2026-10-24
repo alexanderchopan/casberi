@@ -5193,18 +5193,29 @@ struct ThingSheetView: View {
 }
 
 /// Minimal flow layout for tag chips (wraps like the prototype's flex-wrap).
+/// A piece of a `FlowLayout` that starts a new line, however much room the
+/// line it would join has left: Move's "Then …" sentence (prd §1494).
+struct FlowBreak: LayoutValueKey {
+    static let defaultValue = false
+}
+
 struct FlowLayout: Layout {
     var spacing: CGFloat = 8
     /// The gap between wrapped lines; nil keeps `spacing` (prd §1251: a
     /// header's words wrap at the type's own leading).
     var lineSpacing: CGFloat? = nil
+    /// Added above a piece marked `FlowBreak`: the air between two sentences.
+    var breakGap: CGFloat = 0
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
         let width = proposal.width ?? .infinity
         var x: CGFloat = 0, y: CGFloat = 0, rowH: CGFloat = 0
         for view in subviews {
             let size = view.sizeThatFits(.unspecified)
-            if x + size.width > width, x > 0 { x = 0; y += rowH + (lineSpacing ?? spacing); rowH = 0 }
+            let breaks = view[FlowBreak.self] && x > 0
+            if breaks || (x + size.width > width && x > 0) {
+                x = 0; y += rowH + (lineSpacing ?? spacing) + (breaks ? breakGap : 0); rowH = 0
+            }
             x += size.width + spacing
             rowH = max(rowH, size.height)
         }
@@ -5215,8 +5226,9 @@ struct FlowLayout: Layout {
         var x = bounds.minX, y = bounds.minY, rowH: CGFloat = 0
         for view in subviews {
             let size = view.sizeThatFits(.unspecified)
-            if x + size.width > bounds.maxX, x > bounds.minX {
-                x = bounds.minX; y += rowH + (lineSpacing ?? spacing); rowH = 0
+            let breaks = view[FlowBreak.self] && x > bounds.minX
+            if breaks || (x + size.width > bounds.maxX && x > bounds.minX) {
+                x = bounds.minX; y += rowH + (lineSpacing ?? spacing) + (breaks ? breakGap : 0); rowH = 0
             }
             view.place(at: CGPoint(x: x, y: y), proposal: .unspecified)
             x += size.width + spacing

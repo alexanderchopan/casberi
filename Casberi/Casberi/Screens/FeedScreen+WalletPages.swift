@@ -273,22 +273,37 @@ extension FeedScreen {
             .sorted { $0.usd > $1.usd }
     }
 
+    /// The Accounts page's addresses and venues: your own account first,
+    /// whatever it holds — a $0 account is still yours to open — then the
+    /// rest largest first.
+    var walletAccountHolders: [WalletPortfolio.Holder] {
+        var holders = walletHolderTotals
+        guard selectedSeat == nil, let own = YourAccountDemo.shownAddress else { return holders }
+        let mine = holders.firstIndex { WalletWatch.sameAddress($0.address, own) }
+            .map { holders.remove(at: $0) }
+        holders.insert(mine ?? WalletPortfolio.Holder(address: own, label: String(localized: "Your account"), usd: 0),
+                       at: 0)
+        return holders
+    }
+
     /// **HOLDINGS, WHAT THE MONEY IS (prd §1480 item 4).** The treemap in the
     /// box, then five doors: Accounts, Tokens, Positions, Apps, NFTs.
     @ViewBuilder
     func walletHoldingsDoors(all: [Thing]) -> some View {
         let mask = BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil
-        let holders = walletHolderTotals
+        let holders = walletAccountHolders
         let appAccounts = walletAccountRows(all)
         let apps = walletAppRows(all)
         let tokens = portfolioShown?.positions ?? []
         let tokensUSD = tokens.reduce(0) { $0 + $1.usd }
+        // Every token hidden still leaves the door, to the Hidden row.
+        let anyHidden = portfolioUnhidden?.positions.contains { walletHidden.contains($0.symbol.uppercased()) } ?? false
         let positions = walletPositionCount
         walletDoorsSection {
             if !holders.isEmpty || !appAccounts.isEmpty {
                 walletDoor(.holdingAccounts, figure: "\(holders.count + appAccounts.count)")
             }
-            if !tokens.isEmpty {
+            if !tokens.isEmpty || anyHidden {
                 walletDoor(.holdings, name: String(localized: "Tokens"),
                            line: tokens.count == 1 ? String(localized: "1 token")
                                                    : String(localized: "\(tokens.count) tokens"),
@@ -485,24 +500,30 @@ extension FeedScreen {
     @ViewBuilder
     func walletHolderAccountsPage(all: [Thing], nextEventID: UUID?) -> some View {
         let mask = BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil
-        let holders = walletHolderTotals
+        let holders = walletAccountHolders
         let appAccounts = walletAccountRows(all)
         if holders.isEmpty && appAccounts.isEmpty { walletSkeletonRowsSection }
         if !holders.isEmpty {
             walletCard(WalletSection.holdingAccounts.label, glyph: WalletSection.holdingAccounts.glyph) {
                 ForEach(holders) { holder in
                     let isVenue = WalletPortfolio.isVenue(holder.address)
+                    // Your own account keeps a name you gave it, else "Your account".
+                    let watchedLabel = wallet.addresses.first { WalletWatch.sameAddress($0.address, holder.address) }
+                        .map(\.label).flatMap { $0.isEmpty ? nil : $0 }
                     let name = isVenue ? holder.label
-                        : (wallet.addresses.first { WalletWatch.sameAddress($0.address, holder.address) }
-                            .map { $0.label.isEmpty ? WalletStore.shortAddress($0.address) : $0.label }
-                            ?? WalletStore.shortAddress(holder.address))
+                        : watchedLabel ?? (Self.isYourAccount(holder.address) ? String(localized: "Your account")
+                                                                                : WalletStore.shortAddress(holder.address))
                     Button {
                         DSHaptic.selection()
                         if !isVenue { withAnimation(DS.Motion.standard) { chrome.walletScope = holder.address } }
                     } label: {
                         DSFeedRow(name: name, trailingBesideLine: true) {
                             Group {
-                                if isVenue {
+                                if let app = Self.privyApp(holder.address), app.logoURL != nil {
+                                    // A Privy app wears its own logo, as Privy's
+                                    // room draws it; the catalogue has none.
+                                    PrivyAppMark(logoURL: app.logoURL)
+                                } else if isVenue {
                                     BridgeIcon(name: holder.label, size: DS.Face.row)
                                 } else {
                                     WalletFace(address: holder.address, size: DS.Face.row, circular: true)
@@ -520,6 +541,13 @@ extension FeedScreen {
             }
         }
         walletAccountsSection(appAccounts, nextEventID: nextEventID)
+    }
+
+    /// The Privy app a `privy:` holder names, for its logo.
+    static func privyApp(_ holderID: String) -> PrivyHomeFeed.App? {
+        guard holderID.hasPrefix(WalletPortfolio.privyHolderPrefix) else { return nil }
+        let id = String(holderID.dropFirst(WalletPortfolio.privyHolderPrefix.count))
+        return PrivyHomeStore.shared.apps.first { $0.id == id }
     }
 
     // MARK: - The pages' boxes
