@@ -1,17 +1,19 @@
 import SwiftUI
 import SwiftData
 
-/// MARKETS' FOLLOW (prd §1081, §1391): keep a company, a coin or a stock, one
-/// tap a star, without leaving the room.
+/// MARKETS' FOLLOW (prd §1081, §1391, §1493): keep a company, a coin or a
+/// stock, one tap a star, without leaving the room.
 ///
-/// **THE TRAY IS THE PACKS (prd §1391, user: "we don't need search b/c we
-/// have a tab bar w/ search").** It opens on what your Wallet holds that you
-/// don't follow yet, then the eight packs as groups, the companies behind
-/// your apps first in each, every traded one a row with its star; the
-/// untraded are not listed, since there is nothing to follow. It has no
-/// field: the tab bar's Search is the one place to look anything up (§1171,
-/// §1185), and since §1467 that Search asks the market itself, so nothing is
-/// handed here. The sheet stays open, so you can keep several.
+/// It opens on what your Wallet holds that you don't follow yet, then the
+/// eight packs as groups, the companies behind your apps first in each, every
+/// traded one a row with its star; the untraded are not listed, since there
+/// is nothing to follow. **The field is back (prd §1493, user: "since markets
+/// follow opens as a sheet it needs a search field on it bc the tab bar isn't
+/// there").** §1391 dropped it because the tab bar's Search could look
+/// anything up, but a sheet covers the tab bar; the field asks the market
+/// through the one read the tab bar's Search uses (`MarketsSearchRead`,
+/// §1467), so the two never disagree. The sheet stays open, so you can keep
+/// several.
 ///
 /// Optional environment only: on Mac Catalyst a sheet's content is evaluated
 /// where the presenter's `.environment` has not reached (prd §872).
@@ -24,17 +26,90 @@ struct WatchAddSheet: View {
     @State private var watchedSymbols: Set<String> = []
     @State private var fromWallet: [TokenWatch.Resolved] = []
     @State private var justStarred: String? = nil
+    @State private var query = ""
+    /// The market's answer for `readFor` (prd §1493), read after a pause in
+    /// the typing, never in a body.
+    @State private var reading = MarketsSearchRead.Reading()
+    @State private var readFor = ""
+    @State private var searching = false
+    @FocusState private var fieldFocused: Bool
 
     var body: some View {
         DSTray(title: String(localized: "Follow"), height: 640, detents: [.large], scrollsItself: true) {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 0) {
-                    packs
+                    if trimmed.isEmpty { packs } else { results }
                 }
                 .padding(.bottom, 96)
             }
+            .scrollDismissesKeyboard(.interactively)
+            .dsFindField {
+                DSTraySearchField(placeholder: String(localized: "Coins, tokens, stocks"),
+                                  text: $query, focus: $fieldFocused, searching: searching)
+            }
         }
         .task { await loadSuggestions() }
+        .task(id: query) { await search() }
+        #if DEBUG
+        // `-marketsFollowQuery "<words>"` fills the field: a simctl-booted
+        // simulator draws no keyboard (the `-socialQuery` precedent).
+        .onAppear {
+            if let q = UserDefaults.standard.string(forKey: "marketsFollowQuery") { query = q }
+        }
+        #endif
+    }
+
+    private var trimmed: String { query.trimmingCharacters(in: .whitespacesAndNewlines) }
+
+    // MARK: - The market (prd §1493)
+
+    /// The market's rows for the words, every one, each a follow in place;
+    /// a stock wears the quote `CompanyQuotes` reads once the rows stand.
+    @ViewBuilder private var results: some View {
+        if readFor == trimmed, !reading.hits.isEmpty {
+            DSTrayGroup(HomeScope.markets, glyph: CategoryFold.glyph(for: HomeScope.markets)) {
+                ForEach(reading.hits) { hit in hitRow(hit) }
+            }
+        } else if DemoMode.isActive || (!searching && readFor == trimmed) {
+            DSFootnote(DemoMode.isActive ? Text("Search works once you leave the demo.")
+                                         : Text("Nothing on the market by that name."))
+                .padding(.horizontal, DS.Space.s4)
+                .padding(.top, DS.Space.s4)
+        }
+    }
+
+    private func hitRow(_ hit: MarketsSearchRead.Hit) -> some View {
+        var price = hit.price
+        var change = hit.change
+        if case .stock(let symbol, _) = hit.kind, let quote = CompanyQuotes.shared.quote(.stock(symbol)) {
+            price = quote.price
+            change = quote.change
+        }
+        return resultRow(id: hit.ref, face: WatchFace(url: hit.imageURL, lettered: hit.lettered, onWhite: hit.onWhite),
+                         name: hit.name, line: hit.line, price: price, change: change, label: hit.name) {
+            toggle(hit: hit)
+        }
+    }
+
+    /// Asks the market once the typing pauses; a newer word cancels this one.
+    private func search() async {
+        let q = trimmed
+        guard !q.isEmpty, !DemoMode.isActive else {
+            reading = MarketsSearchRead.Reading(); readFor = ""; searching = false
+            return
+        }
+        try? await Task.sleep(for: .milliseconds(300))
+        guard !Task.isCancelled else { return }
+        searching = true
+        let found = await MarketsSearchRead.read(q)
+        guard !Task.isCancelled else { return }
+        reading = found
+        readFor = q
+        searching = false
+        #if DEBUG
+        NSLog("[Casberi] marketsFollowQuery| %@ | %d rows | %@", q, found.hits.count,
+              found.hits.prefix(6).map(\.name).joined(separator: ", "))
+        #endif
     }
 
     // MARK: - The packs
@@ -155,6 +230,16 @@ struct WatchAddSheet: View {
         }
     }
 
+    private func toggle(hit: MarketsSearchRead.Hit) {
+        if watched.contains(hit.ref) {
+            remove(ref: hit.ref)
+            return
+        }
+        guard let thing = MarketsSearchRead.follow(hit, context: modelContext) else { return }
+        if case .stock(let symbol, _) = hit.kind { watchedSymbols.insert(symbol.uppercased()) }
+        landed(key: thing.sourceRef ?? hit.ref, thing: thing)
+    }
+
     private func toggle(token: TokenWatch.Resolved) {
         let key = ref(of: token)
         if watched.contains(key) {
@@ -180,6 +265,9 @@ struct WatchAddSheet: View {
     private func remove(ref key: String) {
         MarketsWatch.unfollow(ref: key, context: modelContext)
         watched.remove(key)
+        // A stock followed from the field is a pack company too: its star
+        // there goes out with it.
+        if key.hasPrefix(StockWatch.refPrefix) { watchedSymbols.remove(String(key.dropFirst(StockWatch.refPrefix.count))) }
         DSHaptic.tap()
     }
 

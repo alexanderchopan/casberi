@@ -58,6 +58,9 @@ grep -q 'await MarketsSearchRead.read(words)' Casberi/Casberi/Shell/RoomsTray.sw
 grep -q 'MarketsWatch.unfollow(ref: hit.ref, context: context)' Casberi/Casberi/Shell/RoomsTray.swift \
   && grep -q 'MarketsWatch.unfollow(ref: key, context: modelContext)' Casberi/Casberi/Screens/WatchAddSheet.swift \
   || { echo "✗ unfollowing from Search and from the Follow tray no longer share one rule"; exit 1; }
+grep -q 'DSTraySearchField(placeholder: String(localized: "Coins, tokens, stocks")' Casberi/Casberi/Screens/WatchAddSheet.swift \
+  && grep -q 'await MarketsSearchRead.read(q)' Casberi/Casberi/Screens/WatchAddSheet.swift \
+  || { echo "✗ the Follow sheet lost its field, or asks the market by a read the tab bar's Search does not use (prd §1493)"; exit 1; }
 grep -q 'PriceAlertStore.isAlertRow(\$0) && PriceAlertStore.shared.stands(\$0)' Casberi/Casberi/Screens/FeedScreen+Markets.swift \
   || { echo "✗ Went off lists rows for alerts that no longer exist"; exit 1; }
 grep -q 'PriceAlertStore.shared.sweepRemoved(context: modelContext)' Casberi/Casberi/Shell/RootShell.swift \

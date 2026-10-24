@@ -237,7 +237,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1630 of 1699 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1631 of 1700 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1768,7 +1768,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1388 — Where no name stands beside it, a wallet's face says who; the counts box takes one gutter and a card gets its add (am… (amended by §1487)
 - §1389 — The Holdings map is not painted and leads with the money; Exit demo stands on the title's line (amends §1081's fill r…
 - §1390 — In a counts box the name leads and the count trails (amends §1180's figure column, §1166's "each figure and its whole…
-- §1391 — Markets' box is the sectors' day; Following and Alerts are the list head's two words; the Follow tray is the packs (a…
+- §1391 — Markets' box is the sectors' day; Following and Alerts are the list head's two words; the Follow tray is the packs (a… (amended by §1493)
 - §1392 — Contacts lists who you deal with, in one anatomy, with no money (amends §1265's Recent card, §1323's Contacts, the 20…
 - §1393 — No grey card anywhere but the Apps page's folders (amends §1258's sheet card, §1227's tray card, §1383's kept panels…
 - §1394 — One anatomy for every money sheet (amends §1181's box, §1182's card body, §1351/§1373's swap body, §1386's fact rows)
@@ -1843,7 +1843,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1464 — The row does the thing, and Return commits: GitHub, X and a site in three taps
 - §1465 — One gutter per screen: Move and the keys walk share `MoveSentence.gutter`, Security's two sentences share theirs (amended by §1466)
 - §1466 — Move is one running sentence: clauses that never split across a line, one size, the money as small print (amended by §1479)
-- §1467 — The one Search asks the market: coins, tokens and stocks for whatever you typed, a pasted contract included, followed…
+- §1467 — The one Search asks the market: coins, tokens and stocks for whatever you typed, a pasted contract included, followed… (amended by §1493)
 - §1468 — Spending is the Wallet's fifth tile: the month or the week against the last one to the same point, the recurring half… (amended by §1469, §1480)
 - §1469 — Spending's two groups and its start box: Recurring and The rest are rows, each the sum of a list (Subscriptions, then… (amended by §1480)
 - §1470 — Receive from another network takes any coin Relay bridges, and lands what you pick: the network's dollar unless they… (amended by §1483, §1485)
@@ -1869,6 +1869,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1490 — No tab wears a badge: the Wallet's dot and Library's broken-app ring are deleted
 - §1491 — Following and Markets stand on the Wallet's All only (amends §1480 item 2)
 - §1492 — One account with nothing on Home says so (amends §1491)
+- §1493 — Markets' Follow sheet has a search field again
 
 ## Dead rulings → what replaced them (generated)
 
