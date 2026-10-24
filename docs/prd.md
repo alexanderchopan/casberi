@@ -68370,3 +68370,14 @@ The rule under all of it: **every page shows every account at once, and the acco
 11. **Not changed:** the day header (`heading20`, the brand ink, §740); the screen's name (`heading34`); Move's sentence (§1479); the page head (your face, You, the address, §1487); the rows under every page (§1482's pitch).
 
 **Mac half (§1402):** the same views in the list column; the Mac's point scale takes the rung down with everything else. Not seen on the Mac.
+
+## §1497 — The Feed is titles and icons: no app name over a Newest row, no line under any Feed row (amends §1256's app line on Newest, §744's line slot on the Feed) (user, 2026-10-24: "on the Feed page, i don't like that the newest category shows the name of the app on supertext agove, and i don't like that any of the things in the feed show a subtext. it should just be the title and the app icons so it is cleaner") — BUILT
+
+1. **Newest draws as every Feed row.** Its rows no longer pass the app's name and time (`appLine`) or stand grouped; each leads with its own icon and its title, as the category sections under it do.
+2. **No line under a title on the Feed.** `DSFeedRow` reads `\.dsTitleOnly` and drops its line where it is set; the Feed's category sections (`scrollSection`) and Newest set it. The trailing slot stays: a clock still ahead, money, Live (§902).
+3. **Everywhere else keeps its line.** A room's own page, the Wallet's lists and every sheet are unchanged; the flag is set on the Feed's front page only.
+4. **Not changed:** the box's cover over the tiles, which keeps its app, time and words; a post's words and pictures under its name (`below`), which are the row's content, not a line.
+
+**Seen** on the simulator (iOS 27, the demo): Newest is five icons and titles, Ada Lovelace keeps $49.00; Day keeps its times; Notes, Social and Work draw one line each.
+
+**Mac half (§1402):** the same views in the list column. Not seen on the Mac.

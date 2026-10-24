@@ -92,6 +92,13 @@ struct DSFeedRow<Lead: View, Trailing: View, Below: View>: View {
     /// draws no lead of its own — a mark, a face or a picture alike — and its
     /// words start at the column's left edge, under the app's name.
     @Environment(\.dsGroupedSource) private var groupedSource
+    /// The Feed draws the title and the app's icon and nothing under them
+    /// (prd §1497, user: "it should just be the title and the app icons so
+    /// it is cleaner"): the line is dropped wherever this is set.
+    @Environment(\.dsTitleOnly) private var titleOnly
+
+    /// The line this row draws, nil on the Feed (prd §1497).
+    private var shownLine: Text? { titleOnly ? nil : line }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -107,7 +114,7 @@ struct DSFeedRow<Lead: View, Trailing: View, Below: View>: View {
                     HStack(alignment: .center, spacing: DS.Space.s2) {
                         VStack(alignment: .leading, spacing: 2) {
                             title
-                            if let line {
+                            if let line = shownLine {
                                 styledLine(line)
                             }
                         }
@@ -126,7 +133,7 @@ struct DSFeedRow<Lead: View, Trailing: View, Below: View>: View {
                             // (§903): a fold looks like any row.
                             trailing
                         }
-                        if let line {
+                        if let line = shownLine {
                             styledLine(line)
                         }
                     }
@@ -209,6 +216,12 @@ struct DSGlyphLead: View {
                 .symbolEffect(.bounce, value: bounce)
         }
     }
+}
+
+extension EnvironmentValues {
+    /// Rows in this subtree draw their title and lead only, no line under
+    /// the title (the Feed, prd §1497).
+    @Entry var dsTitleOnly = false
 }
 
 /// The feed row's plain helpers, outside the generic so a call site names no

@@ -238,7 +238,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1634 of 1703 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1635 of 1704 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1065,7 +1065,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §741 — An X notice carries X's time, and a landed aggregate is rewritten when it grows
 - §742 — The day divider's pink is one notch softer than the mark's (amended by §1128)
 - §743 — Every feed row stands on a plate, at the darkest step the app has
-- §744 — Every feed row is one anatomy: a 26pt lead, the name and the time, one line, and whatever is its content below (part superseded by §1017)
+- §744 — Every feed row is one anatomy: a 26pt lead, the name and the time, one line, and whatever is its content below (amended by §1497; part superseded by §1017)
 - §745 — Every source room's head composes `DSRoomChassis`; the twenty-two hand-drawn heads are one template, and what they dr… (amended by §760; part superseded by §758)
 - §746 — A pill is a choice or a fact, and every verb is a row
 - §747 — The wallet family's bar is deleted: the account is a card you page, the readings are door rows (amended by §1039; part superseded by §774)
@@ -1638,7 +1638,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1253 — Sources' apps are cards like the Feed's, by category or A–Z (amended by §1383)
 - §1254 — Setup pages take the Feed's cards
 - §1255 — The tray's category glyphs are pink, and the Wallet has one
-- §1256 — Home's glance tiles become one Newest card
+- §1256 — Home's glance tiles become one Newest card (amended by §1497)
 - §1257 — The Wallet's Home tiles become one Overview card (amended by §1480)
 - §1258 — Every thing sheet takes the Feed's style
 - §1259 — The wallet balance line is green
@@ -1874,6 +1874,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1494 — Move says each thing once: one row per token, like swaps fold into one, and a second move is a second sentence
 - §1495 — Wallet reads go through Tor: always on, one circuit a wallet, the refusers named
 - §1496 — One section rung: every section name and every Wallet door is `heading24` with its glyph, no door carries a line, and…
+- §1497 — The Feed is titles and icons: no app name over a Newest row, no line under any Feed row
 
 ## Dead rulings → what replaced them (generated)
 

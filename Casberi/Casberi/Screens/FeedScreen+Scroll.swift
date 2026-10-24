@@ -144,6 +144,8 @@ extension FeedScreen {
             categorySections(category, things, nextEventID: nextEventID)
             let _ = { Self.sectionCapNow = nil }()
         }
+        // The title and the app's icon, no line under it (prd §1497).
+        .environment(\.dsTitleOnly, true)
     }
 
     /// A named section on its panel (prd §1208d): the name caps the top,
@@ -568,15 +570,16 @@ extension FeedScreen {
                 let positions = cardRunPositions(count: things.count, isBreaker: { _ in false })
                 ForEach(Array(keyed(things).enumerated()), id: \.element.id) { i, item in
                     if let thing = item.live {
-                        // Each row says its app and time, as Home's grouped
-                        // rows do (§1103a): across categories a title alone
-                        // ("Linea") says nothing of where it came from.
-                        shapedListRow(thing, index: i, nextEventID: nextEventID, position: positions[i],
-                                      grouped: true, app: (source: thing.source, date: thing.capturedAt))
-                            .environment(\.dsGroupedSource, thing.source)
+                        // The title and the app's icon, as every Feed row
+                        // (prd §1497, user: "i don't like that the newest
+                        // category shows the name of the app on supertext
+                        // above"). The icon says where it came from, so the
+                        // app's name and time over the title (§1256) went.
+                        shapedListRow(thing, index: i, nextEventID: nextEventID, position: positions[i])
                     }
                 }
             }
+            .environment(\.dsTitleOnly, true)
         }
     }
 
