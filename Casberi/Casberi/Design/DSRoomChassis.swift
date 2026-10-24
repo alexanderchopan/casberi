@@ -188,7 +188,18 @@ enum DSRoomChassis {
     /// A section name's glyph column (user, 2026-10-23: "look how all this stuff
     /// has different indentation on the headers"): a 17pt symbol centered in one
     /// width, so every section's name starts at one x.
-    static let headGlyph: CGFloat = 26
+    ///
+    /// **THE ROW'S LEAD COLUMN AND GAP (prd §1496, user: "should these share
+    /// same indent? we have places like this where the title doesn't carry
+    /// same indent as row below it").** It was 26 wide with an 8pt gap, so a
+    /// name started at 34 while the rows under it — a 30pt lead and a 12pt
+    /// gap (`DSFeedRow`, `DSPushRow`, `walletDoorLead`) — started their words
+    /// at 42, and the glyph sat 2pt off the lead's centre. Now the header's
+    /// glyph is centred over the row's mark and its name starts where every
+    /// row's title starts. `section-glyph-audit.py` holds both.
+    static let headGlyph: CGFloat = DS.Mark.row
+    /// The gap from a section's glyph to its name: the row's, mark to words.
+    static let headGap: CGFloat = DS.Space.s3
     /// What a title row adds to the outer line its callers pad it by, so the
     /// screen's name stands in the rows' column (prd §1471).
     static let titleIndent: CGFloat = leadInset - inset

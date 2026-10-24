@@ -37,7 +37,7 @@ extension FeedScreen {
             DSHaptic.selection()
             if let act { act() } else { chrome.walletSection = section }
         } label: {
-            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+            HStack(alignment: .firstTextBaseline, spacing: DSRoomChassis.headGap) {
                 Image(systemName: section.glyph)
                     .dsGlyph(.body)
                     .foregroundStyle(DS.brandInk)

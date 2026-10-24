@@ -343,7 +343,7 @@ extension FeedScreen {
                             }
                         }
                     } label: {
-                        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                        HStack(alignment: .firstTextBaseline, spacing: DSRoomChassis.headGap) {
                             Image(systemName: wallet ? Self.walletHomeGlyph(section) : CategoryFold.glyph(for: section))
                                 .dsGlyph(.body)
                                 .foregroundStyle(DS.brandInk)
@@ -723,7 +723,7 @@ struct SectionPanelName<Trailing: View>: View {
     @ViewBuilder var trailing: Trailing
 
     var body: some View {
-        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+        HStack(alignment: .firstTextBaseline, spacing: DSRoomChassis.headGap) {
             // One glyph column (user, 2026-10-23: "look how all this stuff has
             // different indentation on the headers"): a symbol drawn at its own
             // width put every title at a different x. Centered in a fixed

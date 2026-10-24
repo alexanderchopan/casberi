@@ -319,7 +319,7 @@ extension FeedScreen {
                 c.listing.ticker.map { !watched.contains($0.uppercased()) } ?? false
             }
             Section {
-                HStack(spacing: DS.Space.s2) {
+                HStack(spacing: DSRoomChassis.headGap) {
                     Image(systemName: "building.2")
                         .dsGlyph(.body)
                         .foregroundStyle(DS.brandInk)

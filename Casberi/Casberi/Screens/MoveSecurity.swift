@@ -147,7 +147,7 @@ struct MoveSecurity: View {
     /// margin they stood under the header's glyph, left of the name they
     /// belong to; the glyph's column and its gap in `SectionPanelName` put
     /// them under the name, as a Feed row's words stand beside its mark.
-    static let rowIndent: CGFloat = DSRoomChassis.headGlyph + DS.Space.s2
+    static let rowIndent: CGFloat = DSRoomChassis.headGlyph + DSRoomChassis.headGap
 
     /// Who signs, as a section's glyph: a person with a key. Not Permissions'
     /// bare key (who can spend FROM you) and not Your account's shield.

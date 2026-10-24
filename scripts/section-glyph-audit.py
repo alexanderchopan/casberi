@@ -23,6 +23,13 @@ doors (`walletDoor`) and Your account's Keys and Spending share. The Feed had
 borrowed `heading28` (the lede's fit ladder), so every Feed section stood a
 step over every other section in the app; a name on any other rung beside a
 section glyph is that drift again, wherever it is written next.
+THE THIRD CHECK (prd §1496, user: "should these share same indent?"). The
+header's HStack must space the glyph from its name by `DSRoomChassis.headGap`,
+and the chassis must define the column as the row's lead (`DS.Mark.row`) and
+the gap as the row's (`DS.Space.s3`): then a name starts where every row's
+title starts and the glyph is centred over the row's mark. It was 26 and 8,
+so every name stood 8pt left of the words under it.
+
 WHAT IT DOES NOT CHECK. A row's lead (`DSFeedRow` and the room rows own
 theirs), a glyph after the title, or a header built without an HStack.
 """
@@ -45,6 +52,7 @@ def findings(files):
             back = "\n".join(lines[max(0, i - 5):i])
             if "HStack" not in back:
                 continue
+            stack = next((l for l in reversed(lines[max(0, i - 5):i]) if "HStack" in l), "")
             own = lines[i:i + 6]
             if not any(".dsGlyph(.body" in l for l in own):
                 continue
@@ -63,13 +71,25 @@ def findings(files):
                 out.append((f"{path}:{i + 1}", "column"))
             if rung.group(1) != "24":
                 out.append((f"{path}:{i + 1}", f"rung heading{rung.group(1)}"))
+            if "spacing: DSRoomChassis.headGap" not in stack:
+                out.append((f"{path}:{i + 1}", "gap"))
+    return out
+
+
+def chassis_findings(text):
+    """The column is the row's lead and the gap the row's (prd §1496)."""
+    out = []
+    if "static let headGlyph: CGFloat = DS.Mark.row" not in text:
+        out.append(("DSRoomChassis.headGlyph", "column"))
+    if "static let headGap: CGFloat = DS.Space.s3" not in text:
+        out.append(("DSRoomChassis.headGap", "chassis-gap"))
     return out
 
 
 SELF_TEST = '''
 struct A: View {
     var body: some View {
-        HStack(spacing: DS.Space.s2) {
+        HStack(spacing: DSRoomChassis.headGap) {
             Image(systemName: "clock")
                 .dsGlyph(.body)
                 .foregroundStyle(DS.brandInk)
@@ -114,6 +134,15 @@ def self_test():
          SELF_TEST.replace(".dsText(.heading24)", ".dsText(.heading28)", 1), 1)
     case("a section name on the screen's rung is flagged (prd §1496)",
          SELF_TEST.replace(".dsText(.heading24)", ".dsText(.heading34)", 1), 1)
+    case("a header gapped by hand, off the row's gap, is flagged (prd §1496)",
+         SELF_TEST.replace("HStack(spacing: DSRoomChassis.headGap)", "HStack(spacing: DS.Space.s2)", 1), 1)
+    chassis = "static let headGlyph: CGFloat = DS.Mark.row\nstatic let headGap: CGFloat = DS.Space.s3"
+    for name, text, want in [("the chassis on the row's column and gap is clean", chassis, 0),
+                             ("a column narrower than the row's lead is flagged", chassis.replace("DS.Mark.row", "26"), 1),
+                             ("a gap other than the row's is flagged", chassis.replace("DS.Space.s3", "DS.Space.s2"), 1)]:
+        got = len(chassis_findings(text))
+        print(f"  {'ok  ' if got == want else 'FAIL'} {name} ({got} finding(s))")
+        ok = ok and got == want
     return ok
 
 
@@ -125,16 +154,21 @@ def main():
         sys.exit(1)
     files = [(str(p.relative_to(ROOT)), p.read_text(encoding="utf-8"))
              for p in sorted(SRC.rglob("*.swift"))]
-    hits = findings(files)
+    hits = findings(files) + chassis_findings(
+        (SRC / "Design" / "DSRoomChassis.swift").read_text(encoding="utf-8"))
     if hits:
         for where, why in hits:
             if why == "column":
-                print(f"✗ {where}: a section name's glyph at its own width — frame it at DSRoomChassis.headGlyph")
+                print(f"✗ {where}: a section name's glyph off the row's lead column — frame it at DSRoomChassis.headGlyph, which is DS.Mark.row")
+            elif why == "gap":
+                print(f"✗ {where}: a section name's glyph gapped by hand — space the HStack by DSRoomChassis.headGap (prd §1496)")
+            elif why == "chassis-gap":
+                print(f"✗ {where}: the header gap is not the row's, DS.Space.s3 (prd §1496)")
             else:
                 print(f"✗ {where}: a section name at {why.split()[1]} — every section name is heading24 (prd §1496)")
         print(f"section-glyph-audit: {len(hits)} header(s) off the one column or the one rung")
         sys.exit(1)
-    print("✓ section-glyph audit: every section name's glyph stands in one column, at heading24")
+    print("✓ section-glyph audit: every section name on the row's column and gap, at heading24")
 
 
 if __name__ == "__main__":

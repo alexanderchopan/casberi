@@ -213,7 +213,7 @@ struct SourcesOpenFolder: View {
                 .accessibilityLabel(Text("Close \(folder.category)"))
                 .accessibilityAddTraits(.isButton)
             VStack(alignment: .leading, spacing: DS.Space.s4) {
-                HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+                HStack(alignment: .firstTextBaseline, spacing: DSRoomChassis.headGap) {
                     Image(systemName: CategoryFold.glyph(for: folder.category))
                         .dsGlyph(.body, weight: .regular)
                         .foregroundStyle(DS.brandInk)

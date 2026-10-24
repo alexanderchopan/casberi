@@ -1912,7 +1912,7 @@ struct AddressCard: View {
             // ran straight out of the note with no header, so two unlike
             // sections read as one run of rows.
             // The Feed's section name (prd §1268): its pink glyph first.
-            HStack(spacing: DS.Space.s2) {
+            HStack(spacing: DSRoomChassis.headGap) {
                 Image(systemName: "clock")
                     .dsGlyph(.body)
                     .foregroundStyle(DS.brandInk)

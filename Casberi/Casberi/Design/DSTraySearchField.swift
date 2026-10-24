@@ -106,7 +106,7 @@ struct DSTrayGroup<Content: View, Trailing: View>: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
+            HStack(alignment: .firstTextBaseline, spacing: DSRoomChassis.headGap) {
                 Image(systemName: glyph)
                     .dsGlyph(.body)
                     .foregroundStyle(DS.brandInk)
