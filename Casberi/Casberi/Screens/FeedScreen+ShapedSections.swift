@@ -316,9 +316,10 @@ extension FeedScreen {
                 // §1078), and a remembered one of them resolves to Home.
                 // One address picked dims Spending too (prd §1468): it reads
                 // every account, as Home's list does only on All (§1201).
+                // Markets is no account's at all (§1498), so it dims with it.
                 let inert: Set<WalletSection> = seatPicked
                     ? walletInertSections(visible: visible, upcoming: upcoming)
-                    : (selectedWallet != nil ? [.spending, .places, .fees] : [])
+                    : (selectedWallet != nil ? [.spending, .places, .fees, .markets] : [])
                 let section = pinnedWalletSection ?? WalletSection.resolve(
                     chrome.walletSection,
                     present: WalletSection.pages(tiles: walletSectionPublication.sections)
@@ -428,7 +429,7 @@ extension FeedScreen {
                     // **FOUR SHORT LISTS (user, 2026-10-08):** Needs you, Coming
                     // up, Spending, Transactions, five rows each and a door
                     // (`Screens/FeedScreen+WalletHome.swift`).
-                    // **HOME IS THE OVERVIEW (prd §1480 item 2).** Six doors,
+                    // **HOME IS THE OVERVIEW (prd §1480 item 2).** Five doors,
                     // no list: the stream is Activity's, the readings
                     // Spending's, what the money is Holdings'.
                     walletHomeDoors(upcoming: upcoming)

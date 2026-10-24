@@ -68381,3 +68381,15 @@ The rule under all of it: **every page shows every account at once, and the acco
 **Seen** on the simulator (iOS 27, the demo): Newest is five icons and titles, Ada Lovelace keeps $49.00; Day keeps its times; Notes, Social and Work draw one line each.
 
 **Mac half (§1402):** the same views in the list column. Not seen on the Mac.
+
+## §1498 — Markets is a Wallet tile again, its list the Watchlist, and Home draws no Markets door (amends §1480 items 1, 2 and 7, §1491's Markets half) (user, 2026-10-24: "markets still seems oddly placed in wallet. like it 'should' be a tile, but i don't want it to be per se b/c not all the other wallet apps have it and so it would be confusing"; of moving it to Move, declined on the reasoning that Move acts and Markets reads; "i do think renaming it to watchlist helps"; "i don't want to lose the 'from your apps' stuff b/c that is unique"; "why shouldn't markets be a tile like it was before"; "lets bring the tile back but keep watchlist on the with the tile not on home. question is if the tile should be 'markets' or 'watchlist'") — BUILT
+
+1. **Five tiles: Home · Activity · Holdings · Markets · Spending** (A–Z after Home, §995; `WalletSection.order` is `[.home, .holdings, .markets, .activity, .spending]`, the unconditional first, §483). Five scroll sideways on the phone, as they did before §1480 (§1328).
+2. **The tile is Markets; its first list is the Watchlist.** The page holds more than what you follow: the box is the watchlist's day as a heat map, then the Watchlist, then From your apps (§1480 item 7, kept: the companies behind the apps you connected are Casberi's alone). The list head's two words are **Watchlist · Alerts** (`TokensScope.watchlist`'s label, was "Following", which the Wallet's Following door also says, §1480 item 2).
+3. **Home has five doors**: Your account, Following, Needs you, Permissions, Threats. Markets is not a door off Home and draws no rows there; prices are a tap away on their tile.
+4. **One account picked dims the tile**, as it dims Spending (§1468 item 4): what you watch is nobody's account, the reason §1491 took the door off Home on a pick (`walletInertSections`, and the address pick's inert set).
+5. **Not changed:** Search asks the market (§1467); Move stays the four verbs (§1473). The Watchlist widget keeps its name.
+
+`wallet-section-selftest.sh` holds the five tiles, Home's five doors, the label, and three drift guards (no Markets door on Home; both picks dim the tile), with the order mutations re-aimed and "Markets sent back to a door off Home" as a mutation.
+
+**Seen** on the simulator (iOS 27, its own device, the demo): Home's tiles read Home · Holdings · Markets · Activity, Spending past the edge, and five doors under them — Your account, Following 26, Needs you 13, Permissions 5, Threats 3; the Markets tile reads "6 watched · 4 up, 2 down today" over the heat map, then "Watchlist · Alerts" and the rows (Chainlink, NVIDIA, Apple, Tesla, Ethereum).

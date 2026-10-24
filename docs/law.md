@@ -148,6 +148,7 @@ Privacy and Reddit. Frames and Logos are the devnets that remain.
 - Addresses rows carry one line, the corpus's own word, never a company or a role. The trailing slot holds marks, never money (§918).
 - Onchain cards share one head, `CardSpendRoom`. `CardSpendSeat` alone decides which rows are spends (§858, §868). MetaMask Card reads Monad through an index (§860).
 - Markets' Watchlist follows a coin by its CoinPaprika id, never a DEX symbol match; wrapped-native and pre-cutoff index follows converge every launch. A stock row draws its day line. Alerts: price, custom move %, token day volume, gas below N gwei, synced through iCloud with fired winning. Reorder in My order; gas heads the list; one price pins to the Lock Screen as a Live Activity, stamped past 15 minutes (§1250).
+- The Wallet's tiles are Home · Activity · Holdings · Markets · Spending; Home's doors are Your account, Following, Needs you, Permissions, Threats. Markets is a tile, its first list the Watchlist (Watchlist · Alerts), then From your apps; one account picked dims it, as it dims Spending (§1480, §1498).
 
 - zk.money is a Wallet LABEL, not a seat. A deposit is titled "Deposited … into zk.money": to a recognised deposit address or a savings escrow. A withdrawal is titled "Withdrew … from zk.money": DAI from a portal or a withdrawal executor, or USDC/USDT from a swap escrow. Each row carries a dated note. Tags resolve off its registry (never its payment gateway) and refuse a follow (§1273, §1384).
 - A zk.money payment link's claim secret never reaches the row; it is kept in this device's Keychain only, never synced, and "Claim in zk.money" reads it on tap and opens it in Safari. A request link (`/pay/<tag>#` or `/request#`) is dated by its expiry (§1384, amending §1273).
@@ -238,14 +239,14 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1635 of 1704 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1636 of 1705 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
 - §4 — Persona variables (amended by §1126, §1344)
 - §5 — How it works today — Bob (amended by §1208c)
 - §6 — How it works today — Alice (amended by §1113)
-- §7 — Outcomes — Bob (amended by §1100)
+- §7 — Outcomes — Bob (amended by §1100, §1498)
 - §8 — Outcomes — Alice (amended by §1119, §1160, §1163)
 - §9 — Problems
 - §10 — Solutions (amended by §1208)
@@ -1857,7 +1858,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1477 — The rating ask: Apple's own five-star sheet, for someone using the app on their own things on four different days, on…
 - §1478 — Your own model: the person's own OpenAI-compatible server as an agent seat — an address, an optional key, a model
 - §1479 — Move's sentence is one size, picked by fit: 52, 44, then 34; the verbs and Add at 24, the foot's acts at 34; the quot…
-- §1480 — The Wallet restructured: Home is the overview, four tiles, every list behind a door, and Security, Cards and the cate… (amended by §1496)
+- §1480 — The Wallet restructured: Home is the overview, four tiles, every list behind a door, and Security, Cards and the cate… (amended by §1496, §1498)
 - §1481 — Buy's merchants wear their marks, and Buy's sentence is Swap's size (amends §1473; applies §1479)
 - §1482 — Every Wallet list row stands at one pitch: a 44pt head, 4pt of air, the room's inset both sides, a 2pt gap under the…
 - §1483 — Receive from Arc: a chain's own coin that is a dollar quotes ten, not a fraction (amended by §1485)
@@ -1868,13 +1869,14 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1488 — The arrival copies nothing until a network is picked
 - §1489 — The Feed has no Wallet section; the Wallet's asks light its tab with a dot (amended by §1490)
 - §1490 — No tab wears a badge: the Wallet's dot and Library's broken-app ring are deleted
-- §1491 — Following and Markets stand on the Wallet's All only (amends §1480 item 2)
+- §1491 — Following and Markets stand on the Wallet's All only (amends §1480 item 2) (amended by §1498)
 - §1492 — One account with nothing on Home says so (amends §1491)
 - §1493 — A private key to take away: Export creates a new key, adds it as an owner, and shows it once — the way out without Ca…
 - §1494 — Move says each thing once: one row per token, like swaps fold into one, and a second move is a second sentence
 - §1495 — Wallet reads go through Tor: always on, one circuit a wallet, the refusers named
 - §1496 — One section rung: every section name and every Wallet door is `heading24` with its glyph, no door carries a line, and…
 - §1497 — The Feed is titles and icons: no app name over a Newest row, no line under any Feed row
+- §1498 — Markets is a Wallet tile again, its list the Watchlist, and Home draws no Markets door
 
 ## Dead rulings → what replaced them (generated)
 

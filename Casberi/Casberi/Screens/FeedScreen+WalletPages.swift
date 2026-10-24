@@ -3,7 +3,7 @@ import SwiftData
 
 /// **THE WALLET'S DOORS AND THE PAGES BEHIND THEM (prd §1480).**
 ///
-/// Home is the overview: the balance and its line in the box, then six doors.
+/// Home is the overview: the balance and its line in the box, then five doors (Markets is a tile, §1498).
 /// Holdings and Spending put their lists behind doors too, so every page fits
 /// one screen and a list longer than its screen is one tap away. Every page
 /// shows every account at once, and the account menu narrows it to one.
@@ -99,7 +99,7 @@ extension FeedScreen {
         Section { rows() }
     }
 
-    // MARK: - Home's six doors
+    // MARK: - Home's five doors
 
     /// What Your account's door trails, in amber: the control that is missing
     /// (prd §1480 item 2, §1496), nothing when every key stands. Recovery
@@ -166,8 +166,8 @@ extension FeedScreen {
     }
 
     /// **HOME, THE OVERVIEW (prd §1480 item 2).** Under the box and the
-    /// tiles, six doors: Your account, Following, Needs you, Permissions,
-    /// Threats, Markets. Needs you, Permissions and Threats draw no row while
+    /// tiles, five doors: Your account, Following, Needs you, Permissions,
+    /// Threats (Markets is a tile, §1498). Needs you, Permissions and Threats draw no row while
     /// empty; Your account stands on All or with your account picked.
     @ViewBuilder
     func walletHomeDoors(upcoming: [Thing]) -> some View {
@@ -186,9 +186,10 @@ extension FeedScreen {
                 walletDoor(.yourAccount, name: String(localized: "Create an account"),
                            act: { chrome.moveTray = true })
             }
-            // **FOLLOWING AND MARKETS ARE THE ROOM'S, NOT AN ACCOUNT'S (prd
-            // §1491, user: "i am on railgun and see 'markets' why is that?"):**
-            // with one account picked, Home lists only what is that account's.
+            // **FOLLOWING IS THE ROOM'S, NOT AN ACCOUNT'S (prd §1491, user: "i
+            // am on railgun and see 'markets' why is that?"):** with one
+            // account picked, Home lists only what is that account's. Markets
+            // left Home for its own tile (§1498), dimmed on a pick.
             if onAll {
                 if following.isEmpty {
                     walletDoor(.following, name: String(localized: "Follow an account"),
@@ -210,10 +211,6 @@ extension FeedScreen {
                 // Every threat is red (prd §1463).
                 walletDoor(.threats, figure: "\(counts.flagged)", figureTone: DS.destructiveInk)
             }
-            if onAll {
-                let watched = marketsWatches(walletMarketsRows).count
-                walletDoor(.markets, figure: watched == 0 ? nil : "\(watched)")
-            }
             // **ONE ACCOUNT WITH NOTHING ON HOME SAYS SO (prd §1492, user: "ok"
             // to "Nothing needs you on Railgun").** With Following and Markets
             // on All only (§1491), an app with no asks, grants or threats left
@@ -227,7 +224,6 @@ extension FeedScreen {
         // **BESIDE A PANE THE DOORS STAY IN THE LIST (prd §1480 item 11):**
         // they are Home's only list, so the list column keeps them and the
         // pane keeps the balance; a page opens in the list column.
-        .task(id: walletMarketsKey) { loadWalletMarkets() }
         // The cards' asks need the Spending reading, which starts here
         // whatever Home shows (it did under the deleted Spending list).
         .task(id: walletSpendingKey) { await SpendingReading.shared.refresh(modelContext) }
