@@ -1,6 +1,7 @@
 #!/bin/zsh
-# Casberi needs-you self-test — Needs you lives in its place, and Day is dated
-# rows (prd §1413; was day-needs-selftest.sh, prd §1327 item 9):
+# Casberi needs-you self-test — Needs you lives in its place, Day is dated
+# rows, and the Feed has no Wallet section: the Wallet's asks light its tab
+# (prd §1413, §1489; was day-needs-selftest.sh, prd §1327 item 9):
 #
 #   Casberi/Casberi/Model/WalletNeedsYou.swift  (compiled whole against stubs
 #                                                of the names it reads)
@@ -14,7 +15,9 @@
 # rule is right, and the drift guards say every reader still asks that one
 # rule. Since prd §1344 it also holds Day's own page deleted: its tiles,
 # Coming up, the page's Needs you card, and since §1413 the week strip and the
-# gather, model included.
+# gather, model included. Since §1489 it holds the Feed's Wallet section
+# deleted (its Needs you and its moves) and the tab's dot reading the
+# Wallet's one rule.
 #
 # Pure, local, deterministic. Exit non-zero on failure. `--self-test` (and
 # every plain run) also proves each check can fail: plausible mutations of the
@@ -24,11 +27,12 @@ cd "$(dirname "$0")/.."
 
 WALLET="Casberi/Casberi/Model/WalletNeedsYou.swift"
 SOURCE="Casberi/Casberi/Model/WalletNeedsSource.swift"
-SCREEN="Casberi/Casberi/Screens/FeedScreen+WalletNeeds.swift"
 ROOM="Casberi/Casberi/Screens/FeedScreen+MergedRoom.swift"
 WROOM="Casberi/Casberi/Screens/FeedScreen+WalletRoom.swift"
 WHOME="Casberi/Casberi/Screens/FeedScreen+WalletHome.swift"
+WPAGES="Casberi/Casberi/Screens/FeedScreen+WalletPages.swift"
 TABS="Casberi/Casberi/Design/PlaceTabBar.swift"
+RAIL="Casberi/Casberi/Shell/PlaceRail.swift"
 INFEED="Casberi/Casberi/Screens/FeedScreen+DayInFeed.swift"
 FEED="Casberi/Casberi/Screens/FeedScreen.swift"
 MAKE="Casberi/Casberi/Model/DayMake.swift"
@@ -41,7 +45,7 @@ RSHELL="Casberi/Casberi/Shell/RootShell.swift"
 SURFACE="Casberi/Casberi/Shell/MainSurface.swift"
 CAL="Casberi/Casberi/Screens/WalletCalendar.swift"
 HOME_SCOPE="Casberi/Casberi/Model/HomeScope.swift"
-for f in "$WALLET" "$SOURCE" "$SCREEN" "$ROOM" "$WROOM" "$WHOME" "$TABS" "$INFEED" "$FEED" "$MAKE" \
+for f in "$WALLET" "$SOURCE" "$ROOM" "$WROOM" "$WHOME" "$WPAGES" "$TABS" "$RAIL" "$INFEED" "$FEED" "$MAKE" \
          "$SECTIONS" "$SCROLL" "$SHAPED" "$GLYPHS" "$CHROME" "$RSHELL" "$SURFACE" "$CAL" "$HOME_SCOPE"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
@@ -64,7 +68,7 @@ DELETED_FILES=(
   "Casberi/Casberi/Screens/FeedScreen+DayNeeds.swift"
   "Casberi/Casberi/Screens/DayCalendarFigure.swift"
 )
-WATCHED=("$ROOM" "$SCREEN" "$INFEED" "$FEED" "$SECTIONS" "$SCROLL" "$SHAPED" "$GLYPHS" "$CHROME" "$RSHELL" "$SURFACE" "$MAKE" "$CAL")
+WATCHED=("$ROOM" "$INFEED" "$FEED" "$SECTIONS" "$SCROLL" "$SHAPED" "$GLYPHS" "$CHROME" "$RSHELL" "$SURFACE" "$MAKE" "$CAL")
 GONE='DayScope|dayScope|dayComingUp|ComingUpWeek|DayDated|dayDatedRow|DayCalendarFigure|dayAheadRow|dayNeedsSection|DayMakeDialog|dayMakeOpen|dayHasApp|func pickDay[(]|DayNeeds|dayNeeds|dayNeedsRows|dayNeedsKey|loadDayNeeds|dayCalendarOpen|daySelected|pickFeedDay|dayPickedSection|dayCalendarMarks|dayFeedCalendarRow|dayFeedWeekEnd|shownWeeks|dotCell|onDay|Back to today'
 day_page_gone() { # $1 a root holding the paths above; prints the breach and fails
   local root="$1" f
@@ -86,27 +90,50 @@ day_page_gone . || exit 1
 grep -q 'WalletNeedsYou.waiting(' "$WROOM" \
   || { echo "✗ the Wallet's Home no longer asks WalletNeedsYou — the Feed and the Wallet can disagree"; exit 1; }
 grep -q 'WalletNeedsYou.waiting(' "$SOURCE" \
-  || { echo "✗ the Feed's Wallet section no longer asks the Wallet's own rule (prd §1413)"; exit 1; }
-grep -q 'WalletNeedsSource.waiting(' "$SCREEN" \
-  || { echo "✗ the Feed no longer reads the Wallet's Needs you through WalletNeedsSource (prd §1413)"; exit 1; }
-grep -q 'walletNeedsRows(nextEventID: nextEventID, limit: needsLimit)' "$SCROLL" \
-  || { echo "✗ the Feed's Wallet section no longer leads with Needs you (prd §1413)"; exit 1; }
-grep -q 'static let walletNeedsFirstRows = 3' "$SCREEN" \
-  || { echo "✗ the Wallet's Needs you no longer takes three on the first page (prd §1413)"; exit 1; }
+  || { echo "✗ the Wallet tab's dot no longer asks the Wallet's own rule (prd §1489)"; exit 1; }
+grep -q 'let ids = await waiting(rows, safePending: safe, now: .now)' "$SOURCE" \
+  || { echo "✗ WalletNeedsSource.count no longer counts through its own waiting (prd §1489)"; exit 1; }
 grep -q '.task(id: feedSectionsKey)' "$FEED" \
-  || { echo "✗ the Wallet's Needs you is no longer read in a task (prd §628)"; exit 1; }
-grep -q 'Set(walletNeeds.live.map(\\.id))' "$SCROLL" \
-  || { echo "✗ the Wallet's moves no longer skip what its Needs you leads with (prd §1343 item 7)"; exit 1; }
+  || { echo "✗ Day's and Notes' rows are no longer read in a task (prd §628)"; exit 1; }
+# The tab's dot (prd §1489): read off the corpus in the shell's task, never a
+# body (§628), and worn by the Wallet's tab on the phone's bar and the rail.
+grep -q 'let asks = await WalletNeedsSource.count(context: modelContext)' "$SURFACE" \
+  || { echo "✗ the shell no longer reads the Wallet's asks for its tab (prd §1489)"; exit 1; }
+grep -B 3 'WalletNeedsSource.count(context: modelContext)' "$SURFACE" | grep -c '.task(id: corpusRevision)' >/dev/null \
+  || { echo "✗ the Wallet's asks are read somewhere other than the corpus task (prd §628, §1489)"; exit 1; }
+grep -q 'modifier(WalletAlarm(active: tab == .wallet))' "$TABS" \
+  || { echo "✗ the phone's Wallet tab no longer wears the dot (prd §1489)"; exit 1; }
+grep -q 'modifier(WalletAlarm(active: tab == .wallet))' "$RAIL" \
+  || { echo "✗ the Mac rail's Wallet tile no longer wears the dot (prd §1489, §1402)"; exit 1; }
+grep -q 'chrome.walletAsks > 0 || RecoveryKeyNudge.shown || OutsideKeyNudge.shown' "$TABS" \
+  || { echo "✗ the Wallet's dot no longer lights for an ask and the key nudges (prd §1489)"; exit 1; }
 # Day is dated rows (prd §1413): nothing in its section names Needs you, and
 # its window is bounded by the cap alone.
 grep -v '^[[:space:]]*//' "$INFEED" | grep -Eq 'needsYou|Needs you|needsYouGroup' \
   && { echo "✗ Day's section draws Needs you again — it lives in its place (prd §1413)"; exit 1; }
 grep -q 'let window = dayFeedWindow(visible)' "$INFEED" \
   || { echo "✗ Day's window is bounded by something other than the cap again (prd §1413)"; exit 1; }
-# One shape per section (prd §1413 item 7): the Wallet's asks take the row
-# the moves under them take, never the grouped one.
-grep -v '^[[:space:]]*//' "$SCREEN" | grep -q 'grouped: true' \
-  && { echo "✗ the Wallet's Needs you rows took the grouped shape beside plain moves (prd §1413 item 7)"; exit 1; }
+# --- the Feed's Wallet section stays deleted (prd §1489) ---------------------
+# It repeated the top of the Wallet tab's Home: Needs you, then the moves. The
+# Feed's categories leave the Wallet out, the file that drew its Needs you is
+# gone, and nothing in the Feed's scroll names its reads again.
+FEED_WALLET_GONE='walletNeeds|walletNeedsRows|loadWalletNeeds|walletNeedsFirstRows|walletMoves'
+feed_wallet_gone() { # $1 a root holding the files below; prints the breach and fails
+  local root="$1"
+  [[ -e "$root/Casberi/Casberi/Screens/FeedScreen+WalletNeeds.swift" ]] \
+    && { echo "✗ FeedScreen+WalletNeeds.swift is back — the Feed has no Wallet section (prd §1489)"; return 1; }
+  grep -q '$0 != RoomAccounts.testnetsRoom && $0 != CategoryFold.walletRoom' "$root/$HOME_SCOPE" \
+    || { echo "✗ the Feed's categories take the Wallet again (HomeScope.feedCategories, prd §1489)"; return 1; }
+  local f
+  for f in "$SCROLL" "$FEED"; do
+    if grep -v '^[[:space:]]*//' "$root/$f" | grep -Ewq "$FEED_WALLET_GONE"; then
+      echo "✗ $f reads the Feed's Wallet section again ($(grep -v '^[[:space:]]*//' "$root/$f" | grep -Ewo "$FEED_WALLET_GONE" | head -1)) — prd §1489"
+      return 1
+    fi
+  done
+  return 0
+}
+feed_wallet_gone . || exit 1
 # Every door to Day lands on its section (prd §1344): on the phone a door
 # naming Day is a Feed section, and Day's room on iPad and the Mac draws that
 # one section, never a page of its own.
@@ -124,10 +151,12 @@ grep -q 'feedSheet = .subscriptionAdd' "$ROOM" \
 # Each place keeps its own Needs you (prd §1329, §1413).
 grep -q 'WorkAsk.needsYou(' "$ROOM" \
   || { echo "✗ Work's own section lost its Needs you — each place keeps its own"; exit 1; }
-grep -q 'walletDaySections(\[(Self.needsYouGroup' "$WHOME" \
+grep -q 'walletDaySections(\[(Self.needsYouGroup' "$WPAGES" \
   || { echo "✗ the Wallet's Home lost its Needs you — each place keeps its own"; exit 1; }
-grep -qi 'badge' "$TABS" \
-  && { echo "✗ the tab bar wears a badge — the Day tab does not (user, prd §1327 item 9)"; exit 1; }
+# A dot, never a count (prd §1489): Home's Needs you counts what the tab
+# does not read, and two numbers for one list disagree (§837).
+grep -v '^[[:space:]]*//' "$TABS" | grep -Eqi 'badge|walletAsks\)' \
+  && { echo "✗ the tab bar wears a count — the Wallet's tab wears a dot (prd §1489, §1327 item 9)"; exit 1; }
 
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
@@ -285,5 +314,33 @@ guard_mutate "the strip's picked day comes back" \
 guard_mutate "the calendar takes a tap again" \
   'echo "    var onDay: ((Date) -> Void)? = nil" >> Casberi/Casberi/Screens/WalletCalendar.swift' || mfail=1
 
+# The Feed's Wallet section stays deleted (prd §1489), over its own copy.
+wallet_root() {
+  rm -rf "$TMP/wroot"
+  local f
+  for f in "$HOME_SCOPE" "$SCROLL" "$FEED"; do mkdir -p "$TMP/wroot/$(dirname "$f")"; cp "$f" "$TMP/wroot/$f"; done
+}
+wallet_mutate() { # $1 label, then a command run inside the copy
+  local label="$1"; shift
+  wallet_root
+  ( cd "$TMP/wroot" && eval "$*" )
+  if feed_wallet_gone "$TMP/wroot" >/dev/null; then
+    echo "  ✗ mutation SURVIVED: $label"
+    return 1
+  fi
+  echo "  ✓ mutation caught: $label"
+}
+wallet_root
+feed_wallet_gone "$TMP/wroot" >/dev/null \
+  || { echo "  ✗ the Feed-Wallet guard fails an untouched copy — it would catch anything"; mfail=1; }
+wallet_mutate "the Wallet section's file comes back" \
+  'echo "extension FeedScreen {}" > Casberi/Casberi/Screens/FeedScreen+WalletNeeds.swift' || mfail=1
+wallet_mutate "the Feed's categories take the Wallet again" \
+  'sed -i.bak "s/CategoryFold.walletRoom\$/CategoryFold.dayRoom/" Casberi/Casberi/Model/HomeScope.swift' || mfail=1
+wallet_mutate "the Feed reads the Wallet's asks again" \
+  'echo "    @State var walletNeeds: [Thing] = []" >> Casberi/Casberi/Screens/FeedScreen.swift' || mfail=1
+wallet_mutate "the scroll lists the Wallet's moves again" \
+  'echo "    let m = Self.walletMoves([])" >> Casberi/Casberi/Screens/FeedScreen+Scroll.swift' || mfail=1
+
 [[ $mfail -eq 0 ]] || { echo "needs-you-selftest: a mutation SURVIVED — a check above proves nothing"; exit 1; }
-echo "needs-you-selftest: OK — the Wallet's one rule, the Feed's Wallet section leading with it, Work's own, and Day's deleted page, strip and gather all pinned."
+echo "needs-you-selftest: OK — the Wallet's one rule, its tab's dot reading it, the Feed's Wallet section deleted, Work's own, and Day's deleted page, strip and gather all pinned."

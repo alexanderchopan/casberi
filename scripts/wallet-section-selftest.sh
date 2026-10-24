@@ -604,7 +604,8 @@ guard DSChip.swift "if ranges.count > 1" \
 # Overview's first row counts the accounts, the Accounts list stands under
 # Overview, and its header's + is the Feed's with two rows — Follow an account
 # (the tray) and Connect an app (the catalogue on its Wallet card) — the same
-# two the Feed's Wallet section offers (§1347 grew). Since prd §1480 the list
+# two the Feed's Wallet section offered (§1347 grew; that section is deleted,
+# §1489, and the menu is the Accounts header's alone). Since prd §1480 the list
 # is Following, a door on Home: your own account apart (it is Your account's),
 # every other account a row with its Rename and Stop following.
 guard FeedScreen.swift "walletDoor(.following, line: followingLine(following)" \
@@ -617,10 +618,10 @@ guard FeedScreen+WalletHome.swift "route.present(.apps)" \
   "Connect an app no longer lands on the catalogue (prd §1410, §1234)"
 guard FeedScreen+WalletHome.swift "WalletUnwatch.perform(entry, context: modelContext, chrome: chrome)" \
   "an account row's hold lost Stop following (prd §1302, §1410)"
-guard FeedScreen+Scroll.swift "category == CategoryFold.walletRoom || category == Self.accountsName" \
-  "the Feed's Wallet + and the Accounts header stopped sharing one menu (prd §1410, §1347)"
+guard FeedScreen+Scroll.swift "if category == Self.accountsName {" \
+  "the Accounts header lost its + (prd §1410)"
 guard FeedScreen+Scroll.swift "adds = walletAccountAdds" \
-  "the Feed's Wallet + draws its own rows again instead of the Accounts menu (prd §1410)"
+  "the Accounts header's + draws its own rows instead of the one menu (prd §1410)"
 
 echo "  ok   drift guards: mount, gate, publication, clear, dot, scopes, generic control, crown chip budget, accounts (§1410)"
 echo "✓ wallet sections: order, presence, resolve, shows, labels, 11 mutations, drift guards"

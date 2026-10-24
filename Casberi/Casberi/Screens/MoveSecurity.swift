@@ -1009,7 +1009,7 @@ private extension Optional {
 }
 
 /// **THE OUTSIDE-KEY NUDGE (prd §1432, §1422 item 7): one row under Needs
-/// you** — the Wallet's Home and the Feed's Wallet section — while your
+/// you** — the Wallet's Home, and a dot on its tab (prd §1489) — while your
 /// account answers only to keys inside Casberi. A passkey signs only where
 /// it was made, so the way out is a key the person holds elsewhere; the row
 /// stands until every network the account is on has one, and opens the

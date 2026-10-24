@@ -163,8 +163,8 @@ extension FeedScreen {
         }
     }
 
-    /// The two ways in, on the Accounts header and the Feed's Wallet section
-    /// alike (prd §1410; §1347's one row grew): the tray that follows an
+    /// The two ways in, on the Accounts header (prd §1410; §1347's one row
+    /// grew; the Feed's Wallet section that shared them is gone, §1489): the tray that follows an
     /// address, and the catalogue landed on its Wallet card — 24 apps, too
     /// many for a menu, so the one door to the catalogue (§1234) as Social's
     /// More social apps is (§1303).

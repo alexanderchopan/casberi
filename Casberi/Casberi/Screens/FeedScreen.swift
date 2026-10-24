@@ -780,10 +780,6 @@ struct FeedScreen: View {
     /// New was tapped in the Agents room with no agent picked and several
     /// that can answer (prd §1054).
     @State var askingWhichAgent = false
-    /// The Wallet's Needs you (prd §1413): what the Feed's Wallet section
-    /// leads with, read in the screen's `.task` (`loadWalletNeeds`), never in
-    /// a body (§628). Raw model refs, so every reader takes `.live` first.
-    @State var walletNeeds: [Thing] = []
     /// The Feed's Day section reads its own rows (prd §1343): the Feed's
     /// list carries none of what is ahead, and the section is all ahead.
     @State var dayFeedRows: [Thing] = []
@@ -1542,13 +1538,11 @@ struct FeedScreen: View {
                 #endif
             }
             .onChange(of: chrome.feedJump) { _, _ in settleFeedJump(proxy) }
-            // Day's rows, Notes' rows and the Wallet's Needs you, read by the
-            // Feed itself (prd §1343, §1347, §1413): the Wallet's section
-            // subtracts its Needs you even when a jump passes it before its
-            // row has appeared.
+            // Day's rows and Notes' rows, read by the Feed itself (prd
+            // §1343, §1347). The Wallet's asks are the shell's, for its tab's
+            // dot (prd §1489).
             .task(id: feedSectionsKey) {
                 if source == "All" { loadDayFeedRows(); loadNotesFeedRows() }
-                await loadWalletNeeds()
             }
             // The renewals under Day's days read the Wallet's own reading,
             // from here, since the Feed may open before the Wallet has (prd

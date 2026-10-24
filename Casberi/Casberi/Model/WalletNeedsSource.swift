@@ -1,16 +1,16 @@
 import Foundation
 import SwiftData
 
-/// **THE WALLET'S NEEDS YOU, READ FOR THE FEED (prd §1413; was Day's
-/// `DayNeedsSource`, prd §1327 item 9).** The Feed's Wallet section leads
-/// with what waits on you in the Wallet, through the Wallet's own rule
-/// (`WalletNeedsYou`), off the SAME rows its Home reads — its merged room's
-/// members, newest first, `FeedScreen.sourceRoomFetchLimit` of them — so a
-/// row the Feed lists is a row the Wallet lists (§837: two surfaces, one
-/// store). The read runs on a context of its own off the main actor,
-/// returning values only; the Feed's `.task` resolves the few ids it keeps on
-/// the main context. Work's asks are not gathered anywhere: Work's section
-/// draws its own (`WorkAsk`, prd §1080), and Day is dated rows.
+/// **THE WALLET'S ASKS, READ FOR ITS TAB (prd §1489; was the Feed's Wallet
+/// section's, prd §1413, and Day's `DayNeedsSource` before that, §1327 item
+/// 9).** The Wallet's tab wears a dot while something waits on you there,
+/// through the Wallet's own rule (`WalletNeedsYou`), off the SAME rows its
+/// Home reads — its merged room's members, newest first,
+/// `FeedScreen.sourceRoomFetchLimit` of them — so the dot never lights for a
+/// row the Wallet does not list (§837: two surfaces, one store). The read
+/// runs on a context of its own off the main actor, returning values only.
+/// Work's asks are not gathered anywhere: Work's section draws its own
+/// (`WorkAsk`, prd §1080), and Day is dated rows.
 enum WalletNeedsSource {
 
     /// A Wallet row's values, as `WalletNeedsYou.waiting` reads them.
@@ -21,6 +21,23 @@ enum WalletNeedsSource {
         let tags: [String]
         let at: Date
         let holder: String?
+    }
+
+    /// How many asks wait, for the tab's dot (prd §1489). `MainSurface`'s
+    /// `.task` calls it on a corpus change.
+    @MainActor
+    static func count(context: ModelContext) async -> Int {
+        let rows = await read(container: context.container,
+                              wallet: RoomAccounts.roomSources(CategoryFold.walletRoom),
+                              limit: FeedScreen.sourceRoomFetchLimit)
+        let safe = Set(SafeBridge.pendingSnapshot().map(\.ref))
+        let ids = await waiting(rows, safePending: safe, now: .now)
+        #if DEBUG
+        // `walletAsks|` — what lights the Wallet's tab, for a check that
+        // cannot see the dot.
+        NSLog("[Casberi] walletAsks| waiting=%d", ids.count)
+        #endif
+        return ids.count
     }
 
     /// The candidates, off the main actor. `wallet` is the room's members

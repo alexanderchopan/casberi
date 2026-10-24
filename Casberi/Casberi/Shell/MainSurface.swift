@@ -3324,6 +3324,13 @@ struct MainSurface: View {
                 BridgeRefresh.refreshAllConnected(context: modelContext, store: store)
                 chrome.rain(sources: BridgeRefresh.roster(store: store))
             }
+            // The Wallet tab's dot (prd §1489): its asks, re-read on a
+            // corpus change, off the main actor, never in a body (§628).
+            .task(id: corpusRevision) {
+                let asks = await WalletNeedsSource.count(context: modelContext)
+                guard !Task.isCancelled, asks != chrome.walletAsks else { return }
+                chrome.walletAsks = asks
+            }
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
             // The nav bar itself is hidden now (2026-07-20) — nothing lives

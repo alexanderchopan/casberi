@@ -103,18 +103,19 @@ extension FeedScreen {
         }
         // A note of yours, or an entry from an app you write in, stands in
         // Notes (prd §1347), whatever the app's category.
-        var byCategory = Dictionary(grouping: live) {
+        // The Wallet's rows group under its name and no section draws them:
+        // the Feed has no Wallet section (prd §1489).
+        return Dictionary(grouping: live) {
             Pinboard.inRoom($0) ? HomeScope.notesSection : (sectionOf[$0.source] ?? "")
         }
-        // **THE WALLET'S SECTION IS WHAT MOVED (prd §1343, user: "wallet
-        // section skip what needs you shows … feed is a feed, not the entire
-        // source").** Its moves, never a state (`walletMoves`), and nothing
-        // its own Needs you already leads with (prd §1413).
-        if let wallet = byCategory[CategoryFold.walletRoom] {
-            let waiting = Set(walletNeeds.live.map(\.id))
-            byCategory[CategoryFold.walletRoom] = Self.walletMoves(wallet).filter { !waiting.contains($0.id) }
-        }
-        return byCategory
+    }
+
+    /// What the Feed's own reads are keyed on (Day's rows, Notes' rows): any
+    /// change to the corpus, on the Feed. Everywhere else `.idle`, so the
+    /// task does nothing there.
+    var feedSectionsKey: Corpus.Revision {
+        guard source == "All" else { return .idle }
+        return Corpus.revision(in: modelContext)
     }
 
     @ViewBuilder
@@ -139,21 +140,9 @@ extension FeedScreen {
         let cap = sectionCaps[category] ?? Self.sectionFirstRows
         panelSection(category, glyph: CategoryFold.glyph(for: category), things: things,
                      choices: sectionChoices(category)) {
-            // The Wallet's section leads with its Needs you (prd §1413):
-            // three on the first page, outside the section's cap, then its
-            // moves; More opens the rest of both.
-            let needsLimit = category == CategoryFold.walletRoom
-                ? (cap == Self.sectionFirstRows ? Self.walletNeedsFirstRows : cap) : 0
-            let needsWaiting = category == CategoryFold.walletRoom ? walletNeeds.live.count : 0
-            if needsLimit > 0 {
-                walletNeedsRows(nextEventID: nextEventID, limit: needsLimit)
-            }
             let _ = { Self.sectionCapNow = (category, cap) }()
             categorySections(category, things, nextEventID: nextEventID)
             let _ = { Self.sectionCapNow = nil }()
-            if needsWaiting > needsLimit, things.count <= cap {
-                sectionMoreRow(category)
-            }
         }
     }
 
@@ -923,11 +912,10 @@ extension FeedScreen {
                 },
             ]
         }
-        // **THE WALLET FOLLOWS FROM ITS HEADER (prd §1347, user: "wallet
-        // category will have a plus too to follow more wallets")**, and the
-        // Wallet's own Accounts list adds from its header the same two ways
-        // (prd §1410): the one menu, in both places.
-        if category == CategoryFold.walletRoom || category == Self.accountsName {
+        // **THE WALLET'S ACCOUNTS LIST ADDS FROM ITS HEADER (prd §1410):**
+        // Follow an account, Connect an app. The Feed's Wallet section that
+        // shared the menu is deleted (prd §1489, amending §1347).
+        if category == Self.accountsName {
             adds = walletAccountAdds
         }
         if category == RoomAccounts.socialRoom {

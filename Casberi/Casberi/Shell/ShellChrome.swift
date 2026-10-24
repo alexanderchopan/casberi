@@ -948,6 +948,11 @@ final class ShellChrome {
     /// rains what it asked.
     var libraryPull = 0
 
+    /// How many of the Wallet's asks wait on you (prd §1489): the Wallet's
+    /// tab wears a dot while any do. `MainSurface` reads it off the corpus
+    /// (`WalletNeedsSource.count`), since the Feed no longer leads with them.
+    var walletAsks = 0
+
     /// The chip strip's CURRENT order, mirrored here so Mac's ⌘1–⌘9 can read
     /// it (2026-07-28) — `MainSurface.chipLabels` depends on the live corpus
     /// (`@Query`) and `ChipMemory`'s tap-learning, neither of which the

@@ -60,7 +60,6 @@ FILES = [
     "Screens/FeedScreen+WalletPages.swift",
     "Screens/FeedScreen+WalletSecurity.swift",
     "Screens/FeedScreen+WalletRoom.swift",
-    "Screens/FeedScreen+WalletNeeds.swift",
     "Screens/FeedScreen+Spending.swift",
     "Screens/FeedScreen+Subscriptions.swift",
     "Screens/MoveSecurity.swift",

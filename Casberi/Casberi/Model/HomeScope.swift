@@ -93,13 +93,15 @@ enum HomeScope {
 
     @MainActor static func feedCategories(chips: [String]) -> [String] {
         let present = Set(chips)
-        // **DAY AND THE WALLET ARE FEED SECTIONS (prd §1343, user: "we just
-        // make day a section", "wallet section should show last N things").**
-        // Day leads by default and moves like any category; the Wallet's
-        // section is a preview of its tab. Day stands whether or not a chip
-        // names it: it is gathered, never one app's.
+        // **DAY IS A FEED SECTION (prd §1343, user: "we just make day a
+        // section").** Day leads by default and moves like any category, and
+        // stands whether or not a chip names it: it is gathered, never one
+        // app's. **THE WALLET IS NOT (prd §1489, amending §1343 item 7, user:
+        // "we have wallet in the feed and needs you … It kind of seems weird
+        // there").** Its section repeated the top of its tab's Home; the tab
+        // is one tap away and wears a dot while something waits on you.
         return CategoryOrder.current.filter {
-            $0 != RoomAccounts.testnetsRoom
+            $0 != RoomAccounts.testnetsRoom && $0 != CategoryFold.walletRoom
                 && ($0 == RoomAccounts.dayRoom || $0 == Self.notesSection || present.contains($0))
         }
     }
