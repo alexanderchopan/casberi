@@ -68235,3 +68235,10 @@ The rule under all of it: **every page shows every account at once, and the acco
 7. **The Mac half (§1402):** the same rows through the same modifiers; the Mac's point scale (§1406) scales the type, and the head and air with it as before. Not seen on the Mac.
 
 **Seen** on the simulator (iOS 27, Debug, the demo): Home's six doors stand at one pitch, Needs you and Markets as tall as the doors with a line; Your account's This iPhone, Recovery key, Signer, Spend limit and Round-ups at that same pitch under the box, their text starting in the doors' column; Threats' rows one list row each under their groups; Positions' Morpho, Aave, Spark, ETH long and the two pools evenly spaced, the money trailing at the rows' edge. Build green; `wallet-row-audit.py` clean, 8/8 mutations caught.
+
+## §1483 — Receive from Arc: a chain's own coin that is a dollar quotes ten, not a fraction (amends §1470 item 6) (user, 2026-10-24: "arc isn't working as a chain on receive") — FIXED, UNMEASURED
+
+1. **The cause.** §1470 item 6 quotes a route at 0.005 of a chain's own coin, because a chain's own coin was ETH-like. Arc's own coin is USDC (18 decimals, §808), so a route from Arc asked Relay to quote half a cent of USDC, under the ~$0.05 floor Relay quotes at, and every Arc route was refused before an address came back.
+2. **The rule.** `YourAccountElsewhere.quoteAmount` sizes the quote by what the coin is: anything named BTC 0.0005, a chain's own coin 0.005 unless its symbol names a dollar, else ten. Arc's USDC quotes ten.
+3. **The check.** `your-account-selftest.sh` holds a native 18-decimal USDC to ten whole units. Relay's saved records (`relay-chains.json`) carry no Arc record; none was invented.
+4. **UNMEASURED:** Relay's `/chains` was not reachable from the session that wrote this, so it is not measured that Relay lists Arc with `depositAddressEnabled`, nor whether it lists Arc's USDC ERC-20 interface (`0x3600…0000`) beside the native coin, which would draw two USDC rows under what they send. Measure with `-moveReceiveFrom "Arc"` on the simulator.

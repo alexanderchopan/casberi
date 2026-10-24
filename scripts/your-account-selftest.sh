@@ -398,6 +398,9 @@ check(E.quoteAmount(eth) == "5000000000000000", "ETH's quote amount: \(E.quoteAm
 check(E.quoteAmount(usdt) == "10000000", "USDT (6)'s quote amount: \(E.quoteAmount(usdt))")
 check(E.quoteAmount(bnb.first { $0.symbol == "USDT" }!) == "10000000000000000000", "USDT on BNB (18 decimals) quotes ten in 6-decimal units")
 check(E.quoteAmount(base.first { $0.symbol == "cbBTC" }!) == "50000", "cbBTC's quote amount: \(E.quoteAmount(base.first { $0.symbol == "cbBTC" }!))")
+// A dollar that is the chain's own coin quotes ten, not half a cent (prd §1483: Arc's gas coin is USDC, 18 decimals).
+let arcUSDC = E.Coin(symbol: "USDC", address: YourAccountSwap.native, decimals: 18)
+check(arcUSDC.isNative && E.quoteAmount(arcUSDC) == "10000000000000000000", "Arc's own USDC quotes under Relay's floor: \(E.quoteAmount(arcUSDC))")
 // One address per PAIR: the kept key names what arrives.
 let k1 = E.keptKey("0xAbC", 42161, usdt, 8453, YourAccountOp.dollar(on: YourAccountOp.base)), k2 = E.keptKey("0xAbC", 42161, usdt, 8453, YourAccountOp.eth)
 check(k1 != k2 && k1.hasPrefix("yourAccount.elsewhere.0xabc.42161."), "the kept address is not keyed on what arrives: \(k1)")
