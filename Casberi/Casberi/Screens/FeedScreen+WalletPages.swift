@@ -24,23 +24,39 @@ extension FeedScreen {
     func walletDoor(_ section: WalletSection, name: String? = nil, line: String? = nil,
                     lineTone: Color = DS.textTertiary, figure: String? = nil,
                     act: (() -> Void)? = nil) -> some View {
-        DSPushRow(title: Text(verbatim: name ?? section.label),
-                  subtitle: line.map { Text(verbatim: $0) },
-                  fact: figure.map { Text(verbatim: $0).monospacedDigit() },
-                  factTone: DS.textPrimary,
-                  subtitleTone: lineTone,
-                  opens: true) {
+        // The Feed's row (prd §744), not a settings row: its 44pt head, its
+        // line, and the figure in Activity's money rung, so a door and the
+        // transaction under it share one pitch and one figure size.
+        Button {
             DSHaptic.selection()
             if let act { act() } else { chrome.walletSection = section }
-        } leading: {
-            walletDoorLead(section.glyph)
+        } label: {
+            DSFeedRow(name: name ?? section.label,
+                      line: line.map { Text(verbatim: $0).foregroundStyle(lineTone) },
+                      trailingBesideLine: true) {
+                walletDoorLead(section.glyph)
+            } trailing: {
+                if let figure { walletRowFigure(figure) }
+            }
+            .contentShape(Rectangle())
         }
+        .buttonStyle(RowPress())
+        .dsHover()
         .accessibilityLabel(Text(verbatim: [name ?? section.label, figure, line]
             .compactMap { $0 }.joined(separator: ". ")))
         .listRowInsets(EdgeInsets(top: Self.rowAir, leading: DSRoomChassis.rowInset,
                                   bottom: Self.rowAir, trailing: DSRoomChassis.rowInset))
         .feedRowBackground()
         .listRowSeparator(.hidden)
+    }
+
+    /// A Wallet row's figure: Activity's money rung, tabular, one line.
+    func walletRowFigure(_ figure: String, tone: Color = DS.textPrimary) -> some View {
+        Text(verbatim: figure)
+            .dsText(.price17)
+            .monospacedDigit()
+            .foregroundStyle(tone)
+            .lineLimit(1)
     }
 
     /// The doors as one section under the tiles, no header: the title above
@@ -462,22 +478,25 @@ extension FeedScreen {
                         : (wallet.addresses.first { WalletWatch.sameAddress($0.address, holder.address) }
                             .map { $0.label.isEmpty ? WalletStore.shortAddress($0.address) : $0.label }
                             ?? WalletStore.shortAddress(holder.address))
-                    DSPushRow(title: Text(verbatim: name),
-                              fact: Text(verbatim: mask ?? WalletValue.money(holder.usd)).monospacedDigit(),
-                              factTone: DS.textPrimary,
-                              opens: false) {
+                    Button {
                         DSHaptic.selection()
                         if !isVenue { withAnimation(DS.Motion.standard) { chrome.walletScope = holder.address } }
-                    } leading: {
-                        Group {
-                            if isVenue {
-                                BridgeIcon(name: holder.label, size: DS.Face.row)
-                            } else {
-                                WalletFace(address: holder.address, size: DS.Face.row, circular: true)
+                    } label: {
+                        DSFeedRow(name: name, trailingBesideLine: true) {
+                            Group {
+                                if isVenue {
+                                    BridgeIcon(name: holder.label, size: DS.Face.row)
+                                } else {
+                                    WalletFace(address: holder.address, size: DS.Face.row, circular: true)
+                                }
                             }
+                        } trailing: {
+                            walletRowFigure(mask ?? WalletValue.money(holder.usd))
                         }
-                        .frame(width: DS.Mark.row, height: DS.Mark.row)
+                        .contentShape(Rectangle())
                     }
+                    .buttonStyle(RowPress())
+                    .dsHover()
                     .listRowInsets(EdgeInsets(top: Self.rowAir, leading: DSRoomChassis.rowInset,
                                               bottom: Self.rowAir, trailing: DSRoomChassis.rowInset))
                     .feedRowBackground()

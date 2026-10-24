@@ -104,15 +104,14 @@ extension FeedScreen {
     @ViewBuilder
     func walletAccountRow(_ slot: DSAccountSlot) -> some View {
         let picked = slot.isShowing(chrome.walletScope)
-        DSPushRow(title: Text(verbatim: slot.name),
-                  subtitle: slot.sub.map { Text(verbatim: $0) },
-                  fact: picked ? Text(Image(systemName: "checkmark")) : nil,
-                  factTone: DS.pickInk, opens: false) {
+        Button {
             DSHaptic.selection()
             withAnimation(DS.Motion.standard) { chrome.walletScope = picked ? nil : slot.id }
-        } leading: {
-            // A face keeps its own ramp, centred in the Feed's column (§1170).
-            Group {
+        } label: {
+            // The Feed's row (prd §744), as the Wallet's doors are.
+            DSFeedRow(name: slot.name, line: slot.sub.map { Text(verbatim: $0) },
+                      trailingBesideLine: true) {
+                // A face keeps its own ramp, centred in the Feed's column (§1170).
                 switch slot.faces.first {
                 case .wallet(let address)?:
                     WalletFace(address: address, size: DS.Face.row, circular: true)
@@ -121,9 +120,18 @@ extension FeedScreen {
                 case nil:
                     BridgeIcon(name: slot.name, size: DS.Face.row)
                 }
+            } trailing: {
+                if picked {
+                    Image(systemName: "checkmark")
+                        .dsGlyph(.body, weight: .semibold)
+                        .foregroundStyle(DS.pickInk)
+                        .accessibilityHidden(true)
+                }
             }
-            .frame(width: DS.Mark.row, height: DS.Mark.row)
+            .contentShape(Rectangle())
         }
+        .buttonStyle(RowPress())
+        .dsHover()
         .accessibilityLabel(Text(verbatim: picked ? "\(slot.name), showing" : slot.name))
         // The air the Subscriptions rows take, so the two lists read alike.
         .listRowInsets(EdgeInsets(top: Self.rowAir, leading: DSRoomChassis.rowInset,
