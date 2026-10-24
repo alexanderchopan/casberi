@@ -281,7 +281,11 @@ TAP_DECLARED = re.compile(
 HIDDEN_SURFACE = re.compile(r"accessibilityHidden\(\s*true\s*\)")
 ESCAPE_ACTION = re.compile(r"accessibilityAction\(\s*\.escape\s*\)")
 
-WORDS = re.compile(r"\bText\(|\bLabel\(|dsText|LocalizedStringKey|String\(localized:")
+# `DSFeedRow(` is words by construction: the one feed-row anatomy (prd §744)
+# draws its `name:` as text in a head at least 44pt tall (§1017, §1482), so a
+# row whose name is a variable rather than a `Text(` literal is still a worded,
+# floored target — not a face-only disc (2026-10-23, the Holdings accounts row).
+WORDS = re.compile(r"\bText\(|\bLabel\(|dsText|LocalizedStringKey|String\(localized:|\bDSFeedRow\(")
 
 # --- Check 4 -----------------------------------------------------------------
 # A DRAWING SIZED FROM DATA. The first three patterns are unambiguous drawings;
