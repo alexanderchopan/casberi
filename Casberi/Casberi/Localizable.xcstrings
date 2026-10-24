@@ -137202,6 +137202,34 @@
         }
       }
     },
+    "Relay would not open an address for %@ from %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Relay no abrió una dirección para %1$@ desde %2$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Relayは%2$@からの%1$@のアドレスを開きませんでした"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Relay가 %2$@에서 보내는 %1$@의 주소를 열지 않았습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Relay 未为来自 %2$@ 的 %1$@ 开设地址"
+          }
+        }
+      }
+    },
     "Relay's route would pay less than it quoted, so nothing was signed" : {
       "localizations" : {
         "es" : {

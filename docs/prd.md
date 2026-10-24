@@ -68249,3 +68249,11 @@ The rule under all of it: **every page shows every account at once, and the acco
 2. **Receive is the address, its Copy, "From another network", and Share.** `MoveSentence.Blank.exchange`, `exchangeList` and `addFrom` are gone with it, and the three strings from `Localizable.xcstrings` (§723: deleted from the surface, deleted from the model).
 3. **A door to an exchange returns only if it fills the withdrawal**: the address, the network and the amount, landing on the exchange's send form.
 4. **Not seen:** written in a Linux session with no simulator or Xcode; not built, not run.
+
+## §1485 — Receive from another network: a chain's own coin quotes 0.01, a floor refusal is asked again over it, and Relay's raw units are never shown (amends §1470 item 6, §1483 item 2) (user, 2026-10-24, over a screenshot of Receive reading "Amount must be greater than 5000000000000000 for deposit address quotes": "ok") — FIXED, UNMEASURED
+
+1. **The cause.** `YourAccountElsewhere.quoteAmount` quoted a route at 0.005 of a chain's own coin, 5000000000000000 wei on an 18-decimal coin. Relay refuses a deposit address at that amount ("must be greater than"), so every route sending a chain's own coin failed, and Move drew Relay's sentence with its raw units.
+2. **The rule.** A chain's own coin quotes 0.01; a bitcoin 0.0005 and anything else ten, as before. The quote names no payment: the address takes any amount on its route.
+3. **A floor refusal is asked once more** at twice the floor Relay names (`overFloor`). If that is refused too, Move says "Relay would not open an address for <coin> from <network>"; no number in Relay's units reaches the page. Any other refusal is drawn as before.
+4. **The check.** `your-account-selftest.sh` holds ETH to 0.01 and reads the floor off Relay's own sentence; a refusal with no floor is not asked again.
+5. **UNMEASURED:** Relay was not reachable from the session that wrote this (the session's proxy refused `api.relay.link`), and nothing was built: whether Relay's floor is the same on every chain is not known, which is why the refusal is read rather than trusted. Measure with `-moveReceiveFrom` on the simulator.

@@ -132,20 +132,32 @@ enum YourAccountElsewhere {
     /// on its route, but Relay will not quote under about $0.05 or beyond a
     /// pool's depth: a small fraction of a chain's own coin or a bitcoin,
     /// ten of anything else (a dollar, mostly). A dollar is ten even where it
-    /// is the chain's own coin: Arc's gas coin is USDC, and 0.005 of it is
-    /// half a cent, under Relay's floor, so no Arc route was ever quoted
-    /// (prd §1483). Pure, for the self-test.
+    /// is the chain's own coin: Arc's gas coin is USDC, and a fraction of it
+    /// is a cent or less, under Relay's floor, so no Arc route was ever quoted
+    /// (prd §1483). A chain's own coin quotes 0.01: Relay refuses a deposit
+    /// address at 0.005 ETH, "must be greater than 5000000000000000"
+    /// (prd §1485). Pure, for the self-test.
     static func quoteAmount(_ coin: Coin) -> String {
         let whole = Decimal(sign: .plus, exponent: coin.decimals, significand: 1)
         let symbol = coin.symbol.uppercased()
         let units: Decimal
         if symbol.contains("BTC") { units = whole * Decimal(string: "0.0005")! }
-        else if coin.isNative, !symbol.contains("USD") { units = whole * Decimal(string: "0.005")! }
+        else if coin.isNative, !symbol.contains("USD") { units = whole * Decimal(string: "0.01")! }
         else { units = whole * 10 }
         var rounded = Decimal()
         var source = units
         NSDecimalRound(&rounded, &source, 0, .down)
         return "\(rounded)"
+    }
+
+    /// The floor in Relay's "Amount must be greater than N for deposit
+    /// address quotes", doubled: the amount to ask again with, in the coin's
+    /// units (prd §1485). Nil for any other refusal. Pure, for the self-test.
+    static func overFloor(_ message: String) -> String? {
+        guard message.lowercased().contains("must be greater than"),
+              let digits = message.split(whereSeparator: { !$0.isNumber }).first,
+              let floor = Decimal(string: String(digits)), floor > 0 else { return nil }
+        return "\(floor * 2)"
     }
 
     /// The route's address: the one kept for it, else Relay's, checked
@@ -162,8 +174,21 @@ enum YourAccountElsewhere {
         }
         let target = RoundUps.Target(chainId: net.chainId, address: YourAccountSwap.currency(arrives),
                                      symbol: arrives.symbol, decimals: arrives.decimals, network: net.name)
-        let deposit = try await YourAccountChain.depositAddress(fromChain: from.id, currency: token.address, to: target,
+        let deposit: YourAccountChain.Deposit
+        do {
+            deposit = try await YourAccountChain.depositAddress(fromChain: from.id, currency: token.address, to: target,
                                                                 amount: quoteAmount(token), account: account, name: from.name)
+        } catch let refused as YourAccountChain.Failure {
+            // Under Relay's floor: ask once more over it, and never show its
+            // raw units (prd §1485).
+            guard let over = overFloor(refused.message) else { throw refused }
+            do {
+                deposit = try await YourAccountChain.depositAddress(fromChain: from.id, currency: token.address, to: target,
+                                                                    amount: over, account: account, name: from.name)
+            } catch let again as YourAccountChain.Failure where overFloor(again.message) != nil {
+                throw YourAccountChain.Failure(message: String(localized: "Relay would not open an address for \(token.symbol) from \(from.name)"))
+            }
+        }
         if let data = try? JSONEncoder().encode(Kept(address: deposit.address, fee: deposit.feeUSD, seconds: deposit.seconds)) {
             UserDefaults.standard.set(data, forKey: key)
         }
