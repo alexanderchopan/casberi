@@ -223,7 +223,7 @@ struct OwnModelSetupScreen: View {
                                               "Remembers a chat's earlier answers; screenshots and web search stay off."])
             case .unreachable:
                 result = .failed(OwnModel.Check.unreachableLine(host: OwnModel.hostLine(url)))
-            case .needsModel, .noModels, .wantsKey, .keyRefused, .other:
+            case .needsModel, .noModels, .wantsKey, .keyRefused, .webPage, .other:
                 result = .failed(outcome.line ?? "")
             }
         }

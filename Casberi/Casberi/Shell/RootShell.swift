@@ -4175,14 +4175,21 @@ struct RootShell: View {
             ?? AccountReaders.ID.device
         let corpus = provider == .bankr
             ? [] : toolSnapshot(terms: Retriever.contentTerms(query), reader: reader)
-        // The honest line above used to fire whenever the local retrieval came
-        // back empty. With tools it fires only for a genuinely empty corpus —
-        // an empty retrieval is now exactly the case where a second,
+        // The honest line used to fire whenever the local retrieval came back
+        // empty. With tools it fires only for a genuinely empty corpus — an
+        // empty retrieval is now exactly the case where a second,
         // differently-worded search is most likely to find something, which is
         // the whole reason the model has tools.
+        //
+        // A FAILURE, NOT AN ANSWER (2026-10-24). This returned `.success` with
+        // "Nothing matches that — a bigger model won't help", and the composer
+        // took it for the agent's own reply: the success tick, the keyed badge,
+        // the conversation marked keyed — over a request that never went out.
+        // A tester with nothing kept read it as the seat being broken ("my
+        // logs show nothing"). The failure line names the agent and says what
+        // to do.
         guard !hits.isEmpty || provider == .bankr || !corpus.isEmpty else {
-            return .success(KeyedAnswer(doc: proseDoc(
-                "Nothing matches that — a bigger model won't help.")))
+            return .failure(.nothingKept(agent: provider?.agent ?? String(localized: "your agent")))
         }
         // CARRYING AN IMPORTED CONVERSATION ON (2026-08-20). A sheet that
         // asked to continue a chat handed over its turns; they become this

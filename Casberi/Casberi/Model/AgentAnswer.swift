@@ -624,6 +624,14 @@ enum AgentAnswerFailure: Error, Sendable {
     case providerError(Int)
     /// A clean 200 that carried no words.
     case empty
+    /// No request went out: the person has kept nothing this agent may read,
+    /// so there was no evidence to ask over (2026-10-24, a tester: "it shows
+    /// connected but my logs show nothing after I ask it a question"). This
+    /// used to come back as a SUCCESS reading "Nothing matches that — a
+    /// bigger model won't help", which the composer ticked, badged and kept
+    /// as the agent's own answer — a keyed answer that was never asked for
+    /// (prd §83). Names the agent so the sentence says who was not asked.
+    case nothingKept(agent: String)
     /// The provider took the key and will not spend against it — HTTP 402
     /// (MEASURED on NEAR AI, 2026-09-20: `no_limit_configured`). Split from
     /// `providerError` because that case's own sentence ends "not your key.
@@ -686,6 +694,8 @@ enum AgentAnswerFailure: Error, Sendable {
             String(localized: "Your agent had trouble answering (error \(status)) — try again.")
         case .empty:
             String(localized: "Your agent came back with nothing. Try asking it another way.")
+        case .nothingKept(let agent):
+            String(localized: "Nothing's kept for \(agent) to read yet, so it wasn't asked. Keep a few things first.")
         case .outOfCredit:
             // Names the ONE thing that will fix it, and does not say "try
             // again" — a 402 does not change on a retry.

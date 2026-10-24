@@ -277,6 +277,11 @@ enum OwnModel {
         /// 401/403 with a key set.
         case keyRefused
         case unreachable
+        /// 200 whose body is HTML: a web UI at that address (Open WebUI, a
+        /// reverse proxy's landing page), its API on another port or path.
+        /// MEASURED in the field (2026-10-24): a Tailscale-served host
+        /// answered the envelope on `:8443` and a page on `443`.
+        case webPage
         case other(Int)
 
         var line: String? {
@@ -287,6 +292,12 @@ enum OwnModel {
             case .wantsKey:        "That server wants a key."
             case .keyRefused:      "That key was refused."
             case .unreachable:     nil   // worded with the host, below
+            case .webPage:
+                "That address serves a web page, not the API. Ollama answers on its own port (host:11434); Open WebUI's API is under /api."
+            // A 200 that is JSON but not the envelope: an API of some other
+            // shape, or a base one path off.
+            case .other(200):
+                "That server answered, but not with a model list. Is the address the API's base, like host:11434/v1?"
             case .other(let code): "That server answered HTTP \(code). Is it an OpenAI-compatible server?"
             }
         }
@@ -305,9 +316,9 @@ enum OwnModel {
         switch status {
         case 200:
             let ids = modelIDs(data)
-            // A 200 that is not the OpenAI envelope (a web page at that
-            // address, say) is not a connected server.
-            guard let ids else { return .other(200) }
+            // A 200 that is not the OpenAI envelope is not a connected
+            // server: a web page says so by name, anything else by shape.
+            guard let ids else { return looksLikeHTML(data) ? .webPage : .other(200) }
             if ids.isEmpty, typedModel.trimmingCharacters(in: .whitespaces).isEmpty { return .noModels }
             return .connected(models: ids)
         case 404:
@@ -317,6 +328,17 @@ enum OwnModel {
         case 403: return hasKey ? .keyRefused : .wantsKey
         default:  return .other(status)
         }
+    }
+
+    /// Whether a body is a web page: its first non-blank bytes open a tag
+    /// (`<!doctype html>`, `<html`, `<!--`). Read off the body, never a
+    /// Content-Type header, so a proxy that labels its page `text/plain`
+    /// still says what it is.
+    static func looksLikeHTML(_ data: Data?) -> Bool {
+        guard let data else { return false }
+        let head = String(decoding: data.prefix(256), as: UTF8.self)
+            .trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        return head.hasPrefix("<")
     }
 
     /// `{ data: [ { id } ] }` → the ids, in the server's order; nil when the

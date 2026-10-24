@@ -24,6 +24,7 @@ MODEL="Casberi/Casberi/Model/OwnModel.swift"
 ANSWER="Casberi/Casberi/Model/AgentAnswer.swift"
 MODELS="Casberi/Casberi/Model/AgentModels.swift"
 SCREEN="Casberi/Casberi/Screens/OwnModelSetupScreen.swift"
+SHELL_FILE="Casberi/Casberi/Shell/RootShell.swift"
 VAULT="Casberi/Casberi/Model/TokenVault.swift"
 for f in "$MODEL" "$ANSWER" "$MODELS" "$SCREEN" "$VAULT"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
@@ -38,6 +39,12 @@ grep -q 'OwnModel.namesToolRefusal(body) ? .toolsUnsupported : .providerError(40
   || { echo "✗ a 400 is read as a tool refusal without its body naming tools"; exit 1; }
 grep -q 'guard !candidates.isEmpty, steps.isEmpty else { return .failure(.empty) }' "$ANSWER" \
   || { echo "✗ a tool-less retry can ask a question of no evidence"; exit 1; }
+# Nothing kept is a FAILURE that names the agent, never a success the composer
+# ticks as the agent's own answer (2026-10-24: "my logs show nothing").
+grep -q 'return .failure(.nothingKept(agent: provider?.agent' "$SHELL_FILE" \
+  || { echo "✗ an empty corpus no longer fails as nothingKept — the composer will tick an answer nobody was asked for"; exit 1; }
+grep -q 'case .nothingKept(let agent):' "$ANSWER" \
+  || { echo "✗ nothingKept has no sentence of its own"; exit 1; }
 grep -q 'system = systemPrompt(tools: false)' "$ANSWER" \
   || { echo "✗ the tool-less retry still tells the model to use tools"; exit 1; }
 grep -q 'OwnModel.rememberToolless(address: address, model: wire.model)' "$ANSWER" \
@@ -133,7 +140,13 @@ check(!OwnModel.isPlainHTTP(OwnModel.parse("models.example.org").url!), "a publi
 // The check's status codes (MEASURED on Ollama 0.40.9, 2026-10-23).
 let list = Data(#"{"object":"list","data":[{"id":"gemma3:1b","object":"model"},{"id":"qwen2.5:1.5b"}]}"#.utf8)
 check(OwnModel.check(status: 200, data: list, hasKey: false, typedModel: "") == .connected(models: ["gemma3:1b", "qwen2.5:1.5b"]), "200 with the envelope connects and lists")
-check(OwnModel.check(status: 200, data: Data("<html>".utf8), hasKey: false, typedModel: "") == .other(200), "a 200 that is not the envelope is not a server")
+check(OwnModel.check(status: 200, data: Data("<!DOCTYPE html><html>".utf8), hasKey: false, typedModel: "") == .webPage, "a 200 that is a web page says so (the field's Tailscale case)")
+check(OwnModel.check(status: 200, data: Data("\n  <html>".utf8), hasKey: false, typedModel: "") == .webPage, "a page behind leading whitespace is still a page")
+check(OwnModel.check(status: 200, data: Data(#"{"models":[]}"#.utf8), hasKey: false, typedModel: "") == .other(200), "a 200 that is JSON but not the envelope is not a server")
+check(OwnModel.Check.webPage.line == "That address serves a web page, not the API. Ollama answers on its own port (host:11434); Open WebUI's API is under /api.", "the web-page line names where the API lives")
+check(OwnModel.Check.other(200).line == "That server answered, but not with a model list. Is the address the API's base, like host:11434/v1?", "the 200 line asks for the API's base")
+check(OwnModel.Check.other(502).line == "That server answered HTTP 502. Is it an OpenAI-compatible server?", "another code is reported as itself")
+check(!OwnModel.looksLikeHTML(nil), "no body is no page")
 check(OwnModel.check(status: 404, data: nil, hasKey: false, typedModel: "") == .needsModel, "404 with no model typed needs a model")
 check(OwnModel.check(status: 404, data: nil, hasKey: false, typedModel: "llama3.1") == .connected(models: []), "404 with a typed model connects, listless")
 check(OwnModel.check(status: 401, data: nil, hasKey: false, typedModel: "") == .wantsKey, "401 with no key wants one")
@@ -222,4 +235,5 @@ mutate "tool memory keyed by model alone" 's/"\\\(address\.trimmingCharacters\(i
 mutate "refusal without reading the body" 's/return text\.contains\("tool"\) && text\.contains\("support"\)/return true/'
 mutate "empty list says choose" 's/if ids\.isEmpty, typedModel/if false, typedModel/'
 mutate "forget keeps the tool memory" 's/UserDefaults\.standard\.removeObject\(forKey: toollessKey\)\n        TokenVault\.noteArrivals\(\)/TokenVault.noteArrivals()/'
-echo "✓ own-model self-test: 10 mutations caught"
+mutate "a web page read as some other 200" 's/return looksLikeHTML\(data\) \? \.webPage : \.other\(200\)/return .other(200)/'
+echo "✓ own-model self-test: 11 mutations caught"
