@@ -238,7 +238,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1631 of 1700 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1633 of 1702 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1799,7 +1799,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1418 — An app you have GOES: a tap in Library lands where the tray's icon does, a long press holds Open and Settings, and Ca… (amended by §1444)
 - §1419 — Aztec's testnet, round three: the signer follows a reset testnet, keeps a log of what it signed, follows the account… (amended by §1446)
 - §1420 — The generic empty start screen is deleted: an app's page with nothing yet says so in one line
-- §1421 — Your account has no phrase: recovery is your other devices and an iCloud-synced passkey (amends `docs/safe-wallet-spe…
+- §1421 — Your account has no phrase: recovery is your other devices and an iCloud-synced passkey (amends `docs/safe-wallet-spe… (amended by §1493)
 - §1422 — Five equal tabs: Feed · Wallet · Move · Library · Search; Move is a page (amends §1327's three tabs and Search apart,…
 - §1423 — Move wears the dollar sign; the Wallet category takes its tab's wallet; the tabs answer the hand (amends §1063's doll…
 - §1424 — Your account sends: ETH and USDC on Base and Ethereum, several in one transaction, a new key with every send (builds…
@@ -1843,7 +1843,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1463 — The wash says the state: a threat red, an ask orange, on green, nothing for a zero
 - §1464 — The row does the thing, and Return commits: GitHub, X and a site in three taps
 - §1465 — One gutter per screen: Move and the keys walk share `MoveSentence.gutter`, Security's two sentences share theirs (amended by §1466)
-- §1466 — Move is one running sentence: clauses that never split across a line, one size, the money as small print (amended by §1479)
+- §1466 — Move is one running sentence: clauses that never split across a line, one size, the money as small print (amended by §1479, §1494)
 - §1467 — The one Search asks the market: coins, tokens and stocks for whatever you typed, a pasted contract included, followed…
 - §1468 — Spending is the Wallet's fifth tile: the month or the week against the last one to the same point, the recurring half… (amended by §1469, §1480)
 - §1469 — Spending's two groups and its start box: Recurring and The rest are rows, each the sum of a list (Subscriptions, then… (amended by §1480)
@@ -1870,6 +1870,8 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1490 — No tab wears a badge: the Wallet's dot and Library's broken-app ring are deleted
 - §1491 — Following and Markets stand on the Wallet's All only (amends §1480 item 2)
 - §1492 — One account with nothing on Home says so (amends §1491)
+- §1493 — A private key to take away: Export creates a new key, adds it as an owner, and shows it once — the way out without Ca…
+- §1494 — Move says each thing once: one row per token, like swaps fold into one, and a second move is a second sentence
 - §1495 — Wallet reads go through Tor: always on, one circuit a wallet, the refusers named
 
 ## Dead rulings → what replaced them (generated)

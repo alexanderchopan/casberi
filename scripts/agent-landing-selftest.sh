@@ -84,7 +84,7 @@ src = open(sys.argv[1]).read()
 i = src.find("private func keyedAnswerDocument")
 if i < 0:
     print("  \u2717 keyedAnswerDocument is gone — this guard is blind"); sys.exit(1)
-body = src[i:i + 6000]
+body = src[i:i + 9000]
 reset = body.find("keyedProvider = provider")
 hist = body.find("history: keyedHistory")
 if reset < 0 or hist < 0:
@@ -228,7 +228,7 @@ src = open(sys.argv[1]).read()
 i = src.find("private func agentRoomSections")
 if i < 0:
     print("  \u2717 agentRoomSections is gone — this guard is blind"); sys.exit(1)
-body = src[i:i + 6000]
+body = src[i:i + 9000]
 thread = body.find("AgentChatThread(")
 tiles  = body.find("agentTiles")
 entry  = body.find("AgentChatEntry(")

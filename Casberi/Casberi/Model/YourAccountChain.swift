@@ -540,10 +540,12 @@ enum YourAccountChain {
 
     /// The account's Signers on `net`: owners whose key someone holds —
     /// neither this phone's shared passkey signer nor a recovery key's
-    /// contract.
+    /// contract, nor a key exported from this phone (prd §1493), which no
+    /// wallet here is asked to sign with.
     static func signers(_ net: Network, _ account: String) async throws -> [String] {
         var out: [String] = []
-        for owner in try await owners(net, account) where owner.caseInsensitiveCompare(YourAccount.sharedSigner) != .orderedSame {
+        for owner in try await owners(net, account) where owner.caseInsensitiveCompare(YourAccount.sharedSigner) != .orderedSame
+            && !YourAccountExport.isExported(owner, for: account) {
             if try await !isContract(net, owner) { out.append(owner) }
         }
         return out
@@ -899,6 +901,37 @@ enum YourAccountChain {
         let outcome = try await operate(net, account: account, deployed: deployed,
                                         calls: [YourAccountOp.addOwnerCall(account: account, owner: owner,
                                                                            threshold: deployed ? try await threshold(net, account) : 1)],
+                                        rotateTo: nextKey, payments: [], signer: device,
+                                        reason: reason, stage: stage)
+        return Sent(outcome: await settle(outcome, net, account, next: next, x: nextKey.x), network: net)
+    }
+
+    /// Take a plain-key owner off `net` (prd §1493: an exported key's
+    /// Remove): one operation, signed by this phone, keeping the threshold.
+    /// Already gone is done.
+    static func removeOwnerKey(_ owner: String, on net: Network, reason: String,
+                               stage: @escaping @Sendable (Stage) async -> Void) async throws -> Sent {
+        guard let account = YourAccountKey.address else {
+            throw Failure(message: String(localized: "There is no account on this iPhone"))
+        }
+        await stage(.preparing)
+        guard try await isDeployed(net, account) else {
+            return Sent(outcome: .landed(transaction: nil, rotated: false), network: net)
+        }
+        let all = try await owners(net, account)
+        guard all.contains(where: { $0.caseInsensitiveCompare(owner) == .orderedSame }) else {
+            return Sent(outcome: .landed(transaction: nil, rotated: false), network: net)
+        }
+        guard let call = YourAccountOp.removeOwnerCall(account: account, owners: all, owner: owner,
+                                                       threshold: try await threshold(net, account)) else {
+            throw Failure(message: String(localized: "This send could not be written"))
+        }
+        let (signerIndex, device) = try await deviceSigner(net, account, deployed: true)
+        let next = try YourAccountKey.nextKey(after: signerIndex)
+        guard let nextKey = YourAccountKey.publicKey(next) else {
+            throw Failure(message: String(localized: "This send could not be written"))
+        }
+        let outcome = try await operate(net, account: account, deployed: true, calls: [call],
                                         rotateTo: nextKey, payments: [], signer: device,
                                         reason: reason, stage: stage)
         return Sent(outcome: await settle(outcome, net, account, next: next, x: nextKey.x), network: net)

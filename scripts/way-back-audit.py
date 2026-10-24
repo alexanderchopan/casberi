@@ -40,8 +40,12 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 SOURCES = [ROOT / "Casberi/Casberi", ROOT / "Casberi/Shared",
            ROOT / "Casberi/ShareExtension"]
 
-# File name → the control that replaces the swipe. Empty on purpose.
-ALLOWED = {}
+# File name → the control that replaces the swipe.
+ALLOWED = {
+    # The exported private key exists nowhere else while it is shown (prd
+    # §1493): "I saved it" and "Remove the key" are the way out.
+    "MoveExportKey.swift": "I saved it · Remove the key",
+}
 
 COVER = re.compile(r"\.fullScreenCover\s*\(")
 DISMISS_OFF = re.compile(r"\.interactiveDismissDisabled\s*\(\s*(?:true\s*)?\)")

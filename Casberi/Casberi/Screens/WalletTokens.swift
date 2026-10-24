@@ -129,7 +129,12 @@ struct WalletTokensSheet: View {
     let positions: [WalletPortfolio.Position]
     let total: Double
     let moves: [String: Double]
+    /// The tokens you hid (`HiddenTokens`): out of the list and the total,
+    /// named in one row at the foot that brings each back (§83).
+    var hidden: [WalletPortfolio.Position] = []
     let onOpen: (WalletPortfolio.Position) -> Void
+    /// Hide (true) or show (false) a token, from a row's long press.
+    var onHide: ((WalletPortfolio.Position, Bool) -> Void)? = nil
 
     @State private var query = ""
     @State private var dustOpen = false
@@ -162,6 +167,7 @@ struct WalletTokensSheet: View {
                         let found = ordered.filter { $0.symbol.localizedCaseInsensitiveContains(trimmed) }
                         ForEach(found) { row($0) }
                     }
+                    if !hidden.isEmpty, onHide != nil { hiddenRow }
                 }
                 .padding(.bottom, positions.count > Self.searchFrom ? 96 : DS.Space.s4)
             }
@@ -184,6 +190,50 @@ struct WalletTokensSheet: View {
                                 move: moves[HoldingMoves.key(position.symbol)])
                 .walletRowPitch()
                 .contentShape(Rectangle())
+        }
+        .buttonStyle(RowPress())
+        .contextMenu {
+            // Out of the list and the total (user: "when i open tokens i
+            // should be able to long press and hide tokens").
+            if let onHide {
+                Button {
+                    onHide(position, true)
+                } label: {
+                    Label(String(localized: "Hide \(position.symbol)"), systemImage: "eye.slash")
+                }
+            }
+        }
+        .padding(.horizontal, DS.Space.s4)
+    }
+
+    /// "Hidden · 3", what they are worth and that the total leaves them out;
+    /// its menu brings each back.
+    private var hiddenRow: some View {
+        Menu {
+            ForEach(hidden) { position in
+                Button {
+                    onHide?(position, false)
+                } label: {
+                    Label(String(localized: "Show \(position.symbol)"), systemImage: "eye")
+                }
+            }
+        } label: {
+            HStack(spacing: DS.Space.s3) {
+                Image(systemName: "eye.slash")
+                    .dsGlyph(.body, weight: .medium)
+                    .foregroundStyle(DS.textSecondary)
+                    .frame(width: DS.Face.list, height: DS.Face.list)
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(String(localized: "Hidden · \(hidden.count)"))
+                        .dsText(.body17).foregroundStyle(DS.textPrimary)
+                    Text(String(localized: "\(WalletValue.money(hidden.reduce(0) { $0 + $1.usd })), not in the total"))
+                        .dsText(.subhead12).foregroundStyle(DS.textTertiary)
+                }
+                Spacer(minLength: DS.Space.s2)
+            }
+            .padding(.vertical, DS.Space.s2)
+            .contentShape(Rectangle())
         }
         .buttonStyle(RowPress())
         .padding(.horizontal, DS.Space.s4)

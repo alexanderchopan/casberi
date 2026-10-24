@@ -292,14 +292,20 @@ extension FeedScreen {
         case .walletTokens:
             // Every token Holdings folded (prd §1107). A pick closes the tray
             // first, then opens the token: one sheet at a time (§872).
-            if let portfolio = portfolioShown {
+            // Off the unhidden read, so hiding the last token leaves the
+            // tray standing on its Hidden row instead of emptying it.
+            if let whole = portfolioUnhidden {
+                let portfolio = whole.hiding(walletHidden)
+                let hidden = whole.positions.filter { walletHidden.contains($0.symbol.uppercased()) }
                 WalletTokensSheet(positions: portfolio.positions, total: portfolio.totalUSD,
-                                  moves: walletHoldingMoves) { position in
+                                  moves: walletHoldingMoves, hidden: hidden) { position in
                     feedSheet = nil
                     Task { @MainActor in
                         try? await Task.sleep(for: .milliseconds(450))
                         walletOpenToken(position)
                     }
+                } onHide: { position, hide in
+                    walletSetHidden(position.symbol, hidden: hide)
                 }
             }
         case .subscription(let id):

@@ -1667,7 +1667,10 @@ struct Composer: View {
         // the paste heuristic from reading the one-shot set as a capture.
         fillDraft(q)
         try? await Task.sleep(for: .milliseconds(500))
-        commit()
+        // `-uiAnswerKeyed YES` takes the "Ask <agent>" door instead of the
+        // plain send — the one path a keyed failure line is drawn on
+        // (2026-10-24, the nothing-kept sentence).
+        if UserDefaults.standard.bool(forKey: "uiAnswerKeyed") { askDirectly() } else { commit() }
         #endif
     }
 
@@ -2851,12 +2854,24 @@ struct Composer: View {
                         // `askWithKey()`'s own success path sets this for the
                         // identical reason.
                         conversationIsKeyed = true
-                    case .failure:
+                    case .failure(let failure):
                         // The agent didn't answer, so the on-device model
                         // does — and the badge correctly reads "on this
                         // iPhone", because that's who actually answered.
                         keyedCurrent = false
-                        finalDoc = await answer(q, paintPartial, paintDocument)
+                        if case .nothingKept = failure {
+                            // Nothing kept is nothing for EITHER model to
+                            // answer over: the free answer would say "Nothing
+                            // here yet" under the phone's badge, and the
+                            // person who tapped Ask <agent> would never learn
+                            // the agent was not asked (2026-10-24, a tester's
+                            // "my logs show nothing"). The failure's own line,
+                            // as `askWithKey()` draws every failure.
+                            answerFailed = true
+                            finalDoc = ["root = Stack([w])", "w = Insight(\"\(failure.line)\")"]
+                        } else {
+                            finalDoc = await answer(q, paintPartial, paintDocument)
+                        }
                     }
                 } else {
                     finalDoc = await answer(q, paintPartial, paintDocument)

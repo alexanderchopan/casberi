@@ -298,6 +298,22 @@ let usdcSymbol = "0x" + String(repeating: "0", count: 62) + "20" + String(repeat
 check(YourAccountOp.abiString(usdcSymbol) == "USDC", "an ABI string symbol")
 check(YourAccountOp.abiString("0x4d4b520000000000000000000000000000000000000000000000000000000000") == "MKR", "a bytes32 symbol")
 check(YourAccountOp.abiString("0x") == nil, "no answer is no symbol")
+// An exported key's Remove (prd §1493): Safe's owner list is linked, so the
+// call names the owner BEFORE it (the sentinel before the first) and keeps
+// the threshold; it refuses an owner that is not one, or one too few left.
+let ownA = "0x00000000000000000000000000000000000000aa", ownB = "0x00000000000000000000000000000000000000bb"
+let ownC = "0x00000000000000000000000000000000000000cc", acct = "0x09930469ea9d645Bb4141d94af5f2d02A22D29Ce"
+let removeSel = YourAccount.sel("removeOwner(address,address,uint256)")
+check(removeSel == [0xf8, 0xdc, 0x5d, 0xd9], "removeOwner's selector is not Safe's f8dc5dd9")
+check(YourAccountOp.removeOwnerCall(account: acct, owners: [ownA, ownB, ownC], owner: ownB, threshold: 1)?.data
+      == removeSel + YourAccount.w(ownA) + YourAccount.w(ownB) + YourAccount.w(1), "removing the second owner does not name the first before it")
+check(YourAccountOp.removeOwnerCall(account: acct, owners: [ownA, ownB], owner: ownA, threshold: 1)?.data
+      == removeSel + YourAccount.w("0x0000000000000000000000000000000000000001") + YourAccount.w(ownA) + YourAccount.w(1), "removing the first owner does not name the sentinel")
+check(YourAccountOp.removeOwnerCall(account: acct, owners: [ownA, ownB, ownC], owner: ownC, threshold: 2)?.data.suffix(32) == YourAccount.w(2)[...],
+      "removing a key lowered the threshold (prd §1456 item 3)")
+check(YourAccountOp.removeOwnerCall(account: acct, owners: [ownA, ownB], owner: ownB, threshold: 2) == nil, "a removal that leaves fewer owners than the threshold was written")
+check(YourAccountOp.removeOwnerCall(account: acct, owners: [ownA, ownB], owner: ownC, threshold: 1) == nil, "a removal of a key that is no owner was written")
+check(YourAccountOp.removeOwnerCall(account: acct, owners: [ownA, ownB], owner: ownB, threshold: 1)?.to == acct, "the removal is not a call to the account itself")
 exit(bad == 0 ? 0 : 1)
 SWIFT
 # Round-ups read the demo's own account (prd §1475), which needs the app; off here.
@@ -320,6 +336,23 @@ grep -q 'static var allCases' "$TABS" && { echo "✗ PlaceTab.allCases is overri
 # them, DEBUG included (prd §1441a).
 grep -q 'static let networks: \[Network\] = \[base, ethereum, robinhood\]$' "$OP" || { echo "✗ YourAccountOp.networks is not Base, Ethereum and Robinhood Chain in every build (prd §1441a, §1454)"; exit 1; }
 grep -A4 'static let baseSepolia' "$OP" | grep -q 'isTest: true' || { echo "✗ Base Sepolia is not marked a test network"; exit 1; }
+
+# The exported private key (prd §1493): never on Robinhood, never read as a
+# Signer, its address noted before it goes on, never shown before it landed,
+# and its bytes kept nowhere.
+EXPORT=Casberi/Casberi/Model/YourAccountExport.swift
+EXPORTPAGE=Casberi/Casberi/Screens/MoveExportKey.swift
+grep -q 'net.chainId != YourAccountOp.robinhood.chainId' "$EXPORT" || { echo "✗ an exported key may go on Robinhood, which Safe's app is not known to open (prd §1493)"; exit 1; }
+grep -q '&& !YourAccountExport.isExported(owner, for: account)' Casberi/Casberi/Model/YourAccountChain.swift || { echo "✗ YourAccountChain.signers reads an exported key as a Signer — a send would ask it to co-sign (prd §1493)"; exit 1; }
+grep -q 'if YourAccountExport.isExported(owner, for: account) { exported.append(owner) }' Casberi/Casberi/Screens/MoveSecurity.swift || { echo "✗ Security draws an exported key as the Signer (prd §1493)"; exit 1; }
+grep -qE 'SecItemAdd|kSecValueData' "$EXPORT" "$EXPORTPAGE" && { echo "✗ the exported key's bytes are written somewhere (prd §1493: shown once, kept nowhere)"; exit 1; }
+grep -qE 'set\(.*hex' "$EXPORT" "$EXPORTPAGE" && { echo "✗ the exported key's hex is stored (prd §1493)"; exit 1; }
+noted=$(grep -n 'YourAccountExport.note(key.address' "$EXPORTPAGE" | cut -d: -f1)
+added=$(grep -n 'YourAccountChain.addOutsideKey(' "$EXPORTPAGE" | cut -d: -f1)
+landed=$(grep -n 'guard !on.isEmpty else' "$EXPORTPAGE" | cut -d: -f1)
+shown=$(grep -n 'stage = .shown(key, on: on, failed: failed)' "$EXPORTPAGE" | head -1 | cut -d: -f1)
+[[ -n "$noted" && -n "$added" && "$noted" -lt "$added" ]] || { echo "✗ the exported key's address is no longer noted before it goes on — a crash would leave it read as a Signer (prd §1493)"; exit 1; }
+[[ -n "$landed" && -n "$shown" && "$landed" -lt "$shown" ]] || { echo "✗ the export page can show a key that landed nowhere (prd §1493)"; exit 1; }
 
 # Where the account can be used is read, never assumed (prd §1442k): Move
 # names its networks only through YourAccountReach, and Receive reads it.
@@ -505,4 +538,4 @@ grep -q 'Self.short($0, decimals: buy.token.decimals)' "$SENTENCE" || { echo "�
 grep -q 'return "≈ " + Self.figure(back, decimals: buy.token.decimals)' "$SENTENCE" || { echo "✗ the print line no longer carries the ≈ and the exact quote (prd §1479, §83)"; exit 1; }
 grep -q 'case .swap: \[soldPrint, quotePrint, feeTotal\]' "$SENTENCE" || { echo "✗ the swap's print line dropped the exact quote (prd §1479)"; exit 1; }
 
-echo "✓ your account: the address is the factory's, the send's bytes are the module's, amounts add up, Move is in every build, it names only networks this phone can use, asks where money lacks the recovery key, and the sentence is one size picked by fit"
+echo "✓ your account: the address is the factory's, the send's bytes are the module's, amounts add up, Move is in every build, it names only networks this phone can use, asks where money lacks the recovery key, the sentence is one size picked by fit, and an exported key is kept apart and shown only once it landed"

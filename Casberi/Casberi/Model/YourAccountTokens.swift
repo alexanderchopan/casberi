@@ -167,7 +167,14 @@ enum YourAccountTokens {
             return row.usd / amount
         }
         var candidates = Op.tokens(on: net)
-        for token in remembered(on: net) where !candidates.contains(token) { candidates.append(token) }
+        // **ONE ROW PER TOKEN (prd §1494, user: "here it is showing USDG
+        // twice").** A token is its contract, whatever its spelling: the
+        // network's dollar is written checksummed and a remembered buy as
+        // Relay spelled it, so whole-value equality let USDG in twice.
+        func has(_ token: Op.Token) -> Bool {
+            candidates.contains { $0.contract?.lowercased() == token.contract?.lowercased() }
+        }
+        for token in remembered(on: net) where !has(token) { candidates.append(token) }
         let listed = await list(net)
         for r in reading.prefix(30) {
             guard let contract = r.contract, ENS.isHexAddress(contract),
@@ -205,8 +212,10 @@ enum YourAccountTokens {
             }
             for await h in group { priced.append(h) }
         }
+        var seen = Set<String>()
         return priced
             .sorted { ($0.usd ?? -1, $0.token.symbol) > ($1.usd ?? -1, $1.token.symbol) }
+            .filter { seen.insert($0.id).inserted }
     }
 
     #if DEBUG

@@ -217,7 +217,7 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - `-saveLink "<url>"` — keep a link as a paste would, once per URL (prd §1092; NSLogs `saveLink:`); pair with `-openThing`
 - `-openThing "<title prefix>"` — open the newest thing whose title starts with the prefix (NSLogs `openThing:`). It runs at mount, before ingest hooks land anything, so land first and relaunch.
 - `-answerProbe "<query>"` — run the answer path headless, NSLog the result (`-probeDelay <s>` to wait first). Deterministic unless the Apple Intelligence seat answers (prd §833).
-- `-uiAnswerProbe "<query>"` — auto-open the composer and send through the real UI path (also read in `Shell/Composer.swift`).
+- `-uiAnswerProbe "<query>"` — send through the composer's real UI path; `-uiAnswerKeyed YES` takes the Ask door (`Shell/Composer.swift`).
 - `-forceBackgroundLaunch YES` — stamp this launch as a background launch so `RootShell`'s gate stays closed (NSLogs `backgroundLaunch: yes`, prd §642); the sim cannot background-launch, so a pass proves the branch renders, not that the watchdog is beaten.
 - `-ratingAskProbe YES` — ask for Apple's rating sheet on the next foreground whatever the rule says (`Model/RatingAsk.swift`: four days of real use, never the demo, once per version; `rating-ask-selftest.sh`; NSLogs `ratingAsk|`) → prd §1477
 - `-storeVersionProbe <x.y.z>` — pretend the App Store has x.y.z: the shell flashes "Casberi x.y.z is out" and Settings' colophon draws "Update to x.y.z" (`Model/StoreVersion.swift`; NSLogs `storeVersion:`). DEBUG never asks the store; older TestFlight builds expire on each beta ship (`testflight-expire-after.sh`) → prd §1104

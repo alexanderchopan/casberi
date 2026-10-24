@@ -1,0 +1,107 @@
+<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Export a private key</title><style>
+:root{color-scheme:light dark;--ground:#f2f1f5;--ink:#15141a;--ink2:#56535f;--rounded:ui-rounded,"SF Pro Rounded",-apple-system,sans-serif}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--ground:#0b0b0f;--ink:#eeecf3;--ink2:#a29ead}}
+:root[data-theme="dark"]{--ground:#0b0b0f;--ink:#eeecf3;--ink2:#a29ead}
+*{margin:0;padding:0;box-sizing:border-box}body{background:var(--ground);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,sans-serif;padding:16px 16px 48px}
+main{max-width:1300px;margin:0 auto}h1{font:700 24px/30px var(--rounded)}
+p.desc{font-size:14px;line-height:20px;color:var(--ink2);max-width:920px;margin-top:6px}p.desc b{color:var(--ink)}
+.rowx{display:flex;gap:22px;flex-wrap:wrap;margin-top:14px;align-items:flex-start}figure{width:300px;flex:none}figcaption{font-size:12.5px;line-height:17px;color:var(--ink2);margin-top:8px}figcaption b{color:var(--ink)}
+.phone{zoom:.745;width:402px;height:874px;border-radius:44px;background:#000;position:relative;overflow:hidden;box-shadow:0 24px 70px #00000055;color:#fff;font-family:-apple-system,sans-serif;padding:62px 20px 0}
+.back{display:flex;align-items:center;gap:6px;font:600 17px var(--rounded);color:#ebebf599;margin-bottom:10px}
+.ttl{font:700 34px/40px var(--rounded);margin-bottom:18px}.ttl span{color:#ebebf599;font-weight:600}
+.sh{display:flex;align-items:center;gap:10px;font:700 28px var(--rounded);margin:6px 0 6px}
+.r{display:flex;align-items:center;gap:12px;min-height:60px;padding:4px 0}.r div{flex:1;display:flex;flex-direction:column;gap:2px}
+.r b{font-weight:400;font-size:17px}.r small{font-size:12px;line-height:16px;color:#ebebf599}.r em{font-style:normal;font-size:17px;color:#ff375f}.r em.off{color:#ebebf54d}
+.r.new{background:#ff375f14;margin:0 -12px;padding:4px 12px;border-radius:14px}
+.sw{width:51px;height:31px;border-radius:16px;background:#39393d;position:relative}.sw:after{content:"";position:absolute;left:2px;top:2px;width:27px;height:27px;border-radius:14px;background:#fff}
+.sent{font:700 34px/42px var(--rounded);margin:6px 0 18px}.sent i{font-style:normal;color:#ff375f}
+.fact{font-size:15px;line-height:21px;color:#ebebf599;margin-bottom:10px}.fact b{color:#fff;font-weight:600}
+.fee{display:flex;justify-content:space-between;font-size:17px;padding:10px 0}.fee em{font-style:normal;color:#ebebf599}
+.foot{position:absolute;left:20px;right:20px;bottom:40px}
+.slab{height:56px;border-radius:28px;background:#fff;color:#000;display:flex;align-items:center;justify-content:center;gap:8px;font:600 19px var(--rounded)}
+.slab.ghost{background:none;color:#ff375f;height:44px;margin-top:6px}
+.fid{font-size:13px;color:#ebebf599;text-align:center;margin-top:8px}
+.key{background:#1c1c1e;border-radius:22px;padding:18px;font:500 19px/30px ui-monospace,"SF Mono",Menlo,monospace;letter-spacing:0;word-break:break-all;position:relative;margin-bottom:14px}
+.key.hid span{filter:blur(9px)}.hold{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;font:600 17px var(--rounded)}
+.hold small{font:400 13px -apple-system;color:#ebebf599}
+.tiles{display:flex;gap:6px;margin:0 0 18px}.t{width:84px;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:13px;font-weight:600}
+.step{display:flex;gap:12px;margin-bottom:12px;font-size:16px;line-height:22px}.step i{font-style:normal;flex:none;width:26px;height:26px;border-radius:13px;background:#2c2c2e;display:flex;align-items:center;justify-content:center;font:600 14px var(--rounded)}
+.step small{display:block;font-size:13px;line-height:18px;color:#ebebf599}
+.toast{position:absolute;left:50%;transform:translateX(-50%);top:58px;background:#2c2c2ecc;border-radius:22px;padding:10px 18px;font:600 15px var(--rounded);white-space:nowrap}
+svg.g{fill:none;stroke:#ff375f;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.alt{margin-top:28px}
+</style><main>
+<h1>Export a private key: the way out without Casberi</h1>
+<p class="desc">The account is a Safe. Its keys are its <b>owners</b>, so we never export an existing key (this iPhone's can't leave the Secure Enclave, and the recovery key is one only Casberi can read). <b>Export creates a new key, adds it as an owner, and shows it once.</b> It's a plain Ethereum private key (64 hex characters), not a phrase, so MetaMask, Rabby or Rainbow import it as "Import private key". That wallet then opens the account in Safe's app.</p>
+
+<div class="rowx">
+
+<figure><div class="phone">
+<div class="back"><svg class="g" width="18" height="18" viewBox="0 0 24 24" style="stroke:#ebebf599"><path d="M15 5l-7 7 7 7"/></svg>Wallet</div>
+<div class="ttl">Wallet <span>· Security</span></div>
+<div class="sh"><svg class="g" width="26" height="26" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M15 9.5c-.5-1-1.6-1.5-3-1.5-1.7 0-3 .8-3 2s1.3 1.7 3 2 3 .8 3 2-1.3 2-3 2c-1.4 0-2.5-.5-3-1.5M12 6v2M12 16v2"/></svg>Your account</div>
+<div class="r"><div><b>This iPhone</b><small>Signs on Base · a new key with every send · key 4</small></div></div>
+<div class="r"><div><b>Recovery key</b><small>On · Base and Ethereum · iCloud Keychain</small></div></div>
+<div class="r"><div><b>Signer</b><small>Not set · a wallet you have, for big sends</small></div><em>Add</em></div>
+<div class="r new"><div><b>Private key</b><small>Open this account in another wallet</small></div><em>Export</em></div>
+<div class="r"><div><b>Spend limit</b><small>Off · add a signer to set one</small></div><span class="sw"></span></div>
+<div class="r"><div><b>Round-ups</b><small>Off</small></div><span class="sw"></span></div>
+</div><figcaption><b>1. A row with the keys.</b> "Private key" goes under Signer, with the verb Export, the same shape as every row here. It's also the step Create's key walk (§1457) could offer last: "If Casberi goes away."</figcaption></figure>
+
+<figure><div class="phone">
+<div class="back"><svg class="g" width="18" height="18" viewBox="0 0 24 24" style="stroke:#ebebf599"><path d="M15 5l-7 7 7 7"/></svg>Security</div>
+<div class="ttl">Private key</div>
+<div class="sent">A key that <i>opens this account</i> in another wallet.</div>
+<p class="fact"><b>Whoever has it has your money.</b> You'll see it once.</p>
+<div style="height:10px"></div>
+<div class="fee"><span>Base</span><em>about $0.02</em></div>
+<div class="fee"><span>Ethereum</span><em>about $0.40</em></div>
+<div class="foot"><div class="slab"><svg width="20" height="20" viewBox="0 0 24 24" style="fill:none;stroke:#000;stroke-width:1.8;stroke-linecap:round"><path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3M9 9v1.5M15 9v1.5M12 9v4h-1M9 16c1.7 1.3 4.3 1.3 6 0"/></svg>Create the key</div></div>
+</div><figcaption><b>2. One sentence, one warning, the fee.</b> Create the key is one Face ID: the key is created in memory and added as an owner on each network. <b>It's shown only once that has landed</b>, so you never hold a key that opens nothing.</figcaption></figure>
+
+<figure><div class="phone">
+<div class="toast">Added on Base and Ethereum</div>
+<div class="back" style="opacity:0">.</div>
+<div class="ttl">Your private key</div>
+<div class="key hid"><span>4f3a9c1e7b20d58a 6e91f0c3b7d24a85 0c6e2f19a8b37d4e 51f0a9c2e8b6d307</span><div class="hold"><svg class="g" width="28" height="28" viewBox="0 0 24 24" style="stroke:#fff"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>Hold to show<small>Nobody nearby?</small></div></div>
+<div class="tiles"><div class="t"><svg class="g" width="30" height="30" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/></svg>Copy</div><div class="t"><svg class="g" width="30" height="30" viewBox="0 0 24 24"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><path d="M14 14h2v2h-2zM18 18h2v2h-2zM18 14h2M14 18h2"/></svg>QR</div></div>
+<div class="step"><i>1</i><div>Import it into any wallet<small>As a private key. It shows empty; that's expected.</small></div></div>
+<div class="step"><i>2</i><div>Open app.safe.global with that wallet<small>Your account and your money are there.</small></div></div>
+<div class="foot"><div class="slab">I saved it</div><div class="slab ghost">Remove the key</div></div>
+</div><figcaption><b>3. Shown once, behind a hold.</b> Copy clears after 60 seconds; QR is for a wallet on another device. Two steps say how to use it. Remove the key takes it off the account if you didn't save it.</figcaption></figure>
+
+<figure><div class="phone">
+<div class="back"><svg class="g" width="18" height="18" viewBox="0 0 24 24" style="stroke:#ebebf599"><path d="M15 5l-7 7 7 7"/></svg>Wallet</div>
+<div class="ttl">Wallet <span>· Security</span></div>
+<div class="sh"><svg class="g" width="26" height="26" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M15 9.5c-.5-1-1.6-1.5-3-1.5-1.7 0-3 .8-3 2s1.3 1.7 3 2 3 .8 3 2-1.3 2-3 2c-1.4 0-2.5-.5-3-1.5M12 6v2M12 16v2"/></svg>Your account</div>
+<div class="r"><div><b>This iPhone</b><small>Signs on Base · a new key with every send · key 4</small></div></div>
+<div class="r"><div><b>Recovery key</b><small>On · Base and Ethereum · iCloud Keychain</small></div></div>
+<div class="r"><div><b>Signer</b><small>Not set · a wallet you have, for big sends</small></div><em>Add</em></div>
+<div class="r"><div><b>Private key</b><small>…a3f1 · Base and Ethereum</small></div><em>Remove</em></div>
+<div class="r"><div><b>Spend limit</b><small>Off · add a signer to set one</small></div><span class="sw"></span></div>
+<div class="r"><div><b>Round-ups</b><small>Off</small></div><span class="sw"></span></div>
+</div><figcaption><b>4. Afterwards.</b> The key's address and where it works, read from the chain, like the recovery key's line. Remove is one Face ID.</figcaption></figure>
+
+</div>
+
+<h1 class="alt" style="font-size:20px">With a spend limit on, the key can't act alone</h1>
+<div class="rowx">
+<figure><div class="phone">
+<div class="back"><svg class="g" width="18" height="18" viewBox="0 0 24 24" style="stroke:#ebebf599"><path d="M15 5l-7 7 7 7"/></svg>Security</div>
+<div class="ttl">Private key</div>
+<div class="sent">A key that <i>opens this account</i> in another wallet, <i>with your Signer</i>.</div>
+<p class="fact"><b>Whoever has both has your money.</b> You'll see it once.</p>
+<div style="height:10px"></div>
+<div class="fee"><span>Base</span><em>about $0.02</em></div>
+<div class="foot"><div class="slab">Create the key</div></div>
+</div><figcaption><b>5. Spend limit on.</b> The account needs two keys, and adding one never lowers that (§1456 item 3). The sentence says "with your Signer"; creating it asks the Signer too.</figcaption></figure>
+<div style="flex:1;min-width:280px;max-width:560px">
+<p class="desc"><b>What this settles and what it doesn't.</b></p>
+<p class="desc">• <b>A private key, not a phrase</b> (your call). Every major wallet imports one, and it's the same key a phrase would derive, without the 12 words.</p>
+<p class="desc">• <b>Only Safe's contracts</b> (§1380): it's one more owner via <code>addOwnerWithThreshold</code>, which the account already does for the Signer.</p>
+<p class="desc">• <b>Robinhood:</b> left off until we confirm Safe's app opens accounts there. Otherwise the key would be an owner of something no other wallet can reach.</p>
+<p class="desc">• <b>Corrects §1421 item 2.</b> The recovery key is a raw Keychain key, not a passkey Safe's app can find, so it was never the way out.</p>
+<p class="desc">• <b>Fee:</b> it needs a little ETH on each network, like setting up the recovery key. With none, the row says "with your first send" (§1457 item 4).</p>
+</div>
+</div>
+</main>
