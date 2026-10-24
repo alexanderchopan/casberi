@@ -2725,6 +2725,10 @@ struct Composer: View {
             // together, right here, so it can only ever govern the ask it was
             // set for.
             let stayKeyed = forceKeyedThisAsk || (conversationIsKeyed && keyAvailable)
+            // An explicit "Ask <agent>" (the chip, or the agent picked as
+            // where a send goes, which routes through `askDirectly()`) is
+            // owed its failure; only a follow-up falls back (prd §1502).
+            let askedExplicitly = forceKeyedThisAsk
             forceKeyedThisAsk = false
             // Pin who answers, for `activeAskAgent` — see `askWithKey()` for
             // why this is resolved here rather than in the capsule's body.
@@ -2855,18 +2859,24 @@ struct Composer: View {
                         // identical reason.
                         conversationIsKeyed = true
                     case .failure(let failure):
-                        // The agent didn't answer, so the on-device model
-                        // does — and the badge correctly reads "on this
-                        // iPhone", because that's who actually answered.
                         keyedCurrent = false
-                        if case .nothingKept = failure {
-                            // Nothing kept is nothing for EITHER model to
-                            // answer over: the free answer would say "Nothing
-                            // here yet" under the phone's badge, and the
-                            // person who tapped Ask <agent> would never learn
-                            // the agent was not asked (2026-10-24, a tester's
-                            // "my logs show nothing"). The failure's own line,
-                            // as `askWithKey()` draws every failure.
+                        // AN EXPLICIT ASK IS OWED ITS FAILURE (prd §1502).
+                        // A tapped "Ask <agent>" that fails — no model chosen,
+                        // the server unreachable, a timeout, a refusal — says
+                        // so in the failure's own line, as `askWithKey()`
+                        // draws every failure. It used to fall back to the
+                        // phone's answer under the phone's badge, so a person
+                        // whose server never saw a request read a normal
+                        // answer and could not tell their agent was not asked
+                        // (2026-10-24, a tester: "nothing is hitting my local
+                        // server"). Nothing kept is nothing for either model
+                        // to answer over, so it says so on a follow-up too.
+                        // Only a follow-up's other failures fall back: the
+                        // phone still knows the corpus, it just lacks the
+                        // keyed turn, and its badge says who answered.
+                        var owedItsLine = askedExplicitly
+                        if case .nothingKept = failure { owedItsLine = true }
+                        if owedItsLine {
                             answerFailed = true
                             finalDoc = ["root = Stack([w])", "w = Insight(\"\(failure.line)\")"]
                         } else {

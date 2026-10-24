@@ -45,6 +45,16 @@ grep -q 'return .failure(.nothingKept(agent: provider?.agent' "$SHELL_FILE" \
   || { echo "✗ an empty corpus no longer fails as nothingKept — the composer will tick an answer nobody was asked for"; exit 1; }
 grep -q 'case .nothingKept(let agent):' "$ANSWER" \
   || { echo "✗ nothingKept has no sentence of its own"; exit 1; }
+# An explicit ask is owed its failure (prd §1502, a tester: "nothing is hitting
+# my local server"): read before the flag clears, and drawn, never the phone's
+# answer under the phone's badge. Only a follow-up falls back.
+COMPOSER_FILE="Casberi/Casberi/Shell/Composer.swift"
+awk '/let stayKeyed = forceKeyedThisAsk/{on=1} on && /let askedExplicitly = forceKeyedThisAsk/{seen=1} on && /forceKeyedThisAsk = false/{ok=seen; exit} END{exit !ok}' "$COMPOSER_FILE" \
+  || { echo "✗ the explicit ask is read after its flag clears — every ask reads as a follow-up and falls back"; exit 1; }
+grep -q 'var owedItsLine = askedExplicitly' "$COMPOSER_FILE" \
+  || { echo "✗ a failed explicit agent ask falls back to the phone's answer again"; exit 1; }
+grep -q 'if case .nothingKept = failure { owedItsLine = true }' "$COMPOSER_FILE" \
+  || { echo "✗ nothing kept no longer says so on a follow-up"; exit 1; }
 grep -q 'system = systemPrompt(tools: false)' "$ANSWER" \
   || { echo "✗ the tool-less retry still tells the model to use tools"; exit 1; }
 grep -q 'OwnModel.rememberToolless(address: address, model: wire.model)' "$ANSWER" \

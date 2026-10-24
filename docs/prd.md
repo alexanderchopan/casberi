@@ -68430,3 +68430,13 @@ The rule under all of it: **every page shows every account at once, and the acco
 9. `your-account-selftest.sh` holds the mechanism (no ladder, the one rung, the wide offer, the wrap, the shrink) and the walk's order (the limit only with a co-signer, round-ups always, Created last, Done closing Move).
 
 **Not done:** Create itself cannot run on the simulator — it has no Secure Enclave, and `YourAccountKey.create` refuses (`enclaveRefused`) rather than make a weaker key — so the walk was seen through `-movePreview keys`, and the Create → walk hand-off is unseen. "Couldn't create the account on this device" says nothing of why; on a phone it means Face ID or a passcode is not set up, and the line should say so — not changed here.
+
+## §1502 — An explicit agent ask that fails says so; only a follow-up falls back to the phone (amends the 2026-07-21 keyed-follow-up fallback and 2026-10-24's nothing-kept line; user, 2026-10-24, on a tester's "i'm updated but nothing is hitting my local server … it sees my models … but requests aren't going through": "make every failure of an explicit agent ask show its own line, keep the fallback only for follow-ups") — BUILT
+
+1. **An explicit ask is owed its failure.** "Ask <agent>" (the chip, or the agent picked as where a send goes, both through `askDirectly()`) that fails — no model chosen, the server unreachable, a timeout, an error status, a refusal — draws the failure's own line (`AgentAnswerFailure.line`), as `askWithKey()` always did. Before, `commit()`'s keyed branch answered on the phone under the phone's badge for every failure but nothing kept, so a person whose server never saw a request read an ordinary answer and could not tell their agent was not asked.
+2. **Only a follow-up falls back.** A typed follow-up in a conversation already on an agent keeps the 2026-07-21 fallback for every failure but nothing kept: the phone still knows the corpus, and its badge says who answered. Nothing kept says so on either.
+3. `askedExplicitly` is read from `forceKeyedThisAsk` before that flag clears; `own-model-selftest.sh` holds the order and both rules.
+
+**Seen** on the simulator against a stand-in server that lists one model and answers every question 500: the server logged `POST /v1/chat/completions`, and the composer drew "Your agent had trouble answering (error 500) — try again." over no phone answer.
+
+**Not done:** "Couldn't reach your agent — check your connection." is the unreachable line for every agent; for Your own model the useful words are the server's address (a LAN server off, or the phone off its network). Not changed here.
