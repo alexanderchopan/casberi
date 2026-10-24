@@ -204,6 +204,7 @@ Privacy and Reddit. Frames and Logos are the devnets that remain.
 - Device-side guarantees: device-only keys, the credential tripwire, the receipts ledger, clipboard etiquette (§277).
 - "What this app reaches" and "what it reached" are one pushed screen, one row per service, filtered by category (§967).
 - Every hand-off of the corpus to a model passes `AccountReaders` (§639).
+- Every request naming a wallet goes through Tor on iOS, always on, never optional, one circuit per wallet; the Feed's apps never do. Hosts measured refusing every exit (`refusesTor`: Relay, Tenderly, Optimism's and Gnosis's RPCs, thirdweb, GeckoTerminal) are read directly and named on What this app reaches, which counts what went through Tor; no Tor is an outage, never a direct read. Your account says "Tor · On", Move's swap foot "not through Tor"; the Mac has no Tor yet and says so (§1495).
 
 ### 18. Mac and iPad
 - The Mac takes its own type scale (`macScale` 0.88). A walked row can be taken with ⌘C, Space or drag (§631).
@@ -237,7 +238,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1630 of 1699 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1631 of 1700 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1869,6 +1870,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1490 — No tab wears a badge: the Wallet's dot and Library's broken-app ring are deleted
 - §1491 — Following and Markets stand on the Wallet's All only (amends §1480 item 2)
 - §1492 — One account with nothing on Home says so (amends §1491)
+- §1495 — Wallet reads go through Tor: always on, one circuit a wallet, the refusers named
 
 ## Dead rulings → what replaced them (generated)
 

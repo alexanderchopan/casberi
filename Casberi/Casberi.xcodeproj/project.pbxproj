@@ -13,6 +13,7 @@
 		CE0000000000000000000001 /* WalletConnect in Frameworks */ = {isa = PBXBuildFile; productRef = CE0000000000000000000002 /* WalletConnect */; };
 		CE0000000000000000000005 /* ReownAppKit in Frameworks */ = {isa = PBXBuildFile; platformFilter = ios; productRef = CE0000000000000000000004 /* ReownAppKit */; };
 		CE0000000000000000000007 /* P256K in Frameworks */ = {isa = PBXBuildFile; productRef = CE0000000000000000000006 /* P256K */; };
+		CE000000000000000000000B /* TorShim in Frameworks */ = {isa = PBXBuildFile; platformFilter = ios; productRef = CE000000000000000000000A /* TorShim */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -167,6 +168,7 @@
 				CE0000000000000000000001 /* WalletConnect in Frameworks */,
 				CE0000000000000000000005 /* ReownAppKit in Frameworks */,
 				CE0000000000000000000007 /* P256K in Frameworks */,
+				CE000000000000000000000B /* TorShim in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -262,6 +264,7 @@
 			packageProductDependencies = (
 				CE0000000000000000000002 /* WalletConnect */,
 				CE0000000000000000000004 /* ReownAppKit */,
+				CE000000000000000000000A /* TorShim */,
 			);
 			productName = Casberi;
 			productReference = CA0000000000000000000004 /* Casberi.app */;
@@ -420,6 +423,7 @@
 			packageReferences = (
 				CE0000000000000000000003 /* XCRemoteSwiftPackageReference "reown-swift" */,
 				CE0000000000000000000008 /* XCLocalSwiftPackageReference "../Vendor/swift-secp256k1" */,
+				CE0000000000000000000009 /* XCLocalSwiftPackageReference "../Vendor/TorKit" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = CA0000000000000000000003 /* Products */;
@@ -1097,6 +1101,10 @@
 			isa = XCLocalSwiftPackageReference;
 			relativePath = ../Vendor/swift-secp256k1;
 		};
+		CE0000000000000000000009 /* XCLocalSwiftPackageReference "../Vendor/TorKit" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../Vendor/TorKit;
+		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -1114,6 +1122,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = CE0000000000000000000008 /* XCLocalSwiftPackageReference "../Vendor/swift-secp256k1" */;
 			productName = P256K;
+		};
+		CE000000000000000000000A /* TorShim */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = CE0000000000000000000009 /* XCLocalSwiftPackageReference "../Vendor/TorKit" */;
+			productName = TorShim;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

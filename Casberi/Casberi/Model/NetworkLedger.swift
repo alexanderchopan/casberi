@@ -74,6 +74,10 @@ final class NetworkLedger: @unchecked Sendable {
         /// Missing on rows written before this shipped, which decode as nil
         /// (`Optional` uses `decodeIfPresent`) and simply sort as they used to.
         var service: String?
+        /// How many of `count` went through Tor (prd §1495) — what "Through
+        /// Tor" on the list is read from, so it says what happened, not what
+        /// was meant to. Missing on older rows, which read as none.
+        var throughTor: Int?
         var id: String { host }
     }
 
@@ -107,7 +111,7 @@ final class NetworkLedger: @unchecked Sendable {
     /// the person's own input (a feed, a store, a saved link); a host that is
     /// fixed in code belongs in `NetworkReach`, where the static audit can
     /// keep it honest.
-    func record(host: String, as service: String? = nil) {
+    func record(host: String, as service: String? = nil, throughTor: Bool = false) {
         let clean = host.lowercased()
         guard !clean.isEmpty else { return }
         let now = Date()
@@ -115,6 +119,7 @@ final class NetworkLedger: @unchecked Sendable {
         if var existing = entries[clean] {
             existing.count += 1
             existing.last = now
+            if throughTor { existing.throughTor = (existing.throughTor ?? 0) + 1 }
             // Learn an attribution the first time one is offered, and don't
             // let a later unattributed call erase it: one host can be reached
             // by both an attributed path and a generic one (a saved link
@@ -124,7 +129,7 @@ final class NetworkLedger: @unchecked Sendable {
             entries[clean] = existing
         } else {
             entries[clean] = Entry(host: clean, count: 1, first: now, last: now,
-                                   service: service)
+                                   service: service, throughTor: throughTor ? 1 : nil)
         }
         // Claim the flush HERE, while the lock is held. Advancing `lastFlush`
         // inside `flush()` instead let every concurrent request in a
@@ -138,13 +143,13 @@ final class NetworkLedger: @unchecked Sendable {
     }
 
     /// Convenience for the call sites that hold a request rather than a host.
-    func record(_ request: URLRequest, as service: String? = nil) {
-        if let host = request.url?.host() { record(host: host, as: service) }
+    func record(_ request: URLRequest, as service: String? = nil, throughTor: Bool = false) {
+        if let host = request.url?.host() { record(host: host, as: service, throughTor: throughTor) }
     }
 
     /// …and for the ones that hand `URLSession` a bare URL.
-    func record(_ url: URL, as service: String? = nil) {
-        if let host = url.host() { record(host: host, as: service) }
+    func record(_ url: URL, as service: String? = nil, throughTor: Bool = false) {
+        if let host = url.host() { record(host: host, as: service, throughTor: throughTor) }
     }
 
     // MARK: - Reading

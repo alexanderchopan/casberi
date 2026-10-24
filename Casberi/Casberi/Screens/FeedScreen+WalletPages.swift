@@ -89,6 +89,11 @@ extension FeedScreen {
         } else {
             parts.append(String(localized: "Recovery on"))
         }
+        // Already on, never a choice (prd §1495): said beside recovery, the
+        // other protection that is simply there.
+        if TorRoute.available {
+            parts.append(String(localized: "Tor on"))
+        }
         if let facts = YourAccountFacts.current {
             if facts.signers > 0 {
                 parts.append(facts.signers == 1 ? String(localized: "1 signer")

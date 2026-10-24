@@ -348,3 +348,11 @@ Verbatim. CLAUDE.md keeps a one-line index for each, pointing here.
 ## zFi and Tacit (prd §1281, 2026-10-12)
 
 `-zfiOrdersProbe <0x…>` NSLogs `zfiOrders|` one line per live order the wallet holds on zFi's Swapboard (and its closed v1 book), Dutchboard and Floorboard: kind, id, title, escrow, state, "needs you". Read without watching the wallet, one `eth_call` per board on the Wallet's mainnet pool (`ZFiOrders`, pure half `ZFiWire`). The boards are read directly, never through zFi's `SwapboardView`/`FloorboardView` lenses, because the lenses drop expired, frozen and closed orders, which are the ones still holding escrow. Each board keeps maker/seller/bidder in step with the receipt's owner while live and zeroes it on close (Swapboard keeps the maker on a closed order and clears `active` instead), so a filter on that field is the whole ownership rule. Token symbols and decimals are kept in `zfi.tokens.v1` once both are read; an NFT collection has no decimals and is asked again each pass. Tacit is a label only (`Model/Tacit.swift`): pool in/out is Deposited/Withdrew, entrances (zap, wrap forwarders) are Deposited, routers named with no verb. Harness: `zfi-selftest.sh`.
+
+## Moved from CLAUDE.md verbatim (2026-10-24, the 100KB rule)
+
+- **World ID: this phone as an authenticator is BLOCKED in World's app (§787), and the seat (§786) is NOT BUILDABLE (`getPackedAccountData` is zero for a World App wallet; public World Chain RPCs cap `eth_getLogs` at 100 blocks). Do not build from `docs/worldid-seat-spec.md`** → docs/hooks/wallet.md · docs/worldid-authenticator-spec.md · prd §785 · §786 · §787
+
+## Tor (prd §1495, 2026-10-24)
+
+`-torProbe YES` starts Tor (iOS only — the release has no Mac Catalyst slice) and NSLogs `torProbe|`: the connect time and tor's version; Relay's `/chains` over Tor and directly (Relay refuses every exit, so 403 over Tor beside 200 direct proves the request left by Tor); `TorRoute.way` for MEV Blocker; a funnel `eth_chainId` read and how many of that host's receipts went through Tor. `-torProbe fail` stands up the failed state, so Your account's Private reads row says Tor could not connect. Which hosts go through Tor is `NetworkReach`'s `throughTor`/`refusesTor` (measured 2026-10-24); `tor-route-selftest.sh` holds the rule and its use in `IngestSupport.send`.

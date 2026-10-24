@@ -589,13 +589,22 @@ enum IngestSupport {
     /// recorded except which host was contacted; see `NetworkLedger`.
     private static func send(_ request: URLRequest,
                              service: String? = nil) async -> (Data, HTTPURLResponse)? {
-        NetworkLedger.shared.record(request, as: service)
+        // A request naming a wallet goes through Tor (prd §1495, `TorRoute`).
+        let way = TorRoute.way(for: request)
+        let tor: String? = if case .tor(let key) = way { key } else { nil }
+        NetworkLedger.shared.record(request, as: service, throughTor: tor != nil)
         // Alchemy's key is one pool for every install: a 429 there brakes
         // every Alchemy request on this phone, not just the one refused
         // (`AlchemyBrake`, 2026-10-20).
         let braked = AlchemyBrake.brakes(host: request.url?.host)
         if braked { await AlchemyBrake.shared.waitForTurn() }
-        guard let (data, response) = try? await session.data(for: request),
+        let answer: (Data, URLResponse)?
+        if let tor {
+            answer = await torData(for: request, isolation: tor)
+        } else {
+            answer = try? await session.data(for: request)
+        }
+        guard let (data, response) = answer,
               let http = response as? HTTPURLResponse else { return nil }
         if braked { await AlchemyBrake.shared.note(status: http.statusCode) }
         // Whether the bridge is still being let in (2026-08-10). This funnel
@@ -606,6 +615,25 @@ enum IngestSupport {
         BridgeHealth.record(host: request.url?.host, status: http.statusCode,
                             named: service)
         return (data, http)
+    }
+
+    /// Through Tor, and never around it: no Tor is an outage (nil), so the
+    /// wallet stands on its last reading. A 403 is one exit's (measured: Alchemy
+    /// refuses 80.67.167.81 every time, Safe's service one exit in five), so it
+    /// gets one more circuit and then reads as an outage, never as the
+    /// provider's refusal a chain would carry for a week (prd §827b).
+    private static func torData(for request: URLRequest,
+                                isolation key: String) async -> (Data, URLResponse)? {
+        var request = request
+        // Zerion takes 6–45s over Tor for a heavy wallet (measured 2026-10-24).
+        request.timeoutInterval = max(request.timeoutInterval, TorClient.requestTimeout)
+        guard let first = await TorClient.shared.session(isolation: key),
+              let answer = try? await first.data(for: request) else { return nil }
+        guard (answer.1 as? HTTPURLResponse)?.statusCode == 403 else { return answer }
+        guard let second = await TorClient.shared.retrySession(isolation: key),
+              let again = try? await second.data(for: request),
+              (again.1 as? HTTPURLResponse)?.statusCode != 403 else { return nil }
+        return again
     }
 
     /// The funnel, for a caller that must build its own request (prd §803c,

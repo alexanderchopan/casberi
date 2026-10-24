@@ -2830,6 +2830,11 @@ harness "Wallet Permissions rungs self-test" "11 mutations, 10 drift guards" "sc
 
 harness "Zerion lane self-test" "one request at a time, spaced, a 429 waited out on schedule, 4 mutations" "scripts/zerion-lane-selftest.sh" "the zerion lane self-test failed — run scripts/zerion-lane-selftest.sh"
 harness "Alchemy brake self-test" "a 429 holds every Alchemy request, then lets them go spaced, 5 mutations" "scripts/alchemy-brake-selftest.sh" "the alchemy brake self-test failed — run scripts/alchemy-brake-selftest.sh"
+# Tor (prd §1495): every failure here is silent. A wallet read that slipped off
+# Tor looks exactly like one that didn't, a Feed app routed through Tor shows
+# up as a locked-out session days later, and a fallback to a direct read is
+# invisible by design. The rule, its use in the funnel, and no failover.
+harness "Tor route self-test" "wallets through Tor on their own circuits, refusers and Feed apps direct, 4 mutations" "scripts/tor-route-selftest.sh" "the tor route self-test failed — run scripts/tor-route-selftest.sh"
 # The ask capsule (prd §543) — the one control that says who will answer, and
 # the deletions that made it the only one. Every failure renders as a perfectly
 # ordinary capsule: an agent silently missing (a stale recency entry outranking

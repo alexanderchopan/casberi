@@ -1940,6 +1940,13 @@ struct MoveSentence: View {
                         .dsText(.label12)
                         .foregroundStyle(DS.textTertiary)
                     Self.mark(of: "Relay")
+                    // Relay refuses every Tor exit (measured, prd §1495): the
+                    // one wallet act that leaves Tor says so where it happens.
+                    if TorRoute.available {
+                        Text("· not through Tor")
+                            .dsText(.label12)
+                            .foregroundStyle(DS.textTertiary)
+                    }
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.top, DS.Space.s1)

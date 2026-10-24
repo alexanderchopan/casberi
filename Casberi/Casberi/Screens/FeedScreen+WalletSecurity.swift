@@ -80,6 +80,9 @@ extension FeedScreen {
                         cardScrollTarget = SecurityAnchor.account.id
                         chrome.walletScrollRequest = nil
                     }
+                // Every wallet's reads, not only this account's (prd §1495).
+                TorFactRow()
+                    .walletStackRow()
             }
         }
     }

@@ -76,20 +76,51 @@ struct NetworkReachScreen: View {
         let endpoint: NetworkReach.Endpoint
         let requests: Int
         let last: Date?
+        /// How many of `requests` went through Tor, from the ledger (prd §1495).
+        var throughTor = 0
         var id: String { endpoint.service }
     }
 
     private var rows: [ServiceRow] {
         var requests: [String: Int] = [:]
+        var tor: [String: Int] = [:]
         var last: [String: Date] = [:]
         for receipt in declared {
             guard let service = receipt.service else { continue }
             requests[service, default: 0] += receipt.entry.count
+            tor[service, default: 0] += receipt.entry.throughTor ?? 0
             last[service] = max(last[service] ?? .distantPast, receipt.entry.last)
         }
         return NetworkReach.endpoints.map {
-            ServiceRow(endpoint: $0, requests: requests[$0.service] ?? 0, last: last[$0.service])
+            ServiceRow(endpoint: $0, requests: requests[$0.service] ?? 0, last: last[$0.service],
+                       throughTor: tor[$0.service] ?? 0)
         }
+    }
+
+    /// **WHAT WENT THROUGH TOR (prd §1495)**, read off the receipts rather than
+    /// the rule, so the line says what happened: every request, some of them,
+    /// or — on the Mac, which has no Tor yet — none. The hosts measured
+    /// refusing Tor are named, because they are read directly.
+    private func torLine(_ row: ServiceRow) -> String? {
+        guard row.endpoint.throughTor else { return nil }
+        var line: String
+        if !TorRoute.available {
+            line = String(localized: "Direct on this Mac · Tor isn't here yet")
+        } else if row.requests == 0 {
+            line = String(localized: "Through Tor")
+        } else if row.throughTor == row.requests {
+            line = String(localized: "All through Tor")
+        } else {
+            line = String(localized: "\(row.throughTor) of \(row.requests) through Tor")
+        }
+        let refusers = row.endpoint.refusesTor
+        if refusers.count == 1, let host = refusers.first {
+            line += " · " + String(localized: "\(host) refuses Tor, so it's read directly")
+        } else if refusers.count > 1 {
+            let hosts = refusers.formatted(.list(type: .and))
+            line += " · " + String(localized: "\(hosts) refuse Tor, so they're read directly")
+        }
+        return line
     }
 
     /// The chip's category, then the four states a service can be in. A
@@ -468,6 +499,12 @@ struct NetworkReachScreen: View {
                     Text(stateLine(state))
                         .dsText(.subhead12)
                         .foregroundStyle(DS.textPrimary)
+                }
+                if let tor = torLine(row) {
+                    Text(verbatim: tor)
+                        .dsText(.subhead12).monospacedDigit()
+                        .foregroundStyle(DS.textPrimary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
                 Text(row.endpoint.purpose)
                     .dsText(.subhead12).foregroundStyle(DS.textSecondary)
