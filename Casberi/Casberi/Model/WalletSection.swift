@@ -2,22 +2,26 @@ import Foundation
 
 /// The wallet room's SCOPE — which of its pages is on screen (prd §483).
 ///
-/// **FOUR TILES, EVERY LIST BEHIND A DOOR (prd §1480, user: "i want to totally
+/// **FIVE TILES, EVERY LIST BEHIND A DOOR (prd §1480, user: "i want to totally
 /// refactor wallet. it has the right things, but has redundancy, shows too
-/// much").** The tiles are Home · Activity · Holdings · Spending, and each
-/// answers one question:
+/// much"; Markets a tile again by §1498).** The tiles are Home · Activity ·
+/// Holdings · Markets · Spending, and each answers one question:
 ///
-///   • **Home** is the overview: the balance and its line, then six doors —
-///     Your account, Following, Needs you, Permissions, Threats, Markets.
+///   • **Home** is the overview: the balance and its line, then five doors —
+///     Your account, Following, Needs you, Permissions, Threats.
 ///   • **Activity** is the stream: every transaction by day.
 ///   • **Holdings** is what the money is: Accounts, Tokens, Positions, Apps,
 ///     NFTs, each a door.
+///   • **Markets** is what you watch, then the companies behind your apps
+///     (§1498, user: "lets bring the tile back but keep watchlist on the with
+///     the tile not on home"). It is yours, not an account's, so one account
+///     picked dims it, as it dims Spending.
 ///   • **Spending** is a reading of Activity: Subscriptions, Places, Fees.
 ///
 /// Security is deleted (user: "we will break those out into what they are"):
 /// your account's controls are Your account's, approvals and delegations are
 /// Permissions, the three kinds of flagged transfer are Threats, and a Safe
-/// signature waiting on you is a Needs you row. Markets is a page off Home.
+/// signature waiting on you is a Needs you row.
 ///
 /// **A PAGE IS A SCOPE WITH NO TILE.** Subscriptions was the first (§1232);
 /// every door opens one. A page names the page it opened from (`parent`), and
@@ -37,6 +41,9 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
     case holdings
     /// A reading of Activity: subscriptions, places, fees (prd §1468, §1480).
     case spending
+    /// What you watch, and the companies behind your apps (prd §1480 item 7;
+    /// a tile again by §1498, a door off Home before it).
+    case markets
 
     // ── Home's doors ─────────────────────────────────────────────────────────
     /// The account the app made you, and its controls (prd §1480 item 6).
@@ -49,8 +56,6 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
     case permissions
     /// Address poisoning, fake tokens, fake transfers.
     case threats
-    /// What you watch, and the companies behind your apps (prd §1480 item 7).
-    case markets
 
     // ── Holdings' doors ──────────────────────────────────────────────────────
     /// Each account's balance: the wallets and the accounts apps hold.
@@ -71,13 +76,14 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
 
     /// The tiles, in the publication's order: the ones that are never empty
     /// first (§483), so the strip's head is the same on every wallet. They
-    /// DRAW A–Z after Home — Activity, Holdings, Spending (§995). `allCases`
-    /// adds the pages.
-    static let order: [WalletSection] = [.home, .holdings, .activity, .spending]
+    /// DRAW A–Z after Home — Activity, Holdings, Markets, Spending (§995).
+    /// `allCases` adds the pages.
+    static let order: [WalletSection] = [.home, .holdings, .markets, .activity, .spending]
 
-    /// Home's doors, in the row's order (prd §1480 item 2).
+    /// Home's doors, in the row's order (prd §1480 item 2; Markets left for
+    /// its tile, §1498).
     static let homeDoors: [WalletSection] = [.yourAccount, .following, .needsYou,
-                                             .permissions, .threats, .markets]
+                                             .permissions, .threats]
     /// Holdings' doors (prd §1480 item 4).
     static let holdingsDoors: [WalletSection] = [.holdingAccounts, .positions, .apps, .nfts]
     /// Spending's doors (prd §1480 item 5).

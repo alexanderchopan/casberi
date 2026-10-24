@@ -53,28 +53,31 @@ func check(_ ok: Bool, _ what: String) {
 }
 
 // ORDER is a ruling, not an accident of declaration.
-check(WalletSection.order == [.home, .holdings, .activity, .spending],
-      "order is home → holdings → activity → spending (prd §1480)")
-// **FOUR TILES (prd §1480).** Security is deleted — its parts are Your
+check(WalletSection.order == [.home, .holdings, .markets, .activity, .spending],
+      "order is home → holdings → markets → activity → spending (prd §1480, §1498)")
+// **FIVE TILES (prd §1480, §1498).** Security is deleted — its parts are Your
 // account, Permissions and Threats, each a page off Home — and Markets is a
-// page off Home. A remembered "security" must resolve to Home, never to a
-// page that claims to be it.
+// tile again, never a door off Home (§1498). A remembered "security" must
+// resolve to Home, never to a page that claims to be it.
 for gone in ["security", "comingUp", "risk", "watch", "cards", "accounts"] {
     check(WalletSection(rawValue: gone) == nil, "\(gone) is not a scope (prd §1107, §1480)")
 }
-check(WalletSection.order.count == 4, "the wallet has four tiles (prd §1480)")
-check(!WalletSection.order.contains(.markets), "markets is a page off Home, not a tile (prd §1480)")
+check(WalletSection.order.count == 5, "the wallet has five tiles (prd §1498)")
+check(WalletSection.order.contains(.markets) && WalletSection.markets.isTile,
+      "markets is a tile, not a page off Home (prd §1498)")
+check(!WalletSection.homeDoors.contains(.markets), "Home draws no Markets door — its tile is the one way in (prd §1498)")
+check(WalletSection.markets.label == "Markets", "the tile reads Markets; its list is the Watchlist (prd §1498)")
 check(WalletSection.activity.label == "Activity", "the stream's tile reads Activity (prd §1480)")
 check(WalletSection.spending.label == "Spending", "the tile reads Spending — Home's list's own word (prd §1201)")
-// **EVERY OTHER CASE IS A PAGE BEHIND A DOOR (prd §1480).** Home's six,
+// **EVERY OTHER CASE IS A PAGE BEHIND A DOOR (prd §1480).** Home's five,
 // Holdings' four and Spending's three; together with the tiles they are
 // every case, each once, so a new scope cannot be silently unlisted.
 let doors = WalletSection.homeDoors + WalletSection.holdingsDoors + WalletSection.spendingDoors
 check(Set(WalletSection.order).union(doors) == Set(WalletSection.allCases)
       && WalletSection.order.count + doors.count == WalletSection.allCases.count,
       "the tiles and the doors list every case once (prd §1480)")
-check(WalletSection.homeDoors == [.yourAccount, .following, .needsYou, .permissions, .threats, .markets],
-      "Home's doors are Your account, Following, Needs you, Permissions, Threats, Markets (prd §1480)")
+check(WalletSection.homeDoors == [.yourAccount, .following, .needsYou, .permissions, .threats],
+      "Home's doors are Your account, Following, Needs you, Permissions, Threats (prd §1480, §1498)")
 check(WalletSection.holdingsDoors == [.holdingAccounts, .positions, .apps, .nfts],
       "Holdings' pages are Accounts, Positions, Apps, NFTs (Tokens is its sheet) (prd §1480)")
 check(WalletSection.spendingDoors == [.subscriptions, .places, .fees],
@@ -202,11 +205,11 @@ mutate() {
 }
 
 mutate "a conditional tile moved ahead of an unconditional one (the strip reflows)" \
-  's/\[\.home, \.holdings, \.activity, \.spending\]/[.home, .activity, .holdings, .spending]/'
+  's/\[\.home, \.holdings, \.markets, \.activity, \.spending\]/[.home, .holdings, .activity, .markets, .spending]/'
 mutate "spending dropped from the row, its case still compiling (prd §1468)" \
-  's/\[\.home, \.holdings, \.activity, \.spending\]/[.home, .holdings, .activity]/'
+  's/\[\.home, \.holdings, \.markets, \.activity, \.spending\]/[.home, .holdings, .markets, .activity]/'
 mutate "home no longer leads" \
-  's/\[\.home, \.holdings, \.activity/[.holdings, .home, .activity/'
+  's/\[\.home, \.holdings, \.markets/[.holdings, .home, .markets/'
 mutate "resolve falls back to the first present scope instead of home" \
   's/guard let wanted, present\.contains\(wanted\) else \{ return \.home \}/guard let wanted, present.contains(wanted) else { return present.first ?? .home }/'
 mutate "the retired Security tile comes back as a scope (prd §1480)" \
@@ -220,11 +223,11 @@ mutate "an empty page left with nothing to say — the dead control this ruling 
 mutate "a Holdings page goes back to Home instead of Holdings (prd §1480 item 9)" \
   's/if Self\.holdingsDoors\.contains\(self\) \{ return \.holdings \}/if Self.holdingsDoors.contains(self) { return .home }/'
 mutate "a door dropped from Home's row, its page unreachable (prd §1480)" \
-  's/\.permissions, \.threats, \.markets\]/.permissions, .markets]/'
+  's/\.permissions, \.threats\]/.permissions]/'
 mutate "what you follow is named Accounts again, beside Holdings' Accounts (prd §1480)" \
   's/case \.following:       return String\(localized: "Following"\)/case .following:       return String(localized: "Accounts")/'
-mutate "Markets made a tile again (prd §1480)" \
-  's/\[\.home, \.holdings, \.activity, \.spending\]/[.home, .holdings, .markets, .activity, .spending]/'
+mutate "Markets sent back to a door off Home (prd §1498)" \
+  's/\[\.home, \.holdings, \.markets, \.activity, \.spending\]/[.home, .holdings, .activity, .spending]/; s/\.permissions, \.threats\]/.permissions, .threats, .markets]/'
 mutate "home loses its empty copy again, so the wallet room says nothing when nothing came back (prd §761)" \
   's/case \.home:            return String\(localized: "No balance yet"\)/case .home:            return nil/'
 mutate "home's empty copy promises a load state it cannot know (§83)" \
@@ -254,6 +257,21 @@ deny()  { have "$1"; if grep -q -- "$2" "$work/$1.bare"; then fail "drift: $3"; 
 
 guard MainSurface.swift "extension WalletSection: DSSectionScope" \
   "the conformance moved — it must stay OUT of the Foundation-only model file"
+
+# **MARKETS IS A TILE AGAIN (prd §1498, user: "lets bring the tile back but
+# keep watchlist on the with the tile not on home").** Home draws no Markets
+# door, and one account picked dims the tile, as it dims Spending: what you
+# watch is nobody's account (§1491).
+PAGES="Casberi/Casberi/Screens/FeedScreen+WalletPages.swift"
+WROOM="Casberi/Casberi/Screens/FeedScreen+WalletRoom.swift"
+SHAPED="Casberi/Casberi/Screens/FeedScreen+ShapedSections.swift"
+for f in "$PAGES" "$WROOM" "$SHAPED"; do strip_comments "$f" > "$work/$(basename $f).bare"; done
+deny FeedScreen+WalletPages.swift "walletDoor(.markets" \
+  "Home draws a Markets door again — Markets is a tile (prd §1498)"
+guard FeedScreen+WalletRoom.swift "\.fees, \.markets," \
+  "an app pick no longer dims the Markets tile (prd §1498)"
+guard FeedScreen+ShapedSections.swift "\[\.spending, \.places, \.fees, \.markets\]" \
+  "one address picked no longer dims the Markets tile (prd §1498)"
 
 # **MARKETS OPENS IN PLACE (prd §1337, retiring §1232's own page; user: "it
 # should open in place not the overlay. it's jarring").** The Wallet's FeedScreen

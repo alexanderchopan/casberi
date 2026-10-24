@@ -577,7 +577,9 @@ extension FeedScreen {
         // together), so one app's page cannot stand on it (§1468).
         // Permissions, Threats and Your account are an address's readings,
         // which an app pick clears (§1067), as Security was.
-        var out: Set<WalletSection> = [.spending, .places, .fees, .permissions, .threats, .yourAccount]
+        // Markets is what YOU watch, no account's (§1498, after §1491).
+        var out: Set<WalletSection> = [.spending, .places, .fees, .markets,
+                                       .permissions, .threats, .yourAccount]
         // Privy's apps are Holdings' too (§1124), with money or without, and
         // so is an account an app read (§1341): every state stands there.
         if walletScopeIsEmpty(.holdings),

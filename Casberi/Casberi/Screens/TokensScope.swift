@@ -29,7 +29,8 @@ struct TokensScope: DSTileScope {
     var label: String {
         if self == .alerts { return String(localized: "Alerts") }
         if self == .new { return String(localized: "New") }
-        return category ?? String(localized: "Following")
+        // The list is the Watchlist; the tile is Markets (prd §1498).
+        return category ?? String(localized: "Watchlist")
     }
 
     var glyph: String {
