@@ -1,7 +1,7 @@
 #!/bin/zsh
 # Casberi needs-you self-test — Needs you lives in its place, Day is dated
-# rows, and the Feed has no Wallet section: the Wallet's asks light its tab
-# (prd §1413, §1489; was day-needs-selftest.sh, prd §1327 item 9):
+# rows, the Feed has no Wallet section, and no tab wears a badge
+# (prd §1413, §1489, §1490; was day-needs-selftest.sh, prd §1327 item 9):
 #
 #   Casberi/Casberi/Model/WalletNeedsYou.swift  (compiled whole against stubs
 #                                                of the names it reads)
@@ -16,8 +16,8 @@
 # rule. Since prd §1344 it also holds Day's own page deleted: its tiles,
 # Coming up, the page's Needs you card, and since §1413 the week strip and the
 # gather, model included. Since §1489 it holds the Feed's Wallet section
-# deleted (its Needs you and its moves) and the tab's dot reading the
-# Wallet's one rule.
+# deleted (its Needs you and its moves); since §1490 it holds the bar and
+# the rail bare: no dot on the Wallet, no ring on Library.
 #
 # Pure, local, deterministic. Exit non-zero on failure. `--self-test` (and
 # every plain run) also proves each check can fail: plausible mutations of the
@@ -26,7 +26,6 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 WALLET="Casberi/Casberi/Model/WalletNeedsYou.swift"
-SOURCE="Casberi/Casberi/Model/WalletNeedsSource.swift"
 ROOM="Casberi/Casberi/Screens/FeedScreen+MergedRoom.swift"
 WROOM="Casberi/Casberi/Screens/FeedScreen+WalletRoom.swift"
 WHOME="Casberi/Casberi/Screens/FeedScreen+WalletHome.swift"
@@ -45,7 +44,7 @@ RSHELL="Casberi/Casberi/Shell/RootShell.swift"
 SURFACE="Casberi/Casberi/Shell/MainSurface.swift"
 CAL="Casberi/Casberi/Screens/WalletCalendar.swift"
 HOME_SCOPE="Casberi/Casberi/Model/HomeScope.swift"
-for f in "$WALLET" "$SOURCE" "$ROOM" "$WROOM" "$WHOME" "$WPAGES" "$TABS" "$RAIL" "$INFEED" "$FEED" "$MAKE" \
+for f in "$WALLET" "$ROOM" "$WROOM" "$WHOME" "$WPAGES" "$TABS" "$RAIL" "$INFEED" "$FEED" "$MAKE" \
          "$SECTIONS" "$SCROLL" "$SHAPED" "$GLYPHS" "$CHROME" "$RSHELL" "$SURFACE" "$CAL" "$HOME_SCOPE"; do
   [[ -f "$f" ]] || { echo "✗ $f not found"; exit 1; }
 done
@@ -89,24 +88,26 @@ day_page_gone . || exit 1
 # Wiring the compiled functions cannot prove about themselves.
 grep -q 'WalletNeedsYou.waiting(' "$WROOM" \
   || { echo "✗ the Wallet's Home no longer asks WalletNeedsYou — the Feed and the Wallet can disagree"; exit 1; }
-grep -q 'WalletNeedsYou.waiting(' "$SOURCE" \
-  || { echo "✗ the Wallet tab's dot no longer asks the Wallet's own rule (prd §1489)"; exit 1; }
-grep -q 'let ids = await waiting(rows, safePending: safe, now: .now)' "$SOURCE" \
-  || { echo "✗ WalletNeedsSource.count no longer counts through its own waiting (prd §1489)"; exit 1; }
 grep -q '.task(id: feedSectionsKey)' "$FEED" \
   || { echo "✗ Day's and Notes' rows are no longer read in a task (prd §628)"; exit 1; }
-# The tab's dot (prd §1489): read off the corpus in the shell's task, never a
-# body (§628), and worn by the Wallet's tab on the phone's bar and the rail.
-grep -q 'let asks = await WalletNeedsSource.count(context: modelContext)' "$SURFACE" \
-  || { echo "✗ the shell no longer reads the Wallet's asks for its tab (prd §1489)"; exit 1; }
-grep -B 3 'WalletNeedsSource.count(context: modelContext)' "$SURFACE" | grep -c '.task(id: corpusRevision)' >/dev/null \
-  || { echo "✗ the Wallet's asks are read somewhere other than the corpus task (prd §628, §1489)"; exit 1; }
-grep -q 'modifier(WalletAlarm(active: tab == .wallet))' "$TABS" \
-  || { echo "✗ the phone's Wallet tab no longer wears the dot (prd §1489)"; exit 1; }
-grep -q 'modifier(WalletAlarm(active: tab == .wallet))' "$RAIL" \
-  || { echo "✗ the Mac rail's Wallet tile no longer wears the dot (prd §1489, §1402)"; exit 1; }
-grep -q 'chrome.walletAsks > 0 || RecoveryKeyNudge.shown || OutsideKeyNudge.shown' "$TABS" \
-  || { echo "✗ the Wallet's dot no longer lights for an ask and the key nudges (prd §1489)"; exit 1; }
+# No tab wears a badge (prd §1490, user: "there should be no badge"): no dot
+# on the Wallet, no ring on Library, on the phone's bar or the Mac's rail, and
+# nothing left reading the Wallet's asks for one. Needs you is the Wallet
+# Home's list; a broken app says so on its own row.
+TAB_BADGE='LibraryAlarm|WalletAlarm|walletAsks|WalletNeedsSource|DS\.attention|\.badge\('
+tabs_bare() { # $1 a root holding the files below; prints the breach and fails
+  local root="$1" f
+  [[ -e "$root/Casberi/Casberi/Model/WalletNeedsSource.swift" ]] \
+    && { echo "✗ WalletNeedsSource.swift is back — nothing counts the Wallet's asks for a tab (prd §1490)"; return 1; }
+  for f in "$TABS" "$RAIL" "$CHROME" "$SURFACE"; do
+    if grep -v '^[[:space:]]*//' "$root/$f" | grep -Eq "$TAB_BADGE"; then
+      echo "✗ $f wears or feeds a tab badge again ($(grep -v '^[[:space:]]*//' "$root/$f" | grep -Eo "$TAB_BADGE" | head -1)) — prd §1490"
+      return 1
+    fi
+  done
+  return 0
+}
+tabs_bare . || exit 1
 # Day is dated rows (prd §1413): nothing in its section names Needs you, and
 # its window is bounded by the cap alone.
 grep -v '^[[:space:]]*//' "$INFEED" | grep -Eq 'needsYou|Needs you|needsYouGroup' \
@@ -153,10 +154,6 @@ grep -q 'WorkAsk.needsYou(' "$ROOM" \
   || { echo "✗ Work's own section lost its Needs you — each place keeps its own"; exit 1; }
 grep -q 'walletDaySections(\[(Self.needsYouGroup' "$WPAGES" \
   || { echo "✗ the Wallet's Home lost its Needs you — each place keeps its own"; exit 1; }
-# A dot, never a count (prd §1489): Home's Needs you counts what the tab
-# does not read, and two numbers for one list disagree (§837).
-grep -v '^[[:space:]]*//' "$TABS" | grep -Eqi 'badge|walletAsks\)' \
-  && { echo "✗ the tab bar wears a count — the Wallet's tab wears a dot (prd §1489, §1327 item 9)"; exit 1; }
 
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
@@ -342,5 +339,33 @@ wallet_mutate "the Feed reads the Wallet's asks again" \
 wallet_mutate "the scroll lists the Wallet's moves again" \
   'echo "    let m = Self.walletMoves([])" >> Casberi/Casberi/Screens/FeedScreen+Scroll.swift' || mfail=1
 
+# The bare-bar guard (prd §1490), over its own copy.
+tabs_root() {
+  rm -rf "$TMP/troot"
+  local f
+  for f in "$TABS" "$RAIL" "$CHROME" "$SURFACE"; do mkdir -p "$TMP/troot/$(dirname "$f")"; cp "$f" "$TMP/troot/$f"; done
+}
+tabs_mutate() { # $1 label, then a command run inside the copy
+  local label="$1"; shift
+  tabs_root
+  ( cd "$TMP/troot" && eval "$*" )
+  if tabs_bare "$TMP/troot" >/dev/null; then
+    echo "  ✗ mutation SURVIVED: $label"
+    return 1
+  fi
+  echo "  ✓ mutation caught: $label"
+}
+tabs_root
+tabs_bare "$TMP/troot" >/dev/null \
+  || { echo "  ✗ the bare-bar guard fails an untouched copy — it would catch anything"; mfail=1; }
+tabs_mutate "the Wallet's dot comes back on the bar" \
+  'echo "                .modifier(WalletAlarm(active: tab == .wallet))" >> Casberi/Casberi/Design/PlaceTabBar.swift' || mfail=1
+tabs_mutate "Library's ring comes back on the rail" \
+  'echo "        .modifier(LibraryAlarm(active: tab == .library))" >> Casberi/Casberi/Shell/PlaceRail.swift' || mfail=1
+tabs_mutate "the chrome counts the Wallet's asks again" \
+  'echo "    var walletAsks = 0" >> Casberi/Casberi/Shell/ShellChrome.swift' || mfail=1
+tabs_mutate "the count's file comes back" \
+  'mkdir -p Casberi/Casberi/Model && echo "enum WalletNeedsSource {}" > Casberi/Casberi/Model/WalletNeedsSource.swift' || mfail=1
+
 [[ $mfail -eq 0 ]] || { echo "needs-you-selftest: a mutation SURVIVED — a check above proves nothing"; exit 1; }
-echo "needs-you-selftest: OK — the Wallet's one rule, its tab's dot reading it, the Feed's Wallet section deleted, Work's own, and Day's deleted page, strip and gather all pinned."
+echo "needs-you-selftest: OK — the Wallet's one rule, no badge on any tab, the Feed's Wallet section deleted, Work's own, and Day's deleted page, strip and gather all pinned."

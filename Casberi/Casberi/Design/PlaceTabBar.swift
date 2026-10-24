@@ -182,8 +182,6 @@ struct PlaceTabBar: View {
                 .accessibilityLabel(Text(verbatim: tab.label))
                 .accessibilityAddTraits(tab == current ? [.isButton, .isSelected] : .isButton)
                 .accessibilityHint(tab == .search ? Text("Find anything, or make a page of it") : Text(verbatim: ""))
-                .modifier(LibraryAlarm(active: tab == .library))
-                .modifier(WalletAlarm(active: tab == .wallet))
                 .background { if tab == .feed { FeedTabFrame() } }
             }
         }
@@ -239,62 +237,6 @@ struct FeedTabFrame: View {
                 .onAppear { chrome.feedTabFrame = g.frame(in: .global) }
                 .onChange(of: g.frame(in: .global)) { _, f in chrome.feedTabFrame = f }
         }
-    }
-}
-
-/// A broken app rings your face, as it rang the face's seat (`DoorAlarm`,
-/// prd §798): Library is where the apps are mended. A leaf, so a landing
-/// sweep's writes to `bridges` rebuild this and not the bar.
-struct LibraryAlarm: ViewModifier {
-    let active: Bool
-    @Environment(BridgeStore.self) private var bridges
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    func body(content: Content) -> some View {
-        let broken = active && bridges.attentionCount > 0
-        content
-            .overlay(alignment: .top) {
-                if broken {
-                    Circle()
-                        .strokeBorder(DS.attention, style: StrokeStyle(lineWidth: 2, dash: [3, 3]))
-                        .frame(width: 32, height: 32)
-                        .offset(y: 3)
-                        .transition(.scale(scale: 1.25).combined(with: .opacity))
-                        .accessibilityHidden(true)
-                }
-            }
-            .animation(reduceMotion ? nil : DS.Motion.press, value: broken)
-            .accessibilityValue(broken ? Text("needs attention") : Text(verbatim: ""))
-    }
-}
-
-/// **AN ASK LIGHTS THE WALLET'S TAB (prd §1489, user: "wallet also has need
-/// you in the wallet section").** The Feed has no Wallet section, so what
-/// waits on you there is a dot on the tab instead: an ask through the
-/// Wallet's own rule (`ShellChrome.walletAsks`) or a key nudge, the rows
-/// that lead its Needs you. A dot, not a count: Home's Needs you also counts
-/// cards and dated rows the tab does not read, and two numbers for one list
-/// would disagree (§837). A leaf, as `LibraryAlarm` is.
-struct WalletAlarm: ViewModifier {
-    let active: Bool
-    @Environment(ShellChrome.self) private var chrome
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    func body(content: Content) -> some View {
-        let lit = active && (chrome.walletAsks > 0 || RecoveryKeyNudge.shown || OutsideKeyNudge.shown)
-        content
-            .overlay(alignment: .top) {
-                if lit {
-                    Circle()
-                        .fill(DS.attention)
-                        .frame(width: 8, height: 8)
-                        .offset(x: 12, y: 3)
-                        .transition(.scale(scale: 0.5).combined(with: .opacity))
-                        .accessibilityHidden(true)
-                }
-            }
-            .animation(reduceMotion ? nil : DS.Motion.press, value: lit)
-            .accessibilityValue(lit ? Text("needs you") : Text(verbatim: ""))
     }
 }
 

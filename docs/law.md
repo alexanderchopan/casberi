@@ -87,7 +87,7 @@ Privacy and Reddit. Frames and Logos are the devnets that remain.
 - Pictures tile under their own day, three across, in the room's own shape, with the caption under the picture (§910).
 - A row's lead turns to its dock category's glyph and back, once, when it lands while you watch or its title moves in place (§901, §901b).
 - The feed's days are felt: a tick as a divider passes. The floor draws the mark (§866, §866a).
-- The Feed stacks every category but the Wallet and Testnets: the Wallet is its own tab, and its asks light that tab with a dot, never a count, on the phone's bar and the Mac's rail (§1489).
+- The Feed stacks every category but the Wallet and Testnets: the Wallet is its own tab (§1489). No tab wears a badge, dot or ring, on the phone's bar or the Mac's rail: the Wallet's asks are its Home's Needs you, a broken app says so on its own row (§1490).
 
 ### 6. Thing sheets
 - Each kind has its own head: an article leads with its picture and puts the dial under the head (§882). A post leads with the person (§884), a screenshot with the picture big and no Zoom (§885), money with the party and the amount at the head rung (§887). Notes, chats and mail use the shared head (§892–§894), and media leads with its art (§897).
@@ -237,7 +237,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1627 of 1696 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1628 of 1697 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1865,7 +1865,8 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1486 — Receive picks its network, always (amended by §1488)
 - §1487 — Your account wears your face and is named You
 - §1488 — The arrival copies nothing until a network is picked
-- §1489 — The Feed has no Wallet section; the Wallet's asks light its tab with a dot
+- §1489 — The Feed has no Wallet section; the Wallet's asks light its tab with a dot (amended by §1490)
+- §1490 — No tab wears a badge: the Wallet's dot and Library's broken-app ring are deleted
 
 ## Dead rulings → what replaced them (generated)
 

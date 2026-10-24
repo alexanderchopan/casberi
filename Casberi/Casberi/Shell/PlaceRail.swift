@@ -79,8 +79,6 @@ struct PlaceRail: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text(verbatim: tab.label))
         .accessibilityAddTraits(on ? [.isButton, .isSelected] : .isButton)
-        .modifier(LibraryAlarm(active: tab == .library))
-        .modifier(WalletAlarm(active: tab == .wallet))
         // The capture flight lands on the Feed's tile, as it lands on the
         // phone's Feed tab.
         .background { if tab == .feed { FeedTabFrame() } }
