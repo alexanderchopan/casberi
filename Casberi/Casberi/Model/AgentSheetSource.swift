@@ -34,7 +34,7 @@ enum AgentSheetSource {
     /// chat anatomy exactly as an imported one does.
     static let chatSources: Set<String> = ["ChatGPT", "Claude", "Claude Code", "Gemini",
                                            "Bankr", "Venice", "OpenRouter", "Grok",
-                                           "NEAR AI", "Muse"]
+                                           "NEAR AI", "Muse", "Your own model"]
 
     /// Seats whose rows GROW — a re-import appends to the same row rather than
     /// replacing it, so "this is everything" would be a claim with a shelf
@@ -46,7 +46,7 @@ enum AgentSheetSource {
     /// everything" would be a claim with a shelf life — here, of seconds.
     static let growingSources: Set<String> = ["Claude Code",
                                               "Bankr", "Venice", "OpenRouter", "Grok",
-                                              "NEAR AI", "Muse",
+                                              "NEAR AI", "Muse", "Your own model",
                                               "Claude", "ChatGPT", "Gemini"]
 
     // MARK: - Shape

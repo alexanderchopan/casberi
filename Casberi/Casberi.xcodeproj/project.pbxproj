@@ -705,7 +705,7 @@
 				INFOPLIST_KEY_NSFinancialDataUsageDescription = "Casberi reads the transactions and balances of the cards and accounts in your Wallet on this device, so your spending appears in your feed. It stays on this device, is never uploaded, and can't spend or move money.";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "Casberi reads your workouts so they land in your feed.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Casberi only reads your workouts so they land in your feed — it never writes to Health.";
-				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "Casberi reads your own Logos node at the address you give it, when that node is on your network.";
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "Casberi reaches your own Logos node or your own model at the address you give it, when it is on your network.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Casberi records your voice notes when you tap the mic.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Casberi reads screenshots you take so they land as things.";
 				INFOPLIST_KEY_NSRemindersFullAccessUsageDescription = "Casberi reads your reminders so your list lands as things, and keeps a reminder you set from a note.";
@@ -759,7 +759,7 @@
 				INFOPLIST_KEY_NSFinancialDataUsageDescription = "Casberi reads the transactions and balances of the cards and accounts in your Wallet on this device, so your spending appears in your feed. It stays on this device, is never uploaded, and can't spend or move money.";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "Casberi reads your workouts so they land in your feed.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Casberi only reads your workouts so they land in your feed — it never writes to Health.";
-				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "Casberi reads your own Logos node at the address you give it, when that node is on your network.";
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "Casberi reaches your own Logos node or your own model at the address you give it, when it is on your network.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Casberi records your voice notes when you tap the mic.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Casberi reads screenshots you take so they land as things.";
 				INFOPLIST_KEY_NSRemindersFullAccessUsageDescription = "Casberi reads your reminders so your list lands as things, and keeps a reminder you set from a note.";

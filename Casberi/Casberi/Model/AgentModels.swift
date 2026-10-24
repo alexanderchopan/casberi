@@ -170,9 +170,18 @@ enum AgentModels {
             // read as Meta's key check.
             request = URLRequest(url: URL(string: "https://api.meta.ai/v1/models")!)
             request.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
+        case .ownModel:
+            // The person's own server (prd §1478): `{base}/models`, a bearer
+            // only when they set a key. MEASURED on Ollama 0.40.9
+            // (2026-10-23): the OpenAI envelope, `data: [{id, object,
+            // created, owned_by}]`, keyless. A 404 means the server has no
+            // list, and the page then takes a typed name instead.
+            guard let base = OwnModel.base else { return nil }
+            request = URLRequest(url: base.appending(path: "models"))
+            if !key.isEmpty { request.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization") }
         }
         request.timeoutInterval = 20
-        NetworkLedger.shared.record(request)
+        NetworkLedger.shared.record(request, as: provider == .ownModel ? OwnModel.name : nil)
         guard let (data, response) = try? await URLSession.shared.data(for: request),
               (response as? HTTPURLResponse)?.statusCode == 200,
               let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any]

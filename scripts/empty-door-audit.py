@@ -56,6 +56,8 @@ ALLOWED = {
                                  "was the sheet's whole card (prd §1341)"),
     "SafeSigner.swift": (1, "a signature made on this phone; the transaction's own row "
                             "carries the Safe page"),
+    "LogosBridge.swift": (1, "your node's state change: its only page would be the node's "
+                             "own private address, which prd §1474 keeps out of the row"),
     "CardPointersBridge.swift": (1, "the MCP offer payload names no URL (measured in its "
                                     "decoder); the merchant is in the title"),
     "MarketsAlerts.swift": (1, "a gas alert that went off (prd §1250): a chain's gas has no "

@@ -166,3 +166,5 @@ Built from one canvas (`design/mockups/five-things-to-do.html`, the claude.ai ar
 - **Sim:** `-voiceNoteFile <m4a>` then `-openThing "Voice note"` reaches the voice card through the dial's Share; `-openThing "<article title>"` on a demo article reaches Keep (select with a hold-and-drag; a synthesized tap on the edit menu falls through to what is under it, so judge Keep by the `Points at this` shelf refreshing).
 
 **A note of yours EDITS (prd §981, moved from CLAUDE.md 2026-10-14).** A note of yours EDITS: its sheet's first disc is `Edit` (Reminders' seat), which reopens the note sheet on the same thing (`ShellChrome.editNote`), and its sheet draws no "That day" shelf (§981).
+
+- `-noteVoice YES` (moved from CLAUDE.md verbatim, 2026-10-23, to keep it under its budget): The band draws `VoiceCapture.levels` in the player's bar anatomy. Held New arms (the plus morphs to the waveform) and lands here recording (`DSScopeTiles.Hold`, `DSHaptic.lift`). Dictation is Apple's keyboard mic over the focused field.

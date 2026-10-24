@@ -246,6 +246,8 @@ enum ScopeTileGlyph {
     static var feed: String { CategoryFold.glyph(for: "All") }
     static let watch       = "eye"
     static let new         = "plus"
+    static let accounts    = "person.2"
+    static let alerts      = "bell"
 }
 
 // A comment quoting `case .home: return "house"` is not code.
@@ -255,6 +257,10 @@ extension WalletSection: DSTileScope {
         case .home:      return ScopeTileGlyph.home
         case .positions: return ScopeTileGlyph.positions
         case .watch:     return ScopeTileGlyph.watch
+        // The two §1480 aliases, so the clean fixture holds the cases the
+        // real `ALIASES` table names (check C flags an alias with no case).
+        case .following: return ScopeTileGlyph.accounts
+        case .needsYou:  return ScopeTileGlyph.alerts
         }
     }
 }

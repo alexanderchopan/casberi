@@ -530,7 +530,7 @@ def check_l_seat_names_resolve_at_runtime(files_text):
 # which is the same assertion without the seat.
 # Seats whose rows `agentChats()` pours by looping `AgentProvider`, so no
 # literal names them; check O proves that loop (prd §1065).
-PROVIDER_ROW_SEAT = {"Venice", "Bankr", "OpenRouter", "Grok", "NEAR AI", "Muse"}
+PROVIDER_ROW_SEAT = {"Venice", "Bankr", "OpenRouter", "Grok", "NEAR AI", "Muse", "Your own model"}
 
 KNOWN_ROWLESS_SEAT = {
     "Coinbase", "Kraken", "Binance", "Gemini Exchange",

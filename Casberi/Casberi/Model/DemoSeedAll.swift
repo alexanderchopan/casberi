@@ -985,6 +985,8 @@ enum DemoSeedAll {
         case .openrouter: 11
         case .venice:     13
         case .grok:       16
+        // Today, so "this week" means the week the training rows sit in.
+        case .ownModel:   0
         }
     }
 
@@ -1042,6 +1044,16 @@ enum DemoSeedAll {
                        answer: "Three things you wrote down and left open: photograph the flat before the handover, cancel the standing order, and answer the two replies that asked you something directly. The van is the only one with a deadline attached."),
              AgentTurn(question: "Which is most urgent?",
                        answer: "The van. The lease ends on the 30th and everything else can happen after you've moved.")]
+        // Your own model (prd §1478): the one subject no other agent's demo
+        // conversation takes, and every fact in it is a row `fitness()` pours
+        // — the 5.2 km run, the morning run, the gravel ride on the watch,
+        // upper-body strength five days back, legs seventeen. No "yesterday":
+        // `at` folds the table's last two days into today (§1136i).
+        case .ownModel:
+            [AgentTurn(question: "How much did I train this week?",
+                       answer: "Four sessions in the last seven days: a 5.2 km run, a morning run, a gravel ride from your watch, and an upper-body strength session. Three of the four were cardio."),
+             AgentTurn(question: "When did I last do legs?",
+                       answer: "Seventeen days ago. Upper body has had a session since, and legs hasn't.")]
         }
     }
 
@@ -5778,6 +5790,7 @@ enum DemoSeedAll {
         ("Grok", "Key on this phone", "Answers with your things, on your key."),
         ("NEAR AI", "Key on this phone", "Answers with your things, on your key."),
         ("Muse", "Key on this phone", "Answers with your things, on your key."),
+        ("Your own model", "On your network", "Answers with your things, on your own server."),
         ("Railgun", "Synced 45m ago", "Reads your accounts' shielded moves."),
         ("Safe", "Synced 15m ago", "Reads your Safe's pending signatures."),
         ("Linear", "Synced 15m ago", "Reads the work assigned to you."),

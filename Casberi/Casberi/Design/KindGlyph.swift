@@ -383,6 +383,10 @@ enum BridgeGlyph {
         // Defensive only — `brand-muse` is bundled, so `BridgeIcon` never
         // reaches this.
         case "muse":         return "scribble"
+        // Your own model (prd §1478): a generic mark on purpose — the seat is
+        // nobody's product, so there is no brand to bundle. A server rack,
+        // because what it names is the box at the address you gave.
+        case "ownmodel", "your own model": return "server.rack"
         // Logos bundles the λ its team sent (`brand-logos`), so `BridgeIcon`
         // never reaches this in practice — kept defensive, in the
         // neutral-letterform shape (the App Store Connect precedent) rather

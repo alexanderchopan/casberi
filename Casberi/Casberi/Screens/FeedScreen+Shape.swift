@@ -135,7 +135,7 @@ extension FeedScreen {
             // and a second shape would be two renderings of one thing.
             case "ChatGPT", "Claude", "Gemini",
                  "Bankr", "Venice", "OpenRouter", "Grok", "NEAR AI",
-                 "Muse": self = .chat
+                 "Muse", "Your own model": self = .chat
             // Posts read as posts in their own room (2026-07-13) — split from
             // .chat: a saved conversation is a snippet row, a post is a card.
             case "Bluesky": self = .social

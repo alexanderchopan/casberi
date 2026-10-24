@@ -114,7 +114,10 @@ enum TokenVault {
     static let syncedKeys: Set<String> = {
         var keys = Set(TokenBridge.allCases.filter { !localTokenBridges.contains($0) }.map(\.tokenKey))
         // Bankr signs in on its own page; every other agent key is pasted.
-        keys.formUnion(AgentProvider.allCases.filter { $0 != .bankr }.map(\.vaultKey))
+        // Your own model's key stays on this device (prd §1478), the
+        // `localTokenBridges` case: it is useless without the address, which
+        // lives in `UserDefaults` and does not travel.
+        keys.formUnion(AgentProvider.allCases.filter { $0 != .bankr && $0 != .ownModel }.map(\.vaultKey))
         keys.formUnion(ExchangeBridge.Venue.allCases.map(\.vaultKey))
         keys.formUnion([TrelloAuth.keyVaultKey, JiraAuth.domainVaultKey, JiraAuth.emailVaultKey,
                         ASCAuth.keyIDVaultKey, ASCAuth.issuerVaultKey, WiseAuth.profileVaultKey])

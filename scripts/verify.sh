@@ -1579,6 +1579,11 @@ harness "Keccak-256 self-test" "keccak256 self-test" "scripts/keccak256-selftest
 # a failed paste says by what the provider answered (`KeyShape`, `ConnectFailure`).
 harness "Key-shape self-test" "key-shape self-test" "scripts/key-shape-selftest.sh" "the key-shape self-test failed — run scripts/key-shape-selftest.sh"
 
+# Your own model (prd §1478): the address rule (http only to a local host, /v1
+# appended, no guessed port), the connect check's status codes, the tool-less
+# memory keyed by address and model, and the answer path's wiring (`OwnModel`).
+harness "Own-model self-test" "own-model self-test" "scripts/own-model-selftest.sh" "the own-model self-test failed — run scripts/own-model-selftest.sh"
+
 # Address safety (`Model/AddressSafety.swift`). Both functions are pure and
 # both fail SILENTLY: a checksum check that answers `unavailable` for
 # everything simply never warns, and a lookalike test with a mis-shaped

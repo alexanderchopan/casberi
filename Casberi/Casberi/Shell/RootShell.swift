@@ -1304,6 +1304,68 @@ struct RootShell: View {
                       AgentKey.isConfigured ? 1 : 0, active?.rawValue ?? "none",
                       active.map { AgentKey.hint($0) } ?? "")
             }
+            // `-ownModel "<address>[|<model>[|<key>]]"` — connect Your own
+            // model headlessly (prd §1478): the address is parsed by the
+            // page's own rule and CHECKED against the server (`/v1/models`),
+            // the model is chosen (or the server's only one), the key kept
+            // only if given; `clear` forgets the seat. NSLogs `ownModel|`
+            // with the parsed base, the check's outcome and the list, so a
+            // probe can read a real server's answer. The key is never logged.
+            // Pair with `-byokProbe` for a question; `-ownModelToolless YES`
+            // clears the tool-less memory first, so a refusal can be seen
+            // again.
+            if UserDefaults.standard.bool(forKey: "ownModelToolless") {
+                OwnModel.forgetToolless()
+                NSLog("[Casberi] ownModel| toolless memory cleared")
+            }
+            if let raw = UserDefaults.standard.string(forKey: "ownModel") {
+                if raw == "clear" {
+                    // As Disconnect does: the seat leaves the store too, or
+                    // the page draws Disconnect under "Not connected".
+                    AgentKey.clear(.ownModel)
+                    bridges.remove(OwnModel.seatID)
+                    NSLog("[Casberi] ownModel| cleared configured=%d",
+                          AgentKey.isConfigured(.ownModel) ? 1 : 0)
+                } else {
+                    let parts = raw.split(separator: "|", maxSplits: 2,
+                                          omittingEmptySubsequences: false).map(String.init)
+                    let address = parts[0]
+                    let typedModel = parts.count > 1 ? parts[1] : ""
+                    let key = parts.count > 2 ? parts[2] : ""
+                    let parsed = OwnModel.parse(address)
+                    // `if let`, never `guard … return`: a return here leaves
+                    // the whole hook runner and skips every hook below it.
+                    if let base = parsed.url { Task { @MainActor in
+                        let outcome = await AgentAnswer.checkOwnModel(
+                            base: base, key: key.isEmpty ? nil : key, typedModel: typedModel)
+                        var model = typedModel
+                        if case .connected(let list) = outcome {
+                            if model.isEmpty, list.count == 1 { model = list[0] }
+                            OwnModel.setAddress(address)
+                            if !key.isEmpty { AgentKey.set(key, for: .ownModel) }
+                            AgentKey.activate(.ownModel)
+                            AgentModelStore.set(model.isEmpty ? nil : model, for: .ownModel)
+                            bridges.registerConnected(
+                                id: OwnModel.seatID, name: OwnModel.name,
+                                proof: String(localized: "At \(OwnModel.hostLine(base))"),
+                                can: ["Answers on your own server — only when you tap.",
+                                      OwnModel.privacyLine])
+                            NSLog("[Casberi] ownModel| base=%@ http=%d connected models=%@ chosen=%@ configured=%d active=%@",
+                                  base.absoluteString, OwnModel.isPlainHTTP(base) ? 1 : 0,
+                                  list.joined(separator: ","), model,
+                                  AgentKey.isConfigured(.ownModel) ? 1 : 0,
+                                  AgentKey.active?.rawValue ?? "none")
+                        } else {
+                            NSLog("[Casberi] ownModel| base=%@ failed=%@ line=%@",
+                                  base.absoluteString, String(describing: outcome),
+                                  outcome.line ?? OwnModel.Check.unreachableLine(host: OwnModel.hostLine(base)))
+                        }
+                    } } else {
+                        NSLog("[Casberi] ownModel| address=%@ refused=%@",
+                              address, parsed.refusal ?? "invalid")
+                    }
+                }
+            }
             // Debug hook: `-agentModel "<provider>:<model id>"` (or `clear`)
             // pins which model a provider answers with, so a model choice is
             // exercisable headlessly. Declared BEFORE every probe below —

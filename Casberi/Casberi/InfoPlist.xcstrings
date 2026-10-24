@@ -361,31 +361,31 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Casberi reads your own Logos node at the address you give it, when that node is on your network."
+            "value": "Casberi reaches your own Logos node or your own model at the address you give it, when it is on your network."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Casberi lee tu propio nodo de Logos en la dirección que le des, cuando ese nodo está en tu red."
+            "value": "Casberi llega a tu propio nodo de Logos o a tu propio modelo en la dirección que le des, cuando está en tu red."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Casberi は、指定されたアドレスにある自分の Logos ノードを、そのノードが同じネットワーク上にあるときに読み込みます。"
+            "value": "Casberi は、指定されたアドレスにある自分の Logos ノードや自分のモデルに、それが同じネットワーク上にあるときに接続します。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Casberi는 입력한 주소에 있는 내 Logos 노드를, 그 노드가 같은 네트워크에 있을 때 읽어요."
+            "value": "Casberi는 입력한 주소에 있는 내 Logos 노드나 내 모델에, 그것이 같은 네트워크에 있을 때 연결해요."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "当你的 Logos 节点在你的网络上时，Casberi 会在你提供的地址读取它。"
+            "value": "当你的 Logos 节点或你自己的模型在你的网络上时，Casberi 会在你提供的地址连接它。"
           }
         }
       }

@@ -1208,6 +1208,9 @@ enum AccountWeek {
 /// where the key goes and nothing about the key it replaces.
 struct AccountKeySheet<Content: View>: View {
     let name: String
+    /// The sheet's title, when "Your <name> key" is not what it holds — Your
+    /// own model's form is an address first and a key only maybe (prd §1478).
+    var title: String? = nil
     @ViewBuilder var content: () -> Content
     @Environment(\.dismiss) private var dismiss
 
@@ -1225,7 +1228,7 @@ struct AccountKeySheet<Content: View>: View {
             .listStyle(.plain)
             .scrollContentBackground(.hidden)
             .dsPageBackground()
-            .dsScreenTitle(String(localized: "Your \(name) key"))
+            .dsScreenTitle(title ?? String(localized: "Your \(name) key"))
             .dsSheetDismiss { dismiss() }
         }
         .dsNavSheet()

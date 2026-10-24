@@ -897,6 +897,18 @@ enum NetworkReach {
                          "api.venice.ai", "openrouter.ai", "api.x.ai", "cloud-api.near.ai",
                          "api.meta.ai"]),
 
+        // Your own model (prd §1478) — the person's own OpenAI-compatible
+        // server. No fixed host: the address is TYPED (the §289 case, as the
+        // Logos node's), so every request names this service to
+        // `NetworkLedger` and the receipts screen attributes it. Not "stays on
+        // your device": the server is somebody's computer (§83).
+        // The catalogue name spelled out, never `OwnModel.name`: the
+        // bridge-health self-test reads the literal (prd §1163).
+        Endpoint(service: "Your own model",
+                 reach: .whenConnected(bridge: "Your own model"),
+                 purpose: "Only when you ask, your question and the matched things go to the address you gave. Casberi can't see what that server keeps.",
+                 hosts: ["the address you give it"]),
+
         // Bankr stays split out of the line above (2026-08-29, prd §529)
         // even now that its acting path is gone (2026-09-03), because the
         // GROUND still differs: the other six answer from what you saved,

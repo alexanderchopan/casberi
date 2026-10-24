@@ -49,6 +49,10 @@ enum AgentProvider: String, CaseIterable, Identifiable {
     case grok
     case nearai
     case meta
+    /// The person's own OpenAI-compatible server at an address they give
+    /// (prd §1478, `Model/OwnModel.swift`). Raw value `ownmodel`: the vault
+    /// key, the model store's key and the seat id all derive from it.
+    case ownModel = "ownmodel"
 
     var id: String { rawValue }
 
@@ -66,6 +70,7 @@ enum AgentProvider: String, CaseIterable, Identifiable {
         // The agent the person knows is Muse; the company is Meta. Both
         // names ship on the tile, and only this one reaches a transcript.
         case .meta:       "Muse"
+        case .ownModel:   "Your own model"
         }
     }
 
@@ -81,6 +86,8 @@ enum AgentProvider: String, CaseIterable, Identifiable {
         case .grok:       "xAI"
         case .nearai:     "NEAR AI"
         case .meta:       "Meta"
+        // Nobody sends a bill: the server is the person's own.
+        case .ownModel:   "Your own model"
         }
     }
 
@@ -122,6 +129,10 @@ enum AgentProvider: String, CaseIterable, Identifiable {
         // confirmed from here and Grok's rule applies: a wrong deep link is
         // worse than the root (2026-09-20).
         case .meta:       "dev.meta.ai"
+        // No console and no door: a key, when the server wants one, is
+        // whatever the person set on their own box. The page draws no
+        // "Get your API key" slab for this seat.
+        case .ownModel:   ""
         }
     }
 
@@ -141,8 +152,23 @@ enum AgentProvider: String, CaseIterable, Identifiable {
         // wrong credential sees it before the check spends a round trip.
         case .nearai:     "Paste your NEAR AI key"
         case .meta:       "LLM|…"
+        case .ownModel:   "Only if your server asks for one"
         }
     }
+
+    /// Whether a request may go out with NO key (prd §1478). Only Your own
+    /// model: a server on a home network usually asks for none, and the seat
+    /// is configured by its address instead (`AgentKey.configured`).
+    var keyOptional: Bool { self == .ownModel }
+
+    /// Whether this provider sends a bill, so a request writes a spend row
+    /// (`AgentSpend`). Your own model is the person's own server: no bill.
+    var billed: Bool { self != .ownModel }
+
+    /// How long one answer round may take. A local model loads into memory
+    /// before its first word, and that can take a minute (prd §1478); every
+    /// hosted provider is 90s. `complete` takes the larger of this and its own.
+    var answerTimeout: TimeInterval { self == .ownModel ? 180 : 90 }
 
     /// Anthropic keeps its original vault key so keys saved before the
     /// providers arrived keep working.
@@ -215,6 +241,11 @@ enum AgentProvider: String, CaseIterable, Identifiable {
         // confirm it from this machine. This is the Grok exposure exactly, and
         // the fix is the same: `-byokProbe` against a real key.
         case .meta:       "muse-spark-1.3"
+        // NONE. A request with no chosen model does not go out — the page
+        // asks for one (`AgentAnswerFailure.noModel`). There is no pin that
+        // could be right for a server whose models are whatever the person
+        // pulled.
+        case .ownModel:   ""
         }
     }
 
@@ -264,7 +295,10 @@ enum AgentProvider: String, CaseIterable, Identifiable {
         // `architecture.input_modalities`, and Meta's is a first-party list
         // nobody here has seen. So this flips by MEASUREMENT against a real
         // key, not by reading more documentation.
-        case .venice, .bankr, .openrouter, .grok, .nearai, .meta: false
+        // Your own model: false, and no listing raises it — `/v1/models` on
+        // an Ollama answers `{id, object, created, owned_by}` and nothing
+        // about modalities (MEASURED 2026-10-23).
+        case .venice, .bankr, .openrouter, .grok, .nearai, .meta, .ownModel: false
         }
     }
 
@@ -304,7 +338,7 @@ enum AgentProvider: String, CaseIterable, Identifiable {
         // shipped example of what writing search code against an unread spec
         // costs: Grok's entry above, unbuilt to this day for exactly that
         // reason. Nothing here or on the setup screen claims it.
-        case .openai, .bankr, .grok, .nearai, .meta: false
+        case .openai, .bankr, .grok, .nearai, .meta, .ownModel: false
         }
     }
 
@@ -332,7 +366,7 @@ enum AgentProvider: String, CaseIterable, Identifiable {
         switch self {
         case .anthropic: true
         case .openai, .google, .venice, .bankr, .openrouter, .grok, .nearai,
-             .meta: false
+             .meta, .ownModel: false
         }
     }
 
@@ -372,6 +406,8 @@ enum AgentProvider: String, CaseIterable, Identifiable {
             "Runs on sealed hardware that signs its answer, and your phone checks the signature itself. The answer arrives all at once instead of a word at a time, because that is what can be signed."
         case .meta:
             "Remembers this chat's answers so far — screenshots and web search stay off for now."
+        case .ownModel:
+            OwnModel.capabilityLine
         }
     }
 }
@@ -394,7 +430,12 @@ enum AgentKey {
         memoLock.lock(); defer { memoLock.unlock() }
         let generation = TokenVault.generation
         if let memo = configuredMemo, memo.generation == generation { return memo.value }
-        let value = AgentProvider.allCases.filter { TokenVault.get($0.vaultKey) != nil }
+        // Your own model is configured by its ADDRESS, not a key (prd §1478):
+        // its key is optional, so Keychain presence says nothing. The memo
+        // still covers it — `OwnModel.setAddress` bumps the same generation.
+        let value = AgentProvider.allCases.filter {
+            $0 == .ownModel ? OwnModel.address != nil : TokenVault.get($0.vaultKey) != nil
+        }
         configuredMemo = (generation, value)
         return value
     }
@@ -445,6 +486,9 @@ enum AgentKey {
         // day a new key is pasted — a permission nobody granted, for a key
         // nobody has seen.
         if provider == .bankr { BankrAgent.forget() }
+        // Your own model's address and its tool-less memory go with the seat
+        // (prd §1478): a remembered refusal describes a server that is gone.
+        if provider == .ownModel { OwnModel.forget() }
         if UserDefaults.standard.string(forKey: activeDefaultsKey) == provider.rawValue {
             UserDefaults.standard.removeObject(forKey: activeDefaultsKey)
         }
@@ -470,6 +514,20 @@ enum AgentKey {
         // OpenRouter key may carry a different limit entirely, and the old
         // bucket must not suppress a real crossing on the new one.
         if provider == .openrouter { OpenRouterCredits.clear() }
+    }
+
+    /// The key a request for `provider` carries, or why none can go out —
+    /// the one rule `synthesize` and `complete` both read. A key-optional seat
+    /// (Your own model, prd §1478) needs its address and a chosen model, and
+    /// its key may be empty, which means "send no Authorization header".
+    static func requestKey(for provider: AgentProvider,
+                           task: AgentTask = .ask) -> Result<String, AgentAnswerFailure> {
+        guard provider.keyOptional else {
+            return TokenVault.get(provider.vaultKey).map { .success($0) } ?? .failure(.noKey)
+        }
+        guard OwnModel.base != nil else { return .failure(.noKey) }
+        guard !provider.model(for: task).isEmpty else { return .failure(.noModel) }
+        return .success(TokenVault.get(provider.vaultKey) ?? "")
     }
 
     /// The tail of a stored key for the settings line ("…3kQA") — enough to
@@ -598,6 +656,13 @@ enum AgentAnswerFailure: Error, Sendable {
     /// gave us one, because "still running" is advice somebody may want to act
     /// on and the id is the only way to find the job again.
     case stillRunning(String?)
+    /// Your own model has an address but no model chosen (prd §1478). The
+    /// seat has no default pin to fall back to, so nothing goes out.
+    case noModel
+    /// HTTP 400 whose body says the model does not support tools — MEASURED
+    /// on Ollama 0.40.9: `"… gemma3:1b does not support tools"`. Your own
+    /// model retries without them; any other seat reports it as itself.
+    case toolsUnsupported
 
     /// One plain sentence for the composer — what happened, and only where
     /// it's true, what to do about it.
@@ -636,6 +701,10 @@ enum AgentAnswerFailure: Error, Sendable {
             jobID.map {
                 String(localized: "Bankr is still working on that after 90 seconds. It may still land — the job is \($0). Check Bankr for the outcome, or ask again in a moment.")
             } ?? String(localized: "Bankr is still working on that after 90 seconds — check Bankr for the outcome, or ask again in a moment.")
+        case .noModel:
+            String(localized: "Pick a model on Your own model's page first.")
+        case .toolsUnsupported:
+            String(localized: "That model can't use tools. Pick another model on your agent's page.")
         }
     }
 }
@@ -806,6 +875,11 @@ enum AgentAnswer {
             // AI's does, and for the identical reason.
             request = URLRequest(url: URL(string: "https://api.meta.ai/v1/models")!)
             request.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
+        case .ownModel:
+            // Checked by ADDRESS, not key — `checkOwnModel` below. Reaching
+            // here means a caller passed the seat to the key check, which has
+            // nothing to check against.
+            return .unreachable
         }
         request.timeoutInterval = 15
         NetworkLedger.shared.record(request)
@@ -962,6 +1036,32 @@ enum AgentAnswer {
         }
     }
 
+    /// Your own model's connect check (prd §1478): `GET {base}/models`, a
+    /// bearer only when a key is set, 15s. 200 with the OpenAI envelope
+    /// connects and fills the picker; 404 connects only if the person typed a
+    /// model (the server has no list); 401/403 says whether a key is wanted
+    /// or refused; nothing back is unreachable, worded with the host. The
+    /// status codes are read by `OwnModel.check`, which the self-test holds.
+    ///
+    /// MEASURED on Ollama 0.40.9 (2026-10-23): `/v1/models` → 200
+    /// `{"object":"list","data":[{"id":"gemma3:1b",…}]}`, with or without a
+    /// bearer; a wrong path → 404 `text/plain`. LM Studio, llama.cpp and vLLM
+    /// document the same list and were not run here.
+    static func checkOwnModel(base: URL, key: String?, typedModel: String) async -> OwnModel.Check {
+        var request = URLRequest(url: base.appending(path: "models"))
+        if let key, !key.isEmpty {
+            request.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
+        }
+        request.timeoutInterval = 15
+        NetworkLedger.shared.record(request, as: OwnModel.name)
+        guard let (data, response) = try? await URLSession.shared.data(for: request),
+              let http = response as? HTTPURLResponse
+        else { return OwnModel.check(status: nil, data: nil, hasKey: !(key ?? "").isEmpty,
+                                     typedModel: typedModel) }
+        return OwnModel.check(status: http.statusCode, data: data,
+                              hasKey: !(key ?? "").isEmpty, typedModel: typedModel)
+    }
+
     /// Synthesizes a grounded answer over the retrieved candidates with the
     /// person's key, under the SAME shared instructions/prompt the on-device
     /// model answers with (OnDeviceModel.synthesisInstructions/Prompt) — the
@@ -1006,8 +1106,12 @@ enum AgentAnswer {
                            systemPrefix: String = "",
                            onPartial: ((String) -> Void)? = nil)
     async -> Result<AgentAnswerResult, AgentAnswerFailure> {
-        guard let provider = explicitProvider ?? AgentKey.active,
-              let key = TokenVault.get(provider.vaultKey) else { return .failure(.noKey) }
+        guard let provider = explicitProvider ?? AgentKey.active else { return .failure(.noKey) }
+        let key: String
+        switch AgentKey.requestKey(for: provider) {
+        case .success(let resolved): key = resolved
+        case .failure(let failure): return .failure(failure)
+        }
 
         // The credential tripwire (prd §277, 2026-08-02). Everything past this
         // line leaves the device for somebody else's API, so the corpus text
@@ -1049,7 +1153,13 @@ enum AgentAnswer {
         // an empty candidate list is a starting point rather than a dead end.
         // Without them it is the whole evidence set, and a bigger model over
         // nothing is only a slower way to say "nothing matches".
-        let toolsOn = !corpus.isEmpty
+        // `var`, because Your own model may refuse `tools` mid-loop (below)
+        // — and a model it refused before skips the round outright (prd §1478).
+        var toolsOn = !corpus.isEmpty
+        if provider == .ownModel, let address = OwnModel.address,
+           OwnModel.isToolless(address: address, model: provider.model) {
+            toolsOn = false
+        }
         guard !candidates.isEmpty || toolsOn else { return .failure(.empty) }
 
         // Page reading is only reachable when the corpus tools are on: the URLs
@@ -1065,13 +1175,20 @@ enum AgentAnswer {
         // — and every rule below is read in that light. Appended at the end it
         // would arrive after the grounding contract and the PICKS instructions,
         // where it reads as an afterthought to a task already described.
-        var system = systemPrefix.isEmpty ? "" : systemPrefix + "\n\n"
-        system += OnDeviceModel.synthesisInstructions(length: "a few plain sentences")
-        if toolsOn { system += toolGuidance }
-        if fetchOn { system += AgentWebFetch.guidance }
-        system += toolsOn ? toolPickInstructions : pickInstructions
-        if provider.searchesWeb { system += webSearchGuidance }
-        if provider == .anthropic { system += thinkingOffGuidance }
+        // Built by a function of `tools` because a seat that refuses tools
+        // mid-loop (prd §1478) is asked again under the no-tools contract, not
+        // told to use tools it no longer has.
+        func systemPrompt(tools: Bool) -> String {
+            var system = systemPrefix.isEmpty ? "" : systemPrefix + "\n\n"
+            system += OnDeviceModel.synthesisInstructions(length: "a few plain sentences")
+            if tools { system += toolGuidance }
+            if tools && fetchOn { system += AgentWebFetch.guidance }
+            system += tools ? toolPickInstructions : pickInstructions
+            if provider.searchesWeb { system += webSearchGuidance }
+            if provider == .anthropic { system += thinkingOffGuidance }
+            return system
+        }
+        var system = systemPrompt(tools: toolsOn)
 
         // First turn sends the full prompt (instructions + numbered
         // candidates); a follow-up sends just the bare question — the
@@ -1133,7 +1250,9 @@ enum AgentAnswer {
             var request = wire.request
             request.httpMethod = "POST"
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-            request.timeoutInterval = 90
+            // A local model loads into memory before its first word, and that
+            // can take a minute (prd §1478); every hosted provider is 90.
+            request.timeoutInterval = provider.answerTimeout
 
             let streamed: StreamOutcome
             // NEAR AI reads whole, everything else streams — the one fork on
@@ -1147,21 +1266,44 @@ enum AgentAnswer {
             case .success(let outcome):
                 streamed = outcome
             case .failure(let failure):
+                // Your own model refused the tools (prd §1478): the MEASURED
+                // shape is a 400 whose body names them, from a model built
+                // without tool support. Send the same round again with none,
+                // and remember the model so the next question skips this.
+                // `.toolsUnsupported` is raised only on a 400 whose BODY names
+                // tools (`streamText`), so a 400 for any other reason (a prompt
+                // past the context window) is never remembered as this.
+                if provider == .ownModel, declareTools, case .toolsUnsupported = failure,
+                   let address = OwnModel.address {
+                    OwnModel.rememberToolless(address: address, model: wire.model)
+                    NSLog("[Casberi] AgentAnswer(ownmodel): %@ refused tools (HTTP 400) — asking again without them",
+                          wire.model)
+                    toolsOn = false
+                    // Without tools the candidates are the whole evidence, and
+                    // none is the honest "nothing matches", not a question
+                    // asked of nothing (the guard above the loop's rule).
+                    guard !candidates.isEmpty, steps.isEmpty else { return .failure(.empty) }
+                    system = systemPrompt(tools: false)
+                    continue
+                }
                 // A failed round was usually still a billed request — a 429 or
                 // a 5xx arrives after the provider has read the prompt. It is
                 // recorded with no token counts, which is the honest shape:
-                // it happened, and nobody told us what it cost.
-                AgentSpend.shared.record(provider: provider, round: rounds)
+                // it happened, and nobody told us what it cost. Your own model
+                // has no bill, so no receipt (prd §1478).
+                if provider.billed { AgentSpend.shared.record(provider: provider, round: rounds) }
                 let worded = routingFailure(failure, provider: provider)
                 NSLog("[Casberi] AgentAnswer(%@): %@", provider.rawValue, String(describing: worded))
                 return .failure(worded)
             }
-            AgentSpend.shared.record(provider: provider, round: rounds,
-                                     input: streamed.inputTokens,
-                                     output: streamed.outputTokens,
-                                     model: streamed.model,
-                                     cacheRead: streamed.cacheReadTokens,
-                                     cacheWrite: streamed.cacheWriteTokens)
+            if provider.billed {
+                AgentSpend.shared.record(provider: provider, round: rounds,
+                                         input: streamed.inputTokens,
+                                         output: streamed.outputTokens,
+                                         model: streamed.model,
+                                         cacheRead: streamed.cacheReadTokens,
+                                         cacheWrite: streamed.cacheWriteTokens)
+            }
             if streamed.searchedWeb { searchedWeb = true }
             pagesRead += streamed.pagesRead
             if let model = streamed.model { answeredModel = model }
@@ -1262,8 +1404,12 @@ enum AgentAnswer {
                          task: AgentTask = .ask)
     async -> Result<String, AgentAnswerFailure> {
         guard let provider = explicitProvider ?? AgentKey.active,
-              provider != .bankr,
-              let key = TokenVault.get(provider.vaultKey) else { return .failure(.noKey) }
+              provider != .bankr else { return .failure(.noKey) }
+        let key: String
+        switch AgentKey.requestKey(for: provider, task: task) {
+        case .success(let resolved): key = resolved
+        case .failure(let failure): return .failure(failure)
+        }
         guard var wire = makeRequest(provider: provider, key: key, system: system,
                                      history: [], userText: prompt, images: [],
                                      steps: [], declareTools: false, task: task) else {
@@ -1285,7 +1431,8 @@ enum AgentAnswer {
         var request = wire.request
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.timeoutInterval = 60
+        // A cold local model loads before its first word (prd §1478).
+        request.timeoutInterval = max(60, provider.answerTimeout)
 
         switch await streamText(request, onPartial: nil, parse: wire.parse) {
         case .success(let outcome):
@@ -1427,7 +1574,7 @@ enum AgentAnswer {
             if !tools.isEmpty { body["tools"] = tools }
             request.httpBody = try? JSONSerialization.data(withJSONObject: body)
             parse = anthropicDelta
-        case .openai, .venice, .openrouter, .grok, .nearai, .meta:
+        case .openai, .venice, .openrouter, .grok, .nearai, .meta, .ownModel:
             // One OpenAI-compatible shape covers all four — Venice's,
             // OpenRouter's and xAI's APIs all speak it natively (MEASURED
             // 2026-07-31 for the endpoint's mere existence — `/v1/chat/
@@ -1453,10 +1600,23 @@ enum AgentAnswer {
             // is the same standing caveat this branch's opening comment
             // already carries for Venice, OpenRouter and xAI.
             case .meta:       base = "https://api.meta.ai/v1"
+            // Your own model (prd §1478): the address the person gave, parsed
+            // by `OwnModel.parse` (`/v1` appended when no path was typed). No
+            // address, no request. Attributed to the ledger by NAME, because
+            // the host is theirs and the registry cannot declare it (the
+            // Logos node's §289 case).
+            case .ownModel:
+                guard let own = OwnModel.base else { return nil }
+                base = own.absoluteString
+                NetworkLedger.shared.record(own, as: OwnModel.name)
             default:          return nil
             }
             request = URLRequest(url: URL(string: "\(base)/chat/completions")!)
-            request.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
+            // No `Authorization` header at all when a key-optional seat has no
+            // key — a bare `Bearer ` is a malformed header some servers 401.
+            if !key.isEmpty {
+                request.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
+            }
             if provider == .openrouter {
                 // OpenRouter's own attribution headers — optional, but they're
                 // how a request shows up as Casberi's on the person's own
@@ -1465,6 +1625,8 @@ enum AgentAnswer {
                 request.setValue("Casberi", forHTTPHeaderField: "X-Title")
             }
             let chosenModel = provider.model(for: task)
+            // A request with no model does not go out (prd §1478).
+            if chosenModel.isEmpty, provider.keyOptional { return nil }
             // OpenRouter passes an Anthropic-backed model its `cache_control`
             // breakpoints through unchanged, so a pinned `anthropic/…` here
             // stops re-paying for the same candidates on every tool round —
@@ -2095,6 +2257,18 @@ enum AgentAnswer {
         case 200: break
         case 401, 403: return .failure(.rejectedKey)
         case 429: return .failure(.rateLimited)
+        case 400:
+            // The one 400 worth reading (prd §1478): a model built without
+            // tool support refuses a request carrying them, and says so in the
+            // body. Read at most 4KB of it; anything else stays a 400.
+            var body = Data()
+            do {
+                for try await byte in bytes {
+                    body.append(byte)
+                    if body.count >= 4096 { break }
+                }
+            } catch {}
+            return .failure(OwnModel.namesToolRefusal(body) ? .toolsUnsupported : .providerError(400))
         default: return .failure(.providerError(http.statusCode))
         }
         var outcome = StreamOutcome()

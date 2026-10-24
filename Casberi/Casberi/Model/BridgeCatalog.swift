@@ -435,6 +435,11 @@ enum BridgeCatalog {
               needsSetup: true, added: day(2026, 9, 20)),
         Offer(name: "Muse",        tagline: "Meta's model, on your key",           group: "Agent",     connectable: true,
               needsSetup: true, added: day(2026, 9, 20)),
+        // The person's own OpenAI-compatible server (prd §1478): Ollama, LM
+        // Studio, llama.cpp, vLLM, Open WebUI — an address, an optional key,
+        // a model. Generic glyph, no brand mark: it is nobody's product.
+        Offer(name: "Your own model", tagline: "A model you run, at an address you give", group: "Agent", connectable: true,
+              needsSetup: true, added: day(2026, 10, 23)),
         Offer(name: "GitHub",      tagline: "", group: "Work",      connectable: true,
               needsSetup: true),
         Offer(name: "GitLab",      tagline: "",     group: "Work",      connectable: true,
@@ -1085,5 +1090,7 @@ enum BridgeSetupMode {
         "npm", "PyPI", "Walletbeat", "L2BEAT", "ENS",
         "ETH Validators", "NerdWallet", "Logos", "Aztec",
         // No key and no account — Apple's model, turned on (prd §833).
-        "Apple Intelligence"]
+        "Apple Intelligence",
+        // An address, and a key only if the server asks (prd §1478).
+        "Your own model"]
 }

@@ -488,6 +488,7 @@ final class BridgeStore {
         "Snapchat": "snapchat", "Spotify": "spotify", "Steam": "steam", "Threads": "threads",
         "TikTok": "tiktok", "Twitch": "twitch", "Venice": "venice", "X": "x",
         "Fileverse": "fileverse", "Privy": "privy",
+        "Your own model": "ownmodel",
     ]
 
     /// Whether this seat's key travels through iCloud Keychain (prd §1162) —

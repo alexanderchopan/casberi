@@ -161,6 +161,7 @@ enum AgentSheet {
         case "Muse":        return "Muse"
         case "OpenRouter":  return "OpenRouter"
         case "Grok":        return "Grok"
+        case "Your own model": return "Your own model"
         default:            return nil
         }
     }

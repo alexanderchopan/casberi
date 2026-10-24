@@ -78,6 +78,8 @@ enum BridgeRouter {
         case grok
         case nearAI
         case muse
+        /// The person's own OpenAI-compatible server (prd §1478).
+        case ownModel
         case bluesky
         /// Snapchat sits with the social seats but behaves like the ChatGPT
         /// imports — Snap exposes no readable API, so its screen is a file
@@ -275,7 +277,7 @@ enum BridgeRouter {
                  // doc-comment says so) and was missed here when it landed
                  // 2026-07-31 — so a verified key left the raised sheet sitting
                  // there, alone among the agent seats (audit, 2026-07-31).
-                 .venice, .bankr, .appleIntelligence, .openRouter, .grok, .nearAI, .muse,
+                 .venice, .bankr, .appleIntelligence, .openRouter, .grok, .nearAI, .muse, .ownModel,
                  .chatgpt, .claude, .claudeCode, .gemini,
                  .kindle, .dayOne, .appleJournal, .bookmarks:
                 true
@@ -328,6 +330,7 @@ enum BridgeRouter {
             case .grok:           "grok"
             case .nearAI:         "nearai"
             case .muse:           "muse"
+            case .ownModel:       OwnModel.seatID
             case .bluesky:        "bsky"
             // Missing when Instagram landed (2026-07-31) — this switch has no
             // `default`, so its absence was a build break, and a seat with no
@@ -449,6 +452,7 @@ enum BridgeRouter {
         Row(offer: "Grok",       id: "grok",   destination: .grok),
         Row(offer: "NEAR AI",    id: "nearai", destination: .nearAI),
         Row(offer: "Muse",       id: "muse",   destination: .muse),
+        Row(offer: OwnModel.name, id: OwnModel.seatID, destination: .ownModel),
         Row(offer: "Bluesky",   id: "bsky",   destination: .bluesky),
         Row(offer: "Snapchat",  id: "snapchat", destination: .snapchat),
         Row(offer: "TikTok",    id: "tiktok",   destination: .tiktok),
@@ -639,6 +643,7 @@ struct BridgeDestinationView: View {
         case .grok:           GrokSetupScreen()
         case .nearAI:         NearAISetupScreen()
         case .muse:           MuseSetupScreen()
+        case .ownModel:       OwnModelSetupScreen()
         case .exchange(let venue): ExchangeSetupScreen(venue: venue)
         case .bluesky:        HandleSetupScreen(bridge: .bluesky)
         case .snapchat:       SnapchatImportScreen()
