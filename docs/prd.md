@@ -68258,27 +68258,36 @@ The rule under all of it: **every page shows every account at once, and the acco
 4. **The check.** `your-account-selftest.sh` holds ETH to 0.01 and reads the floor off Relay's own sentence; a refusal with no floor is not asked again.
 5. **UNMEASURED:** Relay was not reachable from the session that wrote this (the session's proxy refused `api.relay.link`), and nothing was built: whether Relay's floor is the same on every chain is not known, which is why the refusal is read rather than trusted. Measure with `-moveReceiveFrom` on the simulator.
 
-## §1486 — Receive's networks and Buy's last merchants wear their marks (applies §1481, §1453) (user, 2026-10-24: "need icons", over Buy's merchant list and Receive's network list)
+## §1486 — Receive picks its network, always (amends §1442i items 1–2, §1453 item 2, §1484 item 2) (user, 2026-10-24: "on swap and send u pick the network in the sentence but in receive it's some line 'from another network' why is that"; "well, it's confusing because other addresses like your address is the same on other EVM chains. so I mean to a user, maybe we should have them pick the chain no matter what") — WRITTEN, NOT YET COMPILED
+
+1. **Why:** the account's address is the same string on every EVM network, so "at …3416 on Base, Ethereum and Robinhood Chain." reads as "this address works anywhere." Money sent to it on Arbitrum does not reach the account; that network takes a Relay address (§1453). Send and Swap already name one network in the sentence; Receive now does too.
+2. **The sentence:** "at …3416 on network." with the network a grey blank, as Send's is (§1438c), pink once picked: "at …3416 on Base." The network is the one state Swap and Send use, so a network already picked there stands here. Until it is picked, the short address is white and a tap opens the network list rather than copying.
+3. **One list:** the blank opens §1453's list: your own networks first ("your own address"; picking one names it in the sentence), then every network Relay takes deposits on, A–Z ("through Relay"; picking one is §1470's route sentence, where the "on Arbitrum" word opens this same list). The "From another network" line and the route's "Your own address" line are deleted: the list carries both.
+4. **Under the sentence:** nothing until a network is picked (a route Relay refused still says why). Then the whole address, Copy address, and "Any coin on Base." §1442k's "Send to it only on …" line is dropped there, since the list offers only networks this phone can use; "Not on any network from this iPhone yet." stays.
+5. **Share** hands on no address before a pick: it is grey and says "Pick a network first", opening the list.
+6. **Not changed:** the arrival sentence (§1442j, "Created …3416 on Base, Ethereum and Robinhood Chain.") states where the account lives and keeps its copy. The demo draws no "Asking Relay" spinner in the list, since the demo asks Relay nothing (§1475).
+
+## §1487 — Receive's networks and Buy's last merchants wear their marks (applies §1481, §1453) (user, 2026-10-24: "need icons", over Buy's merchant list and Receive's network list)
 
 1. **Receive.** Every network Relay takes deposits on drew its first letter. `MoveSentence.elsewhereMark` names a bundled mark by the network's name (lowercased, letters and digits only, with Relay's other spellings: "BNB", "OP Mainnet", "zkSync Era", "World Chain"); a name off the table keeps its letter. Your own three networks keep `networkMark`.
-2. **Fifty-seven network marks (fifty-six since §1488), `brand-net-<slug>`**, from web3icons (`@web3icons/core` 4.0.58, MIT, its `background` variant: the mark on its brand square, clipped to the row's circle), rendered at 256px. Bundled, never fetched: Relay's own `iconUrl` would add a host to `NetworkReach` for a picture.
+2. **Fifty-seven network marks (fifty-six since §1489), `brand-net-<slug>`**, from web3icons (`@web3icons/core` 4.0.58, MIT, its `background` variant: the mark on its brand square, clipped to the row's circle), rendered at 256px. Bundled, never fetched: Relay's own `iconUrl` would add a host to `NetworkReach` for a picture.
 3. **Buy.** Instacart and Valorant: Simple Icons' marks (16.35.0, CC0) in their brand colour on white (`brand-instacart`, `brand-valorant`); `BridgeIcon` finds them by name. The App Store, §1481's source, was out of this session's reach. **The Home Depot keeps its letters:** no icon set carries its mark, and a drawn one is a lookalike.
 4. **Not built here:** the coins under a Relay network (AVAX, BNB, APE, BERA) still draw `AssetMark`'s letters. Arc's mark is web3icons' `arc`, taken to be Circle's Arc by name. Not built or seen on the simulator: this session had no Xcode.
 
-## §1487 — Swap's For offers the main tokens; everything else is a search (amends §1440, §1470) (user, 2026-10-24: "for swap let's just show the main tokens and not this other crap. user can search for what they want", over a For list of unverified tokens: xdp, AXIS, MSTRc, METAc)
+## §1488 — Swap's For offers the main tokens; everything else is a search (amends §1440, §1470) (user, 2026-10-24: "for swap let's just show the main tokens and not this other crap. user can search for what they want", over a For list of unverified tokens: xdp, AXIS, MSTRc, METAc)
 
 1. **With nothing typed**, For lists what you hold, then the main tokens Relay verifies on that network: ETH, WETH, USDC, USDT, DAI, EURC, cbBTC, WBTC, cbETH, wstETH (`YourAccountTokens.main`, matched on the symbol, uppercased). A token Relay does not verify is never in the list unless you hold it.
 2. **Typed**, nothing changes: Relay's matches, verified first, an unverified one said so; a pasted contract still reads off the chain.
 3. Receive's "as" list (§1470) reads the same `matches`, so it lists the same.
 4. Not built or seen on the simulator: this session had no Xcode.
 
-## §1488 — Receive leaves out a network that is closing: Abstract (amends §1453, §1486) (user, 2026-10-24: "remove abstract chain too. it's closing down. i'm surprised relay still offers it")
+## §1489 — Receive leaves out a network that is closing: Abstract (amends §1453, §1487) (user, 2026-10-24: "remove abstract chain too. it's closing down. i'm surprised relay still offers it")
 
 1. Relay still lists Abstract (chain 2741) as taking deposits. `YourAccountElsewhere.closing` leaves it out of Receive's networks by id, so no one routes money onto a chain that is shutting down. We don't wait for Relay to drop it; once Relay does, the entry does nothing and can be deleted.
 2. Its mark (`brand-net-abstract`) and its row in `elsewhereSlugs` are deleted with it.
 3. Not built or seen on the simulator: this session had no Xcode.
 
-## §1489 — Every merchant Buy lists wears a mark: 73 more from Simple Icons, the rest from the App Store by a script, and a probe that names any still drawing letters (applies §1481, §1164) (user, 2026-10-24: "I need you to check all the merchants on buy and make sure we have icons for them")
+## §1490 — Every merchant Buy lists wears a mark: 73 more from Simple Icons, the rest from the App Store by a script, and a probe that names any still drawing letters (applies §1481, §1164) (user, 2026-10-24: "I need you to check all the merchants on buy and make sure we have icons for them")
 
 1. **What Buy lists.** With nothing typed: Bitrefill's 25 popular cards for the country, then each group's seed searches (`BitrefillBuy.Group.searches`, 14 words, 25 each); a typed word adds its matches. The catalogue is 576 US products (measured 2026-10-22), read live, so no file in the tree holds it.
 2. **The probe.** `-buyMarksProbe YES` runs those fifteen searches with the account on the phone ($0.002 each, x402) and logs `buyMark| <name> | <id> | <asset>|letters` per merchant, then `buyMarks| N merchants, M drawing letters`. This is the check; run it after the script below.

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fetch a brand's App Store artwork into the asset catalogue (prd §1489).
+"""Fetch a brand's App Store artwork into the asset catalogue (prd §1490).
 
 WHY. Buy's merchants are Bitrefill's catalogue, and most US retail and
 restaurant brands are in no open icon set (Simple Icons dropped them on

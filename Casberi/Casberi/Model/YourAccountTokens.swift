@@ -11,7 +11,7 @@ import Foundation
 /// offers no dollars.
 ///
 /// *For* is Relay's token search (prd §1440): with nothing typed, what you
-/// hold and the main tokens Relay verifies (§1487); its matches as you type,
+/// hold and the main tokens Relay verifies (§1488); its matches as you type,
 /// each marked verified or not.
 /// A pasted address Relay does not know is read off the chain (`symbol()`,
 /// `decimals()`) and says it is "Not verified by Relay", so a look-alike
@@ -103,7 +103,7 @@ enum YourAccountTokens {
         return Op.Token(symbol: symbol, decimals: decimals, contract: EIP55.checksum(address))
     }
 
-    /// The tokens For offers with nothing typed (prd §1487): the money
+    /// The tokens For offers with nothing typed (prd §1488): the money
     /// people swap between, verified by Relay. Anything else is a search.
     static let main: Set<String> = ["ETH", "WETH", "USDC", "USDT", "DAI", "EURC", "CBBTC", "WBTC", "CBETH", "WSTETH"]
 

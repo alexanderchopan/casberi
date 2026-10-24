@@ -72,7 +72,7 @@ enum YourAccountElsewhere {
     @MainActor private static var listed: (networks: [Network], at: Date)?
 
     /// Networks Relay still lists that are closing down, left out so no one
-    /// sends money onto them (prd §1488): Abstract (2741).
+    /// sends money onto them (prd §1489): Abstract (2741).
     static let closing: Set<Int> = [2741]
 
     /// Relay's EVM networks that take deposit addresses, without the

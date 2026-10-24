@@ -1194,7 +1194,7 @@ enum ProbeHooks {
         },
         // `-buyMarksProbe YES` — every merchant Buy lists with nothing typed
         // (the popular cards and each group's seed searches) and the mark it
-        // draws, so a gap is a list, not a scroll (prd §1489). Each search is
+        // draws, so a gap is a list, not a scroll (prd §1490). Each search is
         // a paid x402 call, $0.002, fifteen in all. Logs `buyMark|` per
         // merchant, then `buyMarks|` with the count drawing letters.
         Hook(key: "buyMarksProbe") { _, _ in

@@ -556,13 +556,34 @@ struct MoveSentence: View {
             }
             reachClauses
         } else {
+            // **THE NETWORK IS PICKED, ALWAYS (prd §1486, user: "your address
+            // is the same on other EVM chains … we should have them pick the
+            // chain no matter what").** Until it is, the address is a word,
+            // not a copy: a tap asks for the network first.
             MoveClause(glue: String(localized: "at")) {
-                Button { copy() } label: { word(YourAccount.short(account), ink: DS.pickInk) }
+                Button {
+                    if networkPicked { copy() } else {
+                        withAnimation(DS.Motion.standard) { open = .elsewhere }
+                        DSHaptic.selection()
+                    }
+                } label: { word(YourAccount.short(account), ink: networkPicked ? DS.pickInk : DS.textPrimary) }
                     .buttonStyle(RowPress())
                     .accessibilityLabel(Text("Your address, \(account)"))
-                    .accessibilityHint(Text("Copies your address"))
+                    .accessibilityHint(networkPicked ? Text("Copies your address") : Text("Pick a network first"))
             }
-            reachClauses
+            MoveClause(glue: String(localized: "on")) { receiveNetworkWord }
+        }
+    }
+
+    /// Receive's one blank (prd §1486): the list it opens is your own
+    /// networks, then every network Relay takes deposits on.
+    private var receiveNetworkWord: some View {
+        Group {
+            if networkPicked {
+                blank(network.name + ".", ink: DS.pickInk, .elsewhere, label: Text("On \(network.name), change"))
+            } else {
+                blank(String(localized: "network."), ink: DS.textTertiary, .elsewhere, label: Text("Pick a network"))
+            }
         }
     }
 
@@ -1175,16 +1196,13 @@ struct MoveSentence: View {
                     Text(Self.elsewhereLine(route))
                         .dsText(.body17).foregroundStyle(DS.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
-                    Button {
-                        withAnimation(DS.Motion.standard) { elsewhere = nil }
-                        DSHaptic.selection()
-                    } label: {
-                        Text("Your own address")
-                            .dsText(.body17)
-                            .foregroundStyle(DS.pickInk)
-                            .frame(minHeight: 44, alignment: .leading)
-                    }
-                    .buttonStyle(RowPress())
+                }
+            } else if !fresh, !networkPicked {
+                // No address under the sentence until its network is picked
+                // (prd §1486); a route Relay refused still says why.
+                if let elsewhereFinding {
+                    Text(verbatim: elsewhereFinding).dsText(.body17).foregroundStyle(DS.attentionInk)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             } else {
             VStack(alignment: .leading, spacing: DS.Space.s3) {
@@ -1198,8 +1216,15 @@ struct MoveSentence: View {
                 } else {
                     DSCopyRow(value: account, label: "Copy address", sensitive: false)
                 }
-                // Never an address the account cannot follow (§1442k).
-                if let reach, !YourAccountReach.isAll(reach) {
+                // The network the sentence names (prd §1486).
+                if !fresh {
+                    Text("Any coin on \(network.name).")
+                        .dsText(.body17).foregroundStyle(DS.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                // Never an address the account cannot follow (§1442k); once a
+                // network is picked, the list offered only the ones it can.
+                if let reach, !YourAccountReach.isAll(reach), fresh || reach.isEmpty {
                     Text(reach.isEmpty
                          ? "Not on any network from this \(ThisDevice.name) yet."
                          : "Send to it only on \(reach.map(\.name).formatted(.list(type: .or))).")
@@ -1218,18 +1243,6 @@ struct MoveSentence: View {
                         .dsText(.body17).foregroundStyle(DS.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
                         .transition(.opacity)
-                }
-                if !network.isTest {
-                    Button {
-                        withAnimation(DS.Motion.standard) { open = .elsewhere }
-                        DSHaptic.selection()
-                    } label: {
-                        Text("From another network")
-                            .dsText(.body17)
-                            .foregroundStyle(DS.pickInk)
-                            .frame(minHeight: 44, alignment: .leading)
-                    }
-                    .buttonStyle(RowPress())
                 }
                 if let elsewhereFinding {
                     Text(verbatim: elsewhereFinding).dsText(.body17).foregroundStyle(DS.attentionInk)
@@ -1558,14 +1571,19 @@ struct MoveSentence: View {
         }
     }
 
-    /// Where the money is (prd §1453): the account's own networks take your
-    /// own address; every other network Relay takes deposits on goes
-    /// through Relay, to your account on this network.
+    /// Where the money is (prd §1453, Receive's one network list since
+    /// §1486): the account's own networks take your own address; every other
+    /// network Relay takes deposits on goes through Relay, to your account on
+    /// this network.
     private var elsewhereList: some View {
         VStack(alignment: .leading, spacing: 0) {
             ForEach(networksByWorth) { n in
-                listRow(n.name, sub: String(localized: "your own address"), image: Self.networkMark(n)) {
-                    pick { elsewhere = nil }
+                listRow(n.name, sub: n.isTest ? String(localized: "Test network · its coins have no value") : String(localized: "your own address"),
+                        image: Self.networkMark(n), dim: elsewhere == nil && networkPicked && n == network) {
+                    pick {
+                        elsewhere = nil
+                        switchNetwork(n)
+                    }
                 }
             }
             ForEach(elsewhereNetworks) { n in
@@ -1575,7 +1593,7 @@ struct MoveSentence: View {
                     takeRoute(from: n, token: n.coin(like: elsewhere?.token))
                 }
             }
-            if elsewhereNetworks.isEmpty {
+            if elsewhereNetworks.isEmpty, !YourAccountDemo.isOn {
                 HStack(spacing: DS.Space.s2) {
                     DSSpinner()
                     Text("Asking Relay").dsText(.body17).foregroundStyle(DS.textSecondary)
@@ -1688,7 +1706,7 @@ struct MoveSentence: View {
         }
     }
 
-    /// A network Relay names, by its name (prd §1486): web3icons' mark,
+    /// A network Relay names, by its name (prd §1487): web3icons' mark,
     /// bundled as `brand-net-<slug>`; a name off the table keeps its letter.
     static func elsewhereMark(_ name: String) -> String? {
         let key = name.lowercased().filter { $0.isLetter || $0.isNumber }
@@ -1884,6 +1902,18 @@ struct MoveSentence: View {
                             Text("Share")
                                 .dsText(.heading34)
                                 .foregroundStyle(DS.pickInk)
+                                .frame(minHeight: 48, alignment: .trailing)
+                        }
+                        .buttonStyle(RowPress())
+                    } else if elsewhere == nil, !networkPicked, !fresh {
+                        // Never an address without its network (prd §1486).
+                        Button {
+                            say(String(localized: "Pick a network first"))
+                            withAnimation(DS.Motion.standard) { open = .elsewhere }
+                        } label: {
+                            Text("Share")
+                                .dsText(.heading34)
+                                .foregroundStyle(DS.textTertiary)
                                 .frame(minHeight: 48, alignment: .trailing)
                         }
                         .buttonStyle(RowPress())

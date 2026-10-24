@@ -33,7 +33,7 @@ private enum BridgeIconArt {
         "digital prepaid visa": "brand-visa",
         "at&t": "brand-att",
         // Bitrefill's merchants an asset name cannot spell, or spell short
-        // (prd §1489).
+        // (prd §1490).
         "mcdonald's": "brand-mcdonalds",
         "macy's": "brand-macys",
         "sam's club": "brand-sams-club",
