@@ -236,7 +236,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1626 of 1695 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1627 of 1696 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1864,6 +1864,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1486 — Receive's networks and Buy's last merchants wear their marks (applies §1481, §1453)
 - §1487 — Swap's For offers the main tokens; everything else is a search (amends §1440, §1470)
 - §1488 — Receive leaves out a network that is closing: Abstract (amends §1453, §1486)
+- §1489 — Every merchant Buy lists wears a mark: 73 more from Simple Icons, the rest from the App Store by a script, and a prob…
 
 ## Dead rulings → what replaced them (generated)
 
