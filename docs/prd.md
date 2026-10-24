@@ -68302,3 +68302,12 @@ The rule under all of it: **every page shows every account at once, and the acco
 4. **A broken app says so on its own row** in Library and in the rooms tray (its amber icon, `RoomsTray`), and the digest names it (§1162).
 5. **Deleted from the model with the surface (§723):** `WalletNeedsSource` (it only counted for the dot), `ShellChrome.walletAsks` and `MainSurface`'s corpus task that filled it. The Feed's Wallet section stays deleted (§1489 items 1, 2, 5 stand).
 6. **The check.** `needs-you-selftest.sh` holds the bar, the rail, the chrome and the shell free of both alarms, the count and any `.badge(` or `DS.attention`, and the count's file deleted, with four mutations.
+
+## §1491 — Following and Markets stand on the Wallet's All only (amends §1480 item 2) (user, 2026-10-24: "i am on railgun and see 'markets' why is that?", "it shows when i am on gemini too")
+
+1. **The cause.** Home's doors (§1480 item 2) gated Your account on the pick and Needs you, Permissions and Threats on their counts, but drew Following and Markets on every pick. With Railgun or a Gemini account picked, Home offered the room's whole follow list and the room's watchlist, neither of which is that account's.
+2. **The rule.** Following and Markets are the room's, so `walletHomeDoors` draws them only on All (`selectedSeat == nil && selectedWallet == nil`). With one account picked, Home lists only what is that account's: Your account when it is yours, and its asks, grants and threats.
+3. **Not changed.** Markets stays a page off Home, not a tile (§1480). The door figure's size was already settled by §1482 and the Feed-row doors (`walletRowFigure`, `price17`), which answered the same evening's "why are the counts a different size than Activity's amounts".
+4. **Mac half (§1402):** the Mac's Wallet Home is the same list, so the gate is the same.
+5. **The check.** `wallet-section-selftest.sh` passes unchanged (its guards match the door text, not its gate). Seen on the iPhone 17 Pro simulator in the demo: All draws both; each of 23 of the 25 accounts picked through `-walletScope` (the three wallets and 20 apps, Railgun and Gemini Exchange among them) draws neither. Coinbase and Apple Wallet did not take the launch pick and were not seen picked.
+6. **Left open.** With one app picked, Home is often empty under the tiles (Railgun, Privy, Lightning, Kraken, Binance and most others have no asks, grants or threats of their own).

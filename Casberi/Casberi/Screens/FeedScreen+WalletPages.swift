@@ -197,11 +197,16 @@ extension FeedScreen {
                 walletDoor(.yourAccount, name: String(localized: "Create an account"),
                            act: { chrome.moveTray = true })
             }
-            if following.isEmpty {
-                walletDoor(.following, name: String(localized: "Follow an account"),
-                           act: { feedSheet = .walletFollow })
-            } else {
-                walletDoor(.following, line: followingLine(following), figure: "\(following.count)")
+            // **FOLLOWING AND MARKETS ARE THE ROOM'S, NOT AN ACCOUNT'S (prd
+            // §1491, user: "i am on railgun and see 'markets' why is that?"):**
+            // with one account picked, Home lists only what is that account's.
+            if onAll {
+                if following.isEmpty {
+                    walletDoor(.following, name: String(localized: "Follow an account"),
+                               act: { feedSheet = .walletFollow })
+                } else {
+                    walletDoor(.following, line: followingLine(following), figure: "\(following.count)")
+                }
             }
             if needs > 0 {
                 walletDoor(.needsYou, figure: "\(needs)")
@@ -217,9 +222,11 @@ extension FeedScreen {
                 walletDoor(.threats, line: Self.threatsLine(counts),
                            lineTone: DS.destructiveInk, figure: "\(counts.flagged)")
             }
-            let watched = marketsWatches(walletMarketsRows).count
-            walletDoor(.markets, line: watched == 0 ? String(localized: "Follow a coin or a stock") : nil,
-                       figure: watched == 0 ? nil : "\(watched)")
+            if onAll {
+                let watched = marketsWatches(walletMarketsRows).count
+                walletDoor(.markets, line: watched == 0 ? String(localized: "Follow a coin or a stock") : nil,
+                           figure: watched == 0 ? nil : "\(watched)")
+            }
         }
         // **BESIDE A PANE THE DOORS STAY IN THE LIST (prd §1480 item 11):**
         // they are Home's only list, so the list column keeps them and the
