@@ -45,7 +45,7 @@ enum YourAccountOp {
     /// Safe's adapter published at its own address (§1447 item 18); Pimlico's
     /// public bundler serves it, Candide's does not.
     static let robinhood = Network(
-        name: "Robinhood Chain", chainId: 4663,
+        name: "Robinhood", chainId: 4663, // one word in every sentence (prd §1479 item 4)
         rpcs: ["https://rpc.mainnet.chain.robinhood.com", "https://robinhood-rpc.publicnode.com"],
         bundlers: ["https://public.pimlico.io/v2/4663/rpc"],
         dollar: "0x5fc5360d0400a0fd4f2af552add042d716f1d168", dollarSymbol: "USDG", isTest: false)
