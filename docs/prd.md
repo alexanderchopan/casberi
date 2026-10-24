@@ -68319,3 +68319,13 @@ The rule under all of it: **every page shows every account at once, and the acco
 3. **Declined.** Showing the account's activity on Home would repeat the Activity tile. Landing a quiet account on Activity would make the same tap land in two places depending on data you cannot see.
 4. **Mac half (§1402):** the Mac's Wallet Home is the same list.
 5. **Seen** on the iPhone 17 Pro simulator in the demo: Railgun, Kraken and Privy draw the empty state; Wise (one ask) and Everyday (asks, grants, threats) draw their rows and no empty state.
+
+## §1493 — Markets' Follow sheet has a search field again (amends §1391 item 4, §1467 item 4) (user, 2026-10-24: "since markets follow opens as a sheet it needs a search field on it bc the tab bar isn't there") — WRITTEN, NOT YET COMPILED
+
+1. **The cause.** §1391 dropped the field because the tab bar's Search could look anything up. The Follow tray is a sheet, and a sheet covers the tab bar, so from inside it there was no way to find a coin, token or stock outside the packs.
+2. **The rule.** The field stands at the bottom on glass (`DSTraySearchField`, "Coins, tokens, stocks"), as on every other find tray. Empty, the sheet is what §1391 made it: From your Wallet, then the packs. With words, it is one Markets group of the market's rows, each a follow in place.
+3. **One read.** The field asks the market through `MarketsSearchRead.read`, the read the tab bar's Search uses (§1467), after a 300ms pause, never in a body. The rows draw every hit; the sheet is the dedicated place, so there is no Show all. A stock wears its `CompanyQuotes` quote once it lands.
+4. **Stars agree.** A follow from the field lands as a pack star does (bounce, toast, Undo). A stock followed or unfollowed from the field lights or clears its pack company's star too.
+5. **Demo.** The market is not asked; the field says "Search works once you leave the demo." Nothing found: "Nothing on the market by that name."
+6. **Mac half (§1402):** the Mac's Follow is the same sheet and gets the same field.
+7. **Guarded** by `markets-selftest.sh`: the field and the shared read. `-marketsFollowQuery "<words>"` fills the field (NSLogs `marketsFollowQuery|`).
