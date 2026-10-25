@@ -1213,7 +1213,13 @@ struct MoveSentence: View {
                     .dsText(.body17)
                     .foregroundStyle(DS.textPrimary)
             } else {
-                TextField(String(localized: "Search"), text: $search)
+                // A contract pasted here is read off each network
+                // (`lookUpPasted`), so the field says so and the list keeps no
+                // paste row at its foot (prd §1533, user: "inside search bar
+                // say search or paste").
+                TextField(open == .buy || open == .arrives
+                          ? String(localized: "Search or paste an address")
+                          : String(localized: "Search"), text: $search)
                     .focused($focus, equals: .search)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
@@ -1986,7 +1992,6 @@ struct MoveSentence: View {
             if networkPicked, !YourAccountSwap.supported(network) {
                 Text("Swaps are not on \(network.name)").dsText(.body17).foregroundStyle(DS.textSecondary).frame(minHeight: 44)
             }
-            pasteRow { search = $0 }
         }
     }
 
