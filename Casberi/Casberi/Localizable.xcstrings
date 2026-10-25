@@ -112764,6 +112764,34 @@
         }
       }
     },
+    "No wallet connected, so nothing was added" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No se conectó ninguna billetera, así que no se añadió nada"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ウォレットが接続されなかったため、何も追加されませんでした"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "지갑이 연결되지 않아 아무것도 추가되지 않았습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "未连接钱包，因此没有添加任何内容"
+          }
+        }
+      }
+    },
     "No wallet connected. Try again, or add one later." : {
       "localizations" : {
         "es" : {
@@ -149092,6 +149120,34 @@
         }
       }
     },
+    "Scan with the wallet you want, then approve twice: connect, then sign." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Escanea con la billetera que quieras y aprueba dos veces: conectar y luego firmar."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "使いたいウォレットでスキャンし、接続と署名の2回承認してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "원하는 지갑으로 스캔한 뒤 두 번 승인하세요: 연결, 그다음 서명."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "用你想要的钱包扫描，然后批准两次：先连接，再签名。"
+          }
+        }
+      }
+    },
     "Scan with the wallet you want, then approve." : {
       "localizations" : {
         "es" : {
@@ -165927,6 +165983,62 @@
         }
       }
     },
+    "That wallet connected as another address" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Esa billetera se conectó con otra dirección"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "そのウォレットは別のアドレスで接続しました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "그 지갑은 다른 주소로 연결되었습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "该钱包以另一个地址连接"
+          }
+        }
+      }
+    },
+    "That wallet could not sign for this address, so it was not added" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Esa billetera no pudo firmar por esta dirección, así que no se añadió"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "そのウォレットはこのアドレスで署名できなかったため、追加されませんでした"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "그 지갑은 이 주소로 서명할 수 없어 추가되지 않았습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "该钱包无法为此地址签名，因此未添加"
+          }
+        }
+      }
+    },
     "That wallet is a contract, not one whose key you hold" : {
       "localizations" : {
         "es" : {
@@ -181633,6 +181745,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "正在等待你的钱包，点按可取消"
+          }
+        }
+      }
+    },
+    "Waiting for your wallet…" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Esperando a tu billetera…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ウォレットを待っています…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "지갑을 기다리는 중…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在等待你的钱包…"
           }
         }
       }
@@ -201223,6 +201363,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你的钱包已批准，但未提供地址 — 请改为粘贴地址。"
+          }
+        }
+      }
+    },
+    "Your wallet declined to sign, so nothing was added" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu billetera rechazó firmar, así que no se añadió nada"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ウォレットが署名を拒否したため、何も追加されませんでした"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "지갑이 서명을 거부하여 아무것도 추가되지 않았습니다"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你的钱包拒绝签名，因此没有添加任何内容"
           }
         }
       }
