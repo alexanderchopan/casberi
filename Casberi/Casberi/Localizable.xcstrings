@@ -59706,34 +59706,6 @@
         }
       }
     },
-    "Change collects in your dollars. At $5, your next send buys %@ with it." : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "El cambio se junta en tus dólares. Al llegar a $5, tu próximo envío compra %@ con él."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "端数はドルのまま貯まります。$5になると、次の送金で%@を購入します。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "잔돈은 달러로 모입니다. $5가 되면 다음 송금에서 %@를 삽니다."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "零钱留在你的美元里。满 $5 时，你的下一笔转账会用它买入 %@。"
-          }
-        }
-      }
-    },
     "Change name" : {
       "localizations" : {
         "es" : {
@@ -75406,6 +75378,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "每个网络通过 Tor 从 Casberi 的列表读取，或从你自己的节点读取。"
+          }
+        }
+      }
+    },
+    "Each send rounds up to the next $%lld. Once the extra reaches $5, it buys %@." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cada envío se redondea a los siguientes $%lld. Cuando lo extra llega a $5, compra %@."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "送金ごとに次の$%lldまで切り上げます。端数が$5に達すると、%@を購入します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "송금할 때마다 다음 $%lld 단위로 올립니다. 남은 금액이 $5가 되면 %@를 삽니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "每笔转账向上取整到下一个 $%lld。多出的部分满 $5 时，会买入 %@。"
           }
         }
       }

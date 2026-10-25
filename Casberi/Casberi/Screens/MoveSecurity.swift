@@ -284,7 +284,7 @@ struct MoveSecurity: View {
             roundUpMarks = marks
         }
         if roundUps.on {
-            Text("Change collects in your dollars. At $5, your next send buys \(roundUps.target.symbol) with it.")
+            Text("Each send rounds up to the next $\(roundUps.step). Once the extra reaches $5, it buys \(roundUps.target.symbol).")
                 .dsText(.subhead12).foregroundStyle(DS.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.bottom, DS.Space.s2)
