@@ -11,6 +11,7 @@ import CloudKit
 enum AccountDetail: String, Identifiable {
     case data
     case notifications
+    case licenses
     var id: String { rawValue }
 }
 
@@ -68,10 +69,14 @@ struct AccountDetailSheet: View {
     /// `NetworkReachScreen` composes it. Nil on an empty ledger, which is
     /// a fresh install and gets the door's standing subtitle instead.
     @State private var reach: NetworkReceiptsInsight.Reach?
+    /// Casberi's own license, then every library it ships and its license
+    /// (`Resources/Licenses.md`), read on appear. Reown's SDK requires its
+    /// notice and its license in the app (its §2(a)).
+    @State private var licenses: [LicenseSection] = []
 
     var body: some View {
         DSTray(title: title, height: sheetHeight,
-               detents: detail == .data ? [.large] : nil, brandTitle: detail == .data) {
+               detents: detail == .notifications ? nil : [.large], brandTitle: detail == .data) {
             switch detail {
             case .data:
                 // THE BOX, THEN CARDS (prd §1227, user: "7 looks good"): the
@@ -87,6 +92,8 @@ struct AccountDetailSheet: View {
                 .scrollIndicators(.hidden)
             case .notifications:
                 notifyCard
+            case .licenses:
+                licensesCard
             }
         }
         .onAppear {
@@ -99,6 +106,7 @@ struct AccountDetailSheet: View {
             // this case of the tray actually mounted.
             NSLog("accountDetail| \(detail.rawValue) mounted")
             #endif
+            if detail == .licenses { licenses = Self.readLicenses() }
             thingCount = (try? modelContext.fetchCount(FetchDescriptor<Thing>())) ?? 0
             guard detail == .data else { return }
             exportURL = buildExport()
@@ -154,6 +162,7 @@ struct AccountDetailSheet: View {
         // this is the sheet it opens, so the two must never disagree.
         case .data: "Data"
         case .notifications: "Notifications"
+        case .licenses: "Licenses"
         }
     }
 
@@ -283,6 +292,7 @@ struct AccountDetailSheet: View {
         // badge indent so it wraps one line fewer.
         case .data: privacyHeight
         case .notifications: notifyHeight
+        case .licenses: 700
         }
     }
 
@@ -337,6 +347,52 @@ struct AccountDetailSheet: View {
         400 + CGFloat(Notifications.Settings.switches.count) * (48 + DS.Space.s4)
             // The "Last sent …" clause and the taller status row under it.
             + (notifyAuthorized ? 75 : 0)
+    }
+
+    // MARK: - Licenses (prd §1508)
+
+    struct LicenseSection {
+        let name: String?
+        let text: AttributedString
+    }
+
+    /// `Resources/Licenses.md` split at its `# ` lines: a name over each
+    /// license, the words verbatim (inline markdown only, so Reown's bold
+    /// stays bold and nothing is reflowed).
+    static func readLicenses() -> [LicenseSection] {
+        guard let url = Bundle.main.url(forResource: "Licenses", withExtension: "md"),
+              let raw = try? String(contentsOf: url, encoding: .utf8) else { return [] }
+        let options = AttributedString.MarkdownParsingOptions(interpretedSyntax: .inlineOnlyPreservingWhitespace)
+        return ("\n" + raw).components(separatedBy: "\n# ").compactMap { chunk in
+            let lines = chunk.split(separator: "\n", maxSplits: 1, omittingEmptySubsequences: false)
+            let lead = chunk.hasPrefix("\n")
+            let name = lead ? nil : lines.first.map { String($0) }
+            let body = (lead ? chunk : lines.count > 1 ? String(lines[1]) : "")
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !body.isEmpty else { return nil }
+            let text = (try? AttributedString(markdown: body, options: options)) ?? AttributedString(body)
+            return LicenseSection(name: name, text: text)
+        }
+    }
+
+    private var licensesCard: some View {
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: DS.Space.s6) {
+                ForEach(Array(licenses.enumerated()), id: \.offset) { _, section in
+                    VStack(alignment: .leading, spacing: DS.Space.s2) {
+                        if let name = section.name {
+                            Text(verbatim: name).dsText(.heading17).foregroundStyle(DS.textPrimary)
+                        }
+                        Text(section.text)
+                            .dsText(section.name == nil ? .body17 : .subhead12)
+                            .foregroundStyle(section.name == nil ? DS.textPrimary : DS.textSecondary)
+                            .textSelection(.enabled)
+                    }
+                }
+            }
+            .padding(.bottom, DS.Space.s6)
+        }
+        .scrollIndicators(.hidden)
     }
 
     // MARK: - iCloud sync status (2026-07-27)

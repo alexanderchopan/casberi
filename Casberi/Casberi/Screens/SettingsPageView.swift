@@ -20,6 +20,8 @@ struct SettingsPageView: View {
                 AccountDetailSheet(detail: .notifications)
             case .language:
                 LanguagePickerSheet()
+            case .licenses:
+                AccountDetailSheet(detail: .licenses)
             }
         }
         .environment(\.dsInPane, true)

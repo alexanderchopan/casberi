@@ -404,6 +404,12 @@ struct SettingsRows: View {
                             openURL(url)
                         }
                     }),
+            // Casberi's license and every library's it ships (prd §1508):
+            // Reown's SDK requires its notice and its license in the app.
+            RowSpec(title: "Licenses",
+                    value: "GPL 3",
+                    badge: ("doc.text", DS.textPrimary),
+                    action: { open(.licenses) { detail = .licenses } }),
         ]
         // Diagnostics left Settings (user, 2026-10-10: "doesn't seem we need
         // it anymore") and was deleted on 2026-10-21 (user: "remove diagnostics").
@@ -550,6 +556,7 @@ struct SettingsRows: View {
         case "Notifications": "bell"
         case "Language": "globe"
         case "Support": "questionmark.circle"
+        case "Licenses": "doc.text"
         default: "sparkles"
         }
     }

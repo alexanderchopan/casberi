@@ -239,7 +239,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1645 of 1714 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1647 of 1716 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1886,6 +1886,8 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1505 — The composer has no phone key: an agent is picked when one exists, so every send is an explicit ask
 - §1506 — Receive › From another wallet: a wallet of your own connects, and each send into your account is approved there
 - §1507 — Buy stands on Move's verbs from the first frame (applies §1473's "Buy only with an account on this phone")
+- §1508 — The code is GPLv3, Reown's SDK linked by a section 7 permission; Settings › Licenses carries every library's notice
+- §1509 — Signing shows its details behind one word, and a warning is one line you can sign past
 
 ## Dead rulings → what replaced them (generated)
 
