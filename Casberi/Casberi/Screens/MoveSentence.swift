@@ -1938,6 +1938,15 @@ struct MoveSentence: View {
         }
     }
 
+    /// A token For offers unasked (prd §1532): verified, and a stablecoin or
+    /// one we have a mark for — the artwork `AssetMark` draws, or the icon
+    /// book's picture (which the demo never draws).
+    private func majorToken(_ l: Tokens.Listed) -> Bool {
+        Tokens.major(l) { symbol in
+            AssetMark.hasAsset(symbol) || (!DemoMode.isActive && TokenIconBook.url(for: symbol) != nil)
+        }
+    }
+
     /// What For offers, on the picked network or on each, a network's head
     /// of five when none is picked and nothing is typed.
     private var buyRows: [(key: String, net: Op.Network, listed: Tokens.Listed)] {
@@ -1946,7 +1955,7 @@ struct MoveSentence: View {
         var seen: Set<String> = []
         for n in lookIn {
             let pool = (typed ? (found[n.chainId] ?? []) : []) + (listedBy[n.chainId] ?? [])
-            var rows = Tokens.matches(search, in: pool, held: heldBy[n.chainId] ?? [])
+            var rows = Tokens.matches(search, in: pool, held: heldBy[n.chainId] ?? [], shows: majorToken)
             if let p = pasted[n.chainId], !rows.contains(where: { $0.id == p.id }) { rows.insert(p, at: 0) }
             if !networkPicked, !typed { rows = Array(rows.prefix(5)) }
             for l in rows where !(n == network && networkPicked && l.token == with?.token) {
@@ -2095,7 +2104,7 @@ struct MoveSentence: View {
         let to = network.isTest ? Op.base : network
         let typed = !search.trimmingCharacters(in: .whitespaces).isEmpty
         let pool = (typed ? (found[to.chainId] ?? []) : []) + (listedBy[to.chainId] ?? [])
-        let rows = Tokens.matches(search, in: pool, held: heldBy[to.chainId] ?? [])
+        let rows = Tokens.matches(search, in: pool, held: heldBy[to.chainId] ?? [], shows: majorToken)
         return VStack(alignment: .leading, spacing: 0) {
             ForEach(rows) { l in
                 let about = l.onList ? (l.name == l.token.symbol ? nil : l.name) : String(localized: "Not verified by Relay")
@@ -2838,6 +2847,24 @@ struct MoveSentence: View {
             for await (id, held) in group {
                 found[id] = held ?? []
                 if held == nil { failed.insert(id) }
+            }
+        }
+        // **A FAILED NETWORK IS ASKED ONCE MORE, ON ITS OWN (prd §1532, user:
+        // "also get this error can't read networks").** Every node answered
+        // from a desk minutes later, so a read that came back empty on all
+        // three networks at once was the phone's connection in the instant
+        // the tab opened, not the nodes. One more ask two seconds on, before
+        // the error is said, and only for what failed.
+        if !failed.isEmpty {
+            try? await Task.sleep(for: .seconds(2))
+            await withTaskGroup(of: (Int, [Tokens.Held]?).self) { group in
+                for net in Op.networks where failed.contains(net.chainId) {
+                    group.addTask { @MainActor in (net.chainId, await Tokens.read(account, on: net)) }
+                }
+                for await (id, held) in group where held != nil {
+                    found[id] = held
+                    failed.remove(id)
+                }
             }
         }
         heldBy = found

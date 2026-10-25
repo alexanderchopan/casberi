@@ -102,15 +102,35 @@ enum YourAccountTokens {
         return Op.Token(symbol: symbol, decimals: decimals, contract: EIP55.checksum(address))
     }
 
+    /// The stablecoins For offers with nothing typed (prd §1532), mark or
+    /// no mark. Uppercase.
+    static let stablecoins: Set<String> = [
+        "USDC", "USDT", "USDT0", "DAI", "USDS", "PYUSD", "USDG", "USDE", "FDUSD",
+        "EURC", "GHO", "FRAX", "LUSD", "CRVUSD", "RLUSD", "USD1", "USDBC", "TUSD",
+    ]
+
+    /// **ONLY THE TOKENS YOU WOULD KNOW, UNASKED (prd §1532, user: "why don't
+    /// we just show stablecoins, and ones we have icons for").** Relay's list
+    /// for a network runs to hundreds of tokens, most of them with no mark
+    /// and no name anyone recognises. With nothing typed, For offers what
+    /// Relay verified AND is a stablecoin or wears a mark (`marked`, the
+    /// app's own artwork or the icon book). Typed words and a pasted
+    /// contract still reach every token, and what you hold always shows.
+    static func major(_ l: Listed, marked: (String) -> Bool) -> Bool {
+        l.onList && (stablecoins.contains(l.token.symbol.uppercased()) || marked(l.token.symbol))
+    }
+
     /// What a search in For shows: with nothing typed, what you hold then
-    /// the list's head; typed, symbols that start with it, then names that
-    /// hold it, what you hold first in each. Forty at most.
-    static func matches(_ query: String, in list: [Listed], held: [Held]) -> [Listed] {
+    /// the list's head (only what `shows` keeps); typed, symbols that start
+    /// with it, then names that hold it, what you hold first in each. Forty
+    /// at most.
+    static func matches(_ query: String, in list: [Listed], held: [Held],
+                        shows: (Listed) -> Bool = { _ in true }) -> [Listed] {
         let q = query.trimmingCharacters(in: .whitespaces).lowercased()
         let heldIDs = Set(held.map(\.id))
         let mine = held.map { h in list.first { $0.id == h.id } ?? Listed(token: h.token, name: h.token.symbol, onList: false) }
         guard !q.isEmpty else {
-            return Array((mine + list.filter { !heldIDs.contains($0.id) }).prefix(40))
+            return Array((mine + list.filter { !heldIDs.contains($0.id) && shows($0) }).prefix(40))
         }
         func rank(_ l: Listed) -> Int? {
             let symbol = l.token.symbol.lowercased(), name = l.name.lowercased()
