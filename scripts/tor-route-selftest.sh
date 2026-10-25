@@ -41,6 +41,18 @@ if grep -rn -E 'readDirectly|Read without Tor|setDirect' Casberi/Casberi --inclu
 fi
 echo "  ok   the funnel routes through the rule, never fails over, has no bypass, and counts what went through Tor"
 
+# Every move Relay carries says it left Tor (prd §1512): the foot reads one
+# rule, and the rule names the three moves that ask Relay.
+MOVE="Casberi/Casberi/Screens/MoveSentence.swift"
+use "$MOVE" 'if relayCarries, receipt == nil {' "Relay's foot no longer reads relayCarries"
+use "$MOVE" 'case .swap: true' "a swap no longer says Relay carries it"
+use "$MOVE" 'case .send: roundUpPlan?.buy != nil' "a round-up that buys no longer says Relay carries it"
+use "$MOVE" 'case .receive: elsewhere != nil' "Receive from another network no longer says Relay carries it"
+if awk '/Text\("Powered by Relay"\)/,/padding\(\.top/' "$MOVE" | grep -q 'not through Tor'; then :; else
+    echo "✗ Relay's foot no longer says it is not through Tor"; exit 1
+fi
+echo "  ok   every move Relay carries says it is not through Tor"
+
 TMP=$(mktemp -d /tmp/tor-route-selftest.XXXXXX)
 trap 'rm -rf "$TMP"' EXIT
 mkdir -p "$TMP/shim"

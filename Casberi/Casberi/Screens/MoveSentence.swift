@@ -308,6 +308,18 @@ struct MoveSentence: View {
         return RoundUps.plan(dollarSent: sent, saved: RoundUps.saved(on: network.chainId), step: setting.step)
     }
 
+    /// Whether Relay carries this move (prd §1512): a swap, a send whose
+    /// round-up buys now, money arriving from another network. Relay refuses
+    /// every Tor exit, key or no key, so each says it on the foot.
+    private var relayCarries: Bool {
+        switch verb {
+        case .swap: true
+        case .send: roundUpPlan?.buy != nil
+        case .receive: elsewhere != nil
+        case .buy: false
+        }
+    }
+
     /// The small print's word on round-ups: what is counted, or that this
     /// send buys with it.
     private var roundUpPrint: [String] {
@@ -2182,7 +2194,9 @@ struct MoveSentence: View {
             }
             // Relay's credit signs the foot, small and centred, as Apple
             // Pay's does (§1442f): a credit, not a fact about this swap.
-            if verb == .swap, receipt == nil {
+            // Wherever Relay carries the move, since it is read directly
+            // (§1512).
+            if relayCarries, receipt == nil {
                 HStack(spacing: DS.Space.s1) {
                     Text("Powered by Relay")
                         .dsText(.label12)
