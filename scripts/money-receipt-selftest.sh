@@ -329,12 +329,14 @@ grep -q 'MoneyReceipt.isReading(source: thing.source, ref: thing.sourceRef)' "$S
 # …and the sheet ends a reading at its box: no tiles, no history.
 grep -q 'if moneyReceipt.form == .record {' "$SHEET" \
   || { echo "✗ a reading draws the record's tiles and history again"; exit 1; }
-# A balance is never a transaction: Home's list and its history share one filter.
-grep -q 'let moves = Self.walletMoves(all)' "Casberi/Casberi/Screens/FeedScreen+WalletHome.swift" \
-  && grep -q 'walletSeeAllSection(total: moves.count)' "Casberi/Casberi/Screens/FeedScreen+WalletHome.swift" \
+# A balance is never a transaction: Activity's list and its history share one
+# filter (Activity's stream left Home for its own page in prd §1480).
+grep -q 'let moves = Self.walletMoves(all)' "Casberi/Casberi/Screens/FeedScreen+WalletPages.swift" \
+  && grep -q 'walletSeeAllSection(total: moves.count)' "Casberi/Casberi/Screens/FeedScreen+WalletPages.swift" \
   && grep -q 'FeedScreen.walletMoves(all.live)' "Casberi/Casberi/Screens/WalletHistoryScreen.swift" \
   || { echo "✗ Transactions or its history lists states again (prd §1341)"; exit 1; }
-grep -q 'walletAccountsSection(accounts' "Casberi/Casberi/Screens/FeedScreen+ShapedSections.swift" \
+# They stand on Holdings › Apps since prd §1503 (§1480 put them behind a door).
+grep -q 'walletAccountsSection(appAccounts, nextEventID: nextEventID)' "Casberi/Casberi/Screens/FeedScreen+WalletPages.swift" \
   || { echo "✗ Holdings no longer lists the accounts Transactions left out — they would vanish"; exit 1; }
 # No Lightning row's content is its hash, the demo's included.
 ! grep -q 'content: "lightning:' "Casberi/Casberi/Model/LightningBridge.swift" "Casberi/Casberi/Model/DemoSeedAll.swift" \
