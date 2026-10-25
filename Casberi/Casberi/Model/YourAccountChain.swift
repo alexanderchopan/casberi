@@ -735,6 +735,8 @@ enum YourAccountChain {
         if let roundUp {
             let deposit = try await depositAddress(from: net, currency: net.dollar, to: roundUp.target,
                                                    amount: roundUp.units, account: account)
+            // So the landed send to it reads as this buy (prd §1523).
+            RoundUps.noteDeposit(deposit.address, target: roundUp.target)
             guard let call = YourAccount7579.sessionCall(token: net.dollar, dollar: plan.dollar, to: deposit.address, units: roundUp.units) else {
                 throw Failure(message: String(localized: "This send could not be written"))
             }
@@ -1566,6 +1568,8 @@ enum YourAccountChain {
         if let roundUp {
             let deposit = try await depositAddress(from: net, currency: net.dollar, to: roundUp.target,
                                                    amount: roundUp.units, account: account)
+            // So the landed send to it reads as this buy, never as spending (prd §1523).
+            RoundUps.noteDeposit(deposit.address, target: roundUp.target)
             let dollar = YourAccountOp.dollar(on: net)
             let payment = YourAccountOp.Payment(network: net, token: dollar, amount: roundUp.units,
                                                 to: deposit.address, toName: "Relay")

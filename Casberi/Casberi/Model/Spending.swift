@@ -67,6 +67,16 @@ enum Spending {
         var feesTotal: Double = 0
         var earlierFees: Double? = nil
         var feesFrom: Date? = nil
+        /// **ROUND-UPS (prd §1523):** each buy this window, newest first;
+        /// their sum; last window's sum; the change still waiting to buy
+        /// (the caller's, never read off a row); and, when this window holds
+        /// the first buy ever marked, its day, because buys before the mark
+        /// was kept are not counted (§83). Never part of `total`.
+        var roundUps: [RoundUp] = []
+        var roundUpsTotal: Double = 0
+        var earlierRoundUps: Double? = nil
+        var roundUpsWaiting: Double = 0
+        var roundUpsFrom: Date? = nil
 
         var rest: Double { max(0, total - recurring) }
         var earlierRest: Double? { earlier.map { max(0, $0 - (earlierRecurring ?? 0)) } }
@@ -115,8 +125,39 @@ enum Spending {
         /// landed before the fact was kept, or one the read did not price.
         var feeUSD: Double? = nil
         var network: String? = nil
+        /// What a round-up bought with this send (prd §1523): the `.roundUp`
+        /// fact a sent leg to one of Relay's deposit addresses carries.
+        var roundUp: RoundUp.Bought? = nil
 
         enum Way: Equatable { case sent, received, swap }
+    }
+
+    /// **ONE ROUND-UP'S BUY (prd §1523):** the dollars a send's change
+    /// reached, paid to Relay for the token picked, and when.
+    struct RoundUp: Equatable {
+        struct Bought: Equatable {
+            var symbol: String
+            var network: String
+        }
+        var tx: String
+        var usd: Double
+        var at: Date
+        var bought: Bought
+    }
+
+    /// **ROUND-UPS (prd §1523): what the change bought**, one per
+    /// transaction, from a wallet you follow, priced. Kept apart from
+    /// spending: the change was not spent, it became a token you hold.
+    static func walletRoundUps(_ moves: [Move], own: Set<String>) -> [RoundUp] {
+        var counted = Set<String>()
+        var out: [RoundUp] = []
+        for m in moves where m.way == .sent && own.contains(m.wallet) {
+            guard let bought = m.roundUp, let usd = m.usd, usd.isFinite, usd > 0,
+                  !counted.contains(m.tx) else { continue }
+            counted.insert(m.tx)
+            out.append(RoundUp(tx: m.tx, usd: usd, at: m.at, bought: bought))
+        }
+        return out
     }
 
     /// One transaction's gas (prd §1476): the fee a wallet of yours paid,
@@ -171,6 +212,8 @@ enum Spending {
     /// - **a send the read classified as anything but a send** — a trade
     ///   whose other leg never landed, a deposit into a protocol, a call;
     /// - **a send to machinery** the caller recognised;
+    /// - **a round-up's buy** (prd §1523): the change, paid to Relay for a
+    ///   token you picked, is kept, not spent;
     /// - **a round trip**: money worth the same (within
     ///   `roundTripTolerance`) arriving at one of your wallets within
     ///   `roundTripWindow`, in a transaction of its own — a cross-chain swap
@@ -184,15 +227,8 @@ enum Spending {
                   let usd = m.usd, usd.isFinite, usd > 0 else { return false }
             return !(m.counterparty.map(own.contains) ?? false)
         }
-        var out: [Move] = []
-        for send in moves.filter({ $0.way == .sent }).sorted(by: { $0.at < $1.at }) {
-            guard own.contains(send.wallet) else { continue }
-            guard let usd = send.usd, usd.isFinite, usd > 0, send.place != nil else { continue }
-            if let to = send.counterparty, own.contains(to) { continue }
-            if send.machinery { continue }
-            if paidBack.contains(send.tx) { continue }
-            if let op = send.operation, op != "send" { continue }
-            // The nearest arrival that answers it, taken so it answers no other.
+        // The nearest arrival that answers a send worth `usd`.
+        func nearest(to send: Move, usd: Double) -> Int? {
             let answers = arrivals.indices.filter { i in
                 let a = arrivals[i]
                 guard a.tx != send.tx, let back = a.usd else { return false }
@@ -200,8 +236,28 @@ enum Spending {
                 return lag >= -roundTripSkew && lag <= roundTripWindow
                     && abs(back - usd) <= usd * roundTripTolerance
             }
-            if let i = answers.min(by: { abs(arrivals[$0].at.timeIntervalSince(send.at))
-                                         < abs(arrivals[$1].at.timeIntervalSince(send.at)) }) {
+            return answers.min(by: { abs(arrivals[$0].at.timeIntervalSince(send.at))
+                                     < abs(arrivals[$1].at.timeIntervalSince(send.at)) })
+        }
+        // A round-up's buy (prd §1523) takes the token Relay sends back
+        // first, so that fill answers no send of yours: the buy rides the
+        // same operation as a send, and a $5 send would read as a round trip.
+        for buy in moves where buy.way == .sent && buy.roundUp != nil && own.contains(buy.wallet) {
+            guard let usd = buy.usd, usd.isFinite, usd > 0,
+                  let taken = nearest(to: buy, usd: usd) else { continue }
+            arrivals.remove(at: taken)
+        }
+        var out: [Move] = []
+        for send in moves.filter({ $0.way == .sent }).sorted(by: { $0.at < $1.at }) {
+            guard own.contains(send.wallet) else { continue }
+            guard let usd = send.usd, usd.isFinite, usd > 0, send.place != nil else { continue }
+            if let to = send.counterparty, own.contains(to) { continue }
+            if send.machinery { continue }
+            if send.roundUp != nil { continue }
+            if paidBack.contains(send.tx) { continue }
+            if let op = send.operation, op != "send" { continue }
+            // The nearest arrival that answers it, taken so it answers no other.
+            if let i = nearest(to: send, usd: usd) {
                 arrivals.remove(at: i)
                 continue
             }
@@ -237,7 +293,8 @@ enum Spending {
     static func read(_ charges: [Charge], now: Date, calendar: Calendar = .current,
                      window: Window = .month,
                      isRecurring: (String) -> Bool = { _ in false },
-                     fees: [Fee] = [], unpricedSends: [Date] = []) -> Reading {
+                     fees: [Fee] = [], unpricedSends: [Date] = [],
+                     roundUps: [RoundUp] = [], roundUpsWaiting: Double = 0) -> Reading {
         guard let (start, lastStart, lastEnd) = bounds(window, now: now, calendar: calendar)
         else { return Reading(total: 0, earlier: nil, places: []) }
 
@@ -317,6 +374,23 @@ enum Spending {
         reading.earlierFees = sawEarlierFee ? earlierFees : nil
         if let firstFee, unpricedSends.contains(where: { $0 >= start && $0 <= now && $0 < firstFee }) {
             reading.feesFrom = firstFee
+        }
+        // Round-ups (prd §1523): this window's buys, and the last's sum.
+        var earlierRoundUps: Double = 0, sawEarlierRoundUp = false
+        for buy in roundUps {
+            if buy.at >= start && buy.at <= now {
+                reading.roundUps.append(buy)
+                reading.roundUpsTotal += buy.usd
+            } else if buy.at >= lastStart && buy.at <= lastEnd {
+                earlierRoundUps += buy.usd
+                sawEarlierRoundUp = true
+            }
+        }
+        reading.roundUps.sort { $0.at > $1.at }
+        reading.earlierRoundUps = sawEarlierRoundUp ? earlierRoundUps : nil
+        reading.roundUpsWaiting = roundUpsWaiting.isFinite ? max(0, roundUpsWaiting) : 0
+        if let first = roundUps.map(\.at).min(), first >= start, first <= now {
+            reading.roundUpsFrom = first
         }
         return reading
     }

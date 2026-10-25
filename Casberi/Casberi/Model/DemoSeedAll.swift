@@ -3383,6 +3383,25 @@ enum DemoSeedAll {
             t.transferUSD = 150
             SpendingSource.stampFee(t, 0.011, network: "Base")
         })
+        // Two round-up buys this month (prd §1523): the change reached $5
+        // and bought ETH on Base through a Relay deposit address, so
+        // Spending's Round-ups door draws, beside the $2.60 still waiting
+        // (`YourAccountDemo`), and neither counts as spending.
+        for (i, days) in [3, 14].enumerated() {
+            let deposit = "0x7e1a\(i)c0de5e7d0f4a9b2c6e8d1f3a5b7c9e0d2f\(i)"
+            out.append(row(.transaction, "Sent 5 USDC to Relay",
+                           source: "Wallet", ref: "demo:wallet:roundup:\(i)", days: days, hour: 12,
+                           content: "Base · Relay · round-up \(i)") { t in
+                t.walletAddress = walletFor(move: 0)
+                t.transferDirection = "sent"
+                t.transferAmount = "5 USDC"
+                t.transferCounterparty = "Relay"
+                t.counterpartyAddress = deposit
+                t.transferUSD = 5
+                SpendingSource.stampFee(t, 0.004, network: "Base")
+                SpendingSource.stampRoundUp(t, symbol: "ETH", network: "Base")
+            })
+        }
         // A move between two of the person's own wallets (prd §1078): both
         // legs land, as they do live, and Home draws them as one row.
         let everyday = demoWallets[0], savings = demoWallets[1]

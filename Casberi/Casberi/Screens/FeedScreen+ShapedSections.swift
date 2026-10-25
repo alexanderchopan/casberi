@@ -320,7 +320,7 @@ extension FeedScreen {
                 // stays lit (§1519, amending §1498 item 4).
                 let inert: Set<WalletSection> = seatPicked
                     ? walletInertSections(visible: visible, upcoming: upcoming)
-                    : (selectedWallet != nil ? [.spending, .places, .fees] : [])
+                    : (selectedWallet != nil ? [.spending, .places, .fees, .roundUps] : [])
                 let section = pinnedWalletSection ?? WalletSection.resolve(
                     chrome.walletSection,
                     present: WalletSection.pages(tiles: walletSectionPublication.sections)
@@ -437,7 +437,7 @@ extension FeedScreen {
                 case .activity:
                     walletActivitySections(all, nextEventID: nextEventID)
                 case .yourAccount, .following, .needsYou, .permissions, .threats,
-                     .holdingAccounts, .positions, .apps, .nfts, .places, .fees, .recoveryKey, .nodes:
+                     .holdingAccounts, .positions, .apps, .nfts, .places, .fees, .roundUps, .recoveryKey, .nodes:
                     walletPageSections(section, all: all, upcoming: upcoming,
                                        nextEventID: nextEventID)
                 // **MARKETS STANDS HERE, IN PLACE (prd §1337, retiring §1232's
@@ -451,8 +451,8 @@ extension FeedScreen {
                     walletSubscriptionsSections
                 // **EVERY PLACE, LARGEST FIRST (prd §1468)**, each against
                 // the last window; no cap and no door, the tile is the page.
-                // **THREE DOORS (prd §1480 item 5):** Subscriptions, Places,
-                // Fees, each its own page.
+                // **FOUR DOORS (prd §1480 item 5, §1523):** Subscriptions,
+                // Places, Fees, Round-ups, each its own page.
                 case .spending:
                     walletSpendingDoors
                 // **WHOSE, THEN WHAT (prd §1480 item 4, §1503):** You,

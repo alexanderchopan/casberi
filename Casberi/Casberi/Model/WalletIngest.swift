@@ -1844,6 +1844,9 @@ enum WalletIngest {
             SpendingSource.stampOperation(thing, t["zerionOperation"] as? String)
             // The gas it cost (prd §1476), on the sent leg, named for its network.
             SpendingSource.stampFee(thing, t["zerionFeeUSD"] as? Double, network: chain.displayName)
+            // A round-up's buy, paid to a Relay deposit address this phone
+            // asked for (prd §1523): kept, never spent.
+            SpendingSource.stampRoundUp(thing, to: thing.counterpartyAddress, deposits: RoundUps.depositTargets())
         }
         return thing
     }
@@ -1888,6 +1891,8 @@ enum WalletIngest {
             },
             uniquingKeysWith: { first, _ in first })
         var healed = 0
+        // Relay's deposit addresses this phone paid a round-up to (prd §1523), once a pass.
+        let roundUpDeposits = RoundUps.depositTargets()
         for leg in legs {
             guard let thing = byRef[leg.ref], thing.isLive else { continue }
             var touched = false
@@ -1904,6 +1909,12 @@ enum WalletIngest {
             // The fee, for sends landed before prd §1476 kept it.
             if !leg.received,
                SpendingSource.stampFee(thing, leg.t["zerionFeeUSD"] as? Double, network: leg.chain.displayName) {
+                touched = true
+            }
+            // A round-up's buy that landed before its deposit address was
+            // kept on this phone, or on another device (prd §1523).
+            if !leg.received,
+               SpendingSource.stampRoundUp(thing, to: thing.counterpartyAddress, deposits: roundUpDeposits) {
                 touched = true
             }
             // THE VOID SHAPE, for rows landed before prd §516 (2026-08-28).
