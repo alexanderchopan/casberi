@@ -499,8 +499,12 @@ guard FeedScreen.swift "figureTone: DS.destructiveInk" \
   "the Threats door no longer reads the checkup's counts (prd §1480)"
 guard FeedScreen.swift "case _ where walletScopeIsEmpty(section):" \
   "the slot no longer draws a scope's empty state — a chip onto an empty scope opens 258 blank points (§611)"
-guard FeedScreen.swift "WalletScopeEmptyFigure(section: section)" \
-  "the empty state stopped reading the scope's own words, so every empty scope says the same thing"
+guard FeedScreen.swift "WalletScopeEmptyFigure(section: section, reading: holdingsReads > 0)" \
+  "the empty state stopped reading the scope's own words, or says \"Nothing held\" while a holdings read is still on its way"
+guard FeedScreen.swift "defer { holdingsReads -= 1 }" \
+  "a holdings read no longer ends its count on every path — the box would spin forever"
+guard WalletScopeEmptyFigure.swift "if reading {" \
+  "the reading form is gone — a cold read says \"Nothing held\" over money not yet read"
 
 guard FeedScreen.swift "chrome.walletSections = " \
   "the room no longer publishes its present scopes"

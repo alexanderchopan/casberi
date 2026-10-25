@@ -192,14 +192,16 @@ def audit(texts: dict) -> list:
                    "chain by chain as though it were a refusal (prd §825)")
 
     # 4 — the last-known fallback, gated and stamped.
-    pr = body(ingest, "static func portfolioRead(")
+    pr = body(ingest, "static func portfolioReading(")
     if not pr:
-        bad.append("WalletIngest.portfolioRead is gone — this audit is blind")
+        bad.append("WalletIngest.portfolioReading is gone — this audit is blind")
     else:
         if "lastKnownHoldingsByWallet()" not in pr:
             bad.append("portfolioRead no longer falls back to the last known holdings — an "
                        "unreachable pass shows Privy's stored money and none of yours (prd §825)")
-        elif "unreached" not in pr:
+        # The fallback's own line: the no-portfolio guard names `unreached`
+        # too (its nil says the read failed), so the whole body proves nothing.
+        elif not any("unreached" in l for l in pr.split("\n") if "lastKnownHoldingsByWallet()" in l):
             bad.append("portfolioRead's last-known fallback is not gated on UNREACHED — a "
                        "wallet that answered and holds nothing would show a stale figure (prd §825)")
         if "asOf" not in pr:
@@ -215,7 +217,7 @@ def audit(texts: dict) -> list:
     if "venues: cash + privy" not in pr:
         bad.append("portfolioRead reads Privy and cash but doesn't hand them to the "
                    "portfolio — read and never counted (prd §1048)")
-    guard_line = next((l for l in pr.split("\n") if "else { return nil }" in l and "groups.isEmpty" in l), "")
+    guard_line = next((l for l in pr.split("\n") if "else { return (read: nil," in l and "groups.isEmpty" in l), "")
     if not guard_line:
         bad.append("portfolioRead's no-portfolio guard is gone — this audit is blind (prd §1048)")
     elif "privy" in guard_line.lower():
@@ -413,8 +415,8 @@ def self_test() -> int:
         ("the crown stops passing the stamp", "FeedScreen",
          lambda t: t.replace("asOf: portfolio?.asOf,", "")),
         ("Privy may stand alone", "WalletIngest",
-         lambda t: t.replace("|| !cash.isEmpty else { return nil }",
-                             "|| !cash.isEmpty || !privy.isEmpty else { return nil }")),
+         lambda t: t.replace("|| !cash.isEmpty else { return (read: nil,",
+                             "|| !cash.isEmpty || !privy.isEmpty else { return (read: nil,")),
         ("Privy is read and never counted", "WalletIngest",
          lambda t: t.replace("venues: cash + privy,", "venues: cash,")),
         ("Privy leaves the total", "WalletIngest",

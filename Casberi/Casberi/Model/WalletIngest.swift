@@ -2037,6 +2037,16 @@ enum WalletIngest {
     /// - **Scoped, or a single wallet** → that wallet's own map, unchanged.
     @MainActor
     static func portfolioRead(scopeTo address: String? = nil) async -> (doc: [String], portfolio: WalletPortfolio)? {
+        await portfolioReading(scopeTo: address).read
+    }
+
+    /// The same read, and whether a nil one is a read that FAILED: a wallet
+    /// went unreached and nothing remembered stood in. The Wallet room keeps
+    /// the map it already drew over such a nil, rather than "Nothing held"
+    /// over money it showed a minute ago; a reached, empty nil clears it.
+    @MainActor
+    static func portfolioReading(scopeTo address: String? = nil) async
+        -> (read: (doc: [String], portfolio: WalletPortfolio)?, failed: Bool) {
         // **THE DEMO READS NOTHING, SO IT BUILDS ITS OWN** (prd §483). Without
         // this the Holdings scope is absent from the demo entirely — the room's
         // most distinctive drawing, missing from the thing that exists to show
@@ -2051,12 +2061,12 @@ enum WalletIngest {
                             holderID: WalletPortfolio.privyHolderPrefix + $0.appID, label: $0.app) }
             }
             let portfolio = WalletPortfolio.demoFixture(scopeTo: address, privy: privy)
-            guard !portfolio.isEmpty else { return nil }
+            guard !portfolio.isEmpty else { return (read: nil, failed: false) }
             let cells = portfolio.treemapCells.joined(separator: ", ")
             // The line carries the total the room's crown reads (prd §953);
             // `GenTagMap` hides it wherever the crown draws it.
             let line = subline(totalUSD: portfolio.totalUSD, tokenCount: portfolio.tokenCount, stale: nil)
-            return (["root = TagMap(\(q("")), \(q(line)), [\(cells)], \(q("token")))"], portfolio)
+            return (read: (doc: ["root = TagMap(\(q("")), \(q(line)), [\(cells)], \(q("token")))"], portfolio: portfolio), failed: false)
         }
         let read = await holdingsByWallet()
         var groups = read.groups
@@ -2116,7 +2126,7 @@ enum WalletIngest {
         // all on an exchange still has one, and returning nil would paint the
         // empty state over a balance we successfully read. Privy is the one
         // that may not stand alone.
-        guard !groups.isEmpty || !exchange.isEmpty || validatorsUSD > 0 || !cash.isEmpty else { return nil }
+        guard !groups.isEmpty || !exchange.isEmpty || validatorsUSD > 0 || !cash.isEmpty else { return (read: nil, failed: read.unreached > 0) }
         var portfolio = WalletPortfolio.from(groups: groups, exchange: exchange,
                                              validatorsUSD: validatorsUSD,
                                              venues: cash + privy,
@@ -2170,7 +2180,7 @@ enum WalletIngest {
             // The line carries the total the room's crown reads (prd §953) —
             // it was "" and the true-area treemap (§939) never drew for the
             // combined portfolio; `GenTagMap` hides it where the crown draws.
-            return (holdingsDoc(portfolio), portfolio)
+            return (read: (doc: holdingsDoc(portfolio), portfolio: portfolio), failed: false)
         }
 
         let ids = groups.indices.map { "w\($0)" }
@@ -2178,7 +2188,7 @@ enum WalletIngest {
         for (i, g) in groups.enumerated() {
             doc.append("w\(i) = TagMap(\(q(g.label)), \(q(g.subline)), [\(g.cells.joined(separator: ", "))], \(q("token")))")
         }
-        return (doc, portfolio)
+        return (read: (doc: doc, portfolio: portfolio), failed: false)
     }
 
     /// One map over a whole portfolio — the combined read's, and an app's
@@ -2828,8 +2838,9 @@ enum WalletIngest {
         let touched = Set(backstopped.filter { $0.amount > 0 }.map(\.network))
         let pricedOn = Set(backstopped.filter { ($0.price ?? 0) > 0 }.map(\.network))
         let heldNative = Set(backstopped.filter { $0.contract == nil && $0.amount > 0 }.map(\.network))
-        await UnpricedNetworks.shared.record(stuck: heldNative.subtracting(pricedOn), touched: touched)
-        return backstopped.compactMap { c in
+        let stuck = heldNative.subtracting(pricedOn)
+        await UnpricedNetworks.shared.record(stuck: stuck, touched: touched)
+        let held: [HeldToken] = backstopped.compactMap { c in
             guard let price = c.price, price > 0 else { return nil }
             let usd = c.amount * price
             // `.isFinite` FIRST: an untrusted balance/price can overflow to inf
@@ -2851,6 +2862,13 @@ enum WalletIngest {
                              network: c.network, usd: usd, amount: c.amount,
                              owner: c.owner)
         }
+        // **A COIN HELD AND PRICED NOWHERE IS NOT "HOLDS NOTHING" (prd §828).**
+        // Every price source missing at once left a wallet with ETH reading
+        // as empty: cached for the window, and never `.unreachable`, so the
+        // last-known reading could not stand in and the page said "Nothing
+        // held". nil is never cached and reads as unreached.
+        if held.isEmpty, !stuck.isEmpty { return nil }
+        return held
     }
 
     /// The raw holdings Alchemy's Portfolio `by-address` hands back for the

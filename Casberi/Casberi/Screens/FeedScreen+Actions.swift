@@ -348,8 +348,11 @@ extension FeedScreen {
         // pick that moves between two apps is caught as well.
         let seat = selectedSeat
         let scopeKey = chrome.walletScope
+        holdingsReads += 1
         Task { @MainActor in
-            var read = await WalletIngest.portfolioRead(scopeTo: scope)
+            defer { holdingsReads -= 1 }
+            let reading = await WalletIngest.portfolioReading(scopeTo: scope)
+            var read = reading.read
             // The scope may have moved while the read was in flight — a late
             // answer for a wallet we've since left must not paint (the same
             // guard `loadWalletLive` keeps).
@@ -368,7 +371,12 @@ extension FeedScreen {
                 withAnimation(DS.Motion.standard) {
                     blockStream.paint(!hides ? read.doc : shown.isEmpty ? [] : WalletIngest.holdingsDoc(shown))
                     portfolio = read.portfolio
+                    portfolioScope = scopeKey
                 }
+            } else if reading.failed, portfolio != nil, portfolioScope == scopeKey {
+                // A read that could not look keeps the map this scope already
+                // drew (prd §825): a rate-limited pass is not an empty wallet.
+                NSLog("[Casberi] walletHoldings: read failed, keeping the last map")
             } else if !blockStream.els.isEmpty || portfolio != nil {
                 withAnimation(DS.Motion.standard) {
                     blockStream.paint([])

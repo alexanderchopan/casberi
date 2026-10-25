@@ -660,6 +660,13 @@ struct FeedScreen: View {
     /// the map it's standing under. Lands with the treemap doc, from the same
     /// read.
     @State var portfolio: WalletPortfolio?
+    /// The scope `portfolio` was read for (`chrome.walletScope`), so a failed
+    /// re-read keeps that scope's map and never another's.
+    @State var portfolioScope: String?
+    /// Holdings reads in flight. A cold read waits on Zerion's one-a-second
+    /// lane behind every other Zerion read, for many seconds; until it lands
+    /// the box says it is reading, never "Nothing held".
+    @State var holdingsReads = 0
     /// The tokens hidden from Holdings (`HiddenTokens`), held here so a hide
     /// redraws the list, the map and the total at once.
     @State var walletHidden: Set<String> = HiddenTokens.symbols

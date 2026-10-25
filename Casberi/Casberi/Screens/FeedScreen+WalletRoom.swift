@@ -220,7 +220,7 @@ extension FeedScreen {
         // **THE EMPTY STATE IS IN THE SLOT (prd §611).** A tile onto a page
         // with nothing draws what would fill it, empty.
         case _ where walletScopeIsEmpty(section):
-            WalletScopeEmptyFigure(section: section)
+            WalletScopeEmptyFigure(section: section, reading: holdingsReads > 0)
         // Holdings' pages keep Holdings' box: the treemap says which tile
         // you are in (prd §1480).
         case .holdings, .holdingAccounts, .positions, .apps, .nfts:

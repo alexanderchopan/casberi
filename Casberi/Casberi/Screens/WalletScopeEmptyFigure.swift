@@ -34,11 +34,24 @@ struct WalletScopeEmptyFigure: View {
     /// and this fills it like any other scope's empty state: top-aligned, in
     /// the box, at the same rung.
     var padded: Bool = true
+    /// A read is on its way: the skeleton with the spinner over it, never
+    /// the short state, which would say "Nothing held" over money not yet
+    /// read (user: "wallet holdings sometimes don't load").
+    var reading: Bool = false
 
     var body: some View {
         // `.home` returned nil for both until §761 and never reached here; it
         // has words now, and this is still the one place they are drawn.
-        if let words = section.emptyBody {
+        if reading {
+            ZStack {
+                DSSkeletonFigure(figure: section.skeleton)
+                DSSpinner()
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .padding(.horizontal, padded ? WalletCardStyle.pad : 0)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(Text("Loading…"))
+        } else if let words = section.emptyBody {
             DSEmptyState(headline: section.emptyHeadline.map { Text($0) },
                          words: Text(words), scale: .room(section.skeleton))
                 .padding(.horizontal, padded ? WalletCardStyle.pad : 0)
