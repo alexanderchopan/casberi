@@ -177,8 +177,41 @@ check(feeRows.feesFrom == day(3), "an unpriced send before the first fee makes t
 check(Spending.read([], now: now, calendar: cal, fees: [Spending.Fee(tx: "a", network: "Base", usd: 0.30, at: day(1))],
                     unpricedSends: [day(0.5)]).feesFrom == nil, "an unpriced send after the first fee says nothing")
 
+// ── Round-ups (prd §1523): the change a send rounded up, paid to Relay for
+// a token you picked. Kept, never spent, and never in the total. ──────────
+let eth = Spending.RoundUp.Bought(symbol: "ETH", network: "Base")
+func buy(_ tx: String, _ usd: Double?, at m: Double, wallet: String = mine, way: M.Way = .sent) -> M {
+    M(wallet: wallet, tx: tx, way: way, usd: usd, at: at(m), counterparty: "0xde90517", place: "Relay", roundUp: eth)
+}
+check(spent([buy("r1", 5, at: 0), send("s1", 40, at: 1)]) == ["s1"],
+      "a round-up's buy is not spending; the send beside it still is")
+// The buy rides the send's operation; Relay's fill comes back minutes later
+// and is the buy's, never an answer to a $5 send beside it.
+check(spent([buy("op", 5, at: 0), send("op", 5, at: 0), receipt("fill", 4.97, at: 1, from: "0x5011e4")]) == ["op"],
+      "Relay's fill answers the round-up's buy, not the send it rode with")
+let buys = Spending.walletRoundUps([buy("r1", 5, at: 0), buy("r1", 5, at: 0), buy("r2", 5.20, at: 1),
+                                    buy("r3", 5, at: 2, wallet: unfollowed), buy("r4", nil, at: 3),
+                                    buy("r5", 5, at: 4, way: .received), send("s1", 40, at: 5)], own: own)
+check(buys.map(\.tx) == ["r1", "r2"],
+      "one buy per transaction; an unfollowed wallet's, an unpriced one, a received leg and a plain send are left out (\(buys.map(\.tx)))")
+check(buys.first?.bought == eth, "a buy carries the token it bought and its network")
+typealias R = Spending.RoundUp
+let roundUpRows = Spending.read([C(place: "Uber", usd: 48, at: day(1))], now: now, calendar: cal, window: .month,
+                                roundUps: [R(tx: "a", usd: 5, at: day(4), bought: eth),
+                                           R(tx: "b", usd: 5.20, at: day(2), bought: eth),
+                                           R(tx: "c", usd: 5, at: day(35), bought: eth)],
+                                roundUpsWaiting: 2.60)
+check(roundUpRows.roundUps.map(\.tx) == ["b", "a"], "this window's buys, newest first (\(roundUpRows.roundUps.map(\.tx)))")
+check(abs(roundUpRows.roundUpsTotal - 10.20) < 1e-9 && roundUpRows.earlierRoundUps == 5,
+      "the door's figure is this window's buys, against the last")
+check(roundUpRows.total == 48, "round-ups are never part of the total (\(roundUpRows.total))")
+check(roundUpRows.roundUpsWaiting == 2.60, "the change still waiting is carried as the caller read it")
+check(roundUpRows.roundUpsFrom == nil, "a buy marked last window means this window's count is whole")
+check(Spending.read([], now: now, calendar: cal, roundUps: [R(tx: "a", usd: 5, at: day(4), bought: eth)]).roundUpsFrom == day(4),
+      "the first buy ever marked, inside this window, is the day the count starts from")
+
 if failures > 0 { print("\(failures) assertion(s) failed"); exit(1) }
-print("  ok   swaps, trades, deposits, round trips, unfollowed wallets, own moves, the window and the recurring half")
+print("  ok   swaps, trades, deposits, round trips, unfollowed wallets, own moves, the window, the recurring half, fees and round-ups")
 SWIFT
 
 xcrun swiftc -O "$SRC" "$work/main.swift" -o "$work/t" 2>&1 | grep -v "^$" || true
@@ -209,3 +242,9 @@ mutate "a plan also stands in Places"          's/if p\.recurring \{ subscriptio
 mutate "a subscription names its oldest charge" 's/charge\.at > \(place\.lastAt \?\? \.distantPast\)/charge.at < (place.lastAt ?? .distantFuture)/'
 mutate "a transaction's gas counted once per leg"   's/seen\.insert\(m\.tx\)//'
 mutate "an unfollowed wallet's gas counts"           's/for m in moves where own\.contains\(m\.wallet\) \{/for m in moves {/'
+mutate "a round-up's buy counts as spending"         's/if send\.roundUp != nil \{ continue \}//'
+mutate "Relay's fill answers a send of yours"        's/arrivals\.remove\(at: taken\)//'
+mutate "a round-up counted once per leg"             's/counted\.insert\(m\.tx\)//'
+mutate "an unfollowed wallet's round-ups count"      's/for m in moves where m\.way == \.sent && own\.contains\(m\.wallet\) \{/for m in moves where m.way == .sent {/'
+mutate "a round-up added to the total"               's/reading\.roundUpsTotal \+= buy\.usd/reading.roundUpsTotal += buy.usd; reading.total += buy.usd/'
+mutate "the day the count starts from never said"    's/reading\.roundUpsFrom = first/reading.roundUpsFrom = nil/'

@@ -70,7 +70,7 @@ check(WalletSection.markets.label == "Markets", "the tile reads Markets; its lis
 check(WalletSection.activity.label == "Activity", "the stream's tile reads Activity (prd §1480)")
 check(WalletSection.spending.label == "Spending", "the tile reads Spending — Home's list's own word (prd §1201)")
 // **EVERY OTHER CASE IS A PAGE BEHIND A DOOR (prd §1480).** Home's five,
-// Holdings' four and Spending's three; together with the tiles they are
+// Holdings' four and Spending's four; together with the tiles they are
 // every case, each once, so a new scope cannot be silently unlisted.
 let doors = WalletSection.homeDoors + WalletSection.holdingsDoors + WalletSection.spendingDoors
     + WalletSection.yourAccountDoors
@@ -81,8 +81,8 @@ check(WalletSection.homeDoors == [.yourAccount, .following, .needsYou, .permissi
       "Home's doors are Your account, Following, Needs you, Permissions, Threats (prd §1480, §1498)")
 check(WalletSection.holdingsDoors == [.holdingAccounts, .apps, .positions, .nfts],
       "Holdings' pages are Following, Apps, Positions, NFTs (You narrows, Tokens is its sheet) (prd §1503)")
-check(WalletSection.spendingDoors == [.subscriptions, .places, .fees],
-      "Spending's doors are Subscriptions, Places, Fees (prd §1480)")
+check(WalletSection.spendingDoors == [.subscriptions, .places, .fees, .roundUps],
+      "Spending's doors are Subscriptions, Places, Fees, Round-ups (prd §1480, §1523)")
 check(WalletSection.yourAccountDoors == [.recoveryKey, .nodes],
       "Your account's doors are the recovery key's check and Nodes (prd §1515, §1517)")
 // A page goes back to the page it opened from (prd §1480 item 9).

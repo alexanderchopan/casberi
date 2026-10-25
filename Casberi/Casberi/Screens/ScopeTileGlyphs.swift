@@ -41,6 +41,8 @@ enum ScopeTileGlyph {
     static let places      = "mappin.and.ellipse"
     /// Spending's Fees door: gas (prd §1476, §1480).
     static let fees        = "fuelpump"
+    /// Spending's Round-ups door: a send's change, rounded up (prd §1523).
+    static let roundUps    = "arrow.up.circle"
     /// Privy's Apps — "every app that made you a wallet" (user, 2026-09-19:
     /// *"on the privy screen, you're using the same icon for apps that we use
     /// for frames. We need a different icon for apps there"*, prd §831).
@@ -238,6 +240,7 @@ extension WalletSection: DSTileScope {
         case .subscriptions:   return ScopeTileGlyph.subscriptions
         case .places:          return ScopeTileGlyph.places
         case .fees:            return ScopeTileGlyph.fees
+        case .roundUps:        return ScopeTileGlyph.roundUps
         case .recoveryKey:     return ScopeTileGlyph.recoveryKey
         // Your own node (prd §1517) wears the node's own glyph.
         case .nodes:           return ScopeTileGlyph.node

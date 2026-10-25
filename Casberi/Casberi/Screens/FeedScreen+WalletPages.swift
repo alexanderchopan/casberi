@@ -341,14 +341,16 @@ extension FeedScreen {
     // MARK: - Spending's doors
 
     /// **SPENDING, A READING OF ACTIVITY (prd §1480 item 5).** The window's
-    /// total in the box, then three doors: Subscriptions, Places, Fees — one
-    /// name per group, the box's Recurring and The rest retired.
+    /// total in the box, then the doors: Subscriptions, Places, Fees — one
+    /// name per group, the box's Recurring and The rest retired — and
+    /// Round-ups (prd §1523), what the change bought, outside the total.
     @ViewBuilder
     var walletSpendingDoors: some View {
         let reading = SpendingReading.shared
         let page = reading.page
         let mask = BalancePrivacy.shared.withheld ? BalancePrivacy.mask : nil
-        if !(page.places.isEmpty && page.subscriptions.isEmpty && page.fees.isEmpty) {
+        let roundUps = !page.roundUps.isEmpty || page.roundUpsWaiting > 0
+        if !(page.places.isEmpty && page.subscriptions.isEmpty && page.fees.isEmpty) || roundUps {
             walletDoorsSection {
                 if !page.subscriptions.isEmpty {
                     walletDoor(.subscriptions, figure: mask ?? AppleWalletRoom.money(page.recurring, "USD"))
@@ -360,6 +362,16 @@ extension FeedScreen {
                     // Not in the total (prd §1476 item 1): the Fees page's box
                     // says so (`feesLine`); a door carries no line (§1496).
                     walletDoor(.fees, figure: mask ?? AppleWalletRoom.money(page.feesTotal, "USD"))
+                }
+                if roundUps {
+                    // What the change bought this window, never in the total
+                    // (prd §1523): kept, not spent. Nothing bought yet, the
+                    // door says what waits instead of a zero.
+                    if page.roundUps.isEmpty {
+                        walletDoor(.roundUps, word: Self.spendingRoundUpWaiting(page.roundUpsWaiting, mask: mask))
+                    } else {
+                        walletDoor(.roundUps, figure: mask ?? AppleWalletRoom.money(page.roundUpsTotal, "USD"))
+                    }
                 }
             }
         } else if reading.read {
@@ -419,6 +431,8 @@ extension FeedScreen {
             walletSpendingGroup(.places)
         case .fees:
             walletSpendingGroup(.fees)
+        case .roundUps:
+            walletSpendingGroup(.roundUps)
         default:
             EmptyView()
         }
@@ -622,6 +636,21 @@ extension FeedScreen {
                 walletCard(WalletSection.fees.label, glyph: WalletSection.fees.glyph) {
                     ForEach(reading.page.fees, id: \.name) { network in
                         spendingFeeRow(network, window: reading.window, mask: mask)
+                    }
+                }
+            }
+        case .roundUps:
+            // **WHAT THE CHANGE BOUGHT (prd §1523):** the change still
+            // waiting first, then each buy, newest first.
+            let page = reading.page
+            if page.roundUps.isEmpty && page.roundUpsWaiting <= 0 { walletSkeletonRowsSection }
+            if !page.roundUps.isEmpty || page.roundUpsWaiting > 0 {
+                walletCard(WalletSection.roundUps.label, glyph: WalletSection.roundUps.glyph) {
+                    if page.roundUpsWaiting > 0 {
+                        spendingRoundUpWaitingRow(page.roundUpsWaiting, mask: mask)
+                    }
+                    ForEach(page.roundUps, id: \.tx) { buy in
+                        spendingRoundUpRow(buy, mask: mask)
                     }
                 }
             }

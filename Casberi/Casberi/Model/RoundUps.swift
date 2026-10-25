@@ -13,6 +13,9 @@ import Foundation
 /// The buy is a plain `transfer` of the dollar to Relay's deposit address for
 /// the route (`YourAccountChain.roundUpCall`) — the same call a send is, so a
 /// spend limit's session can carry it too, and no approval is ever granted.
+///
+/// **What it bought is Spending's Round-ups door (prd §1523)**, never part of
+/// the total: the change was kept, not spent.
 enum RoundUps {
     /// What the change buys. `address` is Relay's spelling: the zero address
     /// for a network's own coin.
@@ -70,6 +73,50 @@ enum RoundUps {
     static func setSaved(_ units: String, on chainId: Int) {
         guard !YourAccountDemo.isOn else { return }
         UserDefaults.standard.set(units, forKey: savedKey(chainId))
+    }
+
+    /// The change waiting on every network, in dollars: what Spending's
+    /// Round-ups row says is not bought yet (prd §1523).
+    static var waitingUSD: Double {
+        YourAccountOp.networks.reduce(0) { sum, net in
+            sum + ((Decimal(string: saved(on: net.chainId)).map { NSDecimalNumber(decimal: $0 / pow(10, dollarDecimals)).doubleValue }) ?? 0)
+        }
+    }
+
+    // MARK: - The buys (prd §1523)
+
+    /// **RELAY'S DEPOSIT ADDRESSES THIS PHONE PAID A ROUND-UP TO.** Relay
+    /// hands out a new address per quote, so nothing on chain says a transfer
+    /// to one was a round-up's buy: this list does. The landed send to one is
+    /// stamped `.roundUp` (`SpendingSource.stampRoundUp`), and the stamp
+    /// rides the row through iCloud; the list itself stays on this phone.
+    /// Kept when the address is asked for, before the send lands: an address
+    /// a send never reached marks nothing. The newest `depositCap` are kept.
+    struct Deposit: Codable, Equatable, Sendable {
+        var address: String
+        var target: Target
+        var at: Date
+    }
+
+    static let depositCap = 200
+    private static let depositsKey = "yourAccount.roundUps.deposits"
+
+    static var deposits: [Deposit] {
+        UserDefaults.standard.data(forKey: depositsKey).flatMap { try? JSONDecoder().decode([Deposit].self, from: $0) } ?? []
+    }
+
+    static func noteDeposit(_ address: String, target: Target, at: Date = .now) {
+        guard !YourAccountDemo.isOn, !address.isEmpty else { return }
+        var list = deposits.filter { $0.address.caseInsensitiveCompare(address) != .orderedSame }
+        list.append(Deposit(address: address.lowercased(), target: target, at: at))
+        if list.count > depositCap { list.removeFirst(list.count - depositCap) }
+        if let data = try? JSONEncoder().encode(list) { UserDefaults.standard.set(data, forKey: depositsKey) }
+    }
+
+    /// What a round-up paid to each deposit address buys, by lowercased
+    /// address: read once for a pass over many rows.
+    static func depositTargets() -> [String: Target] {
+        Dictionary(deposits.map { ($0.address.lowercased(), $0.target) }, uniquingKeysWith: { _, newer in newer })
     }
 
     /// What `units` of the dollar rounds up by, to the next `step` dollars;

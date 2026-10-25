@@ -614,12 +614,17 @@ struct ThingFact: Hashable, Identifiable, Sendable {
         /// number. Read by Spending's Fees row (`SpendingSource.fee(of:)`),
         /// never drawn as a fact row.
         case fee
+        /// A sent wallet leg that was a round-up's buy (prd §1523): `label`
+        /// the token it bought, `value` the network it lands on. Read by
+        /// Spending's Round-ups door (`SpendingSource.roundUp(of:)`), which
+        /// also keeps it out of the total; never drawn as a fact row.
+        case roundUp
 
         /// Kept on the thing for a reader elsewhere, never drawn as a label
         /// and value row (`FactRows` skips these).
         var isRowless: Bool {
             switch self {
-            case .reminder, .edited, .list, .unsubscribe, .settlement, .operation, .fee: return true
+            case .reminder, .edited, .list, .unsubscribe, .settlement, .operation, .fee, .roundUp: return true
             default: return false
             }
         }

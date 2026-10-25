@@ -66,6 +66,45 @@ extension FeedScreen {
         return "\(count) · \(spendingAgainst(network.usd, earlier: earlier, window: window, now: now, point: false))"
     }
 
+    /// **A ROUND-UP'S BUY (prd §1523):** the token it bought, its day and
+    /// network, and the dollars it took. The buy the count starts from says
+    /// so: buys before the mark was kept are not counted (§83).
+    func spendingRoundUpRow(_ buy: Spending.RoundUp, mask: String?) -> some View {
+        SubscriptionRow(name: buy.bought.symbol,
+                        line: Text(verbatim: Self.spendingRoundUpLine(buy, from: SpendingReading.shared.page.roundUpsFrom))) {
+            Text(verbatim: mask ?? AppleWalletRoom.money(buy.usd, "USD"))
+                .dsText(.price17).monospacedDigit().foregroundStyle(DS.textPrimary)
+        }
+        .walletListRow()
+    }
+
+    static func spendingRoundUpLine(_ buy: Spending.RoundUp, from: Date?) -> String {
+        var parts = [buy.at.formatted(.dateTime.month(.abbreviated).day()),
+                     String(localized: "on \(buy.bought.network)")]
+        if let from, from == buy.at { parts.append(String(localized: "first counted")) }
+        return parts.joined(separator: " · ")
+    }
+
+    /// The change counted and not yet bought (prd §1523): what it buys, and
+    /// at what.
+    func spendingRoundUpWaitingRow(_ usd: Double, mask: String?) -> some View {
+        let setting = RoundUps.setting
+        let at = AppleWalletRoom.money((Double(RoundUps.buyAt) ?? 5_000_000) / pow(10, Double(RoundUps.dollarDecimals)), "USD")
+        return SubscriptionRow(name: String(localized: "Waiting"),
+                               line: Text(verbatim: String(localized: "Buys \(setting.target.symbol) at \(at)"))) {
+            Text(verbatim: mask ?? AppleWalletRoom.money(usd, "USD"))
+                .dsText(.price17).monospacedDigit().foregroundStyle(DS.textPrimary)
+        }
+        .walletListRow()
+    }
+
+    /// The Round-ups door's word while nothing is bought this window:
+    /// "$2.60 waiting"; under Hide balances "Waiting".
+    static func spendingRoundUpWaiting(_ usd: Double, mask: String?) -> String {
+        guard mask == nil else { return String(localized: "Waiting") }
+        return String(localized: "\(AppleWalletRoom.money(usd, "USD")) waiting")
+    }
+
     /// A subscription's row (prd §1469): its newest charge's day and what
     /// paid it — "Oct 14 · Apple Card", "Oct 2 · tracked by you" — and what
     /// it cost this window. Never compared: one price compares to itself.

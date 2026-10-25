@@ -16,7 +16,8 @@ import Foundation
 ///     (§1498, user: "lets bring the tile back but keep watchlist on the with
 ///     the tile not on home"). It is yours, not an account's, so it stays
 ///     lit whatever account is picked (§1519, user: "markets should stay lit").
-///   • **Spending** is a reading of Activity: Subscriptions, Places, Fees.
+///   • **Spending** is a reading of Activity: Subscriptions, Places, Fees,
+///     Round-ups (§1523).
 ///
 /// Security is deleted (user: "we will break those out into what they are"):
 /// your account's controls are Your account's, approvals and delegations are
@@ -77,6 +78,8 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
     case subscriptions
     case places
     case fees
+    /// What your account's round-ups bought, never in the total (prd §1523).
+    case roundUps
 
     var id: String { rawValue }
 
@@ -92,8 +95,8 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
                                              .permissions, .threats]
     /// Holdings' doors (prd §1480 item 4, §1503): whose, then what.
     static let holdingsDoors: [WalletSection] = [.holdingAccounts, .apps, .positions, .nfts]
-    /// Spending's doors (prd §1480 item 5).
-    static let spendingDoors: [WalletSection] = [.subscriptions, .places, .fees]
+    /// Spending's doors (prd §1480 item 5; Round-ups, §1523).
+    static let spendingDoors: [WalletSection] = [.subscriptions, .places, .fees, .roundUps]
     /// Your account's doors (prd §1515): the recovery key's check.
     static let yourAccountDoors: [WalletSection] = [.recoveryKey, .nodes]
 
@@ -141,6 +144,7 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
         case .subscriptions:   return String(localized: "Subscriptions")
         case .places:          return String(localized: "Places")
         case .fees:            return String(localized: "Fees")
+        case .roundUps:        return String(localized: "Round-ups")
         case .recoveryKey:     return String(localized: "Recovery key")
         case .nodes:           return String(localized: "Nodes")
         }
@@ -166,6 +170,7 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
         case .subscriptions:   return String(localized: "What renews, and what it costs you")
         case .places:          return String(localized: "Where your money went")
         case .fees:            return String(localized: "What your sends paid the network")
+        case .roundUps:        return String(localized: "What your round-ups bought")
         case .recoveryKey:     return String(localized: "Whether your recovery key still works")
         case .nodes:           return String(localized: "Where your account reads each network")
         }
@@ -199,6 +204,7 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
         case .subscriptions:   return String(localized: "No subscriptions yet")
         case .places:          return String(localized: "No places")
         case .fees:            return String(localized: "No fees")
+        case .roundUps:        return String(localized: "No round-ups")
         case .recoveryKey:     return String(localized: "Not checked yet")
         case .nodes:           return String(localized: "Casberi's list")
         }
@@ -244,6 +250,8 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
             return String(localized: "Every place you paid this window, largest first.")
         case .fees:
             return String(localized: "Gas on every transaction your wallets sent, by network.")
+        case .roundUps:
+            return String(localized: "The change your sends rounded up, and the token it bought; never part of the total.")
         case .recoveryKey:
             return String(localized: "Your recovery key, checked once a month with Face ID: no fee, nothing sent.")
         case .nodes:

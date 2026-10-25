@@ -30,6 +30,10 @@ final class SpendingReading {
     /// fee yet, so the row can say which day the fees start from.
     private var fees: [Spending.Fee] = []
     private var unpricedSends: [Date] = []
+    /// **ROUND-UPS (prd §1523):** what the change bought, one per
+    /// transaction, and the change still waiting to buy.
+    private var roundUps: [Spending.RoundUp] = []
+    private var roundUpsWaiting: Double = 0
     /// **A PLAN TRACKED BY HAND COUNTS ON ITS RENEWAL DAY (prd §1469):**
     /// one charge per renewal at its price, for an item only you added —
     /// nothing a card charged, which is already in `charges`. The tile's
@@ -87,6 +91,8 @@ final class SpendingReading {
         let followed = SpendingSource.followedWallets()
         fees = SpendingSource.walletFees(things, followed: followed)
         unpricedSends = SpendingSource.unpricedSends(things, followed: followed)
+        roundUps = SpendingSource.walletRoundUps(things, followed: followed)
+        roundUpsWaiting = RoundUps.waitingUSD
         recurringKeys = Self.recurring()
         readPage(now: now, calendar: calendar)
         let roll = WalletCardRoll.compose(
@@ -113,7 +119,8 @@ final class SpendingReading {
         let keys = recurringKeys
         let next = Spending.read(charges + tracked, now: now, calendar: calendar, window: window,
                                  isRecurring: { keys.contains(Subscriptions.key($0)) },
-                                 fees: fees, unpricedSends: unpricedSends)
+                                 fees: fees, unpricedSends: unpricedSends,
+                                 roundUps: roundUps, roundUpsWaiting: roundUpsWaiting)
         if next != page { page = next }
     }
 
@@ -302,6 +309,7 @@ enum SpendingSource {
             let tx = thing.content.isEmpty ? (thing.sourceRef ?? thing.id.uuidString) : thing.content.lowercased()
             let to = thing.counterpartyAddress?.lowercased()
             let fee = Self.fee(of: thing)
+            let bought = way == .sent ? Self.roundUp(of: thing) : nil
             return Spending.Move(
                 wallet: wallet, tx: tx, way: way,
                 usd: thing.transferUSD, at: thing.capturedAt,
@@ -310,7 +318,8 @@ enum SpendingSource {
                 machinery: way == .sent && to.map(isMachinery) ?? false,
                 place: thing.transferCounterparty.flatMap { $0.isEmpty ? nil : $0 }
                     ?? thing.counterpartyAddress.map(WalletStore.shortAddress),
-                feeUSD: fee?.usd, network: fee?.network)
+                feeUSD: fee?.usd, network: fee?.network,
+                roundUp: bought.map { Spending.RoundUp.Bought(symbol: $0.symbol, network: $0.network) })
         }
     }
 
@@ -369,5 +378,40 @@ enum SpendingSource {
         guard let usd, usd.isFinite, usd > 0, !network.isEmpty, Self.fee(of: thing) == nil else { return false }
         thing.facts.append(ThingFact(network, String(usd), .fee).encoded)
         return true
+    }
+
+    // MARK: - What a round-up bought (prd §1523)
+
+    /// The token a sent leg's round-up bought and the network it lands on:
+    /// the `.roundUp` fact's label and value. Never drawn as a fact row.
+    static func roundUp(of thing: Thing) -> (symbol: String, network: String)? {
+        guard let fact = thing.factList.first(where: { $0.action == .roundUp }) else { return nil }
+        return (fact.label, fact.value)
+    }
+
+    /// Stamps a sent leg whose counterparty is a deposit address this phone
+    /// paid a round-up to (`RoundUps.depositTargets()`, read once by the
+    /// caller), once. Returns whether the thing changed.
+    @discardableResult
+    static func stampRoundUp(_ thing: Thing, to counterparty: String?,
+                             deposits: [String: RoundUps.Target]) -> Bool {
+        guard let counterparty, !deposits.isEmpty, Self.roundUp(of: thing) == nil,
+              let target = deposits[counterparty.lowercased()] else { return false }
+        return stampRoundUp(thing, symbol: target.symbol, network: target.network)
+    }
+
+    /// Stamps the buy by its token and network, once (the demo's rows).
+    @discardableResult
+    static func stampRoundUp(_ thing: Thing, symbol: String, network: String) -> Bool {
+        guard !symbol.isEmpty, !network.isEmpty, Self.roundUp(of: thing) == nil else { return false }
+        thing.facts.append(ThingFact(symbol, network, .roundUp).encoded)
+        return true
+    }
+
+    /// **ROUND-UPS (prd §1523):** what the change bought, through
+    /// `Spending.walletRoundUps` — one per transaction, followed wallets only.
+    @MainActor
+    static func walletRoundUps(_ things: [Thing], followed own: Set<String>) -> [Spending.RoundUp] {
+        Spending.walletRoundUps(walletMoves(things), own: own)
     }
 }

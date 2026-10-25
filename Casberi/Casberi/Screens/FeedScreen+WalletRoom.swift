@@ -196,7 +196,7 @@ extension FeedScreen {
         case .yourAccount, .following, .needsYou, .permissions, .threats, .recoveryKey, .nodes:
             walletPageFigure(section, upcoming: upcoming)
         // Spending's pages keep Spending's box: the window and its total.
-        case .places, .fees:
+        case .places, .fees, .roundUps:
             walletSpendingFigure
         // **SUBSCRIPTIONS, AND ONLY THEM (prd §1111).** The calendar shows
         // each renewal on its day and the statement what they cost a month;
@@ -557,7 +557,7 @@ extension FeedScreen {
         // Subscriptions and Spending are decided by their own reading, in
         // their figure; Activity and Home's doors state their own count
         // (prd §1480), an empty one included.
-        case .home, .markets, .subscriptions, .spending, .places, .fees,
+        case .home, .markets, .subscriptions, .spending, .places, .fees, .roundUps,
              .activity, .yourAccount, .following, .needsYou, .permissions, .threats, .recoveryKey, .nodes:
             return false
         case .holdings, .holdingAccounts, .positions, .apps, .nfts:
@@ -578,7 +578,7 @@ extension FeedScreen {
         // Permissions, Threats and Your account are an address's readings,
         // which an app pick clears (§1067), as Security was.
         // Markets is what YOU watch, no account's, so it stays lit (§1519).
-        var out: Set<WalletSection> = [.spending, .places, .fees,
+        var out: Set<WalletSection> = [.spending, .places, .fees, .roundUps,
                                        .permissions, .threats, .yourAccount, .recoveryKey, .nodes]
         // Privy's apps are Holdings' too (§1124), with money or without, and
         // so is an account an app read (§1341): every state stands there.
