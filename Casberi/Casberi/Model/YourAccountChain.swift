@@ -23,7 +23,12 @@ enum YourAccountChain {
         /// service's mark in place of its name (§1442n, user: "if we say
         /// relay we should show their logo. and not say 'said'").
         var from: String? = nil
-        init(message: String, from: String? = nil) { self.message = message; self.from = from }
+        /// Refused for good: the simulation says it would fail, so asking
+        /// another key instead (the spend limit's fallback) would not help.
+        var settled = false
+        init(message: String, from: String? = nil, settled: Bool = false) {
+            self.message = message; self.from = from; self.settled = settled
+        }
     }
 
     private static let service = "Your account"
@@ -675,12 +680,32 @@ enum YourAccountChain {
     static func sessionSend(_ payments: [YourAccountOp.Payment], roundUp: RoundUpBuy? = nil, reason: String,
                             report: @escaping @Sendable (String) -> Void = { _ in },
                             stage: @escaping @Sendable (Stage) async -> Void) async throws -> Sent {
-        guard let net = payments.first?.network, payments.allSatisfy({ $0.network == net }),
-              let account = YourAccountKey.address, let plan = plan(net),
-              let window = plan.window(at: Int(Date().timeIntervalSince1970)) else {
+        guard let net = payments.first?.network, let account = YourAccountKey.address else {
             throw Failure(message: String(localized: "A spend limit is not available yet"))
         }
         await stage(.preparing)
+        // A preview of these sends on the session key, under a minute old,
+        // is signed as it stands (prd §1509).
+        let kept = await Prepared.take(payments.map(Item.send), roundUp: roundUp, route: .session)
+        let (callData, salt) = try await sessionCall(payments, roundUp: roundUp, account: account)
+        // Simulated like every other send (prd §1509): the transfers as the
+        // account makes them; a refusal sends nothing.
+        let steps: [Step] = payments.compactMap { YourAccountOp.call(for: $0).map { ([$0], nil) } }
+        let symbols = Dictionary(payments.compactMap { p in p.token.contract.map { ($0.lowercased(), p.token.symbol) } },
+                                 uniquingKeysWith: { a, _ in a })
+        try require(await check(net, account: account, approvals: [], steps: steps, symbols: symbols), on: net, swaps: false)
+        return try await sessionOperation(net, account: account, callData: callData, salt: salt, reason: reason,
+                                          pinned: kept?.op, report: report, stage: stage)
+    }
+
+    /// The session key's calls for these sends (and a round-up's buy), and
+    /// the salt of the window that holds now.
+    static func sessionCall(_ payments: [YourAccountOp.Payment], roundUp: RoundUpBuy?, account: String) async throws
+        -> (callData: [UInt8], salt: [UInt8]) {
+        guard let net = payments.first?.network, payments.allSatisfy({ $0.network == net }),
+              let plan = plan(net), let window = plan.window(at: Int(Date().timeIntervalSince1970)) else {
+            throw Failure(message: String(localized: "A spend limit is not available yet"))
+        }
         var calls: [YourAccount7579.Execution] = []
         for p in payments {
             guard let call = YourAccount7579.sessionCall(token: p.token.contract, dollar: plan.dollar, to: p.to, units: p.amount) else {
@@ -700,8 +725,7 @@ enum YourAccountChain {
             ? YourAccount7579.executeSingle(to: calls[0].target, wei: YourAccountOp.decimal(calls[0].value), data: calls[0].data)
             : YourAccount7579.executeBatch(calls)
         guard let callData else { throw Failure(message: String(localized: "This send could not be written")) }
-        return try await sessionOperation(net, account: account, callData: callData,
-                                          salt: YourAccount7579.salt(plan, window), reason: reason, report: report, stage: stage)
+        return (callData, YourAccount7579.salt(plan, window))
     }
 
     /// `units` of `token` (ETH or the network's dollar) to `target`, signed
@@ -738,13 +762,14 @@ enum YourAccountChain {
                                           reason: reason, dryRun: dryRun, report: report, stage: stage)
     }
 
-    /// One operation on the session key: Smart Sessions' nonce key, the
-    /// window's permission, the EntryPoint's own hash under Face ID, and the
-    /// passkey validator asked before it goes.
-    private static func sessionOperation(_ net: Network, account: String, callData: [UInt8], salt: [UInt8],
-                                         reason: String, dryRun: Bool = false,
-                                         report: @escaping @Sendable (String) -> Void = { _ in },
-                                         stage: @escaping @Sendable (Stage) async -> Void) async throws -> Sent {
+    /// The session key's operation, priced but unsigned: Smart Sessions'
+    /// nonce key, a USE-mode dummy of the right shape, the bundler's
+    /// estimate. Over the window's total the policy refuses it here, in the
+    /// estimate, so the preview knows a send is over the limit before any
+    /// tap (prd §1509).
+    static func sessionBuild(_ net: Network, account: String, callData: [UInt8], salt: [UInt8],
+                             pinned: YourAccountOp.Op? = nil,
+                             report: @escaping @Sendable (String) -> Void = { _ in }) async throws -> YourAccountOp.Op {
         let validatorInit = try sessionInit()
         let permission = YourAccount7579.permissionId(validatorInit: validatorInit, salt: salt)
         var op = YourAccountOp.Op(sender: account, nonce: 0, factory: nil, factoryData: [], callData: callData)
@@ -753,6 +778,16 @@ enum YourAccountChain {
         op.nonce = try await nonce(net, account, key: op.nonceKey)
         op.signature = YourAccount7579.useSignature(permissionId: permission, hash: [UInt8](repeating: 0, count: 32),
                                                     r: [UInt8](repeating: 0x11, count: 32), s: [UInt8](repeating: 0x22, count: 32))
+        if let pinned, pinned.nonce == op.nonce, pinned.nonceKey == op.nonceKey, pinned.callData == op.callData,
+           pinned.sender == op.sender {
+            op.verificationGasLimit = pinned.verificationGasLimit
+            op.callGasLimit = pinned.callGasLimit
+            op.preVerificationGas = pinned.preVerificationGas
+            op.maxFeePerGas = pinned.maxFeePerGas
+            op.maxPriorityFeePerGas = pinned.maxPriorityFeePerGas
+            report("pinned: the preview's gas and fee")
+            return op
+        }
         try await price(&op, on: net)
         let estimate: [String: Any]
         do {
@@ -777,8 +812,21 @@ enum YourAccountChain {
         op.preVerificationGas = pvg
         report("gas vgl=\(vgl) cgl=\(cgl) pvg=\(pvg)")
 
-        // The EntryPoint's own word on the hash, before Face ID sees it.
+        return op
+    }
+
+    /// One operation on the session key: Smart Sessions' nonce key, the
+    /// window's permission, the EntryPoint's own hash under Face ID, and the
+    /// passkey validator asked before it goes.
+    private static func sessionOperation(_ net: Network, account: String, callData: [UInt8], salt: [UInt8],
+                                         reason: String, dryRun: Bool = false, pinned: YourAccountOp.Op? = nil,
+                                         report: @escaping @Sendable (String) -> Void = { _ in },
+                                         stage: @escaping @Sendable (Stage) async -> Void) async throws -> Sent {
+        let validatorInit = try sessionInit()
+        let permission = YourAccount7579.permissionId(validatorInit: validatorInit, salt: salt)
+        var op = try await sessionBuild(net, account: account, callData: callData, salt: salt, pinned: pinned, report: report)
         let hash = YourAccountOp.userOpHash(op, chainId: net.chainId)
+        // The EntryPoint's own word on the hash, before Face ID sees it.
         let theirs = SafeABI.hexBytes(try await ethCall(net, to: YourAccount.entryPoint,
             data: YourAccount.sel("getUserOpHash((address,uint256,bytes,bytes,bytes32,uint256,bytes32,bytes,bytes))")
                 + YourAccount.w(32) + op.packedTuple))
@@ -1172,14 +1220,30 @@ enum YourAccountChain {
                 "data": SafeABI.hex(YourAccount.sel("getEthBalance(address)") + YourAccount.w(account))]
     }
 
-    /// **WHAT COMES BACK, PROVEN BEFORE FACE ID (prd §1440).** The account's
-    /// calls, run in order by the network's own node (`eth_simulateV1`, as
-    /// the account, against the real state), with the bought token's balance
-    /// read around each swap. Refused unless every call succeeds and every
-    /// swap pays at least its quoted minimum. Returns what each swap paid.
-    private static func simulate(_ net: Network, account: String, approvals: [YourAccountOp.Call],
-                                 steps: [(calls: [YourAccountOp.Call], swap: (buy: YourAccountOp.Token, minimum: String)?)])
-        async throws -> [String?] {
+    /// One step of a transaction: its calls, and for a swap what it buys and
+    /// the least it must pay.
+    typealias Step = (calls: [YourAccountOp.Call], swap: (buy: YourAccountOp.Token, minimum: String)?)
+
+    /// What running the calls said (prd §1509 item 1): the verdict Details
+    /// draws, what each swap paid (nil for a send), and whether a swap's
+    /// route paid less than its minimum.
+    struct Simulated: Equatable, Sendable {
+        var checked: YourAccountPreview.Checked
+        var paid: [String?] = []
+        var paysLess = false
+    }
+
+    /// **WHAT COMES BACK, PROVEN BEFORE FACE ID (prd §1440, §1509).** The
+    /// account's calls, run in order by the network's own node
+    /// (`eth_simulateV1`, as the account, against the real state), with the
+    /// bought token's balance read around each swap. Never throws: a node
+    /// that will not simulate is `notChecked`, a refused call `fails` with
+    /// the token it was (`symbols`, by contract) and the node's reason.
+    /// Measured 2026-10-24: every node of all three networks answers it, a
+    /// revert as the call's `status 0x0` with `error.data`, a value the
+    /// account lacks as a refusal of the whole block (-38014).
+    static func check(_ net: Network, account: String, approvals: [YourAccountOp.Call], steps: [Step],
+                      symbols: [String: String] = [:]) async -> Simulated {
         func json(_ c: YourAccountOp.Call) -> [String: Any] {
             // The value word as a JSON-RPC quantity: hex, no leading zeros.
             let digits = SafeABI.hex(c.value).dropFirst(2).drop { $0 == "0" }
@@ -1187,44 +1251,84 @@ enum YourAccountChain {
                     "data": SafeABI.hex(c.data)]
         }
         var calls: [[String: Any]] = approvals.map(json)
+        // Which of the transaction's own calls each simulated call is (the
+        // balance reads around a swap are none).
+        var own: [Int?] = approvals.indices.map { $0 }
+        var count = approvals.count
         var reads: [(before: Int, after: Int, minimum: String)?] = []
         for step in steps {
             if let swap = step.swap {
                 let before = calls.count
-                calls.append(balanceCall(swap.buy, of: account))
-                calls += step.calls.map(json)
+                calls.append(balanceCall(swap.buy, of: account)); own.append(nil)
+                for c in step.calls { calls.append(json(c)); own.append(count); count += 1 }
                 let after = calls.count
-                calls.append(balanceCall(swap.buy, of: account))
+                calls.append(balanceCall(swap.buy, of: account)); own.append(nil)
                 reads.append((before, after, swap.minimum))
             } else {
-                calls += step.calls.map(json)
+                for c in step.calls { calls.append(json(c)); own.append(count); count += 1 }
                 reads.append(nil)
             }
         }
         let params: [Any] = [["blockStateCalls": [["calls": calls]], "validation": false], "latest"]
-        guard let blocks = try await rpc(net, "eth_simulateV1", params) as? [[String: Any]],
-              let results = blocks.first?["calls"] as? [[String: Any]], results.count == calls.count else {
-            throw Failure(message: String(localized: "\(net.name) could not check this swap, so nothing was signed"))
+        let answer: Any
+        do {
+            answer = try await rpc(net, "eth_simulateV1", params)
+        } catch let failure as Failure {
+            // A value the account does not hold refuses the whole block.
+            if failure.message.lowercased().contains("insufficient funds") {
+                return Simulated(checked: .fails(call: nil, token: "ETH", reason: failure.message))
+            }
+            return Simulated(checked: .notChecked)
+        } catch {
+            return Simulated(checked: .notChecked)
         }
-        if results.contains(where: { ($0["status"] as? String) != "0x1" }) {
-            throw Failure(message: String(localized: "This would fail on \(net.name), so nothing was signed"))
+        guard let blocks = answer as? [[String: Any]],
+              let results = blocks.first?["calls"] as? [[String: Any]], results.count == calls.count else {
+            return Simulated(checked: .notChecked)
+        }
+        if let bad = results.firstIndex(where: { ($0["status"] as? String) != "0x1" }) {
+            let error = results[bad]["error"] as? [String: Any]
+            let target = (calls[bad]["to"] as? String)?.lowercased() ?? ""
+            let reason = YourAccountPreview.revertReason(error?["data"] as? String) ?? (error?["message"] as? String)
+            return Simulated(checked: .fails(call: own[bad], token: symbols[target], reason: reason))
         }
         func value(_ i: Int) -> String? {
             (results[i]["returnData"] as? String).flatMap { YourAccountOp.decimal(hexQuantity: String($0.prefix(66))) }
         }
         var paid: [String?] = []
-        for read in reads {
+        var least: (String, YourAccountOp.Token)?
+        for (n, read) in reads.enumerated() {
             guard let read else { paid.append(nil); continue }
             guard let before = value(read.before), let after = value(read.after) else {
-                throw Failure(message: String(localized: "\(net.name) could not check this swap, so nothing was signed"))
+                return Simulated(checked: .notChecked)
             }
             let got = YourAccountOp.difference(after, before)
             guard YourAccountOp.atMost(read.minimum, got) else {
-                throw Failure(message: String(localized: "Relay's route would pay less than it quoted, so nothing was signed"))
+                return Simulated(checked: .fails(call: nil, token: nil, reason: String(localized: "Pays less than Relay quoted")),
+                                 paysLess: true)
             }
             paid.append(got)
+            if let buy = steps[n].swap?.buy {
+                least = (least.map { YourAccountOp.sum($0.0, read.minimum) } ?? read.minimum, buy)
+            }
         }
-        return paid
+        if let least { return Simulated(checked: .returnsAtLeast(least.0, least.1), paid: paid) }
+        return Simulated(checked: .lands, paid: paid)
+    }
+
+    /// The simulation as signing reads it: a swap is refused unless it was
+    /// checked and pays its minimum (§1440); a send the node refuses is
+    /// refused, and one no node would check goes as before (prd §1509).
+    static func require(_ s: Simulated, on net: Network, swaps: Bool) throws {
+        switch s.checked {
+        case .notChecked:
+            if swaps { throw Failure(message: String(localized: "\(net.name) could not check this swap, so nothing was signed")) }
+        case .fails:
+            if s.paysLess { throw Failure(message: String(localized: "Relay's route would pay less than it quoted, so nothing was signed"), settled: true) }
+            throw Failure(message: String(localized: "This would fail on \(net.name), so nothing was signed"), settled: true)
+        case .lands, .returnsAtLeast:
+            break
+        }
     }
 
     /// A swap the page describes: what is sold, for what, on one network.
@@ -1264,13 +1368,48 @@ enum YourAccountChain {
         var bought: [String?] = []
     }
 
+    /// One transaction, assembled and simulated, everything but its gas and
+    /// its signature (prd §1509): what Details previews and what Face ID
+    /// signs are built by this one function, so they cannot drift apart.
+    struct Assembled {
+        let items: [Item]
+        let net: Network
+        let account: String
+        /// Every call in order: approvals, the steps, a renewal, the keys
+        /// chosen at Create. The key change is added by the operation.
+        var calls: [YourAccountOp.Call]
+        /// The same, in words, the key change last (`YourAccountPreview`).
+        var words: [YourAccountPreview.Step]
+        let payments: [YourAccountOp.Payment]
+        let approvals: [YourAccountPreview.Approval]
+        /// What each swap sells and Relay's fee on it, from the quote signed.
+        let sold: [YourAccountPreview.Sold]
+        let steps: [Step]
+        var simulated: Simulated
+        let deployed: Bool
+        let renewed: YourAccount7579.Plan?
+        let setupPlan: YourAccount7579.Plan?
+        /// " · and your keys" when the operation opens the account.
+        let reasonTail: String
+        let signerIndex: Int
+        let next: Int
+        let nextKey: (x: [UInt8], y: [UInt8])
+        let signer: Signer
+    }
+
     /// **EVERY SEND AND SWAP IN ONE OPERATION (prd §1436, §1440).** Each swap
     /// is quoted afresh by Relay and its calls checked (`YourAccountSwap.
     /// checked`: Relay's own contracts, exactly the amount sold); approvals
     /// go first, once per token for the sum; then the sends and swaps in the
     /// page's order and the key change. Before Face ID the whole of it is
-    /// simulated and refused unless every swap pays its minimum. Relay settles
-    /// in the same transaction, so a landed operation is a finished swap.
+    /// simulated (sends too since §1509) and refused unless every call
+    /// succeeds and every swap pays its minimum. Relay settles in the same
+    /// transaction, so a landed operation is a finished swap.
+    ///
+    /// **WHAT DETAILS SHOWED IS WHAT IS SIGNED (prd §1509).** A preview of
+    /// these same items, made under a minute ago on the same route, is signed
+    /// as it stands — its quotes, its gas, its hash — after its simulation is
+    /// run once more; anything older is assembled and priced afresh.
     static func transact(_ items: [Item], reason: String, dryRun: Bool = false, coSigner: CoSigner? = nil,
                          roundUp: RoundUpBuy? = nil, renew: Bool = false,
                          report: @escaping @Sendable (String) -> Void = { _ in },
@@ -1282,9 +1421,81 @@ enum YourAccountChain {
             throw Failure(message: String(localized: "There is no account on this iPhone"))
         }
         await stage(.preparing)
+        let route: Prepared.Signs = coSigner == nil ? .owner : .bothKeys
+        let kept = await Prepared.take(items, roundUp: roundUp, route: route)
+        var a: Assembled
+        if let kept, let held = kept.assembled {
+            // The preview's own calls, checked once more against the state now.
+            let again = await check(net, account: account, approvals: Array(held.calls.prefix(held.approvalCount)),
+                                    steps: held.steps, symbols: held.symbols)
+            try require(again, on: net, swaps: held.steps.contains { $0.swap != nil })
+            a = held.assembled
+            a.simulated = again
+            report("signing the preview from \(Int(Date().timeIntervalSince(kept.made)))s ago")
+        } else {
+            a = try await assemble(items, account: account, roundUp: roundUp, renew: renew && coSigner != nil,
+                                   report: report).assembled
+            try require(a.simulated, on: net, swaps: a.steps.contains { $0.swap != nil })
+        }
+        let swaps = a.steps.compactMap(\.swap)
+        report("simulated: \(a.simulated.paid.compactMap { $0 }.joined(separator: ", "))")
+
+        // What the bought tokens hold now, to measure what landed.
+        var before: [String: String] = [:]
+        for buy in swaps.map(\.buy) where before[buy.contract ?? ""] == nil {
+            before[buy.contract ?? ""] = await balance(net, buy, of: account) ?? "0"
+        }
+        report("account=\(account) deployed=\(a.deployed) signer=key\(a.signerIndex) next=key\(a.next) swaps=\(swaps.count)")
+        let outcome = try await operate(net, account: account, deployed: a.deployed, calls: a.calls,
+                                        rotateTo: a.nextKey, payments: a.payments, signer: a.signer, coSigner: coSigner,
+                                        reason: reason + a.reasonTail, dryRun: dryRun, pinned: kept?.op,
+                                        report: report, stage: stage)
+        if let renewed = a.renewed, case .landed = outcome { savePlan(renewed, on: net) }
+        if let setupPlan = a.setupPlan, case .landed = outcome { savePlan(setupPlan, on: net) }
+        let sent = Sent(outcome: await settle(outcome, net, account, next: a.next, x: a.nextKey.x), network: net)
+        guard case .landed = sent.outcome, !swaps.isEmpty else {
+            return Transacted(sent: sent, bought: a.simulated.paid)
+        }
+        // A token bought by one swap alone: what actually arrived.
+        var bought = a.simulated.paid
+        for (i, step) in a.steps.enumerated() {
+            guard let swap = step.swap else { continue }
+            let key = swap.buy.contract ?? ""
+            guard swaps.filter({ ($0.buy.contract ?? "") == key }).count == 1,
+                  let then = before[key], let now = await balance(net, swap.buy, of: account) else { continue }
+            let arrived = YourAccountOp.difference(now, then)
+            if arrived != "0" { bought[i] = arrived }
+        }
+        return Transacted(sent: sent, bought: bought)
+    }
+
+    /// What `assemble` hands back beside the transaction: how many of its
+    /// calls are approvals, and which token each contract is, so a kept
+    /// preview can be simulated again exactly.
+    struct AssembledParts {
+        let assembled: Assembled
+        let approvalCount: Int
+        let symbols: [String: String]
+        var calls: [YourAccountOp.Call] { assembled.calls }
+        var steps: [Step] { assembled.steps }
+    }
+
+    /// The calls of one transaction, simulated, with its words. Every swap
+    /// is quoted afresh by Relay, for the preview as for signing, so a kept
+    /// preview's quotes are never older than the preview (`Prepared.lifetime`).
+    static func assemble(_ items: [Item], account: String, roundUp: RoundUpBuy?, renew: Bool,
+                         report: @escaping @Sendable (String) -> Void = { _ in }) async throws -> AssembledParts {
+        guard let net = items.first?.network else {
+            throw Failure(message: String(localized: "One transaction sends on one network"))
+        }
+        typealias Words = YourAccountPreview
+        func figure(_ units: String, _ token: YourAccountOp.Token) -> String { YourAccountOp.spoken(units, decimals: token.decimals) }
         var payments: [YourAccountOp.Payment] = []
         var approvals: [(token: String, spender: String, amount: String)] = []
-        var steps: [(calls: [YourAccountOp.Call], swap: (buy: YourAccountOp.Token, minimum: String)?)] = []
+        var steps: [Step] = []
+        var stepWords: [Words.Step] = []
+        var symbols: [String: String] = [:]
+        var sold: [YourAccountPreview.Sold] = []
         for item in items {
             switch item {
             case .send(let p):
@@ -1293,6 +1504,8 @@ enum YourAccountChain {
                 }
                 payments.append(p)
                 steps.append(([call], nil))
+                stepWords.append(Words.send(figure(p.amount, p.token), p.token.symbol, to: p.toName ?? Words.short(p.to)))
+                if let c = p.token.contract { symbols[c.lowercased()] = p.token.symbol }
             case .swap(let s):
                 let quote = try await swapQuote(net, sell: s.sell, buy: s.buy, amount: s.amount, account: account)
                 guard let checked = YourAccountSwap.checked(quote, sell: s.sell, amount: s.amount) else {
@@ -1304,6 +1517,10 @@ enum YourAccountChain {
                 }
                 approvals += checked.approvals
                 steps.append((calls, (s.buy, quote.minimumBuy)))
+                sold.append(YourAccountPreview.Sold(token: s.sell, amount: s.amount, fee: quote.fee))
+                stepWords.append(Words.swap(figure(s.amount, s.sell), s.sell.symbol,
+                                            atLeast: figure(quote.minimumBuy, s.buy), s.buy.symbol))
+                if let c = s.sell.contract { symbols[c.lowercased()] = s.sell.symbol }
                 // What leaves the account, for the balance check before any prompt.
                 payments.append(.init(network: net, token: s.sell, amount: s.amount,
                                       to: YourAccountSwap.routers.first ?? account, toName: nil))
@@ -1312,49 +1529,63 @@ enum YourAccountChain {
         guard let approvalCalls = YourAccountSwap.approvalCalls(approvals) else {
             throw Failure(message: String(localized: "This swap could not be written"))
         }
+        // The approvals in words, once per token for the sum, as they are called.
+        var approved: [Words.Approval] = []
+        for call in approvalCalls {
+            let contract = call.to.lowercased()
+            let token = items.compactMap { item -> YourAccountOp.Token? in
+                if case .swap(let s) = item, s.sell.contract?.lowercased() == contract { return s.sell }
+                return nil
+            }.first
+            let units = SafeCalldata.decimal(Array(call.data.suffix(32)))
+            approved.append(Words.Approval(figure: token.map { figure(units, $0) } ?? units,
+                                           symbol: token?.symbol ?? Words.short(call.to), spender: "Relay"))
+        }
         // Round-ups (prd §1452): what the change has reached, to Relay's
         // deposit address for the route, last; its dollars counted with the
         // sends' before any prompt.
         if let roundUp {
             let deposit = try await depositAddress(from: net, currency: net.dollar, to: roundUp.target,
                                                    amount: roundUp.units, account: account)
-            let payment = YourAccountOp.Payment(network: net, token: YourAccountOp.dollar(on: net), amount: roundUp.units,
+            let dollar = YourAccountOp.dollar(on: net)
+            let payment = YourAccountOp.Payment(network: net, token: dollar, amount: roundUp.units,
                                                 to: deposit.address, toName: "Relay")
             guard let call = YourAccountOp.call(for: payment) else {
                 throw Failure(message: String(localized: "This send could not be written"))
             }
             payments.append(payment)
             steps.append(([call], nil))
+            stepWords.append(Words.roundUp(figure(roundUp.units, dollar), dollar.symbol,
+                                           buys: roundUp.target.symbol, on: roundUp.target.network))
+            symbols[net.dollar.lowercased()] = dollar.symbol
             report("roundUp: \(roundUp.units) to \(deposit.address) for \(roundUp.target.symbol) on \(roundUp.target.network)")
         }
         var calls = approvalCalls + steps.flatMap(\.calls)
-        let swaps = steps.compactMap(\.swap)
+        var words = approved.map { Words.approve($0.figure, $0.symbol, to: $0.spender) } + stepWords
         // The spend limit renewed with it (prd §1455): only where both keys
         // sign anyway, after everything else.
         var renewed: YourAccount7579.Plan?
-        if renew, coSigner != nil, let r = try await renewal(net, account) {
+        if renew, let r = try await renewal(net, account) {
             calls += r.calls
             renewed = r.plan
+            words.append(Words.renewsLimit(periods: r.plan.windows.count))
             report("renewing the spend limit: \(r.plan.windows.count) periods")
         }
-
-        // What the bought tokens hold now, to measure what landed.
-        var before: [String: String] = [:]
-        for buy in swaps.map(\.buy) where before[buy.contract ?? ""] == nil {
-            before[buy.contract ?? ""] = await balance(net, buy, of: account) ?? "0"
-        }
-        let simulated = swaps.isEmpty ? [] : try await simulate(net, account: account, approvals: approvalCalls, steps: steps)
-        report("simulated: \(simulated.compactMap { $0 }.joined(separator: ", "))")
+        let simulated = await check(net, account: account, approvals: approvalCalls, steps: steps, symbols: symbols)
 
         let deployed = try await isDeployed(net, account)
         // The keys chosen at Create (prd §1457): with the operation that
         // opens the account on this network, after everything it sends.
-        var reason = reason
+        var tail = ""
         var setupPlan: YourAccount7579.Plan?
+        if !deployed { words.append(Words.opens(network: net.name)) }
         if !deployed, let setup = try await setupCalls(net, account) {
             calls += setup.calls
             setupPlan = setup.plan
-            reason += " · " + String(localized: "and your keys")
+            tail = " · " + String(localized: "and your keys")
+            if YourAccountRecovery.publicKey(for: account) != nil { words.append(Words.addsRecovery) }
+            if YourAccountSetup.choice(for: account)?.signer != nil { words.append(Words.addsSigner) }
+            if let plan = setup.plan { words.append(Words.setsLimit(periods: plan.windows.count)) }
             report("setup: \(setup.calls.count) calls, limit \(setup.plan.map { "\($0.windows.count) periods" } ?? "none")")
         }
         let (signerIndex, signer) = try await deviceSigner(net, account, deployed: deployed)
@@ -1362,27 +1593,12 @@ enum YourAccountChain {
         guard let nextKey = YourAccountKey.publicKey(next) else {
             throw Failure(message: String(localized: "This send could not be written"))
         }
-        report("account=\(account) deployed=\(deployed) signer=key\(signerIndex) next=key\(next) swaps=\(swaps.count)")
-        let outcome = try await operate(net, account: account, deployed: deployed, calls: calls,
-                                        rotateTo: nextKey, payments: payments, signer: signer, coSigner: coSigner,
-                                        reason: reason, dryRun: dryRun, report: report, stage: stage)
-        if let renewed, case .landed = outcome { savePlan(renewed, on: net) }
-        if let setupPlan, case .landed = outcome { savePlan(setupPlan, on: net) }
-        let sent = Sent(outcome: await settle(outcome, net, account, next: next, x: nextKey.x), network: net)
-        guard case .landed = sent.outcome, !swaps.isEmpty else {
-            return Transacted(sent: sent, bought: simulated)
-        }
-        // A token bought by one swap alone: what actually arrived.
-        var bought = simulated
-        for (i, step) in steps.enumerated() {
-            guard let swap = step.swap else { continue }
-            let key = swap.buy.contract ?? ""
-            guard swaps.filter({ ($0.buy.contract ?? "") == key }).count == 1,
-                  let then = before[key], let now = await balance(net, swap.buy, of: account) else { continue }
-            let arrived = YourAccountOp.difference(now, then)
-            if arrived != "0" { bought[i] = arrived }
-        }
-        return Transacted(sent: sent, bought: bought)
+        words.append(Words.rotate(to: next))
+        let assembled = Assembled(items: items, net: net, account: account, calls: calls, words: words,
+                                  payments: payments, approvals: approved, sold: sold, steps: steps, simulated: simulated,
+                                  deployed: deployed, renewed: renewed, setupPlan: setupPlan, reasonTail: tail,
+                                  signerIndex: signerIndex, next: next, nextKey: nextKey, signer: signer)
+        return AssembledParts(assembled: assembled, approvalCount: approvalCalls.count, symbols: symbols)
     }
 
     // MARK: - Revoke (prd §1437)
@@ -1425,6 +1641,7 @@ enum YourAccountChain {
     private static func operate(_ net: Network, account: String, deployed: Bool, calls: [YourAccountOp.Call],
                                 rotateTo next: (x: [UInt8], y: [UInt8])?, payments: [YourAccountOp.Payment],
                                 signer: Signer, coSigner: CoSigner? = nil, reason: String, dryRun: Bool = false,
+                                pinned: YourAccountOp.Op? = nil,
                                 report: @escaping @Sendable (String) -> Void = { _ in },
                                 stage: @escaping @Sendable (Stage) async -> Void) async throws -> Sent.Outcome {
         // Which contract this account answers through on this network
@@ -1441,59 +1658,8 @@ enum YourAccountChain {
             }
             coSigner = asked
         }
-        // A token approved to Multicall3 would ride every spend limit's ETH
-        // route (prd §1447 item 15): never, from any operation.
-        guard !calls.contains(where: YourAccount7579.approvesMulticall3) else {
-            throw Failure(message: String(localized: "This send could not be written"))
-        }
-        guard let callData = YourAccountOp.callData(calls: calls, rotateTo: next, entry: entry) else {
-            throw Failure(message: String(localized: "This send could not be written"))
-        }
-        var op = YourAccountOp.Op(sender: account, nonce: 0, factory: nil, factoryData: [], callData: callData)
-        op.entry = entry
-        if deployed {
-            op.nonce = try await nonce(net, account)
-        } else {
-            guard let origin = YourAccountKey.origin else {
-                throw Failure(message: String(localized: "This send could not be written"))
-            }
-            op.factory = YourAccount.proxyFactory
-            op.factoryData = YourAccountOp.factoryData(x: origin.x, y: origin.y)
-        }
-        if let coSigner {
-            guard let dummy = YourAccountOp.bothSignatures(r: [UInt8](repeating: 0x11, count: 32), s: [UInt8](repeating: 0x22, count: 32),
-                                                           owner: signer.owner, signer: coSigner.owner,
-                                                           ecdsa: [UInt8](repeating: 0x11, count: 64) + [27]) else {
-                throw Failure(message: String(localized: "This send could not be written"))
-            }
-            op.signature = dummy
-        } else {
-            op.signature = YourAccountOp.dummySignature(owner: signer.owner)
-        }
-        try await price(&op, on: net)
-        // A balance override lets the bundler estimate whatever the account
-        // holds, so a short balance is said below in words.
-        let override: [String: Any] = [account: ["balance": "0xde0b6b3a7640000"]]
-        let estimate = try await bundler(net, "eth_estimateUserOperationGas", [op.json, YourAccount.entryPoint, override]) as? [String: Any] ?? [:]
-        // The dummy fails verification, so verification gas is the fallback
-        // path's — an over-estimate, never short; a tenth more on each. A
-        // number that overflows is a refusal, never a trap.
-        func q(_ k: String) -> UInt64? {
-            guard let v = (estimate[k] as? String).flatMap({ UInt64($0.dropFirst(2), radix: 16) }) else { return nil }
-            let (m, overflow) = v.multipliedReportingOverflow(by: 11)
-            return overflow ? nil : m / 10
-        }
-        guard let vgl = q("verificationGasLimit"), let cgl = q("callGasLimit"), let pvg = q("preVerificationGas"),
-              vgl > 0, cgl > 0 else {
-            throw Failure(message: String(localized: "\(net.name) could not price this send"))
-        }
-        // With both keys the dummy's ECDSA half fails first, so the estimate
-        // never reaches the passkey's P-256 check the real pair pays for
-        // (AA26 on Base, prd §1447 item 16): that check, and more, on top.
-        report("gas verification=\(vgl) call=\(cgl) pre=\(pvg)")
-        op.verificationGasLimit = coSigner == nil ? vgl : vgl + 100_000
-        op.callGasLimit = cgl
-        op.preVerificationGas = pvg
+        var op = try await build(net, account: account, deployed: deployed, entry: entry, calls: calls, rotateTo: next,
+                                 signerOwner: signer.owner, coSignerOwner: coSigner?.owner, pinned: pinned, report: report)
         guard let maxCost = op.maxCost else {
             throw Failure(message: String(localized: "\(net.name) could not price this send"))
         }
@@ -1580,6 +1746,83 @@ enum YourAccountChain {
         }
         if dryRun { return .dryRun }
         return try await submit(op, net, account: account, stage: stage)
+    }
+
+    /// The operation `operate` signs, built and priced but unsigned: its
+    /// callData with the key change, its nonce (or its creation), a dummy
+    /// signature of the right shape, the bundler's estimate. The preview
+    /// (prd §1509) prices exactly this.
+    static func build(_ net: Network, account: String, deployed: Bool, entry: YourAccountOp.Entry,
+                      calls: [YourAccountOp.Call], rotateTo next: (x: [UInt8], y: [UInt8])?,
+                      signerOwner: String, coSignerOwner: String?, pinned: YourAccountOp.Op? = nil,
+                      report: @escaping @Sendable (String) -> Void = { _ in }) async throws -> YourAccountOp.Op {
+        // A token approved to Multicall3 would ride every spend limit's ETH
+        // route (prd §1447 item 15): never, from any operation.
+        guard !calls.contains(where: YourAccount7579.approvesMulticall3) else {
+            throw Failure(message: String(localized: "This send could not be written"))
+        }
+        guard let callData = YourAccountOp.callData(calls: calls, rotateTo: next, entry: entry) else {
+            throw Failure(message: String(localized: "This send could not be written"))
+        }
+        var op = YourAccountOp.Op(sender: account, nonce: 0, factory: nil, factoryData: [], callData: callData)
+        op.entry = entry
+        if deployed {
+            op.nonce = try await nonce(net, account)
+        } else {
+            guard let origin = YourAccountKey.origin else {
+                throw Failure(message: String(localized: "This send could not be written"))
+            }
+            op.factory = YourAccount.proxyFactory
+            op.factoryData = YourAccountOp.factoryData(x: origin.x, y: origin.y)
+        }
+        if let coSignerOwner {
+            guard let dummy = YourAccountOp.bothSignatures(r: [UInt8](repeating: 0x11, count: 32), s: [UInt8](repeating: 0x22, count: 32),
+                                                           owner: signerOwner, signer: coSignerOwner,
+                                                           ecdsa: [UInt8](repeating: 0x11, count: 64) + [27]) else {
+                throw Failure(message: String(localized: "This send could not be written"))
+            }
+            op.signature = dummy
+        } else {
+            op.signature = YourAccountOp.dummySignature(owner: signerOwner)
+        }
+        // A preview's own gas and fee, when its operation is this one byte
+        // for byte: what Details showed, hash included, is what is signed.
+        if let pinned, pinned.sender == op.sender, pinned.nonce == op.nonce, pinned.nonceKey == op.nonceKey,
+           pinned.factory == op.factory, pinned.factoryData == op.factoryData, pinned.callData == op.callData,
+           pinned.entry == op.entry, pinned.signature.count == op.signature.count {
+            op.verificationGasLimit = pinned.verificationGasLimit
+            op.callGasLimit = pinned.callGasLimit
+            op.preVerificationGas = pinned.preVerificationGas
+            op.maxFeePerGas = pinned.maxFeePerGas
+            op.maxPriorityFeePerGas = pinned.maxPriorityFeePerGas
+            report("pinned: the preview's gas and fee")
+            return op
+        }
+        try await price(&op, on: net)
+        // A balance override lets the bundler estimate whatever the account
+        // holds, so a short balance is said below in words.
+        let override: [String: Any] = [account: ["balance": "0xde0b6b3a7640000"]]
+        let estimate = try await bundler(net, "eth_estimateUserOperationGas", [op.json, YourAccount.entryPoint, override]) as? [String: Any] ?? [:]
+        // The dummy fails verification, so verification gas is the fallback
+        // path's — an over-estimate, never short; a tenth more on each. A
+        // number that overflows is a refusal, never a trap.
+        func q(_ k: String) -> UInt64? {
+            guard let v = (estimate[k] as? String).flatMap({ UInt64($0.dropFirst(2), radix: 16) }) else { return nil }
+            let (m, overflow) = v.multipliedReportingOverflow(by: 11)
+            return overflow ? nil : m / 10
+        }
+        guard let vgl = q("verificationGasLimit"), let cgl = q("callGasLimit"), let pvg = q("preVerificationGas"),
+              vgl > 0, cgl > 0 else {
+            throw Failure(message: String(localized: "\(net.name) could not price this send"))
+        }
+        // With both keys the dummy's ECDSA half fails first, so the estimate
+        // never reaches the passkey's P-256 check the real pair pays for
+        // (AA26 on Base, prd §1447 item 16): that check, and more, on top.
+        report("gas verification=\(vgl) call=\(cgl) pre=\(pvg)")
+        op.verificationGasLimit = coSignerOwner == nil ? vgl : vgl + 100_000
+        op.callGasLimit = cgl
+        op.preVerificationGas = pvg
+        return op
     }
 
     /// Sends a signed operation and follows it to the chain.

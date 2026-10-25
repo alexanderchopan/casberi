@@ -1,0 +1,245 @@
+import Foundation
+
+/// **WHAT A MOVE WILL DO, BEFORE FACE ID (prd §1509 item 1, Phase 1 of
+/// `docs/signing-safety-spec.md`).** The sentence stays the screen; its grey
+/// line gains the network fee and one word, Details, which opens what this
+/// exact operation is: who it goes to, the fee in the network's coin, the
+/// nonce, what the simulation found, and a page deeper the calls in words,
+/// the hash Face ID signs and the bytes.
+///
+/// The arithmetic and the words are here, Foundation and the Safe encoders
+/// only, so `move-details-selftest.sh` holds them; the reads that fill a
+/// `YourAccountChain.Preview` are the chain's.
+///
+/// **Two readings of "the hash" (ERC-8213, read 2026-10-24, Draft):** an
+/// operation your own keys sign is a SafeOp, EIP-712 typed data, so its hash
+/// IS an "EIP-712 Digest" and is labelled exactly so. A send under the spend
+/// limit is signed by the session key over EntryPoint v0.7's own
+/// `getUserOpHash`, which is not EIP-712, so it is the "Operation hash". The
+/// ERC's "Calldata Digest" (`keccak256(uint256(len) ‖ calldata)`) stands
+/// under the operation's calldata either way.
+enum YourAccountPreview {
+    typealias Op = YourAccountOp
+
+    // MARK: - The fee
+
+    /// The most the operation can cost, in wei: every gas limit the
+    /// operation carries times the most it pays a unit of gas. A ceiling,
+    /// never the charge — what is used is less — so it is said "up to" (§83:
+    /// a fee that can move says so). nil when a number overflows.
+    static func networkFee(verification: UInt64, call: UInt64, preVerification: UInt64, maxFeePerGas: UInt64) -> String? {
+        let (a, o1) = verification.addingReportingOverflow(call)
+        let (b, o2) = a.addingReportingOverflow(preVerification)
+        let (c, o3) = b.multipliedReportingOverflow(by: maxFeePerGas)
+        return o1 || o2 || o3 ? nil : String(c)
+    }
+
+    /// The grey line's fee: "Fee under a cent" (the swap's words, a ceiling
+    /// under a cent is a charge under a cent), else "Fee up to $0.03"; with
+    /// no dollar price, the coin.
+    static func feePhrase(usd: Double?, wei: String, coin: String = "ETH", money: (Double) -> String) -> String {
+        if let usd {
+            return usd < 0.01 ? String(localized: "Fee under a cent") : String(localized: "Fee up to \(money(usd))")
+        }
+        return String(localized: "Fee up to \(Self.coin(wei)) \(coin)")
+    }
+
+    /// Wei as the coin, to two significant figures under one: "0.0000031",
+    /// never the six places that round a fee to "0.000003".
+    static func coin(_ wei: String) -> String {
+        let whole = Op.display(wei, decimals: 18, places: 18)
+        guard whole.hasPrefix("0."), let dot = whole.firstIndex(of: "."),
+              let first = whole[dot...].firstIndex(where: { $0 != "0" && $0 != "." }) else {
+            return Op.display(wei, decimals: 18)
+        }
+        return Op.display(wei, decimals: 18, places: whole.distance(from: whole.index(after: dot), to: first) + 2)
+    }
+
+    /// Relay's fee over what is sold, as a percentage: "0.04%". Two places,
+    /// trailing zeros cut; "under 0.01%" for less; nil when nothing is sold
+    /// or Relay charged it in something else.
+    static func relayShare(fee: String, sold: String) -> String? {
+        guard fee != "0", sold != "0", let f = Decimal(string: fee), let s = Decimal(string: sold), s > 0 else { return nil }
+        var share = f / s * 100
+        var rounded = Decimal()
+        NSDecimalRound(&rounded, &share, 2, .plain)
+        if rounded == 0 { return String(localized: "under 0.01%") }
+        return NSDecimalNumber(decimal: rounded).stringValue + "%"
+    }
+
+    /// The same share over several sold tokens: Relay's fees and what is
+    /// sold, both in dollars.
+    static func relayShare(feeUSD: Double, soldUSD: Double) -> String? {
+        guard feeUSD > 0, soldUSD > 0 else { return nil }
+        return relayShare(fee: String(format: "%.0f", feeUSD * 1e9), sold: String(format: "%.0f", soldUSD * 1e9))
+    }
+
+    // MARK: - ERC-8213
+
+    /// The **Calldata Digest** (ERC-8213): `keccak256(uint256(len(calldata))
+    /// ‖ calldata)`, the length a big-endian 32-byte word, no chain id.
+    static func calldataDigest(_ calldata: [UInt8]) -> [UInt8] {
+        var length = [UInt8](repeating: 0, count: 32)
+        var n = UInt64(calldata.count)
+        for i in stride(from: 31, through: 24, by: -1) { length[i] = UInt8(n & 0xff); n >>= 8 }
+        return Keccak256.hash(length + calldata)
+    }
+
+    /// How a hash is labelled, in ERC-8213's exact terms where they apply.
+    enum HashKind: Equatable, Sendable {
+        /// A SafeOp: EIP-712 typed data, its digest what Face ID signs.
+        case eip712
+        /// EntryPoint v0.7's `getUserOpHash`, which the session key signs.
+        case userOp
+
+        var label: String {
+            switch self {
+            case .eip712: String(localized: "EIP-712 Digest")
+            case .userOp: String(localized: "Operation hash")
+            }
+        }
+    }
+
+    // MARK: - What the simulation found
+
+    /// What running this exact operation's calls against the network's
+    /// state said (`eth_simulateV1`). "Checked" is drawn only for `lands` and
+    /// `returnsAtLeast` (§83).
+    enum Checked: Equatable, Sendable {
+        case lands
+        /// A swap: at least this many base units of the bought token.
+        case returnsAtLeast(String, Op.Token)
+        /// A call refused: which one (the transaction's own order), the
+        /// token it was, and the node's reason decoded where it can be.
+        case fails(call: Int?, token: String?, reason: String?)
+        /// The node would not simulate, or could not be asked.
+        case notChecked
+
+        var fails: Bool { if case .fails = self { true } else { false } }
+    }
+
+    /// The red line when the simulation refuses (canvas figure 9): the
+    /// token that refused, else the network.
+    static func failLine(_ checked: Checked, swap: Bool, network: String) -> String? {
+        guard case .fails(_, let token, _) = checked else { return nil }
+        if let token {
+            return swap ? String(localized: "This swap would fail: \(token) refuses it.")
+                        : String(localized: "This send would fail: \(token) refuses it.")
+        }
+        return swap ? String(localized: "This swap would fail on \(network).")
+                    : String(localized: "This send would fail on \(network).")
+    }
+
+    /// A revert's reason in words where the bytes carry one: `Error(string)`,
+    /// `Panic(uint256)`, the few custom errors tokens raise for a transfer;
+    /// else the selector, so Details says which error it was.
+    static func revertReason(_ data: String?) -> String? {
+        guard let data, let bytes = SafeABI.hexBytes(data), bytes.count >= 4 else { return nil }
+        let selector = Keccak256.hexString(Array(bytes.prefix(4)))
+        let body = Array(bytes.dropFirst(4))
+        switch selector {
+        case "08c379a0":
+            // Error(string): offset, length, bytes.
+            guard body.count >= 64 else { return nil }
+            let length = body[32..<64].reduce(0) { ($0 << 8) | Int($1) }
+            guard length > 0, length <= 512, body.count >= 64 + length,
+                  let text = String(bytes: body[64..<(64 + length)], encoding: .utf8) else { return nil }
+            return text
+        case "4e487b71":
+            guard body.count >= 32 else { return nil }
+            return "Panic 0x" + String(format: "%02x", body[31])
+        case "356680b7": return "InsufficientFunds()"
+        case "e450d38c": return "ERC20InsufficientBalance"
+        case "ec442f05": return "ERC20InvalidReceiver"
+        case "96c6fd1e": return "ERC20InvalidSender"
+        default: return "0x" + selector
+        }
+    }
+
+    // MARK: - The calls, in words
+
+    /// One numbered line of "What it does": the call's act, and under it
+    /// what it means when that is not plain (the key change).
+    struct Step: Equatable, Sendable {
+        let words: String
+        var detail: String? = nil
+    }
+
+    /// An approval the operation makes: always exactly what is sold, to
+    /// Relay, used in the same step (§1440).
+    struct Approval: Equatable, Sendable {
+        let figure: String
+        let symbol: String
+        let spender: String
+    }
+
+    /// What one swap sells, and Relay's fee on it in the sold token.
+    struct Sold: Equatable, Sendable {
+        let token: Op.Token
+        let amount: String
+        let fee: String
+    }
+
+    /// An address in a line of words: "0x1a2B…cD09", its first four and
+    /// last four hex, as Details' To row shows it whole.
+    static func short(_ address: String) -> String {
+        guard address.count > 12 else { return address }
+        return String(address.prefix(6)) + "…" + String(address.suffix(4))
+    }
+
+    static func send(_ figure: String, _ symbol: String, to who: String) -> Step {
+        Step(words: String(localized: "Sends \(figure) \(symbol) to \(who)"))
+    }
+
+    /// An approval is always exact (§1440: `YourAccountSwap.checked` refuses
+    /// any other amount), used in the same step.
+    static func approve(_ figure: String, _ symbol: String, to spender: String) -> Step {
+        Step(words: String(localized: "Lets \(spender) spend exactly \(figure) \(symbol)"),
+             detail: String(localized: "Used in the same step"))
+    }
+
+    static func swap(_ figure: String, _ symbol: String, atLeast: String, _ bought: String) -> Step {
+        Step(words: String(localized: "Swaps \(figure) \(symbol) for at least \(atLeast) \(bought) through Relay"))
+    }
+
+    static func roundUp(_ figure: String, _ symbol: String, buys target: String, on network: String) -> Step {
+        Step(words: String(localized: "Sends \(figure) \(symbol) of round-ups to Relay"),
+             detail: String(localized: "Buys \(target) on \(network)"))
+    }
+
+    /// Every operation your own keys sign carries the key change
+    /// (`YourAccountOp.callData(calls:rotateTo:)`): the shared signer
+    /// re-configured to the next Enclave key.
+    static func rotate(to key: Int) -> Step {
+        Step(words: String(localized: "Moves your account to a new key"),
+             detail: String(localized: "This iPhone's key \(key). The old key stops working."))
+    }
+
+    static func opens(network: String) -> Step {
+        Step(words: String(localized: "Opens your account on \(network)"))
+    }
+
+    static var addsRecovery: Step { Step(words: String(localized: "Adds your recovery key")) }
+    static var addsSigner: Step { Step(words: String(localized: "Adds your Signer as a second key")) }
+
+    static func setsLimit(periods: Int) -> Step {
+        Step(words: String(localized: "Sets your spend limit"),
+             detail: String(localized: "\(periods) periods ahead. Over it, your Signer signs too."))
+    }
+
+    static func renewsLimit(periods: Int) -> Step {
+        Step(words: String(localized: "Renews your spend limit"),
+             detail: String(localized: "\(periods) periods ahead"))
+    }
+
+    /// The session key signs under the limit: no key change rides it.
+    static var underLimit: Step {
+        Step(words: String(localized: "Signed by your spend limit's key"),
+             detail: String(localized: "Under your limit, so your Signer is not asked."))
+    }
+
+    // MARK: - Hex
+
+    /// "0x5f3c…" in full, lowercase, as ERC-8213 says a digest is shown.
+    static func hex(_ bytes: [UInt8]) -> String { "0x" + Keccak256.hexString(bytes) }
+}

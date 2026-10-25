@@ -119,6 +119,16 @@ struct MoveSentence: View {
     struct Hint: Equatable { let text: String; let failure: Bool; var from: String? = nil; let id = UUID() }
     @State private var hint: Hint?
 
+    // MARK: - Details (prd §1509)
+
+    /// What signing the sentence would do now (`Chain.preview`), and the
+    /// sentence it was read for: a preview of another sentence is never drawn.
+    @State private var preview: Chain.Preview?
+    @State private var previewFor = ""
+    /// Details open under the grey line; Raw transaction, a page deeper.
+    @State private var details = false
+    @State private var rawOpen = false
+
     // MARK: - Buy (prd §1473)
 
     /// Buy stands on the verbs' line only with an account on this phone —
@@ -320,12 +330,17 @@ struct MoveSentence: View {
         GeometryReader { geo in
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    VStack(alignment: .leading, spacing: 0) {
-                        sentence
+                    if rawOpen {
+                        rawPage
+                            .transition(.opacity)
+                    } else {
+                        VStack(alignment: .leading, spacing: 0) {
+                            sentence
+                        }
+                        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { sentenceHeight = $0 }
+                        space(room: geo.size.height)
+                            .padding(.top, open == nil ? DS.Space.s6 : DS.Space.s4)
                     }
-                    .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { sentenceHeight = $0 }
-                    space(room: geo.size.height)
-                        .padding(.top, open == nil ? DS.Space.s6 : DS.Space.s4)
                 }
                 .padding(.horizontal, inTray ? DSRoomChassis.leadInset - DS.Space.s4 : DSRoomChassis.leadInset)
                 .padding(.top, inTray ? DS.Space.s2 : DS.Space.s6)
@@ -337,7 +352,7 @@ struct MoveSentence: View {
         .scrollDismissesKeyboard(.interactively)
         // While a blank is open the foot steps aside: its verb cannot sign a
         // half-picked sentence, and the list takes its room (§1442a).
-        .safeAreaInset(edge: .bottom, spacing: 0) { if open == nil { foot.transition(.opacity) } }
+        .safeAreaInset(edge: .bottom, spacing: 0) { if open == nil, !rawOpen { foot.transition(.opacity) } }
         .task(id: network.chainId) { await readNetwork() }
         .task {
             // The sentence finishes itself a moment after it lands (§1442j);
@@ -351,8 +366,13 @@ struct MoveSentence: View {
         .onChange(of: verb) { _, now in
             if fresh { withAnimation(DS.Motion.standard) { fresh = false; arrived = true } }
             if now == .buy { enterBuy() }
+            // Details stays open across edits of the sentence, and closes
+            // when the verb changes (prd §1509).
+            details = false
+            rawOpen = false
         }
         .task(id: quoteKey) { await requote() }
+        .task(id: previewKey) { await repreview() }
         .task(id: to) { await resolve() }
         .task {
             await readAll()
@@ -890,14 +910,6 @@ struct MoveSentence: View {
         return amounts.reduce("0") { Op.sum($0, $1) }
     }
 
-    /// Every swap's fee, in dollars where the sold token is priced.
-    private var feeTotal: String? {
-        var usd = keptSwaps.compactMap { s in price(of: s.sell).map { Op.dollars(s.quote.fee, decimals: s.sell.decimals, price: $0) } }.reduce(0, +)
-        if let with, let quote, let p = with.price { usd += Op.dollars(quote.fee, decimals: with.token.decimals, price: p) }
-        guard !keptSwaps.isEmpty || quote != nil else { return nil }
-        return usd < 0.01 ? String(localized: "Fee under a cent") : String(localized: "Fee \(Self.money(usd))")
-    }
-
     /// How a list reads inside a sentence: a comma after each but the last
     /// two, "and" before the last.
     static func joiner(_ n: Int, of count: Int) -> (glue: String?, trail: String?) {
@@ -1345,6 +1357,15 @@ struct MoveSentence: View {
                     ReceiveFromWalletSheet.present(account: account, sample: YourAccountDemo.isDemo(account))
                 }
             }
+        } else if let fail = failNote {
+            // The simulation refuses it (prd §1509, canvas figure 9): the red
+            // reason in the grey line's place, the verb dimmed, and Details
+            // still there to say which call and why.
+            VStack(alignment: .leading, spacing: 0) {
+                detailsToggle(Text(verbatim: fail + " ").foregroundStyle(DS.destructiveInk))
+                if details { moveDetails }
+            }
+            .fixedSize(horizontal: false, vertical: true)
         } else if let note = lineNote {
             HStack(alignment: .firstTextBaseline, spacing: DS.Space.s2) {
                 if note == quoteNote, let quoteFrom { Self.mark(of: quoteFrom) }
@@ -1358,12 +1379,21 @@ struct MoveSentence: View {
                 // Swapping, the other unit is the receipt's column; the fee is
                 // the whole swap's (§1442g).
                 let print: [String] = switch verb {
-                case .swap: [soldPrint, quotePrint, feeTotal].compactMap { $0 }
+                case .swap: [soldPrint, quotePrint, swapFeePrint].compactMap { $0 }
                 case .send: [soldPrint].compactMap { $0 } + (peopleCount > 1 ? [String(localized: "To \(peopleCount) people")] : []) + roundUpPrint
+                    + [sendFeePrint].compactMap { $0 }
                 case .receive: []
                 case .buy: buyPrint
                 }
-                if !print.isEmpty {
+                // "$25.00 · Fee up to $0.01 · Details" (prd §1509): the last
+                // word opens this exact operation under the line.
+                if offersDetails {
+                    VStack(alignment: .leading, spacing: 0) {
+                        detailsToggle(Text(verbatim: print.isEmpty ? "" : print.joined(separator: " · ") + " · ")
+                            .foregroundStyle(DS.textSecondary))
+                        if details { moveDetails }
+                    }
+                } else if !print.isEmpty {
                     Text(verbatim: print.joined(separator: " · "))
                         .dsText(.body17).foregroundStyle(DS.textSecondary)
                 }
@@ -1397,7 +1427,132 @@ struct MoveSentence: View {
             if malformed { return String(localized: "Check the address") }
             if let imitates = resolved?.imitates { return String(localized: "Looks like \(imitates)'s — check it") }
         }
+        // What signing would refuse, said before the tap: a fee the account
+        // cannot pay, a node that would not price it (prd §1509).
+        if verb == .send || verb == .swap, let refusal = shownPreview?.refusal { return refusal }
         return nil
+    }
+
+    // MARK: - Details (prd §1509)
+
+    /// The preview of the sentence as it stands now; nil while it is read.
+    private var shownPreview: Chain.Preview? {
+        !previewKey.isEmpty && previewFor == previewKey ? preview : nil
+    }
+
+    /// Details is offered once there is a transaction to show.
+    private var offersDetails: Bool { (verb == .send || verb == .swap) && !all.isEmpty }
+
+    /// The red line when this exact operation would fail.
+    private var failNote: String? {
+        guard verb == .send || verb == .swap, let p = shownPreview else { return nil }
+        return YourAccountPreview.failLine(p.checked, swap: verb == .swap, network: network.name)
+    }
+
+    /// The grey line ending in Details, a chevron after it; the whole line
+    /// opens it, and a second tap closes it.
+    private func detailsToggle(_ lead: Text) -> some View {
+        Button {
+            withAnimation(DS.Motion.standard) { details.toggle() }
+            DSHaptic.selection()
+        } label: {
+            (lead + Text("Details").foregroundStyle(DS.textPrimary) + Text(verbatim: " ")
+                + Text(Image(systemName: details ? "chevron.up" : "chevron.down")).foregroundStyle(DS.textPrimary))
+                .dsText(.body17)
+                .multilineTextAlignment(.leading)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(minHeight: 44, alignment: .leading)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(RowPress())
+        .accessibilityHint(details ? Text("Hides the details") : Text("Shows what this transaction does"))
+    }
+
+    private var moveDetails: some View {
+        let sends = all.compactMap { item -> String? in if case .send(let p) = item { p.to } else { nil } }
+        let to = sends.reduce(into: [String]()) { list, a in if !list.contains(where: { WalletWatch.sameAddress($0, a) }) { list.append(a) } }
+        return MoveDetails(preview: shownPreview, swap: verb == .swap, to: to, account: account,
+                           networkFeeUSD: networkFeeUSD, relayFeeUSD: relayFeeUSD, soldUSD: soldDollarsTotal) {
+            withAnimation(DS.Motion.standard) { rawOpen = true }
+            DSHaptic.selection()
+        }
+    }
+
+    private var rawPage: some View {
+        MoveRawPage(preview: shownPreview) {
+            withAnimation(DS.Motion.standard) { rawOpen = false }
+            DSHaptic.selection()
+        }
+    }
+
+    /// ETH's price for the fee: the Wallet's, read with the holdings.
+    private var ethPrice: Double? {
+        if YourAccountDemo.isDemo(account) { return YourAccountDemo.price(Op.eth) }
+        return heldBy.values.joined().first { $0.token == Op.eth && $0.price != nil }?.price
+    }
+
+    /// The network fee's ceiling in dollars.
+    private var networkFeeUSD: Double? {
+        guard let wei = shownPreview?.feeWei, let price = ethPrice else { return nil }
+        return Op.dollars(wei, decimals: 18, price: price)
+    }
+
+    /// Relay's fees from the quotes the preview would sign, in dollars.
+    private var relayFeeUSD: Double? {
+        guard let sold = shownPreview?.sold, !sold.isEmpty else { return nil }
+        let parts = sold.map { s in price(of: s.token).map { Op.dollars(s.fee, decimals: s.token.decimals, price: $0) } }
+        return parts.contains { $0 == nil } ? nil : parts.compactMap { $0 }.reduce(0, +)
+    }
+
+    /// A send's fee: "Fee up to $0.01", "Fee under a cent".
+    private var sendFeePrint: String? {
+        guard let wei = shownPreview?.feeWei else { return nil }
+        return YourAccountPreview.feePhrase(usd: networkFeeUSD, wei: wei, money: Self.money)
+    }
+
+    /// A swap's fee is the network's and Relay's together (prd §1509 item 2).
+    private var swapFeePrint: String? {
+        guard let network = networkFeeUSD, let relay = relayFeeUSD else { return nil }
+        return YourAccountPreview.feePhrase(usd: network + relay, wei: "0", money: Self.money)
+    }
+
+    /// The sentence the preview is of: its lines' contents, never their
+    /// ids (the line being filled is a new value every read), the network
+    /// and a round-up's buy.
+    private var previewKey: String {
+        guard verb == .send || verb == .swap, receipt == nil, !all.isEmpty else { return "" }
+        let lines = all.map { item -> String in
+            switch item {
+            case .send(let p): "s|\(p.token.contract ?? "eth")|\(p.amount)|\(p.to.lowercased())"
+            case .swap(let s): "w|\(s.sell.contract ?? "eth")|\(s.buy.contract ?? "eth")|\(s.amount)"
+            }
+        }
+        return ([account, String(network.chainId), roundUpPlan?.buy ?? "-"] + lines).joined(separator: ";")
+    }
+
+    /// Ask for the preview once the sentence settles, then again every 40
+    /// seconds while it stands, so the operation kept for signing is never
+    /// older than `Chain.Prepared.lifetime`: what Raw transaction shows is
+    /// what Face ID signs.
+    private func repreview() async {
+        let key = previewKey
+        guard !key.isEmpty else { return }
+        try? await Task.sleep(for: .milliseconds(YourAccountDemo.isDemo(account) ? 150 : 700))
+        while !Task.isCancelled {
+            if stage != nil {
+                try? await Task.sleep(for: .seconds(2))
+                continue
+            }
+            let roundUp = roundUpPlan?.buy.map { Chain.RoundUpBuy(units: $0, target: RoundUps.setting.target) }
+            let p = await Chain.preview(all, account: account, roundUp: roundUp)
+            guard !Task.isCancelled, key == previewKey else { return }
+            withAnimation(DS.Motion.standard) { preview = p; previewFor = key }
+            #if DEBUG
+            if UserDefaults.standard.bool(forKey: "moveRawProbe") { Self.logRaw(p) }
+            #endif
+            if YourAccountDemo.isDemo(account) { return }
+            try? await Task.sleep(for: .seconds(40))
+        }
     }
 
     /// What the line being filled is worth in its other unit, or, once a
@@ -2067,7 +2222,8 @@ struct MoveSentence: View {
 
     private var footOn: Bool {
         if verb == .buy { return stage == nil && buyReady }
-        return verb == .receive || (stage == nil && !all.isEmpty)
+        // A transaction the simulation refuses dims its verb (prd §1509).
+        return verb == .receive || (stage == nil && !all.isEmpty && failNote == nil)
     }
 
     private var footVerb: String {
@@ -2303,7 +2459,8 @@ struct MoveSentence: View {
                 }
                 return Chain.Transacted(sent: sent)
             } catch let failure as Chain.Failure {
-                guard await !signed.value else { throw failure }
+                // A send the simulation refuses fails on both keys too.
+                guard await !signed.value, !failure.settled else { throw failure }
                 #if DEBUG
                 NSLog("moveSpend: over the limit, both keys: %@", failure.message)
                 #endif
@@ -2944,6 +3101,34 @@ struct MoveSentence: View {
         } else if let buyDraft = d.string(forKey: "moveBuyDraft"), !buyDraft.isEmpty {
             verb = .buy
             self.buyDraft(buyDraft)
+        }
+        // `-moveDetails YES|raw` (prd §1509): Details open, or Raw
+        // transaction, once the draft has settled its verb.
+        if let shown = d.string(forKey: "moveDetails"), !shown.isEmpty {
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(2))
+                details = true
+                if shown == "raw" { rawOpen = true }
+                NSLog("moveDetails: %@ preview=%@", shown, shownPreview == nil ? "reading" : "ready")
+            }
+        }
+    }
+
+    /// `-moveRawProbe YES`: what Raw transaction shows, line by line.
+    static func logRaw(_ p: Chain.Preview?) {
+        guard let p else { NSLog("moveRaw| none"); return }
+        let checked: String = switch p.checked {
+        case .lands: "lands"
+        case .returnsAtLeast(let u, let t): "atLeast \(u) \(t.symbol)"
+        case .fails(let call, let token, let reason): "fails call=\(call.map(String.init) ?? "-") token=\(token ?? "-") \(reason ?? "-")"
+        case .notChecked: "notChecked"
+        }
+        NSLog("moveRaw| route=%@ nonce=%@ fee=%@ checked=%@", String(describing: p.route), p.nonce.map { String($0) } ?? "-",
+              p.feeWei ?? "-", checked)
+        NSLog("moveRaw| %@=%@ bytes=%d digest=%@ refusal=%@", p.hashKind.label, p.hash.map(YourAccountPreview.hex) ?? "-",
+              p.callData.count, YourAccountPreview.hex(YourAccountPreview.calldataDigest(p.callData)), p.refusal ?? "-")
+        for (n, step) in p.words.enumerated() {
+            NSLog("moveRaw| %d %@%@", n + 1, step.words, step.detail.map { " — " + $0 } ?? "")
         }
     }
 

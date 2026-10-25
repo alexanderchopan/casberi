@@ -1,0 +1,225 @@
+import SwiftUI
+
+/// **DETAILS, UNDER THE SENTENCE (prd §1509 item 1, canvas figures 2 and
+/// 4).** The rows Move's grey line opens with its last word: for a send the
+/// full address, from, the network fee in its coin, the nonce and what the
+/// simulation found; for a swap the least it returns, the fee split three
+/// ways, the exact approval, the nonce and the simulation. Then one door,
+/// Raw transaction. Nothing here is a control but the door: the sentence
+/// above is still the screen.
+struct MoveDetails: View {
+    typealias Op = YourAccountOp
+    typealias Words = YourAccountPreview
+
+    /// Nil while it is being read.
+    let preview: YourAccountChain.Preview?
+    let swap: Bool
+    /// Who a send goes to, in the sentence's order, once each.
+    let to: [String]
+    let account: String
+    /// The network fee's ceiling in dollars at the Wallet's ETH price.
+    let networkFeeUSD: Double?
+    /// Relay's fees, and what the swap sells, in dollars.
+    let relayFeeUSD: Double?
+    let soldUSD: Double?
+    let onRaw: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            if let preview {
+                if swap { swapRows(preview) } else { sendRows(preview) }
+                row(String(localized: "Nonce"), preview.nonce.map { String($0) } ?? String(localized: "Not read"))
+                checkedRow(preview)
+                if preview.hash != nil {
+                    DSPushRow(title: Text("Raw transaction"), action: onRaw) { EmptyView() }
+                }
+            } else {
+                HStack(spacing: DS.Space.s2) {
+                    DSSpinner()
+                    Text("Checking").dsText(.body17).foregroundStyle(DS.textSecondary)
+                }
+                .walletRowPitch()
+            }
+        }
+        .padding(.top, DS.Space.s2)
+        .transition(.opacity)
+    }
+
+    // MARK: - A send
+
+    @ViewBuilder private func sendRows(_ p: YourAccountChain.Preview) -> some View {
+        ForEach(to, id: \.self) { address in
+            // The whole address, checksummed: the sentence shows the name.
+            VStack(alignment: .leading, spacing: DS.Space.s1) {
+                Text("To").dsText(.body17).foregroundStyle(DS.textSecondary)
+                Text(verbatim: EIP55.checksum(address))
+                    .dsText(.mono17)
+                    .foregroundStyle(DS.textPrimary)
+                    .textSelection(.enabled)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .walletRowPitch()
+        }
+        row(String(localized: "From"), String(localized: "Your account \(YourAccount.short(account))"))
+        feeRow(p)
+    }
+
+    /// The network fee, its ceiling in dollars over the coin; "Not priced"
+    /// with why when the bundler would not estimate it.
+    private func feeRow(_ p: YourAccountChain.Preview) -> some View {
+        guard let wei = p.feeWei else {
+            return row(String(localized: "Network fee"), String(localized: "Not priced"), sub: p.refusal)
+        }
+        let coin = "\(Words.coin(wei)) ETH"
+        guard let usd = networkFeeUSD else { return row(String(localized: "Network fee"), String(localized: "Up to \(coin)")) }
+        let value = usd < 0.01 ? String(localized: "Under a cent") : String(localized: "Up to \(MoveSentence.money(usd))")
+        return row(String(localized: "Network fee"), value, sub: coin)
+    }
+
+    // MARK: - A swap
+
+    @ViewBuilder private func swapRows(_ p: YourAccountChain.Preview) -> some View {
+        if case .returnsAtLeast(let units, let token) = p.checked {
+            row(String(localized: "You get at least"), "\(MoveSentence.figure(units, decimals: token.decimals)) \(token.symbol)")
+        }
+        if let network = networkFeeUSD, let relay = relayFeeUSD {
+            let total = network + relay
+            let share = soldUSD.flatMap { Words.relayShare(feeUSD: relay, soldUSD: $0) }
+            let networkWords = network < 0.01 ? String(localized: "Network under a cent") : String(localized: "Network up to \(MoveSentence.money(network))")
+            let relayWords = share.map { String(localized: "Relay \(MoveSentence.money(relay)) (\($0))") } ?? String(localized: "Relay \(MoveSentence.money(relay))")
+            row(String(localized: "Fee"), total < 0.01 ? String(localized: "Under a cent") : String(localized: "Up to \(MoveSentence.money(total))"),
+                sub: networkWords + " · " + relayWords, second: String(localized: "Casberi none"))
+        } else {
+            feeRow(p)
+        }
+        ForEach(Array(p.approvals.enumerated()), id: \.offset) { _, a in
+            row(String(localized: "Approves"), String(localized: "Exactly \(a.figure) \(a.symbol)"),
+                sub: String(localized: "to \(a.spender), used in the same step"))
+        }
+    }
+
+    // MARK: - What the simulation found
+
+    /// Green only when this exact operation was simulated (§83); "Not
+    /// checked" when the node would not, never "Lands as written".
+    private func checkedRow(_ p: YourAccountChain.Preview) -> some View {
+        switch p.checked {
+        case .lands:
+            return row(String(localized: "Checked"), String(localized: "Lands as written"), ink: DS.confirmInk)
+        case .returnsAtLeast(let units, let token):
+            return row(String(localized: "Checked"),
+                       String(localized: "Returns at least \(MoveSentence.figure(units, decimals: token.decimals)) \(token.symbol)"),
+                       ink: DS.confirmInk)
+        case .fails(_, _, let reason):
+            return row(String(localized: "Checked"), String(localized: "Would fail"), sub: reason, ink: DS.destructiveInk)
+        case .notChecked:
+            return row(String(localized: "Checked"), String(localized: "Not checked"), sub: String(localized: "\(p.network.name) would not simulate it"))
+        }
+    }
+
+    // MARK: - One row
+
+    /// A name, and its value trailing over its line: the Wallet rows' pitch
+    /// (§1482), the body rung.
+    private func row(_ label: String, _ value: String, sub: String? = nil, second: String? = nil,
+                     ink: Color = DS.textPrimary) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s4) {
+            Text(verbatim: label).dsText(.body17).foregroundStyle(DS.textSecondary)
+            Spacer(minLength: DS.Space.s2)
+            VStack(alignment: .trailing, spacing: 2) {
+                Text(verbatim: value).dsText(.body17).foregroundStyle(ink)
+                ForEach([sub, second].compactMap { $0 }, id: \.self) { line in
+                    Text(verbatim: line).dsText(.subhead12).foregroundStyle(DS.textTertiary)
+                }
+            }
+            .multilineTextAlignment(.trailing)
+            .fixedSize(horizontal: false, vertical: true)
+        }
+        .walletRowPitch()
+        .accessibilityElement(children: .combine)
+    }
+}
+
+/// **RAW TRANSACTION, A PAGE DEEPER (prd §1509 item 1, canvas figure 3).**
+/// The calls in words first, numbered, the key change included; then the
+/// hash Face ID signs, labelled in ERC-8213's own terms (an "EIP-712 Digest"
+/// for a SafeOp, the "Operation hash" for the session key's), and the
+/// operation's calldata with its byte count and its Calldata Digest, each
+/// with Copy. It takes the sentence's place in Move, its title the way back.
+struct MoveRawPage: View {
+    let preview: YourAccountChain.Preview?
+    let onBack: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s6) {
+            // The title row indents itself to the rows' column from the
+            // chassis inset; Move's page already stands in that column.
+            DSRoomTitleRow(title: String(localized: "Move"), pick: String(localized: "Raw transaction"), onTitle: onBack)
+                .padding(.leading, -DSRoomChassis.titleIndent)
+            if let p = preview, let hash = p.hash {
+                section(String(localized: "What it does")) {
+                    ForEach(Array(p.words.enumerated()), id: \.offset) { n, step in
+                        HStack(alignment: .firstTextBaseline, spacing: DS.Space.s3) {
+                            Text(verbatim: "\(n + 1)").dsText(.body17).foregroundStyle(DS.textTertiary).monospacedDigit()
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(verbatim: step.words).dsText(.body17).foregroundStyle(DS.textPrimary)
+                                if let detail = step.detail {
+                                    Text(verbatim: detail).dsText(.subhead12).foregroundStyle(DS.textTertiary)
+                                }
+                            }
+                            .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .padding(.vertical, DS.Space.s2)
+                    }
+                }
+                let hex = YourAccountPreview.hex(hash)
+                section(p.hashKind.label) {
+                    Text(verbatim: hex)
+                        .dsText(.mono17)
+                        .foregroundStyle(DS.textPrimary)
+                        .textSelection(.enabled)
+                        .fixedSize(horizontal: false, vertical: true)
+                    DSCopyRow(value: hex, label: "Copy hash", sensitive: false)
+                }
+                let data = YourAccountPreview.hex(p.callData)
+                section(String(localized: "Calldata · \(p.callData.count) bytes")) {
+                    // The bytes clipped to a few lines, scrolling inside.
+                    ScrollView {
+                        Text(verbatim: data)
+                            .dsText(.mono12)
+                            .foregroundStyle(DS.textSecondary)
+                            .textSelection(.enabled)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .frame(height: 112)
+                    .scrollIndicators(.visible)
+                    Text("Calldata Digest").dsText(.label12).foregroundStyle(DS.textSecondary)
+                        .padding(.top, DS.Space.s2)
+                    Text(verbatim: YourAccountPreview.hex(YourAccountPreview.calldataDigest(p.callData)))
+                        .dsText(.mono12)
+                        .foregroundStyle(DS.textPrimary)
+                        .textSelection(.enabled)
+                        .fixedSize(horizontal: false, vertical: true)
+                    DSCopyRow(value: data, label: "Copy calldata", sensitive: false)
+                }
+            } else if let refusal = preview?.refusal {
+                Text(verbatim: refusal).dsText(.body17).foregroundStyle(DS.attentionInk)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else {
+                HStack(spacing: DS.Space.s2) {
+                    DSSpinner()
+                    Text("Checking").dsText(.body17).foregroundStyle(DS.textSecondary)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func section<Content: View>(_ title: String, @ViewBuilder _ content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: DS.Space.s2) {
+            Text(verbatim: title).dsText(.label12).foregroundStyle(DS.textSecondary)
+            content()
+        }
+    }
+}

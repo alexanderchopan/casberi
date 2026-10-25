@@ -2741,6 +2741,13 @@ harness "Safe co-signer self-test" "safetx self-test" "scripts/safetx-selftest.s
 harness "Safe signer §913 self-test" "safe-signer self-test" "scripts/safe-signer-selftest.sh" "the §913 signer self-test failed — run scripts/safe-signer-selftest.sh"
 harness "Your account self-test" "your-account self-test" "scripts/your-account-selftest.sh" "your account's address arithmetic or the Move gate drifted — run scripts/your-account-selftest.sh"
 
+# Move's Details (prd §1509): the fee ceiling and its words, ERC-8213's
+# Calldata Digest pinned to the ERC's own vector, the revert words pinned to
+# Base's measured answer, the calls in words; and the wiring — every send
+# simulated before Face ID, a refusal dims the verb, "Not checked" never
+# green, and signing takes the kept preview so Raw's hash is Face ID's.
+harness "Move details self-test" "move-details self-test" "scripts/move-details-selftest.sh" "Move's Details drifted — run scripts/move-details-selftest.sh"
+
 harness "Money-receipt pure-logic self-test" "money-receipt self-test" "scripts/money-receipt-selftest.sh" "the money-receipt logic self-test failed — run scripts/money-receipt-selftest.sh"
 
 # Pure-logic self-test for the agent's open (prd §332). This is the first screen

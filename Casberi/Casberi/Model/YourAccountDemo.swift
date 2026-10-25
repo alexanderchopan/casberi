@@ -124,6 +124,36 @@ enum YourAccountDemo {
                                    minutes: MoveSecurity.LimitPeriod.month.minutes)
     }
 
+    // MARK: - Details (prd §1509)
+
+    /// The demo's next nonce and the key its next move moves to, as Details
+    /// and Raw transaction draw them.
+    static let previewNonce: UInt64 = 14
+    static let previewKey = 5
+    /// A public key that is no key of anyone's: two fixed words, so the
+    /// demo's calldata is the encoders' own bytes and never this phone's.
+    static var previewKeyXY: (x: [UInt8], y: [UInt8]) {
+        (Keccak256.hash(Array("casberi demo key x".utf8)), Keccak256.hash(Array("casberi demo key y".utf8)))
+    }
+
+    /// The most a unit of gas costs on each network, in wei: fees of about
+    /// a cent on Base and Robinhood and a dollar or two on Ethereum.
+    static func previewMaxFee(on net: Op.Network) -> UInt64 {
+        switch net.chainId {
+        case Op.ethereum.chainId: 700_000_000
+        case Op.robinhood.chainId: 4_000_000
+        default: 5_000_000
+        }
+    }
+
+    /// Relay's usual fee on a swap, four hundredths of a percent of it.
+    static func relayFee(_ sold: String) -> String {
+        guard let units = Decimal(string: sold) else { return "0" }
+        var r = Decimal(), v = units * Decimal(string: "0.0004")!
+        NSDecimalRound(&r, &v, 0, .down)
+        return NSDecimalNumber(decimal: r).stringValue
+    }
+
     /// What every act says in the demo.
     static var actsLater: String { String(localized: "This works once you leave the demo.") }
 }
