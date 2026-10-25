@@ -217,8 +217,14 @@ struct DSRoomScopeChrome<Scope: DSTileScope, Crown: View, Figure: View>: View {
     /// pill cannot say: a picked address, one tap from copying. A slot id is
     /// the address; "All" is "" and an app (`seat:`, prd §1048b) is not an
     /// address, so neither has one to copy.
+    ///
+    /// **ON HOME ONLY (prd §1522, user: "doesn't make sense to have copy
+    /// address on holdings page").** The address is the account's, not a
+    /// page's: Holdings, Activity, Spending and Markets answer their own
+    /// question, and Move's Receive copies it too (§1518).
     private var accountLine: some View {
-        if let showing = accounts.first(where: { $0.isShowing(scope) }),
+        if active == home,
+           let showing = accounts.first(where: { $0.isShowing(scope) }),
            !showing.id.isEmpty, !RoomAccounts.isSeat(showing.id) {
             // Said as what it copies (user: "copy icon but user would never
             // know it is for a wallet address"): a bare glyph read as nothing.

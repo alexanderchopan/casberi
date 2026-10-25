@@ -68611,3 +68611,9 @@ The rule under all of it: **every page shows every account at once, and the acco
 4. **A failed read keeps the map** (`WalletIngest.portfolioReading`'s `failed`, `streamBlock`): a nil whose pass left a wallet unreached and nothing remembered keeps the map this scope already drew (`portfolioScope`); a nil from a pass that reached every wallet still clears it.
 5. **Self-tests.** `wallet-section-selftest.sh` guards the reading form and the count's `defer`; `wallet-total-audit.py` reads `portfolioReading` and checks the fallback's own line for `unreached`.
 6. **Not seen:** written in a Linux session with no Xcode; not built, not run. Which of the three paths the user's phone took is not known: `holdingsWindow:`, `zerion: HTTP` and `walletHoldings:` in the device log say which.
+
+## §1522 — Copy address stands on Home only (amends §1066's account line under the tiles) (user, 2026-10-25, on a screenshot of "Wallet · You" on Holdings with "Copy address …ca8d" under the tiles: "doesn't make sense to have copy address on holdings page") — WRITTEN, NOT YET COMPILED
+
+1. **The cause.** `DSRoomScopeChrome.accountLine` drew the picked address's Copy row under the tiles on every page, so Holdings, Activity, Spending and Markets each opened on a copy act that answers none of their questions.
+2. **The rule.** The row draws only when the active tile is the room's Home (`active == home`). It is the chrome's, so Logos and Aztec follow. Move's Receive still copies your address (§1518), and an address card still has its own Copy row.
+3. **Not seen:** written in a Linux session with no Xcode; not built, not run.
