@@ -227,6 +227,9 @@ KNOWN_PROPER: set[str] = {
     # Relay, which settles Move's swaps (prd §1440): "Not verified by Relay"
     # names its token verification.
     "Relay",
+    # Tor, the network every Wallet read goes through (prd §1495): "Through
+    # Tor", "refuses Tor" name the network, as "Relay" names Relay.
+    "Tor",
     # Aztec's fee token (prd §1270, §1271): "Fee Juice" is the name Aztec
     # gives it, as "Optic ID" is Apple's.
     "Fee", "Juice",
