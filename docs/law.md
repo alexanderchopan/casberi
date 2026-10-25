@@ -239,7 +239,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1655 of 1724 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1656 of 1725 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1864,9 +1864,9 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1483 — Receive from Arc: a chain's own coin that is a dollar quotes ten, not a fraction (amended by §1485)
 - §1484 — Receive has no exchange door (amended by §1486, §1506)
 - §1485 — Receive from another network: a chain's own coin quotes 0.01, a floor refusal is asked again over it, and Relay's raw…
-- §1486 — Receive picks its network, always (amended by §1488, §1501)
+- §1486 — Receive picks its network, always (amended by §1488, §1501, §1518)
 - §1487 — Your account wears your face and is named You
-- §1488 — The arrival copies nothing until a network is picked (amended by §1501)
+- §1488 — The arrival copies nothing until a network is picked (amended by §1501, §1518)
 - §1489 — The Feed has no Wallet section; the Wallet's asks light its tab with a dot (amended by §1490)
 - §1490 — No tab wears a badge: the Wallet's dot and Library's broken-app ring are deleted
 - §1491 — Following and Markets stand on the Wallet's All only (amends §1480 item 2) (amended by §1498)
@@ -1879,7 +1879,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1498 — Markets is a Wallet tile again, its list the Watchlist, and Home draws no Markets door
 - §1499 — A co-signer chosen at Create says it activates on the first send, and its step says only what it does (amended by §1501)
 - §1500 — Create's small print is "Face ID approves every move."
-- §1501 — The create flow, word by word: four steps and Created with Done, and Move is one size, always
+- §1501 — The create flow, word by word: four steps and Created with Done, and Move is one size, always (amended by §1518)
 - §1502 — An explicit agent ask that fails says so; only a follow-up falls back to the phone
 - §1503 — Holdings says whose the money is, in money: You · Following · Apps, then Tokens · Positions · NFTs; NFTs offers every…
 - §1504 — Following is the wallets you follow; what rode a wallet leaves with it at once; Privy is its own sign-in
@@ -1896,6 +1896,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1515 — The recovery key is checked once a month: one row in Needs you, a check with Face ID and no fee, and a page that says…
 - §1516 — A co-signer is a key that answered, not an address a wallet named
 - §1517 — Your own node: a Nodes page under Your account, an address per network checked against its chain before use, and that…
+- §1518 — Receive's foot copies the address, and an empty account's Move draws no verb
 
 ## Dead rulings → what replaced them (generated)
 

@@ -1313,9 +1313,9 @@ struct MoveSentence: View {
             // **RECEIVE (§1442i, user: "when we show 'at' show …xxxx or complete
             // address. and somewhere on the page complete address should be
             // displayed. also with a copy button").** The sentence says
-            // "…9f12"; the whole address stands here, readable, with its own
-            // copy. No exchange door: it only copied and opened Coinbase,
-            // which the copy row already does (prd §1484).
+            // "…9f12"; the whole address stands here, readable, and the
+            // foot's Copy address copies it (prd §1518). No exchange door: it
+            // only copied and opened Coinbase (prd §1484).
             if let route = elsewhere {
                 VStack(alignment: .leading, spacing: DS.Space.s3) {
                     Text(verbatim: route.address)
@@ -1323,9 +1323,6 @@ struct MoveSentence: View {
                         .foregroundStyle(DS.textSecondary)
                         .textSelection(.enabled)
                         .fixedSize(horizontal: false, vertical: true)
-                    // A deposit address, named so: it is not your account's
-                    // own (prd §1501, the Created page's line points here).
-                    DSCopyRow(value: route.address, label: "Copy deposit address", sensitive: false)
                     // A wrong token sent here can be lost, so the line names
                     // the one it takes; a swap on the way is said (§83), since
                     // what lands is set by the price when it lands.
@@ -1350,11 +1347,6 @@ struct MoveSentence: View {
                         .foregroundStyle(DS.textSecondary)
                         .textSelection(.enabled)
                         .fixedSize(horizontal: false, vertical: true)
-                    if YourAccountDemo.isDemo(account) {
-                        DSDoorRow(icon: "doc.on.doc", label: "Copy address") { say(YourAccountDemo.actsLater) }
-                    } else {
-                        DSCopyRow(value: account, label: "Copy address", sensitive: false)
-                    }
                     // The network the sentence names (prd §1486).
                     Text("Any coin on \(network.name).")
                         .dsText(.body17).foregroundStyle(DS.textSecondary)
@@ -2282,40 +2274,30 @@ struct MoveSentence: View {
             // puts a screen's main act.
             HStack(alignment: .firstTextBaseline) {
                 if verb == .receive {
-                    // Copying is beside the address (§1442i); the foot's one
-                    // act hands it to someone.
+                    // **The foot's one act copies the address (prd §1518,
+                    // user: "receive should have copy address").** Never an
+                    // address without its network (prd §1486, the arrival
+                    // too since §1488): grey until one is picked, and a tap
+                    // opens the list. The demo's copy says it acts later.
                     Spacer(minLength: 0)
-                    if YourAccountDemo.isDemo(account) {
-                        Button { say(YourAccountDemo.actsLater) } label: {
-                            Text("Share")
-                                .dsText(.heading34)
-                                .foregroundStyle(DS.pickInk)
-                                .frame(minHeight: 48, alignment: .trailing)
-                        }
-                        .buttonStyle(RowPress())
-                    } else if elsewhere == nil, fresh || !networkPicked {
-                        // Never an address without its network (prd §1486,
-                        // the arrival too since §1488).
-                        Button {
+                    let ready = elsewhere != nil || (!fresh && networkPicked)
+                    Button {
+                        if ready { copy() } else {
                             say(String(localized: "Pick a network first"))
                             withAnimation(DS.Motion.standard) { open = .elsewhere }
-                        } label: {
-                            Text("Share")
-                                .dsText(.heading34)
-                                .foregroundStyle(DS.textTertiary)
-                                .frame(minHeight: 48, alignment: .trailing)
                         }
-                        .buttonStyle(RowPress())
-                    } else {
-                        ShareLink(item: receiveAddress) {
-                            Text("Share")
-                                .dsText(.heading34)
-                                .foregroundStyle(DS.pickInk)
-                                .frame(minHeight: 48, alignment: .trailing)
-                        }
-                        .buttonStyle(RowPress())
-                        .accessibilityHint(Text("Shares your address"))
+                    } label: {
+                        Text(verbatim: footVerb)
+                            .dsText(.heading34)
+                            .foregroundStyle(ready ? DS.pickInk : DS.textTertiary)
+                            .frame(minHeight: 48, alignment: .trailing)
                     }
+                    .buttonStyle(RowPress())
+                    .accessibilityHint(ready ? Text("Copies your address") : Text("Pick a network first"))
+                } else if nothingToMove {
+                    // Nothing to swap, send or pay with: the sentence says so
+                    // and offers Receive (prd §1518); no Add, no verb.
+                    EmptyView()
                 } else if verb != .buy {
                     Button { add() } label: {
                         // Pink is the values' and the signing verb's alone
@@ -2330,7 +2312,7 @@ struct MoveSentence: View {
                     .disabled(stage != nil)
                     .accessibilityHint(Text("Keeps this in the transaction and starts the next one"))
                 }
-                if verb != .receive {
+                if verb != .receive, !nothingToMove {
                     Spacer(minLength: DS.Space.s3)
                     Button { sign() } label: {
                         Text(verbatim: footVerb)
@@ -2349,7 +2331,7 @@ struct MoveSentence: View {
             // Pay's does (§1442f): a credit, not a fact about this swap.
             // Wherever Relay carries the move, since it is read directly
             // (§1512).
-            if relayCarries, receipt == nil {
+            if relayCarries, receipt == nil, !nothingToMove {
                 HStack(spacing: DS.Space.s1) {
                     Text("Powered by Relay")
                         .dsText(.label12)
@@ -2391,6 +2373,12 @@ struct MoveSentence: View {
     private var footClearance: CGFloat {
         guard !inTray, sizeClass == .compact, !chrome.keyboardUp else { return DS.Space.s2 }
         return DSDock.agentSize(fold: chrome.fold) + DSDock.agentBottomInset(fold: chrome.fold) + DS.Space.s2
+    }
+
+    /// Read, nothing anywhere, and nothing under way: the foot has no act
+    /// to draw (prd §1518). A move landing keeps its foot.
+    private var nothingToMove: Bool {
+        verb != .receive && emptyEverywhere && stage == nil && all.isEmpty
     }
 
     private var footOn: Bool {

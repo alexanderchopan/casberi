@@ -68581,3 +68581,10 @@ The rule under all of it: **every page shows every account at once, and the acco
 6. **Your account's doors:** Nodes only. The recovery check's page (§1515) stays Needs you's door, since the Keys card already has a Recovery key row, and a second one with the same name would be two rows saying one thing.
 7. **The Mac** (§1402): the same page; with no Tor there (§1495), nothing changes but the address.
 8. **Hook:** `-ownNode "<chainId>|<url>"|clear` (in `docs/hooks/wallet.md`). Self-test: `scripts/own-node-selftest.sh` (14 checks: the address rule, the verdict on the measured answers, the words, the switch, and no fall-through to the list).
+
+## §1518 — Receive's foot copies the address, and an empty account's Move draws no verb (amends §1442i item 4, §1486 item 5, §1488 item 3, §1501 item 6) (user, 2026-10-25, of Move on Swap with nothing held: "receive should have copy address. also it says swap bottom right corner which is wrong") — WRITTEN, NOT YET COMPILED
+
+1. **Receive's one act is Copy address,** at the foot where Share stood (`footVerb`'s receive case, unused until now). Share is deleted. Before a network is picked (and on the arrival) the word is grey and a tap says "Pick a network first" and opens the list, as Share did (§1486, §1488); once picked, or on a Relay route, it is pink and copies the address the page shows. The demo's copy says it acts later (§1475).
+2. **One copy per screen:** the Copy address row under your own address and the Copy deposit address row under a route's are deleted. A route's address is still named a deposit address by the line under it ("This deposit address takes only …", §1501 item 6). The short address in the sentence still copies once a network is picked.
+3. **Nothing to swap, send or pay with draws no foot act** (`nothingToMove`: read, nothing on any network, nothing kept, nothing under way): no Add, no grey verb, no Relay credit. The sentence's "Nothing to swap yet." and "Receive something first" stay. A move landing keeps its foot.
+4. **Not seen:** written in a Linux session with no Xcode; not built, not run.
