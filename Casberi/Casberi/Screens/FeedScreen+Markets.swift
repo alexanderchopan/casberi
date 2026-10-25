@@ -108,9 +108,10 @@ extension FeedScreen {
         // column and gap, and the Feed's own choices and +.
         // **FOLLOWING · ALERTS ARE THE HEAD'S TWO WORDS (prd §1391):** the
         // Feed's choice grammar (§1251), the picked word in the head ink, the
-        // other grey. Follow, from the head's + (prd §1386), the one word
-        // (prd §1391, user: "could we just say follow? its follow a market
-        // regardless").
+        // other grey. Follow, from the head (prd §1386), the one word (prd
+        // §1391, user: "could we just say follow? its follow a market
+        // regardless"); since §1522 its glyph is the magnifier, because the
+        // tray it opens is Markets' search page.
         let choices = [TokensScope.watchlist, .alerts].map { choice in
             SectionChoice(id: choice.id, label: choice.label, on: chrome.tokensScope == choice) {
                 chrome.tokensScope = choice
@@ -118,10 +119,20 @@ extension FeedScreen {
         }
         return Section {
             SectionPanelName(name: TokensScope.watchlist.label, glyph: ScopeTileGlyph.watch,
-                             choices: choices,
-                             adds: [SectionAdd(label: String(localized: "Follow"), glyph: "plus") {
-                                 feedSheet = .watchAdd
-                             }]) { EmptyView() }
+                             choices: choices) {
+                Button {
+                    DSHaptic.selection()
+                    feedSheet = .watchAdd
+                } label: {
+                    Image(systemName: "magnifyingglass")
+                        .dsGlyph(.body, weight: .regular)
+                        .foregroundStyle(DS.brandInk)
+                        .frame(width: DS.Hit.min, height: DS.Hit.min)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(PressSpring())
+                .accessibilityLabel(Text("Search the market"))
+            }
                 .feedRowBackground()
                 .listRowInsets(EdgeInsets())
                 .listRowSeparator(.hidden)
