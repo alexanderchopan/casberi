@@ -564,9 +564,19 @@ enum YourAccountChain {
     }
 
     static func limitState(_ net: Network, _ account: String) async throws -> LimitState {
-        guard try await isDeployed(net, account), try await threshold(net, account) == 2,
-              try await accountEntry(net, account) == .adapter, let plan = plan(net),
-              try await !sessionIds(net, account).isEmpty else { return .off }
+        guard try await isDeployed(net, account) else { return .off }
+        return try await limitState(net, account, threshold: try await threshold(net, account))
+    }
+
+    /// The same, for a reader that already holds the threshold of an account
+    /// that is on `net` (Security's read): the plan this phone set is asked
+    /// first, then the adapter and the sessions at once, one round trip over
+    /// Tor in place of four.
+    static func limitState(_ net: Network, _ account: String, threshold: Int) async throws -> LimitState {
+        guard threshold == 2, let plan = plan(net) else { return .off }
+        async let entry = accountEntry(net, account)
+        async let sessions = sessionIds(net, account)
+        guard try await entry == .adapter, try await !sessions.isEmpty else { return .off }
         return .on(plan, current: plan.window(at: Int(Date().timeIntervalSince1970)))
     }
 

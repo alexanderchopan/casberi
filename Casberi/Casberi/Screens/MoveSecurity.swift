@@ -446,28 +446,41 @@ struct MoveSecurity: View {
             for net in Op.networks {
                 group.addTask {
                     guard let deployed = try? await Chain.isDeployed(net, account) else { return nil }
+                    guard deployed else {
+                        return Standing(network: net, deployed: false, keyIndex: nil, recovery: .notThere, outside: [],
+                                        exported: [], threshold: nil, limit: nil)
+                    }
+                    // **ASKED AT ONCE, EACH ONCE.** Every read here went one
+                    // after another over Tor (~1–2s each), and the recovery
+                    // state and the limit asked the code, the owners and the
+                    // threshold again: eleven round trips a network before the
+                    // page said anything. The owners answer the recovery key
+                    // too; the threshold feeds the limit.
+                    async let configured = Chain.configuredX(net, account)
+                    async let ownersRead = Chain.owners(net, account)
+                    async let spending = Self.spending(net, account)
                     var index: Int?
                     // This phone's only if it can still sign with it.
-                    if deployed, let x = try? await Chain.configuredX(net, account),
+                    if let x = try? await configured,
                        let i = YourAccountKey.index(matchingX: x), YourAccountKey.holds(i) {
                         index = i
                     }
-                    var state: Chain.RecoveryState = deployed ? .missing : .notThere
-                    if deployed, let signer, let s = try? await Chain.recoveryState(net, account, signer: signer) { state = s }
-                    var outside: [String] = []
+                    let all = try? await ownersRead
+                    var state: Chain.RecoveryState = .missing
+                    if let signer, let all {
+                        state = all.contains { $0.caseInsensitiveCompare(signer) == .orderedSame } ? .added : .missing
+                    }
                     var exported: [String] = []
-                    if deployed, let all = try? await Chain.owners(net, account) {
-                        for owner in all where owner.caseInsensitiveCompare(YourAccount.sharedSigner) != .orderedSame {
-                            if YourAccountExport.isExported(owner, for: account) { exported.append(owner) }
-                            else if (try? await Chain.isContract(net, owner)) == false { outside.append(owner) }
-                        }
+                    var asked: [String] = []
+                    for owner in all ?? [] where owner.caseInsensitiveCompare(YourAccount.sharedSigner) != .orderedSame {
+                        if YourAccountExport.isExported(owner, for: account) { exported.append(owner) }
+                        else { asked.append(owner) }
                     }
-                    var threshold: Int?
-                    var limit: Chain.LimitState?
-                    if deployed {
-                        threshold = try? await Chain.threshold(net, account)
-                        limit = threshold == 2 ? try? await Chain.limitState(net, account) : .off
+                    let plain = await IngestSupport.boundedGather(asked, maxConcurrent: 6) {
+                        (try? await Chain.isContract(net, $0)) == false
                     }
+                    let outside = zip(asked, plain).filter { $0.1 }.map { $0.0 }
+                    let (threshold, limit) = await spending
                     return Standing(network: net, deployed: deployed, keyIndex: index, recovery: state, outside: outside,
                                     exported: exported, threshold: threshold, limit: limit)
                 }
@@ -496,6 +509,14 @@ struct MoveSecurity: View {
             if let amount = UserDefaults.standard.string(forKey: "spendLimitAmount") { amountText = amount }
         }
         #endif
+    }
+
+    /// How many keys a send needs on `net`, then the limit that implies: one
+    /// chain of reads, run beside the key and the owners.
+    private static func spending(_ net: Op.Network, _ account: String) async -> (threshold: Int?, limit: Chain.LimitState?) {
+        let threshold = try? await Chain.threshold(net, account)
+        let limit = threshold == 2 ? try? await Chain.limitState(net, account, threshold: 2) : .off
+        return (threshold, limit)
     }
 
     // MARK: - The spend limit (prd §1455)
