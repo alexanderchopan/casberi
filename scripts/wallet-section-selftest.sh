@@ -601,6 +601,15 @@ ok = "selectedSeat == nil && selectedWallet == nil" in body and ".count > 1" in 
     and "if splits, hasApps" in body
 sys.exit(0 if ok else 1)
 PY
+# Your account is one name on Home and Holdings (prd §1523, user: "on holdings
+# we say you. should both say your account"): the door takes the section's label.
+python3 - "$work/FeedScreen.swift.bare" <<'PY' || fail "drift: Holdings names your account something other than Home's \"Your account\" (prd §1523)"
+import re, sys
+src = open(sys.argv[1]).read()
+m = re.search(r"func walletHoldingsDoors\(.*?\n    }\n", src, re.S)
+body = m.group(0) if m else ""
+sys.exit(0 if "walletDoor(.yourAccount, figure:" in body else 1)
+PY
 # Tokens is a door on Holdings since prd §1480, opening every token in its
 # sheet; Holdings itself never lists them, or Positions sink under forty rows.
 deny FeedScreen.swift "ForEach(portfolio.positions)" \

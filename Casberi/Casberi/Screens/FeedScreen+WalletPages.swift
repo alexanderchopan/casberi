@@ -279,7 +279,7 @@ extension FeedScreen {
     }
 
     /// **HOLDINGS, WHAT THE MONEY IS (prd §1480 item 4, §1503).** The treemap
-    /// in the box, then whose it is — You, Following, Apps, each its total,
+    /// in the box, then whose it is — Your account, Following, Apps, each its total,
     /// never a count (user: "i don't care that i have 90 apps. i care about
     /// the total of tokens in those apps") — then Tokens, Positions, NFTs.
     @ViewBuilder
@@ -305,8 +305,10 @@ extension FeedScreen {
             && [hasYou, hasFollowing, hasApps].filter { $0 }.count > 1
         walletDoorsSection {
             if splits, let you = groups.you {
-                // Narrows the Wallet to it: its tokens fill the treemap.
-                walletDoor(.yourAccount, name: String(localized: "You"), figure: money([you]),
+                // Narrows the Wallet to it: its tokens fill the treemap. Named
+                // as Home names it (prd §1523, user: "on holdings we say you.
+                // should both say your account").
+                walletDoor(.yourAccount, figure: money([you]),
                            act: { withAnimation(DS.Motion.standard) { chrome.walletScope = you.address } })
             }
             if splits, hasFollowing {

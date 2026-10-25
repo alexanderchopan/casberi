@@ -239,7 +239,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1660 of 1729 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1661 of 1730 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1881,7 +1881,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1500 — Create's small print is "Face ID approves every move."
 - §1501 — The create flow, word by word: four steps and Created with Done, and Move is one size, always (amended by §1518)
 - §1502 — An explicit agent ask that fails says so; only a follow-up falls back to the phone
-- §1503 — Holdings says whose the money is, in money: You · Following · Apps, then Tokens · Positions · NFTs; NFTs offers every… (amended by §1520)
+- §1503 — Holdings says whose the money is, in money: You · Following · Apps, then Tokens · Positions · NFTs; NFTs offers every… (amended by §1520, §1523)
 - §1504 — Following is the wallets you follow; what rode a wallet leaves with it at once; Privy is its own sign-in
 - §1505 — The composer has no phone key: an agent is picked when one exists, so every send is an explicit ask
 - §1506 — Receive › From another wallet: a wallet of your own connects, and each send into your account is approved there
@@ -1901,6 +1901,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1520 — Holdings says whose only when it splits
 - §1521 — Holdings says it is reading, and a failed read keeps the map
 - §1522 — Copy address stands on Home only
+- §1523 — Holdings names your account "Your account", as Home does
 
 ## Dead rulings → what replaced them (generated)
 

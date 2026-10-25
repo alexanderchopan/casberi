@@ -68617,3 +68617,10 @@ The rule under all of it: **every page shows every account at once, and the acco
 1. **The cause.** `DSRoomScopeChrome.accountLine` drew the picked address's Copy row under the tiles on every page, so Holdings, Activity, Spending and Markets each opened on a copy act that answers none of their questions.
 2. **The rule.** The row draws only when the active tile is the room's Home (`active == home`). It is the chrome's, so Logos and Aztec follow. Move's Receive still copies your address (§1518), and an address card still has its own Copy row.
 3. **Not seen:** written in a Linux session with no Xcode; not built, not run.
+
+## §1523 — Holdings names your account "Your account", as Home does (amends §1503 item 1) (user, 2026-10-25, on screenshots of Home's "Your account" door and Holdings' "You" door: "it's weird in home we say your account and on holdings we say you. should both say your account.") — WRITTEN, NOT YET COMPILED
+
+1. **The rule.** Holdings' first group door is "Your account" (`walletDoor(.yourAccount, …)` with no name override, so it reads `WalletSection.yourAccount.label`). Holdings › NFTs' chooser names your own account the same way.
+2. **Not changed.** The door's figure and press: it still shows your account's total and narrows the Wallet to it (§1503, §1520). The account menu's own name for your account (the title's "Wallet · You", §1487) is not touched.
+3. **Self-test.** `wallet-section-selftest.sh` fails if the Holdings door takes a name of its own again.
+4. **Not seen:** written in a Linux session with no Xcode; not built, not run.

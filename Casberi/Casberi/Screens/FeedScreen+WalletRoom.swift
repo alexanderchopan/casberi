@@ -630,14 +630,14 @@ extension FeedScreen {
     /// is empty but we used to have a way for a user to show their NFTs").**
     /// With several wallets and none picked, the shelf has no one wallet to
     /// speak for (§387) and the page drew nothing, not even its door. It
-    /// offers each instead: You first, then every wallet you follow.
+    /// offers each instead: Your account first, then every wallet you follow.
     @ViewBuilder
     var walletNFTChooseEachSection: some View {
         let own = YourAccountDemo.shownAddress
         let followed = wallet.addresses.filter { !Self.isYourAccount($0.address) }
         walletCard(String(localized: "Choose collections"), glyph: Self.nftGlyph) {
             if let own {
-                walletNFTChooseRow(address: own, name: String(localized: "You"))
+                walletNFTChooseRow(address: own, name: WalletSection.yourAccount.label)
             }
             ForEach(followed, id: \.address) { entry in
                 walletNFTChooseRow(address: entry.address, name: entry.label.isEmpty ? entry.short : entry.label)
