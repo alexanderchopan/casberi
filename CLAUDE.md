@@ -396,6 +396,7 @@ All read via UserDefaults in `Shell/RootShell.swift` unless noted. **The flag st
 - **AgentKit is NOT BUILT (prd §801, user-declined after measuring)** — World App answered our own 3.0 bridge request and refused it (`verification_rejected`, "Visit an Orb"). → docs/hooks/wallet.md · prd §801
 - **A World App username is a name ONLY in the follow field (`NameResolve.followTarget`, prd §802), never a `NameResolve.Family`** → docs/hooks/wallet.md · prd §801b · §802
 - `-safeProbe background` `-signerProbe` — Safe: background queue read, gateway-first confirmation, simulation (`safeBackground|`, `signer| lastDoor=`, `signerSim|`). UNMEASURED → prd §1249
+- `-signerSheetPreview YES|<0x…>` — raise the Signer sheet (WalletConnect code) over a sample link 3s after launch; asks no wallet. On the phone the wallet here leads and the code is small, for another phone
 - `-wcProjectID` `-wcConnectProbe` `-wcTimeout` — Wallet/WalletConnect (2026-07-16, prd 84) → docs/hooks/wallet.md
 - `-prepareProbe` `-approvalProbe` — run the approval PREPARE path (prd 112, the preparing-surface ruling: reads and previews in-app, signatures → docs/hooks/wallet.md
 - **A spam NFT mint is one you didn't sign, not one that's cheap** (`-nftOriginProbe`) → docs/hooks/wallet.md · prd §481

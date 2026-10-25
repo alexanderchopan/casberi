@@ -13,50 +13,88 @@ struct SignerRequestSheet: View {
     /// Nil while one is being chosen (prd §1457): any wallet's first address.
     let signer: String?
     @State private var copiedInstead = false
+    /// A phone cannot scan its own screen (user: "it's only relevant if you
+    /// had another phone"): there the wallet on this phone leads and the code
+    /// is small, for a second device; an iPad or a Mac leads with the code.
+    private let onPhone = UIDevice.current.userInterfaceIdiom == .phone
 
     var body: some View {
         DSTray(title: signer == nil ? String(localized: "Your Signer") : String(localized: "Your Signer signs too"),
-               height: 600, detents: [.large]) {
+               height: onPhone ? 420 : 600, detents: [.large]) {
             VStack(alignment: .leading, spacing: DS.Space.s3) {
-                Text(signer.map { String(localized: "Scan with …\(String($0.suffix(4))) in its wallet, then approve.") }
-                     ?? String(localized: "Scan with the wallet you want, then approve twice: connect, then sign."))
+                Text(onPhone
+                     ? (signer.map { String(localized: "Approve in the wallet holding …\(String($0.suffix(4))).") }
+                        ?? String(localized: "Approve twice in the wallet you want: connect, then sign."))
+                     : (signer.map { String(localized: "Scan with …\(String($0.suffix(4))) in its wallet, then approve.") }
+                        ?? String(localized: "Scan with the wallet you want, then approve twice: connect, then sign.")))
                     .dsText(.body17)
                     .foregroundStyle(DS.textSecondary)
-                if let code = Self.code(url.absoluteString) {
-                    Image(uiImage: code)
-                        .interpolation(.none)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(maxWidth: 260)
-                        .padding(DS.Space.s3)
-                        .background(Color.white, in: RoundedRectangle(cornerRadius: DS.Radius.widget))
+                    .fixedSize(horizontal: false, vertical: true)
+                if !onPhone, let code = Self.code(url.absoluteString) {
+                    codeImage(code, side: 260)
                         .frame(maxWidth: .infinity)
-                        .accessibilityLabel(Text("WalletConnect code"))
                 }
-                DSDoorRow(icon: "arrow.up.forward.app", label: "Open wallet") {
-                    // The wallet that claims WalletConnect's own link (Rainbow,
-                    // Trust, Zerion…); none here, the link is copied instead.
-                    if UIApplication.shared.canOpenURL(url) {
-                        UIApplication.shared.open(url)
-                    } else {
-                        DSPasteboard.copySensitive(url.absoluteString)
-                        withAnimation(DS.Motion.standard) { copiedInstead = true }
-                    }
-                }
-                if copiedInstead {
-                    Text("No wallet here opens it: the link is copied, paste it in yours.")
-                        .dsText(.body17).foregroundStyle(DS.textSecondary)
+                doors
+                waiting
+                if onPhone, let code = Self.code(url.absoluteString) {
+                    // The second device's door, last and small: a code, and
+                    // the one line saying who it is for.
+                    HStack(alignment: .center, spacing: DS.Space.s3) {
+                        codeImage(code, side: 96)
+                        VStack(alignment: .leading, spacing: DS.Space.s1) {
+                            Text("Wallet on another phone?")
+                                .dsText(.heading17)
+                                .foregroundStyle(DS.textPrimary)
+                            Text("Scan this with its camera.")
+                                .dsText(.body17)
+                                .foregroundStyle(DS.textSecondary)
+                        }
                         .fixedSize(horizontal: false, vertical: true)
-                }
-                DSCopyRow(value: url.absoluteString, label: "Copy link", sensitive: true)
-                HStack(spacing: DS.Space.s2) {
-                    DSSpinner()
-                    Text(signer == nil ? String(localized: "Waiting for your wallet") : String(localized: "Waiting for your Signer"))
-                        .dsText(.body17)
-                        .foregroundStyle(DS.textSecondary)
+                    }
+                    .padding(.top, DS.Space.s3)
                 }
             }
         }
+    }
+
+    /// The code on white, which a camera needs around it to read it.
+    private func codeImage(_ code: UIImage, side: CGFloat) -> some View {
+        Image(uiImage: code)
+            .interpolation(.none)
+            .resizable()
+            .scaledToFit()
+            .frame(width: side, height: side)
+            .padding(side < 160 ? DS.Space.s2 : DS.Space.s3)
+            .background(Color.white, in: RoundedRectangle(cornerRadius: DS.Radius.widget))
+            .accessibilityLabel(Text("WalletConnect code"))
+    }
+
+    private var waiting: some View {
+        HStack(spacing: DS.Space.s2) {
+            DSSpinner()
+            Text(signer == nil ? String(localized: "Waiting for your wallet") : String(localized: "Waiting for your Signer"))
+                .dsText(.body17)
+                .foregroundStyle(DS.textSecondary)
+        }
+    }
+
+    @ViewBuilder private var doors: some View {
+        DSDoorRow(icon: "arrow.up.forward.app", label: "Open wallet") {
+            // The wallet that claims WalletConnect's own link (Rainbow,
+            // Trust, Zerion…); none here, the link is copied instead.
+            if UIApplication.shared.canOpenURL(url) {
+                UIApplication.shared.open(url)
+            } else {
+                DSPasteboard.copySensitive(url.absoluteString)
+                withAnimation(DS.Motion.standard) { copiedInstead = true }
+            }
+        }
+        if copiedInstead {
+            Text("No wallet here opens it: the link is copied, paste it in yours.")
+                .dsText(.body17).foregroundStyle(DS.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        DSCopyRow(value: url.absoluteString, label: "Copy link", sensitive: true)
     }
 
     /// The link as a QR code, one pixel a module (scaled without smoothing).

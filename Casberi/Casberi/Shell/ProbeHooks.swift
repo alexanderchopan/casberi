@@ -4153,6 +4153,18 @@ enum ProbeHooks {
                 }
             }
         },
+        // `-signerSheetPreview YES|<signer address>` — raise the Signer sheet
+        // over a sample pairing link, 3s after launch, to look at it: no
+        // wallet is asked and nothing is signed.
+        Hook(key: "signerSheetPreview") { raw, _ in
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(3))
+                let signer = raw.hasPrefix("0x") ? raw : nil
+                let url = URL(string: "wc:8a5e5bdc0bb7d5b3c3e9d1c4f2a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4@2?relay-protocol=irn&symKey=" + String(repeating: "7", count: 64))!
+                _ = SignerRequestSheet.present(url: url, signer: signer)
+                NSLog("signerSheetPreview: shown signer=%@", signer ?? "-")
+            }
+        },
         // `-walletCoSignProbe "<network>|<wei>|<signer address>"` — `wei` ETH
         // from the account to itself signed by this phone AND the Signer's own
         // wallet over WalletConnect (prd §1447 item 17): the sheet shows the
