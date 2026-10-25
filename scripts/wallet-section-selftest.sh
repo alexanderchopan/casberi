@@ -53,8 +53,8 @@ func check(_ ok: Bool, _ what: String) {
 }
 
 // ORDER is a ruling, not an accident of declaration.
-check(WalletSection.order == [.home, .holdings, .markets, .activity, .spending],
-      "order is home → holdings → markets → activity → spending (prd §1480, §1498)")
+check(WalletSection.order == [.home, .holdings, .activity, .spending, .markets],
+      "order is home → holdings → activity → spending → markets (prd §1480, §1527)")
 // **FIVE TILES (prd §1480, §1498).** Security is deleted — its parts are Your
 // account, Permissions and Threats, each a page off Home — and Markets is a
 // tile again, never a door off Home (§1498). A remembered "security" must
@@ -95,13 +95,11 @@ check(WalletSection.holdingAccounts.label == "Following", "Holdings' wallets you
 check(WalletSection.following.label == "Following", "what you follow reads Following, never Accounts (prd §1480)")
 check(WalletSection.subscriptions.label == "Subscriptions", "the page reads Subscriptions — Day's tile says it too (prd §1111)")
 
-// Conditional scopes sit at the tail, so the strip's head is the same on every
-// wallet.
-let firstConditional = WalletSection.order.firstIndex { $0.isConditional }!
-let lastUnconditional = WalletSection.order.lastIndex { !$0.isConditional }!
-check(lastUnconditional < firstConditional,
-      "no conditional scope sits before an unconditional one")
-check(WalletSection.order.last == .spending, "spending is last — conditional (prd §1468)")
+// Markets is yours, not an account's, so it stands last, after the account
+// pages (prd §1527, user: "markets should be the last tile in the row"). No
+// tile is hidden when empty (below), so the strip's head is the same on
+// every wallet either way.
+check(WalletSection.order.last == .markets, "markets is last (prd §1527)")
 check(WalletSection.order.first == .home, "home leads")
 
 check(WalletSection.home.isAlwaysPresent, "home is always present")
@@ -208,12 +206,12 @@ mutate() {
   echo "  ok   catches  $why"
 }
 
-mutate "a conditional tile moved ahead of an unconditional one (the strip reflows)" \
-  's/\[\.home, \.holdings, \.markets, \.activity, \.spending\]/[.home, .holdings, .activity, .markets, .spending]/'
+mutate "markets no longer last (prd §1527)" \
+  's/\[\.home, \.holdings, \.activity, \.spending, \.markets\]/[.home, .holdings, .activity, .markets, .spending]/'
 mutate "spending dropped from the row, its case still compiling (prd §1468)" \
-  's/\[\.home, \.holdings, \.markets, \.activity, \.spending\]/[.home, .holdings, .markets, .activity]/'
+  's/\[\.home, \.holdings, \.activity, \.spending, \.markets\]/[.home, .holdings, .activity, .markets]/'
 mutate "home no longer leads" \
-  's/\[\.home, \.holdings, \.markets/[.holdings, .home, .markets/'
+  's/\[\.home, \.holdings, \.activity/[.holdings, .home, .activity/'
 mutate "resolve falls back to the first present scope instead of home" \
   's/guard let wanted, present\.contains\(wanted\) else \{ return \.home \}/guard let wanted, present.contains(wanted) else { return present.first ?? .home }/'
 mutate "the retired Security tile comes back as a scope (prd §1480)" \
@@ -231,7 +229,7 @@ mutate "a door dropped from Home's row, its page unreachable (prd §1480)" \
 mutate "what you follow is named Accounts again, beside Holdings' Accounts (prd §1480)" \
   's/case \.following:       return String\(localized: "Following"\)/case .following:       return String(localized: "Accounts")/'
 mutate "Markets sent back to a door off Home (prd §1498)" \
-  's/\[\.home, \.holdings, \.markets, \.activity, \.spending\]/[.home, .holdings, .activity, .spending]/; s/\.permissions, \.threats\]/.permissions, .threats, .markets]/'
+  's/\[\.home, \.holdings, \.activity, \.spending, \.markets\]/[.home, .holdings, .activity, .spending]/; s/\.permissions, \.threats\]/.permissions, .threats, .markets]/'
 mutate "home loses its empty copy again, so the wallet room says nothing when nothing came back (prd §761)" \
   's/case \.home:            return String\(localized: "No balance yet"\)/case .home:            return nil/'
 mutate "home's empty copy promises a load state it cannot know (§83)" \
@@ -630,8 +628,8 @@ grep -q "wallet-section-selftest.sh" "$VERIFY" \
 # per drawing, because the chips are not always offered.
 guard DSRoomChassis.swift "crownChrome + (chips ? crownRangeChips : 0)" \
   "the chips left the crown's budget — every crown drawing a range track clips it again"
-guard FeedScreen.swift "DSRoomChassis.crownChart(chips: ranges.count > 1)" \
-  "the wallet crown stopped paying for its range chips — the 7d/Watched track clips at the slot's edge"
+guard FeedScreen.swift "DSRoomChassis.crownChart(chips: ranges.count > 1 || WalletWhoseSwitch.shows(chrome))" \
+  "the wallet crown stopped paying for its foot row (range chips, Yours · Everything, prd §1526) — the track clips at the slot's edge"
 # (The activity chart's own guard went with the chart, prd §1039.)
 # (The chart's `chartHeight(chips:)` budget, and the guard that its predicate
 # stayed the chips' own gate, went with prd §942: a flexing drawing reserves

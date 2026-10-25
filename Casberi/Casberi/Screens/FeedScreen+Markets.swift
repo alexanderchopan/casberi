@@ -161,10 +161,13 @@ extension FeedScreen {
         // (prd §1230); the verb above starts it.
         if watches.isEmpty {
             Section {
+                // In the header's text column, past its glyph (user,
+                // 2026-10-25: "same indentation as the header").
                 Text("Nothing followed yet")
                     .dsText(.body17)
                     .foregroundStyle(DS.textSecondary)
-                    .listRowInsets(EdgeInsets(top: DS.Space.s2, leading: DSRoomChassis.rowInset,
+                    .listRowInsets(EdgeInsets(top: DS.Space.s2,
+                                              leading: DSRoomChassis.rowInset + DSRoomChassis.headGlyph + DSRoomChassis.headGap,
                                               bottom: DS.Space.s2, trailing: DSRoomChassis.rowInset))
                     .feedRowBackground()
                     .listRowSeparator(.hidden)

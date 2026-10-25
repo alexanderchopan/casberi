@@ -394,7 +394,8 @@ extension FeedScreen {
                     walletRowFigure(figure, tone: tone)
                 }
             }
-            .padding(.vertical, DS.Space.s1)
+            // The app's one row pitch (prd §1496): a preview is a row.
+            .walletRowPitch()
             .contentShape(Rectangle())
         }
         .buttonStyle(RowPress())

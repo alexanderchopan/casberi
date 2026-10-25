@@ -87,7 +87,7 @@ enum WalletSection: String, CaseIterable, Identifiable, Sendable {
     /// first (§483), so the strip's head is the same on every wallet. They
     /// DRAW A–Z after Home — Activity, Holdings, Markets, Spending (§995).
     /// `allCases` adds the pages.
-    static let order: [WalletSection] = [.home, .holdings, .markets, .activity, .spending]
+    static let order: [WalletSection] = [.home, .holdings, .activity, .spending, .markets]
 
     /// Home's doors, in the row's order (prd §1480 item 2; Markets left for
     /// its tile, §1498).
