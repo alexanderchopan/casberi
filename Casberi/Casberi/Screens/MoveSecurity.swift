@@ -284,25 +284,28 @@ struct MoveSecurity: View {
             roundUpMarks = marks
         }
         if roundUps.on {
-            // A worked send, because "the next $1" read as a $1 round-up.
-            Group {
-                if roundUps.step == 5 {
-                    Text("A $3.40 send rounds up to $5, setting aside $1.60. When $5 is set aside, it buys \(roundUps.target.symbol).")
-                } else {
-                    Text("A $3.40 send rounds up to $4, setting aside $0.60. When $5 is set aside, it buys \(roundUps.target.symbol).")
-                }
-            }
-            .dsText(.subhead12).foregroundStyle(DS.textSecondary)
-            .fixedSize(horizontal: false, vertical: true)
-            .padding(.bottom, DS.Space.s2)
-            .transition(.opacity.combined(with: .move(edge: .top)))
+            Text(verbatim: Self.roundUpsExample(roundUps))
+                .dsText(.subhead12).foregroundStyle(DS.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.bottom, DS.Space.s2)
+                .transition(.opacity.combined(with: .move(edge: .top)))
         }
     }
 
-    /// "$1, buys ETH", or Off.
+    /// "To next $1, buys ETH", or Off. "To next" because a bare "$1" read
+    /// as the amount each send adds.
     private var roundUpWord: String {
         guard roundUps.on else { return String(localized: "Off") }
-        return String(localized: "$\(roundUps.step), buys \(roundUps.target.symbol)")
+        return String(localized: "To next $\(roundUps.step), buys \(roundUps.target.symbol)")
+    }
+
+    /// A worked send, because "the next $1" read as a $1 round-up: what a
+    /// $3.40 send sets aside, and when that buys. Security and the keys walk
+    /// say it the same way.
+    static func roundUpsExample(_ setting: RoundUps.Setting) -> String {
+        setting.step == 5
+            ? String(localized: "A $3.40 send rounds up to $5, setting aside $1.60. When $5 is set aside, it buys \(setting.target.symbol).")
+            : String(localized: "A $3.40 send rounds up to $4, setting aside $0.60. When $5 is set aside, it buys \(setting.target.symbol).")
     }
 
     /// ONE gutter for this card's limit sentence; sized to the widest glue,

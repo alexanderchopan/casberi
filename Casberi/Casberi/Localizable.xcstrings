@@ -707,34 +707,6 @@
         }
       }
     },
-    "$%lld, buys %@" : {
-      "localizations" : {
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "$%lld, compra %@"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "$%lld、%@を購入"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "$%lld, %@ 구매"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "$%lld，买入 %@"
-          }
-        }
-      }
-    },
     "%@" : {
       "localizations" : {
         "es" : {
@@ -175740,6 +175712,34 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "待办"
+          }
+        }
+      }
+    },
+    "To next $%lld, buys %@" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Al siguiente $%lld, compra %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "次の$%lldまで、%@を購入"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "다음 $%lld까지, %@ 구매"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "到下一个 $%lld，买入 %@"
           }
         }
       }

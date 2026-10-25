@@ -178,6 +178,7 @@ struct MoveKeysWalk: View {
                 }
             }
             .task { await loadRoundUpChoices() }
+            small(MoveSecurity.roundUpsExample(roundUps))
         case .created:
             MoveFlow {
                 MoveWord(String(localized: "Created"), ink: DS.textSecondary)
