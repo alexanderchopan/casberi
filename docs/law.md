@@ -239,7 +239,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 
 ## Live rulings, every one (generated)
 
-1650 of 1719 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
+1651 of 1720 H2 rulings in `docs/prd.md` are not superseded, reversed, deleted or retired WHOLE by anything the ledger records (the Superseded index, Known stale, Renumbered, and each heading's own parenthetical). "Part superseded" means a CLAUSE of the ruling was replaced — read the later entry before citing that clause. Numbers 1–33 are the original spec chapters. A ruling outgrown with no phrase anywhere still reads as live here; the by-area section above is the judgement layer.
 
 - §1 — Thesis
 - §3 — Goals (amended by §1103a)
@@ -1891,6 +1891,7 @@ None open. The four recorded here on 2026-10-01 were ruled the same day: `enrich
 - §1510 — Details in Move: the fee on every send, this exact operation simulated and previewed, Raw transaction a page deeper,…
 - §1511 — Move's sentence is placed against the width it was measured for, so a clause never draws over the next (applies §1501…
 - §1512 — Relay stays the one swap provider under Tor: it is read directly, and every move it carries says so on its foot (answ…
+- §1513 — Warnings in Move: one line you can sign past, a second tap for the verb, history-wide lookalikes, reported and sancti…
 
 ## Dead rulings → what replaced them (generated)
 

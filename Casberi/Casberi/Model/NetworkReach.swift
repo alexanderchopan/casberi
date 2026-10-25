@@ -489,6 +489,17 @@ enum NetworkReach {
                  credentialed: false,
                  throughTor: true,
                  refusesTor: ["api.relay.link"]),
+        // Move's checks (prd §1509 item 2, §1513): what a send or a swap is
+        // looked up against before you sign. GoPlus names the address you
+        // are about to pay, and Blockscout the contract, so both go through
+        // Tor on a circuit of their own; OFAC's list is downloaded whole
+        // and names no wallet (raw.githubusercontent.com, declared above).
+        Endpoint(service: "Move's checks",
+                 reach: .whenConnected(bridge: "Wallet"),
+                 purpose: "Before you send or swap, asks GoPlus whether the address you are about to pay has been reported for theft or fraud, and Blockscout when a contract was made, both through Tor. OFAC's list of sanctioned addresses is downloaded whole once a day and matched on this phone. Carries the one address being checked, nothing else about you.",
+                 hosts: ["api.gopluslabs.io", "base.blockscout.com", "eth.blockscout.com", "robinhoodchain.blockscout.com"],
+                 credentialed: false,
+                 throughTor: true),
         // Bitrefill's accountless checkout (prd §1473): Move's Buy. Reached
         // only when you tap Buy — a sign-in signed by your account, the
         // catalogue, an invoice, and its payment as a signed USDC

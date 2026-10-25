@@ -42,6 +42,8 @@ enum YourAccountDemo {
     static let cbBTC = Op.Token(symbol: "cbBTC", decimals: 8, contract: "0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf")
     static let aero = Op.Token(symbol: "AERO", decimals: 18, contract: "0x940181a94A35A4569E4529A3CDfB74e38FD98631")
     static let mag7 = Op.Token(symbol: "MAG7", decimals: 18, contract: "0x152f7613f362Abf1C05DB2EF2D6ef220302bf840")
+    /// A token two days old that Relay does not list (prd §1513's demo).
+    static let pepe2 = Op.Token(symbol: "PEPE2", decimals: 18, contract: "0x9e7ac1d2b3f4e5a6b7c8d9e0f1a2b3c4d5e6f702")
 
     /// One price a whole token, in dollars, for every token the demo names.
     static func price(_ token: Op.Token) -> Double? {
@@ -51,6 +53,7 @@ enum YourAccountDemo {
         case "CBBTC": 108_000
         case "AERO": 0.92
         case "MAG7": 41.5
+        case "PEPE2": 0.0000012
         default: nil
         }
     }
@@ -77,7 +80,10 @@ enum YourAccountDemo {
     /// What the swap picker offers in the demo: what it holds, and a few more.
     static func list(_ net: Op.Network) -> [Listed] {
         var out = held(on: net).map { Listed(token: $0.token, name: name($0.token), onList: true) }
-        if net.chainId == Op.base.chainId { out.append(Listed(token: aero, name: "Aerodrome", onList: true)) }
+        if net.chainId == Op.base.chainId {
+            out.append(Listed(token: aero, name: "Aerodrome", onList: true))
+            out.append(Listed(token: pepe2, name: "Pepe 2", onList: false))
+        }
         return out
     }
 
@@ -152,6 +158,35 @@ enum YourAccountDemo {
         var r = Decimal(), v = units * Decimal(string: "0.0004")!
         NSDecimalRound(&r, &v, 0, .down)
         return NSDecimalNumber(decimal: r).stringValue
+    }
+
+    // MARK: - Warnings (prd §1513)
+
+    /// The demo person's history and the addresses each warning needs: one
+    /// they paid on Oct 3, one that imitates it, one GoPlus reports, one whose
+    /// token refuses the transfer, and one never paid.
+    static let paid = "0x71c7656ec7ab88b098defb751b7401b5f6d849a2"
+    static let paidOn = DateComponents(calendar: Calendar(identifier: .gregorian), year: 2026, month: 10, day: 3).date ?? .now
+    static let imitator = "0x5e1f7a3b9c0d2e4f6a8b0c2d4e6f8a0b2c4d49a2"
+    static let reported = "0xd9a1b5c3e7f09a2b4c6d8e0f1a3b5c7d9e1f07fe"
+    static let refusing = "0xbad0c0ffee00000000000000000000000000bad1"
+    static let stranger = "0x2b3c4d5e6f708192a3b4c5d6e7f8091a2b3c4d5e"
+
+    /// What Move's checks find in the demo, off this table, never a service.
+    static func findings(to: [String], token: YourAccountTokens.Listed?) -> (findings: [MoveWarnings.Finding], checkedWith: [String]) {
+        var out: [MoveWarnings.Finding] = []
+        for a in to.map({ $0.lowercased() }) {
+            switch a {
+            case reported: out.append(.scam(address: a, sources: "SlowMist, ScamSniffer")); out.append(.firstSend)
+            case imitator: out.append(.lookalike(of: paid, name: nil, paid: paidOn))
+            case paid, refusing: break
+            default: out.append(.firstSend)
+            }
+        }
+        if let token, token.token == pepe2 {
+            out.append(.contract(token: true, unverified: !token.onList, ageDays: 2, neverUsed: true))
+        }
+        return (out, [String(localized: "GoPlus's reports (SlowMist, ScamSniffer)")])
     }
 
     /// What every act says in the demo.

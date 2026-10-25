@@ -129,6 +129,18 @@ struct MoveSentence: View {
     @State private var details = false
     @State private var rawOpen = false
 
+    // MARK: - Warnings (prd §1509 item 2, §1513)
+
+    @Environment(\.modelContext) private var context
+    /// What `MoveChecks` found about the sentence's addresses and token, the
+    /// sentence it was read for, and what Details says was checked.
+    @State private var findings: [MoveWarnings.Finding] = []
+    @State private var checkedWith: [String] = []
+    @State private var findingsFor = ""
+    /// The warning a first tap armed: the verb signs on the second tap only
+    /// while this is still the warning on screen.
+    @State private var armed = ""
+
     // MARK: - Buy (prd §1473)
 
     /// Buy stands on the verbs' line only with an account on this phone —
@@ -274,7 +286,9 @@ struct MoveSentence: View {
             guard let buy, let quote, lockedBuy.map({ $0 == buy.token }) ?? true else { return nil }
             return .swap(Chain.Swap(network: network, sell: with.token, buy: buy.token, amount: units, quote: quote))
         case .send:
-            guard let r = resolved, r.imitates == nil, stands(r) else { return nil }
+            // A lookalike no longer blocks the line (prd §1509 item 2, amends
+            // §1438b): it warns, and the verb takes a second tap.
+            guard let r = resolved, stands(r) else { return nil }
             return .send(Op.Payment(network: network, token: with.token, amount: units, to: r.address, toName: r.name))
         case .receive, .buy:
             return nil
@@ -385,6 +399,7 @@ struct MoveSentence: View {
         }
         .task(id: quoteKey) { await requote() }
         .task(id: previewKey) { await repreview() }
+        .task(id: checkKey) { await recheck() }
         .task(id: to) { await resolve() }
         .task {
             await readAll()
@@ -1130,7 +1145,7 @@ struct MoveSentence: View {
     private var toWord: some View {
         let shown = resolved?.name ?? (resolved.map { YourAccount.short($0.address) })
             ?? (to.isEmpty ? String(localized: "address") : to)
-        return blank(shown, ink: resolved?.imitates != nil ? DS.attentionInk : resolved == nil ? DS.textTertiary : DS.pickInk,
+        return blank(shown, ink: toWarningInk ?? (resolved?.imitates != nil ? DS.attentionInk : resolved == nil ? DS.textTertiary : DS.pickInk),
                   .to, label: Text("To \(shown), change"))
                 // A look-alike shakes once: a refusal you feel.
                 .keyframeAnimator(initialValue: 0.0, trigger: shake) { content, x in
@@ -1174,7 +1189,7 @@ struct MoveSentence: View {
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                     .submitLabel(.done)
-                    .onSubmit { if resolved != nil, resolved?.imitates == nil { pick {} } }
+                    .onSubmit { if resolved != nil { pick {} } }
                     .dsText(.body17)
                     .foregroundStyle(DS.textPrimary)
             } else {
@@ -1375,12 +1390,13 @@ struct MoveSentence: View {
                     ReceiveFromWalletSheet.present(account: account, sample: YourAccountDemo.isDemo(account))
                 }
             }
-        } else if let fail = failNote {
-            // The simulation refuses it (prd §1509, canvas figure 9): the red
-            // reason in the grey line's place, the verb dimmed, and Details
-            // still there to say which call and why.
+        } else if let warning = leadWarning {
+            // A warning takes the grey line's place (prd §1509 item 2): red
+            // when reported or refused, amber to check; one line, and Details
+            // lists every finding. A refusal dims the verb (canvas figure 9).
             VStack(alignment: .leading, spacing: 0) {
-                detailsToggle(Text(verbatim: fail + " ").foregroundStyle(DS.destructiveInk))
+                detailsToggle(Text(verbatim: warningLine(warning) + " ")
+                    .foregroundStyle(warning.red ? DS.destructiveInk : DS.attentionInk))
                 if details { moveDetails }
             }
             .fixedSize(horizontal: false, vertical: true)
@@ -1443,7 +1459,6 @@ struct MoveSentence: View {
         if verb == .swap, let quoteNote { return quoteNote }
         if verb == .send {
             if malformed { return String(localized: "Check the address") }
-            if let imitates = resolved?.imitates { return String(localized: "Looks like \(imitates)'s — check it") }
         }
         // What signing would refuse, said before the tap: a fee the account
         // cannot pay, a node that would not price it (prd §1509).
@@ -1465,6 +1480,141 @@ struct MoveSentence: View {
     private var failNote: String? {
         guard verb == .send || verb == .swap, let p = shownPreview else { return nil }
         return YourAccountPreview.failLine(p.checked, swap: verb == .swap, network: network.name)
+    }
+
+    // MARK: - Warnings (prd §1509 item 2, §1513)
+
+    /// The addresses the sentence pays: each send's, and the one being typed.
+    private var recipients: [String] {
+        guard verb == .send else { return [] }
+        var out = keptSends.map(\.to)
+        if let r = resolved, !YourAccountDemo.isYours(r.address) { out.append(r.address) }
+        return out.reduce(into: [String]()) { list, a in if !list.contains(where: { WalletWatch.sameAddress($0, a) }) { list.append(a) } }
+    }
+
+    /// What the sentence is checked for: its recipients, or a swap's token.
+    private var checkKey: String {
+        guard verb == .send || verb == .swap, receipt == nil else { return "" }
+        let token = verb == .swap ? buy.map { "\($0.token.contract ?? "eth")|\($0.onList)" } : nil
+        guard !recipients.isEmpty || token != nil else { return "" }
+        return ([account, String(network.chainId), token ?? "-"] + recipients.map { $0.lowercased() }).joined(separator: ";")
+    }
+
+    /// The findings for the sentence as it stands, the simulation's refusal first.
+    private var shownFindings: [MoveWarnings.Finding] {
+        var all = !checkKey.isEmpty && findingsFor == checkKey ? findings : []
+        if let fail = failNote { all.append(.fails(fail)) }
+        return MoveWarnings.ordered(all)
+    }
+
+    private var leadWarning: MoveWarnings.Finding? { shownFindings.first }
+
+    private func warningLine(_ f: MoveWarnings.Finding) -> String {
+        MoveWarnings.line(f, short: { YourAccountPreview.short(EIP55.checksum($0)) },
+                          day: { $0.formatted(.dateTime.month(.abbreviated).day()) })
+    }
+
+    /// The To word takes the colour of a warning about who it is.
+    private var toWarningInk: Color? {
+        guard let lead = leadWarning else { return nil }
+        switch lead {
+        case .scam, .sanctioned: return DS.destructiveInk
+        case .lookalike, .firstSend: return DS.attentionInk
+        case .contract(let token, _, _, _): return token ? nil : DS.attentionInk
+        case .fails: return nil
+        }
+    }
+
+    /// "Send anyway" stands while a warning that arms it is on screen.
+    private var warned: Bool { MoveWarnings.arms(shownFindings) }
+    /// The whole sentence and its warning: an edit of the amount or the
+    /// token after the first tap asks for the first tap again.
+    private var armKey: String { previewKey + "|" + checkKey + "|" + (leadWarning.map(warningLine) ?? "") }
+
+    /// Look the sentence's addresses and token up, a moment after it
+    /// settles: history and OFAC on the phone, GoPlus and Blockscout through
+    /// Tor. The demo's come off its table.
+    private func recheck() async {
+        let key = checkKey
+        guard !key.isEmpty else { return }
+        try? await Task.sleep(for: .milliseconds(YourAccountDemo.isDemo(account) ? 100 : 400))
+        guard !Task.isCancelled else { return }
+        let net = network
+        let to = recipients
+        let token = verb == .swap ? buy : nil
+        var found: [MoveWarnings.Finding] = []
+        var with: [String] = []
+        let sanctions = MoveChecks.sanctions()
+        if let sanctions {
+            with.append(String(localized: "OFAC's sanctions list, \(sanctions.date.formatted(.dateTime.month(.abbreviated).day().year()))"))
+            for a in to + [token?.token.contract].compactMap({ $0 }) where sanctions.addresses.contains(a.lowercased()) {
+                found.append(.sanctioned(address: a, listed: sanctions.date))
+            }
+        }
+        if YourAccountDemo.isDemo(account) {
+            let demo = YourAccountDemo.findings(to: to, token: token)
+            found += demo.findings
+            with += demo.checkedWith
+        } else {
+            let sent = MoveChecks.sentTo(account, context: context)
+            let named = MoveChecks.named()
+            let own = Set([account.lowercased()] + [YourAccountKey.address?.lowercased()].compactMap { $0 })
+            for a in to where !MoveWarnings.isKnown(a, sentTo: sent, named: Set(named.keys), own: own) {
+                found.append(MoveWarnings.imitated(a, sentTo: sent, named: named, own: own,
+                                                   looksLike: AddressSafety.isLookalike) ?? .firstSend)
+            }
+            // Both services, for every address at once: each is a Tor round
+            // trip of a second or more (measured).
+            let asked = to + [token?.token.contract].compactMap { $0 }
+            var reports: [String: MoveWarnings.Report?] = [:]
+            var made: [String: MoveWarnings.Creation?] = [:]
+            await withTaskGroup(of: (String, MoveWarnings.Report?, MoveWarnings.Creation?).self) { group in
+                for a in asked {
+                    group.addTask {
+                        async let r = MoveChecks.report(a, chainId: net.chainId)
+                        async let c = MoveChecks.creation(a, chainId: net.chainId)
+                        return (a, await r, await c)
+                    }
+                }
+                for await (a, r, c) in group { reports[a] = r; made[a] = c }
+            }
+            let answered = asked.allSatisfy { reports[$0] ?? nil != nil }
+            for a in to {
+                if let r = reports[a] ?? nil, r.reported { found.append(.scam(address: a, sources: r.sources)) }
+                if case .at(let when)? = made[a] ?? nil {
+                    found.append(.contract(token: false, unverified: false, ageDays: MoveWarnings.ageDays(when, now: .now),
+                                           neverUsed: sent[a.lowercased()] == nil))
+                }
+            }
+            if let token, let contract = token.token.contract {
+                if let r = reports[contract] ?? nil, r.reported { found.append(.scam(address: contract, sources: r.sources)) }
+                var age: Int?
+                if case .at(let when)? = made[contract] ?? nil { age = MoveWarnings.ageDays(when, now: .now) }
+                found.append(.contract(token: true, unverified: !token.onList, ageDays: age,
+                                       neverUsed: !held.contains { $0.token == token.token }
+                                           && !MoveChecks.used(token.token.symbol, by: account, context: context)))
+            }
+            // Said only when GoPlus was asked something (§83).
+            if !asked.isEmpty {
+                with.append(answered ? String(localized: "GoPlus's reports (SlowMist, ScamSniffer)") : String(localized: "GoPlus did not answer: not checked"))
+            }
+        }
+        // A contract finding that says nothing is no finding.
+        found.removeAll { if case .contract(let t, let u, let d, let n) = $0 {
+            MoveWarnings.contractLine(token: t, unverified: u, ageDays: d, neverUsed: n) == nil } else { false } }
+        guard !Task.isCancelled, key == checkKey else { return }
+        let lookedAlike = found.contains { if case .lookalike = $0 { true } else { false } }
+        let wasAlike = findings.contains { if case .lookalike = $0 { true } else { false } } && findingsFor == key
+        withAnimation(DS.Motion.standard) { findings = found; checkedWith = with; findingsFor = key }
+        // A lookalike shakes the To word once (§1438b, kept).
+        // A book name's lookalike already shook as it resolved.
+        if lookedAlike, !wasAlike, resolved?.imitates == nil { shake += 1; DSHaptic.failure() }
+        #if DEBUG
+        if let probe = UserDefaults.standard.string(forKey: "moveWarnProbe"), !probe.isEmpty {
+            NSLog("moveWarn| %@ | %@ | verb=%@ | findings=%d | with=%@", probe, leadWarning.map(warningLine) ?? "-",
+                  footVerb, shownFindings.count, checkedWith.joined(separator: "; "))
+        }
+        #endif
     }
 
     /// The grey line ending in Details, a chevron after it; the whole line
@@ -1490,7 +1640,8 @@ struct MoveSentence: View {
         let sends = all.compactMap { item -> String? in if case .send(let p) = item { p.to } else { nil } }
         let to = sends.reduce(into: [String]()) { list, a in if !list.contains(where: { WalletWatch.sameAddress($0, a) }) { list.append(a) } }
         return MoveDetails(preview: shownPreview, swap: verb == .swap, to: to, account: account,
-                           networkFeeUSD: networkFeeUSD, relayFeeUSD: relayFeeUSD, soldUSD: soldDollarsTotal) {
+                           networkFeeUSD: networkFeeUSD, relayFeeUSD: relayFeeUSD, soldUSD: soldDollarsTotal,
+                           warnings: shownFindings.map { (warningLine($0), $0.red) }, checkedWith: checkedWith) {
             withAnimation(DS.Motion.standard) { rawOpen = true }
             DSHaptic.selection()
         }
@@ -1823,7 +1974,7 @@ struct MoveSentence: View {
                     pick {}
                 }
             }
-            if let r = resolved, r.imitates == nil, !book.contains(where: { WalletWatch.sameAddress($0.address, r.address) }) {
+            if let r = resolved, !book.contains(where: { WalletWatch.sameAddress($0.address, r.address) }) {
                 listRow(r.name ?? YourAccount.short(r.address), sub: r.name == nil ? nil : YourAccount.short(r.address)) {
                     pick {}
                 }
@@ -2184,7 +2335,9 @@ struct MoveSentence: View {
                     Button { sign() } label: {
                         Text(verbatim: footVerb)
                             .dsText(.heading34)
-                            .foregroundStyle(footOn ? DS.pickInk : DS.textTertiary)
+                            .foregroundStyle(!footOn ? DS.textTertiary
+                                             : warned && stage == nil ? (leadWarning?.red == true ? DS.destructiveInk : DS.attentionInk)
+                                             : DS.pickInk)
                             .frame(minHeight: 48, alignment: .trailing)
                     }
                     .buttonStyle(RowPress())
@@ -2256,6 +2409,8 @@ struct MoveSentence: View {
         }
         if verb == .receive { return String(localized: "Copy address") }
         if verb == .buy { return String(localized: "Buy") }
+        // A warning makes it a second tap (prd §1509 item 2).
+        if warned { return verb == .swap ? String(localized: "Swap anyway") : String(localized: "Send anyway") }
         let batch = all
         let swaps = batch.filter { if case .swap = $0 { true } else { false } }.count
         let kind: Verb? = swaps == batch.count ? .swap : swaps == 0 ? .send : nil
@@ -2315,7 +2470,6 @@ struct MoveSentence: View {
             if let quoteNote { return quoteNote }
             if quote == nil { return String(localized: "Waiting for the price") }
         case .send:
-            if let imitates = resolved?.imitates { return String(localized: "Looks like \(imitates)'s — check it") }
             if resolved == nil { return String(localized: "Pick who it goes to") }
         case .receive, .buy:
             break
@@ -2394,6 +2548,15 @@ struct MoveSentence: View {
 
     private func sign() {
         guard stage == nil else { return }
+        // The first tap on "Send anyway" only arms it; the second signs.
+        if verb != .buy, warned, armed != armKey {
+            armed = armKey
+            DSHaptic.failure()
+            #if DEBUG
+            NSLog("moveWarn| armed %@", armKey)
+            #endif
+            return
+        }
         // The demo's account signs nothing (§1475): it says so, as every demo act does.
         if YourAccountDemo.isDemo(account) { say(YourAccountDemo.actsLater); return }
         if verb == .buy { buyNow(); return }
@@ -3101,17 +3264,26 @@ struct MoveSentence: View {
     /// swap is Added once Relay prices it, and the send fills the next sentence.
     private func draft() {
         let d = UserDefaults.standard
-        if let swap = d.string(forKey: "moveSwapDraft"), !swap.isEmpty {
-            let parts = swap.split(separator: "|").map(String.init)
-            verb = .swap
-            networkPicked = true
-            if parts.count > 1, let h = held.first(where: { $0.token.symbol == parts[1] }) { with = h }
-            let buyName = parts.count > 2 ? parts[2] : (with?.token.symbol == "ETH" ? "USDC" : "ETH")
-            buy = listed.first { $0.token.symbol == buyName && $0.onList }
-                ?? held.first { $0.token.symbol == buyName }.map { Tokens.Listed(token: $0.token, name: $0.token.symbol, onList: true) }
-            amount = parts.first ?? ""
-            inDollars = false
-            NSLog("moveSwapDraft: %@ %@ for %@", amount, with?.token.symbol ?? "-", buy?.token.symbol ?? "-")
+        // `-moveWarnProbe first|lookalike|scam|sanctioned|newContract|fails`
+        // (prd §1513): a sentence that draws that warning, off the demo's
+        // table (or OFAC's first address); logs `moveWarn|` once checked.
+        if let probe = d.string(forKey: "moveWarnProbe"), !probe.isEmpty {
+            if probe == "newContract" {
+                swapDraft("50|USDC|PEPE2")
+            } else {
+                let to: String = switch probe {
+                case "lookalike": YourAccountDemo.imitator
+                case "scam": YourAccountDemo.reported
+                case "fails": YourAccountDemo.refusing
+                case "sanctioned": MoveChecks.sanctions()?.addresses.sorted().first ?? YourAccountDemo.stranger
+                default: YourAccountDemo.stranger
+                }
+                verb = .send
+                sendDraft("5|\(to)|USDC")
+            }
+            NSLog("moveWarnProbe: %@", probe)
+        } else if let swap = d.string(forKey: "moveSwapDraft"), !swap.isEmpty {
+            swapDraft(swap)
         } else if d.string(forKey: "moveSendDraft")?.isEmpty == false {
             verb = .send
             sendDraft()
@@ -3132,6 +3304,21 @@ struct MoveSentence: View {
                 NSLog("moveDetails: %@ preview=%@", shown, shownPreview == nil ? "reading" : "ready")
             }
         }
+    }
+
+    private func swapDraft(_ swap: String) {
+        let parts = swap.split(separator: "|").map(String.init)
+        verb = .swap
+        networkPicked = true
+        if parts.count > 1, let h = held.first(where: { $0.token.symbol == parts[1] }) { with = h }
+        let buyName = parts.count > 2 ? parts[2] : (with?.token.symbol == "ETH" ? "USDC" : "ETH")
+        // Relay's own listing first; one it does not list only by name.
+        buy = listed.first { $0.token.symbol == buyName && $0.onList }
+            ?? listed.first { $0.token.symbol == buyName }
+            ?? held.first { $0.token.symbol == buyName }.map { Tokens.Listed(token: $0.token, name: $0.token.symbol, onList: true) }
+        amount = parts.first ?? ""
+        inDollars = false
+        NSLog("moveSwapDraft: %@ %@ for %@", amount, with?.token.symbol ?? "-", buy?.token.symbol ?? "-")
     }
 
     /// `-moveRawProbe YES`: what Raw transaction shows, line by line.
@@ -3201,8 +3388,8 @@ struct MoveSentence: View {
 
     /// Lines are `;`-separated, each `<amount>|<to>[|<SYM>]`; every line but
     /// the last is Added once its recipient resolves.
-    private func sendDraft() {
-        guard let draft = UserDefaults.standard.string(forKey: "moveSendDraft"), !draft.isEmpty else { return }
+    private func sendDraft(_ given: String? = nil) {
+        guard let draft = given ?? UserDefaults.standard.string(forKey: "moveSendDraft"), !draft.isEmpty else { return }
         let lines = draft.split(separator: ";").map { $0.split(separator: "|").map(String.init) }
         networkPicked = true
         Task { @MainActor in

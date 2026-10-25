@@ -123,6 +123,9 @@ enum BridgeRefresh {
         }
         if !force, let last = lastSweep, Date.now.timeIntervalSince(last) < minSweepInterval { return }
         lastSweep = .now
+        // OFAC's sanctioned addresses for Move's checks (prd §1513): once a
+        // day, whole, with an account on this phone.
+        MoveChecks.refreshSanctionsIfDue()
         // This pass's pace, fixed here rather than read per slot — see
         // `stagger`.
         let leadInMs = force ? 0 : 1800

@@ -2747,6 +2747,10 @@ harness "Your account self-test" "your-account self-test" "scripts/your-account-
 # simulated before Face ID, a refusal dims the verb, "Not checked" never
 # green, and signing takes the kept preview so Raw's hash is Face ID's.
 harness "Move details self-test" "move-details self-test" "scripts/move-details-selftest.sh" "Move's Details drifted — run scripts/move-details-selftest.sh"
+# Move's warnings (prd §1513): the lookalike of history, the known set's
+# one-way rule, OFAC's list guard, red over amber, the services' answers as
+# measured; and the second tap that replaced §1438b's block.
+harness "Move warnings self-test" "move-warnings self-test" "scripts/move-warnings-selftest.sh" "Move's warnings drifted — run scripts/move-warnings-selftest.sh"
 
 harness "Money-receipt pure-logic self-test" "money-receipt self-test" "scripts/money-receipt-selftest.sh" "the money-receipt logic self-test failed — run scripts/money-receipt-selftest.sh"
 

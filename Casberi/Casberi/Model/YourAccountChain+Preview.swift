@@ -236,8 +236,18 @@ extension YourAccountChain {
         op.preVerificationGas = 60_000
         op.maxFeePerGas = YourAccountDemo.previewMaxFee(on: net)
         op.maxPriorityFeePerGas = op.maxFeePerGas / 10
+        // The demo's refusing address: its token refuses the transfer, as a
+        // blacklisted recipient's USDC does (canvas figure 9).
+        let refused = items.enumerated().first { _, item in
+            if case .send(let p) = item { return p.to.lowercased() == YourAccountDemo.refusing }
+            return false
+        }
+        var checked: YourAccountPreview.Checked = least.map { .returnsAtLeast($0.0, $0.1) } ?? .lands
+        if let (n, item) = refused, case .send(let p) = item {
+            checked = .fails(call: n, token: p.token.symbol, reason: "Blacklistable: account is blacklisted")
+        }
         return Preview(network: net, route: .owner, feeWei: op.maxCost.map(String.init), nonce: op.nonce,
-                       checked: least.map { .returnsAtLeast($0.0, $0.1) } ?? .lands, words: words, approvals: approvals,
+                       checked: checked, words: words, approvals: approvals,
                        sold: sold, hash: YourAccountOp.safeOpHash(op, chainId: net.chainId), hashKind: .eip712, callData: callData)
     }
 }

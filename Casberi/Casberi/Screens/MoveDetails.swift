@@ -22,6 +22,11 @@ struct MoveDetails: View {
     /// Relay's fees, and what the swap sells, in dollars.
     let relayFeeUSD: Double?
     let soldUSD: Double?
+    /// Every warning, in order, each with whether it is red (prd §1509 item
+    /// 2: the line shows one, Details lists them all), and what the
+    /// addresses were checked against.
+    var warnings: [(text: String, red: Bool)] = []
+    var checkedWith: [String] = []
     let onRaw: () -> Void
 
     var body: some View {
@@ -30,6 +35,7 @@ struct MoveDetails: View {
                 if swap { swapRows(preview) } else { sendRows(preview) }
                 row(String(localized: "Nonce"), preview.nonce.map { String($0) } ?? String(localized: "Not read"))
                 checkedRow(preview)
+                foundRows
                 if preview.hash != nil {
                     DSPushRow(title: Text("Raw transaction"), action: onRaw) { EmptyView() }
                 }
@@ -115,6 +121,29 @@ struct MoveDetails: View {
             return row(String(localized: "Checked"), String(localized: "Would fail"), sub: reason, ink: DS.destructiveInk)
         case .notChecked:
             return row(String(localized: "Checked"), String(localized: "Not checked"), sub: String(localized: "\(p.network.name) would not simulate it"))
+        }
+    }
+
+    // MARK: - The warnings
+
+    /// "Found", every warning in its ink; "Checked with", the lists and the
+    /// services asked, and the date of the list.
+    @ViewBuilder private var foundRows: some View {
+        if !warnings.isEmpty || !checkedWith.isEmpty {
+            VStack(alignment: .leading, spacing: DS.Space.s1) {
+                Text(warnings.isEmpty ? "Checked with" : "Found").dsText(.body17).foregroundStyle(DS.textSecondary)
+                ForEach(Array(warnings.enumerated()), id: \.offset) { _, w in
+                    Text(verbatim: w.text).dsText(.body17)
+                        .foregroundStyle(w.red ? DS.destructiveInk : DS.attentionInk)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                ForEach(checkedWith, id: \.self) { line in
+                    Text(verbatim: line).dsText(.subhead12).foregroundStyle(DS.textTertiary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .walletRowPitch()
         }
     }
 
