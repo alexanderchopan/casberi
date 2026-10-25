@@ -38,10 +38,31 @@ extension FeedScreen {
                 }
             }
         }
+        // The account the search tray picked, or All (prd §1524); set before
+        // the read so its first page is already that account's.
+        .onChange(of: walletSpendingScope, initial: true) { _, scope in
+            SpendingReading.shared.narrow(scope)
+        }
         .task(id: walletSpendingKey) {
             await SubscriptionsReading.shared.refresh(modelContext)
             await SpendingReading.shared.refresh(modelContext)
         }
+    }
+
+    /// **WHOSE SPENDING (prd §1524):** the app or the wallet the search tray
+    /// picked, else All. An app is the sources its rows land under, empty
+    /// for one that spends nothing (Spending dims there); a wallet is every
+    /// spelling it is followed by.
+    var walletSpendingScope: Spending.Scope {
+        if let seat = selectedSeat {
+            return .app(Set(SpendingReading.sources.filter(seat.owns)))
+        }
+        if let address = selectedWallet {
+            var forms: Set<String> = [address.lowercased()]
+            if let hex = wallet.resolvedForm(of: address) { forms.insert(hex.lowercased()) }
+            return .wallet(forms)
+        }
+        return .all
     }
 
     /// A network's fees (prd §1476): how many transactions, then how it

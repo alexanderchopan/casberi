@@ -314,13 +314,13 @@ extension FeedScreen {
                 // empty page that claims to be a section.
                 // An app pick dims the scopes with nothing for that app (prd
                 // §1078), and a remembered one of them resolves to Home.
-                // One address picked dims Spending too (prd §1468): it reads
-                // every account, as Home's list does only on All (§1201).
+                // One address picked keeps Spending lit (prd §1524, amending
+                // §1468): it reads that wallet's own sends and cards.
                 // Markets is no account's, so a pick leaves it as it is and it
                 // stays lit (§1519, amending §1498 item 4).
                 let inert: Set<WalletSection> = seatPicked
                     ? walletInertSections(visible: visible, upcoming: upcoming)
-                    : (selectedWallet != nil ? [.spending, .places, .fees, .roundUps] : [])
+                    : []
                 let section = pinnedWalletSection ?? WalletSection.resolve(
                     chrome.walletSection,
                     present: WalletSection.pages(tiles: walletSectionPublication.sections)

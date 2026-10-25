@@ -22,6 +22,32 @@ enum Spending {
         /// `Subscriptions.byYou` for a plan tracked by hand with no card
         /// behind it (prd §1469); nil when nothing names it.
         var via: String? = nil
+        /// Whose it is (prd §1524): the `Thing.source` its row landed under,
+        /// and the wallet, lowercased, for a send or a card read off one.
+        /// Nil for a plan tracked by hand, which is no account's.
+        var app: String? = nil
+        var wallet: String? = nil
+    }
+
+    /// **WHOSE SPENDING THE TILE READS (prd §1524).** All is every account's,
+    /// added up; an account picked in the search tray is that account's
+    /// alone: a wallet's sends and the cards read off it, or an app's rows.
+    enum Scope: Equatable {
+        case all
+        /// A wallet, in every spelling it is followed by, lowercased.
+        case wallet(Set<String>)
+        /// An app: the `Thing.source`s its rows land under.
+        case app(Set<String>)
+
+        /// Whether a charge, a fee or a buy of `app` or `wallet` is this
+        /// scope's. A plan tracked by hand (no app, no wallet) is All's only.
+        func holds(app: String?, wallet: String?) -> Bool {
+            switch self {
+            case .all: return true
+            case .wallet(let forms): return wallet.map { forms.contains($0.lowercased()) } ?? false
+            case .app(let sources): return app.map { sources.contains($0) } ?? false
+            }
+        }
     }
 
     struct Place: Equatable {
@@ -143,6 +169,8 @@ enum Spending {
         var usd: Double
         var at: Date
         var bought: Bought
+        /// The wallet that paid it, lowercased (prd §1524).
+        var wallet: String? = nil
     }
 
     /// **ROUND-UPS (prd §1523): what the change bought**, one per
@@ -155,7 +183,7 @@ enum Spending {
             guard let bought = m.roundUp, let usd = m.usd, usd.isFinite, usd > 0,
                   !counted.contains(m.tx) else { continue }
             counted.insert(m.tx)
-            out.append(RoundUp(tx: m.tx, usd: usd, at: m.at, bought: bought))
+            out.append(RoundUp(tx: m.tx, usd: usd, at: m.at, bought: bought, wallet: m.wallet))
         }
         return out
     }
@@ -167,6 +195,8 @@ enum Spending {
         var network: String
         var usd: Double
         var at: Date
+        /// The wallet that paid it, lowercased (prd §1524).
+        var wallet: String? = nil
     }
 
     /// **FEES (prd §1476): gas on every transaction a wallet you follow
@@ -182,7 +212,7 @@ enum Spending {
             guard let usd = m.feeUSD, usd.isFinite, usd > 0, let network = m.network,
                   !seen.contains(m.tx) else { continue }
             seen.insert(m.tx)
-            out.append(Fee(tx: m.tx, network: network, usd: usd, at: m.at))
+            out.append(Fee(tx: m.tx, network: network, usd: usd, at: m.at, wallet: m.wallet))
         }
         return out
     }

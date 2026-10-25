@@ -573,13 +573,18 @@ extension FeedScreen {
     /// Home never is. On All, nothing is inert: an empty
     /// scope there explains itself (§611).
     func walletInertSections(visible: [Thing], upcoming: [Thing]) -> Set<WalletSection> {
-        // Spending is every account's reading (§1201's cards and wallets
-        // together), so one app's page cannot stand on it (§1468).
+        // Spending reads the picked app's own rows (prd §1524, amending
+        // §1468): a card's charges stand there, so it stays lit for an app
+        // that spends, and dims for one that does not. Fees and Round-ups
+        // are a wallet's: a card pays no gas.
         // Permissions, Threats and Your account are an address's readings,
         // which an app pick clears (§1067), as Security was.
         // Markets is what YOU watch, no account's, so it stays lit (§1519).
-        var out: Set<WalletSection> = [.spending, .places, .fees, .roundUps,
+        var out: Set<WalletSection> = [.fees, .roundUps,
                                        .permissions, .threats, .yourAccount, .recoveryKey, .nodes]
+        if case .app(let sources) = walletSpendingScope, sources.isEmpty {
+            out.formUnion([.spending, .places])
+        }
         // Privy's apps are Holdings' too (§1124), with money or without, and
         // so is an account an app read (§1341): every state stands there.
         if walletScopeIsEmpty(.holdings),

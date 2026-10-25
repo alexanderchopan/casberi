@@ -22,6 +22,9 @@ final class SpendingReading {
     private(set) var page = Spending.Reading(total: 0, earlier: nil, places: [])
     /// The window the tile stands on; Month until picked.
     private(set) var window: Spending.Window = .month
+    /// **WHOSE (prd §1524):** All, or the account the search tray picked.
+    /// Home's `reading` is always All.
+    private(set) var scope: Spending.Scope = .all
     /// The dollar charges of the last fetch, so a window pick re-reads them
     /// with no fetch.
     private var charges: [Spending.Charge] = []
@@ -78,7 +81,8 @@ final class SpendingReading {
         let rates = codes.isEmpty ? [:] : await WalletCash.cachedRates(for: codes)
         let charges = raw.compactMap { c in
             WalletCash.usd(c.amount, c.currency, rates: rates)
-                .map { Spending.Charge(place: c.place, usd: $0, at: c.at, via: c.card) }
+                .map { Spending.Charge(place: c.place, usd: $0, at: c.at, via: c.card,
+                                       app: c.app.isEmpty ? nil : c.app, wallet: c.wallet) }
         }
         tracked = plans.compactMap { c in
             WalletCash.usd(c.amount, c.currency, rates: rates)
@@ -115,12 +119,27 @@ final class SpendingReading {
         readPage(now: now, calendar: calendar)
     }
 
+    /// The account the tile reads (prd §1524): re-read from the cached
+    /// charges, no fetch.
+    func narrow(_ scope: Spending.Scope, now: Date = .now, calendar: Calendar = .current) {
+        guard scope != self.scope else { return }
+        self.scope = scope
+        readPage(now: now, calendar: calendar)
+    }
+
     private func readPage(now: Date, calendar: Calendar) {
         let keys = recurringKeys
-        let next = Spending.read(charges + tracked, now: now, calendar: calendar, window: window,
+        let scope = self.scope
+        func holds(_ app: String?, _ wallet: String?) -> Bool { scope.holds(app: app, wallet: wallet) }
+        // The change waiting is your account's: All's, or your account's page.
+        let yours = YourAccountDemo.shownAddress.map { scope.holds(app: nil, wallet: $0) } ?? false
+        let next = Spending.read((charges + tracked).filter { holds($0.app, $0.wallet) },
+                                 now: now, calendar: calendar, window: window,
                                  isRecurring: { keys.contains(Subscriptions.key($0)) },
-                                 fees: fees, unpricedSends: unpricedSends,
-                                 roundUps: roundUps, roundUpsWaiting: roundUpsWaiting)
+                                 fees: fees.filter { holds(SpendingReading.walletSource, $0.wallet) },
+                                 unpricedSends: scope == .all ? unpricedSends : [],
+                                 roundUps: roundUps.filter { holds(SpendingReading.walletSource, $0.wallet) },
+                                 roundUpsWaiting: scope == .all || yours ? roundUpsWaiting : 0)
         if next != page { page = next }
     }
 
@@ -206,6 +225,9 @@ enum SpendingSource {
         /// The card it went on, for Home's Cards; nil for a move that is no card's.
         var card: String? = nil
         var app: String = ""
+        /// The wallet it left, lowercased: a send, or a card read off one
+        /// (prd §1524).
+        var wallet: String? = nil
     }
 
     /// A card spend's card as the person knows it.
@@ -238,14 +260,16 @@ enum SpendingSource {
                       thing.walletAddress.map({ followed.contains($0.lowercased()) }) ?? true,
                       let amount = thing.priceValue, let currency = thing.priceCurrency else { return nil }
                 return Raw(place: thing.source, amount: abs(amount), currency: currency, at: thing.capturedAt,
-                           card: cardName(forSource: thing.source), app: thing.source)
+                           card: cardName(forSource: thing.source), app: thing.source,
+                           wallet: thing.walletAddress?.lowercased())
             case WiseShape.source:
                 guard thing.transferDirection == "sent",
                       !thing.tags.contains(String(localized: "Pending")),
                       !thing.tags.contains(String(localized: "Returned")),
                       let amount = thing.priceValue, let currency = thing.priceCurrency else { return nil }
                 let place = thing.transferCounterparty.flatMap { $0.isEmpty ? nil : $0 } ?? WiseShape.source
-                return Raw(place: place, amount: abs(amount), currency: currency, at: thing.capturedAt)
+                return Raw(place: place, amount: abs(amount), currency: currency, at: thing.capturedAt,
+                           app: WiseShape.source)
             default:
                 return nil
             }
@@ -268,7 +292,8 @@ enum SpendingSource {
     static func walletCharges(_ things: [Thing], followed own: Set<String>) -> [Raw] {
         Spending.walletSpends(walletMoves(things), own: own).compactMap { move in
             guard let place = move.place, let usd = move.usd else { return nil }
-            return Raw(place: place, amount: usd, currency: "USD", at: move.at)
+            return Raw(place: place, amount: usd, currency: "USD", at: move.at,
+                       app: SpendingReading.walletSource, wallet: move.wallet)
         }
     }
 

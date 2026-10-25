@@ -68638,3 +68638,17 @@ Spending counts what left you for a place (§1201). Round-up change does not lea
 8. `spending-selftest.sh` holds the buy left out of spending beside a send that counts, the fill taken by the buy and not by the send, one buy per transaction, the unfollowed, unpriced and received legs left out, the window and the last, the total untouched, the waiting figure, and the "from" day; six mutations. `wallet-section-selftest.sh` pins the four doors.
 
 **Not seen:** none of it. Written in a container with no Swift toolchain: not compiled, no harness run, not on the simulator or the Mac. The Python audits pass.
+
+## §1524 — An account picked in the search tray reads its own Spending; All stays every account added up (amends §1468's "one app's page cannot stand on it" and §1480 item 8's "narrowed by the menu") (user, 2026-10-25: "do you think we should put card spending in spending section?"; "in the search tray you pick individual accounts to see the page. on the all wallet page it shouldn't"; "search tray is how you narrow") — BUILT, NOT COMPILED
+
+Every card's charges already counted in Spending on All. §1480 item 8 deleted Cards as a section and said a card's spending was Places and Subscriptions narrowed by the menu, but the code dimmed Spending whenever an account was picked: an app pick put Spending, Places and Fees in `walletInertSections`, and an address pick dimmed them in `FeedScreen+ShapedSections`. So "what did I put on Apple Card this month" had no answer anywhere.
+
+1. **All is unchanged:** every card, Wise and every followed wallet, added up, with the plans tracked by hand.
+2. **The search tray narrows.** An account picked there (an address, or an app the Wallet folded in) keeps Spending lit and reads its own rows alone (`Spending.Scope`, `SpendingReading.narrow`, from `FeedScreen.walletSpendingScope`):
+   - **a card or an app** — the charges landed under its sources (`SpendingReading.sources.filter(seat.owns)`); Fees and Round-ups dim, because a card pays no gas;
+   - **a wallet** — its own sends, the cards read off it (MetaMask Card, ether.fi, Plasma One carry the wallet), its fees and its round-ups;
+   - **an app that spends nothing** (an exchange, Safe, ENS) — Spending and Places dim, as before.
+3. **What stays All's only:** a plan tracked by hand, which no account pays, and the change waiting to buy unless the picked wallet is your account. Each figure compares with the same account last window. Home's month (`reading`) is always All.
+4. `spending-selftest.sh` holds the scope (a wallet in any spelling, a card read off it, another wallet left out, an app's own charges, a hand-tracked plan All's only) with three mutations.
+
+**Not seen:** none of it. Written in a container with no Swift toolchain: not compiled, no harness run, not on the simulator or the Mac.

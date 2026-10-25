@@ -210,6 +210,20 @@ check(roundUpRows.roundUpsFrom == nil, "a buy marked last window means this wind
 check(Spending.read([], now: now, calendar: cal, roundUps: [R(tx: "a", usd: 5, at: day(4), bought: eth)]).roundUpsFrom == day(4),
       "the first buy ever marked, inside this window, is the day the count starts from")
 
+// ── Whose (prd §1524): All adds every account; an account the search tray
+// picked reads its own rows alone. ─────────────────────────────────────────
+let mineOnly = Spending.Scope.wallet([mine])
+let appleOnly = Spending.Scope.app(["Apple Wallet"])
+check(Spending.Scope.all.holds(app: nil, wallet: nil), "All holds a plan tracked by hand")
+check(mineOnly.holds(app: "Wallet", wallet: mine.uppercased()), "a wallet's page holds its own sends, however spelt")
+check(mineOnly.holds(app: "MetaMask Card", wallet: mine), "a wallet's page holds a card read off it")
+check(!mineOnly.holds(app: "Wallet", wallet: savings), "a wallet's page never holds another wallet's sends")
+check(!mineOnly.holds(app: "Apple Wallet", wallet: nil), "a wallet's page never holds a card no wallet pays")
+check(appleOnly.holds(app: "Apple Wallet", wallet: nil), "an app's page holds its own charges")
+check(!appleOnly.holds(app: "Privacy", wallet: nil), "an app's page never holds another app's")
+check(!appleOnly.holds(app: nil, wallet: nil) && !mineOnly.holds(app: nil, wallet: nil),
+      "a plan tracked by hand is no account's: All's only")
+
 if failures > 0 { print("\(failures) assertion(s) failed"); exit(1) }
 print("  ok   swaps, trades, deposits, round trips, unfollowed wallets, own moves, the window, the recurring half, fees and round-ups")
 SWIFT
@@ -248,3 +262,6 @@ mutate "a round-up counted once per leg"             's/counted\.insert\(m\.tx\)
 mutate "an unfollowed wallet's round-ups count"      's/for m in moves where m\.way == \.sent && own\.contains\(m\.wallet\) \{/for m in moves where m.way == .sent {/'
 mutate "a round-up added to the total"               's/reading\.roundUpsTotal \+= buy\.usd/reading.roundUpsTotal += buy.usd; reading.total += buy.usd/'
 mutate "the day the count starts from never said"    's/reading\.roundUpsFrom = first/reading.roundUpsFrom = nil/'
+mutate "a plan tracked by hand on an app's page"     's/return app\.map \{ sources\.contains\(\$0\) \} \?\? false/return app.map { sources.contains(\$0) } ?? true/'
+mutate "a wallet's page reads every wallet"          's/return wallet\.map \{ forms\.contains\(\$0\.lowercased\(\)\) \} \?\? false/return wallet.map { _ in true } ?? false/'
+mutate "a wallet spelt in capitals is not its own"   's/forms\.contains\(\$0\.lowercased\(\)\)/forms.contains(\$0)/'
