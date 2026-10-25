@@ -284,11 +284,18 @@ struct MoveSecurity: View {
             roundUpMarks = marks
         }
         if roundUps.on {
-            Text("Each send rounds up to the next $\(roundUps.step). Once the extra reaches $5, it buys \(roundUps.target.symbol).")
-                .dsText(.subhead12).foregroundStyle(DS.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.bottom, DS.Space.s2)
-                .transition(.opacity.combined(with: .move(edge: .top)))
+            // A worked send, because "the next $1" read as a $1 round-up.
+            Group {
+                if roundUps.step == 5 {
+                    Text("A $3.40 send rounds up to $5, setting aside $1.60. When $5 is set aside, it buys \(roundUps.target.symbol).")
+                } else {
+                    Text("A $3.40 send rounds up to $4, setting aside $0.60. When $5 is set aside, it buys \(roundUps.target.symbol).")
+                }
+            }
+            .dsText(.subhead12).foregroundStyle(DS.textSecondary)
+            .fixedSize(horizontal: false, vertical: true)
+            .padding(.bottom, DS.Space.s2)
+            .transition(.opacity.combined(with: .move(edge: .top)))
         }
     }
 
